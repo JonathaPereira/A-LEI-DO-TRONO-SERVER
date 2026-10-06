@@ -11,7 +11,8 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.5.1-alpha';
+const VERSION = '0.5.3-alpha';
+const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
 const LAWS = ['ordem','estandarte','revolta','anarquia','usurpacao'];
@@ -89,7 +90,15 @@ function broadcastRoom(room){
 }
 function sendToSeat(room,seat,payload){ const ws=playerSocketBySeat(room,seat); if(ws) send(ws,payload); }
 function broadcastGameEvent(room,payload){ for(const p of room.players.values()) send(p.ws,{type:'game-event',...payload}); }
-function broadcastLog(room,message){ broadcastGameEvent(room,{event:'log',message}); }
+function broadcastLog(room,message){
+  const g=room.game;
+  if(g){
+    if(!Array.isArray(g.logHistory)) g.logHistory=[];
+    g.logHistory.push({ts:Date.now(),round:g.round||0,trick:g.trick||0,message:String(message)});
+    if(g.logHistory.length>600) g.logHistory.splice(0,g.logHistory.length-600);
+  }
+  broadcastGameEvent(room,{event:'log',message});
+}
 function schedule(room,fn,ms=450){
   if(!room.game) return;
   const token=room.game.token;
@@ -108,7 +117,7 @@ function leaveRoom(ws, reason='leave') {
     if(gp && !gp.bot){
       gp.bot=true; gp.clientId=null; gp.name=`${leaving.name} (IA)`;
       broadcastGameEvent(room,{event:'player-replaced-by-bot',seat:leaving.seat,name:leaving.name});
-      if(room.game.turn===leaving.seat && room.game.phase==='await-play') schedule(room,()=>advanceTurn(room),650);
+      if(room.game.turn===leaving.seat && room.game.phase==='await-play'){ clearTurnTimer(room.game); schedule(room,()=>advanceTurn(room),650); }
       if(room.game.pending && room.game.pending.waiting?.has(leaving.seat)) {
         autoResolvePendingSeat(room,leaving.seat);
       }
@@ -175,7 +184,7 @@ function startGame(room){
     players,round:1,trick:1,deck:[],undealt:[],decree:null,
     lawUsage:Object.fromEntries(LAWS.map(l=>[l,0])),currentLaw:'ordem',trump:null,declaredLeadSuit:null,
     leader:firstStarter,firstRoundStarter:firstStarter,lastCrown:null,lastShadow:null,previousWinningSuit:null,
-    plays:[],turn:null,phase:'starting',pending:null,promptSeq:0,
+    plays:[],turn:null,phase:'starting',pending:null,promptSeq:0,turnDeadline:null,turnSerial:0,turnTimer:null,logHistory:[],
   };
   for(const p of room.players.values()) p.ready=false;
   broadcastRoom(room); broadcastRooms();
@@ -190,7 +199,8 @@ function resetRoundStats(game){
 function setupRound(room){
   const g=room.game; if(!g) return;
   g.phase='round-start';g.trick=1;g.currentLaw='ordem';g.trump=null;g.declaredLeadSuit=null;
-  g.lawUsage=Object.fromEntries(LAWS.map(l=>[l,0]));g.lastCrown=null;g.lastShadow=null;g.previousWinningSuit=null;g.plays=[];g.turn=null;g.pending=null;
+  g.lawUsage=Object.fromEntries(LAWS.map(l=>[l,0]));g.lastCrown=null;g.lastShadow=null;g.previousWinningSuit=null;g.plays=[];g.turn=null;g.turnDeadline=null;g.pending=null;
+  clearTurnTimer(g);
   resetRoundStats(g);
   const deck=shuffle(makeDeck());
   for(let i=0;i<10;i++) for(let seat=0;seat<4;seat++) g.players[seat].hand.push(deck.pop());
@@ -283,40 +293,73 @@ function applyTrump(room,seat,suit){
 }
 function suitName(s){ return ({cetro:'Cetro',chave:'Chave',lamina:'Lâmina',mascara:'Máscara'})[s]||s; }
 
+function usurpacaoEligibleCards(hand){
+  return hand.filter(c=>c.publicReason!=='Corte Aberta');
+}
 function usurpacaoGiveStage(room){
   const g=room.game, shadow=g.players[g.lastShadow], crown=g.players[g.lastCrown];
   if(!shadow||!crown){ return startTurns(room); }
+  if(shadow.seat===crown.seat) throw new Error('Usurpação inválida: Coroa e Sombra não podem ser o mesmo jogador.');
   if(g.players.some(p=>p.hand.length<4)) throw new Error('Usurpação inválida: todos precisam ter pelo menos 4 cartas.');
-  g.phase='usurp-give';g.pending={kind:'usurp-give',seat:shadow.seat,shadow:shadow.seat,crown:crown.seat};broadcastGameState(room);
-  if(shadow.bot){ const given=[...shadow.hand].sort((a,b)=>a.value-b.value)[0]; schedule(room,()=>applyUsurpGive(room,shadow.seat,given.id),500); }
-  else sendPrompt(room,shadow.seat,{kind:'usurp-give',title:'Usurpação — entregue uma carta',cardIds:shadow.hand.map(c=>c.id),otherName:crown.name});
+  const eligible=usurpacaoEligibleCards(shadow.hand);
+  if(!eligible.length) throw new Error('Usurpação inválida: a Sombra não possui carta elegível para trocar.');
+  g.phase='usurp-give';g.pending={kind:'usurp-give',seat:shadow.seat,shadow:shadow.seat,crown:crown.seat,eligibleIds:eligible.map(c=>c.id)};broadcastGameState(room);
+  if(shadow.bot){ const given=[...eligible].sort((a,b)=>a.value-b.value)[0]; schedule(room,()=>applyUsurpGive(room,shadow.seat,given.id),500); }
+  else sendPrompt(room,shadow.seat,{kind:'usurp-give',title:'Usurpação — entregue uma carta',cardIds:eligible.map(c=>c.id),otherName:crown.name,note:'A carta revelada pela Corte Aberta não pode ser trocada.'});
 }
 function applyUsurpGive(room,seat,cardId){
-  const g=room.game,p=g?.pending;if(!p||p.kind!=='usurp-give'||p.seat!==seat)return false;
+  const g=room.game,p=g?.pending;if(!p||p.kind!=='usurp-give'||p.seat!==seat||!p.eligibleIds?.includes(cardId))return false;
   const shadow=g.players[p.shadow],crown=g.players[p.crown];const idx=shadow.hand.findIndex(c=>c.id===cardId);if(idx<0)return false;
+  if(shadow.hand[idx].publicReason==='Corte Aberta') return false;
   const [given]=shadow.hand.splice(idx,1);crown.hand.push(given);crown.hand=shuffle(crown.hand);
-  g.phase='usurp-pick';g.pending={kind:'usurp-pick',seat:shadow.seat,shadow:shadow.seat,crown:crown.seat,given};broadcastGameState(room);
-  if(shadow.bot){ schedule(room,()=>applyUsurpPick(room,shadow.seat,rand(crown.hand.length)),500); }
-  else sendPrompt(room,shadow.seat,{kind:'usurp-pick',title:'Usurpação — escolha às cegas',count:crown.hand.length,otherName:crown.name});
+  const pickableIds=usurpacaoEligibleCards(crown.hand).map(c=>c.id);
+  if(!pickableIds.length) throw new Error('Usurpação inválida: a Coroa não possui carta elegível para devolver.');
+  g.phase='usurp-pick';g.pending={kind:'usurp-pick',seat:shadow.seat,shadow:shadow.seat,crown:crown.seat,given,pickableIds};broadcastGameState(room);
+  if(shadow.bot){ schedule(room,()=>applyUsurpPick(room,shadow.seat,rand(pickableIds.length)),500); }
+  else sendPrompt(room,shadow.seat,{kind:'usurp-pick',title:'Usurpação — escolha às cegas',count:pickableIds.length,otherName:crown.name,note:'A carta aberta pelo Decreto Corte Aberta está protegida e não participa da escolha.'});
   return true;
 }
 function applyUsurpPick(room,seat,index){
   const g=room.game,p=g?.pending;if(!p||p.kind!=='usurp-pick'||p.seat!==seat)return false;
   const shadow=g.players[p.shadow],crown=g.players[p.crown];
-  const i=Number(index);if(!Number.isInteger(i)||i<0||i>=crown.hand.length)return false;
-  const [taken]=crown.hand.splice(i,1);shadow.hand.push(taken);sortHand(shadow.hand);sortHand(crown.hand);
+  const i=Number(index);if(!Number.isInteger(i)||i<0||i>=p.pickableIds.length)return false;
+  const chosenId=p.pickableIds[i];
+  const crownIndex=crown.hand.findIndex(c=>c.id===chosenId);if(crownIndex<0)return false;
+  const [taken]=crown.hand.splice(crownIndex,1);shadow.hand.push(taken);sortHand(shadow.hand);sortHand(crown.hand);
   const given=p.given;
+  if(taken.publicReason==='Corte Aberta'||given.publicReason==='Corte Aberta') throw new Error('Usurpação tentou mover uma carta protegida pela Corte Aberta.');
   const waiting=new Set([shadow,crown].filter(x=>!x.bot).map(x=>x.seat));
   g.phase='usurp-reveal';g.pending={kind:'usurp-ack',waiting};
   broadcastGameEvent(room,{event:'exchange',kind:'usurpacao',title:'Usurpação — troca de mãos',shadow:shadow.seat,crown:crown.seat,moves:[{from:shadow.seat,to:crown.seat,label:'Carta da Sombra → Coroa'},{from:crown.seat,to:shadow.seat,label:'Carta aleatória → Sombra',delay:220}]});
   if(!shadow.bot) sendToSeat(room,shadow.seat,{type:'private-usurpation',role:'shadow',outgoing:given,incoming:taken,otherName:crown.name,returnedSameCard:given.id===taken.id});
   if(!crown.bot) sendToSeat(room,crown.seat,{type:'private-usurpation',role:'crown',outgoing:taken,incoming:given,otherName:shadow.name,returnedSameCard:given.id===taken.id});
-  broadcastLog(room,`Usurpação: ${shadow.name} e ${crown.name} trocaram uma carta oculta.`);broadcastGameState(room);
+  broadcastLog(room,`Usurpação: ${shadow.name} e ${crown.name} trocaram uma carta oculta. A carta da Corte Aberta permaneceu protegida.`);broadcastGameState(room);
   if(!waiting.size)schedule(room,()=>{g.pending=null;startTurns(room);},3200);
   return true;
 }
 
-function startTurns(room){ const g=room.game;g.phase='await-play';g.turn=g.leader;broadcastGameState(room);advanceTurn(room); }
+function clearTurnTimer(g){
+  if(!g) return;
+  if(g.turnTimer){ clearTimeout(g.turnTimer); g.turnTimer=null; }
+  g.turnDeadline=null;
+}
+function armTurnTimer(room,seat){
+  const g=room.game;if(!g)return;
+  clearTurnTimer(g);
+  const serial=++g.turnSerial;
+  g.turnDeadline=Date.now()+TURN_MS;
+  g.turnTimer=setTimeout(()=>{
+    const live=room.game;
+    if(!live||live.token!==g.token||live.phase!=='await-play'||live.turn!==seat||live.turnSerial!==serial)return;
+    const p=live.players[seat];const legal=legalCards(live,p);
+    if(!legal.length)return;
+    const card=legal[rand(legal.length)];
+    broadcastGameEvent(room,{event:'turn-timeout',seat,seconds:60});
+    broadcastLog(room,`Tempo esgotado: ${p.name} recebeu uma jogada automática.`);
+    commitPlay(room,p,card,{hidden:false,declaredSuit:null,isReserve:live.decree?.id==='reserva'&&live.trick===10&&p.reserve?.id===card.id,timeout:true});
+  },TURN_MS+60);
+}
+function startTurns(room){ const g=room.game;clearTurnTimer(g);g.phase='await-play';g.turn=g.leader;broadcastGameState(room);advanceTurn(room); }
 function influenceBlocked(g){ return g.decree?.id==='silencio' && g.trick<=5; }
 function leadSuit(g){ return g.declaredLeadSuit || g.plays[0]?.card?.suit || null; }
 function legalCards(g,p){
@@ -330,6 +373,7 @@ function legalCards(g,p){
   return cards;
 }
 function canUseInfluence(g,p){ if(p.influence<2||influenceBlocked(g))return false; if(g.plays.length===0)return p.seat===g.leader; return true; }
+function influenceLegalCards(g,p){ return legalCards(g,p).filter(c=>c.publicReason!=='Corte Aberta'); }
 function chooseBotPlay(g,p,legal){
   const sorted=[...legal].sort((a,b)=>a.value-b.value),seek=Math.random()<.55;
   if(g.currentLaw==='revolta') return seek?sorted[0]:sorted[sorted.length-1];
@@ -339,9 +383,10 @@ function chooseBotPlay(g,p,legal){
 }
 function advanceTurn(room){
   const g=room.game;if(!g||g.phase!=='await-play')return;
-  if(g.plays.length>=4)return resolveTrick(room);
+  if(g.plays.length>=4){clearTurnTimer(g);return resolveTrick(room);}
   const seat=(g.leader+g.plays.length)%4;g.turn=seat;
   const p=g.players[seat],legal=legalCards(g,p);
+  if(!p.bot) armTurnTimer(room,seat); else clearTurnTimer(g);
   broadcastGameState(room);
   if(g.decree?.id==='reserva' && g.trick===10 && p.reserve){
     return schedule(room,()=>{
@@ -353,7 +398,7 @@ function advanceTurn(room){
     schedule(room,()=>{
       if(!room.game||room.game.turn!==seat||room.game.phase!=='await-play')return;
       const card=chooseBotPlay(g,p,legal);let hidden=false,declaredSuit=null;
-      if(canUseInfluence(g,p)&&Math.random()<.18&&(card.value>=9||card.value<=3)){hidden=true;p.influence-=2;if(g.plays.length===0){declaredSuit=card.suit;g.declaredLeadSuit=declaredSuit;}}
+      if(card.publicReason!=='Corte Aberta'&&canUseInfluence(g,p)&&Math.random()<.18&&(card.value>=9||card.value<=3)){hidden=true;p.influence-=2;if(g.plays.length===0){declaredSuit=card.suit;g.declaredLeadSuit=declaredSuit;}}
       commitPlay(room,p,card,{hidden,declaredSuit,isReserve:g.decree?.id==='reserva'&&g.trick===10&&p.reserve?.id===card.id});
     },620);
   }
@@ -365,6 +410,7 @@ function handlePlay(room,seat,msg){
   let hidden=!!msg.hidden,declaredSuit=msg.declaredSuit||null;
   if(hidden){
     if(!canUseInfluence(g,p))return sendToSeat(room,seat,{type:'error',code:'NO_INFLUENCE',message:'Influência indisponível.'}),false;
+    if(card.publicReason==='Corte Aberta')return sendToSeat(room,seat,{type:'error',code:'CORTE_INFLUENCE_BLOCKED',message:'A carta revelada pela Corte Aberta não pode ser jogada oculta por Influência.'}),false;
     if(g.plays.length===0){
       if(!SUITS.includes(declaredSuit)||card.suit!==declaredSuit)return sendToSeat(room,seat,{type:'error',code:'BAD_DECLARATION',message:'Ao abrir oculta, anuncie o mesmo naipe da carta jogada.'}),false;
       g.declaredLeadSuit=declaredSuit;
@@ -374,8 +420,9 @@ function handlePlay(room,seat,msg){
   const isReserve=g.decree?.id==='reserva'&&g.trick===10&&p.reserve?.id===card.id;
   commitPlay(room,p,card,{hidden,declaredSuit,isReserve});return true;
 }
-function commitPlay(room,p,card,{hidden=false,declaredSuit=null,isReserve=false}={}){
+function commitPlay(room,p,card,{hidden=false,declaredSuit=null,isReserve=false,timeout=false}={}){
   const g=room.game;
+  clearTurnTimer(g);
   if(isReserve){ p.reserve=null; }
   else { const idx=p.hand.findIndex(c=>c.id===card.id);if(idx<0)throw new Error('Carta não encontrada na mão.');p.hand.splice(idx,1); }
   if(card.public){card.public=false;card.publicReason=null;}
@@ -390,12 +437,20 @@ function pickWinner(candidates,mode){
   return candidates.reduce((best,p)=>{if(!best)return p;if(mode==='max')return p.card.value>best.card.value?p:best;return p.card.value<best.card.value?p:best;},null);
 }
 function evaluateTrick(g){
+  if(!g?.plays||g.plays.length!==4) throw new Error('A vaza precisa conter exatamente 4 cartas para ser resolvida.');
   const lead=leadSuit(g);let crown;
-  if(g.currentLaw==='anarquia')crown=pickWinner(g.plays,'max');
-  else if(g.currentLaw==='revolta')crown=pickWinner(g.plays.filter(p=>p.card.suit===lead),'min');
-  else if(g.currentLaw==='estandarte'){const tr=g.plays.filter(p=>p.card.suit===g.trump);crown=tr.length?pickWinner(tr,'max'):pickWinner(g.plays.filter(p=>p.card.suit===lead),'max');}
-  else crown=pickWinner(g.plays.filter(p=>p.card.suit===lead),'max');
-  const others=g.plays.filter(p=>p.playerId!==crown.playerId);const shadow=pickWinner(others,g.currentLaw==='revolta'?'max':'min');return{crown,shadow};
+  if(g.currentLaw==='anarquia') crown=pickWinner(g.plays,'max');
+  else if(g.currentLaw==='revolta') crown=pickWinner(g.plays.filter(p=>p.card.suit===lead),'min');
+  else if(g.currentLaw==='estandarte'){
+    const tr=g.plays.filter(p=>p.card.suit===g.trump);
+    crown=tr.length?pickWinner(tr,'max'):pickWinner(g.plays.filter(p=>p.card.suit===lead),'max');
+  } else crown=pickWinner(g.plays.filter(p=>p.card.suit===lead),'max');
+  if(!crown) throw new Error(`Não foi possível determinar a Coroa sob ${lawName(g.currentLaw)}.`);
+  const others=g.plays.filter(p=>p.playerId!==crown.playerId);
+  const shadow=pickWinner(others,g.currentLaw==='revolta'?'max':'min');
+  if(!shadow) throw new Error('Não foi possível determinar a Sombra.');
+  if(crown.playerId===shadow.playerId) throw new Error('Invariante violada: um jogador não pode receber Coroa e Sombra na mesma vaza.');
+  return{crown,shadow};
 }
 function resolveTrick(room){
   const g=room.game;if(!g)return;
@@ -409,8 +464,8 @@ function resolveTrick(room){
   const revealedPlays=g.plays.map(x=>({...x,hidden:false}));
   g.lastCrown=cp.seat;g.lastShadow=sp.seat;g.previousWinningSuit=crown.card.suit;g.leader=cp.seat;
   g.phase='trick-result';
-  broadcastGameEvent(room,{event:'trick-result',crownId:cp.seat,shadowId:sp.seat,revealedPlays,influenceGains});
-  broadcastLog(room,`Coroa: ${cp.name}. Sombra: ${sp.name}.`);broadcastGameState(room,true);
+  broadcastGameEvent(room,{event:'trick-result',law:g.currentLaw,crownId:cp.seat,shadowId:sp.seat,revealedPlays,influenceGains});
+  broadcastLog(room,`${lawName(g.currentLaw)} — Coroa: ${cp.name} (${suitName(crown.card.suit)} ${crown.card.value}). Sombra: ${sp.name} (${suitName(shadow.card.suit)} ${shadow.card.value})${g.currentLaw==='estandarte'&&g.trump?` • Trunfo: ${suitName(g.trump)}`:''}.`);broadcastGameState(room,true);
   schedule(room,()=>afterTrickAnimation(room,sameCrown),6400);
 }
 function afterTrickAnimation(room,sameCrown){
@@ -428,7 +483,7 @@ function challengeStage(room,p,cards){
 }
 function applyChallenge(room,seat,cardId){
   const g=room.game,pending=g?.pending;if(!pending||pending.kind!=='challenge'||pending.seat!==seat||!pending.cardIds.includes(cardId))return false;
-  const p=g.players[seat],c=p.hand.find(x=>x.id===cardId);if(!c)return false;c.public=true;c.publicReason='Desafio';g.pending=null;broadcastLog(room,`Desafio: ${p.name} revelou ${suitName(c.suit)} ${c.value}.`);broadcastGameState(room);continueAfterChallenge(room);return true;
+  const p=g.players[seat],c=p.hand.find(x=>x.id===cardId);if(!c)return false;c.public=true;c.publicReason='Desafio';g.pending=null;broadcastGameEvent(room,{event:'challenge-reveal',seat,card:c});broadcastLog(room,`Desafio: ${p.name} revelou ${suitName(c.suit)} ${c.value}.`);broadcastGameState(room);continueAfterChallenge(room);return true;
 }
 function continueAfterChallenge(room){
   const g=room.game;if(g.trick===10)return endRound(room);
@@ -473,7 +528,8 @@ function endGame(room){
   const g=room.game;g.phase='game-over';
   const sorted=[...g.players].sort((a,b)=>prestige(b)-prestige(a)||totalPairs(b)-totalPairs(a)||b.totalCrowns-a.totalCrowns||b.totalShadows-a.totalShadows);
   const top=sorted[0];const tied=sorted.filter(p=>prestige(p)===prestige(top)&&totalPairs(p)===totalPairs(top)&&p.totalCrowns===top.totalCrowns&&p.totalShadows===top.totalShadows);
-  broadcastGameEvent(room,{event:'game-ended',winners:tied.map(p=>p.seat),scores:sorted.map(p=>({seat:p.seat,name:p.name,crowns:p.totalCrowns,shadows:p.totalShadows,pairs:totalPairs(p),prestige:prestige(p)}))});broadcastGameState(room);
+  broadcastLog(room,`Partida encerrada. ${tied.map(p=>p.name).join(' e ')} ${tied.length>1?'dividem o Trono':'ocupa o Trono'}.`);
+  broadcastGameEvent(room,{event:'game-ended',winners:tied.map(p=>p.seat),scores:sorted.map(p=>({seat:p.seat,name:p.name,crowns:p.totalCrowns,shadows:p.totalShadows,pairs:totalPairs(p),prestige:prestige(p)})),finalLog:[...(g.logHistory||[])]});broadcastGameState(room);
 }
 
 function sendPrompt(room,seat,prompt){
@@ -513,8 +569,8 @@ function autoResolvePendingSeat(room,seat){
   if(p.kind==='decree')applyDecreeChoice(room,seat,p.options[rand(p.options.length)]);
   else if(p.kind==='trump')applyTrump(room,seat,chooseBotTrump(gp));
   else if(p.kind==='law')applyLawChoice(room,seat,p.options[rand(p.options.length)]);
-  else if(p.kind==='usurp-give'){const c=[...gp.hand].sort((a,b)=>a.value-b.value)[0];applyUsurpGive(room,seat,c.id);}
-  else if(p.kind==='usurp-pick')applyUsurpPick(room,seat,rand(g.players[p.crown].hand.length));
+  else if(p.kind==='usurp-give'){const eligible=usurpacaoEligibleCards(gp.hand);const c=[...eligible].sort((a,b)=>a.value-b.value)[0];if(c)applyUsurpGive(room,seat,c.id);}
+  else if(p.kind==='usurp-pick')applyUsurpPick(room,seat,rand(p.pickableIds?.length||1));
   else if(p.kind==='challenge')applyChallenge(room,seat,p.cardIds[rand(p.cardIds.length)]);
 }
 
@@ -535,13 +591,14 @@ function privateGameState(room,viewerSeat,revealPlays=false){
     card:(revealPlays||!pl.hidden||pl.playerId===viewerSeat)?pl.card:null,
   }));
   const legal=(g.phase==='await-play'&&g.turn===viewerSeat)?legalCards(g,viewer).map(c=>c.id):[];
+  const influenceLegal=(g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer))?influenceLegalCards(g,viewer).map(c=>c.id):[];
   return {
     online:true,youSeat:viewerSeat,round:g.round,trick:g.trick,phase:g.phase,
     currentLaw:g.currentLaw,lawUsage:g.lawUsage,trump:g.trump,declaredLeadSuit:g.declaredLeadSuit,
     decree:g.decree,lastCrown:g.lastCrown,lastShadow:g.lastShadow,previousWinningSuit:g.previousWinningSuit,
-    leader:g.leader,turn:g.turn,plays,players,
-    legalCardIds:legal,
-    canUseInfluence:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer),
+    leader:g.leader,turn:g.turn,turnDeadline:g.turnDeadline||null,plays,players,
+    legalCardIds:legal,influenceLegalCardIds:influenceLegal,
+    canUseInfluence:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer)&&influenceLegal.length>0,
     influenceBlocked:influenceBlocked(g),
   };
 }
@@ -576,6 +633,9 @@ wss.on('connection',(ws)=>{
 });
 
 const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.isAlive===false){try{ws.terminate();}catch{}continue;}ws.isAlive=false;try{ws.ping();}catch{}}},30000);
-server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
+if(require.main===module){
+  server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
+}
+module.exports={evaluateTrick,pickWinner,legalCards,influenceLegalCards,usurpacaoEligibleCards,prestige,totalPairs,makeDeck,SUITS,LAWS};
 function shutdown(){clearInterval(heartbeat);for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
 process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);
