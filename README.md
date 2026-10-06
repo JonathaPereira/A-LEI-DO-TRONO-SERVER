@@ -1,38 +1,17 @@
-# A Lei do Trono — Backend v0.5.0 Alpha
+# A Lei do Trono — Backend v0.5.1 Alpha
 
-Backend WebSocket para validar o multiplayer online do lobby.
+Primeira versão com **partida online sincronizada pelo servidor**.
 
-## Local
+- 3 salas, 4 assentos
+- 2 a 4 humanos; vagas vazias viram IAs
+- servidor embaralha/distribui as cartas
+- mãos privadas por conexão
+- turnos, Leis, Decretos, Coroa, Sombra, Influência e pontuação no servidor
+- Usurpação privada para os envolvidos
+- Rotação sincronizada
+- desconexão durante a partida substitui o jogador por IA
 
-```bash
-npm install
-npm start
-```
-
-Abra:
-
-- `http://localhost:10000/health`
-- WebSocket: `ws://localhost:10000/ws`
-
-## Render
-
-- Tipo: **Web Service**
-- Runtime: **Node**
-- Build Command: `npm install`
-- Start Command: `npm start`
-- Health Check Path: `/health`
-
-O Render define `PORT` automaticamente.
-
-## O que já faz
-
-- 3 salas fixas;
-- máximo de 4 jogadores por sala;
-- assentos 0–3;
-- host automático;
-- Pronto / Não pronto;
-- entrada, saída e ocupação em tempo real;
-- health check;
-- heartbeat WebSocket.
-
-A lógica completa da partida ainda será migrada para o servidor na próxima etapa.
+Render:
+- Build: `npm install`
+- Start: `npm start`
+- Health: `/health`
