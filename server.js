@@ -11,7 +11,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.5.5-alpha';
+const VERSION = '0.5.6-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -82,7 +82,7 @@ function roomHostId(room) {
   return sorted[0]?.id || null;
 }
 function publicPlayer(room, player) {
-  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room),voice:{joined:!!player.voiceJoined,muted:!!player.voiceMuted}};
+  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room),voice:{joined:!!player.voiceJoined,muted:!!player.voiceMuted,camera:!!player.cameraOn}};
 }
 function safeRoom(room) {
   return {
@@ -131,7 +131,9 @@ function leaveRoom(ws, reason='leave') {
       gp.bot=true; gp.clientId=null;
       const usedBotNames=new Set(room.game.players.filter(x=>x.bot&&x!==gp).map(x=>x.name));
       gp.name=BOT_NAMES.find(n=>!usedBotNames.has(n))||'Otacílio';
-      broadcastGameEvent(room,{event:'player-replaced-by-bot',seat:leaving.seat,name:leaving.name,botName:gp.name});
+      broadcastGameEvent(room,{event:'player-replaced-by-bot',seat:leaving.seat,name:leaving.name,botName:gp.name,reason});
+      broadcastLog(room,`<strong>${leaving.name}</strong> ${reason==='disconnect'?'se desconectou':'deixou a sala'}. <strong>${gp.name}</strong> assumiu o assento.`);
+      broadcastGameState(room);
       if(room.game.turn===leaving.seat && room.game.phase==='await-play'){ clearTurnTimer(room.game); schedule(room,()=>advanceTurn(room),650); }
       if(room.game.pending && room.game.pending.waiting?.has(leaving.seat)) {
         autoResolvePendingSeat(room,leaving.seat);
@@ -154,7 +156,7 @@ function joinRoom(ws,roomId,rawName){
   leaveRoom(ws,'switch-room');
   if(room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,lastChatAt:0};
+  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,lastChatAt:0};
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
@@ -181,9 +183,9 @@ function handleChatMessage(ws,rawText){
 }
 function handleVoiceState(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
-  player.voiceJoined=!!message.joined;player.voiceMuted=player.voiceJoined&&!!message.muted;
+  player.voiceJoined=!!message.joined;player.voiceMuted=player.voiceJoined&&!!message.muted;player.cameraOn=player.voiceJoined&&!!message.camera;
   broadcastRoom(room);
-  for(const p of room.players.values())send(p.ws,{type:'voice-state',playerId:player.id,seat:player.seat,name:player.name,joined:player.voiceJoined,muted:player.voiceMuted});
+  for(const p of room.players.values())send(p.ws,{type:'voice-state',playerId:player.id,seat:player.seat,name:player.name,joined:player.voiceJoined,muted:player.voiceMuted,camera:player.cameraOn});
 }
 function handleVoiceSignal(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player||!player.voiceJoined)return;
@@ -482,6 +484,11 @@ function commitPlay(room,p,card,{hidden=false,influenceAction='none',modifier=0,
   else { const idx=p.hand.findIndex(c=>c.id===card.id);if(idx<0)throw new Error('Carta não encontrada na mão.');p.hand.splice(idx,1); }
   if(card.public){card.public=false;card.publicReason=null;}
   const play={playerId:p.seat,card,hidden,influenceAction,modifier,order:g.plays.length};g.plays.push(play);
+  if(influenceAction!=='none'){
+    const cost=influenceAction==='sigilo'?1:2;
+    broadcastGameEvent(room,{event:'influence-used',playerId:p.seat,name:p.name,action:influenceAction,modifier,cost,declaredSuit:declaredSuit||null});
+    broadcastLog(room,`<strong>Influência:</strong> ${p.name} usou <strong>${influenceLabel(play)}</strong>${declaredSuit?` e anunciou ${suitName(declaredSuit)}`:''}.`);
+  }
   broadcastGameEvent(room,{event:'card-played',playerId:p.seat,hidden,card:hidden?null:card,declaredSuit:declaredSuit||null,isReserve});
   if(hidden&&g.plays.length===1&&declaredSuit) broadcastLog(room,`${p.name} anunciou ${suitName(declaredSuit)} e abriu com uma carta oculta usando Influência.`);
   else broadcastLog(room,`${p.name} jogou ${hidden?'uma carta oculta':`${suitName(card.suit)} ${card.value}`}${isReserve?' da Reserva':''}.`);
@@ -647,8 +654,8 @@ function privateGameState(room,viewerSeat,revealPlays=false){
   const plays=g.plays.map(pl=>({
     playerId:pl.playerId,order:pl.order,hidden:revealPlays?false:pl.hidden,
     card:(revealPlays||!pl.hidden||pl.playerId===viewerSeat)?pl.card:null,
-    modifier:(revealPlays||pl.playerId===viewerSeat)?(pl.modifier||0):0,
-    influenceAction:(revealPlays||pl.playerId===viewerSeat)?(pl.influenceAction||'none'):(pl.hidden?'hidden':'none'),
+    modifier:pl.modifier||0,
+    influenceAction:pl.influenceAction||'none',
   }));
   const legal=(g.phase==='await-play'&&g.turn===viewerSeat)?legalCards(g,viewer).map(c=>c.id):[];
   const influenceLegal=(g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer,1))?influenceLegalCards(g,viewer).map(c=>c.id):[];
