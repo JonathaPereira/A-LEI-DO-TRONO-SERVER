@@ -11,11 +11,12 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.5.3-alpha';
+const VERSION = '0.5.4-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
 const LAWS = ['ordem','estandarte','revolta','anarquia','usurpacao'];
+const BOT_NAMES = ['Bonifácio','Epaminondas','Cícero','Otacílio'];
 const DECREES = [
   {id:'reserva', name:'Reserva', icon:'▣', text:'Cada jogador separa 1 carta. Ela fica fora da mão nas 9 primeiras vazas e deve ser jogada na 10ª.'},
   {id:'rotacao', name:'Rotação', icon:'⟳', text:'Após as vazas 7, 8 e 9, todos passam simultaneamente 1 carta ao jogador à esquerda.'},
@@ -115,8 +116,10 @@ function leaveRoom(ws, reason='leave') {
   if(room.game && leaving){
     const gp=room.game.players[leaving.seat];
     if(gp && !gp.bot){
-      gp.bot=true; gp.clientId=null; gp.name=`${leaving.name} (IA)`;
-      broadcastGameEvent(room,{event:'player-replaced-by-bot',seat:leaving.seat,name:leaving.name});
+      gp.bot=true; gp.clientId=null;
+      const usedBotNames=new Set(room.game.players.filter(x=>x.bot&&x!==gp).map(x=>x.name));
+      gp.name=BOT_NAMES.find(n=>!usedBotNames.has(n))||'Otacílio';
+      broadcastGameEvent(room,{event:'player-replaced-by-bot',seat:leaving.seat,name:leaving.name,botName:gp.name});
       if(room.game.turn===leaving.seat && room.game.phase==='await-play'){ clearTurnTimer(room.game); schedule(room,()=>advanceTurn(room),650); }
       if(room.game.pending && room.game.pending.waiting?.has(leaving.seat)) {
         autoResolvePendingSeat(room,leaving.seat);
@@ -155,7 +158,7 @@ function makeMatchPlayer(room,seat){
   return {
     id:seat, seat,
     clientId:hp?.id||null,
-    name:hp?.name || ['Casa do Cetro','Casa da Chave','Casa da Lâmina','Casa da Máscara'][seat],
+    name:hp?.name || `IA ${seat+1}`,
     bot:!hp,
     hand:[],reserve:null,
     totalCrowns:0,totalShadows:0,roundCrowns:0,roundShadows:0,influence:0,hadCrown:false,crownStreak:0,
@@ -178,6 +181,8 @@ function requestStart(ws){
 
 function startGame(room){
   const players=[0,1,2,3].map(seat=>makeMatchPlayer(room,seat));
+  let botIndex=0;
+  for(const p of players) if(p.bot) p.name=BOT_NAMES[botIndex++]||`IA ${p.seat+1}`;
   const firstStarter=rand(4);
   room.game={
     token:crypto.randomUUID(),
