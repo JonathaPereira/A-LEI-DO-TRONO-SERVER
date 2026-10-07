@@ -4,15 +4,16 @@ const fs = require('fs');
 const path = require('path');
 
 const CF_BASE = 'https://rtc.live.cloudflare.com/v1';
+const TURN_BASE = 'https://rtc.live.cloudflare.com/v1/turn';
 const USAGE_FILE = process.env.REALTIME_USAGE_FILE || '/tmp/a_lei_do_trono_realtime_usage.json';
 const ALLOWED_KINDS = new Set(['audio','camera','screen']);
 const ALLOWED_QUALITIES = new Set(['economy','balanced','high','ultra']);
 const QUALITY_ORDER = ['economy','balanced','high','ultra'];
 const PROFILE = {
-  economy:{audio:64000,camera:{f:450000,h:260000,q:120000},screen:900000},
-  balanced:{audio:96000,camera:{f:1000000,h:450000,q:180000},screen:1800000},
-  high:{audio:128000,camera:{f:2200000,h:900000,q:320000},screen:3500000},
-  ultra:{audio:160000,camera:{f:5000000,h:1800000,q:500000},screen:8000000},
+  economy:{audio:64000,camera:{f:450000,h:260000,q:120000},screen:1000000},
+  balanced:{audio:96000,camera:{f:1000000,h:450000,q:180000},screen:2500000},
+  high:{audio:128000,camera:{f:2200000,h:900000,q:320000},screen:4500000},
+  ultra:{audio:160000,camera:{f:5000000,h:1800000,q:500000},screen:9000000},
 };
 
 function envBool(name, fallback=false){
@@ -46,6 +47,11 @@ class RealtimeSfuManager{
     this.appId=String(process.env.CLOUDFLARE_REALTIME_APP_ID||'').trim();
     this.token=String(process.env.CLOUDFLARE_REALTIME_API_TOKEN||'').trim();
     this.enabled=envBool('CLOUDFLARE_REALTIME_ENABLED',false);
+    this.turnEnabled=envBool('CLOUDFLARE_TURN_ENABLED',false);
+    this.turnKeyId=String(process.env.CLOUDFLARE_TURN_KEY_ID||'').trim();
+    this.turnToken=String(process.env.CLOUDFLARE_TURN_API_TOKEN||'').trim();
+    this.turnTtl=Math.max(600,Math.min(172800,Math.floor(envNum('CLOUDFLARE_TURN_TTL_SECONDS',21600))));
+    this.turnCache=null;
     this.softLimitGb=Math.max(0,envNum('REALTIME_MONTHLY_SOFT_LIMIT_GB',800));
     this.hardLimitGb=Math.max(this.softLimitGb,envNum('REALTIME_MONTHLY_HARD_LIMIT_GB',950));
     this.ultraDisableGb=Math.max(0,envNum('REALTIME_ULTRA_DISABLE_GB',800));
@@ -68,6 +74,7 @@ class RealtimeSfuManager{
 
   stop(){clearInterval(this.timer);this._tick(true);}
   configured(){return !!(this.appId&&this.token);}
+  turnConfigured(){return !!(this.turnKeyId&&this.turnToken);}
   totalGb(){return this.monthBaseGb+(this.usage.bytes/1e9);}
   policy(){
     const gb=this.totalGb();
@@ -91,11 +98,11 @@ class RealtimeSfuManager{
   }
   publicHealth(){
     const p=this.policy();
-    return {configured:p.configured,enabled:p.enabled,hardBlocked:p.hardBlocked,estimatedGb:p.estimatedGb,maxQuality:p.maxQuality,screenAllowed:p.screenAllowed,thresholds:p.thresholds,month:p.month,maxParticipants:p.maxParticipants,estimateSafetyFactor:p.estimateSafetyFactor};
+    return {configured:p.configured,enabled:p.enabled,hardBlocked:p.hardBlocked,estimatedGb:p.estimatedGb,maxQuality:p.maxQuality,screenAllowed:p.screenAllowed,thresholds:p.thresholds,month:p.month,maxParticipants:p.maxParticipants,estimateSafetyFactor:p.estimateSafetyFactor,turnConfigured:this.turnConfigured(),turnEnabled:this.turnEnabled};
   }
   roomPublications(roomId){
     const map=this.publicationsByRoom.get(roomId);if(!map)return [];
-    return [...map.values()].map(p=>({ownerId:p.ownerId,ownerName:p.ownerName,kind:p.kind,sessionId:p.sessionId,trackName:p.trackName,quality:p.quality,rids:p.rids||[],createdAt:p.createdAt}));
+    return [...map.values()].filter(p=>p.ready).map(p=>({ownerId:p.ownerId,ownerName:p.ownerName,kind:p.kind,sessionId:p.sessionId,trackName:p.trackName,quality:p.quality,rids:p.rids||[],createdAt:p.createdAt}));
   }
   broadcastPublications(room){
     if(!room)return;const publications=this.roomPublications(room.id);
@@ -136,7 +143,7 @@ class RealtimeSfuManager{
           for(const roomMap of this.publicationsByRoom.values())for(const pub of [...roomMap.values()].filter(p=>p.kind==='screen'))await this._closePublication(pub,true).catch(()=>{});
         }
         for(const sub of this.subscriptions.values()){
-          if(sub.kind!=='camera')continue;const pub=this._pubMap(sub.roomId).get(this._pubKey(sub.publisherId,'camera'));if(!pub)continue;
+          if(!['camera','screen'].includes(sub.kind))continue;const pub=this._pubMap(sub.roomId).get(this._pubKey(sub.publisherId,sub.kind));if(!pub)continue;
           const desired=this._clampRid(pub,sub.preferredRid,'balanced');if(desired===sub.preferredRid)continue;
           try{await this._cf('PUT',`/sessions/${encodeURIComponent(sub.sessionId)}/tracks/update`,{tracks:[{mid:sub.mid,simulcast:{preferredRid:desired,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'}}]});sub.preferredRid=desired;sub.estimatedBps=this._subscriptionBps(pub,desired);}catch{}
         }
@@ -188,9 +195,28 @@ class RealtimeSfuManager{
   _subscriptionBps(pub,preferredRid){
     const pr=PROFILE[pub.quality]||PROFILE.balanced;
     let bps;if(pub.kind==='audio')bps=pr.audio;
-    else if(pub.kind==='screen')bps=pr.screen;
+    else if(pub.kind==='screen'){const factor=preferredRid==='q'?.18:preferredRid==='h'?.42:1;bps=pr.screen*factor;}
     else bps=pr.camera[preferredRid]||pr.camera.h;
     return Math.ceil(bps*this.estimateSafetyFactor);
+  }
+
+  async _turnIceServers(){
+    const stun=[{urls:['stun:stun.cloudflare.com:3478']}];
+    if(!this.turnEnabled||!this.turnConfigured())return {iceServers:stun,turn:false};
+    const now=Date.now();
+    if(this.turnCache&&this.turnCache.expiresAt>now+300000)return {iceServers:this.turnCache.iceServers,turn:true};
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+    try{
+      const res=await fetch(`${TURN_BASE}/keys/${encodeURIComponent(this.turnKeyId)}/credentials/generate-ice-servers`,{
+        method:'POST',headers:{Authorization:`Bearer ${this.turnToken}`,'Content-Type':'application/json'},
+        body:JSON.stringify({ttl:this.turnTtl}),signal:controller.signal,
+      });
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!Array.isArray(data.iceServers))throw new Error(`TURN HTTP ${res.status}`);
+      const iceServers=data.iceServers.filter(x=>x&&Array.isArray(x.urls)&&x.urls.length);
+      this.turnCache={iceServers,expiresAt:now+this.turnTtl*1000};
+      return {iceServers,turn:true};
+    }finally{clearTimeout(timer);}
   }
 
   async _cf(method,suffix,body){
@@ -218,6 +244,18 @@ class RealtimeSfuManager{
     const auth=this._allowedRoomPlayer(ws,true);if(auth.error){this._sendResponse(ws,requestId,false,null,{code:auth.error,message:'Operação SFU não autorizada neste contexto.'});return;}
     const {room,player}=auth;
     try{
+      if(action==='ice-config'){
+        try{this._sendResponse(ws,requestId,true,await this._turnIceServers());}catch(err){this._sendResponse(ws,requestId,true,{iceServers:[{urls:['stun:stun.cloudflare.com:3478']}],turn:false,warning:'TURN indisponível; usando STUN.'});}
+        return;
+      }
+      if(action==='publication-ready'){
+        const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId);
+        if(!session||session.purpose!=='publish')throw Object.assign(new Error('Publicação não encontrada.'),{code:'BAD_SFU_READY'});
+        const pub=this._pubMap(room.id).get(this._pubKey(player.id,session.kind));
+        if(!pub||pub.sessionId!==sessionId)throw Object.assign(new Error('Publicação não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
+        pub.ready=true;pub.readyAt=Date.now();this.broadcastPublications(room);this.broadcastVoiceRoster(room);
+        this._sendResponse(ws,requestId,true,{ready:true,kind:pub.kind});return;
+      }
       if(action==='publish-track'){
         const kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
         if(!ALLOWED_KINDS.has(kind)||!sdpOk(payload.sessionDescription,'offer')||typeof payload.mid!=='string')throw Object.assign(new Error('Publicação inválida.'),{code:'BAD_SFU_PUBLISH'});
@@ -231,20 +269,21 @@ class RealtimeSfuManager{
         const body={sessionDescription:payload.sessionDescription,tracks:[{location:'local',mid:String(payload.mid),trackName}]};
         let result;try{result=await this._cf('POST',`/sessions/${encodeURIComponent(sessionId)}/tracks/new`,body);}catch(err){this.sessions.delete(sessionId);throw err;}
         const trackResult=(result.tracks||[])[0]||{};if(trackResult.errorCode)throw Object.assign(new Error(trackResult.errorDescription||'Falha ao publicar track.'),{code:trackResult.errorCode});
-        const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName,mid:String(payload.mid),rids:kind==='camera'?['f','h','q']:[],createdAt:Date.now()};
+        const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName,mid:String(payload.mid),rids:['camera','screen'].includes(kind)?['f','h','q']:[],ready:false,createdAt:Date.now()};
         this._pubMap(room.id).set(this._pubKey(player.id,kind),pub);player.mediaTransport='sfu';player.transmissionQuality=quality;
-        this.broadcastPublications(room);this.broadcastVoiceRoster(room);
+        this.broadcastVoiceRoster(room);
         this._sendResponse(ws,requestId,true,{sessionId,sessionDescription:result.sessionDescription||null,publication:{kind,trackName,quality,rids:pub.rids}});return;
       }
       if(action==='subscribe-track'){
         const publisherId=String(payload.publisherId||''),kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
         if(!ALLOWED_KINDS.has(kind)||publisherId===player.id)throw Object.assign(new Error('Assinatura inválida.'),{code:'BAD_SFU_SUBSCRIBE'});
         const pub=this._pubMap(room.id).get(this._pubKey(publisherId,kind));if(!pub)throw Object.assign(new Error('Publicação não está disponível.'),{code:'PUBLICATION_NOT_FOUND'});
+        if(!pub.ready)throw Object.assign(new Error('Publicação ainda está conectando ao SFU.'),{code:'PUBLICATION_NOT_READY'});
         const gate=this._assertAvailable(kind,quality);if(!gate.ok){this._sendResponse(ws,requestId,false,null,gate);return;}
         const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');
-        const preferredRid=kind==='camera'?this._clampRid(pub,String(payload.preferredRid||''),quality):null;
+        const preferredRid=['camera','screen'].includes(kind)?this._clampRid(pub,String(payload.preferredRid||''),quality):null;
         const remote={location:'remote',sessionId:pub.sessionId,trackName:pub.trackName};
-        if(kind==='camera')remote.simulcast={preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'};
+        if(['camera','screen'].includes(kind))remote.simulcast={preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'};
         let result;try{result=await this._cf('POST',`/sessions/${encodeURIComponent(sessionId)}/tracks/new`,{tracks:[remote]});}catch(err){throw err;}
         const tr=(result.tracks||[])[0]||{};if(tr.errorCode)throw Object.assign(new Error(tr.errorDescription||'Falha ao assinar track.'),{code:tr.errorCode});
         const receivingMid=String(tr.mid??'');
@@ -258,8 +297,8 @@ class RealtimeSfuManager{
         this._sendResponse(ws,requestId,true,{accepted:true,result:result||{}});return;
       }
       if(action==='update-subscription'){
-        const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId),sub=this.subscriptions.get(sessionId);if(!session||!sub||sub.kind!=='camera')throw Object.assign(new Error('Assinatura de câmera não encontrada.'),{code:'BAD_SFU_UPDATE'});
-        const pub=this._pubMap(room.id).get(this._pubKey(sub.publisherId,'camera'));if(!pub)throw Object.assign(new Error('Publicação de câmera não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
+        const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId),sub=this.subscriptions.get(sessionId);if(!session||!sub||!['camera','screen'].includes(sub.kind))throw Object.assign(new Error('Assinatura de vídeo não encontrada.'),{code:'BAD_SFU_UPDATE'});
+        const pub=this._pubMap(room.id).get(this._pubKey(sub.publisherId,sub.kind));if(!pub)throw Object.assign(new Error('Publicação de vídeo não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
         const preferredRid=this._clampRid(pub,String(payload.preferredRid||''),player.transmissionQuality||'balanced');
         const result=await this._cf('PUT',`/sessions/${encodeURIComponent(sessionId)}/tracks/update`,{tracks:[{mid:sub.mid,simulcast:{preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'}}]});
         sub.preferredRid=preferredRid;sub.estimatedBps=this._subscriptionBps(pub,preferredRid);

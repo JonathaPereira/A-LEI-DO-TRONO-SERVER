@@ -1,4 +1,4 @@
-# A Lei do Trono — Backend v0.6.2 Alpha
+# A Lei do Trono — Backend v0.6.3 Alpha
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
@@ -7,7 +7,7 @@ Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime
 - `realtime-sfu.js`
 - `package.json`
 
-Ao atualizar o GitHub/Render para v0.6.2, envie também `realtime-sfu.js`. O App ID e o API Token nunca devem ser gravados no repositório.
+Ao atualizar o GitHub/Render para v0.6.3, envie também `realtime-sfu.js`. O App ID e o API Token nunca devem ser gravados no repositório.
 
 ## Variáveis do Render
 Obrigatórias para o SFU:
@@ -26,10 +26,20 @@ Opcionais:
 - `REALTIME_MONTHLY_BASE_GB=0` — uso do mês já ocorrido antes do processo atual. Recomendado atualizar com o valor real do painel da Cloudflare antes de futuros redeploys/restarts, porque o disco `/tmp` do Render não é persistência de faturamento.
 - `REALTIME_MAX_PARTICIPANTS=8` — teto de segurança de participantes simultâneos no transporte SFU do Salão Livre. O chat de texto continua sem esse teto.
 
+
+### TURN opcional (recomendado para celular / redes restritivas)
+O SFU normalmente tenta STUN direto. Para redes móveis, CGNAT e firewalls restritivos, configure também o Cloudflare TURN com uma TURN Key separada:
+- `CLOUDFLARE_TURN_ENABLED=true`
+- `CLOUDFLARE_TURN_KEY_ID=<Token ID da TURN Key>`
+- `CLOUDFLARE_TURN_API_TOKEN=<API token da TURN Key>`
+- `CLOUDFLARE_TURN_TTL_SECONDS=21600`
+
+Essas credenciais ficam somente no Render. O backend gera credenciais TURN curtas para o navegador; o segredo de longa duração não é exposto ao frontend.
+
 ## Sequência segura de ativação
 1. Deploy deste backend mantendo `CLOUDFLARE_REALTIME_ENABLED=false`.
-2. Abra `/health` e confirme `version: 0.6.2-alpha`, `realtime.configured: true` e `realtime.enabled: false`.
-3. Publique o frontend v0.6.2 e teste o Salão Livre; com o kill switch desligado ele deve continuar em P2P.
+2. Abra `/health` e confirme `version: 0.6.3-alpha`, `realtime.configured: true` e `realtime.enabled: false`.
+3. Publique o frontend v0.6.3 e teste o Salão Livre; com o kill switch desligado ele deve continuar em P2P.
 4. Só então mude `CLOUDFLARE_REALTIME_ENABLED=true` no Render e faça novo deploy.
 5. Teste primeiro 2 participantes, depois 3. Observe o cartão de infraestrutura no painel de Configurações.
 6. Em qualquer anomalia de consumo/mídia, volte `CLOUDFLARE_REALTIME_ENABLED=false` e redeploy.
@@ -46,5 +56,5 @@ Política padrão:
 
 O kill switch é independente desses números.
 
-## Escopo v0.6.2
+## Escopo v0.6.3
 O SFU é experimental e fica restrito ao `chat-livre`. A comunicação durante a partida continua P2P nesta versão. Se o SFU estiver desativado ou falhar na inicialização, o cliente retorna ao P2P.
