@@ -11,7 +11,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.5.6-alpha';
+const VERSION = '0.5.8-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -82,15 +82,27 @@ function roomHostId(room) {
   return sorted[0]?.id || null;
 }
 function publicPlayer(room, player) {
-  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room),voice:{joined:!!player.voiceJoined,muted:!!player.voiceMuted,camera:!!player.cameraOn}};
+  // Estado detalhado de voz/câmera é privado dos participantes da chamada.
+  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room)};
 }
 function safeRoom(room) {
   return {
     id:room.id,name:room.name,max:room.max,count:room.players.size,
+    voiceActive:[...room.players.values()].some(p=>p.voiceJoined),
     gameActive:!!room.game && room.game.phase!=='game-over',
     players:[...room.players.values()].sort((a,b)=>a.seat-b.seat).map(p=>publicPlayer(room,p)),
   };
 }
+function privateVoiceRoster(room){
+  return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
+    id:p.id,name:p.name,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn
+  }));
+}
+function broadcastVoiceRoster(room){
+  const players=privateVoiceRoster(room);
+  for(const p of room.players.values()) if(p.voiceJoined) send(p.ws,{type:'voice-roster',roomId:room.id,players});
+}
+
 function safeRooms(){ return [...rooms.values()].map(safeRoom); }
 function send(ws,payload){ if(ws?.readyState===WebSocket.OPEN) ws.send(JSON.stringify(payload)); }
 function broadcastAll(payload){ for(const client of wss.clients) send(client,payload); }
@@ -142,7 +154,7 @@ function leaveRoom(ws, reason='leave') {
   }
 
   if(room.players.size===0) room.chatHistory=[];
-  broadcastRoom(room); broadcastRooms();
+  broadcastRoom(room); broadcastRooms(); broadcastVoiceRoster(room);
   if(leaving){
     for(const p of room.players.values()) send(p.ws,{type:'player-left',roomId:room.id,playerId:leaving.id,name:leaving.name,reason});
   }
@@ -184,14 +196,15 @@ function handleChatMessage(ws,rawText){
 function handleVoiceState(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
   player.voiceJoined=!!message.joined;player.voiceMuted=player.voiceJoined&&!!message.muted;player.cameraOn=player.voiceJoined&&!!message.camera;
-  broadcastRoom(room);
-  for(const p of room.players.values())send(p.ws,{type:'voice-state',playerId:player.id,seat:player.seat,name:player.name,joined:player.voiceJoined,muted:player.voiceMuted,camera:player.cameraOn});
+  // Fora da chamada, os clientes recebem apenas voiceActive no room-state.
+  // Identidade, mute e câmera só são enviados aos membros que entraram na call.
+  broadcastRoom(room);broadcastRooms();broadcastVoiceRoster(room);
 }
 function handleVoiceSignal(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player||!player.voiceJoined)return;
   const target=room.players.get(String(message.targetId||''));
   if(!target||!target.voiceJoined||target.id===player.id)return;
-  const signalType=String(message.signalType||'');if(!['offer','answer','ice'].includes(signalType))return;
+  const signalType=String(message.signalType||'');if(!['offer','answer','ice','renegotiate-request'].includes(signalType))return;
   send(target.ws,{type:'voice-signal',fromId:player.id,fromName:player.name,signalType,data:message.data||null});
 }
 
