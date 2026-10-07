@@ -1,4 +1,4 @@
-# A Lei do Trono — Backend v0.5.9 Alpha
+# A Lei do Trono — Backend v0.6.0 Alpha
 
 Servidor autoritativo WebSocket/Node.js do protótipo online.
 
@@ -7,7 +7,7 @@ Servidor autoritativo WebSocket/Node.js do protótipo online.
 - Valida as regras, turnos, Influência, Leis, Decretos, Coroa, Sombra e pontuação.
 - Jogador desconectado durante a partida é substituído por bot e a sala recebe o evento de desconexão.
 
-## Comunicação v0.5.9
+## Comunicação v0.6.0
 - Sinalização WebRTC privada entre todos os participantes da chamada.
 - Estados de câmera, microfone e compartilhamento de tela só são enviados a quem entrou na call.
 - Quem está fora da call recebe apenas o indicador público de que há alguém conectado.
@@ -22,5 +22,5 @@ Suba `server.js` e `package.json` ao repositório do backend no GitHub. O Render
 Depois confirme em `/health`:
 
 ```json
-{"ok":true,"version":"0.5.9-alpha"}
+{"ok":true,"version":"0.6.0-alpha"}
 ```
