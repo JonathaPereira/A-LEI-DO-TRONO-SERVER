@@ -1,11 +1,12 @@
 {
   "name": "a-lei-do-trono-backend",
-  "version": "0.6.3-alpha",
+  "version": "0.7.0-alpha",
   "private": true,
   "description": "Backend WebSocket para A Lei do Trono",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tests/integration.js"
   },
   "engines": {
     "node": ">=18"
