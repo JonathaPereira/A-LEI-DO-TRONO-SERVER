@@ -11,7 +11,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.5.8-alpha';
+const VERSION = '0.5.9-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -27,6 +27,7 @@ const DECREES = [
 ];
 const decreeById = Object.fromEntries(DECREES.map(d=>[d.id,d]));
 
+const CHAT_ONLY_ROOM_ID = 'chat-livre';
 const roomDefs = [
   ['sala-cetro', 'Sala do Cetro'],
   ['sala-chave', 'Sala da Chave'],
@@ -36,12 +37,25 @@ const roomDefs = [
 const rooms = new Map(roomDefs.map(([id, name]) => [id, {
   id,
   name,
+  kind: 'game',
   max: 4,
   players: new Map(),
   createdAt: Date.now(),
   game: null,
   chatHistory: [],
+  nextSeat: 0,
 }]));
+rooms.set(CHAT_ONLY_ROOM_ID,{
+  id:CHAT_ONLY_ROOM_ID,
+  name:'Salão Livre — Somente Chat',
+  kind:'chat',
+  max:null,
+  players:new Map(),
+  createdAt:Date.now(),
+  game:null,
+  chatHistory:[],
+  nextSeat:0,
+});
 
 const rand = n => Math.floor(Math.random()*n);
 function shuffle(arr){
@@ -73,29 +87,31 @@ function sortHand(hand){
   hand.sort((a,b)=>SUITS.indexOf(a.suit)-SUITS.indexOf(b.suit)||a.value-b.value);
 }
 function nextFreeSeat(room) {
+  if(room.kind==='chat') return room.nextSeat++;
   const occupied = new Set([...room.players.values()].map(p => p.seat));
   for (let seat = 0; seat < room.max; seat += 1) if (!occupied.has(seat)) return seat;
   return null;
 }
 function roomHostId(room) {
+  if(room.kind!=='game') return null;
   const sorted = [...room.players.values()].sort((a, b) => a.seat - b.seat);
   return sorted[0]?.id || null;
 }
 function publicPlayer(room, player) {
-  // Estado detalhado de voz/câmera é privado dos participantes da chamada.
-  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room)};
+  // Estado detalhado de voz/câmera/tela é privado dos participantes da chamada.
+  return {id:player.id,name:player.name,seat:player.seat,ready:room.kind==='game'&&!!player.ready,host:room.kind==='game'&&player.id===roomHostId(room)};
 }
 function safeRoom(room) {
   return {
-    id:room.id,name:room.name,max:room.max,count:room.players.size,
+    id:room.id,name:room.name,kind:room.kind,max:room.max,count:room.players.size,
     voiceActive:[...room.players.values()].some(p=>p.voiceJoined),
-    gameActive:!!room.game && room.game.phase!=='game-over',
+    gameActive:room.kind==='game'&&!!room.game && room.game.phase!=='game-over',
     players:[...room.players.values()].sort((a,b)=>a.seat-b.seat).map(p=>publicPlayer(room,p)),
   };
 }
 function privateVoiceRoster(room){
   return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
-    id:p.id,name:p.name,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn
+    id:p.id,name:p.name,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn,screen:!!p.screenOn
   }));
 }
 function broadcastVoiceRoster(room){
@@ -103,7 +119,7 @@ function broadcastVoiceRoster(room){
   for(const p of room.players.values()) if(p.voiceJoined) send(p.ws,{type:'voice-roster',roomId:room.id,players});
 }
 
-function safeRooms(){ return [...rooms.values()].map(safeRoom); }
+function safeRooms(){ return [...rooms.values()].filter(r=>r.kind==='game').map(safeRoom); }
 function send(ws,payload){ if(ws?.readyState===WebSocket.OPEN) ws.send(JSON.stringify(payload)); }
 function broadcastAll(payload){ for(const client of wss.clients) send(client,payload); }
 function broadcastRooms(){ broadcastAll({type:'rooms',rooms:safeRooms()}); }
@@ -163,12 +179,12 @@ function leaveRoom(ws, reason='leave') {
 function joinRoom(ws,roomId,rawName){
   const room=rooms.get(roomId);
   if(!room){ send(ws,{type:'error',code:'ROOM_NOT_FOUND',message:'Sala inexistente.'}); return; }
-  if(room.game && room.game.phase!=='game-over') { send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta sala já está em partida.'}); return; }
+  if(room.kind==='game'&&room.game && room.game.phase!=='game-over') { send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta sala já está em partida.'}); return; }
   if(ws.roomId===roomId && room.players.has(ws.clientId)){ send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,room.players.get(ws.clientId))}); return; }
   leaveRoom(ws,'switch-room');
-  if(room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
+  if(room.kind==='game'&&room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,lastChatAt:0};
+  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,lastChatAt:0};
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
@@ -177,6 +193,7 @@ function joinRoom(ws,roomId,rawName){
 function setReady(ws,ready){
   const room=rooms.get(ws.roomId), player=room?.players.get(ws.clientId);
   if(!room||!player){ send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Você não está em uma sala.'}); return; }
+  if(room.kind!=='game'){ send(ws,{type:'error',code:'CHAT_ONLY_ROOM',message:'O Salão Livre é somente para conversa.'}); return; }
   if(room.game && room.game.phase!=='game-over'){ send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'A partida já começou.'}); return; }
   player.ready=!!ready; broadcastRoom(room); broadcastRooms();
 }
@@ -195,9 +212,12 @@ function handleChatMessage(ws,rawText){
 }
 function handleVoiceState(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
-  player.voiceJoined=!!message.joined;player.voiceMuted=player.voiceJoined&&!!message.muted;player.cameraOn=player.voiceJoined&&!!message.camera;
+  player.voiceJoined=!!message.joined;
+  player.voiceMuted=player.voiceJoined&&!!message.muted;
+  player.cameraOn=player.voiceJoined&&!!message.camera;
+  player.screenOn=player.voiceJoined&&!!message.screen;
   // Fora da chamada, os clientes recebem apenas voiceActive no room-state.
-  // Identidade, mute e câmera só são enviados aos membros que entraram na call.
+  // Identidade, mute, câmera e compartilhamento só são enviados aos membros da call.
   broadcastRoom(room);broadcastRooms();broadcastVoiceRoster(room);
 }
 function handleVoiceSignal(ws,message){
@@ -226,6 +246,7 @@ function rawAccumulated(p){ return p.totalCrowns+p.totalShadows; }
 function requestStart(ws){
   const room=rooms.get(ws.roomId), player=room?.players.get(ws.clientId);
   if(!room||!player){ send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Você não está em uma sala.'}); return; }
+  if(room.kind!=='game'){ send(ws,{type:'error',code:'CHAT_ONLY_ROOM',message:'O Salão Livre não inicia partidas.'}); return; }
   if(roomHostId(room)!==ws.clientId){ send(ws,{type:'error',code:'NOT_HOST',message:'Somente o anfitrião pode iniciar.'}); return; }
   if(room.players.size<2){ send(ws,{type:'error',code:'NOT_ENOUGH_PLAYERS',message:'São necessários pelo menos 2 jogadores online. As vagas restantes serão preenchidas por IAs.'}); return; }
   const notReady=[...room.players.values()].filter(p=>!p.ready);
@@ -689,7 +710,7 @@ function broadcastGameState(room,revealPlays=false){
 }
 
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),chatOnlyCount:rooms.get(CHAT_ONLY_ROOM_ID)?.players.size||0,uptime:process.uptime()}));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{

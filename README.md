@@ -1,28 +1,26 @@
-# A Lei do Trono — Backend v0.5.8 Alpha
+# A Lei do Trono — Backend v0.5.9 Alpha
 
-Backend WebSocket autoritativo da partida online.
+Servidor autoritativo WebSocket/Node.js do protótipo online.
 
-## Nesta versão
-- 3 salas, 4 assentos; 2 a 4 humanos e IAs nas vagas restantes.
-- servidor controla baralho, mãos privadas, turnos, Leis, Decretos, Coroa, Sombra, Influência e Prestígio.
-- cronômetro autoritativo de 60 s; no fim do tempo o servidor joga uma carta legal aleatória.
-- Usurpação protege a carta da Corte Aberta e Influência não pode ocultá-la.
-- IAs: Bonifácio, Epaminondas, Cícero e Otacílio quando necessário.
-- desconexão durante a partida substitui o jogador por IA e gera evento público.
+## Partida
+- Mantém as três salas de jogo com até 4 jogadores e preenchimento por bots.
+- Valida as regras, turnos, Influência, Leis, Decretos, Coroa, Sombra e pontuação.
+- Jogador desconectado durante a partida é substituído por bot e a sala recebe o evento de desconexão.
 
-## Comunicação v0.5.8
-- O servidor não transporta áudio/vídeo: apenas sinaliza WebRTC.
-- Fora da chamada, `room-state` expõe somente `voiceActive` (sim/não).
-- Nome dos participantes da call, estado do microfone e câmera são enviados em `voice-roster` somente para jogadores que entraram na chamada.
-- Sinalização aceita `offer`, `answer`, `ice` e `renegotiate-request` para ressincronizar câmera quando necessário.
+## Comunicação v0.5.9
+- Sinalização WebRTC privada entre todos os participantes da chamada.
+- Estados de câmera, microfone e compartilhamento de tela só são enviados a quem entrou na call.
+- Quem está fora da call recebe apenas o indicador público de que há alguém conectado.
+- O Salão Livre (`chat-livre`) é separado das partidas e não impõe limite fixo de participantes no servidor.
+- O backend sinaliza áudio, câmera e compartilhamento de tela; a mídia continua P2P entre navegadores.
 
-## Render
-- Build Command: `npm install`
-- Start Command: `npm start`
-- Health Check Path: `/health`
+> Observação: P2P com apenas STUN pode falhar entre algumas redes restritivas/CGNAT. Para confiabilidade de produção em qualquer rede, configure um servidor TURN no frontend.
 
-Depois do deploy, `/health` deve mostrar `0.5.8-alpha`.
+## Deploy
+Suba `server.js` e `package.json` ao repositório do backend no GitHub. O Render fará o deploy automaticamente; se necessário, use **Manual Deploy → Deploy latest commit**.
 
+Depois confirme em `/health`:
 
-### v0.5.8
-O relay de sinalização continua privado aos participantes da call e suporta renegociações mesh entre todos os pares. A principal correção WebRTC está no frontend com Perfect Negotiation.
+```json
+{"ok":true,"version":"0.5.9-alpha"}
+```
