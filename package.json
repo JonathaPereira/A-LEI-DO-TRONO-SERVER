@@ -1,6 +1,6 @@
 {
   "name": "a-lei-do-trono-backend",
-  "version": "0.6.0-alpha",
+  "version": "0.6.1-alpha",
   "private": true,
   "description": "Backend WebSocket para A Lei do Trono",
   "main": "server.js",

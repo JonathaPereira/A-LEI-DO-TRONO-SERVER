@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
+const { RealtimeSfuManager } = require('./realtime-sfu');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,7 +12,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.6.0-alpha';
+const VERSION = '0.6.1-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -56,6 +57,8 @@ rooms.set(CHAT_ONLY_ROOM_ID,{
   chatHistory:[],
   nextSeat:0,
 });
+
+const realtimeSfu = new RealtimeSfuManager({rooms,send,broadcastVoiceRoster,chatOnlyRoomId:CHAT_ONLY_ROOM_ID,version:VERSION});
 
 const rand = n => Math.floor(Math.random()*n);
 function shuffle(arr){
@@ -111,7 +114,8 @@ function safeRoom(room) {
 }
 function privateVoiceRoster(room){
   return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
-    id:p.id,name:p.name,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn,screen:!!p.screenOn
+    id:p.id,name:p.name,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn,screen:!!p.screenOn,
+    transport:p.mediaTransport||'p2p',quality:p.transmissionQuality||'balanced'
   }));
 }
 function broadcastVoiceRoster(room){
@@ -152,6 +156,7 @@ function leaveRoom(ws, reason='leave') {
   if(!room){ ws.roomId=null; return; }
   const leaving=room.players.get(ws.clientId);
   room.players.delete(ws.clientId); ws.roomId=null;
+  if(leaving) void realtimeSfu.cleanupClient(leaving.id,room.id);
 
   if(room.game && leaving){
     const gp=room.game.players[leaving.seat];
@@ -184,7 +189,7 @@ function joinRoom(ws,roomId,rawName){
   leaveRoom(ws,'switch-room');
   if(room.kind==='game'&&room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,lastChatAt:0};
+  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
@@ -216,9 +221,16 @@ function handleVoiceState(ws,message){
   player.voiceMuted=player.voiceJoined&&!!message.muted;
   player.cameraOn=player.voiceJoined&&!!message.camera;
   player.screenOn=player.voiceJoined&&!!message.screen;
+  const q=String(message.quality||player.transmissionQuality||'balanced');
+  player.transmissionQuality=['economy','balanced','high','ultra'].includes(q)?q:'balanced';
+  const transport=String(message.transport||player.mediaTransport||'p2p');
+  player.mediaTransport=player.voiceJoined&&(transport==='sfu'?'sfu':'p2p');
+  if(player.voiceJoined&&player.mediaTransport==='sfu')player.transmissionQuality=realtimeSfu.notePlayerQuality(room.id,player.id,player.transmissionQuality);
+  if(!player.voiceJoined){player.mediaTransport='p2p';void realtimeSfu.cleanupClient(player.id,room.id);}
   // Fora da chamada, os clientes recebem apenas voiceActive no room-state.
   // Identidade, mute, câmera e compartilhamento só são enviados aos membros da call.
   broadcastRoom(room);broadcastRooms();broadcastVoiceRoster(room);
+  if(room.kind==='chat'&&player.voiceJoined){realtimeSfu.broadcastStatus(room);realtimeSfu.broadcastPublications(room);}
 }
 function handleVoiceSignal(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player||!player.voiceJoined)return;
@@ -710,13 +722,14 @@ function broadcastGameState(room,revealPlays=false){
 }
 
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),chatOnlyCount:rooms.get(CHAT_ONLY_ROOM_ID)?.players.size||0,uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),chatOnlyCount:rooms.get(CHAT_ONLY_ROOM_ID)?.players.size||0,realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.isAlive=true;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),serverVersion:VERSION});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),serverVersion:VERSION,realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     switch(message.type){
@@ -729,6 +742,7 @@ wss.on('connection',(ws)=>{
       case 'chat-message':handleChatMessage(ws,message.text);break;
       case 'voice-state':handleVoiceState(ws,message);break;
       case 'voice-signal':handleVoiceSignal(ws,message);break;
+      case 'sfu-request':void realtimeSfu.handleRequest(ws,message);break;
       case 'state-request':{const room=rooms.get(ws.roomId),p=room?.players.get(ws.clientId);if(room?.game&&p)send(ws,{type:'game-state',state:privateGameState(room,p.seat)});break;}
       case 'ping':send(ws,{type:'pong',at:Date.now()});break;
       default:send(ws,{type:'error',code:'UNKNOWN_TYPE',message:'Tipo de mensagem desconhecido.'});
@@ -742,5 +756,5 @@ if(require.main===module){
   server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
 }
 module.exports={evaluateTrick,pickWinner,playValue,clampCardValue,legalCards,influenceLegalCards,usurpacaoEligibleCards,prestige,totalPairs,makeDeck,SUITS,LAWS};
-function shutdown(){clearInterval(heartbeat);for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
+function shutdown(){clearInterval(heartbeat);realtimeSfu.stop();for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
 process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);
