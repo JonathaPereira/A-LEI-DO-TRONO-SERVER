@@ -1,4 +1,4 @@
-# A Lei do Trono — Backend v0.5.4 Alpha
+# A Lei do Trono — Backend v0.5.5 Alpha
 
 Backend WebSocket autoritativo da partida online.
 
@@ -18,4 +18,10 @@ Backend WebSocket autoritativo da partida online.
 - Start Command: `npm start`
 - Health Check Path: `/health`
 
-Depois do deploy, `/health` deve mostrar `0.5.4-alpha`.
+Depois do deploy, `/health` deve mostrar `0.5.5-alpha`.
+
+## Novidades v0.5.5
+- Influência 2.0: 1 ficha = Sigilo; 2 fichas = Manobra +3/-3, com valor efetivo limitado a 1-12.
+- Decreto Silêncio bloqueia o gasto apenas nas vazas 1-3.
+- Chat de texto por sala com histórico temporário.
+- Sinalização WebRTC de voz via WebSocket; o áudio segue P2P entre os jogadores.

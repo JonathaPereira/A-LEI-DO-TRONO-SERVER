@@ -11,7 +11,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.5.4-alpha';
+const VERSION = '0.5.5-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -22,7 +22,7 @@ const DECREES = [
   {id:'rotacao', name:'Rotação', icon:'⟳', text:'Após as vazas 7, 8 e 9, todos passam simultaneamente 1 carta ao jogador à esquerda.'},
   {id:'corte', name:'Corte Aberta', icon:'◉', text:'No início da rodada, cada jogador revela 1 carta da mão. Ela permanece pública até ser usada.'},
   {id:'desafio', name:'Desafio', icon:'⚔', text:'Na primeira Coroa de cada jogador, revele 1 carta. Novas Coroas consecutivas revelam mais 1.'},
-  {id:'silencio', name:'Silêncio', icon:'⊘', text:'Nas 5 primeiras vazas, ninguém pode gastar Influência. A partir da 6ª, funciona normalmente.'},
+  {id:'silencio', name:'Silêncio', icon:'⊘', text:'Nas 3 primeiras vazas, ninguém pode gastar Influência. A partir da 4ª, funciona normalmente.'},
   {id:'sucessao', name:'Sucessão', icon:'♛', text:'O próximo líder não pode abrir com o naipe que venceu a vaza anterior, salvo se não possuir outro.'},
 ];
 const decreeById = Object.fromEntries(DECREES.map(d=>[d.id,d]));
@@ -40,6 +40,7 @@ const rooms = new Map(roomDefs.map(([id, name]) => [id, {
   players: new Map(),
   createdAt: Date.now(),
   game: null,
+  chatHistory: [],
 }]));
 
 const rand = n => Math.floor(Math.random()*n);
@@ -52,6 +53,17 @@ function sanitizeName(value) {
   const name = String(value || 'Jogador').replace(/[<>]/g, '').trim().slice(0, 18);
   return name || 'Jogador';
 }
+function sanitizeChat(value){
+  return String(value||'').replace(/\r\n?/g,'\n').replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/g,' ').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,300);
+}
+function clampCardValue(value){ return Math.max(1,Math.min(12,Number(value)||0)); }
+function playValue(play){ return clampCardValue((play?.card?.value||0)+(play?.modifier||0)); }
+function influenceLabel(play){
+  if(!play?.influenceAction||play.influenceAction==='none')return '';
+  if(play.influenceAction==='sigilo')return 'Sigilo';
+  return play.influenceAction==='plus'?'Manobra +3':'Manobra -3';
+}
+
 function makeDeck(){
   let id=0; const deck=[];
   for(const suit of SUITS) for(let value=1;value<=12;value++) deck.push({id:`c${id++}`,suit,value,public:false,publicReason:null});
@@ -70,7 +82,7 @@ function roomHostId(room) {
   return sorted[0]?.id || null;
 }
 function publicPlayer(room, player) {
-  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room)};
+  return {id:player.id,name:player.name,seat:player.seat,ready:!!player.ready,host:player.id===roomHostId(room),voice:{joined:!!player.voiceJoined,muted:!!player.voiceMuted}};
 }
 function safeRoom(room) {
   return {
@@ -127,6 +139,7 @@ function leaveRoom(ws, reason='leave') {
     }
   }
 
+  if(room.players.size===0) room.chatHistory=[];
   broadcastRoom(room); broadcastRooms();
   if(leaving){
     for(const p of room.players.values()) send(p.ws,{type:'player-left',roomId:room.id,playerId:leaving.id,name:leaving.name,reason});
@@ -141,9 +154,10 @@ function joinRoom(ws,roomId,rawName){
   leaveRoom(ws,'switch-room');
   if(room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws};
+  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,lastChatAt:0};
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
+  send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
   broadcastRoom(room); broadcastRooms();
 }
 function setReady(ws,ready){
@@ -151,6 +165,32 @@ function setReady(ws,ready){
   if(!room||!player){ send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Você não está em uma sala.'}); return; }
   if(room.game && room.game.phase!=='game-over'){ send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'A partida já começou.'}); return; }
   player.ready=!!ready; broadcastRoom(room); broadcastRooms();
+}
+
+function handleChatMessage(ws,rawText){
+  const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);
+  if(!room||!player){send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Entre em um salão para usar o chat.'});return;}
+  const now=Date.now();
+  if(now-(player.lastChatAt||0)<450){send(ws,{type:'error',code:'CHAT_RATE',message:'Aguarde um instante antes de enviar outra mensagem.'});return;}
+  const text=sanitizeChat(rawText);if(!text)return;
+  player.lastChatAt=now;
+  const message={id:crypto.randomUUID(),roomId:room.id,senderId:player.id,seat:player.seat,name:player.name,text,ts:now};
+  if(!Array.isArray(room.chatHistory))room.chatHistory=[];
+  room.chatHistory.push(message);if(room.chatHistory.length>50)room.chatHistory.splice(0,room.chatHistory.length-50);
+  for(const p of room.players.values())send(p.ws,{type:'chat-message',message});
+}
+function handleVoiceState(ws,message){
+  const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
+  player.voiceJoined=!!message.joined;player.voiceMuted=player.voiceJoined&&!!message.muted;
+  broadcastRoom(room);
+  for(const p of room.players.values())send(p.ws,{type:'voice-state',playerId:player.id,seat:player.seat,name:player.name,joined:player.voiceJoined,muted:player.voiceMuted});
+}
+function handleVoiceSignal(ws,message){
+  const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player||!player.voiceJoined)return;
+  const target=room.players.get(String(message.targetId||''));
+  if(!target||!target.voiceJoined||target.id===player.id)return;
+  const signalType=String(message.signalType||'');if(!['offer','answer','ice'].includes(signalType))return;
+  send(target.ws,{type:'voice-signal',fromId:player.id,fromName:player.name,signalType,data:message.data||null});
 }
 
 function makeMatchPlayer(room,seat){
@@ -365,7 +405,7 @@ function armTurnTimer(room,seat){
   },TURN_MS+60);
 }
 function startTurns(room){ const g=room.game;clearTurnTimer(g);g.phase='await-play';g.turn=g.leader;broadcastGameState(room);advanceTurn(room); }
-function influenceBlocked(g){ return g.decree?.id==='silencio' && g.trick<=5; }
+function influenceBlocked(g){ return g.decree?.id==='silencio' && g.trick<=3; }
 function leadSuit(g){ return g.declaredLeadSuit || g.plays[0]?.card?.suit || null; }
 function legalCards(g,p){
   let cards=[...p.hand];
@@ -377,7 +417,7 @@ function legalCards(g,p){
   }
   return cards;
 }
-function canUseInfluence(g,p){ if(p.influence<2||influenceBlocked(g))return false; if(g.plays.length===0)return p.seat===g.leader; return true; }
+function canUseInfluence(g,p,cost=1){ if(p.influence<cost||influenceBlocked(g))return false; if(g.plays.length===0)return p.seat===g.leader; return true; }
 function influenceLegalCards(g,p){ return legalCards(g,p).filter(c=>c.publicReason!=='Corte Aberta'); }
 function chooseBotPlay(g,p,legal){
   const sorted=[...legal].sort((a,b)=>a.value-b.value),seek=Math.random()<.55;
@@ -402,9 +442,16 @@ function advanceTurn(room){
   if(p.bot){
     schedule(room,()=>{
       if(!room.game||room.game.turn!==seat||room.game.phase!=='await-play')return;
-      const card=chooseBotPlay(g,p,legal);let hidden=false,declaredSuit=null;
-      if(card.publicReason!=='Corte Aberta'&&canUseInfluence(g,p)&&Math.random()<.18&&(card.value>=9||card.value<=3)){hidden=true;p.influence-=2;if(g.plays.length===0){declaredSuit=card.suit;g.declaredLeadSuit=declaredSuit;}}
-      commitPlay(room,p,card,{hidden,declaredSuit,isReserve:g.decree?.id==='reserva'&&g.trick===10&&p.reserve?.id===card.id});
+      const card=chooseBotPlay(g,p,legal);let influenceAction='none',modifier=0,declaredSuit=null;
+      if(card.publicReason!=='Corte Aberta'&&!influenceBlocked(g)){
+        if(canUseInfluence(g,p,2)&&card.value>=4&&card.value<=9&&Math.random()<.30){
+          const seekCrown=Math.random()<.62;
+          influenceAction=(g.currentLaw==='revolta' ? (seekCrown?'minus':'plus') : (seekCrown?'plus':'minus'));
+          modifier=influenceAction==='plus'?3:-3;p.influence-=2;
+        }else if(canUseInfluence(g,p,1)&&Math.random()<.12){influenceAction='sigilo';p.influence-=1;}
+        if(influenceAction!=='none'&&g.plays.length===0){declaredSuit=card.suit;g.declaredLeadSuit=declaredSuit;}
+      }
+      commitPlay(room,p,card,{hidden:influenceAction!=='none',influenceAction,modifier,declaredSuit,isReserve:g.decree?.id==='reserva'&&g.trick===10&&p.reserve?.id===card.id});
     },620);
   }
 }
@@ -412,34 +459,37 @@ function handlePlay(room,seat,msg){
   const g=room.game;if(!g||g.phase!=='await-play'||g.turn!==seat)return false;
   const p=g.players[seat];if(p.bot)return false;
   const legal=legalCards(g,p);const card=legal.find(c=>c.id===msg.cardId);if(!card)return sendToSeat(room,seat,{type:'error',code:'ILLEGAL_CARD',message:'Esta carta não pode ser jogada agora.'}),false;
-  let hidden=!!msg.hidden,declaredSuit=msg.declaredSuit||null;
+  let action=String(msg.influenceAction||((msg.hidden)?'sigilo':'none'));
+  if(!['none','sigilo','plus','minus'].includes(action))action='none';
+  const hidden=action!=='none',cost=action==='sigilo'?1:(hidden?2:0),modifier=action==='plus'?3:action==='minus'?-3:0;
+  const declaredSuit=msg.declaredSuit||null;
   if(hidden){
-    if(!canUseInfluence(g,p))return sendToSeat(room,seat,{type:'error',code:'NO_INFLUENCE',message:'Influência indisponível.'}),false;
+    if(!canUseInfluence(g,p,cost))return sendToSeat(room,seat,{type:'error',code:'NO_INFLUENCE',message:`Você precisa de ${cost} Influência${cost>1?'s':''} para esta ação.`}),false;
     if(card.publicReason==='Corte Aberta')return sendToSeat(room,seat,{type:'error',code:'CORTE_INFLUENCE_BLOCKED',message:'A carta revelada pela Corte Aberta não pode ser jogada oculta por Influência.'}),false;
     if(g.plays.length===0){
       if(!SUITS.includes(declaredSuit)||card.suit!==declaredSuit)return sendToSeat(room,seat,{type:'error',code:'BAD_DECLARATION',message:'Ao abrir oculta, anuncie o mesmo naipe da carta jogada.'}),false;
       g.declaredLeadSuit=declaredSuit;
     }
-    p.influence-=2;
+    p.influence-=cost;
   }
   const isReserve=g.decree?.id==='reserva'&&g.trick===10&&p.reserve?.id===card.id;
-  commitPlay(room,p,card,{hidden,declaredSuit,isReserve});return true;
+  commitPlay(room,p,card,{hidden,influenceAction:action,modifier,declaredSuit,isReserve});return true;
 }
-function commitPlay(room,p,card,{hidden=false,declaredSuit=null,isReserve=false,timeout=false}={}){
+function commitPlay(room,p,card,{hidden=false,influenceAction='none',modifier=0,declaredSuit=null,isReserve=false,timeout=false}={}){
   const g=room.game;
   clearTurnTimer(g);
   if(isReserve){ p.reserve=null; }
   else { const idx=p.hand.findIndex(c=>c.id===card.id);if(idx<0)throw new Error('Carta não encontrada na mão.');p.hand.splice(idx,1); }
   if(card.public){card.public=false;card.publicReason=null;}
-  const play={playerId:p.seat,card,hidden,order:g.plays.length};g.plays.push(play);
+  const play={playerId:p.seat,card,hidden,influenceAction,modifier,order:g.plays.length};g.plays.push(play);
   broadcastGameEvent(room,{event:'card-played',playerId:p.seat,hidden,card:hidden?null:card,declaredSuit:declaredSuit||null,isReserve});
-  if(hidden&&g.plays.length===1&&declaredSuit) broadcastLog(room,`${p.name} anunciou ${suitName(declaredSuit)} e abriu com uma carta oculta.`);
+  if(hidden&&g.plays.length===1&&declaredSuit) broadcastLog(room,`${p.name} anunciou ${suitName(declaredSuit)} e abriu com uma carta oculta usando Influência.`);
   else broadcastLog(room,`${p.name} jogou ${hidden?'uma carta oculta':`${suitName(card.suit)} ${card.value}`}${isReserve?' da Reserva':''}.`);
   g.turn=null;broadcastGameState(room);schedule(room,()=>{g.phase='await-play';advanceTurn(room);},480);
 }
 
 function pickWinner(candidates,mode){
-  return candidates.reduce((best,p)=>{if(!best)return p;if(mode==='max')return p.card.value>best.card.value?p:best;return p.card.value<best.card.value?p:best;},null);
+  return candidates.reduce((best,p)=>{if(!best)return p;const v=playValue(p),bv=playValue(best);if(mode==='max')return v>bv?p:best;return v<bv?p:best;},null);
 }
 function evaluateTrick(g){
   if(!g?.plays||g.plays.length!==4) throw new Error('A vaza precisa conter exatamente 4 cartas para ser resolvida.');
@@ -470,7 +520,10 @@ function resolveTrick(room){
   g.lastCrown=cp.seat;g.lastShadow=sp.seat;g.previousWinningSuit=crown.card.suit;g.leader=cp.seat;
   g.phase='trick-result';
   broadcastGameEvent(room,{event:'trick-result',law:g.currentLaw,crownId:cp.seat,shadowId:sp.seat,revealedPlays,influenceGains});
-  broadcastLog(room,`${lawName(g.currentLaw)} — Coroa: ${cp.name} (${suitName(crown.card.suit)} ${crown.card.value}). Sombra: ${sp.name} (${suitName(shadow.card.suit)} ${shadow.card.value})${g.currentLaw==='estandarte'&&g.trump?` • Trunfo: ${suitName(g.trump)}`:''}.`);broadcastGameState(room,true);
+  const crownValue=playValue(crown),shadowValue=playValue(shadow);
+  const crownShown=crown.modifier?`${crown.card.value} ${crown.modifier>0?'+3':'-3'} → ${crownValue}`:`${crown.card.value}`;
+  const shadowShown=shadow.modifier?`${shadow.card.value} ${shadow.modifier>0?'+3':'-3'} → ${shadowValue}`:`${shadow.card.value}`;
+  broadcastLog(room,`${lawName(g.currentLaw)} — Coroa: ${cp.name} (${suitName(crown.card.suit)} ${crownShown}). Sombra: ${sp.name} (${suitName(shadow.card.suit)} ${shadowShown})${g.currentLaw==='estandarte'&&g.trump?` • Trunfo: ${suitName(g.trump)}`:''}.`);broadcastGameState(room,true);
   schedule(room,()=>afterTrickAnimation(room,sameCrown),6400);
 }
 function afterTrickAnimation(room,sameCrown){
@@ -594,16 +647,19 @@ function privateGameState(room,viewerSeat,revealPlays=false){
   const plays=g.plays.map(pl=>({
     playerId:pl.playerId,order:pl.order,hidden:revealPlays?false:pl.hidden,
     card:(revealPlays||!pl.hidden||pl.playerId===viewerSeat)?pl.card:null,
+    modifier:(revealPlays||pl.playerId===viewerSeat)?(pl.modifier||0):0,
+    influenceAction:(revealPlays||pl.playerId===viewerSeat)?(pl.influenceAction||'none'):(pl.hidden?'hidden':'none'),
   }));
   const legal=(g.phase==='await-play'&&g.turn===viewerSeat)?legalCards(g,viewer).map(c=>c.id):[];
-  const influenceLegal=(g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer))?influenceLegalCards(g,viewer).map(c=>c.id):[];
+  const influenceLegal=(g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer,1))?influenceLegalCards(g,viewer).map(c=>c.id):[];
   return {
     online:true,youSeat:viewerSeat,round:g.round,trick:g.trick,phase:g.phase,
     currentLaw:g.currentLaw,lawUsage:g.lawUsage,trump:g.trump,declaredLeadSuit:g.declaredLeadSuit,
     decree:g.decree,lastCrown:g.lastCrown,lastShadow:g.lastShadow,previousWinningSuit:g.previousWinningSuit,
     leader:g.leader,turn:g.turn,turnDeadline:g.turnDeadline||null,plays,players,
     legalCardIds:legal,influenceLegalCardIds:influenceLegal,
-    canUseInfluence:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer)&&influenceLegal.length>0,
+    canUseInfluence:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer,1)&&influenceLegal.length>0,
+    canUseManeuver:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer,2)&&influenceLegal.length>0,
     influenceBlocked:influenceBlocked(g),
   };
 }
@@ -629,6 +685,9 @@ wss.on('connection',(ws)=>{
       case 'ready':setReady(ws,message.ready);break;
       case 'start-room':requestStart(ws);break;
       case 'game-action':handleGameAction(ws,message);break;
+      case 'chat-message':handleChatMessage(ws,message.text);break;
+      case 'voice-state':handleVoiceState(ws,message);break;
+      case 'voice-signal':handleVoiceSignal(ws,message);break;
       case 'state-request':{const room=rooms.get(ws.roomId),p=room?.players.get(ws.clientId);if(room?.game&&p)send(ws,{type:'game-state',state:privateGameState(room,p.seat)});break;}
       case 'ping':send(ws,{type:'pong',at:Date.now()});break;
       default:send(ws,{type:'error',code:'UNKNOWN_TYPE',message:'Tipo de mensagem desconhecido.'});
@@ -641,6 +700,6 @@ const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.isAlive===fa
 if(require.main===module){
   server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
 }
-module.exports={evaluateTrick,pickWinner,legalCards,influenceLegalCards,usurpacaoEligibleCards,prestige,totalPairs,makeDeck,SUITS,LAWS};
+module.exports={evaluateTrick,pickWinner,playValue,clampCardValue,legalCards,influenceLegalCards,usurpacaoEligibleCards,prestige,totalPairs,makeDeck,SUITS,LAWS};
 function shutdown(){clearInterval(heartbeat);for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
 process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);
