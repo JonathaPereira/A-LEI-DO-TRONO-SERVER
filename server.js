@@ -12,7 +12,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.3-alpha';
+const VERSION = '0.7.4-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -250,7 +250,8 @@ function handleVoiceSignal(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player||!player.voiceJoined)return;
   const target=room.players.get(String(message.targetId||''));
   if(!target||!target.voiceJoined||target.id===player.id)return;
-  const signalType=String(message.signalType||'');if(!['offer','answer','ice','renegotiate-request'].includes(signalType))return;
+  const signalType=String(message.signalType||'');if(!['offer','answer','ice','renegotiate-request','stream-watch'].includes(signalType))return;
+  if(signalType==='stream-watch'&&room.kind!=='chat')return;
   send(target.ws,{type:'voice-signal',fromId:player.id,fromName:player.name,signalType,data:message.data||null});
 }
 

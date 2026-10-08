@@ -6,7 +6,7 @@ const path = require('path');
 const CF_BASE = 'https://rtc.live.cloudflare.com/v1';
 const TURN_BASE = 'https://rtc.live.cloudflare.com/v1/turn';
 const USAGE_FILE = process.env.REALTIME_USAGE_FILE || '/tmp/a_lei_do_trono_realtime_usage.json';
-const ALLOWED_KINDS = new Set(['audio','camera','screen']);
+const ALLOWED_KINDS = new Set(['audio','camera','screen','screen-audio']);
 const ALLOWED_QUALITIES = new Set(['economy','balanced','high']);
 const QUALITY_ORDER = ['economy','balanced','high'];
 const PROFILE = {
@@ -141,7 +141,7 @@ class RealtimeSfuManager{
         for(const roomMap of this.publicationsByRoom.values())for(const pub of [...roomMap.values()])await this._closePublication(pub,true).catch(()=>{});
       }else{
         if(!policy.screenAllowed){
-          for(const roomMap of this.publicationsByRoom.values())for(const pub of [...roomMap.values()].filter(p=>p.kind==='screen'))await this._closePublication(pub,true).catch(()=>{});
+          for(const roomMap of this.publicationsByRoom.values())for(const pub of [...roomMap.values()].filter(p=>p.kind==='screen'||p.kind==='screen-audio'))await this._closePublication(pub,true).catch(()=>{});
         }
         for(const sub of this.subscriptions.values()){
           if(!['camera','screen'].includes(sub.kind))continue;const pub=this._pubMap(sub.roomId).get(this._pubKey(sub.publisherId,sub.kind));if(!pub)continue;
@@ -164,7 +164,7 @@ class RealtimeSfuManager{
     if(!this.enabled)return {ok:false,code:'REALTIME_DISABLED',message:'Cloudflare Realtime está desligado pelo kill switch.'};
     if(!this.configured())return {ok:false,code:'REALTIME_NOT_CONFIGURED',message:'Cloudflare Realtime não está configurado no backend.'};
     if(p.hardBlocked)return {ok:false,code:'REALTIME_HARD_LIMIT',message:'Limite operacional mensal do Realtime atingido.'};
-    if(kind==='screen'&&!p.screenAllowed)return {ok:false,code:'SCREEN_BUDGET_BLOCKED',message:'Compartilhamento bloqueado pelo freio de consumo.'};
+    if((kind==='screen'||kind==='screen-audio')&&!p.screenAllowed)return {ok:false,code:'SCREEN_BUDGET_BLOCKED',message:'Compartilhamento bloqueado pelo freio de consumo.'};
     if(quality==='high'&&!p.highAllowed)return {ok:false,code:'HIGH_BUDGET_BLOCKED',message:'Qualidade Alta foi bloqueada pelo freio de consumo.'};
     return {ok:true,policy:p};
   }
@@ -196,6 +196,7 @@ class RealtimeSfuManager{
   _subscriptionBps(pub,preferredRid){
     const pr=PROFILE[pub.quality]||PROFILE.balanced;
     let bps;if(pub.kind==='audio')bps=pr.audio;
+    else if(pub.kind==='screen-audio')bps=192000;
     else if(pub.kind==='screen'){const factor=preferredRid==='q'?.18:preferredRid==='h'?.42:1;bps=(pub.screenBitrate||pr.screen)*factor;}
     else bps=pr.camera[preferredRid]||pr.camera.h;
     return Math.ceil(bps*this.estimateSafetyFactor);
