@@ -12,7 +12,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.1-alpha';
+const VERSION = '0.7.2-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -29,6 +29,11 @@ const DECREES = [
 const decreeById = Object.fromEntries(DECREES.map(d=>[d.id,d]));
 
 const CHAT_ONLY_ROOM_ID = 'chat-livre';
+const CHAT_CHANNELS = [
+  ['chat-livre', 'Geral', 'Conversa aberta'],
+  ['chat-jogos', 'Jogos', 'Partidas e transmissões'],
+  ['chat-conversa', 'Conversa', 'Papo em grupo'],
+];
 const roomDefs = [
   ['sala-cetro', 'Sala do Cetro'],
   ['sala-chave', 'Sala da Chave'],
@@ -46,17 +51,7 @@ const rooms = new Map(roomDefs.map(([id, name]) => [id, {
   chatHistory: [],
   nextSeat: 0,
 }]));
-rooms.set(CHAT_ONLY_ROOM_ID,{
-  id:CHAT_ONLY_ROOM_ID,
-  name:'Salão Livre — Somente Chat',
-  kind:'chat',
-  max:null,
-  players:new Map(),
-  createdAt:Date.now(),
-  game:null,
-  chatHistory:[],
-  nextSeat:0,
-});
+for (const [id,name] of CHAT_CHANNELS) rooms.set(id,{id,name,kind:'chat',max:null,players:new Map(),createdAt:Date.now(),game:null,chatHistory:[],nextSeat:0});
 
 const realtimeSfu = new RealtimeSfuManager({rooms,send,broadcastVoiceRoster,chatOnlyRoomId:CHAT_ONLY_ROOM_ID,version:VERSION});
 
@@ -138,6 +133,8 @@ function broadcastVoiceRoster(room){
   for(const p of room.players.values()) if(p.voiceJoined) send(p.ws,{type:'voice-roster',roomId:room.id,players});
 }
 
+function safeChatChannels(){return CHAT_CHANNELS.map(([id,name,description])=>({id,name,description,count:rooms.get(id)?.players.size||0,voiceActive:[...(rooms.get(id)?.players.values()||[])].some(p=>p.voiceJoined)}));}
+function broadcastChatChannels(){broadcastAll({type:'chat-channels',channels:safeChatChannels()});}
 function safeRooms(){ return [...rooms.values()].filter(r=>r.kind==='game').map(safeRoom); }
 function send(ws,payload){ if(ws?.readyState===WebSocket.OPEN) ws.send(JSON.stringify(payload)); }
 function broadcastAll(payload){ for(const client of wss.clients) send(client,payload); }
@@ -190,7 +187,7 @@ function leaveRoom(ws, reason='leave') {
   }
 
   if(room.players.size===0) room.chatHistory=[];
-  broadcastRoom(room); broadcastRooms(); broadcastVoiceRoster(room);
+  broadcastRoom(room); broadcastRooms(); broadcastChatChannels(); broadcastVoiceRoster(room);
   if(leaving){
     for(const p of room.players.values()) send(p.ws,{type:'player-left',roomId:room.id,playerId:leaving.id,name:leaving.name,reason});
   }
@@ -210,7 +207,7 @@ function joinRoom(ws,roomId,rawName){
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
-  broadcastRoom(room); broadcastRooms();
+  broadcastRoom(room); broadcastRooms(); broadcastChatChannels();
 }
 function setReady(ws,ready){
   const room=rooms.get(ws.roomId), player=room?.players.get(ws.clientId);
@@ -239,14 +236,14 @@ function handleVoiceState(ws,message){
   player.cameraOn=player.voiceJoined&&!!message.camera;
   player.screenOn=player.voiceJoined&&!!message.screen;
   const q=String(message.quality||player.transmissionQuality||'balanced');
-  player.transmissionQuality=['economy','balanced','high','ultra'].includes(q)?q:'balanced';
+  player.transmissionQuality=['economy','balanced','high'].includes(q)?q:'balanced';
   const transport=String(message.transport||player.mediaTransport||'p2p');
   player.mediaTransport=player.voiceJoined&&(transport==='sfu'?'sfu':'p2p');
   if(player.voiceJoined&&player.mediaTransport==='sfu')player.transmissionQuality=realtimeSfu.notePlayerQuality(room.id,player.id,player.transmissionQuality);
   if(!player.voiceJoined){player.mediaTransport='p2p';void realtimeSfu.cleanupClient(player.id,room.id);}
   // Fora da chamada, os clientes recebem apenas voiceActive no room-state.
   // Identidade, mute, câmera e compartilhamento só são enviados aos membros da call.
-  broadcastRoom(room);broadcastRooms();broadcastVoiceRoster(room);
+  broadcastRoom(room);broadcastRooms();broadcastChatChannels();broadcastVoiceRoster(room);
   if(room.kind==='chat'&&player.voiceJoined){realtimeSfu.broadcastStatus(room);realtimeSfu.broadcastPublications(room);}
 }
 function handleVoiceSignal(ws,message){
@@ -739,18 +736,19 @@ function broadcastGameState(room,revealPlays=false){
 }
 
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),chatOnlyCount:rooms.get(CHAT_ONLY_ROOM_ID)?.players.size||0,realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),chatOnlyCount:CHAT_CHANNELS.reduce((n,[id])=>n+(rooms.get(id)?.players.size||0),0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.isAlive=true;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),serverVersion:VERSION,realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     switch(message.type){
       case 'list-rooms':send(ws,{type:'rooms',rooms:safeRooms()});break;
+      case 'list-chat-channels':send(ws,{type:'chat-channels',channels:safeChatChannels()});break;
       case 'check-name':{const result=nameAvailability(message.name,ws.clientId);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
       case 'join-room':joinRoom(ws,message.roomId,message.name);break;
       case 'leave-room':leaveRoom(ws,'leave');break;

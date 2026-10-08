@@ -7,13 +7,12 @@ const CF_BASE = 'https://rtc.live.cloudflare.com/v1';
 const TURN_BASE = 'https://rtc.live.cloudflare.com/v1/turn';
 const USAGE_FILE = process.env.REALTIME_USAGE_FILE || '/tmp/a_lei_do_trono_realtime_usage.json';
 const ALLOWED_KINDS = new Set(['audio','camera','screen']);
-const ALLOWED_QUALITIES = new Set(['economy','balanced','high','ultra']);
-const QUALITY_ORDER = ['economy','balanced','high','ultra'];
+const ALLOWED_QUALITIES = new Set(['economy','balanced','high']);
+const QUALITY_ORDER = ['economy','balanced','high'];
 const PROFILE = {
-  economy:{audio:64000,camera:{f:450000,h:260000,q:120000},screen:1000000},
-  balanced:{audio:96000,camera:{f:1000000,h:450000,q:180000},screen:2500000},
-  high:{audio:128000,camera:{f:2200000,h:900000,q:320000},screen:4500000},
-  ultra:{audio:160000,camera:{f:5000000,h:1800000,q:500000},screen:9000000},
+  economy:{audio:64000,camera:{f:900000,h:450000,q:180000},screen:2300000},
+  balanced:{audio:96000,camera:{f:2200000,h:950000,q:350000},screen:5000000},
+  high:{audio:128000,camera:{f:3500000,h:1400000,q:450000},screen:5800000},
 };
 
 function envBool(name, fallback=false){
@@ -81,8 +80,8 @@ class RealtimeSfuManager{
     const hardBlocked=gb>=this.hardLimitGb;
     const screenAllowed=gb<this.screenDisableGb&&!hardBlocked;
     const highAllowed=gb<this.highDisableGb&&!hardBlocked;
-    const ultraAllowed=gb<this.ultraDisableGb&&!hardBlocked;
-    const maxQuality=hardBlocked?'economy':(!highAllowed?'balanced':(!ultraAllowed?'high':'ultra'));
+    const ultraAllowed=false; // Perfil Ultra removido de todos os canais.
+    const maxQuality=hardBlocked?'economy':(!highAllowed?'balanced':'high');
     return {
       enabled:this.enabled,configured:this.configured(),hardBlocked,
       softWarning:gb>=this.softLimitGb,
@@ -154,7 +153,7 @@ class RealtimeSfuManager{
 
   _allowedRoomPlayer(ws,requireVoice=true){
     const room=this.rooms.get(ws.roomId),player=room?.players.get(ws.clientId);
-    if(!room||!player||room.id!==this.chatOnlyRoomId||room.kind!=='chat')return {error:'SFU_CHAT_ONLY'};
+    if(!room||!player||room.kind!=='chat')return {error:'SFU_CHAT_ONLY'};
     if(requireVoice&&!player.voiceJoined)return {error:'VOICE_REQUIRED'};
     return {room,player};
   }
@@ -164,7 +163,6 @@ class RealtimeSfuManager{
     if(!this.configured())return {ok:false,code:'REALTIME_NOT_CONFIGURED',message:'Cloudflare Realtime não está configurado no backend.'};
     if(p.hardBlocked)return {ok:false,code:'REALTIME_HARD_LIMIT',message:'Limite operacional mensal do Realtime atingido.'};
     if(kind==='screen'&&!p.screenAllowed)return {ok:false,code:'SCREEN_BUDGET_BLOCKED',message:'Compartilhamento bloqueado pelo freio de consumo.'};
-    if(quality==='ultra'&&!p.ultraAllowed)return {ok:false,code:'ULTRA_BUDGET_BLOCKED',message:'Ultra foi bloqueado pelo freio de consumo.'};
     if(quality==='high'&&!p.highAllowed)return {ok:false,code:'HIGH_BUDGET_BLOCKED',message:'Qualidade Alta foi bloqueada pelo freio de consumo.'};
     return {ok:true,policy:p};
   }
@@ -189,7 +187,7 @@ class RealtimeSfuManager{
     if(!available.length)return null;
     let rid=available.includes(requestedRid)?requestedRid:this._preferredRid(desiredQuality);
     const p=this.policy();
-    if(rid==='f'&&(!p.highAllowed||(pub?.quality==='ultra'&&!p.ultraAllowed)))rid='h';
+    if(rid==='f'&&!p.highAllowed)rid='h';
     if(!available.includes(rid))rid=available.includes('h')?'h':available.includes('q')?'q':available[0];
     return rid;
   }
