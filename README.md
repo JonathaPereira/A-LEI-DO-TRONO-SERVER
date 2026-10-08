@@ -1,4 +1,6 @@
-# A Lei do Trono — Backend v0.7.2 Alpha
+# A Lei do Trono — Backend v0.7.5 Alpha
+
+Correção v0.7.5: a lógica do backend está preservada; versão e teste de integração foram alinhados com o frontend. Em uma atualização existente, preserve a configuração SFU e as variáveis atuais.
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
@@ -7,7 +9,7 @@ Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime
 - `realtime-sfu.js`
 - `package.json`
 
-Ao atualizar o GitHub/Render para v0.7.2, envie também `realtime-sfu.js`. O App ID e o API Token nunca devem ser gravados no repositório.
+Ao atualizar o GitHub/Render para v0.7.5, envie também `realtime-sfu.js`. O App ID e o API Token nunca devem ser gravados no repositório.
 
 ## Variáveis do Render
 Obrigatórias para o SFU:
@@ -38,8 +40,8 @@ Essas credenciais ficam somente no Render. O backend gera credenciais TURN curta
 
 ## Sequência segura de ativação
 1. Deploy deste backend mantendo `CLOUDFLARE_REALTIME_ENABLED=false`.
-2. Abra `/health` e confirme `version: 0.7.1-alpha`, `realtime.configured: true` e `realtime.enabled: false`.
-3. Publique o frontend v0.7.2 e teste o Salão Livre; com o kill switch desligado ele deve continuar em P2P.
+2. Abra `/health` e confirme `version: 0.7.5-alpha`, `realtime.configured: true` e `realtime.enabled: false`.
+3. Publique o frontend v0.7.5 e teste o Salão Livre; com o kill switch desligado ele deve continuar em P2P.
 4. Só então mude `CLOUDFLARE_REALTIME_ENABLED=true` no Render e faça novo deploy.
 5. Teste primeiro 2 participantes, depois 3. Observe o cartão de infraestrutura no painel de Configurações.
 6. Em qualquer anomalia de consumo/mídia, volte `CLOUDFLARE_REALTIME_ENABLED=false` e redeploy.
@@ -56,5 +58,5 @@ Política padrão:
 
 O kill switch é independente desses números.
 
-## Escopo v0.7.2
+## Escopo v0.7.5
 O SFU é experimental e aceita `chat-livre`, `chat-jogos` e `chat-conversa`, com mídia isolada por sala. A comunicação durante a partida continua P2P nesta versão. Se o SFU estiver desativado ou falhar na inicialização, o cliente retorna ao P2P.

@@ -12,7 +12,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.4-alpha';
+const VERSION = '0.7.5-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
