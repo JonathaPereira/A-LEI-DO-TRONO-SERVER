@@ -5,14 +5,22 @@ const http = require('http');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 const { RealtimeSfuManager } = require('./realtime-sfu');
+const { createAuth } = require('./auth');
 
 const app = express();
+app.set('trust proxy',Number(process.env.TRUST_PROXY_HOPS||1));
+const accountAuth = createAuth({onRevoke:event=>{
+  for(const ws of wss.clients)if(ws.account?.id===event.userId&&(event.all||ws.account.sessionId===event.sessionId)){
+    ws.account=null;leaveRoom(ws,'auth-expired');send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Sua sessão foi encerrada. Entre novamente.'});ws.close(4001,'Sessão encerrada');
+  }
+}});
+accountAuth.install(app,express);
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ server, path: '/ws',maxPayload:64*1024,verifyClient:info=>!info.origin||!accountAuth.required||accountAuth.allowedOrigins.has(info.origin) });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.7-alpha';
+const VERSION = '0.7.8-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -79,6 +87,11 @@ function nameAvailability(name,excludeClientId=null){
   const owner=nameOwner(clean,excludeClientId);
   if(owner)return {available:false,name:clean,code:'NAME_TAKEN',message:`Já há alguém usando “${clean}”. Escolha outro nome.`};
   return {available:true,name:clean,code:null,message:'Nome disponível.'};
+}
+function accountNameAvailability(ws,rawName){
+  const result=nameAvailability(accountAuth.required?ws.account?.nickname:rawName,ws.clientId);
+  if(accountAuth.required&&result.code==='NAME_TAKEN')result.message='Sua conta já está em uma sala em outra aba ou aparelho. Saia dessa sala antes de entrar aqui.';
+  return result;
 }
 function sanitizeChat(value){
   return String(value||'').replace(/\r\n?/g,'\n').replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/g,' ').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,300);
@@ -194,9 +207,10 @@ function leaveRoom(ws, reason='leave') {
 }
 
 function joinRoom(ws,roomId,rawName){
+  if(accountAuth.required)rawName=ws.account?.nickname;
   const room=rooms.get(roomId);
   if(!room){ send(ws,{type:'error',code:'ROOM_NOT_FOUND',message:'Sala inexistente.'}); return; }
-  const availability=nameAvailability(rawName,ws.clientId);
+  const availability=accountNameAvailability(ws,rawName);
   if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message,name:availability.name});return;}
   if(room.kind==='game'&&room.game && room.game.phase!=='game-over') { send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta sala já está em partida.'}); return; }
   if(ws.roomId===roomId && room.players.has(ws.clientId)){ send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,room.players.get(ws.clientId))}); return; }
@@ -738,20 +752,43 @@ function broadcastGameState(room,revealPlays=false){
 }
 
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,rooms:safeRooms(),chatOnlyCount:CHAT_CHANNELS.reduce((n,[id])=>n+(rooms.get(id)?.players.size||0),0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,auth:accountAuth.health(),rooms:safeRooms(),chatOnlyCount:CHAT_CHANNELS.reduce((n,[id])=>n+(rooms.get(id)?.players.size||0),0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
-  ws.clientId=crypto.randomUUID();ws.roomId=null;ws.isAlive=true;
+  ws.clientId=crypto.randomUUID();ws.roomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
+    if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
+    if(message.type==='authenticate'){
+      if(ws.authPending)return;
+      if(++ws.authAttempts>20){ws.close(4001,'Muitas tentativas de autenticação');return;}
+      ws.authPending=true;
+      const priorAccount=ws.account;
+      void accountAuth.identity(message.access_token).then(account=>{
+        if(ws.readyState!==WebSocket.OPEN)return;
+        if(priorAccount&&priorAccount.id!==account.id)leaveRoom(ws,'account-change');
+        ws.account=account;
+        ws.authAttempts=0;
+        send(ws,{type:'auth-result',requestId:message.requestId,ok:true,user:{id:account.id,nickname:account.nickname},expiresAt:account.expiresAt});
+      }).catch(err=>{
+        ws.account=null;leaveRoom(ws,'auth-expired');
+        send(ws,{type:'auth-result',requestId:message.requestId,ok:false,error:{code:err.code||'AUTH_UNAVAILABLE',message:err.message||'Não foi possível entrar.'}});
+      }).finally(()=>{ws.authPending=false;});
+      return;
+    }
+    const publicMessages=['list-rooms','list-chat-channels','ping'];
+    const publicStatus=message.type==='sfu-request'&&message.action==='status';
+    if(accountAuth.required&&!publicMessages.includes(message.type)&&!publicStatus&&(!ws.account||ws.account.expiresAt<=Date.now())){
+      send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Entre na sua conta para continuar.'});return;
+    }
     switch(message.type){
       case 'list-rooms':send(ws,{type:'rooms',rooms:safeRooms()});break;
       case 'list-chat-channels':send(ws,{type:'chat-channels',channels:safeChatChannels()});break;
-      case 'check-name':{const result=nameAvailability(message.name,ws.clientId);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
+      case 'check-name':{const result=accountNameAvailability(ws,message.name);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
       case 'join-room':joinRoom(ws,message.roomId,message.name);break;
       case 'leave-room':leaveRoom(ws,'leave');break;
       case 'ready':setReady(ws,message.ready);break;
@@ -769,7 +806,7 @@ wss.on('connection',(ws)=>{
   ws.on('close',()=>leaveRoom(ws,'disconnect'));ws.on('error',()=>{});
 });
 
-const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.isAlive===false){try{ws.terminate();}catch{}continue;}ws.isAlive=false;try{ws.ping();}catch{}}},30000);
+const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(accountAuth.required&&ws.account&&ws.account.expiresAt<=Date.now()){leaveRoom(ws,'auth-expired');ws.close(4001,'Sessão expirada');continue;}if(ws.isAlive===false){try{ws.terminate();}catch{}continue;}ws.isAlive=false;try{ws.ping();}catch{}}},30000);
 if(require.main===module){
   server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
 }

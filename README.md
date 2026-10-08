@@ -1,15 +1,21 @@
-# A Lei do Trono — Backend v0.7.7 Alpha
+# A Lei do Trono — Backend v0.7.8 Alpha
 
-Esta release mantém o transporte da v0.7.6; as correções novas de reprodução e abertura da stream estão no frontend v0.7.7. O roster distingue SFU pendente de P2P, prontidão do microfone é confirmada antes de anunciar SFU e operações antigas são canceladas na mudança de chamada. Publique também o frontend v0.7.7. Em uma atualização existente, preserve a configuração SFU e as variáveis atuais.
+Cadastro, login e recuperação agora são integrados ao Supabase. Acesso às salas, mensagens, voz e operações SFU exige autenticação. Antes do deploy, siga CONFIGURAR_LOGIN_v0.7.8.md, execute supabase/schema.sql e configure o Supabase/SMTP e as variáveis do Render. Preserve a infraestrutura de áudio da v0.7.7.
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
 ## Arquivos obrigatórios
 - `server.js`
+- `auth.js`
+- `supabase/schema.sql` (executar no Supabase)
 - `realtime-sfu.js`
 - `package.json`
 
-Ao atualizar o GitHub/Render para v0.7.7, envie também `realtime-sfu.js`. O App ID e o API Token nunca devem ser gravados no repositório.
+Ao atualizar o GitHub/Render para v0.7.8, envie também `realtime-sfu.js`. O App ID e o API Token nunca devem ser gravados no repositório.
+
+## Variáveis de contas
+
+Veja `.env.example` e `CONFIGURAR_LOGIN_v0.7.8.md`: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, APP_URL e AUTH_REQUIRED=true. Nenhuma chave administrativa é necessária.
 
 ## Variáveis do Render
 Obrigatórias para o SFU:
@@ -38,10 +44,12 @@ O SFU normalmente tenta STUN direto. Para redes móveis, CGNAT e firewalls restr
 
 Essas credenciais ficam somente no Render. O backend gera credenciais TURN curtas para o navegador; o segredo de longa duração não é exposto ao frontend.
 
-## Sequência segura de ativação
+## Sequência segura de ativação do SFU
+
+Para a atualização de contas, prepare também a autenticação antes de publicar os dois pacotes. Se o SFU já está funcionando, preserve sua configuração atual; os passos abaixo são para sua primeira ativação.
 1. Deploy deste backend mantendo `CLOUDFLARE_REALTIME_ENABLED=false`.
-2. Abra `/health` e confirme `version: 0.7.7-alpha`, `realtime.configured: true` e `realtime.enabled: false`.
-3. Publique o frontend v0.7.7 e teste o Salão Livre; com o kill switch desligado ele deve continuar em P2P.
+2. Abra `/health` e confirme `version: 0.7.8-alpha`, `realtime.configured: true` e `realtime.enabled: false`.
+3. Publique o frontend v0.7.8 e teste o Salão Livre; com o kill switch desligado ele deve continuar em P2P.
 4. Só então mude `CLOUDFLARE_REALTIME_ENABLED=true` no Render e faça novo deploy.
 5. Teste primeiro 2 participantes, depois 3. Observe o cartão de infraestrutura no painel de Configurações.
 6. Em qualquer anomalia de consumo/mídia, volte `CLOUDFLARE_REALTIME_ENABLED=false` e redeploy.
@@ -58,5 +66,5 @@ Política padrão:
 
 O kill switch é independente desses números.
 
-## Escopo v0.7.7
+## Escopo v0.7.8
 O SFU é experimental e aceita `chat-livre`, `chat-jogos` e `chat-conversa`, com mídia isolada por sala. A comunicação durante a partida continua P2P nesta versão. Se o SFU estiver desativado ou falhar na inicialização, o cliente retorna ao P2P.
