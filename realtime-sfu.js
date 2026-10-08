@@ -185,11 +185,12 @@ class RealtimeSfuManager{
   }
   _preferredRid(q){q=this._clampQuality(q);return q==='economy'?'q':q==='balanced'?'h':'f';}
   _clampRid(pub,requestedRid,desiredQuality='balanced'){
-    let rid=['f','h','q'].includes(requestedRid)?requestedRid:this._preferredRid(desiredQuality);
+    const available=Array.isArray(pub?.rids)?pub.rids.filter(r=>['f','h','q'].includes(r)):[];
+    if(!available.length)return null;
+    let rid=available.includes(requestedRid)?requestedRid:this._preferredRid(desiredQuality);
     const p=this.policy();
-    // A camada f é a camada máxima do publicador. Quando Ultra ou Alta estão
-    // bloqueadas pelo freio, nunca permitimos que uma nova assinatura peça f.
     if(rid==='f'&&(!p.highAllowed||(pub?.quality==='ultra'&&!p.ultraAllowed)))rid='h';
+    if(!available.includes(rid))rid=available.includes('h')?'h':available.includes('q')?'q':available[0];
     return rid;
   }
   _subscriptionBps(pub,preferredRid){
@@ -198,6 +199,33 @@ class RealtimeSfuManager{
     else if(pub.kind==='screen'){const factor=preferredRid==='q'?.18:preferredRid==='h'?.42:1;bps=pr.screen*factor;}
     else bps=pr.camera[preferredRid]||pr.camera.h;
     return Math.ceil(bps*this.estimateSafetyFactor);
+  }
+  async _publicationActive(pub,{maxAge=1200}={}){
+    if(!pub?.sessionId||!pub?.trackName)return false;
+    if(pub.lastVerifiedAt&&Date.now()-pub.lastVerifiedAt<maxAge)return true;
+    let info;
+    try{info=await this._cf('GET',`/sessions/${encodeURIComponent(pub.sessionId)}`);}catch(err){
+      if(err?.status===404||err?.status===410)return false;
+      throw err;
+    }
+    const track=(info?.tracks||[]).find(t=>t&&t.location==='local'&&String(t.trackName||'')===String(pub.trackName));
+    const active=!!track&&track.status!=='inactive';
+    if(active){pub.lastVerifiedAt=Date.now();pub.remoteStatus=track.status||'active';}
+    return active;
+  }
+  async _waitPublicationActive(pub,timeoutMs=4200){
+    const end=Date.now()+timeoutMs;let lastError=null;
+    do{try{if(await this._publicationActive(pub,{maxAge:0}))return true;}catch(err){lastError=err;}await new Promise(r=>setTimeout(r,260));}while(Date.now()<end);
+    if(lastError)throw lastError;return false;
+  }
+  async _pruneStalePublication(room,pub){
+    if(!pub)return;
+    const map=this._pubMap(pub.roomId),key=this._pubKey(pub.ownerId,pub.kind);
+    if(map.get(key)?.sessionId===pub.sessionId)map.delete(key);
+    const related=[...this.subscriptions.values()].filter(s=>s.roomId===pub.roomId&&s.publisherId===pub.ownerId&&s.kind===pub.kind);
+    for(const sub of related)await this._closeSubscription(sub,true).catch(()=>{});
+    this.sessions.delete(pub.sessionId);
+    if(room)this.broadcastPublications(room);
   }
 
   async _turnIceServers(){
@@ -248,13 +276,18 @@ class RealtimeSfuManager{
         try{this._sendResponse(ws,requestId,true,await this._turnIceServers());}catch(err){this._sendResponse(ws,requestId,true,{iceServers:[{urls:['stun:stun.cloudflare.com:3478']}],turn:false,warning:'TURN indisponível; usando STUN.'});}
         return;
       }
+      if(action==='list-publications'){
+        this._sendResponse(ws,requestId,true,{publications:this.roomPublications(room.id)});return;
+      }
       if(action==='publication-ready'){
         const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId);
         if(!session||session.purpose!=='publish')throw Object.assign(new Error('Publicação não encontrada.'),{code:'BAD_SFU_READY'});
         const pub=this._pubMap(room.id).get(this._pubKey(player.id,session.kind));
         if(!pub||pub.sessionId!==sessionId)throw Object.assign(new Error('Publicação não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
+        const active=await this._waitPublicationActive(pub,4200);
+        if(!active)throw Object.assign(new Error('A track foi negociada, mas ainda não ficou ativa no SFU.'),{code:'PUBLICATION_NOT_ACTIVE'});
         pub.ready=true;pub.readyAt=Date.now();this.broadcastPublications(room);this.broadcastVoiceRoster(room);
-        this._sendResponse(ws,requestId,true,{ready:true,kind:pub.kind});return;
+        this._sendResponse(ws,requestId,true,{ready:true,kind:pub.kind,trackName:pub.trackName,rids:pub.rids});return;
       }
       if(action==='publish-track'){
         const kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
@@ -262,30 +295,37 @@ class RealtimeSfuManager{
         const gate=this._assertAvailable(kind,quality);if(!gate.ok){this._sendResponse(ws,requestId,false,null,gate);return;}
         const activeSfu=[...room.players.values()].filter(p=>p.voiceJoined&&p.mediaTransport==='sfu').length;
         if(player.mediaTransport!=='sfu'&&activeSfu>=this.maxParticipants){this._sendResponse(ws,requestId,false,null,{code:'SFU_ROOM_SAFETY_LIMIT',message:`Limite de segurança do SFU (${this.maxParticipants} participantes simultâneos) atingido.`});return;}
-        const existing=this._pubMap(room.id).get(this._pubKey(player.id,kind));if(existing)await this._closePublication(existing,true).catch(()=>{});
+        const existing=this._pubMap(room.id).get(this._pubKey(player.id,kind));if(existing){await this._closePublication(existing,true).catch(()=>{});this.broadcastPublications(room);}
         const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');
         this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'publish',kind,createdAt:Date.now()});
-        const trackName=kind;
+        const trackName=`${kind}-${String(player.id).replace(/[^a-zA-Z0-9]/g,'').slice(0,8)}-${Date.now().toString(36)}`;
+        const requestedRids=Array.isArray(payload.rids)?[...new Set(payload.rids.filter(r=>['f','h','q'].includes(r)))]:[];
         const body={sessionDescription:payload.sessionDescription,tracks:[{location:'local',mid:String(payload.mid),trackName}]};
         let result;try{result=await this._cf('POST',`/sessions/${encodeURIComponent(sessionId)}/tracks/new`,body);}catch(err){this.sessions.delete(sessionId);throw err;}
         const trackResult=(result.tracks||[])[0]||{};if(trackResult.errorCode)throw Object.assign(new Error(trackResult.errorDescription||'Falha ao publicar track.'),{code:trackResult.errorCode});
-        const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName,mid:String(payload.mid),rids:['camera','screen'].includes(kind)?['f','h','q']:[],ready:false,createdAt:Date.now()};
+        const actualTrackName=String(trackResult.trackName||trackName);
+        const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName:actualTrackName,mid:String(payload.mid),rids:['camera','screen'].includes(kind)?requestedRids:[],ready:false,createdAt:Date.now(),lastVerifiedAt:0};
         this._pubMap(room.id).set(this._pubKey(player.id,kind),pub);player.mediaTransport='sfu';player.transmissionQuality=quality;
         this.broadcastVoiceRoster(room);
-        this._sendResponse(ws,requestId,true,{sessionId,sessionDescription:result.sessionDescription||null,publication:{kind,trackName,quality,rids:pub.rids}});return;
+        this._sendResponse(ws,requestId,true,{sessionId,sessionDescription:result.sessionDescription||null,publication:{kind,trackName:actualTrackName,quality,rids:pub.rids}});return;
       }
       if(action==='subscribe-track'){
         const publisherId=String(payload.publisherId||''),kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
         if(!ALLOWED_KINDS.has(kind)||publisherId===player.id)throw Object.assign(new Error('Assinatura inválida.'),{code:'BAD_SFU_SUBSCRIBE'});
         const pub=this._pubMap(room.id).get(this._pubKey(publisherId,kind));if(!pub)throw Object.assign(new Error('Publicação não está disponível.'),{code:'PUBLICATION_NOT_FOUND'});
         if(!pub.ready)throw Object.assign(new Error('Publicação ainda está conectando ao SFU.'),{code:'PUBLICATION_NOT_READY'});
+        if(!(await this._publicationActive(pub,{maxAge:1200}))){await this._pruneStalePublication(room,pub);throw Object.assign(new Error('A publicação mudou ou foi encerrada; atualizando a lista de mídia.'),{code:'PUBLICATION_STALE'});}
         const gate=this._assertAvailable(kind,quality);if(!gate.ok){this._sendResponse(ws,requestId,false,null,gate);return;}
         const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');
         const preferredRid=['camera','screen'].includes(kind)?this._clampRid(pub,String(payload.preferredRid||''),quality):null;
         const remote={location:'remote',sessionId:pub.sessionId,trackName:pub.trackName};
-        if(['camera','screen'].includes(kind))remote.simulcast={preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'};
+        if(['camera','screen'].includes(kind)&&preferredRid&&pub.rids?.length)remote.simulcast={preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'};
         let result;try{result=await this._cf('POST',`/sessions/${encodeURIComponent(sessionId)}/tracks/new`,{tracks:[remote]});}catch(err){throw err;}
-        const tr=(result.tracks||[])[0]||{};if(tr.errorCode)throw Object.assign(new Error(tr.errorDescription||'Falha ao assinar track.'),{code:tr.errorCode});
+        const tr=(result.tracks||[])[0]||{};
+        if(tr.errorCode){
+          if(tr.errorCode==='not_found_track_error'){await this._pruneStalePublication(room,pub);throw Object.assign(new Error('A fonte de mídia foi substituída antes da assinatura. Ressincronizando.'),{code:'PUBLICATION_STALE'});}
+          throw Object.assign(new Error(tr.errorDescription||'Falha ao assinar track.'),{code:tr.errorCode});
+        }
         const receivingMid=String(tr.mid??'');
         this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'subscribe',kind,publisherId,createdAt:Date.now()});
         this.subscriptions.set(sessionId,{sessionId,ownerId:player.id,roomId:room.id,publisherId,kind,mid:receivingMid,preferredRid:preferredRid||null,estimatedBps:this._subscriptionBps(pub,preferredRid),createdAt:Date.now()});
@@ -300,9 +340,10 @@ class RealtimeSfuManager{
         const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId),sub=this.subscriptions.get(sessionId);if(!session||!sub||!['camera','screen'].includes(sub.kind))throw Object.assign(new Error('Assinatura de vídeo não encontrada.'),{code:'BAD_SFU_UPDATE'});
         const pub=this._pubMap(room.id).get(this._pubKey(sub.publisherId,sub.kind));if(!pub)throw Object.assign(new Error('Publicação de vídeo não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
         const preferredRid=this._clampRid(pub,String(payload.preferredRid||''),player.transmissionQuality||'balanced');
+        if(!preferredRid||!pub.rids?.length){sub.preferredRid=null;sub.estimatedBps=this._subscriptionBps(pub,null);this._sendResponse(ws,requestId,true,{preferredRid:null,simulcast:false});return;}
         const result=await this._cf('PUT',`/sessions/${encodeURIComponent(sessionId)}/tracks/update`,{tracks:[{mid:sub.mid,simulcast:{preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'}}]});
         sub.preferredRid=preferredRid;sub.estimatedBps=this._subscriptionBps(pub,preferredRid);
-        this._sendResponse(ws,requestId,true,{preferredRid,result});return;
+        this._sendResponse(ws,requestId,true,{preferredRid,result,simulcast:true});return;
       }
       if(action==='close-publication'){
         const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId);if(!session||session.purpose!=='publish')throw Object.assign(new Error('Publicação não encontrada.'),{code:'BAD_SFU_CLOSE'});

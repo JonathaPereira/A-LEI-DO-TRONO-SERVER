@@ -12,7 +12,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.0-alpha';
+const VERSION = '0.7.1-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -67,8 +67,23 @@ function shuffle(arr){
   return a;
 }
 function sanitizeName(value) {
-  const name = String(value || 'Jogador').replace(/[<>]/g, '').trim().slice(0, 18);
-  return name || 'Jogador';
+  const raw=String(value??'').replace(/[<>]/g,'').replace(/[\u0000-\u001F\u007F]/g,' ').trim();
+  return [...raw].slice(0,20).join('');
+}
+function nameKey(value){
+  return sanitizeName(value).normalize('NFKC').toLocaleLowerCase('pt-BR');
+}
+function nameOwner(name,excludeClientId=null){
+  const key=nameKey(name);if(!key)return null;
+  for(const room of rooms.values())for(const p of room.players.values())if(p.id!==excludeClientId&&nameKey(p.name)===key)return {room,player:p};
+  return null;
+}
+function nameAvailability(name,excludeClientId=null){
+  const clean=sanitizeName(name);
+  if(!clean)return {available:false,name:'',code:'NAME_REQUIRED',message:'Digite um nome para entrar.'};
+  const owner=nameOwner(clean,excludeClientId);
+  if(owner)return {available:false,name:clean,code:'NAME_TAKEN',message:`Já há alguém usando “${clean}”. Escolha outro nome.`};
+  return {available:true,name:clean,code:null,message:'Nome disponível.'};
 }
 function sanitizeChat(value){
   return String(value||'').replace(/\r\n?/g,'\n').replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/g,' ').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,300);
@@ -184,12 +199,14 @@ function leaveRoom(ws, reason='leave') {
 function joinRoom(ws,roomId,rawName){
   const room=rooms.get(roomId);
   if(!room){ send(ws,{type:'error',code:'ROOM_NOT_FOUND',message:'Sala inexistente.'}); return; }
+  const availability=nameAvailability(rawName,ws.clientId);
+  if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message,name:availability.name});return;}
   if(room.kind==='game'&&room.game && room.game.phase!=='game-over') { send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta sala já está em partida.'}); return; }
   if(ws.roomId===roomId && room.players.has(ws.clientId)){ send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,room.players.get(ws.clientId))}); return; }
   leaveRoom(ws,'switch-room');
   if(room.kind==='game'&&room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:sanitizeName(rawName),seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
+  const player={id:ws.clientId,name:availability.name,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
@@ -734,6 +751,7 @@ wss.on('connection',(ws)=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     switch(message.type){
       case 'list-rooms':send(ws,{type:'rooms',rooms:safeRooms()});break;
+      case 'check-name':{const result=nameAvailability(message.name,ws.clientId);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
       case 'join-room':joinRoom(ws,message.roomId,message.name);break;
       case 'leave-room':leaveRoom(ws,'leave');break;
       case 'ready':setReady(ws,message.ready);break;
