@@ -10,9 +10,9 @@ const ALLOWED_KINDS = new Set(['audio','camera','screen']);
 const ALLOWED_QUALITIES = new Set(['economy','balanced','high']);
 const QUALITY_ORDER = ['economy','balanced','high'];
 const PROFILE = {
-  economy:{audio:64000,camera:{f:900000,h:450000,q:180000},screen:2300000},
-  balanced:{audio:96000,camera:{f:2200000,h:950000,q:350000},screen:5000000},
-  high:{audio:128000,camera:{f:3500000,h:1400000,q:450000},screen:5800000},
+  economy:{audio:64000,camera:{f:900000,h:450000,q:180000},screen:4000000},
+  balanced:{audio:96000,camera:{f:2200000,h:950000,q:350000},screen:8000000},
+  high:{audio:128000,camera:{f:3500000,h:1400000,q:450000},screen:10000000},
 };
 
 function envBool(name, fallback=false){
@@ -60,6 +60,8 @@ class RealtimeSfuManager{
     this.maxParticipants=Math.max(2,Math.min(32,Math.floor(envNum('REALTIME_MAX_PARTICIPANTS',8))));
     this.estimateSafetyFactor=Math.max(1,Math.min(4,envNum('REALTIME_ESTIMATE_SAFETY_FACTOR',1.5)));
     this.sessions=new Map();
+    this.clientGenerations=new Map();
+    this.sessionQueues=new Map();
     this.publicationsByRoom=new Map();
     this.subscriptions=new Map();
     this.usage={month:monthKeyUTC(),bytes:0,lastTick:Date.now(),loadedFromDisk:false};
@@ -101,7 +103,7 @@ class RealtimeSfuManager{
   }
   roomPublications(roomId){
     const map=this.publicationsByRoom.get(roomId);if(!map)return [];
-    return [...map.values()].filter(p=>p.ready).map(p=>({ownerId:p.ownerId,ownerName:p.ownerName,kind:p.kind,sessionId:p.sessionId,trackName:p.trackName,quality:p.quality,rids:p.rids||[],createdAt:p.createdAt}));
+    return [...map.values()].filter(p=>p.ready).map(p=>({ownerId:p.ownerId,ownerName:p.ownerName,kind:p.kind,sessionId:p.sessionId,trackName:p.trackName,quality:p.quality,screenBitrate:p.screenBitrate,rids:p.rids||[],createdAt:p.createdAt}));
   }
   broadcastPublications(room){
     if(!room)return;const publications=this.roomPublications(room.id);
@@ -181,7 +183,7 @@ class RealtimeSfuManager{
     }
     return quality;
   }
-  _preferredRid(q){q=this._clampQuality(q);return q==='economy'?'q':q==='balanced'?'h':'f';}
+  _preferredRid(q){q=this._clampQuality(q);return q==='economy'?'q':'f';}
   _clampRid(pub,requestedRid,desiredQuality='balanced'){
     const available=Array.isArray(pub?.rids)?pub.rids.filter(r=>['f','h','q'].includes(r)):[];
     if(!available.length)return null;
@@ -194,7 +196,7 @@ class RealtimeSfuManager{
   _subscriptionBps(pub,preferredRid){
     const pr=PROFILE[pub.quality]||PROFILE.balanced;
     let bps;if(pub.kind==='audio')bps=pr.audio;
-    else if(pub.kind==='screen'){const factor=preferredRid==='q'?.18:preferredRid==='h'?.42:1;bps=pr.screen*factor;}
+    else if(pub.kind==='screen'){const factor=preferredRid==='q'?.18:preferredRid==='h'?.42:1;bps=(pub.screenBitrate||pr.screen)*factor;}
     else bps=pr.camera[preferredRid]||pr.camera.h;
     return Math.ceil(bps*this.estimateSafetyFactor);
   }
@@ -220,7 +222,7 @@ class RealtimeSfuManager{
     if(!pub)return;
     const map=this._pubMap(pub.roomId),key=this._pubKey(pub.ownerId,pub.kind);
     if(map.get(key)?.sessionId===pub.sessionId)map.delete(key);
-    const related=[...this.subscriptions.values()].filter(s=>s.roomId===pub.roomId&&s.publisherId===pub.ownerId&&s.kind===pub.kind);
+    const related=[...this.subscriptions.values()].filter(s=>s.roomId===pub.roomId&&s.publisherSessionId===pub.sessionId);
     for(const sub of related)await this._closeSubscription(sub,true).catch(()=>{});
     this.sessions.delete(pub.sessionId);
     if(room)this.broadcastPublications(room);
@@ -264,11 +266,20 @@ class RealtimeSfuManager{
   }
 
   async handleRequest(ws,message){
+    const sid=String(message.payload?.sessionId||'');
+    if(!sid)return this._handleRequest(ws,message);
+    const queued=(this.sessionQueues.get(sid)||Promise.resolve()).catch(()=>{}).then(()=>this._handleRequest(ws,message));
+    this.sessionQueues.set(sid,queued);
+    try{await queued;}finally{if(this.sessionQueues.get(sid)===queued)this.sessionQueues.delete(sid);}
+  }
+  async _handleRequest(ws,message){
     const requestId=String(message.requestId||'').slice(0,80),action=String(message.action||''),payload=message.payload||{};
     if(!requestId)return;
     if(action==='status'){this._sendResponse(ws,requestId,true,this.statusPayload());return;}
     const auth=this._allowedRoomPlayer(ws,true);if(auth.error){this._sendResponse(ws,requestId,false,null,{code:auth.error,message:'Operação SFU não autorizada neste contexto.'});return;}
     const {room,player}=auth;
+    const contextKey=`${room.id}:${player.id}`,generation=this.clientGenerations.get(contextKey)||0;
+    const ensureCurrent=()=>{if(ws.roomId!==room.id||room.players.get(player.id)!==player||!player.voiceJoined||(this.clientGenerations.get(contextKey)||0)!==generation)throw Object.assign(new Error('A chamada mudou durante a operação SFU.'),{code:'SFU_SESSION_STALE'});};
     try{
       if(action==='ice-config'){
         try{this._sendResponse(ws,requestId,true,await this._turnIceServers());}catch(err){this._sendResponse(ws,requestId,true,{iceServers:[{urls:['stun:stun.cloudflare.com:3478']}],turn:false,warning:'TURN indisponível; usando STUN.'});}
@@ -294,15 +305,17 @@ class RealtimeSfuManager{
         const activeSfu=[...room.players.values()].filter(p=>p.voiceJoined&&p.mediaTransport==='sfu').length;
         if(player.mediaTransport!=='sfu'&&activeSfu>=this.maxParticipants){this._sendResponse(ws,requestId,false,null,{code:'SFU_ROOM_SAFETY_LIMIT',message:`Limite de segurança do SFU (${this.maxParticipants} participantes simultâneos) atingido.`});return;}
         const existing=this._pubMap(room.id).get(this._pubKey(player.id,kind));if(existing){await this._closePublication(existing,true).catch(()=>{});this.broadcastPublications(room);}
-        const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');
+        const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');ensureCurrent();
         this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'publish',kind,createdAt:Date.now()});
         const trackName=`${kind}-${String(player.id).replace(/[^a-zA-Z0-9]/g,'').slice(0,8)}-${Date.now().toString(36)}`;
         const requestedRids=Array.isArray(payload.rids)?[...new Set(payload.rids.filter(r=>['f','h','q'].includes(r)))]:[];
         const body={sessionDescription:payload.sessionDescription,tracks:[{location:'local',mid:String(payload.mid),trackName}]};
         let result;try{result=await this._cf('POST',`/sessions/${encodeURIComponent(sessionId)}/tracks/new`,body);}catch(err){this.sessions.delete(sessionId);throw err;}
         const trackResult=(result.tracks||[])[0]||{};if(trackResult.errorCode)throw Object.assign(new Error(trackResult.errorDescription||'Falha ao publicar track.'),{code:trackResult.errorCode});
+        ensureCurrent();
         const actualTrackName=String(trackResult.trackName||trackName);
-        const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName:actualTrackName,mid:String(payload.mid),rids:['camera','screen'].includes(kind)?requestedRids:[],ready:false,createdAt:Date.now(),lastVerifiedAt:0};
+        const requestedBitrate=Number(payload.screenBitrate);const screenBitrate=kind==='screen'?Math.min(this.policy().highAllowed?15000000:6000000,Math.max(4000000,Number.isFinite(requestedBitrate)?requestedBitrate:PROFILE[quality].screen)):null;
+        const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName:actualTrackName,mid:String(payload.mid),screenBitrate,rids:['camera','screen'].includes(kind)?requestedRids:[],ready:false,createdAt:Date.now(),lastVerifiedAt:0};
         this._pubMap(room.id).set(this._pubKey(player.id,kind),pub);player.mediaTransport='sfu';player.transmissionQuality=quality;
         this.broadcastVoiceRoster(room);
         this._sendResponse(ws,requestId,true,{sessionId,sessionDescription:result.sessionDescription||null,publication:{kind,trackName:actualTrackName,quality,rids:pub.rids}});return;
@@ -314,7 +327,7 @@ class RealtimeSfuManager{
         if(!pub.ready)throw Object.assign(new Error('Publicação ainda está conectando ao SFU.'),{code:'PUBLICATION_NOT_READY'});
         if(!(await this._publicationActive(pub,{maxAge:1200}))){await this._pruneStalePublication(room,pub);throw Object.assign(new Error('A publicação mudou ou foi encerrada; atualizando a lista de mídia.'),{code:'PUBLICATION_STALE'});}
         const gate=this._assertAvailable(kind,quality);if(!gate.ok){this._sendResponse(ws,requestId,false,null,gate);return;}
-        const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');
+        const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');ensureCurrent();
         const preferredRid=['camera','screen'].includes(kind)?this._clampRid(pub,String(payload.preferredRid||''),quality):null;
         const remote={location:'remote',sessionId:pub.sessionId,trackName:pub.trackName};
         if(['camera','screen'].includes(kind)&&preferredRid&&pub.rids?.length)remote.simulcast={preferredRid,priorityOrdering:'asciibetical',ridNotAvailable:'asciibetical'};
@@ -324,18 +337,33 @@ class RealtimeSfuManager{
           if(tr.errorCode==='not_found_track_error'){await this._pruneStalePublication(room,pub);throw Object.assign(new Error('A fonte de mídia foi substituída antes da assinatura. Ressincronizando.'),{code:'PUBLICATION_STALE'});}
           throw Object.assign(new Error(tr.errorDescription||'Falha ao assinar track.'),{code:tr.errorCode});
         }
+        ensureCurrent();
+        if(!sdpOk(result.sessionDescription,'offer'))throw Object.assign(new Error('SFU não forneceu uma oferta SDP válida.'),{code:'BAD_SFU_OFFER'});
         const receivingMid=String(tr.mid??'');
-        this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'subscribe',kind,publisherId,createdAt:Date.now()});
-        this.subscriptions.set(sessionId,{sessionId,ownerId:player.id,roomId:room.id,publisherId,kind,mid:receivingMid,preferredRid:preferredRid||null,estimatedBps:this._subscriptionBps(pub,preferredRid),createdAt:Date.now()});
+        this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'subscribe',pendingAnswer:true,kind,publisherId,createdAt:Date.now()});
+        this.subscriptions.set(sessionId,{sessionId,ownerId:player.id,roomId:room.id,publisherId,publisherSessionId:pub.sessionId,kind,mid:receivingMid,preferredRid:preferredRid||null,estimatedBps:this._subscriptionBps(pub,preferredRid),createdAt:Date.now()});
         this._sendResponse(ws,requestId,true,{sessionId,sessionDescription:result.sessionDescription||null,mid:receivingMid,publisherId,kind,preferredRid});return;
       }
       if(action==='renegotiate'){
-        const session=this._sessionOwned(ws,payload.sessionId);if(!session||!sdpOk(payload.sessionDescription,'answer'))throw Object.assign(new Error('Renegociação inválida.'),{code:'BAD_SFU_RENEGOTIATE'});
-        const result=await this._cf('PUT',`/sessions/${encodeURIComponent(payload.sessionId)}/renegotiate`,{sessionDescription:payload.sessionDescription});
+        const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId);
+        if(!session||session.purpose!=='subscribe')throw Object.assign(new Error('Sessão de recepção encerrada ou substituída. Ressincronize a mídia.'),{code:'SFU_SESSION_STALE'});
+        if(!sdpOk(payload.sessionDescription,'answer'))throw Object.assign(new Error('A resposta SDP da recepção está ausente ou é inválida.'),{code:'BAD_SFU_ANSWER'});
+        const answer={type:'answer',sdp:payload.sessionDescription.sdp};
+        const result=await this._cf('PUT',`/sessions/${encodeURIComponent(sessionId)}/renegotiate`,{sessionDescription:answer});
+        ensureCurrent();session.pendingAnswer=false;
         this._sendResponse(ws,requestId,true,{accepted:true,result:result||{}});return;
+      }
+      if(action==='set-screen-bitrate'){
+        const requested=Number(payload.screenBitrate);
+        if(![4000000,6000000,8000000,10000000,12000000,15000000].includes(requested))throw Object.assign(new Error('Bitrate de tela inválido.'),{code:'BAD_SCREEN_BITRATE'});
+        const pub=this._pubMap(room.id).get(this._pubKey(player.id,'screen'));
+        const effective=Math.min(requested,this.policy().highAllowed?15000000:6000000);
+        if(pub){pub.screenBitrate=effective;for(const sub of this.subscriptions.values())if(sub.roomId===room.id&&sub.publisherId===player.id&&sub.kind==='screen')sub.estimatedBps=this._subscriptionBps(pub,sub.preferredRid);this.broadcastPublications(room);}
+        this._sendResponse(ws,requestId,true,{screenBitrate:effective});return;
       }
       if(action==='update-subscription'){
         const sessionId=String(payload.sessionId||''),session=this._sessionOwned(ws,sessionId),sub=this.subscriptions.get(sessionId);if(!session||!sub||!['camera','screen'].includes(sub.kind))throw Object.assign(new Error('Assinatura de vídeo não encontrada.'),{code:'BAD_SFU_UPDATE'});
+        if(session.pendingAnswer)throw Object.assign(new Error('A resposta da negociação ainda está pendente.'),{code:'SFU_NEGOTIATION_PENDING'});
         const pub=this._pubMap(room.id).get(this._pubKey(sub.publisherId,sub.kind));if(!pub)throw Object.assign(new Error('Publicação de vídeo não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
         const preferredRid=this._clampRid(pub,String(payload.preferredRid||''),player.transmissionQuality||'balanced');
         if(!preferredRid||!pub.rids?.length){sub.preferredRid=null;sub.estimatedBps=this._subscriptionBps(pub,null);this._sendResponse(ws,requestId,true,{preferredRid:null,simulcast:false});return;}
@@ -357,18 +385,27 @@ class RealtimeSfuManager{
   }
 
   async _closePublication(pub,silent=false){
-    if(!pub)return;const session=this.sessions.get(pub.sessionId);
+    if(!pub)return;
+    const related=[...this.subscriptions.values()].filter(s=>s.roomId===pub.roomId&&s.publisherSessionId===pub.sessionId);
+    this.sessions.delete(pub.sessionId);const map=this._pubMap(pub.roomId);if(map.get(this._pubKey(pub.ownerId,pub.kind))===pub)map.delete(this._pubKey(pub.ownerId,pub.kind));
+    for(const sub of related){this.subscriptions.delete(sub.sessionId);this.sessions.delete(sub.sessionId);}
     try{if(this.configured())await this._cf('PUT',`/sessions/${encodeURIComponent(pub.sessionId)}/tracks/close`,{tracks:[{mid:pub.mid}],force:true});}catch(err){if(!silent)throw err;}
-    this.sessions.delete(pub.sessionId);const map=this._pubMap(pub.roomId);if(map.get(this._pubKey(pub.ownerId,pub.kind))?.sessionId===pub.sessionId)map.delete(this._pubKey(pub.ownerId,pub.kind));
-    const related=[...this.subscriptions.values()].filter(s=>s.roomId===pub.roomId&&s.publisherId===pub.ownerId&&s.kind===pub.kind);for(const sub of related)await this._closeSubscription(sub,true).catch(()=>{});
+    for(const sub of related)await this._closeSubscription(sub,true).catch(()=>{});
   }
   async _closeSubscription(sub,silent=false){
     if(!sub)return;try{if(this.configured())await this._cf('PUT',`/sessions/${encodeURIComponent(sub.sessionId)}/tracks/close`,{tracks:[{mid:sub.mid}],force:true});}catch(err){if(!silent)throw err;}
     this.subscriptions.delete(sub.sessionId);this.sessions.delete(sub.sessionId);
   }
   async cleanupClient(clientId,roomId){
-    const pubs=[...this._pubMap(roomId).values()].filter(p=>p.ownerId===clientId);for(const p of pubs)await this._closePublication(p,true).catch(()=>{});
-    const subs=[...this.subscriptions.values()].filter(s=>s.ownerId===clientId);for(const s of subs)await this._closeSubscription(s,true).catch(()=>{});
+    const key=`${roomId}:${clientId}`;this.clientGenerations.set(key,(this.clientGenerations.get(key)||0)+1);
+    // Capture and detach everything before yielding. A late teardown must never select
+    // subscriptions created by the next join to this same room.
+    const pubs=[...this._pubMap(roomId).values()].filter(p=>p.ownerId===clientId);
+    const subs=[...this.subscriptions.values()].filter(s=>s.roomId===roomId&&s.ownerId===clientId);
+    for(const pub of pubs){this.sessions.delete(pub.sessionId);const map=this._pubMap(roomId);if(map.get(this._pubKey(clientId,pub.kind))===pub)map.delete(this._pubKey(clientId,pub.kind));}
+    for(const sub of subs){this.sessions.delete(sub.sessionId);this.subscriptions.delete(sub.sessionId);}
+    for(const pub of pubs)await this._closePublication(pub,true).catch(()=>{});
+    for(const sub of subs)await this._closeSubscription(sub,true).catch(()=>{});
     const room=this.rooms.get(roomId);if(room)this.broadcastPublications(room);
   }
 }
