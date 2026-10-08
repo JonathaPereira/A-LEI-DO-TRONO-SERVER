@@ -12,7 +12,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.5-alpha';
+const VERSION = '0.7.6-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -231,6 +231,7 @@ function handleChatMessage(ws,rawText){
 }
 function handleVoiceState(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
+  const previousTransport=player.mediaTransport;
   player.voiceJoined=!!message.joined;
   player.voiceMuted=player.voiceJoined&&!!message.muted;
   player.cameraOn=player.voiceJoined&&!!message.camera;
@@ -238,9 +239,9 @@ function handleVoiceState(ws,message){
   const q=String(message.quality||player.transmissionQuality||'balanced');
   player.transmissionQuality=['economy','balanced','high'].includes(q)?q:'balanced';
   const transport=String(message.transport||player.mediaTransport||'p2p');
-  player.mediaTransport=player.voiceJoined&&(transport==='sfu'?'sfu':'p2p');
+  player.mediaTransport=player.voiceJoined&&['sfu','sfu-pending'].includes(transport)?transport:'p2p';
   if(player.voiceJoined&&player.mediaTransport==='sfu')player.transmissionQuality=realtimeSfu.notePlayerQuality(room.id,player.id,player.transmissionQuality);
-  if(!player.voiceJoined){player.mediaTransport='p2p';void realtimeSfu.cleanupClient(player.id,room.id);}
+  if(!player.voiceJoined||(player.mediaTransport==='p2p'&&['sfu','sfu-pending'].includes(previousTransport)))void realtimeSfu.cleanupClient(player.id,room.id);
   // Fora da chamada, os clientes recebem apenas voiceActive no room-state.
   // Identidade, mute, câmera e compartilhamento só são enviados aos membros da call.
   broadcastRoom(room);broadcastRooms();broadcastChatChannels();broadcastVoiceRoster(room);

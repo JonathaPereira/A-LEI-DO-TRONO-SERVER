@@ -295,16 +295,19 @@ class RealtimeSfuManager{
         const pub=this._pubMap(room.id).get(this._pubKey(player.id,session.kind));
         if(!pub||pub.sessionId!==sessionId)throw Object.assign(new Error('Publicação não encontrada.'),{code:'PUBLICATION_NOT_FOUND'});
         const active=await this._waitPublicationActive(pub,4200);
+        ensureCurrent();
+        if(this._pubMap(room.id).get(this._pubKey(player.id,pub.kind))!==pub)throw Object.assign(new Error('A publicação foi substituída.'),{code:'PUBLICATION_STALE'});
         if(!active)throw Object.assign(new Error('A track foi negociada, mas ainda não ficou ativa no SFU.'),{code:'PUBLICATION_NOT_ACTIVE'});
-        pub.ready=true;pub.readyAt=Date.now();this.broadcastPublications(room);this.broadcastVoiceRoster(room);
+        pub.ready=true;pub.readyAt=Date.now();if(pub.kind==='audio')player.mediaTransport='sfu';this.broadcastPublications(room);this.broadcastVoiceRoster(room);
         this._sendResponse(ws,requestId,true,{ready:true,kind:pub.kind,trackName:pub.trackName,rids:pub.rids});return;
       }
       if(action==='publish-track'){
         const kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
         if(!ALLOWED_KINDS.has(kind)||!sdpOk(payload.sessionDescription,'offer')||typeof payload.mid!=='string')throw Object.assign(new Error('Publicação inválida.'),{code:'BAD_SFU_PUBLISH'});
         const gate=this._assertAvailable(kind,quality);if(!gate.ok){this._sendResponse(ws,requestId,false,null,gate);return;}
-        const activeSfu=[...room.players.values()].filter(p=>p.voiceJoined&&p.mediaTransport==='sfu').length;
-        if(player.mediaTransport!=='sfu'&&activeSfu>=this.maxParticipants){this._sendResponse(ws,requestId,false,null,{code:'SFU_ROOM_SAFETY_LIMIT',message:`Limite de segurança do SFU (${this.maxParticipants} participantes simultâneos) atingido.`});return;}
+        const publishing=new Set([...this._pubMap(room.id).values()].map(p=>p.ownerId));
+        const activeSfu=[...room.players.values()].filter(p=>p.voiceJoined&&(p.mediaTransport==='sfu'||publishing.has(p.id)));
+        if(!activeSfu.some(p=>p.id===player.id)&&activeSfu.length>=this.maxParticipants){this._sendResponse(ws,requestId,false,null,{code:'SFU_ROOM_SAFETY_LIMIT',message:`Limite de segurança do SFU (${this.maxParticipants} participantes simultâneos) atingido.`});return;}
         const existing=this._pubMap(room.id).get(this._pubKey(player.id,kind));if(existing){await this._closePublication(existing,true).catch(()=>{});this.broadcastPublications(room);}
         const newSession=await this._cf('POST','/sessions/new');const sessionId=String(newSession.sessionId||'');if(!sessionId)throw new Error('Cloudflare não retornou sessionId.');ensureCurrent();
         this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'publish',kind,createdAt:Date.now()});
@@ -317,7 +320,7 @@ class RealtimeSfuManager{
         const actualTrackName=String(trackResult.trackName||trackName);
         const requestedBitrate=Number(payload.screenBitrate);const screenBitrate=kind==='screen'?Math.min(this.policy().highAllowed?15000000:6000000,Math.max(4000000,Number.isFinite(requestedBitrate)?requestedBitrate:PROFILE[quality].screen)):null;
         const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName:actualTrackName,mid:String(payload.mid),screenBitrate,rids:['camera','screen'].includes(kind)?requestedRids:[],ready:false,createdAt:Date.now(),lastVerifiedAt:0};
-        this._pubMap(room.id).set(this._pubKey(player.id,kind),pub);player.mediaTransport='sfu';player.transmissionQuality=quality;
+        this._pubMap(room.id).set(this._pubKey(player.id,kind),pub);if(kind==='audio')player.mediaTransport='sfu-pending';player.transmissionQuality=quality;
         this.broadcastVoiceRoster(room);
         this._sendResponse(ws,requestId,true,{sessionId,sessionDescription:result.sessionDescription||null,publication:{kind,trackName:actualTrackName,quality,rids:pub.rids}});return;
       }
