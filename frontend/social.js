@@ -185,6 +185,7 @@ window.TronoSocial = (()=>{
   let micMuted=false;
   let deafened=false;
   let cameraOn=false;
+  let cameraRequest=null,cameraGeneration=0,cameraTogglePending=false;
   let screenSharing=false;
   let panelOpen=false;
   let chatHubMode=false;
@@ -402,13 +403,9 @@ window.TronoSocial = (()=>{
 
   function cameraMediaConstraints(){const q=qualityProfile().camera;const video={width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:q.fps,max:q.fps}};if(selectedCamera)video.deviceId={exact:selectedCamera};return video;}
   function cameraFallbackAttempts(){
-    const q=qualityProfile().camera,base={width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:Math.min(q.fps,30),max:q.fps}};
-    const list=[];
-    if(selectedCamera){list.push({...base,deviceId:{exact:selectedCamera}});list.push({...base,deviceId:{ideal:selectedCamera}});}
-    list.push({...base,facingMode:{ideal:'user'}});
-    list.push({width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30},facingMode:{ideal:'user'}});
-    list.push(true);
-    return list;
+    const q=qualityProfile().camera,base={width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:Math.min(q.fps,30)}};
+    // Retain the selected input when relaxing quality; never silently switch cameras.
+    return selectedCamera?[{...base,deviceId:{exact:selectedCamera}},{deviceId:{exact:selectedCamera}}]:[{...base,facingMode:{ideal:'user'}},true];
   }
   function cameraErrorCanFallback(err){return ['OverconstrainedError','NotFoundError','NotReadableError','AbortError','TypeError'].includes(err?.name)||['OVERCONSTRAINED','DEVICE_NOT_FOUND'].includes(err?.code);}
   async function openCameraStream(){
@@ -416,7 +413,20 @@ window.TronoSocial = (()=>{
       try{return await navigator.mediaDevices.getUserMedia({audio:false,video});}
       catch(err){last=err;if(err?.name==='NotAllowedError'||err?.name==='SecurityError')throw err;if(!cameraErrorCanFallback(err))throw err;}
     }
+    if(selectedCamera&&['NotFoundError','OverconstrainedError'].includes(last?.name)){
+      const devices=await navigator.mediaDevices.enumerateDevices();
+      if(!devices.some(d=>d.kind==='videoinput'&&d.deviceId===selectedCamera)){
+        selectedCamera='';storage.removeItem('tronoCameraInput');return navigator.mediaDevices.getUserMedia({audio:false,video:true});
+      }
+    }
     throw last||new Error('Não foi possível iniciar a câmera.');
+  }
+  function cameraErrorMessage(err){
+    if(err?.name==='NotAllowedError'||err?.name==='SecurityError')return 'Permita o acesso à câmera nas configurações deste site no navegador.';
+    if(err?.name==='NotReadableError'||err?.name==='AbortError')return 'A câmera está ocupada ou não iniciou. Feche outros aplicativos que usam a câmera e escolha a entrada em Configurações → Vídeo.';
+    if(err?.name==='NotFoundError')return 'Nenhuma câmera disponível. Conecte uma câmera e escolha a entrada em Configurações → Vídeo.';
+    if(err?.name==='OverconstrainedError')return 'Esta câmera não aceitou a captura. Escolha outra entrada em Configurações → Vídeo.';
+    return err?.message||'Não foi possível abrir a câmera.';
   }
   // getDisplayMedia rejects min/exact/max capture constraints; apply the ceiling after capture.
   function screenMediaConstraints(){const q=qualityProfile().screen;return {width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:q.fps}};}
@@ -491,14 +501,25 @@ window.TronoSocial = (()=>{
     try{const result=await window.TronoNetwork?.requestSfu('update-subscription',{sessionId:sub.sessionId,preferredRid:requested},9000);sub.preferredRid=result?.preferredRid||requested;}catch(err){console.warn('[TronoSocial] qualidade ao maximizar',kind,err.code||err);}
   }
   async function toggleMediaFullscreen(tile){
-    if(inChatHub()&&window.TronoMosaic){window.TronoMosaic.open(tile?.dataset.peer);return;}
     if(!tile)return;const video=tile.querySelector('video'),wasMax=tile.classList.contains('media-maximized')||document.fullscreenElement===tile;
+    window.TronoMosaic?.close();
+    if(!wasMax&&tile.classList.contains('screen-share-tile')){
+      if(tile.dataset.peer===meId()){localScreenCollapsed=false;localScreenPreviewPaused=false;}else tile.dataset.collapsed='0';
+      renderScreenGrid();
+    }
+    if(wasMax&&!document.fullscreenElement){tile.classList.remove('media-maximized');document.body.classList.remove('media-focus-open');await setSfuTileLayer(tile,false);return;}
+    const old=document.querySelector('.media-maximized');if(old){old.classList.remove('media-maximized');document.body.classList.remove('media-focus-open');void setSfuTileLayer(old,false);}
     try{
       if(document.fullscreenElement){await document.exitFullscreen();await setSfuTileLayer(tile,false);return;}
       if(tile.requestFullscreen){await tile.requestFullscreen();await setSfuTileLayer(tile,true);return;}
       if(video?.webkitEnterFullscreen){video.webkitEnterFullscreen();await setSfuTileLayer(tile,true);return;}
     }catch(err){console.warn('[TronoSocial] tela cheia',err);}
-    const old=document.querySelector('.media-maximized');if(old&&old!==tile){old.classList.remove('media-maximized');await setSfuTileLayer(old,false);}tile.classList.toggle('media-maximized');document.body.classList.toggle('media-focus-open',tile.classList.contains('media-maximized'));await setSfuTileLayer(tile,!wasMax);
+    tile.classList.add('media-maximized');document.body.classList.add('media-focus-open');await setSfuTileLayer(tile,true);
+  }
+  function fullscreenMedia(peerId,kind='screen'){
+    const host=$(kind==='camera'?'cameraGrid':'screenShareGrid');
+    const tile=[...host.children].find(t=>t.dataset.peer===peerId);
+    if(tile)return toggleMediaFullscreen(tile);
   }
   function bindMediaFullscreen(tile){if(!tile||tile.dataset.fullscreenBound)return;tile.dataset.fullscreenBound='1';tile.querySelector('.media-fullscreen-btn')?.addEventListener('click',e=>{e.stopPropagation();toggleMediaFullscreen(tile);});tile.querySelector('video')?.addEventListener('dblclick',()=>toggleMediaFullscreen(tile));}
   const FLOATING_RECT_KEY='tronoSocialFloatingRectV2';
@@ -595,7 +616,8 @@ window.TronoSocial = (()=>{
       camera.innerHTML='<option value="">Câmera padrão</option>'+cams.filter(d=>d.deviceId).map((d,i)=>`<option value="${esc(d.deviceId)}">${esc(d.label||`Câmera ${i+1}`)}</option>`).join('');
       if(ins.some(d=>d.deviceId===selectedInput))input.value=selectedInput;else selectedInput=input.value||'';
       if(outs.some(d=>d.deviceId===selectedOutput))output.value=selectedOutput;else selectedOutput=output.value||'';
-      if(cams.some(d=>d.deviceId===selectedCamera))camera.value=selectedCamera;else selectedCamera=camera.value||'';
+      if(cams.some(d=>d.deviceId===selectedCamera))camera.value=selectedCamera;
+      else if(cams.some(d=>d.deviceId)){selectedCamera='';camera.value='';storage.removeItem('tronoCameraInput');}
       if(!('setSinkId' in HTMLMediaElement.prototype)){output.disabled=true;output.title='Este navegador não permite escolher a saída de áudio pelo site.';}
       updateNoiseButton();
     }catch(err){console.warn('[TronoSocial] dispositivos',err);}
@@ -713,26 +735,42 @@ window.TronoSocial = (()=>{
   }
 
   async function acquireCamera(){
+    if(cameraRequest)return cameraRequest;
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Seu navegador não oferece acesso à câmera nesta página.');
-    const temp=await openCameraStream(),track=temp.getVideoTracks()[0],stream=ensureLocalStream();
-    if(!track){temp.getTracks().forEach(t=>t.stop());throw new Error('Nenhuma trilha de câmera foi recebida.');}
-    for(const old of stream.getVideoTracks()){stream.removeTrack(old);old.stop();}
-    stream.addTrack(track);cameraOn=true;
-    if(transportIsSfu()){
-      try{
-        const existing=sfuLocalPublications.get('camera');
-        if(existing?.sender){await existing.sender.replaceTrack(track);await applySenderQuality(existing.sender,'camera');}
-        else await publishSfuTrack('camera',track);
-      }catch(err){
-        console.warn('[TronoSocial] câmera SFU; acionando fallback',err?.code||err);
-        await fallbackToP2p('A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.');
+    const generation=++cameraGeneration,callGeneration=voiceGeneration;
+    const current=()=>voiceJoined&&generation===cameraGeneration&&callGeneration===voiceGeneration;
+    const run=(async()=>{
+      // Release the device before reopening it (some webcams allow only one capture).
+      cameraOn=false;
+      for(const old of localStream?.getVideoTracks()||[]){localStream.removeTrack(old);old.stop();}
+      renderVideoGrid();renderSeatMedia();
+      const temp=await openCameraStream(),track=temp.getVideoTracks()[0];
+      if(!current()){temp.getTracks().forEach(t=>t.stop());throw Object.assign(new Error('Abertura da câmera cancelada.'),{code:'CAMERA_CANCELLED'});}
+      const stream=ensureLocalStream();
+      if(!track){temp.getTracks().forEach(t=>t.stop());throw new Error('Nenhuma trilha de câmera foi recebida.');}
+      for(const old of stream.getVideoTracks()){stream.removeTrack(old);old.stop();}
+      stream.addTrack(track);cameraOn=true;
+      track.addEventListener('ended',()=>{if(current()&&stream.getVideoTracks().includes(track))void disableCamera(true).then(updateButtons);},{once:true});
+      if(transportIsSfu()){
+        try{
+          const existing=sfuLocalPublications.get('camera');
+          if(existing?.sender){await existing.sender.replaceTrack(track);await applySenderQuality(existing.sender,'camera');}
+          else await publishSfuTrack('camera',track);
+        }catch(err){
+          console.warn('[TronoSocial] câmera SFU; acionando fallback',err?.code||err);
+          await fallbackToP2p('A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.');
+        }
       }
-    }
-    if(!transportIsSfu())for(const pc of peers.values())if(pc._tronoVideoSender){await pc._tronoVideoSender.replaceTrack(track).catch(()=>{});await applySenderQuality(pc._tronoVideoSender,'camera');}
-    window.TronoNetwork?.setVoiceState(voiceJoined,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());
-    await enumerateDevices();renderVideoGrid();renderSeatMedia();renderVoiceRoster();return track;
+      if(!transportIsSfu())for(const pc of peers.values())if(pc._tronoVideoSender){await pc._tronoVideoSender.replaceTrack(track).catch(()=>{});await applySenderQuality(pc._tronoVideoSender,'camera');}
+      if(!current()){track.stop();throw Object.assign(new Error('Abertura da câmera cancelada.'),{code:'CAMERA_CANCELLED'});}
+      window.TronoNetwork?.setVoiceState(voiceJoined,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());
+      await enumerateDevices();renderVideoGrid();renderSeatMedia();renderVoiceRoster();return track;
+    })();
+    const tracked=run.catch(async err=>{if(current())await disableCamera(true);throw err;}).finally(()=>{if(cameraRequest===tracked){cameraRequest=null;updateButtons();}});
+    cameraRequest=tracked;updateButtons();return tracked;
   }
   async function disableCamera(sendState=true){
+    cameraGeneration++;
     cameraOn=false;
     for(const t of localStream?.getVideoTracks?.()||[]){localStream.removeTrack(t);t.stop();}
     if(transportIsSfu())await closeSfuPublication('camera');else for(const pc of peers.values())if(pc._tronoVideoSender)await pc._tronoVideoSender.replaceTrack(null).catch(()=>{});
@@ -1463,7 +1501,7 @@ window.TronoSocial = (()=>{
     window.TronoMosaic?.close();
     // Cancel pending permission/SFU work before releasing the current devices.
     const wasInVoice=voiceJoined;
-    voiceGeneration++;voiceJoinPromise=null;voiceJoined=false;
+    voiceGeneration++;cameraGeneration++;voiceJoinPromise=null;voiceJoined=false;
     window.TronoNetwork?.setVoiceState(false,false,false,false,transmissionQuality,'p2p');closeAllPeers();
     if(transportIsSfu()||transportPending()||sfuSubscriptions.size||sfuLocalPublications.size)void stopSfuTransport({toP2p:true});
     watchingStreams.clear();privateVoiceRoster.clear();stopMeter(meId());mediaTransport='p2p';
@@ -1478,11 +1516,14 @@ window.TronoSocial = (()=>{
   function toggleMute(){if(!voiceJoined)return;micMuted=!micMuted;localStream?.getAudioTracks().forEach(t=>t.enabled=!micMuted);window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());updateButtons();renderVoiceRoster();updateMediaIndicators();}
   function toggleDeafen(){if(!voiceJoined)return;deafened=!deafened;for(const [id,a] of remoteAudio){a.muted=deafened||remotePlayback.get(id)?.route==='gain';updateRemoteGain(id);}if(!deafened)unlockCallAudio();updateButtons();}
   async function toggleCamera(){
+    if(cameraTogglePending||cameraRequest)return;
+    cameraTogglePending=true;updateButtons();
     try{
       if(cameraOn){await disableCamera(true);setStatus('Câmera desligada.','ok');updateButtons();return;}
       if(!voiceJoined){const ok=await joinVoice();if(!ok)return;}
       setStatus('Solicitando acesso à câmera...');await acquireCamera();setStatus(transportIsSfu()?'Câmera publicada no Cloudflare SFU.':'Câmera ligada e distribuída à malha P2P.','ok');updateButtons();
-    }catch(err){cameraOn=false;setStatus(err.message||'Não foi possível abrir a câmera.','error');updateButtons();renderVideoGrid();renderSeatMedia();}
+    }catch(err){if(err?.code!=='CAMERA_CANCELLED'){setStatus(cameraErrorMessage(err),'error');renderVideoGrid();renderSeatMedia();}}
+    finally{cameraTogglePending=false;updateButtons();}
   }
 
   function updateNoiseButton(){
@@ -1501,11 +1542,13 @@ window.TronoSocial = (()=>{
     $('joinVoiceBtn')?.classList.toggle('call-active',voiceJoined);
     m?.classList.toggle('danger-active',micMuted);d?.classList.toggle('danger-active',deafened);c?.classList.toggle('camera-active',cameraOn);s?.classList.toggle('screen-active',screenSharing);updateNoiseButton();
     const textOnly=inChatHub()&&roomState?.channelType==='text';for(const id of ['joinVoiceBtn','cameraBtn','screenShareBtn'])if($(id))$(id).disabled=textOnly||(id==='screenShareBtn'&&(!voiceJoined||!inChatHub()));
+    if(c)c.disabled=textOnly||cameraTogglePending||!!cameraRequest;
+    if($('cameraInputSelect'))$('cameraInputSelect').disabled=cameraTogglePending||!!cameraRequest;
     window.dispatchEvent(new CustomEvent('trono-call-change',{detail:{joined:voiceJoined,deafened,roomId:roomState?.id}}));
   }
   async function changeInput(e){selectedInput=e.target.value||'';storage.setItem('tronoVoiceInput',selectedInput);if(voiceJoined){try{await acquireMic();await watchStream(meId(),localStream);setStatus('Microfone alterado.','ok');}catch(err){setStatus('Não foi possível trocar o microfone.','error');}}}
   async function changeOutput(e){selectedOutput=e.target.value||'';lastOutputError='';storage.setItem('tronoVoiceOutput',selectedOutput);for(const a of remoteAudio.values())await applyOutput(a);const ctx=ensureMediaAudioContext();if(ctx?.setSinkId)try{await ctx.setSinkId(selectedOutput);}catch{lastOutputError='Não foi possível trocar a saída amplificada.';}for(const id of remoteAudio.keys())attachRemoteAudio(id);if(!lastOutputError)setStatus(selectedOutput?'Saída de áudio alterada.':'Usando saída padrão.','ok');renderTelemetry();}
-  async function changeCamera(e){selectedCamera=e.target.value||'';storage.setItem('tronoCameraInput',selectedCamera);if(cameraOn){try{await acquireCamera();setStatus('Câmera alterada.','ok');}catch(err){setStatus('Não foi possível trocar a câmera.','error');}}}
+  async function changeCamera(e){if(cameraRequest)return;selectedCamera=e.target.value||'';storage.setItem('tronoCameraInput',selectedCamera);if(cameraOn){try{await acquireCamera();setStatus('Câmera alterada.','ok');}catch(err){if(err?.code!=='CAMERA_CANCELLED')setStatus(cameraErrorMessage(err),'error');}}}
 
   function consumeVoiceRoster(list=[]){
     if(!voiceJoined)return;
@@ -1694,7 +1737,7 @@ window.TronoSocial = (()=>{
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalAudioTrack(){return localStream?.getAudioTracks?.()[0]||null;}
     ,get screenSettings(){return {...SCREEN_FORMATS[screenFormat],bitrate:effectiveScreenBitrate(),audio:shareStreamAudio};}
-    ,get deafened(){return deafened;},toggleWatchStream,
+    ,get deafened(){return deafened;},toggleWatchStream,fullscreenMedia,
     getMediaSources(){return voiceJoined?detailedPlayers().filter(p=>p.camera||p.screen||(p.id===meId()&&(cameraOn||screenSharing))).map(p=>({id:p.id,name:p.name,self:p.id===meId(),camera:(p.id===meId()?cameraOn:p.camera)?cameraStreamForPerson(p):null,screen:(p.id===meId()?screenSharing:watchingStreams.has(p.id))?screenStreamForPerson(p):null,screenOffered:p.screen,watching:p.id===meId()||watchingStreams.has(p.id)})):[];}
   };
 })();

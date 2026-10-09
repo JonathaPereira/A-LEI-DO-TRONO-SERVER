@@ -4,7 +4,7 @@ const express=require('express'),{chromium,expect}=require('@playwright/test');
 const {startFixture}=require('./auth-fixture'),{validateSound}=require('../soundboard');
 function wave(seconds){const size=seconds*16000*2,b=Buffer.alloc(44+size);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(size,40);return b;}
 
-test('frontend Chromium: permissions, channels, screen selection, mosaic, soundboard and mobile', {timeout:120000}, async t=>{
+test('frontend Chromium: permissions, channels, fullscreen, camera recovery, audio trimming and responsive layout', {timeout:180000}, async t=>{
   const app=express();app.use(express.static(path.resolve(__dirname,'../frontend')));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port;
   const f=await startFixture({port:10681,appOrigin:origin,soundboard:true});let browser;const errors=[],contexts=[];
@@ -66,7 +66,34 @@ test('frontend Chromium: permissions, channels, screen selection, mosaic, soundb
       await page.getByRole('checkbox',{name:'Incluir Ana no mosaico'}).uncheck();await page.getByRole('checkbox',{name:'Incluir Gabi no mosaico'}).check();await expect(page.locator('#mediaFocusCount')).toHaveText('6 de 6 pessoas');await expect(page.locator('#mediaFocusGrid .focus-person')).toHaveCount(6);
       await page.screenshot({path:path.join(artifacts,'frontend-mosaic-desktop.png')});await page.locator('#mediaFocusClose').click();assert.equal(await page.locator('#mediaFocusGrid video').count(),0);await page.evaluate(()=>{window.TronoSocial.getMediaSources=window.__originalSources;});
     });
-    await t.test('sound conversion, rejection over 15 seconds, upload and personal playback volume',async()=>{
+    await t.test('single camera fullscreen exits mosaic; native and viewport fallback both close cleanly',async()=>{
+      await page.locator('#expandMosaicBtn').click();await page.locator('#mediaFocusFullscreen').click();
+      await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.classList.contains('camera-tile'))).toBe(true);
+      await expect(page.locator('#mediaFocusDialog')).toBeHidden();assert.equal(await page.locator('#mediaFocusGrid video').count(),0);
+      const box=await page.locator('#cameraGrid .camera-tile').boundingBox();assert.equal(Math.round(box.width),1440);assert.equal(Math.round(box.height),1000);
+      await page.locator('#cameraGrid .media-fullscreen-btn').click();await expect.poll(()=>page.evaluate(()=>!!document.fullscreenElement)).toBe(false);
+      await page.evaluate(()=>{window.__nativeFullscreen=Element.prototype.requestFullscreen;Element.prototype.requestFullscreen=()=>Promise.reject(new DOMException('Bloqueado','NotAllowedError'));});
+      await page.locator('#expandMosaicBtn').click();await page.locator('#mediaFocusGrid .focus-full-camera').click();await expect(page.locator('#cameraGrid .media-maximized')).toBeVisible();await expect(page.locator('#mediaFocusDialog')).toBeHidden();
+      await page.locator('#cameraGrid .media-fullscreen-btn').click();assert.equal(await page.locator('.media-maximized').count(),0);await page.evaluate(()=>{Element.prototype.requestFullscreen=window.__nativeFullscreen;});
+    });
+    await t.test('camera input releases existing device, relaxes capture constraints and cancels pending capture on leave',async()=>{
+      await page.evaluate(()=>{window.__nativeCamera=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);window.__previousCamera=window.TronoSocial.getMediaSources().find(p=>p.self).camera.getVideoTracks()[0];window.__cameraAttempts=[];navigator.mediaDevices.getUserMedia=async constraints=>{if(constraints.video){window.__cameraAttempts.push(constraints);if(window.__previousCamera.readyState!=='ended')throw new DOMException('Device still occupied','NotReadableError');if(window.__cameraAttempts.length===1)throw new DOMException('Could not start video source','NotReadableError');}return window.__nativeCamera(constraints);};document.getElementById('cameraInputSelect').dispatchEvent(new Event('change',{bubbles:true}));});
+      await expect.poll(()=>page.evaluate(()=>window.__cameraAttempts.length)).toBe(2);await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);
+      assert.equal(await page.evaluate(()=>window.__previousCamera.readyState),'ended');
+      await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(false);
+      await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async constraints=>{const stream=await window.__nativeCamera(constraints);if(constraints.video){window.__pendingCamera=stream;await new Promise(resolve=>{window.__releaseCamera=resolve;});}return stream;};});
+      await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>!!window.__pendingCamera)).toBe(true);await expect(page.locator('#cameraBtn')).toBeDisabled();await page.locator('#joinVoiceBtn').click();await page.evaluate(()=>window.__releaseCamera());
+      await expect.poll(()=>page.evaluate(()=>window.__pendingCamera.getTracks().every(t=>t.readyState==='ended'))).toBe(true);assert.equal(await page.evaluate(()=>window.TronoSocial.cameraOn),false);
+      await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=window.__nativeCamera;});await page.locator('#joinVoiceBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);
+    });
+    await t.test('screen fullscreen restores a collapsed preview and leaves the group grid',async()=>{
+      await page.locator('#screenShareBtn').click();await page.locator('#screenOptionsConfirm').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.screenSharing)).toBe(true);
+      await page.locator('#screenShareGrid .screen-collapse-btn').click();await expect(page.locator('#screenShareGrid .share-collapsed')).toBeVisible();
+      await page.locator('#expandMosaicBtn').click();await page.locator('#mediaFocusGrid .focus-full-screen').click();
+      await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.classList.contains('screen-share-tile'))).toBe(true);await expect(page.locator('#mediaFocusDialog')).toBeHidden();await expect(page.locator('#screenShareGrid .share-collapsed')).toHaveCount(0);await expect(page.locator('#screenShareGrid video')).toBeVisible();
+      await page.locator('#screenShareGrid .media-fullscreen-btn').click();await page.locator('#screenShareBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.screenSharing)).toBe(false);
+    });
+    await t.test('sound conversion, long audio cropping, exact PCM interval and personal playback volume',async()=>{
       let uploaded=0;const library=[{id:f.soundId,name:'Efeito.wav',ownerId:owner.user.id,bytes:32044,mime:'audio/wav',kind:'soundboard',durationMs:1000}];
       await page.route(f.base+'/files/**',async route=>{
         const req=route.request(),url=new URL(req.url());
@@ -75,15 +102,32 @@ test('frontend Chromium: permissions, channels, screen selection, mosaic, soundb
         if(url.pathname.endsWith('/url'))return route.fulfill({json:{url:origin+'/test-sound.wav',expiresAt:Date.now()+300000}});
         return route.continue();
       });await page.route(origin+'/test-sound.wav',route=>route.fulfill({body:wave(1),contentType:'audio/wav'}));
-      await page.locator('#soundboardBtn').click();await page.locator('#soundName').fill('Aplausos');await page.locator('#soundFile').setInputFiles({name:'longo.wav',mimeType:'audio/wav',buffer:wave(16)});await page.locator('#soundUpload').click();await expect(page.locator('#soundboardMessage')).toContainText('15 segundos');assert.equal(uploaded,0);
-      await page.locator('#soundFile').setInputFiles({name:'efeito.wav',mimeType:'audio/wav',buffer:wave(15)});await page.locator('#soundUpload').click();await expect(page.locator('#soundboardMessage')).toHaveText('Efeito adicionado à biblioteca.');assert.equal(uploaded,1);
+      await page.locator('#soundboardToggle').click();await page.locator('#soundUploadDetails summary').click();await page.locator('#soundName').fill('Aplausos');await page.locator('#soundFile').setInputFiles({name:'longo.wav',mimeType:'audio/wav',buffer:wave(30)});await expect(page.locator('#soundTrimEditor')).toBeVisible();await expect(page.locator('#soundUpload')).toBeEnabled();
+      await page.locator('#soundTrimEnd').fill('26');await page.locator('#soundTrimEnd').press('Tab');await expect(page.locator('#soundTrimStart')).toHaveValue('11');await expect(page.locator('#soundTrimDuration')).toHaveText('15.00 s / 15 s');assert.equal(uploaded,0);
+      await page.locator('#soundTrimPreview').click();await expect(page.locator('#soundboardMessage')).toHaveText('Ouvindo somente o trecho selecionado.');
+      await page.screenshot({path:path.join(artifacts,'frontend-soundboard-desktop.png')});
+      const cropped=await page.evaluate(async()=>{const buffer=new AudioBuffer({length:16000*30,sampleRate:16000,numberOfChannels:2});for(const [channel,value] of [[0,.25],[1,-.5]])buffer.getChannelData(channel).fill(value,16000*11,16000*26);const data=new DataView(await window.TronoSoundboard.encodeWav(buffer,11,26).arrayBuffer());let rejected=false;try{window.TronoSoundboard.encodeWav(buffer,0,16);}catch{rejected=true;}return {bytes:data.byteLength,channels:data.getUint16(22,true),first:data.getInt16(44,true),second:data.getInt16(46,true),last:data.getInt16(data.byteLength-2,true),rejected};});
+      assert.deepEqual(cropped,{bytes:44+15*16000*4,channels:2,first:8191,second:-16384,last:-16384,rejected:true});
+      await page.locator('#soundUpload').click();await expect(page.locator('#soundboardMessage')).toHaveText('Efeito adicionado à biblioteca.');assert.equal(uploaded,1);await expect(page.locator('.sound-thumbnail')).toHaveCount(2);
       await page.locator('#soundboardVolume').evaluate(el=>{el.value='35';el.dispatchEvent(new Event('input',{bubbles:true}));});await page.locator('[data-play-sound="'+f.soundId+'"]').click();await expect.poll(()=>page.evaluate(()=>window.__soundAudios.at(-1)?.volume)).toBe(.35);await page.locator('#soundStop').click();await page.locator('#soundboardClose').click();
+      await page.setViewportSize({width:390,height:844});await page.locator('#soundboardToggle').click();const menu=await page.locator('#soundboardDialog').boundingBox();assert(menu.x>=0&&menu.x+menu.width<=390&&menu.y>=0&&menu.y+menu.height<=844);await expect(page.locator('#soundboardClose')).toBeVisible();await page.screenshot({path:path.join(artifacts,'frontend-soundboard-mobile.png')});await page.keyboard.press('Escape');await expect(page.locator('#soundboardDialog')).toBeHidden();await page.setViewportSize({width:1440,height:1000});
+    });
+    await t.test('volume controls remain inside their cards and online indicators sit outside avatars',async()=>{
+      await memberPage.locator('#joinVoiceBtn').click();await expect.poll(()=>memberPage.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);await expect(page.locator('.mn-peer-gain')).toBeVisible();
+      const gain=page.locator('.mn-peer-gain');const bounds=await gain.boundingBox(),slider=await gain.locator('input').boundingBox(),output=await gain.locator('output').boundingBox();assert(slider.x>=bounds.x&&slider.x+slider.width<=bounds.x+bounds.width+1);assert(slider.y>=output.y+output.height,'slider sits below the label and value');
+      if(!await page.locator('#communityPanel').isVisible())await page.locator('#communityToggle').click();
+      const avatar=page.locator('.community-person.is-online .community-avatar').first(),icon=await avatar.boundingBox(),dot=await avatar.locator('.community-status-dot').boundingBox();assert(dot.x+dot.width>icon.x+icon.width&&dot.y+dot.height>icon.y+icon.height);
+      await page.locator('#voiceSettingsBtn').click();await expect(page.locator('#micGainSlider')).toBeVisible();await page.screenshot({path:path.join(artifacts,'frontend-settings-desktop.png')});
+      await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(artifacts,'frontend-settings-mobile.png')});const input=await page.locator('#micGainSlider').boundingBox();assert(input.x>=0&&input.x+input.width<=390);await page.locator('#voiceSettingsClose').click();if(await page.locator('#communityPanel').isVisible())await page.locator('#communityClose').click();await memberPage.locator('#joinVoiceBtn').click();
     });
     await t.test('desktop/mobile layout and preserved game lobby',async()=>{
       await page.screenshot({path:path.join(artifacts,'frontend-chat-desktop.png')});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(artifacts,'frontend-chat-mobile.png')});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       for(const id of ['joinVoiceBtn','cameraBtn','screenShareBtn','soundboardBtn']){await expect(page.locator('#'+id)).toBeVisible();const box=await page.locator('#'+id).boundingBox();assert(box.x>=0&&box.x+box.width<=391,id+' must fit mobile viewport');assert(box.y>=0&&box.y+box.height<=845,id+' must remain on screen');}
       await page.locator('#backFromChatOnlyBtn').click();await expect(page.locator('#portalScreen')).toBeVisible();await page.locator('#openGamePortalBtn').click();await expect(page.locator('#setupScreen')).toBeVisible();await expect(page.locator('.room-enter').first()).toBeVisible();
-      await page.locator('#backFromLobbyBtn').click();await page.screenshot({path:path.join(artifacts,'frontend-portal-mobile.png')});
+      await page.locator('#backFromLobbyBtn').click();await page.screenshot({path:path.join(artifacts,'frontend-portal-mobile.png'),fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+      await expect(page.locator('#portalMusicVolume')).toBeVisible();
+      await page.evaluate(()=>{const stage=document.getElementById('portalStage');stage.dispatchEvent(new PointerEvent('pointermove',{clientX:300,clientY:500}));window.TronoPortal.showOnly('setupScreen');});await page.evaluate(()=>new Promise(requestAnimationFrame));await page.evaluate(()=>window.TronoPortal.showPortal());
+      await page.setViewportSize({width:1440,height:1000});await expect(page.locator('#openVoicePortalBtn')).toBeInViewport();await expect(page.locator('#openGamePortalBtn')).toBeInViewport();assert(await page.evaluate(()=>['--px','--py'].every(key=>Math.abs(Number(document.getElementById('portalStage').style.getPropertyValue(key)))<=1)));await page.screenshot({path:path.join(artifacts,'frontend-portal-desktop.png'),fullPage:true});
     });
     assert.deepEqual(errors,[],'No uncaught browser errors');
   }finally{for(const context of contexts)await context.close();await browser?.close();await f.stop();await new Promise(resolve=>server.close(resolve));}

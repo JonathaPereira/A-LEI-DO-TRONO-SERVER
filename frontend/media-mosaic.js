@@ -2,7 +2,8 @@
 window.TronoMosaic=(()=>{
   const $=id=>document.getElementById(id);let selected=new Set(),frame=0;
   const sources=()=>window.TronoSocial.getMediaSources();
-  function close(){if($('mediaFocusDialog')?.open){cleanup();$('mediaFocusDialog').close();}}
+  function close(){if($('mediaFocusDialog')?.open){cleanup();$('mediaFocusDialog').close();}selected.clear();}
+  function fullscreen(person,kind){if(person?.[kind])void window.TronoSocial.fullscreenMedia(person.id,kind);}
   function attach(video,stream){if(video.srcObject!==stream)video.srcObject=stream||null;if(stream)void video.play().catch(()=>{});}
   function cleanup(){for(const video of $('mediaFocusGrid').querySelectorAll('video')){video.pause();video.srcObject=null;}$('mediaFocusGrid').replaceChildren();}
   function render(){
@@ -22,20 +23,23 @@ window.TronoMosaic=(()=>{
     host.querySelector('.mosaic-empty')?.remove();
     for(const p of visible){
       let cell=[...host.children].find(c=>c.dataset.peer===p.id);
-      if(!cell){cell=document.createElement('article');cell.className='focus-person';cell.dataset.peer=p.id;cell.innerHTML='<div class="focus-person-media"><video class="focus-screen" autoplay muted playsinline></video><video class="focus-camera" autoplay muted playsinline></video><span class="focus-video-placeholder">Aguardando vídeo…</span></div><footer><strong></strong><small></small></footer>';host.appendChild(cell);}
+      if(!cell){cell=document.createElement('article');cell.className='focus-person';cell.dataset.peer=p.id;cell.innerHTML='<div class="focus-person-media"><video class="focus-screen" autoplay muted playsinline></video><video class="focus-camera" autoplay muted playsinline></video><span class="focus-video-placeholder">Aguardando vídeo…</span></div><footer><div><strong></strong><small></small></div><div class="focus-media-actions"><button class="focus-full-screen" type="button">⛶ Tela</button><button class="focus-full-camera" type="button">⛶ Câmera</button><button class="focus-watch" type="button">▶ Assistir</button></div></footer>';host.appendChild(cell);}
       cell.querySelector('strong').textContent=p.name+(p.self?' · você':'');cell.querySelector('small').textContent=p.camera&&p.screen?'Câmera + tela':p.screen?'Tela':p.camera?'Câmera':'Aguardando mídia';
       const camera=p.camera?.getVideoTracks().some(t=>t.readyState==='live'),screen=p.screen?.getVideoTracks().some(t=>t.readyState==='live');cell.classList.toggle('has-camera',!!camera);cell.classList.toggle('has-screen',!!screen);
       attach(cell.querySelector('.focus-camera'),camera?p.camera:null);attach(cell.querySelector('.focus-screen'),screen?p.screen:null);
+      for(const kind of ['screen','camera']){const button=cell.querySelector('.focus-full-'+kind);button.hidden=!(kind==='screen'?screen:camera);button.setAttribute('aria-label','Tela cheia: '+(kind==='screen'?'tela':'câmera')+' de '+p.name);button.onclick=()=>fullscreen(p,kind);cell.querySelector('.focus-'+kind).ondblclick=()=>fullscreen(p,kind);}
+      const watch=cell.querySelector('.focus-watch');watch.hidden=!p.screenOffered||p.watching;watch.onclick=()=>window.TronoSocial.toggleWatchStream(p.id);
       cell.querySelector('.focus-video-placeholder').hidden=!!camera||!!screen;
     }
     if(!visible.length){const empty=document.createElement('p');empty.className='mosaic-empty';empty.textContent='Selecione até seis pessoas para montar sua grade.';host.appendChild(empty);}
+    $('mediaFocusFullscreen').disabled=!visible.some(p=>p.screen||p.camera);
   }
   function schedule(){if(frame)return;frame=requestAnimationFrame(()=>{frame=0;render();});}
   function open(peerId){const list=sources();selected=new Set(peerId?[peerId]:list.slice(0,6).map(p=>p.id));if(!$('mediaFocusDialog').open)$('mediaFocusDialog').showModal();render();}
   function bind(){
     $('expandMosaicBtn').onclick=()=>open();$('mediaFocusClose').onclick=close;
-    $('mediaFocusFullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('mediaFocusDialog').requestFullscreen();}catch{$('mediaFocusCount').textContent='Tela cheia indisponível; mosaico ampliado ativo.';}};
-    $('mediaFocusDialog').addEventListener('close',()=>{cleanup();selected.clear();if(document.fullscreenElement===$('mediaFocusDialog'))void document.exitFullscreen().catch(()=>{});});
+    $('mediaFocusFullscreen').onclick=()=>{const p=sources().find(p=>selected.has(p.id)&&(p.screen||p.camera));fullscreen(p,p?.screen?'screen':'camera');};
+    $('mediaFocusDialog').addEventListener('close',()=>{if(!$('mediaFocusDialog').open){cleanup();selected.clear();}});
     new MutationObserver(schedule).observe($('mediaMosaic'),{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
     window.addEventListener('trono-call-change',schedule);window.addEventListener('resize',schedule);
     window.TronoNetwork.onMessage(message=>{if(['voice-roster','voice-state','channel-deleted'].includes(message.type))schedule();});render();

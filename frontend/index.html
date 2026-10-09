@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
-  <script src="auth-boot.js?v=081community"></script>
-  <link rel="stylesheet" href="style.css?v=081community" />
-  <link rel="stylesheet" href="mn-chat.css?v=081community" />
-  <link rel="stylesheet" href="auth.css?v=081community" />
-  <link rel="stylesheet" href="profile-files.css?v=081community" />
-  <link rel="stylesheet" href="community.css?v=081community" />
-  <link rel="stylesheet" href="modern.css?v=081community" />
+  <script src="auth-boot.js?v=082refinements"></script>
+  <link rel="stylesheet" href="style.css?v=082refinements" />
+  <link rel="stylesheet" href="mn-chat.css?v=082refinements" />
+  <link rel="stylesheet" href="auth.css?v=082refinements" />
+  <link rel="stylesheet" href="profile-files.css?v=082refinements" />
+  <link rel="stylesheet" href="community.css?v=082refinements" />
+  <link rel="stylesheet" href="modern.css?v=082refinements" />
+  <link rel="stylesheet" href="refinements.css?v=082refinements" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -352,7 +353,7 @@
         <small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada aproximadamente a cada 2 segundos. Alguns campos variam conforme navegador e dispositivo.</small>
       </section>
       <div class="mn-media-stage">
-        <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>⛶ Ampliar mosaico</button></div>
+        <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>▦ Grade · até 6</button></div>
         <div id="mediaMosaic" class="media-mosaic">
         <div id="screenShareGrid" class="screen-share-grid hidden" aria-label="Compartilhamentos de tela"></div>
         <div id="cameraGrid" class="camera-grid camera-grid-empty" aria-label="Câmeras da chamada"></div>
@@ -455,30 +456,33 @@
   <dialog id="channelFilesDialog" class="feature-dialog wide-dialog" aria-labelledby="channelFilesTitle">
     <button id="channelFilesClose" class="dialog-close" type="button" aria-label="Fechar anexos">×</button><span class="section-eyebrow">ARQUIVOS DO CANAL</span><h2 id="channelFilesTitle">Fotos &amp; anexos</h2><p id="channelFilesMessage" class="feature-message" role="status"></p><div id="channelFileList" class="channel-file-list"></div>
   </dialog>
-  <dialog id="soundboardDialog" class="feature-dialog wide-dialog" aria-labelledby="soundboardTitle">
-    <button id="soundboardClose" class="dialog-close" type="button" aria-label="Fechar efeitos">×</button><span class="section-eyebrow">SOUND BOARD</span><h2 id="soundboardTitle">Dê um som ao momento</h2><p id="soundboardCallHint"></p>
+  <button id="soundboardToggle" class="soundboard-toggle" type="button" aria-controls="soundboardDialog" aria-expanded="false"><span aria-hidden="true">♫</span> Efeitos</button>
+  <aside id="soundboardDialog" class="feature-dialog soundboard-menu" aria-labelledby="soundboardTitle" role="dialog" hidden>
+    <header class="soundboard-heading"><div><span class="section-eyebrow">NA CHAMADA</span><h2 id="soundboardTitle">Efeitos sonoros</h2></div><button id="soundboardClose" class="dialog-close" type="button" aria-label="Fechar efeitos">×</button></header><p id="soundboardCallHint"></p>
     <div class="sound-volume"><label for="soundboardVolume">Volume para mim</label><input id="soundboardVolume" type="range" min="0" max="100" value="70"><output id="soundboardVolumeValue">70%</output><button id="soundStop" class="secondary-button" type="button">Parar áudio</button></div>
     <div id="soundboardList" class="soundboard-list"></div>
-    <form id="soundUploadForm" class="sound-upload-form"><h3>Adicionar efeito</h3><div class="form-columns"><label>Nome<input id="soundName" maxlength="40" required placeholder="Ex.: aplausos"></label><label>Áudio · até 15 segundos<input id="soundFile" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm" required></label></div><button id="soundUpload" type="submit" class="primary-button">↑ Enviar efeito</button></form><p id="soundboardMessage" class="feature-message" role="status" aria-live="polite"></p>
-  </dialog>
+    <details id="soundUploadDetails" class="sound-upload-details"><summary>＋ Adicionar efeito</summary><form id="soundUploadForm" class="sound-upload-form"><label>Nome<input id="soundName" maxlength="40" required placeholder="Ex.: aplausos"></label><label>Escolher áudio<input id="soundFile" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm" required><small>Até 20 MB. Áudios longos podem ser recortados abaixo.</small></label>
+      <section id="soundTrimEditor" class="sound-trim-editor" aria-label="Recortar áudio" hidden><div class="trim-heading"><strong>Escolha seu trecho</strong><output id="soundTrimDuration"></output></div><canvas id="soundWaveform" width="640" height="100" aria-hidden="true"></canvas><div class="trim-fields"><label>Início (s)<input id="soundTrimStart" type="number" min="0" step="0.01" value="0" inputmode="decimal"></label><label>Fim (s)<input id="soundTrimEnd" type="number" min="0.05" step="0.01" value="15" inputmode="decimal"></label></div><label>Posição inicial<input id="soundTrimStartRange" class="trim-range" aria-label="Posição inicial do recorte" type="range" min="0" step="0.01" value="0"></label><label>Posição final<input id="soundTrimEndRange" class="trim-range" aria-label="Posição final do recorte" type="range" min="0" step="0.01" value="15"></label><div class="trim-footer"><small>Trecho de até 15 segundos. Ajuste os dois pontos ou clique na onda.</small><button id="soundTrimPreview" class="secondary-button" type="button">▶ Ouvir trecho</button></div></section>
+      <button id="soundUpload" type="submit" class="primary-button" disabled>↑ Enviar trecho</button></form></details><p id="soundboardMessage" class="feature-message" role="status" aria-live="polite"></p>
+  </aside>
   <dialog id="mediaFocusDialog" class="media-focus-dialog" aria-labelledby="mediaFocusTitle">
-    <header><div><span class="section-eyebrow">JUNTOS, EM MOSAICO</span><h2 id="mediaFocusTitle">Uma janela para todos</h2><p>Selecione até seis pessoas. Abra as transmissões pelo botão Assistir stream.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button">⛶ Tela cheia</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
+    <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
-  <script src="audio.js?v=081community"></script>
-  <script src="network.js?v=081community"></script>
-  <script src="auth.js?v=081community"></script>
-  <script src="rtc-config.js?v=081community"></script>
-  <script src="audio-gain.js?v=081community"></script>
-  <script src="avatar-icons.js?v=081community"></script>
-  <script src="profile-files.js?v=081community"></script>
-  <script src="social.js?v=081community"></script>
-  <script src="recording.js?v=081community"></script>
-  <script src="game.js?v=081community"></script>
-  <script src="portal.js?v=081community"></script>
-  <script src="community.js?v=081community"></script>
-  <script src="community-admin.js?v=081community"></script>
-  <script src="soundboard-client.js?v=081community"></script>
-  <script src="media-mosaic.js?v=081community"></script>
+  <script src="audio.js?v=082refinements"></script>
+  <script src="network.js?v=082refinements"></script>
+  <script src="auth.js?v=082refinements"></script>
+  <script src="rtc-config.js?v=082refinements"></script>
+  <script src="audio-gain.js?v=082refinements"></script>
+  <script src="avatar-icons.js?v=082refinements"></script>
+  <script src="profile-files.js?v=082refinements"></script>
+  <script src="social.js?v=082refinements"></script>
+  <script src="recording.js?v=082refinements"></script>
+  <script src="game.js?v=082refinements"></script>
+  <script src="portal.js?v=082refinements"></script>
+  <script src="community.js?v=082refinements"></script>
+  <script src="community-admin.js?v=082refinements"></script>
+  <script src="soundboard-client.js?v=082refinements"></script>
+  <script src="media-mosaic.js?v=082refinements"></script>
 </body>
 </html>
