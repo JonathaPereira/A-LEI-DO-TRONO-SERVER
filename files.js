@@ -6,6 +6,16 @@ const {pipeline}=require('stream/promises');
 const LIMITS={file:10_000_000,video:100_000_000,avatar:1_000_000,total:8_000_000_000};
 const PREVIEW_MIMES=new Set(['image/png','image/jpeg','image/gif','image/webp','video/mp4','video/webm','application/pdf']);
 const error=(code,message,status=400)=>Object.assign(new Error(message),{code,status});
+const R2_CODES=new Set(['Unauthorized','AccessDenied','InvalidAccessKeyId','SignatureDoesNotMatch','ExpiredRequest','RequestExpired','RequestTimeTooSkewed','NotEntitled','InvalidBucketName','NoSuchBucket','MissingContentLength','IncompleteBody','EntityTooLarge','MetadataTooLarge','InternalError','ServiceUnavailable','TooManyRequests','InvalidArgument','InvalidRequest','AuthorizationHeaderMalformed']);
+function storageResponseError(status,body){
+ const candidate=String(body).match(/<Code>\s*([A-Za-z]+)\s*<\/Code>/)?.[1];
+ const providerCode=R2_CODES.has(candidate)?candidate:'UnknownError';
+ const e=error('STORAGE_UNAVAILABLE',`Não foi possível salvar no armazenamento (R2: HTTP ${status}, ${providerCode}).`,503);
+ e.storageResponse=true;
+ // Never log the XML, URL, headers, object key or credentials.
+ console.warn('[R2 upload]',JSON.stringify({status,code:providerCode}));
+ return e;
+}
 const enc=s=>encodeURIComponent(s).replace(/[!'()*]/g,c=>`%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
 const mac=(key,s)=>crypto.createHmac('sha256',key).update(s).digest();
@@ -44,11 +54,18 @@ function r2Adapter(env){return {
  async put(key,body,size,mime,name){
    const url=signedUrl(env,'PUT',key);let request;
    const response=new Promise((resolve,reject)=>{
-     request=https.request(url,{method:'PUT',headers:{'Content-Length':String(size),'Content-Type':mime,'Content-Disposition':`${PREVIEW_MIMES.has(mime)?'inline':'attachment'}; filename*=UTF-8''${enc(name)}`}},res=>{res.resume();res.on('end',()=>res.statusCode>=200&&res.statusCode<300?resolve():reject(error('STORAGE_UNAVAILABLE','Não foi possível salvar no armazenamento.',503)));});
+     request=https.request(url,{method:'PUT',headers:{'Content-Length':String(size),'Content-Type':mime,'Content-Disposition':`${PREVIEW_MIMES.has(mime)?'inline':'attachment'}; filename*=UTF-8''${enc(name)}`}},res=>{
+       let captured=Buffer.alloc(0);
+       res.on('data',chunk=>{if(captured.length<16384)captured=Buffer.concat([captured,Buffer.from(chunk).subarray(0,16384-captured.length)]);});
+       res.on('error',reject);res.on('aborted',()=>reject(error('STORAGE_UNAVAILABLE','A conexão com o R2 foi interrompida. Tente novamente.',503)));
+       res.on('end',()=>res.statusCode>=200&&res.statusCode<300?resolve():reject(storageResponseError(res.statusCode,captured.toString('utf8'))));
+     });
      request.on('error',reject);request.setTimeout(300_000,()=>request.destroy(error('UPLOAD_TIMEOUT','Envio demorou demais. Tente novamente.',408)));
    });
    // Observe both promises immediately: either side may fail before the other.
-   const settled=await Promise.allSettled([pipeline(body,request),response]);const failed=settled.find(r=>r.status==='rejected');if(failed)throw failed.reason;
+   const settled=await Promise.allSettled([pipeline(body,request),response]);
+   // A rejected response may also break the writable stream. Keep the R2 reason.
+   const failed=settled.find(r=>r.status==='rejected'&&r.reason?.storageResponse)||settled.find(r=>r.status==='rejected');if(failed)throw failed.reason;
  },
  async remove(key){const res=await fetch(signedUrl(env,'DELETE',key),{method:'DELETE',signal:AbortSignal.timeout(20_000)});if(!res.ok&&res.status!==404)throw error('STORAGE_UNAVAILABLE','Não foi possível excluir agora.',503);},
  url(row,download=false){const inline=!download&&PREVIEW_MIMES.has(row.mime);return signedUrl(env,'GET',row.object_key,{'response-content-type':row.mime,'response-content-disposition':`${inline?'inline':'attachment'}; filename*=UTF-8''${enc(row.name)}`});}
@@ -117,4 +134,4 @@ function createFiles({auth,env=process.env,membership=()=>false,onDeleted=()=>{}
  }
  return {install,attachment,health:()=>({configured,limits:LIMITS}),cleanup,db};
 }
-module.exports={createFiles,signedUrl,detectMime,LIMITS};
+module.exports={createFiles,signedUrl,detectMime,LIMITS,r2Adapter};
