@@ -2,7 +2,7 @@
 // TEST ONLY: fake Supabase contracts, no connection to a user's Supabase project.
 const http=require('http'),crypto=require('crypto'),path=require('path'),{spawn}=require('child_process');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true}={}){
+async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false}={}){
   const users=new Map(),access=new Map(),refresh=new Map(),links=new Map();let backend;
   const secret=crypto.randomBytes(32);
   function createSession(user){const sid=crypto.randomUUID(),claims={sub:user.id,exp:Math.floor(Date.now()/1000)+3600,session_id:sid};const data=Buffer.from(JSON.stringify(claims)).toString('base64url');const head=Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url');const token=`${head}.${data}.${crypto.createHmac('sha256',secret).update(`${head}.${data}`).digest('base64url')}`;const rt=crypto.randomBytes(32).toString('hex');access.set(token,{user,sid});refresh.set(rt,{user,sid});return {access_token:token,refresh_token:rt,expires_in:3600,user};}
@@ -33,7 +33,10 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
       return reply(200,{id:record.user.id,email:record.user.email,email_confirmed_at:record.user.email_confirmed_at,user_metadata:{nickname:'NOME_METADATA_NAO_CONFIAVEL'}});
     }
     if(url.pathname==='/rest/v1/profiles'){
-      if(!record)return fail('bad_jwt',401);return reply(200,[{id:record.user.id,nickname:record.user.nickname}]);
+      if(!record)return fail('bad_jwt',401);return reply(200,[{id:record.user.id,nickname:record.user.nickname,avatar_preset:record.user.avatar_preset||'crown',avatar_file_id:record.user.avatar_file_id||null}]);
+    }
+    if(url.pathname==='/rest/v1/rpc/update_chat_profile'){
+      if(!record)return fail('bad_jwt',401);if([...users.values()].some(u=>u.id!==record.user.id&&u.nickname.toLowerCase()===body.p_nickname.toLowerCase()))return reply(409,{message:'NICKNAME_TAKEN'});record.user.nickname=body.p_nickname;record.user.avatar_preset=body.p_preset;record.user.avatar_file_id=body.p_file;return reply(200,{});
     }
     if(url.pathname==='/auth/v1/logout'){
       if(!record)return fail('bad_jwt',401);for(const [k,v] of access)if(v.user.id===record.user.id&&(url.searchParams.get('scope')==='global'||v.sid===record.sid))access.delete(k);for(const [k,v] of refresh)if(v.user.id===record.user.id&&(url.searchParams.get('scope')==='global'||v.sid===record.sid))refresh.delete(k);return reply(200,{});
@@ -41,7 +44,7 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     reply(404,{});
   });
   await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
-  backend=spawn(process.execPath,[path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:'false'},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
+  backend=spawn(process.execPath,[path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':''},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
   const base=`http://127.0.0.1:${port}`;
   for(let attempt=0;attempt<100;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===99)throw new Error('Backend did not start: '+logs);await wait(50);}
   async function call(endpoint,body,token,origin=appOrigin,method='POST'){

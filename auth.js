@@ -10,7 +10,7 @@ function validPassword(password) {return Object.values(passwordChecks(password))
 function validNickname(name) {return typeof name==='string' && /^[\p{L}\p{N} _.-]{2,20}$/u.test(name) && name===name.trim();}
 function authError(code,message,status=400) {return Object.assign(new Error(message),{code,status});}
 const policyMessage='Use pelo menos 8 caracteres, com letra minúscula, maiúscula, número e símbolo.';
-function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{}}={}) {
+function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{},onProfileChange=()=>{}}={}) {
   const url=String(env.SUPABASE_URL||'').replace(/\/+$/,'');
   const key=String(env.SUPABASE_PUBLISHABLE_KEY||env.SUPABASE_ANON_KEY||'');
   let site=null,origin=null;
@@ -39,6 +39,7 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{}}
       if(code==='weak_password')throw authError('WEAK_PASSWORD',policyMessage);
       if(code==='user_already_exists'||code==='email_exists')throw authError('SIGNUP_FAILED','Não foi possível concluir o cadastro. Tente entrar ou recuperar sua senha.');
       if(code==='signup_disabled')throw authError('SIGNUP_DISABLED','Novos cadastros estão temporariamente indisponíveis.',403);
+      if(path.includes('/rpc/update_chat_profile')){const messages={NICKNAME_TAKEN:'Esse apelido já está em uso. Escolha outro.',INVALID_NICKNAME:'Use um apelido de 2 a 20 caracteres.',INVALID_AVATAR:'Selecione um ícone ou envie uma foto válida.'};const reason=Object.keys(messages).find(k=>String(data.message||'').includes(k));throw authError(reason||'PROFILE_UPDATE_FAILED',messages[reason]||'Não foi possível salvar. Confira se a atualização SQL foi executada.',reason==='NICKNAME_TAKEN'?409:400);}
       if(path.includes('/verify'))throw authError('RECOVERY_INVALID','Este link expirou ou já foi utilizado. Solicite outro link.',401);
       if(path.includes('/signup'))throw authError('SIGNUP_FAILED','Não foi possível concluir o cadastro. Confira os dados ou tente outro apelido.');
       if(path.includes('/recover'))throw authError('EMAIL_UNAVAILABLE','Não foi possível enviar o e-mail agora. Tente novamente mais tarde.',503);
@@ -53,17 +54,17 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{}}
     // The hosted Auth service validates the token. Never trust a locally decoded JWT for identity.
     const user=await upstream('/auth/v1/user',{token});
     if(!user.id||user.is_anonymous||!user.email_confirmed_at)throw authError('EMAIL_NOT_CONFIRMED','Confirme seu e-mail antes de entrar.',403);
-    const rows=await upstream(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,nickname`,{token});
+    const rows=await upstream(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`,{token});
     const profile=Array.isArray(rows)?rows.find(p=>p.id===user.id):null;
     if(!profile||!validNickname(profile.nickname))throw authError('PROFILE_UNAVAILABLE','Não foi possível carregar seu perfil. Tente novamente mais tarde.',503);
     let exp,sessionId;try{const claims=JSON.parse(Buffer.from(token.split('.')[1],'base64url'));exp=claims.exp;sessionId=claims.session_id;}catch{}
     if(!Number.isFinite(exp)||exp*1000<=Date.now())throw authError('AUTH_EXPIRED','Sua sessão expirou. Entre novamente.',401);
-    return {id:user.id,nickname:profile.nickname,email:user.email,expiresAt:exp*1000,sessionId};
+    return {id:user.id,nickname:profile.nickname,email:user.email,avatar_preset:profile.avatar_preset||'crown',avatar_file_id:profile.avatar_file_id||null,expiresAt:exp*1000,sessionId};
   }
   async function sessionPayload(data) {
     if(!data.access_token||!data.refresh_token)throw authError('AUTH_UNAVAILABLE','Não foi possível iniciar a sessão.',503);
     const user=await identity(data.access_token);
-    return {session:{access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(user.expiresAt/1000)},user:{id:user.id,nickname:user.nickname,email:user.email}};
+    return {session:{access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Math.floor(user.expiresAt/1000)},user:{id:user.id,nickname:user.nickname,email:user.email,avatar_preset:user.avatar_preset,avatar_file_id:user.avatar_file_id}};
   }
   function emailFrom(body) {const email=String(body?.email||'').trim().toLowerCase();if(email.length>254||!/^\S+@[^\s@]+\.[^\s@]+$/.test(email))throw authError('INVALID_EMAIL','Informe um e-mail válido.');return email;}
   function requirePassword(body) {if(typeof body?.password!=='string'||!validPassword(body.password))throw authError('WEAK_PASSWORD',Buffer.byteLength(String(body?.password||''),'utf8')>72?'A senha deve ter no máximo 72 bytes. Evite uma senha tão longa.':policyMessage);return body.password;}
@@ -115,10 +116,18 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{}}
       await upstream('/auth/v1/logout?scope=global',{method:'POST',token});
       return {message:'Senha atualizada. Entre novamente com a nova senha.'};
     },'reset',5);
-    route('get','me',async req=>{const user=await identity(tokenFrom(req));return {user:{id:user.id,nickname:user.nickname,email:user.email}};},'me',60);
+    route('get','me',async req=>{const user=await identity(tokenFrom(req));return {user:{id:user.id,nickname:user.nickname,email:user.email,avatar_preset:user.avatar_preset,avatar_file_id:user.avatar_file_id}};},'me',60);
+    route('post','profile',async req=>{
+      const token=tokenFrom(req),account=await identity(token),nickname=String(req.body.nickname||'').trim().normalize('NFKC');
+      if(!validNickname(nickname))throw authError('INVALID_NICKNAME','Use um apelido de 2 a 20 caracteres: letras, números, espaço, ponto, hífen ou sublinhado.');
+      const preset=String(req.body.avatar_preset||'crown'),file=req.body.avatar_file_id||null;
+      if(file&&!/^[0-9a-f-]{36}$/i.test(file))throw authError('INVALID_AVATAR','Foto inválida.');
+      await upstream('/rest/v1/rpc/update_chat_profile',{method:'POST',token,body:{p_nickname:nickname,p_preset:preset,p_file:file}});
+      const user=await identity(token);onProfileChange(user);return {user:{id:user.id,nickname:user.nickname,email:user.email,avatar_preset:user.avatar_preset,avatar_file_id:user.avatar_file_id}};
+    },'profile',15);
     route('post','logout',async req=>{const token=tokenFrom(req),account=await identity(token);await upstream('/auth/v1/logout?scope=local',{method:'POST',token});onRevoke({userId:account.id,sessionId:account.sessionId,all:!account.sessionId});return {ok:true};});
     app.use('/auth',(err,req,res,next)=>{if(!err)return next();res.status(400).json({error:{code:'INVALID_REQUEST',message:'Dados inválidos.'}});});
   }
-  return {required,configured,health,identity,install,allowedOrigins};
+  return {required,configured,health,identity,install,allowedOrigins,tokenFrom};
 }
 module.exports={createAuth,passwordChecks,validPassword,validNickname,policyMessage};

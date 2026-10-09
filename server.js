@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 const { RealtimeSfuManager } = require('./realtime-sfu');
 const { createAuth } = require('./auth');
+const {createFiles}=require('./files');
 
 const app = express();
 app.set('trust proxy',Number(process.env.TRUST_PROXY_HOPS||1));
@@ -13,6 +14,8 @@ const accountAuth = createAuth({onRevoke:event=>{
   for(const ws of wss.clients)if(ws.account?.id===event.userId&&(event.all||ws.account.sessionId===event.sessionId)){
     ws.account=null;leaveRoom(ws,'auth-expired');send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Sua sessão foi encerrada. Entre novamente.'});ws.close(4001,'Sessão encerrada');
   }
+},onProfileChange:account=>{
+  for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}
 }});
 accountAuth.install(app,express);
 const server = http.createServer(app);
@@ -20,7 +23,7 @@ const wss = new WebSocketServer({ server, path: '/ws',maxPayload:64*1024,verifyC
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.7.8-alpha';
+const VERSION = '0.7.9-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -125,7 +128,7 @@ function roomHostId(room) {
 }
 function publicPlayer(room, player) {
   // Estado detalhado de voz/câmera/tela é privado dos participantes da chamada.
-  return {id:player.id,name:player.name,seat:player.seat,ready:room.kind==='game'&&!!player.ready,host:room.kind==='game'&&player.id===roomHostId(room)};
+  return {id:player.id,name:player.name,avatar_preset:player.avatar_preset||'crown',avatar_file_id:player.avatar_file_id||null,seat:player.seat,ready:room.kind==='game'&&!!player.ready,host:room.kind==='game'&&player.id===roomHostId(room)};
 }
 function safeRoom(room) {
   return {
@@ -137,7 +140,7 @@ function safeRoom(room) {
 }
 function privateVoiceRoster(room){
   return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
-    id:p.id,name:p.name,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn,screen:!!p.screenOn,
+    id:p.id,name:p.name,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn,screen:!!p.screenOn,
     transport:p.mediaTransport||'p2p',quality:p.transmissionQuality||'balanced'
   }));
 }
@@ -200,6 +203,7 @@ function leaveRoom(ws, reason='leave') {
   }
 
   if(room.players.size===0) room.chatHistory=[];
+  resetVoiceModeIfEmpty(room);
   broadcastRoom(room); broadcastRooms(); broadcastChatChannels(); broadcastVoiceRoster(room);
   if(leaving){
     for(const p of room.players.values()) send(p.ws,{type:'player-left',roomId:room.id,playerId:leaving.id,name:leaving.name,reason});
@@ -217,7 +221,7 @@ function joinRoom(ws,roomId,rawName){
   leaveRoom(ws,'switch-room');
   if(room.kind==='game'&&room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:availability.name,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
+  const player={id:ws.clientId,name:availability.name,avatar_preset:ws.account?.avatar_preset||'crown',avatar_file_id:ws.account?.avatar_file_id||null,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
@@ -231,21 +235,42 @@ function setReady(ws,ready){
   player.ready=!!ready; broadcastRoom(room); broadcastRooms();
 }
 
-function handleChatMessage(ws,rawText){
+async function handleChatMessage(ws,rawText,attachmentId){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);
   if(!room||!player){send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Entre em um salão para usar o chat.'});return;}
   const now=Date.now();
   if(now-(player.lastChatAt||0)<450){send(ws,{type:'error',code:'CHAT_RATE',message:'Aguarde um instante antes de enviar outra mensagem.'});return;}
-  const text=sanitizeChat(rawText);if(!text)return;
+  const text=sanitizeChat(rawText);if(!text&&!attachmentId)return;
   player.lastChatAt=now;
-  const message={id:crypto.randomUUID(),roomId:room.id,senderId:player.id,seat:player.seat,name:player.name,text,ts:now};
+  let attachment=null;
+  try{if(attachmentId)attachment=await fileStorage.attachment(attachmentId,ws.account?.id,room.id);}catch(e){send(ws,{type:'error',code:e.code,message:e.message});return;}
+  if(ws.roomId!==room.id||room.players.get(player.id)!==player)return;
+  const message={id:crypto.randomUUID(),roomId:room.id,senderId:player.id,seat:player.seat,name:player.name,avatar_preset:player.avatar_preset||'crown',avatar_file_id:player.avatar_file_id||null,text,attachment,ts:now};
   if(!Array.isArray(room.chatHistory))room.chatHistory=[];
   room.chatHistory.push(message);if(room.chatHistory.length>50)room.chatHistory.splice(0,room.chatHistory.length-50);
   for(const p of room.players.values())send(p.ws,{type:'chat-message',message});
 }
+function resetVoiceModeIfEmpty(room){if(![...room.players.values()].some(p=>p.voiceJoined)){room.voiceMode=null;room.voiceRevision=(room.voiceRevision||0)+1;}}
+function chooseVoiceMode(room){
+  if(!room.voiceMode){const policy=realtimeSfu.statusPayload();room.voiceMode=room.kind==='chat'&&policy.enabled&&policy.configured&&!policy.hardBlocked?'sfu':'p2p';room.voiceRevision=(room.voiceRevision||0)+1;}
+  return room.voiceMode;
+}
+function sendVoiceMode(room,reason=''){
+  for(const p of room.players.values())send(p.ws,{type:'voice-mode',roomId:room.id,mode:room.voiceMode,revision:room.voiceRevision,reason});
+}
+function forceRoomP2p(room,reason='A chamada foi sincronizada em P2P para todos.'){
+  if(room.voiceMode==='p2p')return;
+  room.voiceMode='p2p';room.voiceRevision=(room.voiceRevision||0)+1;
+  for(const p of room.players.values())if(p.voiceJoined){p.mediaTransport='p2p';void realtimeSfu.cleanupClient(p.id,room.id);}
+  sendVoiceMode(room,reason);broadcastVoiceRoster(room);
+}
+function prepareVoice(ws,message){const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!player){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'NOT_IN_ROOM',message:'Entre em um canal primeiro.'}});return;}
+  const mode=chooseVoiceMode(room);send(ws,{type:'sfu-response',requestId:message.requestId,ok:true,data:{mode,revision:room.voiceRevision}});sendVoiceMode(room);
+}
 function handleVoiceState(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
   const previousTransport=player.mediaTransport;
+  if(message.joined){chooseVoiceMode(room);if(message.transport==='p2p'||(!player.voiceJoined&&[...room.players.values()].filter(p=>p.voiceJoined).length>=realtimeSfu.statusPayload().maxParticipants))forceRoomP2p(room);}
   player.voiceJoined=!!message.joined;
   player.voiceMuted=player.voiceJoined&&!!message.muted;
   player.cameraOn=player.voiceJoined&&!!message.camera;
@@ -253,9 +278,10 @@ function handleVoiceState(ws,message){
   const q=String(message.quality||player.transmissionQuality||'balanced');
   player.transmissionQuality=['economy','balanced','high'].includes(q)?q:'balanced';
   const transport=String(message.transport||player.mediaTransport||'p2p');
-  player.mediaTransport=player.voiceJoined&&['sfu','sfu-pending'].includes(transport)?transport:'p2p';
+  player.mediaTransport=player.voiceJoined&&room.voiceMode==='sfu'&&['sfu','sfu-pending'].includes(transport)?transport:'p2p';
   if(player.voiceJoined&&player.mediaTransport==='sfu')player.transmissionQuality=realtimeSfu.notePlayerQuality(room.id,player.id,player.transmissionQuality);
   if(!player.voiceJoined||(player.mediaTransport==='p2p'&&['sfu','sfu-pending'].includes(previousTransport)))void realtimeSfu.cleanupClient(player.id,room.id);
+  if(player.voiceJoined)sendVoiceMode(room);else resetVoiceModeIfEmpty(room);
   // Fora da chamada, os clientes recebem apenas voiceActive no room-state.
   // Identidade, mute, câmera e compartilhamento só são enviados aos membros da call.
   broadcastRoom(room);broadcastRooms();broadcastChatChannels();broadcastVoiceRoster(room);
@@ -264,7 +290,7 @@ function handleVoiceState(ws,message){
 function handleVoiceSignal(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player||!player.voiceJoined)return;
   const target=room.players.get(String(message.targetId||''));
-  if(!target||!target.voiceJoined||target.id===player.id)return;
+  if(!target||!target.voiceJoined||target.id===player.id||player.mediaTransport!=='p2p'||target.mediaTransport!=='p2p')return;
   const signalType=String(message.signalType||'');if(!['offer','answer','ice','renegotiate-request','stream-watch'].includes(signalType))return;
   if(signalType==='stream-watch'&&room.kind!=='chat')return;
   send(target.ws,{type:'voice-signal',fromId:player.id,fromName:player.name,signalType,data:message.data||null});
@@ -751,8 +777,10 @@ function broadcastGameState(room,revealPlays=false){
   for(const hp of room.players.values()) send(hp.ws,{type:'game-state',state:privateGameState(room,hp.seat,revealPlays)});
 }
 
+const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
+fileStorage.install(app);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,auth:accountAuth.health(),rooms:safeRooms(),chatOnlyCount:CHAT_CHANNELS.reduce((n,[id])=>n+(rooms.get(id)?.players.size||0),0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,auth:accountAuth.health(),files:fileStorage.health(),rooms:safeRooms(),chatOnlyCount:CHAT_CHANNELS.reduce((n,[id])=>n+(rooms.get(id)?.players.size||0),0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
@@ -764,21 +792,20 @@ wss.on('connection',(ws)=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(message.type==='authenticate'){
-      if(ws.authPending)return;
       if(++ws.authAttempts>20){ws.close(4001,'Muitas tentativas de autenticação');return;}
-      ws.authPending=true;
-      const priorAccount=ws.account;
-      void accountAuth.identity(message.access_token).then(account=>{
-        if(ws.readyState!==WebSocket.OPEN)return;
-        if(priorAccount&&priorAccount.id!==account.id)leaveRoom(ws,'account-change');
-        ws.account=account;
-        ws.authAttempts=0;
-        send(ws,{type:'auth-result',requestId:message.requestId,ok:true,user:{id:account.id,nickname:account.nickname},expiresAt:account.expiresAt});
-      }).catch(err=>{
-        ws.account=null;leaveRoom(ws,'auth-expired');
-        send(ws,{type:'auth-result',requestId:message.requestId,ok:false,error:{code:err.code||'AUTH_UNAVAILABLE',message:err.message||'Não foi possível entrar.'}});
-      }).finally(()=>{ws.authPending=false;});
-      return;
+      ws.authQueue=(ws.authQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
+        const priorAccount=ws.account;
+        try{
+          const account=await accountAuth.identity(message.access_token);if(ws.readyState!==WebSocket.OPEN)return;
+          if(priorAccount&&priorAccount.id!==account.id)leaveRoom(ws,'account-change');
+          if(!priorAccount&&account.sessionId)for(const other of wss.clients)if(other!==ws&&other.account?.id===account.id&&other.account.sessionId===account.sessionId){leaveRoom(other,'session-reconnected');other.account=null;other.close(4002,'Sessão reconectada em outra aba');}
+          ws.account=account;ws.authAttempts=0;
+          send(ws,{type:'auth-result',requestId:message.requestId,ok:true,user:{id:account.id,nickname:account.nickname},expiresAt:account.expiresAt});
+        }catch(err){
+          if(err.status===401||err.code==='EMAIL_NOT_CONFIRMED'){ws.account=null;leaveRoom(ws,'auth-expired');}
+          send(ws,{type:'auth-result',requestId:message.requestId,ok:false,error:{code:err.code||'AUTH_UNAVAILABLE',message:err.message||'Não foi possível entrar.'}});
+        }
+      });return;
     }
     const publicMessages=['list-rooms','list-chat-channels','ping'];
     const publicStatus=message.type==='sfu-request'&&message.action==='status';
@@ -794,7 +821,9 @@ wss.on('connection',(ws)=>{
       case 'ready':setReady(ws,message.ready);break;
       case 'start-room':requestStart(ws);break;
       case 'game-action':handleGameAction(ws,message);break;
-      case 'chat-message':handleChatMessage(ws,message.text);break;
+      case 'chat-message':void handleChatMessage(ws,message.text,message.attachmentId);break;
+      case 'voice-prepare':prepareVoice(ws,message);break;
+      case 'voice-fallback':{const room=rooms.get(ws.roomId);if(room?.players.get(ws.clientId)?.voiceJoined)forceRoomP2p(room);break;}
       case 'voice-state':handleVoiceState(ws,message);break;
       case 'voice-signal':handleVoiceSignal(ws,message);break;
       case 'sfu-request':void realtimeSfu.handleRequest(ws,message);break;

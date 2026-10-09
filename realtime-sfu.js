@@ -279,8 +279,9 @@ class RealtimeSfuManager{
     if(action==='status'){this._sendResponse(ws,requestId,true,this.statusPayload());return;}
     const auth=this._allowedRoomPlayer(ws,true);if(auth.error){this._sendResponse(ws,requestId,false,null,{code:auth.error,message:'Operação SFU não autorizada neste contexto.'});return;}
     const {room,player}=auth;
+    if(room.voiceMode==='p2p'&&!['ice-config','close-publication','close-subscription','close-tracks'].includes(action)){this._sendResponse(ws,requestId,false,null,{code:'ROOM_P2P',message:'A sala está sincronizada em P2P.'});return;}
     const contextKey=`${room.id}:${player.id}`,generation=this.clientGenerations.get(contextKey)||0;
-    const ensureCurrent=()=>{if(ws.roomId!==room.id||room.players.get(player.id)!==player||!player.voiceJoined||(this.clientGenerations.get(contextKey)||0)!==generation)throw Object.assign(new Error('A chamada mudou durante a operação SFU.'),{code:'SFU_SESSION_STALE'});};
+    const ensureCurrent=()=>{if(room.voiceMode==='p2p'||ws.roomId!==room.id||room.players.get(player.id)!==player||!player.voiceJoined||(this.clientGenerations.get(contextKey)||0)!==generation)throw Object.assign(new Error('A chamada mudou durante a operação SFU.'),{code:'SFU_SESSION_STALE'});};
     try{
       if(action==='ice-config'){
         try{this._sendResponse(ws,requestId,true,await this._turnIceServers());}catch(err){this._sendResponse(ws,requestId,true,{iceServers:[{urls:['stun:stun.cloudflare.com:3478']}],turn:false,warning:'TURN indisponível; usando STUN.'});}
