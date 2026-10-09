@@ -1,17 +1,45 @@
-# A Lei do Trono — Backend v0.8.0 Alpha
+# A Lei do Trono — v0.8.0 Alpha + atualização da comunidade
 
 Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jogar e usar texto e voz da mesa; acesso ao M&N, anexos e operações SFU exige autenticação. Antes do deploy, siga ATUALIZAR_v0.8.0.md e execute supabase/upgrade-v080.sql depois do SQL da v0.7.9. Instalações novas precisam de schema.sql, upgrade-v079.sql e upgrade-v080.sql, nessa ordem. Preserve as configurações de Supabase/SMTP, R2 e Realtime/TURN já utilizadas.
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
+
+O frontend da v0.8.0 enviado pelo criador está em `frontend/`, com seleção de
+qualidade/FPS, cargos, canais, galeria de anexos, efeitos sonoros e mosaico de
+até seis pessoas. Consulte [COMMUNITY_UPDATE.md](COMMUNITY_UPDATE.md) para
+atualizar o Supabase, o backend e a publicação no Surge.
+
+## Desenvolvimento local
+
+```bash
+npm ci
+npm test
+npm run test:frontend
+npm start
+```
+
+Em outro terminal, execute `npm run start:frontend`. O backend usa a porta 10000
+e o servidor estático usa 8080 (`FRONTEND_PORT` pode alterá-la). O frontend usa
+o backend local ao abrir em localhost; a publicação usa o Render configurado
+em `frontend/network.js`. Não existe etapa de compilação do frontend.
+
+Os testes de navegador usam Chromium em `/usr/bin/chromium`, ou no caminho
+informado em `AUTH_TEST_CHROMIUM`. Usam mídia artificial e simulam os serviços
+externos. Para login e armazenamento reais, configure Supabase/R2 no backend;
+o jogo como convidado pode ser validado sem essas credenciais.
 
 ## Arquivos obrigatórios
 - `server.js`
 - `auth.js`
 - `files.js`
 - `community.js`
+- `community-management.js`
+- `roles.js`
+- `soundboard.js`
 - `supabase/schema.sql` (executar no Supabase)
 - `supabase/upgrade-v079.sql` (perfis e anexos)
 - `supabase/upgrade-v080.sql` (diretório de membros para o backend)
+- `supabase/upgrade-community.sql` (cargos, canais e efeitos sonoros)
 - `realtime-sfu.js`
 - `package.json`
 

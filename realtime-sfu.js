@@ -155,7 +155,7 @@ class RealtimeSfuManager{
 
   _allowedRoomPlayer(ws,requireVoice=true){
     const room=this.rooms.get(ws.roomId),player=room?.players.get(ws.clientId);
-    if(!room||!player||room.kind!=='chat')return {error:'SFU_CHAT_ONLY'};
+    if(!room||!player||room.kind!=='chat'||room.channelType==='text')return {error:'SFU_CHAT_ONLY'};
     if(requireVoice&&!player.voiceJoined)return {error:'VOICE_REQUIRED'};
     return {room,player};
   }
