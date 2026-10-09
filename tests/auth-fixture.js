@@ -35,6 +35,10 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     if(url.pathname==='/rest/v1/profiles'){
       if(!record)return fail('bad_jwt',401);return reply(200,[{id:record.user.id,nickname:record.user.nickname,avatar_preset:record.user.avatar_preset||'crown',avatar_file_id:record.user.avatar_file_id||null}]);
     }
+    if(url.pathname==='/rest/v1/rpc/chat_member_directory'){
+      if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
+      return reply(200,[...users.values()].filter(u=>u.email_confirmed_at).map(u=>({id:u.id,nickname:u.nickname,avatar_preset:u.avatar_preset||'crown',avatar_file_id:u.avatar_file_id||null})));
+    }
     if(url.pathname==='/rest/v1/rpc/update_chat_profile'){
       if(!record)return fail('bad_jwt',401);if([...users.values()].some(u=>u.id!==record.user.id&&u.nickname.toLowerCase()===body.p_nickname.toLowerCase()))return reply(409,{message:'NICKNAME_TAKEN'});record.user.nickname=body.p_nickname;record.user.avatar_preset=body.p_preset;record.user.avatar_file_id=body.p_file;return reply(200,{});
     }
@@ -44,7 +48,7 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     reply(404,{});
   });
   await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
-  backend=spawn(process.execPath,[path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':''},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
+  backend=spawn(process.execPath,[path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',SUPABASE_SECRET_KEY:'sb_secret_fixture_only',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':''},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
   const base=`http://127.0.0.1:${port}`;
   for(let attempt=0;attempt<100;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===99)throw new Error('Backend did not start: '+logs);await wait(50);}
   async function call(endpoint,body,token,origin=appOrigin,method='POST'){

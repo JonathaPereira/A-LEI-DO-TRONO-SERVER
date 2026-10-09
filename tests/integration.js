@@ -3,7 +3,7 @@ const {spawn}=require('child_process');
 const path=require('path');
 const assert=require('assert');
 const backend=path.resolve(__dirname,'..');
-const VERSION='0.7.9-alpha';
+const VERSION='0.8.0-alpha';
 const WebSocket=require('ws');
 const port=10181;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
