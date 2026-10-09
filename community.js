@@ -11,7 +11,7 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
     const identity=validAccount(ws)?ws.account:validGuest(ws)?ws.guest:null;
     if(!identity)return;
     const id=identity.id;
-    members.set(id,{id,name:identity.nickname,guest:!!identity.guest,avatar_preset:identity.avatar_preset||'person',avatar_file_id:identity.avatar_file_id||null,lastSeen:Date.now()});
+    members.set(id,{id,name:identity.nickname,guest:!!identity.guest,role:identity.guest?'guest':identity.role||'member',avatar_preset:identity.avatar_preset||'person',avatar_file_id:identity.avatar_file_id||null,lastSeen:Date.now()});
   }
   function snapshot(ws){
     const full=!!validAccount(ws),online=new Map();
@@ -35,7 +35,7 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
       const rows=await response.json();if(!Array.isArray(rows))throw new Error('invalid directory');
       const ids=new Set(rows.map(p=>p.id));
       for(const [id,m]of members)if(!m.guest&&!ids.has(id))members.delete(id);
-      for(const row of rows)members.set(row.id,{id:row.id,name:row.nickname,guest:false,avatar_preset:row.avatar_preset||'crown',avatar_file_id:row.avatar_file_id||null,lastSeen:members.get(row.id)?.lastSeen||null});
+      for(const row of rows)members.set(row.id,{id:row.id,name:row.nickname,guest:false,role:['creator','admin'].includes(row.role)?row.role:'member',avatar_preset:row.avatar_preset||'crown',avatar_file_id:row.avatar_file_id||null,lastSeen:members.get(row.id)?.lastSeen||null});
       directoryReady=true;broadcast();
     }catch{directoryReady=false;}finally{loading=false;}
   }

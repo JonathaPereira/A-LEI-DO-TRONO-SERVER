@@ -1,0 +1,88 @@
+A LEI DO TRONO + CHAT DE VOZ M&N — AUDITORIA TÉCNICA v0.7.1-alpha
+Data: 2026-10-07
+Base auditada: v0.7.0-alpha
+
+ESCOPO
+- corrigir not_found_track_error no fluxo Cloudflare SFU;
+- reforçar câmera em navegadores móveis;
+- reforçar publicação/recepção de compartilhamento de tela;
+- reorganizar a interface de voz/câmera/tela;
+- limitar nomes a 20 caracteres, permitir apagar o campo e impedir duplicados;
+- adicionar feedback sonoro de clique;
+- adicionar controles para efeitos e música dentro da Central de Comunicação.
+
+CORREÇÕES SFU
+1. O backend mantém publisher sessionId + trackName como identificadores da publicação.
+2. Uma publicação substituída é retirada imediatamente da lista pública antes da nova ser anunciada.
+3. publication-ready consulta o estado da sessão e só anuncia a track após ela estar ativa.
+4. subscribe-track verifica novamente se a publicação existe/está ativa antes de criar a assinatura.
+5. not_found_track_error remove a referência obsoleta e retorna PUBLICATION_STALE para ressincronização.
+6. O frontend solicita list-publications novamente ao receber erro de publicação obsoleta.
+7. A mensagem não recomenda TURN para not_found_track_error; TURN é citado somente em falha de rota/ICE/timeout.
+8. Os RIDs f/h/q são enviados ao backend somente quando realmente aparecem nos parâmetros/SDP do navegador.
+9. Se simulcast não puder ser criado no dispositivo, câmera/tela repetem a publicação em camada única.
+10. Se câmera ou tela não conseguirem publicar no SFU, a mídia capturada é preservada e a chamada recua para P2P.
+
+CÂMERA MOBILE
+- tentativa com câmera selecionada exact;
+- fallback para deviceId ideal;
+- fallback para facingMode user;
+- fallback 720p/30;
+- fallback final para video:true;
+- erros de permissão continuam sendo exibidos em vez de mascarados.
+
+INTERFACE
+- controles principais agrupados em colunas verticais: Chamada, Áudio, Vídeo & Tela, Sistema;
+- Configurações divididas em abas: Áudio, Vídeo, Conexão;
+- aba Áudio: entrada, saída, supressor, efeitos e música;
+- aba Vídeo: câmera, qualidade e atualização de dispositivos;
+- aba Conexão: telemetria + estado do Realtime/freio;
+- responsividade específica para 1100, 760 e 460 px.
+
+IDENTIDADE
+- limite frontend/backend: 20 caracteres;
+- o campo pode ficar completamente vazio durante a edição;
+- entrada em sala/chat é bloqueada se o nome estiver vazio;
+- check-name em tempo real mostra disponibilidade;
+- join-room repete a validação para eliminar corrida entre dois usuários;
+- comparação usa normalização NFKC e é case-insensitive;
+- nenhum usuário conectado no servidor pode usar o mesmo nome de outro usuário.
+
+ÁUDIO DA APLICAÇÃO
+- efeito curto de clique em controles interativos;
+- SFX persistente em localStorage;
+- música persistente em localStorage;
+- botões na aba Áudio para mutar efeitos e música;
+- avisos sonoros de entrada/saída obedecem ao toggle de efeitos.
+
+VALIDAÇÕES EXECUTADAS
+- node --check: frontend/game.js, network.js, portal.js, recording.js, rtc-config.js, social.js;
+- node --check: backend/server.js, realtime-sfu.js, tests/integration.js;
+- package.json validado;
+- 198 IDs HTML, zero duplicados;
+- referências de IDs do JS conferidas contra o HTML;
+- assets locais do HTML/CSS conferidos;
+- CSS: número de chaves de abertura/fechamento consistente;
+- teste unitário SFU com fetch simulado: publicação com RIDs, publication-ready e limpeza de publicação obsoleta — PASS;
+- suíte local: 15 testes aprovados; integração WebSocket completa foi ignorada porque npm install excedeu o tempo disponível neste ambiente;
+- smoke visual por Chromium com HTML/CSS injetados: desktop 1440x900 e mobile 390x844 — renderização concluída.
+
+LIMITAÇÕES IMPORTANTES
+- não foi possível testar a aplicação Cloudflare real porque App ID/token do usuário estão corretamente somente no Render;
+- não é possível simular aqui notebook + celular em redes reais independentes;
+- TURN não foi ativado automaticamente: é uma credencial/serviço separado e deve ser configurado somente se os testes mostrarem falha real de ICE/CGNAT;
+- o teste decisivo para v0.7.1 deve ser feito após deploy com pelo menos notebook + celular, e depois 3 participantes.
+
+FOCO DO PLAYTEST
+1. duas pessoas entram no Salão Livre e recebem áudio sem not_found_track_error persistente;
+2. ligar/desligar câmera repetidamente no notebook e celular;
+3. trocar câmera no celular se houver frontal/traseira;
+4. compartilhar tela do notebook e confirmar recepção no celular;
+5. alternar Economia/Equilibrada/Alta/Ultra conforme suporte;
+6. abrir Telemetria e registrar RTT/FPS/perda se a mídia travar;
+7. testar nomes vazios, nomes com 20 caracteres e nome duplicado;
+8. testar abas de Configurações em desktop e mobile;
+9. testar Efeitos e Música ligados/desligados.
+
+RESULTADO
+APROVADO PARA DEPLOY DE PLAYTEST v0.7.1-alpha, com teste SFU real obrigatório após publicação.

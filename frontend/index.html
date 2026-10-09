@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>M&amp;N · A Lei do Trono</title>
+  <meta name="referrer" content="no-referrer" />
+  <script src="auth-boot.js?v=081community"></script>
+  <link rel="stylesheet" href="style.css?v=081community" />
+  <link rel="stylesheet" href="mn-chat.css?v=081community" />
+  <link rel="stylesheet" href="auth.css?v=081community" />
+  <link rel="stylesheet" href="profile-files.css?v=081community" />
+  <link rel="stylesheet" href="community.css?v=081community" />
+  <link rel="stylesheet" href="modern.css?v=081community" />
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
+
+
+  <section id="portalScreen" class="screen portal-screen" aria-label="Escolha sua experiência">
+    <div class="portal-noise" aria-hidden="true"></div>
+    <header class="portal-header">
+      <button id="portalBrandBtn" class="portal-brand" type="button" aria-label="Início M&N"><span class="portal-brand-mark">✦</span><strong>M&N</strong></button>
+      <nav class="portal-nav" aria-label="Navegação principal">
+        <button class="portal-nav-btn active" data-portal-target="home">Início</button>
+        <button class="portal-nav-btn" data-portal-target="voice">Chat de Voz</button>
+        <button class="portal-nav-btn" data-portal-target="game">A Lei do Trono</button>
+      </nav>
+      <div class="portal-account">
+        <span class="portal-status-dot"></span>
+        <div><strong id="portalPlayerLabel">Jogador</strong><small id="portalServerStatus">Conectando à Corte…</small></div>
+        <button id="accountLoginBtn" class="account-action" type="button">Entrar</button>
+        <button id="accountProfileBtn" class="account-action hidden" type="button">Meu perfil</button>
+        <button id="accountLogoutBtn" class="account-action hidden" type="button">Sair</button>
+        <button id="accountGuestExitBtn" class="account-action hidden" type="button">Sair do convidado</button>
+      </div>
+    </header>
+
+    <main id="portalStage" class="portal-stage">
+      <article id="voicePortalCard" class="portal-choice portal-choice-voice" tabindex="0" aria-label="Abrir Chat de Voz M&N">
+        <div class="portal-choice-shade"></div>
+        <div class="portal-choice-content">
+          <span class="portal-kicker"><i></i> COMUNICAÇÃO EM TEMPO REAL</span>
+          <h1><small>Chat de Voz</small>M&amp;N</h1>
+          <p>Seu espaço para estar junto. Converse, compartilhe a tela e encontre sua comunidade.</p>
+          <div class="portal-features" aria-label="Recursos do chat">
+            <span>🎙 Voz</span><span>▣ Câmera</span><span>▤ Tela</span><span>♫ Efeitos</span>
+          </div>
+          <button id="openVoicePortalBtn" class="portal-cta portal-cta-blue" type="button"><span>🎙</span> Abrir Chat de Voz <b>→</b></button>
+          <p id="portalEntryStatus" class="portal-entry-status" role="status" aria-live="polite"></p>
+        </div>
+      </article>
+
+      <div class="portal-rift" aria-hidden="true"><span>✦</span><i></i><b></b></div>
+
+      <article id="gamePortalCard" class="portal-choice portal-choice-game" tabindex="0" aria-label="Abrir A Lei do Trono">
+        <div class="portal-choice-shade"></div>
+        <div class="portal-choice-content portal-choice-content-right">
+          <span class="portal-kicker"><i></i> ESTRATÉGIA • INFLUÊNCIA • ALIANÇAS</span>
+          <h1><small>A Lei do</small>TRONO</h1>
+          <p>Prepare sua Casa, escolha suas alianças e dispute a Coroa. Sua próxima partida começa aqui.</p>
+          <div class="portal-features" aria-label="Recursos do jogo">
+            <span>♛ Salões</span><span>⚔ Estratégia</span><span>✦ Influência</span><span>☾ Sombra</span>
+          </div>
+          <button id="openGamePortalBtn" class="portal-cta portal-cta-gold" type="button"><span>♛</span> Entrar no Jogo <b>→</b></button>
+          <button id="openGuestGameBtn" class="guest-entry-btn" type="button">Jogar como convidado</button>
+          <p class="guest-entry-note">Convidados podem jogar e conversar por voz na mesa. O chat M&amp;N exige uma conta.</p>
+        </div>
+      </article>
+    </main>
+
+    <section class="portal-identity-bar" aria-label="Identidade e trilha sonora">
+      <label class="portal-identity"><span>Seu nome</span><input id="portalIdentity" value="Jogador" maxlength="20" autocomplete="nickname" aria-describedby="portalNameAvailability" /><small id="portalNameAvailability" class="name-availability" aria-live="polite"></small></label>
+      <div class="portal-now-playing"><span class="music-pulse" aria-hidden="true"><i></i><i></i><i></i><i></i></span><div><small>TRILHA CC0</small><strong id="portalNowPlaying">Lo-fi • omfgdude</strong><small id="portalMusicStatus" class="music-playback-status" role="status" aria-live="polite"></small></div></div>
+      <div class="portal-track-select" aria-label="Escolha da trilha">
+        <button class="track-btn active" data-track="lofi" title="Lofi again — omfgdude • CC0">Lo-fi</button>
+        <button class="track-btn" data-track="edm" title="Joyfully — MintoDog • CC0">EDM</button>
+        <button class="track-btn" data-track="rock" title="Codename Granny II — Kistol • CC0">Rock</button>
+        <button class="track-btn" data-track="electronic" title="Claimed by the Void — vitalezzz • CC0">Eletrônica</button>
+      </div>
+      <button id="portalMusicBtn" class="portal-music-btn" type="button">♫ Música ligada</button>
+      <label class="portal-volume"><span>Volume</span><input id="portalMusicVolume" type="range" min="0" max="100" value="32"/><output id="portalMusicVolumeValue">32%</output></label>
+      <button id="portalCreditsBtn" class="portal-credit-btn" type="button" title="Créditos das trilhas">CC0</button>
+    </section>
+  </section>
+
+  <section id="setupScreen" class="screen setup-screen lobby-screen hidden">
+    <div class="setup-card lobby-card">
+      <button id="backFromLobbyBtn" class="back-lobby portal-back-btn" type="button">← Voltar ao portal</button>
+      <div class="crest">♛</div>
+      <h1>A LEI DO TRONO</h1>
+      <p class="subtitle">Protótipo digital v0.8.0-alpha • Playtest Online</p>
+      <p class="intro">Identifique-se, escolha um salão e prepare sua Casa. Cada sala comporta até 4 jogadores.</p>
+
+      <div class="identity-row">
+        <label class="identity-name-field"><span>Seu nome na Corte</span><input id="playerIdentity" value="Jogador" maxlength="20" autocomplete="nickname" aria-describedby="nameAvailability" /><small id="nameAvailability" class="name-availability" aria-live="polite"></small></label>
+        <button id="manualBtn" class="royal-btn manual-btn">📜 Manual temático</button>
+      </div>
+
+      <div class="room-grid" id="roomGrid">
+        <article class="room-card" data-room="sala-cetro"><div class="room-glyph cetro">♜</div><div><small>SALÃO I</small><h3>Sala do Cetro</h3><p>Uma mesa aberta para até quatro Casas.</p></div><div class="room-footer"><span id="roomCount0">0 / 4</span><button class="royal-btn room-enter" data-room="sala-cetro">Entrar</button></div></article>
+        <article class="room-card" data-room="sala-chave"><div class="room-glyph chave">⚿</div><div><small>SALÃO II</small><h3>Sala da Chave</h3><p>Uma mesa aberta para até quatro Casas.</p></div><div class="room-footer"><span id="roomCount1">0 / 4</span><button class="royal-btn room-enter" data-room="sala-chave">Entrar</button></div></article>
+        <article class="room-card" data-room="sala-mascara"><div class="room-glyph mascara">◉</div><div><small>SALÃO III</small><h3>Sala da Máscara</h3><p>Uma mesa aberta para até quatro Casas.</p></div><div class="room-footer"><span id="roomCount2">0 / 4</span><button class="royal-btn room-enter" data-room="sala-mascara">Entrar</button></div></article>
+      </div>
+      <article class="chat-only-entry">
+        <div class="chat-only-glyph">◫</div>
+        <div class="chat-only-copy"><small>FORA DA MESA</small><h3>Somente chat</h3><p>Salão livre para texto, áudio, câmera e compartilhamento de tela. Sem limite fixo de participantes imposto pelo servidor e sem iniciar uma partida.</p></div>
+        <button id="chatOnlyBtn" class="royal-btn primary">Entrar no Salão Livre</button>
+      </article>
+      <div class="lobby-status"><span class="status-dot"></span><span id="networkStatus">Conectando ao servidor da Corte...</span></div>
+      <div class="lobby-audio-panel" aria-label="Controles de áudio do lobby">
+        <button id="lobbyMusicBtn" class="royal-btn lobby-music-toggle">♫ Música ligada</button>
+        <label class="lobby-volume"><span>Volume</span><input id="lobbyMusicVolume" type="range" min="0" max="100" value="32"/><output id="lobbyMusicVolumeValue">32%</output></label>
+        <div class="music-track-select lobby-track-select" aria-label="Escolha da trilha">
+          <button class="track-btn active" data-track="lofi">Lo-fi</button>
+          <button class="track-btn" data-track="edm">EDM</button>
+          <button class="track-btn" data-track="rock">Rock</button>
+          <button class="track-btn" data-track="electronic">Eletrônica</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="roomScreen" class="screen setup-screen room-screen hidden">
+    <div class="setup-card room-wait-card">
+      <button id="backToLobbyBtn" class="back-lobby">← Voltar aos salões</button>
+      <div class="crest">♛</div>
+      <small class="eyebrow">SALA SELECIONADA</small>
+      <h1 id="selectedRoomName">Sala do Cetro</h1>
+      <p class="intro">Aguarde outros jogadores, marque Pronto e inicie a partida. Com 2 ou 3 jogadores, as vagas restantes serão preenchidas por IAs.</p>
+      <div id="roomSeats" class="room-seats"></div>
+      <div class="online-room-actions">
+        <button id="roomSocialBtn" class="royal-btn">💬 Comunicação</button>
+        <button id="readyOnlineBtn" class="royal-btn online-ready-btn">✓ Marcar Pronto</button>
+        <button id="startOnlineBtn" class="royal-btn primary" disabled>♛ Iniciar partida online</button>
+      </div>
+      <p id="roomOnlineStatus" class="online-room-status">Conectando ao salão...</p>
+      <details class="local-test-fold">
+        <summary>Opções locais de desenvolvimento</summary>
+        <div class="setup-actions">
+          <button id="startHumanBtn" class="royal-btn">Preencher vagas com IAs e jogar local</button>
+          <button id="startDemoBtn" class="royal-btn">Simular 4 IAs</button>
+        </div>
+      </details>
+      <p class="setup-note">Alpha multiplayer: o servidor agora controla o baralho, as mãos privadas, os turnos e as principais regras da partida. As opções abaixo permanecem apenas para testes locais.</p>
+      <input id="p0Name" value="Jogador" class="hidden" />
+      <input id="p1Name" value="Bonifácio" class="hidden" />
+      <input id="p2Name" value="Epaminondas" class="hidden" />
+      <input id="p3Name" value="Cícero" class="hidden" />
+    </div>
+  </section>
+
+  <section id="chatOnlyScreen" class="screen chat-only-screen hidden">
+    <header class="chat-only-topbar chat-app-header">
+      <div class="chat-app-brand">
+        <span class="chat-app-crest">M<span>&</span>N</span>
+        <div><small>SEU PONTO DE ENCONTRO</small><h2>Comunidade M&amp;N</h2><p id="chatOnlyStatus">Conectando ao salão de conversa...</p></div>
+      </div>
+      <div class="chat-app-statusbar" aria-label="Estado da comunicação">
+        <button id="telemetryStatusPill" class="connection-health neutral" title="Abrir diagnóstico da conexão"><i></i><span id="telemetryHealthLabel">Conexão</span><small id="telemetryHealthDetail">aguardando</small></button>
+        <span id="chatOnlyTransport" class="transport-pill">P2P</span>
+        <span id="chatOnlyCount" class="participant-pill">0 pessoas conectadas</span>
+      </div>
+      <div class="chat-only-top-actions">
+        <span id="myRoleBadge" class="role-badge role-member">Membro</span>
+        <button id="communityManageBtn" class="chat-header-action hidden" type="button"><span>⚙</span><b>Gerenciar</b></button>
+        <button id="chatProfileBtn" class="chat-header-action" type="button" title="Alterar apelido e ícone"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3c0-5 16-5 16 0v3z"/></svg></span><b>Perfil</b></button>
+        <button id="chatOnlyTextBtn" class="chat-header-action" title="Abrir mensagens de texto"><span>💬</span><b>Chat</b><em id="chatOnlyUnread" class="chat-header-unread hidden">0</em></button>
+        <button id="chatOnlyOpenSocialBtn" class="royal-btn hidden">Abrir comunicação</button>
+        <button id="backFromChatOnlyBtn" class="chat-header-action back-action" title="Voltar ao início"><span>←</span><b>Voltar</b></button>
+      </div>
+    </header>
+    <nav class="mn-channel-sidebar" aria-label="Canais M&N">
+      <div class="mn-sidebar-heading"><div><strong>M&amp;N</strong><small>Seu ponto de encontro.</small></div><button id="createChannelBtn" class="channel-add hidden" type="button" aria-label="Criar ou excluir canais" title="Gerenciar canais">+</button></div>
+      <div class="mn-sidebar-scroll">
+      <div class="mn-sidebar-label">TEXTO</div>
+      <div id="textChannelList" class="mn-channel-list"><small class="channel-empty">Carregando…</small></div>
+      <div class="mn-sidebar-label">SALAS DE VOZ</div>
+      <div id="chatChannelList" class="mn-channel-list"><span class="mn-channel-loading">Carregando canais...</span></div>
+      </div>
+      <div class="mn-sidebar-bottom"><span class="mn-online-dot"></span><div><strong id="chatOnlyRoomName">Geral</strong><small>Canal selecionado • M&amp;N</small></div></div>
+    </nav>
+  </section>
+
+  <section id="gameScreen" class="screen game-screen hidden">
+    <header class="topbar">
+      <div class="brand"><span class="brand-crown">♛</span><div><strong>A LEI DO TRONO</strong><small id="versionLabel">Protótipo digital v0.8.0-alpha</small></div></div>
+      <div class="round-status"><span id="roundBadge">Rodada 1/3</span><span id="trickBadge">Vaza 1/10</span><span id="turnBadge">Preparando...</span><span id="turnTimer" class="turn-timer idle">01:00</span></div>
+      <div class="top-actions">
+        <div class="music-volume" title="Volume da música de fundo"><span>♫</span><input id="musicVolume" type="range" min="0" max="100" value="32" aria-label="Volume da música"/><output id="musicVolumeValue">32%</output></div>
+        <div class="music-track-select top-track-select" aria-label="Escolha da trilha">
+          <button class="track-btn active" data-track="lofi" title="Lofi again — omfgdude • CC0">Lo-fi</button>
+          <button class="track-btn" data-track="edm" title="Joyfully — MintoDog • CC0">EDM</button>
+          <button class="track-btn" data-track="rock" title="Codename Granny II — Kistol • CC0">Rock</button>
+          <button class="track-btn" data-track="electronic" title="Claimed by the Void — vitalezzz • CC0">Eletrônica</button>
+        </div>
+        <button id="musicBtn" class="icon-btn" title="Ativar ou silenciar música">♫ Música</button>
+        <button id="recordMatchBtn" class="icon-btn record-btn" title="Gravar a partida exibida nesta aba">⏺ Gravar</button>
+        <button id="logBtn" class="icon-btn" title="Abrir ou ocultar a Crônica da Corte">☷ Log</button>
+        <button id="socialBtn" class="icon-btn social-top-btn" title="Chat de texto, voz e câmera">💬 Chat <span id="chatUnread" class="chat-unread hidden">0</span></button>
+        <button id="speedBtn" class="icon-btn" title="Alternar velocidade">⏱ Normal</button>
+        <button id="rulesBtn" class="icon-btn" title="Resumo de regras">📜 Regras</button>
+        <button id="restartBtn" class="icon-btn danger" title="Voltar ao início">↻ Início</button>
+      </div>
+    </header>
+
+    <main class="board-wrap">
+      <div class="table-aura"></div>
+      <div id="player0" class="player-panel pos-bottom"></div><div id="player1" class="player-panel pos-left"></div><div id="player2" class="player-panel pos-top"></div><div id="player3" class="player-panel pos-right"></div>
+      <div id="seatMediaLayer" class="seat-media-layer" aria-label="Câmeras posicionadas junto aos assentos da mesa"></div>
+      <section class="royal-table">
+        <div class="table-emblem"><img src="assets/throne.png" alt="Trono" /></div>
+        <div id="tableInfluenceCoins" class="table-influence-coins" aria-label="Influências sobre a mesa"></div>
+        <div id="tableCard0" class="table-card-slot slot-bottom"><span>J1</span></div><div id="tableCard1" class="table-card-slot slot-left"><span>J2</span></div><div id="tableCard2" class="table-card-slot slot-top"><span>J3</span></div><div id="tableCard3" class="table-card-slot slot-right"><span>J4</span></div>
+        <div class="center-info">
+          <div class="law-mini"><img id="currentLawImg" src="assets/laws/ordem.png" alt="Lei atual" /><div><small>LEI ATUAL</small><strong id="currentLawName">ORDEM</strong><span id="lawUsesText">Uso 1 de 2</span></div></div>
+          <div id="trumpInfo" class="trump-info hidden">Trunfo: <strong id="trumpSuitText">—</strong></div>
+          <div id="leadSuitInfo" class="trump-info lead-suit-info hidden">Naipe anunciado: <strong id="leadSuitText">—</strong></div>
+          <div id="decreeBadge" class="decree-badge"><small>DECRETO</small><strong>—</strong></div>
+        </div>
+      </section>
+      <aside class="law-tracker"><h3>Leis da rodada</h3><div id="lawTrackerList"></div></aside>
+      <aside id="eventLogPanel" class="event-log-panel floating-log log-hidden"><div id="eventDragHandle" class="event-head"><h3>Crônica da Corte</h3><div class="event-head-actions"><button id="logResetBtn" title="Restaurar posição e tamanho">↺</button><button id="clearLogBtn" title="Limpar registro">⌫</button><button id="logHideBtn" title="Ocultar janela">×</button></div></div><div id="eventLog" class="event-log"></div><div class="resize-hint">arraste pelo título • redimensione pelo canto ↘</div><div id="logResizeGrip" class="log-resize-grip" title="Redimensionar"></div></aside>
+    </main>
+
+    <section class="hand-zone">
+      <div class="hand-toolbar"><div><strong id="handTitle">Sua mão</strong><span id="instructionText">Aguarde...</span></div><div class="hand-actions"><button id="sortHandBtn" class="small-btn">Ordenar</button><label id="influenceToggleWrap" class="influence-toggle disabled" data-tooltip="Influência 2.0: com 1 ficha use Sigilo para jogar uma carta oculta; com 2, use Manobra da Corte (+3 ou -3). O valor efetivo nunca passa de 12 nem fica abaixo de 1. Ao abrir oculta, anuncie o naipe real."><input type="checkbox" id="influenceToggle" disabled /><span class="influence-emblem">✦</span><span class="influence-copy"><strong>INFLUÊNCIA</strong><small id="influenceStatusText">0/2 • indisponível</small></span><span class="influence-action">USAR</span></label></div></div>
+      <div id="humanHand" class="hand"></div>
+    </section>
+  </section>
+
+  <aside id="socialPanel" class="social-panel hidden social-hidden" aria-label="Comunicação da Corte">
+    <div id="socialDragHandle" class="social-head"><div><small>SALA DE VOZ</small><strong id="mnStageRoomName">Geral</strong></div><div class="social-head-actions"><button id="socialModeBtn" title="Alternar janela completa/flutuante">▱ Flutuante</button><button id="socialCloseBtn" title="Minimizar">—</button></div></div>
+    <section class="court-chat-section" aria-label="Mensagens de texto">
+      <div class="court-chat-title"><div><small>MENSAGENS</small><strong># conversa</strong></div><div class="chat-title-actions"><button id="channelFilesBtn" class="small-btn" type="button" title="Ver fotos e anexos do canal">Anexos</button><button id="muteTextBtn" class="small-btn">Silenciar chat</button><button id="chatDrawerCloseBtn" class="chat-drawer-close" title="Fechar chat">×</button></div></div>
+      <div id="courtChatMessages" class="court-chat-messages" aria-live="polite"></div>
+      <div class="court-chat-compose">
+        <button id="attachFileBtn" class="emoji-trigger" type="button" title="Anexar arquivo: 10 MB; vídeo MP4: 100 MB" aria-label="Anexar arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M8 14l7-7a3 3 0 014 4L9 21a5 5 0 01-7-7L12 4a6 6 0 018 8L10 22M5 17l11-11"/></svg></button>
+        <input id="chatFileInput" type="file" hidden>
+        <button id="emojiBtn" class="emoji-trigger" title="Escolher emoji" aria-expanded="false">☺</button>
+        <div id="emojiPicker" class="emoji-picker hidden" aria-label="Seletor de emojis"></div>
+        <textarea id="courtChatInput" maxlength="300" rows="2" placeholder="Escreva uma mensagem..."></textarea>
+        <button id="courtChatSend" class="chat-send-btn" title="Enviar mensagem">➤</button>
+      </div>
+      <div id="attachmentStatus" class="attachment-status" role="status" aria-live="polite"></div>
+      <small class="chat-help">Enter envia • 10 MB por arquivo • 100 MB por vídeo MP4/WebM • 300 caracteres</small>
+    </section>
+    <section class="voice-section">
+    <div class="voice-title"><div><strong>O papo acontece aqui.</strong><small class="voice-subtitle">Microfone, câmera ou tela. Do seu jeito.</small></div><span id="voiceStatus" role="status" aria-live="polite">Fora do chat de voz.</span><button id="resumeAudioBtn" class="royal-btn hidden" type="button">🔊 Liberar áudio</button></div>
+      <div class="voice-actions call-toolbar call-control-columns" aria-label="Controles principais da chamada">
+        <div class="call-control-group call-control-primary">
+          <small>CHAMADA</small>
+          <button id="joinVoiceBtn" class="royal-btn primary call-action"><span class="call-icon">☎</span><span>Entrar na voz</span></button>
+        </div>
+        <div class="call-control-group">
+          <small>ÁUDIO</small>
+          <button id="muteMicBtn" class="royal-btn call-action" disabled><span class="call-icon">🎙</span><span>Mutar microfone</span></button>
+          <button id="deafenVoiceBtn" class="royal-btn call-action" disabled><span class="call-icon">🔊</span><span>Silenciar voz</span></button>
+        </div>
+        <div class="call-control-group">
+          <small>VÍDEO & TELA</small>
+          <button id="cameraBtn" class="royal-btn call-action"><span class="call-icon">▣</span><span>Ligar câmera</span></button>
+          <button id="screenShareBtn" class="royal-btn screen-share-btn call-action" disabled><span class="call-icon">▤</span><span>Compartilhar tela</span></button>
+        </div>
+        <div class="call-control-group call-control-system">
+          <small>SISTEMA</small>
+          <button id="soundboardBtn" class="royal-btn call-action" type="button"><span class="call-icon">♫</span><span>Efeitos</span></button>
+          <button id="voiceSettingsBtn" class="royal-btn call-action settings-btn" aria-expanded="false"><span class="call-icon">⚙</span><span>Configurações</span></button>
+        </div>
+      </div>
+      <div id="voiceSettingsPanel" class="voice-settings-panel hidden" aria-label="Configurações da chamada">
+        <div class="voice-settings-head"><div><small>CENTRAL DE CONTROLE</small><strong>Configurações da chamada</strong></div><button id="voiceSettingsClose" class="settings-close" title="Fechar configurações">×</button></div>
+        <div class="voice-settings-tabs" role="tablist" aria-label="Categorias das configurações">
+          <button class="voice-settings-tab active" type="button" role="tab" aria-selected="true" data-settings-tab="audio">🎙 Áudio</button>
+          <button class="voice-settings-tab" type="button" role="tab" aria-selected="false" data-settings-tab="video">▣ Vídeo</button>
+          <button class="voice-settings-tab" type="button" role="tab" aria-selected="false" data-settings-tab="connection">⌁ Conexão</button>
+        </div>
+        <div class="voice-settings-content">
+          <section class="voice-settings-pane active" data-settings-panel="audio" role="tabpanel">
+            <div class="settings-section-heading"><div><small>ENTRADA & SAÍDA</small><strong>Áudio da chamada</strong></div><span>Dispositivos e processamento</span></div>
+            <div class="voice-devices voice-devices-vertical">
+              <label><span>Microfone</span><select id="voiceInputSelect"><option value="">Microfone padrão</option></select></label>
+              <label><span>Saída de áudio</span><select id="voiceOutputSelect"><option value="">Saída padrão</option></select></label>
+            </div>
+            <div class="mn-gain-controls" aria-label="Controles de ganho de áudio">
+              <label class="mn-gain-label"><span>Meu microfone</span><output id="micGainValue">100%</output><input id="micGainSlider" type="range" min="0" max="300" step="5" value="100" /></label>
+              <label class="mn-gain-label"><span>Áudio de saída</span><output id="outputGainValue">100%</output><input id="outputGainSlider" type="range" min="0" max="300" step="5" value="100" /></label>
+              <p>Volumes individuais de outros usuários aparecem nos participantes quando você entra na chamada.</p>
+            </div>
+            <label class="mn-gain-label call-alert-volume"><span>Avisos de entrada e saída</span><output id="callAlertVolumeValue">85%</output><input id="callAlertVolume" type="range" min="0" max="100" step="5" value="85" aria-label="Volume dos avisos da chamada" /></label>
+            <button id="testCallAlert" class="royal-btn settings-secondary" type="button" data-no-click-sfx="1">Ouvir aviso de chamada</button>
+            <div class="settings-action-grid">
+              <button id="noiseSuppressionBtn" class="royal-btn noise-active settings-secondary" title="Supressor integrado de ruído">Supressor: Ligado</button>
+              <button id="voiceSfxBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar efeitos da interface e avisos da chamada">🔔 Efeitos: Ligados</button>
+              <button id="voiceMusicBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar a música da aplicação">♫ Música: Ligada</button>
+            </div>
+            <div class="voice-devices voice-devices-vertical"><label><span>Música de fundo</span><select id="voiceMusicTrackSelect" aria-label="Trocar música do chat de voz"></select></label></div>
+            <label class="mn-gain-label"><span>Volume da música</span><output id="voiceMusicVolumeValue">32%</output><input id="voiceMusicVolume" type="range" min="0" max="100" value="32" /></label>
+            <small id="voiceMusicStatus" class="music-playback-status" role="status" aria-live="polite"></small>
+            <small class="settings-context-help">Avisos de entrada, saída e mensagens. Escolha sua música aqui; a preferência vale para este dispositivo.</small>
+          </section>
+          <section class="voice-settings-pane" data-settings-panel="video" role="tabpanel" hidden>
+            <div class="settings-section-heading"><div><small>CÂMERA & TRANSMISSÃO</small><strong>Vídeo</strong></div><span>Qualidade adaptativa</span></div>
+            <div class="voice-devices voice-devices-vertical">
+              <label class="camera-device-label"><span>Câmera</span><select id="cameraInputSelect"><option value="">Câmera padrão</option></select></label>
+              <label class="quality-device-label"><span>Perfil de câmera e áudio</span><select id="transmissionQualitySelect"><option value="economy">Economia • 720p / 30 FPS</option><option value="balanced">Equilibrada • 720p / 30 FPS</option><option value="high">Alta • 720p / 30 FPS</option></select></label>
+              <label><span>Qualidade da stream</span><select id="screenFormatSelect"><option value="720-15">720p / 15 FPS</option><option value="720-30">720p / 30 FPS</option><option value="720-60">720p / 60 FPS</option><option value="1080-15">1080p / 15 FPS</option><option value="1080-30">1080p / 30 FPS</option><option value="1080-60">1080p / 60 FPS</option></select></label>
+              <label><span>Bitrate da tela</span><select id="screenBitrateSelect"><option value="4">4 Mbps</option><option value="6">6 Mbps</option><option value="8" selected>8 Mbps • recomendado</option><option value="10">10 Mbps</option><option value="12">12 Mbps</option><option value="15">15 Mbps</option></select></label>
+              <label><span>Conteúdo compartilhado</span><select id="screenContentSelect"><option value="detail">Nitidez • jogos, textos e detalhes</option><option value="motion">Movimento • vídeo e animações</option></select></label>
+            </div>
+            <label class="mn-share-audio"><input id="shareStreamAudio" type="checkbox" checked /><span>Compartilhar áudio da stream</span></label>
+            <small class="settings-context-help">No seletor do navegador, marque Compartilhar áudio. Para enviar o som de um vídeo, prefira compartilhar a aba que o reproduz. Esta opção vale para a próxima transmissão.</small>
+            <div class="settings-action-grid"><button id="refreshDevicesBtn" class="small-btn settings-secondary">↻ Atualizar dispositivos</button></div>
+            <small id="qualityHint" class="quality-hint">720p / 30 FPS • qualidade visual e estabilidade em primeiro lugar.</small>
+          </section>
+          <section class="voice-settings-pane" data-settings-panel="connection" role="tabpanel" hidden>
+            <div class="settings-section-heading"><div><small>REDE & DIAGNÓSTICO</small><strong>Conexão</strong></div><span>SFU, TURN e telemetria</span></div>
+            <div class="settings-action-grid"><button id="telemetryOpenBtn" class="royal-btn settings-secondary telemetry-open-btn" title="Ver diagnóstico em tempo real">⌁ Abrir diagnóstico</button></div>
+            <div id="realtimeInfraCard" class="realtime-infra-card" aria-live="polite">
+              <div class="realtime-infra-head"><div><small>TRANSPORTE DE MÍDIA</small><strong id="realtimeModeLabel">WebRTC P2P (fallback)</strong></div><span id="realtimeUsageLabel">Aguardando dados do backend</span></div>
+              <div id="realtimeUsageBar" class="realtime-usage-bar" role="progressbar" aria-label="Uso mensal estimado do Cloudflare Realtime" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+              <small id="realtimePolicyLabel">Freio de consumo aguardando sincronização.</small>
+            </div>
+            <small class="settings-context-help">Falhas de publicação/assinatura são ressicronizadas antes do fallback. TURN só é relevante quando a rota ICE não consegue se estabelecer.</small>
+          </section>
+        </div>
+      </div>
+      <section id="telemetryPanel" class="telemetry-panel hidden" aria-label="Telemetria WebRTC">
+        <div class="telemetry-head"><div><small>DIAGNÓSTICO EM TEMPO REAL</small><strong>Saúde da conexão</strong></div><button id="telemetryCloseBtn" class="settings-close" title="Fechar diagnóstico">×</button></div>
+        <div class="telemetry-hero"><span id="telemetryHeroDot" class="telemetry-dot neutral"></span><div><strong id="telemetryHeroLabel">Aguardando mídia</strong><small id="telemetryRecommendation">Entre na chamada para iniciar a telemetria.</small></div></div>
+        <div class="telemetry-grid">
+          <div><small>Transporte</small><strong id="telemetryTransport">—</strong></div>
+          <div><small>RTT</small><strong id="telemetryRtt">—</strong></div>
+          <div><small>Upload</small><strong id="telemetryUpload">—</strong></div>
+          <div><small>Download</small><strong id="telemetryDownload">—</strong></div>
+          <div><small>FPS enviado</small><strong id="telemetryOutFps">—</strong></div>
+          <div><small>FPS recebido</small><strong id="telemetryInFps">—</strong></div>
+          <div><small>Resolução enviada</small><strong id="telemetryOutResolution">—</strong></div>
+          <div><small>Resolução recebida</small><strong id="telemetryInResolution">—</strong></div>
+          <div><small>Perda de pacotes</small><strong id="telemetryLoss">—</strong></div>
+          <div><small>Jitter</small><strong id="telemetryJitter">—</strong></div>
+          <div class="telemetry-network"><small>Estado WebRTC</small><strong id="telemetryPcState">—</strong></div>
+          <div class="telemetry-network"><small>Rota ICE</small><strong id="telemetryIceRoute">—</strong></div>
+          <div class="telemetry-network"><small>Fallback TURN</small><strong id="telemetryTurn">—</strong></div>
+          <div><small>Versão do app</small><strong id="telemetryAppVersion">0.8.0-alpha</strong></div>
+          <div class="telemetry-wide"><small>Reprodução de voz</small><strong id="telemetryPlayback">—</strong></div>
+          <div><small>Receptores de voz</small><strong id="telemetryVoiceReceivers">—</strong></div>
+          <div><small>Processamento de áudio</small><strong id="telemetryAudioContext">—</strong></div>
+          <div class="telemetry-wide"><small>Saída de áudio</small><strong id="telemetryOutput">—</strong></div>
+          <div class="telemetry-wide"><small>Limitador detectado</small><strong id="telemetryLimiter">—</strong></div><div class="telemetry-wide"><small>Último erro SFU</small><strong id="telemetrySfuError">Nenhum</strong></div>
+        </div>
+        <small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada aproximadamente a cada 2 segundos. Alguns campos variam conforme navegador e dispositivo.</small>
+      </section>
+      <div class="mn-media-stage">
+        <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>⛶ Ampliar mosaico</button></div>
+        <div id="mediaMosaic" class="media-mosaic">
+        <div id="screenShareGrid" class="screen-share-grid hidden" aria-label="Compartilhamentos de tela"></div>
+        <div id="cameraGrid" class="camera-grid camera-grid-empty" aria-label="Câmeras da chamada"></div>
+        </div>
+        <div id="voiceRoster" class="voice-roster" aria-label="Participantes da chamada"></div>
+      </div>
+      <small class="voice-help">Escolha Assistir stream para abrir uma tela. Amplie o mosaico com até 6 pessoas.</small>
+    </section>
+    <div id="socialResizeGrip" class="social-resize-grip" title="Redimensionar janela" aria-hidden="true">↘</div>
+    <div id="remoteAudioHost" class="remote-audio-host" aria-hidden="true"></div>
+  </aside>
+
+  <button id="socialMiniDock" class="social-mini-dock hidden" type="button" title="Restaurar comunicação"><span>💬</span><strong>Comunicação</strong><em>abrir</em></button>
+
+  <div id="exchangeCinematic" class="exchange-cinematic hidden" aria-hidden="true"><div class="exchange-vignette"></div><div class="exchange-header"><span id="exchangeIcon" class="exchange-icon">⇄</span><div><small id="exchangeKicker">MOVIMENTO DA CORTE</small><strong id="exchangeTitle">Troca de cartas</strong><span id="exchangeSubtitle">As cartas estão mudando de mãos.</span></div></div><div id="exchangeStage" class="exchange-stage"></div></div>
+  <div id="connectionNotice" class="connection-notice hidden" aria-live="assertive"></div>
+  <div id="recordingNotice" class="recording-notice hidden" aria-live="polite"><span class="recording-dot"></span><strong id="recordingNoticeLabel">GRAVANDO</strong><b id="recordingTimer">00:00</b><small id="recordingNoticeHelp">Clique em Parar quando quiser encerrar.</small><button id="recordingStopBtn" class="recording-stop-inline" type="button">■ Parar</button></div>
+  <div id="influencePublicNotice" class="influence-public-notice hidden" aria-live="assertive"></div>
+  <div id="turnNotice" class="turn-notice hidden" aria-hidden="true" aria-live="assertive"><div class="turn-notice-vignette"></div><div class="turn-notice-card"><span class="turn-notice-crown">♛</span><small>O TRONO O CHAMA</small><strong>SUA VEZ</strong><span id="turnNoticeLaw">Escolha sua carta</span><b id="turnNoticeClock">01:00</b><em>Você tem 1 minuto para agir.</em></div></div>
+  <div id="trickOutcome" class="trick-outcome hidden" aria-hidden="true"><div id="crownOutcome" class="outcome-layer crown-outcome hidden"><div class="outcome-symbol">♛</div><div class="outcome-kicker">A COROA FOI CONQUISTADA</div><div id="crownOutcomeName" class="outcome-name"></div></div><div id="shadowOutcome" class="outcome-layer shadow-outcome hidden"><div class="shadow-mist"></div><div class="outcome-symbol shadow-symbol">☾</div><div class="outcome-kicker">A SOMBRA SE ERGUE</div><div id="shadowOutcomeName" class="outcome-name"></div></div></div>
+
+  <div id="toast" class="toast hidden"></div><div id="hoverTooltip" class="hover-tooltip hidden" role="tooltip"></div>
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop"></div><div class="modal-card"><button id="modalClose" class="modal-close hidden">×</button><div id="modalIcon" class="modal-icon">♛</div><h2 id="modalTitle"></h2><p id="modalText"></p><div id="modalChoices" class="modal-choices"></div><div id="modalFooter" class="modal-footer"></div></div></div>
+
+  <div id="rulesDrawer" class="rules-drawer hidden"><div class="rules-card"><button id="rulesClose">×</button><h2>Resumo do protótipo v0.8.0-alpha</h2><div class="rules-columns">
+    <div><h3>Fluxo</h3><p>3 rodadas • 10 vazas por rodada • 10 cartas por jogador. A primeira vaza usa <b>Ordem</b>. A Coroa inicia a próxima vaza e a Sombra escolhe a próxima Lei.</p><p>Cada Lei possui 2 usos e não pode ser repetida em vazas consecutivas.</p></div>
+    <div><h3>Coroa & Sombra</h3><p>Coroa é o vencedor segundo a Lei. Sombra é o jogador elegível que cumpre a condição secundária. Ninguém recebe ambos na mesma vaza. Empates favorecem quem jogou primeiro.</p></div><div><h3>Usurpação</h3><p>A Sombra entrega 1 carta escolhida à Coroa. A Coroa incorpora essa carta, embaralha toda a mão e uma carta aleatória retorna à Sombra.</p><p>A carta revelada pela <b>Corte Aberta</b> é protegida: não pode ser entregue nem retirada pela Usurpação. Terceiros veem apenas cartas fechadas; Coroa e Sombra recebem a revelação privada da troca.</p></div>
+    <div><h3>Influência 2.0</h3><p>Quem termina sem Coroa nem Sombra ganha 1 Influência, até 2. <b>Sigilo:</b> gaste 1 para jogar uma carta oculta. <b>Manobra da Corte:</b> gaste 2 para jogar oculta e escolher +3 ou -3 no valor efetivo.</p><p>O valor efetivo é limitado entre <b>1 e 12</b>. Ex.: 10+3=12 e 2-3=1. O modificador só vale para resolver Coroa/Sombra naquela vaza. <b>O uso de Influência e a escolha +3 ou -3 são públicos para todos</b>; apenas a identidade da carta permanece oculta até a resolução. Ao abrir oculta, anuncie o naipe real. A carta da Corte Aberta não pode usar Influência.</p><p><b>Silêncio:</b> bloqueia o gasto apenas nas vazas 1 a 3.</p></div>
+    <div><h3>Pontuação</h3><p>Coroa = 1 Prestígio. Sombra = 1 Prestígio. Cada par acumulado Coroa + Sombra concede +2 Prestígio. Desempate: mais pares, mais Coroas, mais Sombras.</p></div>
+  </div></div></div>
+
+  <dialog id="authDialog" class="auth-dialog" aria-labelledby="authTitle" aria-describedby="authIntro">
+    <button id="authCloseBtn" class="auth-close" type="button" aria-label="Fechar acesso à conta">×</button>
+    <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
+    <h2 id="authTitle">Bem-vindo de volta</h2>
+    <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
+    <form id="authForm">
+      <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
+      <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
+      <label class="auth-field">Senha<input id="authPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="authRules" /></label>
+      <label class="auth-field hidden">Confirme a senha<input id="authConfirm" name="password_confirmation" type="password" autocomplete="new-password" disabled /></label>
+      <label class="auth-check"><input id="authShowPassword" type="checkbox" /> Mostrar senha</label>
+      <ul id="authRules" class="auth-rules hidden" aria-label="Requisitos da senha" aria-live="polite">
+        <li data-password-rule="length"><span>○</span> Mínimo de 8 caracteres</li>
+        <li data-password-rule="lowercase"><span>○</span> Letra minúscula (a–z)</li>
+        <li data-password-rule="uppercase"><span>○</span> Letra maiúscula (A–Z)</li>
+        <li data-password-rule="number"><span>○</span> Número (0–9)</li>
+        <li data-password-rule="symbol"><span>○</span> Símbolo (!, @, #…)</li>
+      </ul>
+      <button id="authSubmitBtn" class="auth-primary" type="submit">Entrar</button>
+      <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+    </form>
+    <div class="auth-links"><button id="authForgotBtn" class="auth-link" type="button">Esqueci minha senha</button></div>
+    <div id="authModeLinks" class="auth-links"><button id="authSignupBtn" class="auth-link" type="button">Criar uma conta</button><button id="authBackLoginBtn" class="auth-link hidden" type="button">Voltar para entrar</button></div>
+    <button id="authGuestBtn" class="guest-entry-btn" type="button">Jogar como convidado</button>
+    <p class="guest-entry-note">Sem cadastro: jogo e voz da mesa. Para entrar no M&amp;N, faça login.</p>
+  </dialog>
+
+  <dialog id="guestDialog" class="auth-dialog" aria-labelledby="guestTitle">
+    <button id="guestClose" class="auth-close" type="button" aria-label="Fechar acesso de convidado">×</button>
+    <span class="auth-brand">♛ A LEI DO TRONO</span><h2 id="guestTitle">Jogar como convidado</h2>
+    <p class="guest-entry-note">Escolha seu nome para jogar e usar a voz na mesa. O chat M&amp;N continua exclusivo para quem tem conta.</p>
+    <form id="guestForm"><label class="auth-field">Nome do convidado<input id="guestNickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" required /></label><button id="guestSubmit" class="auth-primary" type="submit">Entrar no jogo</button><p id="guestMessage" class="auth-message" role="status" aria-live="polite"></p></form>
+  </dialog>
+  <button id="communityToggle" class="community-toggle hidden" type="button" aria-controls="communityPanel" aria-expanded="false">Pessoas</button>
+  <aside id="communityPanel" class="community-panel hidden" aria-label="Presença na comunidade"><header><div><strong>Pessoas</strong><small id="communitySummary">Conectando…</small></div><button id="communityClose" class="community-close" type="button" aria-label="Fechar painel de pessoas">×</button></header><p id="communityScope" class="community-scope"></p><div id="communityMembers" class="community-members"></div><section class="community-activity"><strong>Atividade da voz</strong><ul id="communityActivity"></ul></section></aside>
+  <div id="callNoticeHost" class="community-call-notices" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <audio id="bgMusic" src="assets/audio/electronic_summer_nights.mp3" loop preload="metadata"></audio>
+  <dialog id="profileDialog" class="auth-dialog profile-card" aria-labelledby="profileTitle">
+    <button id="profileClose" class="auth-close" type="button" aria-label="Fechar perfil">×</button>
+    <span class="auth-brand">✦ M&amp;N · SEU PERFIL</span><h2 id="profileTitle">Apelido e ícone</h2>
+    <form id="profileForm">
+      <label class="auth-field">Apelido<input id="profileNickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" required><small>De 2 a 20 caracteres. Aparece no chat e nas partidas.</small></label>
+      <div id="profilePreview" class="profile-preview" aria-label="Prévia do ícone"></div>
+      <div id="avatarPresets" class="avatar-presets" aria-label="Ícones disponíveis"></div>
+      <div class="profile-photo-label"><label for="profilePhoto">Usar uma foto</label><button id="profilePhotoChoose" class="small-btn" type="button">Escolher foto</button><input id="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><small>Até 10 MB. Recorte central automático em 256 × 256 pixels.</small></div>
+      <p id="profileMessage" role="status" aria-live="polite"></p><button id="profileSave" class="royal-btn primary" type="submit">Salvar perfil</button>
+    </form>
+    <h3>Meus arquivos</h3><p id="storageUsage"></p><div id="profileFiles"></div>
+  </dialog>
+  <dialog id="screenOptionsDialog" class="feature-dialog share-options-dialog" aria-labelledby="screenOptionsTitle">
+    <span class="section-eyebrow">TRANSMISSÃO</span><h2 id="screenOptionsTitle">Compartilhe do seu jeito</h2>
+    <p id="shareOptionsNote"></p>
+    <form id="screenOptionsForm">
+      <div class="form-columns"><label>Qualidade<select id="shareResolution"><option value="720">720p · Equilibrada</option><option value="1080">1080p · Alta definição</option></select></label><label>Quadros por segundo<select id="shareFps"><option value="15">15 FPS · Textos e slides</option><option value="30">30 FPS · Recomendado</option><option value="60">60 FPS · Movimento fluido</option></select></label></div>
+      <label class="feature-checkbox"><input id="shareAudio" type="checkbox" checked> Compartilhar áudio, quando disponível</label>
+      <div class="dialog-actions"><button id="screenOptionsCancel" type="button" class="secondary-button">Cancelar</button><button id="screenOptionsConfirm" type="submit" class="primary-button">Escolher tela →</button></div>
+    </form>
+  </dialog>
+  <dialog id="channelManagerDialog" class="feature-dialog" aria-labelledby="channelManagerTitle">
+    <button id="channelManagerClose" class="dialog-close" type="button" aria-label="Fechar gerenciamento">×</button><span class="section-eyebrow">SUA COMUNIDADE</span><h2 id="channelManagerTitle">Organize os canais</h2>
+    <form id="createChannelForm"><div class="form-columns"><label>Nome<input id="channelName" minlength="2" maxlength="40" required placeholder="Ex.: momentos"></label><label>Tipo<select id="channelType"><option value="text"># Canal de texto</option><option value="voice">♬ Canal de voz</option></select></label></div><label>Descrição <small>opcional</small><input id="channelDescription" maxlength="160" placeholder="Um espaço para compartilhar"></label><button id="createChannelSubmit" class="primary-button" type="submit">+ Criar canal</button></form>
+    <p id="channelManagerMessage" class="feature-message" role="status"></p><div id="managedChannels" class="managed-channels"></div>
+  </dialog>
+  <dialog id="roleDialog" class="feature-dialog" aria-labelledby="roleTitle">
+    <button id="roleClose" class="dialog-close" type="button" aria-label="Fechar cargo">×</button><span class="section-eyebrow">PERMISSÕES</span><h2 id="roleTitle">Cargo de <span id="rolePersonName"></span></h2><p>Somente o criador pode conceder ou remover Admin.</p>
+    <form id="roleForm"><input id="rolePersonId" type="hidden"><label>Cargo<select id="roleSelect"><option value="member">Membro</option><option value="admin">Admin</option></select></label><p id="roleMessage" class="feature-message" role="status"></p><button id="roleSave" class="primary-button" type="submit">Salvar cargo</button></form>
+  </dialog>
+  <dialog id="channelFilesDialog" class="feature-dialog wide-dialog" aria-labelledby="channelFilesTitle">
+    <button id="channelFilesClose" class="dialog-close" type="button" aria-label="Fechar anexos">×</button><span class="section-eyebrow">ARQUIVOS DO CANAL</span><h2 id="channelFilesTitle">Fotos &amp; anexos</h2><p id="channelFilesMessage" class="feature-message" role="status"></p><div id="channelFileList" class="channel-file-list"></div>
+  </dialog>
+  <dialog id="soundboardDialog" class="feature-dialog wide-dialog" aria-labelledby="soundboardTitle">
+    <button id="soundboardClose" class="dialog-close" type="button" aria-label="Fechar efeitos">×</button><span class="section-eyebrow">SOUND BOARD</span><h2 id="soundboardTitle">Dê um som ao momento</h2><p id="soundboardCallHint"></p>
+    <div class="sound-volume"><label for="soundboardVolume">Volume para mim</label><input id="soundboardVolume" type="range" min="0" max="100" value="70"><output id="soundboardVolumeValue">70%</output><button id="soundStop" class="secondary-button" type="button">Parar áudio</button></div>
+    <div id="soundboardList" class="soundboard-list"></div>
+    <form id="soundUploadForm" class="sound-upload-form"><h3>Adicionar efeito</h3><div class="form-columns"><label>Nome<input id="soundName" maxlength="40" required placeholder="Ex.: aplausos"></label><label>Áudio · até 15 segundos<input id="soundFile" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm" required></label></div><button id="soundUpload" type="submit" class="primary-button">↑ Enviar efeito</button></form><p id="soundboardMessage" class="feature-message" role="status" aria-live="polite"></p>
+  </dialog>
+  <dialog id="mediaFocusDialog" class="media-focus-dialog" aria-labelledby="mediaFocusTitle">
+    <header><div><span class="section-eyebrow">JUNTOS, EM MOSAICO</span><h2 id="mediaFocusTitle">Uma janela para todos</h2><p>Selecione até seis pessoas. Abra as transmissões pelo botão Assistir stream.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button">⛶ Tela cheia</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
+    <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
+  </dialog>
+  <script src="audio.js?v=081community"></script>
+  <script src="network.js?v=081community"></script>
+  <script src="auth.js?v=081community"></script>
+  <script src="rtc-config.js?v=081community"></script>
+  <script src="audio-gain.js?v=081community"></script>
+  <script src="avatar-icons.js?v=081community"></script>
+  <script src="profile-files.js?v=081community"></script>
+  <script src="social.js?v=081community"></script>
+  <script src="recording.js?v=081community"></script>
+  <script src="game.js?v=081community"></script>
+  <script src="portal.js?v=081community"></script>
+  <script src="community.js?v=081community"></script>
+  <script src="community-admin.js?v=081community"></script>
+  <script src="soundboard-client.js?v=081community"></script>
+  <script src="media-mosaic.js?v=081community"></script>
+</body>
+</html>
