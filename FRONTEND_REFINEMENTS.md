@@ -1,35 +1,62 @@
-# Publicar os refinamentos do frontend
+# Publicar correções de texto, voz e transmissão
 
-Esta atualização parte da atualização de comunidade já instalada. Modifica
-somente o frontend e seus testes: não é necessário repetir o SQL no Supabase
-nem trocar as configurações do Render.
+Esta atualização parte da atualização de comunidade já instalada. Ela modifica
+o backend e o frontend para separar a navegação de texto da sala de voz.
+Não há nova migração SQL nem novas variáveis de ambiente.
 
-1. Baixe o ZIP da branch `codex/frontend-refinements` no GitHub, conectado à
-   conta com acesso ao repositório, e extraia-o.
-2. Abra a pasta `frontend` dentro do projeto extraído. Ela contém `index.html`,
-   `refinements.css`, `appearance.css`, `appearance.js`, `panel-layout.js`,
-   `call-media.css`, `noise-suppression.js` e a pasta `vendor/rnnoise/`
-   e todos os arquivos e assets necessários.
-3. Clique com o botão direito dentro dessa pasta e escolha **Open Git Bash here**.
-4. Execute:
+1. Atualize a branch `main` do GitHub com as alterações da branch
+   `codex/frontend-refinements` (PR #2). Se aparecer como rascunho, use
+   **Ready for review** antes de **Merge pull request**. O backend desta correção altera
+   `server.js` e `community.js`; os demais arquivos do projeto devem ser
+   preservados. As alterações em `package.json` acrescentam o teste de regressão.
+2. No Render, abra o serviço do backend e use **Manual Deploy → Deploy latest
+   commit**, se o deploy automático ainda não começou. Aguarde **Live**.
+   Os comandos continuam `npm install` e `npm start`.
+3. Baixe o ZIP atualizado do GitHub, conectado à conta com acesso ao repositório,
+   e extraia-o. Abra a pasta `frontend` dentro do projeto extraído. Publique
+   essa pasta completa, incluindo `stream-controls.js`, `network.js`, `game.js`,
+   `social.js`, o CSS e `vendor/rnnoise/`.
+4. Clique com o botão direito dentro de `frontend` e escolha **Open Git Bash here**.
+   Execute:
 
    ```bash
    surge . a-lei-do-trono.surge.sh
    ```
 
-5. Abra `https://a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5**.
+5. Abra `https://a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5** em todos
+   os computadores. O reinício do backend encerra as chamadas existentes;
+   entre novamente na voz para conferir a correção.
+
+Publique o backend **antes** do frontend. A nova interface informa quando
+está conectada a um backend antigo, em vez de trocar a voz ao abrir texto.
 
 Não publique a raiz do backend no Surge. Publique a pasta `frontend` completa
 para incluir o CSS, a espada dos controles de volume e o modelo RNNoise.
 Não remova a pasta `vendor`: ela contém o processamento gratuito do microfone.
-Os arquivos da interface usam o identificador de cache `085shareaudio`; o protocolo do
+Os arquivos da interface usam o identificador de cache `086textvoice`; o protocolo do
 backend continua `0.8.0-alpha`.
 
 ## Comportamentos para conferir
 
+- Entre em uma sala de voz, ligue a câmera ou compartilhe uma tela e abra um
+  canal de texto: somente as mensagens mudam. O microfone, a câmera, a
+  transmissão e as streams assistidas continuam na sala de voz original.
+  Voltar ao mesmo canal de voz não reconecta a chamada. Escolher outra sala
+  de voz continua mudando a chamada para aquela sala.
+- Excluir um canal de texto não desconecta quem está em outra sala de voz.
+  Excluir a sala de voz encerra aquela chamada e preserva o canal de texto
+  aberto. As mensagens e os anexos seguem o canal de texto selecionado.
+
 - O portal mostra as duas mulheres, os textos e os botões em desktop e celular.
 - ⛶ e clique duplo abrem a câmera/tela em tela cheia; Esc volta à chamada.
   A grade fecha automaticamente ao escolher uma mídia em tela cheia.
+- Ao assistir uma transmissão, os controles, o nome e o cursor somem após
+  três segundos sem interação, tanto na prévia quanto na tela cheia. Mover o
+  mouse sobre aquela transmissão ou tocar nela traz os controles de volta;
+  mover o mouse em outros painéis não os revela. Usar Tab para focar a
+  transmissão revela os controles, que permanecem disponíveis durante o
+  uso por teclado. Convites para assistir e prévias minimizadas continuam
+  com seus botões disponíveis. O vídeo e o áudio continuam reproduzindo.
 - Grade · até 6 permite marcar/desmarcar pessoas; Tela e Câmera estão
   identificadas por pessoa. Assistir inicia uma transmissão ainda não aberta.
 - Quando há compartilhamento, as transmissões ocupam a área principal e as
@@ -76,7 +103,8 @@ backend continua `0.8.0-alpha`.
 
 ## Validação de desenvolvimento
 
-Execute `npm ci`, `npm run test:frontend` e `node --test tests/noise-processing.js`
+Execute `npm ci`, `npm test`, `npm run test:frontend` e
+`node --test tests/noise-processing.js`
 na raiz do projeto, com Chromium
 instalado (`AUTH_TEST_CHROMIUM` permite indicar seu executável). Os cenários
 usam backend local e serviços simulados; a câmera e a tela usam fontes de
@@ -84,10 +112,14 @@ teste. Os testes verificam a API nativa de tela cheia, fallback na janela,
 limite da grade, liberação/cancelamento da câmera, recorte PCM estéreo exato,
 upload validado pelo backend, volume pessoal, edição do nome sem fechar o
 submenu, temas individuais persistentes, redimensionamento/restauração dos
-painéis, câmeras nos cartões, ocultação individual, efeitos compactos e layouts
+painéis, navegação de texto durante a voz, mídia preservada, controles de stream
+ocultados por inatividade, câmeras nos cartões, ocultação individual, efeitos compactos e layouts
 desktop/celular. O teste de áudio mede a saída real do RNNoise com ruído
 determinístico e fala sintética, para conferir redução sem silenciar a fala.
 Ele não estabelece um percentual de redução em todos os microfones reais.
+Os testes do servidor conferem as duas associações independentes na mesma
+conexão autenticada, sinalização de voz, presença, mensagens, acesso a anexos,
+exclusão de canais e limpeza ao desconectar.
 O cenário de duas pessoas injeta mídias geradas na entrada dos receptores
 para conferir a interface e o ciclo de mídia: o Chromium gerenciado deste
 ambiente bloqueia UDP direto, portanto esse cenário não valida transporte RTP

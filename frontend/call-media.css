@@ -1,4 +1,8 @@
 /* Screens occupy the main stage; participant cameras reuse the profile cards. */
+.screen-share-tile>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.media-resize-grip){transition:opacity .18s ease,visibility .18s ease}
+#socialPanel .screen-share-tile.screen-controls-idle{cursor:none}
+#socialPanel .screen-share-tile.screen-controls-idle>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.media-resize-grip){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.screen-share-tile:focus-visible{outline:2px solid var(--theme-accent);outline-offset:3px}
 body.chat-only-active #socialPanel .screens-layout #mediaMosaic{grid-template-columns:minmax(0,1fr)!important}
 body.chat-only-active #socialPanel .screens-layout #screenShareGrid:not(.hidden):not(.screen-share-empty){display:grid!important;grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px;min-width:0}
 body.chat-only-active #socialPanel .screens-layout #mediaMosaic .screen-share-tile:not(.share-collapsed):not(:fullscreen):not(.media-maximized){aspect-ratio:16/9!important}
@@ -24,3 +28,12 @@ body.chat-only-active #socialPanel .camera-tile.media-maximized{position:fixed!i
 .soundboard-menu .sound-card-actions .sound-delete{font-size:16px;min-width:24px}
 @media(max-width:640px){body.chat-only-active #socialPanel .call-action>span:not(.call-icon){min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.25}}
 @media(max-width:640px){body.chat-only-active #socialPanel .screens-layout .voice-roster{grid-template-columns:repeat(2,minmax(0,1fr))!important}.participant-camera-toggle{font-size:9px;padding:5px;min-height:30px}body.chat-only-active #socialPanel .screens-layout .voice-person{padding:10px 7px!important}body.chat-only-active #socialPanel .screens-layout .voice-person>small{font-size:9px!important}}
+/* Keep call controls accessible below text on compact screens, without an overlay. */
+@media(max-width:1279px){
+  body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:48px minmax(0,1fr) auto!important;grid-template-areas:'head' 'chat' 'voice'!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){position:relative!important;inset:auto!important;width:100%!important;height:100%!important;z-index:auto!important;box-shadow:none!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section{padding:0!important;gap:0!important;overflow:visible!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section>:is(.voice-title,.mn-media-stage,.voice-help){display:none!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel .call-toolbar{margin-top:0!important;border-radius:0!important}
+}
+@media(max-width:640px){body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-rows:0 minmax(0,1fr) auto!important}}

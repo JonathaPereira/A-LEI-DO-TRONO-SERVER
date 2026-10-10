@@ -18,7 +18,7 @@ const accountAuth = createAuth({onRevoke:event=>{
     ws.account=null;leaveRoom(ws,'auth-expired');send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Sua sessão foi encerrada. Entre novamente.'});ws.close(4001,'Sessão encerrada');
   }
 },onProfileChange:account=>{
-  for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}
+  for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};for(const id of new Set([ws.roomId,ws.textRoomId])){const room=rooms.get(id),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}}
   community.broadcast();
 }});
 accountAuth.install(app,express);
@@ -183,7 +183,34 @@ function schedule(room,fn,ms=450){
   setTimeout(()=>{ if(room.game?.token===token) { try{ fn(); }catch(err){ console.error(err); broadcastGameEvent(room,{event:'server-error',message:err.message}); } } },ms);
 }
 
-function leaveRoom(ws, reason='leave') {
+// Text membership is independent of the primary voice/game room. Both use the
+// same authenticated socket; media signaling and SFU sessions stay in ws.roomId.
+function leaveTextRoom(ws){
+  const room=rooms.get(ws.textRoomId);ws.textRoomId=null;
+  if(!room)return;
+  room.players.delete(ws.clientId);
+  if(!room.players.size)room.chatHistory=[];
+  broadcastRoom(room);broadcastChatChannels();
+}
+function createRoomPlayer(ws,room,name,seat=nextFreeSeat(room)){
+  return {id:ws.clientId,name,guest:!!ws.guest,avatar_preset:ws.account?.avatar_preset||(ws.guest?'person':'crown'),avatar_file_id:ws.account?.avatar_file_id||null,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
+}
+function joinTextRoom(ws,roomId,rawName){
+  const room=rooms.get(roomId);
+  if(!room||room.kind!=='chat'||room.channelType!=='text'){send(ws,{type:'error',code:'TEXT_CHANNEL_REQUIRED',message:'Escolha um canal de texto.'});return;}
+  const availability=accountNameAvailability(ws,rawName);
+  if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message});return;}
+  // Upgrade an older client's primary text membership without leaving voice.
+  if(ws.roomId===roomId)ws.roomId=null;
+  if(ws.textRoomId!==roomId)leaveTextRoom(ws);
+  const player=room.players.get(ws.clientId)||createRoomPlayer(ws,room,availability.name);
+  room.players.set(ws.clientId,player);ws.textRoomId=roomId;
+  send(ws,{type:'joined-text-channel',room:safeRoom(room),primaryRoomId:ws.roomId});
+  send(ws,{type:'chat-history',roomId:room.id,messages:[...room.chatHistory]});
+  broadcastRoom(room);broadcastChatChannels();community.broadcast();
+}
+function leaveRoom(ws, reason='leave',keepText=false) {
+  if(!keepText)leaveTextRoom(ws);
   if (!ws.roomId) return;
   const room=rooms.get(ws.roomId);
   if(!room){ ws.roomId=null; return; }
@@ -224,11 +251,11 @@ function joinRoom(ws,roomId,rawName){
   const availability=accountNameAvailability(ws,rawName);
   if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message,name:availability.name});return;}
   if(room.kind==='game'&&room.game && room.game.phase!=='game-over') { send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta sala já está em partida.'}); return; }
-  if(ws.roomId===roomId && room.players.has(ws.clientId)){ send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,room.players.get(ws.clientId))}); return; }
+  if(ws.roomId===roomId && room.players.has(ws.clientId)){ leaveTextRoom(ws);send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,room.players.get(ws.clientId))});send(ws,{type:'chat-history',roomId:room.id,messages:[...room.chatHistory]}); return; }
   leaveRoom(ws,'switch-room');
   if(room.kind==='game'&&room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
-  const player={id:ws.clientId,name:availability.name,guest:!!ws.guest,avatar_preset:ws.account?.avatar_preset||(ws.guest?'person':'crown'),avatar_file_id:ws.account?.avatar_file_id||null,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
+  const player=createRoomPlayer(ws,room,availability.name,seat);
   room.players.set(ws.clientId,player); ws.roomId=room.id;
   send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,player)});
   send(ws,{type:'chat-history',roomId:room.id,messages:[...(room.chatHistory||[])]});
@@ -242,9 +269,9 @@ function setReady(ws,ready){
   player.ready=!!ready; broadcastRoom(room); broadcastRooms();
 }
 
-async function handleChatMessage(ws,rawText,attachmentId){
-  const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);
-  if(!room||!player){send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Entre em um salão para usar o chat.'});return;}
+async function handleChatMessage(ws,rawText,attachmentId,requestedRoomId){
+  const room=rooms.get(ws.textRoomId||ws.roomId),player=room?.players.get(ws.clientId);
+  if(!room||!player||(requestedRoomId!==undefined&&requestedRoomId!==room.id)){send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Selecione novamente o canal para enviar a mensagem.'});return;}
   if(room.channelType==='voice'){send(ws,{type:'error',code:'VOICE_CHANNEL',message:'Use um canal de texto para enviar mensagens.'});return;}
   if(ws.guest&&attachmentId){send(ws,{type:'error',code:'LOGIN_REQUIRED_FILES',message:'Entre em uma conta para enviar anexos.'});return;}
   const now=Date.now();
@@ -253,7 +280,7 @@ async function handleChatMessage(ws,rawText,attachmentId){
   player.lastChatAt=now;
   let attachment=null;
   try{if(attachmentId)attachment=await fileStorage.attachment(attachmentId,ws.account?.id,room.id);}catch(e){send(ws,{type:'error',code:e.code,message:e.message});return;}
-  if(ws.roomId!==room.id||room.players.get(player.id)!==player)return;
+  if((ws.textRoomId||ws.roomId)!==room.id||room.players.get(player.id)!==player)return;
   const message={id:crypto.randomUUID(),roomId:room.id,senderId:player.id,seat:player.seat,name:player.name,avatar_preset:player.avatar_preset||'crown',avatar_file_id:player.avatar_file_id||null,text,attachment,ts:now};
   if(!Array.isArray(room.chatHistory))room.chatHistory=[];
   room.chatHistory.push(message);if(room.chatHistory.length>50)room.chatHistory.splice(0,room.chatHistory.length-50);
@@ -813,7 +840,7 @@ function broadcastGameState(room,revealPlays=false){
 
 const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),canAttach:(id,roomId)=>rooms.get(roomId)?.channelType!=='voice'&&[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
 const community=createCommunity({wss,rooms,send,auth:accountAuth});
-const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){leaveRoom(p.ws,'channel-deleted');send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
+const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
 fileStorage.install(app);
 communityManagement.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
@@ -822,9 +849,9 @@ app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
-  ws.clientId=crypto.randomUUID();ws.roomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
+  ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
@@ -874,11 +901,12 @@ wss.on('connection',(ws)=>{
       case 'presence-request':send(ws,community.snapshot(ws));break;
       case 'check-name':{const result=accountNameAvailability(ws,message.name);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
       case 'join-room':joinRoom(ws,message.roomId,message.name);break;
+      case 'join-text-channel':joinTextRoom(ws,message.roomId,message.name);break;
       case 'leave-room':leaveRoom(ws,'leave');break;
       case 'ready':setReady(ws,message.ready);break;
       case 'start-room':requestStart(ws);break;
       case 'game-action':handleGameAction(ws,message);break;
-      case 'chat-message':void handleChatMessage(ws,message.text,message.attachmentId);break;
+      case 'chat-message':void handleChatMessage(ws,message.text,message.attachmentId,message.roomId);break;
       case 'voice-prepare':prepareVoice(ws,message);break;
       case 'voice-fallback':{const room=rooms.get(ws.roomId);if(room?.players.get(ws.clientId)?.voiceJoined)forceRoomP2p(room);break;}
       case 'voice-state':handleVoiceState(ws,message);break;

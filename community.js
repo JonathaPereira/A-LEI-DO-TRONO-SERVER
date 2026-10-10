@@ -15,7 +15,7 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
   }
   function snapshot(ws){
     const full=!!validAccount(ws),online=new Map();
-    for(const client of wss.clients){if(client.readyState!==1)continue;note(client);const id=validAccount(client)?client.account.id:validGuest(client)?client.guest.id:null;if(!id)continue;const room=rooms.get(client.roomId),player=room?.players.get(client.clientId);if(!full&&room?.kind!=='game')continue;const old=online.get(id);if(!old||room)online.set(id,{online:true,roomId:room?.id||null,roomName:room?.name||null,roomKind:room?.kind||null,inVoice:!!player?.voiceJoined});}
+    for(const client of wss.clients){if(client.readyState!==1)continue;note(client);const id=validAccount(client)?client.account.id:validGuest(client)?client.guest.id:null;if(!id)continue;const primary=rooms.get(client.roomId),room=primary?.players.get(client.clientId)?.voiceJoined?primary:rooms.get(client.textRoomId)||primary,player=room?.players.get(client.clientId);if(!full&&room?.kind!=='game')continue;const old=online.get(id);if(!old||room)online.set(id,{online:true,roomId:room?.id||null,roomName:room?.name||null,roomKind:room?.kind||null,inVoice:!!player?.voiceJoined});}
     const list=[];
     for(const m of members.values()){
       if(!full&&!online.has(m.id))continue;
