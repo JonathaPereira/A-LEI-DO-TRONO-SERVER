@@ -29,10 +29,21 @@ acompanha o backend para a ordem de migração/publicação e limites dos testes
 
 Em Pessoas, use Cargo para promover/remover Admin; em Gerenciar, crie/exclua
 canais. Anexos lista fotos e arquivos do canal. Efeitos, no canto inferior
-direito, abre um submenu com miniaturas. Em Adicionar efeito, escolha um
+esquerdo, abre um submenu com miniaturas; o botão duplicado da barra central
+foi removido. Em Adicionar efeito, escolha um
 áudio de até 20 MB, selecione início/fim de um trecho de até 15 segundos e
 ouça antes de enviar. Somente o trecho selecionado será publicado. O volume
 é individual e o botão da miniatura toca o efeito na chamada.
+
+Em Perfil → Aparência, escolha roxo (padrão), verde/preto, preto/vermelho,
+azul/preto ou amarelo/preto. O tema muda apenas para você e fica salvo por
+conta neste navegador. Não muda a aparência dos outros participantes.
+
+Arraste as bordas laterais, inferiores ou os cantos dos painéis de canais,
+mensagens e pessoas para mudar o tamanho. A borda inferior da chamada ajusta
+sua altura; as laterais ajustam sua largura. No celular, a faixa de canais
+permite ajustar a altura. As medidas ficam salvas por conta neste navegador.
+Perfil → Voltar ao padrão restaura todas as medidas sem mudar o tema.
 
 Grade · até 6 permite escolher os participantes. Nos cartões da grade,
 ⛶ Tela ou ⛶ Câmera abre a mídia em tela cheia e fecha a grade. Também é

@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
-  <script src="auth-boot.js?v=082refinements"></script>
-  <link rel="stylesheet" href="style.css?v=082refinements" />
-  <link rel="stylesheet" href="mn-chat.css?v=082refinements" />
-  <link rel="stylesheet" href="auth.css?v=082refinements" />
-  <link rel="stylesheet" href="profile-files.css?v=082refinements" />
-  <link rel="stylesheet" href="community.css?v=082refinements" />
-  <link rel="stylesheet" href="modern.css?v=082refinements" />
-  <link rel="stylesheet" href="refinements.css?v=082refinements" />
+  <script src="auth-boot.js?v=083appearance"></script>
+  <link rel="stylesheet" href="style.css?v=083appearance" />
+  <link rel="stylesheet" href="mn-chat.css?v=083appearance" />
+  <link rel="stylesheet" href="auth.css?v=083appearance" />
+  <link rel="stylesheet" href="profile-files.css?v=083appearance" />
+  <link rel="stylesheet" href="community.css?v=083appearance" />
+  <link rel="stylesheet" href="modern.css?v=083appearance" />
+  <link rel="stylesheet" href="refinements.css?v=083appearance" />
+  <link rel="stylesheet" href="appearance.css?v=083appearance" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -165,7 +166,7 @@
       <div class="chat-only-top-actions">
         <span id="myRoleBadge" class="role-badge role-member">Membro</span>
         <button id="communityManageBtn" class="chat-header-action hidden" type="button"><span>⚙</span><b>Gerenciar</b></button>
-        <button id="chatProfileBtn" class="chat-header-action" type="button" title="Alterar apelido e ícone"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3c0-5 16-5 16 0v3z"/></svg></span><b>Perfil</b></button>
+        <button id="chatProfileBtn" class="chat-header-action" type="button" title="Perfil, tema e layout"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3c0-5 16-5 16 0v3z"/></svg></span><b>Perfil</b></button>
         <button id="chatOnlyTextBtn" class="chat-header-action" title="Abrir mensagens de texto"><span>💬</span><b>Chat</b><em id="chatOnlyUnread" class="chat-header-unread hidden">0</em></button>
         <button id="chatOnlyOpenSocialBtn" class="royal-btn hidden">Abrir comunicação</button>
         <button id="backFromChatOnlyBtn" class="chat-header-action back-action" title="Voltar ao início"><span>←</span><b>Voltar</b></button>
@@ -265,7 +266,6 @@
         </div>
         <div class="call-control-group call-control-system">
           <small>SISTEMA</small>
-          <button id="soundboardBtn" class="royal-btn call-action" type="button"><span class="call-icon">♫</span><span>Efeitos</span></button>
           <button id="voiceSettingsBtn" class="royal-btn call-action settings-btn" aria-expanded="false"><span class="call-icon">⚙</span><span>Configurações</span></button>
         </div>
       </div>
@@ -425,7 +425,7 @@
   <audio id="bgMusic" src="assets/audio/electronic_summer_nights.mp3" loop preload="metadata"></audio>
   <dialog id="profileDialog" class="auth-dialog profile-card" aria-labelledby="profileTitle">
     <button id="profileClose" class="auth-close" type="button" aria-label="Fechar perfil">×</button>
-    <span class="auth-brand">✦ M&amp;N · SEU PERFIL</span><h2 id="profileTitle">Apelido e ícone</h2>
+    <span class="auth-brand">✦ M&amp;N · SEU PERFIL</span><h2 id="profileTitle">Seu perfil</h2>
     <form id="profileForm">
       <label class="auth-field">Apelido<input id="profileNickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" required><small>De 2 a 20 caracteres. Aparece no chat e nas partidas.</small></label>
       <div id="profilePreview" class="profile-preview" aria-label="Prévia do ícone"></div>
@@ -433,6 +433,14 @@
       <div class="profile-photo-label"><label for="profilePhoto">Usar uma foto</label><button id="profilePhotoChoose" class="small-btn" type="button">Escolher foto</button><input id="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><small>Até 10 MB. Recorte central automático em 256 × 256 pixels.</small></div>
       <p id="profileMessage" role="status" aria-live="polite"></p><button id="profileSave" class="royal-btn primary" type="submit">Salvar perfil</button>
     </form>
+    <section class="profile-appearance" aria-labelledby="profileAppearanceTitle"><h3 id="profileAppearanceTitle">Aparência</h3><fieldset class="theme-picker"><legend>Cores do tema</legend>
+      <label class="theme-option" style="--swatch:#a99cff"><input type="radio" name="profileTheme" value="purple"><span class="theme-swatch" aria-hidden="true"></span><span>Roxo · padrão</span></label>
+      <label class="theme-option" style="--swatch:#69d29b"><input type="radio" name="profileTheme" value="green"><span class="theme-swatch" aria-hidden="true"></span><span>Verde e preto</span></label>
+      <label class="theme-option" style="--swatch:#f47b85"><input type="radio" name="profileTheme" value="red"><span class="theme-swatch" aria-hidden="true"></span><span>Preto e vermelho</span></label>
+      <label class="theme-option" style="--swatch:#75bdf2"><input type="radio" name="profileTheme" value="blue"><span class="theme-swatch" aria-hidden="true"></span><span>Azul e preto</span></label>
+      <label class="theme-option" style="--swatch:#efd470"><input type="radio" name="profileTheme" value="yellow"><span class="theme-swatch" aria-hidden="true"></span><span>Amarelo e preto</span></label>
+    </fieldset><p class="appearance-help">Aplica na hora, só para você neste navegador. Não muda o tema dos outros na chamada.</p>
+    <div class="profile-layout"><div><strong>Layout dos painéis</strong><p class="appearance-help">Arraste as bordas laterais, inferiores ou os cantos para ajustar o tamanho.</p></div><button id="layoutResetBtn" class="secondary-button" type="button">↺ Voltar ao padrão</button></div><p id="appearanceMessage" class="appearance-help" role="status" aria-live="polite"></p></section>
     <h3>Meus arquivos</h3><p id="storageUsage"></p><div id="profileFiles"></div>
   </dialog>
   <dialog id="screenOptionsDialog" class="feature-dialog share-options-dialog" aria-labelledby="screenOptionsTitle">
@@ -469,20 +477,22 @@
     <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
-  <script src="audio.js?v=082refinements"></script>
-  <script src="network.js?v=082refinements"></script>
-  <script src="auth.js?v=082refinements"></script>
-  <script src="rtc-config.js?v=082refinements"></script>
-  <script src="audio-gain.js?v=082refinements"></script>
-  <script src="avatar-icons.js?v=082refinements"></script>
-  <script src="profile-files.js?v=082refinements"></script>
-  <script src="social.js?v=082refinements"></script>
-  <script src="recording.js?v=082refinements"></script>
-  <script src="game.js?v=082refinements"></script>
-  <script src="portal.js?v=082refinements"></script>
-  <script src="community.js?v=082refinements"></script>
-  <script src="community-admin.js?v=082refinements"></script>
-  <script src="soundboard-client.js?v=082refinements"></script>
-  <script src="media-mosaic.js?v=082refinements"></script>
+  <script src="audio.js?v=083appearance"></script>
+  <script src="network.js?v=083appearance"></script>
+  <script src="auth.js?v=083appearance"></script>
+  <script src="rtc-config.js?v=083appearance"></script>
+  <script src="audio-gain.js?v=083appearance"></script>
+  <script src="avatar-icons.js?v=083appearance"></script>
+  <script src="profile-files.js?v=083appearance"></script>
+  <script src="social.js?v=083appearance"></script>
+  <script src="recording.js?v=083appearance"></script>
+  <script src="game.js?v=083appearance"></script>
+  <script src="portal.js?v=083appearance"></script>
+  <script src="community.js?v=083appearance"></script>
+  <script src="community-admin.js?v=083appearance"></script>
+  <script src="soundboard-client.js?v=083appearance"></script>
+  <script src="media-mosaic.js?v=083appearance"></script>
+  <script src="appearance.js?v=083appearance"></script>
+  <script src="panel-layout.js?v=083appearance"></script>
 </body>
 </html>

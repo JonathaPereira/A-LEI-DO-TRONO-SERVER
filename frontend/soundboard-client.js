@@ -57,7 +57,7 @@ window.TronoSoundboard=(()=>{
   }
   function close({restoreFocus=true}={}){
     if($('soundboardDialog').hidden)return;
-    $('soundboardDialog').hidden=true;for(const id of ['soundboardToggle','soundboardBtn'])$(id).setAttribute('aria-expanded','false');
+    $('soundboardDialog').hidden=true;$('soundboardToggle').setAttribute('aria-expanded','false');
     if(localPreview)stop();
     if(restoreFocus&&returnFocus?.isConnected)returnFocus.focus({preventScroll:true});
   }
@@ -65,7 +65,7 @@ window.TronoSoundboard=(()=>{
     if(!window.TronoAuth.user){window.TronoAuth.open('login');return;}
     if(!$('soundboardDialog').hidden){close();return;}
     returnFocus=document.activeElement;$('soundboardDialog').hidden=false;
-    for(const id of ['soundboardToggle','soundboardBtn'])$(id).setAttribute('aria-expanded','true');
+    $('soundboardToggle').setAttribute('aria-expanded','true');
     controls();$('soundboardClose').focus({preventScroll:true});notice('Carregando efeitos…');
     try{await refresh();notice('');}catch(e){notice(e.message);}
   }
@@ -84,15 +84,16 @@ window.TronoSoundboard=(()=>{
   function drawWaveform(){
     if(!clip)return;
     const canvas=$('soundWaveform'),ctx=canvas.getContext('2d'),data=clip.getChannelData(0),width=canvas.width,height=canvas.height;
-    ctx.clearRect(0,0,width,height);ctx.fillStyle='#111522';ctx.fillRect(0,0,width,height);
+    const style=getComputedStyle(document.documentElement),accent=style.getPropertyValue('--theme-accent').trim()||'#a99cff',muted=style.getPropertyValue('--theme-muted').trim()||'#a5acc8';
+    ctx.clearRect(0,0,width,height);ctx.fillStyle=style.getPropertyValue('--theme-bg').trim()||'#0c0e18';ctx.fillRect(0,0,width,height);
     const from=trimStart/clip.duration*width,to=trimEnd/clip.duration*width;
-    ctx.fillStyle='#62518466';ctx.fillRect(from,0,to-from,height);
+    ctx.fillStyle=accent;ctx.globalAlpha=.2;ctx.fillRect(from,0,to-from,height);ctx.globalAlpha=1;
     for(let x=0;x<width;x+=3){
       const first=Math.floor(x/width*data.length),last=Math.min(data.length,Math.ceil((x+3)/width*data.length));let peak=0;
       const step=Math.max(1,Math.floor((last-first)/80));for(let i=first;i<last;i+=step)peak=Math.max(peak,Math.abs(data[i]));
-      const bar=Math.max(3,peak*(height-20));ctx.fillStyle=x>=from&&x<=to?'#dac6ff':'#606981';ctx.fillRect(x,(height-bar)/2,2,bar);
+      const bar=Math.max(3,peak*(height-20));ctx.fillStyle=x>=from&&x<=to?accent:muted;ctx.fillRect(x,(height-bar)/2,2,bar);
     }
-    ctx.fillStyle='#e5d6ff';ctx.fillRect(from,0,2,height);ctx.fillRect(Math.max(0,to-2),0,2,height);
+    ctx.fillStyle=accent;ctx.fillRect(from,0,2,height);ctx.fillRect(Math.max(0,to-2),0,2,height);
   }
   function renderTrim(){
     if(!clip)return;
@@ -151,16 +152,18 @@ window.TronoSoundboard=(()=>{
   }
   function readVolume(){try{const saved=Number(storage.getItem(volumeKey())??70);volume=Number.isFinite(saved)?Math.max(0,Math.min(100,saved)):70;}catch{volume=70;}controls();}
   function bind(){
-    for(const id of ['soundboardBtn','soundboardToggle']){$(id).onclick=open;$(id).setAttribute('aria-controls','soundboardDialog');$(id).setAttribute('aria-expanded','false');}
+    $('soundboardToggle').onclick=open;$('soundboardToggle').setAttribute('aria-controls','soundboardDialog');$('soundboardToggle').setAttribute('aria-expanded','false');
     $('soundboardClose').onclick=close;$('soundUploadForm').onsubmit=upload;$('soundStop').onclick=stop;$('soundFile').onchange=loadClip;$('soundTrimPreview').onclick=previewTrim;
     for(const [id,kind] of [['soundTrimStart','start'],['soundTrimEnd','end'],['soundTrimStartRange','start'],['soundTrimEndRange','end']])$(id).addEventListener($(id).type==='number'?'change':'input',e=>{if(e.target.value!=='')changeTrim(kind,Number(e.target.value));});
     $('soundWaveform').onclick=e=>{if(!clip)return;const rect=e.currentTarget.getBoundingClientRect(),position=(e.clientX-rect.left)/rect.width*clip.duration;trimEnd=Math.min(clip.duration,position+Math.min(15,trimEnd-trimStart));changeTrim('start',position);};
     $('soundboardVolume').oninput=e=>{volume=Number(e.target.value);storage.setItem(volumeKey(),String(volume));if(player)player.volume=window.TronoSocial.deafened&&!localPreview?0:volume/100;controls();};
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('soundboardDialog').hidden){e.preventDefault();close();}});
-    document.addEventListener('click',e=>{if(!$('soundboardDialog').hidden&&!e.target.closest('#soundboardDialog,#soundboardToggle,#soundboardBtn'))close({restoreFocus:false});});
+    // Decide outside interaction before focus/scroll can move the editor under the pointer.
+    document.addEventListener('pointerdown',e=>{if(!$('soundboardDialog').hidden&&!e.target.closest('#soundboardDialog,#soundboardToggle'))close({restoreFocus:false});});
     new MutationObserver(()=>{if(!document.body.classList.contains('chat-only-active'))close({restoreFocus:false});}).observe(document.body,{attributes:true,attributeFilter:['class']});
     window.addEventListener('trono-auth-change',()=>{stop();uploadController?.abort();refreshVersion++;resetClip();sounds=[];render();readVolume();close();});
     window.addEventListener('trono-role-change',render);
+    window.addEventListener('trono-theme-change',drawWaveform);
     window.addEventListener('trono-call-change',e=>{controls();if(!e.detail.joined)stop();else if(player)player.volume=e.detail.deafened&&!localPreview?0:volume/100;});
     window.TronoNetwork.onMessage(message=>{
       if(message.type==='soundboard-play'&&message.roomId===window.TronoNetwork.currentRoom&&window.TronoSocial.voiceJoined)void playFile(message.file);
