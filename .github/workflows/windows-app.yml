@@ -33,6 +33,16 @@ jobs:
       - name: Build Windows x64 installer
         run: npm run pack:win
         working-directory: desktop/app
+      - name: Verify the compiled Windows app
+        shell: pwsh
+        run: |
+          node --test tests/desktop-packaged.js 2>&1 | Tee-Object artifacts/windows-packaged.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-packaged.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows packaged app::$details"
+            exit $testExit
+          }
       - name: Prepare user download
         shell: pwsh
         run: |
