@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "start:frontend": "node scripts/serve-frontend.js",
-    "test": "node tests/integration.js && node tests/auth.js && node tests/features-v079.js && node tests/community-v080.js && node --test tests/community-management.js tests/community-sql.js tests/files-soundboard.js tests/text-voice-channels.js",
+    "test": "node tests/integration.js && node tests/auth.js && node tests/features-v079.js && node tests/community-v080.js && node --test tests/community-management.js tests/community-sql.js tests/files-soundboard.js tests/text-voice-channels.js tests/chat-history-sql.js tests/chat-history-restart.js",
     "test:auth": "node tests/auth.js",
     "test:frontend": "node --test tests/frontend-browser.js"
   },

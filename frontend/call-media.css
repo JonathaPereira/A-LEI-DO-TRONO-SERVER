@@ -28,12 +28,17 @@ body.chat-only-active #socialPanel .camera-tile.media-maximized{position:fixed!i
 .soundboard-menu .sound-card-actions .sound-delete{font-size:16px;min-width:24px}
 @media(max-width:640px){body.chat-only-active #socialPanel .call-action>span:not(.call-icon){min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.25}}
 @media(max-width:640px){body.chat-only-active #socialPanel .screens-layout .voice-roster{grid-template-columns:repeat(2,minmax(0,1fr))!important}.participant-camera-toggle{font-size:9px;padding:5px;min-height:30px}body.chat-only-active #socialPanel .screens-layout .voice-person{padding:10px 7px!important}body.chat-only-active #socialPanel .screens-layout .voice-person>small{font-size:9px!important}}
-/* Keep call controls accessible below text on compact screens, without an overlay. */
-@media(max-width:1279px){
-  body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:48px minmax(0,1fr) auto!important;grid-template-areas:'head' 'chat' 'voice'!important}
-  body.chat-only-active.channel-text-active.call-connected #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){position:relative!important;inset:auto!important;width:100%!important;height:100%!important;z-index:auto!important;box-shadow:none!important}
-  body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section{padding:0!important;gap:0!important;overflow:visible!important}
-  body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section>:is(.voice-title,.mn-media-stage,.voice-help){display:none!important}
-  body.chat-only-active.channel-text-active.call-connected #socialPanel .call-toolbar{margin-top:0!important;border-radius:0!important}
-}
-@media(max-width:640px){body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-rows:0 minmax(0,1fr) auto!important}}
+/* Text is always the main view; an existing call keeps only its compact controls. */
+body.chat-only-active.channel-text-active #socialPanel.social-chat-hub.chat-drawer-open{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:0 minmax(0,1fr)!important;grid-template-areas:'head' 'chat'!important}
+body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-rows:0 minmax(0,1fr) auto!important;grid-template-areas:'head' 'chat' 'voice'!important}
+body.chat-only-active.channel-text-active #socialPanel .social-head{display:none!important}
+body.chat-only-active.channel-text-active #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){position:relative!important;inset:auto!important;width:100%!important;height:100%!important;z-index:auto!important;box-shadow:none!important}
+body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section{padding:0!important;gap:0!important;overflow:visible!important}
+body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section>:is(.voice-title,.mn-media-stage,.voice-help){display:none!important}
+body.chat-only-active.channel-text-active.call-connected #socialPanel .call-toolbar{margin-top:0!important;border-radius:0!important}
+.text-voice-connection{display:none;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;color:var(--theme-accent);font:600 12px var(--ui-font);border-top:1px solid var(--theme-line)}
+body.channel-text-active.call-connected .text-voice-connection{display:flex}
+.text-voice-connection button{padding:5px 9px;border:1px solid var(--theme-line);border-radius:7px;color:var(--theme-text);background:var(--theme-soft);font:600 11px var(--ui-font);cursor:pointer}
+.text-voice-connection button:hover{border-color:var(--theme-accent)}
+.older-chat-messages{align-self:center;margin:8px;padding:7px 14px;border:1px solid var(--theme-line);border-radius:9px;color:var(--theme-muted);background:var(--theme-soft);font:600 12px var(--ui-font);cursor:pointer}
+.older-chat-messages:hover{border-color:var(--theme-accent);color:var(--theme-text)}

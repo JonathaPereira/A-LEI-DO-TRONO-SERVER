@@ -35,7 +35,7 @@ window.TronoCommunity=(()=>{
   }
   function renderRoomIcons(){
     for(const room of rooms){const card=document.querySelector(`article.room-card[data-room="${room.id}"]`);if(card)icons(card,room.players||[]);}
-    for(const channel of channels){const button=document.querySelector(`[data-chat-channel="${channel.id}"]`);if(button)icons(button,channel.players||[]);}
+    for(const channel of channels){const button=document.querySelector(`[data-chat-channel="${channel.id}"]`);if(button){if(channel.type==='text')button.querySelector('.room-presence-icons')?.remove();else icons(button,channel.players||[]);}}
   }
   function toggle(value){open=typeof value==='boolean'?value:!open;document.body.classList.toggle('community-open',open);$('communityPanel').classList.toggle('hidden',!open);$('communityToggle').setAttribute('aria-expanded',String(open));}
   function syncMode(){const logged=!!window.TronoAuth.user,guest=!!window.TronoAuth.guest;$('communityToggle')?.classList.toggle('hidden',!logged&&!guest);const chat=document.body.classList.contains('chat-only-active');if(chat!==lastChatMode){lastChatMode=chat;toggle(chat&&matchMedia('(min-width:1280px)').matches);}if(!logged&&!guest){snapshot=null;toggle(false);render();}}

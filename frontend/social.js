@@ -551,7 +551,7 @@ window.TronoSocial = (()=>{
     storage.setItem('tronoSocialMode',panelMode);
     renderVideoGrid();renderScreenGrid();renderSeatMedia();
   }
-  function clearChannelChat(){const host=$('courtChatMessages');if(host)host.replaceChildren();setUnreadCount(0);toggleTextChat(false);}
+  function clearChannelChat(){chatHistoryBefore=null;$('olderChatMessages')?.classList.add('hidden');const host=$('courtChatMessages');if(host)host.replaceChildren();setUnreadCount(0);toggleTextChat(false);}
   function setChatHubMode(active){
     chatHubMode=!!active;
     if(!chatHubMode)document.body.classList.remove('channel-text-active','channel-voice-active');
@@ -587,15 +587,25 @@ window.TronoSocial = (()=>{
     }
   }
 
+  let chatHistoryBefore=null;
   function appendChat(m,{silent=false}={}){
     const box=$('courtChatMessages');if(!box||!m)return;
-    const mine=m.senderId===meId(),row=document.createElement('div');row.className=`court-chat-msg ${mine?'mine':''}`;
+    if(m.id&&[...box.children].some(row=>row.dataset.messageId===m.id))return;
+    const mine=m.accountId?m.accountId===window.TronoAuth?.user?.id:m.senderId===meId(),row=document.createElement('div');row.dataset.messageId=m.id||'';row.className=`court-chat-msg ${mine?'mine':''}`;
     const t=new Date(m.ts||Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     row.innerHTML=`<div><span class="chat-author-icon">${window.TronoProfile?.avatarHtml(m)||'👤'}</span><strong>${esc(m.name||'Jogador')}</strong><time>${t}</time></div><p>${esc(m.text||'')}</p>`;
     if(m.attachment){const host=document.createElement('div');host.className='chat-attachment';row.appendChild(host);window.TronoFiles?.renderAttachment(host,m.attachment);}
-    window.TronoProfile?.hydrate(row);box.appendChild(row);while(box.children.length>100)box.firstElementChild?.remove();box.scrollTop=box.scrollHeight;if(!mine&&!silent){bumpUnread();if(!chatMuted)playCallSound('message','text');}
+    window.TronoProfile?.hydrate(row);box.appendChild(row);box.scrollTop=box.scrollHeight;if(!mine&&!silent){bumpUnread();if(!chatMuted)playCallSound('message','text');}
   }
-  function loadHistory(messages=[]){const box=$('courtChatMessages');if(!box)return;box.innerHTML='';messages.slice(-100).forEach(m=>appendChat(m,{silent:true}));markRead();}
+  function loadHistory(messages=[],meta={}){
+    const box=$('courtChatMessages');if(!box)return;
+    const height=box.scrollHeight,top=box.scrollTop,existing=meta.older?[...box.children]:[];
+    box.replaceChildren();messages.forEach(m=>appendChat(m,{silent:true}));
+    for(const row of existing)if(![...box.children].some(item=>item.dataset.messageId===row.dataset.messageId))box.appendChild(row);
+    if(meta.older)box.scrollTop=top+box.scrollHeight-height;
+    chatHistoryBefore=meta.before||null;const button=$('olderChatMessages');if(button){button.disabled=false;button.classList.toggle('hidden',!meta.hasMore);}
+    markRead();
+  }
   function toggleTextMute(){chatMuted=!chatMuted;storage.setItem('tronoChatMuted',chatMuted?'1':'0');const b=$('muteTextBtn');if(b){b.textContent=chatMuted?'Ativar chat':'Silenciar chat';b.classList.toggle('danger-active',chatMuted);}if(chatMuted)markRead();}
   let pendingChatFile=null,chatUploadController=null;
   function attachmentStatus(text='',cancel=false){const host=$('attachmentStatus');if(!host)return;host.replaceChildren(document.createTextNode(text));if(cancel){const btn=document.createElement('button');btn.type='button';btn.textContent='× Cancelar';btn.onclick=()=>{chatUploadController?.abort();pendingChatFile=null;$('chatFileInput').value='';attachmentStatus();};host.appendChild(btn);}}
@@ -1318,7 +1328,7 @@ window.TronoSocial = (()=>{
   function renderVoiceRoster(){
     const host=$('voiceRoster');if(!host)return;
     const stage=host.closest('.mn-media-stage');stage?.classList.toggle('has-screen',voiceJoined&&detailedPlayers().some(p=>p.id===meId()?screenSharing:p.screen&&watchingStreams.has(p.id)));stage?.classList.toggle('has-camera',voiceJoined&&detailedPlayers().some(p=>p.id===meId()?cameraOn:p.camera&&!hiddenCameras.has(p.id)));stage?.classList.toggle('screens-layout',camerasInProfiles());
-    const roomName=roomState?.name||(inChatHub()?'Geral':'Voz da mesa');if($('mnStageRoomName'))$('mnStageRoomName').textContent=roomName;
+    const roomName=roomState?.name||(inChatHub()?'Geral':'Voz da mesa');if($('mnStageRoomName'))$('mnStageRoomName').textContent=roomName;if($('textVoiceRoomName'))$('textVoiceRoomName').textContent='Voz conectada · '+roomName;
     if(!voiceJoined){
       const active=publicVoiceActive();host.classList.add('voice-roster-private');
       for(const video of host.querySelectorAll('video'))video.srcObject=null;
@@ -1708,6 +1718,8 @@ window.TronoSocial = (()=>{
   function bind(){
     $('socialBtn')?.addEventListener('click',()=>showPanel(!panelOpen));$('roomSocialBtn')?.addEventListener('click',()=>showPanel(!panelOpen));$('chatOnlyOpenSocialBtn')?.addEventListener('click',()=>showPanel(true));$('socialCloseBtn')?.addEventListener('click',()=>showPanel(false));$('socialModeBtn')?.addEventListener('click',togglePanelMode);$('socialMiniDock')?.addEventListener('click',()=>showPanel(true));
     $('chatOnlyTextBtn')?.addEventListener('click',()=>toggleTextChat());$('mnSidebarTextBtn')?.addEventListener('click',()=>toggleTextChat(true));$('chatDrawerCloseBtn')?.addEventListener('click',()=>toggleTextChat(false));
+    $('olderChatMessages')?.addEventListener('click',()=>{if(chatHistoryBefore&&window.TronoNetwork.requestChatHistory(chatHistoryBefore))$('olderChatMessages').disabled=true;});
+    $('returnToVoiceRoom')?.addEventListener('click',()=>{const id=window.TronoNetwork.primaryRoom;for(const button of document.querySelectorAll('[data-chat-channel]'))if(button.dataset.chatChannel===id){button.click();break;}});
     $('attachFileBtn')?.addEventListener('click',()=>{if(window.TronoNetwork?.currentRoom)$('chatFileInput').click();else attachmentStatus('Entre em um canal para anexar arquivos.');});
     $('chatFileInput')?.addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const max=/\.(mp4|webm)$/i.test(file.name)?100_000_000:10_000_000;if(!file.size||file.size>max){pendingChatFile=null;e.target.value='';attachmentStatus(`Limite: ${window.TronoFiles.size(max)} por arquivo.`);return;}pendingChatFile=file;attachmentStatus(`${file.name} · ${window.TronoFiles.size(file.size)}. Clique em enviar.`,true);});
     $('courtChatSend')?.addEventListener('click',sendChat);$('muteTextBtn')?.addEventListener('click',toggleTextMute);$('emojiBtn')?.addEventListener('click',ev=>{ev.stopPropagation();toggleEmojiPicker();});if($('muteTextBtn')){$('muteTextBtn').textContent=chatMuted?'Ativar chat':'Silenciar chat';$('muteTextBtn').classList.toggle('danger-active',chatMuted);}
@@ -1735,7 +1747,8 @@ window.TronoSocial = (()=>{
       if(msg.type==='joined-text-channel')consumeChatRoom(msg.room);
       if(msg.type==='room-state'){if(msg.room?.id===window.TronoNetwork.primaryRoom)consumeRoom(msg.room);else if(msg.room?.id===window.TronoNetwork.currentRoom)consumeChatRoom(msg.room);}
       if(msg.type==='channel-deleted'&&msg.roomId===roomState?.id){void leaveVoice();roomState=null;updateButtons();}
-      if(msg.type==='chat-history'&&msg.roomId===window.TronoNetwork.currentRoom)loadHistory(msg.messages||[]);
+      if(msg.type==='error'&&['CHAT_HISTORY_UNAVAILABLE','CHAT_HISTORY_RATE'].includes(msg.code)){if($('olderChatMessages'))$('olderChatMessages').disabled=false;const failed=msg.failedMessage,input=$('courtChatInput');if(failed?.roomId===window.TronoNetwork.currentRoom&&input&&!input.value)input.value=failed.text||'';}
+      if(msg.type==='chat-history'&&msg.roomId===window.TronoNetwork.currentRoom)loadHistory(msg.messages||[],msg);
       if(msg.type==='chat-message'&&msg.message?.roomId===window.TronoNetwork.currentRoom)appendChat(msg.message);
       if(msg.type==='voice-mode'&&msg.roomId===roomState?.id){roomVoiceMode=msg.mode;if(voiceJoined&&msg.mode==='p2p'&&(transportIsSfu()||transportPending()))void fallbackToP2p(msg.reason||'Chamada sincronizada em P2P.');}
       if(msg.type==='voice-roster')consumeVoiceRoster(msg.players||[]);
