@@ -20,9 +20,16 @@ jobs:
       - run: npm ci
         working-directory: desktop/app
       - name: Test desktop policy and native Windows runtime
+        shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-runtime.js
+          node --test tests/desktop-policy.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows app runtime::$details"
+            exit $testExit
+          }
       - name: Build Windows x64 installer
         run: npm run pack:win
         working-directory: desktop/app
