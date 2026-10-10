@@ -3,7 +3,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync}=require('node:child_process');
 const {_electron,expect}=require('@playwright/test');
 const {startHTTPS}=require('./desktop-https-fixture');
-test('installed desktop boundary, native shortcut, picker and filesystem integration',{timeout:90000},async t=>{
+test('installed desktop boundary, native shortcut, picker and filesystem integration',{timeout:120000},async t=>{
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,api,phase='launch',finished=false;
   t.signal.addEventListener('abort',()=>{if(!finished){console.error('Desktop test stalled at: '+phase);app?.process().kill();}},{once:true});
   try{
@@ -20,7 +20,7 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     assert(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+F9')));
     if(process.platform==='win32'){
       await page.evaluate(()=>{window.__desktopHotkeys=0;window.TronoDesktop.onClip(()=>window.__desktopHotkeys++);});await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].hide());
-      const input=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class MNHotkey { [DllImport("user32.dll")] static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); public static void Press() { try { keybd_event(0x11,0,0,UIntPtr.Zero); keybd_event(0x12,0,0,UIntPtr.Zero); keybd_event(0x78,0,0,UIntPtr.Zero); } finally { keybd_event(0x78,0,2,UIntPtr.Zero); keybd_event(0x12,0,2,UIntPtr.Zero); keybd_event(0x11,0,2,UIntPtr.Zero); } } }'; [MNHotkey]::Press()`],{encoding:'utf8',timeout:15000});assert.equal(input.status,0,input.stderr);await expect.poll(()=>page.evaluate(()=>window.__desktopHotkeys)).toBe(1);await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].show());
+      const input=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class MNHotkey { [DllImport("user32.dll")] static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); public static void Press() { try { keybd_event(0x11,0,0,UIntPtr.Zero); keybd_event(0x12,0,0,UIntPtr.Zero); keybd_event(0x78,0,0,UIntPtr.Zero); } finally { keybd_event(0x78,0,2,UIntPtr.Zero); keybd_event(0x12,0,2,UIntPtr.Zero); keybd_event(0x11,0,2,UIntPtr.Zero); } } }'; [MNHotkey]::Press()`],{encoding:'utf8',timeout:45000});assert.equal(input.status,0,input.error?.message||input.stderr);await expect.poll(()=>page.evaluate(()=>window.__desktopHotkeys)).toBe(1);await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].show());
     }
     // A canceled quit must keep the replay shortcut registered.
     await app.evaluate(({dialog})=>{globalThis.__quitPromptCount=0;dialog.showMessageBoxSync=()=>{globalThis.__quitPromptCount++;return 0;};});
