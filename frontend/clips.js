@@ -22,7 +22,7 @@ window.TronoClips=(()=>{
     $('clipReplayDot').classList.toggle('is-ready',ready);
     $('clipShare').hidden=!!sharedSource;$('clipResume').hidden=!sharedSource||active||starting||!settings.auto;
     $('clipFolder').textContent=directory?directory.name:'Escolher arquivo ao salvar / Downloads';$('clipResetFolder').hidden=!directory;
-    $('clipChooseFolder').hidden=typeof window.showDirectoryPicker!=='function';$('clipFloating').hidden=!window.documentPictureInPicture;
+    $('clipChooseFolder').hidden=!window.TronoDesktop&&typeof window.showDirectoryPicker!=='function';$('clipFloating').hidden=!window.documentPictureInPicture;
     const count=clips.filter(c=>c.blob).length;$('clipPendingCount').textContent=count;$('clipToolbarCount').textContent=count;$('clipToolbarCount').hidden=!count;
     window.TronoClipDesktop?.configure({shortcut:settings.shortcut,active:ready});
     if(pip&&!pip.closed){const status=pip.document.getElementById('pipStatus');if(status)status.textContent=$('clipSource').textContent;const button=pip.document.getElementById('pipClip');if(button){button.disabled=!ready;button.textContent='Clipar últimos '+settings.seconds+' s';}const count=pip.document.getElementById('pipCount');if(count)count.textContent=clips.filter(c=>c.blob).length+' clipes pendentes';}
@@ -33,6 +33,7 @@ window.TronoClips=(()=>{
     if(!clips.length){const empty=document.createElement('p');empty.className='clips-empty';empty.textContent='Seus clipes ficam aqui até você decidir salvar ou descartar.';host.appendChild(empty);}
     for(const clip of clips){
       const card=document.createElement('article');card.className='clip-card';card.dataset.clipId=clip.id;
+      if(window.TronoDesktop){const poster=document.createElement(clip.poster?'img':'div');poster.className='clip-poster';if(clip.poster){poster.src=clip.poster;poster.alt='Miniatura de '+clip.name;}else{poster.setAttribute('aria-label','Clipe sem miniatura');}card.append(poster);}
       const heading=document.createElement('strong');heading.textContent=clip.name;
       const detail=document.createElement('small');detail.textContent=Math.round(clip.duration)+' s · '+clip.quality+' · '+clip.fps+' FPS · '+(clip.bytes/1048576).toFixed(1)+' MB';
       const state=document.createElement('span');state.className='clip-state';state.textContent=clip.state==='saved'?'Salvo na pasta escolhida':clip.state==='download'?'Download solicitado · cópia local mantida':emergency.has(clip.id)?'Somente nesta sessão · salve antes de fechar':'Armazenado no navegador · pendente';
@@ -43,7 +44,7 @@ window.TronoClips=(()=>{
         button('Prévia',()=>{if(!preview.hidden){preview.querySelector('video')?.pause();preview.replaceChildren();revoke(clip.id);preview.hidden=true;return;}const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';const url=URL.createObjectURL(clip.blob);urls.set(clip.id,url);video.src=url;video.setAttribute('aria-label','Prévia de '+clip.name);preview.appendChild(video);preview.hidden=false;});
         button('Salvar',()=>void save(clip.id));card.appendChild(preview);
       }
-      button(clip.blob?'Descartar':'Remover da lista',()=>void discard(clip.id));card.prepend(heading,detail,state,actions);host.appendChild(card);
+      button(clip.blob?'Descartar':'Remover da lista',()=>void discard(clip.id));card.append(heading,detail,state,actions);host.appendChild(card);
     }
     renderState();
   }
@@ -52,6 +53,7 @@ window.TronoClips=(()=>{
   async function retain(s,result){
     const id=result.id,createdAt=Date.now(),stamp=new Date(createdAt).toISOString().slice(0,19).replace(/[:T]/g,'-');
     const clip={id,owner:s.owner,name:'Clipe '+new Date(createdAt).toLocaleString('pt-BR'),filename:'Trono_Clipe_'+stamp+'_'+id.slice(0,8)+'.webm',createdAt,quality:s.quality,fps:s.fps,duration:result.duration,bytes:result.bytes,blob:result.blob,state:'pending'};
+    if(window.TronoDesktop&&window.ImageCapture){try{const frame=await new ImageCapture(s.stream.getVideoTracks()[0]).grabFrame();try{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;canvas.getContext('2d').drawImage(frame,0,0,320,180);clip.poster=canvas.toDataURL('image/jpeg',.7);}finally{frame.close();}}catch{/* A thumbnail failure must never discard a replay. */}}
     try{await store.put(clip);}catch{emergency.set(id,clip);memoryOnly.add(id);if(session===s)stop(s);if(s.owner===owner)message('Replay pausado: sem espaço ou acesso ao armazenamento do navegador. Este clipe está somente na memória: salve ou descarte antes de retomar e antes de fechar a página.');}
     s.waiters.delete(id);dispose(s);if(s.owner===owner){await refresh();window.TronoClipDesktop?.saved(clips.filter(c=>c.blob).length);if(!emergency.has(id))message('Clipe armazenado. Você pode continuar jogando e guardar outros antes de salvar.');}
   }
@@ -92,10 +94,16 @@ window.TronoClips=(()=>{
   }
   function sharedStopped(source){if(source&&sharedSource!==source)return;sharedSource=null;stop();}
   function clip(){const s=session;if(!s||!s.status?.ready){message('Compartilhe sua tela e aguarde o replay ficar pronto para clipar.');return;}if(s.waiters.size>=4){message('Aguarde os clipes em preparação antes de clipar novamente.');return;}const id=crypto.randomUUID();s.waiters.add(id);s.flushing.push(id);message('Preparando clipe…');try{s.recorder.requestData();}catch{s.flushing=s.flushing.filter(k=>k!==id);s.waiters.delete(id);message('A captura não está disponível. Os clipes anteriores continuam armazenados.');}}
-  async function chooseFolder(){const current=owner;try{const handle=await window.showDirectoryPicker({id:'trono-clips',mode:'readwrite'});if(current!==owner)return;directory=handle;renderState();try{await store.setDirectory(current,handle);message('Pasta escolhida. Nenhum clipe é salvo nela sem clicar em Salvar.');}catch{message('Pasta escolhida para esta sessão. O navegador não permitiu lembrar essa pasta.');}}catch(e){if(e.name!=='AbortError')message('Não foi possível escolher a pasta. Você pode usar Salvar para escolher um arquivo.');}}
+  async function chooseFolder(){const current=owner;try{const handle=window.TronoDesktop?await window.TronoDesktop.chooseFolder():await window.showDirectoryPicker({id:'trono-clips',mode:'readwrite'});if(!handle||current!==owner)return;directory=handle;renderState();try{if(!handle.native)await store.setDirectory(current,handle);message(handle.native?'Pasta escolhida para esta sessão do aplicativo. Nenhum clipe é salvo sem clicar em Salvar.':'Pasta escolhida. Nenhum clipe é salvo nela sem clicar em Salvar.');}catch{message('Pasta escolhida para esta sessão. O navegador não permitiu lembrar essa pasta.');}}catch(e){if(e.name!=='AbortError')message('Não foi possível escolher a pasta. Você pode usar Salvar para escolher um arquivo.');}}
   async function save(id){
     const clip=clips.find(c=>c.id===id);if(!clip?.blob||busy.has(id))return;busy.add(id);let handle,writable;
     try{
+      if(window.TronoDesktop){
+        const result=await window.TronoDesktop.saveClip({filename:clip.filename,directory:directory?.native?directory.id:null,bytes:await clip.blob.arrayBuffer()});
+        if(result.canceled){message('Salvamento cancelado. O clipe continua armazenado.');return;}
+        if(!result.saved)throw Error('Não foi possível salvar o clipe.');
+        const saved={...clip,blob:null,state:'saved'};try{await store.put(saved);emergency.delete(id);memoryOnly.delete(id);message('Clipe salvo.');}catch{emergency.set(id,saved);message('Clipe salvo no arquivo. A lista local não pôde ser atualizada.');}return;
+      }
       // Invoke picker/permission from this click, before storage work can expire user activation.
       if(directory){const permission=directory.queryPermission?await directory.queryPermission({mode:'readwrite'}):'granted';if(permission!=='granted'&&(!directory.requestPermission||await directory.requestPermission({mode:'readwrite'})!=='granted'))throw Error('Acesso à pasta negado. Escolha outra pasta e tente novamente.');handle=await directory.getFileHandle(clip.filename,{create:true});}
       else if(window.showSaveFilePicker)handle=await window.showSaveFilePicker({id:'trono-clips',suggestedName:clip.filename,types:[{description:'Vídeo WebM',accept:{'video/webm':['.webm']}}]});
@@ -112,7 +120,7 @@ window.TronoClips=(()=>{
     if(choosingShortcut){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();choosingShortcut=false;renderState();return;}if(!/^(Key[A-Z]|Digit[0-9]|F\d{1,2})$/.test(e.code))return;e.preventDefault();e.stopPropagation();const reserved=['F5','F11','F12'].includes(e.code)||((e.ctrlKey||e.metaKey)&&['KeyR','KeyW','KeyT','KeyL','KeyN','KeyP'].includes(e.code));if(reserved||(!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^F\d/.test(e.code))){message('Use Ctrl/Alt/Meta com uma tecla ou uma tecla F livre. Evite atalhos reservados do navegador.');return;}settings.shortcut={code:e.code,ctrl:e.ctrlKey,alt:e.altKey,shift:e.shiftKey,meta:e.metaKey};choosingShortcut=false;saveSettings();renderState();message(window.TronoClipDesktop?.connected?'Atalho enviado ao componente Windows.':'Atalho configurado para esta página. Conecte o componente Windows para usar durante o jogo.');return;}
     const s=settings?.shortcut;if(!s||e.repeat||e.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;if(e.code===s.code&&e.ctrlKey===s.ctrl&&e.altKey===s.alt&&e.shiftKey===s.shift&&e.metaKey===s.meta){e.preventDefault();e.stopPropagation();if(!window.TronoClipDesktop?.globalActive)clip();}
   }
-  function tab(name){document.querySelectorAll('[data-clips-tab]').forEach(b=>{const on=b.dataset.clipsTab===name;b.classList.toggle('active',on);b.setAttribute('aria-selected',on);});$('clipsLibrary').hidden=name!=='library';$('clipsPreferences').hidden=name!=='preferences';} function open(){tab('library');if(!$('clipsDialog').open)$('clipsDialog').showModal();void refresh();}
+  function tab(name){document.querySelectorAll('[data-clips-tab]').forEach(b=>{const on=b.dataset.clipsTab===name;b.classList.toggle('active',on);b.setAttribute('aria-selected',on);});$('clipsLibrary').hidden=name!=='library';$('clipsPreferences').hidden=name!=='preferences';} function open({inline=false}={}){tab('library');if(!$('clipsDialog').open){if(inline)$('clipsDialog').show();else $('clipsDialog').showModal();}void refresh();}
   async function accountChanged(){const next=account();if(next===owner&&settings)return;sharedSource=null;stop();owner=next;readSettings();directory=null;clips=[];renderList();const current=owner;try{const saved=await store.directory(current);if(current===owner){directory=saved||null;renderState();}}catch{}await refresh();}
   function bind(){
     owner=account();readSettings();renderState();void refresh();const initialOwner=owner;void store.directory(initialOwner).then(h=>{if(owner===initialOwner){directory=h||null;renderState();}}).catch(()=>{});

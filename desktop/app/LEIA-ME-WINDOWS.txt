@@ -1,0 +1,32 @@
+M&N · A Lei do Trono — Windows 0.1.0 (primeira versão)
+
+1. Extraia este ZIP e abra MN-Trono-0.1.0-Windows.exe.
+2. Escolha a pasta e conclua a instalação. Abra M&N pelo atalho criado.
+3. Entre com a mesma conta do site. As salas, cargos, mensagens e jogo usam
+   o mesmo servidor. O app não precisa do Chrome nem do antigo MN-Clipes.exe.
+4. Comunidade abre o chat. Jogar abre o jogo. Clipes mostra a biblioteca local.
+   Os controles de voz, câmera, tela e replay ficam na barra inferior.
+5. Compartilhe uma tela ou janela; o replay é preparado automaticamente.
+   Em Clipes > Preferências escolha duração, qualidade, FPS, atalho e pasta.
+   O atalho funciona também com o jogo em foco, salvo conflitos ou jogos que
+   bloqueiam atalhos externos. Não execute o app como administrador por padrão.
+6. Clipes ficam neste computador até salvar ou descartar. O buffer de replay
+   é temporário; clipes criados persistem na biblioteca local por conta.
+   A pasta de exportação é escolhida novamente ao reabrir o app.
+7. Fechar a janela minimiza para a bandeja e mantém chamada/replay ativos.
+   Para encerrar use M&N > Sair ou o menu do ícone na bandeja do Windows.
+
+O instalador ainda não tem assinatura digital; o Windows pode mostrar um
+aviso de editor desconhecido. Verifique que baixou do GitHub deste projeto.
+
+ÁUDIO: esta versão captura o áudio do computador inteiro quando solicitado
+no seletor. Pode incluir a voz da chamada e causar eco. A caixa vem desmarcada.
+Áudio isolado por jogo e codificador nativo de hardware são próximas etapas.
+
+O app usa Chromium/Electron e ainda precisa de recursos para codificar replay.
+Ter uma versão Windows não reserva CPU/GPU nem garante voz sem travamentos.
+As funções de jogo/chat dependem de internet e do servidor estar disponível.
+
+Sessões, temas e clipes do navegador não são copiados automaticamente ao app.
+Não há envio de clipes para Cloudflare/Supabase: salvar usa somente disco local.
+Para atualizar, instale a nova versão sem apagar os dados do aplicativo.

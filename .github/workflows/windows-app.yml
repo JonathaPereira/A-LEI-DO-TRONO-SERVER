@@ -1,0 +1,46 @@
+name: Windows full app
+on:
+  push:
+    branches: [main, codex/windows-app-foundation]
+    paths: ['desktop/app/**', 'frontend/**', 'tests/desktop-*.js', '.github/workflows/windows-app.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm ci
+        working-directory: desktop/app
+      - name: Test desktop policy and native Windows runtime
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test tests/desktop-policy.js tests/desktop-runtime.js
+      - name: Build Windows x64 installer
+        run: npm run pack:win
+        working-directory: desktop/app
+      - name: Prepare user download
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/windows-download | Out-Null
+          Copy-Item artifacts/windows-app/MN-Trono-*-Windows.exe artifacts/windows-download/
+          Copy-Item desktop/app/LEIA-ME-WINDOWS.txt artifacts/windows-download/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MN-Trono-Windows-x64
+          path: artifacts/windows-download/
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-app-validation
+          path: artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 14
