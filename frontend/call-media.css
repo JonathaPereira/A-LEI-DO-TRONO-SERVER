@@ -62,3 +62,4 @@ body.channel-text-active.call-connected .text-voice-connection{display:flex}
   body.chat-only-active #socialPanel.social-chat-hub{padding-bottom:52px!important;box-sizing:border-box}
   body.chat-only-active:not(.channel-text-active) #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){bottom:52px!important;height:calc(100% - 52px)!important}
 }
+body.voice-light-mode #socialPanel :is(.voice-person,.mn-person-avatar,.camera-tile,.screen-share-tile,.call-action,.connection-health),body.voice-light-mode #socialPanel :is(.voice-person,.mn-person-avatar)::before,body.voice-light-mode #socialPanel :is(.voice-person,.mn-person-avatar)::after{animation:none!important;transition:none!important}

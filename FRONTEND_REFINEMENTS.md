@@ -1,58 +1,55 @@
-# Publicar a correção das mensagens e os indicadores de áudio
+# Publicar o modo leve para jogar
 
-Esta correção aceita a confirmação HTTP 204 sem corpo retornada pelo Supabase
-quando salva uma mensagem. A versão anterior tentava ler JSON dessa resposta,
-acusava erro e não transmitia a mensagem já gravada. Os testes agora reproduzem
-essa resposta real, inclusive em canais de texto e mistos.
+Esta versão modifica apenas o frontend. O backend e a migração do histórico
+continuam iguais à correção de mensagens já publicada. Não há SQL, dependências
+ou variáveis novas.
 
-Os perfis da chamada mostram ícones distintos para microfone mutado e áudio
-silenciado, atualizados para os outros participantes. Silenciar a escuta mantém
-independente o controle do microfone. O campo de texto e seus três botões ficam
-na mesma linha em desktop e celular; falhas reais de armazenamento aparecem
-junto ao campo e preservam o rascunho.
+O navegador não permite reservar CPU ou memória do computador para o chat.
+Esta atualização reduz o trabalho do próprio chat, sem prometer eliminar cortes
+causados pelo jogo, por drivers de áudio ou pela rede.
 
-**Não há SQL novo nem novas variáveis nesta correção.** Se você já executou
-`supabase/upgrade-chat-history.sql`, não precisa executá-lo novamente.
-O histórico existente é preservado, incluindo mensagens que foram gravadas
-pelo servidor anterior apesar do erro de confirmação.
+## Publicação
 
-Baixe o ZIP atualizado do GitHub e extraia-o antes de começar os passos abaixo.
-
-1. Somente se ainda não instalou o histórico, no Supabase abra **SQL Editor → New query**. Abra o arquivo
-   `supabase/upgrade-chat-history.sql` do ZIP atualizado, copie **todo** o conteúdo
-   e execute com **Run**. Essa migração deve ser aplicada depois da atualização
-   de comunidade já instalada; pode ser repetida sem apagar as mensagens.
-2. Atualize a branch `main` do GitHub com as alterações da branch
-   `codex/chat-delivery-status` (novo pull request). Se aparecer como rascunho, use
-   **Ready for review** antes de **Merge pull request**. O backend desta correção altera
-   `server.js` e `chat-history.js`; os demais arquivos do projeto devem ser
-   preservados. Não há mudança de dependências.
-3. No Render, abra o serviço do backend e use **Manual Deploy → Deploy latest
-   commit**, se o deploy automático ainda não começou. Aguarde **Live**.
-   Os comandos continuam `npm install` e `npm start`.
-4. Depois que o backend estiver Live, abra a pasta `frontend` dentro do
-   projeto extraído do ZIP atualizado. Publique
-   essa pasta completa, incluindo `stream-controls.js`, `network.js`, `game.js`,
-   `social.js`, o CSS e `vendor/rnnoise/`.
-5. Clique com o botão direito dentro de `frontend` e escolha **Open Git Bash here**.
-   Execute:
+1. Baixe o ZIP desta atualização no GitHub e extraia-o.
+2. Abra a pasta `frontend` extraída e use **Open Git Bash here**.
+3. Publique a pasta completa, incluindo `vendor/rnnoise/`:
 
    ```bash
    surge . a-lei-do-trono.surge.sh
    ```
 
-6. Abra `https://a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5** em todos
-   os computadores. O reinício do backend encerra as chamadas existentes;
-   entre novamente na voz para conferir a correção.
+4. Recarregue o site com **Ctrl+F5** em cada computador.
+5. Quem está jogando deve abrir **Configurações da chamada → Áudio** e ligar
+   **Modo leve para jogar**. O botão vale apenas para este navegador/aparelho
+   e a preferência continua após recarregar a página.
 
-Com a migração do histórico já instalada, publique o backend e então o frontend, **nessa ordem**. A nova interface informa quando
-está conectada a um backend antigo, em vez de trocar a voz ao abrir texto.
+A branch `codex/voice-light-mode` guarda a atualização para revisão no GitHub.
+A publicação desta versão exige somente o frontend no Surge. Se você fizer
+merge e o Render estiver com deploy automático, ele poderá reiniciar o backend,
+embora não haja mudança de código do servidor.
 
-Não publique a raiz do backend no Surge. Publique a pasta `frontend` completa
-para incluir o CSS, a espada dos controles de volume e o modelo RNNoise.
-Não remova a pasta `vendor`: ela contém o processamento gratuito do microfone.
-Os arquivos da interface usam o identificador de cache `088chatdelivery`; o protocolo do
-backend continua `0.8.0-alpha`.
+## O que o modo leve faz
+
+- Usa o supressor nativo do navegador no lugar do RNNoise enquanto estiver
+  ligado. O controle de supressão continua podendo ser desligado. A interface
+  informa quando o navegador não fornece supressão nativa; não simula proteção.
+- Reduz os medidores de fala para aproximadamente 5 atualizações por segundo.
+  No modo normal são aproximadamente 10, em vez de acompanhar os quadros da tela.
+  Com a página oculta, não lê os medidores nem atualiza seus indicadores; o
+  processamento e a transmissão da voz continuam ativos.
+- Atualiza só os indicadores de fala; não redesenha os participantes e as câmeras
+  a cada mudança de quem está falando. Isso vale também no modo normal.
+- Reduz a coleta automática de diagnóstico para a cada 10 segundos quando o
+  painel estiver fechado, evita coletas simultâneas e reduz animações da chamada.
+  Abrir o diagnóstico continua oferecendo atualizações frequentes.
+- Preserva o mute, o volume do microfone e a conexão com a sala. Desligar o modo
+  restaura a preferência normal de supressão, incluindo RNNoise se estiver ligado.
+
+Os arquivos da interface usam o cache `089voicelight`.
+
+Se a voz ainda cortar ao jogar, limite o FPS do jogo para deixar folga de
+processamento e teste o microfone também fora do navegador. Isso ajuda a separar
+sobrecarga do computador, problema do dispositivo/driver e conexão de rede.
 
 ## Comportamentos para conferir
 
