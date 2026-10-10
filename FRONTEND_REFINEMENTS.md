@@ -22,7 +22,7 @@ nem trocar as configurações do Render.
 Não publique a raiz do backend no Surge. Publique a pasta `frontend` completa
 para incluir o CSS, a espada dos controles de volume e o modelo RNNoise.
 Não remova a pasta `vendor`: ela contém o processamento gratuito do microfone.
-Os arquivos da interface usam o identificador de cache `084rnnoise`; o protocolo do
+Os arquivos da interface usam o identificador de cache `085shareaudio`; o protocolo do
 backend continua `0.8.0-alpha`.
 
 ## Comportamentos para conferir
@@ -35,6 +35,15 @@ backend continua `0.8.0-alpha`.
 - Quando há compartilhamento, as transmissões ocupam a área principal e as
   câmeras ficam nos cartões dos participantes. Ao parar o compartilhamento,
   as câmeras voltam à área de mídias. Tela cheia continua funcionando.
+- Ao compartilhar uma janela, o site pede somente o áudio daquela janela.
+  Também pede para excluir o áudio da própria página da captura do sistema,
+  evitando retransmitir as vozes da chamada quando o navegador suporta isso.
+  Essas opções dependem do navegador: use Chrome/Edge atualizado e confira
+  o seletor de áudio. Se ainda houver retorno, desmarque Compartilhar áudio;
+  isso preserva o microfone da chamada. A captura física de áudio de jogo no
+  Windows precisa de conferência após publicar, pois as fontes do teste são geradas.
+  Referências: [opção windowAudio](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getDisplayMedia)
+  e [restrictOwnAudio](https://developer.mozilla.org/en-US/docs/Web/API/MediaTrackConstraints/restrictOwnAudio).
 - Ocultar câmera / Mostrar câmera funciona por participante, no cartão ou na
   grade. Só muda o que você vê, mantendo a voz e a transmissão da pessoa.
   No SFU, interrompe a assinatura daquela câmera; em P2P, oculta localmente
@@ -79,7 +88,7 @@ painéis, câmeras nos cartões, ocultação individual, efeitos compactos e lay
 desktop/celular. O teste de áudio mede a saída real do RNNoise com ruído
 determinístico e fala sintética, para conferir redução sem silenciar a fala.
 Ele não estabelece um percentual de redução em todos os microfones reais.
-O cenário de duas pessoas injeta vídeos gerados na entrada dos receptores
+O cenário de duas pessoas injeta mídias geradas na entrada dos receptores
 para conferir a interface e o ciclo de mídia: o Chromium gerenciado deste
 ambiente bloqueia UDP direto, portanto esse cenário não valida transporte RTP
 entre dispositivos ou a conexão real com o SFU.

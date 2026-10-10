@@ -782,7 +782,11 @@ window.TronoSocial = (()=>{
     if(!voiceJoined){const ok=await joinVoice();if(!ok)return false;}
     if(transportIsSfu()&&realtimeStatus&&!realtimeStatus.screenAllowed){setStatus('Compartilhamento bloqueado pelo freio mensal de consumo.','warn');return false;}
     try{
-      const stream=await navigator.mediaDevices.getDisplayMedia({video:screenMediaConstraints(),audio:shareStreamAudio?{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false}:false,systemAudio:shareStreamAudio?'include':'exclude',selfBrowserSurface:'exclude'});
+      // A game window must request window audio explicitly; some browsers otherwise
+      // offer the entire system mix, including voices played by this call.
+      // restrictOwnAudio also requests removal of this page from system capture.
+      // These are browser controls, so older implementations may ignore them.
+      const stream=await navigator.mediaDevices.getDisplayMedia({video:screenMediaConstraints(),audio:shareStreamAudio?{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false,restrictOwnAudio:true}:false,systemAudio:shareStreamAudio?'include':'exclude',windowAudio:shareStreamAudio?'window':'exclude',selfBrowserSurface:'exclude'});
       const track=stream.getVideoTracks()[0];if(!track)throw new Error('Nenhuma tela foi selecionada.');await optimizeScreenTrack(track);
       if(localScreenStream)localScreenStream.getTracks().forEach(t=>t.stop());localScreenStream=stream;screenSharing=true;localScreenPreviewPaused=false;localScreenCollapsed=false;
       track.addEventListener('ended',()=>stopScreenShare(true),{once:true});
