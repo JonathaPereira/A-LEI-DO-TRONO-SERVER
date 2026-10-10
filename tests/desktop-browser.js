@@ -49,7 +49,7 @@ test('desktop shell preserves live calls, shared rooms, game entry and local cli
     });
     await t.test('PDF previews use the isolated native viewer and report errors without losing the call',async()=>{
       const id='10000000-0000-4000-8000-000000000099';await context.route(fixture.base+'/files/'+id+'/url',route=>route.fulfill({status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':origin},body:JSON.stringify({url:'https://files.example.test/manual.pdf',expiresAt:Date.now()+60000})}));
-      await page.evaluate(id=>{const host=document.createElement('div');host.id='nativeFileFixture';host.style.cssText='position:fixed;top:180px;left:500px;z-index:1500';host.append(window.TronoFiles.renderAttachment({id,name:'Manual.pdf',mime:'application/pdf',bytes:100}));document.body.append(host);},id);
+      await page.evaluate(id=>{const host=document.createElement('div');host.id='nativeFileFixture';host.style.cssText='position:fixed;top:180px;left:500px;z-index:1500';window.TronoFiles.renderAttachment(host,{id,name:'Manual.pdf',mime:'application/pdf',bytes:100});document.body.append(host);},id);
       await page.locator('#nativeFileFixture .file-preview').click();await expect.poll(()=>page.evaluate(()=>window.__native.attachment?.url)).toBe('https://files.example.test/manual.pdf');await page.evaluate(()=>{window.__native.attachmentError=true;});await page.locator('#nativeFileFixture .file-preview').click();await expect(page.locator('#nativeFileFixture')).toContainText('Arquivo indisponível');await page.evaluate(()=>document.getElementById('nativeFileFixture').remove());
     });
     await t.test('desktop themes remain personal and compact Windows widths fit the dock',async()=>{

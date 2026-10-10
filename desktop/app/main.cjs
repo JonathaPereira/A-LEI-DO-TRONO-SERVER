@@ -10,7 +10,8 @@ const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop
 if(!app.requestSingleInstanceLock())app.quit();
 else{
   app.on('second-instance',()=>{window?.show();window?.focus();});
-  app.on('before-quit',()=>{quitting=true;globalShortcut.unregisterAll();});
+  app.on('before-quit',()=>{quitting=true;});
+  app.on('will-quit',()=>globalShortcut.unregisterAll());
   app.on('window-all-closed',()=>app.quit());
   app.whenReady().then(start).catch(error=>{dialog.showErrorBox('Não foi possível abrir o M&N',error.message);app.quit();});
 }
@@ -57,7 +58,8 @@ async function start(){
     if(response===1)event.preventDefault();else quitting=false;
   });
   window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();});
-  window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace){clearHotkey();cancelCapture();}});
+  window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace)cancelCapture();});
+  window.webContents.on('did-navigate',clearHotkey);
   window.webContents.on('will-navigate',(event,url)=>{if(!isAppURL(url)){event.preventDefault();if(/^https:\/\//.test(url))void shell.openExternal(url);}});
   window.webContents.on('will-attach-webview',event=>event.preventDefault());
   // window.open inherits the opener's Chromium partition, even with some
