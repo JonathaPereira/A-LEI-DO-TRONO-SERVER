@@ -33,7 +33,8 @@ esquerdo, abre um submenu com miniaturas; o botão duplicado da barra central
 foi removido. Em Adicionar efeito, escolha um
 áudio de até 20 MB, selecione início/fim de um trecho de até 15 segundos e
 ouça antes de enviar. Somente o trecho selecionado será publicado. O volume
-é individual e o botão da miniatura toca o efeito na chamada.
+é individual e o botão da miniatura toca o efeito na chamada. As miniaturas
+ficaram menores para caberem mais efeitos no menu.
 
 Em Perfil → Aparência, escolha roxo (padrão), verde/preto, preto/vermelho,
 azul/preto ou amarelo/preto. O tema muda apenas para você e fica salvo por
@@ -51,6 +52,20 @@ possível usar ⛶ ou um clique duplo diretamente no vídeo. Use Esc ou ⛶
 para voltar. Em navegadores que bloqueiam a API de tela cheia, o vídeo ocupa
 a janela inteira. O compartilhamento de tela depende
 do suporte do navegador, especialmente no celular.
+
+Durante compartilhamentos, as telas ocupam a área principal e as câmeras
+ficam nos cartões dos perfis. Ao encerrar as telas, as câmeras voltam à área
+de mídias. Ocultar câmera / Mostrar câmera funciona nos cartões e na grade:
+afeta somente sua visualização, sem desligar a câmera da pessoa nem sua voz
+ou transmissão. A preferência dura até sair da chamada.
+
+Configurações → Áudio → Supressor ativa RNNoise no seu microfone, processado
+localmente e gratuitamente antes de transmitir a voz. O primeiro uso carrega
+um modelo de aproximadamente 3,6 MB. Publique a pasta `vendor/rnnoise/` junto
+com os outros arquivos do frontend. O botão informa o modo real: RNNoise,
+redução nativa do navegador, pausado ou indisponível. Em caso de falha, tenta
+a redução nativa e mantém o microfone funcionando. Ruídos fortes ou outras
+vozes próximas ainda podem passar; o resultado varia com o microfone.
 
 A entrada da câmera fica em Configurações → Vídeo. Ao trocar, a captura
 anterior é liberada primeiro. Se outro aplicativo estiver usando a câmera,

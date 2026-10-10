@@ -7,7 +7,8 @@ nem trocar as configurações do Render.
 1. Baixe o ZIP da branch `codex/frontend-refinements` no GitHub, conectado à
    conta com acesso ao repositório, e extraia-o.
 2. Abra a pasta `frontend` dentro do projeto extraído. Ela contém `index.html`,
-   `refinements.css`, `appearance.css`, `appearance.js`, `panel-layout.js`
+   `refinements.css`, `appearance.css`, `appearance.js`, `panel-layout.js`,
+   `call-media.css`, `noise-suppression.js` e a pasta `vendor/rnnoise/`
    e todos os arquivos e assets necessários.
 3. Clique com o botão direito dentro dessa pasta e escolha **Open Git Bash here**.
 4. Execute:
@@ -19,8 +20,9 @@ nem trocar as configurações do Render.
 5. Abra `https://a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5**.
 
 Não publique a raiz do backend no Surge. Publique a pasta `frontend` completa
-para incluir o CSS e a espada dos controles de volume. Os arquivos da
-interface usam o identificador de cache `083appearance`; o protocolo do
+para incluir o CSS, a espada dos controles de volume e o modelo RNNoise.
+Não remova a pasta `vendor`: ela contém o processamento gratuito do microfone.
+Os arquivos da interface usam o identificador de cache `084rnnoise`; o protocolo do
 backend continua `0.8.0-alpha`.
 
 ## Comportamentos para conferir
@@ -30,8 +32,21 @@ backend continua `0.8.0-alpha`.
   A grade fecha automaticamente ao escolher uma mídia em tela cheia.
 - Grade · até 6 permite marcar/desmarcar pessoas; Tela e Câmera estão
   identificadas por pessoa. Assistir inicia uma transmissão ainda não aberta.
+- Quando há compartilhamento, as transmissões ocupam a área principal e as
+  câmeras ficam nos cartões dos participantes. Ao parar o compartilhamento,
+  as câmeras voltam à área de mídias. Tela cheia continua funcionando.
+- Ocultar câmera / Mostrar câmera funciona por participante, no cartão ou na
+  grade. Só muda o que você vê, mantendo a voz e a transmissão da pessoa.
+  No SFU, interrompe a assinatura daquela câmera; em P2P, oculta localmente
+  sem prometer economia de rede. A preferência dura até sair da chamada.
+- Configurações → Áudio → Supressor ativa o RNNoise no seu próprio microfone.
+  O modelo roda localmente a 48 kHz, antes de enviar a voz. O botão confirma
+  RNNoise ativo, redução do navegador, processamento pausado ou indisponível.
+  O primeiro uso baixa cerca de 3,6 MB do modelo do próprio site, sem API ou
+  mensalidade. Se RNNoise falhar, tenta a redução nativa; se ela não estiver
+  disponível, mantém o microfone e informa a falta de supressão.
 - Efeitos fica no canto inferior esquerdo, sem botão duplicado na barra central,
-  com miniaturas e volume pessoal.
+  com miniaturas menores, quatro colunas em larguras comuns e volume pessoal.
   Adicionar efeito permite recortar áudios longos para até 15 segundos,
   ouvir o trecho e enviar apenas esse trecho. Clicar e digitar no nome do áudio
   mantém o submenu aberto, inclusive depois de rolar o formulário.
@@ -52,14 +67,22 @@ backend continua `0.8.0-alpha`.
 
 ## Validação de desenvolvimento
 
-Execute `npm ci` e `npm run test:frontend` na raiz do projeto, com Chromium
+Execute `npm ci`, `npm run test:frontend` e `node --test tests/noise-processing.js`
+na raiz do projeto, com Chromium
 instalado (`AUTH_TEST_CHROMIUM` permite indicar seu executável). Os cenários
 usam backend local e serviços simulados; a câmera e a tela usam fontes de
 teste. Os testes verificam a API nativa de tela cheia, fallback na janela,
 limite da grade, liberação/cancelamento da câmera, recorte PCM estéreo exato,
 upload validado pelo backend, volume pessoal, edição do nome sem fechar o
 submenu, temas individuais persistentes, redimensionamento/restauração dos
-painéis e layouts desktop/celular.
+painéis, câmeras nos cartões, ocultação individual, efeitos compactos e layouts
+desktop/celular. O teste de áudio mede a saída real do RNNoise com ruído
+determinístico e fala sintética, para conferir redução sem silenciar a fala.
+Ele não estabelece um percentual de redução em todos os microfones reais.
+O cenário de duas pessoas injeta vídeos gerados na entrada dos receptores
+para conferir a interface e o ciclo de mídia: o Chromium gerenciado deste
+ambiente bloqueia UDP direto, portanto esse cenário não valida transporte RTP
+entre dispositivos ou a conexão real com o SFU.
 
 Webcams físicas, permissões do sistema operacional, fullscreen em Safari e
 publicação real no Surge precisam da conferência no dispositivo final.

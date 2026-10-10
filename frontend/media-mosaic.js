@@ -23,12 +23,13 @@ window.TronoMosaic=(()=>{
     host.querySelector('.mosaic-empty')?.remove();
     for(const p of visible){
       let cell=[...host.children].find(c=>c.dataset.peer===p.id);
-      if(!cell){cell=document.createElement('article');cell.className='focus-person';cell.dataset.peer=p.id;cell.innerHTML='<div class="focus-person-media"><video class="focus-screen" autoplay muted playsinline></video><video class="focus-camera" autoplay muted playsinline></video><span class="focus-video-placeholder">Aguardando vídeo…</span></div><footer><div><strong></strong><small></small></div><div class="focus-media-actions"><button class="focus-full-screen" type="button">⛶ Tela</button><button class="focus-full-camera" type="button">⛶ Câmera</button><button class="focus-watch" type="button">▶ Assistir</button></div></footer>';host.appendChild(cell);}
+      if(!cell){cell=document.createElement('article');cell.className='focus-person';cell.dataset.peer=p.id;cell.innerHTML='<div class="focus-person-media"><video class="focus-screen" autoplay muted playsinline></video><video class="focus-camera" autoplay muted playsinline></video><span class="focus-video-placeholder">Aguardando vídeo…</span></div><footer><div><strong></strong><small></small></div><div class="focus-media-actions"><button class="focus-full-screen" type="button">⛶ Tela</button><button class="focus-full-camera" type="button">⛶ Câmera</button><button class="focus-watch" type="button">▶ Assistir</button><button class="focus-camera-toggle" type="button"></button></div></footer>';host.appendChild(cell);}
       cell.querySelector('strong').textContent=p.name+(p.self?' · você':'');cell.querySelector('small').textContent=p.camera&&p.screen?'Câmera + tela':p.screen?'Tela':p.camera?'Câmera':'Aguardando mídia';
       const camera=p.camera?.getVideoTracks().some(t=>t.readyState==='live'),screen=p.screen?.getVideoTracks().some(t=>t.readyState==='live');cell.classList.toggle('has-camera',!!camera);cell.classList.toggle('has-screen',!!screen);
       attach(cell.querySelector('.focus-camera'),camera?p.camera:null);attach(cell.querySelector('.focus-screen'),screen?p.screen:null);
       for(const kind of ['screen','camera']){const button=cell.querySelector('.focus-full-'+kind);button.hidden=!(kind==='screen'?screen:camera);button.setAttribute('aria-label','Tela cheia: '+(kind==='screen'?'tela':'câmera')+' de '+p.name);button.onclick=()=>fullscreen(p,kind);cell.querySelector('.focus-'+kind).ondblclick=()=>fullscreen(p,kind);}
       const watch=cell.querySelector('.focus-watch');watch.hidden=!p.screenOffered||p.watching;watch.onclick=()=>window.TronoSocial.toggleWatchStream(p.id);
+      const cameraToggle=cell.querySelector('.focus-camera-toggle');cameraToggle.hidden=p.self||!p.cameraOffered;cameraToggle.textContent=p.cameraHidden?'Mostrar câmera':'Ocultar câmera';cameraToggle.setAttribute('aria-label',(p.cameraHidden?'Mostrar':'Ocultar')+' câmera de '+p.name+' na grade');cameraToggle.onclick=()=>window.TronoSocial.toggleWatchCamera(p.id);
       cell.querySelector('.focus-video-placeholder').hidden=!!camera||!!screen;
     }
     if(!visible.length){const empty=document.createElement('p');empty.className='mosaic-empty';empty.textContent='Selecione até seis pessoas para montar sua grade.';host.appendChild(empty);}
@@ -41,7 +42,7 @@ window.TronoMosaic=(()=>{
     $('mediaFocusFullscreen').onclick=()=>{const p=sources().find(p=>selected.has(p.id)&&(p.screen||p.camera));fullscreen(p,p?.screen?'screen':'camera');};
     $('mediaFocusDialog').addEventListener('close',()=>{if(!$('mediaFocusDialog').open){cleanup();selected.clear();}});
     new MutationObserver(schedule).observe($('mediaMosaic'),{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-    window.addEventListener('trono-call-change',schedule);window.addEventListener('resize',schedule);
+    window.addEventListener('trono-call-change',schedule);window.addEventListener('trono-media-change',schedule);window.addEventListener('resize',schedule);
     window.TronoNetwork.onMessage(message=>{if(['voice-roster','voice-state','channel-deleted'].includes(message.type))schedule();});render();
   }
   window.addEventListener('DOMContentLoaded',bind);
