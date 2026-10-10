@@ -4,6 +4,13 @@
 if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const $=id=>document.getElementById(id),body=document.body;
   body.classList.add('desktop-app');
+  const help={
+    '.clips-footnote':'Clipes guardados neste aplicativo e nesta conta. Salve os que quiser manter definitivamente.',
+    '.appearance-help':'Aplica na hora, só para você neste aplicativo. Não muda o tema dos outros na chamada.',
+    '#voiceLightModeHelp':'Usa a redução de ruído básica em vez do RNNoise e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.',
+    '[data-settings-panel="video"] .settings-context-help':'No seletor do aplicativo, ative o áudio do computador se quiser incluí-lo. Ele pode captar as vozes da chamada e causar eco. Esta opção vale para a próxima transmissão.'
+  };
+  for(const [selector,text]of Object.entries(help))document.querySelector(selector).textContent=text;
   const icons={home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',game:'<path d="m3 6 4 4 5-6 5 6 4-4-2 13H5z"/>',community:'<path d="M21 11a8 8 0 0 1-8 8H8l-5 3V11a9 9 0 0 1 18 0Z"/><path d="M8 10h8M8 14h5"/>',clips:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4zM3 7h18"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>'};
   const rail=document.createElement('nav');rail.id='desktopRail';rail.setAttribute('aria-label','Áreas do aplicativo');
   rail.innerHTML='<div class="desktop-brand" title="M&N · A Lei do Trono">M<span>&</span>N</div>';
