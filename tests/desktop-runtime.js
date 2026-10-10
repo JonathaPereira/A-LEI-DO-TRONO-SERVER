@@ -7,7 +7,7 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
   try{
     app=await _electron.launch({executablePath:require('../desktop/app/node_modules/electron'),args:[path.resolve(__dirname,'../desktop/app'),'--user-data-dir='+directory],timeout:40000});
     const page=await app.firstWindow();await expect(page.locator('#desktopRail')).toBeVisible({timeout:30000});assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
-    await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authClose').click();
+    await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authCloseBtn').click();
     assert.equal(await page.evaluate(()=>typeof require),'undefined');assert.equal(await page.evaluate(()=>typeof process),'undefined');assert.equal(await page.evaluate(()=>window.TronoDesktop.version),'0.1.0');
     await page.locator('[data-desktop-route="clips"]').click();await expect(page.locator('.desktop-clips-page')).toBeVisible();await page.locator('[data-desktop-route="home"]').click();await expect(page.locator('#portalScreen')).toBeVisible();
     // The installed bundle never falls back to remote Surge files.
