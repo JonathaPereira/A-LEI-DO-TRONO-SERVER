@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('TronoDesktop',{
   onCaptureCancel:fn=>listen('mn:capture-cancel',fn),
   selectCapture:choice=>ipcRenderer.invoke('mn:capture-select',choice),
   chooseFolder:()=>ipcRenderer.invoke('mn:folder'),
+  openAttachment:choice=>ipcRenderer.invoke('mn:attachment',choice),
   saveClip:data=>ipcRenderer.invoke('mn:clip-save',data)
 });

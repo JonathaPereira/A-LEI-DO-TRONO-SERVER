@@ -2,11 +2,13 @@
 // Real Electron/Windows smoke test; browser flow coverage is in desktop-browser.js.
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync}=require('node:child_process');
 const {_electron,expect}=require('@playwright/test');
+const {startHTTPS}=require('./desktop-https-fixture');
 test('installed desktop boundary, native shortcut, picker and filesystem integration',{timeout:90000},async t=>{
-  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,phase='launch',finished=false;
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,api,phase='launch',finished=false;
   t.signal.addEventListener('abort',()=>{if(!finished){console.error('Desktop test stalled at: '+phase);app?.process().kill();}},{once:true});
   try{
-    app=await _electron.launch({executablePath:require('../desktop/app/node_modules/electron'),args:[path.resolve(__dirname,'../desktop/app'),'--user-data-dir='+directory,'--desktop-diagnostics',...(process.platform==='linux'?['--no-sandbox']:[])],timeout:40000});
+    api=await startHTTPS(directory);
+    app=await _electron.launch({executablePath:require('../desktop/app/node_modules/electron'),args:[path.resolve(__dirname,'../desktop/app'),'--user-data-dir='+directory,'--desktop-diagnostics','--desktop-api-test-origin='+api.url,...(process.platform==='linux'?['--no-sandbox']:[])],timeout:40000});
     app.process().stderr.on('data',chunk=>{for(const line of chunk.toString().split('\n'))if(line.startsWith('[desktop]'))console.log(line);});
     const page=await app.firstWindow();await expect(page.locator('#desktopRail')).toBeVisible({timeout:30000});assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
     await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authCloseBtn').click();
@@ -38,9 +40,16 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     await expect(page.locator('.desktop-capture-dialog')).toBeVisible({timeout:30000});await page.locator('.desktop-capture-dialog .dialog-close').click();assert(['NotAllowedError','AbortError'].includes(await page.evaluate(()=>window.__captureResult)));
     await page.locator('#runtimeShare').click();await expect(page.locator('.desktop-capture-sources button').first()).toBeVisible();await page.locator('.desktop-capture-sources button').first().click();assert.equal(await page.evaluate(()=>window.__captureResult),'active');assert.equal(await page.evaluate(()=>window.__nativeStream.getVideoTracks()[0].readyState),'live');await page.evaluate(()=>window.__nativeStream.getTracks().forEach(track=>track.stop()));
     phase='RNNoise in installed bundle';assert(await page.evaluate(async()=>{const context=new AudioContext({sampleRate:48000});let processor;try{await context.resume();processor=await window.TronoNoise.create(context);return processor.node instanceof AudioWorkletNode;}finally{processor?.destroy();await context.close();}}));
+    phase='HTTPS API compatibility';
+    // Trust only this disposable localhost certificate, exclusively in the test.
+    await app.evaluate(({session,BrowserWindow})=>{const verify=(request,callback)=>callback(request.hostname==='127.0.0.1'?0:-3);session.defaultSession.setCertificateVerifyProc(verify);BrowserWindow.getAllWindows()[0].webContents.session.setCertificateVerifyProc(verify);session.fromPartition('persist:mn-attachments').setCertificateVerifyProc(verify);});
+    const posted=await page.evaluate(async url=>{const response=await fetch(url+'/api',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-only'},referrerPolicy:'no-referrer',body:JSON.stringify({test:'desktop-body'}),signal:AbortSignal.timeout(10000)});return response.json();},api.url);assert.equal(posted.method,'POST');assert.equal(posted.origin,'https://a-lei-do-trono.surge.sh');assert.equal(posted.authorization,'Bearer fixture-only');assert.deepEqual(JSON.parse(posted.body),{test:'desktop-body'});
+    const uploaded=await page.evaluate(url=>new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST',url+'/upload');xhr.setRequestHeader('Content-Type','application/octet-stream');xhr.setRequestHeader('X-File-Name','fixture.webm');xhr.onload=()=>resolve(JSON.parse(xhr.responseText));xhr.onerror=reject;xhr.send(new Blob(['upload-bytes']));}),api.url);assert.equal(uploaded.origin,'https://a-lei-do-trono.surge.sh');assert.equal(uploaded.filename,'fixture.webm');assert.equal(uploaded.body,'upload-bytes');
+    phase='attachment partition isolation';const opened=app.waitForEvent('window');await page.evaluate(url=>window.TronoDesktop.openAttachment({url:url+'/doc'}),api.url);const popup=await opened;
+    assert.equal(await popup.evaluate(()=>typeof window.TronoDesktop),'undefined');assert.equal(await popup.evaluate(()=>window.opener),null);const sessions=await app.evaluate(({BrowserWindow,session})=>BrowserWindow.getAllWindows().map(win=>({url:win.webContents.getURL(),app:win.webContents.session===session.fromPartition('persist:mn-trono'),attachment:win.webContents.session===session.fromPartition('persist:mn-attachments')})));assert.equal(sessions.filter(win=>win.app).length,1,JSON.stringify(sessions));assert.equal(sessions.filter(win=>win.attachment).length,1,JSON.stringify(sessions));await popup.close();
     await page.screenshot({path:path.resolve(__dirname,'../artifacts/windows-app-runtime.png')});
     // Closing the window retains the process/call for the tray; quit is explicit.
     phase='tray close';await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].close());assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible()),false);
   }catch(error){error.message='Desktop phase: '+phase+'\n'+error.message;throw error;}
-  finally{finished=true;if(app){const timer=setTimeout(()=>app.process().kill(),5000);try{await app.close();}finally{clearTimeout(timer);}}await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
+  finally{finished=true;if(app){const timer=setTimeout(()=>app.process().kill(),5000);try{await app.close();}finally{clearTimeout(timer);}}await api?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
 });

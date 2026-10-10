@@ -1,6 +1,7 @@
 'use strict';
 const path=require('node:path');
 const APP_ORIGIN='https://a-lei-do-trono.surge.sh';
+const BACKEND_ORIGIN='https://a-lei-do-trono-server.onrender.com';
 function isAppURL(value){try{return new URL(value).origin===APP_ORIGIN;}catch{return false;}}
 function bundlePath(root,url){
   if(!isAppURL(url))throw Error('Invalid application origin');
@@ -18,4 +19,4 @@ function accelerator(value){
   if(!value.ctrl&&!value.alt&&!value.meta&&!/^F/.test(code))throw Error('Use Ctrl/Alt/Win com uma tecla ou uma tecla F livre.');
   return [value.ctrl?'Control':'',value.alt?'Alt':'',value.shift?'Shift':'',value.meta?'Super':'',code.replace(/^Key|^Digit/,'')].filter(Boolean).join('+');
 }
-module.exports={APP_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator};
+module.exports={APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator};

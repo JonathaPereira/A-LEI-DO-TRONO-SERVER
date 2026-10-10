@@ -1,7 +1,7 @@
 'use strict';
 const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell}=require('electron');
 const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('node:crypto'),{pathToFileURL}=require('node:url');
-const {APP_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
+const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
 let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false;
@@ -20,18 +20,32 @@ function clearHotkey(){if(hotkey)globalShortcut.unregister(hotkey);hotkey=null;c
 async function start(){
   app.setAppUserModelId('com.jonatha.mn.trono');
   const browserSession=session.fromPartition('persist:mn-trono');
+  const attachmentSession=session.fromPartition('persist:mn-attachments');
+  attachmentSession.setPermissionCheckHandler(()=>false);attachmentSession.setPermissionRequestHandler((_,__,callback)=>callback(false));
+  // This partition contains only the installed UI. External frames are blocked
+  // by CSP and all popups get a separate, unprivileged network session.
+  let testAPI=null;
+  if(!app.isPackaged){try{const candidate=new URL(app.commandLine.getSwitchValue('desktop-api-test-origin'));if(candidate.protocol==='https:'&&candidate.hostname==='127.0.0.1')testAPI=candidate.origin;}catch{}}
   // Local, versioned UI uses the existing origin for API/WS compatibility.
   // Every request to this origin is served only from the installed bundle.
   // There is no remote-site fallback with desktop privileges.
   await browserSession.protocol.handle('https',async request=>{
-    if(!isAppURL(request.url))return net.fetch(request,{bypassCustomProtocolHandlers:true});
+    if(!isAppURL(request.url)){
+      const headers=new Headers(request.headers),target=new URL(request.url).origin;
+      // Protocol requests omit Chromium's automatic Origin header, including
+      // no-referrer auth POSTs and XHR uploads. The app's dedicated partition
+      // supplies its origin only to its own backend; foreign pages never use
+      // this partition or receive desktop capabilities.
+      if((target===BACKEND_ORIGIN||target===testAPI)&&!headers.has('origin'))headers.set('Origin',APP_ORIGIN);
+      return net.fetch(request,{headers,bypassCustomProtocolHandlers:true});
+    }
     if(!['GET','HEAD'].includes(request.method))return new Response('',{status:405});
     try{
       const file=bundlePath(root,request.url),real=await fs.realpath(file),realRoot=await fs.realpath(root);
       if(!real.startsWith(realRoot+path.sep))return new Response('',{status:403});
       const response=await net.fetch(pathToFileURL(real).href),headers=new Headers(response.headers);
       headers.set('Cache-Control','no-store');
-      headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; worker-src 'self' blob:; frame-src 'self' blob: https:; object-src 'none'");
+      headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'");
       return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
@@ -46,9 +60,18 @@ async function start(){
   window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace){clearHotkey();cancelCapture();}});
   window.webContents.on('will-navigate',(event,url)=>{if(!isAppURL(url)){event.preventDefault();if(/^https:\/\//.test(url))void shell.openExternal(url);}});
   window.webContents.on('will-attach-webview',event=>event.preventDefault());
-  window.webContents.setWindowOpenHandler(({url})=>{
-    if(url==='about:blank'||/^https:\/\//.test(url))return {action:'allow',overrideBrowserWindowOptions:{webPreferences:{preload:undefined,nodeIntegration:false,contextIsolation:true,sandbox:true}}};
-    return {action:'deny'};
+  // window.open inherits the opener's Chromium partition, even with some
+  // BrowserWindow overrides. File viewers are created through the fixed IPC
+  // below, so foreign content never enters the app's API network partition.
+  window.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))void shell.openExternal(url);return {action:'deny'};});
+  ipcMain.handle('mn:attachment',(event,choice)=>{
+    trusted(event);if(typeof choice?.url!=='string'||choice.url.length>16384)throw Error('Link de arquivo inválido.');
+    const target=new URL(choice.url);if(target.protocol!=='https:'||target.username||target.password||isAppURL(target.href))throw Error('Link de arquivo inválido.');
+    const viewer=new BrowserWindow({title:'Arquivo · M&N',width:1024,height:760,icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:attachmentSession,nodeIntegration:false,contextIsolation:true,sandbox:true}});
+    const navigate=(event,url)=>{if(isAppURL(url)){event.preventDefault();void shell.openExternal(url);}};
+    viewer.webContents.on('will-navigate',navigate);viewer.webContents.on('will-redirect',navigate);
+    viewer.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))void shell.openExternal(url);return {action:'deny'};});
+    void viewer.loadURL(target.href).catch(error=>{if(error.code==='ERR_ABORTED'){viewer.destroy();return;}dialog.showErrorBox('Não foi possível abrir o arquivo',error.message);viewer.destroy();});return {opened:true};
   });
   browserSession.setPermissionCheckHandler((contents,permission,origin)=>{trace('permission',permission,origin,contents===window.webContents);return contents===window.webContents&&isAppURL(origin)&&['media','display-capture','fullscreen','speaker-selection','clipboard-sanitized-write'].includes(permission);});
   browserSession.setPermissionRequestHandler(async(contents,permission,callback,details)=>{
