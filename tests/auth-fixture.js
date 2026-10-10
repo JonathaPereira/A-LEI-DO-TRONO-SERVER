@@ -3,7 +3,7 @@
 const http=require('http'),crypto=require('crypto'),path=require('path'),{spawn}=require('child_process');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false,soundboard=false}={}){
-  const users=new Map(),access=new Map(),refresh=new Map(),links=new Map();let backend;
+  const users=new Map(),access=new Map(),refresh=new Map(),links=new Map(),chatMessages=new Map(),historyState={fail:false};let backend;
   const channels=new Map([['chat-livre','Geral'],['chat-jogos','Jogos'],['chat-conversa','Conversa']].map(([id,name])=>[id,{id,name,description:'',channel_type:'mixed'}]));
   const role=u=>u.email_confirmed_at&&u.email.toLowerCase()==='jonathapereira.jj@gmail.com'?'creator':u.community_role||'member';
   const soundId='30000000-0000-4000-8000-000000000001';
@@ -66,6 +66,14 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
       return reply(200,url.searchParams.get('id')==='eq.'+soundId?[{id:soundId,owner_id:[...users.values()][0]?.id,name:'Efeito',bytes:32044,mime:'audio/wav',kind:'soundboard',room_id:null,duration_ms:1000,state:'ready',created_at:new Date().toISOString()}]:[]);
     }
+    if(url.pathname==='/rest/v1/rpc/chat_history_append'||url.pathname==='/rest/v1/rpc/chat_history_read'){
+      if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
+      if(historyState.fail)return reply(503,{});
+      const channel=channels.get(body.p_room);if(!channel||channel.deleted_at||channel.channel_type==='voice')return reply(400,{message:'CHANNEL_NOT_FOUND'});
+      if(url.pathname.endsWith('append')){chatMessages.set(body.p_id,body.p_message);return reply(200,null);}
+      const messages=[...chatMessages.values()].filter(m=>m.roomId===body.p_room).reverse(),before=body.p_before?messages.findIndex(m=>m.id===body.p_before):-1;
+      return reply(200,(body.p_before&&before<0?[]:messages.slice(before+1,before+1+body.p_limit+1)).map(message=>({message})));
+    }
     if(url.pathname==='/rest/v1/rpc/update_chat_profile'){
       if(!record)return fail('bad_jwt',401);if([...users.values()].some(u=>u.id!==record.user.id&&u.nickname.toLowerCase()===body.p_nickname.toLowerCase()))return reply(409,{message:'NICKNAME_TAKEN'});record.user.nickname=body.p_nickname;record.user.avatar_preset=body.p_preset;record.user.avatar_file_id=body.p_file;return reply(200,{});
     }
@@ -75,13 +83,18 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     reply(404,{});
   });
   await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
-  backend=spawn(process.execPath,[path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',SUPABASE_SECRET_KEY:'sb_secret_fixture_only',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':'',...(soundboard?{R2_ACCOUNT_ID:'a'.repeat(32),R2_BUCKET:'fixture',R2_ACCESS_KEY_ID:'fixture-only',R2_SECRET_ACCESS_KEY:'fixture-only'}:{})},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
   const base=`http://127.0.0.1:${port}`;
-  for(let attempt=0;attempt<100;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===99)throw new Error('Backend did not start: '+logs);await wait(50);}
+  async function boot(){
+  backend=spawn(process.execPath,[path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',SUPABASE_SECRET_KEY:'sb_secret_fixture_only',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':'',...(soundboard?{R2_ACCOUNT_ID:'a'.repeat(32),R2_BUCKET:'fixture',R2_ACCESS_KEY_ID:'fixture-only',R2_SECRET_ACCESS_KEY:'fixture-only'}:{})},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
+    for(let attempt=0;attempt<100;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===99)throw new Error('Backend did not start: '+logs);await wait(50);}
+  }
+  async function stopBackend(){const child=backend;if(child.exitCode!==null)return;const closed=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),2000);await closed;clearTimeout(timer);}
+  await boot();
   async function call(endpoint,body,token,origin=appOrigin,method='POST'){
     const r=await fetch(`${base}/auth/${endpoint}`,{method,headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:`Bearer ${token}`}:{})},body:method==='GET'?undefined:JSON.stringify(body)});return {status:r.status,data:await r.json(),headers:r.headers};
   }
-  async function stop(){backend.kill('SIGTERM');await wait(150);if(backend.exitCode===null)backend.kill('SIGKILL');await new Promise(resolve=>provider.close(resolve));}
-  return {base,call,users,links,stop,appOrigin,soundId};
+  async function stop(){await stopBackend();await new Promise(resolve=>provider.close(resolve));}
+  async function restart(){await stopBackend();await boot();}
+  return {base,call,users,links,stop,restart,chatMessages,historyState,appOrigin,soundId};
 }
 module.exports={startFixture};

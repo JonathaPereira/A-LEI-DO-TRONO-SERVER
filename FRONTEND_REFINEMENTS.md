@@ -1,51 +1,71 @@
-# Publicar correções de texto, voz e transmissão
+# Publicar texto independente e histórico persistente
 
 Esta atualização parte da atualização de comunidade já instalada. Ela modifica
 o backend e o frontend para separar a navegação de texto da sala de voz.
-Não há nova migração SQL nem novas variáveis de ambiente.
+As mensagens dos canais de texto/mistos passam a ser salvas no Supabase.
+Esta versão exige **upgrade-chat-history.sql**; não há novas variáveis de ambiente.
+Ela reutiliza SUPABASE_URL e a chave secreta do backend já usada pela comunidade.
+Mensagens anteriores que só existiam na memória do servidor antigo não são
+recuperadas por esta migração. A persistência vale para mensagens enviadas
+depois de instalar esta atualização.
 
-1. Atualize a branch `main` do GitHub com as alterações da branch
-   `codex/frontend-refinements` (PR #2). Se aparecer como rascunho, use
+Baixe o ZIP atualizado do GitHub e extraia-o antes de começar os passos abaixo.
+
+1. No Supabase, abra **SQL Editor → New query**. Abra o arquivo
+   `supabase/upgrade-chat-history.sql` do ZIP atualizado, copie **todo** o conteúdo
+   e execute com **Run**. Essa migração deve ser aplicada depois da atualização
+   de comunidade já instalada; pode ser repetida sem apagar as mensagens.
+2. Atualize a branch `main` do GitHub com as alterações da branch
+   `codex/text-chat-history` (novo pull request). Se aparecer como rascunho, use
    **Ready for review** antes de **Merge pull request**. O backend desta correção altera
-   `server.js` e `community.js`; os demais arquivos do projeto devem ser
+   `server.js` e o novo `chat-history.js`; os demais arquivos do projeto devem ser
    preservados. As alterações em `package.json` acrescentam o teste de regressão.
-2. No Render, abra o serviço do backend e use **Manual Deploy → Deploy latest
+3. No Render, abra o serviço do backend e use **Manual Deploy → Deploy latest
    commit**, se o deploy automático ainda não começou. Aguarde **Live**.
    Os comandos continuam `npm install` e `npm start`.
-3. Baixe o ZIP atualizado do GitHub, conectado à conta com acesso ao repositório,
-   e extraia-o. Abra a pasta `frontend` dentro do projeto extraído. Publique
+4. Depois que o backend estiver Live, abra a pasta `frontend` dentro do
+   projeto extraído do ZIP atualizado. Publique
    essa pasta completa, incluindo `stream-controls.js`, `network.js`, `game.js`,
    `social.js`, o CSS e `vendor/rnnoise/`.
-4. Clique com o botão direito dentro de `frontend` e escolha **Open Git Bash here**.
+5. Clique com o botão direito dentro de `frontend` e escolha **Open Git Bash here**.
    Execute:
 
    ```bash
    surge . a-lei-do-trono.surge.sh
    ```
 
-5. Abra `https://a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5** em todos
+6. Abra `https://a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5** em todos
    os computadores. O reinício do backend encerra as chamadas existentes;
    entre novamente na voz para conferir a correção.
 
-Publique o backend **antes** do frontend. A nova interface informa quando
+Execute o SQL, publique o backend e então publique o frontend, **nessa ordem**. A nova interface informa quando
 está conectada a um backend antigo, em vez de trocar a voz ao abrir texto.
 
 Não publique a raiz do backend no Surge. Publique a pasta `frontend` completa
 para incluir o CSS, a espada dos controles de volume e o modelo RNNoise.
 Não remova a pasta `vendor`: ela contém o processamento gratuito do microfone.
-Os arquivos da interface usam o identificador de cache `086textvoice`; o protocolo do
+Os arquivos da interface usam o identificador de cache `087persistentchat`; o protocolo do
 backend continua `0.8.0-alpha`.
 
 ## Comportamentos para conferir
 
 - Entre em uma sala de voz, ligue a câmera ou compartilhe uma tela e abra um
-  canal de texto: somente as mensagens mudam. O microfone, a câmera, a
+  canal de texto: as mensagens ocupam a área principal, sem o painel de câmeras.
+  A chamada fica conectada em segundo plano, com controles compactos abaixo
+  das mensagens e um botão para voltar à sala de voz. O microfone, a câmera, a
   transmissão e as streams assistidas continuam na sala de voz original.
   Voltar ao mesmo canal de voz não reconecta a chamada. Escolher outra sala
   de voz continua mudando a chamada para aquela sala.
 - Excluir um canal de texto não desconecta quem está em outra sala de voz.
   Excluir a sala de voz encerra aquela chamada e preserva o canal de texto
   aberto. As mensagens e os anexos seguem o canal de texto selecionado.
+- As novas mensagens sobrevivem a reinícios/deploys do backend e à saída de
+  todos do canal. O chat mostra as últimas 50 mensagens e **Mensagens anteriores**
+  carrega as páginas anteriores, sem excluir o histórico salvo. A conta autora
+  continua identificada após recarregar. Anexos excluídos continuam marcados
+  como excluídos ao ler o histórico. Se não for possível salvar uma mensagem,
+  ela não é transmitida como entregue; o rascunho de texto é restaurado quando
+  o campo está vazio e o mesmo canal continua aberto.
 
 - O portal mostra as duas mulheres, os textos e os botões em desktop e celular.
 - ⛶ e clique duplo abrem a câmera/tela em tela cheia; Esc volta à chamada.
@@ -119,7 +139,10 @@ determinístico e fala sintética, para conferir redução sem silenciar a fala.
 Ele não estabelece um percentual de redução em todos os microfones reais.
 Os testes do servidor conferem as duas associações independentes na mesma
 conexão autenticada, sinalização de voz, presença, mensagens, acesso a anexos,
-exclusão de canais e limpeza ao desconectar.
+exclusão de canais e limpeza ao desconectar. Os novos testes reiniciam o
+processo real do backend com um provedor de banco simulado que conserva os
+dados, e executam a migração real em PostgreSQL/PGlite para verificar
+permissões, páginas e reaplicação sem perda de mensagens.
 O cenário de duas pessoas injeta mídias geradas na entrada dos receptores
 para conferir a interface e o ciclo de mídia: o Chromium gerenciado deste
 ambiente bloqueia UDP direto, portanto esse cenário não valida transporte RTP

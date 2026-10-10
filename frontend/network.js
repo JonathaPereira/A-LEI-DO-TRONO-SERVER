@@ -115,6 +115,7 @@ window.TronoNetwork = (()=>{
     connect,authenticate,authenticateGuest,disconnect,joinRoom,joinTextChannel,leaveRoom,joinChatOnly:name=>joinRoom('chat-livre',name),joinChatChannel:(id,name)=>joinRoom(id,name),requestChatChannels:()=>send('list-chat-channels'),requestPresence:()=>send('presence-request'),
     requestRooms:()=>send('list-rooms'),setReady:r=>send('ready',{ready:!!r}),startRoom:()=>send('start-room'),
     gameAction:(action,payload={})=>send('game-action',{action,payload}),requestState:()=>send('state-request'),ping:()=>send('ping'),
+    requestChatHistory:before=>send('chat-history-request',{roomId:currentRoom,before}),
     sendChat:(text,attachmentId)=>!!currentRoom&&send('chat-message',{roomId:currentRoom,text,attachmentId}),
     async prepareVoice(){if(!await (primaryRoom?.startsWith('sala-')?ensureGameIdentity():ensureAuthenticated()))throw new Error('Entre na sua conta ou como convidado do jogo.');const requestId=makeId();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingSfu.delete(requestId);reject(new Error('Não foi possível sincronizar a chamada.'));},15000);pendingSfu.set(requestId,{resolve,reject,timer});send('voice-prepare',{requestId});});},
     fallbackVoice:()=>send('voice-fallback'),

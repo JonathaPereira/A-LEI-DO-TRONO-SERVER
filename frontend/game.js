@@ -1366,7 +1366,7 @@ async function switchChatChannel(channelId){
     chatChannelResumeVoice=wasInVoice&&!keepVoice;
     const online=await (textChannel?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));
     if(!online)throw new Error('Servidor indisponível.');
-    $('chatOnlyStatus').textContent=`Entrando no canal ${CHAT_CHANNEL_CATALOG.get(channelId).name}...`;
+    $('chatOnlyStatus').textContent=textChannel?'Abrindo mensagens...':`Entrando no canal ${CHAT_CHANNEL_CATALOG.get(channelId).name}...`;
     window.TronoSocial?.clearChannelChat?.();
   }catch(err){chatChannelResumeVoice=false;toast(err?.message||'Não foi possível trocar de canal.',2200);}
   finally{chatChannelSwitching=false;}
@@ -1379,7 +1379,7 @@ function renderChatChannels(channels=[]){
   for(const c of CHAT_CHANNEL_CATALOG.values()){
     const button=document.createElement('button');button.type='button';button.className='mn-channel'+(c.id===selected?' active':'');button.dataset.chatChannel=c.id;button.setAttribute('aria-current',c.id===selected?'page':'false');
     const icon=document.createElement('span');icon.className='channel-kind-icon';icon.textContent=c.type==='text'?'#':'♬';
-    const copy=document.createElement('span');copy.className='mn-channel-meta';const name=document.createElement('strong');name.textContent=c.name;const info=document.createElement('small');info.textContent=`${Number(c.count)||0} pessoas${c.voiceActive?' · voz ativa':''}${c.type==='mixed'?' · texto e voz':''}`;copy.append(name,info);button.append(icon,copy);(c.type==='text'?textHost:host).appendChild(button);
+    const copy=document.createElement('span');copy.className='mn-channel-meta';const name=document.createElement('strong');name.textContent=c.name;const info=document.createElement('small');info.textContent=c.type==='text'?'Canal de texto':`${Number(c.count)||0} pessoas${c.voiceActive?' · voz ativa':''}${c.type==='mixed'?' · texto e voz':''}`;copy.append(name,info);button.append(icon,copy);(c.type==='text'?textHost:host).appendChild(button);
   }
   for(const target of [host,textHost])if(!target.children.length){const empty=document.createElement('small');empty.className='channel-empty';empty.textContent='Nenhum canal';target.appendChild(empty);}
   window.TronoCommunity?.renderRoomIcons?.();

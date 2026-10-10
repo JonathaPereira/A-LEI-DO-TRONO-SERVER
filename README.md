@@ -1,6 +1,6 @@
 # A Lei do Trono — v0.8.0 Alpha + atualização da comunidade
 
-Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jogar e usar texto e voz da mesa; acesso ao M&N, anexos e operações SFU exige autenticação. Antes do deploy, siga ATUALIZAR_v0.8.0.md e execute supabase/upgrade-v080.sql depois do SQL da v0.7.9. Instalações novas precisam de schema.sql, upgrade-v079.sql e upgrade-v080.sql, nessa ordem. Preserve as configurações de Supabase/SMTP, R2 e Realtime/TURN já utilizadas.
+Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jogar e usar texto e voz da mesa; acesso ao M&N, anexos e operações SFU exige autenticação. Antes do deploy, siga ATUALIZAR_v0.8.0.md e execute supabase/upgrade-v080.sql depois do SQL da v0.7.9. Instalações novas precisam de schema.sql, upgrade-v079.sql, upgrade-v080.sql, upgrade-community.sql e upgrade-chat-history.sql, nessa ordem. Preserve as configurações de Supabase/SMTP, R2 e Realtime/TURN já utilizadas.
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
@@ -32,6 +32,7 @@ o jogo como convidado pode ser validado sem essas credenciais.
 - `server.js`
 - `auth.js`
 - `files.js`
+- `chat-history.js`
 - `community.js`
 - `community-management.js`
 - `roles.js`
@@ -40,6 +41,7 @@ o jogo como convidado pode ser validado sem essas credenciais.
 - `supabase/upgrade-v079.sql` (perfis e anexos)
 - `supabase/upgrade-v080.sql` (diretório de membros para o backend)
 - `supabase/upgrade-community.sql` (cargos, canais e efeitos sonoros)
+- `supabase/upgrade-chat-history.sql` (mensagens persistentes)
 - `realtime-sfu.js`
 - `package.json`
 
@@ -108,3 +110,21 @@ Consulte ATUALIZAR_v0.8.0.md. Adicione SUPABASE_SECRET_KEY e as quatro variávei
 ## Convidados e presença v0.8.0
 
 O backend valida a identidade temporária de convidado e restringe suas operações à mesa do jogo. O diretório de contas confirmadas é obtido por uma função SQL exclusiva da chave de serviço; não inclui e-mails ou senhas. O health informa `presence.directoryReady`. Eventos de voz diferenciam entrada, saída e desconexão. Veja ATUALIZAR_v0.8.0.md para validar o fluxo completo.
+
+## Texto independente e histórico persistente
+
+Abrir um canal de texto mostra as mensagens como área principal e mantém a
+chamada na sala de voz original, com controles compactos. As mensagens de
+texto/mistos são gravadas no Supabase antes de serem transmitidas. O histórico
+sobrevive a deploys e à saída de todos do canal; páginas de 50 mensagens podem
+ser carregadas pelo botão Mensagens anteriores. As mensagens da mesa do jogo
+continuam temporárias e convidados não acessam o histórico da comunidade.
+
+Execute `supabase/upgrade-chat-history.sql` antes de publicar esta versão do
+backend. Reutiliza `SUPABASE_URL` e `SUPABASE_SECRET_KEY` (ou a chave legada de
+serviço), sem depender do R2 para texto. Tabela e RPCs são acessíveis somente
+pelo backend; ele valida autenticação e associação ao canal em cada leitura.
+`/health` informa `chatHistory.configured` e `chatHistory.ready` após uma operação.
+Veja [FRONTEND_REFINEMENTS.md](FRONTEND_REFINEMENTS.md) para publicar SQL,
+backend e frontend, nessa ordem. A migração não recupera mensagens que só
+estavam na memória do backend antigo.

@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
-  <script src="auth-boot.js?v=086textvoice"></script>
-  <link rel="stylesheet" href="style.css?v=086textvoice" />
-  <link rel="stylesheet" href="mn-chat.css?v=086textvoice" />
-  <link rel="stylesheet" href="auth.css?v=086textvoice" />
-  <link rel="stylesheet" href="profile-files.css?v=086textvoice" />
-  <link rel="stylesheet" href="community.css?v=086textvoice" />
-  <link rel="stylesheet" href="modern.css?v=086textvoice" />
-  <link rel="stylesheet" href="refinements.css?v=086textvoice" />
-  <link rel="stylesheet" href="appearance.css?v=086textvoice" />
-  <link rel="stylesheet" href="call-media.css?v=086textvoice" />
+  <script src="auth-boot.js?v=087persistentchat"></script>
+  <link rel="stylesheet" href="style.css?v=087persistentchat" />
+  <link rel="stylesheet" href="mn-chat.css?v=087persistentchat" />
+  <link rel="stylesheet" href="auth.css?v=087persistentchat" />
+  <link rel="stylesheet" href="profile-files.css?v=087persistentchat" />
+  <link rel="stylesheet" href="community.css?v=087persistentchat" />
+  <link rel="stylesheet" href="modern.css?v=087persistentchat" />
+  <link rel="stylesheet" href="refinements.css?v=087persistentchat" />
+  <link rel="stylesheet" href="appearance.css?v=087persistentchat" />
+  <link rel="stylesheet" href="call-media.css?v=087persistentchat" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -236,6 +236,7 @@
     <div id="socialDragHandle" class="social-head"><div><small>SALA DE VOZ</small><strong id="mnStageRoomName">Geral</strong></div><div class="social-head-actions"><button id="socialModeBtn" title="Alternar janela completa/flutuante">▱ Flutuante</button><button id="socialCloseBtn" title="Minimizar">—</button></div></div>
     <section class="court-chat-section" aria-label="Mensagens de texto">
       <div class="court-chat-title"><div><small>MENSAGENS</small><strong># conversa</strong></div><div class="chat-title-actions"><button id="channelFilesBtn" class="small-btn" type="button" title="Ver fotos e anexos do canal">Anexos</button><button id="muteTextBtn" class="small-btn">Silenciar chat</button><button id="chatDrawerCloseBtn" class="chat-drawer-close" title="Fechar chat">×</button></div></div>
+      <button id="olderChatMessages" type="button" class="older-chat-messages hidden">Mensagens anteriores</button>
       <div id="courtChatMessages" class="court-chat-messages" aria-live="polite"></div>
       <div class="court-chat-compose">
         <button id="attachFileBtn" class="emoji-trigger" type="button" title="Anexar arquivo: 10 MB; vídeo MP4: 100 MB" aria-label="Anexar arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M8 14l7-7a3 3 0 014 4L9 21a5 5 0 01-7-7L12 4a6 6 0 018 8L10 22M5 17l11-11"/></svg></button>
@@ -249,6 +250,7 @@
       <small class="chat-help">Enter envia • 10 MB por arquivo • 100 MB por vídeo MP4/WebM • 300 caracteres</small>
     </section>
     <section class="voice-section">
+      <div class="text-voice-connection"><span id="textVoiceRoomName"></span><button id="returnToVoiceRoom" type="button">Voltar à sala de voz</button></div>
     <div class="voice-title"><div><strong>O papo acontece aqui.</strong><small class="voice-subtitle">Microfone, câmera ou tela. Do seu jeito.</small></div><span id="voiceStatus" role="status" aria-live="polite">Fora do chat de voz.</span><button id="resumeAudioBtn" class="royal-btn hidden" type="button">🔊 Liberar áudio</button></div>
       <div class="voice-actions call-toolbar call-control-columns" aria-label="Controles principais da chamada">
         <div class="call-control-group call-control-primary">
@@ -480,24 +482,24 @@
     <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
-  <script src="audio.js?v=086textvoice"></script>
-  <script src="network.js?v=086textvoice"></script>
-  <script src="auth.js?v=086textvoice"></script>
-  <script src="rtc-config.js?v=086textvoice"></script>
-  <script src="audio-gain.js?v=086textvoice"></script>
-  <script src="avatar-icons.js?v=086textvoice"></script>
-  <script src="profile-files.js?v=086textvoice"></script>
-  <script src="noise-suppression.js?v=086textvoice"></script>
-  <script src="stream-controls.js?v=086textvoice"></script>
-  <script src="social.js?v=086textvoice"></script>
-  <script src="recording.js?v=086textvoice"></script>
-  <script src="game.js?v=086textvoice"></script>
-  <script src="portal.js?v=086textvoice"></script>
-  <script src="community.js?v=086textvoice"></script>
-  <script src="community-admin.js?v=086textvoice"></script>
-  <script src="soundboard-client.js?v=086textvoice"></script>
-  <script src="media-mosaic.js?v=086textvoice"></script>
-  <script src="appearance.js?v=086textvoice"></script>
-  <script src="panel-layout.js?v=086textvoice"></script>
+  <script src="audio.js?v=087persistentchat"></script>
+  <script src="network.js?v=087persistentchat"></script>
+  <script src="auth.js?v=087persistentchat"></script>
+  <script src="rtc-config.js?v=087persistentchat"></script>
+  <script src="audio-gain.js?v=087persistentchat"></script>
+  <script src="avatar-icons.js?v=087persistentchat"></script>
+  <script src="profile-files.js?v=087persistentchat"></script>
+  <script src="noise-suppression.js?v=087persistentchat"></script>
+  <script src="stream-controls.js?v=087persistentchat"></script>
+  <script src="social.js?v=087persistentchat"></script>
+  <script src="recording.js?v=087persistentchat"></script>
+  <script src="game.js?v=087persistentchat"></script>
+  <script src="portal.js?v=087persistentchat"></script>
+  <script src="community.js?v=087persistentchat"></script>
+  <script src="community-admin.js?v=087persistentchat"></script>
+  <script src="soundboard-client.js?v=087persistentchat"></script>
+  <script src="media-mosaic.js?v=087persistentchat"></script>
+  <script src="appearance.js?v=087persistentchat"></script>
+  <script src="panel-layout.js?v=087persistentchat"></script>
 </body>
 </html>
