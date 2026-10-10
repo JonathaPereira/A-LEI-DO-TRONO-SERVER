@@ -1,4 +1,4 @@
-# Publicar o modo leve para jogar
+# Publicar clipes de replay e modo leve para jogar
 
 Esta versão modifica apenas o frontend. O backend e a migração do histórico
 continuam iguais à correção de mensagens já publicada. Não há SQL, dependências
@@ -19,14 +19,65 @@ causados pelo jogo, por drivers de áudio ou pela rede.
    ```
 
 4. Recarregue o site com **Ctrl+F5** em cada computador.
-5. Quem está jogando deve abrir **Configurações da chamada → Áudio** e ligar
-   **Modo leve para jogar**. O botão vale apenas para este navegador/aparelho
-   e a preferência continua após recarregar a página.
+5. Abra **Clipes** no cabeçalho do M&N ou do jogo para configurar os replays.
+   Para reduzir o trabalho do chat enquanto joga, abra também
+   **Configurações da chamada → Áudio → Modo leve para jogar**. As preferências
+   são locais e continuam após recarregar a página.
 
 A branch `codex/voice-light-mode` guarda a atualização para revisão no GitHub.
 A publicação desta versão exige somente o frontend no Surge. Se você fizer
 merge e o Render estiver com deploy automático, ele poderá reiniciar o backend,
 embora não haja mudança de código do servidor.
+
+## Usar os clipes
+
+1. Clique em **Clipes**. Escolha qualidade, FPS, duração do replay e um atalho.
+   O padrão é 720p/30 FPS, últimos 30 segundos e **Ctrl+Shift+X**.
+2. Clique em **Escolher tela ou jogo** e selecione seu monitor principal ou
+   a janela do jogo no seletor do navegador. A escolha e a permissão precisam
+   ser feitas novamente a cada captura; o site não escolhe o monitor sozinho.
+3. Aguarde o buffer ficar disponível. Use **Clipar** ou o atalho para guardar
+   o trecho anterior, continuando a captura para criar outros clipes.
+4. Em **Clipes armazenados**, abra a **Prévia**, **Salve** cada clipe que quiser
+   guardar definitivamente ou **Descarte**. Escolher a pasta só define o destino;
+   não exporta nada até clicar em Salvar. Arquivos já exportados não são apagados
+   ao remover o item da lista.
+
+A pasta escolhida usa a API de arquivos do Chrome/Edge, quando disponível,
+e o navegador pode pedir permissão de novo. Sem essa API, o botão Salvar usa
+Downloads. O navegador decide o caminho de Downloads conforme suas configurações.
+Quando o download é solicitado, a cópia local continua disponível para repetir
+ou descartar depois de conferir o arquivo. Cancelar ou falhar ao salvar mantém
+o clipe pendente. Os vídeos são WebM, sem necessidade de serviços pagos.
+
+O atalho funciona apenas com esta página ou a janela de clipes em foco.
+**Não funciona como atalho global enquanto o jogo está em foco.** Quando o
+navegador oferecer **Janela flutuante**, ela mostra o botão Clipar e a quantidade
+de pendentes; é possível clicar nela durante jogos em janela/sem borda.
+Sobrepor jogos em tela cheia exclusiva depende do sistema operacional.
+
+Clipes são locais: ficam em IndexedDB, separados por conta, neste navegador
+e endereço do site. Recarregar e publicar um novo frontend no mesmo domínio
+preserva os pendentes; trocar computador/navegador/domínio não os transfere.
+Limpar dados do site ou a remoção dos dados pelo navegador pode apagá-los.
+Se faltar espaço ou acesso ao armazenamento, a captura é interrompida e o
+clipe é mantido somente na sessão, com aviso para salvar/descartar antes de
+retomar ou fechar. Não são enviados ao Supabase ou ao R2.
+
+Capturar clipes é independente de ligar câmera, microfone ou transmitir para
+a sala. A opção de áudio inclui apenas o áudio da origem quando o navegador
+permitir; não abre o microfone. O site solicita exclusão do próprio áudio da
+chamada, mas o suporte depende do navegador e da origem escolhida.
+Gravar vídeo exige recursos do computador: comece com 720p/30 FPS e observe
+a voz durante o jogo. O modo leve reduz o trabalho do chat, sem reservar CPU.
+
+O buffer de quadros codificados fica em um Worker, limitado a 64 MiB. Ao clipar,
+ele monta um WebM reproduzível a partir de um quadro completo, ajustando os
+tempos do vídeo e áudio sem decodificar/reencodar. Pode haver alguns segundos
+extras; atingir o limite de memória encurta o trecho em vez de crescer sem limite.
+Os clipes pendentes ocupam o armazenamento local, não esse buffer.
+Publique a pasta frontend completa, incluindo `clips.js`, `clips.css`,
+`clip-store.js` e `clip-buffer.js`, além dos arquivos já existentes.
 
 ## O que o modo leve faz
 
@@ -45,7 +96,7 @@ embora não haja mudança de código do servidor.
 - Preserva o mute, o volume do microfone e a conexão com a sala. Desligar o modo
   restaura a preferência normal de supressão, incluindo RNNoise se estiver ligado.
 
-Os arquivos da interface usam o cache `089voicelight`.
+Os arquivos da interface usam o cache `090clips`.
 
 Se a voz ainda cortar ao jogar, limite o FPS do jogo para deixar folga de
 processamento e teste o microfone também fora do navegador. Isso ajuda a separar
@@ -128,7 +179,7 @@ sobrecarga do computador, problema do dispositivo/driver e conexão de rede.
 ## Validação de desenvolvimento
 
 Execute `npm ci`, `npm test`, `npm run test:frontend` e
-`node --test tests/noise-processing.js`
+`npm run test:clips`, além de `node --test tests/noise-processing.js`
 na raiz do projeto, com Chromium
 instalado (`AUTH_TEST_CHROMIUM` permite indicar seu executável). Os cenários
 usam backend local e serviços simulados; a câmera e a tela usam fontes de
@@ -151,6 +202,16 @@ O cenário de duas pessoas injeta mídias geradas na entrada dos receptores
 para conferir a interface e o ciclo de mídia: o Chromium gerenciado deste
 ambiente bloqueia UDP direto, portanto esse cenário não valida transporte RTP
 entre dispositivos ou a conexão real com o SFU.
+
+Os testes de clipes exigem também `ffmpeg` e `ffprobe` no PATH. Usam
+MediaRecorder real no Chromium com tela/áudio gerados, verificam os trechos
+recentes e decodificam o vídeo exportado inteiro. Conferem fronteiras EBML
+fragmentadas, quadros completos, limite de memória, múltiplos pendentes,
+prévia/seek, pasta escolhida (via handle real do armazenamento privado do
+navegador), Downloads, persistência após reload, cancelamento, falta de espaço,
+descarte durante indisponibilidade do banco local e captura sem alterar a voz.
+O seletor físico de monitores e pastas, áudio de jogos, janela flutuante e
+desempenho durante a jogatina ainda exigem conferência no computador do usuário.
 
 Webcams físicas, permissões do sistema operacional, fullscreen em Safari e
 publicação real no Surge precisam da conferência no dispositivo final.

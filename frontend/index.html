@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
-  <script src="auth-boot.js?v=089voicelight"></script>
-  <link rel="stylesheet" href="style.css?v=089voicelight" />
-  <link rel="stylesheet" href="mn-chat.css?v=089voicelight" />
-  <link rel="stylesheet" href="auth.css?v=089voicelight" />
-  <link rel="stylesheet" href="profile-files.css?v=089voicelight" />
-  <link rel="stylesheet" href="community.css?v=089voicelight" />
-  <link rel="stylesheet" href="modern.css?v=089voicelight" />
-  <link rel="stylesheet" href="refinements.css?v=089voicelight" />
-  <link rel="stylesheet" href="appearance.css?v=089voicelight" />
-  <link rel="stylesheet" href="call-media.css?v=089voicelight" />
+  <script src="auth-boot.js?v=090clips"></script>
+  <link rel="stylesheet" href="style.css?v=090clips" />
+  <link rel="stylesheet" href="mn-chat.css?v=090clips" />
+  <link rel="stylesheet" href="auth.css?v=090clips" />
+  <link rel="stylesheet" href="profile-files.css?v=090clips" />
+  <link rel="stylesheet" href="community.css?v=090clips" />
+  <link rel="stylesheet" href="modern.css?v=090clips" />
+  <link rel="stylesheet" href="refinements.css?v=090clips" />
+  <link rel="stylesheet" href="appearance.css?v=090clips" />
+  <link rel="stylesheet" href="call-media.css?v=090clips" />
+  <link rel="stylesheet" href="clips.css?v=090clips" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -168,6 +169,7 @@
         <span id="myRoleBadge" class="role-badge role-member">Membro</span>
         <button id="communityManageBtn" class="chat-header-action hidden" type="button"><span>⚙</span><b>Gerenciar</b></button>
         <button id="chatProfileBtn" class="chat-header-action" type="button" title="Perfil, tema e layout"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3c0-5 16-5 16 0v3z"/></svg></span><b>Perfil</b></button>
+        <button class="chat-header-action" data-open-clips type="button" title="Clipes da tela ou jogo" aria-label="Abrir central de clipes"><span>✂</span><b>Clipes</b></button>
         <button id="chatOnlyTextBtn" class="chat-header-action" title="Abrir mensagens de texto"><span>💬</span><b>Chat</b><em id="chatOnlyUnread" class="chat-header-unread hidden">0</em></button>
         <button id="chatOnlyOpenSocialBtn" class="royal-btn hidden">Abrir comunicação</button>
         <button id="backFromChatOnlyBtn" class="chat-header-action back-action" title="Voltar ao início"><span>←</span><b>Voltar</b></button>
@@ -199,6 +201,7 @@
         </div>
         <button id="musicBtn" class="icon-btn" title="Ativar ou silenciar música">♫ Música</button>
         <button id="recordMatchBtn" class="icon-btn record-btn" title="Gravar a partida exibida nesta aba">⏺ Gravar</button>
+        <button class="icon-btn" data-open-clips type="button" title="Clipes da tela ou jogo">✂ Clipes</button>
         <button id="logBtn" class="icon-btn" title="Abrir ou ocultar a Crônica da Corte">☷ Log</button>
         <button id="socialBtn" class="icon-btn social-top-btn" title="Chat de texto, voz e câmera">💬 Chat <span id="chatUnread" class="chat-unread hidden">0</span></button>
         <button id="speedBtn" class="icon-btn" title="Alternar velocidade">⏱ Normal</button>
@@ -449,6 +452,26 @@
     <div class="profile-layout"><div><strong>Layout dos painéis</strong><p class="appearance-help">Arraste as bordas laterais, inferiores ou os cantos para ajustar o tamanho.</p></div><button id="layoutResetBtn" class="secondary-button" type="button">↺ Voltar ao padrão</button></div><p id="appearanceMessage" class="appearance-help" role="status" aria-live="polite"></p></section>
     <h3>Meus arquivos</h3><p id="storageUsage"></p><div id="profileFiles"></div>
   </dialog>
+  <div id="clipCaptureNotice" class="clip-capture-notice" hidden><span id="clipCaptureNoticeText"></span><button type="button" data-open-clips>Abrir clipes</button><button id="clipCaptureStop" type="button">Parar captura</button></div>
+  <dialog id="clipsDialog" class="feature-dialog clips-dialog" aria-labelledby="clipsTitle">
+    <header class="clips-heading"><div><small>SEUS MOMENTOS</small><h2 id="clipsTitle">Clipes da tela ou jogo</h2></div><button id="clipClose" class="dialog-close" type="button" aria-label="Fechar central de clipes">×</button></header>
+    <p class="clips-help">Escolha a tela principal ou a janela do jogo. Clipar guarda os últimos segundos aqui; você decide depois se quer salvar ou descartar. A captura fica apenas neste computador.</p>
+    <div class="clips-settings">
+      <label>Qualidade<select id="clipQuality"><option value="light">720p · Leve</option><option value="balanced">1080p · Equilibrada</option><option value="high">1440p · Alta</option></select></label>
+      <label>FPS<select id="clipFps"><option value="30">30 FPS</option><option value="60">60 FPS</option></select></label>
+      <label>Trecho recente<select id="clipSeconds"><option value="15">15 segundos</option><option value="30" selected>30 segundos</option><option value="60">60 segundos</option><option value="120">2 minutos</option></select></label>
+      <label>Atalho<button id="clipShortcut" class="secondary-button" type="button" aria-label="Escolher atalho para clipar">Ctrl + Shift + X</button></label>
+    </div>
+    <label class="clip-audio"><input id="clipIncludeAudio" type="checkbox" checked> Incluir o áudio da origem, quando o navegador permitir</label>
+    <p class="clips-help">O atalho funciona com esta página ou a janela de clipes em foco; não é um atalho global do Windows. Use a janela flutuante para clicar em Clipar durante o jogo, quando disponível. 720p/30 FPS exige menos recursos; gravar vídeo pode pesar no computador.</p>
+    <div class="clips-capture-actions"><button id="clipStart" class="primary-button" type="button">Escolher tela ou jogo</button><button id="clipNow" class="primary-button" type="button" disabled>Clipar últimos 30 s</button><button id="clipFloating" class="secondary-button" type="button" hidden>Janela flutuante</button></div>
+    <p id="clipSource" class="clip-source">Captura desligada</p>
+    <div class="clip-destination"><span id="clipFolder"></span><button id="clipChooseFolder" class="secondary-button" type="button">Escolher pasta</button><button id="clipResetFolder" class="secondary-button" type="button" hidden>Salvar como / Downloads</button></div>
+    <p id="clipsStatus" class="clips-status" role="status" aria-live="polite">Nenhum clipe é salvo em uma pasta sem você clicar em Salvar.</p>
+    <div class="clips-list-heading"><h3>Clipes armazenados</h3><span><b id="clipPendingCount">0</b> pendentes</span></div>
+    <div id="clipList" class="clip-list"></div>
+    <p class="clips-help">A duração é aproximada e pode incluir alguns segundos extras para começar com imagem completa. O limite de memória pode encurtar trechos em qualidades altas. Clipes pendentes permanecem no armazenamento deste navegador, neste site e conta. Limpar os dados do site pode apagá-los; exporte os que quiser guardar definitivamente.</p>
+  </dialog>
   <dialog id="screenOptionsDialog" class="feature-dialog share-options-dialog" aria-labelledby="screenOptionsTitle">
     <span class="section-eyebrow">TRANSMISSÃO</span><h2 id="screenOptionsTitle">Compartilhe do seu jeito</h2>
     <p id="shareOptionsNote"></p>
@@ -484,24 +507,26 @@
     <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
-  <script src="audio.js?v=089voicelight"></script>
-  <script src="network.js?v=089voicelight"></script>
-  <script src="auth.js?v=089voicelight"></script>
-  <script src="rtc-config.js?v=089voicelight"></script>
-  <script src="audio-gain.js?v=089voicelight"></script>
-  <script src="avatar-icons.js?v=089voicelight"></script>
-  <script src="profile-files.js?v=089voicelight"></script>
-  <script src="noise-suppression.js?v=089voicelight"></script>
-  <script src="stream-controls.js?v=089voicelight"></script>
-  <script src="social.js?v=089voicelight"></script>
-  <script src="recording.js?v=089voicelight"></script>
-  <script src="game.js?v=089voicelight"></script>
-  <script src="portal.js?v=089voicelight"></script>
-  <script src="community.js?v=089voicelight"></script>
-  <script src="community-admin.js?v=089voicelight"></script>
-  <script src="soundboard-client.js?v=089voicelight"></script>
-  <script src="media-mosaic.js?v=089voicelight"></script>
-  <script src="appearance.js?v=089voicelight"></script>
-  <script src="panel-layout.js?v=089voicelight"></script>
+  <script src="audio.js?v=090clips"></script>
+  <script src="network.js?v=090clips"></script>
+  <script src="auth.js?v=090clips"></script>
+  <script src="rtc-config.js?v=090clips"></script>
+  <script src="audio-gain.js?v=090clips"></script>
+  <script src="avatar-icons.js?v=090clips"></script>
+  <script src="profile-files.js?v=090clips"></script>
+  <script src="noise-suppression.js?v=090clips"></script>
+  <script src="stream-controls.js?v=090clips"></script>
+  <script src="social.js?v=090clips"></script>
+  <script src="recording.js?v=090clips"></script>
+  <script src="clip-store.js?v=090clips"></script>
+  <script src="clips.js?v=090clips"></script>
+  <script src="game.js?v=090clips"></script>
+  <script src="portal.js?v=090clips"></script>
+  <script src="community.js?v=090clips"></script>
+  <script src="community-admin.js?v=090clips"></script>
+  <script src="soundboard-client.js?v=090clips"></script>
+  <script src="media-mosaic.js?v=090clips"></script>
+  <script src="appearance.js?v=090clips"></script>
+  <script src="panel-layout.js?v=090clips"></script>
 </body>
 </html>

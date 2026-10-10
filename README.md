@@ -15,6 +15,7 @@ atualizar o Supabase, o backend e a publicação no Surge.
 npm ci
 npm test
 npm run test:frontend
+npm run test:clips
 npm start
 ```
 
@@ -155,3 +156,28 @@ O navegador não reserva CPU/memória nem controla a prioridade do jogo. Esta
 redução de trabalho pode ajudar, mas não garante áudio sem cortes sob carga
 nem substitui diagnóstico de CPU, drivers ou rede. Esta versão exige apenas
 publicar o frontend; não há migração SQL ou mudança do backend.
+
+## Clipes de replay locais
+
+O botão **Clipes** abre a captura dos últimos 15, 30, 60 ou 120 segundos da
+tela/janela escolhida no navegador. Qualidade (720p, 1080p ou 1440p), FPS
+(30/60) e atalho são pessoais. Vários clipes ficam pendentes em IndexedDB,
+por conta e site, com prévia, salvar e descartar. Escolher uma pasta não salva
+automaticamente; cada clipe precisa de confirmação. Downloads mantêm a cópia
+local porque o site não consegue confirmar a conclusão do download.
+
+A captura é separada da chamada, não liga o microfone e não envia vídeos ao
+servidor. O atalho funciona apenas com a página ou janela de clipes em foco,
+sem atalho global do Windows. O buffer de vídeo codificado tem limite de
+64 MiB, sem reencodar ao clipar; a duração depende dos quadros completos e pode
+ser menor em qualidades altas. Se faltar espaço no navegador, a captura para
+e preserva o clipe na sessão para exportar/descartar antes de fechar.
+Limpar os dados do site pode excluir os pendentes. Consulte
+[FRONTEND_REFINEMENTS.md](FRONTEND_REFINEMENTS.md) para uso e publicação.
+Só é necessário publicar o frontend; não há novo SQL ou configuração do backend.
+
+`npm run test:clips` exige Chromium, `ffmpeg` e `ffprobe` no PATH. Os testes
+usam MediaRecorder real com vídeo/áudio gerados, decodificam os WebMs exportados,
+verificam recorte recente, limite de memória, persistência, salvamento,
+cancelamento, falta de espaço e isolamento do microfone da chamada. A escolha
+de monitor, áudio do jogo e desempenho sob carga devem ser conferidos no PC.
