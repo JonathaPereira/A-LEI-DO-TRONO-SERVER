@@ -611,7 +611,7 @@ window.TronoSocial = (()=>{
   function attachmentStatus(text='',cancel=false){const host=$('attachmentStatus');if(!host)return;host.replaceChildren(document.createTextNode(text));if(cancel){const btn=document.createElement('button');btn.type='button';btn.textContent='× Cancelar';btn.onclick=()=>{chatUploadController?.abort();pendingChatFile=null;$('chatFileInput').value='';attachmentStatus();};host.appendChild(btn);}}
   async function sendChat(){
     const input=$('courtChatInput');if(!input||chatUploadController)return;const text=input.value.trim(),file=pendingChatFile,roomId=window.TronoNetwork?.currentRoom;if(!text&&!file)return;
-    if(!file){if(window.TronoNetwork?.sendChat(text)){input.value='';input.focus();}return;}
+    if(!file){if(window.TronoNetwork?.sendChat(text)){attachmentStatus();input.value='';input.focus();}else attachmentStatus('Conexão interrompida. Aguarde a reconexão para enviar.');return;}
     chatUploadController=new AbortController();$('courtChatSend').disabled=true;$('attachFileBtn').disabled=true;input.disabled=true;let uploaded;
     try{uploaded=await window.TronoFiles.upload(file,{roomId,signal:chatUploadController.signal,onProgress:n=>attachmentStatus(`Enviando ${file.name}: ${n}%`,true)});if(roomId!==window.TronoNetwork.currentRoom)throw new Error('O canal mudou durante o envio.');if(!window.TronoNetwork.sendChat(text,uploaded.id))throw new Error('Conexão interrompida. Tente novamente.');pendingChatFile=null;$('chatFileInput').value='';input.value='';attachmentStatus('Arquivo enviado.');}
     catch(e){if(uploaded)await window.TronoFiles.remove(uploaded.id).catch(()=>{});attachmentStatus(e.message);}
@@ -1324,6 +1324,11 @@ window.TronoSocial = (()=>{
     renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();
   }
 
+  function voiceStatusIcons(muted,silenced){
+    const icon=(label,path)=>`<span class="participant-status-icon" role="img" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}<path d="M3 3l18 18"/></svg></span>`;
+    return (muted?icon('Microfone mutado','<path d="M9 9v3a3 3 0 005 2M15 9V5a3 3 0 00-6 0M5 10v2a7 7 0 0012 5M19 12v-2M12 19v3M8 22h8"/>'):'')+(silenced?icon('Áudio da chamada silenciado','<path d="M4 13v-1a8 8 0 0113-6M20 12v5M4 13H2v7h5v-7H4M20 13h2v7h-5v-3"/>'):'');
+  }
+  function renderVoiceStatus(host,muted,silenced){if(!host)return;const html=voiceStatusIcons(muted,silenced);if(host.innerHTML!==html)host.innerHTML=html;host.hidden=!html;}
   function camerasInProfiles(){return inChatHub()&&voiceJoined&&detailedPlayers().some(p=>p.id===meId()?screenSharing:p.screen);}
   function renderVoiceRoster(){
     const host=$('voiceRoster');if(!host)return;
@@ -1337,11 +1342,11 @@ window.TronoSocial = (()=>{
     host.classList.remove('voice-roster-private');host.querySelector('.voice-privacy-note')?.remove();const me=meId(),players=detailedPlayers(),desired=new Set(players.map(p=>p.id));
     for(const old of [...host.querySelectorAll('.voice-person')])if(!desired.has(old.dataset.peer)){for(const video of old.querySelectorAll('video'))video.srcObject=null;old.remove();}
     for(const p of players){
-      const self=p.id===me,muted=self?micMuted:!!p.muted,cam=self?cameraOn:!!p.camera,screen=self?screenSharing:!!p.screen,speaking=!muted&&speakingPeers.has(p.id),transport=self?announcedTransport():(p.transport||'p2p'),hidden=hiddenCameras.has(p.id);
+      const self=p.id===me,muted=self?micMuted:!!p.muted,silenced=self?deafened:!!p.deafened,cam=self?cameraOn:!!p.camera,screen=self?screenSharing:!!p.screen,speaking=!muted&&speakingPeers.has(p.id),transport=self?announcedTransport():(p.transport||'p2p'),hidden=hiddenCameras.has(p.id);
       let card=findPeerTile(host,p.id,'.voice-person');
       if(!card){
         card=document.createElement('div');card.className='voice-person joined';card.dataset.peer=p.id;
-        card.innerHTML='<div class="participant-camera-slot" hidden></div><span class="mn-person-avatar"></span><strong></strong><small></small><button class="participant-camera-toggle" type="button" hidden></button>';
+        card.innerHTML='<div class="participant-camera-slot" hidden></div><span class="mn-person-avatar"></span><strong></strong><span class="participant-voice-status" hidden></span><small></small><button class="participant-camera-toggle" type="button" hidden></button>';
         card.querySelector('.participant-camera-toggle').onclick=()=>void toggleWatchCamera(p.id);
         if(!self){const label=document.createElement('label');label.className='mn-peer-gain';label.innerHTML='<span>Volume</span><input type="range" min="0" max="300" step="5"><output></output>';label.querySelector('input').dataset.peerVolume=p.id;label.querySelector('input').setAttribute('aria-label','Volume de '+p.name);card.appendChild(label);}
         host.appendChild(card);
@@ -1349,9 +1354,10 @@ window.TronoSocial = (()=>{
       card.classList.toggle('speaking',speaking);const dock=camerasInProfiles()&&cam&&!hidden;card.classList.toggle('camera-in-profile',dock);card.querySelector('.participant-camera-slot').hidden=!dock;
       const avatar=card.querySelector('.mn-person-avatar'),signature=JSON.stringify([p.name,p.avatar_preset,p.avatar_file_id]);
       if(avatar.dataset.signature!==signature){avatar.dataset.signature=signature;avatar.dataset.color=String([...String(p.id)].reduce((v,c)=>v+c.charCodeAt(0),0)%4);avatar.innerHTML=(window.TronoProfile?.avatarHtml(p)||esc(String(p.name||'M').slice(0,2).toUpperCase()))+'<i></i>';}
-      avatar.querySelector('i').textContent=muted?'×':speaking?'●':'';
+      avatar.querySelector('i').textContent=speaking?'●':'';
+      renderVoiceStatus(card.querySelector('.participant-voice-status'),muted,silenced);
       card.querySelector(':scope > strong').textContent=p.name+(self?' (você)':'');
-      card.querySelector(':scope > small').textContent=(muted?'microfone mutado':speaking?'falando…':'na voz')+(cam?(hidden?' • câmera oculta':' • 📷 câmera'):'')+(screen?' • 🖥 tela':'')+(transport==='sfu'?' • ☁ SFU':transport==='sfu-pending'?' • conectando…':'');
+      card.querySelector(':scope > small').textContent=(muted?'microfone mutado':speaking?'falando…':'na voz')+(silenced?' • áudio silenciado':'')+(cam?(hidden?' • câmera oculta':' • 📷 câmera'):'')+(screen?' • 🖥 tela':'')+(transport==='sfu'?' • ☁ SFU':transport==='sfu-pending'?' • conectando…':'');
       const toggle=card.querySelector('.participant-camera-toggle');toggle.hidden=self||!cam;toggle.textContent=hidden?'Mostrar câmera':'Ocultar câmera';toggle.setAttribute('aria-label',(hidden?'Mostrar':'Ocultar')+' câmera de '+p.name);toggle.setAttribute('aria-pressed',String(hidden));toggle.title='Esta preferência muda apenas o que você vê.';
       if(!self){card.querySelector('[data-peer-volume]').value=String(peerVolumes.get(p.id)??100);card.querySelector('output').textContent=(peerVolumes.get(p.id)??100)+'%';}
     }
@@ -1495,13 +1501,13 @@ window.TronoSocial = (()=>{
       }
       tile.className=`seat-camera-tile seat-camera-${p.seat}`;bindSeatTileResize(tile,p.seat);
       const muted=p.id===me?micMuted:!!p.muted,speaking=!muted&&speakingPeers.has(p.id);tile.classList.toggle('speaking',speaking);
-      tile.querySelector('.seat-camera-name').textContent=`${p.name}${p.id===me?' • você':''}`;tile.querySelector('.seat-camera-mic').textContent=muted?'🔇':speaking?'●':'🎙️';
+      tile.querySelector('.seat-camera-name').textContent=`${p.name}${p.id===me?' • você':''}`;renderVoiceStatus(tile.querySelector('.seat-camera-mic'),muted,p.id===me?deafened:!!p.deafened);
       const stream=cameraStreamForPerson(p),video=tile.querySelector('video');if(personHasLiveCamera(p)){updateVideoElement(video,stream);tile.classList.add('has-video');}else{tile.classList.remove('has-video');if(p.id!==me)scheduleVideoRecovery(p.id);}
     }
   }
   function updateMediaIndicators(){
     const me=meId();
-    for(const tile of document.querySelectorAll('.seat-camera-tile,.camera-tile')){const p=privateVoiceRoster.get(tile.dataset.peer);if(!p)continue;const muted=p.id===me?micMuted:!!p.muted,speaking=!muted&&speakingPeers.has(p.id);tile.classList.toggle('speaking',speaking);const mic=tile.querySelector('.seat-camera-mic');if(mic)mic.textContent=muted?'🔇':speaking?'●':'🎙️';}
+    for(const tile of document.querySelectorAll('.seat-camera-tile,.camera-tile')){const p=privateVoiceRoster.get(tile.dataset.peer);if(!p)continue;const muted=p.id===me?micMuted:!!p.muted,speaking=!muted&&speakingPeers.has(p.id);tile.classList.toggle('speaking',speaking);renderVoiceStatus(tile.querySelector('.seat-camera-mic'),muted,p.id===me?deafened:!!p.deafened);}
   }
 
   function joinVoice(){
@@ -1550,7 +1556,7 @@ window.TronoSocial = (()=>{
     return Promise.resolve();
   }
   function toggleMute(){if(!voiceJoined)return;micMuted=!micMuted;localStream?.getAudioTracks().forEach(t=>t.enabled=!micMuted);if(micCapture)micCapture.rawStream.getAudioTracks()[0].enabled=micCapture.outgoingTrack===micCapture.processor?.track||!micMuted;window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());updateButtons();renderVoiceRoster();updateMediaIndicators();}
-  function toggleDeafen(){if(!voiceJoined)return;deafened=!deafened;for(const [id,a] of remoteAudio){a.muted=deafened||remotePlayback.get(id)?.route==='gain';updateRemoteGain(id);}if(!deafened)unlockCallAudio();updateButtons();}
+  function toggleDeafen(){if(!voiceJoined)return;deafened=!deafened;for(const [id,a] of remoteAudio){a.muted=deafened||remotePlayback.get(id)?.route==='gain';updateRemoteGain(id);}if(!deafened)unlockCallAudio();window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());updateButtons();renderVoiceRoster();updateMediaIndicators();}
   async function toggleCamera(){
     if(cameraTogglePending||cameraRequest)return;
     cameraTogglePending=true;updateButtons();
@@ -1597,7 +1603,7 @@ window.TronoSocial = (()=>{
 
   function consumeVoiceRoster(list=[]){
     if(!voiceJoined)return;
-    const before=new Set(privateVoiceRoster.keys()),next=new Map();for(const p of list)if(p?.id)next.set(p.id,{id:p.id,name:p.name,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,joined:true,muted:!!p.muted,camera:!!p.camera,screen:!!p.screen,transport:p.transport||'p2p',quality:p.quality||'balanced'});
+    const before=new Set(privateVoiceRoster.keys()),next=new Map();for(const p of list)if(p?.id)next.set(p.id,{id:p.id,name:p.name,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,joined:true,muted:!!p.muted,deafened:!!p.deafened,camera:!!p.camera,screen:!!p.screen,transport:p.transport||'p2p',quality:p.quality||'balanced'});
     if(voiceRosterInitialized&&!voiceEventsSupported){for(const id of next.keys())if(id!==meId()&&!before.has(id))playCallSound('join',id);for(const id of before)if(id!==meId()&&!next.has(id))playCallSound('leave',id);}else voiceRosterInitialized=true;
     privateVoiceRoster.clear();for(const [id,p] of next)privateVoiceRoster.set(id,p);syncPeers();
   }
@@ -1747,7 +1753,7 @@ window.TronoSocial = (()=>{
       if(msg.type==='joined-text-channel')consumeChatRoom(msg.room);
       if(msg.type==='room-state'){if(msg.room?.id===window.TronoNetwork.primaryRoom)consumeRoom(msg.room);else if(msg.room?.id===window.TronoNetwork.currentRoom)consumeChatRoom(msg.room);}
       if(msg.type==='channel-deleted'&&msg.roomId===roomState?.id){void leaveVoice();roomState=null;updateButtons();}
-      if(msg.type==='error'&&['CHAT_HISTORY_UNAVAILABLE','CHAT_HISTORY_RATE'].includes(msg.code)){if($('olderChatMessages'))$('olderChatMessages').disabled=false;const failed=msg.failedMessage,input=$('courtChatInput');if(failed?.roomId===window.TronoNetwork.currentRoom&&input&&!input.value)input.value=failed.text||'';}
+      if(msg.type==='error'&&['CHAT_HISTORY_UNAVAILABLE','CHAT_HISTORY_RATE'].includes(msg.code)){if($('olderChatMessages'))$('olderChatMessages').disabled=false;const failed=msg.failedMessage,input=$('courtChatInput');if(failed?.roomId===window.TronoNetwork.currentRoom&&input&&!input.value)input.value=failed.text||'';if((failed?.roomId||msg.roomId)===window.TronoNetwork.currentRoom)attachmentStatus(msg.message);}
       if(msg.type==='chat-history'&&msg.roomId===window.TronoNetwork.currentRoom)loadHistory(msg.messages||[],msg);
       if(msg.type==='chat-message'&&msg.message?.roomId===window.TronoNetwork.currentRoom)appendChat(msg.message);
       if(msg.type==='voice-mode'&&msg.roomId===roomState?.id){roomVoiceMode=msg.mode;if(voiceJoined&&msg.mode==='p2p'&&(transportIsSfu()||transportPending()))void fallbackToP2p(msg.reason||'Chamada sincronizada em P2P.');}
@@ -1760,7 +1766,7 @@ window.TronoSocial = (()=>{
       }
       if(msg.type==='voice-state'&&voiceJoined){
         const was=privateVoiceRoster.has(msg.playerId),old=privateVoiceRoster.get(msg.playerId)||{id:msg.playerId,name:msg.name,seat:msg.seat};
-        if(msg.joined)privateVoiceRoster.set(msg.playerId,{...old,joined:true,muted:!!msg.muted,camera:!!msg.camera,screen:!!msg.screen,transport:msg.transport||old.transport||'p2p',quality:msg.quality||old.quality||'balanced'});else privateVoiceRoster.delete(msg.playerId);
+        if(msg.joined)privateVoiceRoster.set(msg.playerId,{...old,joined:true,muted:!!msg.muted,deafened:!!msg.deafened,camera:!!msg.camera,screen:!!msg.screen,transport:msg.transport||old.transport||'p2p',quality:msg.quality||old.quality||'balanced'});else privateVoiceRoster.delete(msg.playerId);
         if(!voiceEventsSupported&&voiceRosterInitialized&&msg.playerId!==meId()&&was!==!!msg.joined)playCallSound(msg.joined?'join':'leave',msg.playerId);
         syncPeers();
       }

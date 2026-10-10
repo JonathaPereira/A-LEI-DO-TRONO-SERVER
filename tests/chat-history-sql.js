@@ -8,7 +8,7 @@ test('persistent chat SQL: ordering, pagination, replay, attachment deletion, ch
     await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated,service_role;grant execute on function auth.uid() to authenticated,service_role;`);
     for(const file of ['schema.sql','upgrade-v079.sql','upgrade-v080.sql','upgrade-community.sql','upgrade-chat-history.sql'])await db.exec(fs.readFileSync(path.join(__dirname,'../supabase',file),'utf8'));
     await db.query('insert into auth.users values($1,$2,now(),$3)',[account,'membro@example.test',JSON.stringify({nickname:'Membro'})]);
-    async function fetchImpl(url,options){const args=JSON.parse(options.body),name=new URL(url).pathname.split('/').at(-1);await db.exec('set role service_role');try{const rows=name==='chat_history_append'?(await db.query('select public.chat_history_append($1,$2,$3,$4)',[args.p_id,args.p_room,args.p_sender,args.p_message])).rows:(await db.query('select * from public.chat_history_read($1,$2,$3)',[args.p_room,args.p_before,args.p_limit])).rows;return {ok:true,json:async()=>rows};}catch{return {ok:false,json:async()=>({})};}finally{await db.exec('reset role');}}
+    async function fetchImpl(url,options){const args=JSON.parse(options.body),name=new URL(url).pathname.split('/').at(-1);await db.exec('set role service_role');try{if(name==='chat_history_append'){await db.query('select public.chat_history_append($1,$2,$3,$4)',[args.p_id,args.p_room,args.p_sender,args.p_message]);return new Response(null,{status:204});}const {rows}=await db.query('select * from public.chat_history_read($1,$2,$3)',[args.p_room,args.p_before,args.p_limit]);return Response.json(rows);}catch{return Response.json({},{status:400});}finally{await db.exec('reset role');}}
     const settings={auth:{configured:true,required:true},env:{SUPABASE_URL:'https://example.test',SUPABASE_SECRET_KEY:'sb_secret_test'},fetchImpl},store=createChatHistory(settings),room={id:'chat-livre',kind:'chat',channelType:'mixed',chatHistory:[]};
     const messages=[];for(let i=0;i<55;i++){const message={id:crypto.randomUUID(),roomId:room.id,text:'Mensagem '+i,accountId:account,attachment:null};messages.push(message);await store.append(room,message,account);}
     const latest=await store.read(room);assert.equal(latest.messages.length,50);assert.equal(latest.messages[0].text,'Mensagem 5');assert.equal(latest.messages.at(-1).text,'Mensagem 54');assert(latest.hasMore);
@@ -22,4 +22,13 @@ test('persistent chat SQL: ordering, pagination, replay, attachment deletion, ch
     await db.query('delete from public.chat_files where id=$1',[attachment]);assert.equal((await store.read(room)).messages.at(-1).attachment.deleted,true);
     await db.query('update public.community_channels set deleted_at=now() where id=$1',[room.id]);assert.equal((await store.read(room)).messages.length,0);await assert.rejects(store.append(room,{...messages[0],id:crypto.randomUUID()},account),{code:'CHAT_HISTORY_UNAVAILABLE'});
   }finally{await db.close();}
+});
+test('void RPC accepts empty confirmations; failed writes and invalid history still fail closed',async()=>{
+  const room={id:'chat-livre',kind:'chat',channelType:'mixed'},message={id:crypto.randomUUID(),roomId:room.id,text:'Confirmada'};
+  let response;const store=createChatHistory({auth:{configured:true,required:true},env:{SUPABASE_URL:'https://fixture.test',SUPABASE_SECRET_KEY:'sb_secret_test'},fetchImpl:async()=>response});
+  for(const status of [204,200]){response=new Response(null,{status});await store.append(room,message,'account');assert.equal(store.health().ready,true);}
+  response=Response.json(null);await store.append(room,message,'account');
+  response=Response.json({message:'Internal database error'},{status:503});await assert.rejects(store.append(room,message,'account'),{code:'CHAT_HISTORY_UNAVAILABLE'});assert.equal(store.health().ready,false);
+  for(const result of [null,{},[{message:{id:message.id,roomId:'other'}}]]){response=Response.json(result);await assert.rejects(store.read(room),{code:'CHAT_HISTORY_UNAVAILABLE'});}
+  response=new Response(null,{status:204});await assert.rejects(store.read(room),{code:'CHAT_HISTORY_UNAVAILABLE'});
 });

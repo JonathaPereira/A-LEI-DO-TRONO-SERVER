@@ -42,3 +42,23 @@ body.channel-text-active.call-connected .text-voice-connection{display:flex}
 .text-voice-connection button:hover{border-color:var(--theme-accent)}
 .older-chat-messages{align-self:center;margin:8px;padding:7px 14px;border:1px solid var(--theme-line);border-radius:9px;color:var(--theme-muted);background:var(--theme-soft);font:600 12px var(--ui-font);cursor:pointer}
 .older-chat-messages:hover{border-color:var(--theme-accent);color:var(--theme-text)}
+/* Attachment, emoji, editor and send button share a single stable row. */
+#socialPanel .court-chat-compose{grid-template-columns:auto auto minmax(0,1fr) auto!important;align-items:end!important;min-width:0}
+#socialPanel #attachFileBtn{grid-column:1;grid-row:1}
+#socialPanel #emojiBtn{grid-column:2;grid-row:1}
+#socialPanel #courtChatInput{grid-column:3;grid-row:1;width:100%;min-width:0;box-sizing:border-box;resize:vertical}
+#socialPanel #courtChatSend{grid-column:4;grid-row:1}
+#socialPanel .court-chat-compose button:focus-visible{outline:2px solid var(--theme-accent);outline-offset:2px}
+#socialPanel .court-chat-msg{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+#socialPanel .court-chat-msg p{white-space:pre-wrap;overflow-wrap:anywhere}
+#socialPanel .attachment-status{flex-wrap:wrap;color:var(--theme-muted);line-height:1.5;max-width:100%;box-sizing:border-box}
+.participant-voice-status,.seat-camera-mic{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0}
+.participant-voice-status[hidden],.seat-camera-mic[hidden]{display:none!important}
+.participant-status-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid color-mix(in srgb,var(--theme-accent) 45%,transparent);border-radius:8px;background:var(--theme-soft);color:var(--theme-accent);flex-shrink:0}
+.participant-status-icon svg{display:block;width:18px;height:18px}
+.seat-camera-mic .participant-status-icon{width:22px;height:22px;background:#111827cc}
+@media(max-width:640px){#socialPanel .court-chat-title{flex-wrap:wrap;gap:8px!important}#socialPanel .chat-title-actions{flex-wrap:wrap;gap:6px}.text-voice-connection{flex-wrap:wrap}.participant-status-icon{width:24px;height:24px}}
+@media(max-width:640px){
+  body.chat-only-active #socialPanel.social-chat-hub{padding-bottom:52px!important;box-sizing:border-box}
+  body.chat-only-active:not(.channel-text-active) #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){bottom:52px!important;height:calc(100% - 52px)!important}
+}

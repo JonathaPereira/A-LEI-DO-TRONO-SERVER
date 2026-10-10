@@ -70,7 +70,7 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
       if(historyState.fail)return reply(503,{});
       const channel=channels.get(body.p_room);if(!channel||channel.deleted_at||channel.channel_type==='voice')return reply(400,{message:'CHANNEL_NOT_FOUND'});
-      if(url.pathname.endsWith('append')){chatMessages.set(body.p_id,body.p_message);return reply(200,null);}
+      if(url.pathname.endsWith('append')){chatMessages.set(body.p_id,body.p_message);res.writeHead(204);return res.end();}
       const messages=[...chatMessages.values()].filter(m=>m.roomId===body.p_room).reverse(),before=body.p_before?messages.findIndex(m=>m.id===body.p_before):-1;
       return reply(200,(body.p_before&&before<0?[]:messages.slice(before+1,before+1+body.p_limit+1)).map(message=>({message})));
     }
