@@ -1,25 +1,32 @@
-# Publicar texto independente e histórico persistente
+# Publicar a correção das mensagens e os indicadores de áudio
 
-Esta atualização parte da atualização de comunidade já instalada. Ela modifica
-o backend e o frontend para separar a navegação de texto da sala de voz.
-As mensagens dos canais de texto/mistos passam a ser salvas no Supabase.
-Esta versão exige **upgrade-chat-history.sql**; não há novas variáveis de ambiente.
-Ela reutiliza SUPABASE_URL e a chave secreta do backend já usada pela comunidade.
-Mensagens anteriores que só existiam na memória do servidor antigo não são
-recuperadas por esta migração. A persistência vale para mensagens enviadas
-depois de instalar esta atualização.
+Esta correção aceita a confirmação HTTP 204 sem corpo retornada pelo Supabase
+quando salva uma mensagem. A versão anterior tentava ler JSON dessa resposta,
+acusava erro e não transmitia a mensagem já gravada. Os testes agora reproduzem
+essa resposta real, inclusive em canais de texto e mistos.
+
+Os perfis da chamada mostram ícones distintos para microfone mutado e áudio
+silenciado, atualizados para os outros participantes. Silenciar a escuta mantém
+independente o controle do microfone. O campo de texto e seus três botões ficam
+na mesma linha em desktop e celular; falhas reais de armazenamento aparecem
+junto ao campo e preservam o rascunho.
+
+**Não há SQL novo nem novas variáveis nesta correção.** Se você já executou
+`supabase/upgrade-chat-history.sql`, não precisa executá-lo novamente.
+O histórico existente é preservado, incluindo mensagens que foram gravadas
+pelo servidor anterior apesar do erro de confirmação.
 
 Baixe o ZIP atualizado do GitHub e extraia-o antes de começar os passos abaixo.
 
-1. No Supabase, abra **SQL Editor → New query**. Abra o arquivo
+1. Somente se ainda não instalou o histórico, no Supabase abra **SQL Editor → New query**. Abra o arquivo
    `supabase/upgrade-chat-history.sql` do ZIP atualizado, copie **todo** o conteúdo
    e execute com **Run**. Essa migração deve ser aplicada depois da atualização
    de comunidade já instalada; pode ser repetida sem apagar as mensagens.
 2. Atualize a branch `main` do GitHub com as alterações da branch
-   `codex/text-chat-history` (novo pull request). Se aparecer como rascunho, use
+   `codex/chat-delivery-status` (novo pull request). Se aparecer como rascunho, use
    **Ready for review** antes de **Merge pull request**. O backend desta correção altera
-   `server.js` e o novo `chat-history.js`; os demais arquivos do projeto devem ser
-   preservados. As alterações em `package.json` acrescentam o teste de regressão.
+   `server.js` e `chat-history.js`; os demais arquivos do projeto devem ser
+   preservados. Não há mudança de dependências.
 3. No Render, abra o serviço do backend e use **Manual Deploy → Deploy latest
    commit**, se o deploy automático ainda não começou. Aguarde **Live**.
    Os comandos continuam `npm install` e `npm start`.
@@ -38,13 +45,13 @@ Baixe o ZIP atualizado do GitHub e extraia-o antes de começar os passos abaixo.
    os computadores. O reinício do backend encerra as chamadas existentes;
    entre novamente na voz para conferir a correção.
 
-Execute o SQL, publique o backend e então publique o frontend, **nessa ordem**. A nova interface informa quando
+Com a migração do histórico já instalada, publique o backend e então o frontend, **nessa ordem**. A nova interface informa quando
 está conectada a um backend antigo, em vez de trocar a voz ao abrir texto.
 
 Não publique a raiz do backend no Surge. Publique a pasta `frontend` completa
 para incluir o CSS, a espada dos controles de volume e o modelo RNNoise.
 Não remova a pasta `vendor`: ela contém o processamento gratuito do microfone.
-Os arquivos da interface usam o identificador de cache `087persistentchat`; o protocolo do
+Os arquivos da interface usam o identificador de cache `088chatdelivery`; o protocolo do
 backend continua `0.8.0-alpha`.
 
 ## Comportamentos para conferir

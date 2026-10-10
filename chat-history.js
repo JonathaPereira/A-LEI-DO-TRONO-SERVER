@@ -4,11 +4,14 @@ function createChatHistory({auth,env=process.env,fetchImpl=fetch}={}){
   const url=String(env.SUPABASE_URL||'').replace(/\/+$/,''),key=env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY;
   const configured=!!(auth.configured&&key),queues=new Map();let ready=false;
   function serial(roomId,fn){const task=(queues.get(roomId)||Promise.resolve()).catch(()=>{}).then(fn);queues.set(roomId,task);void task.finally(()=>{if(queues.get(roomId)===task)queues.delete(roomId);}).catch(()=>{});return task;}
-  async function rpc(name,body){
+  async function rpc(name,body,expectJSON=true){
     if(!configured)throw fail();
     try{
       const response=await fetchImpl(`${url}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:key,...(!String(key).startsWith('sb_secret_')?{Authorization:'Bearer '+key}:{}),'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-      if(!response.ok)throw fail();const result=await response.json();ready=true;return result;
+      if(!response.ok)throw fail();
+      // PostgREST returns an empty HTTP 204 for SQL functions that return void.
+      // A successful append is already committed; there is no JSON result to read.
+      const result=expectJSON?await response.json():null;ready=true;return result;
     }catch{ready=false;throw fail();}
   }
   const persistent=room=>room.kind==='chat'&&room.channelType!=='voice';
@@ -16,7 +19,7 @@ function createChatHistory({auth,env=process.env,fetchImpl=fetch}={}){
     if(!persistent(room))return;
     if(!configured&&!auth.required)return; // Deliberate local/legacy mode only.
     if(!accountId)throw fail();
-    await rpc('chat_history_append',{p_id:message.id,p_room:room.id,p_sender:accountId,p_message:message});
+    await rpc('chat_history_append',{p_id:message.id,p_room:room.id,p_sender:accountId,p_message:message},false);
   }
   async function read(room,before=null){
     if(!persistent(room))return {messages:[...(room.chatHistory||[])],hasMore:false,before:null};

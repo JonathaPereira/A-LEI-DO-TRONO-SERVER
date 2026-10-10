@@ -128,3 +128,16 @@ pelo backend; ele valida autenticação e associação ao canal em cada leitura.
 Veja [FRONTEND_REFINEMENTS.md](FRONTEND_REFINEMENTS.md) para publicar SQL,
 backend e frontend, nessa ordem. A migração não recupera mensagens que só
 estavam na memória do backend antigo.
+
+## Correção das confirmações de mensagens e estado de áudio
+
+O backend aceita HTTP 204 sem JSON ao gravar mensagens pelo RPC que retorna
+`void` no Supabase. Leituras continuam exigindo histórico válido e erros reais
+não são confirmados como envio. Os testes de SQL e WebSocket reproduzem a
+resposta vazia e verificam entrega e persistência após reiniciar o backend.
+
+O estado privado da chamada inclui `deafened`, separado de `muted`; os perfis
+mostram ícones de microfone e fone cortados aos membros da chamada. A escuta
+silenciada não muda o estado do microfone. O compositor mantém anexar, emoji,
+texto e enviar na mesma linha em desktop/celular. Esta correção não altera
+a migração SQL nem exige novas variáveis: atualize Render e depois Surge.

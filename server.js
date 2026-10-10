@@ -146,7 +146,7 @@ function safeRoom(room) {
 }
 function privateVoiceRoster(room){
   return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
-    id:p.id,name:p.name,guest:!!p.guest,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,muted:!!p.voiceMuted,camera:!!p.cameraOn,screen:!!p.screenOn,
+    id:p.id,name:p.name,guest:!!p.guest,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,muted:!!p.voiceMuted,deafened:!!p.voiceDeafened,camera:!!p.cameraOn,screen:!!p.screenOn,
     transport:p.mediaTransport||'p2p',quality:p.transmissionQuality||'balanced',screenFps:p.screenFps||30
   }));
 }
@@ -194,7 +194,7 @@ function leaveTextRoom(ws){
   broadcastRoom(room);broadcastChatChannels();
 }
 function createRoomPlayer(ws,room,name,seat=nextFreeSeat(room)){
-  return {id:ws.clientId,name,guest:!!ws.guest,avatar_preset:ws.account?.avatar_preset||(ws.guest?'person':'crown'),avatar_file_id:ws.account?.avatar_file_id||null,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
+  return {id:ws.clientId,name,guest:!!ws.guest,avatar_preset:ws.account?.avatar_preset||(ws.guest?'person':'crown'),avatar_file_id:ws.account?.avatar_file_id||null,seat,ready:false,joinedAt:Date.now(),ws,voiceJoined:false,voiceMuted:false,voiceDeafened:false,cameraOn:false,screenOn:false,mediaTransport:'p2p',transmissionQuality:'balanced',lastChatAt:0};
 }
 function joinTextRoom(ws,roomId,rawName){
   const room=rooms.get(roomId);
@@ -337,6 +337,7 @@ function handleVoiceState(ws,message){
   player.voiceJoined=!!message.joined;
   if(previouslyJoined!==player.voiceJoined)broadcastVoiceEvent(room,player,player.voiceJoined?'joined':'left','voice-toggle');
   player.voiceMuted=player.voiceJoined&&!!message.muted;
+  player.voiceDeafened=player.voiceJoined&&!!message.deafened;
   player.cameraOn=player.voiceJoined&&!!message.camera;
   player.screenOn=player.voiceJoined&&!!message.screen;
   const q=String(message.quality||player.transmissionQuality||'balanced');
