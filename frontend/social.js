@@ -194,6 +194,7 @@ window.TronoSocial = (()=>{
   let panelMode=storage.getItem('tronoSocialMode')==='floating'?'floating':'full';
   let chatMuted=storage.getItem('tronoChatMuted')==='1';
   let noiseSuppression=storage.getItem('tronoNoiseSuppression')!=='0';
+  let voiceLightMode=storage.getItem('tronoVoiceLightMode')==='1';
   let selectedInput=storage.getItem('tronoVoiceInput')||'';
   let selectedOutput=storage.getItem('tronoVoiceOutput')||'';
   let selectedCamera=storage.getItem('tronoCameraInput')||'';
@@ -221,7 +222,7 @@ window.TronoSocial = (()=>{
   let localScreenPreviewPaused=false;
   let localScreenCollapsed=false;
   let telemetryOpen=false;
-  let telemetryTimer=null;
+  let telemetryTimer=null,telemetrySchedule=0,telemetryCollecting=false;
   let telemetrySnapshot=null;
   const telemetryPrev=new Map();
 
@@ -295,7 +296,7 @@ window.TronoSocial = (()=>{
     emojiOpen=typeof force==='boolean'?force:!emojiOpen;populateEmojiPicker();
     $('emojiPicker')?.classList.toggle('hidden',!emojiOpen);$('emojiBtn')?.classList.toggle('active',emojiOpen);$('emojiBtn')?.setAttribute('aria-expanded',emojiOpen?'true':'false');
   }
-  function toggleTelemetry(force){telemetryOpen=typeof force==='boolean'?force:!telemetryOpen;$('telemetryPanel')?.classList.toggle('hidden',!telemetryOpen);if(telemetryOpen)void collectTelemetry();}
+  function toggleTelemetry(force){telemetryOpen=typeof force==='boolean'?force:!telemetryOpen;$('telemetryPanel')?.classList.toggle('hidden',!telemetryOpen);startTelemetry();}
   function ensureLocalStream(){if(!localStream)localStream=new MediaStream();return localStream;}
   function playCallSound(kind='join',id='local'){
     if(window.TronoAudio?.sfxEnabled===false||storage.getItem('tronoSfxEnabled')==='0')return;
@@ -710,7 +711,7 @@ window.TronoSocial = (()=>{
     void watchStream(meId(),stream);
   }
 
-  async function acquireMic({generation=voiceGeneration,nativeOnly=false}={}){
+  async function acquireMic({generation=voiceGeneration,nativeOnly=voiceLightMode}={}){
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Seu navegador não oferece acesso ao microfone nesta página. Use HTTPS em navegador atualizado.');
     const request=++micGeneration,enabled=noiseSuppression,current=()=>generation===voiceGeneration&&request===micGeneration;
     noiseLoading=true;updateNoiseButton();
@@ -848,10 +849,10 @@ window.TronoSocial = (()=>{
 
   function setSpeaking(id,on){
     const had=speakingPeers.has(id);if(on)speakingPeers.add(id);else speakingPeers.delete(id);
-    if(had!==on){renderVoiceRoster();updateMediaIndicators();}
+    if(had!==on)updateMediaIndicators();
   }
   function stopMeter(id){
-    const m=voiceMeters.get(id);if(m){cancelAnimationFrame(m.raf);try{m.source.disconnect();}catch{}try{m.analyser.disconnect();}catch{}voiceMeters.delete(id);}setSpeaking(id,false);
+    const m=voiceMeters.get(id);if(m){clearTimeout(m.timer);try{m.source.disconnect();}catch{}try{m.analyser.disconnect();}catch{}voiceMeters.delete(id);}setSpeaking(id,false);
   }
   async function ensureMeterContext(){
     meterAudioContext=ensureMediaAudioContext();return meterAudioContext?.state==='running'?meterAudioContext:null;
@@ -859,12 +860,15 @@ window.TronoSocial = (()=>{
   async function watchStream(id,stream){
     if(!id||!stream?.getAudioTracks?.().length)return;
     const trackId=stream.getAudioTracks()[0].id;if(voiceMeters.get(id)?.trackId===trackId)return;
-    stopMeter(id);const ctx=await ensureMeterContext();if(!ctx)return;
+    stopMeter(id);const ctx=await ensureMeterContext();if(!ctx||!voiceJoined||stream.getAudioTracks()[0]?.readyState!=='live')return;
     try{
-      const source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=.72;source.connect(analyser);
       if(voiceMeters.get(id)?.trackId===trackId)return;
-      const data=new Uint8Array(analyser.fftSize),meter={source,analyser,data,trackId,raf:0,lastVoice:0};voiceMeters.set(id,meter);
-      const tick=()=>{if(!voiceMeters.has(id))return;analyser.getByteTimeDomainData(data);let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x;}const rms=Math.sqrt(sum/data.length),now=performance.now();if(rms>.042)meter.lastVoice=now;setSpeaking(id,now-meter.lastVoice<230);meter.raf=requestAnimationFrame(tick);};tick();
+      const source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=.72;source.connect(analyser);
+      const data=new Uint8Array(analyser.fftSize),meter={source,analyser,data,trackId,timer:0,lastVoice:0};voiceMeters.set(id,meter);
+      const tick=()=>{if(voiceMeters.get(id)!==meter)return;
+        if(document.visibilityState!=='hidden'){analyser.getByteTimeDomainData(data);let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x;}const rms=Math.sqrt(sum/data.length),now=performance.now();if(rms>.042)meter.lastVoice=now;setSpeaking(id,now-meter.lastVoice<300);}
+        meter.timer=setTimeout(tick,document.visibilityState==='hidden'?1000:voiceLightMode?200:100);
+      };tick();
     }catch(err){console.warn('[TronoSocial] medidor de voz',err);}
   }
 
@@ -1329,6 +1333,7 @@ window.TronoSocial = (()=>{
     return (muted?icon('Microfone mutado','<path d="M9 9v3a3 3 0 005 2M15 9V5a3 3 0 00-6 0M5 10v2a7 7 0 0012 5M19 12v-2M12 19v3M8 22h8"/>'):'')+(silenced?icon('Áudio da chamada silenciado','<path d="M4 13v-1a8 8 0 0113-6M20 12v5M4 13H2v7h5v-7H4M20 13h2v7h-5v-3"/>'):'');
   }
   function renderVoiceStatus(host,muted,silenced){if(!host)return;const html=voiceStatusIcons(muted,silenced);if(host.innerHTML!==html)host.innerHTML=html;host.hidden=!html;}
+  function personVoiceSummary(p){const self=p.id===meId(),muted=self?micMuted:!!p.muted,cam=self?cameraOn:!!p.camera,screen=self?screenSharing:!!p.screen,transport=self?announcedTransport():(p.transport||'p2p');return (muted?'microfone mutado':speakingPeers.has(p.id)?'falando…':'na voz')+((self?deafened:p.deafened)?' • áudio silenciado':'')+(cam?(hiddenCameras.has(p.id)?' • câmera oculta':' • 📷 câmera'):'')+(screen?' • 🖥 tela':'')+(transport==='sfu'?' • ☁ SFU':transport==='sfu-pending'?' • conectando…':'');}
   function camerasInProfiles(){return inChatHub()&&voiceJoined&&detailedPlayers().some(p=>p.id===meId()?screenSharing:p.screen);}
   function renderVoiceRoster(){
     const host=$('voiceRoster');if(!host)return;
@@ -1357,7 +1362,7 @@ window.TronoSocial = (()=>{
       avatar.querySelector('i').textContent=speaking?'●':'';
       renderVoiceStatus(card.querySelector('.participant-voice-status'),muted,silenced);
       card.querySelector(':scope > strong').textContent=p.name+(self?' (você)':'');
-      card.querySelector(':scope > small').textContent=(muted?'microfone mutado':speaking?'falando…':'na voz')+(silenced?' • áudio silenciado':'')+(cam?(hidden?' • câmera oculta':' • 📷 câmera'):'')+(screen?' • 🖥 tela':'')+(transport==='sfu'?' • ☁ SFU':transport==='sfu-pending'?' • conectando…':'');
+      card.querySelector(':scope > small').textContent=personVoiceSummary(p);
       const toggle=card.querySelector('.participant-camera-toggle');toggle.hidden=self||!cam;toggle.textContent=hidden?'Mostrar câmera':'Ocultar câmera';toggle.setAttribute('aria-label',(hidden?'Mostrar':'Ocultar')+' câmera de '+p.name);toggle.setAttribute('aria-pressed',String(hidden));toggle.title='Esta preferência muda apenas o que você vê.';
       if(!self){card.querySelector('[data-peer-volume]').value=String(peerVolumes.get(p.id)??100);card.querySelector('output').textContent=(peerVolumes.get(p.id)??100)+'%';}
     }
@@ -1507,6 +1512,7 @@ window.TronoSocial = (()=>{
   }
   function updateMediaIndicators(){
     const me=meId();
+    for(const card of document.querySelectorAll('#voiceRoster .voice-person')){const p=privateVoiceRoster.get(card.dataset.peer);if(!p)continue;const speaking=!(p.id===me?micMuted:p.muted)&&speakingPeers.has(p.id);card.classList.toggle('speaking',speaking);const dot=card.querySelector('.mn-person-avatar i');if(dot)dot.textContent=speaking?'●':'';const summary=card.querySelector(':scope > small');if(summary)summary.textContent=personVoiceSummary(p);}
     for(const tile of document.querySelectorAll('.seat-camera-tile,.camera-tile')){const p=privateVoiceRoster.get(tile.dataset.peer);if(!p)continue;const muted=p.id===me?micMuted:!!p.muted,speaking=!muted&&speakingPeers.has(p.id);tile.classList.toggle('speaking',speaking);renderVoiceStatus(tile.querySelector('.seat-camera-mic'),muted,p.id===me?deafened:!!p.deafened);}
   }
 
@@ -1575,8 +1581,9 @@ window.TronoSocial = (()=>{
     return {requested:noiseSuppression,mode:noiseSuppression?mode:'off',sampleRate:processor?.ctx.sampleRate||settings.sampleRate||null};
   }
   function updateNoiseButton(){
+    updateVoiceLightMode();
     const b=$('noiseSuppressionBtn');if(!b)return;const {mode}=noiseState();
-    const labels={off:['Desligado','Supressão desligada. O controle de volume continua ativo.'],idle:['Preparado','O RNNoise será ativado no seu microfone ao entrar na voz.'],loading:['Iniciando…','Carregando o processamento do microfone…'],rnnoise:['RNNoise','RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.'],native:['Navegador','RNNoise indisponível. A redução nativa do navegador está ativa.'],paused:['Pausado','Processamento pausado. Use Liberar áudio para retomá-lo.'],unavailable:['Indisponível','Não foi possível ativar a supressão. O microfone continua transmitindo.']};
+    const labels={off:['Desligado','Supressão desligada. O controle de volume continua ativo.'],idle:['Preparado',voiceLightMode?'Modo leve: a redução nativa será solicitada ao entrar na voz.':'O RNNoise será ativado no seu microfone ao entrar na voz.'],loading:['Iniciando…','Carregando o processamento do microfone…'],rnnoise:['RNNoise','RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.'],native:['Navegador',voiceLightMode?'Modo leve: redução nativa do navegador ativa; RNNoise pausado.':'RNNoise indisponível. A redução nativa do navegador está ativa.'],paused:['Pausado','Processamento pausado. Use Liberar áudio para retomá-lo.'],unavailable:['Indisponível','Não foi possível ativar a supressão. O microfone continua transmitindo.']};
     const [label,detail]=labels[mode];b.disabled=noiseLoading;b.classList.toggle('noise-active',noiseSuppression);b.classList.toggle('danger-active',!noiseSuppression);b.textContent='Supressor: '+label;b.title=detail;b.dataset.engine=mode;b.setAttribute('aria-pressed',String(noiseSuppression));
     if($('noiseSuppressionStatus'))$('noiseSuppressionStatus').textContent=detail;
   }
@@ -1584,6 +1591,17 @@ window.TronoSocial = (()=>{
     if(noiseLoading)return;const previous=noiseSuppression;
     noiseSuppression=!noiseSuppression;storage.setItem('tronoNoiseSuppression',noiseSuppression?'1':'0');updateNoiseButton();
     if(voiceJoined){try{await acquireMic();await watchStream(meId(),localStream);setStatus(noiseState().mode==='rnnoise'?'RNNoise ativo no microfone.':noiseSuppression?'Processamento do microfone atualizado.':'Supressor desligado.','ok');}catch(err){noiseSuppression=previous;storage.setItem('tronoNoiseSuppression',previous?'1':'0');updateNoiseButton();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível atualizar o processamento do microfone.','error');}}
+  }
+  function updateVoiceLightMode(){
+    const button=$('voiceLightModeBtn');if(button){button.disabled=noiseLoading;button.textContent='Modo leve para jogar: '+(voiceLightMode?'Ligado':'Desligado');button.setAttribute('aria-pressed',String(voiceLightMode));button.classList.toggle('noise-active',voiceLightMode);}
+    document.body.classList.toggle('voice-light-mode',voiceLightMode);
+  }
+  async function toggleVoiceLightMode(){
+    if(noiseLoading)return;const previous=voiceLightMode;
+    voiceLightMode=!voiceLightMode;storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();
+    if(!voiceJoined)return;
+    try{await acquireMic();await watchStream(meId(),localStream);setStatus(voiceLightMode?'Modo leve ativo. O RNNoise fica pausado; a redução nativa depende do navegador.':'Modo leve desligado. Preferências de áudio restauradas.','ok');}
+    catch(err){voiceLightMode=previous;storage.setItem('tronoVoiceLightMode',previous?'1':'0');updateNoiseButton();startTelemetry();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.','error');}
   }
 
   function updateButtons(){
@@ -1689,6 +1707,8 @@ window.TronoSocial = (()=>{
   }
   function updateTelemetryHeader(){renderTelemetry();}
   async function collectTelemetry(){
+    if(telemetryCollecting)return;telemetryCollecting=true;
+    try{
     const pcs=allTelemetryPeerConnections();if(!voiceJoined||!pcs.length){telemetrySnapshot=null;renderTelemetry();return;}
     let uploadBps=0,downloadBps=0,rttSum=0,rttCount=0,jitterSum=0,jitterCount=0,lossLost=0,lossTotal=0,outFps=0,inFps=0,outW=0,outH=0,inW=0,inH=0,iceRoute='',pcState='';const limiters=[];
     for(const [pcKey,pc] of pcs){
@@ -1704,8 +1724,13 @@ window.TronoSocial = (()=>{
     if(!outFps){const track=screenSharing?localScreenStream?.getVideoTracks?.()[0]:localStream?.getVideoTracks?.()[0],settings=track?.getSettings?.()||{};outFps=Number(settings.frameRate)||0;outW=outW||Number(settings.width)||0;outH=outH||Number(settings.height)||0;}
     const limiter=limiters.includes('cpu')?'cpu':limiters.includes('bandwidth')?'bandwidth':limiters[0]||'none';
     telemetrySnapshot={transport:mediaTransport,rttMs:rttCount?rttSum/rttCount:0,uploadBps,downloadBps,outFps,inFps,outW,outH,inW,inH,lossPct:lossTotal?lossLost/lossTotal*100:0,jitterMs:jitterCount?jitterSum/jitterCount:0,limiter,iceRoute,pcState};renderTelemetry();
+    }finally{telemetryCollecting=false;}
   }
-  function startTelemetry(){if(telemetryTimer)clearInterval(telemetryTimer);void collectTelemetry();telemetryTimer=setInterval(()=>{if(document.visibilityState!=='hidden')void collectTelemetry();},2000);}
+  function startTelemetry(){
+    clearTimeout(telemetryTimer);const generation=++telemetrySchedule;
+    const tick=async()=>{if(generation!==telemetrySchedule)return;try{if(document.visibilityState!=='hidden')await collectTelemetry();}catch(err){console.warn('[TronoSocial] diagnóstico de mídia',err);}finally{if(generation===telemetrySchedule)telemetryTimer=setTimeout(tick,voiceLightMode&&!telemetryOpen?10000:2000);}};
+    void tick();
+  }
 
   function bindFloatingDrag(){
     const panel=$('socialPanel'),handle=$('socialDragHandle');if(!panel||!handle)return;let drag=null;
@@ -1744,6 +1769,7 @@ window.TronoSocial = (()=>{
     $('screenBitrateSelect')?.addEventListener('change',async e=>{const value=Number(e.target.value);if(!SCREEN_BITRATES.includes(value))return;screenBitrateMbps=value;storage.setItem('mnScreenBitrate',String(value));updateQualityUI();await applyQualityToLiveMedia();if(transportIsSfu())await window.TronoNetwork.requestSfu('set-screen-bitrate',{screenBitrate:effectiveScreenBitrate()}).catch(err=>setStatus(err.message,'warn'));setStatus(`Tela configurada para até ${value} Mbps.`,'ok');});
     $('screenContentSelect')?.addEventListener('change',async e=>{screenContent=e.target.value==='motion'?'motion':'detail';storage.setItem('mnScreenContent',screenContent);await applyQualityToLiveMedia();});
     $('voiceInputSelect')?.addEventListener('change',changeInput);$('voiceOutputSelect')?.addEventListener('change',changeOutput);$('cameraInputSelect')?.addEventListener('change',changeCamera);$('transmissionQualitySelect')?.addEventListener('change',changeTransmissionQuality);
+    $('voiceLightModeBtn')?.addEventListener('click',toggleVoiceLightMode);
     if($('callAlertVolume'))$('callAlertVolume').value=callAlertVolume;if($('callAlertVolumeValue'))$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;
     $('callAlertVolume')?.addEventListener('input',e=>{callAlertVolume=Math.max(0,Math.min(100,Number(e.target.value)||0));storage.setItem('mnCallAlertVolume',String(callAlertVolume));$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;primeCallSounds();});$('testCallAlert')?.addEventListener('click',()=>{primeCallSounds();playCallSound('join','test');});
     window.TronoNetwork?.onMessage(msg=>{
@@ -1799,7 +1825,7 @@ window.TronoSocial = (()=>{
 
   return {
     showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,startScreenShare,stopScreenShare,
-    get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get noiseSuppression(){return noiseSuppression;},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
+    get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalAudioTrack(){return localStream?.getAudioTracks?.()[0]||null;}
     ,get screenSettings(){return {...SCREEN_FORMATS[screenFormat],bitrate:effectiveScreenBitrate(),audio:shareStreamAudio};}
