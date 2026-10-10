@@ -1,0 +1,41 @@
+M&N CLIPES — ATALHO GLOBAL NO WINDOWS (x64)
+
+Este componente permite clipar com o jogo em foco, mantendo o chat no outro
+monitor. Não grava tela, não captura microfone e não recebe seus vídeos:
+ele envia somente o comando do atalho para o navegador neste computador.
+
+ANTES DE USAR: publique o frontend com replay integrado (cache 091sharingclips).
+A versão antiga do site não possui a conexão com este componente.
+
+1. Extraia o ZIP e abra MN-Clipes.exe. Não precisa instalar .NET nem usar admin.
+2. No aplicativo, clique em Copiar código.
+3. Na aba do chat que você já utiliza, abra Meus clipes (barra inferior)
+   -> Preferências, cole o código e clique em Conectar ao Windows.
+4. Se o navegador perguntar sobre acesso à rede local, permita a conexão
+   deste site com o componente que você abriu no seu computador.
+5. Compartilhe a tela do jogo com áudio. Assim que o replay estiver pronto,
+   o aplicativo mostrará Atalho global ativo com a combinação escolhida.
+6. Continue no jogo e aperte o atalho. O clipe aparece na biblioteca do chat.
+   Salve os clipes que quiser manter, ou descarte-os depois.
+
+O padrão é Ctrl+Shift+X. Para escolher outro, use Meus clipes -> Preferências
+-> Atalho. Se outro aplicativo já utiliza a combinação, aparece um aviso:
+escolha outra. Ao parar o replay ou desconectar o navegador, o atalho é liberado.
+
+Fechar a janela apenas recolhe o aplicativo para a bandeja do Windows.
+Para encerrar, clique com o botão direito no ícone da bandeja -> Sair.
+Mantenha o aplicativo e o navegador abertos durante a jogatina.
+O código muda quando o aplicativo é reiniciado: copie o novo e reconecte.
+O botão Abrir chat é opcional: abre o site com o código preenchido em uma
+nova aba. Para preservar sua chamada atual, prefira conectar na aba existente.
+
+Os clipes ficam no armazenamento do navegador, por conta e domínio. Parar o
+compartilhamento descarta apenas o buffer temporário. Limpar dados do site
+pode apagar os clipes pendentes. Exportar os vídeos os guarda na pasta escolhida.
+O aplicativo não envia nada à Cloudflare. Compartilhar tela na chamada continua
+usando a infraestrutura normal do chat.
+
+Conexão local: WebSocket 127.0.0.1:32196, autenticado por código aleatório.
+Não aceita conexões de outros computadores. O atalho usa RegisterHotKey
+exclusivamente para a combinação escolhida, sem monitorar outras teclas.
+Compatibilidade: Windows 10/11 x64, navegador Chrome/Edge atualizado.

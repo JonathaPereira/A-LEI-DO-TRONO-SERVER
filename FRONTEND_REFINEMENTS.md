@@ -1,83 +1,110 @@
-# Publicar clipes de replay e modo leve para jogar
+# Replay automático no compartilhamento e atalho Windows
 
-Esta versão modifica apenas o frontend. O backend e a migração do histórico
-continuam iguais à correção de mensagens já publicada. Não há SQL, dependências
-ou variáveis novas.
+Esta atualização modifica o frontend e acrescenta um componente opcional para
+Windows. Não exige alteração do backend, novo SQL, dependência de produção no
+Render ou variável de ambiente.
 
-O navegador não permite reservar CPU ou memória do computador para o chat.
-Esta atualização reduz o trabalho do próprio chat, sem prometer eliminar cortes
-causados pelo jogo, por drivers de áudio ou pela rede.
+## Publicar
 
-## Publicação
+1. Baixe e extraia o ZIP desta versão no GitHub.
+2. Abra a pasta `frontend` completa pelo Git Bash, incluindo os arquivos
+   `clip-desktop.js`, `clip-buffer.js`, `clip-store.js`, `clips.js`, `clips.css`
+   e `vendor/rnnoise/`.
+3. Execute `surge . a-lei-do-trono.surge.sh` e recarregue com **Ctrl+F5**.
+4. Para atalho global, baixe também o ZIP **M&N Clipes Windows x64**, extraia e
+   abra `MN-Clipes.exe`. O componente funciona com este frontend atualizado.
 
-1. Baixe o ZIP desta atualização no GitHub e extraia-o.
-2. Abra a pasta `frontend` extraída e use **Open Git Bash here**.
-3. Publique a pasta completa, incluindo `vendor/rnnoise/`:
+A branch `codex/clips-sharing-refinements` contém a mudança para revisão.
+Fazer merge atualiza a main; a publicação no Surge é separada. Se o Render estiver
+com deploy automático, o merge poderá reiniciar o backend, embora o servidor
+continue com o mesmo código.
 
-   ```bash
-   surge . a-lei-do-trono.surge.sh
-   ```
+## Usar o replay
 
-4. Recarregue o site com **Ctrl+F5** em cada computador.
-5. Abra **Clipes** no cabeçalho do M&N ou do jogo para configurar os replays.
-   Para reduzir o trabalho do chat enquanto joga, abra também
-   **Configurações da chamada → Áudio → Modo leve para jogar**. As preferências
-   são locais e continuam após recarregar a página.
+Compartilhe a tela normalmente, com áudio habilitado no seletor do navegador.
+O replay é preparado automaticamente usando essa mesma seleção; não há um
+segundo seletor ou botão para começar uma gravação separada. O botão **✂ Clipar**
+fica na barra inferior, junto aos controles de microfone, câmera e tela.
+Enquanto o buffer aquece, ele mostra os segundos já disponíveis.
 
-A branch `codex/voice-light-mode` guarda a atualização para revisão no GitHub.
-A publicação desta versão exige somente o frontend no Surge. Se você fizer
-merge e o Render estiver com deploy automático, ele poderá reiniciar o backend,
-embora não haja mudança de código do servidor.
+Cada clique guarda o trecho anterior. **Meus clipes**, na mesma barra, abre a
+biblioteca com prévia, salvar e descartar. É possível acumular vários clipes e
+escolher depois quais exportar. **Preferências** contém qualidade/FPS, duração,
+atalho, pasta e a opção de desativar o replay automático. Mudar essas preferências
+reinicia o buffer local, mantendo a transmissão e os clipes já criados.
+Se ocorrer falta de espaço, o replay pausa e preserva o clipe na sessão para
+salvar/descartar; a transmissão da chamada continua. Depois use **Retomar replay**.
 
-## Usar os clipes
+Ao parar de compartilhar ou sair da chamada, o buffer temporário é descartado.
+Os clipes criados permanecem no armazenamento do navegador, inclusive após
+recarregar ou publicar no mesmo domínio. São separados por conta. Trocar de
+navegador/computador/domínio não transfere os clipes; limpar os dados do site ou
+a remoção dos dados pelo navegador pode apagar os pendentes.
 
-1. Clique em **Clipes**. Escolha qualidade, FPS, duração do replay e um atalho.
-   O padrão é 720p/30 FPS, últimos 30 segundos e **Ctrl+Shift+X**.
-2. Clique em **Escolher tela ou jogo** e selecione seu monitor principal ou
-   a janela do jogo no seletor do navegador. A escolha e a permissão precisam
-   ser feitas novamente a cada captura; o site não escolhe o monitor sozinho.
-3. Aguarde o buffer ficar disponível. Use **Clipar** ou o atalho para guardar
-   o trecho anterior, continuando a captura para criar outros clipes.
-4. Em **Clipes armazenados**, abra a **Prévia**, **Salve** cada clipe que quiser
-   guardar definitivamente ou **Descarte**. Escolher a pasta só define o destino;
-   não exporta nada até clicar em Salvar. Arquivos já exportados não são apagados
-   ao remover o item da lista.
+Escolher a pasta apenas define o destino: cada exportação exige clicar em Salvar.
+Sem a API de pasta/arquivo do navegador, usa Downloads. Download solicitado mantém
+uma cópia local recuperável porque o site não consegue confirmar a conclusão.
+Cancelar o salvamento mantém o clipe. Remover da biblioteca não apaga arquivos
+já exportados. Os arquivos são WebM.
 
-A pasta escolhida usa a API de arquivos do Chrome/Edge, quando disponível,
-e o navegador pode pedir permissão de novo. Sem essa API, o botão Salvar usa
-Downloads. O navegador decide o caminho de Downloads conforme suas configurações.
-Quando o download é solicitado, a cópia local continua disponível para repetir
-ou descartar depois de conferir o arquivo. Cancelar ou falhar ao salvar mantém
-o clipe pendente. Os vídeos são WebM, sem necessidade de serviços pagos.
+## Atalho com o jogo em foco
 
-O atalho funciona apenas com esta página ou a janela de clipes em foco.
-**Não funciona como atalho global enquanto o jogo está em foco.** Quando o
-navegador oferecer **Janela flutuante**, ela mostra o botão Clipar e a quantidade
-de pendentes; é possível clicar nela durante jogos em janela/sem borda.
-Sobrepor jogos em tela cheia exclusiva depende do sistema operacional.
+A página sozinha recebe atalhos quando está em foco. Para usar no jogo sem ir ao
+segundo monitor, mantenha o componente Windows aberto e faça a conexão uma vez:
 
-Clipes são locais: ficam em IndexedDB, separados por conta, neste navegador
-e endereço do site. Recarregar e publicar um novo frontend no mesmo domínio
-preserva os pendentes; trocar computador/navegador/domínio não os transfere.
-Limpar dados do site ou a remoção dos dados pelo navegador pode apagá-los.
-Se faltar espaço ou acesso ao armazenamento, a captura é interrompida e o
-clipe é mantido somente na sessão, com aviso para salvar/descartar antes de
-retomar ou fechar. Não são enviados ao Supabase ou ao R2.
+1. No `MN-Clipes.exe`, clique **Copiar código**.
+2. Na aba do chat já aberta, acesse **Meus clipes → Preferências**.
+3. Cole o código e clique **Conectar ao Windows**.
+4. Permita o acesso à rede local se o navegador solicitar.
+5. Compartilhe a tela. Aguarde **Atalho global ativo** no componente e volte ao jogo.
+6. Aperte o atalho configurado; o clipe é guardado na biblioteca sem trocar o foco.
 
-Capturar clipes é independente de ligar câmera, microfone ou transmitir para
-a sala. A opção de áudio inclui apenas o áudio da origem quando o navegador
-permitir; não abre o microfone. O site solicita exclusão do próprio áudio da
-chamada, mas o suporte depende do navegador e da origem escolhida.
-Gravar vídeo exige recursos do computador: comece com 720p/30 FPS e observe
-a voz durante o jogo. O modo leve reduz o trabalho do chat, sem reservar CPU.
+O padrão é **Ctrl+Shift+X**. O componente usa RegisterHotKey do Windows apenas para
+a combinação escolhida. Não monitora outras teclas, não captura vídeo/áudio e
+não recebe os arquivos. A conexão é local em `127.0.0.1:32196`, com código
+aleatório e origem do site validada. Quando o replay para ou o navegador
+desconecta, o atalho é liberado. Atalhos ocupados por outro programa mostram erro.
 
-O buffer de quadros codificados fica em um Worker, limitado a 64 MiB. Ao clipar,
-ele monta um WebM reproduzível a partir de um quadro completo, ajustando os
-tempos do vídeo e áudio sem decodificar/reencodar. Pode haver alguns segundos
-extras; atingir o limite de memória encurta o trecho em vez de crescer sem limite.
-Os clipes pendentes ocupam o armazenamento local, não esse buffer.
-Publique a pasta frontend completa, incluindo `clips.js`, `clips.css`,
-`clip-store.js` e `clip-buffer.js`, além dos arquivos já existentes.
+Fechar a janela recolhe o componente à bandeja; **botão direito no ícone → Sair**
+encerra. Reiniciar o componente gera outro código: copie e reconecte.
+**Abrir chat** é opcional e abre uma nova aba com o código preenchido; para
+preservar a chamada existente, prefira conectar na aba atual.
+O ZIP é portátil para Windows 10/11 x64 e inclui .NET; não exige instalação do
+SDK ou privilégios de administrador. Instruções também em `desktop/LEIA-ME-WINDOWS.txt`.
+
+## Qualidade e recursos
+
+O padrão agora é **1080p/60 FPS**, com objetivo de **24 Mbps de vídeo e 192 kbps
+de áudio** no MediaRecorder. As opções são 720p (6/9 Mbps em 30/60 FPS), 1080p
+(16/24 Mbps) e 1440p (28/42 Mbps). O resultado depende da resolução/FPS fornecidos
+pela tela/janela e da capacidade de codificação do computador. As preferências
+antigas passam ao novo padrão, preservando 1440p se já estava escolhido.
+
+A captura local alimenta clones separados para replay e transmissão. Os limites
+de resolução/FPS e bitrate da chamada são aplicados à transmissão; o replay usa
+a fonte local antes da compressão enviada. Assim, aumentar a qualidade do arquivo
+não muda o teto de bitrate enviado à chamada. Configure a qualidade desejada
+antes de compartilhar para pedir a fonte com essa resolução/FPS. A captura não
+inventa detalhes acima da resolução da tela/janela.
+
+O áudio da origem entra automaticamente quando o navegador o fornece. Não há
+uma segunda captura de microfone. Se o usuário/navegador não incluir áudio no
+compartilhamento, o replay informa que ficou sem áudio; não promete gravar o que
+não recebeu. O site pede exclusão do próprio áudio da chamada, mas o suporte
+depende do navegador e da fonte escolhida.
+
+O buffer existe apenas na memória local, em Worker, com limite calculado entre
+64 e 256 MiB conforme qualidade e duração. Retém quadros codificados dos segundos
+recentes, em vez de uma gravação inteira. Ao clipar, monta um WebM a partir de um
+quadro completo e ajusta os tempos de vídeo/áudio sem reencodar. Pode haver alguns
+segundos extras, ou trecho menor se atingir o limite. Os clipes criados usam o
+armazenamento local do navegador, fora desse buffer.
+
+**O buffer e os clipes não são enviados à Cloudflare, Supabase ou R2.** O
+compartilhamento continua usando a infraestrutura normal da chamada. O componente
+Windows envia somente comandos locais. Gravar/codificar vídeo usa CPU/GPU/memória
+no computador; qualidade alta e 60 FPS podem pesar durante o jogo. O modo leve
+reduz o trabalho do chat, sem reservar CPU ou garantir voz sem cortes sob carga.
 
 ## O que o modo leve faz
 
@@ -96,7 +123,7 @@ Publique a pasta frontend completa, incluindo `clips.js`, `clips.css`,
 - Preserva o mute, o volume do microfone e a conexão com a sala. Desligar o modo
   restaura a preferência normal de supressão, incluindo RNNoise se estiver ligado.
 
-Os arquivos da interface usam o cache `090clips`.
+Os arquivos da interface usam o cache `091sharingclips`.
 
 Se a voz ainda cortar ao jogar, limite o FPS do jogo para deixar folga de
 processamento e teste o microfone também fora do navegador. Isso ajuda a separar
@@ -210,8 +237,13 @@ fragmentadas, quadros completos, limite de memória, múltiplos pendentes,
 prévia/seek, pasta escolhida (via handle real do armazenamento privado do
 navegador), Downloads, persistência após reload, cancelamento, falta de espaço,
 descarte durante indisponibilidade do banco local e captura sem alterar a voz.
-O seletor físico de monitores e pastas, áudio de jogos, janela flutuante e
-desempenho durante a jogatina ainda exigem conferência no computador do usuário.
+O seletor físico de monitores e pastas, áudio de jogos, janela flutuante, tecla
+global em jogos e desempenho durante a jogatina ainda exigem conferência no PC.
+
+O workflow `windows-clips.yml` compila o componente portátil e testa a ponte
+local no Windows. O teste nativo registra um atalho e usa entrada de teclado
+para verificar a entrega de WM_HOTKEY sem uma página em foco. Isso não substitui
+o teste no computador com seu jogo, seus drivers e o navegador em execução.
 
 Webcams físicas, permissões do sistema operacional, fullscreen em Safari e
 publicação real no Surge precisam da conferência no dispositivo final.

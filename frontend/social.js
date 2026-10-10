@@ -181,7 +181,7 @@ window.TronoSocial = (()=>{
 
   let roomState=null,chatRoomState=null;
   let localStream=null;
-  let localScreenStream=null;
+  let localScreenStream=null,localDisplayStream=null,screenGeneration=0;
   let micCapture=null,micGeneration=0,noiseLoading=false;
   let voiceJoined=false;
   let micMuted=false;
@@ -432,11 +432,12 @@ window.TronoSocial = (()=>{
     return err?.message||'Não foi possível abrir a câmera.';
   }
   // getDisplayMedia rejects min/exact/max capture constraints; apply the ceiling after capture.
-  function screenMediaConstraints(){const q=qualityProfile().screen;return {width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:q.fps}};}
+  function screenMediaConstraints(){const q=qualityProfile().screen,r=window.TronoClips?.captureProfile?.();return {width:{ideal:Math.max(q.width,r?.width||0)},height:{ideal:Math.max(q.height,r?.height||0)},frameRate:{ideal:Math.max(q.fps,r?.fps||0)}};}
   async function optimizeScreenTrack(track){
-    if(!track)return;const q=qualityProfile().screen;
+    if(!track)return;
     try{if('contentHint' in track)track.contentHint=screenContent;}catch{}
-    try{await track.applyConstraints({width:{ideal:q.width,max:q.width},height:{ideal:q.height,max:q.height},frameRate:{ideal:q.fps,max:q.fps}});}catch(err){console.warn('[TronoSocial] constraints tela',err);}
+    // Constraints on cloned capture tracks can affect their shared source.
+    // Downscale the outgoing encoder instead, preserving the local replay.
   }
   function waitPeerConnected(pc,timeout=10000){
     if(!pc)return Promise.reject(new Error('PeerConnection ausente.'));
@@ -462,8 +463,10 @@ window.TronoSocial = (()=>{
       }else if(kind==='screen'){
         p.degradationPreference='maintain-resolution';
         sender.track.contentHint=screenContent;
+        const source=sender.track.getSettings?.()||{};
+        const scale=Math.max(1,(source.width||q.screen.width)/q.screen.width,(source.height||q.screen.height)/q.screen.height);
         const byRid={f:q.screenBitrate,h:Math.max(500000,Math.round(q.screenBitrate*.42)),q:Math.max(250000,Math.round(q.screenBitrate*.18))};
-        for(const e of p.encodings){e.maxBitrate=byRid[e.rid]||q.screenBitrate;e.maxFramerate=e.rid==='q'?Math.min(q.screen.fps,20):e.rid==='h'?Math.min(q.screen.fps,30):q.screen.fps;}
+        for(const e of p.encodings){e.scaleResolutionDownBy=scale*(e.rid==='h'?2:e.rid==='q'?4:1);e.maxBitrate=byRid[e.rid]||q.screenBitrate;e.maxFramerate=e.rid==='q'?Math.min(q.screen.fps,20):e.rid==='h'?Math.min(q.screen.fps,30):q.screen.fps;}
       }else if(p.encodings.length>=3&&p.encodings.some(e=>e.rid)){
         const byRid={f:q.videoBitrate,h:Math.max(180000,Math.round(q.videoBitrate*.42)),q:Math.max(90000,Math.round(q.videoBitrate*.16))};
         for(const e of p.encodings){e.maxBitrate=byRid[e.rid]||q.videoBitrate;e.maxFramerate=q.camera.fps;}
@@ -789,18 +792,25 @@ window.TronoSocial = (()=>{
 
   async function startScreenShare(){
     if(!inChatHub())return false;
+    if(screenSharing)return true;
     if(!navigator.mediaDevices?.getDisplayMedia){setStatus('Compartilhamento de tela não é suportado neste navegador.','error');return false;}
     if(!voiceJoined){const ok=await joinVoice();if(!ok)return false;}
     if(transportIsSfu()&&realtimeStatus&&!realtimeStatus.screenAllowed){setStatus('Compartilhamento bloqueado pelo freio mensal de consumo.','warn');return false;}
+    const request=++screenGeneration,callGeneration=voiceGeneration;let source,outgoing;
     try{
       // A game window must request window audio explicitly; some browsers otherwise
       // offer the entire system mix, including voices played by this call.
       // restrictOwnAudio also requests removal of this page from system capture.
       // These are browser controls, so older implementations may ignore them.
-      const stream=await navigator.mediaDevices.getDisplayMedia({video:screenMediaConstraints(),audio:shareStreamAudio?{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false,restrictOwnAudio:true}:false,systemAudio:shareStreamAudio?'include':'exclude',windowAudio:shareStreamAudio?'window':'exclude',selfBrowserSurface:'exclude'});
-      const track=stream.getVideoTracks()[0];if(!track)throw new Error('Nenhuma tela foi selecionada.');await optimizeScreenTrack(track);
-      if(localScreenStream)localScreenStream.getTracks().forEach(t=>t.stop());localScreenStream=stream;screenSharing=true;localScreenPreviewPaused=false;localScreenCollapsed=false;
-      track.addEventListener('ended',()=>stopScreenShare(true),{once:true});
+      source=await navigator.mediaDevices.getDisplayMedia({video:screenMediaConstraints(),audio:shareStreamAudio?{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false,restrictOwnAudio:true}:false,systemAudio:shareStreamAudio?'include':'exclude',windowAudio:shareStreamAudio?'window':'exclude',selfBrowserSurface:'exclude'});
+      if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined){source.getTracks().forEach(t=>t.stop());return false;}
+      // Keep the local source at replay quality. Only the outgoing clones get
+      // the call's resolution/FPS ceilings and network bitrate limits.
+      outgoing=source.clone();const stream=outgoing,track=stream.getVideoTracks()[0];if(!track)throw new Error('Nenhuma tela foi selecionada.');await optimizeScreenTrack(track);
+      if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined){source.getTracks().forEach(t=>t.stop());outgoing.getTracks().forEach(t=>t.stop());return false;}
+      localDisplayStream=source;localScreenStream=stream;screenSharing=true;localScreenPreviewPaused=false;localScreenCollapsed=false;
+      source.getVideoTracks()[0].addEventListener('ended',()=>{if(localDisplayStream===source)void stopScreenShare(true);},{once:true});
+      void window.TronoClips?.sharedStarted?.(source);
       if(transportIsSfu()){
         try{await publishSfuTrack('screen',track);const sound=stream.getAudioTracks()[0];if(sound)await publishSfuTrack('screen-audio',sound);}
         catch(err){console.warn('[TronoSocial] tela SFU; acionando fallback',err?.code||err);await fallbackToP2p('O compartilhamento não conseguiu publicar pelo SFU; chamada mantida em P2P para preservar a tela.');}
@@ -809,10 +819,11 @@ window.TronoSocial = (()=>{
       const sound=stream.getAudioTracks()[0];sound?.addEventListener('ended',async()=>{if(localScreenStream!==stream)return;if(transportIsSfu())await closeSfuPublication('screen-audio');else for(const pc of peers.values())await pc._tronoScreenAudioSender?.replaceTrack(null);renderScreenGrid();},{once:true});
       window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,true,transmissionQuality,announcedTransport());
       updateButtons();renderScreenGrid();renderVoiceRoster();setStatus(sound?'Compartilhando tela e áudio.':shareStreamAudio?'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.':'Compartilhando tela sem áudio.',sound?'ok':'warn');return true;
-    }catch(err){if(screenSharing)await stopScreenShare(true);setStatus(err?.name==='NotAllowedError'?'Compartilhamento de tela cancelado.':(err.message||'Não foi possível compartilhar a tela.'),'error');return false;}
+    }catch(err){if(localDisplayStream===source&&screenSharing)await stopScreenShare(true);else{source?.getTracks().forEach(t=>t.stop());outgoing?.getTracks().forEach(t=>t.stop());}if(request!==screenGeneration||callGeneration!==voiceGeneration)return false;setStatus(err?.name==='NotAllowedError'?'Compartilhamento de tela cancelado.':(err.message||'Não foi possível compartilhar a tela.'),'error');return false;}
   }
   async function stopScreenShare(sendState=true){
-    if(!screenSharing&&!localScreenStream)return;
+    screenGeneration++;if(!screenSharing&&!localScreenStream&&!localDisplayStream)return;
+    window.TronoClips?.sharedStopped?.(localDisplayStream);localDisplayStream?.getTracks().forEach(t=>t.stop());localDisplayStream=null;
     screenSharing=false;localScreenPreviewPaused=false;localScreenCollapsed=false;localScreenStream?.getTracks?.().forEach(t=>t.stop());localScreenStream=null;
     if(transportIsSfu()){await closeSfuPublication('screen-audio');await closeSfuPublication('screen');}else for(const pc of peers.values()){pc._tronoWatchingScreen=false;if(pc._tronoScreenSender)await pc._tronoScreenSender.replaceTrack(null).catch(()=>{});if(pc._tronoScreenAudioSender)await pc._tronoScreenAudioSender.replaceTrack(null).catch(()=>{});}
     if(sendState)window.TronoNetwork?.setVoiceState(voiceJoined,micMuted,cameraOn,false,transmissionQuality,announcedTransport());
@@ -828,6 +839,7 @@ window.TronoSocial = (()=>{
     $('shareFps').querySelector('[value="60"]').disabled=limited;
     if(limited){$('shareResolution').value='720';if(setting.fps===60)$('shareFps').value='30';}
     $('shareOptionsNote').textContent=limited?'O limite de consumo atual permite até 720p / 30 FPS.':'Escolha a qualidade; em seguida, o navegador perguntará qual tela ou aba compartilhar.';
+    $('shareReplayHelp').textContent=window.TronoClips?.captureProfile?.()?'O replay será preparado automaticamente para clipar pelo botão ✂ na barra da chamada, com o áudio da tela quando disponível.':'Replay desligado. Ative em Meus clipes → Preferências para preparar clipes ao compartilhar.';
     $('screenOptionsDialog').showModal();
   }
   function confirmScreenOptions(e){
@@ -1555,6 +1567,7 @@ window.TronoSocial = (()=>{
     watchingStreams.clear();hiddenCameras.clear();privateVoiceRoster.clear();stopMeter(meId());mediaTransport='p2p';
     for(const key of [...remoteAudio.keys()])removeRemoteAudio(key);updateAudioRecoveryUI();
     cleanupMicCapture(micCapture);micCapture=null;localStream?.getTracks().forEach(t=>t.stop());localStream=null;
+    screenGeneration++;window.TronoClips?.sharedStopped?.(localDisplayStream);localDisplayStream?.getTracks().forEach(t=>t.stop());localDisplayStream=null;
     localScreenStream?.getTracks().forEach(t=>t.stop());localScreenStream=null;screenSharing=false;cameraOn=false;localScreenPreviewPaused=false;localScreenCollapsed=false;
     for(const id of [...voiceMeters.keys()])stopMeter(id);meterAudioContext=null;
     if(wasInVoice){playCallSound(reason==='disconnect'?'disconnect':'leave','local');callNotice({kind:reason==='disconnect'?'disconnected':'left',name:'Você',text:reason==='disconnect'?'Você foi desconectado da chamada.':'Você saiu da chamada.'});}voiceRosterInitialized=false;$('joinVoiceBtn').innerHTML='<span class="call-icon">☎</span><span>Entrar na voz</span>';$('muteMicBtn').disabled=true;$('deafenVoiceBtn').disabled=true;$('cameraBtn').disabled=false;if($('screenShareBtn'))$('screenShareBtn').disabled=true;
@@ -1824,9 +1837,10 @@ window.TronoSocial = (()=>{
   window.addEventListener('DOMContentLoaded',bind);
 
   return {
-    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,startScreenShare,stopScreenShare,
+    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,startScreenShare,stopScreenShare,openScreenOptions,
     get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
+    getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},
     getLocalAudioTrack(){return localStream?.getAudioTracks?.()[0]||null;}
     ,get screenSettings(){return {...SCREEN_FORMATS[screenFormat],bitrate:effectiveScreenBitrate(),audio:shareStreamAudio};}
     ,get deafened(){return deafened;},toggleWatchStream,toggleWatchCamera,fullscreenMedia,

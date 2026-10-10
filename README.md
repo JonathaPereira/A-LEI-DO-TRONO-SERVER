@@ -157,27 +157,33 @@ redução de trabalho pode ajudar, mas não garante áudio sem cortes sob carga
 nem substitui diagnóstico de CPU, drivers ou rede. Esta versão exige apenas
 publicar o frontend; não há migração SQL ou mudança do backend.
 
-## Clipes de replay locais
+## Replay automático e atalho Windows
 
-O botão **Clipes** abre a captura dos últimos 15, 30, 60 ou 120 segundos da
-tela/janela escolhida no navegador. Qualidade (720p, 1080p ou 1440p), FPS
-(30/60) e atalho são pessoais. Vários clipes ficam pendentes em IndexedDB,
-por conta e site, com prévia, salvar e descartar. Escolher uma pasta não salva
-automaticamente; cada clipe precisa de confirmação. Downloads mantêm a cópia
-local porque o site não consegue confirmar a conclusão do download.
+Compartilhar a tela prepara automaticamente os últimos 15, 30, 60 ou 120 segundos,
+com áudio da origem quando disponível. O botão Clipar fica na barra inferior da
+chamada; Meus clipes abre a biblioteca com prévia, salvar e descartar. Vários
+clipes ficam pendentes no IndexedDB por conta/site e sobrevivem a reload/deploy
+no mesmo domínio. Parar o compartilhamento descarta somente o buffer temporário.
+Os clipes não são enviados ao servidor ou à Cloudflare.
 
-A captura é separada da chamada, não liga o microfone e não envia vídeos ao
-servidor. O atalho funciona apenas com a página ou janela de clipes em foco,
-sem atalho global do Windows. O buffer de vídeo codificado tem limite de
-64 MiB, sem reencodar ao clipar; a duração depende dos quadros completos e pode
-ser menor em qualidades altas. Se faltar espaço no navegador, a captura para
-e preserva o clipe na sessão para exportar/descartar antes de fechar.
-Limpar os dados do site pode excluir os pendentes. Consulte
-[FRONTEND_REFINEMENTS.md](FRONTEND_REFINEMENTS.md) para uso e publicação.
-Só é necessário publicar o frontend; não há novo SQL ou configuração do backend.
+O padrão é 1080p/60 FPS, com objetivo de 24 Mbps de vídeo e 192 kbps de áudio.
+Replay e transmissão usam clones separados da captura; os limites da chamada
+continuam aplicados apenas à transmissão. O buffer codificado é limitado entre
+64 e 256 MiB. Qualidade/duração dependem da origem e dos recursos do computador.
+O atalho da página funciona em foco; `desktop/TronoClips` oferece um componente
+Windows portátil com RegisterHotKey e conexão local autenticada para clipar com
+o jogo em foco. Não captura mídia ou monitora outras teclas.
 
-`npm run test:clips` exige Chromium, `ffmpeg` e `ffprobe` no PATH. Os testes
-usam MediaRecorder real com vídeo/áudio gerados, decodificam os WebMs exportados,
-verificam recorte recente, limite de memória, persistência, salvamento,
-cancelamento, falta de espaço e isolamento do microfone da chamada. A escolha
-de monitor, áudio do jogo e desempenho sob carga devem ser conferidos no PC.
+Veja [FRONTEND_REFINEMENTS.md](FRONTEND_REFINEMENTS.md) para publicação e uso e
+[LEIA-ME-WINDOWS.txt](desktop/LEIA-ME-WINDOWS.txt) para conectar o aplicativo.
+Somente o frontend precisa ser publicado no Surge; não há novo SQL/backend.
+
+`npm run test:clips` exige Chromium, `ffmpeg` e `ffprobe`. Usa MediaRecorder real
+com vídeo/áudio gerados, decodifica o WebM inteiro, verifica áudio, resolução,
+recorte recente, limites do buffer, múltiplos pendentes, exportação, persistência,
+comandos da ponte com página sem foco e isolamento da mídia da chamada.
+`dotnet run --project desktop/tests` (SDK .NET 10) verifica o protocolo local,
+origens, código de pareamento, mapeamento e liberação de atalhos. No Windows,
+verifica também RegisterHotKey/UnregisterHotKey. O workflow Windows compila o
+executável portátil. O atalho físico em jogos, seletor de tela/áudio, desempenho
+e permissões precisam de conferência no dispositivo final.
