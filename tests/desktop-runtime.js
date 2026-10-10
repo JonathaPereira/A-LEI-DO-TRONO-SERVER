@@ -3,8 +3,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync}=require('node:child_process');
 const {_electron,expect}=require('@playwright/test');
 test('installed desktop boundary, native shortcut, picker and filesystem integration',{timeout:90000},async t=>{
-  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,phase='launch';
-  t.signal.addEventListener('abort',()=>{console.error('Desktop test stalled at: '+phase);app?.process().kill();},{once:true});
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,phase='launch',finished=false;
+  t.signal.addEventListener('abort',()=>{if(!finished){console.error('Desktop test stalled at: '+phase);app?.process().kill();}},{once:true});
   try{
     app=await _electron.launch({executablePath:require('../desktop/app/node_modules/electron'),args:[path.resolve(__dirname,'../desktop/app'),'--user-data-dir='+directory],timeout:40000});
     const page=await app.firstWindow();await expect(page.locator('#desktopRail')).toBeVisible({timeout:30000});assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
@@ -20,10 +20,10 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     await page.evaluate(()=>window.TronoDesktop.configureClips({active:false}));assert(!await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+F9')));
     // An untrusted child page cannot issue native filesystem IPC, even if it
     // navigates to the app origin with a manually injected test preload.
-    phase='child IPC isolation';const denied=await app.evaluate(async({BrowserWindow})=>{
-      const child=new BrowserWindow({show:false,webPreferences:{session:BrowserWindow.getAllWindows()[0].webContents.session,preload:require('node:path').resolve('desktop/app/preload.cjs'),sandbox:true,contextIsolation:true}});
+    phase='child IPC isolation';const denied=await app.evaluate(async({BrowserWindow},preload)=>{
+      const child=new BrowserWindow({show:false,webPreferences:{session:BrowserWindow.getAllWindows()[0].webContents.session,preload,sandbox:true,contextIsolation:true}});
       try{await child.loadURL('https://a-lei-do-trono.surge.sh/');return await child.webContents.executeJavaScript("window.TronoDesktop.chooseFolder().then(()=>false,()=>true)");}finally{child.destroy();}
-    });assert(denied);
+    },path.resolve(__dirname,'../desktop/app/preload.cjs'));assert(denied);
     phase='native file export';await app.evaluate(({dialog},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});dialog.showSaveDialog=async()=>({canceled:true});},directory);
     const folder=await page.evaluate(()=>window.TronoDesktop.chooseFolder());assert.equal(folder.native,true);
     assert.deepEqual(await page.evaluate(()=>window.TronoDesktop.saveClip({filename:'Trono_Clipe_cancel.webm',bytes:Uint8Array.from([0x1a,0x45,0xdf,0xa3,4]).buffer})),{canceled:true});
@@ -36,5 +36,5 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     // Closing the window retains the process/call for the tray; quit is explicit.
     phase='tray close';await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].close());assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible()),false);
   }catch(error){error.message='Desktop phase: '+phase+'\n'+error.message;throw error;}
-  finally{if(app){const timer=setTimeout(()=>app.process().kill(),5000);try{await app.close();}finally{clearTimeout(timer);}}await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
+  finally{finished=true;if(app){const timer=setTimeout(()=>app.process().kill(),5000);try{await app.close();}finally{clearTimeout(timer);}}await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
 });
