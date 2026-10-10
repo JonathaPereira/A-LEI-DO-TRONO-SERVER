@@ -819,7 +819,7 @@ window.TronoSocial = (()=>{
       const sound=stream.getAudioTracks()[0];sound?.addEventListener('ended',async()=>{if(localScreenStream!==stream)return;if(transportIsSfu())await closeSfuPublication('screen-audio');else for(const pc of peers.values())await pc._tronoScreenAudioSender?.replaceTrack(null);renderScreenGrid();},{once:true});
       window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,true,transmissionQuality,announcedTransport());
       updateButtons();renderScreenGrid();renderVoiceRoster();setStatus(sound?'Compartilhando tela e áudio.':shareStreamAudio?'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.':'Compartilhando tela sem áudio.',sound?'ok':'warn');return true;
-    }catch(err){if(localDisplayStream===source&&screenSharing)await stopScreenShare(true);else{source?.getTracks().forEach(t=>t.stop());outgoing?.getTracks().forEach(t=>t.stop());}if(request!==screenGeneration||callGeneration!==voiceGeneration)return false;setStatus(err?.name==='NotAllowedError'?'Compartilhamento de tela cancelado.':(err.message||'Não foi possível compartilhar a tela.'),'error');return false;}
+    }catch(err){if(localDisplayStream===source&&screenSharing)await stopScreenShare(true);else{source?.getTracks().forEach(t=>t.stop());outgoing?.getTracks().forEach(t=>t.stop());}if(request!==screenGeneration||callGeneration!==voiceGeneration)return false;setStatus(['NotAllowedError','AbortError'].includes(err?.name)?'Compartilhamento de tela cancelado.':(err.message||'Não foi possível compartilhar a tela.'),'error');return false;}
   }
   async function stopScreenShare(sendState=true){
     screenGeneration++;if(!screenSharing&&!localScreenStream&&!localDisplayStream)return;

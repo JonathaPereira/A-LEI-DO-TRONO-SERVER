@@ -6,6 +6,7 @@ const {clipBytes,writeClip}=require('./clip-files.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
 let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false;
 const folders=new Map(),mediaPermissions=new Set();
+const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop-diagnostics'))console.error('[desktop]',...values);};
 if(!app.requestSingleInstanceLock())app.quit();
 else{
   app.on('second-instance',()=>{window?.show();window?.focus();});
@@ -34,7 +35,7 @@ async function start(){
       return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
-  window=new BrowserWindow({title:'M&N · A Lei do Trono',width:1440,height:960,minWidth:960,minHeight:640,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
+  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:960,minHeight:640,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
   window.on('close',event=>{if(tray&&!quitting){event.preventDefault();window.hide();}});
   window.webContents.on('will-prevent-unload',event=>{
@@ -49,11 +50,20 @@ async function start(){
     if(url==='about:blank'||/^https:\/\//.test(url))return {action:'allow',overrideBrowserWindowOptions:{webPreferences:{preload:undefined,nodeIntegration:false,contextIsolation:true,sandbox:true}}};
     return {action:'deny'};
   });
-  browserSession.setPermissionCheckHandler((contents,permission,origin)=>contents===window.webContents&&isAppURL(origin)&&['media','display-capture','fullscreen'].includes(permission));
+  browserSession.setPermissionCheckHandler((contents,permission,origin)=>{trace('permission',permission,origin,contents===window.webContents);return contents===window.webContents&&isAppURL(origin)&&['media','display-capture','fullscreen','speaker-selection','clipboard-sanitized-write'].includes(permission);});
   browserSession.setPermissionRequestHandler(async(contents,permission,callback,details)=>{
+    trace('permission request',permission,details.mediaTypes,contents===window.webContents);
     if(contents!==window.webContents||!isAppURL(details.requestingUrl||contents.getURL()))return callback(false);
     if(permission==='fullscreen')return callback(true);
+    if(permission==='speaker-selection'||permission==='clipboard-sanitized-write')return callback(true);
+    // This authorizes opening our picker, not a screen source. The separate
+    // display handler still requires the main frame and explicit selection.
+    if(permission==='display-capture')return callback(true);
     if(permission!=='media')return callback(false);
+    // Chromium asks for "media" with no device types before display capture.
+    // The next handler presents the explicit screen/window picker. Do not
+    // mislabel this as a camera/microphone permission or block behind that dialog.
+    if(Array.isArray(details.mediaTypes)&&details.mediaTypes.length===0)return callback(true);
     const types=details.mediaTypes||['audio','video'],key=types.slice().sort().join(',');
     if(mediaPermissions.has(key))return callback(true);
     const label=types.includes('video')?'câmera e microfone':'microfone';
@@ -61,6 +71,7 @@ async function start(){
     if(answer.response===0)mediaPermissions.add(key);callback(answer.response===0);
   });
   browserSession.setDisplayMediaRequestHandler(async(request,callback)=>{
+    trace('capture request',request.securityOrigin,request.frame===window.webContents.mainFrame);
     if(request.frame!==window.webContents.mainFrame||!isAppURL(request.securityOrigin)||capture)return callback({});
     const pending={id:crypto.randomUUID(),callback,sources:[],audio:request.audioRequested,timer:setTimeout(cancelCapture,60000)};capture=pending;
     try{
@@ -69,7 +80,7 @@ async function start(){
       const options=sources.filter(s=>s.id!==window.getMediaSourceId());
       pending.sources=options;
       window.webContents.send('mn:capture',{id:pending.id,audio:request.audioRequested,windows:process.platform==='win32',sources:options.map(s=>({id:s.id,name:s.name,thumbnail:s.thumbnail.toDataURL()}))});
-    }catch{if(capture===pending)cancelCapture();}
+    }catch(error){trace('capture failure',error.message);if(capture===pending)cancelCapture();}
   });
   ipcMain.handle('mn:clips-configure',(event,configuration)=>{
     trusted(event);clearHotkey();if(configuration?.active!==true)return {active:false};
@@ -94,7 +105,7 @@ async function start(){
     else{const answer=await dialog.showSaveDialog(window,{title:'Salvar clipe',defaultPath:path.join(app.getPath('videos'),name),filters:[{name:'Vídeo WebM',extensions:['webm']}]});if(answer.canceled||!answer.filePath)return {canceled:true};target=answer.filePath;if(!target.toLowerCase().endsWith('.webm'))throw Error('Escolha um arquivo .webm.');}
     await writeClip(target,bytes,{overwrite:!data.directory});return {saved:true};
   });
-  const icon=nativeImage.createFromPath(path.join(root,'assets/throne.png')).resize({width:32,height:32});
+  const icon=nativeImage.createFromPath(path.join(__dirname,'assets/icon.png')).resize({width:32,height:32});
   tray=new Tray(icon);tray.setToolTip('M&N · A Lei do Trono');tray.setContextMenu(Menu.buildFromTemplate([{label:'Abrir M&N',click:()=>{window.show();window.focus();}},{label:'Clipar',click:clip},{type:'separator'},{label:'Sair',click:()=>app.quit()}]));tray.on('double-click',()=>{window.show();window.focus();});
   Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'M&N',submenu:[{label:'Abrir site',click:()=>void shell.openExternal(APP_ORIGIN)},{type:'separator'},{label:'Sair',click:()=>app.quit()}]},{label:'Visualização',submenu:[{role:'reload'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'},...(!app.isPackaged?[{role:'toggleDevTools'}]:[])]}]));
   await window.loadURL(APP_ORIGIN+'/');

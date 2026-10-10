@@ -19,9 +19,9 @@
     "productName": "MN Trono",
     "artifactName": "MN-Trono-${version}-Windows.${ext}",
     "directories": {"output": "../../artifacts/windows-app"},
-    "files": ["*.cjs", "package.json"],
+    "files": ["*.cjs", "package.json", "assets/**"],
     "extraResources": [{"from": "../../frontend", "to": "frontend"}],
-    "win": {"target": "nsis"},
+    "win": {"target": "nsis", "icon": "assets/icon.png"},
     "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false}
   }
 }
