@@ -1,0 +1,39 @@
+/* Screens occupy the main stage; participant cameras reuse the profile cards. */
+.screen-share-tile>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.media-resize-grip){transition:opacity .18s ease,visibility .18s ease}
+#socialPanel .screen-share-tile.screen-controls-idle{cursor:none}
+#socialPanel .screen-share-tile.screen-controls-idle>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.media-resize-grip){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.screen-share-tile:focus-visible{outline:2px solid var(--theme-accent);outline-offset:3px}
+body.chat-only-active #socialPanel .screens-layout #mediaMosaic{grid-template-columns:minmax(0,1fr)!important}
+body.chat-only-active #socialPanel .screens-layout #screenShareGrid:not(.hidden):not(.screen-share-empty){display:grid!important;grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px;min-width:0}
+body.chat-only-active #socialPanel .screens-layout #mediaMosaic .screen-share-tile:not(.share-collapsed):not(:fullscreen):not(.media-maximized){aspect-ratio:16/9!important}
+body.chat-only-active #socialPanel .screens-layout .voice-roster{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;align-items:start}
+body.chat-only-active #socialPanel .voice-person{position:relative;min-width:0}
+.participant-camera-slot{width:100%;min-width:0;max-width:240px}
+body.chat-only-active #socialPanel .participant-camera-slot .camera-tile:not(:fullscreen):not(.media-maximized){position:relative!important;width:100%!important;height:auto!important;aspect-ratio:16/9!important;max-width:none!important;max-height:none!important;min-height:0!important;border:1px solid var(--theme-line)!important;border-radius:9px!important;overflow:hidden;background:var(--theme-bg)!important}
+body.chat-only-active #socialPanel .participant-camera-slot .camera-tile:not(:fullscreen):not(.media-maximized)>span{display:none!important}
+body.chat-only-active #socialPanel .camera-in-profile .mn-person-avatar{display:none!important}
+body.chat-only-active #socialPanel .voice-person>strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.participant-camera-toggle{border:1px solid var(--theme-line);border-radius:7px;padding:6px 9px;min-height:30px;font:600 10px var(--ui-font);background:var(--theme-soft);color:var(--theme-text);cursor:pointer;transition:background .15s,border-color .15s}
+.participant-camera-toggle:hover,.participant-camera-toggle:focus-visible{border-color:var(--theme-accent);background:var(--theme-card)}
+body.chat-only-active #socialPanel .camera-tile:fullscreen,body.chat-only-active #socialPanel .camera-tile.media-maximized{aspect-ratio:auto!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;border:0!important;border-radius:0!important;background:#090c16!important}
+body.chat-only-active #socialPanel .camera-tile:fullscreen{position:relative!important}
+body.chat-only-active #socialPanel .camera-tile.media-maximized{position:fixed!important;inset:0!important;z-index:1000!important}
+.noise-suppression-status{display:block;font:500 11px/1.5 var(--ui-font);color:var(--theme-muted);padding:8px 0}
+.soundboard-menu .soundboard-list{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px;max-height:240px}
+.soundboard-menu .sound-play{min-height:72px;padding:7px 5px;gap:4px}
+.soundboard-menu .sound-thumbnail{width:25px;height:25px;border-radius:8px;font-size:17px}
+.soundboard-menu .sound-play strong{font-size:10px}.soundboard-menu .sound-play small{font-size:9px}
+.soundboard-menu .sound-card{border-radius:9px}.soundboard-menu .sound-card-actions{padding:2px 4px;gap:2px}
+.soundboard-menu .sound-card-actions button{min-height:24px;font-size:9px;padding:3px 4px}
+.soundboard-menu .sound-card-actions .sound-delete{font-size:16px;min-width:24px}
+@media(max-width:640px){body.chat-only-active #socialPanel .call-action>span:not(.call-icon){min-width:0;max-width:100%;overflow-wrap:anywhere;line-height:1.25}}
+@media(max-width:640px){body.chat-only-active #socialPanel .screens-layout .voice-roster{grid-template-columns:repeat(2,minmax(0,1fr))!important}.participant-camera-toggle{font-size:9px;padding:5px;min-height:30px}body.chat-only-active #socialPanel .screens-layout .voice-person{padding:10px 7px!important}body.chat-only-active #socialPanel .screens-layout .voice-person>small{font-size:9px!important}}
+/* Keep call controls accessible below text on compact screens, without an overlay. */
+@media(max-width:1279px){
+  body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:48px minmax(0,1fr) auto!important;grid-template-areas:'head' 'chat' 'voice'!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){position:relative!important;inset:auto!important;width:100%!important;height:100%!important;z-index:auto!important;box-shadow:none!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section{padding:0!important;gap:0!important;overflow:visible!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel .voice-section>:is(.voice-title,.mn-media-stage,.voice-help){display:none!important}
+  body.chat-only-active.channel-text-active.call-connected #socialPanel .call-toolbar{margin-top:0!important;border-radius:0!important}
+}
+@media(max-width:640px){body.chat-only-active.channel-text-active.call-connected #socialPanel.social-chat-hub.chat-drawer-open{grid-template-rows:0 minmax(0,1fr) auto!important}}

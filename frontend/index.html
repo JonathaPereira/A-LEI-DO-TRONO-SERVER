@@ -5,13 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
-  <script src="auth-boot.js?v=081community"></script>
-  <link rel="stylesheet" href="style.css?v=081community" />
-  <link rel="stylesheet" href="mn-chat.css?v=081community" />
-  <link rel="stylesheet" href="auth.css?v=081community" />
-  <link rel="stylesheet" href="profile-files.css?v=081community" />
-  <link rel="stylesheet" href="community.css?v=081community" />
-  <link rel="stylesheet" href="modern.css?v=081community" />
+  <script src="auth-boot.js?v=086textvoice"></script>
+  <link rel="stylesheet" href="style.css?v=086textvoice" />
+  <link rel="stylesheet" href="mn-chat.css?v=086textvoice" />
+  <link rel="stylesheet" href="auth.css?v=086textvoice" />
+  <link rel="stylesheet" href="profile-files.css?v=086textvoice" />
+  <link rel="stylesheet" href="community.css?v=086textvoice" />
+  <link rel="stylesheet" href="modern.css?v=086textvoice" />
+  <link rel="stylesheet" href="refinements.css?v=086textvoice" />
+  <link rel="stylesheet" href="appearance.css?v=086textvoice" />
+  <link rel="stylesheet" href="call-media.css?v=086textvoice" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -164,7 +167,7 @@
       <div class="chat-only-top-actions">
         <span id="myRoleBadge" class="role-badge role-member">Membro</span>
         <button id="communityManageBtn" class="chat-header-action hidden" type="button"><span>⚙</span><b>Gerenciar</b></button>
-        <button id="chatProfileBtn" class="chat-header-action" type="button" title="Alterar apelido e ícone"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3c0-5 16-5 16 0v3z"/></svg></span><b>Perfil</b></button>
+        <button id="chatProfileBtn" class="chat-header-action" type="button" title="Perfil, tema e layout"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3c0-5 16-5 16 0v3z"/></svg></span><b>Perfil</b></button>
         <button id="chatOnlyTextBtn" class="chat-header-action" title="Abrir mensagens de texto"><span>💬</span><b>Chat</b><em id="chatOnlyUnread" class="chat-header-unread hidden">0</em></button>
         <button id="chatOnlyOpenSocialBtn" class="royal-btn hidden">Abrir comunicação</button>
         <button id="backFromChatOnlyBtn" class="chat-header-action back-action" title="Voltar ao início"><span>←</span><b>Voltar</b></button>
@@ -264,7 +267,6 @@
         </div>
         <div class="call-control-group call-control-system">
           <small>SISTEMA</small>
-          <button id="soundboardBtn" class="royal-btn call-action" type="button"><span class="call-icon">♫</span><span>Efeitos</span></button>
           <button id="voiceSettingsBtn" class="royal-btn call-action settings-btn" aria-expanded="false"><span class="call-icon">⚙</span><span>Configurações</span></button>
         </div>
       </div>
@@ -290,10 +292,11 @@
             <label class="mn-gain-label call-alert-volume"><span>Avisos de entrada e saída</span><output id="callAlertVolumeValue">85%</output><input id="callAlertVolume" type="range" min="0" max="100" step="5" value="85" aria-label="Volume dos avisos da chamada" /></label>
             <button id="testCallAlert" class="royal-btn settings-secondary" type="button" data-no-click-sfx="1">Ouvir aviso de chamada</button>
             <div class="settings-action-grid">
-              <button id="noiseSuppressionBtn" class="royal-btn noise-active settings-secondary" title="Supressor integrado de ruído">Supressor: Ligado</button>
+              <button id="noiseSuppressionBtn" class="royal-btn noise-active settings-secondary" type="button" aria-pressed="true" title="Redução de ruído do seu microfone">Supressor: Preparado</button>
               <button id="voiceSfxBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar efeitos da interface e avisos da chamada">🔔 Efeitos: Ligados</button>
               <button id="voiceMusicBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar a música da aplicação">♫ Música: Ligada</button>
             </div>
+            <small id="noiseSuppressionStatus" class="noise-suppression-status" role="status" aria-live="polite"></small>
             <div class="voice-devices voice-devices-vertical"><label><span>Música de fundo</span><select id="voiceMusicTrackSelect" aria-label="Trocar música do chat de voz"></select></label></div>
             <label class="mn-gain-label"><span>Volume da música</span><output id="voiceMusicVolumeValue">32%</output><input id="voiceMusicVolume" type="range" min="0" max="100" value="32" /></label>
             <small id="voiceMusicStatus" class="music-playback-status" role="status" aria-live="polite"></small>
@@ -352,7 +355,7 @@
         <small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada aproximadamente a cada 2 segundos. Alguns campos variam conforme navegador e dispositivo.</small>
       </section>
       <div class="mn-media-stage">
-        <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>⛶ Ampliar mosaico</button></div>
+        <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>▦ Grade · até 6</button></div>
         <div id="mediaMosaic" class="media-mosaic">
         <div id="screenShareGrid" class="screen-share-grid hidden" aria-label="Compartilhamentos de tela"></div>
         <div id="cameraGrid" class="camera-grid camera-grid-empty" aria-label="Câmeras da chamada"></div>
@@ -424,7 +427,7 @@
   <audio id="bgMusic" src="assets/audio/electronic_summer_nights.mp3" loop preload="metadata"></audio>
   <dialog id="profileDialog" class="auth-dialog profile-card" aria-labelledby="profileTitle">
     <button id="profileClose" class="auth-close" type="button" aria-label="Fechar perfil">×</button>
-    <span class="auth-brand">✦ M&amp;N · SEU PERFIL</span><h2 id="profileTitle">Apelido e ícone</h2>
+    <span class="auth-brand">✦ M&amp;N · SEU PERFIL</span><h2 id="profileTitle">Seu perfil</h2>
     <form id="profileForm">
       <label class="auth-field">Apelido<input id="profileNickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" required><small>De 2 a 20 caracteres. Aparece no chat e nas partidas.</small></label>
       <div id="profilePreview" class="profile-preview" aria-label="Prévia do ícone"></div>
@@ -432,6 +435,14 @@
       <div class="profile-photo-label"><label for="profilePhoto">Usar uma foto</label><button id="profilePhotoChoose" class="small-btn" type="button">Escolher foto</button><input id="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><small>Até 10 MB. Recorte central automático em 256 × 256 pixels.</small></div>
       <p id="profileMessage" role="status" aria-live="polite"></p><button id="profileSave" class="royal-btn primary" type="submit">Salvar perfil</button>
     </form>
+    <section class="profile-appearance" aria-labelledby="profileAppearanceTitle"><h3 id="profileAppearanceTitle">Aparência</h3><fieldset class="theme-picker"><legend>Cores do tema</legend>
+      <label class="theme-option" style="--swatch:#a99cff"><input type="radio" name="profileTheme" value="purple"><span class="theme-swatch" aria-hidden="true"></span><span>Roxo · padrão</span></label>
+      <label class="theme-option" style="--swatch:#69d29b"><input type="radio" name="profileTheme" value="green"><span class="theme-swatch" aria-hidden="true"></span><span>Verde e preto</span></label>
+      <label class="theme-option" style="--swatch:#f47b85"><input type="radio" name="profileTheme" value="red"><span class="theme-swatch" aria-hidden="true"></span><span>Preto e vermelho</span></label>
+      <label class="theme-option" style="--swatch:#75bdf2"><input type="radio" name="profileTheme" value="blue"><span class="theme-swatch" aria-hidden="true"></span><span>Azul e preto</span></label>
+      <label class="theme-option" style="--swatch:#efd470"><input type="radio" name="profileTheme" value="yellow"><span class="theme-swatch" aria-hidden="true"></span><span>Amarelo e preto</span></label>
+    </fieldset><p class="appearance-help">Aplica na hora, só para você neste navegador. Não muda o tema dos outros na chamada.</p>
+    <div class="profile-layout"><div><strong>Layout dos painéis</strong><p class="appearance-help">Arraste as bordas laterais, inferiores ou os cantos para ajustar o tamanho.</p></div><button id="layoutResetBtn" class="secondary-button" type="button">↺ Voltar ao padrão</button></div><p id="appearanceMessage" class="appearance-help" role="status" aria-live="polite"></p></section>
     <h3>Meus arquivos</h3><p id="storageUsage"></p><div id="profileFiles"></div>
   </dialog>
   <dialog id="screenOptionsDialog" class="feature-dialog share-options-dialog" aria-labelledby="screenOptionsTitle">
@@ -440,6 +451,7 @@
     <form id="screenOptionsForm">
       <div class="form-columns"><label>Qualidade<select id="shareResolution"><option value="720">720p · Equilibrada</option><option value="1080">1080p · Alta definição</option></select></label><label>Quadros por segundo<select id="shareFps"><option value="15">15 FPS · Textos e slides</option><option value="30">30 FPS · Recomendado</option><option value="60">60 FPS · Movimento fluido</option></select></label></div>
       <label class="feature-checkbox"><input id="shareAudio" type="checkbox" checked> Compartilhar áudio, quando disponível</label>
+      <small>Para compartilhar só o som do jogo, escolha sua aba ou janela. O áudio do computador inteiro pode incluir a chamada; se houver retorno de voz, desmarque o áudio.</small>
       <div class="dialog-actions"><button id="screenOptionsCancel" type="button" class="secondary-button">Cancelar</button><button id="screenOptionsConfirm" type="submit" class="primary-button">Escolher tela →</button></div>
     </form>
   </dialog>
@@ -455,30 +467,37 @@
   <dialog id="channelFilesDialog" class="feature-dialog wide-dialog" aria-labelledby="channelFilesTitle">
     <button id="channelFilesClose" class="dialog-close" type="button" aria-label="Fechar anexos">×</button><span class="section-eyebrow">ARQUIVOS DO CANAL</span><h2 id="channelFilesTitle">Fotos &amp; anexos</h2><p id="channelFilesMessage" class="feature-message" role="status"></p><div id="channelFileList" class="channel-file-list"></div>
   </dialog>
-  <dialog id="soundboardDialog" class="feature-dialog wide-dialog" aria-labelledby="soundboardTitle">
-    <button id="soundboardClose" class="dialog-close" type="button" aria-label="Fechar efeitos">×</button><span class="section-eyebrow">SOUND BOARD</span><h2 id="soundboardTitle">Dê um som ao momento</h2><p id="soundboardCallHint"></p>
+  <button id="soundboardToggle" class="soundboard-toggle" type="button" aria-controls="soundboardDialog" aria-expanded="false"><span aria-hidden="true">♫</span> Efeitos</button>
+  <aside id="soundboardDialog" class="feature-dialog soundboard-menu" aria-labelledby="soundboardTitle" role="dialog" hidden>
+    <header class="soundboard-heading"><div><span class="section-eyebrow">NA CHAMADA</span><h2 id="soundboardTitle">Efeitos sonoros</h2></div><button id="soundboardClose" class="dialog-close" type="button" aria-label="Fechar efeitos">×</button></header><p id="soundboardCallHint"></p>
     <div class="sound-volume"><label for="soundboardVolume">Volume para mim</label><input id="soundboardVolume" type="range" min="0" max="100" value="70"><output id="soundboardVolumeValue">70%</output><button id="soundStop" class="secondary-button" type="button">Parar áudio</button></div>
     <div id="soundboardList" class="soundboard-list"></div>
-    <form id="soundUploadForm" class="sound-upload-form"><h3>Adicionar efeito</h3><div class="form-columns"><label>Nome<input id="soundName" maxlength="40" required placeholder="Ex.: aplausos"></label><label>Áudio · até 15 segundos<input id="soundFile" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm" required></label></div><button id="soundUpload" type="submit" class="primary-button">↑ Enviar efeito</button></form><p id="soundboardMessage" class="feature-message" role="status" aria-live="polite"></p>
-  </dialog>
+    <details id="soundUploadDetails" class="sound-upload-details"><summary>＋ Adicionar efeito</summary><form id="soundUploadForm" class="sound-upload-form"><label>Nome<input id="soundName" maxlength="40" required placeholder="Ex.: aplausos"></label><label>Escolher áudio<input id="soundFile" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm" required><small>Até 20 MB. Áudios longos podem ser recortados abaixo.</small></label>
+      <section id="soundTrimEditor" class="sound-trim-editor" aria-label="Recortar áudio" hidden><div class="trim-heading"><strong>Escolha seu trecho</strong><output id="soundTrimDuration"></output></div><canvas id="soundWaveform" width="640" height="100" aria-hidden="true"></canvas><div class="trim-fields"><label>Início (s)<input id="soundTrimStart" type="number" min="0" step="0.01" value="0" inputmode="decimal"></label><label>Fim (s)<input id="soundTrimEnd" type="number" min="0.05" step="0.01" value="15" inputmode="decimal"></label></div><label>Posição inicial<input id="soundTrimStartRange" class="trim-range" aria-label="Posição inicial do recorte" type="range" min="0" step="0.01" value="0"></label><label>Posição final<input id="soundTrimEndRange" class="trim-range" aria-label="Posição final do recorte" type="range" min="0" step="0.01" value="15"></label><div class="trim-footer"><small>Trecho de até 15 segundos. Ajuste os dois pontos ou clique na onda.</small><button id="soundTrimPreview" class="secondary-button" type="button">▶ Ouvir trecho</button></div></section>
+      <button id="soundUpload" type="submit" class="primary-button" disabled>↑ Enviar trecho</button></form></details><p id="soundboardMessage" class="feature-message" role="status" aria-live="polite"></p>
+  </aside>
   <dialog id="mediaFocusDialog" class="media-focus-dialog" aria-labelledby="mediaFocusTitle">
-    <header><div><span class="section-eyebrow">JUNTOS, EM MOSAICO</span><h2 id="mediaFocusTitle">Uma janela para todos</h2><p>Selecione até seis pessoas. Abra as transmissões pelo botão Assistir stream.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button">⛶ Tela cheia</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
+    <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
-  <script src="audio.js?v=081community"></script>
-  <script src="network.js?v=081community"></script>
-  <script src="auth.js?v=081community"></script>
-  <script src="rtc-config.js?v=081community"></script>
-  <script src="audio-gain.js?v=081community"></script>
-  <script src="avatar-icons.js?v=081community"></script>
-  <script src="profile-files.js?v=081community"></script>
-  <script src="social.js?v=081community"></script>
-  <script src="recording.js?v=081community"></script>
-  <script src="game.js?v=081community"></script>
-  <script src="portal.js?v=081community"></script>
-  <script src="community.js?v=081community"></script>
-  <script src="community-admin.js?v=081community"></script>
-  <script src="soundboard-client.js?v=081community"></script>
-  <script src="media-mosaic.js?v=081community"></script>
+  <script src="audio.js?v=086textvoice"></script>
+  <script src="network.js?v=086textvoice"></script>
+  <script src="auth.js?v=086textvoice"></script>
+  <script src="rtc-config.js?v=086textvoice"></script>
+  <script src="audio-gain.js?v=086textvoice"></script>
+  <script src="avatar-icons.js?v=086textvoice"></script>
+  <script src="profile-files.js?v=086textvoice"></script>
+  <script src="noise-suppression.js?v=086textvoice"></script>
+  <script src="stream-controls.js?v=086textvoice"></script>
+  <script src="social.js?v=086textvoice"></script>
+  <script src="recording.js?v=086textvoice"></script>
+  <script src="game.js?v=086textvoice"></script>
+  <script src="portal.js?v=086textvoice"></script>
+  <script src="community.js?v=086textvoice"></script>
+  <script src="community-admin.js?v=086textvoice"></script>
+  <script src="soundboard-client.js?v=086textvoice"></script>
+  <script src="media-mosaic.js?v=086textvoice"></script>
+  <script src="appearance.js?v=086textvoice"></script>
+  <script src="panel-layout.js?v=086textvoice"></script>
 </body>
 </html>

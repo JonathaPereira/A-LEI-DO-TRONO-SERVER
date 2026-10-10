@@ -45,6 +45,7 @@ window.TronoPortal = (()=>{
   function showOnly(id){
     if(!$(id))throw new Error('A tela solicitada não terminou de carregar. Recarregue com Ctrl+F5.');
     for(const screen of allPrimaryScreens())screen.classList.toggle('hidden',screen.id!==id);
+    $('portalStage')?.style.setProperty('--px','0');$('portalStage')?.style.setProperty('--py','0');
     document.body.classList.toggle('portal-active',id==='portalScreen');
     if(id!=='chatOnlyScreen')document.body.classList.remove('chat-only-active');
   }
@@ -130,15 +131,16 @@ window.TronoPortal = (()=>{
   function bindParallax(){
     const stage=$('portalStage');if(!stage||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
     let frame=0;
+    const reset=()=>{if(frame)cancelAnimationFrame(frame);frame=0;stage.style.setProperty('--px','0');stage.style.setProperty('--py','0');};
     stage.addEventListener('pointermove',e=>{
       if(frame)return;
       frame=requestAnimationFrame(()=>{
-        frame=0;const r=stage.getBoundingClientRect();
-        const x=((e.clientX-r.left)/Math.max(1,r.width)-.5)*2,y=((e.clientY-r.top)/Math.max(1,r.height)-.5)*2;
+        frame=0;const r=stage.getBoundingClientRect();if(!r.width||!r.height){reset();return;}
+        const x=Math.max(-1,Math.min(1,((e.clientX-r.left)/r.width-.5)*2)),y=Math.max(-1,Math.min(1,((e.clientY-r.top)/r.height-.5)*2));
         stage.style.setProperty('--px',x.toFixed(3));stage.style.setProperty('--py',y.toFixed(3));
       });
     });
-    stage.addEventListener('pointerleave',()=>{stage.style.setProperty('--px','0');stage.style.setProperty('--py','0');});
+    stage.addEventListener('pointerleave',reset);window.addEventListener('resize',reset);
   }
 
   function bind(){
