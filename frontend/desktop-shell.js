@@ -31,6 +31,9 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
     if(view==='home'){window.TronoPortal.showOnly('portalScreen');setView(view);return;}
     if(view==='game'){
       if(!window.TronoAuth?.user&&!window.TronoAuth?.guest){window.TronoPortal.openGame();return;}
+      // A community entry may have left a previous game. Do not restore its
+      // stale waiting-room UI merely because it was the last game screen.
+      if(window.TronoChatHub.channels.some(channel=>channel.id===window.TronoNetwork.primaryRoom))lastGame='setupScreen';
       window.TronoPortal.showOnly(lastGame);window.TronoNetwork.requestRooms();setView(view);return;
     }
     if(view==='community'){

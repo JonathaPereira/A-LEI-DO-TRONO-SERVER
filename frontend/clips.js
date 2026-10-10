@@ -36,7 +36,7 @@ window.TronoClips=(()=>{
       if(window.TronoDesktop){const poster=document.createElement(clip.poster?'img':'div');poster.className='clip-poster';if(clip.poster){poster.src=clip.poster;poster.alt='Miniatura de '+clip.name;}else{poster.setAttribute('aria-label','Clipe sem miniatura');}card.append(poster);}
       const heading=document.createElement('strong');heading.textContent=clip.name;
       const detail=document.createElement('small');detail.textContent=Math.round(clip.duration)+' s · '+clip.quality+' · '+clip.fps+' FPS · '+(clip.bytes/1048576).toFixed(1)+' MB';
-      const state=document.createElement('span');state.className='clip-state';state.textContent=clip.state==='saved'?'Salvo na pasta escolhida':clip.state==='download'?'Download solicitado · cópia local mantida':emergency.has(clip.id)?'Somente nesta sessão · salve antes de fechar':'Armazenado no navegador · pendente';
+      const state=document.createElement('span');state.className='clip-state';state.textContent=clip.state==='saved'?'Salvo na pasta escolhida':clip.state==='download'?'Download solicitado · cópia local mantida':emergency.has(clip.id)?'Somente nesta sessão · salve antes de fechar':window.TronoDesktop?'Armazenado neste app · pendente':'Armazenado no navegador · pendente';
       const actions=document.createElement('div');actions.className='clip-actions';
       function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=busy.has(clip.id);b.onclick=fn;actions.appendChild(b);return b;}
       if(clip.blob){
