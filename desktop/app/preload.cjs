@@ -2,7 +2,12 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.1.2',
+  version:'0.1.3',
+  clipsSuspended:true,
+  readSession:()=>ipcRenderer.invoke('mn:session-read'),
+  saveSession:value=>ipcRenderer.invoke('mn:session-save',value),
+  getMediaPermissions:()=>ipcRenderer.invoke('mn:media-permissions'),
+  resetMediaPermissions:()=>ipcRenderer.invoke('mn:media-reset'),
   prepareReplay:()=>ipcRenderer.invoke('mn:replay-prepare'),
   getWindowState:()=>ipcRenderer.invoke('mn:window-state'),
   toggleFullscreen:()=>ipcRenderer.invoke('mn:fullscreen'),

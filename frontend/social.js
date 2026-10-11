@@ -195,6 +195,9 @@ window.TronoSocial = (()=>{
   let panelMode=storage.getItem('tronoSocialMode')==='floating'?'floating':'full';
   let chatMuted=storage.getItem('tronoChatMuted')==='1';
   let noiseSuppression=storage.getItem('tronoNoiseSuppression')!=='0';
+  let noiseEngine=window.TronoDesktop?(storage.getItem('mnDesktopNoiseMode')|| (noiseSuppression?'native':'off')):'rnnoise';
+  if(!['native','rnnoise','off'].includes(noiseEngine))noiseEngine='native';
+  if(window.TronoDesktop)noiseSuppression=noiseEngine!=='off';
   let voiceLightMode=storage.getItem('tronoVoiceLightMode')==='1';
   let selectedInput=storage.getItem('tronoVoiceInput')||'';
   let selectedOutput=storage.getItem('tronoVoiceOutput')||'';
@@ -314,11 +317,12 @@ window.TronoSocial = (()=>{
   function primeCallSounds(){if(window.TronoAudio?.sfxEnabled===false)return;const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;try{if(!callSoundContext||callSoundContext.state==='closed')callSoundContext=new Ctx();if(callSoundContext.state==='suspended')void callSoundContext.resume().catch(()=>{});if(selectedOutput&&callSoundContext.setSinkId)void callSoundContext.setSinkId(selectedOutput).catch(()=>{});}catch{}}
   function callNotice(event){window.TronoCommunity?.voiceNotice?.(event);}
   function toggleVoiceSettings(force){
+    if(window.TronoDesktopSettings)return window.TronoDesktopSettings.toggle(force);
     settingsOpen=typeof force==='boolean'?force:!settingsOpen;
     const panel=$('voiceSettingsPanel'),btn=$('voiceSettingsBtn');panel?.classList.toggle('hidden',!settingsOpen);btn?.classList.toggle('settings-active',settingsOpen);btn?.setAttribute('aria-expanded',settingsOpen?'true':'false');
   }
   function setSettingsTab(tab='audio'){
-    if(!['audio','video','connection'].includes(tab))tab='audio';settingsTab=tab;storage.setItem('tronoVoiceSettingsTab',tab);
+    if(!['audio','video','connection',...(window.TronoDesktop?['capture','account','appearance','privacy']:[])].includes(tab))tab='audio';settingsTab=tab;storage.setItem('tronoVoiceSettingsTab',tab);
     document.querySelectorAll('[data-settings-tab]').forEach(btn=>{const on=btn.dataset.settingsTab===tab;btn.classList.toggle('active',on);btn.setAttribute('aria-selected',on?'true':'false');});
     document.querySelectorAll('[data-settings-panel]').forEach(panel=>{const on=panel.dataset.settingsPanel===tab;panel.classList.toggle('active',on);panel.hidden=!on;});
   }
@@ -708,14 +712,14 @@ window.TronoSocial = (()=>{
     if(!micCapture||!voiceJoined)return;
     const track=micCapture.processor&&mediaAudioContext?.state==='running'?micCapture.processor.track:micCapture.rawStream.getAudioTracks()[0];
     if(!track||track.readyState!=='live'||track===micCapture.outgoingTrack)return;
-    if(track===micCapture.processor?.track)micCapture.rawStream.getAudioTracks()[0].enabled=true;
+    if(track===micCapture.processor?.track)micCapture.rawStream.getAudioTracks()[0].enabled=!micMuted;
     track.enabled=!micMuted;const stream=ensureLocalStream();for(const old of stream.getAudioTracks())stream.removeTrack(old);stream.addTrack(track);micCapture.outgoingTrack=track;
     for(const pc of peers.values())await syncInitiatorTracks(pc);
     const pub=sfuLocalPublications.get('audio');if(pub?.sender)await pub.sender.replaceTrack(track);
     void watchStream(meId(),stream);
   }
 
-  async function acquireMic({generation=voiceGeneration,nativeOnly=voiceLightMode}={}){
+  async function acquireMic({generation=voiceGeneration,nativeOnly=voiceLightMode||(window.TronoDesktop&&noiseEngine==='native')}={}){
     if(!navigator.mediaDevices?.getUserMedia)throw new Error('Seu navegador não oferece acesso ao microfone nesta página. Use HTTPS em navegador atualizado.');
     const request=++micGeneration,enabled=noiseSuppression,current=()=>generation===voiceGeneration&&request===micGeneration;
     noiseLoading=true;updateNoiseButton();
@@ -739,7 +743,7 @@ window.TronoSocial = (()=>{
     const stream=ensureLocalStream(),oldCapture=micCapture;
     for(const old of stream.getAudioTracks())stream.removeTrack(old);
     stream.addTrack(outgoingTrack);
-    micCapture={rawStream,processor,outgoingTrack};installed=true;
+    micCapture={rawStream,processor,outgoingTrack};applyMicrophoneMute();installed=true;
     for(const [id,pc] of [...peers])if(pc._tronoAudioSender){try{await syncInitiatorTracks(pc);}catch(err){console.warn('[TronoSocial] reconectando novo microfone',err);closePeer(id);ensurePeer(id);}}
     const sfuAudio=sfuLocalPublications.get('audio');if(sfuAudio?.sender){try{await sfuAudio.sender.replaceTrack(outgoingTrack);await applySenderQuality(sfuAudio.sender,'audio');}catch(err){try{await publishSfuTrack('audio',outgoingTrack);}catch{await fallbackToP2p('Microfone alterado. Reconectando a chamada por P2P.');}}}
     cleanupMicCapture(oldCapture);
@@ -1621,6 +1625,7 @@ window.TronoSocial = (()=>{
   }
   function updateNoiseButton(){
     updateVoiceLightMode();
+    const select=$('noiseModeSelect');if(select){select.value=noiseSuppression?noiseEngine:'off';select.disabled=noiseLoading;}
     const b=$('noiseSuppressionBtn');if(!b)return;const {mode}=noiseState();
     const labels={off:['Desligado','Supressão desligada. O controle de volume continua ativo.'],idle:['Preparado',voiceLightMode?'Modo leve: a redução nativa será solicitada ao entrar na voz.':'O RNNoise será ativado no seu microfone ao entrar na voz.'],loading:['Iniciando…','Carregando o processamento do microfone…'],rnnoise:['RNNoise','RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.'],native:['Navegador',voiceLightMode?'Modo leve: redução nativa do navegador ativa; RNNoise pausado.':'RNNoise indisponível. A redução nativa do navegador está ativa.'],paused:['Pausado','Processamento pausado. Use Liberar áudio para retomá-lo.'],unavailable:['Indisponível','Não foi possível ativar a supressão. O microfone continua transmitindo.']};
     const [label,detail]=labels[mode];b.disabled=noiseLoading;b.classList.toggle('noise-active',noiseSuppression);b.classList.toggle('danger-active',!noiseSuppression);b.textContent='Supressor: '+label;b.title=detail;b.dataset.engine=mode;b.setAttribute('aria-pressed',String(noiseSuppression));
@@ -1631,13 +1636,20 @@ window.TronoSocial = (()=>{
     noiseSuppression=!noiseSuppression;storage.setItem('tronoNoiseSuppression',noiseSuppression?'1':'0');updateNoiseButton();
     if(voiceJoined){try{await acquireMic();await watchStream(meId(),localStream);setStatus(noiseState().mode==='rnnoise'?'RNNoise ativo no microfone.':noiseSuppression?'Processamento do microfone atualizado.':'Supressor desligado.','ok');}catch(err){noiseSuppression=previous;storage.setItem('tronoNoiseSuppression',previous?'1':'0');updateNoiseButton();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível atualizar o processamento do microfone.','error');}}
   }
+  async function setNoiseMode(value){
+    if(!window.TronoDesktop||noiseLoading||!['native','rnnoise','off'].includes(value))return;
+    const previous={noiseEngine,noiseSuppression,voiceLightMode};noiseEngine=value;noiseSuppression=value!=='off';if(value==='rnnoise')voiceLightMode=false;
+    const save=()=>{storage.setItem('mnDesktopNoiseMode',noiseEngine);storage.setItem('tronoNoiseSuppression',noiseSuppression?'1':'0');storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();};save();
+    try{if(voiceJoined){await acquireMic();await watchStream(meId(),localStream);}setStatus(value==='native'?'Redução leve selecionada.':value==='rnnoise'?'RNNoise selecionado.':'Redução de ruído desligada.','ok');}
+    catch(err){({noiseEngine,noiseSuppression,voiceLightMode}=previous);save();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar a redução de ruído. A opção anterior foi mantida.','error');}
+  }
   function updateVoiceLightMode(){
     const button=$('voiceLightModeBtn');if(button){button.disabled=noiseLoading;button.textContent='Modo leve para jogar: '+(voiceLightMode?'Ligado':'Desligado');button.setAttribute('aria-pressed',String(voiceLightMode));button.classList.toggle('noise-active',voiceLightMode);}
     document.body.classList.toggle('voice-light-mode',voiceLightMode);
   }
   async function toggleVoiceLightMode(){
     if(noiseLoading)return;const previous=voiceLightMode;
-    voiceLightMode=!voiceLightMode;storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();
+    voiceLightMode=!voiceLightMode;if(window.TronoDesktop&&voiceLightMode&&noiseSuppression){noiseEngine='native';storage.setItem('mnDesktopNoiseMode',noiseEngine);}storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();
     if(!voiceJoined)return;
     try{await acquireMic();await watchStream(meId(),localStream);setStatus(voiceLightMode?'Modo leve ativo. O RNNoise fica pausado; a redução nativa depende do navegador.':'Modo leve desligado. Preferências de áudio restauradas.','ok');}
     catch(err){voiceLightMode=previous;storage.setItem('tronoVoiceLightMode',previous?'1':'0');updateNoiseButton();startTelemetry();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.','error');}
@@ -1808,6 +1820,7 @@ window.TronoSocial = (()=>{
     $('screenBitrateSelect')?.addEventListener('change',async e=>{const value=Number(e.target.value);if(!SCREEN_BITRATES.includes(value))return;screenBitrateMbps=value;storage.setItem('mnScreenBitrate',String(value));updateQualityUI();await applyQualityToLiveMedia();if(transportIsSfu())await window.TronoNetwork.requestSfu('set-screen-bitrate',{screenBitrate:effectiveScreenBitrate()}).catch(err=>setStatus(err.message,'warn'));setStatus(`Tela configurada para até ${value} Mbps.`,'ok');});
     $('screenContentSelect')?.addEventListener('change',async e=>{screenContent=e.target.value==='motion'?'motion':'detail';storage.setItem('mnScreenContent',screenContent);await applyQualityToLiveMedia();});
     $('voiceInputSelect')?.addEventListener('change',changeInput);$('voiceOutputSelect')?.addEventListener('change',changeOutput);$('cameraInputSelect')?.addEventListener('change',changeCamera);$('transmissionQualitySelect')?.addEventListener('change',changeTransmissionQuality);
+    $('noiseModeSelect')?.addEventListener('change',e=>void setNoiseMode(e.target.value));
     $('voiceLightModeBtn')?.addEventListener('click',toggleVoiceLightMode);
     if($('callAlertVolume'))$('callAlertVolume').value=callAlertVolume;if($('callAlertVolumeValue'))$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;
     $('callAlertVolume')?.addEventListener('input',e=>{callAlertVolume=Math.max(0,Math.min(100,Number(e.target.value)||0));storage.setItem('mnCallAlertVolume',String(callAlertVolume));$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;primeCallSounds();});$('testCallAlert')?.addEventListener('click',()=>{primeCallSounds();playCallSound('join','test');});
@@ -1863,8 +1876,8 @@ window.TronoSocial = (()=>{
   window.addEventListener('DOMContentLoaded',bind);
 
   return {
-    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTelemetry,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
-    get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
+    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
+    get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseMode(){return noiseSuppression?noiseEngine:"off";},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},
     getLocalAudioTrack(){return localStream?.getAudioTracks?.()[0]||null;}

@@ -11,7 +11,7 @@ let audioCtx = null;
 let masterBus = null;
 let musicMaster = null;
 let sfxMaster = null;
-let musicEnabled = storage.getItem('tronoMusicEnabled')!=='0';
+let musicEnabled = storage.getItem('tronoMusicEnabled')==='1';
 let sfxEnabled = storage.getItem('tronoSfxEnabled')!=='0';
 let musicStep = 0;
 let musicRequest=0;
