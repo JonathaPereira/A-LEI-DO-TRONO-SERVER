@@ -1,4 +1,5 @@
 /* Screens occupy the main stage; participant cameras reuse the profile cards. */
+body.chat-only-active #socialPanel #mediaMosaic .camera-grid-docked{display:none!important}
 .screen-share-tile>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.screen-switch-btn,.media-resize-grip){transition:opacity .18s ease,visibility .18s ease}
 #socialPanel .screen-share-tile.screen-controls-idle{cursor:none}
 #socialPanel .screen-share-tile.screen-controls-idle>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.screen-switch-btn,.media-resize-grip){opacity:0!important;visibility:hidden!important;pointer-events:none!important}

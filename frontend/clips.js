@@ -2,7 +2,7 @@
 window.TronoClips=(()=>{
   const $=id=>document.getElementById(id),store=window.TronoClipStore,storage=window.TronoStorage||localStorage,workerURL=new URL('clip-buffer.js?v=091sharingclips',document.currentScript.src);
   const qualities={light:{width:1280,height:720,bitrate:6000000,label:'720p'},balanced:{width:1920,height:1080,bitrate:16000000,label:'1080p'},high:{width:2560,height:1440,bitrate:28000000,label:'1440p'}};
-  let owner='local',settings,session=null,sharedSource=null,localSource=null,localChoosing=false,starting=false,generation=0,clips=[],directory=null,choosingShortcut=false,pip=null,loading=0,localPrimary=false,autoPaused=false,automaticPreparing=false,lastCallJoined=false,lastCaptureError=null;
+  let owner='local',settings,session=null,sharedSource=null,localSource=null,localChoosing=false,starting=false,generation=0,clips=[],directory=null,choosingShortcut=false,pip=null,loading=0,localPrimary=false,autoPaused=false,automaticPreparing=false,lastCallJoined=false,lastCaptureError=null,localCaptureGeneration=0;
   const emergency=new Map(),memoryOnly=new Set(),urls=new Map(),busy=new Set();
   const account=()=>window.TronoAuth?.user?.id||'local';
   const defaults=()=>({version:2,quality:'balanced',fps:60,seconds:30,auto:true,desktopAuto:true,shortcut:{code:'KeyX',ctrl:true,shift:true,alt:false,meta:false}});
@@ -99,11 +99,11 @@ window.TronoClips=(()=>{
   async function startLocalReplay({automatic=false,choose=false,audio=true}={}){
     if(!window.TronoDesktop||localChoosing)return;
     if(sharedSource&&!choose){await sharedStarted(sharedSource,{local:sharedSource===localSource,force:true});return;}
-    const requestedOwner=owner;lastCaptureError=null;localChoosing=true;renderState();
+    const requestedOwner=owner,captureGeneration=++localCaptureGeneration;lastCaptureError=null;localChoosing=true;renderState();
     try{
       const q=qualities[settings.quality];
       const stream=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:settings.fps}},audio:audio?{echoCancellation:false,noiseSuppression:false,autoGainControl:false}:false});
-      if(requestedOwner!==owner){stream.getTracks().forEach(track=>track.stop());return;}
+      if(requestedOwner!==owner||captureGeneration!==localCaptureGeneration||(automatic&&(!settings.desktopAuto||autoPaused))){stream.getTracks().forEach(track=>track.stop());return;}
       const previous=localSource;localSource=stream;localPrimary=automatic;autoPaused=false;previous?.getTracks().forEach(track=>track.stop());stream.getVideoTracks()[0].addEventListener('ended',()=>{if(localSource===stream)stopLocalReplay();},{once:true});
       await sharedStarted(stream,{local:true});if(!session){const reason=$('clipsStatus').textContent;stopLocalReplay();message(reason);}
     }catch(error){lastCaptureError=error.name;message(['AbortError','NotAllowedError'].includes(error.name)?'Captura local cancelada.':error.message||'Não foi possível iniciar o replay local.');}
@@ -111,7 +111,7 @@ window.TronoClips=(()=>{
   }
   async function ensureAutomaticReplay(){if(!window.TronoDesktop||!settings.desktopAuto||autoPaused||localChoosing||automaticPreparing||sharedSource||session)return;automaticPreparing=true;const currentOwner=owner;try{await window.TronoDesktop.prepareReplay();}catch{message('Não foi possível preparar a tela principal. Use Ativar replay para tentar novamente.');}finally{automaticPreparing=false;if(currentOwner!==owner)void ensureAutomaticReplay();}}
   async function startPrimaryReplay({audio=true}={}){await startLocalReplay({automatic:true,audio});return {active:!!session,error:lastCaptureError};}
-  function stopLocalReplay(){autoPaused=true;const source=localSource;if(!source)return;localSource=null;localPrimary=false;sharedStopped(source);source.getTracks().forEach(track=>track.stop());renderState();}
+  function stopLocalReplay(){localCaptureGeneration++;autoPaused=true;const source=localSource;if(!source)return;localSource=null;localPrimary=false;sharedStopped(source);source.getTracks().forEach(track=>track.stop());renderState();}
   function sharedStopped(source){if(localSource&&sharedSource===localSource&&source!==localSource)return;if(source&&sharedSource!==source)return;sharedSource=null;stop();if(window.TronoDesktop&&!autoPaused)void ensureAutomaticReplay();}
   function clip(){const s=session;if(!s||!s.status?.ready){message(window.TronoDesktop?'Ative o replay e aguarde ficar pronto para clipar.':'Compartilhe sua tela e aguarde o replay ficar pronto para clipar.');return;}if(s.waiters.size>=4){message('Aguarde os clipes em preparação antes de clipar novamente.');return;}const id=crypto.randomUUID();s.waiters.add(id);s.flushing.push(id);message('Preparando clipe…');try{s.recorder.requestData();}catch{s.flushing=s.flushing.filter(k=>k!==id);s.waiters.delete(id);message('A captura não está disponível. Os clipes anteriores continuam armazenados.');}}
   async function chooseFolder(){const current=owner;try{const handle=window.TronoDesktop?await window.TronoDesktop.chooseFolder():await window.showDirectoryPicker({id:'trono-clips',mode:'readwrite'});if(!handle||current!==owner)return;directory=handle;renderState();try{if(!handle.native)await store.setDirectory(current,handle);message(handle.native?'Pasta escolhida para esta sessão do aplicativo. Nenhum clipe é salvo sem clicar em Salvar.':'Pasta escolhida. Nenhum clipe é salvo nela sem clicar em Salvar.');}catch{message('Pasta escolhida para esta sessão. O navegador não permitiu lembrar essa pasta.');}}catch(e){if(e.name!=='AbortError')message('Não foi possível escolher a pasta. Você pode usar Salvar para escolher um arquivo.');}}

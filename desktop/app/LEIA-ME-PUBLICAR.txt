@@ -13,6 +13,6 @@ Não remova downloads/latest.yml nem o instalador apontado por esse arquivo.
 O aplicativo verifica atualizações ao abrir e a cada quatro horas.
 Nas próximas versões, publique novamente este pacote completo do site.
 Quem tiver o app 0.1.1 ou posterior receberá a atualização internamente.
-Quem ainda estiver no 0.1.0 precisa instalar 0.1.1 uma única vez.
+Quem ainda estiver no 0.1.0 precisa instalar a versão atual uma única vez.
 
 O domínio do site continua sendo o mesmo. Backend e SQL não mudam.

@@ -1,18 +1,23 @@
-M&N · A Lei do Trono — Windows 0.1.1
+M&N · A Lei do Trono — Windows 0.1.2
 
-1. Extraia o ZIP e instale MN-Trono-0.1.1-Windows.exe.
+1. Em uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.2-Windows.exe.
+   Quem já tem 0.1.1 recebe a atualização internamente após a publicação no site.
    Quem tem 0.1.0 instala esta versão uma vez para habilitar atualizações internas.
    Mantenha os dados do aplicativo para preservar preferências e clipes.
 2. Entre com a mesma conta do site. Jogo, salas e mensagens usam o mesmo servidor.
    Não precisa do Chrome nem do antigo MN-Clipes.exe.
 3. Efeitos fica na coluna esquerda. Tela cheia funciona pelo botão ou F11.
    Voz, câmera, tela e replay continuam nos controles inferiores.
-4. Para clipes sem compartilhar, clique Ativar replay e escolha tela/janela.
+4. O replay da tela principal do Windows é preparado ao abrir o app, sem transmitir.
+   Inclui o áudio do computador quando disponível; o indicador no topo mostra o estado.
    O atalho global guarda os segundos anteriores mesmo com o jogo em foco.
    Em Clipes > Preferências escolha duração, qualidade, FPS, atalho e pasta.
-5. Compartilhar tela também prepara replay automaticamente quando ativado.
+   Você pode desligar o início automático ou clicar Parar replay local.
+   Trocar fonte do replay permite escolher outra tela/janela e áudio.
+5. Compartilhar outra tela não troca o replay privado da tela principal.
    Trocar tela na sua prévia mantém a anterior até você escolher a nova fonte.
-   Cancelar mantém a transmissão. Trocar reinicia o buffer; clipes ficam guardados.
+   Cancelar mantém a transmissão. Se o replay usar a transmissão, trocar reinicia
+   seu buffer. Clipes já armazenados permanecem em ambos os casos.
 6. No seletor, Aplicativo escolhido · isolado captura apenas o app e seus processos.
    Para uma tela inteira, escolha também a janela do app que fornecerá áudio.
    Requer Windows 11 ou build 20348+. Windows 10 comum não suporta esta API.
@@ -25,6 +30,11 @@ M&N · A Lei do Trono — Windows 0.1.1
 9. Atualizações baixam internamente quando publicadas pelo projeto. Use o aviso
    Reiniciar e atualizar ou saia de verdade para instalar. Não reinicia uma chamada
    silenciosamente. Clique no número da versão para verificar manualmente.
+10. Pessoas e Telemetria ficam no topo e abrem painéis que podem ser minimizados.
+    A lista de pessoas atualiza ao vivo. Silenciar voz bloqueia microfone e áudio;
+    voltar a ouvir restaura o estado anterior do microfone.
+11. Exibição nos perfis permite câmera ou tela no quadrado da pessoa ou na área
+    ampliada, sem encerrar a mídia. Essa preferência só muda o que você vê.
 
 O instalador ainda não tem assinatura digital. Baixe do projeto/domínio oficial.
 As atualizações precisam do canal publicado em a-lei-do-trono.surge.sh/downloads/.

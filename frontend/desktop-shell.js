@@ -33,7 +33,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const replay=document.createElement('span');replay.id='desktopReplayStatus';replay.className='desktop-replay-status';replay.setAttribute('role','status');replay.textContent='Preparando replay…';
   const people=$('communityToggle'),telemetry=$('telemetryOpenBtn'),diagnostics=$('telemetryPanel');
   people.title='Ver pessoas online ou minimizar a lista';people.setAttribute('aria-controls','communityPanel');
-  telemetry.textContent='Telemetria';telemetry.setAttribute('aria-controls','telemetryPanel');telemetry.setAttribute('aria-expanded','false');telemetry.onclick=()=>window.TronoSocial.toggleTelemetry();
+  telemetry.textContent='Telemetria';telemetry.setAttribute('aria-controls','telemetryPanel');telemetry.setAttribute('aria-expanded','false');
   topbar.append(replay,people,telemetry);body.append(topbar,diagnostics);
   window.addEventListener('trono-telemetry-change',event=>telemetry.setAttribute('aria-expanded',String(event.detail.open)));
   function replayStatus(state){replay.classList.toggle('ready',state.ready);replay.textContent=state.ready?(state.primary?'Replay · tela principal':'Replay ativo'):state.preparing?'Preparando replay…':'Replay pausado';}

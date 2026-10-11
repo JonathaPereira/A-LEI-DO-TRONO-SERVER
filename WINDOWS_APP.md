@@ -1,17 +1,21 @@
-# M&N · A Lei do Trono no Windows — 0.1.1
+# M&N · A Lei do Trono no Windows — 0.1.2
 
 O aplicativo reúne o jogo e o chat do site, com as mesmas contas, salas, cargos e mensagens. Preserva temas pessoais, canais independentes de texto/voz, câmeras, RNNoise, volumes, efeitos e a biblioteca de clipes. Não precisa do Chrome nem do antigo `MN-Clipes.exe`. Os recursos online continuam usando os serviços existentes.
 
 ## Instalar e usar
 
 1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída correspondente à versão. O repositório privado exige login no GitHub. Depois de publicar o pacote do site, o login também oferece **Baixe a versão desktop**, sem exigir conta no GitHub.
-2. Extraia o ZIP e instale `MN-Trono-0.1.1-Windows.exe`. Quem tem 0.1.0 precisa desta instalação uma única vez para receber o atualizador interno. Mantenha os dados do aplicativo.
+2. Para uma instalação nova, extraia o ZIP e instale `MN-Trono-0.1.2-Windows.exe`. Quem já tem 0.1.1 recebe 0.1.2 internamente quando o pacote completo for publicado no site. Quem tem 0.1.0 precisa de uma instalação manual única para receber o atualizador. Mantenha os dados do aplicativo.
 3. Entre com a mesma conta do site. Sessões, temas e clipes do navegador não são importados. A restrição de presença da mesma conta em sessões simultâneas continua valendo.
-4. A coluna esquerda contém Início, Jogar, Comunidade, Efeitos, Clipes, Perfil e Tela cheia. F11 também alterna tela cheia. A biblioteca de clipes oculta o painel da comunidade; os controles inferiores e a chamada permanecem ativos.
-5. Para clipar sem transmitir, clique em **Ativar replay** na barra inferior ou em Clipes. Escolha a tela/janela e o áudio uma vez. O atalho global então guarda os segundos anteriores mesmo com o jogo em foco. Não entra na voz nem publica a tela. Jogos podem bloquear atalhos externos, especialmente com elevações diferentes.
-6. Compartilhar uma tela também prepara replay automaticamente quando essa preferência está ligada. **Trocar tela**, na sua prévia, abre o seletor mantendo a captura anterior até a nova escolha; cancelar mantém a transmissão atual. A troca inicia um novo buffer de replay e preserva os clipes já criados.
-7. Em Clipes, configure duração, qualidade, FPS, atalho e pasta. Guarde vários trechos, revise e escolha quais salvar/descartar. **Parar replay local** libera a captura privada e descarta somente os segundos temporários. A pasta de exportação vale pela sessão. Cancelar o seletor ou falhar a gravação mantém o clipe pendente.
+4. A coluna esquerda contém Início, Jogar, Comunidade, Efeitos, Clipes, Perfil e Tela cheia. F11 também alterna tela cheia. A biblioteca de clipes oculta a área central da chamada; os controles inferiores e a voz permanecem ativos. **Pessoas** e **Telemetria** ficam no topo e permitem abrir/minimizar seus painéis em qualquer área. A presença recebe atualizações ao vivo do servidor.
+5. Ao abrir, o app prepara o replay da **tela principal definida no Windows**, com o áudio do computador quando disponível. O indicador superior mostra quando está pronto. O atalho global guarda os segundos anteriores mesmo com o jogo em foco, sem entrar na voz ou publicar a tela. Em máquinas sem saída de áudio disponível, tenta vídeo sem áudio e informa isso em Clipes. Jogos podem bloquear atalhos externos, especialmente com elevações diferentes.
+6. O replay privado da tela principal continua independente de compartilhar outra tela e de sair da chamada. **Trocar tela**, na prévia da transmissão, mantém a captura anterior até a nova escolha; cancelar mantém a transmissão atual. Se o replay estiver usando a transmissão em vez da fonte privada, a troca inicia um novo buffer. Clipes já criados permanecem.
+7. Em Clipes, configure duração, qualidade, FPS, atalho e pasta. **Trocar fonte do replay** permite escolher outra tela/janela e seu áudio. A preferência **Preparar a tela principal ao abrir o aplicativo** desativa o início automático. **Parar replay local** libera a captura privada e descarta somente os segundos temporários; não reinicia ao mutar/desmutar ou entrar na voz até você reativar. Guarde vários trechos e escolha quais salvar/descartar. A pasta de exportação vale pela sessão. Cancelar o seletor ou falhar a gravação mantém o clipe pendente.
 8. Fechar a janela mantém chamada/replay na bandeja. Para encerrar de verdade, use **M&N > Sair** ou o menu da bandeja.
+
+**Silenciar voz** bloqueia o microfone e o áudio recebido da chamada. Ao voltar a ouvir, restaura o estado anterior do microfone, inclusive se já estava mutado. O microfone não pode ser liberado enquanto o áudio da chamada estiver silenciado.
+
+Em cada perfil da chamada, **Exibição** permite colocar a câmera ou a transmissão naquele quadrado, ou devolver as mídias ao espaço ampliado. O botão de minimizar na câmera também alterna essa posição. São preferências locais, sem encerrar a mídia nem mudar a visualização das outras pessoas. Tela cheia continua disponível.
 
 O instalador ainda não tem assinatura digital; o Windows pode mostrar editor desconhecido. Baixe somente do projeto ou do domínio oficial.
 
@@ -27,7 +31,7 @@ O isolamento é por processo/aplicativo, não por aba. Abas ou janelas de um mes
 
 O app verifica o canal público `https://a-lei-do-trono.surge.sh/downloads/` após abrir e a cada quatro horas. Clicar no número da versão permite verificar manualmente. A nova versão baixa em segundo plano. O aviso **Reiniciar e atualizar** pede confirmação porque encerra a chamada e o buffer temporário; os clipes criados persistem. Também instala ao sair de verdade, depois de confirmar o encerramento, sem reiniciar uma chamada silenciosamente. Fechar para a bandeja continua mantendo o app aberto.
 
-O canal só fica disponível quando o responsável publica o pacote completo do site, incluindo o instalador e `downloads/latest.yml`. O manifesto contém SHA-512 do instalador; HTTPS e a verificação de integridade não substituem uma assinatura digital de editor. Falhar a atualização não interrompe o uso do app.
+O canal só fica disponível quando o responsável publica o pacote completo do site, incluindo o instalador e `downloads/latest.yml`. Usuários a partir de 0.1.1 não precisam baixar outro EXE manualmente: o atualizador faz esse download e instala internamente. Publicar somente o frontend do Git não atualiza o app instalado. O manifesto contém SHA-512 do instalador; HTTPS e a verificação de integridade não substituem uma assinatura digital de editor. Falhar a atualização não interrompe o uso do app.
 
 ## Dados e consumo
 
