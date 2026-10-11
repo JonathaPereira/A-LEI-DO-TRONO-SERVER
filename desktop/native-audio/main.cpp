@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 using namespace Microsoft::WRL;
 class Activation final : public RuntimeClass<RuntimeClassFlags<ClassicCom>, FtmBase, IActivateAudioInterfaceCompletionHandler> {
 public:
@@ -48,6 +49,27 @@ static bool stopping() {
     char command=0; DWORD read=0; ReadFile(GetStdHandle(STD_INPUT_HANDLE),&command,1,&read,nullptr);
     return command=='q';
 }
+// Test-only command-line source: two separate instances let the Windows test
+// verify that application loopback includes one tone and excludes the other.
+static int tone(double frequency) {
+    check(CoInitializeEx(nullptr,COINIT_MULTITHREADED));
+    ComPtr<IMMDeviceEnumerator> devices;check(CoCreateInstance(__uuidof(MMDeviceEnumerator),nullptr,CLSCTX_ALL,IID_PPV_ARGS(&devices)));
+    ComPtr<IMMDevice> device;check(devices->GetDefaultAudioEndpoint(eRender,eMultimedia,&device));
+    ComPtr<IAudioClient> client;check(device->Activate(__uuidof(IAudioClient),CLSCTX_ALL,nullptr,&client));
+    WAVEFORMATEX format{};format.wFormatTag=WAVE_FORMAT_PCM;format.nChannels=2;format.nSamplesPerSec=44100;format.wBitsPerSample=16;format.nBlockAlign=4;format.nAvgBytesPerSec=176400;
+    check(client->Initialize(AUDCLNT_SHAREMODE_SHARED,AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,1000000,0,&format,nullptr));
+    ComPtr<IAudioRenderClient> render;check(client->GetService(IID_PPV_ARGS(&render)));UINT32 total=0;check(client->GetBufferSize(&total));
+    check(client->Start());std::cerr << "{\"type\":\"tone-ready\"}" << std::endl;uint64_t position=0;
+    while(!stopping()) {
+        UINT32 padding=0;check(client->GetCurrentPadding(&padding));UINT32 frames=total-padding;
+        if(frames){BYTE* data=nullptr;check(render->GetBuffer(frames,&data));auto pcm=reinterpret_cast<int16_t*>(data);
+            for(UINT32 i=0;i<frames;i++){auto value=static_cast<int16_t>(std::sin(6.283185307179586*frequency*(position++)/44100)*5000);pcm[2*i]=value;pcm[2*i+1]=value;}
+            check(render->ReleaseBuffer(frames,0));
+        }
+        Sleep(10);
+    }
+    client->Stop();return 0;
+}
 int wmain(int argc, wchar_t** argv) {
     if(argc==2 && std::wstring(argv[1])==L"--probe") {
         std::cout << "{\"available\":" << (buildNumber()>=20348?"true":"false") << ",\"build\":" << buildNumber() << "}";
@@ -55,6 +77,7 @@ int wmain(int argc, wchar_t** argv) {
     }
     DWORD processId=0,excluded=0;
     try {
+        if(argc==3 && std::wstring(argv[1])==L"--test-tone") { double frequency=std::stod(argv[2]);if(frequency<100 || frequency>3000)throw E_INVALIDARG;return tone(frequency); }
         for(int i=1;i+1<argc;i+=2) {
             std::wstring key=argv[i],value=argv[i+1]; size_t used=0; auto number=std::stoull(value,&used);
             if(used!=value.size() || !number) throw E_INVALIDARG;

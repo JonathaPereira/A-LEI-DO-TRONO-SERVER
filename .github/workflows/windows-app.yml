@@ -20,13 +20,22 @@ jobs:
       - run: npm ci
         working-directory: desktop/app
       - name: Build Windows application audio capture
-        run: npm run build:native
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
+          $buildExit = $LASTEXITCODE
+          if ($buildExit -ne 0) {
+            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows native audio::$details"
+            exit $buildExit
+          }
         working-directory: desktop/app
       - name: Test desktop policy and native Windows runtime
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-audio.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')

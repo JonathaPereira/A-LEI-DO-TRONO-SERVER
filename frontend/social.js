@@ -790,13 +790,14 @@ window.TronoSocial = (()=>{
     renderVideoGrid();renderSeatMedia();renderVoiceRoster();
   }
 
-  async function startScreenShare(){
+  async function startScreenShare({replace=false}={}){
     if(!inChatHub())return false;
-    if(screenSharing)return true;
+    if(screenSharing&&!replace)return true;
     if(!navigator.mediaDevices?.getDisplayMedia){setStatus('Compartilhamento de tela não é suportado neste navegador.','error');return false;}
     if(!voiceJoined){const ok=await joinVoice();if(!ok)return false;}
     if(transportIsSfu()&&realtimeStatus&&!realtimeStatus.screenAllowed){setStatus('Compartilhamento bloqueado pelo freio mensal de consumo.','warn');return false;}
-    const request=++screenGeneration,callGeneration=voiceGeneration;let source,outgoing;
+    const previousSource=localDisplayStream,previousStream=localScreenStream;
+    const request=++screenGeneration,callGeneration=voiceGeneration;let source,outgoing,committed=false;
     try{
       // A game window must request window audio explicitly; some browsers otherwise
       // offer the entire system mix, including voices played by this call.
@@ -808,19 +809,31 @@ window.TronoSocial = (()=>{
       // the call's resolution/FPS ceilings and network bitrate limits.
       outgoing=source.clone();const stream=outgoing,track=stream.getVideoTracks()[0];if(!track)throw new Error('Nenhuma tela foi selecionada.');await optimizeScreenTrack(track);
       if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined){source.getTracks().forEach(t=>t.stop());outgoing.getTracks().forEach(t=>t.stop());return false;}
-      localDisplayStream=source;localScreenStream=stream;screenSharing=true;localScreenPreviewPaused=false;localScreenCollapsed=false;
+      localDisplayStream=source;localScreenStream=stream;screenSharing=true;committed=true;localScreenPreviewPaused=false;localScreenCollapsed=false;
       source.getVideoTracks()[0].addEventListener('ended',()=>{if(localDisplayStream===source)void stopScreenShare(true);},{once:true});
       void window.TronoClips?.sharedStarted?.(source);
       if(transportIsSfu()){
-        try{await publishSfuTrack('screen',track);const sound=stream.getAudioTracks()[0];if(sound)await publishSfuTrack('screen-audio',sound);}
+        try{
+          // Keep publication IDs and subscriptions when changing an active source.
+          // A canceled picker never reaches this point or stops the previous source.
+          for(const [kind,next] of [['screen',track],['screen-audio',stream.getAudioTracks()[0]]]){
+            const publication=replace?sfuLocalPublications.get(kind):null;
+            if(next&&publication?.sender){await publication.sender.replaceTrack(next);await applySenderQuality(publication.sender,kind);}
+            else if(next)await publishSfuTrack(kind,next);
+            else if(publication)await closeSfuPublication(kind);
+          }
+        }
         catch(err){console.warn('[TronoSocial] tela SFU; acionando fallback',err?.code||err);await fallbackToP2p('O compartilhamento não conseguiu publicar pelo SFU; chamada mantida em P2P para preservar a tela.');}
       }
       if(!transportIsSfu())for(const pc of peers.values())await syncInitiatorTracks(pc);
+      if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined)return false;
       const sound=stream.getAudioTracks()[0];sound?.addEventListener('ended',async()=>{if(localScreenStream!==stream)return;if(transportIsSfu())await closeSfuPublication('screen-audio');else for(const pc of peers.values())await pc._tronoScreenAudioSender?.replaceTrack(null);renderScreenGrid();},{once:true});
       window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,true,transmissionQuality,announcedTransport());
       updateButtons();renderScreenGrid();renderVoiceRoster();setStatus(sound?'Compartilhando tela e áudio.':shareStreamAudio?'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.':'Compartilhando tela sem áudio.',sound?'ok':'warn');return true;
-    }catch(err){if(localDisplayStream===source&&screenSharing)await stopScreenShare(true);else{source?.getTracks().forEach(t=>t.stop());outgoing?.getTracks().forEach(t=>t.stop());}if(request!==screenGeneration||callGeneration!==voiceGeneration)return false;setStatus(['NotAllowedError','AbortError'].includes(err?.name)?'Compartilhamento de tela cancelado.':(err.message||'Não foi possível compartilhar a tela.'),'error');return false;}
+    }catch(err){if(localDisplayStream===source&&screenSharing)await stopScreenShare(true);else{source?.getTracks().forEach(t=>t.stop());outgoing?.getTracks().forEach(t=>t.stop());}if(request!==screenGeneration||callGeneration!==voiceGeneration)return false;setStatus(['NotAllowedError','AbortError'].includes(err?.name)?(replace&&screenSharing?'Troca cancelada. A tela anterior continua sendo compartilhada.':'Compartilhamento de tela cancelado.'):(err.message||'Não foi possível compartilhar a tela.'),'error');return false;}
+    finally{if(committed){previousSource?.getTracks().forEach(t=>t.stop());previousStream?.getTracks().forEach(t=>t.stop());}}
   }
+  async function switchScreenShare(){if(screenSharing)return startScreenShare({replace:true});return false;}
   async function stopScreenShare(sendState=true){
     screenGeneration++;if(!screenSharing&&!localScreenStream&&!localDisplayStream)return;
     window.TronoClips?.sharedStopped?.(localDisplayStream);localDisplayStream?.getTracks().forEach(t=>t.stop());localDisplayStream=null;
@@ -1443,11 +1456,12 @@ window.TronoSocial = (()=>{
       let tile=findPeerTile(host,p.id,'.screen-share-tile');
       if(!tile){
         tile=document.createElement('div');tile.className='screen-share-tile';tile.dataset.peer=p.id;
-        tile.innerHTML='<video autoplay playsinline muted></video><div class="screen-share-placeholder">Conectando compartilhamento…</div><div class="mn-stream-invite"><strong></strong><small>Escolha quando abrir a transmissão.</small></div><button class="mn-watch-stream" type="button">Assistir stream</button><button class="media-fullscreen-btn" title="Maximizar compartilhamento" aria-label="Maximizar compartilhamento">⛶</button><button class="screen-collapse-btn" title="Minimizar prévia" aria-label="Minimizar prévia">—</button><button class="screen-resource-btn hidden" title="Ocultar apenas a prévia local sem interromper a transmissão">⚡ Economizar recursos</button><label class="mn-stream-volume"><span>Áudio da stream</span><input type="range" min="0" max="300" step="5" value="100"><output>100%</output></label><small class="mn-stream-audio-state"></small><span class="mn-stream-name"></span>';
+        tile.innerHTML='<video autoplay playsinline muted></video><div class="screen-share-placeholder">Conectando compartilhamento…</div><div class="mn-stream-invite"><strong></strong><small>Escolha quando abrir a transmissão.</small></div><button class="mn-watch-stream" type="button">Assistir stream</button><button class="media-fullscreen-btn" title="Maximizar compartilhamento" aria-label="Maximizar compartilhamento">⛶</button><button class="screen-collapse-btn" title="Minimizar prévia" aria-label="Minimizar prévia">—</button><button class="screen-resource-btn hidden" title="Ocultar apenas a prévia local sem interromper a transmissão">⚡ Economizar recursos</button><button class="screen-switch-btn" type="button" hidden title="Escolher outra tela ou janela sem encerrar o compartilhamento">⇄ Trocar tela</button><label class="mn-stream-volume"><span>Áudio da stream</span><input type="range" min="0" max="300" step="5" value="100"><output>100%</output></label><small class="mn-stream-audio-state"></small><span class="mn-stream-name"></span>';
         host.appendChild(tile);bindMediaFullscreen(tile);bindMediaResize(tile,'screen');
         tile.querySelector('.mn-watch-stream').addEventListener('click',()=>toggleWatchStream(p.id));
         tile.querySelector('.mn-stream-volume input').addEventListener('input',e=>setStreamGain(p.id,e.target.value));
         tile.querySelector('.screen-resource-btn').addEventListener('click',ev=>{ev.stopPropagation();toggleLocalScreenPreview();});
+        tile.querySelector('.screen-switch-btn').addEventListener('click',async ev=>{ev.stopPropagation();const button=ev.currentTarget;button.disabled=true;try{await switchScreenShare();}finally{button.disabled=false;}});
         tile.querySelector('.screen-collapse-btn').addEventListener('click',async ev=>{
           ev.stopPropagation();if(document.fullscreenElement===tile)await document.exitFullscreen().catch(()=>{});
           tile.classList.remove('media-maximized');document.body.classList.remove('media-focus-open');
@@ -1457,6 +1471,7 @@ window.TronoSocial = (()=>{
       tile.classList.toggle('stream-invitation',!watching);
       tile.querySelector('.mn-stream-invite strong').textContent=`${p.name} está transmitindo`;
       const watch=tile.querySelector('.mn-watch-stream');watch.hidden=self;watch.textContent=watching?'Parar de assistir':'Assistir stream';
+      tile.querySelector('.screen-switch-btn').hidden=!self;
       tile.querySelector('.mn-stream-name').textContent=`🖥 ${p.name}${self?' • você • transmitindo':''}`;
       for(const selector of ['.media-fullscreen-btn','.screen-collapse-btn'])tile.querySelector(selector).hidden=!watching;
       const resource=tile.querySelector('.screen-resource-btn');resource.classList.toggle('hidden',!self);resource.textContent=localScreenPreviewPaused?'👁 Mostrar prévia':'⚡ Economizar recursos';
@@ -1837,7 +1852,7 @@ window.TronoSocial = (()=>{
   window.addEventListener('DOMContentLoaded',bind);
 
   return {
-    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,startScreenShare,stopScreenShare,openScreenOptions,
+    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
     get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},

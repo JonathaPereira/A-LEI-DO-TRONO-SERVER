@@ -1,32 +1,34 @@
-M&N · A Lei do Trono — Windows 0.1.1 (primeira versão)
+M&N · A Lei do Trono — Windows 0.1.1
 
-1. Extraia este ZIP e abra MN-Trono-0.1.1-Windows.exe.
-2. Escolha a pasta e conclua a instalação. Abra M&N pelo atalho criado.
-3. Entre com a mesma conta do site. As salas, cargos, mensagens e jogo usam
-   o mesmo servidor. O app não precisa do Chrome nem do antigo MN-Clipes.exe.
-4. Comunidade abre o chat. Jogar abre o jogo. Clipes mostra a biblioteca local.
-   Os controles de voz, câmera, tela e replay ficam na barra inferior.
-5. Compartilhe uma tela ou janela; o replay é preparado automaticamente.
+1. Extraia o ZIP e instale MN-Trono-0.1.1-Windows.exe.
+   Quem tem 0.1.0 instala esta versão uma vez para habilitar atualizações internas.
+   Mantenha os dados do aplicativo para preservar preferências e clipes.
+2. Entre com a mesma conta do site. Jogo, salas e mensagens usam o mesmo servidor.
+   Não precisa do Chrome nem do antigo MN-Clipes.exe.
+3. Efeitos fica na coluna esquerda. Tela cheia funciona pelo botão ou F11.
+   Voz, câmera, tela e replay continuam nos controles inferiores.
+4. Para clipes sem compartilhar, clique Ativar replay e escolha tela/janela.
+   O atalho global guarda os segundos anteriores mesmo com o jogo em foco.
    Em Clipes > Preferências escolha duração, qualidade, FPS, atalho e pasta.
-   O atalho funciona também com o jogo em foco, salvo conflitos ou jogos que
-   bloqueiam atalhos externos. Não execute o app como administrador por padrão.
-6. Clipes ficam neste computador até salvar ou descartar. O buffer de replay
-   é temporário; clipes criados persistem na biblioteca local por conta.
-   A pasta de exportação é escolhida novamente ao reabrir o app.
-7. Fechar a janela minimiza para a bandeja e mantém chamada/replay ativos.
-   Para encerrar use M&N > Sair ou o menu do ícone na bandeja do Windows.
+5. Compartilhar tela também prepara replay automaticamente quando ativado.
+   Trocar tela na sua prévia mantém a anterior até você escolher a nova fonte.
+   Cancelar mantém a transmissão. Trocar reinicia o buffer; clipes ficam guardados.
+6. No seletor, Aplicativo escolhido · isolado captura apenas o app e seus processos.
+   Para uma tela inteira, escolha também a janela do app que fornecerá áudio.
+   Requer Windows 11 ou build 20348+. Windows 10 comum não suporta esta API.
+   Abas do mesmo navegador podem compartilhar processos: não é isolamento por aba.
+   Computador inteiro pode incluir vozes da chamada e causar eco; é opcional.
+7. Os clipes ficam localmente até salvar/descartar, inclusive ao reabrir o app.
+   Parar replay descarta apenas o buffer temporário e libera a captura privada.
+   Não envia clipes à Cloudflare/Supabase. Exportar salva WebM no disco escolhido.
+8. Fechar mantém chamada/replay na bandeja. Para encerrar use M&N > Sair.
+9. Atualizações baixam internamente quando publicadas pelo projeto. Use o aviso
+   Reiniciar e atualizar ou saia de verdade para instalar. Não reinicia uma chamada
+   silenciosamente. Clique no número da versão para verificar manualmente.
 
-O instalador ainda não tem assinatura digital; o Windows pode mostrar um
-aviso de editor desconhecido. Verifique que baixou do GitHub deste projeto.
+O instalador ainda não tem assinatura digital. Baixe do projeto/domínio oficial.
+As atualizações precisam do canal publicado em a-lei-do-trono.surge.sh/downloads/.
 
-ÁUDIO: esta versão captura o áudio do computador inteiro quando solicitado
-no seletor. Pode incluir a voz da chamada e causar eco. A caixa vem desmarcada.
-Áudio isolado por jogo e codificador nativo de hardware são próximas etapas.
-
-O app usa Chromium/Electron e ainda precisa de recursos para codificar replay.
-Ter uma versão Windows não reserva CPU/GPU nem garante voz sem travamentos.
-As funções de jogo/chat dependem de internet e do servidor estar disponível.
-
-Sessões, temas e clipes do navegador não são copiados automaticamente ao app.
-Não há envio de clipes para Cloudflare/Supabase: salvar usa somente disco local.
-Para atualizar, instale a nova versão sem apagar os dados do aplicativo.
+Jogos podem bloquear atalhos globais. Não execute como administrador por padrão.
+Replay usa Chromium/Electron e consome CPU/GPU; não há reserva garantida de recursos.
+Sessões, temas e clipes do navegador não são importados automaticamente.
