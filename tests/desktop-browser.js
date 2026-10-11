@@ -28,6 +28,19 @@ test('desktop shell preserves live calls, shared rooms, game entry and local cli
       await page.evaluate(()=>window.__native.clip());await page.locator('[data-desktop-route="clips"]').click();await expect(page.locator('#clipList .clip-card')).toHaveCount(1,{timeout:10000});await expect(page.locator('.clip-state')).toContainText('pendente');await page.locator('#clipStopLocal').click();assert.equal(await page.evaluate(()=>window.__native.localVideo.readyState),'ended');assert.equal(await page.evaluate(()=>window.TronoClips.active),false);
       await page.locator('#clipList').getByRole('button',{name:'Descartar',exact:true}).click();await expect(page.locator('#clipList .clip-card')).toHaveCount(0);await page.locator('[data-desktop-route="home"]').click();
     });
+    await t.test('native PCM becomes an audio track without speaker monitoring and stops cleanly',async()=>{
+      await page.evaluate(async()=>{
+        window.__audioAcks=0;window.__audioStops=0;window.TronoDesktop.ackApplicationAudio=()=>window.__audioAcks++;window.TronoDesktop.stopApplicationAudio=async()=>window.__audioStops++;
+        const pipe=await window.TronoApplicationAudio.create({id:'pcm-fixture',sampleRate:44100,channels:2});window.__pcmPipe=pipe;
+        const context=new AudioContext(),source=context.createMediaStreamSource(new MediaStream([pipe.track])),analyser=context.createAnalyser(),silent=context.createGain();silent.gain.value=0;source.connect(analyser);analyser.connect(silent);silent.connect(context.destination);await context.resume();window.__pcmContext=context;window.__pcmAnalyser=analyser;
+        let cursor=0;window.__pcmTimer=setInterval(()=>{const pcm=new Int16Array(882*2);for(let frame=0;frame<882;frame++){const value=Math.round(Math.sin(2*Math.PI*440*cursor++/44100)*12000);pcm[frame*2]=pcm[frame*2+1]=value;}window.__native.audio({type:'chunk',id:'pcm-fixture',bytes:new Uint8Array(pcm.buffer)});},20);
+      });
+      try{
+        await expect.poll(()=>page.evaluate(()=>{const samples=new Float32Array(window.__pcmAnalyser.fftSize);window.__pcmAnalyser.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length);}),{timeout:6000}).toBeGreaterThan(.1);
+        assert(await page.evaluate(()=>window.__audioAcks>0));assert.equal(await page.evaluate(()=>window.__pcmPipe.track.readyState),'live');
+      }finally{await page.evaluate(async()=>{clearInterval(window.__pcmTimer);await window.__pcmPipe.close();await window.__pcmPipe.close();await window.__pcmContext.close();});}
+      assert.equal(await page.evaluate(()=>window.__pcmPipe.track.readyState),'ended');assert.equal(await page.evaluate(()=>window.__audioStops),1);
+    });
     await t.test('fullscreen control and update notice are available from the native rail',async()=>{
       await page.locator('#desktopFullscreen').click();await expect(page.locator('#desktopFullscreen')).toHaveAttribute('aria-pressed','true');await page.locator('#desktopFullscreen').click();await expect(page.locator('#desktopFullscreen')).toHaveAttribute('aria-pressed','false');
       await page.evaluate(()=>window.__native.update({status:'ready',version:'0.1.2'}));await expect(page.locator('.desktop-update-banner')).toContainText('Nova versão pronta');await page.locator('.desktop-update-banner').getByRole('button',{name:'Fechar aviso de atualização'}).click();await expect(page.locator('.desktop-update-banner')).toBeHidden();
