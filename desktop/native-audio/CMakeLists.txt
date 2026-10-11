@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(MNAudio LANGUAGES CXX)
+add_executable(MN-Application-Audio main.cpp)
+target_compile_features(MN-Application-Audio PRIVATE cxx_std_17)
+target_compile_definitions(MN-Application-Audio PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+set_property(TARGET MN-Application-Audio PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+target_link_libraries(MN-Application-Audio PRIVATE mmdevapi ole32 avrt)

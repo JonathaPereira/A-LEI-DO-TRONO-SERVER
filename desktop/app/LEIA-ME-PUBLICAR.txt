@@ -1,0 +1,18 @@
+M&N — publicar o site com download e atualizações do app
+
+1. Extraia este ZIP. Entre na pasta frontend extraída, que contém index.html
+   e a pasta downloads com o instalador e latest.yml.
+2. No Git Bash, dentro dessa pasta frontend, execute:
+   surge . a-lei-do-trono.surge.sh
+3. Confira no site o botão "Baixe a versão desktop" na tela de login.
+
+Não publique apenas os arquivos do código-fonte: o executável não fica no Git.
+Use este pacote completo para que o botão e o atualizador encontrem os arquivos.
+Não remova downloads/latest.yml nem o instalador apontado por esse arquivo.
+
+O aplicativo verifica atualizações ao abrir e a cada quatro horas.
+Nas próximas versões, publique novamente este pacote completo do site.
+Quem tiver o app 0.1.1 ou posterior receberá a atualização internamente.
+Quem ainda estiver no 0.1.0 precisa instalar a versão atual uma única vez.
+
+O domínio do site continua sendo o mesmo. Backend e SQL não mudam.

@@ -6,7 +6,8 @@
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
   <script src="auth-boot.js?v=091sharingclips"></script>
-  <script src="desktop-platform.js?v=092desktop"></script>
+  <script src="desktop-platform.js?v=094desktop012"></script>
+  <script src="application-audio.js?v=093desktop"></script>
   <link rel="stylesheet" href="style.css?v=091sharingclips" />
   <link rel="stylesheet" href="mn-chat.css?v=091sharingclips" />
   <link rel="stylesheet" href="auth.css?v=091sharingclips" />
@@ -15,10 +16,10 @@
   <link rel="stylesheet" href="modern.css?v=091sharingclips" />
   <link rel="stylesheet" href="refinements.css?v=091sharingclips" />
   <link rel="stylesheet" href="appearance.css?v=091sharingclips" />
-  <link rel="stylesheet" href="call-media.css?v=091sharingclips" />
+  <link rel="stylesheet" href="call-media.css?v=094desktop012" />
   <link rel="stylesheet" href="clips.css?v=091sharingclips" />
   <link rel="stylesheet" href="desktop-platform.css?v=092desktop" />
-  <link rel="stylesheet" href="desktop-shell.css?v=092desktop" />
+  <link rel="stylesheet" href="desktop-shell.css?v=094desktop012" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -405,6 +406,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.2-Windows.exe" download="MN-Trono-0.1.2-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -464,12 +466,13 @@
     <nav class="clips-tabs" role="tablist" aria-label="Central de clipes"><button type="button" role="tab" data-clips-tab="library" aria-controls="clipsLibrary" aria-selected="true" class="active">Biblioteca <b id="clipPendingCount">0</b></button><button type="button" role="tab" data-clips-tab="preferences" aria-controls="clipsPreferences" aria-selected="false">Preferências</button></nav>
     <p id="clipsStatus" class="clips-status" role="status" aria-live="polite">Ao compartilhar a tela, o replay fica pronto automaticamente.</p>
     <section id="clipsLibrary" role="tabpanel">
-      <div class="clips-library-actions"><button id="clipShare" type="button">Compartilhar tela</button><button id="clipResume" type="button" hidden>Retomar replay</button><button id="clipFloating" type="button" hidden>Janela flutuante</button></div>
+      <div class="clips-library-actions"><button id="clipShare" type="button">Compartilhar tela</button><button id="clipStopLocal" type="button" hidden>Parar replay local</button><button id="clipChooseSource" type="button" hidden>Trocar fonte do replay</button><button id="clipResume" type="button" hidden>Retomar replay</button><button id="clipFloating" type="button" hidden>Janela flutuante</button></div>
       <div id="clipList" class="clip-list"></div>
       <p class="clips-footnote">Clipes guardados neste navegador e nesta conta. Salve os que quiser manter definitivamente.</p>
     </section>
     <section id="clipsPreferences" role="tabpanel" hidden>
       <label class="clip-audio"><input id="clipAuto" type="checkbox" checked> Preparar replay automaticamente ao compartilhar a tela</label>
+      <label id="clipDesktopAutoLabel" class="clip-audio" hidden><input id="clipDesktopAuto" type="checkbox" checked> Preparar a tela principal ao abrir o aplicativo</label>
       <div class="clips-settings">
         <label>Qualidade do arquivo<select id="clipQuality"><option value="light">720p · Leve</option><option value="balanced">1080p · Alta</option><option value="high">1440p · Máxima</option></select></label>
         <label>FPS<select id="clipFps"><option value="30">30 FPS</option><option value="60" selected>60 FPS</option></select></label>
@@ -527,19 +530,20 @@
   <script src="profile-files.js?v=091sharingclips"></script>
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
-  <script src="social.js?v=091sharingclips"></script>
+  <script src="social.js?v=094desktop012"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
-  <script src="clips.js?v=091sharingclips"></script>
+  <script src="clips.js?v=094desktop012"></script>
   <script src="clip-desktop.js?v=091sharingclips"></script>
   <script src="game.js?v=091sharingclips"></script>
   <script src="portal.js?v=091sharingclips"></script>
-  <script src="community.js?v=091sharingclips"></script>
+  <script src="community.js?v=094desktop012"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
   <script src="soundboard-client.js?v=091sharingclips"></script>
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=091sharingclips"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=092desktop"></script>
+  <script src="desktop-shell.js?v=094desktop012"></script>
+  <script src="desktop-updates.js?v=093desktop"></script>
 </body>
 </html>

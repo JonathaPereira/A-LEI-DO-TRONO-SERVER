@@ -1,7 +1,8 @@
 /* Screens occupy the main stage; participant cameras reuse the profile cards. */
-.screen-share-tile>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.media-resize-grip){transition:opacity .18s ease,visibility .18s ease}
+body.chat-only-active #socialPanel #mediaMosaic .camera-grid-docked{display:none!important}
+.screen-share-tile>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.screen-switch-btn,.media-resize-grip){transition:opacity .18s ease,visibility .18s ease}
 #socialPanel .screen-share-tile.screen-controls-idle{cursor:none}
-#socialPanel .screen-share-tile.screen-controls-idle>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.media-resize-grip){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+#socialPanel .screen-share-tile.screen-controls-idle>:is(.mn-watch-stream,.mn-stream-volume,.mn-stream-name,.mn-stream-audio-state,.media-fullscreen-btn,.screen-collapse-btn,.screen-resource-btn,.screen-switch-btn,.media-resize-grip){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 .screen-share-tile:focus-visible{outline:2px solid var(--theme-accent);outline-offset:3px}
 body.chat-only-active #socialPanel .screens-layout #mediaMosaic{grid-template-columns:minmax(0,1fr)!important}
 body.chat-only-active #socialPanel .screens-layout #screenShareGrid:not(.hidden):not(.screen-share-empty){display:grid!important;grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px;min-width:0}
@@ -63,3 +64,12 @@ body.channel-text-active.call-connected .text-voice-connection{display:flex}
   body.chat-only-active:not(.channel-text-active) #socialPanel.chat-drawer-open .court-chat-section:not([hidden]){bottom:52px!important;height:calc(100% - 52px)!important}
 }
 body.voice-light-mode #socialPanel :is(.voice-person,.mn-person-avatar,.camera-tile,.screen-share-tile,.call-action,.connection-health),body.voice-light-mode #socialPanel :is(.voice-person,.mn-person-avatar)::before,body.voice-light-mode #socialPanel :is(.voice-person,.mn-person-avatar)::after{animation:none!important;transition:none!important}
+
+.screen-switch-btn{position:absolute;z-index:8;left:8px;top:45px;min-height:30px;padding:6px 10px;border:1px solid var(--theme-line);border-radius:9px;background:var(--theme-bg);color:var(--theme-text);font:700 10px var(--ui-font);cursor:pointer;box-shadow:0 5px 15px #0007;transition:background .15s,border-color .15s}
+.screen-switch-btn[hidden]{display:none!important}.screen-switch-btn:hover{background:var(--theme-card);border-color:var(--theme-accent)}.screen-switch-btn:disabled{opacity:.55;cursor:wait}
+.participant-media-layout{display:flex;align-items:center;gap:7px;width:100%;min-width:0;font:600 10px var(--ui-font);color:var(--theme-muted)}.participant-media-layout[hidden]{display:none}.participant-media-layout select{min-width:0;flex:1;max-width:100%;padding:6px;border:1px solid var(--theme-line);border-radius:7px;background:var(--theme-panel);color:var(--theme-text);font:500 10px var(--ui-font)}
+body.chat-only-active #socialPanel .media-in-profile .mn-person-avatar{display:none!important}.participant-screen-slot{width:100%;max-width:240px;min-width:0}
+body.chat-only-active #socialPanel .participant-screen-slot .screen-share-tile:not(:fullscreen):not(.media-maximized){width:100%!important;min-height:0!important;height:auto!important;max-width:none!important;aspect-ratio:16/9!important;border-radius:9px!important}
+body.chat-only-active #socialPanel .participant-screen-slot .screen-share-tile.share-collapsed{height:48px!important;aspect-ratio:auto!important}
+.participant-screen-slot .screen-resource-btn{display:none!important}.participant-screen-slot .mn-stream-volume{max-width:calc(100% - 16px);left:8px;right:8px}.participant-screen-slot .mn-stream-audio-state{display:none!important}
+.media-dock-btn{position:absolute;top:7px;left:7px;z-index:9;width:30px;height:30px;border:1px solid var(--theme-line);border-radius:8px;background:var(--theme-panel);color:var(--theme-text);cursor:pointer}.media-dock-btn:hover{color:var(--theme-accent);border-color:var(--theme-accent)}
