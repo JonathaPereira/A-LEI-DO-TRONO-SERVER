@@ -1639,7 +1639,7 @@ window.TronoSocial = (()=>{
   async function setNoiseMode(value){
     if(!window.TronoDesktop||noiseLoading||!['native','rnnoise','off'].includes(value))return;
     const previous={noiseEngine,noiseSuppression,voiceLightMode};noiseEngine=value;noiseSuppression=value!=='off';if(value==='rnnoise')voiceLightMode=false;
-    const save=()=>{storage.setItem('mnDesktopNoiseMode',noiseEngine);storage.setItem('tronoNoiseSuppression',noiseSuppression?'1':'0');storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();};save();
+    const save=()=>{storage.setItem('mnDesktopNoiseMode',noiseEngine);storage.setItem('tronoNoiseSuppression',noiseSuppression?'1':'0');storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();};save();
     try{if(voiceJoined){await acquireMic();await watchStream(meId(),localStream);}setStatus(value==='native'?'Redução leve selecionada.':value==='rnnoise'?'RNNoise selecionado.':'Redução de ruído desligada.','ok');}
     catch(err){({noiseEngine,noiseSuppression,voiceLightMode}=previous);save();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar a redução de ruído. A opção anterior foi mantida.','error');}
   }
@@ -1648,11 +1648,11 @@ window.TronoSocial = (()=>{
     document.body.classList.toggle('voice-light-mode',voiceLightMode);
   }
   async function toggleVoiceLightMode(){
-    if(noiseLoading)return;const previous=voiceLightMode;
+    if(noiseLoading)return;const previous=voiceLightMode,previousEngine=noiseEngine;
     voiceLightMode=!voiceLightMode;if(window.TronoDesktop&&voiceLightMode&&noiseSuppression){noiseEngine='native';storage.setItem('mnDesktopNoiseMode',noiseEngine);}storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();
     if(!voiceJoined)return;
     try{await acquireMic();await watchStream(meId(),localStream);setStatus(voiceLightMode?'Modo leve ativo. O RNNoise fica pausado; a redução nativa depende do navegador.':'Modo leve desligado. Preferências de áudio restauradas.','ok');}
-    catch(err){voiceLightMode=previous;storage.setItem('tronoVoiceLightMode',previous?'1':'0');updateNoiseButton();startTelemetry();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.','error');}
+    catch(err){voiceLightMode=previous;noiseEngine=previousEngine;if(window.TronoDesktop)storage.setItem('mnDesktopNoiseMode',noiseEngine);storage.setItem('tronoVoiceLightMode',previous?'1':'0');updateNoiseButton();startTelemetry();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.','error');}
   }
 
   function updateButtons(){

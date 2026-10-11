@@ -5,7 +5,7 @@ body.desktop-app #desktopSettingsDialog #voiceSettingsPanel{position:static!impo
 .desktop-app #desktopSettingsDialog .voice-settings-head{grid-column:1/-1;padding:18px 22px;background:var(--theme-panel);border-bottom:1px solid var(--theme-line)}
 .desktop-app #desktopSettingsDialog .voice-settings-head strong{font-size:21px}.desktop-app #desktopSettingsDialog .voice-settings-head small{font-size:10px}.desktop-app #desktopSettingsDialog .settings-close{width:36px;height:36px;flex:none}
 .desktop-app #desktopSettingsDialog .voice-settings-tabs{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:0;padding:16px 10px;background:var(--theme-panel);overflow:auto;border:0;border-right:1px solid var(--theme-line)}
-.desktop-app #desktopSettingsDialog .voice-settings-tab{flex:none;min-height:42px;text-align:left;font-size:13px;font-family:var(--ui-font);padding:10px 12px;border-radius:9px;white-space:normal;color:var(--theme-muted)}
+.desktop-app #desktopSettingsDialog .voice-settings-tab{flex:none;min-height:42px;text-align:left;font-size:13px;font-family:var(--ui-font);padding:10px 12px;border-radius:9px;white-space:normal;color:var(--theme-muted)!important;background:var(--theme-panel)!important;border-color:var(--theme-line)!important}
 .desktop-app #desktopSettingsDialog .voice-settings-tab.active{color:var(--theme-accent)!important;background:var(--theme-soft)!important;border-color:var(--theme-line)!important}
 .desktop-app #desktopSettingsDialog .voice-settings-content{min-width:0;min-height:0;overflow:auto;padding:24px 28px;scrollbar-gutter:stable}.desktop-app #desktopSettingsDialog .voice-settings-pane{max-width:650px;margin:0 auto;padding:0;background:none;border:0}
 .desktop-app #desktopSettingsDialog .voice-settings-pane[hidden]{display:none!important}.desktop-app #desktopSettingsDialog h2{font-size:23px;margin:0 0 16px}.desktop-app #desktopSettingsDialog h3{font-size:17px}
@@ -26,6 +26,7 @@ body.desktop-app #desktopSettingsDialog #voiceSettingsPanel{position:static!impo
  body.desktop-app.desktop-channels-open #chatOnlyScreen{z-index:835!important;background:transparent!important;pointer-events:none}
  body.desktop-app.desktop-channels-open #chatOnlyScreen:before{display:none}
  body.desktop-app.desktop-channels-open #chatOnlyScreen .chat-app-header{visibility:hidden}
+ .desktop-app.desktop-channels-open .community-call-notices{display:none}
  body.desktop-app.chat-only-active #chatOnlyScreen .mn-channel-sidebar{display:none!important;width:220px!important;z-index:840!important}
  body.desktop-app.desktop-channels-open.chat-only-active #chatOnlyScreen .mn-channel-sidebar{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:0!important;padding:16px 14px!important;border-radius:0!important;overflow:hidden!important;pointer-events:auto}
  body.desktop-app #chatOnlyScreen .mn-sidebar-scroll{display:block!important;flex:1 1 auto!important;min-height:0!important;overflow:auto!important;width:100%!important;max-height:none!important}
