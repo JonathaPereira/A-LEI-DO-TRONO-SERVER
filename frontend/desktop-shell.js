@@ -8,7 +8,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
     '.clips-footnote':'Clipes guardados neste aplicativo e nesta conta. Salve os que quiser manter definitivamente.',
     '.appearance-help':'Aplica na hora, só para você neste aplicativo. Não muda o tema dos outros na chamada.',
     '#voiceLightModeHelp':'Usa a redução de ruído básica em vez do RNNoise e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.',
-    '[data-settings-panel="video"] .settings-context-help':'No seletor do aplicativo, ative o áudio do computador se quiser incluí-lo. Ele pode captar as vozes da chamada e causar eco. Esta opção vale para a próxima transmissão.'
+    '[data-settings-panel="video"] .settings-context-help':'Escolha áudio isolado do aplicativo/jogo para transmitir seu som. Computador inteiro pode incluir as vozes da chamada e causar eco. O replay local da tela principal é independente da transmissão.'
   };
   for(const [selector,text]of Object.entries(help))document.querySelector(selector).textContent=text;
   const icons={home:'<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',game:'<path d="m3 6 4 4 5-6 5 6 4-4-2 13H5z"/>',community:'<path d="M21 11a8 8 0 0 1-8 8H8l-5 3V11a9 9 0 0 1 18 0Z"/><path d="M8 10h8M8 14h5"/>',clips:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4zM3 7h18"/>',profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>'};
@@ -29,6 +29,15 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const fullscreenButton=document.createElement('button');fullscreenButton.id='desktopFullscreen';fullscreenButton.type='button';fullscreenButton.title='Tela cheia · F11';
   fullscreenButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Tela cheia</span>';
   rail.insertBefore(fullscreenButton,version);
+  const topbar=document.createElement('header');topbar.id='desktopTopBar';topbar.setAttribute('aria-label','Pessoas, telemetria e replay');
+  const replay=document.createElement('span');replay.id='desktopReplayStatus';replay.className='desktop-replay-status';replay.setAttribute('role','status');replay.textContent='Preparando replay…';
+  const people=$('communityToggle'),telemetry=$('telemetryOpenBtn'),diagnostics=$('telemetryPanel');
+  people.title='Ver pessoas online ou minimizar a lista';people.setAttribute('aria-controls','communityPanel');
+  telemetry.textContent='Telemetria';telemetry.setAttribute('aria-controls','telemetryPanel');telemetry.setAttribute('aria-expanded','false');telemetry.onclick=()=>window.TronoSocial.toggleTelemetry();
+  topbar.append(replay,people,telemetry);body.append(topbar,diagnostics);
+  window.addEventListener('trono-telemetry-change',event=>telemetry.setAttribute('aria-expanded',String(event.detail.open)));
+  function replayStatus(state){replay.classList.toggle('ready',state.ready);replay.textContent=state.ready?(state.primary?'Replay · tela principal':'Replay ativo'):state.preparing?'Preparando replay…':'Replay pausado';}
+  window.addEventListener('trono-replay-change',event=>replayStatus(event.detail));replayStatus({ready:!!window.TronoClips?.replayStatus?.ready,primary:window.TronoClips?.primaryReplay,preparing:!window.TronoClips?.active});
   function updateWindowState(state){const on=state.fullscreen===true;fullscreenButton.setAttribute('aria-pressed',String(on));fullscreenButton.setAttribute('aria-label',on?'Sair da tela cheia':'Entrar em tela cheia');fullscreenButton.querySelector('span').textContent=on?'Sair da tela cheia':'Tela cheia';}
   fullscreenButton.onclick=async()=>{fullscreenButton.disabled=true;try{updateWindowState(await window.TronoDesktop.toggleFullscreen());}catch{fullscreenButton.title='Não foi possível alterar a tela cheia. Tente F11.';}finally{fullscreenButton.disabled=false;}};
   window.TronoDesktop.onWindowState(updateWindowState);void window.TronoDesktop.getWindowState().then(updateWindowState).catch(()=>{});

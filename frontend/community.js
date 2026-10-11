@@ -38,7 +38,7 @@ window.TronoCommunity=(()=>{
     for(const channel of channels){const button=document.querySelector(`[data-chat-channel="${channel.id}"]`);if(button){if(channel.type==='text')button.querySelector('.room-presence-icons')?.remove();else icons(button,channel.players||[]);}}
   }
   function toggle(value){open=typeof value==='boolean'?value:!open;document.body.classList.toggle('community-open',open);$('communityPanel').classList.toggle('hidden',!open);$('communityToggle').setAttribute('aria-expanded',String(open));}
-  function syncMode(){const logged=!!window.TronoAuth.user,guest=!!window.TronoAuth.guest;$('communityToggle')?.classList.toggle('hidden',!logged&&!guest);const chat=document.body.classList.contains('chat-only-active');if(chat!==lastChatMode){lastChatMode=chat;toggle(chat&&matchMedia('(min-width:1280px)').matches);}if(!logged&&!guest){snapshot=null;toggle(false);render();}}
+  function syncMode(){const logged=!!window.TronoAuth.user,guest=!!window.TronoAuth.guest;$('communityToggle')?.classList.toggle('hidden',!logged&&!guest);const chat=document.body.classList.contains('chat-only-active');if(chat!==lastChatMode){lastChatMode=chat;if(!window.TronoDesktop)toggle(chat&&matchMedia('(min-width:1280px)').matches);}if(!logged&&!guest){snapshot=null;toggle(false);render();}}
   function voiceNotice(event){
     if(event.id){if(seenEvents.has(event.id))return;seenEvents.add(event.id);if(seenEvents.size>200)seenEvents.delete(seenEvents.values().next().value);}
     const action=event.kind==='joined'?'entrou na chamada':event.kind==='disconnected'?'foi desconectado da chamada':'saiu da chamada';

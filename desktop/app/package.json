@@ -1,7 +1,7 @@
 {
   "name": "mn-trono-desktop",
-  "version": "0.1.1",
-  "description": "M&N e A Lei do Trono \u2014 aplicativo Windows",
+  "version": "0.1.2",
+  "description": "M&N e A Lei do Trono — aplicativo Windows",
   "author": "Jonatha Pereira",
   "private": true,
   "main": "main.cjs",

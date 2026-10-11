@@ -1,11 +1,11 @@
 'use strict';
-const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell}=require('electron');
+const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,screen}=require('electron');
 const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('node:crypto'),{pathToFileURL}=require('node:url');
 const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
-let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false;
+let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,primaryReplay=false;
 const folders=new Map(),mediaPermissions=new Set();
 const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop-diagnostics'))console.error('[desktop]',...values);};
 if(!app.requestSingleInstanceLock())app.quit();
@@ -55,6 +55,17 @@ async function start(){
   window.on('ready-to-show',()=>window.show());
   applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
   ipcMain.handle('mn:application-audio-stop',(event,id)=>{trusted(event);applicationAudio.stop(id);});
+  ipcMain.handle('mn:replay-prepare',async event=>{
+    trusted(event);if(primaryReplay||capture)return {busy:true};
+    primaryReplay=true;
+    try{
+      // A fixed, trusted renderer entry point receives user activation so the
+      // desktop API can prepare the replay without a manual sharing gesture.
+      const result=await window.webContents.executeJavaScript('window.TronoClips.startPrimaryReplay()',true);
+      if(!result.active&&['NotReadableError','NotFoundError','AbortError'].includes(result.error))return await window.webContents.executeJavaScript('window.TronoClips.startPrimaryReplay({audio:false})',true);
+      return result;
+    }finally{primaryReplay=false;}
+  });
   ipcMain.on('mn:application-audio-ack',(event,id)=>{try{trusted(event);applicationAudio.ack(id);}catch{}});
   updates=createUpdates({updater:require('electron-updater').autoUpdater,enabled:app.isPackaged,publish:state=>{if(!window.isDestroyed())window.webContents.send('mn:update-state',state);},confirm:async()=>{const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Continuar no app','Reiniciar e atualizar'],defaultId:0,cancelId:0,message:'Reiniciar para atualizar?',detail:'A chamada e o buffer de replay serão encerrados. Clipes já armazenados permanecem. Salve antes os clipes que existirem somente na memória.'});return answer.response===1;},prepareInstall:()=>{installingUpdate=true;quitting=true;}});
   ipcMain.handle('mn:update-state',event=>{trusted(event);return updates.state;});
@@ -116,6 +127,15 @@ async function start(){
     try{
       const {desktopCapturer}=require('electron'),sources=await desktopCapturer.getSources({types:['screen','window'],thumbnailSize:{width:320,height:180}});
       if(capture!==pending||window.isDestroyed())return;
+      if(primaryReplay){
+        const primary=String(screen.getPrimaryDisplay().id),screens=sources.filter(source=>source.id.startsWith('screen:'));
+        const selected=screens.find(source=>String(source.display_id)===primary)||screens[0];
+        capture=null;clearTimeout(pending.timer);
+        if(!selected)return callback({});
+        // System audio is local to the replay. It is never attached to the
+        // microphone or published to the call by this automatic capture.
+        callback({video:selected,...(request.audioRequested&&process.platform==='win32'?{audio:'loopback'}:{})});return;
+      }
       const options=sources.filter(s=>s.id!==window.getMediaSourceId());
       pending.sources=options;
       window.webContents.send('mn:capture',{id:pending.id,audio:request.audioRequested,windows:process.platform==='win32',applicationAudio:applicationAudio.capability.available,sources:options.map(s=>({id:s.id,name:s.name,thumbnail:s.thumbnail.toDataURL()}))});

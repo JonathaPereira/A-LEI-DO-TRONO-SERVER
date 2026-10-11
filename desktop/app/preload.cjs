@@ -2,7 +2,8 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.1.1',
+  version:'0.1.2',
+  prepareReplay:()=>ipcRenderer.invoke('mn:replay-prepare'),
   getWindowState:()=>ipcRenderer.invoke('mn:window-state'),
   toggleFullscreen:()=>ipcRenderer.invoke('mn:fullscreen'),
   onWindowState:fn=>listen('mn:window-state',fn),
