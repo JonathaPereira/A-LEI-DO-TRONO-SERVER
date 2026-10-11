@@ -3,9 +3,10 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync}=require('node:child_process');
 const {_electron,expect}=require('@playwright/test');
 const {startHTTPS}=require('./desktop-https-fixture');
+const {killTestApp,closeTestApp}=require('./desktop-test-close');
 test('installed desktop boundary, native shortcut, picker and filesystem integration',{timeout:160000},async t=>{
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,api,phase='launch',finished=false;
-  t.signal.addEventListener('abort',()=>{if(!finished){console.error('Desktop test stalled at: '+phase);app?.process().kill();}},{once:true});
+  t.signal.addEventListener('abort',()=>{if(!finished){console.error('Desktop test stalled at: '+phase);killTestApp(app);}},{once:true});
   try{
     api=await startHTTPS(directory);
     app=await _electron.launch({executablePath:require('../desktop/app/node_modules/electron'),args:[path.resolve(__dirname,'../desktop/app'),'--user-data-dir='+directory,'--desktop-diagnostics','--desktop-api-test-origin='+api.url,...(process.platform==='linux'?['--no-sandbox']:[])],timeout:40000});
@@ -57,5 +58,5 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     // Closing the window retains the process/call for the tray; quit is explicit.
     phase='tray close';await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].close());assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible()),false);
   }catch(error){error.message='Desktop phase: '+phase+'\n'+error.message;throw error;}
-  finally{finished=true;if(app){const timer=setTimeout(()=>app.process().kill(),5000);try{await app.close();}finally{clearTimeout(timer);}}await api?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
+  finally{finished=true;await closeTestApp(app);await api?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
 });
