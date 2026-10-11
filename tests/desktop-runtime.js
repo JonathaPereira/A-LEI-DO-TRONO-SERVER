@@ -1,0 +1,58 @@
+'use strict';
+// Real Electron/Windows smoke test; browser flow coverage is in desktop-browser.js.
+const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync}=require('node:child_process');
+const {_electron,expect}=require('@playwright/test');
+const {startHTTPS}=require('./desktop-https-fixture');
+test('installed desktop boundary, native shortcut, picker and filesystem integration',{timeout:120000},async t=>{
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-runtime-'));let app,api,phase='launch',finished=false;
+  t.signal.addEventListener('abort',()=>{if(!finished){console.error('Desktop test stalled at: '+phase);app?.process().kill();}},{once:true});
+  try{
+    api=await startHTTPS(directory);
+    app=await _electron.launch({executablePath:require('../desktop/app/node_modules/electron'),args:[path.resolve(__dirname,'../desktop/app'),'--user-data-dir='+directory,'--desktop-diagnostics','--desktop-api-test-origin='+api.url,...(process.platform==='linux'?['--no-sandbox']:[])],timeout:40000});
+    app.process().stderr.on('data',chunk=>{for(const line of chunk.toString().split('\n'))if(line.startsWith('[desktop]'))console.log(line);});
+    const page=await app.firstWindow();await expect(page.locator('#desktopRail')).toBeVisible({timeout:30000});assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
+    await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authCloseBtn').click();
+    assert.equal(await page.evaluate(()=>typeof require),'undefined');assert.equal(await page.evaluate(()=>typeof process),'undefined');assert.equal(await page.evaluate(()=>window.TronoDesktop.version),'0.1.0');
+    phase='navigation';await page.locator('[data-desktop-route="clips"]').click();await expect(page.locator('.desktop-clips-page')).toBeVisible();await page.locator('[data-desktop-route="home"]').click();await expect(page.locator('#portalScreen')).toBeVisible();
+    // The installed bundle never falls back to remote Surge files.
+    assert.equal(await page.evaluate(async()=> (await fetch('/missing-desktop-file')).status),404);
+    phase='global shortcut';const registered=await page.evaluate(()=>window.TronoDesktop.configureClips({active:true,shortcut:{ctrl:true,alt:true,code:'F9'}}));assert.equal(registered.active,true);
+    assert(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+F9')));
+    if(process.platform==='win32'){
+      await page.evaluate(()=>{window.__desktopHotkeys=0;window.TronoDesktop.onClip(()=>window.__desktopHotkeys++);});await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].hide());
+      const input=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class MNHotkey { [DllImport("user32.dll")] static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra); public static void Press() { try { keybd_event(0x11,0,0,UIntPtr.Zero); keybd_event(0x12,0,0,UIntPtr.Zero); keybd_event(0x78,0,0,UIntPtr.Zero); } finally { keybd_event(0x78,0,2,UIntPtr.Zero); keybd_event(0x12,0,2,UIntPtr.Zero); keybd_event(0x11,0,2,UIntPtr.Zero); } } }'; [MNHotkey]::Press()`],{encoding:'utf8',timeout:45000});assert.equal(input.status,0,input.error?.message||input.stderr);await expect.poll(()=>page.evaluate(()=>window.__desktopHotkeys)).toBe(1);await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].show());
+    }
+    // A canceled quit must keep the replay shortcut registered.
+    await app.evaluate(({dialog})=>{globalThis.__quitPromptCount=0;dialog.showMessageBoxSync=()=>{globalThis.__quitPromptCount++;return 0;};});
+    await page.evaluate(()=>{window.__preventQuit=event=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',window.__preventQuit);});await app.evaluate(({app})=>app.quit());await expect.poll(()=>app.evaluate(()=>globalThis.__quitPromptCount)).toBe(1);assert(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+F9')));await page.evaluate(()=>window.removeEventListener('beforeunload',window.__preventQuit));
+    await page.evaluate(()=>window.TronoDesktop.configureClips({active:false}));assert(!await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+F9')));
+    // An untrusted child page cannot issue native filesystem IPC, even if it
+    // navigates to the app origin with a manually injected test preload.
+    phase='child IPC isolation';const denied=await app.evaluate(async({BrowserWindow},preload)=>{
+      const child=new BrowserWindow({show:false,webPreferences:{session:BrowserWindow.getAllWindows()[0].webContents.session,preload,sandbox:true,contextIsolation:true}});
+      try{await child.loadURL('https://a-lei-do-trono.surge.sh/desktop-platform.css');return await child.webContents.executeJavaScript("window.TronoDesktop.chooseFolder().then(()=>false,()=>true)");}finally{child.destroy();}
+    },path.resolve(__dirname,'../desktop/app/preload.cjs'));assert(denied);
+    phase='native file export';await app.evaluate(({dialog},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});dialog.showSaveDialog=async()=>({canceled:true});dialog.showMessageBox=async()=>({response:0});},directory);
+    const folder=await page.evaluate(()=>window.TronoDesktop.chooseFolder());assert.equal(folder.native,true);
+    assert.deepEqual(await page.evaluate(()=>window.TronoDesktop.saveClip({filename:'Trono_Clipe_cancel.webm',bytes:Uint8Array.from([0x1a,0x45,0xdf,0xa3,4]).buffer})),{canceled:true});
+    const result=await page.evaluate(folder=>window.TronoDesktop.saveClip({directory:folder.id,filename:'Trono_Clipe_native.webm',bytes:Uint8Array.from([0x1a,0x45,0xdf,0xa3,4]).buffer}),folder);assert(result.saved);assert.equal((await fs.readFile(path.join(directory,'Trono_Clipe_native.webm'))).length,5);
+    await assert.rejects(page.evaluate(folder=>window.TronoDesktop.saveClip({directory:folder.id,filename:'../bad.webm',bytes:new ArrayBuffer(5)}),folder));
+    // Enumerate real OS sources and cancel without starting a capture.
+    phase='native capture picker';await page.evaluate(()=>{const button=document.createElement('button');button.id='runtimeShare';button.textContent='Testar captura';button.style.cssText='position:fixed;top:10px;left:100px;z-index:1500';button.onclick=()=>{window.__captureError=undefined;window.__captureResult=navigator.mediaDevices.getDisplayMedia({video:true,audio:false}).then(stream=>{window.__nativeStream=stream;return 'active';},error=>{window.__captureError=error.name+': '+error.message;return error.name;});};document.body.append(button);});await page.locator('#runtimeShare').click();
+    await expect.poll(()=>page.evaluate(()=>document.querySelector('.desktop-capture-dialog').open?'picker':window.__captureError||'pending'),{timeout:30000}).not.toBe('pending');assert.equal(await page.evaluate(()=>window.__captureError),undefined);
+    await expect(page.locator('.desktop-capture-dialog')).toBeVisible({timeout:30000});await page.locator('.desktop-capture-dialog .dialog-close').click();assert(['NotAllowedError','AbortError'].includes(await page.evaluate(()=>window.__captureResult)));
+    await page.locator('#runtimeShare').click();await expect(page.locator('.desktop-capture-sources button').first()).toBeVisible();await page.locator('.desktop-capture-sources button').first().click();assert.equal(await page.evaluate(()=>window.__captureResult),'active');assert.equal(await page.evaluate(()=>window.__nativeStream.getVideoTracks()[0].readyState),'live');await page.evaluate(()=>window.__nativeStream.getTracks().forEach(track=>track.stop()));
+    phase='RNNoise in installed bundle';assert(await page.evaluate(async()=>{const context=new AudioContext({sampleRate:48000});let processor;try{await context.resume();processor=await window.TronoNoise.create(context);return processor.node instanceof AudioWorkletNode;}finally{processor?.destroy();await context.close();}}));
+    phase='HTTPS API compatibility';
+    // Trust only this disposable localhost certificate, exclusively in the test.
+    await app.evaluate(({session,BrowserWindow})=>{const verify=(request,callback)=>callback(request.hostname==='127.0.0.1'?0:-3);session.defaultSession.setCertificateVerifyProc(verify);BrowserWindow.getAllWindows()[0].webContents.session.setCertificateVerifyProc(verify);session.fromPartition('persist:mn-attachments').setCertificateVerifyProc(verify);});
+    const posted=await page.evaluate(async url=>{const response=await fetch(url+'/api',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-only'},referrerPolicy:'no-referrer',body:JSON.stringify({test:'desktop-body'}),signal:AbortSignal.timeout(10000)});return response.json();},api.url);assert.equal(posted.method,'POST');assert.equal(posted.origin,'https://a-lei-do-trono.surge.sh');assert.equal(posted.authorization,'Bearer fixture-only');assert.deepEqual(JSON.parse(posted.body),{test:'desktop-body'});
+    const uploaded=await page.evaluate(url=>new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST',url+'/upload');xhr.setRequestHeader('Content-Type','application/octet-stream');xhr.setRequestHeader('X-File-Name','fixture.webm');xhr.onload=()=>resolve(JSON.parse(xhr.responseText));xhr.onerror=reject;xhr.send(new Blob(['upload-bytes']));}),api.url);assert.equal(uploaded.origin,'https://a-lei-do-trono.surge.sh');assert.equal(uploaded.filename,'fixture.webm');assert.equal(uploaded.body,'upload-bytes');
+    phase='attachment partition isolation';const opened=app.waitForEvent('window');await page.evaluate(url=>window.TronoDesktop.openAttachment({url:url+'/doc'}),api.url);const popup=await opened;
+    assert.equal(await popup.evaluate(()=>typeof window.TronoDesktop),'undefined');assert.equal(await popup.evaluate(()=>window.opener),null);const sessions=await app.evaluate(({BrowserWindow,session})=>BrowserWindow.getAllWindows().map(win=>({url:win.webContents.getURL(),app:win.webContents.session===session.fromPartition('persist:mn-trono'),attachment:win.webContents.session===session.fromPartition('persist:mn-attachments')})));assert.equal(sessions.filter(win=>win.app).length,1,JSON.stringify(sessions));assert.equal(sessions.filter(win=>win.attachment).length,1,JSON.stringify(sessions));await popup.close();
+    await page.evaluate(()=>document.getElementById('runtimeShare').remove());await page.screenshot({path:path.resolve(__dirname,'../artifacts/windows-app-runtime.png')});
+    // Closing the window retains the process/call for the tray; quit is explicit.
+    phase='tray close';await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].close());assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible()),false);
+  }catch(error){error.message='Desktop phase: '+phase+'\n'+error.message;throw error;}
+  finally{finished=true;if(app){const timer=setTimeout(()=>app.process().kill(),5000);try{await app.close();}finally{clearTimeout(timer);}}await api?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
+});

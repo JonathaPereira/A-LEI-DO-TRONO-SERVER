@@ -4,6 +4,10 @@ Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jo
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
+O aplicativo Windows com jogo, comunidade, clipes e integrações nativas está em
+`desktop/app/`. Consulte [WINDOWS_APP.md](WINDOWS_APP.md) para instalar, usar,
+testar e compilar. Esta entrega não exige nova migração SQL ou alteração do backend.
+
 O frontend da v0.8.0 enviado pelo criador está em `frontend/`, com seleção de
 qualidade/FPS, cargos, canais, galeria de anexos, efeitos sonoros e mosaico de
 até seis pessoas. Consulte [COMMUNITY_UPDATE.md](COMMUNITY_UPDATE.md) para

@@ -1,0 +1,61 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const express=require('express'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
+test('desktop shell preserves live calls, shared rooms, game entry and local clips',{timeout:90000},async t=>{
+  const host=express();host.use(express.static(path.resolve(__dirname,'../frontend')));const server=await new Promise(r=>{const s=host.listen(0,'127.0.0.1',()=>r(s));}),origin='http://127.0.0.1:'+server.address().port;
+  const fixture=await startFixture({port:10687,appOrigin:origin});let browser;const errors=[],artifacts=path.resolve(__dirname,'../artifacts');fs.mkdirSync(artifacts,{recursive:true});
+  try{
+    await fixture.call('signup',{email:'desktop@example.test',nickname:'Desktop Test',password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links][0][0],type:'signup'});const data=(await fixture.call('login',{email:'desktop@example.test',password:'Senha12!'})).data;
+    browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','--mute-audio']});
+    const context=await browser.newContext({viewport:{width:1440,height:1000},permissions:['camera','microphone']});
+    await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());
+    await context.addInitScript(({backend,data})=>{
+      window.TRONO_BACKEND_URL=backend;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));for(const key of ['tronoMusicEnabled','tronoSfxEnabled','tronoNoiseSuppression'])localStorage.setItem(key,'0');
+      window.__native={configurations:[],saves:[],saveResult:{canceled:true},captureSelections:[]};
+      window.TronoDesktop={version:'0.1.0',onClip:fn=>window.__native.clip=fn,onCapture:fn=>window.__native.capture=fn,onCaptureCancel:fn=>window.__native.cancel=fn,configureClips:async value=>{window.__native.configurations.push(value);return {active:value.active,shortcut:'Control+Shift+K'};},chooseFolder:async()=>({native:true,id:'chosen-folder',name:'Videos'}),saveClip:async value=>{window.__native.saves.push(value);if(window.__native.error)throw Error('Disco cheio');return window.__native.saveResult;},selectCapture:async value=>{window.__native.captureSelections.push(value);return true;}};
+      window.TronoDesktop.openAttachment=async value=>{window.__native.attachment=value;if(window.__native.attachmentError)throw Error('Arquivo indisponível');return {opened:true};};
+    },{backend:fixture.base,data});
+    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());page.setDefaultTimeout(10000);await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);
+    await t.test('installed navigation retains portal art and permanent call controls',async()=>{
+      await expect(page.locator('#desktopRail')).toBeVisible();await expect(page.locator('#desktopCallDock #joinVoiceBtn')).toBeVisible();assert((await page.locator('#voicePortalCard').evaluate(el=>getComputedStyle(el,'::before').backgroundImage)).includes('portal_realms')||await page.locator('#portalStage').evaluate(el=>getComputedStyle(el).backgroundImage.includes('portal_realms')));
+      await page.screenshot({path:path.join(artifacts,'windows-home.png')});
+    });
+    await t.test('voice, text and camera keep working across home, lobby and clip navigation',async()=>{
+      await page.locator('[data-desktop-route="community"]').click();await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.currentRoom)).toBe('chat-livre');await page.locator('#joinVoiceBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);await page.evaluate(()=>{window.__voiceTrack=window.TronoSocial.getLocalAudioTrack();window.__room=window.TronoNetwork.primaryRoom;});
+      await page.locator('#courtChatInput').fill('Mensagem enviada do aplicativo');await page.locator('#courtChatSend').click();await expect(page.locator('#courtChatMessages')).toContainText('Mensagem enviada do aplicativo');
+      await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);
+      for(const view of ['home','game','clips','community']){await page.locator('[data-desktop-route="'+view+'"]').click();await expect.poll(()=>page.evaluate(()=>document.body.dataset.desktopView)).toBe(view);assert.equal(await page.evaluate(()=>window.TronoSocial.voiceJoined&&window.TronoSocial.getLocalAudioTrack()===window.__voiceTrack&&window.__voiceTrack.readyState==='live'&&window.TronoNetwork.primaryRoom===window.__room),true);}
+      await page.screenshot({path:path.join(artifacts,'windows-community.png')});await page.locator('#cameraBtn').click();
+      await page.locator('[data-desktop-route="home"]').click();await page.locator('#voiceSettingsBtn').click();await expect(page.locator('#voiceInputSelect')).toBeVisible();await page.locator('#voiceSettingsClose').click();await page.locator('#muteMicBtn').click();await expect(page.locator('#muteMicBtn')).toContainText('Ativar microfone');await page.locator('#muteMicBtn').click();
+    });
+    await t.test('game rooms stay joined across navigation and community entry asks before leaving',async()=>{
+      await page.locator('[data-desktop-route="game"]').click();await expect(page.locator('#setupScreen')).toBeVisible();const room=await page.locator('.room-enter').first().getAttribute('data-room');await page.locator('.room-enter').first().click();await expect(page.locator('#roomScreen')).toBeVisible();await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.primaryRoom)).toBe(room);
+      for(const view of ['home','clips','game']){await page.locator('[data-desktop-route="'+view+'"]').click();assert.equal(await page.evaluate(()=>window.TronoNetwork.primaryRoom),room);}await expect(page.locator('#roomScreen')).toBeVisible();
+      page.removeAllListeners('dialog');page.once('dialog',dialog=>dialog.dismiss());await page.locator('[data-desktop-route="community"]').click();assert.equal(await page.evaluate(()=>window.TronoNetwork.primaryRoom),room);await expect(page.locator('#roomScreen')).toBeVisible();
+      page.on('dialog',dialog=>dialog.accept());await page.locator('[data-desktop-route="community"]').click();await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.primaryRoom)).toBe('chat-livre');await page.locator('[data-desktop-route="game"]').click();await expect(page.locator('#setupScreen')).toBeVisible();
+    });
+    await t.test('native library, previews and canceled/failed saves retain pending clips',async()=>{
+      await page.evaluate(async owner=>{await window.TronoClipStore.put({id:'native-test',owner,createdAt:Date.now(),filename:'Trono_Clipe_native_test.webm',name:'Jogo de teste',duration:15,quality:'1920×1080',fps:60,bytes:5,blob:new Blob([Uint8Array.from([0x1a,0x45,0xdf,0xa3,1])],{type:'video/webm'}),state:'pending',poster:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'});},data.user.id);
+      await page.locator('[data-desktop-route="clips"]').click();await expect(page.locator('#clipList .clip-card')).toHaveCount(1);await expect(page.locator('.clip-poster')).toBeVisible();await expect(page.locator('#clipDesktopCode')).toBeHidden();
+      const save=page.locator('#clipList').getByRole('button',{name:'Salvar',exact:true});await save.click();await expect(page.locator('#clipsStatus')).toContainText('cancelado');assert(await page.evaluate(async owner=>(await window.TronoClipStore.list(owner))[0].blob instanceof Blob,data.user.id));
+      await page.evaluate(()=>{window.__native.error=true;});await save.click();await expect(page.locator('#clipsStatus')).toContainText('Disco cheio');await page.evaluate(()=>{window.__native.error=false;});
+      await page.locator('[data-clips-tab="preferences"]').click();await page.locator('#clipChooseFolder').click();await expect(page.locator('#clipFolder')).toContainText('Videos');await page.locator('[data-clips-tab="library"]').click();await page.screenshot({path:path.join(artifacts,'windows-clips.png')});
+      await page.evaluate(()=>{window.__native.saveResult={saved:true};});await save.click();await expect(page.locator('.clip-state')).toContainText('Salvo');assert.equal(await page.evaluate(()=>window.__native.saves.at(-1).directory),'chosen-folder');assert.equal(await page.evaluate(async owner=>(await window.TronoClipStore.list(owner))[0].blob,data.user.id),null);
+      await page.reload();await expect(page.locator('#desktopRail')).toBeVisible();await page.locator('[data-desktop-route="clips"]').click();await expect(page.locator('.clip-state')).toContainText('Salvo');
+    });
+    await t.test('native source picker uses explicit audio choice and cancels expired requests',async()=>{
+      await page.evaluate(()=>window.__native.capture({id:'capture-1',audio:true,windows:true,sources:[{id:'window:1:0',name:'Jogo',thumbnail:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}]}));await expect(page.locator('.desktop-capture-dialog')).toBeVisible();await expect(page.locator('.desktop-capture-dialog input')).not.toBeChecked();await page.locator('.desktop-capture-sources button').click();assert.equal(await page.evaluate(()=>window.__native.captureSelections.at(-1).audio),false);
+      await page.evaluate(()=>{window.__native.capture({id:'capture-2',audio:false,windows:true,sources:[]});window.__native.cancel({id:'capture-2'});});await expect(page.locator('.desktop-capture-dialog')).toBeHidden();
+    });
+    await t.test('PDF previews use the isolated native viewer and report errors without losing the call',async()=>{
+      const id='10000000-0000-4000-8000-000000000099';await context.route(fixture.base+'/files/'+id+'/url',route=>route.fulfill({status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':origin},body:JSON.stringify({url:'https://files.example.test/manual.pdf',expiresAt:Date.now()+60000})}));
+      await page.evaluate(id=>{const host=document.createElement('div');host.id='nativeFileFixture';host.style.cssText='position:fixed;top:180px;left:500px;z-index:1500';window.TronoFiles.renderAttachment(host,{id,name:'Manual.pdf',mime:'application/pdf',bytes:100});document.body.append(host);},id);
+      await page.locator('#nativeFileFixture .file-preview').click();await expect.poll(()=>page.evaluate(()=>window.__native.attachment?.url)).toBe('https://files.example.test/manual.pdf');await page.evaluate(()=>{window.__native.attachmentError=true;});await page.locator('#nativeFileFixture .file-preview').click();await expect(page.locator('#nativeFileFixture')).toContainText('Arquivo indisponível');await page.evaluate(()=>document.getElementById('nativeFileFixture').remove());
+    });
+    await t.test('desktop themes remain personal and compact Windows widths fit the dock',async()=>{
+      await page.locator('[data-desktop-route="profile"]').click();await expect(page.locator('#profileDialog')).toBeVisible();await page.locator('input[name="profileTheme"][value="green"]').check();await expect.poll(()=>page.evaluate(()=>document.documentElement.dataset.theme)).toBe('green');await page.locator('#profileClose').click();await page.locator('[data-desktop-route="home"]').click();
+      await page.setViewportSize({width:960,height:700});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));for(const id of ['joinVoiceBtn','muteMicBtn','screenShareBtn','clipToolbarNow','voiceSettingsBtn'])await expect(page.locator('#'+id)).toBeInViewport();await page.screenshot({path:path.join(artifacts,'windows-compact.png')});
+    });
+    assert.deepEqual(errors,[]);
+  }finally{await browser?.close();await fixture.stop();await new Promise(r=>server.close(r));}
+});

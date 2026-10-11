@@ -8,6 +8,10 @@ window.TronoFiles=(()=>{
    if(!res.ok)throw Object.assign(new Error(data.error?.message||'Não foi possível acessar esse arquivo.'),{code:data.error?.code});return data;
  }
  async function url(id,download=false){const key=`${id}:${download}`,old=cache.get(key);if(old&&old.expiresAt>Date.now()+30000)return old.url;const data=await api(`/${id}/url${download?'?download=1':''}`);cache.set(key,data);return data.url;}
+ async function openFile(resolveURL,notice){
+   if(window.TronoDesktop){try{await window.TronoDesktop.openAttachment({url:await resolveURL()});}catch(error){notice.textContent=error.message;}return;}
+   const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;try{const link=await resolveURL();if(tab)tab.location=link;else notice.textContent='Permita abrir a aba para acessar o arquivo.';}catch(error){tab?.close();notice.textContent=error.message;}
+ }
  async function upload(file,{kind='chat',roomId,onProgress,signal}={}){
    const video=/\.(mp4|webm)$/i.test(file.name),max=kind==='soundboard'?2_880_044:kind==='avatar'?1_000_000:video?limits.video:limits.file;
    if(!file.size||file.size>max)throw new Error(`Limite: ${size(max)} ${video?'por vídeo':'por arquivo'}.`);
@@ -32,21 +36,21 @@ window.TronoFiles=(()=>{
    const label=document.createElement('button');label.type='button';label.className='file-download';label.textContent=`${file.name} · ${size(file.bytes)} ↓`;host.appendChild(label);
    const notice=document.createElement('small');host.appendChild(notice);
    if(file.deleted){label.disabled=true;notice.textContent='Arquivo excluído.';return;}
-   label.onclick=async()=>{const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;try{const link=await url(file.id,true);if(tab)tab.location=link;else notice.textContent='Permita abrir a aba para baixar o arquivo.';}catch(e){tab?.close();notice.textContent=e.message;}};
+   label.onclick=()=>void openFile(()=>url(file.id,true),notice);
    if(['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)){
      const img=document.createElement('img');img.className='chat-file-image';img.alt=file.name;img.loading='lazy';host.prepend(img);url(file.id).then(link=>{if(img.isConnected)img.src=link;}).catch(e=>{img.remove();notice.textContent=e.message;});
    }else if(['video/mp4','video/webm'].includes(file.mime)){
      const load=document.createElement('button');load.type='button';load.className='file-preview';load.textContent='▶ Abrir vídeo';host.prepend(load);
      load.onclick=async()=>{try{const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.className='chat-file-video';video.src=await url(file.id);load.replaceWith(video);}catch(e){notice.textContent=e.message;}};
    }else if(file.mime==='application/pdf'){
-     const open=document.createElement('button');open.type='button';open.className='file-preview';open.textContent='▤ Abrir PDF';host.prepend(open);open.onclick=async()=>{const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;try{const link=await url(file.id);if(tab)tab.location=link;else notice.textContent='Permita abrir a aba para visualizar o PDF.';}catch(e){tab?.close();notice.textContent=e.message;}};
+     const open=document.createElement('button');open.type='button';open.className='file-preview';open.textContent='▤ Abrir PDF';host.prepend(open);open.onclick=()=>void openFile(()=>url(file.id),notice);
    }
    if(file.ownerId===window.TronoAuth.user?.id||window.TronoAuth.user?.permissions?.moderateFiles){const del=document.createElement('button');del.type='button';del.className='file-delete';del.textContent=file.ownerId===window.TronoAuth.user?.id?'Excluir anexo':'Moderar: excluir';host.appendChild(del);del.onclick=async()=>{if(!confirm('Excluir este anexo para todos no canal?'))return;del.disabled=true;try{await remove(file.id);host.replaceChildren(document.createTextNode('Arquivo excluído.'));}catch(e){notice.textContent=e.message;del.disabled=false;}};}
  }
  let cacheUser=null;window.addEventListener('trono-auth-change',e=>{const id=e.detail.user?.id;if(id!==cacheUser){cache.clear();cacheUser=id;}});
  window.addEventListener('trono-role-change',()=>{for(const host of document.querySelectorAll('[data-attachment]')){const file=attachments.get(host);if(file)renderAttachment(host,file);}});
  window.TronoNetwork.onMessage(m=>{if(m.type==='attachment-deleted')markDeleted(m.id);});
- return {api,upload,url,remove,size,renderAttachment,limits};
+ return {api,upload,url,remove,size,renderAttachment,limits,openFile};
 })();
 window.TronoProfile=(()=>{
  const $=id=>document.getElementById(id);
@@ -67,7 +71,7 @@ window.TronoProfile=(()=>{
    function addFiles(files){for(const file of files){
      const row=document.createElement('div');row.className='profile-file-row';
      const name=document.createElement('button');name.type='button';name.textContent=`${file.name} · ${window.TronoFiles.size(file.bytes)}${file.kind==='avatar'?' · ícone':''}`;
-     name.onclick=async()=>{const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;try{const link=await window.TronoFiles.url(file.id,true);if(tab)tab.location=link;else message('Permita abrir a aba para baixar o arquivo.',true);}catch(e){tab?.close();message(e.message,true);}};
+     name.onclick=()=>void window.TronoFiles.openFile(()=>window.TronoFiles.url(file.id,true),$('profileMessage'));
      const del=document.createElement('button');del.type='button';del.textContent='Excluir';del.disabled=file.id===window.TronoAuth.user?.avatar_file_id;del.title=del.disabled?'Troque seu ícone antes de excluir essa foto.':'';
      del.onclick=async()=>{del.disabled=true;try{await window.TronoFiles.remove(file.id);await refreshFiles();}catch(e){message(e.message,true);del.disabled=false;}};row.append(name,del);host.appendChild(row);
    }}

@@ -1,5 +1,6 @@
 'use strict';
 window.TronoClipDesktop=(()=>{
+  if(window.TronoDesktopClips)return window.TronoDesktopClips;
   const $=id=>document.getElementById(id),key='mn-clips-desktop-code';
   let socket=null,paired=false,globalActive=false,desired=null,last='',timer=null,code='';const events=new Set();
   try{const url=new URL(location.href),hash=new URLSearchParams(url.hash.slice(1)),incoming=hash.get('clips-desktop');if(incoming&&/^[a-f0-9]{64}$/i.test(incoming)){code=incoming;sessionStorage.setItem(key,code);hash.delete('clips-desktop');url.hash=hash.toString();history.replaceState(null,'',url.pathname+url.search+url.hash);}else code=sessionStorage.getItem(key)||'';}catch{}

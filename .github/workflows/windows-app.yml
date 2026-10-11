@@ -1,0 +1,63 @@
+name: Windows full app
+on:
+  push:
+    branches: [main, codex/windows-app-foundation]
+    paths: ['desktop/app/**', 'frontend/**', 'tests/desktop-*.js', '.github/workflows/windows-app.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm ci
+        working-directory: desktop/app
+      - name: Test desktop policy and native Windows runtime
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test tests/desktop-policy.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows app runtime::$details"
+            exit $testExit
+          }
+      - name: Build Windows x64 installer
+        run: npm run pack:win
+        working-directory: desktop/app
+      - name: Verify the compiled Windows app
+        shell: pwsh
+        run: |
+          node --test tests/desktop-packaged.js 2>&1 | Tee-Object artifacts/windows-packaged.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-packaged.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows packaged app::$details"
+            exit $testExit
+          }
+      - name: Prepare user download
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/windows-download | Out-Null
+          Copy-Item artifacts/windows-app/MN-Trono-*-Windows.exe artifacts/windows-download/
+          Copy-Item desktop/app/LEIA-ME-WINDOWS.txt artifacts/windows-download/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MN-Trono-Windows-x64
+          path: artifacts/windows-download/
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-app-validation
+          path: artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 14
