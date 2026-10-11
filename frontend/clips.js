@@ -1,4 +1,5 @@
 'use strict';
+if(!window.TronoDesktop){
 window.TronoClips=(()=>{
   const $=id=>document.getElementById(id),store=window.TronoClipStore,storage=window.TronoStorage||localStorage,workerURL=new URL('clip-buffer.js?v=091sharingclips',document.currentScript.src);
   const qualities={light:{width:1280,height:720,bitrate:6000000,label:'720p'},balanced:{width:1920,height:1080,bitrate:16000000,label:'1080p'},high:{width:2560,height:1440,bitrate:28000000,label:'1440p'}};
@@ -156,3 +157,5 @@ window.TronoClips=(()=>{
   window.addEventListener('DOMContentLoaded',bind);
   return {open,clip,stop,startLocalReplay,startPrimaryReplay,stopLocalReplay,get localReplay(){return !!localSource;},get localReplaySource(){return localSource;},get primaryReplay(){return localPrimary;},sharedStarted,sharedStopped,captureProfile,get preferences(){return {...settings,shortcut:{...settings.shortcut}};},get replayStatus(){return session?{...session.status,quality:session.quality,fps:session.fps,maxBytes:session.maxBytes,hasAudio:session.hasAudio}:null;},get active(){return !!session&&!session.stopping;}};
 })();
+
+}

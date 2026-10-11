@@ -1,4 +1,5 @@
 'use strict';
+if(!window.TronoDesktop){
 window.TronoClipDesktop=(()=>{
   if(window.TronoDesktopClips)return window.TronoDesktopClips;
   const $=id=>document.getElementById(id),key='mn-clips-desktop-code';
@@ -28,3 +29,5 @@ window.TronoClipDesktop=(()=>{
   window.addEventListener('pagehide',disconnect);
   return {configure,disconnect,saved(count){send({type:'saved',count});},get connected(){return paired;},get globalActive(){return globalActive;}};
 })();
+
+}

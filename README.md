@@ -4,7 +4,7 @@ Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jo
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
-O aplicativo Windows com jogo, comunidade, clipes e integrações nativas está em
+O aplicativo Windows com jogo, comunidade e integrações nativas está em
 `desktop/app/`. Consulte [WINDOWS_APP.md](WINDOWS_APP.md) para instalar, usar,
 testar e compilar. Esta entrega não exige nova migração SQL ou alteração do backend.
 
@@ -161,9 +161,14 @@ redução de trabalho pode ajudar, mas não garante áudio sem cortes sob carga
 nem substitui diagnóstico de CPU, drivers ou rede. Esta versão exige apenas
 publicar o frontend; não há migração SQL ou mudança do backend.
 
-## Replay automático e atalho Windows
+## Replay no site e clipes suspensos no app Windows
 
-Compartilhar a tela prepara automaticamente os últimos 15, 30, 60 ou 120 segundos,
+No aplicativo Windows 0.1.3, Clipes está bloqueado como opção em desenvolvimento.
+Não há replay, gravação automática ou atalho de clipes; dados antigos são preservados.
+Configurações, permissões lembradas e login persistente estão descritos em
+[WINDOWS_APP.md](WINDOWS_APP.md). A descrição abaixo se refere ao recurso do site.
+
+No site, compartilhar a tela prepara automaticamente os últimos 15, 30, 60 ou 120 segundos,
 com áudio da origem quando disponível. O botão Clipar fica na barra inferior da
 chamada; Meus clipes abre a biblioteca com prévia, salvar e descartar. Vários
 clipes ficam pendentes no IndexedDB por conta/site e sobrevivem a reload/deploy

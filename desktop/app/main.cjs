@@ -1,12 +1,13 @@
 'use strict';
-const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,screen}=require('electron');
+const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,safeStorage}=require('electron');
 const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('node:crypto'),{pathToFileURL}=require('node:url');
 const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
+const {DesktopPreferences}=require('./preferences.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
-let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,primaryReplay=false;
-const folders=new Map(),mediaPermissions=new Set();
+let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences;
+const folders=new Map();
 const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop-diagnostics'))console.error('[desktop]',...values);};
 if(!app.requestSingleInstanceLock())app.quit();
 else{
@@ -21,6 +22,7 @@ function clip(){if(clipActive&&!window?.isDestroyed())window.webContents.send('m
 function clearHotkey(){if(hotkey)globalShortcut.unregister(hotkey);hotkey=null;clipActive=false;}
 async function start(){
   app.setAppUserModelId('com.jonatha.mn.trono');
+  preferences=new DesktopPreferences(app.getPath('userData'),safeStorage);await preferences.load();
   const browserSession=session.fromPartition('persist:mn-trono');
   const attachmentSession=session.fromPartition('persist:mn-attachments');
   attachmentSession.setPermissionCheckHandler(()=>false);attachmentSession.setPermissionRequestHandler((_,__,callback)=>callback(false));
@@ -51,23 +53,17 @@ async function start(){
       return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
-  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:960,minHeight:640,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
+  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
   applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
   ipcMain.handle('mn:application-audio-stop',(event,id)=>{trusted(event);applicationAudio.stop(id);});
-  ipcMain.handle('mn:replay-prepare',async event=>{
-    trusted(event);if(primaryReplay||capture)return {busy:true};
-    primaryReplay=true;
-    try{
-      // A fixed, trusted renderer entry point receives user activation so the
-      // desktop API can prepare the replay without a manual sharing gesture.
-      const result=await window.webContents.executeJavaScript('window.TronoClips.startPrimaryReplay()',true);
-      if(!result.active&&['NotReadableError','NotFoundError','AbortError'].includes(result.error))return await window.webContents.executeJavaScript('window.TronoClips.startPrimaryReplay({audio:false})',true);
-      return result;
-    }finally{primaryReplay=false;}
-  });
+  ipcMain.handle('mn:replay-prepare',event=>{trusted(event);return {active:false,suspended:true};});
+  ipcMain.handle('mn:session-read',event=>{trusted(event);return preferences.readSession();});
+  ipcMain.handle('mn:session-save',(event,value)=>{trusted(event);return preferences.saveSession(value);});
+  ipcMain.handle('mn:media-permissions',event=>{trusted(event);return [...preferences.permissions];});
+  ipcMain.handle('mn:media-reset',async event=>{trusted(event);await preferences.reset();return [];});
   ipcMain.on('mn:application-audio-ack',(event,id)=>{try{trusted(event);applicationAudio.ack(id);}catch{}});
-  updates=createUpdates({updater:require('electron-updater').autoUpdater,enabled:app.isPackaged,publish:state=>{if(!window.isDestroyed())window.webContents.send('mn:update-state',state);},confirm:async()=>{const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Continuar no app','Reiniciar e atualizar'],defaultId:0,cancelId:0,message:'Reiniciar para atualizar?',detail:'A chamada e o buffer de replay serão encerrados. Clipes já armazenados permanecem. Salve antes os clipes que existirem somente na memória.'});return answer.response===1;},prepareInstall:()=>{installingUpdate=true;quitting=true;}});
+  updates=createUpdates({updater:require('electron-updater').autoUpdater,enabled:app.isPackaged,publish:state=>{if(!window.isDestroyed())window.webContents.send('mn:update-state',state);},confirm:async()=>{const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Continuar no app','Reiniciar e atualizar'],defaultId:0,cancelId:0,message:'Reiniciar para atualizar?',detail:'A chamada será encerrada. Sua conta, preferências e arquivos locais serão preservados.'});return answer.response===1;},prepareInstall:()=>{installingUpdate=true;quitting=true;}});
   ipcMain.handle('mn:update-state',event=>{trusted(event);return updates.state;});
   ipcMain.handle('mn:update-check',event=>{trusted(event);return updates.check();});
   ipcMain.handle('mn:update-install',event=>{trusted(event);return updates.install();});
@@ -79,7 +75,7 @@ async function start(){
   window.on('close',event=>{if(tray&&!quitting){event.preventDefault();window.hide();}});
   window.webContents.on('will-prevent-unload',event=>{
     if(installingUpdate){event.preventDefault();return;}
-    const response=dialog.showMessageBoxSync(window,{type:'question',buttons:['Continuar no app','Sair'],defaultId:0,cancelId:0,message:'Encerrar o M&N?',detail:'A chamada e o buffer de replay serão encerrados. Clipes já armazenados na biblioteca local permanecem; clipes somente na memória podem ser perdidos.'});
+    const response=dialog.showMessageBoxSync(window,{type:'question',buttons:['Continuar no app','Sair'],defaultId:0,cancelId:0,message:'Encerrar o M&N?',detail:'Sua chamada será encerrada. A conta lembrada e as preferências ficam salvas neste computador.'});
     if(response===1)event.preventDefault();else quitting=false;
   });
   window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();applicationAudio.stopAll();});
@@ -100,7 +96,7 @@ async function start(){
     viewer.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))void shell.openExternal(url);return {action:'deny'};});
     void viewer.loadURL(target.href).catch(error=>{if(error.code==='ERR_ABORTED'){viewer.destroy();return;}dialog.showErrorBox('Não foi possível abrir o arquivo',error.message);viewer.destroy();});return {opened:true};
   });
-  browserSession.setPermissionCheckHandler((contents,permission,origin)=>{trace('permission',permission,origin,contents===window.webContents);return contents===window.webContents&&isAppURL(origin)&&['media','display-capture','fullscreen','speaker-selection','clipboard-sanitized-write'].includes(permission);});
+  browserSession.setPermissionCheckHandler((contents,permission,origin,details)=>{trace('permission',permission,origin,contents===window.webContents);if(contents!==window.webContents||!isAppURL(origin))return false;if(permission==='media')return preferences.permissions.has(details?.mediaType);return ['display-capture','fullscreen','speaker-selection','clipboard-sanitized-write'].includes(permission);});
   browserSession.setPermissionRequestHandler(async(contents,permission,callback,details)=>{
     trace('permission request',permission,details.mediaTypes,contents===window.webContents);
     if(contents!==window.webContents||!isAppURL(details.requestingUrl||contents.getURL()))return callback(false);
@@ -114,11 +110,12 @@ async function start(){
     // The next handler presents the explicit screen/window picker. Do not
     // mislabel this as a camera/microphone permission or block behind that dialog.
     if(Array.isArray(details.mediaTypes)&&details.mediaTypes.length===0)return callback(true);
-    const types=details.mediaTypes||['audio','video'],key=types.slice().sort().join(',');
-    if(mediaPermissions.has(key))return callback(true);
-    const label=types.includes('video')?'câmera e microfone':'microfone';
-    const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Permitir','Cancelar'],defaultId:0,cancelId:1,message:'Permitir acesso ao '+label+'?',detail:'Usado pela voz e câmera do M&N. Os controles da chamada permitem desligar quando desejar.'});
-    if(answer.response===0)mediaPermissions.add(key);callback(answer.response===0);
+    const types=(details.mediaTypes||['audio','video']).filter(type=>['audio','video'].includes(type));
+    if(!types.length)return callback(false);
+    if(types.every(type=>preferences.permissions.has(type)))return callback(true);
+    const label=types.includes('video')?(types.includes('audio')?'câmera e microfone':'câmera'):'microfone';
+    const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Permitir','Cancelar'],defaultId:0,cancelId:1,message:'Permitir acesso ao '+label+'?',detail:'Sua escolha será lembrada neste computador. Você pode redefini-la em Configurações > Privacidade. Os controles da chamada permitem desligar quando desejar.'});
+    if(answer.response===0){try{await preferences.grant(types);}catch{dialog.showErrorBox('Permissão não salva','O acesso funciona nesta sessão, mas não foi possível lembrar a escolha.');}}callback(answer.response===0);
   });
   browserSession.setDisplayMediaRequestHandler(async(request,callback)=>{
     trace('capture request',request.securityOrigin,request.frame===window.webContents.mainFrame);
@@ -127,25 +124,12 @@ async function start(){
     try{
       const {desktopCapturer}=require('electron'),sources=await desktopCapturer.getSources({types:['screen','window'],thumbnailSize:{width:320,height:180}});
       if(capture!==pending||window.isDestroyed())return;
-      if(primaryReplay){
-        const primary=String(screen.getPrimaryDisplay().id),screens=sources.filter(source=>source.id.startsWith('screen:'));
-        const selected=screens.find(source=>String(source.display_id)===primary)||screens[0];
-        capture=null;clearTimeout(pending.timer);
-        if(!selected)return callback({});
-        // System audio is local to the replay. It is never attached to the
-        // microphone or published to the call by this automatic capture.
-        callback({video:selected,...(request.audioRequested&&process.platform==='win32'?{audio:'loopback'}:{})});return;
-      }
       const options=sources.filter(s=>s.id!==window.getMediaSourceId());
       pending.sources=options;
       window.webContents.send('mn:capture',{id:pending.id,audio:request.audioRequested,windows:process.platform==='win32',applicationAudio:applicationAudio.capability.available,sources:options.map(s=>({id:s.id,name:s.name,thumbnail:s.thumbnail.toDataURL()}))});
     }catch(error){trace('capture failure',error.message);if(capture===pending)cancelCapture();}
   });
-  ipcMain.handle('mn:clips-configure',(event,configuration)=>{
-    trusted(event);clearHotkey();if(configuration?.active!==true)return {active:false};
-    try{const chosen=accelerator(configuration.shortcut);if(!globalShortcut.register(chosen,clip))return {active:false,error:'Atalho ocupado. Escolha outro nas preferências.'};hotkey=chosen;clipActive=true;return {active:true,shortcut:chosen};}
-    catch(error){return {active:false,error:error.message};}
-  });
+  ipcMain.handle('mn:clips-configure',event=>{trusted(event);clearHotkey();return {active:false,suspended:true};});
   ipcMain.handle('mn:capture-select',async(event,choice)=>{
     trusted(event);if(!capture||choice?.id!==capture.id)return false;
     const current=capture;capture=null;clearTimeout(current.timer);

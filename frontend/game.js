@@ -1331,7 +1331,7 @@ async function enterChatOnly({validatedIdentity,channelId}={}){
   const validation=validatedIdentity||await window.TronoPortal?.validateIdentity?.();if(validation&&!validation.ok){toast(validation.message||'Escolha um nome disponível.',1800);window.TronoPortal?.showPortal?.();$('portalIdentity')?.focus();return false;}
   const name=(validation?.name||$('playerIdentity')?.value?.trim());if(!name){toast('Digite um nome para entrar.',1600);window.TronoPortal?.showPortal?.();return false;}storage.setItem('tronoPlayerName',name);
   await window.TronoCommunityAdmin?.refresh?.().catch(()=>{});
-  if(!channelId||!CHAT_CHANNEL_CATALOG.has(channelId))channelId=CHAT_CHANNEL_CATALOG.keys().next().value;
+  if(!channelId||!CHAT_CHANNEL_CATALOG.has(channelId))channelId=(window.TronoDesktop?[...CHAT_CHANNEL_CATALOG.values()].find(channel=>channel.type!=='text')?.id:null)||CHAT_CHANNEL_CATALOG.keys().next().value;
   selectedRoom=null;onlineRoomState=null;onlineMe=null;onlineGameMode=false;chatOnlyMode=true;chatOnlyRoomState=null;
   try{
     // Prepare the voice controls before replacing the portal. A failed module leaves a usable screen.
@@ -1345,6 +1345,7 @@ async function enterChatOnly({validatedIdentity,channelId}={}){
   void ensureAudio().catch(()=>{});
   try{
     const online=await (CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text'?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));window.TronoNetwork.requestChatChannels?.();
+    if(window.TronoDesktop&&online&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();
     if(chatOnlyMode&&!online&&$('chatOnlyStatus'))$('chatOnlyStatus').textContent='Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
   }catch(err){console.warn('Conexão ao chat:',err);if(chatOnlyMode&&$('chatOnlyStatus'))$('chatOnlyStatus').textContent='Conexão interrompida. Aguarde a reconexão ou volte ao início para tentar novamente.';}
   return true;
@@ -1354,7 +1355,8 @@ const CHAT_CHANNEL_CATALOG=new Map(Object.entries(CHAT_CHANNEL_NAMES).map(([id,n
 let chatChannelSwitching=false;
 let chatChannelResumeVoice=false;
 async function switchChatChannel(channelId){
-  if(!chatOnlyMode||chatChannelSwitching||!CHAT_CHANNEL_CATALOG.has(channelId)||window.TronoNetwork?.currentRoom===channelId)return;
+  if(!chatOnlyMode||chatChannelSwitching||!CHAT_CHANNEL_CATALOG.has(channelId))return;
+  if(window.TronoNetwork?.currentRoom===channelId){if(window.TronoDesktop&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;}
   chatChannelSwitching=true;
   try{
     const wasInVoice=Boolean(window.TronoSocial?.voiceJoined);
@@ -1363,9 +1365,10 @@ async function switchChatChannel(channelId){
     if(!keepVoice)await window.TronoSocial?.leaveVoice?.();
     const name=(storage.getItem('tronoPlayerName')||$('portalIdentity')?.value||$('playerIdentity')?.value||'').trim();
     if(!name){toast('Informe seu nome no portal para entrar.',1800);return;}
-    chatChannelResumeVoice=wasInVoice&&!keepVoice;
+    chatChannelResumeVoice=(wasInVoice||!!window.TronoDesktop&&!textChannel)&&!keepVoice;
     const online=await (textChannel?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));
     if(!online)throw new Error('Servidor indisponível.');
+    if(window.TronoDesktop&&!textChannel&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();
     $('chatOnlyStatus').textContent=textChannel?'Abrindo mensagens...':`Entrando no canal ${CHAT_CHANNEL_CATALOG.get(channelId).name}...`;
     window.TronoSocial?.clearChannelChat?.();
   }catch(err){chatChannelResumeVoice=false;toast(err?.message||'Não foi possível trocar de canal.',2200);}

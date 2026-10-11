@@ -6,11 +6,11 @@
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
   <script src="auth-boot.js?v=091sharingclips"></script>
-  <script src="desktop-platform.js?v=094desktop012"></script>
-  <script src="application-audio.js?v=093desktop"></script>
+  <script src="desktop-platform.js?v=095desktop013"></script>
+  <script src="application-audio.js?v=095desktop013"></script>
   <link rel="stylesheet" href="style.css?v=091sharingclips" />
   <link rel="stylesheet" href="mn-chat.css?v=091sharingclips" />
-  <link rel="stylesheet" href="auth.css?v=091sharingclips" />
+  <link rel="stylesheet" href="auth.css?v=095desktop013" />
   <link rel="stylesheet" href="profile-files.css?v=091sharingclips" />
   <link rel="stylesheet" href="community.css?v=091sharingclips" />
   <link rel="stylesheet" href="modern.css?v=091sharingclips" />
@@ -19,7 +19,8 @@
   <link rel="stylesheet" href="call-media.css?v=094desktop012" />
   <link rel="stylesheet" href="clips.css?v=091sharingclips" />
   <link rel="stylesheet" href="desktop-platform.css?v=092desktop" />
-  <link rel="stylesheet" href="desktop-shell.css?v=094desktop012" />
+  <link rel="stylesheet" href="desktop-shell.css?v=095desktop013" />
+  <link rel="stylesheet" href="desktop-settings.css?v=095desktop013" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -308,6 +309,7 @@
               <button id="voiceSfxBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar efeitos da interface e avisos da chamada">🔔 Efeitos: Ligados</button>
               <button id="voiceMusicBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar a música da aplicação">♫ Música: Ligada</button>
             </div>
+            <label id="noiseModeLabel" class="desktop-noise-mode" hidden>Redução de ruído<select id="noiseModeSelect"><option value="native">Leve · recomendada para jogar</option><option value="rnnoise">RNNoise · redução mais forte</option><option value="off">Desligada</option></select></label>
             <small id="noiseSuppressionStatus" class="noise-suppression-status" role="status" aria-live="polite"></small>
             <button id="voiceLightModeBtn" class="royal-btn settings-secondary" type="button" aria-pressed="false" aria-describedby="voiceLightModeHelp">Modo leve para jogar: Desligado</button>
             <small id="voiceLightModeHelp" class="noise-suppression-status">Usa a redução de ruído do navegador em vez do RNNoise e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.</small>
@@ -406,12 +408,13 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.2-Windows.exe" download="MN-Trono-0.1.2-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.3-Windows.exe" download="MN-Trono-0.1.3-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
       <label class="auth-field">Senha<input id="authPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="authRules" /></label>
       <label class="auth-field hidden">Confirme a senha<input id="authConfirm" name="password_confirmation" type="password" autocomplete="new-password" disabled /></label>
+      <label id="authRememberRow" class="auth-check" hidden><input id="authRemember" type="checkbox" checked> Lembre de mim neste computador</label>
       <label class="auth-check"><input id="authShowPassword" type="checkbox" /> Mostrar senha</label>
       <ul id="authRules" class="auth-rules hidden" aria-label="Requisitos da senha" aria-live="polite">
         <li data-password-rule="length"><span>○</span> Mínimo de 8 caracteres</li>
@@ -521,21 +524,21 @@
     <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
-  <script src="audio.js?v=091sharingclips"></script>
+  <script src="audio.js?v=095desktop013"></script>
   <script src="network.js?v=091sharingclips"></script>
-  <script src="auth.js?v=091sharingclips"></script>
+  <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
   <script src="avatar-icons.js?v=091sharingclips"></script>
-  <script src="profile-files.js?v=091sharingclips"></script>
+  <script src="profile-files.js?v=095desktop013"></script>
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
-  <script src="social.js?v=094desktop012"></script>
+  <script src="social.js?v=095desktop013"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
-  <script src="clips.js?v=094desktop012"></script>
-  <script src="clip-desktop.js?v=091sharingclips"></script>
-  <script src="game.js?v=091sharingclips"></script>
+  <script src="clips.js?v=095desktop013"></script>
+  <script src="clip-desktop.js?v=095desktop013"></script>
+  <script src="game.js?v=095desktop013"></script>
   <script src="portal.js?v=091sharingclips"></script>
   <script src="community.js?v=094desktop012"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
@@ -543,7 +546,8 @@
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=091sharingclips"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=094desktop012"></script>
+  <script src="desktop-shell.js?v=095desktop013"></script>
+  <script src="desktop-settings.js?v=095desktop013"></script>
   <script src="desktop-updates.js?v=093desktop"></script>
 </body>
 </html>

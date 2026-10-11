@@ -3,6 +3,10 @@ window.TronoAuth = (()=>{
   const $=id=>document.getElementById(id),KEY='mn-auth-session-v1';
   const SYMBOLS="!@#$%^&*()_+-=[]{};'\\:\"|<>?,./`~";
   let resolveReady;const ready=new Promise(resolve=>{resolveReady=resolve;});
+  let remember=!!window.TronoDesktop,persistQueue=Promise.resolve(),rememberError='';
+  try{if(window.TronoDesktop)remember=localStorage.getItem('mn-remember-me')!=='0';}catch{}
+  function persistSession(){if(!window.TronoDesktop?.saveSession)return Promise.resolve();const value=remember&&session?JSON.parse(JSON.stringify({session,user})):null;persistQueue=persistQueue.catch(()=>{}).then(()=>window.TronoDesktop.saveSession(value)).then(result=>{rememberError=result?.error||'';window.dispatchEvent(new Event('trono-remember-change'));}).catch(()=>{rememberError='Não foi possível lembrar sua conta neste computador.';window.dispatchEvent(new Event('trono-remember-change'));});return persistQueue;}
+  function setRemember(value){remember=!!window.TronoDesktop&&!!value;try{localStorage.setItem('mn-remember-me',remember?'1':'0');}catch{}if($('authRemember'))$('authRemember').checked=remember;return persistSession();}
   let session=null,user=null,guest=null,mode='login',recoveryToken=null,refreshPromise=null,refreshTimer=null,busy=false,refreshFailures=0;
   function passwordChecks(password){const p=typeof password==='string'?password:'';return {length:[...p].length>=8,lowercase:/[a-z]/.test(p),uppercase:/[A-Z]/.test(p),number:/[0-9]/.test(p),symbol:[...p].some(c=>SYMBOLS.includes(c))};}
   function validPassword(p){return Object.values(passwordChecks(p)).every(Boolean)&&new TextEncoder().encode(p).length<=72;}
@@ -27,8 +31,8 @@ window.TronoAuth = (()=>{
     window.dispatchEvent(new CustomEvent('trono-auth-change',{detail:{user,guest}}));
   }
   function scheduleRefresh(){clearTimeout(refreshTimer);if(!session)return;const delay=Math.max(1000,session.expires_at*1000-Date.now()-60000);refreshTimer=setTimeout(()=>void refresh().catch(()=>{}),Math.min(delay,2147483647));}
-  function setSession(data){session=data.session;user=data.user;guest=null;refreshFailures=0;try{sessionStorage.removeItem('mn-guest-v1');sessionStorage.setItem(KEY,JSON.stringify({session,user}));}catch{}syncAccount();scheduleRefresh();}
-  function clearSession(){session=null;user=null;clearTimeout(refreshTimer);try{sessionStorage.removeItem(KEY);}catch{}syncAccount();}
+  function setSession(data){session=data.session;user=data.user;guest=null;refreshFailures=0;try{sessionStorage.removeItem('mn-guest-v1');sessionStorage.setItem(KEY,JSON.stringify({session,user}));}catch{}syncAccount();scheduleRefresh();void persistSession();}
+  function clearSession(){session=null;user=null;clearTimeout(refreshTimer);try{sessionStorage.removeItem(KEY);}catch{}syncAccount();void persistSession();}
   function expire(){clearSession();void window.TronoChatHub?.leave?.();void window.TronoSocial?.leaveVoice?.();window.TronoNetwork?.disconnect();window.TronoPortal?.showPortal?.();open('login');message('Sua sessão expirou. Entre novamente.',true);}
   async function refresh(){
     if(refreshPromise)return refreshPromise;if(!session)return null;
@@ -43,7 +47,7 @@ window.TronoAuth = (()=>{
   const modes={login:{title:'Bem-vindo de volta',intro:'Entre na sua conta para conversar e jogar.',button:'Entrar'},signup:{title:'Crie sua conta',intro:'Escolha seu apelido e confirme seu e-mail para participar.',button:'Criar conta'},recover:{title:'Recupere sua senha',intro:'Enviaremos um link para você criar uma nova senha.',button:'Enviar link'},reset:{title:'Crie uma nova senha',intro:'Escolha uma senha que cumpra os requisitos abaixo.',button:'Salvar nova senha'}};
   function open(next='login'){
     mode=Object.hasOwn(modes,next)?next:'login';const copy=modes[mode],dialog=$('authDialog');if(!dialog)return;
-    $('authForm').reset();$('authTitle').textContent=copy.title;$('authIntro').textContent=copy.intro;$('authSubmitBtn').textContent=copy.button;message();
+    $('authForm').reset();$('authRemember').checked=remember;$('authRememberRow').hidden=!window.TronoDesktop||mode!=='login';$('authTitle').textContent=copy.title;$('authIntro').textContent=copy.intro;$('authSubmitBtn').textContent=copy.button;message();
     const fields={authNickname:mode==='signup',authEmail:mode!=='reset',authPassword:mode==='login'||mode==='signup'||mode==='reset',authConfirm:mode==='signup'||mode==='reset'};
     for(const [id,visible] of Object.entries(fields)){const input=$(id);input.disabled=!visible;input.required=visible;input.closest('.auth-field').classList.toggle('hidden',!visible);}
     $('authPassword').type='password';$('authConfirm').type='password';$('authPassword').autocomplete=mode==='login'?'current-password':'new-password';$('authPassword').minLength=mode==='login'?1:8;
@@ -62,7 +66,7 @@ window.TronoAuth = (()=>{
     busy=true;$('authSubmitBtn').disabled=true;$('authForm').setAttribute('aria-busy','true');message('Aguarde…');
     try{
       if(mode==='login'){
-        const data=await api('login',{email,password});if(guest){await window.TronoSocial?.leaveVoice?.();window.TronoNetwork.leaveRoom();window.TronoPortal?.showPortal?.();}setSession(data);await window.TronoNetwork.authenticate(data.session.access_token);$('authForm').reset();$('authDialog').close();
+        const data=await api('login',{email,password});if(guest){await window.TronoSocial?.leaveVoice?.();window.TronoNetwork.leaveRoom();window.TronoPortal?.showPortal?.();}remember=!!window.TronoDesktop&&$('authRemember').checked;try{localStorage.setItem('mn-remember-me',remember?'1':'0');}catch{}setSession(data);await persistQueue;await window.TronoNetwork.authenticate(data.session.access_token);$('authForm').reset();$('authDialog').close();
       }else if(mode==='signup'){
         const data=await api('signup',{email,password,nickname:$('authNickname').value});open('login');$('authEmail').value=email;message(data.message);
       }else if(mode==='recover'){
@@ -76,6 +80,7 @@ window.TronoAuth = (()=>{
   async function logout(){
     const token=session?.access_token;clearSession();recoveryToken=null;window.TronoNetwork.disconnect();
     try{await window.TronoChatHub?.leave?.();}catch{}try{await window.TronoSocial?.leaveVoice?.();}catch{}window.TronoPortal?.showPortal?.();
+    await persistQueue;
     if(token)await api('logout',{},token).catch(()=>{});open('login');
   }
   async function callback(){
@@ -102,6 +107,7 @@ window.TronoAuth = (()=>{
     $('authPassword')?.addEventListener('input',updateChecks);$('authConfirm')?.addEventListener('input',()=>{if(!busy&&$('authMessage')?.textContent==='As senhas não são iguais.'&&$('authPassword').value===$('authConfirm').value)message();});$('authShowPassword')?.addEventListener('change',e=>{for(const id of ['authPassword','authConfirm'])$(id).type=e.target.checked?'text':'password';});
     window.TronoNetwork.onMessage(msg=>{if(msg.type==='error'&&msg.code==='AUTH_REQUIRED')expire();if(msg.type==='role-updated')applyRole(msg.role,msg.permissions);if(msg.type==='auth-result'&&msg.ok)applyRole(msg.user?.role,msg.user?.permissions);});
     try{const saved=JSON.parse(sessionStorage.getItem(KEY)||'null');if(saved?.session?.refresh_token&&saved?.session?.access_token&&saved?.user?.id){session=saved.session;user=saved.user;}}catch{}
+    if(!session&&window.TronoDesktop&&remember){try{const saved=await window.TronoDesktop.readSession();if(saved?.session?.refresh_token&&saved?.session?.access_token&&saved?.user?.id){session=saved.session;user=saved.user;}}catch{}}
     if(!session)try{const saved=JSON.parse(sessionStorage.getItem('mn-guest-v1')||'null');if(saved?.ticket&&saved.expiresAt>Date.now())guest=saved;}catch{}
     syncAccount();
     if(await callback())return;
@@ -120,5 +126,5 @@ window.TronoAuth = (()=>{
   async function ensureGuest(name){await ready;if(!guest){openGuest();return false;}const result=await window.TronoNetwork.authenticateGuest(String(name||guest.nickname).trim(),guest.ticket);setGuest(result);return true;}
   async function submitGuest(e){e.preventDefault();const button=$('guestSubmit');if(button.disabled)return;button.disabled=true;$('guestMessage').textContent='Conectando ao jogo…';try{const result=await window.TronoNetwork.authenticateGuest($('guestNickname').value.trim(),guest?.ticket);setGuest(result);$('guestDialog').close();window.TronoPortal.openGame();}catch(err){$('guestMessage').textContent=err.message;}finally{button.disabled=false;}}
   async function endGuest(){await window.TronoSocial?.leaveVoice?.();window.TronoNetwork?.leaveRoom();window.TronoNetwork?.disconnect();guest=null;try{sessionStorage.removeItem('mn-guest-v1');}catch{}syncAccount();window.TronoPortal?.showPortal?.();}
-  return {ready,updateProfile,open,openGuest,ensureGuest,logout,expire,getAccessToken,passwordChecks,validPassword,get user(){return user;},get guest(){return guest;}};
+  return {ready,updateProfile,setRemember,get remembered(){return remember;},get rememberError(){return rememberError;},open,openGuest,ensureGuest,logout,expire,getAccessToken,passwordChecks,validPassword,get user(){return user;},get guest(){return guest;}};
 })();
