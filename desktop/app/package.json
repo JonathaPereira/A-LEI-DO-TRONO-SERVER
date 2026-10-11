@@ -1,14 +1,15 @@
 {
   "name": "mn-trono-desktop",
-  "version": "0.1.0",
-  "description": "M&N e A Lei do Trono — aplicativo Windows",
+  "version": "0.1.1",
+  "description": "M&N e A Lei do Trono \u2014 aplicativo Windows",
   "author": "Jonatha Pereira",
   "private": true,
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
     "postinstall": "install-electron",
-    "pack:win": "electron-builder --win nsis --x64 --publish never"
+    "pack:win": "electron-builder --win nsis --x64 --publish never",
+    "build:native": "cmake -S ../native-audio -B ../../artifacts/native-audio && cmake --build ../../artifacts/native-audio --config Release"
   },
   "devDependencies": {
     "electron": "44.7.0",
@@ -18,10 +19,47 @@
     "appId": "com.jonatha.mn.trono",
     "productName": "MN Trono",
     "artifactName": "MN-Trono-${version}-Windows.${ext}",
-    "directories": {"output": "../../artifacts/windows-app"},
-    "files": ["*.cjs", "package.json", "assets/**"],
-    "extraResources": [{"from": "../../frontend", "to": "frontend"}],
-    "win": {"target": "nsis", "icon": "assets/icon.png"},
-    "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false}
+    "directories": {
+      "output": "../../artifacts/windows-app"
+    },
+    "files": [
+      "*.cjs",
+      "package.json",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../../frontend",
+        "to": "frontend",
+        "filter": [
+          "**/*",
+          "!downloads/**"
+        ]
+      },
+      {
+        "from": "../../artifacts/native-audio/Release/MN-Application-Audio.exe",
+        "to": "native/MN-Application-Audio.exe"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://a-lei-do-trono.surge.sh/downloads/",
+        "useMultipleRangeRequest": false
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
   }
 }

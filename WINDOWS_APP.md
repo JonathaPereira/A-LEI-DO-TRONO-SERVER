@@ -7,7 +7,7 @@ O app funciona sem Chrome instalado e sem o antigo `MN-Clipes.exe`. Os recursos 
 ## Instalar e usar
 
 1. Na ação **Windows full app**, abra a execução concluída da branch/commit desejado e baixe o artifact **MN-Trono-Windows-x64**. É necessário estar conectado ao GitHub com acesso ao repositório privado.
-2. Extraia o ZIP e execute `MN-Trono-0.1.0-Windows.exe`. Conclua o assistente e abra o atalho M&N Trono.
+2. Extraia o ZIP e execute `MN-Trono-0.1.1-Windows.exe`. Conclua o assistente e abra o atalho M&N Trono.
 3. Entre com a mesma conta do site. O aplicativo tem sua própria sessão; não importa cookies, temas ou clipes do navegador.
 4. Abra Comunidade e entre na voz. A barra inferior contém microfone, saída, câmera, tela, Clipar, biblioteca e configurações. Navegar entre início, lista de jogos e clipes preserva a chamada. Entrar efetivamente em outra sala segue as regras do site. Antes de sair de uma sala de jogo para a comunidade, o app pede confirmação.
 5. Compartilhe uma tela ou janela. O replay é preparado automaticamente, conforme as preferências; o atalho global funciona mesmo com outra janela em foco. Jogos/atalhos exclusivos ou executados com outra elevação podem bloquear atalhos externos; não há garantia em todo jogo.

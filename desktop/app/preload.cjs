@@ -2,7 +2,17 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.1.0',
+  version:'0.1.1',
+  getWindowState:()=>ipcRenderer.invoke('mn:window-state'),
+  toggleFullscreen:()=>ipcRenderer.invoke('mn:fullscreen'),
+  onWindowState:fn=>listen('mn:window-state',fn),
+  getUpdateState:()=>ipcRenderer.invoke('mn:update-state'),
+  onUpdateState:fn=>listen('mn:update-state',fn),
+  checkUpdates:()=>ipcRenderer.invoke('mn:update-check'),
+  installUpdate:()=>ipcRenderer.invoke('mn:update-install'),
+  onApplicationAudio:fn=>listen('mn:application-audio',fn),
+  ackApplicationAudio:id=>ipcRenderer.send('mn:application-audio-ack',id),
+  stopApplicationAudio:id=>ipcRenderer.invoke('mn:application-audio-stop',id),
   configureClips:configuration=>ipcRenderer.invoke('mn:clips-configure',configuration),
   onClip:fn=>listen('mn:clip',fn),
   onCapture:fn=>listen('mn:capture',fn),

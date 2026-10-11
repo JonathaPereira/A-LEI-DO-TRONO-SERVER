@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.0 (primeira versão)
+M&N · A Lei do Trono — Windows 0.1.1 (primeira versão)
 
-1. Extraia este ZIP e abra MN-Trono-0.1.0-Windows.exe.
+1. Extraia este ZIP e abra MN-Trono-0.1.1-Windows.exe.
 2. Escolha a pasta e conclua a instalação. Abra M&N pelo atalho criado.
 3. Entre com a mesma conta do site. As salas, cargos, mensagens e jogo usam
    o mesmo servidor. O app não precisa do Chrome nem do antigo MN-Clipes.exe.

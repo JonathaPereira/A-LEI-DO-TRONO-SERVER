@@ -2,7 +2,7 @@
 window.TronoClips=(()=>{
   const $=id=>document.getElementById(id),store=window.TronoClipStore,storage=window.TronoStorage||localStorage,workerURL=new URL('clip-buffer.js?v=091sharingclips',document.currentScript.src);
   const qualities={light:{width:1280,height:720,bitrate:6000000,label:'720p'},balanced:{width:1920,height:1080,bitrate:16000000,label:'1080p'},high:{width:2560,height:1440,bitrate:28000000,label:'1440p'}};
-  let owner='local',settings,session=null,sharedSource=null,starting=false,generation=0,clips=[],directory=null,choosingShortcut=false,pip=null,loading=0;
+  let owner='local',settings,session=null,sharedSource=null,localSource=null,localChoosing=false,starting=false,generation=0,clips=[],directory=null,choosingShortcut=false,pip=null,loading=0;
   const emergency=new Map(),memoryOnly=new Set(),urls=new Map(),busy=new Set();
   const account=()=>window.TronoAuth?.user?.id||'local';
   const defaults=()=>({version:2,quality:'balanced',fps:60,seconds:30,auto:true,shortcut:{code:'KeyX',ctrl:true,shift:true,alt:false,meta:false}});
@@ -14,13 +14,13 @@ window.TronoClips=(()=>{
     const active=!!session&&!session.stopping,ready=!!(active&&session.status?.ready);
     $('clipQuality').value=settings.quality;$('clipFps').value=String(settings.fps);$('clipSeconds').value=String(settings.seconds);$('clipAuto').checked=settings.auto;
     const available=Math.min(settings.seconds,Math.max(1,Math.floor(session?.status?.seconds||0)));$('clipNow').disabled=!ready;$('clipNow').textContent='Clipar últimos '+(ready?available:settings.seconds)+' s';
-    $('clipToolbarNow').disabled=!ready;$('clipToolbarLabel').textContent=starting?'Preparando…':active?'Clipar '+available+' s':'Clipar';
-    $('clipToolbarNow').title=ready?'Guardar o replay · '+shortcutLabel():'Compartilhe sua tela para preparar o replay';
+    $('clipToolbarNow').disabled=!ready&&(!window.TronoDesktop||starting||localChoosing);$('clipToolbarLabel').textContent=starting||localChoosing?'Preparando…':active?'Clipar '+available+' s':window.TronoDesktop?'Ativar replay':'Clipar';
+    $('clipToolbarNow').title=ready?'Guardar o replay · '+shortcutLabel():window.TronoDesktop?'Ativar replay local sem transmitir para a chamada':'Compartilhe sua tela para preparar o replay';
     $('clipToolbarNow').classList.toggle('replay-ready',ready);
     $('clipShortcut').textContent=choosingShortcut?'Pressione o atalho…':shortcutLabel();
-    $('clipSource').textContent=ready?'Replay pronto · '+Math.floor(session.status?.seconds||0)+' s disponíveis · '+(session.hasAudio?'áudio da tela incluído':'sem áudio da tela'):active||starting?'Preparando replay da tela compartilhada…':sharedSource?'Replay pausado':'Compartilhe sua tela para habilitar o replay';
+    $('clipSource').textContent=ready?'Replay pronto · '+Math.floor(session.status?.seconds||0)+' s disponíveis · '+(session.hasAudio?'áudio da tela incluído':'sem áudio da tela'):active||starting?'Preparando replay da tela compartilhada…':sharedSource?'Replay pausado':window.TronoDesktop?'Ative o replay local ou compartilhe uma tela':'Compartilhe sua tela para habilitar o replay';
     $('clipReplayDot').classList.toggle('is-ready',ready);
-    $('clipShare').hidden=!!sharedSource;$('clipResume').hidden=!sharedSource||active||starting||!settings.auto;
+    $('clipShare').hidden=!!sharedSource;$('clipShare').textContent=window.TronoDesktop?'Ativar replay local':'Compartilhar tela';$('clipShare').disabled=localChoosing;$('clipStopLocal').hidden=!localSource;$('clipResume').hidden=!sharedSource||active||starting||(!settings.auto&&!localSource);
     $('clipFolder').textContent=directory?directory.name:'Escolher arquivo ao salvar / Downloads';$('clipResetFolder').hidden=!directory;
     $('clipChooseFolder').hidden=!window.TronoDesktop&&typeof window.showDirectoryPicker!=='function';$('clipFloating').hidden=!window.documentPictureInPicture;
     const count=clips.filter(c=>c.blob).length;$('clipPendingCount').textContent=count;$('clipToolbarCount').textContent=count;$('clipToolbarCount').hidden=!count;
@@ -63,9 +63,10 @@ window.TronoClips=(()=>{
     s.stream.getTracks().forEach(t=>t.stop());if(current){renderState();message('Buffer temporário descartado. Os clipes já criados continuam na biblioteca.');}
   }
   function captureProfile(){const prefs=settings||defaults(),q=qualities[prefs.quality];return prefs.auto?{width:q.width,height:q.height,fps:prefs.fps}:null;}
-  async function sharedStarted(source){
+  async function sharedStarted(source,{local=false,force=false}={}){
+    if(localSource&&source!==localSource){const previous=localSource;localSource=null;previous.getTracks().forEach(track=>track.stop());}
     stop();sharedSource=source;renderState();
-    if(!settings.auto)return;
+    if(!settings.auto&&!local&&!force)return;
     if([...emergency.values()].some(c=>c.owner===owner&&c.blob)){message('Salve ou descarte os clipes guardados somente nesta sessão antes de retomar o replay.');return;}
     if(!window.MediaRecorder||!window.Worker){message('Replay indisponível neste navegador. O compartilhamento continua.');return;}
     const request=++generation,current=owner;starting=true;renderState();let stream,worker;
@@ -92,6 +93,20 @@ window.TronoClips=(()=>{
       message(s.hasAudio?'Replay automático ativo com o áudio da tela.':window.TronoDesktop?'Replay ativo sem áudio: ative o áudio do computador no seletor ao iniciar a próxima transmissão. Ele pode incluir as vozes da chamada.':'Replay ativo sem áudio: o navegador não forneceu áudio da tela. Habilite-o no seletor de compartilhamento, quando disponível.');
     }catch(e){stream?.getTracks().forEach(t=>t.stop());worker?.terminate();if(request!==generation||current!==owner)return;session=null;starting=false;renderState();message(e.message||'Não foi possível preparar o replay. O compartilhamento continua.');}
   }
+  async function startLocalReplay(){
+    if(!window.TronoDesktop||localChoosing)return;
+    if(sharedSource){await sharedStarted(sharedSource,{local:sharedSource===localSource,force:true});return;}
+    const requestedOwner=owner;localChoosing=true;renderState();
+    try{
+      const q=qualities[settings.quality];
+      const stream=await navigator.mediaDevices.getDisplayMedia({video:{width:{ideal:q.width},height:{ideal:q.height},frameRate:{ideal:settings.fps}},audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      if(requestedOwner!==owner){stream.getTracks().forEach(track=>track.stop());return;}
+      localSource=stream;stream.getVideoTracks()[0].addEventListener('ended',()=>{if(localSource===stream)stopLocalReplay();},{once:true});
+      await sharedStarted(stream,{local:true});if(!session){stopLocalReplay();}
+    }catch(error){message(['AbortError','NotAllowedError'].includes(error.name)?'Captura local cancelada.':error.message||'Não foi possível iniciar o replay local.');}
+    finally{localChoosing=false;renderState();}
+  }
+  function stopLocalReplay(){const source=localSource;if(!source)return;localSource=null;sharedStopped(source);source.getTracks().forEach(track=>track.stop());renderState();}
   function sharedStopped(source){if(source&&sharedSource!==source)return;sharedSource=null;stop();}
   function clip(){const s=session;if(!s||!s.status?.ready){message('Compartilhe sua tela e aguarde o replay ficar pronto para clipar.');return;}if(s.waiters.size>=4){message('Aguarde os clipes em preparação antes de clipar novamente.');return;}const id=crypto.randomUUID();s.waiters.add(id);s.flushing.push(id);message('Preparando clipe…');try{s.recorder.requestData();}catch{s.flushing=s.flushing.filter(k=>k!==id);s.waiters.delete(id);message('A captura não está disponível. Os clipes anteriores continuam armazenados.');}}
   async function chooseFolder(){const current=owner;try{const handle=window.TronoDesktop?await window.TronoDesktop.chooseFolder():await window.showDirectoryPicker({id:'trono-clips',mode:'readwrite'});if(!handle||current!==owner)return;directory=handle;renderState();try{if(!handle.native)await store.setDirectory(current,handle);message(handle.native?'Pasta escolhida para esta sessão do aplicativo. Nenhum clipe é salvo sem clicar em Salvar.':'Pasta escolhida. Nenhum clipe é salvo nela sem clicar em Salvar.');}catch{message('Pasta escolhida para esta sessão. O navegador não permitiu lembrar essa pasta.');}}catch(e){if(e.name!=='AbortError')message('Não foi possível escolher a pasta. Você pode usar Salvar para escolher um arquivo.');}}
@@ -121,18 +136,18 @@ window.TronoClips=(()=>{
     const s=settings?.shortcut;if(!s||e.repeat||e.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;if(e.code===s.code&&e.ctrlKey===s.ctrl&&e.altKey===s.alt&&e.shiftKey===s.shift&&e.metaKey===s.meta){e.preventDefault();e.stopPropagation();if(!window.TronoClipDesktop?.globalActive)clip();}
   }
   function tab(name){document.querySelectorAll('[data-clips-tab]').forEach(b=>{const on=b.dataset.clipsTab===name;b.classList.toggle('active',on);b.setAttribute('aria-selected',on);});$('clipsLibrary').hidden=name!=='library';$('clipsPreferences').hidden=name!=='preferences';} function open({inline=false}={}){tab('library');if(!$('clipsDialog').open){if(inline)$('clipsDialog').show();else $('clipsDialog').showModal();}void refresh();}
-  async function accountChanged(){const next=account();if(next===owner&&settings)return;sharedSource=null;stop();owner=next;readSettings();directory=null;clips=[];renderList();const current=owner;try{const saved=await store.directory(current);if(current===owner){directory=saved||null;renderState();}}catch{}await refresh();}
+  async function accountChanged(){const next=account();if(next===owner&&settings)return;stopLocalReplay();sharedSource=null;stop();owner=next;readSettings();directory=null;clips=[];renderList();const current=owner;try{const saved=await store.directory(current);if(current===owner){directory=saved||null;renderState();}}catch{}await refresh();}
   function bind(){
     owner=account();readSettings();renderState();void refresh();const initialOwner=owner;void store.directory(initialOwner).then(h=>{if(owner===initialOwner){directory=h||null;renderState();}}).catch(()=>{});
-    document.querySelectorAll('[data-open-clips]').forEach(b=>b.addEventListener('click',open));$('clipClose').onclick=()=>{$('clipsDialog').close();choosingShortcut=false;renderState();};$('clipNow').onclick=clip;$('clipToolbarNow').onclick=clip;$('clipChooseFolder').onclick=()=>void chooseFolder();$('clipFloating').onclick=()=>void floating();$('clipShortcut').onclick=()=>{choosingShortcut=true;renderState();message('Pressione o novo atalho. Esc cancela.');};
-    $('clipShare').onclick=async()=>{$('clipsDialog').close();const social=window.TronoSocial;if(!social.voiceJoined&&!await social.joinVoice())return;social.openScreenOptions();};$('clipResume').onclick=()=>{if(sharedSource)void sharedStarted(sharedSource);};
+    document.querySelectorAll('[data-open-clips]').forEach(b=>b.addEventListener('click',open));$('clipClose').onclick=()=>{$('clipsDialog').close();choosingShortcut=false;renderState();};$('clipNow').onclick=clip;$('clipToolbarNow').onclick=()=>{if(window.TronoDesktop&&!session?.status?.ready)void startLocalReplay();else clip();};$('clipChooseFolder').onclick=()=>void chooseFolder();$('clipFloating').onclick=()=>void floating();$('clipShortcut').onclick=()=>{choosingShortcut=true;renderState();message('Pressione o novo atalho. Esc cancela.');};
+    $('clipShare').onclick=async()=>{if(window.TronoDesktop){await startLocalReplay();return;}$('clipsDialog').close();const social=window.TronoSocial;if(!social.voiceJoined&&!await social.joinVoice())return;social.openScreenOptions();};$('clipStopLocal').onclick=stopLocalReplay;$('clipResume').onclick=()=>{if(sharedSource)void sharedStarted(sharedSource,{local:localSource===sharedSource});};
     document.querySelectorAll('[data-clips-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.clipsTab));
     $('clipResetFolder').onclick=()=>{directory=null;renderState();void store.setDirectory(owner,null).catch(()=>{});message('Ao salvar, você poderá escolher um arquivo ou usar Downloads.');};
-    for(const [id,key]of [['clipQuality','quality'],['clipFps','fps'],['clipSeconds','seconds'],['clipAuto','auto']])$(id).addEventListener('change',()=>{settings[key]=key==='auto'?$(id).checked:key==='quality'?$(id).value:Number($(id).value);saveSettings();if(sharedSource)void sharedStarted(sharedSource);else renderState();});
+    for(const [id,key]of [['clipQuality','quality'],['clipFps','fps'],['clipSeconds','seconds'],['clipAuto','auto']])$(id).addEventListener('change',()=>{settings[key]=key==='auto'?$(id).checked:key==='quality'?$(id).value:Number($(id).value);saveSettings();if(sharedSource)void sharedStarted(sharedSource,{local:localSource===sharedSource});else renderState();});
     document.addEventListener('keydown',keydown,true);$('clipsDialog').addEventListener('close',()=>{choosingShortcut=false;for(const video of $('clipList').querySelectorAll('video'))video.pause();});
     window.addEventListener('trono-auth-change',()=>void accountChanged());window.addEventListener('beforeunload',e=>{if(session||starting||[...emergency.values()].some(c=>c.blob)){e.preventDefault();e.returnValue='';}});
-    window.addEventListener('pagehide',()=>{stop();for(const id of urls.keys())revoke(id);});
+    window.addEventListener('pagehide',()=>{stopLocalReplay();stop();for(const id of urls.keys())revoke(id);});
   }
   window.addEventListener('DOMContentLoaded',bind);
-  return {open,clip,stop,sharedStarted,sharedStopped,captureProfile,get preferences(){return {...settings,shortcut:{...settings.shortcut}};},get replayStatus(){return session?{...session.status,quality:session.quality,fps:session.fps,maxBytes:session.maxBytes,hasAudio:session.hasAudio}:null;},get active(){return !!session&&!session.stopping;}};
+  return {open,clip,stop,startLocalReplay,stopLocalReplay,get localReplay(){return !!localSource;},sharedStarted,sharedStopped,captureProfile,get preferences(){return {...settings,shortcut:{...settings.shortcut}};},get replayStatus(){return session?{...session.status,quality:session.quality,fps:session.fps,maxBytes:session.maxBytes,hasAudio:session.hasAudio}:null;},get active(){return !!session&&!session.stopping;}};
 })();

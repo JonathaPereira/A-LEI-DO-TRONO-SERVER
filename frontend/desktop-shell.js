@@ -17,7 +17,21 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   for(const [view,label]of [['home','Início'],['game','Jogar'],['community','Comunidade'],['clips','Clipes'],['profile','Perfil']]){
     const button=document.createElement('button');button.type='button';button.dataset.desktopRoute=view;button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'+icons[view]+'</svg><span>'+label+'</span>';button.onclick=()=>void navigate(view);rail.append(button);
   }
-  const version=document.createElement('small');version.textContent='Windows '+window.TronoDesktop.version;rail.append(version);body.append(rail);
+  const version=document.createElement('button');version.id='desktopUpdateCheck';version.type='button';version.className='desktop-version';version.title='Verificar atualização';version.textContent='Windows '+window.TronoDesktop.version;rail.append(version);body.append(rail);
+  // Move the existing soundboard trigger, preserving its upload/play handlers.
+  const effects=$('soundboardToggle'),effectsMenu=$('soundboardDialog');
+  effects.classList.remove('soundboard-toggle');effects.classList.add('desktop-effects-button');
+  effects.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9v6m4-9v12m5-16v20m5-16v12m4-9v6"/></svg><span>Efeitos</span>';
+  rail.insertBefore(effects,rail.querySelector('[data-desktop-route="clips"]'));
+  function positionEffects(){if(effectsMenu.hidden)return;const top=Math.max(12,Math.min(effects.getBoundingClientRect().top,innerHeight-effectsMenu.offsetHeight-12));effectsMenu.style.setProperty('--desktop-effects-top',top+'px');}
+  new MutationObserver(positionEffects).observe(effectsMenu,{attributes:true,attributeFilter:['hidden']});
+  new ResizeObserver(positionEffects).observe(effectsMenu);window.addEventListener('resize',positionEffects);
+  const fullscreenButton=document.createElement('button');fullscreenButton.id='desktopFullscreen';fullscreenButton.type='button';fullscreenButton.title='Tela cheia · F11';
+  fullscreenButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Tela cheia</span>';
+  rail.insertBefore(fullscreenButton,version);
+  function updateWindowState(state){const on=state.fullscreen===true;fullscreenButton.setAttribute('aria-pressed',String(on));fullscreenButton.setAttribute('aria-label',on?'Sair da tela cheia':'Entrar em tela cheia');fullscreenButton.querySelector('span').textContent=on?'Sair da tela cheia':'Tela cheia';}
+  fullscreenButton.onclick=async()=>{fullscreenButton.disabled=true;try{updateWindowState(await window.TronoDesktop.toggleFullscreen());}catch{fullscreenButton.title='Não foi possível alterar a tela cheia. Tente F11.';}finally{fullscreenButton.disabled=false;}};
+  window.TronoDesktop.onWindowState(updateWindowState);void window.TronoDesktop.getWindowState().then(updateWindowState).catch(()=>{});
   const dock=document.createElement('footer');dock.id='desktopCallDock';dock.setAttribute('aria-label','Chamada e replay');
   const info=document.createElement('div');info.className='desktop-call-info';info.innerHTML='<small>SEU ESPAÇO, SEM INTERRUPÇÕES</small><strong id="desktopCallName">M&N · pronto para conectar</strong><span id="desktopCallStatus"></span>';
   dock.append(info,$('socialPanel').querySelector('.call-toolbar'));body.append(dock,$('voiceSettingsPanel'));

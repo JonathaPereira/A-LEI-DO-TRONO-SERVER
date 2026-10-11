@@ -3,15 +3,16 @@ const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nat
 const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('node:crypto'),{pathToFileURL}=require('node:url');
 const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
+const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
-let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false;
+let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false;
 const folders=new Map(),mediaPermissions=new Set();
 const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop-diagnostics'))console.error('[desktop]',...values);};
 if(!app.requestSingleInstanceLock())app.quit();
 else{
   app.on('second-instance',()=>{window?.show();window?.focus();});
   app.on('before-quit',()=>{quitting=true;});
-  app.on('will-quit',()=>globalShortcut.unregisterAll());
+  app.on('will-quit',()=>{globalShortcut.unregisterAll();applicationAudio?.stopAll();});
   app.on('window-all-closed',()=>app.quit());
   app.whenReady().then(start).catch(error=>{dialog.showErrorBox('Não foi possível abrir o M&N',error.message);app.quit();});
 }
@@ -50,16 +51,29 @@ async function start(){
       return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
-  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:960,minHeight:640,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
+  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:960,minHeight:640,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
+  applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
+  ipcMain.handle('mn:application-audio-stop',(event,id)=>{trusted(event);applicationAudio.stop(id);});
+  ipcMain.on('mn:application-audio-ack',(event,id)=>{try{trusted(event);applicationAudio.ack(id);}catch{}});
+  updates=createUpdates({updater:require('electron-updater').autoUpdater,enabled:app.isPackaged,publish:state=>{if(!window.isDestroyed())window.webContents.send('mn:update-state',state);},confirm:async()=>{const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Continuar no app','Reiniciar e atualizar'],defaultId:0,cancelId:0,message:'Reiniciar para atualizar?',detail:'A chamada e o buffer de replay serão encerrados. Clipes já armazenados permanecem. Salve antes os clipes que existirem somente na memória.'});return answer.response===1;},prepareInstall:()=>{installingUpdate=true;quitting=true;}});
+  ipcMain.handle('mn:update-state',event=>{trusted(event);return updates.state;});
+  ipcMain.handle('mn:update-check',event=>{trusted(event);return updates.check();});
+  ipcMain.handle('mn:update-install',event=>{trusted(event);return updates.install();});
+  if(app.isPackaged){const first=setTimeout(()=>void updates.check(),10000),periodic=setInterval(()=>void updates.check(),4*60*60*1000);first.unref();periodic.unref();app.on('will-quit',()=>{clearTimeout(first);clearInterval(periodic);});}
+  const windowState=()=>({fullscreen:window.isFullScreen()});
+  for(const name of ['enter-full-screen','leave-full-screen'])window.on(name,()=>window.webContents.send('mn:window-state',windowState()));
+  ipcMain.handle('mn:window-state',event=>{trusted(event);return windowState();});
+  ipcMain.handle('mn:fullscreen',event=>{trusted(event);const fullscreen=!window.isFullScreen();window.setFullScreen(fullscreen);return {fullscreen};});
   window.on('close',event=>{if(tray&&!quitting){event.preventDefault();window.hide();}});
   window.webContents.on('will-prevent-unload',event=>{
+    if(installingUpdate){event.preventDefault();return;}
     const response=dialog.showMessageBoxSync(window,{type:'question',buttons:['Continuar no app','Sair'],defaultId:0,cancelId:0,message:'Encerrar o M&N?',detail:'A chamada e o buffer de replay serão encerrados. Clipes já armazenados na biblioteca local permanecem; clipes somente na memória podem ser perdidos.'});
     if(response===1)event.preventDefault();else quitting=false;
   });
-  window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();});
+  window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();applicationAudio.stopAll();});
   window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace)cancelCapture();});
-  window.webContents.on('did-navigate',clearHotkey);
+  window.webContents.on('did-navigate',()=>{clearHotkey();applicationAudio.stopAll();});
   window.webContents.on('will-navigate',(event,url)=>{if(!isAppURL(url)){event.preventDefault();if(/^https:\/\//.test(url))void shell.openExternal(url);}});
   window.webContents.on('will-attach-webview',event=>event.preventDefault());
   // window.open inherits the opener's Chromium partition, even with some
@@ -104,7 +118,7 @@ async function start(){
       if(capture!==pending||window.isDestroyed())return;
       const options=sources.filter(s=>s.id!==window.getMediaSourceId());
       pending.sources=options;
-      window.webContents.send('mn:capture',{id:pending.id,audio:request.audioRequested,windows:process.platform==='win32',sources:options.map(s=>({id:s.id,name:s.name,thumbnail:s.thumbnail.toDataURL()}))});
+      window.webContents.send('mn:capture',{id:pending.id,audio:request.audioRequested,windows:process.platform==='win32',applicationAudio:applicationAudio.capability.available,sources:options.map(s=>({id:s.id,name:s.name,thumbnail:s.thumbnail.toDataURL()}))});
     }catch(error){trace('capture failure',error.message);if(capture===pending)cancelCapture();}
   });
   ipcMain.handle('mn:clips-configure',(event,configuration)=>{
@@ -112,11 +126,17 @@ async function start(){
     try{const chosen=accelerator(configuration.shortcut);if(!globalShortcut.register(chosen,clip))return {active:false,error:'Atalho ocupado. Escolha outro nas preferências.'};hotkey=chosen;clipActive=true;return {active:true,shortcut:chosen};}
     catch(error){return {active:false,error:error.message};}
   });
-  ipcMain.handle('mn:capture-select',(event,choice)=>{
+  ipcMain.handle('mn:capture-select',async(event,choice)=>{
     trusted(event);if(!capture||choice?.id!==capture.id)return false;
     const current=capture;capture=null;clearTimeout(current.timer);
     const source=current.sources.find(s=>s.id===choice.source);
-    current.callback(source?{video:source,...(current.audio&&choice.audio===true&&process.platform==='win32'?{audio:'loopback'}:{})}:{});return !!source;
+    if(!source){current.callback({});return {selected:false};}
+    let audio=null;
+    if(current.audio&&choice.audioMode==='application'){
+      const target=current.sources.find(s=>s.id===(source.id.startsWith('window:')?source.id:choice.audioSource)&&s.id.startsWith('window:'));
+      try{if(!target)throw Error('Escolha uma janela para o áudio isolado.');audio=await applicationAudio.start(target.id);}catch(error){current.callback({});return {selected:false,error:error.message};}
+    }
+    current.callback({video:source,...(current.audio&&(choice.audioMode==='system'||choice.audio===true)&&process.platform==='win32'?{audio:'loopback'}:{})});return {selected:true,audio};
   });
   ipcMain.handle('mn:folder',async event=>{
     trusted(event);const answer=await dialog.showOpenDialog(window,{title:'Pasta para salvar clipes',properties:['openDirectory','createDirectory']});
@@ -132,7 +152,7 @@ async function start(){
   });
   const icon=nativeImage.createFromPath(path.join(__dirname,'assets/icon.png')).resize({width:32,height:32});
   tray=new Tray(icon);tray.setToolTip('M&N · A Lei do Trono');tray.setContextMenu(Menu.buildFromTemplate([{label:'Abrir M&N',click:()=>{window.show();window.focus();}},{label:'Clipar',click:clip},{type:'separator'},{label:'Sair',click:()=>app.quit()}]));tray.on('double-click',()=>{window.show();window.focus();});
-  Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'M&N',submenu:[{label:'Abrir site',click:()=>void shell.openExternal(APP_ORIGIN)},{type:'separator'},{label:'Sair',click:()=>app.quit()}]},{label:'Visualização',submenu:[{role:'reload'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'},...(!app.isPackaged?[{role:'toggleDevTools'}]:[])]}]));
+  Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'M&N',submenu:[{label:'Abrir site',click:()=>void shell.openExternal(APP_ORIGIN)},{type:'separator'},{label:'Sair',click:()=>app.quit()}]},{label:'Visualização',submenu:[{role:'reload'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen',label:'Tela cheia',accelerator:'F11'},...(!app.isPackaged?[{role:'toggleDevTools'}]:[])]}]));
   await window.loadURL(APP_ORIGIN+'/');
 }
 function cancelCapture(){if(!capture)return;const current=capture;capture=null;clearTimeout(current.timer);current.callback({});if(window&&!window.isDestroyed())window.webContents.send('mn:capture-cancel',{id:current.id});}
