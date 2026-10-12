@@ -12,6 +12,7 @@ window.TronoSocial = (()=>{
   const videoRetryTimers=new Map();
   const mediaHealthyAt=new Map();
   const privateVoiceRoster=new Map();
+  const profileActivities=new Map();
   const sfuLocalPublications=new Map();
   const sfuSubscriptions=new Map();
   const sfuRetryTimers=new Map();
@@ -1364,13 +1365,13 @@ window.TronoSocial = (()=>{
   }
   function renderVoiceStatus(host,muted,silenced){if(!host)return;const html=voiceStatusIcons(muted,silenced);if(host.innerHTML!==html)host.innerHTML=html;host.hidden=!html;}
   function personVoiceSummary(p){const self=p.id===meId(),muted=self?micMuted:!!p.muted,cam=self?cameraOn:!!p.camera,screen=self?screenSharing:!!p.screen,transport=self?announcedTransport():(p.transport||'p2p');return (muted?'microfone mutado':speakingPeers.has(p.id)?'falando…':'na voz')+((self?deafened:p.deafened)?' • áudio silenciado':'')+(cam?(hiddenCameras.has(p.id)?' • câmera oculta':' • 📷 câmera'):'')+(screen?' • 🖥 tela':'')+(transport==='sfu'?' • ☁ SFU':transport==='sfu-pending'?' • conectando…':'');}
-  function cameraInProfile(id){const mode=profileMedia.get(id)||'auto';return mode==='camera'||(mode==='auto'&&camerasInProfiles());}
+  function cameraInProfile(id){const mode=profileMedia.get(id)||'auto';return mode==='camera'||(mode==='auto'&&inChatHub());}
   function screenInProfile(id){return profileMedia.get(id)==='screen';}
   function setProfileMedia(id,value){if(!['auto','camera','screen','stage'].includes(value))return;profileMedia.set(id,value);renderVoiceRoster();renderScreenGrid();}
   function camerasInProfiles(){return inChatHub()&&voiceJoined&&detailedPlayers().some(p=>p.id===meId()?screenSharing:p.screen);}
   function renderVoiceRoster(){
     const host=$('voiceRoster');if(!host)return;
-    const stage=host.closest('.mn-media-stage');stage?.classList.toggle('has-screen',voiceJoined&&detailedPlayers().some(p=>p.id===meId()?screenSharing:p.screen&&watchingStreams.has(p.id)));stage?.classList.toggle('has-camera',voiceJoined&&detailedPlayers().some(p=>p.id===meId()?cameraOn:p.camera&&!hiddenCameras.has(p.id)));stage?.classList.toggle('screens-layout',camerasInProfiles());
+    const stage=host.closest('.mn-media-stage');stage?.classList.toggle('has-screen',voiceJoined&&detailedPlayers().some(p=>!screenInProfile(p.id)&&(p.id===meId()?screenSharing:p.screen&&watchingStreams.has(p.id))));stage?.classList.toggle('has-camera',voiceJoined&&detailedPlayers().some(p=>p.id===meId()?cameraOn:p.camera&&!hiddenCameras.has(p.id)));stage?.classList.toggle('screens-layout',camerasInProfiles());stage?.classList.toggle('room-idle',voiceJoined&&!detailedPlayers().some(p=>p.id===meId()?cameraOn||screenSharing:p.camera&&!hiddenCameras.has(p.id)||p.screen));const title=stage?.querySelector('.mosaic-toolbar strong');if(title)title.textContent=stage.classList.contains('room-idle')?'Na chamada':'Câmeras & telas';
     const roomName=roomState?.name||(inChatHub()?'Geral':'Voz da mesa');if($('mnStageRoomName'))$('mnStageRoomName').textContent=roomName;if($('textVoiceRoomName'))$('textVoiceRoomName').textContent='Voz conectada · '+roomName;
     if(!voiceJoined){
       const active=publicVoiceActive();host.classList.add('voice-roster-private');
@@ -1384,10 +1385,10 @@ window.TronoSocial = (()=>{
       let card=findPeerTile(host,p.id,'.voice-person');
       if(!card){
         card=document.createElement('div');card.className='voice-person joined';card.dataset.peer=p.id;
-        card.innerHTML='<div class="participant-camera-slot" hidden></div><div class="participant-screen-slot" hidden></div><span class="mn-person-avatar"></span><strong></strong><div class="participant-meta"><small class="participant-caption"></small><span class="participant-voice-status" hidden></span></div><small class="participant-summary"></small><button class="participant-camera-toggle" type="button" hidden></button><label class="participant-media-layout" hidden><span>Exibição</span><select aria-label="Exibição da mídia"><option value="auto">Automática</option><option value="camera">Câmera no perfil</option><option value="screen">Tela no perfil</option><option value="stage">Mídia ampliada</option></select></label>';
+        card.innerHTML='<div class="participant-camera-slot" hidden></div><div class="participant-screen-slot" hidden></div><span class="mn-person-avatar"></span><strong></strong><div class="participant-meta"><small class="participant-caption"></small><small class="participant-activity" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 8h10a3 3 0 013 2l2 8a2 2 0 01-3 2l-4-3H9l-4 3a2 2 0 01-3-2l2-8a3 3 0 013-2Z"/><path d="M6 12h4m-2-2v4M16 11h.01M18 14h.01"/></svg><span></span></small><span class="participant-voice-status" hidden></span></div><small class="participant-summary"></small><button class="participant-camera-toggle" type="button" hidden></button><label class="participant-media-layout" hidden><span>Exibição</span><select aria-label="Exibição da mídia"><option value="auto">Automática</option><option value="camera">Câmera no perfil</option><option value="screen">Tela no perfil</option><option value="stage">Mídia ampliada</option></select></label>';
         const details=document.createElement('div');details.className='participant-details';details.hidden=true;details.id='participant-details-'+p.id;if(typeof details.showPopover==='function')details.setAttribute('popover','auto');const heading=document.createElement('strong');heading.className='participant-popup-name';heading.textContent=p.name;details.append(heading);
         for(const selector of ['.participant-summary','.participant-camera-toggle','.participant-media-layout'])details.append(card.querySelector(selector));card.append(details);
-        const expand=document.createElement('button');expand.type='button';expand.className='participant-expand';expand.textContent='⌄';expand.setAttribute('aria-expanded','false');expand.setAttribute('aria-controls',details.id);expand.onclick=()=>{const on=!card.classList.contains('participant-expanded');card.classList.toggle('participant-expanded',on);expand.textContent=on?'⌃':'⌄';expand.setAttribute('aria-expanded',String(on));if(on){details.hidden=false;if(details.showPopover){details.showPopover();const rect=card.getBoundingClientRect(),popup=details.getBoundingClientRect();details.style.left=Math.max(12,Math.min(rect.left,innerWidth-popup.width-12))+'px';details.style.top=Math.max(60,Math.min(rect.top-popup.height-8,innerHeight-popup.height-92))+'px';}}else if(details.hidePopover)details.hidePopover();else details.hidden=true;};details.addEventListener('toggle',event=>{if(event.newState==='closed'){details.hidden=true;card.classList.remove('participant-expanded');expand.textContent='⌄';expand.setAttribute('aria-expanded','false');}});card.append(expand);
+        const expand=document.createElement('button');expand.type='button';expand.className='participant-expand';expand.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';expand.setAttribute('aria-expanded','false');expand.setAttribute('aria-controls',details.id);expand.onclick=()=>{const on=!card.classList.contains('participant-expanded');card.classList.toggle('participant-expanded',on);expand.setAttribute('aria-expanded',String(on));if(on){details.hidden=false;if(details.showPopover){details.showPopover();positionProfileControls(card,details);}}else if(details.hidePopover)details.hidePopover();else details.hidden=true;};details.addEventListener('toggle',event=>{if(event.newState==='closed'){details.hidden=true;card.classList.remove('participant-expanded');expand.setAttribute('aria-expanded','false');}});card.append(expand);
         card.querySelector('.participant-camera-toggle').onclick=()=>void toggleWatchCamera(p.id);card.querySelector('.participant-media-layout select').onchange=event=>setProfileMedia(p.id,event.target.value);
         if(!self){const label=document.createElement('label');label.className='mn-peer-gain';label.innerHTML='<span>Volume</span><input type="range" min="0" max="300" step="5"><output></output>';label.querySelector('input').dataset.peerVolume=p.id;label.querySelector('input').setAttribute('aria-label','Volume de '+p.name);details.appendChild(label);}
         host.appendChild(card);
@@ -1402,9 +1403,21 @@ window.TronoSocial = (()=>{
       const toggle=card.querySelector('.participant-camera-toggle');toggle.hidden=self||!cam;toggle.textContent=hidden?'Mostrar câmera':'Ocultar câmera';toggle.setAttribute('aria-label',(hidden?'Mostrar':'Ocultar')+' câmera de '+p.name);toggle.setAttribute('aria-pressed',String(hidden));toggle.title='Esta preferência muda apenas o que você vê.';
       if(!self){card.querySelector('[data-peer-volume]').value=String(peerVolumes.get(p.id)??100);card.querySelector('output').textContent=(peerVolumes.get(p.id)??100)+'%';}
     }
-    window.TronoProfile?.hydrate(host);renderVideoGrid();
+    renderProfileActivities();window.TronoProfile?.hydrate(host);renderVideoGrid();
   }
 
+  function positionProfileControls(card,details){
+    const anchor=card.querySelector('.participant-expand').getBoundingClientRect(),top=window.TronoDesktop?($('desktopTopBar')?.getBoundingClientRect().bottom||0)+12:12,bottom=window.TronoDesktop?($('desktopCallDock')?.getBoundingClientRect().top||innerHeight)-12:innerHeight-12;
+    details.style.maxHeight=Math.max(100,bottom-top)+'px';const popup=details.getBoundingClientRect();
+    details.style.left=Math.max(12,Math.min(anchor.right-popup.width,innerWidth-popup.width-12))+'px';details.style.top=Math.max(top,Math.min(anchor.top-popup.height-8,bottom-popup.height))+'px';
+  }
+  function repositionProfileControls(){for(const details of $('voiceRoster')?.querySelectorAll('.voice-person.participant-expanded .participant-details[popover]')||[])positionProfileControls(details.closest('.voice-person'),details);}
+  function renderProfileActivities(){
+    for(const card of $('voiceRoster')?.querySelectorAll('.voice-person')||[]){
+      const p=privateVoiceRoster.get(card.dataset.peer),accountId=p?.accountId||(p?.id===meId()?window.TronoAuth?.user?.id:null),activity=profileActivities.get(accountId),row=card.querySelector('.participant-activity');
+      row.hidden=!activity;row.querySelector('span').textContent=activity?.name||'';row.title=activity?'Atividade: '+activity.name:'';card.querySelector('.participant-caption').hidden=!!activity;card.classList.toggle('has-activity',!!activity);
+    }
+  }
   function cameraStreamForPerson(p){return p.id===meId()?localStream:recoverReceiverTracks(p.id).av;}
   function screenStreamForPerson(p){return p.id===meId()?localScreenStream:recoverReceiverTracks(p.id).screen;}
   // Tracks remotas podem oscilar o flag `muted` por jitter. Depois que uma câmera já entregou
@@ -1675,7 +1688,7 @@ window.TronoSocial = (()=>{
 
   function consumeVoiceRoster(list=[]){
     if(!voiceJoined)return;
-    const before=new Set(privateVoiceRoster.keys()),next=new Map();for(const p of list)if(p?.id)next.set(p.id,{id:p.id,name:p.name,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,joined:true,muted:!!p.muted,deafened:!!p.deafened,camera:!!p.camera,screen:!!p.screen,transport:p.transport||'p2p',quality:p.quality||'balanced'});
+    const before=new Set(privateVoiceRoster.keys()),next=new Map();for(const p of list)if(p?.id)next.set(p.id,{id:p.id,accountId:p.accountId||null,name:p.name,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,joined:true,muted:!!p.muted,deafened:!!p.deafened,camera:!!p.camera,screen:!!p.screen,transport:p.transport||'p2p',quality:p.quality||'balanced'});
     if(voiceRosterInitialized&&!voiceEventsSupported){for(const id of next.keys())if(id!==meId()&&!before.has(id))playCallSound('join',id);for(const id of before)if(id!==meId()&&!next.has(id))playCallSound('leave',id);}else voiceRosterInitialized=true;
     privateVoiceRoster.clear();for(const [id,p] of next)privateVoiceRoster.set(id,p);syncPeers();
   }
@@ -1819,6 +1832,7 @@ window.TronoSocial = (()=>{
     $('screenFormatSelect')?.addEventListener('change',async e=>{if(!SCREEN_FORMATS[e.target.value])return;screenFormat=e.target.value;storage.setItem('mnScreenFormat',screenFormat);updateQualityUI();await applyQualityToLiveMedia();});
     $('screenOptionsForm').addEventListener('submit',confirmScreenOptions);$('screenOptionsCancel').onclick=()=>$('screenOptionsDialog').close();
     $('shareStreamAudio')?.addEventListener('change',e=>{shareStreamAudio=!!e.target.checked;storage.setItem('mnShareStreamAudio',shareStreamAudio?'1':'0');setStatus('Preferência de áudio aplicada ao próximo compartilhamento.','ok');});
+    window.addEventListener('resize',repositionProfileControls);$('voiceRoster')?.addEventListener('scroll',repositionProfileControls,{passive:true});
     $('voiceRoster')?.addEventListener('input',e=>{if(e.target.matches('[data-peer-volume]'))setPeerGain(e.target.dataset.peerVolume,e.target.value);});
     $('screenBitrateSelect')?.addEventListener('change',async e=>{const value=Number(e.target.value);if(!SCREEN_BITRATES.includes(value))return;screenBitrateMbps=value;storage.setItem('mnScreenBitrate',String(value));updateQualityUI();await applyQualityToLiveMedia();if(transportIsSfu())await window.TronoNetwork.requestSfu('set-screen-bitrate',{screenBitrate:effectiveScreenBitrate()}).catch(err=>setStatus(err.message,'warn'));setStatus(`Tela configurada para até ${value} Mbps.`,'ok');});
     $('screenContentSelect')?.addEventListener('change',async e=>{screenContent=e.target.value==='motion'?'motion':'detail';storage.setItem('mnScreenContent',screenContent);await applyQualityToLiveMedia();});
@@ -1827,7 +1841,9 @@ window.TronoSocial = (()=>{
     $('voiceLightModeBtn')?.addEventListener('click',toggleVoiceLightMode);
     if($('callAlertVolume'))$('callAlertVolume').value=callAlertVolume;if($('callAlertVolumeValue'))$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;
     $('callAlertVolume')?.addEventListener('input',e=>{callAlertVolume=Math.max(0,Math.min(100,Number(e.target.value)||0));storage.setItem('mnCallAlertVolume',String(callAlertVolume));$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;primeCallSounds();});$('testCallAlert')?.addEventListener('click',()=>{primeCallSounds();playCallSound('join','test');});
+    window.addEventListener('trono-auth-change',()=>{profileActivities.clear();renderProfileActivities();});
     window.TronoNetwork?.onMessage(msg=>{
+      if(msg.type==='presence'){profileActivities.clear();if(msg.scope==='community')for(const person of msg.members||[])if(person.online&&person.activity?.name)profileActivities.set(person.id,person.activity);renderProfileActivities();}
       if(msg.type==='welcome'){voiceEventsSupported=!!msg.features?.voiceEvents;void syncRealtimeStatus({quiet:true});}
       if(msg.type==='connection'&&msg.connected)void syncRealtimeStatus({quiet:true});
       if(msg.type==='joined-room'){consumeRoom(msg.room);void syncRealtimeStatus({quiet:true});}
@@ -1863,7 +1879,7 @@ window.TronoSocial = (()=>{
         renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();
       }
       if(msg.type==='connection'&&!msg.connected){
-        realtimeSyncError='Servidor desconectado';realtimeStatus=null;
+        profileActivities.clear();renderProfileActivities();realtimeSyncError='Servidor desconectado';realtimeStatus=null;
         void leaveVoice('disconnect');
         setStatus('Servidor desconectado. Recarregue a página para entrar na voz novamente.','error');
       }

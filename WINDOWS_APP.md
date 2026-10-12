@@ -1,18 +1,22 @@
-# M&N · A Lei do Trono no Windows — 0.1.5
+# M&N · A Lei do Trono no Windows — 0.1.6
 
-O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Atualize também o backend para reiniciar efeitos com cliques repetidos; não há SQL novo.
+O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Atualize também o backend para vincular a atividade aos perfis da chamada; não há SQL novo.
 
 ## Instalar e atualizar
 
-1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída desta versão. O repositório privado exige login no GitHub. Extraia o ZIP e instale `MN-Trono-0.1.5-Windows.exe` em uma instalação nova.
+1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída desta versão. O repositório privado exige login no GitHub. Extraia o ZIP e instale `MN-Trono-0.1.6-Windows.exe` em uma instalação nova.
 2. Depois de publicar o pacote completo do site, o login oferece **Baixe a versão desktop**. Quem já usa 0.1.1 ou posterior recebe a atualização internamente; quem ainda usa 0.1.0 precisa instalar uma versão atual uma vez para habilitar o atualizador. Preserve os dados do aplicativo.
 3. Entre com a mesma conta do site. **Lembre de mim**, marcado inicialmente, restaura a sessão ao reabrir o app. Desmarcar ou sair da conta remove a sessão persistida. Sessões e preferências do navegador não são importadas automaticamente.
+
+O atualizador baixa o instalador completo da última versão publicada: por exemplo, 0.1.1 pode ir direto para 0.1.6. O aviso mostra a versão atual e o destino. **Buscar última versão** consulta novamente o canal, inclusive quando uma atualização antiga já estava pronta, e pode substituí-la pela mais recente. A verificação automática a cada quatro horas também atualiza esse destino. O app só reinicia após sua confirmação ou ao sair de verdade; uma chamada ativa continua enquanto o download ocorre.
 
 O instalador ainda não tem assinatura digital; o Windows pode mostrar editor desconhecido. Baixe do projeto ou do domínio oficial.
 
 ## Interface e configurações
 
 A coluna esquerda contém Início, Jogar, Comunidade, Efeitos, Clipes bloqueados e Tela cheia. F11 também alterna tela cheia. **Pessoas** e **Telemetria** ficam no topo e podem ser minimizados. Em janelas estreitas ou verticais, **Canais** abre a lista em uma lateral recolhível. Os controles da chamada permanecem acessíveis; o mínimo da janela é 480 × 520.
+
+As configurações ajustam a altura ao conteúdo. Em janelas estreitas e monitores verticais, os tópicos usam uma faixa horizontal com rolagem; o conteúdo tem sua própria rolagem quando necessário. Aparência oferece Roxo, Verde, Vermelho, Azul, Amarelo, Turquesa, Laranja, Rosa, Índigo e Grafite. A escolha permanece individual, por conta e aparelho.
 
 Todas as configurações ficam na engrenagem inferior, com os tópicos **Minha conta, Aparência, Áudio, Vídeo, Captura de tela, Jogo, Atividade, Conexão e Privacidade**. Perfil, arquivos, tema, redimensionamento das colunas, música, dispositivos, supressão e qualidade da transmissão usam os mesmos controles e preferências existentes. A música começa desativada em uma instalação nova; uma escolha anterior explícita é preservada.
 
@@ -24,7 +28,9 @@ Em cada perfil da chamada, **Exibição** permite colocar câmera ou transmissã
 
 As transmissões na área principal se ajustam à altura disponível, com a imagem inteira e sem exigir rolagem vertical. Várias streams se distribuem em linhas e colunas; tela cheia, maximização, troca de tela e controles que somem por inatividade continuam disponíveis.
 
-Os perfis têm largura limitada a 288 px e uma linha de 68 px, com avatar visível, nome, estado da voz e prévia de mídia de 80 × 46 px. Sem transmissão, permanecem agrupados, sem se esticar pela sala. Em monitores verticais até 1200 px de largura, os canais se recolhem para dar espaço à chamada. **Expandir perfil** abre detalhes, volume e opções de mídia num painel que não desloca a stream. A bolinha verde fica fora do avatar e indica presença; falar acende uma borda fina animada. Modo leve e redução de movimento usam uma borda estática.
+Durante uma stream na área principal, os perfis mantêm a linha compacta de 68 px, largura até 288 px e prévia de 80 × 46 px, preservando a área da transmissão. Sem mídia, os cards ocupam uma grade central com avatar maior e fundo discreto do tema. A câmera fica no perfil por padrão; sua prévia ocupa o topo do card e o nome/atividade ficam no rodapé. Exibição → Mídia ampliada continua permitindo separar a câmera. Quando uma tela é colocada no perfil, aplica-se a mesma separação entre vídeo e texto.
+
+A atividade aparece abaixo do nome se o participante habilitar o compartilhamento em **Configurações → Atividade**. O backend fornece a identidade da conta no roster privado da voz e a interface combina esse ID com a presença, sem usar o nickname. Trocar o nome, ocultar a atividade ou fechar o aplicativo é refletido nos cards. Aplicativos escolhidos manualmente também aparecem. **Expandir perfil**, agora com chevron SVG, abre volume e opções num painel que não desloca a stream. O indicador verde permanece fora do avatar; a borda fina mostra quem está falando. Animações de hover respeitam Modo leve e redução de movimento.
 
 A mão do jogo fica acima da barra inferior. As cartas se ajustam à altura e ao número de cartas para caber na largura disponível. A janela de comunicação começa recolhida na partida e pode ser aberta em **Configurações → Jogo → Comunicação**. **Jogo** agrupa Partida e velocidade, Regras e histórico, e Comunicação/gravação manual. Ordenar e Influência permanecem junto à mão. A versão do app fica no rodapé esquerdo e mantém a verificação de atualização por clique.
 

@@ -1,7 +1,7 @@
 'use strict';
 window.TronoAppearance=(()=>{
   const storage=window.TronoStorage||localStorage;
-  const themes=new Set(['purple','green','red','blue','yellow']);
+  const themes=new Set(['purple','green','red','blue','yellow','teal','orange','rose','indigo','graphite']);
   const key=()=> 'mnTheme:'+(window.TronoAuth?.user?.id||'guest');
   let current='purple';
   function apply(value,{save=false}={}){
