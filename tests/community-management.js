@@ -38,6 +38,8 @@ test('verified creator email, admin grant/revocation, channels and privacy over 
     a.send({type:'soundboard-play',fileId:f.soundId});assert.equal((await a.wait(m=>m.type==='error')).code,'VOICE_REQUIRED');
     b.send({type:'soundboard-play',fileId:f.soundId,volume:999,durationMs:1});const sound=await b.wait(m=>m.type==='soundboard-play');assert.equal(sound.roomId,voice.id);assert.equal(sound.file.durationMs,1000);assert(!('volume' in sound));
     b.send({type:'soundboard-play',fileId:f.soundId});assert.equal((await b.wait(m=>m.type==='error')).code,'SOUND_RATE');
+    await new Promise(resolve=>setTimeout(resolve,180));b.send({type:'soundboard-play',fileId:f.soundId});const restarted=await b.wait(m=>m.type==='soundboard-play');assert.notEqual(restarted.id,sound.id);assert(restarted.at>sound.at&&restarted.at-sound.at<1000);
+    b.send({type:'soundboard-play',fileId:'40000000-0000-4000-8000-000000000001'});assert.equal((await b.wait(m=>m.type==='error')).code,'SOUND_RATE');
     assert.equal((await call('/channels/'+voice.id,null,member,'DELETE')).status,200);await b.wait(m=>m.type==='channel-deleted'&&m.roomId===voice.id);
     b.send({type:'join-room',roomId:voice.id});assert.equal((await b.wait(m=>m.type==='error')).code,'ROOM_NOT_FOUND');
     assert.equal((await call('/roles',{userId:member.user.id,role:'member'})).status,200);assert.equal((await a.wait(m=>m.type==='role-updated')).role,'member');

@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.4
+M&N · A Lei do Trono — Windows 0.1.5
 
-1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.4-Windows.exe.
+1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.5-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente após publicar
    o pacote completo do site. Quem usa 0.1.0 instala uma versão atual uma vez.
    Preserve os dados do aplicativo.
@@ -41,3 +41,7 @@ O responsável deve atualizar o backend para habilitar a atividade. Não há SQL
     Detecta jogos conhecidos/Steam; selecione outro aplicativo se necessário.
     Exibe só o nome: nunca títulos de janelas ou caminhos. O site mostra a atividade
     recebida do app, mas não detecta programas do Windows. Desligar limpa a atividade.
+
+Na versão 0.1.5, os perfis ficam agrupados e preservam a área da stream.
+Clique novamente no mesmo efeito para reiniciar o áudio na chamada.
+Esse comportamento exige publicar também o backend desta versão. Não há SQL novo.

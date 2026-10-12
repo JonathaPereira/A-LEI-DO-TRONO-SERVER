@@ -6,7 +6,7 @@ Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime
 
 O aplicativo Windows com jogo, comunidade e integrações nativas está em
 `desktop/app/`. Consulte [WINDOWS_APP.md](WINDOWS_APP.md) para instalar, usar,
-testar e compilar. A versão Windows 0.1.4 exige atualizar o backend para presença de jogos, sem nova migração SQL.
+testar e compilar. A versão Windows 0.1.5 ajusta perfis, telas verticais e efeitos compactos. Atualize também o backend para reiniciar efeitos com cliques repetidos; não há nova migração SQL.
 
 O frontend da v0.8.0 enviado pelo criador está em `frontend/`, com seleção de
 qualidade/FPS, cargos, canais, galeria de anexos, efeitos sonoros e mosaico de
@@ -163,7 +163,7 @@ publicar o frontend; não há migração SQL ou mudança do backend.
 
 ## Replay no site e clipes suspensos no app Windows
 
-No aplicativo Windows 0.1.4, Clipes está bloqueado como opção em desenvolvimento.
+No aplicativo Windows 0.1.5, Clipes está bloqueado como opção em desenvolvimento.
 Não há replay, gravação automática ou atalho de clipes; dados antigos são preservados.
 Configurações, permissões lembradas e login persistente estão descritos em
 [WINDOWS_APP.md](WINDOWS_APP.md). A descrição abaixo se refere ao recurso do site.
@@ -200,7 +200,7 @@ e permissões precisam de conferência no dispositivo final.
 ## Atividade do app Windows
 
 O backend aceita atividade apenas de uma conexão autenticada e publica nome e
-início nas listas de presença. O app 0.1.4 tem detecção opcional de jogos conhecidos
+início nas listas de presença. O app 0.1.5 tem detecção opcional de jogos conhecidos
 e da Steam, com seleção manual para outros aplicativos. Não recebe processos,
 caminhos ou títulos de janelas nem mantém histórico. Atividade offline ou sem
 renovação expira; ocultar envia uma limpeza imediata. `/health` informa

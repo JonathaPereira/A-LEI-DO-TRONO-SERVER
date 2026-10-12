@@ -366,13 +366,17 @@ async function playSound(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);
   if(!ws.account||ws.account.expiresAt<=Date.now()){send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Entre em uma conta para usar os efeitos sonoros.'});return;}
   if(!player?.voiceJoined){send(ws,{type:'error',code:'VOICE_REQUIRED',message:'Entre na chamada para tocar um efeito.'});return;}
-  if(ws.soundPending||Date.now()<(room.soundUntil||0)){send(ws,{type:'error',code:'SOUND_RATE',message:'Aguarde o efeito atual terminar.'});return;}
+  const now=Date.now(),blocked=()=>Date.now()<(room.soundUntil||0)&&room.soundFileId!==message.fileId;
+  if(ws.soundPending||now-(ws.lastSoundAt||0)<150){send(ws,{type:'error',code:'SOUND_RATE',message:'Aguarde um instante antes de tocar novamente.'});return;}
+  if(blocked()){send(ws,{type:'error',code:'SOUND_RATE',message:'Aguarde o efeito atual terminar para trocar de áudio.'});return;}
+  ws.lastSoundAt=now;
   ws.soundPending=true;
   try{
     const file=await fileStorage.sound(message.fileId);
     if(ws.roomId!==room.id||room.players.get(player.id)!==player||!player.voiceJoined||ws.account?.expiresAt<=Date.now())return;
-    if(Date.now()<(room.soundUntil||0))throw Object.assign(Error('Aguarde o efeito atual terminar.'),{code:'SOUND_RATE'});
+    if(blocked())throw Object.assign(Error('Aguarde o efeito atual terminar para trocar de áudio.'),{code:'SOUND_RATE'});
     room.soundUntil=Date.now()+Math.max(3000,file.durationMs);
+    room.soundFileId=file.id;
     const event={type:'soundboard-play',id:crypto.randomUUID(),roomId:room.id,file,playerId:player.id,name:player.name,at:Date.now()};
     for(const p of room.players.values())if(p.voiceJoined)send(p.ws,event);
   }catch(e){send(ws,{type:'error',code:e.code||'SOUND_UNAVAILABLE',message:e.status||e.code==='SOUND_RATE'?e.message:'Efeito sonoro indisponível.'});}finally{ws.soundPending=false;}
@@ -866,14 +870,14 @@ const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(
 fileStorage.install(app);
 communityManagement.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}

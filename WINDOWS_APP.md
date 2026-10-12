@@ -1,10 +1,10 @@
-# M&N · A Lei do Trono no Windows — 0.1.4
+# M&N · A Lei do Trono no Windows — 0.1.5
 
-O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Atualize também o backend para a presença de jogos; não há SQL novo.
+O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Atualize também o backend para reiniciar efeitos com cliques repetidos; não há SQL novo.
 
 ## Instalar e atualizar
 
-1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída desta versão. O repositório privado exige login no GitHub. Extraia o ZIP e instale `MN-Trono-0.1.4-Windows.exe` em uma instalação nova.
+1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída desta versão. O repositório privado exige login no GitHub. Extraia o ZIP e instale `MN-Trono-0.1.5-Windows.exe` em uma instalação nova.
 2. Depois de publicar o pacote completo do site, o login oferece **Baixe a versão desktop**. Quem já usa 0.1.1 ou posterior recebe a atualização internamente; quem ainda usa 0.1.0 precisa instalar uma versão atual uma vez para habilitar o atualizador. Preserve os dados do aplicativo.
 3. Entre com a mesma conta do site. **Lembre de mim**, marcado inicialmente, restaura a sessão ao reabrir o app. Desmarcar ou sair da conta remove a sessão persistida. Sessões e preferências do navegador não são importadas automaticamente.
 
@@ -24,9 +24,11 @@ Em cada perfil da chamada, **Exibição** permite colocar câmera ou transmissã
 
 As transmissões na área principal se ajustam à altura disponível, com a imagem inteira e sem exigir rolagem vertical. Várias streams se distribuem em linhas e colunas; tela cheia, maximização, troca de tela e controles que somem por inatividade continuam disponíveis.
 
-Os perfis são compactos, com miniatura de câmera/tela e avatar visível. **Expandir perfil** abre detalhes, volume e opções de mídia num painel que não desloca a stream. A bolinha verde fica fora do avatar e indica presença; falar acende uma borda fina animada. Modo leve e redução de movimento usam uma borda estática.
+Os perfis têm largura limitada a 288 px e uma linha de 68 px, com avatar visível, nome, estado da voz e prévia de mídia de 80 × 46 px. Sem transmissão, permanecem agrupados, sem se esticar pela sala. Em monitores verticais até 1200 px de largura, os canais se recolhem para dar espaço à chamada. **Expandir perfil** abre detalhes, volume e opções de mídia num painel que não desloca a stream. A bolinha verde fica fora do avatar e indica presença; falar acende uma borda fina animada. Modo leve e redução de movimento usam uma borda estática.
 
 A mão do jogo fica acima da barra inferior. As cartas se ajustam à altura e ao número de cartas para caber na largura disponível. A janela de comunicação começa recolhida na partida e pode ser aberta em **Configurações → Jogo → Comunicação**. **Jogo** agrupa Partida e velocidade, Regras e histórico, e Comunicação/gravação manual. Ordenar e Influência permanecem junto à mão. A versão do app fica no rodapé esquerdo e mantém a verificação de atualização por clique.
+
+Os efeitos usam miniaturas de 20 px e cards menores. Clicar de novo no mesmo efeito reinicia o áudio desde o começo para todos os participantes da sala; as prévias continuam locais. Não há repetição automática. O servidor limita disparos a um a cada 150 ms por usuário e aguarda o efeito terminar para trocar por outro áudio.
 
 ## Atividade de jogos
 
