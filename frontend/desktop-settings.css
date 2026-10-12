@@ -19,7 +19,7 @@ body.desktop-app #desktopSettingsDialog #voiceSettingsPanel{position:static!impo
 .desktop-app #desktopCallDock .call-action{min-height:48px;font-size:11px!important;min-width:68px!important;padding:8px!important}.desktop-app .desktop-call-info strong{font-size:14px}.desktop-app #desktopTopBar button{font-size:12px!important}
 .desktop-app .community-call-notices{top:calc(var(--desktop-top) + 12px)!important;right:auto!important;left:calc(var(--desktop-rail) + 12px)!important;max-width:min(320px,calc(100vw - var(--desktop-rail) - 24px))}
 @media(max-width:1100px){.desktop-app #desktopCallDock .call-action{min-width:56px!important;font-size:10px!important}.desktop-app #desktopRail{gap:5px}.desktop-app #desktopTopBar{padding-inline:12px}.desktop-app .portal-header{padding-inline:20px}.desktop-app .portal-choice-content{padding:28px}}
-@media(max-width:900px){
+@media(max-width:900px), (max-aspect-ratio:3/4) and (max-width:1200px){
  body.desktop-app{--desktop-rail:64px;--desktop-dock:82px;--sidebar:0px!important;--layout-sidebar-width:0px!important}
  .desktop-app #desktopRail{padding-inline:5px}.desktop-app #desktopRail button{font-size:9px;padding:10px 2px}.desktop-app .desktop-brand{font-size:18px}
  .desktop-app #desktopChannelsToggle{display:inline-flex;align-items:center}.desktop-app:not([data-desktop-view=community]) #desktopChannelsToggle{display:none}

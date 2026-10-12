@@ -1,19 +1,20 @@
 'use strict';
 window.TronoSoundboard=(()=>{
   const $=id=>document.getElementById(id),storage=window.TronoStorage||localStorage;
-  let sounds=[],volume=70,player=null,localPreview=false,generation=0,uploadController=null,previewUrl=null;
+  let sounds=[],volume=70,player=null,playerFileId=null,localPreview=false,generation=0,uploadController=null,previewUrl=null;
   let clip=null,trimStart=0,trimEnd=0,decodeVersion=0,refreshVersion=0,loading=false,returnFocus=null;
   const volumeKey=()=> 'mnSoundVolume:'+(window.TronoAuth.user?.id||'guest');
   const notice=text=>{$('soundboardMessage').textContent=text;};
   function stop(){
     generation++;
     if(player){player.pause();player.removeAttribute('src');player.load();player=null;}
+    playerFileId=null;
     if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
   }
   function controls(){
     const canPlay=!!window.TronoAuth.user&&window.TronoSocial.voiceJoined;
     for(const button of $('soundboardList').querySelectorAll('[data-play-sound]'))button.disabled=!canPlay;
-    $('soundboardCallHint').textContent=canPlay?'Toque uma miniatura para enviar à chamada.':'Entre na voz para enviar efeitos. As prévias tocam só para você.';
+    $('soundboardCallHint').textContent=canPlay?'Clique para tocar. Clique novamente para reiniciar na chamada.':'Entre na voz para enviar efeitos. As prévias tocam só para você.';
     $('soundboardVolume').value=volume;$('soundboardVolumeValue').textContent=volume+'%';
     $('soundUpload').disabled=loading||!!uploadController||!clip;
     $('soundTrimPreview').disabled=loading||!!uploadController||!clip;
@@ -21,11 +22,17 @@ window.TronoSoundboard=(()=>{
     for(const el of $('soundTrimEditor').querySelectorAll('input'))el.disabled=!!uploadController;
   }
   async function playFile(file,{local=false}={}){
+    if(player&&playerFileId===file.id&&localPreview===local){
+      const version=++generation;
+      try{player.pause();player.currentTime=0;player.volume=window.TronoSocial.deafened&&!local?0:volume/100;await player.play();}
+      catch(e){if(version===generation)notice(e.message);}
+      return;
+    }
     stop();const version=generation;
     try{
       const link=await window.TronoFiles.url(file.id);
       if(version!==generation||(!local&&!window.TronoSocial.voiceJoined))return;
-      localPreview=local;player=new Audio(link);player.volume=window.TronoSocial.deafened&&!local?0:volume/100;
+      localPreview=local;playerFileId=file.id;player=new Audio(link);player.volume=window.TronoSocial.deafened&&!local?0:volume/100;
       await player.play();if(local)notice('Prévia tocando somente para você.');
     }catch(e){if(version===generation)notice(e.name==='NotAllowedError'?'Clique em Ouvir para permitir o áudio neste navegador.':e.message);}
   }
@@ -168,7 +175,7 @@ window.TronoSoundboard=(()=>{
     window.TronoNetwork.onMessage(message=>{
       if(message.type==='soundboard-play'&&message.roomId===window.TronoNetwork.currentRoom&&window.TronoSocial.voiceJoined)void playFile(message.file);
       if(message.type==='error'&&['SOUND_RATE','SOUND_UNAVAILABLE','STORAGE_UNCONFIGURED'].includes(message.code))notice(message.message);
-      if(message.type==='attachment-deleted'){sounds=sounds.filter(s=>s.id!==message.id);render();}
+      if(message.type==='attachment-deleted'){if(playerFileId===message.id)stop();sounds=sounds.filter(s=>s.id!==message.id);render();}
       if(message.type==='channel-deleted'||message.type==='connection'&&!message.connected)stop();
     });readVolume();
   }
