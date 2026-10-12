@@ -31,8 +31,9 @@ inline int activityWatch(DWORD excluded){
         std::cout<<"{\"type\":\"apps\",\"apps\":[";
         if(Process32FirstW(snapshot,&entry))do{
             if(entry.th32ProcessID==excluded||!visible.count(entry.th32ProcessID)||count>=128)continue;
-            HANDLE process=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,FALSE,entry.th32ProcessID);if(!process)continue;
-            std::wstring path(32768,0);DWORD size=static_cast<DWORD>(path.size());BOOL ok=QueryFullProcessImageNameW(process,0,path.data(),&size);CloseHandle(process);if(!ok||size>16384)continue;path.resize(size);
+            HANDLE process=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,FALSE,entry.th32ProcessID);
+            std::wstring path(32768,0);DWORD size=static_cast<DWORD>(path.size());BOOL ok=process?QueryFullProcessImageNameW(process,0,path.data(),&size):FALSE;if(process)CloseHandle(process);
+            if(ok&&size<=16384)path.resize(size);else path=L"process:"+std::wstring(entry.szExeFile);
             if(!products.count(path)){if(products.size()>=256)products.clear();products[path]=activityProduct(path);}
             if(!first)std::cout<<",";first=false;count++;
             std::cout<<"{\"pid\":"<<entry.th32ProcessID<<",\"exe\":"<<activityJson(entry.szExeFile)<<",\"path\":"<<activityJson(path)<<",\"product\":"<<activityJson(products[path])<<",\"foreground\":"<<(entry.th32ProcessID==foreground?"true":"false")<<"}";
