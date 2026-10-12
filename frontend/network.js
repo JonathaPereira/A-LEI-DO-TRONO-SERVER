@@ -6,7 +6,7 @@ window.TronoNetwork = (()=>{
   const isLocal=['localhost','127.0.0.1','::1'].includes(location.hostname);
   const BACKEND_HTTP=normalizeHttp(window.TRONO_BACKEND_URL||(isLocal?`http://${location.hostname}:10000`:DEFAULT_BACKEND_HTTP));
   const BACKEND_WS=`${BACKEND_HTTP.replace(/^http:/,'ws:').replace(/^https:/,'wss:')}/ws`;
-  let socket=null,connected=false,clientId=null,currentRoom=null,primaryRoom=null,independentTextChannels=false,connectPromise=null,authenticatedToken=null;
+  let socket=null,connected=false,clientId=null,currentRoom=null,primaryRoom=null,independentTextChannels=false,gameActivitySupported=false,connectPromise=null,authenticatedToken=null;
   let authenticatedGuest=null;
   const listeners=new Set(),pendingSfu=new Map(),pendingNameChecks=new Map(),pendingAuth=new Map(),pendingGuest=new Map();
   const emit=msg=>listeners.forEach(fn=>{try{fn(msg);}catch(err){console.warn('[TronoNetwork]',err);}});
@@ -31,7 +31,7 @@ window.TronoNetwork = (()=>{
           try{
             const msg=JSON.parse(e.data);
             if(msg.type==='welcome'){
-              clientId=msg.clientId;independentTextChannels=!!msg.features?.independentTextChannels;
+              clientId=msg.clientId;independentTextChannels=!!msg.features?.independentTextChannels;gameActivitySupported=!!msg.features?.gameActivity;
               if(msg.serverVersion&&msg.serverVersion!==CLIENT_VERSION)emit({type:'version-mismatch',clientVersion:CLIENT_VERSION,serverVersion:msg.serverVersion});
             }
             if(msg.type==='sfu-response'&&msg.requestId&&pendingSfu.has(msg.requestId)){
@@ -53,7 +53,7 @@ window.TronoNetwork = (()=>{
             emit(msg);
           }catch(err){console.warn('[TronoNetwork] mensagem inválida',err);}
         };
-        socket.onclose=e=>{clearTimeout(timer);if(socket!==connection){finish(false);return;}connected=false;authenticatedToken=null;authenticatedGuest=null;socket=null;connectPromise=null;rejectPending();emit({type:'connection',connected:false,code:e.code});finish(false);};
+        socket.onclose=e=>{clearTimeout(timer);if(socket!==connection){finish(false);return;}connected=false;gameActivitySupported=false;authenticatedToken=null;authenticatedGuest=null;socket=null;connectPromise=null;rejectPending();emit({type:'connection',connected:false,code:e.code});finish(false);};
         socket.onerror=()=>{};
       }catch{connectPromise=null;finish(false);}
     }).finally(()=>{if(!connected)connectPromise=null;});
@@ -83,7 +83,7 @@ window.TronoNetwork = (()=>{
   }
   function authenticateGuest(name,ticket){const task=authChain.catch(()=>{}).then(async()=>{if(!connected)await connect();if(!connected)throw new Error('Servidor indisponível.');if(authenticatedGuest&&authenticatedGuest.ticket===ticket&&authenticatedGuest.nickname===name)return authenticatedGuest;const requestId=makeId();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingGuest.delete(requestId);reject(new Error('Tempo limite ao entrar como convidado.'));},15000);pendingGuest.set(requestId,{resolve,reject,timer});send('guest-authenticate',{requestId,name,ticket});});});authChain=task;return task;}
   async function ensureGameIdentity(name){if(window.TronoAuth&&!window.TronoAuth.user){return window.TronoAuth.ensureGuest(name);}return ensureAuthenticated();}
-  function disconnect(){const previous=socket;socket=null;connected=false;authenticatedToken=null;authenticatedGuest=null;currentRoom=null;primaryRoom=null;connectPromise=null;rejectPending();previous?.close(1000,'Saída da conta');emit({type:'connection',connected:false});}
+  function disconnect(){const previous=socket;socket=null;connected=false;gameActivitySupported=false;authenticatedToken=null;authenticatedGuest=null;currentRoom=null;primaryRoom=null;connectPromise=null;rejectPending();previous?.close(1000,'Saída da conta');emit({type:'connection',connected:false});}
   function requestSfu(action,payload={},timeoutMs=18000){
     if(!connected||socket?.readyState!==WebSocket.OPEN)return Promise.reject(Object.assign(new Error('Servidor offline.'),{code:'NETWORK_OFFLINE'}));
     const requestId=makeId();
@@ -112,7 +112,7 @@ window.TronoNetwork = (()=>{
   }
   function leaveRoom(){if(currentRoom||primaryRoom)send('leave-room');currentRoom=null;primaryRoom=null;}
   const api={
-    connect,authenticate,authenticateGuest,disconnect,joinRoom,joinTextChannel,leaveRoom,joinChatOnly:name=>joinRoom('chat-livre',name),joinChatChannel:(id,name)=>joinRoom(id,name),requestChatChannels:()=>send('list-chat-channels'),requestPresence:()=>send('presence-request'),
+    connect,authenticate,authenticateGuest,disconnect,joinRoom,joinTextChannel,leaveRoom,joinChatOnly:name=>joinRoom('chat-livre',name),joinChatChannel:(id,name)=>joinRoom(id,name),requestChatChannels:()=>send('list-chat-channels'),requestPresence:()=>send('presence-request'),setActivity:activity=>gameActivitySupported&&send('activity-state',{activity}),get gameActivitySupported(){return gameActivitySupported;},
     requestRooms:()=>send('list-rooms'),setReady:r=>send('ready',{ready:!!r}),startRoom:()=>send('start-room'),
     gameAction:(action,payload={})=>send('game-action',{action,payload}),requestState:()=>send('state-request'),ping:()=>send('ping'),
     requestChatHistory:before=>send('chat-history-request',{roomId:currentRoom,before}),

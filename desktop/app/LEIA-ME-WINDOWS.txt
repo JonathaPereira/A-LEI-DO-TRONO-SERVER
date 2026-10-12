@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.3
+M&N · A Lei do Trono — Windows 0.1.4
 
-1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.3-Windows.exe.
+1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.4-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente após publicar
    o pacote completo do site. Quem usa 0.1.0 instala uma versão atual uma vez.
    Preserve os dados do aplicativo.
@@ -8,7 +8,7 @@ M&N · A Lei do Trono — Windows 0.1.3
    A sessão é criptografada pelo Windows; sua senha não fica salva.
    Desmarcar ou Sair da conta remove a sessão lembrada.
 3. Configurações ficam na engrenagem inferior: Minha conta, Aparência, Áudio,
-   Vídeo, Captura de tela, Conexão e Privacidade. A música começa desativada.
+   Vídeo, Captura de tela, Jogo, Atividade, Conexão e Privacidade. A música começa desativada.
    Supressão leve/nativa é o padrão; RNNoise avançado é opcional.
 4. Clipes está bloqueado: opção em desenvolvimento. Replay, gravação automática
    e atalhos de clipes estão suspensos. Clipes antigos permanecem no perfil local.
@@ -29,4 +29,15 @@ M&N · A Lei do Trono — Windows 0.1.3
 O canal precisa estar publicado em a-lei-do-trono.surge.sh/downloads/.
 O instalador ainda não tem assinatura digital. Use o projeto/domínio oficial.
 Tema, permissões e sessão lembrada são individuais, neste computador.
-Backend e SQL não precisam de alteração nesta versão.
+O responsável deve atualizar o backend para habilitar a atividade. Não há SQL novo.
+
+9. As streams cabem na área disponível. Os perfis são menores: Expandir perfil
+   abre detalhes e volume sem empurrar a transmissão. Bolinha verde indica online;
+   uma borda fina indica fala. Modo leve/redução de movimento deixam a borda estática.
+10. A mão do jogo fica acima dos controles e ajusta as cartas ao espaço disponível.
+    Configurações > Jogo agrupa opções da partida, regras/histórico e comunicação.
+    A versão fica no rodapé esquerdo e verifica atualizações ao clicar.
+11. Configurações > Atividade permite mostrar o jogo aberto. Começa desligado.
+    Detecta jogos conhecidos/Steam; selecione outro aplicativo se necessário.
+    Exibe só o nome: nunca títulos de janelas ou caminhos. O site mostra a atividade
+    recebida do app, mas não detecta programas do Windows. Desligar limpa a atividade.

@@ -1,10 +1,10 @@
-# M&N · A Lei do Trono no Windows — 0.1.3
+# M&N · A Lei do Trono no Windows — 0.1.4
 
-O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Backend e SQL não mudam.
+O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Atualize também o backend para a presença de jogos; não há SQL novo.
 
 ## Instalar e atualizar
 
-1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída desta versão. O repositório privado exige login no GitHub. Extraia o ZIP e instale `MN-Trono-0.1.3-Windows.exe` em uma instalação nova.
+1. No workflow **Windows full app**, baixe **MN-Trono-Windows-x64** da execução concluída desta versão. O repositório privado exige login no GitHub. Extraia o ZIP e instale `MN-Trono-0.1.4-Windows.exe` em uma instalação nova.
 2. Depois de publicar o pacote completo do site, o login oferece **Baixe a versão desktop**. Quem já usa 0.1.1 ou posterior recebe a atualização internamente; quem ainda usa 0.1.0 precisa instalar uma versão atual uma vez para habilitar o atualizador. Preserve os dados do aplicativo.
 3. Entre com a mesma conta do site. **Lembre de mim**, marcado inicialmente, restaura a sessão ao reabrir o app. Desmarcar ou sair da conta remove a sessão persistida. Sessões e preferências do navegador não são importadas automaticamente.
 
@@ -14,11 +14,27 @@ O instalador ainda não tem assinatura digital; o Windows pode mostrar editor de
 
 A coluna esquerda contém Início, Jogar, Comunidade, Efeitos, Clipes bloqueados e Tela cheia. F11 também alterna tela cheia. **Pessoas** e **Telemetria** ficam no topo e podem ser minimizados. Em janelas estreitas ou verticais, **Canais** abre a lista em uma lateral recolhível. Os controles da chamada permanecem acessíveis; o mínimo da janela é 480 × 520.
 
-Todas as configurações ficam na engrenagem inferior, com os tópicos **Minha conta, Aparência, Áudio, Vídeo, Captura de tela, Conexão e Privacidade**. Perfil, arquivos, tema, redimensionamento das colunas, música, dispositivos, supressão e qualidade da transmissão usam os mesmos controles e preferências existentes. A música começa desativada em uma instalação nova; uma escolha anterior explícita é preservada.
+Todas as configurações ficam na engrenagem inferior, com os tópicos **Minha conta, Aparência, Áudio, Vídeo, Captura de tela, Jogo, Atividade, Conexão e Privacidade**. Perfil, arquivos, tema, redimensionamento das colunas, música, dispositivos, supressão e qualidade da transmissão usam os mesmos controles e preferências existentes. A música começa desativada em uma instalação nova; uma escolha anterior explícita é preservada.
 
 Entrar na comunidade ou clicar em uma sala de voz conecta à chamada automaticamente. Selecionar canais de texto permite escrever sem mudar ou desligar a sala de voz ativa. **Silenciar voz** bloqueia microfone e áudio recebido; voltar a ouvir restaura o estado anterior do microfone.
 
 Em cada perfil da chamada, **Exibição** permite colocar câmera ou transmissão naquele quadrado, ou devolver a mídia ao espaço ampliado. O botão de minimizar na câmera também alterna essa posição. São escolhas individuais e não encerram a mídia.
+
+## Streams, perfis e jogo
+
+As transmissões na área principal se ajustam à altura disponível, com a imagem inteira e sem exigir rolagem vertical. Várias streams se distribuem em linhas e colunas; tela cheia, maximização, troca de tela e controles que somem por inatividade continuam disponíveis.
+
+Os perfis são compactos, com miniatura de câmera/tela e avatar visível. **Expandir perfil** abre detalhes, volume e opções de mídia num painel que não desloca a stream. A bolinha verde fica fora do avatar e indica presença; falar acende uma borda fina animada. Modo leve e redução de movimento usam uma borda estática.
+
+A mão do jogo fica acima da barra inferior. As cartas se ajustam à altura e ao número de cartas para caber na largura disponível. A janela de comunicação começa recolhida na partida e pode ser aberta em **Configurações → Jogo → Comunicação**. **Jogo** agrupa Partida e velocidade, Regras e histórico, e Comunicação/gravação manual. Ordenar e Influência permanecem junto à mão. A versão do app fica no rodapé esquerdo e mantém a verificação de atualização por clique.
+
+## Atividade de jogos
+
+Em **Configurações → Atividade**, ative **Mostrar o jogo que estou jogando**. A opção começa desligada e é individual. O app identifica jogos conhecidos, jogos em pastas da Steam e o próprio A Lei do Trono; jogos não reconhecidos podem ser selecionados em **Aplicativo**, com um nome personalizado. A opção manual identifica o executável; aplicativos que usam o mesmo executável podem se agrupar. O site consegue mostrar a atividade recebida do app; o navegador não detecta outros programas do Windows.
+
+A detecção utiliza um helper nativo persistente enquanto a opção está ativa, consulta aproximadamente a cada 15 segundos e reaproveita metadados. Não inicia gravação, captura de tela ou RNNoise. Desativar, sair da conta ou sair do app interrompe o helper. Se o app fica sem conexão, a detecção continua apenas localmente e pode retomar a publicação ao reconectar.
+
+Apenas o nome da atividade é enviado aos membros autenticados. Títulos das janelas, caminhos e IDs de processos não são publicados. Fechar o jogo limpa a atividade na próxima consulta; desligar a opção limpa imediatamente. O backend vincula o relato à conexão autenticada e remove atividade offline ou sem atualização recente. Não grava histórico de aplicativos nem exige migração SQL. Nomes são relatados pelo cliente e podem ser personalizados; não constituem uma verificação externa do jogo.
 
 ## Áudio e permissões
 
@@ -63,14 +79,14 @@ O canal depende da publicação do pacote completo **MN-Trono-Site-com-Desktop**
 surge . a-lei-do-trono.surge.sh
 ```
 
-Dar merge no GitHub ou publicar só o frontend do código-fonte não atualiza o app instalado. O manifesto usa SHA-512 do EXE compilado; HTTPS e verificação de integridade não substituem assinatura digital. Falhas do atualizador não impedem usar a versão instalada.
+Faça merge e aguarde o deploy do backend no Render. `/health` deve apresentar `presence.gameActivity: true`. Depois publique o pacote completo do site. Dar merge ou publicar só o código-fonte do frontend não atualiza o app instalado. O manifesto usa SHA-512 do EXE compilado; HTTPS e verificação de integridade não substituem assinatura digital. Falhas do atualizador não impedem usar a versão instalada.
 
 ## Desenvolvimento e validação
 
 ```bash
 # Raiz, Node 24
 npm ci
-node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-browser.js tests/desktop-download.js
+node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/activity-presence.js tests/desktop-browser.js tests/desktop-download.js
 npm run test:frontend
 npm run test:clips
 

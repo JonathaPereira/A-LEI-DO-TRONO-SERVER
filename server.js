@@ -873,7 +873,7 @@ app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
@@ -884,7 +884,7 @@ wss.on('connection',(ws)=>{
         const identity=community.guest(ws,message);
         if(ws.guest?.id!==identity.id)leaveRoom(ws,'guest-change');
         for(const other of wss.clients)if(other!==ws&&other.guest?.id===identity.id){leaveRoom(other,'session-reconnected');other.guest=null;other.close(4002,'Convidado reconectado');}
-        ws.account=null;ws.guest=identity;community.note(ws);
+        ws.account=null;ws.activity=null;ws.guest=identity;community.note(ws);
         send(ws,{type:'guest-result',requestId:message.requestId,ok:true,guest:{id:identity.id,nickname:identity.nickname,ticket:identity.ticket,expiresAt:identity.expiresAt}});
         community.broadcast();
       }catch(err){send(ws,{type:'guest-result',requestId:message.requestId,ok:false,error:{code:err.code||'GUEST_FAILED',message:err.message}});}
@@ -898,7 +898,7 @@ wss.on('connection',(ws)=>{
           const account=await accountAuth.identity(message.access_token);if(ws.readyState!==WebSocket.OPEN)return;
           if(ws.guest||(priorAccount&&priorAccount.id!==account.id))leaveRoom(ws,'account-change');
           if(!priorAccount&&account.sessionId)for(const other of wss.clients)if(other!==ws&&other.account?.id===account.id&&other.account.sessionId===account.sessionId){leaveRoom(other,'session-reconnected');other.account=null;other.close(4002,'Sessão reconectada em outra aba');}
-          ws.guest=null;ws.account=account;ws.authAttempts=0;
+          if(priorAccount?.id!==account.id)ws.activity=null;ws.guest=null;ws.account=account;ws.authAttempts=0;
           send(ws,{type:'auth-result',requestId:message.requestId,ok:true,user:{id:account.id,nickname:account.nickname,role:account.role,permissions:permissions(account.role)},expiresAt:account.expiresAt});
           community.note(ws);community.broadcast();void community.refreshDirectory();send(ws,{type:'chat-channels',channels:safeChatChannels(true)});
           void communityManagement.refreshFor(message.access_token).catch(()=>{});
@@ -921,6 +921,7 @@ wss.on('connection',(ws)=>{
       case 'list-rooms':send(ws,{type:'rooms',rooms:safeRooms()});break;
       case 'list-chat-channels':send(ws,{type:'chat-channels',channels:safeChatChannels(!!ws.account&&ws.account.expiresAt>Date.now())});break;
       case 'presence-request':send(ws,community.snapshot(ws));break;
+      case 'activity-state':{const result=community.updateActivity(ws,message.activity);if(!result.ok)send(ws,{type:'error',code:result.code,message:'Não foi possível atualizar a atividade.'});break;}
       case 'check-name':{const result=accountNameAvailability(ws,message.name);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
       case 'join-room':joinRoom(ws,message.roomId,message.name);break;
       case 'join-text-channel':joinTextRoom(ws,message.roomId,message.name);break;

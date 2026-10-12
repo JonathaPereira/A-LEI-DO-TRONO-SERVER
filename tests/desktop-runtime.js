@@ -1,6 +1,6 @@
 'use strict';
 // Real Electron/Windows smoke test; browser flow coverage is in desktop-browser.js.
-const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync}=require('node:child_process');
+const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{spawnSync,spawn}=require('node:child_process');
 const {_electron,expect}=require('@playwright/test');
 const {startHTTPS}=require('./desktop-https-fixture');
 const {killTestApp,closeTestApp}=require('./desktop-test-close');
@@ -13,7 +13,7 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     app.process().stderr.on('data',chunk=>{for(const line of chunk.toString().split('\n'))if(line.startsWith('[desktop]'))console.log(line);});
     let page=await app.firstWindow();await expect(page.locator('#desktopRail')).toBeVisible({timeout:30000});assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
     await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authCloseBtn').click();
-    assert.equal(await page.evaluate(()=>typeof require),'undefined');assert.equal(await page.evaluate(()=>typeof process),'undefined');assert.equal(await page.evaluate(()=>window.TronoDesktop.version),'0.1.3');
+    assert.equal(await page.evaluate(()=>typeof require),'undefined');assert.equal(await page.evaluate(()=>typeof process),'undefined');assert.equal(await page.evaluate(()=>window.TronoDesktop.version),'0.1.4');
     phase='suspended replay';assert.equal(await page.evaluate(()=>typeof window.TronoClips),'undefined');assert.deepEqual(await page.evaluate(()=>window.TronoDesktop.prepareReplay()),{active:false,suspended:true});assert.equal(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Shift+X')),false);
     phase='native fullscreen';await page.locator('#desktopFullscreen').click();await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isFullScreen())).toBe(true);await page.locator('#desktopFullscreen').click();await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isFullScreen())).toBe(false);
     phase='navigation';await expect(page.locator('[data-desktop-route="clips"]')).toBeDisabled();await page.locator('#voiceSettingsBtn').click();await expect(page.locator('#desktopSettingsDialog')).toBeVisible();await page.locator('[data-settings-tab="privacy"]').click();await expect(page.locator('#desktopPermissionsStatus')).toBeVisible();await page.locator('#voiceSettingsClose').click();await expect(page.locator('#portalScreen')).toBeVisible();
@@ -26,6 +26,15 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
       const child=new BrowserWindow({show:false,webPreferences:{session:BrowserWindow.getAllWindows()[0].webContents.session,preload,sandbox:true,contextIsolation:true}});
       try{await child.loadURL('https://a-lei-do-trono.surge.sh/desktop-platform.css');return await child.webContents.executeJavaScript("window.TronoDesktop.chooseFolder().then(()=>false,()=>true)");}finally{child.destroy();}
     },path.resolve(__dirname,'../desktop/app/preload.cjs'));assert(denied);
+    phase='native Windows activity';assert.equal((await page.evaluate(()=>window.TronoDesktop.getActivityState())).enabled,false);
+    if(process.platform==='win32'){
+      const executable=path.resolve(__dirname,'../artifacts/native-audio/Release/MN-Application-Audio.exe'),windowProcess=spawn(executable,['--test-activity-window'],{windowsHide:true,stdio:['ignore','pipe','pipe']});let fixtureErrors='';windowProcess.stderr.on('data',chunk=>{fixtureErrors=(fixtureErrors+chunk.toString()).slice(-2048);});
+      await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Activity window did not open: '+fixtureErrors)),10000);windowProcess.once('error',error=>{clearTimeout(timer);reject(error);});windowProcess.stdout.once('data',()=>{clearTimeout(timer);resolve();});windowProcess.once('exit',code=>{clearTimeout(timer);reject(Error('Activity window exited: '+code+' '+fixtureErrors));});});
+      try{const id=require('../desktop/app/activity.cjs').idFor(executable);await expect.poll(async()=>{await page.evaluate(()=>window.TronoDesktop.configureActivity({enabled:true}));return page.evaluate(id=>window.TronoDesktop.getActivityState().then(state=>state.apps.some(app=>app.id===id)),id);},{timeout:25000,message:'Native activity must detect the visible fixture executable'}).toBe(true);
+        const snapshot=await page.evaluate(()=>window.TronoDesktop.getActivityState());assert(!JSON.stringify(snapshot).includes('Private caption'));assert(snapshot.apps.every(row=>!Object.hasOwn(row,'path')&&!Object.hasOwn(row,'pid')));
+        await page.evaluate(id=>window.TronoDesktop.configureActivity({enabled:true,preferredAppId:id,name:'Fixture Game'}),id);await expect.poll(()=>page.evaluate(()=>window.TronoDesktop.getActivityState().then(state=>state.game?.name))).toBe('Fixture Game');await page.evaluate(()=>window.TronoDesktop.configureActivity({enabled:false}));assert.equal((await page.evaluate(()=>window.TronoDesktop.getActivityState())).game,null);
+      }catch(error){console.error('Activity diagnostic',JSON.stringify({state:await page.evaluate(()=>window.TronoDesktop.getActivityState()),fixturePid:windowProcess.pid,fixtureExit:windowProcess.exitCode,fixtureErrors}));throw error;}finally{windowProcess.kill();await page.evaluate(()=>window.TronoDesktop.configureActivity({enabled:false}));}
+    }
     phase='native file export';await app.evaluate(({dialog},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});dialog.showSaveDialog=async()=>({canceled:true});dialog.showMessageBox=async()=>({response:0});},directory);
     const folder=await page.evaluate(()=>window.TronoDesktop.chooseFolder());assert.equal(folder.native,true);
     assert.deepEqual(await page.evaluate(()=>window.TronoDesktop.saveClip({filename:'Trono_Clipe_cancel.webm',bytes:Uint8Array.from([0x1a,0x45,0xdf,0xa3,4]).buffer})),{canceled:true});

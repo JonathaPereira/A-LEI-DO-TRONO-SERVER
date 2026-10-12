@@ -45,6 +45,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const dock=document.createElement('footer');dock.id='desktopCallDock';dock.setAttribute('aria-label','Controles da chamada');
   const info=document.createElement('div');info.className='desktop-call-info';info.innerHTML='<small>SEU ESPAÇO, SEM INTERRUPÇÕES</small><strong id="desktopCallName">M&N · pronto para conectar</strong><span id="desktopCallStatus"></span>';
   dock.append(info,$('socialPanel').querySelector('.call-toolbar'));body.append(dock,$('voiceSettingsPanel'));
+  $('socialBtn').addEventListener('click',()=>{body.classList.add('game-communication-open');window.TronoSocial.showPanel(true);});$('socialCloseBtn').addEventListener('click',()=>body.classList.remove('game-communication-open'));
   const primary=['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen'];let lastGame='setupScreen',previous='home',clipsOpen=false;
   function setView(view){body.dataset.desktopView=view;for(const b of rail.querySelectorAll('button[data-desktop-route]')){const selected=b.dataset.desktopRoute===view;b.classList.toggle('active',selected);if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}}
   function synchronize(){

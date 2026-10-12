@@ -2,7 +2,10 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.1.3',
+  version:'0.1.4',
+  getActivityState:()=>ipcRenderer.invoke('mn:activity-state'),
+  configureActivity:config=>ipcRenderer.invoke('mn:activity-configure',config),
+  onActivity:fn=>listen('mn:activity',fn),
   clipsSuspended:true,
   readSession:()=>ipcRenderer.invoke('mn:session-read'),
   saveSession:value=>ipcRenderer.invoke('mn:session-save',value),

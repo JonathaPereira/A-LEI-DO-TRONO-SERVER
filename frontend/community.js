@@ -9,6 +9,7 @@ window.TronoCommunity=(()=>{
     const icon=avatar(person),dot=document.createElement('i');dot.className='community-status-dot';icon.appendChild(dot);el.appendChild(icon);
     const copy=document.createElement('div');copy.className='community-person-copy';const name=document.createElement('strong');name.textContent=person.name;copy.appendChild(name);
     const status=document.createElement('small');status.textContent=!person.online?'Offline':person.roomName?`${person.roomName}${person.inVoice?' · na voz':''}`:'Online · no início';copy.appendChild(status);
+    if(person.online&&person.activity?.name){const game=document.createElement('small');game.className='community-game-activity';game.textContent='🎮 Jogando '+person.activity.name;game.title=game.textContent;copy.appendChild(game);}
     if(person.guest){const label=document.createElement('span');label.className='community-guest-tag';label.textContent='Convidado';copy.appendChild(label);}
     else {const badge=document.createElement('span');badge.className='role-badge role-'+(person.role||'member');badge.textContent={creator:'Criador',admin:'Admin',member:'Membro'}[person.role]||'Membro';copy.appendChild(badge);}
     if(window.TronoAuth.user?.permissions?.manageRoles&&!person.guest&&person.role!=='creator'){const edit=document.createElement('button');edit.type='button';edit.className='role-edit-btn';edit.title='Alterar cargo de '+person.name;edit.setAttribute('aria-label',edit.title);edit.textContent='Cargo';edit.onclick=()=>window.TronoCommunityAdmin.editRole(person);el.appendChild(edit);}

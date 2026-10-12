@@ -13,13 +13,23 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
     const id=identity.id;
     members.set(id,{id,name:identity.nickname,guest:!!identity.guest,role:identity.guest?'guest':identity.role||'member',avatar_preset:identity.avatar_preset||'person',avatar_file_id:identity.avatar_file_id||null,lastSeen:Date.now()});
   }
+  function updateActivity(ws,value){
+    if(!validAccount(ws))return {ok:false,code:'AUTH_REQUIRED'};
+    if(value!==null&&(typeof value!=='object'||typeof value.name!=='string'||value.name.length>80||/[\x00-\x1f\x7f]/.test(value.name)))return {ok:false,code:'INVALID_ACTIVITY'};
+    const name=value?.name.trim().normalize('NFKC')||null;if(name&&name.length>80)return {ok:false,code:'INVALID_ACTIVITY'};
+    const now=Date.now(),old=ws.activity;
+    // Reports identify only the authenticated socket, never a supplied user ID.
+    ws.activity=name?{name,startedAt:old?.name===name?old.startedAt:now,seenAt:now}:null;
+    if(old?.name!==ws.activity?.name)broadcast();
+    return {ok:true};
+  }
   function snapshot(ws){
     const full=!!validAccount(ws),online=new Map();
-    for(const client of wss.clients){if(client.readyState!==1)continue;note(client);const id=validAccount(client)?client.account.id:validGuest(client)?client.guest.id:null;if(!id)continue;const primary=rooms.get(client.roomId),room=primary?.players.get(client.clientId)?.voiceJoined?primary:rooms.get(client.textRoomId)||primary,player=room?.players.get(client.clientId);if(!full&&room?.kind!=='game')continue;const old=online.get(id);if(!old||room)online.set(id,{online:true,roomId:room?.id||null,roomName:room?.name||null,roomKind:room?.kind||null,inVoice:!!player?.voiceJoined});}
+    for(const client of wss.clients){if(client.readyState!==1)continue;note(client);const id=validAccount(client)?client.account.id:validGuest(client)?client.guest.id:null;if(!id)continue;const primary=rooms.get(client.roomId),room=primary?.players.get(client.clientId)?.voiceJoined?primary:rooms.get(client.textRoomId)||primary,player=room?.players.get(client.clientId);if(!full&&room?.kind!=='game')continue;const old=online.get(id);if(!old||room)online.set(id,{online:true,roomId:room?.id||null,roomName:room?.name||null,roomKind:room?.kind||null,inVoice:!!player?.voiceJoined,activity:full&&validAccount(client)&&client.activity&&Date.now()-client.activity.seenAt<45000?{name:client.activity.name,startedAt:client.activity.startedAt}:null});}
     const list=[];
     for(const m of members.values()){
       if(!full&&!online.has(m.id))continue;
-      list.push({...m,...(online.get(m.id)||{online:false,roomId:null,roomName:null,roomKind:null,inVoice:false})});
+      list.push({...m,...(online.get(m.id)||{online:false,roomId:null,roomName:null,roomKind:null,inVoice:false,activity:null})});
     }
     list.sort((a,b)=>Number(b.online)-Number(a.online)||a.name.localeCompare(b.name,'pt-BR'));
     return {type:'presence',scope:full?'community':'game',directoryReady:full&&directoryReady,members:list.slice(0,1000)};
@@ -53,6 +63,6 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
   }
   const timer=setInterval(()=>{for(const [key,g]of tickets)if(g.expiresAt<=Date.now()){tickets.delete(key);members.delete(g.id);}void refreshDirectory();broadcast();},30000);timer.unref();
   void refreshDirectory();
-  return {note,snapshot,broadcast,guest,validGuest,nameReserved,refreshDirectory,health:()=>({directoryReady}),stop:()=>clearInterval(timer)};
+  return {note,snapshot,broadcast,updateActivity,guest,validGuest,nameReserved,refreshDirectory,health:()=>({directoryReady,gameActivity:true}),stop:()=>clearInterval(timer)};
 }
 module.exports={createCommunity};
