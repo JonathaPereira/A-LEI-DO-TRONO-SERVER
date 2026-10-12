@@ -23,7 +23,9 @@ inline int activityFixture(){
     const auto instance=GetModuleHandleW(nullptr);WNDCLASSW cls{};cls.lpfnWndProc=DefWindowProcW;cls.hInstance=instance;cls.lpszClassName=L"MNActivityFixture";RegisterClassW(&cls);
     HWND window=CreateWindowW(cls.lpszClassName,L"Private caption must never be shared",WS_OVERLAPPEDWINDOW,30,30,360,160,nullptr,nullptr,instance,nullptr);
     if(!window){std::cerr<<"Could not create activity fixture: "<<GetLastError()<<std::endl;return 1;}
-    ShowWindow(window,SW_SHOW);UpdateWindow(window);SetForegroundWindow(window);std::cerr<<"Fixture pid="<<GetCurrentProcessId()<<" visible="<<IsWindowVisible(window)<<" owned="<<(GetWindow(window,GW_OWNER)!=nullptr)<<std::endl;std::cout<<"ready"<<std::endl;
+    // The helper starts with STARTF_USESHOWWINDOW/SW_HIDE. Windows overrides
+    // the first ShowWindow call; the second explicitly shows this test window.
+    ShowWindow(window,SW_SHOW);ShowWindow(window,SW_SHOW);UpdateWindow(window);SetForegroundWindow(window);std::cerr<<"Fixture pid="<<GetCurrentProcessId()<<" visible="<<IsWindowVisible(window)<<" owned="<<(GetWindow(window,GW_OWNER)!=nullptr)<<std::endl;std::cout<<"ready"<<std::endl;
     MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){TranslateMessage(&msg);DispatchMessageW(&msg);}return 0;
 }
 inline int activityWatch(DWORD excluded){
