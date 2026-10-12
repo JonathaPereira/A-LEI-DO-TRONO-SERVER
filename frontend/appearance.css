@@ -4,6 +4,11 @@
 :root[data-theme=red]{--theme-accent:#f47b85;--theme-bg:#0c0809;--theme-panel:#1b1215;--theme-card:#2b1b20;--theme-text:#fff1f3;--theme-muted:#cbb0b5;--theme-line:#603940;--theme-soft:#42252d}
 :root[data-theme=blue]{--theme-accent:#75bdf2;--theme-bg:#070b10;--theme-panel:#101a26;--theme-card:#18283a;--theme-text:#eef6ff;--theme-muted:#a7bdd3;--theme-line:#345272;--theme-soft:#233b56}
 :root[data-theme=yellow]{--theme-accent:#efd470;--theme-bg:#0c0b07;--theme-panel:#1a180f;--theme-card:#282418;--theme-text:#fff9e5;--theme-muted:#c6bf9e;--theme-line:#5d5335;--theme-soft:#3d3520}
+:root[data-theme=teal]{--theme-accent:#5fddcc;--theme-bg:#081210;--theme-panel:#12221f;--theme-card:#1c3430;--theme-text:#e9fcf6;--theme-muted:#a3c7bd;--theme-line:#31574e;--theme-soft:#23473f;}
+:root[data-theme=orange]{--theme-accent:#ffad72;--theme-bg:#130e0b;--theme-panel:#241a13;--theme-card:#39281c;--theme-text:#fff4e9;--theme-muted:#cebba9;--theme-line:#654a35;--theme-soft:#503725;}
+:root[data-theme=rose]{--theme-accent:#efa3cd;--theme-bg:#130c12;--theme-panel:#221620;--theme-card:#362233;--theme-text:#fff0f9;--theme-muted:#cdb3c8;--theme-line:#5f4058;--theme-soft:#482e41;}
+:root[data-theme=indigo]{--theme-accent:#99acff;--theme-bg:#0b0e19;--theme-panel:#171c30;--theme-card:#232b45;--theme-text:#eff2ff;--theme-muted:#b0bad7;--theme-line:#424e74;--theme-soft:#303c62;}
+:root[data-theme=graphite]{--theme-accent:#c1cad6;--theme-bg:#0c0f13;--theme-panel:#181d24;--theme-card:#252d37;--theme-text:#f0f4f8;--theme-muted:#aab7c7;--theme-line:#414e60;--theme-soft:#313e4e;}
 body{color:var(--theme-text)}
 *{scrollbar-color:var(--theme-line) var(--theme-bg)}
 *::-webkit-scrollbar-track,*::-webkit-scrollbar-corner{background:var(--theme-bg)}

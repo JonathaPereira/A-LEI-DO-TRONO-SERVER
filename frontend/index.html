@@ -15,13 +15,14 @@
   <link rel="stylesheet" href="community.css?v=091sharingclips" />
   <link rel="stylesheet" href="modern.css?v=091sharingclips" />
   <link rel="stylesheet" href="refinements.css?v=091sharingclips" />
-  <link rel="stylesheet" href="appearance.css?v=091sharingclips" />
+  <link rel="stylesheet" href="appearance.css?v=098desktop016" />
   <link rel="stylesheet" href="call-media.css?v=094desktop012" />
   <link rel="stylesheet" href="clips.css?v=091sharingclips" />
   <link rel="stylesheet" href="desktop-platform.css?v=092desktop" />
-  <link rel="stylesheet" href="desktop-shell.css?v=097desktop015" />
-  <link rel="stylesheet" href="desktop-settings.css?v=097desktop015" />
-  <link rel="stylesheet" href="media-layout.css?v=097desktop015" />
+  <link rel="stylesheet" href="desktop-shell.css?v=098desktop016" />
+  <link rel="stylesheet" href="desktop-settings.css?v=098desktop016" />
+  <link rel="stylesheet" href="media-layout.css?v=098desktop016" />
+  <link rel="stylesheet" href="call-scene.css?v=098desktop016" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -409,7 +410,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.5-Windows.exe" download="MN-Trono-0.1.5-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.6-Windows.exe" download="MN-Trono-0.1.6-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -460,7 +461,12 @@
       <label class="theme-option" style="--swatch:#f47b85"><input type="radio" name="profileTheme" value="red"><span class="theme-swatch" aria-hidden="true"></span><span>Preto e vermelho</span></label>
       <label class="theme-option" style="--swatch:#75bdf2"><input type="radio" name="profileTheme" value="blue"><span class="theme-swatch" aria-hidden="true"></span><span>Azul e preto</span></label>
       <label class="theme-option" style="--swatch:#efd470"><input type="radio" name="profileTheme" value="yellow"><span class="theme-swatch" aria-hidden="true"></span><span>Amarelo e preto</span></label>
-    </fieldset><p class="appearance-help">Aplica na hora, só para você neste navegador. Não muda o tema dos outros na chamada.</p>
+      <label class="theme-option" style="--swatch:#5fddcc"><input type="radio" name="profileTheme" value="teal"><span class="theme-swatch" aria-hidden="true"></span><span>Turquesa e preto</span></label>
+      <label class="theme-option" style="--swatch:#ffad72"><input type="radio" name="profileTheme" value="orange"><span class="theme-swatch" aria-hidden="true"></span><span>Laranja e preto</span></label>
+      <label class="theme-option" style="--swatch:#efa3cd"><input type="radio" name="profileTheme" value="rose"><span class="theme-swatch" aria-hidden="true"></span><span>Rosa e preto</span></label>
+      <label class="theme-option" style="--swatch:#99acff"><input type="radio" name="profileTheme" value="indigo"><span class="theme-swatch" aria-hidden="true"></span><span>Índigo e preto</span></label>
+      <label class="theme-option" style="--swatch:#c1cad6"><input type="radio" name="profileTheme" value="graphite"><span class="theme-swatch" aria-hidden="true"></span><span>Grafite e preto</span></label>
+    </fieldset><p class="appearance-help">Aplica na hora, só para você neste aparelho. Não muda o tema dos outros na chamada.</p>
     <div class="profile-layout"><div><strong>Layout dos painéis</strong><p class="appearance-help">Arraste as bordas laterais, inferiores ou os cantos para ajustar o tamanho.</p></div><button id="layoutResetBtn" class="secondary-button" type="button">↺ Voltar ao padrão</button></div><p id="appearanceMessage" class="appearance-help" role="status" aria-live="polite"></p></section>
     <h3>Meus arquivos</h3><p id="storageUsage"></p><div id="profileFiles"></div>
   </dialog>
@@ -526,7 +532,7 @@
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
   <script src="audio.js?v=095desktop013"></script>
-  <script src="network.js?v=097desktop015"></script>
+  <script src="network.js?v=098desktop016"></script>
   <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
@@ -534,23 +540,23 @@
   <script src="profile-files.js?v=095desktop013"></script>
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
-  <script src="social.js?v=097desktop015"></script>
+  <script src="social.js?v=098desktop016"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
   <script src="clip-desktop.js?v=095desktop013"></script>
   <script src="game.js?v=095desktop013"></script>
   <script src="portal.js?v=091sharingclips"></script>
-  <script src="community.js?v=097desktop015"></script>
+  <script src="community.js?v=098desktop016"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
-  <script src="soundboard-client.js?v=097desktop015"></script>
+  <script src="soundboard-client.js?v=098desktop016"></script>
   <script src="media-mosaic.js?v=091sharingclips"></script>
-  <script src="appearance.js?v=091sharingclips"></script>
+  <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=097desktop015"></script>
-  <script src="desktop-settings.js?v=097desktop015"></script>
-  <script src="media-layout.js?v=097desktop015"></script>
-  <script src="desktop-activity.js?v=097desktop015"></script>
-  <script src="desktop-updates.js?v=093desktop"></script>
+  <script src="desktop-shell.js?v=098desktop016"></script>
+  <script src="desktop-settings.js?v=098desktop016"></script>
+  <script src="media-layout.js?v=098desktop016"></script>
+  <script src="desktop-activity.js?v=098desktop016"></script>
+  <script src="desktop-updates.js?v=098desktop016"></script>
 </body>
 </html>

@@ -34,7 +34,7 @@ test('verified creator email, admin grant/revocation, channels and privacy over 
     a.send({type:'chat-message',text:'Imagem aqui'});assert.equal((await a.wait(m=>m.type==='chat-message')).message.text,'Imagem aqui');
     b.send({type:'join-room',roomId:voice.id});await b.wait(m=>m.type==='joined-room');
     b.send({type:'chat-message',text:'Não é texto'});assert.equal((await b.wait(m=>m.type==='error')).code,'VOICE_CHANNEL');
-    b.send({type:'voice-state',joined:true,transport:'p2p',screenFps:60});assert.equal((await b.wait(m=>m.type==='voice-roster')).players[0].screenFps,60);
+    b.send({type:'voice-state',joined:true,transport:'p2p',screenFps:60});const roster=(await b.wait(m=>m.type==='voice-roster')).players;assert.equal(roster[0].screenFps,60);assert.equal(roster[0].accountId,other.user.id);
     a.send({type:'soundboard-play',fileId:f.soundId});assert.equal((await a.wait(m=>m.type==='error')).code,'VOICE_REQUIRED');
     b.send({type:'soundboard-play',fileId:f.soundId,volume:999,durationMs:1});const sound=await b.wait(m=>m.type==='soundboard-play');assert.equal(sound.roomId,voice.id);assert.equal(sound.file.durationMs,1000);assert(!('volume' in sound));
     b.send({type:'soundboard-play',fileId:f.soundId});assert.equal((await b.wait(m=>m.type==='error')).code,'SOUND_RATE');

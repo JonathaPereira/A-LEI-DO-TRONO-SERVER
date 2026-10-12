@@ -69,9 +69,9 @@ async function start(){
   ipcMain.on('mn:application-audio-ack',(event,id)=>{try{trusted(event);applicationAudio.ack(id);}catch{}});
   updates=createUpdates({updater:require('electron-updater').autoUpdater,enabled:app.isPackaged,publish:state=>{if(!window.isDestroyed())window.webContents.send('mn:update-state',state);},confirm:async()=>{const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Continuar no app','Reiniciar e atualizar'],defaultId:0,cancelId:0,message:'Reiniciar para atualizar?',detail:'A chamada será encerrada. Sua conta, preferências e arquivos locais serão preservados.'});return answer.response===1;},prepareInstall:()=>{installingUpdate=true;quitting=true;}});
   ipcMain.handle('mn:update-state',event=>{trusted(event);return updates.state;});
-  ipcMain.handle('mn:update-check',event=>{trusted(event);return updates.check();});
+  ipcMain.handle('mn:update-check',event=>{trusted(event);return updates.check({force:true});});
   ipcMain.handle('mn:update-install',event=>{trusted(event);return updates.install();});
-  if(app.isPackaged){const first=setTimeout(()=>void updates.check(),10000),periodic=setInterval(()=>void updates.check(),4*60*60*1000);first.unref();periodic.unref();app.on('will-quit',()=>{clearTimeout(first);clearInterval(periodic);});}
+  if(app.isPackaged){const first=setTimeout(()=>void updates.check(),10000),periodic=setInterval(()=>void updates.check({force:true}),4*60*60*1000);first.unref();periodic.unref();app.on('will-quit',()=>{clearTimeout(first);clearInterval(periodic);});}
   const windowState=()=>({fullscreen:window.isFullScreen()});
   for(const name of ['enter-full-screen','leave-full-screen'])window.on(name,()=>window.webContents.send('mn:window-state',windowState()));
   ipcMain.handle('mn:window-state',event=>{trusted(event);return windowState();});

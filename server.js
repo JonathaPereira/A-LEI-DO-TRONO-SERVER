@@ -146,7 +146,7 @@ function safeRoom(room) {
 }
 function privateVoiceRoster(room){
   return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
-    id:p.id,name:p.name,guest:!!p.guest,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,muted:!!p.voiceMuted,deafened:!!p.voiceDeafened,camera:!!p.cameraOn,screen:!!p.screenOn,
+    id:p.id,accountId:p.ws.account?.id||null,name:p.name,guest:!!p.guest,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,muted:!!p.voiceMuted,deafened:!!p.voiceDeafened,camera:!!p.cameraOn,screen:!!p.screenOn,
     transport:p.mediaTransport||'p2p',quality:p.transmissionQuality||'balanced',screenFps:p.screenFps||30
   }));
 }
@@ -870,14 +870,14 @@ const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(
 fileStorage.install(app);
 communityManagement.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}

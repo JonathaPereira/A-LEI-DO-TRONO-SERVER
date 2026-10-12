@@ -6,7 +6,7 @@ Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime
 
 O aplicativo Windows com jogo, comunidade e integrações nativas está em
 `desktop/app/`. Consulte [WINDOWS_APP.md](WINDOWS_APP.md) para instalar, usar,
-testar e compilar. A versão Windows 0.1.5 ajusta perfis, telas verticais e efeitos compactos. Atualize também o backend para reiniciar efeitos com cliques repetidos; não há nova migração SQL.
+testar e compilar. A versão Windows 0.1.6 traz atividade nos perfis, novos temas e configurações adaptadas a telas verticais. Atualize também o backend para vincular os perfis à atividade da conta (`/health`: `features.voiceProfileActivity: true`); não há nova migração SQL.
 
 O frontend da v0.8.0 enviado pelo criador está em `frontend/`, com seleção de
 qualidade/FPS, cargos, canais, galeria de anexos, efeitos sonoros e mosaico de
