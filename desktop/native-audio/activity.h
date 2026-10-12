@@ -23,7 +23,7 @@ inline int activityFixture(){
     const auto instance=GetModuleHandleW(nullptr);WNDCLASSW cls{};cls.lpfnWndProc=DefWindowProcW;cls.hInstance=instance;cls.lpszClassName=L"MNActivityFixture";RegisterClassW(&cls);
     HWND window=CreateWindowW(cls.lpszClassName,L"Private caption must never be shared",WS_OVERLAPPEDWINDOW,30,30,360,160,nullptr,nullptr,instance,nullptr);
     if(!window){std::cerr<<"Could not create activity fixture: "<<GetLastError()<<std::endl;return 1;}
-    ShowWindow(window,SW_SHOW);UpdateWindow(window);std::cout<<"ready"<<std::endl;
+    ShowWindow(window,SW_SHOW);UpdateWindow(window);SetForegroundWindow(window);std::cerr<<"Fixture pid="<<GetCurrentProcessId()<<" visible="<<IsWindowVisible(window)<<" owned="<<(GetWindow(window,GW_OWNER)!=nullptr)<<std::endl;std::cout<<"ready"<<std::endl;
     MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){TranslateMessage(&msg);DispatchMessageW(&msg);}return 0;
 }
 inline int activityWatch(DWORD excluded){
@@ -31,7 +31,7 @@ inline int activityWatch(DWORD excluded){
     while(std::getline(std::cin,command)){
         if(command!="scan")continue;
         std::unordered_set<DWORD> visible;
-        EnumWindows([](HWND hwnd,LPARAM value)->BOOL{DWORD pid=0;if(IsWindowVisible(hwnd)&&GetWindow(hwnd,GW_OWNER)==nullptr){GetWindowThreadProcessId(hwnd,&pid);if(pid)reinterpret_cast<std::unordered_set<DWORD>*>(value)->insert(pid);}return TRUE;},reinterpret_cast<LPARAM>(&visible));
+        EnumWindows([](HWND hwnd,LPARAM value)->BOOL{DWORD pid=0;if(IsWindowVisible(hwnd)){GetWindowThreadProcessId(hwnd,&pid);if(pid)reinterpret_cast<std::unordered_set<DWORD>*>(value)->insert(pid);}return TRUE;},reinterpret_cast<LPARAM>(&visible));
         DWORD foreground=0;GetWindowThreadProcessId(GetForegroundWindow(),&foreground);
         HANDLE snapshot=CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);if(snapshot==INVALID_HANDLE_VALUE){std::cout<<"{\"type\":\"apps\",\"apps\":[]}"<<std::endl;continue;}
         PROCESSENTRY32W entry{};entry.dwSize=sizeof(entry);bool first=true;unsigned count=0;
