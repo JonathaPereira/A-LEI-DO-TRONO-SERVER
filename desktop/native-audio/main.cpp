@@ -72,6 +72,7 @@ static int tone(double frequency) {
     client->Stop();return 0;
 }
 int wmain(int argc, wchar_t** argv) {
+    if(argc==2 && std::wstring(argv[1])==L"--test-activity-window")return activityFixture();
     if(argc==4 && std::wstring(argv[1])==L"--activity-watch" && std::wstring(argv[2])==L"--exclude-pid"){
         try{return activityWatch(static_cast<DWORD>(std::stoul(argv[3])));}catch(...){return 1;}
     }

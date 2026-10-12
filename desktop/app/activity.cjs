@@ -48,7 +48,7 @@ class DesktopActivity{
   async consume(rows,generation){
     const apps=[];
     for(const row of rows){if(typeof row.path!=='string'||row.path.length>16384||typeof row.exe!=='string'||!Number.isInteger(row.pid)||row.pid<=0||row.pid===process.pid)continue;
-      const exe=row.exe.toLowerCase();if(/^(mn trono|mn-application-audio|unitycrashhandler|crashreport)/i.test(exe))continue;
+      const exe=row.exe.toLowerCase();if(/^(mn trono|unitycrashhandler|crashreport)/i.test(exe))continue;
       const recognized=GAMES[exe]||await this.steamName(row.path),name=label(row.product)||label(row.exe.replace(/\.exe$/i,''));
       apps.push({id:idFor(row.path),name,game:recognized||null,foreground:row.foreground===true});
     }
