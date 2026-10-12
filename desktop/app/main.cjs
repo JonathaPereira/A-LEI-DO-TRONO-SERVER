@@ -4,16 +4,17 @@ const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('n
 const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
 const {DesktopPreferences}=require('./preferences.cjs');
+const {DesktopActivity}=require('./activity.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
-let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences;
+let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences,activity;
 const folders=new Map();
 const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop-diagnostics'))console.error('[desktop]',...values);};
 if(!app.requestSingleInstanceLock())app.quit();
 else{
   app.on('second-instance',()=>{window?.show();window?.focus();});
   app.on('before-quit',()=>{quitting=true;});
-  app.on('will-quit',()=>{globalShortcut.unregisterAll();applicationAudio?.stopAll();});
+  app.on('will-quit',()=>{globalShortcut.unregisterAll();applicationAudio?.stopAll();activity?.dispose();});
   app.on('window-all-closed',()=>app.quit());
   app.whenReady().then(start).catch(error=>{dialog.showErrorBox('Não foi possível abrir o M&N',error.message);app.quit();});
 }
@@ -56,6 +57,9 @@ async function start(){
   window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
   applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
+  activity=new DesktopActivity(app,state=>{if(!window.isDestroyed())window.webContents.send('mn:activity',state);});
+  ipcMain.handle('mn:activity-state',event=>{trusted(event);return activity.snapshot();});
+  ipcMain.handle('mn:activity-configure',(event,config)=>{trusted(event);return activity.configure(config);});
   ipcMain.handle('mn:application-audio-stop',(event,id)=>{trusted(event);applicationAudio.stop(id);});
   ipcMain.handle('mn:replay-prepare',event=>{trusted(event);return {active:false,suspended:true};});
   ipcMain.handle('mn:session-read',event=>{trusted(event);return preferences.readSession();});
@@ -78,7 +82,7 @@ async function start(){
     const response=dialog.showMessageBoxSync(window,{type:'question',buttons:['Continuar no app','Sair'],defaultId:0,cancelId:0,message:'Encerrar o M&N?',detail:'Sua chamada será encerrada. A conta lembrada e as preferências ficam salvas neste computador.'});
     if(response===1)event.preventDefault();else quitting=false;
   });
-  window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();applicationAudio.stopAll();});
+  window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();applicationAudio.stopAll();activity.dispose();});
   window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace)cancelCapture();});
   window.webContents.on('did-navigate',()=>{clearHotkey();applicationAudio.stopAll();});
   window.webContents.on('will-navigate',(event,url)=>{if(!isAppURL(url)){event.preventDefault();if(/^https:\/\//.test(url))void shell.openExternal(url);}});

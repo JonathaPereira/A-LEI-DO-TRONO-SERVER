@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include "activity.h"
 using namespace Microsoft::WRL;
 class Activation final : public RuntimeClass<RuntimeClassFlags<ClassicCom>, FtmBase, IActivateAudioInterfaceCompletionHandler> {
 public:
@@ -71,6 +72,9 @@ static int tone(double frequency) {
     client->Stop();return 0;
 }
 int wmain(int argc, wchar_t** argv) {
+    if(argc==4 && std::wstring(argv[1])==L"--activity-watch" && std::wstring(argv[2])==L"--exclude-pid"){
+        try{return activityWatch(static_cast<DWORD>(std::stoul(argv[3])));}catch(...){return 1;}
+    }
     if(argc==2 && std::wstring(argv[1])==L"--probe") {
         std::cout << "{\"available\":" << (buildNumber()>=20348?"true":"false") << ",\"build\":" << buildNumber() << "}";
         return 0;
