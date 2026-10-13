@@ -97,7 +97,17 @@ async function start(){
   // BrowserWindow overrides. File viewers are created through the fixed IPC
   // below, so foreign content never enters the app's API network partition.
   window.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))void shell.openExternal(url);return {action:'deny'};});
-  ipcMain.handle('mn:attachment',(event,choice)=>{
+  ipcMain.handle('mn:manual',event=>{
+    trusted(event);
+    const manualSession=session.fromPartition('mn-manual');
+    manualSession.setPermissionCheckHandler(()=>false);manualSession.setPermissionRequestHandler((_,__,callback)=>callback(false));
+    const viewer=new BrowserWindow({title:'Manual da Corte · A Lei do Trono',width:1000,height:800,minWidth:480,minHeight:520,icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:manualSession,nodeIntegration:false,contextIsolation:true,sandbox:true}});
+    const manual=pathToFileURL(path.join(root,'manual/index.html')).href,pdf=pathToFileURL(path.join(root,'manual/A_Lei_do_Trono_Manual_v0.9.0.pdf')).href;
+    viewer.webContents.on('will-navigate',(event,url)=>{if(url.split('#')[0]!==manual&&url!==pdf)event.preventDefault();});
+    viewer.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+    void viewer.loadURL(manual).catch(error=>{dialog.showErrorBox('Não foi possível abrir o manual',error.message);viewer.destroy();});return {opened:true};
+  });
+  ipcMain.handle('mn:attachment' ,(event,choice)=>{
     trusted(event);if(typeof choice?.url!=='string'||choice.url.length>16384)throw Error('Link de arquivo inválido.');
     const target=new URL(choice.url);if(target.protocol!=='https:'||target.username||target.password||isAppURL(target.href))throw Error('Link de arquivo inválido.');
     const viewer=new BrowserWindow({title:'Arquivo · M&N',width:1024,height:760,icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:attachmentSession,nodeIntegration:false,contextIsolation:true,sandbox:true}});

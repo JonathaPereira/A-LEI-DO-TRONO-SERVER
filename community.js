@@ -25,7 +25,7 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
   }
   function snapshot(ws){
     const full=!!validAccount(ws),online=new Map();
-    for(const client of wss.clients){if(client.readyState!==1)continue;note(client);const id=validAccount(client)?client.account.id:validGuest(client)?client.guest.id:null;if(!id)continue;const primary=rooms.get(client.roomId),room=primary?.players.get(client.clientId)?.voiceJoined?primary:rooms.get(client.textRoomId)||primary,player=room?.players.get(client.clientId);if(!full&&room?.kind!=='game')continue;const old=online.get(id);if(!old||room)online.set(id,{online:true,roomId:room?.id||null,roomName:room?.name||null,roomKind:room?.kind||null,inVoice:!!player?.voiceJoined,activity:full&&validAccount(client)&&client.activity&&Date.now()-client.activity.seenAt<45000?{name:client.activity.name,startedAt:client.activity.startedAt}:null});}
+    for(const client of wss.clients){if(client.readyState!==1)continue;note(client);const id=validAccount(client)?client.account.id:validGuest(client)?client.guest.id:null;if(!id)continue;const primary=rooms.get(client.roomId),room=primary?.players.get(client.clientId)?.voiceJoined?primary:rooms.get(client.gameRoomId)||rooms.get(client.textRoomId)||primary,player=room?.players.get(client.clientId);if(!full&&room?.kind!=='game')continue;const old=online.get(id);if(!old||room)online.set(id,{online:true,roomId:room?.id||null,roomName:room?.name||null,roomKind:room?.kind||null,inVoice:!!player?.voiceJoined,gameRoomId:client.gameRoomId||null,gameRoomName:rooms.get(client.gameRoomId)?.name||null,activity:full&&validAccount(client)&&client.activity&&Date.now()-client.activity.seenAt<45000?{name:client.activity.name,startedAt:client.activity.startedAt}:null});}
     const list=[];
     for(const m of members.values()){
       if(!full&&!online.has(m.id))continue;
@@ -57,7 +57,7 @@ function createCommunity({wss,rooms,send,auth,env=process.env}){
     if(!validNickname(nickname))throw Object.assign(Error('Escolha um nome de 2 a 20 caracteres: letras, números, espaço, ponto, hífen ou sublinhado.'),{code:'INVALID_NICKNAME'});
     if(nameReserved(nickname))throw Object.assign(Error('Esse apelido pertence a uma conta. Escolha outro nome para o convidado.'),{code:'NAME_TAKEN'});
     if(identity?.expiresAt<=Date.now())identity=null;
-    if(identity&&ws.roomId&&ws.guest?.id===identity.id&&nickname!==identity.nickname)throw Object.assign(Error('Saia da sala para mudar o nome de convidado.'),{code:'GUEST_IN_ROOM'});
+    if(identity&&(ws.roomId||ws.gameRoomId)&&ws.guest?.id===identity.id&&nickname!==identity.nickname)throw Object.assign(Error('Saia da sala para mudar o nome de convidado.'),{code:'GUEST_IN_ROOM'});
     if(!identity){if(tickets.size>=500)throw Object.assign(Error('Muitos convidados conectados. Tente novamente mais tarde.'),{code:'GUEST_BUSY'});identity={id:`guest:${crypto.randomUUID()}`,nickname,guest:true,avatar_preset:'person',avatar_file_id:null,expiresAt:Date.now()+12*60*60*1000,ticket:crypto.randomBytes(32).toString('hex')};tickets.set(identity.ticket,identity);}else identity.nickname=nickname;
     return identity;
   }

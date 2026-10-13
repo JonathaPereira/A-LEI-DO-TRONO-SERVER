@@ -48,6 +48,8 @@ window.TronoPortal = (()=>{
     $('portalStage')?.style.setProperty('--px','0');$('portalStage')?.style.setProperty('--py','0');
     document.body.classList.toggle('portal-active',id==='portalScreen');
     if(id!=='chatOnlyScreen')document.body.classList.remove('chat-only-active');
+    window.TronoSocial?.setChatHubMode?.(id==='chatOnlyScreen');
+    if(id==='gameScreen'||id==='roomScreen'){window.TronoSocial?.showForRoom?.(!!window.TronoSocial.voiceJoined);window.TronoSocial?.showPanel?.(false);}
   }
 
   function showPortal(){

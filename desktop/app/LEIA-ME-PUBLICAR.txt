@@ -19,7 +19,7 @@ Quem tiver o app 0.1.1 ou posterior receberá a atualização internamente.
 Quem ainda estiver no 0.1.0 precisa instalar a versão atual uma única vez.
 
 O domínio do site continua sendo o mesmo. Amigos e conversas requerem backend e SQL atualizados.
-Consulte ATUALIZAR_WINDOWS_v0.1.7.md incluído neste pacote.
+Consulte ATUALIZAR_WINDOWS_v0.1.8.md incluído neste pacote.
 
 Mesmo várias versões atrasado, o atualizador baixa a última versão completa.
 O aviso Buscar última versão também substitui uma atualização antiga já baixada.

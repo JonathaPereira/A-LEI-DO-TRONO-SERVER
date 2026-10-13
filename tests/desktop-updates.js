@@ -19,17 +19,17 @@ test('development and offline update checks preserve the running app',async()=>{
 test('an app several releases behind downloads the latest full installer in one step',async()=>{
   const updater=new EventEmitter();updater.currentVersion={version:'0.1.1'};let feed,checks=0,installed=0;
   updater.setFeedURL=value=>feed=value;updater.quitAndInstall=()=>installed++;
-  updater.checkForUpdates=async()=>{checks++;updater.emit('update-available',{version:'0.1.7',files:[{url:'MN-Trono-0.1.7-Windows.exe'}]});updater.emit('download-progress',{percent:62});};
+  updater.checkForUpdates=async()=>{checks++;updater.emit('update-available',{version:'0.1.8',files:[{url:'MN-Trono-0.1.8-Windows.exe'}]});updater.emit('download-progress',{percent:62});};
   const service=createUpdates({updater,enabled:true,publish:()=>{},confirm:async()=>true,prepareInstall:()=>{}});
-  await service.check();assert.equal(feed.url,UPDATE_URL);assert.equal(service.state.version,'0.1.7');assert.equal(service.state.percent,62);assert.equal(updater.disableDifferentialDownload,true);assert.equal(updater.allowDowngrade,false);
-  updater.emit('update-downloaded',{version:'0.1.7'});await service.check();assert.equal(checks,1);await service.install();assert.equal(installed,1);
+  await service.check();assert.equal(feed.url,UPDATE_URL);assert.equal(service.state.version,'0.1.8');assert.equal(service.state.percent,62);assert.equal(updater.disableDifferentialDownload,true);assert.equal(updater.allowDowngrade,false);
+  updater.emit('update-downloaded',{version:'0.1.8'});await service.check();assert.equal(checks,1);await service.install();assert.equal(installed,1);
 });
 test('checking again replaces an older downloaded version with the latest before installation',async()=>{
   const updater=new EventEmitter();let checks=0,installed=0,releaseConsent;
-  updater.setFeedURL=()=>{};updater.quitAndInstall=()=>installed++;updater.checkForUpdates=async()=>{checks++;updater.emit('checking-for-update');updater.emit('update-available',{version:'0.1.7'});};
+  updater.setFeedURL=()=>{};updater.quitAndInstall=()=>installed++;updater.checkForUpdates=async()=>{checks++;updater.emit('checking-for-update');updater.emit('update-available',{version:'0.1.8'});};
   const service=createUpdates({updater,enabled:true,publish:()=>{},confirm:()=>new Promise(resolve=>releaseConsent=resolve),prepareInstall:()=>{}});
-  updater.emit('update-downloaded',{version:'0.1.2'});const oldInstall=service.install();await service.check({force:true});assert.equal(checks,1);assert.equal(service.state.version,'0.1.7');releaseConsent(true);assert.equal((await oldInstall).pending,true);assert.equal(installed,0);
-  updater.emit('update-downloaded',{version:'0.1.7'});const latestInstall=service.install();releaseConsent(true);assert.equal((await latestInstall).restarting,true);assert.equal(installed,1);
+  updater.emit('update-downloaded',{version:'0.1.2'});const oldInstall=service.install();await service.check({force:true});assert.equal(checks,1);assert.equal(service.state.version,'0.1.8');releaseConsent(true);assert.equal((await oldInstall).pending,true);assert.equal(installed,0);
+  updater.emit('update-downloaded',{version:'0.1.8'});const latestInstall=service.install();releaseConsent(true);assert.equal((await latestInstall).restarting,true);assert.equal(installed,1);
 });
 test('an offline latest-version check retains the already verified installer',async()=>{
   const updater=new EventEmitter();updater.setFeedURL=()=>{};updater.checkForUpdates=async()=>{updater.emit('checking-for-update');updater.emit('error',Error('offline'));throw Error('offline');};

@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="media-layout.css?v=098desktop016" />
   <link rel="stylesheet" href="messenger.css?v=099desktop017" />
   <link rel="stylesheet" href="call-scene.css?v=098desktop016" />
+  <link rel="stylesheet" href="court.css?v=100court" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -225,7 +226,7 @@
         <div id="tableInfluenceCoins" class="table-influence-coins" aria-label="Influências sobre a mesa"></div>
         <div id="tableCard0" class="table-card-slot slot-bottom"><span>J1</span></div><div id="tableCard1" class="table-card-slot slot-left"><span>J2</span></div><div id="tableCard2" class="table-card-slot slot-top"><span>J3</span></div><div id="tableCard3" class="table-card-slot slot-right"><span>J4</span></div>
         <div class="center-info">
-          <div class="law-mini"><img id="currentLawImg" src="assets/laws/ordem.png" alt="Lei atual" /><div><small>LEI ATUAL</small><strong id="currentLawName">ORDEM</strong><span id="lawUsesText">Uso 1 de 2</span></div></div>
+          <div class="law-mini"><img id="currentLawImg" src="assets/laws/ordem.svg" alt="Lei atual" /><div><small>LEI ATUAL</small><strong id="currentLawName">ORDEM</strong><span id="lawUsesText">Uso 1 de 2</span></div></div>
           <div id="trumpInfo" class="trump-info hidden">Trunfo: <strong id="trumpSuitText">—</strong></div>
           <div id="leadSuitInfo" class="trump-info lead-suit-info hidden">Naipe anunciado: <strong id="leadSuitText">—</strong></div>
           <div id="decreeBadge" class="decree-badge"><small>DECRETO</small><strong>—</strong></div>
@@ -399,19 +400,14 @@
   <div id="toast" class="toast hidden"></div><div id="hoverTooltip" class="hover-tooltip hidden" role="tooltip"></div>
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-backdrop"></div><div class="modal-card"><button id="modalClose" class="modal-close hidden">×</button><div id="modalIcon" class="modal-icon">♛</div><h2 id="modalTitle"></h2><p id="modalText"></p><div id="modalChoices" class="modal-choices"></div><div id="modalFooter" class="modal-footer"></div></div></div>
 
-  <div id="rulesDrawer" class="rules-drawer hidden"><div class="rules-card"><button id="rulesClose">×</button><h2>Resumo do protótipo v0.8.0-alpha</h2><div class="rules-columns">
-    <div><h3>Fluxo</h3><p>3 rodadas • 10 vazas por rodada • 10 cartas por jogador. A primeira vaza usa <b>Ordem</b>. A Coroa inicia a próxima vaza e a Sombra escolhe a próxima Lei.</p><p>Cada Lei possui 2 usos e não pode ser repetida em vazas consecutivas.</p></div>
-    <div><h3>Coroa & Sombra</h3><p>Coroa é o vencedor segundo a Lei. Sombra é o jogador elegível que cumpre a condição secundária. Ninguém recebe ambos na mesma vaza. Empates favorecem quem jogou primeiro.</p></div><div><h3>Usurpação</h3><p>A Sombra entrega 1 carta escolhida à Coroa. A Coroa incorpora essa carta, embaralha toda a mão e uma carta aleatória retorna à Sombra.</p><p>A carta revelada pela <b>Corte Aberta</b> é protegida: não pode ser entregue nem retirada pela Usurpação. Terceiros veem apenas cartas fechadas; Coroa e Sombra recebem a revelação privada da troca.</p></div>
-    <div><h3>Influência 2.0</h3><p>Quem termina sem Coroa nem Sombra ganha 1 Influência, até 2. <b>Sigilo:</b> gaste 1 para jogar uma carta oculta. <b>Manobra da Corte:</b> gaste 2 para jogar oculta e escolher +3 ou -3 no valor efetivo.</p><p>O valor efetivo é limitado entre <b>1 e 12</b>. Ex.: 10+3=12 e 2-3=1. O modificador só vale para resolver Coroa/Sombra naquela vaza. <b>O uso de Influência e a escolha +3 ou -3 são públicos para todos</b>; apenas a identidade da carta permanece oculta até a resolução. Ao abrir oculta, anuncie o naipe real. A carta da Corte Aberta não pode usar Influência.</p><p><b>Silêncio:</b> bloqueia o gasto apenas nas vazas 1 a 3.</p></div>
-    <div><h3>Pontuação</h3><p>Coroa = 1 Prestígio. Sombra = 1 Prestígio. Cada par acumulado Coroa + Sombra concede +2 Prestígio. Desempate: mais pares, mais Coroas, mais Sombras.</p></div>
-  </div></div></div>
+  <div id="rulesDrawer" class="rules-drawer hidden"><div class="rules-card"><button id="rulesClose" aria-label="Fechar regras">×</button><h2>Regras da Corte · 0.9.0</h2><button id="rulesManualBtn" class="royal-btn manual-btn" type="button">📜 Abrir manual temático completo</button><div class="rules-columns"><div><h3>Fluxo da partida</h3><p>4 Casas · 3 rodadas · 10 vazas por rodada · 10 cartas por jogador. A primeira vaza usa Ordem. A Coroa abre a próxima vaza; a Sombra escolhe a próxima Lei. Cada Lei tem dois usos e não pode se repetir consecutivamente. Um Decreto fica fixo por toda a rodada.</p><h3>Influência</h3><p>Sem Coroa nem Sombra: ganhe 1 Influência, até 2. Sigilo custa 1 e oculta a carta. Manobra custa 2 e oculta com +3 ou −3, limitado a 1–12. O gasto e o modificador são públicos; ao abrir oculta, anuncie o naipe real. Corte Aberta protege sua carta. Silêncio bloqueia todos nas vazas 1–3; Peso da Coroa bloqueia a Coroa anterior na vaza seguinte.</p><h3>Prestígio</h3><p>Coroas + Sombras + 2 por par acumulado ao longo das três rodadas. Desempate: pares, Coroas, Sombras; empate completo divide o Trono. Em empates de cartas, prevalece quem jogou primeiro. Coroa e Sombra nunca são a mesma pessoa.</p></div><div id="rulesLaws"></div><div id="rulesDecrees"></div></div></div></div>
 
   <dialog id="authDialog" class="auth-dialog" aria-labelledby="authTitle" aria-describedby="authIntro">
     <button id="authCloseBtn" class="auth-close" type="button" aria-label="Fechar acesso à conta">×</button>
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.7-Windows.exe" download="MN-Trono-0.1.7-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.8-Windows.exe" download="MN-Trono-0.1.8-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -533,7 +529,7 @@
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
   <script src="audio.js?v=095desktop013"></script>
-  <script src="network.js?v=098desktop016"></script>
+  <script src="network.js?v=100court"></script>
   <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
@@ -543,20 +539,21 @@
   <script src="stream-controls.js?v=091sharingclips"></script>
   <script src="personal-prefs.js?v=099desktop017"></script>
   <script src="call-stability.js?v=099desktop017"></script>
-  <script src="social.js?v=099desktop017"></script>
+  <script src="social.js?v=100court"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
   <script src="clip-desktop.js?v=095desktop013"></script>
-  <script src="game.js?v=099desktop017"></script>
-  <script src="portal.js?v=091sharingclips"></script>
+  <script src="game-rules.js?v=100court"></script>
+  <script src="game.js?v=100court"></script>
+  <script src="portal.js?v=100court"></script>
   <script src="community.js?v=099desktop017"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
   <script src="soundboard-client.js?v=098desktop016"></script>
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=098desktop016"></script>
+  <script src="desktop-shell.js?v=100court"></script>
   <script src="desktop-settings.js?v=098desktop016"></script>
   <script src="media-layout.js?v=098desktop016"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>

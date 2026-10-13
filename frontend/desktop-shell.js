@@ -66,7 +66,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
       if(!window.TronoAuth?.user&&!window.TronoAuth?.guest){window.TronoPortal.openGame();return;}
       // A community entry may have left a previous game. Do not restore its
       // stale waiting-room UI merely because it was the last game screen.
-      if(window.TronoChatHub.channels.some(channel=>channel.id===window.TronoNetwork.primaryRoom))lastGame='setupScreen';
+      if(!window.TronoNetwork.gameRoom)lastGame='setupScreen';
       window.TronoPortal.showOnly(lastGame);window.TronoNetwork.requestRooms();setView(view);return;
     }
     if(view==='community'){
@@ -74,7 +74,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
       if(room&&window.TronoChatHub.channels.some(channel=>channel.id===room)){
         window.TronoPortal.showOnly('chatOnlyScreen');body.classList.add('chat-only-active');window.TronoSocial.showForRoom(true);setView(view);if(!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;
       }
-      if(room&&!window.confirm('Entrar na comunidade vai sair da sua sala de jogo atual. Continuar?'))return;
+      if(room&&!window.TronoNetwork.independentGameVoice&&!window.confirm('O servidor precisa ser atualizado para manter jogo e voz juntos. Sair da mesa?'))return;
       await window.TronoPortal.openVoice();synchronize();
     }
   }
