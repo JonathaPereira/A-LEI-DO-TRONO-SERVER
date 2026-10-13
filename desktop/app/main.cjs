@@ -1,5 +1,5 @@
 'use strict';
-const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,safeStorage,Notification,clipboard}=require('electron');
+const {app,BrowserWindow,screen,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,safeStorage,Notification,clipboard}=require('electron');
 const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('node:crypto'),{pathToFileURL}=require('node:url');
 const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
@@ -55,7 +55,8 @@ async function start(){
       return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
-  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
+  const workArea=screen.getPrimaryDisplay().workAreaSize;
+  window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:Math.max(480,Math.min(1440,workArea.width)),height:Math.max(520,Math.min(960,workArea.height)),minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
   const notifications=createNotifications({Notification,window,activate:target=>{if(window.isDestroyed())return;window.show();if(window.isMinimized())window.restore();window.focus();window.webContents.send('mn:notification-click',target);}});
   ipcMain.handle('mn:notify',(event,value)=>{trusted(event);return notifications.notify(value);});
@@ -101,7 +102,8 @@ async function start(){
     trusted(event);
     const manualSession=session.fromPartition('mn-manual');
     manualSession.setPermissionCheckHandler(()=>false);manualSession.setPermissionRequestHandler((_,__,callback)=>callback(false));
-    const viewer=new BrowserWindow({title:'Manual da Corte · A Lei do Trono',width:1000,height:800,minWidth:480,minHeight:520,icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:manualSession,nodeIntegration:false,contextIsolation:true,sandbox:true}});
+    const manualArea=screen.getDisplayMatching(window.getBounds()).workAreaSize;
+    const viewer=new BrowserWindow({title:'Manual da Corte · A Lei do Trono',width:Math.max(480,Math.min(1000,manualArea.width)),height:Math.max(520,Math.min(800,manualArea.height)),minWidth:480,minHeight:520,icon:path.join(__dirname,'assets/icon.png'),webPreferences:{session:manualSession,nodeIntegration:false,contextIsolation:true,sandbox:true}});
     const manual=pathToFileURL(path.join(root,'manual/index.html')).href,pdf=pathToFileURL(path.join(root,'manual/A_Lei_do_Trono_Manual_v0.9.0.pdf')).href;
     viewer.webContents.on('will-navigate',(event,url)=>{if(url.split('#')[0]!==manual&&url!==pdf)event.preventDefault();});
     viewer.webContents.setWindowOpenHandler(()=>({action:'deny'}));

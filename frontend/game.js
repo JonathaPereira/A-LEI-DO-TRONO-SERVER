@@ -1304,24 +1304,27 @@ async function enterChatOnly({validatedIdentity,channelId}={}){
   const validation=validatedIdentity||await window.TronoPortal?.validateIdentity?.();if(validation&&!validation.ok){toast(validation.message||'Escolha um nome disponível.',1800);window.TronoPortal?.showPortal?.();$('portalIdentity')?.focus();return false;}
   const name=(validation?.name||$('playerIdentity')?.value?.trim());if(!name){toast('Digite um nome para entrar.',1600);window.TronoPortal?.showPortal?.();return false;}storage.setItem('tronoPlayerName',name);
   await window.TronoCommunityAdmin?.refresh?.().catch(()=>{});
-  if(!channelId||!CHAT_CHANNEL_CATALOG.has(channelId))channelId=(window.TronoDesktop?[...CHAT_CHANNEL_CATALOG.values()].find(channel=>channel.type!=='text')?.id:null)||CHAT_CHANNEL_CATALOG.keys().next().value;
+  const requested=CHAT_CHANNEL_CATALOG.has(channelId)?channelId:null,current=window.TronoNetwork.currentRoom;
+  const restoreCurrent=CHAT_CHANNEL_CATALOG.has(current)&&(!requested||requested===current);
+  const preserveVoice=!requested&&window.TronoNetwork.independentGameVoice&&window.TronoSocial.voiceJoined;
+  if(!requested)channelId=preserveVoice?[...CHAT_CHANNEL_CATALOG.values()].find(c=>c.type!=='voice')?.id:(window.TronoDesktop?[...CHAT_CHANNEL_CATALOG.values()].find(c=>c.type!=='text')?.id:null)||CHAT_CHANNEL_CATALOG.keys().next().value;
   if(!window.TronoNetwork.gameRoom){selectedRoom=null;onlineRoomState=null;onlineMe=null;onlineGameMode=false;}chatOnlyMode=true;chatOnlyRoomState=null;
   try{
-    // Prepare the voice controls before replacing the portal. A failed module leaves a usable screen.
     window.TronoSocial.setChatHubMode?.(true);window.TronoSocial.showForRoom(true);
     if(window.TronoPortal?.showOnly)window.TronoPortal.showOnly('chatOnlyScreen');
     else for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen'])$(id)?.classList.toggle('hidden',id!=='chatOnlyScreen');
     document.body.classList.remove('portal-active');document.body.classList.add('chat-only-active');
   }catch(err){chatOnlyMode=false;throw err;}
-  if($('chatOnlyStatus'))$('chatOnlyStatus').textContent='Conectando ao Salão Livre...';
-  if(!channelId){$('chatOnlyStatus').textContent='Nenhum canal disponível. Crie um canal para começar.';window.TronoNetwork.leaveVoiceRoom();window.TronoSocial.consumeRoom(null);return true;}
-  void ensureAudio().catch(()=>{});
+  if(restoreCurrent){consumeChatOnlyRoom(window.TronoSocial.chatRoomState);return true;}
+  if(!channelId){$('chatOnlyStatus').textContent=preserveVoice?'Sua chamada continua conectada. Selecione uma sala de voz para trocar de chamada.':'Nenhum canal disponível. Crie um canal para começar.';if(!preserveVoice){window.TronoNetwork.leaveVoiceRoom();window.TronoSocial.consumeRoom(null);}return true;}
+  $('chatOnlyStatus').textContent='Abrindo a comunidade...';void ensureAudio().catch(()=>{});
   try{
-    if(CHAT_CHANNEL_CATALOG.has(window.TronoNetwork.currentRoom)){consumeChatOnlyRoom(window.TronoSocial.chatRoomState);return true;}
-    const online=await (CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text'?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));window.TronoNetwork.requestChatChannels?.();
-    if(window.TronoDesktop&&online&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();
-    if(chatOnlyMode&&!online&&$('chatOnlyStatus'))$('chatOnlyStatus').textContent='Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
-  }catch(err){console.warn('Conexão ao chat:',err);if(chatOnlyMode&&$('chatOnlyStatus'))$('chatOnlyStatus').textContent='Conexão interrompida. Aguarde a reconexão ou volte ao início para tentar novamente.';}
+    const textSubscription=preserveVoice||CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text',wasInVoice=window.TronoSocial.voiceJoined;
+    if(!textSubscription&&window.TronoNetwork.primaryRoom!==channelId&&wasInVoice)await window.TronoSocial.leaveVoice();
+    const online=await (textSubscription?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));window.TronoNetwork.requestChatChannels?.();
+    if(!textSubscription&&(window.TronoDesktop||wasInVoice)&&online&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();
+    if(chatOnlyMode&&!online)$('chatOnlyStatus').textContent='Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
+  }catch(err){console.warn('Conexão ao chat:',err);if(chatOnlyMode)$('chatOnlyStatus').textContent='Conexão interrompida. Aguarde a reconexão ou volte ao início para tentar novamente.';}
   return true;
 }
 const CHAT_CHANNEL_NAMES={'chat-livre':'Geral','chat-jogos':'Jogos','chat-conversa':'Conversa'};

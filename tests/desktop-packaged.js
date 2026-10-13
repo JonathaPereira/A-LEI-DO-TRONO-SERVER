@@ -17,6 +17,7 @@ test('compiled Windows app starts with its own game, interface and RNNoise resou
     assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
     assert.equal(await page.evaluate(()=>typeof require),'undefined');
     assert.equal(await page.evaluate(()=>window.TronoDesktop.version),'0.1.8');
+    const geometry=await app.evaluate(({BrowserWindow,screen})=>({window:BrowserWindow.getAllWindows()[0].getBounds(),work:screen.getPrimaryDisplay().workAreaSize}));if(geometry.work.width>=480)assert(geometry.window.width<=geometry.work.width);if(geometry.work.height>=520)assert(geometry.window.height<=geometry.work.height);
     phase='installed resources';const resources=await page.evaluate(async()=>Promise.all(['/game.js','/game-rules.js','/court.css','/manual/index.html','/manual/manual.css','/manual/throne.svg','/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf','/assets/laws/ordem.svg','/desktop-shell.js','/desktop-shell.css','/media-layout.css','/media-layout.js','/desktop-activity.js','/assets/portal_realms.png','/vendor/rnnoise/rnnoise.wasm','/application-audio-worklet.js'].map(async url=>{const response=await fetch(url);return {url,status:response.status,bytes:(await response.arrayBuffer()).byteLength};})));
     for(const resource of resources){assert.equal(resource.status,200,resource.url);assert(resource.bytes>0,resource.url);}
     phase='account initialization';await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authCloseBtn').click();

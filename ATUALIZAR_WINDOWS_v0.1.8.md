@@ -8,9 +8,9 @@ Esta atualização altera o servidor, o frontend e o app. Publique o conjunto co
 - Estandarte: dois ou mais trunfos dão Coroa/Sombra ao maior/menor trunfo de pessoas diferentes; um trunfo dá Coroa a ele e Sombra à menor carta dos demais; sem trunfos, aplica-se Ordem. É permitido jogar trunfo mesmo tendo o naipe inicial.
 - Usurpação: a Sombra escolhe qualquer adversário e separa sua carta antes da escolha cega. Sua própria carta não pode retornar. Corte Aberta continua protegida; somente os dois envolvidos recebem a revelação.
 - Conselho, Favor Real, Espionagem e Peso da Coroa ampliam o catálogo para dez Decretos. O Decreto continua fixo na rodada. Não foi incluída troca de Decreto por Influência.
-- Jogo e M&N possuem participações independentes no mesmo socket. Entrar na mesa, navegar à comunidade ou sair da mesa preserva a chamada do M&N, seus dispositivos e estados. Sair da conta encerra tudo. Sair explicitamente da mesa ainda permite que uma IA assuma sua Casa.
+- Jogo e M&N possuem participações independentes no mesmo socket. Entrar na mesa, navegar à comunidade ou sair da mesa preserva a chamada do M&N, seus dispositivos e estados. Uma chamada iniciada na própria mesa também permanece ativa ao abrir a comunidade; a navegação abre o texto, e trocar a chamada exige selecionar uma sala de voz. Sair da conta encerra tudo. Sair explicitamente da mesa ainda permite que uma IA assuma sua Casa.
 - Cinco novas cartas vetoriais de Lei, animações breves para cada Lei e Decreto, respeitando redução de movimento e modo leve. Manual temático HTML e PDF acessíveis pelo site e pelo app, com exemplos das regras novas.
-- Estado vazio da chamada centralizado na área principal; verificação de layout em telas pequenas e verticais sem reduzir o espaço reservado à stream.
+- Estado vazio da chamada centralizado na área principal; janela inicial e manual limitados à área útil de monitores menores/verticais; verificação de layout em telas pequenas e verticais sem reduzir o espaço reservado à stream.
 
 ## Como publicar
 
