@@ -34,7 +34,7 @@ window.TronoSocial = (()=>{
   const clampGain=v=>Math.min(300,Math.max(0,Math.round((Number(v)||0)/5)*5));
   let microphoneVolume=clampGain(storage.getItem('mnMicrophoneGain')??100);
   let outputVolume=clampGain(storage.getItem('mnOutputGain')??100);
-  const peerVolumes=new Map();
+  const peerVolumes=new Map();let volumeOwner=null;
   const remoteGraphs=new Map();
   const remotePlayback=new Map();
   const audioPlayRequests=new WeakMap();
@@ -177,6 +177,7 @@ window.TronoSocial = (()=>{
   function setPeerGain(id,value){
     if(!privateVoiceRoster.has(id)||id===meId())return;
     unlockCallAudio();peerVolumes.set(id,clampGain(value));attachRemoteAudio(id);
+    const account=privateVoiceRoster.get(id)?.accountId;if(account)window.TronoPersonal?.set('volume:'+account,peerVolumes.get(id));
     const slider=document.querySelector(`[data-peer-volume="${CSS.escape(id)}"]`);
     const label=slider?.closest('.mn-peer-gain')?.querySelector('output');if(label)label.textContent=`${peerVolumes.get(id)}%`;
   }
@@ -230,6 +231,9 @@ window.TronoSocial = (()=>{
   let telemetryTimer=null,telemetrySchedule=0,telemetryCollecting=false;
   let telemetrySnapshot=null;
   const telemetryPrev=new Map();
+  const stability=new window.TronoCallStability.CallStability();
+  let adaptiveEnabled=storage.getItem('mnAdaptiveQuality')!=='0',eventLoopLagMs=0,nativeResources=null;
+  const audioStatsPrev=new Map();
 
   const rtcConfig=window.TRONO_RTC_CONFIG||{iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -251,7 +255,7 @@ window.TronoSocial = (()=>{
     return transmissionQuality;
   }
   const effectiveScreenBitrate=()=>Math.min(screenBitrateMbps,realtimeStatus?.highAllowed===false&&transportIsSfu()?6:15)*1000000;
-  const qualityProfile=()=>({...QUALITY_PROFILES[cappedQuality()]||QUALITY_PROFILES.balanced,screen:SCREEN_FORMATS[screenFormat],screenBitrate:effectiveScreenBitrate()});
+  const qualityProfile=()=>stability.profile({...QUALITY_PROFILES[cappedQuality()]||QUALITY_PROFILES.balanced,screen:SCREEN_FORMATS[screenFormat],screenBitrate:effectiveScreenBitrate()});
   const plainSdp=desc=>desc?{type:desc.type,sdp:desc.sdp}:null;
   const transportIsSfu=()=>mediaTransport==='sfu';
   const transportPending=()=>mediaTransport==='sfu-pending'||mediaTransport==='stopping';
@@ -323,7 +327,7 @@ window.TronoSocial = (()=>{
     const panel=$('voiceSettingsPanel'),btn=$('voiceSettingsBtn');panel?.classList.toggle('hidden',!settingsOpen);btn?.classList.toggle('settings-active',settingsOpen);btn?.setAttribute('aria-expanded',settingsOpen?'true':'false');
   }
   function setSettingsTab(tab='audio'){
-    if(!['audio','video','connection',...(window.TronoDesktop?['capture','account','appearance','game','activity','privacy']:[])].includes(tab))tab='audio';settingsTab=tab;storage.setItem('tronoVoiceSettingsTab',tab);
+    if(!['audio','video','connection','notifications',...(window.TronoDesktop?['capture','account','appearance','game','activity','privacy']:[])].includes(tab))tab='audio';settingsTab=tab;storage.setItem('tronoVoiceSettingsTab',tab);
     document.querySelectorAll('[data-settings-tab]').forEach(btn=>{const on=btn.dataset.settingsTab===tab;btn.classList.toggle('active',on);btn.setAttribute('aria-selected',on?'true':'false');});
     document.querySelectorAll('[data-settings-panel]').forEach(panel=>{const on=panel.dataset.settingsPanel===tab;panel.classList.toggle('active',on);panel.hidden=!on;});
   }
@@ -500,6 +504,7 @@ window.TronoSocial = (()=>{
     setStatus(`Qualidade ${qualityProfile().label.toLowerCase()} aplicada.`,'ok');
   }
   function preferredRidForMedia(kind,maximized=false){
+    if(stability.level)return stability.level===2?'q':'h';
     if(maximized)return 'f';
     return kind==='screen'&&cappedQuality()!=='economy'?'f':preferredRidForQuality();
   }
@@ -1597,6 +1602,7 @@ window.TronoSocial = (()=>{
     const tracked=joining.finally(()=>{if(voiceJoinPromise===tracked)voiceJoinPromise=null;});voiceJoinPromise=tracked;return tracked;
   }
   function leaveVoice(reason='leave'){
+    stability.reset();audioStatsPrev.clear();eventLoopLagMs=0;
     if($('screenOptionsDialog')?.open)$('screenOptionsDialog').close();
     window.TronoMosaic?.close();
     // Cancel pending permission/SFU work before releasing the current devices.
@@ -1690,6 +1696,7 @@ window.TronoSocial = (()=>{
     if(!voiceJoined)return;
     const before=new Set(privateVoiceRoster.keys()),next=new Map();for(const p of list)if(p?.id)next.set(p.id,{id:p.id,accountId:p.accountId||null,name:p.name,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,joined:true,muted:!!p.muted,deafened:!!p.deafened,camera:!!p.camera,screen:!!p.screen,transport:p.transport||'p2p',quality:p.quality||'balanced'});
     if(voiceRosterInitialized&&!voiceEventsSupported){for(const id of next.keys())if(id!==meId()&&!before.has(id))playCallSound('join',id);for(const id of before)if(id!==meId()&&!next.has(id))playCallSound('leave',id);}else voiceRosterInitialized=true;
+    for(const [id,p] of next){if(p.accountId&&(privateVoiceRoster.get(id)?.accountId!==p.accountId||!peerVolumes.has(id)))peerVolumes.set(id,clampGain(window.TronoPersonal?.get('volume:'+p.accountId,100)??100));}
     privateVoiceRoster.clear();for(const [id,p] of next)privateVoiceRoster.set(id,p);syncPeers();
   }
   function consumeChatRoom(room){
@@ -1751,6 +1758,8 @@ window.TronoSocial = (()=>{
     if(voiceJoined&&allTelemetryPeerConnections().some(([,pc])=>['new','connecting'].includes(pc.connectionState)))return {level:'warn',label:'Áudio conectando',detail:'aguardando rota',recommendation:'Ainda há uma ponta conectando. Se persistir, confira o último erro SFU e a disponibilidade de TURN.'};
     if(!voiceJoined||!allTelemetryPeerConnections().length)return {level:'neutral',label:'Aguardando mídia',detail:'sem fluxo',recommendation:'Entre na chamada e ative câmera ou compartilhamento para medir a conexão.'};
     if(['failed','disconnected'].includes(t.pcState))return {level:'poor',label:'Mídia desconectada',detail:t.pcState,recommendation:lastSfuError?`Falha SFU: ${lastSfuError}. Em redes móveis/restritivas, habilite o TURN da Cloudflare.`:'A rota WebRTC caiu. Tente reconectar; em redes móveis/restritivas, habilite TURN.'};
+    if(t.eventLoopLagMs>=180)return {level:'warn',label:'Sobrecarga local detectada',detail:'processamento',recommendation:'O app demorou para responder. Reduza a carga do jogo ou use o modo leve. A adaptação reduz vídeo; nenhum aplicativo web consegue reservar CPU para a voz.'};
+    if(t.audioLossPct>=5||t.audioJitterMs>=70||t.concealedPct>=8)return {level:'poor',label:'Voz recebida instável',detail:'perda ou atraso',recommendation:'O receptor precisou recuperar áudio. Confira a rede e a carga do computador de quem está falando. A leitura local não mede a CPU do outro participante.'};
     const desired=screenSharing?qualityProfile().screen.fps:qualityProfile().camera.fps;
     const lowFps=desired>=30&&t.outFps>0&&t.outFps<desired*.58;
     if(t.lossPct>=8||t.rttMs>=450||t.jitterMs>=100||lowFps){const captureIssue=lowFps&&t.limiter==='none'&&t.lossPct<3&&t.rttMs<180;return {level:'poor',label:'Conexão crítica',detail:t.rttMs?`${Math.round(t.rttMs)} ms`:'instável',recommendation:captureIssue?'A rede está saudável, mas a origem está codificando poucos quadros. Reduza resolução ou feche aplicações pesadas.':t.limiter==='cpu'?'A CPU está limitando a codificação. Reduza resolução/FPS ou feche aplicações pesadas.':t.limiter==='bandwidth'||t.lossPct>=8?'A rede está limitando a mídia. Reduza a qualidade ou teste outra conexão.':'FPS/latência fora do ideal. Teste uma qualidade menor e confira CPU/rede.'};}
@@ -1764,6 +1773,8 @@ window.TronoSocial = (()=>{
     const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
     const playback=audioPlaybackInfo(),output=$('voiceOutputSelect');
     set('telemetryAppVersion',window.TronoDesktop?.version||window.TronoNetwork?.CLIENT_VERSION||'0.8.0-alpha');
+    set('telemetryAudioLoss',t.audioLossPct===undefined?'—':t.audioLossPct.toFixed(1)+'%');set('telemetryAudioJitter',t.audioJitterMs===undefined?'—':Math.round(t.audioJitterMs)+' ms');set('telemetryConcealed',t.concealedPct===undefined?'—':t.concealedPct.toFixed(1)+'%');set('telemetryLocalLag',Math.round(eventLoopLagMs)+' ms');set('telemetryResources',nativeResources?`${nativeResources.appCpuPercent}% CPU · ${nativeResources.appMemoryMB} MB · ${nativeResources.freeMemoryMB} MB livres`:'Abra este painel no app Windows para medir recursos.');
+    set('adaptiveQualityStatus',stability.level?`Vídeo reduzido temporariamente: ${stability.reason}. Retorno gradual após 60 segundos estáveis.`:'Qualidade escolhida preservada; reduções temporárias quando necessário.');
     set('telemetryPlayback',playback.label);set('telemetryVoiceReceivers',`${playback.count} de ${playback.expected}`);
     set('telemetryAudioContext',mediaAudioContext?.state||'Áudio direto');
     set('telemetryOutput',lastOutputError||((output?.options&&[...output.options].find(o=>o.value===selectedOutput)?.textContent)||(selectedOutput?'Dispositivo escolhido':'Saída padrão')));
@@ -1776,28 +1787,32 @@ window.TronoSocial = (()=>{
   async function collectTelemetry(){
     if(telemetryCollecting)return;telemetryCollecting=true;
     try{
+    if(telemetryOpen&&window.TronoDesktop?.getResources)try{nativeResources=await window.TronoDesktop.getResources();}catch{}
     const pcs=allTelemetryPeerConnections();if(!voiceJoined||!pcs.length){telemetrySnapshot=null;renderTelemetry();return;}
+    let audioLost=0,audioTotal=0,audioJitterMs=0,concealed=0,samples=0,jitterDelay=0,jitterEmitted=0;
     let uploadBps=0,downloadBps=0,rttSum=0,rttCount=0,jitterSum=0,jitterCount=0,lossLost=0,lossTotal=0,outFps=0,inFps=0,outW=0,outH=0,inW=0,inH=0,iceRoute='',pcState='';const limiters=[];
     for(const [pcKey,pc] of pcs){
       if(pc.connectionState&&pc.connectionState!=='new')pcState=pc.connectionState;let report;try{report=await pc.getStats();}catch{continue;}
       report.forEach(stat=>{
         const kind=statKind(stat),ts=stat.timestamp||performance.now(),key=`${pcKey}:${stat.id}`;
         if(stat.type==='outbound-rtp'&&!stat.isRemote){uploadBps+=rateFromStat(`tx:${key}`,stat.bytesSent,ts);if(kind==='video'){if(Number(stat.framesPerSecond)>outFps)outFps=Number(stat.framesPerSecond)||0;if((Number(stat.frameWidth)||0)*(Number(stat.frameHeight)||0)>outW*outH){outW=Number(stat.frameWidth)||0;outH=Number(stat.frameHeight)||0;}if(stat.qualityLimitationReason&&stat.qualityLimitationReason!=='none')limiters.push(stat.qualityLimitationReason);}}
-        if(stat.type==='inbound-rtp'&&!stat.isRemote){downloadBps+=rateFromStat(`rx:${key}`,stat.bytesReceived,ts);const loss=lossFromStat(key,stat.packetsReceived,stat.packetsLost,ts);lossLost+=loss.lost;lossTotal+=loss.total;if(Number.isFinite(stat.jitter)){jitterSum+=Number(stat.jitter)*1000;jitterCount++;}if(kind==='video'){if(Number(stat.framesPerSecond)>inFps)inFps=Number(stat.framesPerSecond)||0;if((Number(stat.frameWidth)||0)*(Number(stat.frameHeight)||0)>inW*inH){inW=Number(stat.frameWidth)||0;inH=Number(stat.frameHeight)||0;}}}
+        if(stat.type==='inbound-rtp'&&!stat.isRemote){downloadBps+=rateFromStat(`rx:${key}`,stat.bytesReceived,ts);const loss=lossFromStat(key,stat.packetsReceived,stat.packetsLost,ts);lossLost+=loss.lost;lossTotal+=loss.total;if(kind==='audio'){audioLost+=loss.lost;audioTotal+=loss.total;audioJitterMs=Math.max(audioJitterMs,(Number(stat.jitter)||0)*1000);const prior=audioStatsPrev.get(key);if(prior){concealed+=Math.max(0,(stat.concealedSamples||0)-prior.concealed);samples+=Math.max(0,(stat.totalSamplesReceived||0)-prior.samples);jitterDelay+=Math.max(0,(stat.jitterBufferDelay||0)-prior.delay);jitterEmitted+=Math.max(0,(stat.jitterBufferEmittedCount||0)-prior.emitted);}audioStatsPrev.set(key,{concealed:stat.concealedSamples||0,samples:stat.totalSamplesReceived||0,delay:stat.jitterBufferDelay||0,emitted:stat.jitterBufferEmittedCount||0});}if(Number.isFinite(stat.jitter)){jitterSum+=Number(stat.jitter)*1000;jitterCount++;}if(kind==='video'){if(Number(stat.framesPerSecond)>inFps)inFps=Number(stat.framesPerSecond)||0;if((Number(stat.frameWidth)||0)*(Number(stat.frameHeight)||0)>inW*inH){inW=Number(stat.frameWidth)||0;inH=Number(stat.frameHeight)||0;}}}
         if(stat.type==='candidate-pair'&&stat.state==='succeeded'&&(stat.nominated||stat.selected)){if(Number.isFinite(stat.currentRoundTripTime)){rttSum+=Number(stat.currentRoundTripTime)*1000;rttCount++;}const lc=report.get(stat.localCandidateId);if(lc?.candidateType)iceRoute=lc.candidateType==='relay'?'TURN relay':lc.candidateType==='srflx'?'STUN / srflx':lc.candidateType;}
         if(stat.type==='remote-inbound-rtp'&&Number.isFinite(stat.roundTripTime)){rttSum+=Number(stat.roundTripTime)*1000;rttCount++;}
       });
     }
     if(!outFps){const track=screenSharing?localScreenStream?.getVideoTracks?.()[0]:localStream?.getVideoTracks?.()[0],settings=track?.getSettings?.()||{};outFps=Number(settings.frameRate)||0;outW=outW||Number(settings.width)||0;outH=outH||Number(settings.height)||0;}
     const limiter=limiters.includes('cpu')?'cpu':limiters.includes('bandwidth')?'bandwidth':limiters[0]||'none';
-    telemetrySnapshot={transport:mediaTransport,rttMs:rttCount?rttSum/rttCount:0,uploadBps,downloadBps,outFps,inFps,outW,outH,inW,inH,lossPct:lossTotal?lossLost/lossTotal*100:0,jitterMs:jitterCount?jitterSum/jitterCount:0,limiter,iceRoute,pcState};renderTelemetry();
+    telemetrySnapshot={audioLossPct:audioTotal?audioLost/audioTotal*100:0,audioJitterMs,concealedPct:samples?Math.min(100,concealed/samples*100):0,jitterBufferMs:jitterEmitted?jitterDelay/jitterEmitted*1000:0,eventLoopLagMs,transport:mediaTransport,rttMs:rttCount?rttSum/rttCount:0,uploadBps,downloadBps,outFps,inFps,outW,outH,inW,inH,lossPct:lossTotal?lossLost/lossTotal*100:0,jitterMs:jitterCount?jitterSum/jitterCount:0,limiter,iceRoute,pcState};if(stability.sample(telemetrySnapshot,performance.now(),adaptiveEnabled)){await applyQualityToLiveMedia();setStatus(stability.level?'Vídeo adaptado para aliviar '+stability.reason+'.':'Qualidade de vídeo restaurada.','ok');}renderTelemetry();
     }finally{telemetryCollecting=false;}
   }
   function startTelemetry(){
-    clearTimeout(telemetryTimer);const generation=++telemetrySchedule;
-    const tick=async()=>{if(generation!==telemetrySchedule)return;try{if(document.visibilityState!=='hidden')await collectTelemetry();}catch(err){console.warn('[TronoSocial] diagnóstico de mídia',err);}finally{if(generation===telemetrySchedule)telemetryTimer=setTimeout(tick,voiceLightMode&&!telemetryOpen?10000:2000);}};
+    clearTimeout(telemetryTimer);const generation=++telemetrySchedule;let expected=performance.now();
+    const tick=async()=>{if(generation!==telemetrySchedule)return;const visible=document.visibilityState!=='hidden'||!!window.TronoDesktop,late=performance.now()-expected;eventLoopLagMs=visible&&late<5000?Math.max(0,late):0;try{if(visible)await collectTelemetry();}catch(err){console.warn('[TronoSocial] diagnóstico de mídia',err);}finally{if(generation===telemetrySchedule){const delay=voiceLightMode&&!telemetryOpen?10000:voiceJoined&&!cameraOn&&!screenSharing&&!telemetryOpen?5000:2000;expected=performance.now()+delay;telemetryTimer=setTimeout(tick,delay);}}};
     void tick();
   }
+  function diagnostics(){return window.TronoCallStability.diagnosticReport({version:window.TronoDesktop?.version||window.TronoNetwork.CLIENT_VERSION,platform:window.TronoDesktop?'Windows':'Navegador',call:{joined:voiceJoined,muted:micMuted,deafened,camera:cameraOn,screen:screenSharing,transport:announcedTransport(),playback:audioPlaybackInfo().label},telemetry:telemetrySnapshot,processing:noiseState().mode,adaptation:stability.level?stability.reason:'qualidade escolhida',resources:nativeResources});}
+  async function copyDiagnostics(){const label=$('copyDiagnosticsStatus');try{await collectTelemetry();const report=diagnostics();if(window.TronoDesktop?.copyDiagnostics)await window.TronoDesktop.copyDiagnostics(report);else await navigator.clipboard.writeText(report);label.textContent='Copiado. Não contém nomes, mensagens, IPs ou credenciais.';}catch{label.textContent='Não foi possível copiar. Permita o acesso à área de transferência.';}}
 
   function bindFloatingDrag(){
     const panel=$('socialPanel'),handle=$('socialDragHandle');if(!panel||!handle)return;let drag=null;
@@ -1814,6 +1829,7 @@ window.TronoSocial = (()=>{
   }
 
   function bind(){
+    $('adaptiveQuality').checked=adaptiveEnabled;$('adaptiveQuality').onchange=async e=>{adaptiveEnabled=e.target.checked;storage.setItem('mnAdaptiveQuality',adaptiveEnabled?'1':'0');stability.reset();await applyQualityToLiveMedia();renderTelemetry();};$('copyDiagnostics').onclick=copyDiagnostics;
     $('socialBtn')?.addEventListener('click',()=>showPanel(!panelOpen));$('roomSocialBtn')?.addEventListener('click',()=>showPanel(!panelOpen));$('chatOnlyOpenSocialBtn')?.addEventListener('click',()=>showPanel(true));$('socialCloseBtn')?.addEventListener('click',()=>showPanel(false));$('socialModeBtn')?.addEventListener('click',togglePanelMode);$('socialMiniDock')?.addEventListener('click',()=>showPanel(true));
     $('chatOnlyTextBtn')?.addEventListener('click',()=>toggleTextChat());$('mnSidebarTextBtn')?.addEventListener('click',()=>toggleTextChat(true));$('chatDrawerCloseBtn')?.addEventListener('click',()=>toggleTextChat(false));
     $('olderChatMessages')?.addEventListener('click',()=>{if(chatHistoryBefore&&window.TronoNetwork.requestChatHistory(chatHistoryBefore))$('olderChatMessages').disabled=true;});
@@ -1841,7 +1857,7 @@ window.TronoSocial = (()=>{
     $('voiceLightModeBtn')?.addEventListener('click',toggleVoiceLightMode);
     if($('callAlertVolume'))$('callAlertVolume').value=callAlertVolume;if($('callAlertVolumeValue'))$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;
     $('callAlertVolume')?.addEventListener('input',e=>{callAlertVolume=Math.max(0,Math.min(100,Number(e.target.value)||0));storage.setItem('mnCallAlertVolume',String(callAlertVolume));$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;primeCallSounds();});$('testCallAlert')?.addEventListener('click',()=>{primeCallSounds();playCallSound('join','test');});
-    window.addEventListener('trono-auth-change',()=>{profileActivities.clear();renderProfileActivities();});
+    window.addEventListener('trono-auth-change',()=>{profileActivities.clear();if(volumeOwner!==window.TronoAuth.user?.id){volumeOwner=window.TronoAuth.user?.id||null;peerVolumes.clear();}renderProfileActivities();});
     window.TronoNetwork?.onMessage(msg=>{
       if(msg.type==='presence'){profileActivities.clear();if(msg.scope==='community')for(const person of msg.members||[])if(person.online&&person.activity?.name)profileActivities.set(person.id,person.activity);renderProfileActivities();}
       if(msg.type==='welcome'){voiceEventsSupported=!!msg.features?.voiceEvents;void syncRealtimeStatus({quiet:true});}
@@ -1895,7 +1911,7 @@ window.TronoSocial = (()=>{
   window.addEventListener('DOMContentLoaded',bind);
 
   return {
-    showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
+    diagnostics,showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
     get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseMode(){return noiseSuppression?noiseEngine:"off";},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},

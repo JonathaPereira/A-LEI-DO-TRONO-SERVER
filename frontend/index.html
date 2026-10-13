@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="desktop-shell.css?v=098desktop016" />
   <link rel="stylesheet" href="desktop-settings.css?v=098desktop016" />
   <link rel="stylesheet" href="media-layout.css?v=098desktop016" />
+  <link rel="stylesheet" href="messenger.css?v=099desktop017" />
   <link rel="stylesheet" href="call-scene.css?v=098desktop016" />
 </head>
 <body>
@@ -336,7 +337,7 @@
           </section>
           <section class="voice-settings-pane" data-settings-panel="connection" role="tabpanel" hidden>
             <div class="settings-section-heading"><div><small>REDE & DIAGNÓSTICO</small><strong>Conexão</strong></div><span>SFU, TURN e telemetria</span></div>
-            <div class="settings-action-grid"><button id="telemetryOpenBtn" class="royal-btn settings-secondary telemetry-open-btn" title="Ver diagnóstico em tempo real">⌁ Abrir diagnóstico</button></div>
+            <label class="auth-check"><input id="adaptiveQuality" type="checkbox" checked> Adaptar vídeo para proteger a voz</label><small id="adaptiveQualityStatus" class="settings-context-help">Qualidade escolhida preservada; reduções temporárias quando necessário.</small><div class="settings-action-grid"><button id="telemetryOpenBtn" class="royal-btn settings-secondary telemetry-open-btn" title="Ver diagnóstico em tempo real">⌁ Abrir diagnóstico</button></div>
             <div id="realtimeInfraCard" class="realtime-infra-card" aria-live="polite">
               <div class="realtime-infra-head"><div><small>TRANSPORTE DE MÍDIA</small><strong id="realtimeModeLabel">WebRTC P2P (fallback)</strong></div><span id="realtimeUsageLabel">Aguardando dados do backend</span></div>
               <div id="realtimeUsageBar" class="realtime-usage-bar" role="progressbar" aria-label="Uso mensal estimado do Cloudflare Realtime" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
@@ -370,7 +371,7 @@
           <div class="telemetry-wide"><small>Saída de áudio</small><strong id="telemetryOutput">—</strong></div>
           <div class="telemetry-wide"><small>Limitador detectado</small><strong id="telemetryLimiter">—</strong></div><div class="telemetry-wide"><small>Último erro SFU</small><strong id="telemetrySfuError">Nenhum</strong></div>
         </div>
-        <small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada aproximadamente a cada 2 segundos. Alguns campos variam conforme navegador e dispositivo.</small>
+        <button id="copyDiagnostics" type="button" class="royal-btn settings-secondary">Copiar diagnóstico</button><span id="copyDiagnosticsStatus" role="status"></span><div class="telemetry-grid"><div><small>Perda de voz</small><strong id="telemetryAudioLoss">—</strong></div><div><small>Jitter de voz</small><strong id="telemetryAudioJitter">—</strong></div><div><small>Áudio recuperado</small><strong id="telemetryConcealed">—</strong></div><div><small>Atraso local</small><strong id="telemetryLocalLag">—</strong></div><div class="telemetry-wide"><small>Recursos do app</small><strong id="telemetryResources">—</strong></div></div><small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada aproximadamente a cada 2 segundos. Alguns campos variam conforme navegador e dispositivo.</small>
       </section>
       <div class="mn-media-stage">
         <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>▦ Grade · até 6</button></div>
@@ -410,7 +411,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.6-Windows.exe" download="MN-Trono-0.1.6-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.7-Windows.exe" download="MN-Trono-0.1.7-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -540,14 +541,16 @@
   <script src="profile-files.js?v=095desktop013"></script>
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
-  <script src="social.js?v=098desktop016"></script>
+  <script src="personal-prefs.js?v=099desktop017"></script>
+  <script src="call-stability.js?v=099desktop017"></script>
+  <script src="social.js?v=099desktop017"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
   <script src="clip-desktop.js?v=095desktop013"></script>
-  <script src="game.js?v=095desktop013"></script>
+  <script src="game.js?v=099desktop017"></script>
   <script src="portal.js?v=091sharingclips"></script>
-  <script src="community.js?v=098desktop016"></script>
+  <script src="community.js?v=099desktop017"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
   <script src="soundboard-client.js?v=098desktop016"></script>
   <script src="media-mosaic.js?v=091sharingclips"></script>
@@ -557,6 +560,8 @@
   <script src="desktop-settings.js?v=098desktop016"></script>
   <script src="media-layout.js?v=098desktop016"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
+  <script src="notifications.js?v=099desktop017"></script>
+  <script src="messenger.js?v=099desktop017"></script>
   <script src="desktop-updates.js?v=098desktop016"></script>
 </body>
 </html>

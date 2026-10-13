@@ -1386,6 +1386,7 @@ function renderChatChannels(channels=[]){
   }
   for(const target of [host,textHost])if(!target.children.length){const empty=document.createElement('small');empty.className='channel-empty';empty.textContent='Nenhum canal';target.appendChild(empty);}
   window.TronoCommunity?.renderRoomIcons?.();
+  window.TronoNotifications?.render?.();
 }
 $('chatChannelList')?.addEventListener('click',e=>{const channel=e.target.closest('[data-chat-channel]');if(channel)void switchChatChannel(channel.dataset.chatChannel);});
 $('textChannelList')?.addEventListener('click',e=>{const channel=e.target.closest('[data-chat-channel]');if(channel)void switchChatChannel(channel.dataset.chatChannel);});

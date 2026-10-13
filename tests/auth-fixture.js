@@ -5,6 +5,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false,soundboard=false}={}){
   const users=new Map(),access=new Map(),refresh=new Map(),links=new Map(),chatMessages=new Map(),historyState={fail:false};let backend;
   const channels=new Map([['chat-livre','Geral'],['chat-jogos','Jogos'],['chat-conversa','Conversa']].map(([id,name])=>[id,{id,name,description:'',channel_type:'mixed'}]));
+  const socialLinks=new Map(),directMessages=new Map(),readCursors=new Map();
   const role=u=>u.email_confirmed_at&&u.email.toLowerCase()==='jonathapereira.jj@gmail.com'?'creator':u.community_role||'member';
   const soundId='30000000-0000-4000-8000-000000000001';
   const secret=crypto.randomBytes(32);
@@ -73,6 +74,35 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
       if(url.pathname.endsWith('append')){chatMessages.set(body.p_id,body.p_message);res.writeHead(204);return res.end();}
       const messages=[...chatMessages.values()].filter(m=>m.roomId===body.p_room).reverse(),before=body.p_before?messages.findIndex(m=>m.id===body.p_before):-1;
       return reply(200,(body.p_before&&before<0?[]:messages.slice(before+1,before+1+body.p_limit+1)).map(message=>({message})));
+    }
+    if(url.pathname.startsWith('/rest/v1/rpc/social_')){
+      if(!record)return fail('bad_jwt',401);const who=record.user.id,peer=body.p_peer||body.p_target,key=[who,peer].sort().join(':'),link=socialLinks.get(key),operation=url.pathname.split('social_')[1];
+      const reject=reason=>reply(400,{message:reason}),user=id=>[...users.values()].find(u=>u.id===id&&u.email_confirmed_at),profile=u=>({id:u.id,name:u.nickname,avatar_preset:u.avatar_preset||'crown',avatar_file_id:u.avatar_file_id||null});
+      const threadMessages=[...directMessages.values()].filter(m=>m.accounts.includes(who)&&m.accounts.includes(peer));
+      if(operation==='friend'){
+        if(who===peer||!user(peer))return reject('INVALID_TARGET');
+        if(body.p_action==='request'){if(!link)socialLinks.set(key,{accounts:[who,peer],requestedBy:who,state:'pending'});}
+        else if(!link)return reject('REQUEST_NOT_FOUND');
+        else if(body.p_action==='accept'){if(link.state!=='pending'||link.requestedBy===who)return reject('FORBIDDEN');link.state='accepted';}
+        else if(body.p_action==='decline'){if(link.state!=='pending')return reject('FORBIDDEN');socialLinks.delete(key);}
+        else if(body.p_action==='remove'){if(link.state!=='accepted')return reject('FORBIDDEN');socialLinks.delete(key);}
+        return reply(200,null);
+      }
+      if(operation==='snapshot'){
+        const friends=[...socialLinks.values()].filter(l=>l.accounts.includes(who)).map(l=>({...profile(user(l.accounts.find(id=>id!==who))),state:l.state,incoming:l.requestedBy!==who}));
+        const threads=new Map();for(const msg of directMessages.values())if(msg.accounts.includes(who)){const id=msg.accounts.find(id=>id!==who),old=threads.get(id)||{...profile(user(id)),peerId:id,unread:0};old.last=msg.message;if(msg.message.senderId!==who&&msg.ordinal>(readCursors.get(who+':'+id)||0))old.unread++;threads.set(id,old);}
+        return reply(200,{friends,threads:[...threads.values()].reverse()});
+      }
+      if(operation==='send'){
+        if(link?.state!=='accepted')return reject('FRIEND_REQUIRED');const channel=body.p_room?channels.get(body.p_room):null;if(body.p_room&&(!channel||channel.deleted_at))return reject('CHANNEL_NOT_FOUND');const text=channel?'Convite para '+channel.name:body.p_text;
+        const existing=directMessages.get(body.p_id);if(existing){if(existing.message.senderId!==who||!existing.accounts.includes(peer)||existing.message.text!==text)return reject('INVALID_MESSAGE');return reply(200,existing.message);}
+        const message={id:body.p_id,senderId:who,text,roomId:body.p_room||null,ts:new Date().toISOString()};directMessages.set(message.id,{accounts:[who,peer],message,ordinal:directMessages.size+1});return reply(200,message);
+      }
+      if(operation==='read'){
+        if(!link&&!threadMessages.length)return reject('FORBIDDEN');const reverse=threadMessages.slice().reverse(),index=body.p_before?reverse.findIndex(m=>m.message.id===body.p_before):-1;if(body.p_before&&index<0)return reject('INVALID_CURSOR');return reply(200,reverse.slice(index+1,index+52).reverse().map(m=>m.message));
+      }
+      if(operation==='mark_read'){const msg=threadMessages.find(m=>m.message.id===body.p_message);if(!msg)return reject('INVALID_MESSAGE');readCursors.set(who+':'+peer,Math.max(readCursors.get(who+':'+peer)||0,msg.ordinal));return reply(200,null);}
+      return reply(404,{});
     }
     if(url.pathname==='/rest/v1/rpc/update_chat_profile'){
       if(!record)return fail('bad_jwt',401);if([...users.values()].some(u=>u.id!==record.user.id&&u.nickname.toLowerCase()===body.p_nickname.toLowerCase()))return reply(409,{message:'NICKNAME_TAKEN'});record.user.nickname=body.p_nickname;record.user.avatar_preset=body.p_preset;record.user.avatar_file_id=body.p_file;return reply(200,{});

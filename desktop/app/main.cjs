@@ -1,10 +1,11 @@
 'use strict';
-const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,safeStorage}=require('electron');
+const {app,BrowserWindow,session,net,ipcMain,globalShortcut,dialog,Tray,Menu,nativeImage,shell,safeStorage,Notification,clipboard}=require('electron');
 const path=require('node:path'),fs=require('node:fs/promises'),crypto=require('node:crypto'),{pathToFileURL}=require('node:url');
 const {APP_ORIGIN,BACKEND_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('./policy.cjs');
 const {clipBytes,writeClip}=require('./clip-files.cjs');
 const {DesktopPreferences}=require('./preferences.cjs');
 const {DesktopActivity}=require('./activity.cjs');
+const {createNotifications}=require('./notifications.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
 let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences,activity;
@@ -56,6 +57,11 @@ async function start(){
   });
   window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:1440,height:960,minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
+  const notifications=createNotifications({Notification,window,activate:target=>{if(window.isDestroyed())return;window.show();if(window.isMinimized())window.restore();window.focus();window.webContents.send('mn:notification-click',target);}});
+  ipcMain.handle('mn:notify',(event,value)=>{trusted(event);return notifications.notify(value);});
+  app.on('will-quit',()=>notifications.dispose());
+  ipcMain.handle('mn:copy-diagnostics',(event,text)=>{trusted(event);if(typeof text!=='string'||text.length>12000)throw Error('Invalid diagnostic report');clipboard.writeText(text);return {copied:true};});
+  ipcMain.handle('mn:resources',event=>{trusted(event);const metrics=app.getAppMetrics(),memory=process.getSystemMemoryInfo();return {appCpuPercent:Math.round(metrics.reduce((sum,row)=>sum+(row.cpu.percentCPUUsage||0),0)*10)/10,appMemoryMB:Math.round(metrics.reduce((sum,row)=>sum+(row.memory.workingSetSize||0),0)/1024),freeMemoryMB:Math.round(memory.free/1024)};});
   applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
   activity=new DesktopActivity(app,state=>{if(!window.isDestroyed())window.webContents.send('mn:activity',state);});
   ipcMain.handle('mn:activity-state',event=>{trusted(event);return activity.snapshot();});

@@ -36,7 +36,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-audio.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/desktop-audio.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
