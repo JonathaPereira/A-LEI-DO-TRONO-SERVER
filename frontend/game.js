@@ -1356,7 +1356,7 @@ let chatChannelSwitching=false;
 let chatChannelResumeVoice=false;
 async function switchChatChannel(channelId){
   if(!chatOnlyMode||chatChannelSwitching||!CHAT_CHANNEL_CATALOG.has(channelId))return;
-  if(window.TronoNetwork?.currentRoom===channelId){if(window.TronoDesktop&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;}
+  if(window.TronoNetwork?.currentRoom===channelId&&(CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text'||window.TronoNetwork.primaryRoom===channelId)){if(window.TronoDesktop&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;}
   chatChannelSwitching=true;
   try{
     const wasInVoice=Boolean(window.TronoSocial?.voiceJoined);

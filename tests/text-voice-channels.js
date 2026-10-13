@@ -28,6 +28,13 @@ test('text subscriptions preserve voice signaling, media flags, presence and sep
       assert(!b.messages.slice(before).some(m=>m.type==='voice-event'&&m.playerId===aId&&m.kind!=='joined'));
       a.send({type:'presence-request'});const presence=await a.wait(m=>m.type==='presence'&&m.members.some(p=>p.id===owner.user.id&&p.inVoice));assert.equal(presence.members.find(p=>p.id===owner.user.id).roomId,voice.id);
     });
+    await t.test('reading a mixed-channel mention preserves the original voice and media state',async()=>{
+      for(const c of [a,b]){c.send({type:'join-text-channel',roomId:'chat-livre'});const event=await c.wait(m=>m.type==='joined-text-channel'&&m.room.id==='chat-livre');assert.equal(event.primaryRoomId,voice.id);}
+      a.send({type:'chat-message',text:'Texto no canal misto'});await b.wait(m=>m.type==='chat-message'&&m.message.text==='Texto no canal misto');
+      a.send({type:'voice-prepare',requestId:'mixed-preserved'});assert.equal((await a.wait(m=>m.type==='sfu-response'&&m.requestId==='mixed-preserved')).data.mode,'p2p');
+      const health=await (await fetch(f.base+'/health')).json();assert.equal(health.chatChannels.find(c=>c.id===voice.id).count,2);assert.equal(health.chatChannels.find(c=>c.id==='chat-livre').voiceActive,false);
+      for(const c of [a,b]){const cursor=c.messages.length;c.send({type:'join-text-channel',roomId:text.id});await c.wait(m=>m.type==='joined-text-channel'&&m.room.id===text.id,cursor);}
+    });
     await t.test('invalid destinations leave both memberships intact; guests cannot subscribe',async()=>{
       a.send({type:'join-text-channel',roomId:voice.id});assert.equal((await a.wait(m=>m.type==='error')).code,'TEXT_CHANNEL_REQUIRED');
       a.send({type:'voice-prepare',requestId:'preserved'});assert.equal((await a.wait(m=>m.type==='sfu-response'&&m.requestId==='preserved')).data.mode,'p2p');

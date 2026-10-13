@@ -199,9 +199,12 @@ function createRoomPlayer(ws,room,name,seat=nextFreeSeat(room)){
 }
 function joinTextRoom(ws,roomId,rawName){
   const room=rooms.get(roomId);
-  if(!room||room.kind!=='chat'||room.channelType!=='text'){send(ws,{type:'error',code:'TEXT_CHANNEL_REQUIRED',message:'Escolha um canal de texto.'});return;}
+  if(!room||room.kind!=='chat'||room.channelType==='voice'){send(ws,{type:'error',code:'TEXT_CHANNEL_REQUIRED',message:'Escolha um canal com mensagens de texto.'});return;}
   const availability=accountNameAvailability(ws,rawName);
   if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message});return;}
+  if(ws.roomId===roomId&&room.channelType!=='text'){
+    leaveTextRoom(ws);send(ws,{type:'joined-text-channel',room:safeRoom(room),primaryRoomId:ws.roomId});void sendChatHistory(ws,room);return;
+  }
   // Upgrade an older client's primary text membership without leaving voice.
   if(ws.roomId===roomId)ws.roomId=null;
   if(ws.textRoomId!==roomId)leaveTextRoom(ws);

@@ -15,7 +15,7 @@ window.TronoNotifications=(()=>{
     if(document.hasFocus()&&document.visibilityState==='visible')return;
     if(window.Notification?.permission==='granted'){const notice=new Notification(title,{body:payload.body,tag:payload.key,icon:'assets/throne.png'});notice.onclick=()=>{window.focus();void navigate(payload.target);notice.close();};}
   }
-  async function navigate(target){if(target.accountId!==window.TronoAuth.user?.id)return;if(target.type==='direct')window.TronoMessenger.open(target.id);else if(target.type==='channel')await window.TronoMessenger.joinChannel(target.id);else window.TronoMessenger.open();}
+  async function navigate(target){if(target.accountId!==window.TronoAuth.user?.id)return;if(target.type==='direct')window.TronoMessenger.open(target.id);else if(target.type==='channel')await window.TronoMessenger.joinChannel(target.id,{showText:true});else window.TronoMessenger.openFriends();}
   function render(){
     for(const el of document.querySelectorAll('[data-chat-channel]')){
       const id=el.dataset.chatChannel;el.classList.toggle('channel-muted',muted(id));

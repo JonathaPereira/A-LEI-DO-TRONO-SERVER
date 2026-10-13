@@ -1911,7 +1911,7 @@ window.TronoSocial = (()=>{
   window.addEventListener('DOMContentLoaded',bind);
 
   return {
-    diagnostics,showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
+    diagnostics,showPanel,showForRoom,consumeRoom,consumeChatRoom,joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTextChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
     get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseMode(){return noiseSuppression?noiseEngine:"off";},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},

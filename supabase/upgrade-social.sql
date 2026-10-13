@@ -84,6 +84,7 @@ begin
   p_text:=btrim(p_text);
   if p_text is null or char_length(p_text) not between 1 and 2000 then raise exception 'INVALID_MESSAGE'; end if;
   insert into public.social_threads(account_a,account_b) values(a,b) on conflict do nothing;
+  perform 1 from public.social_threads where account_a=a and account_b=b for update;
   insert into public.social_messages(id,account_a,account_b,sender_id,text,room_id) values(p_id,a,b,who,p_text,p_room) on conflict do nothing;
   select * into m from public.social_messages where id=p_id;
   if m.account_a<>a or m.account_b<>b or m.sender_id<>who or m.text<>p_text or m.room_id is distinct from p_room then raise exception 'INVALID_MESSAGE'; end if;

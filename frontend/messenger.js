@@ -12,7 +12,7 @@ window.TronoMessenger=(()=>{
     const data=await response.json();if(!response.ok)throw new Error(data.error?.message||'Não foi possível completar a operação.');return data;
   }
   async function refresh(){if(!owner)return;if(refreshing){refreshAgain=true;return;}refreshing=true;const id=owner;
-    try{const data=await request('snapshot');if(id!==owner)return;state=data;render();if(opened)status('');}catch(error){if(id===owner)status(error.message);}finally{refreshing=false;if(refreshAgain){refreshAgain=false;schedule();}}
+    try{const data=await request('snapshot');if(id!==owner)return;state=data;render();if(opened){status('');const last=state.threads.find(row=>row.peerId===peer)?.last;if(last&&last.id!==messages.at(-1)?.id)void read();}}catch(error){if(id===owner)status(error.message);}finally{refreshing=false;if(refreshAgain){refreshAgain=false;schedule();}}
   }
   function schedule(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),250);}
   async function action(id,value){try{await request('friend',{peerId:id,action:value});await refresh();status(value==='request'?'Pedido de amizade enviado.':'');}catch(error){status(error.message);}}
@@ -51,18 +51,21 @@ window.TronoMessenger=(()=>{
   async function markRead(){if(!opened||!peer||!document.hasFocus()||document.visibilityState==='hidden'||!messages.length)return;const id=peer,last=messages.at(-1).id;try{await request('mark-read',{peerId:id,messageId:last});const thread=state.threads.find(row=>row.peerId===id);if(thread)thread.unread=0;render();}catch{}}
   async function open(id){
     if(!window.TronoAuth.user){window.TronoAuth.open('login');return;}window.TronoSocial.toggleTelemetry(false);opened=true;$('messengerPanel').hidden=false;$('messengerToggle').setAttribute('aria-expanded','true');
-    if(id&&id!==peer){if(peer)drafts.set(peer,$('messengerInput').value);peer=id;generation++;messages=[];hasMore=false;before=null;pendingSend=null;$('messengerInput').value=drafts.get(peer)||'';paintMessages();void read();}
-    $('messengerPanel').classList.toggle('has-peer',!!peer);render();schedule();void markRead();
+    if(id&&id!==peer){if(peer)drafts.set(peer,$('messengerInput').value);peer=id;generation++;messages=[];hasMore=false;before=null;pendingSend=null;$('messengerInput').value=drafts.get(peer)||'';paintMessages();}
+    $('messengerPanel').classList.toggle('has-peer',!!peer);render();schedule();if(peer)void read();
   }
   function close(){opened=false;$('messengerPanel').hidden=true;$('messengerToggle').setAttribute('aria-expanded','false');}
+  function openFriends(){if(peer)drafts.set(peer,$('messengerInput').value);peer=null;generation++;messages=[];$('messengerPanel').classList.remove('has-peer');paintMessages();void open();renderHeader();}
   async function submit(roomId=null){
     const text=$('messengerInput').value.trim();if(!peer||sending||(!text&&!roomId))return;const id=peer,account=owner;
     const payload=pendingSend&&pendingSend.peerId===id&&pendingSend.text===text&&pendingSend.roomId===roomId?pendingSend:{id:crypto.randomUUID(),peerId:id,text,roomId};pendingSend=payload;sending=true;renderHeader();status('Enviando…');
     try{const message=await request('send',payload);if(owner!==account||peer!==id)return;if(!messages.some(row=>row.id===message.id)){messages.push(message);paintMessages();}if(!roomId&&$('messengerInput').value.trim()===text){$('messengerInput').value='';drafts.delete(id);}pendingSend=null;status('');schedule();void markRead();}catch(error){if(owner===account&&peer===id)status(error.message+' O texto foi mantido para tentar novamente.');}finally{sending=false;renderHeader();}
   }
-  async function joinChannel(id){
+  async function joinChannel(id,{showText=false}={}){
     const channel=window.TronoChatHub.channels.find(row=>row.id===id);if(!channel){status('Esse canal não está disponível.');return;}
-    if(document.body.classList.contains('chat-only-active')){await window.TronoChatHub.switchChannel(id);window.TronoPortal.showOnly('chatOnlyScreen');}
+    let unsubscribe,timer;
+    if(showText){const show=()=>{clearTimeout(timer);unsubscribe?.();requestAnimationFrame(()=>window.TronoSocial.toggleTextChat(true));};unsubscribe=window.TronoNetwork.onMessage(event=>{if((event.type==='joined-room'||event.type==='joined-text-channel')&&event.room?.id===id)show();});timer=setTimeout(()=>unsubscribe(),18000);if(window.TronoNetwork.currentRoom===id)show();}
+    if(document.body.classList.contains('chat-only-active')){if(showText&&channel.type!=='voice')await window.TronoNetwork.joinTextChannel(id,window.TronoAuth.user.nickname);else await window.TronoChatHub.switchChannel(id);window.TronoPortal.showOnly('chatOnlyScreen');}
     else{if(window.TronoNetwork.primaryRoom?.startsWith('sala-')&&!confirm('Entrar neste canal sairá da sala do jogo. Continuar?'))return;await window.TronoChatHub.enter({channelId:id});}
     close();window.TronoNotifications.channelRead(id);
   }
@@ -72,7 +75,7 @@ window.TronoMessenger=(()=>{
     const panel=make('aside','messenger-panel');panel.id='messengerPanel';panel.hidden=true;panel.setAttribute('aria-label','Amigos e conversas privadas');
     panel.innerHTML='<header class="messenger-heading"><strong>Amigos & conversas</strong><button id="messengerClose" class="settings-close" type="button" aria-label="Fechar amigos">×</button></header><div class="messenger-layout"><section class="messenger-sidebar"><label class="messenger-search-label">Adicionar amigo<input id="messengerSearch" placeholder="Buscar pelo apelido" maxlength="20" autocomplete="off"></label><div id="messengerSearchResults"></div><div id="messengerList"></div></section><section class="messenger-conversation"><header><button id="messengerBack" type="button" class="social-small-button">‹ Amigos</button><div><strong id="messengerName"></strong><small id="messengerSubtitle"></small></div></header><div class="messenger-tools"><button id="messengerAdd" type="button" class="social-small-button">Adicionar amigo</button><button id="messengerMute" type="button" class="social-small-button">Silenciar avisos</button><button id="messengerInvite" type="button" class="social-small-button">Convidar para canal</button><button id="messengerRemove" type="button" class="social-small-button">Remover amigo</button><button id="messengerEarlier" type="button" class="social-small-button">Mensagens anteriores</button></div><div id="messengerInvitePicker" hidden><label>Canal<select id="messengerInviteChannel"></select></label><button id="messengerInviteSend" type="button" class="social-small-button">Enviar convite</button></div><div id="messengerMessages" class="messenger-messages"></div><form id="messengerComposer" hidden><textarea id="messengerInput" rows="2" maxlength="2000" placeholder="Mensagem privada" aria-label="Mensagem privada"></textarea><button id="messengerSend" type="submit">Enviar</button></form></section></div><p id="messengerStatus" role="status"></p>';
     document.body.append(panel);$('messengerClose').onclick=close;$('messengerSearch').oninput=search;$('messengerComposer').onsubmit=e=>{e.preventDefault();void submit();};$('messengerInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void submit();}};
-    $('messengerBack').onclick=()=>{if(peer)drafts.set(peer,$('messengerInput').value);peer=null;generation++;messages=[];panel.classList.remove('has-peer');paintMessages();renderHeader();};
+    $('messengerBack').onclick=openFriends;
     $('messengerAdd').onclick=()=>void action(peer,'request');$('messengerMute').onclick=()=>{window.TronoNotifications.mute(peer,!window.TronoNotifications.muted(peer));renderHeader();};$('messengerRemove').onclick=()=>{if(confirm('Remover esta amizade? O histórico da conversa será preservado.'))void action(peer,'remove');};$('messengerEarlier').onclick=()=>void read({older:true});
     $('messengerInvite').onclick=()=>{const picker=$('messengerInvitePicker'),select=$('messengerInviteChannel');picker.hidden=!picker.hidden;select.replaceChildren();for(const channel of window.TronoChatHub.channels)select.add(new Option(channel.name,channel.id));select.value=window.TronoNetwork.primaryRoom||window.TronoNetwork.currentRoom||select.value;};$('messengerInviteSend').onclick=()=>{const id=$('messengerInviteChannel').value;if(id){void submit(id);$('messengerInvitePicker').hidden=true;}};
     window.addEventListener('trono-telemetry-change',event=>{if(event.detail.open)close();});
@@ -90,5 +93,5 @@ window.TronoMessenger=(()=>{
     function auth(){const id=window.TronoAuth.user?.id||null;if(owner!==id){owner=id;generation++;state={friends:[],threads:[]};peer=null;messages=[];drafts.clear();seen.clear();pendingSend=null;close();paintMessages();render();}toggle.hidden=!id;if(id)schedule();}
     window.addEventListener('trono-auth-change',auth);void window.TronoAuth.ready.then(auth);auth();paintMessages();
   }
-  window.addEventListener('DOMContentLoaded',bind);return {open,close,joinChannel,request};
+  window.addEventListener('DOMContentLoaded',bind);return {open,openFriends,close,joinChannel,request};
 })();

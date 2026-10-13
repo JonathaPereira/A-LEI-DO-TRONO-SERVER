@@ -9,7 +9,7 @@ test('activity is opt-in, recognizes games without window captions, retains star
   try{assert.equal(children.length,0);activity.configure({enabled:false});assert.equal(children.length,0);activity.configure({enabled:true});let state=await next(activity,[cs,browser]);assert.equal(state.game.name,'Counter-Strike 2');const started=state.game.startedAt;state=await next(activity,[cs,browser]);assert.equal(state.game.startedAt,started);
     assert(!JSON.stringify(state).includes('C:\\'));assert(!Object.hasOwn(state.apps[0],'pid'));assert(!Object.hasOwn(state.apps[0],'exe'));
     state=await next(activity,[browser]);assert.equal(state.game,null);
-    activity.configure({enabled:true,preferredAppId:idFor(browser.path),name:'Meu aplicativo'});state=await next(activity,[browser]);assert.equal(state.game.name,'Meu aplicativo');
+    activity.busy=true;state=activity.configure({enabled:true,preferredAppId:idFor(browser.path),name:'Meu aplicativo'});assert.equal(state.game.name,'Meu aplicativo','selection uses the last scan immediately even while the helper is busy');const selectedAt=state.game.startedAt;state=await next(activity,[browser]);assert.equal(state.game.name,'Meu aplicativo');assert.equal(state.game.startedAt,selectedAt);
     activity.configure({enabled:false});assert.equal(activity.child,null);assert.equal(activity.snapshot().game,null);await new Promise(setImmediate);assert.equal(children[0].closed,true);assert.equal(activity.timer,null);
     assert.throws(()=>activity.configure({enabled:true,preferredAppId:'../other'}));assert.throws(()=>activity.configure({enabled:'yes'}));
   }finally{activity.dispose();}
