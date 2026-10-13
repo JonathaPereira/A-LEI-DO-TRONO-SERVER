@@ -49,7 +49,7 @@ window.TronoNotifications=(()=>{
     });
     const channelsHost=document.getElementById('chatChannelList'),textHost=document.getElementById('textChannelList');for(const host of [channelsHost,textHost])new MutationObserver(()=>{for(const el of host.children){const id=el.dataset.chatChannel;if(id)el.classList.toggle('channel-muted',muted(id));}}).observe(host,{childList:true});
     for(const type of ['focus','pointerdown'])window.addEventListener(type,()=>{if(visibleChannel(window.TronoNetwork.currentRoom))channelRead(window.TronoNetwork.currentRoom);});
-    window.addEventListener('trono-auth-change',sync);window.addEventListener('trono-personal-change',sync);
+    window.addEventListener('trono-auth-change',sync);window.addEventListener('trono-personal-change',event=>{if(event.detail.key==='notifications'||event.detail.key.startsWith('mute:'))sync();});
   });
   return {notify,muted,mute,channelRead,render};
 })();
