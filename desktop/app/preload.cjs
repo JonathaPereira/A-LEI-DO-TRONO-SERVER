@@ -2,7 +2,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.1.7',
+  version:'0.1.8',
   notify:value=>ipcRenderer.invoke('mn:notify',value),
   onNotificationClick:fn=>listen('mn:notification-click',fn),
   copyDiagnostics:text=>ipcRenderer.invoke('mn:copy-diagnostics',text),
@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('TronoDesktop',{
   onCaptureCancel:fn=>listen('mn:capture-cancel',fn),
   selectCapture:choice=>ipcRenderer.invoke('mn:capture-select',choice),
   chooseFolder:()=>ipcRenderer.invoke('mn:folder'),
+  openManual:()=>ipcRenderer.invoke('mn:manual'),
   openAttachment:choice=>ipcRenderer.invoke('mn:attachment',choice),
   saveClip:data=>ipcRenderer.invoke('mn:clip-save',data)
 });

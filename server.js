@@ -20,7 +20,7 @@ const accountAuth = createAuth({onRevoke:event=>{
     ws.account=null;leaveRoom(ws,'auth-expired');send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Sua sessão foi encerrada. Entre novamente.'});ws.close(4001,'Sessão encerrada');
   }
 },onProfileChange:account=>{
-  for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};for(const id of new Set([ws.roomId,ws.textRoomId])){const room=rooms.get(id),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}}
+  for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};for(const id of new Set([ws.roomId,ws.textRoomId,ws.gameRoomId])){const room=rooms.get(id),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}}
   community.broadcast();
 }});
 accountAuth.install(app,express);
@@ -29,20 +29,14 @@ const wss = new WebSocketServer({ server, path: '/ws',maxPayload:64*1024,verifyC
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.8.0-alpha';
+const VERSION = '0.9.0-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
-const LAWS = ['ordem','estandarte','revolta','anarquia','usurpacao'];
+const Rules=require('./frontend/game-rules');
+const LAWS=Rules.lawOrder;
 const BOT_NAMES = ['Bonifácio','Epaminondas','Cícero','Otacílio'];
-const DECREES = [
-  {id:'reserva', name:'Reserva', icon:'▣', text:'Cada jogador separa 1 carta. Ela fica fora da mão nas 9 primeiras vazas e deve ser jogada na 10ª.'},
-  {id:'rotacao', name:'Rotação', icon:'⟳', text:'Após as vazas 7, 8 e 9, todos passam simultaneamente 1 carta ao jogador à esquerda.'},
-  {id:'corte', name:'Corte Aberta', icon:'◉', text:'No início da rodada, cada jogador revela 1 carta da mão. Ela permanece pública até ser usada.'},
-  {id:'desafio', name:'Desafio', icon:'⚔', text:'Na primeira Coroa de cada jogador, revele 1 carta. Novas Coroas consecutivas revelam mais 1.'},
-  {id:'silencio', name:'Silêncio', icon:'⊘', text:'Nas 3 primeiras vazas, ninguém pode gastar Influência. A partir da 4ª, funciona normalmente.'},
-  {id:'sucessao', name:'Sucessão', icon:'♛', text:'O próximo líder não pode abrir com o naipe que venceu a vaza anterior, salvo se não possuir outro.'},
-];
+const DECREES=Rules.decrees;
 const decreeById = Object.fromEntries(DECREES.map(d=>[d.id,d]));
 
 const CHAT_ONLY_ROOM_ID = 'chat-livre';
@@ -190,7 +184,7 @@ function schedule(room,fn,ms=450){
 function leaveTextRoom(ws){
   const room=rooms.get(ws.textRoomId);ws.textRoomId=null;
   if(!room)return;
-  room.players.delete(ws.clientId);
+  if(ws.roomId!==room.id&&ws.gameRoomId!==room.id)room.players.delete(ws.clientId);
   if(!room.players.size&&room.kind!=='chat')room.chatHistory=[];
   broadcastRoom(room);broadcastChatChannels();
 }
@@ -214,14 +208,11 @@ function joinTextRoom(ws,roomId,rawName){
   void sendChatHistory(ws,room);
   broadcastRoom(room);broadcastChatChannels();community.broadcast();
 }
-function leaveRoom(ws, reason='leave',keepText=false) {
-  if(!keepText)leaveTextRoom(ws);
-  if (!ws.roomId) return;
-  const room=rooms.get(ws.roomId);
-  if(!room){ ws.roomId=null; return; }
+function removeRoomPlayer(ws,room,reason){
+  if(!room)return;
   const leaving=room.players.get(ws.clientId);
   if(leaving?.voiceJoined)broadcastVoiceEvent(room,leaving,['disconnect','auth-expired'].includes(reason)?'disconnected':'left',reason);
-  room.players.delete(ws.clientId); ws.roomId=null;
+  room.players.delete(ws.clientId);
   if(leaving) void realtimeSfu.cleanupClient(leaving.id,room.id);
 
   if(room.game && leaving){
@@ -234,7 +225,7 @@ function leaveRoom(ws, reason='leave',keepText=false) {
       broadcastLog(room,`<strong>${leaving.name}</strong> ${reason==='disconnect'?'se desconectou':'deixou a sala'}. <strong>${gp.name}</strong> assumiu o assento.`);
       broadcastGameState(room);
       if(room.game.turn===leaving.seat && room.game.phase==='await-play'){ clearTurnTimer(room.game); schedule(room,()=>advanceTurn(room),650); }
-      if(room.game.pending && room.game.pending.waiting?.has(leaving.seat)) {
+      if(room.game.pending && (room.game.pending.waiting?.has(leaving.seat)||room.game.pending.seat===leaving.seat)) {
         autoResolvePendingSeat(room,leaving.seat);
       }
     }
@@ -248,7 +239,47 @@ function leaveRoom(ws, reason='leave',keepText=false) {
   }
 }
 
-function joinRoom(ws,roomId,rawName){
+function gameRoomFor(ws){return rooms.get(ws.independentGames?ws.gameRoomId:ws.roomId);}
+function selectedChatId(ws){return ws.textRoomId||ws.roomId||ws.gameRoomId;}
+function leaveGameRoom(ws,reason='leave'){
+  const id=ws.gameRoomId||(!ws.independentGames&&rooms.get(ws.roomId)?.kind==='game'?ws.roomId:null);if(!id)return;
+  ws.gameRoomId=null;if(ws.roomId===id)ws.roomId=null;
+  removeRoomPlayer(ws,rooms.get(id),reason);
+  send(ws,{type:'left-game-room',roomId:id,primaryRoomId:ws.roomId,chatRoomId:selectedChatId(ws)||null});
+}
+function leaveVoiceRoom(ws,reason='leave',keepText=true){
+  const room=rooms.get(ws.roomId);ws.roomId=null;if(!room)return;
+  const p=room.players.get(ws.clientId);
+  if(p&&(ws.gameRoomId===room.id||keepText&&ws.textRoomId===room.id)){
+    if(p.voiceJoined)broadcastVoiceEvent(room,p,'left',reason);
+    p.voiceJoined=false;p.voiceMuted=false;p.voiceDeafened=false;p.cameraOn=false;p.screenOn=false;p.mediaTransport='p2p';
+    void realtimeSfu.cleanupClient(p.id,room.id);resetVoiceModeIfEmpty(room);broadcastRoom(room);broadcastVoiceRoster(room);broadcastChatChannels();community.broadcast();
+  }else removeRoomPlayer(ws,room,reason);
+  send(ws,{type:'left-voice-room',roomId:room.id,primaryRoomId:null,chatRoomId:selectedChatId(ws)||null});
+}
+function leaveRoom(ws,reason='leave',keepText=false){
+  leaveGameRoom(ws,reason);if(!keepText)leaveTextRoom(ws);leaveVoiceRoom(ws,reason,keepText);
+}
+function joinGameRoom(ws,roomId,rawName){
+  const room=rooms.get(roomId),availability=accountNameAvailability(ws,rawName);
+  if(!room||room.kind!=='game'){send(ws,{type:'error',code:'ROOM_NOT_FOUND',message:'Mesa inexistente.'});return;}
+  if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message});return;}
+  if(ws.gameRoomId===room.id||!ws.independentGames&&ws.roomId===room.id){ws.independentGames=true;ws.gameRoomId=room.id;sendGameMembership(ws,room);return;}
+  if(room.game&&room.game.phase!=='game-over'){send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta mesa já está em partida.'});return;}
+  if(room.players.size>=room.max){send(ws,{type:'error',code:'ROOM_FULL',message:'Mesa cheia. Sua chamada foi mantida.'});return;}
+  leaveGameRoom(ws,'switch-game');ws.independentGames=true;
+  const player=createRoomPlayer(ws,room,availability.name);room.players.set(ws.clientId,player);ws.gameRoomId=room.id;
+  if(!ws.roomId)ws.roomId=room.id;
+  sendGameMembership(ws,room);broadcastRoom(room);broadcastRooms();broadcastChatChannels();
+}
+function sendGameMembership(ws,room){
+  const p=room.players.get(ws.clientId);if(!p)return;
+  send(ws,{type:'joined-game-room',room:safeRoom(room),me:publicPlayer(room,p),primaryRoomId:ws.roomId,chatRoomId:selectedChatId(ws)});
+  void sendChatHistory(ws,room);
+  if(room.game&&room.game.phase!=='game-over')send(ws,{type:'game-state',state:privateGameState(room,p.seat)});
+}
+
+function joinRoom(ws,roomId,rawName){if(ws.independentGames&&rooms.get(roomId)?.kind==='game')return joinGameRoom(ws,roomId,rawName);
   if(accountAuth.required)rawName=ws.guest?.nickname||ws.account?.nickname;
   const room=rooms.get(roomId);
   if(!room){ send(ws,{type:'error',code:'ROOM_NOT_FOUND',message:'Sala inexistente.'}); return; }
@@ -257,7 +288,7 @@ function joinRoom(ws,roomId,rawName){
   if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message,name:availability.name});return;}
   if(room.kind==='game'&&room.game && room.game.phase!=='game-over') { send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'Esta sala já está em partida.'}); return; }
   if(ws.roomId===roomId && room.players.has(ws.clientId)){ leaveTextRoom(ws);send(ws,{type:'joined-room',room:safeRoom(room),me:publicPlayer(room,room.players.get(ws.clientId))});void sendChatHistory(ws,room); return; }
-  leaveRoom(ws,'switch-room');
+  if(ws.independentGames){leaveVoiceRoom(ws,'switch-room');leaveTextRoom(ws);}else leaveRoom(ws,'switch-room');
   if(room.kind==='game'&&room.players.size>=room.max){ send(ws,{type:'error',code:'ROOM_FULL',message:'Sala cheia.'}); return; }
   const seat=nextFreeSeat(room); if(seat===null){ send(ws,{type:'error',code:'NO_SEAT',message:'Nenhum assento disponível.'}); return; }
   const player=createRoomPlayer(ws,room,availability.name,seat);
@@ -267,7 +298,7 @@ function joinRoom(ws,roomId,rawName){
   broadcastRoom(room); broadcastRooms(); broadcastChatChannels();
 }
 function setReady(ws,ready){
-  const room=rooms.get(ws.roomId), player=room?.players.get(ws.clientId);
+  const room=gameRoomFor(ws), player=room?.players.get(ws.clientId);
   if(!room||!player){ send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Você não está em uma sala.'}); return; }
   if(room.kind!=='game'){ send(ws,{type:'error',code:'CHAT_ONLY_ROOM',message:'O Salão Livre é somente para conversa.'}); return; }
   if(room.game && room.game.phase!=='game-over'){ send(ws,{type:'error',code:'GAME_IN_PROGRESS',message:'A partida já começou.'}); return; }
@@ -275,7 +306,7 @@ function setReady(ws,ready){
 }
 
 async function handleChatMessage(ws,rawText,attachmentId,requestedRoomId){
-  const room=rooms.get(ws.textRoomId||ws.roomId),player=room?.players.get(ws.clientId);
+  const room=rooms.get(selectedChatId(ws)),player=room?.players.get(ws.clientId);
   if(!room||!player||(requestedRoomId!==undefined&&requestedRoomId!==room.id)){send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Selecione novamente o canal para enviar a mensagem.'});return;}
   if(room.channelType==='voice'){send(ws,{type:'error',code:'VOICE_CHANNEL',message:'Use um canal de texto para enviar mensagens.'});return;}
   if(ws.guest&&attachmentId){send(ws,{type:'error',code:'LOGIN_REQUIRED_FILES',message:'Entre em uma conta para enviar anexos.'});return;}
@@ -286,7 +317,7 @@ async function handleChatMessage(ws,rawText,attachmentId,requestedRoomId){
   try{await chatHistory.serial(room.id,async()=>{
     let attachment=null;
     if(attachmentId)attachment=await fileStorage.attachment(attachmentId,ws.account?.id,room.id);
-    if((ws.textRoomId||ws.roomId)!==room.id||room.players.get(player.id)!==player)return;
+    if(selectedChatId(ws)!==room.id||room.players.get(player.id)!==player)return;
     const message={id:crypto.randomUUID(),roomId:room.id,senderId:player.id,seat:player.seat,name:player.name,accountId:ws.account?.id||null,avatar_preset:player.avatar_preset||'crown',avatar_file_id:player.avatar_file_id||null,text,attachment,ts:now};
     await chatHistory.append(room,message,ws.account?.id);
     if(rooms.get(room.id)!==room)return;
@@ -306,12 +337,12 @@ async function handleChatMessage(ws,rawText,attachmentId,requestedRoomId){
 async function sendChatHistory(ws,room,before=null){
   try{await chatHistory.serial(room.id,async()=>{
     const history=await chatHistory.read(room,before);
-    if((ws.textRoomId||ws.roomId)!==room.id||room.players.get(ws.clientId)?.ws!==ws)return;
+    if(selectedChatId(ws)!==room.id||room.players.get(ws.clientId)?.ws!==ws)return;
     send(ws,{type:'chat-history',roomId:room.id,...history,older:!!before});
   });}catch(e){send(ws,{type:'error',code:e.code||'CHAT_HISTORY_UNAVAILABLE',message:e.message,roomId:room.id});}
 }
 function requestChatHistory(ws,message){
-  const room=rooms.get(ws.textRoomId||ws.roomId);
+  const room=rooms.get(selectedChatId(ws));
   if(!room||room.id!==message.roomId||!room.players.has(ws.clientId))return;
   if(message.before!==undefined&&(!/^[0-9a-f-]{36}$/i.test(message.before)))return;
   if(Date.now()-(ws.lastHistoryAt||0)<800){send(ws,{type:'error',code:'CHAT_HISTORY_RATE',message:'Aguarde um instante antes de carregar outra página.'});return;}
@@ -335,7 +366,7 @@ function forceRoomP2p(room,reason='A chamada foi sincronizada em P2P para todos.
   for(const p of room.players.values())if(p.voiceJoined){p.mediaTransport='p2p';void realtimeSfu.cleanupClient(p.id,room.id);}
   sendVoiceMode(room,reason);broadcastVoiceRoster(room);
 }
-function prepareVoice(ws,message){const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!player){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'NOT_IN_ROOM',message:'Entre em um canal primeiro.'}});return;}
+function prepareVoice(ws,message){if(!ws.roomId&&ws.gameRoomId){ws.roomId=ws.gameRoomId;send(ws,{type:'voice-room-attached',room:safeRoom(rooms.get(ws.roomId))});}const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!player){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'NOT_IN_ROOM',message:'Entre em um canal primeiro.'}});return;}
   if(room.channelType==='text'){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'TEXT_CHANNEL',message:'Entre em um canal de voz para iniciar uma chamada.'}});return;}
   const mode=chooseVoiceMode(room);send(ws,{type:'sfu-response',requestId:message.requestId,ok:true,data:{mode,revision:room.voiceRevision}});sendVoiceMode(room);
 }
@@ -409,7 +440,7 @@ function prestige(p){ return p.totalCrowns+p.totalShadows+2*totalPairs(p); }
 function rawAccumulated(p){ return p.totalCrowns+p.totalShadows; }
 
 function requestStart(ws){
-  const room=rooms.get(ws.roomId), player=room?.players.get(ws.clientId);
+  const room=gameRoomFor(ws), player=room?.players.get(ws.clientId);
   if(!room||!player){ send(ws,{type:'error',code:'NOT_IN_ROOM',message:'Você não está em uma sala.'}); return; }
   if(room.kind!=='game'){ send(ws,{type:'error',code:'CHAT_ONLY_ROOM',message:'O Salão Livre não inicia partidas.'}); return; }
   if(roomHostId(room)!==ws.clientId){ send(ws,{type:'error',code:'NOT_HOST',message:'Somente o anfitrião pode iniciar.'}); return; }
@@ -440,7 +471,7 @@ function startGame(room){
 }
 
 function resetRoundStats(game){
-  for(const p of game.players){ p.hand=[];p.reserve=null;p.roundCrowns=0;p.roundShadows=0;p.influence=0;p.hadCrown=false;p.crownStreak=0; }
+  for(const p of game.players){ p.hand=[];p.reserve=null;p.intelligence=null;p.roundCrowns=0;p.roundShadows=0;p.influence=0;p.hadCrown=false;p.crownStreak=0; }
 }
 function setupRound(room){
   const g=room.game; if(!g) return;
@@ -472,8 +503,9 @@ function applyDecreeChoice(room,seat,decreeId){
   g.decree=decreeById[decreeId];g.pending=null;
   broadcastLog(room,`${g.players[seat].name} escolheu o Decreto ${g.decree.name}.`);
   if(decreeId==='reserva') startMultiCardStage(room,'reserva');
-  else if(decreeId==='corte') startMultiCardStage(room,'corte');
-  else beginTrick(room);
+  else if(decreeId==='corte'||decreeId==='conselho')startMultiCardStage(room,decreeId);
+  else if(decreeId==='espionagem')startIntelligence(room);
+  else {if(decreeId==='favor')for(const p of g.players)p.influence=1;beginTrick(room);}
   return true;
 }
 function startMultiCardStage(room,kind){
@@ -482,7 +514,7 @@ function startMultiCardStage(room,kind){
   g.pending={kind,waiting:new Set(),choices:new Map()};
   for(const p of g.players){
     if(p.bot){ g.pending.choices.set(p.seat,chooseBotCard(p,kind)); }
-    else { g.pending.waiting.add(p.seat); sendPrompt(room,p.seat,{kind:`choose-${kind}`,title:kind==='reserva'?'Escolha sua Reserva':'Corte Aberta',cardIds:p.hand.map(c=>c.id)}); }
+    else { g.pending.waiting.add(p.seat); sendPrompt(room,p.seat,{kind:`choose-${kind}`,title:kind==='reserva'?'Escolha sua Reserva':kind==='conselho'?'Conselho — passe uma carta à direita':'Corte Aberta',cardIds:p.hand.map(c=>c.id)}); }
   }
   broadcastGameState(room);
   maybeFinishMultiStage(room);
@@ -492,7 +524,7 @@ function chooseBotCard(p,kind){
   return p.hand[rand(p.hand.length)]?.id;
 }
 function maybeFinishMultiStage(room){
-  const g=room.game,p=g?.pending; if(!p||!['reserva','corte','rotation'].includes(p.kind)||p.waiting.size) return;
+  const g=room.game,p=g?.pending; if(!p||!['reserva','corte','rotation','conselho'].includes(p.kind)||p.waiting.size) return;
   if(p.kind==='reserva'){
     for(const pl of g.players){ const id=p.choices.get(pl.seat); const idx=pl.hand.findIndex(c=>c.id===id); if(idx<0) continue; pl.reserve=pl.hand.splice(idx,1)[0]; }
     g.pending=null; broadcastLog(room,'Todas as Casas separaram sua carta de Reserva.'); broadcastGameState(room); beginTrick(room); return;
@@ -501,16 +533,25 @@ function maybeFinishMultiStage(room){
     for(const pl of g.players){ const id=p.choices.get(pl.seat); const c=pl.hand.find(c=>c.id===id); if(c){ c.public=true;c.publicReason='Corte Aberta'; } }
     g.pending=null; broadcastLog(room,'Corte Aberta: cada Casa revelou uma carta.'); broadcastGameState(room); beginTrick(room); return;
   }
-  if(p.kind==='rotation'){
-    const chosen=p.choices;
-    const incoming=Array(4);
-    for(const pl of g.players){ const id=chosen.get(pl.seat); const idx=pl.hand.findIndex(c=>c.id===id); if(idx<0) throw new Error('Rotação recebeu carta inválida.'); const [card]=pl.hand.splice(idx,1); incoming[(pl.seat+1)%4]=card; }
-    for(const pl of g.players){ pl.hand.push(incoming[pl.seat]);sortHand(pl.hand); }
+  if(p.kind==='rotation'||p.kind==='conselho'){
+    const council=p.kind==='conselho',direction=council?-1:1;
+    Rules.passCards(g.players,p.choices,direction);for(const pl of g.players)sortHand(pl.hand);
     g.pending=null;
-    broadcastGameEvent(room,{event:'exchange',kind:'rotation',moves:g.players.map(p=>({from:p.seat,to:(p.seat+1)%4,label:`${p.name} → ${g.players[(p.seat+1)%4].name}`})),title:`Rotação — fim da vaza ${g.trick}`});
-    broadcastLog(room,'Rotação: quatro cartas ocultas foram passadas simultaneamente para a esquerda.');
-    broadcastGameState(room); schedule(room,()=>chooseNextLawStage(room),3500); return;
+    broadcastGameEvent(room,{event:'exchange',kind:council?'conselho':'rotation',moves:g.players.map(pl=>({from:pl.seat,to:(pl.seat+direction+4)%4,label:`${pl.name} → ${g.players[(pl.seat+direction+4)%4].name}`})),title:council?'Conselho — pacto entre as Casas':`Rotação — fim da vaza ${g.trick}`});
+    broadcastLog(room,`${council?'Conselho':'Rotação'}: quatro cartas ocultas foram passadas simultaneamente para a ${council?'direita':'esquerda'}.`);
+    broadcastGameState(room);schedule(room,()=>council?beginTrick(room):chooseNextLawStage(room),3500);
   }
+}
+
+function startIntelligence(room){
+  const g=room.game;g.phase='private-intelligence';g.pending={kind:'intelligence-ack',waiting:new Set()};
+  for(const p of g.players){p.intelligence=Rules.intelligence(g.players,p.seat);if(!p.bot){g.pending.waiting.add(p.seat);sendToSeat(room,p.seat,{type:'private-intelligence',intelligence:p.intelligence});}}
+  broadcastLog(room,'Espionagem: cada Casa recebeu uma informação privada sobre o jogador à direita.');broadcastGameState(room);
+  if(!g.pending.waiting.size){g.pending=null;beginTrick(room);}
+}
+function acknowledgePrivate(room,seat,kind){
+  const g=room.game,p=g.pending;if(p?.kind!==kind||!p.waiting.has(seat))return false;
+  p.waiting.delete(seat);if(!p.waiting.size){g.pending=null;schedule(room,()=>kind==='intelligence-ack'?beginTrick(room):startTurns(room),180);}return true;
 }
 
 function beginTrick(room){
@@ -539,49 +580,39 @@ function applyTrump(room,seat,suit){
 }
 function suitName(s){ return ({cetro:'Cetro',chave:'Chave',lamina:'Lâmina',mascara:'Máscara'})[s]||s; }
 
-function usurpacaoEligibleCards(hand){
-  return hand.filter(c=>c.publicReason!=='Corte Aberta');
-}
+function usurpacaoEligibleCards(hand){return Rules.eligible(hand);}
 function usurpacaoGiveStage(room){
-  const g=room.game, shadow=g.players[g.lastShadow], crown=g.players[g.lastCrown];
-  if(!shadow||!crown){ return startTurns(room); }
-  if(shadow.seat===crown.seat) throw new Error('Usurpação inválida: Coroa e Sombra não podem ser o mesmo jogador.');
-  if(g.players.some(p=>p.hand.length<4)) throw new Error('Usurpação inválida: todos precisam ter pelo menos 4 cartas.');
-  const eligible=usurpacaoEligibleCards(shadow.hand);
-  if(!eligible.length) throw new Error('Usurpação inválida: a Sombra não possui carta elegível para trocar.');
-  g.phase='usurp-give';g.pending={kind:'usurp-give',seat:shadow.seat,shadow:shadow.seat,crown:crown.seat,eligibleIds:eligible.map(c=>c.id)};broadcastGameState(room);
-  if(shadow.bot){ const given=[...eligible].sort((a,b)=>a.value-b.value)[0]; schedule(room,()=>applyUsurpGive(room,shadow.seat,given.id),500); }
-  else sendPrompt(room,shadow.seat,{kind:'usurp-give',title:'Usurpação — entregue uma carta',cardIds:eligible.map(c=>c.id),otherName:crown.name,note:'A carta revelada pela Corte Aberta não pode ser trocada.'});
+  const g=room.game,shadow=g.players[g.lastShadow];if(!shadow)return startTurns(room);
+  if(g.players.some(p=>p.hand.length<4))throw new Error('Usurpação exige ao menos quatro cartas por Casa.');
+  const options=g.players.filter(p=>p.seat!==shadow.seat&&Rules.eligible(p.hand).length).map(p=>p.seat);
+  g.phase='usurp-target';g.pending={kind:'usurp-target',seat:shadow.seat,options};broadcastGameState(room);
+  if(shadow.bot)schedule(room,()=>applyUsurpTarget(room,shadow.seat,options[rand(options.length)]),500);
+  else sendPrompt(room,shadow.seat,{kind:'usurp-target',title:'Usurpação — escolha uma Casa',options:options.map(seat=>({seat,name:g.players[seat].name}))});
+}
+function applyUsurpTarget(room,seat,targetSeat){
+  const g=room.game,p=g?.pending;if(p?.kind!=='usurp-target'||p.seat!==seat||!p.options.includes(targetSeat))return false;
+  const shadow=g.players[seat],target=g.players[targetSeat],eligible=Rules.eligible(shadow.hand);
+  g.phase='usurp-give';g.pending={kind:'usurp-give',seat,shadow:seat,target:targetSeat,eligibleIds:eligible.map(c=>c.id)};broadcastGameState(room);
+  if(shadow.bot)schedule(room,()=>applyUsurpGive(room,seat,[...eligible].sort((a,b)=>a.value-b.value)[0].id),500);
+  else sendPrompt(room,seat,{kind:'usurp-give',title:'Usurpação — separe uma carta',cardIds:eligible.map(c=>c.id),otherName:target.name});return true;
 }
 function applyUsurpGive(room,seat,cardId){
-  const g=room.game,p=g?.pending;if(!p||p.kind!=='usurp-give'||p.seat!==seat||!p.eligibleIds?.includes(cardId))return false;
-  const shadow=g.players[p.shadow],crown=g.players[p.crown];const idx=shadow.hand.findIndex(c=>c.id===cardId);if(idx<0)return false;
-  if(shadow.hand[idx].publicReason==='Corte Aberta') return false;
-  const [given]=shadow.hand.splice(idx,1);crown.hand.push(given);crown.hand=shuffle(crown.hand);
-  const pickableIds=usurpacaoEligibleCards(crown.hand).map(c=>c.id);
-  if(!pickableIds.length) throw new Error('Usurpação inválida: a Coroa não possui carta elegível para devolver.');
-  g.phase='usurp-pick';g.pending={kind:'usurp-pick',seat:shadow.seat,shadow:shadow.seat,crown:crown.seat,given,pickableIds};broadcastGameState(room);
-  if(shadow.bot){ schedule(room,()=>applyUsurpPick(room,shadow.seat,rand(pickableIds.length)),500); }
-  else sendPrompt(room,shadow.seat,{kind:'usurp-pick',title:'Usurpação — escolha às cegas',count:pickableIds.length,otherName:crown.name,note:'A carta aberta pelo Decreto Corte Aberta está protegida e não participa da escolha.'});
-  return true;
+  const g=room.game,p=g?.pending;if(p?.kind!=='usurp-give'||p.seat!==seat||!p.eligibleIds.includes(cardId))return false;
+  const shadow=g.players[p.shadow],target=g.players[p.target];
+  const exchange=Rules.reserveExchange(g.players,shadow,target,cardId,shuffle);
+  g.phase='usurp-pick';g.pending={kind:'usurp-pick',seat,shadow:seat,target:target.seat,...exchange};broadcastGameState(room);
+  if(shadow.bot)schedule(room,()=>applyUsurpPick(room,seat,rand(exchange.pickableIds.length)),500);
+  else sendPrompt(room,seat,{kind:'usurp-pick',title:'Usurpação — escolha às cegas',count:exchange.pickableIds.length,otherName:target.name,note:'Sua carta está separada e nunca pode retornar. Corte Aberta permanece protegida.'});return true;
 }
 function applyUsurpPick(room,seat,index){
-  const g=room.game,p=g?.pending;if(!p||p.kind!=='usurp-pick'||p.seat!==seat)return false;
-  const shadow=g.players[p.shadow],crown=g.players[p.crown];
-  const i=Number(index);if(!Number.isInteger(i)||i<0||i>=p.pickableIds.length)return false;
-  const chosenId=p.pickableIds[i];
-  const crownIndex=crown.hand.findIndex(c=>c.id===chosenId);if(crownIndex<0)return false;
-  const [taken]=crown.hand.splice(crownIndex,1);shadow.hand.push(taken);sortHand(shadow.hand);sortHand(crown.hand);
-  const given=p.given;
-  if(taken.publicReason==='Corte Aberta'||given.publicReason==='Corte Aberta') throw new Error('Usurpação tentou mover uma carta protegida pela Corte Aberta.');
-  const waiting=new Set([shadow,crown].filter(x=>!x.bot).map(x=>x.seat));
-  g.phase='usurp-reveal';g.pending={kind:'usurp-ack',waiting};
-  broadcastGameEvent(room,{event:'exchange',kind:'usurpacao',title:'Usurpação — troca de mãos',shadow:shadow.seat,crown:crown.seat,moves:[{from:shadow.seat,to:crown.seat,label:'Carta da Sombra → Coroa'},{from:crown.seat,to:shadow.seat,label:'Carta aleatória → Sombra',delay:220}]});
-  if(!shadow.bot) sendToSeat(room,shadow.seat,{type:'private-usurpation',role:'shadow',outgoing:given,incoming:taken,otherName:crown.name,returnedSameCard:given.id===taken.id});
-  if(!crown.bot) sendToSeat(room,crown.seat,{type:'private-usurpation',role:'crown',outgoing:taken,incoming:given,otherName:shadow.name,returnedSameCard:given.id===taken.id});
-  broadcastLog(room,`Usurpação: ${shadow.name} e ${crown.name} trocaram uma carta oculta. A carta da Corte Aberta permaneceu protegida.`);broadcastGameState(room);
-  if(!waiting.size)schedule(room,()=>{g.pending=null;startTurns(room);},3200);
-  return true;
+  const g=room.game,p=g?.pending;if(p?.kind!=='usurp-pick'||p.seat!==seat||!Number.isInteger(index)||index<0||index>=p.pickableIds.length)return false;
+  const shadow=g.players[p.shadow],target=g.players[p.target],{given,taken}=Rules.finishExchange(shadow,target,p,index);sortHand(shadow.hand);sortHand(target.hand);
+  const waiting=new Set([shadow,target].filter(x=>!x.bot).map(x=>x.seat));g.phase='usurp-reveal';g.pending={kind:'usurp-ack',waiting};
+  broadcastGameEvent(room,{event:'exchange',kind:'usurpacao',title:'Usurpação — troca de mãos',shadow:seat,target:target.seat,moves:[{from:target.seat,to:seat,label:'Carta oculta → Sombra'},{from:seat,to:target.seat,label:'Carta separada → Casa escolhida',delay:220}]});
+  if(!shadow.bot)sendToSeat(room,seat,{type:'private-usurpation',role:'shadow',outgoing:given,incoming:taken,otherName:target.name,returnedSameCard:false});
+  if(!target.bot)sendToSeat(room,target.seat,{type:'private-usurpation',role:'target',outgoing:taken,incoming:given,otherName:shadow.name,returnedSameCard:false});
+  broadcastLog(room,`Usurpação: ${shadow.name} e ${target.name} trocaram uma carta oculta. Nenhuma carta protegida foi movida.`);broadcastGameState(room);
+  if(!waiting.size)schedule(room,()=>{g.pending=null;startTurns(room);},3200);return true;
 }
 
 function clearTurnTimer(g){
@@ -606,7 +637,7 @@ function armTurnTimer(room,seat){
   },TURN_MS+60);
 }
 function startTurns(room){ const g=room.game;clearTurnTimer(g);g.phase='await-play';g.turn=g.leader;broadcastGameState(room);advanceTurn(room); }
-function influenceBlocked(g){ return g.decree?.id==='silencio' && g.trick<=3; }
+function influenceBlocked(g,p){return Rules.influenceBlocked(g,p);}
 function leadSuit(g){ return g.declaredLeadSuit || g.plays[0]?.card?.suit || null; }
 function legalCards(g,p){
   let cards=[...p.hand];
@@ -614,11 +645,11 @@ function legalCards(g,p){
   if(g.plays.length===0 && g.decree?.id==='sucessao' && g.previousWinningSuit){ const alt=cards.filter(c=>c.suit!==g.previousWinningSuit); if(alt.length) cards=alt; }
   if(g.plays.length===0) return cards;
   if(['ordem','estandarte','revolta','usurpacao'].includes(g.currentLaw)){
-    const same=cards.filter(c=>c.suit===leadSuit(g));if(same.length)return same;
+    return Rules.followCards(cards,g.currentLaw,leadSuit(g),g.trump);
   }
   return cards;
 }
-function canUseInfluence(g,p,cost=1){ if(p.influence<cost||influenceBlocked(g))return false; if(g.plays.length===0)return p.seat===g.leader; return true; }
+function canUseInfluence(g,p,cost=1){ if(p.influence<cost||influenceBlocked(g,p))return false; if(g.plays.length===0)return p.seat===g.leader; return true; }
 function influenceLegalCards(g,p){ return legalCards(g,p).filter(c=>c.publicReason!=='Corte Aberta'); }
 function chooseBotPlay(g,p,legal){
   const sorted=[...legal].sort((a,b)=>a.value-b.value),seek=Math.random()<.55;
@@ -644,7 +675,7 @@ function advanceTurn(room){
     schedule(room,()=>{
       if(!room.game||room.game.turn!==seat||room.game.phase!=='await-play')return;
       const card=chooseBotPlay(g,p,legal);let influenceAction='none',modifier=0,declaredSuit=null;
-      if(card.publicReason!=='Corte Aberta'&&!influenceBlocked(g)){
+      if(card.publicReason!=='Corte Aberta'&&!influenceBlocked(g,p)){
         if(canUseInfluence(g,p,2)&&card.value>=4&&card.value<=9&&Math.random()<.30){
           const seekCrown=Math.random()<.62;
           influenceAction=(g.currentLaw==='revolta' ? (seekCrown?'minus':'plus') : (seekCrown?'plus':'minus'));
@@ -697,22 +728,8 @@ function commitPlay(room,p,card,{hidden=false,influenceAction='none',modifier=0,
 function pickWinner(candidates,mode){
   return candidates.reduce((best,p)=>{if(!best)return p;const v=playValue(p),bv=playValue(best);if(mode==='max')return v>bv?p:best;return v<bv?p:best;},null);
 }
-function evaluateTrick(g){
-  if(!g?.plays||g.plays.length!==4) throw new Error('A vaza precisa conter exatamente 4 cartas para ser resolvida.');
-  const lead=leadSuit(g);let crown;
-  if(g.currentLaw==='anarquia') crown=pickWinner(g.plays,'max');
-  else if(g.currentLaw==='revolta') crown=pickWinner(g.plays.filter(p=>p.card.suit===lead),'min');
-  else if(g.currentLaw==='estandarte'){
-    const tr=g.plays.filter(p=>p.card.suit===g.trump);
-    crown=tr.length?pickWinner(tr,'max'):pickWinner(g.plays.filter(p=>p.card.suit===lead),'max');
-  } else crown=pickWinner(g.plays.filter(p=>p.card.suit===lead),'max');
-  if(!crown) throw new Error(`Não foi possível determinar a Coroa sob ${lawName(g.currentLaw)}.`);
-  const others=g.plays.filter(p=>p.playerId!==crown.playerId);
-  const shadow=pickWinner(others,g.currentLaw==='revolta'?'max':'min');
-  if(!shadow) throw new Error('Não foi possível determinar a Sombra.');
-  if(crown.playerId===shadow.playerId) throw new Error('Invariante violada: um jogador não pode receber Coroa e Sombra na mesma vaza.');
-  return{crown,shadow};
-}
+function evaluateTrick(g){return Rules.evaluate(g.plays,g.currentLaw,leadSuit(g),g.trump);}
+
 function resolveTrick(room){
   const g=room.game;if(!g)return;
   g.phase='resolve';g.turn=null;
@@ -800,22 +817,20 @@ function sendPrompt(room,seat,prompt){
   const g=room.game;if(!g)return;const id=`p${++g.promptSeq}`;sendToSeat(room,seat,{type:'game-prompt',prompt:{id,...prompt}});
 }
 function handleGameAction(ws,message){
-  const room=rooms.get(ws.roomId), hp=room?.players.get(ws.clientId),g=room?.game;if(!room||!hp||!g){send(ws,{type:'error',code:'NO_GAME',message:'Não existe partida ativa nesta sala.'});return;}
+  const room=gameRoomFor(ws), hp=room?.players.get(ws.clientId),g=room?.game;if(!room||!hp||!g){send(ws,{type:'error',code:'NO_GAME',message:'Não existe partida ativa nesta sala.'});return;}
   const seat=hp.seat,action=message.action,payload=message.payload||{};
   let ok=false;
   if(action==='choose-decree')ok=applyDecreeChoice(room,seat,payload.value);
   else if(action==='choose-trump')ok=applyTrump(room,seat,payload.value);
   else if(action==='choose-law')ok=applyLawChoice(room,seat,payload.value);
+  else if(action==='usurp-target')ok=applyUsurpTarget(room,seat,payload.targetSeat);
   else if(action==='usurp-give')ok=applyUsurpGive(room,seat,payload.cardId);
   else if(action==='usurp-pick')ok=applyUsurpPick(room,seat,Number(payload.index));
   else if(action==='challenge')ok=applyChallenge(room,seat,payload.cardId);
   else if(action==='play-card')ok=handlePlay(room,seat,payload);
-  else if(action==='usurp-ack'){
-    const p=g.pending;
-    if(p?.kind==='usurp-ack'&&p.waiting?.has(seat)){p.waiting.delete(seat);ok=true;if(!p.waiting.size){g.pending=null;schedule(room,()=>startTurns(room),180);}}
-  }
-  else if(['choose-reserva','choose-corte','rotation'].includes(action)){
-    const p=g.pending, expected=action==='choose-reserva'?'reserva':action==='choose-corte'?'corte':'rotation';
+  else if(action==='usurp-ack'||action==='intelligence-ack')ok=acknowledgePrivate(room,seat,action);
+  else if(['choose-reserva','choose-corte','choose-conselho','rotation'].includes(action)){
+    const p=g.pending, expected=action==='choose-reserva'?'reserva':action==='choose-corte'?'corte':action==='choose-conselho'?'conselho':'rotation';
     if(p?.kind===expected&&p.waiting?.has(seat)&&g.players[seat].hand.some(c=>c.id===payload.cardId)){p.choices.set(seat,payload.cardId);p.waiting.delete(seat);ok=true;broadcastGameState(room);maybeFinishMultiStage(room);}
   }
   if(!ok && !['play-card'].includes(action)) send(ws,{type:'error',code:'INVALID_ACTION',message:'Essa ação não é válida neste momento.'});
@@ -823,7 +838,7 @@ function handleGameAction(ws,message){
 function autoResolvePendingSeat(room,seat){
   const g=room.game,p=g?.pending;if(!g||!p)return;
   const gp=g.players[seat];gp.bot=true;gp.clientId=null;
-  if(p.kind==='usurp-ack'&&p.waiting?.has(seat)){p.waiting.delete(seat);if(!p.waiting.size){g.pending=null;schedule(room,()=>startTurns(room),180);}return;}
+  if(['usurp-ack','intelligence-ack'].includes(p.kind)&&p.waiting?.has(seat)){acknowledgePrivate(room,seat,p.kind);return;}
   if(p.waiting?.has(seat)){
     let cardId=gp.hand[rand(gp.hand.length)]?.id;
     if(p.kind==='reserva')cardId=chooseBotCard(gp,'reserva');
@@ -833,6 +848,7 @@ function autoResolvePendingSeat(room,seat){
   if(p.kind==='decree')applyDecreeChoice(room,seat,p.options[rand(p.options.length)]);
   else if(p.kind==='trump')applyTrump(room,seat,chooseBotTrump(gp));
   else if(p.kind==='law')applyLawChoice(room,seat,p.options[rand(p.options.length)]);
+  else if(p.kind==='usurp-target')applyUsurpTarget(room,seat,p.options[rand(p.options.length)]);
   else if(p.kind==='usurp-give'){const eligible=usurpacaoEligibleCards(gp.hand);const c=[...eligible].sort((a,b)=>a.value-b.value)[0];if(c)applyUsurpGive(room,seat,c.id);}
   else if(p.kind==='usurp-pick')applyUsurpPick(room,seat,rand(p.pickableIds?.length||1));
   else if(p.kind==='challenge')applyChallenge(room,seat,p.cardIds[rand(p.cardIds.length)]);
@@ -866,7 +882,7 @@ function privateGameState(room,viewerSeat,revealPlays=false){
     legalCardIds:legal,influenceLegalCardIds:influenceLegal,
     canUseInfluence:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer,1)&&influenceLegal.length>0,
     canUseManeuver:g.phase==='await-play'&&g.turn===viewerSeat&&canUseInfluence(g,viewer,2)&&influenceLegal.length>0,
-    influenceBlocked:influenceBlocked(g),
+    influenceBlocked:influenceBlocked(g,viewer),intelligence:viewer.intelligence||null,
   };
 }
 function broadcastGameState(room,revealPlays=false){
@@ -878,19 +894,19 @@ const chatHistory=createChatHistory({auth:accountAuth});
 const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),canAttach:(id,roomId)=>rooms.get(roomId)?.channelType!=='voice'&&[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
 const community=createCommunity({wss,rooms,send,auth:accountAuth});
 const socialService=createSocialService({auth:accountAuth,wss,send,rooms});
-const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
+const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else if(p.ws.independentGames)leaveVoiceRoom(p.ws,'channel-deleted');else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
 fileStorage.install(app);
 communityManagement.install(app,express);
 socialService.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,socialMessaging:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
-  ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
+  ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.gameRoomId=null;ws.independentGames=false;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,socialMessaging:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
@@ -928,8 +944,8 @@ wss.on('connection',(ws)=>{
     const publicMessages=['list-rooms','list-chat-channels','ping'];
     const publicStatus=message.type==='sfu-request'&&message.action==='status';
     const gameGuest=community.validGuest(ws);
-    const guestActions=['check-name','leave-room','ready','start-room','game-action','chat-message','voice-prepare','voice-fallback','voice-state','voice-signal','state-request'];
-    const guestAllowed=gameGuest&&(message.type==='presence-request'||message.type==='check-name'||(message.type==='join-room'&&rooms.get(message.roomId)?.kind==='game')||(rooms.get(ws.roomId)?.kind==='game'&&guestActions.includes(message.type)));
+    const guestActions=['check-name','leave-room','leave-game-room','leave-voice-room','ready','start-room','game-action','chat-message','voice-prepare','voice-fallback','voice-state','voice-signal','state-request'];
+    const guestAllowed=gameGuest&&(message.type==='presence-request'||message.type==='check-name'||(['join-room','join-game-room'].includes(message.type)&&rooms.get(message.roomId)?.kind==='game')||((gameRoomFor(ws)?.kind==='game'||rooms.get(ws.roomId)?.kind==='game')&&guestActions.includes(message.type)));
     if(gameGuest&&!guestAllowed&&!publicMessages.includes(message.type)&&!publicStatus){send(ws,{type:'error',code:'LOGIN_REQUIRED_CHAT',message:'Entre em uma conta para acessar o chat M&N.'});return;}
     if(accountAuth.required&&!guestAllowed&&!publicMessages.includes(message.type)&&!publicStatus&&(!ws.account||ws.account.expiresAt<=Date.now())){
       send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Entre na sua conta para continuar.'});return;
@@ -940,6 +956,9 @@ wss.on('connection',(ws)=>{
       case 'presence-request':send(ws,community.snapshot(ws));break;
       case 'activity-state':{const result=community.updateActivity(ws,message.activity);if(!result.ok)send(ws,{type:'error',code:result.code,message:'Não foi possível atualizar a atividade.'});break;}
       case 'check-name':{const result=accountNameAvailability(ws,message.name);send(ws,{type:'name-check-result',requestId:String(message.requestId||''),...result});break;}
+      case 'join-game-room':joinGameRoom(ws,message.roomId,message.name);break;
+      case 'leave-game-room':leaveGameRoom(ws);break;
+      case 'leave-voice-room':leaveVoiceRoom(ws);break;
       case 'join-room':joinRoom(ws,message.roomId,message.name);break;
       case 'join-text-channel':joinTextRoom(ws,message.roomId,message.name);break;
       case 'leave-room':leaveRoom(ws,'leave');break;
@@ -954,7 +973,7 @@ wss.on('connection',(ws)=>{
       case 'voice-signal':handleVoiceSignal(ws,message);break;
       case 'soundboard-play':void playSound(ws,message);break;
       case 'sfu-request':void realtimeSfu.handleRequest(ws,message);break;
-      case 'state-request':{const room=rooms.get(ws.roomId),p=room?.players.get(ws.clientId);if(room?.game&&p)send(ws,{type:'game-state',state:privateGameState(room,p.seat)});break;}
+      case 'state-request':{const room=gameRoomFor(ws),p=room?.players.get(ws.clientId);if(room?.game&&p)send(ws,{type:'game-state',state:privateGameState(room,p.seat)});break;}
       case 'ping':send(ws,{type:'pong',at:Date.now()});break;
       default:send(ws,{type:'error',code:'UNKNOWN_TYPE',message:'Tipo de mensagem desconhecido.'});
     }

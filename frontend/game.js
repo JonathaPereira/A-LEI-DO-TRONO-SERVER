@@ -7,22 +7,9 @@ const SUITS = {
   mascara: {name:'Máscara', color:'#8050a0', glyph:'◉'}
 };
 const SUIT_ORDER = ['cetro','chave','lamina','mascara'];
-const LAWS = {
-  ordem:      {name:'Ordem',      img:'assets/laws/ordem.png', description:'Siga o naipe inicial se puder. A Coroa vai para a maior carta do naipe inicial. A Sombra vai para a menor carta numérica entre os demais jogadores.'},
-  estandarte: {name:'Estandarte', img:'assets/laws/estandarte.png', description:'A Sombra declara o Trunfo antes da abertura. Todos seguem o naipe inicial se puderem. O Trunfo só pode ser usado por quem não possui o naipe inicial. A maior carta de Trunfo recebe a Coroa; sem Trunfo, vence a maior do naipe inicial. A Sombra vai para a menor carta numérica entre os demais jogadores.'},
-  revolta:    {name:'Revolta',    img:'assets/laws/revolta.png', description:'Siga o naipe inicial se puder. A Coroa vai para a menor carta do naipe inicial. A Sombra vai para a maior carta numérica entre os demais jogadores.'},
-  anarquia:   {name:'Anarquia',   img:'assets/laws/anarquia.png', description:'Não existe obrigação de seguir naipe. Os naipes são ignorados: a maior carta numérica recebe a Coroa e a menor carta numérica entre os demais recebe a Sombra.'},
-  usurpacao:  {name:'Usurpação',  img:'assets/laws/usurpacao.png', description:'Só pode ocorrer se todos tiverem pelo menos 4 cartas. A Sombra entrega 1 carta escolhida à Coroa e recebe 1 carta aleatória elegível da mão da Coroa. A carta da Corte Aberta é protegida e não participa da troca. Depois, a vaza é jogada como Ordem.'}
-};
-const LAW_ORDER = ['ordem','estandarte','revolta','anarquia','usurpacao'];
-const DECREES = [
-  {id:'reserva', name:'Reserva', icon:'▣', text:'Cada jogador separa 1 carta. Ela fica fora da mão nas 9 primeiras vazas e deve ser jogada na 10ª.'},
-  {id:'rotacao', name:'Rotação', icon:'⟳', text:'Após as vazas 7, 8 e 9, todos passam simultaneamente 1 carta ao jogador à esquerda.'},
-  {id:'corte', name:'Corte Aberta', icon:'◉', text:'No início da rodada, cada jogador revela 1 carta da mão. Ela permanece pública até ser usada.'},
-  {id:'desafio', name:'Desafio', icon:'⚔', text:'Na primeira Coroa de cada jogador, revele 1 carta. Novas Coroas consecutivas revelam mais 1.'},
-  {id:'silencio', name:'Silêncio', icon:'⊘', text:'Nas 3 primeiras vazas, ninguém pode gastar Influência. A partir da 4ª, funciona normalmente.'},
-  {id:'sucessao', name:'Sucessão', icon:'♛', text:'O próximo líder não pode abrir com o naipe que venceu a vaza anterior, salvo se não possuir outro.'}
-];
+const LAWS=window.TronoRules.laws;
+const LAW_ORDER=window.TronoRules.lawOrder;
+const DECREES=window.TronoRules.decrees;
 
 const $ = (id)=>document.getElementById(id);
 const sleep = ms => new Promise(r=>setTimeout(r, ms));
@@ -36,14 +23,14 @@ const shuffle = arr => {
 let animationScale = 1;
 let game = null;
 let humanPlayResolver = null;
-let modalResolver = null;
+let modalResolver = null,modalReject=null,leavingGame=false;
 let selectedRoom = null;
 let roomPlayers = [];
 let onlineRoomState = null;
 let onlineMe = null;
 let onlineGameMode = false;
 let chatOnlyMode = false;
-let chatOnlyRoomState = null;
+let chatOnlyRoomState = null,joiningGame=null;
 let onlineControl = {legalCardIds:[],influenceLegalCardIds:[],canUseInfluence:false,canUseManeuver:false,influenceBlocked:false};
 let onlineDeclaredSuit = null;
 let onlineInfluenceAction = 'none';
@@ -82,7 +69,7 @@ function totalPrestige(p){ return p.totalCrowns+p.totalShadows+2*totalPairs(p); 
 function shownPrestige(p){ return totalPrestige(p); }
 function rawAccumulated(p){ return p.totalCrowns+p.totalShadows; }
 function playerLabel(id){ return game.players[id].name; }
-function delay(base){ return sleep(Math.max(30,base*animationScale)); }
+async function delay(base){const current=game;await sleep(Math.max(30,base*animationScale));if(current&&!current.online&&current!==game)throw Object.assign(new Error('Partida local encerrada.'),{name:'AbortError'});}
 function escAttr(text=''){ return String(text).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function lawTooltip(id){
   const law=LAWS[id];
@@ -183,11 +170,12 @@ function createPlayers(names, allAI=false){
 
 function resetRoundStats(){
   for(const p of game.players){
-    p.hand=[]; p.reserve=null; p.roundCrowns=0; p.roundShadows=0; p.influence=0; p.hadCrown=false; p.crownStreak=0;
+    p.hand=[]; p.reserve=null;p.intelligence=null; p.roundCrowns=0; p.roundShadows=0; p.influence=0; p.hadCrown=false; p.crownStreak=0;
   }
 }
 
 async function startGame(allAI=false){
+  leavingGame=false;
   await ensureAudio();
   const names=[0,1,2,3].map(i=>$(`p${i}Name`).value);
   game={
@@ -265,6 +253,20 @@ async function applyDecreeRoundStart(){
       logEvent(`${p.name} revelou ${SUITS[card.suit].name} ${card.value} pela <strong>Corte Aberta</strong>.`);
     }
   }
+  if(game.decree.id==='favor')for(const p of game.players)p.influence=1;
+  if(game.decree.id==='conselho'){
+    const choices=new Map();
+    for(const p of game.players){const card=p.ai?p.hand[rand(p.hand.length)]:await chooseCardFromHand(p,'Conselho','Escolha uma carta fechada para passar ao jogador à direita. Todas as trocas acontecem juntas.');choices.set(p.id,card.id);}
+    window.TronoRules.passCards(game.players,choices,-1);for(const p of game.players)sortHand(p);
+    logEvent('Conselho: todas as Casas passaram uma carta fechada à direita.');
+    await showExchangeAnimation({kind:'conselho',title:'Conselho — pacto entre as Casas',subtitle:'Quatro cartas passam simultaneamente à direita.',moves:game.players.map(p=>({from:p.id,to:(p.id+3)%4,label:'Carta fechada → direita'}))});
+  }
+  if(game.decree.id==='espionagem'){
+    for(const p of game.players)p.intelligence=window.TronoRules.intelligence(game.players,p.id);
+    logEvent('Espionagem: cada Casa recebeu uma informação privada sobre o jogador à direita.');
+    await showIntelligence(game.players[game.localPlayerId]?.intelligence);
+  }
+
   renderAll();
 }
 
@@ -274,6 +276,7 @@ function chooseCpuReserve(p){
 }
 
 async function beginTrick(){
+  const session=game;
   if(game.gameOver) return;
   game.phase='trick-start'; game.plays=[]; game.trump=null; game.declaredLeadSuit=null;
   game.lawUsage[game.currentLaw]++;
@@ -284,11 +287,13 @@ async function beginTrick(){
   if(game.currentLaw==='estandarte') await declareTrump();
   if(game.currentLaw==='usurpacao') await performUsurpacao();
 
+  if(session!==game)throw Object.assign(new Error('Partida local encerrada.'),{name:'AbortError'});
   game.phase='await-play'; game.turn=game.leader;
   for(let n=0;n<4;n++){
     const pid=(game.leader+n)%4;
     game.turn=pid; renderAll();
     await playTurn(pid);
+    if(session!==game)throw Object.assign(new Error('Partida local encerrada.'),{name:'AbortError'});
   }
   clearLocalTurnTimer(); game.turn=null; renderAll();
   await resolveTrick();
@@ -371,50 +376,8 @@ async function showExchangeAnimation({kind='exchange',title='Troca de cartas',su
   stage.innerHTML='';
 }
 
-function prepareUsurpacaoExchange(shadow,crown,given){
-  if(!shadow || !crown) throw new Error('Usurpação sem Coroa ou Sombra válida.');
-  if(shadow.id===crown.id) throw new Error('Usurpação inválida: Coroa e Sombra não podem ser o mesmo jogador.');
-  if(game.players.some(p=>p.hand.length<4)) throw new Error('Usurpação inválida: todos precisam ter pelo menos 4 cartas antes da troca.');
-  if(!given || !shadow.hand.some(c=>c.id===given.id)) throw new Error('Usurpação inválida: a carta entregue não pertence à Sombra.');
-  if(given.publicReason==='Corte Aberta') throw new Error('Usurpação inválida: a carta da Corte Aberta é protegida e não pode ser trocada.');
-
-  const beforeShadow=shadow.hand.length;
-  const beforeCrown=crown.hand.length;
-
-  // A Sombra entrega a carta primeiro.
-  shadow.hand=shadow.hand.filter(c=>c.id!==given.id);
-  crown.hand.push(given);
-
-  // A Coroa incorpora a carta recebida e embaralha TODA a mão.
-  crown.hand=shuffle(crown.hand);
-  return {beforeShadow,beforeCrown};
-}
-
-function finishUsurpacaoExchange(shadow,crown,given,pickIndex,before){
-  if(!before) throw new Error('Usurpação inválida: troca não foi preparada.');
-  const pickable=crown.hand.filter(c=>c.publicReason!=='Corte Aberta');
-  if(!Number.isInteger(pickIndex) || pickIndex<0 || pickIndex>=pickable.length){
-    throw new Error('Usurpação inválida: posição escolhida fora das cartas elegíveis da Coroa.');
-  }
-
-  // A carta da Corte Aberta é protegida: ela não participa da escolha às cegas.
-  const chosen=pickable[pickIndex];
-  const crownIndex=crown.hand.findIndex(c=>c.id===chosen.id);
-  const [taken]=crown.hand.splice(crownIndex,1);
-  if(!taken || taken.publicReason==='Corte Aberta') throw new Error('Usurpação inválida: não foi possível retirar uma carta elegível da Coroa.');
-  shadow.hand.push(taken);
-
-  // Invariantes: a troca não cria, destrói ou duplica cartas e preserva o tamanho final das mãos.
-  if(shadow.hand.length!==before.beforeShadow || crown.hand.length!==before.beforeCrown){
-    throw new Error('Usurpação corrompeu o tamanho das mãos.');
-  }
-  const combined=[...shadow.hand,...crown.hand].map(c=>c.id);
-  if(new Set(combined).size!==combined.length){
-    throw new Error('Usurpação duplicou uma carta entre as mãos envolvidas.');
-  }
-
-  return {given,taken,returnedSameCard:given.id===taken.id};
-}
+function prepareUsurpacaoExchange(shadow,target,given){return window.TronoRules.reserveExchange(game.players,shadow,target,given?.id,shuffle);}
+function finishUsurpacaoExchange(shadow,target,given,index,state){return window.TronoRules.finishExchange(shadow,target,state,index);}
 
 async function chooseUsurpacaoReturnIndex(shadow,crown){
   const pickable=crown.hand.filter(c=>c.publicReason!=='Corte Aberta');
@@ -422,7 +385,7 @@ async function chooseUsurpacaoReturnIndex(shadow,crown){
   return await choiceModal({
     icon:'☾',
     title:'Usurpação — escolha às cegas',
-    text:`${crown.name} embaralhou a mão, incluindo a carta que você entregou. Escolha uma das cartas fechadas elegíveis. A carta da Corte Aberta está protegida e não participa da troca.`,
+    text:`${crown.name} embaralhou a mão. Sua carta está separada e será entregue somente depois da escolha; ela nunca pode retornar. Escolha uma das cartas fechadas elegíveis. A carta da Corte Aberta está protegida e não participa da troca.`,
     options:pickable.map((_,i)=>({value:i,type:'hidden-card',title:`Carta ${i+1}`,subtitle:'Face voltada para baixo'}))
   });
 }
@@ -431,11 +394,9 @@ function privateUsurpationHtml(viewer,shadow,crown,given,taken,returnedSameCard)
   const isShadow=viewer.id===shadow.id;
   const outgoing=isShadow?given:taken;
   const incoming=isShadow?taken:given;
-  const role=isShadow?'SOMBRA':'COROA';
+  const role=isShadow?'SOMBRA':'A CASA ESCOLHIDA';
   const other=isShadow?crown:shadow;
-  const special=returnedSameCard
-    ? `<div class="private-exchange-note neutral"><strong>A própria carta retornou.</strong><span>Após o embaralhamento, a carta entregue foi sorteada de volta. A composição final das duas mãos não mudou.</span></div>`
-    : `<div class="private-exchange-note"><strong>Informação privada</strong><span>Somente você e ${other.name} devem conhecer a identidade destas duas cartas.</span></div>`;
+  const special=`<div class="private-exchange-note"><strong>Informação privada</strong><span>Somente você e ${escAttr(other.name)} recebem estas duas cartas. A carta separada nunca pode retornar à Sombra.</span></div>`;
   return `<div class="private-exchange-reveal">
     <div class="private-exchange-role">VOCÊ É ${role}</div>
     <div class="private-exchange-cards">
@@ -461,16 +422,18 @@ async function showPrivateUsurpationResult(shadow,crown,given,taken,returnedSame
 }
 
 async function performUsurpacao(){
-  const shadow=game.players[game.lastShadow], crown=game.players[game.lastCrown];
-  if(!shadow || !crown) return;
+  const shadow=game.players[game.lastShadow];if(!shadow)return;
+  const targets=game.players.filter(p=>p.id!==shadow.id&&window.TronoRules.eligible(p.hand).length);
+  const targetId=shadow.ai?targets[rand(targets.length)].id:await choiceModal({icon:'☾',title:'Usurpação — escolha uma Casa',text:'Você pode trocar com qualquer adversário. Primeiro escolha a Casa; depois separe sua carta e escolha uma carta fechada da mão dela.',options:targets.map(p=>({value:p.id,title:p.name,subtitle:'Trocar uma carta fechada',icon:'♜'}))});
+  const crown=game.players[targetId];
   let given;
   if(shadow.ai){
     const pool=shadow.hand.filter(c=>c.publicReason!=='Corte Aberta').sort((a,b)=>a.value-b.value); given=pool[0];
   }else{
-    given=await chooseCardFromHand(shadow,'Usurpação','Escolha 1 carta da sua mão para entregar, virada para baixo, à Coroa. A carta da Corte Aberta é protegida e não pode ser trocada.',shadow.hand.filter(c=>c.publicReason!=='Corte Aberta'));
+    given=await chooseCardFromHand(shadow,'Usurpação','Escolha 1 carta da sua mão para entregar, virada para baixo, à Casa escolhida. A carta da Corte Aberta é protegida e não pode ser trocada.',shadow.hand.filter(c=>c.publicReason!=='Corte Aberta'));
   }
 
-  // A carta entra primeiro na mão da Coroa e toda a mão é embaralhada.
+  // A carta fica separada até a escolha cega na mão do adversário.
   const before=prepareUsurpacaoExchange(shadow,crown,given);
 
   // Se a Sombra for humana, ela escolhe VISUALMENTE uma posição entre cartas fechadas.
@@ -481,15 +444,15 @@ async function performUsurpacao(){
   await showExchangeAnimation({
     kind:'usurpacao',
     title:'Usurpação — troca de mãos',
-    subtitle:`${shadow.name} entrega uma carta à Coroa; depois do embaralhamento, uma carta aleatória segue da Coroa para a Sombra.`,
+    subtitle:`${shadow.name} escolhe uma carta fechada de ${crown.name}; a carta separada segue então para a Casa escolhida.`,
     moves:[
-      {from:shadow.id,to:crown.id,role:'shadow',label:'Carta da Sombra → Coroa'},
+      {from:shadow.id,to:crown.id,role:'shadow',label:'Carta separada → Casa escolhida'},
       {from:crown.id,to:shadow.id,role:'crown',label:'Carta aleatória → Sombra',delay:220}
     ]
   });
 
   sortHand(shadow); sortHand(crown);
-  logEvent(`<strong>Usurpação:</strong> ${shadow.name} entregou 1 carta oculta a ${crown.name}; a Coroa embaralhou a mão e 1 carta elegível retornou à Sombra. A Corte Aberta permaneceu protegida.`);
+  logEvent(`<strong>Usurpação:</strong> ${shadow.name} entregou 1 carta oculta a ${crown.name}; uma carta elegível da Casa escolhida passou à Sombra antes da entrega. A Corte Aberta permaneceu protegida.`);
   renderAll();
 
   // Só o cliente de um dos dois envolvidos recebe a revelação das cartas.
@@ -497,10 +460,10 @@ async function performUsurpacao(){
   toast('Usurpação resolvida',900); renderAll(); await delay(420);
 }
 
-function isInfluenceBlocked(){ return game.decree?.id==='silencio' && game.trick<=3; }
+function isInfluenceBlocked(p=game?.players[game?.localPlayerId]){return game?.online&&p?.id===game.localPlayerId?onlineControl.influenceBlocked:window.TronoRules.influenceBlocked(game,p);}
 function getLeadSuit(){ return game.declaredLeadSuit || game.plays?.[0]?.card?.suit || null; }
 function canUseInfluence(p,cost=1){
-  if(!p || p.influence<cost || isInfluenceBlocked()) return false;
+  if(!p || p.influence<cost || isInfluenceBlocked(p)) return false;
   // Regra v0.5.5: a Coroa/líder também pode abrir a vaza com carta oculta.
   if(game.plays.length===0) return p.id===game.leader;
   return true;
@@ -543,7 +506,7 @@ async function playTurn(pid){
 }
 
 function maybeCpuInfluence(p,card){
-  if(card?.publicReason==='Corte Aberta'||isInfluenceBlocked()) return {action:'none',cost:0,modifier:0};
+  if(card?.publicReason==='Corte Aberta'||isInfluenceBlocked(p)) return {action:'none',cost:0,modifier:0};
   if(canUseInfluence(p,2)&&card.value>=4&&card.value<=9&&Math.random()<.30){
     const seekCrown=Math.random()<.62;
     const action=game.currentLaw==='revolta'?(seekCrown?'minus':'plus'):(seekCrown?'plus':'minus');
@@ -561,12 +524,7 @@ function getLegalCards(p){
   }
   if(game.plays.length===0) return cards;
   const leadSuit=getLeadSuit();
-  const follows=['ordem','estandarte','revolta','usurpacao'].includes(game.currentLaw);
-  if(follows){
-    const same=cards.filter(c=>c.suit===leadSuit);
-    if(same.length) return same;
-  }
-  return cards;
+  return window.TronoRules.followCards(cards,game.currentLaw,leadSuit,game.trump);
 }
 
 function chooseCpuCard(p,legal){
@@ -583,10 +541,10 @@ function chooseCpuCard(p,legal){
 
 function clearLocalTurnTimer(){ if(localTurnTimer){clearTimeout(localTurnTimer);localTurnTimer=null;} if(game&&!onlineGameMode)game.turnDeadline=null; }
 function waitHumanPlay(legal,p){
-  return new Promise(resolve=>{
+  return new Promise((resolve,reject)=>{
     clearLocalTurnTimer();
     game.turnDeadline=Date.now()+60_000;
-    humanPlayResolver={resolve,legalIds:new Set(legal.map(c=>c.id)),playerId:p.id,declaredSuit:null,influenceAction:'none'};
+    humanPlayResolver={resolve,reject,legalIds:new Set(legal.map(c=>c.id)),playerId:p.id,declaredSuit:null,influenceAction:'none'};
     localTurnTimer=setTimeout(()=>{
       if(!humanPlayResolver||humanPlayResolver.playerId!==p.id)return;
       const card=legal[rand(legal.length)];const r=humanPlayResolver.resolve;humanPlayResolver=null;localTurnTimer=null;game.turnDeadline=null;
@@ -599,12 +557,14 @@ function waitHumanPlay(legal,p){
 }
 
 async function commitPlay(p,card,hidden,sourceInfo,isReserve,influenceAction='none',modifier=0){
+  const session=game;
   if(!isReserve) p.hand=p.hand.filter(c=>c.id!==card.id);
   const play={playerId:p.id,card,hidden,influenceAction,modifier,order:game.plays.length};
   game.plays.push(play);
   if(influenceAction!=='none')showInfluenceUseFeedback({name:p.name,action:influenceAction,cost:selectedInfluenceCost(influenceAction),modifier,declaredSuit:play.order===0?game.declaredLeadSuit:null});
   renderPlayerPanels(); renderHand();
   await animateCardToTable(play,sourceInfo);
+  if(session!==game)throw Object.assign(new Error('Partida local encerrada.'),{name:'AbortError'});
   logEvent(`${p.name} jogou ${hidden?`<strong>uma carta oculta</strong>${play.order===0&&game.declaredLeadSuit?` após anunciar <strong>${SUITS[game.declaredLeadSuit].name}</strong>`:''}`:`${SUITS[card.suit].name} ${card.value}`}${isReserve?' da Reserva':''}.`);
 }
 
@@ -633,22 +593,7 @@ function pickWinner(candidates,mode){
   return candidates.reduce((best,p)=>{if(!best)return p;const v=playValue(p),bv=playValue(best);if(mode==='max')return v>bv?p:best;return v<bv?p:best;},null);
 }
 
-function evaluateTrick(){
-  if(!game?.plays||game.plays.length!==4) throw new Error('A vaza precisa conter exatamente 4 cartas para ser resolvida.');
-  const lead=getLeadSuit();
-  let crown;
-  if(game.currentLaw==='anarquia') crown=pickWinner(game.plays,'max');
-  else if(game.currentLaw==='revolta') crown=pickWinner(game.plays.filter(p=>p.card.suit===lead),'min');
-  else if(game.currentLaw==='estandarte'){
-    const tr=game.plays.filter(p=>p.card.suit===game.trump);
-    crown=tr.length?pickWinner(tr,'max'):pickWinner(game.plays.filter(p=>p.card.suit===lead),'max');
-  }else crown=pickWinner(game.plays.filter(p=>p.card.suit===lead),'max');
-
-  const others=game.plays.filter(p=>p.playerId!==crown.playerId);
-  const shadow=pickWinner(others,game.currentLaw==='revolta'?'max':'min');
-  if(!crown||!shadow||crown.playerId===shadow.playerId) throw new Error('Invariante violada: Coroa e Sombra devem ser jogadores diferentes.');
-  return {crown,shadow};
-}
+function evaluateTrick(){return window.TronoRules.evaluate(game.plays,game.currentLaw,getLeadSuit(),game.trump);}
 
 async function resolveTrick(){
   game.phase='resolve';
@@ -870,13 +815,20 @@ async function endGame(){
   const winnerText=tied.length>1?`Vitória compartilhada: ${tied.map(p=>p.name).join(' e ')}`:`${top.name} ocupa o Trono.`;
   const html=sorted.map((p,i)=>`<div class="score-row final"><strong>${i+1}º ${p.name}</strong><span>Pares ${p.totalPairs}</span><span>♛ ${p.totalCrowns}</span><span>☾ ${p.totalShadows}</span><b>${p.prestige} Prestígio</b></div>`).join('');
   await infoModal({icon:'♛',title:'Fim da Partida',text:`<h3 class="winner-title">${winnerText}</h3>${html}${renderFinalLogHtml(clientLogHistory)}`,button:'Jogar novamente'});
-  location.reload();
+  backToLobby();
 }
 
 function sortHand(p){
   p.hand.sort((a,b)=>SUIT_ORDER.indexOf(a.suit)-SUIT_ORDER.indexOf(b.suit)||a.value-b.value);
 }
 
+function animateCourtArrival(){
+  for(const [node,kind,value,key] of [[document.querySelector('.law-mini'),'law',game.currentLaw,`${game.round}:${game.trick}:${game.currentLaw}`],[$('decreeBadge'),'decree',game.decree?.id,`${game.round}:${game.decree?.id}`]]){
+    if(!node||!value||node.dataset.arrivalKey===key)continue;
+    node.dataset.arrivalKey=key;node.dataset[kind]=value;node.classList.remove('court-arrival');
+    if(!$('gameScreen').classList.contains('hidden')&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!document.body.classList.contains('voice-light-mode')){void node.offsetWidth;node.classList.add('court-arrival');}
+  }
+}
 function renderAll(includeHand=true){
   if(!game) return;
   $('roundBadge').textContent=`Rodada ${game.round}/3`; $('trickBadge').textContent=`Vaza ${game.trick}/10`;
@@ -887,8 +839,11 @@ function renderAll(includeHand=true){
   const lawMini=document.querySelector('.law-mini'); if(lawMini) lawMini.dataset.tooltip=lawTooltip(game.currentLaw);
   const decree=game.decree; $('decreeBadge').innerHTML=decree?`<small>DECRETO</small><strong>${decree.icon} ${decree.name}</strong>`:`<small>DECRETO</small><strong>Escolhendo...</strong>`;
   $('decreeBadge').dataset.tooltip=decreeTooltip(decree);
+  $('decreeBadge').tabIndex=decree?.id==='espionagem'?0:-1;
+  if(decree?.id==='espionagem'){$('decreeBadge').setAttribute('role','button');$('decreeBadge').setAttribute('aria-label','Espionagem: consultar sua informação privada');}else{$('decreeBadge').removeAttribute('role');$('decreeBadge').removeAttribute('aria-label');}
   $('trumpInfo').classList.toggle('hidden',!game.trump); $('trumpSuitText').innerHTML=game.trump?`<span class="trump-glyph" style="color:${SUITS[game.trump].color}">${SUITS[game.trump].glyph}</span>`:'—';
   const announced=game.declaredLeadSuit; $('leadSuitInfo').classList.toggle('hidden',!announced); $('leadSuitText').textContent=announced?SUITS[announced].name:'—';
+  animateCourtArrival();
   renderPlayerPanels(); renderTableInfluenceCoins(); renderLawTracker(); renderTableCards(); updateTurnTimer(); if(includeHand) renderHand();
 }
 function phaseLabel(){
@@ -983,7 +938,7 @@ function renderOnlineHand(){
   wrap.classList.toggle('ready',available);wrap.classList.toggle('opening-ready',usable&&opening);wrap.classList.toggle('disabled',!usable);$('influenceToggle').disabled=!usable;
   if(!usable){$('influenceToggle').checked=false;onlineDeclaredSuit=null;onlineInfluenceAction='none';}
   const status=$('influenceStatusText');if(status){
-    if(onlineControl.influenceBlocked)status.textContent=`${p.influence}/2 • Silêncio bloqueia o uso`;
+    if(onlineControl.influenceBlocked)status.textContent=`${p.influence}/2 • ${game.decree?.name||'Decreto'} bloqueia o uso`;
     else if(!p.influence)status.textContent='0/2 • ganhe 1 ao ficar sem Coroa/Sombra';
     else if(useHidden)status.textContent=`${p.influence}/2 • ${influenceActionName(onlineInfluenceAction)} selecionado`;
     else if(p.influence===1)status.textContent='1/2 • Sigilo disponível';
@@ -1015,7 +970,7 @@ function renderHandLocal(){
   const hiddenLegalIds=new Set(p.hand.filter(c=>baseLegalIds.has(c.id)&&c.publicReason!=='Corte Aberta').map(c=>c.id)),legalIds=hiddenMode?(openingHidden?new Set(p.hand.filter(c=>hiddenLegalIds.has(c.id)&&c.suit===humanPlayResolver.declaredSuit).map(c=>c.id)):hiddenLegalIds):baseLegalIds;
   hand.innerHTML=p.hand.map(c=>`<div class="hand-card ${c.public?'public':''} ${c.publicReason==='Corte Aberta'?'corte-open-hand':''} ${c.publicReason==='Desafio'?'desafio-open-hand':''} ${awaiting&&!legalIds.has(c.id)?'illegal':''} ${!awaiting?'locked':''}" data-card="${c.id}"><img src="${cardAsset(c)}" alt="${SUITS[c.suit].name} ${c.value}"></div>`).join('');
   const available=p.influence>=1&&!isInfluenceBlocked(),usable=awaiting&&canUseInfluence(p,1)&&getLegalCards(p).some(c=>c.publicReason!=='Corte Aberta'),wrap=$('influenceToggleWrap');wrap.classList.toggle('ready',available);wrap.classList.toggle('opening-ready',usable&&game.plays.length===0&&p.id===game.leader);wrap.classList.toggle('disabled',!usable);$('influenceToggle').disabled=!usable;if(!usable){$('influenceToggle').checked=false;if(humanPlayResolver){humanPlayResolver.influenceAction='none';humanPlayResolver.declaredSuit=null;}}
-  const status=$('influenceStatusText');if(status){if(isInfluenceBlocked())status.textContent=`${p.influence}/2 • Silêncio bloqueia o uso`;else if(!p.influence)status.textContent='0/2 • ganhe 1 ao ficar sem Coroa/Sombra';else if(hiddenMode)status.textContent=`${p.influence}/2 • ${influenceActionName(action)} selecionado`;else if(p.influence===1)status.textContent='1/2 • Sigilo disponível';else status.textContent='2/2 • Sigilo ou Manobra disponíveis';}
+  const status=$('influenceStatusText');if(status){if(isInfluenceBlocked())status.textContent=`${p.influence}/2 • ${game.decree?.name||'Decreto'} bloqueia o uso`;else if(!p.influence)status.textContent='0/2 • ganhe 1 ao ficar sem Coroa/Sombra';else if(hiddenMode)status.textContent=`${p.influence}/2 • ${influenceActionName(action)} selecionado`;else if(p.influence===1)status.textContent='1/2 • Sigilo disponível';else status.textContent='2/2 • Sigilo ou Manobra disponíveis';}
   hand.querySelectorAll('.hand-card').forEach(el=>el.addEventListener('click',()=>onHumanCardClick(el)));
 }
 function onHumanCardClick(el){
@@ -1036,8 +991,8 @@ async function chooseCardFromHand(p,title,text,candidates=null){
 
 
 function chooseLawModal(player,valid){
-  return new Promise(resolve=>{
-    modalResolver=resolve;
+  return new Promise((resolve,reject)=>{
+    modalResolver=resolve;modalReject=reject;
     const renderLawView=()=>{
       $('modalIcon').textContent='☾';
       $('modalTitle').textContent='Escolha a próxima Lei';
@@ -1064,8 +1019,8 @@ function chooseLawModal(player,valid){
 }
 
 function choiceModal({icon='♛',title,text,options}){
-  return new Promise(resolve=>{
-    modalResolver=resolve; $('modalIcon').textContent=icon; $('modalTitle').textContent=title; $('modalText').textContent=text; $('modalFooter').textContent='';
+  return new Promise((resolve,reject)=>{
+    modalResolver=resolve;modalReject=reject; $('modalIcon').textContent=icon; $('modalTitle').textContent=title; $('modalText').textContent=text; $('modalFooter').textContent='';
     $('modalChoices').innerHTML=options.map((o,i)=>{
       if(o.type==='card'||o.type==='law') return `<button class="choice-card" data-i="${i}">${o.img?`<img src="${o.img}">`:''}<strong>${o.title}</strong>${o.subtitle?`<small>${o.subtitle}</small>`:''}</button>`;
       if(o.type==='suit') return `<button class="choice-card suit-choice" data-i="${i}" style="border-color:${o.color}"><span class="suit-glyph" style="color:${o.color}">${o.icon}</span><strong>${o.title}</strong></button>`;
@@ -1078,12 +1033,12 @@ function choiceModal({icon='♛',title,text,options}){
   });
 }
 function infoModal({icon='♛',title,text,button='Continuar'}){
-  return new Promise(resolve=>{
-    modalResolver=resolve; $('modalIcon').textContent=icon; $('modalTitle').textContent=title; $('modalText').innerHTML=text; $('modalChoices').innerHTML=`<button id="continueModal" class="royal-btn primary">${button}</button>`; $('modalFooter').textContent=''; $('modal').classList.remove('hidden');
+  return new Promise((resolve,reject)=>{
+    modalResolver=resolve;modalReject=reject; $('modalIcon').textContent=icon; $('modalTitle').textContent=title; $('modalText').innerHTML=text; $('modalChoices').innerHTML=`<button id="continueModal" class="royal-btn primary">${button}</button>`; $('modalFooter').textContent=''; $('modal').classList.remove('hidden');
     $('continueModal').onclick=()=>{closeModal(); const r=modalResolver;modalResolver=null;r();};
   });
 }
-function closeModal(){ $('modal').classList.add('hidden'); }
+function closeModal(){ $('modal').classList.add('hidden');modalReject=null; }
 
 
 let activeTooltipTarget=null;
@@ -1135,10 +1090,9 @@ function enterOnlineBoard(){
   onlineGameMode=true;
   animationScale=1;
   if($('speedBtn')){$('speedBtn').textContent='⏱ Online';$('speedBtn').disabled=true;}
-  $('setupScreen').classList.add('hidden');
-  $('roomScreen').classList.add('hidden');
-  $('gameScreen').classList.remove('hidden');
-  $('versionLabel').textContent='Protótipo digital v0.8.0-alpha • Multiplayer';
+  window.TronoPortal?.showOnly?.('gameScreen');
+  chatOnlyMode=false;
+  $('versionLabel').textContent='Protótipo digital v0.9.0-alpha • Multiplayer';
   clearLog();
 }
 function applyOnlineState(state){
@@ -1159,7 +1113,7 @@ function applyOnlineState(state){
     currentLaw:state.currentLaw,lawUsage:state.lawUsage||Object.fromEntries(LAW_ORDER.map(l=>[l,0])),
     trump:state.trump||null,declaredLeadSuit:state.declaredLeadSuit||null,
     decree:state.decree?DECREES.find(d=>d.id===state.decree.id)||state.decree:null,
-    lastCrown:state.lastCrown,lastShadow:state.lastShadow,previousWinningSuit:state.previousWinningSuit||null,
+    intelligence:state.intelligence||null,lastCrown:state.lastCrown,lastShadow:state.lastShadow,previousWinningSuit:state.previousWinningSuit||null,
     leader:state.leader,turn:state.turn,turnDeadline:state.turnDeadline||null,plays:(state.plays||[]).map(pl=>({playerId:pl.playerId,order:pl.order,hidden:!!pl.hidden,card:pl.card||null,modifier:pl.modifier||0,influenceAction:pl.influenceAction||'none'})),
     gameOver:state.phase==='game-over'
   };
@@ -1186,31 +1140,46 @@ async function showOnlinePrompt(prompt){
   } else if(prompt.kind==='choose-law'){
     value=await chooseLawModal(me,prompt.options);
     window.TronoNetwork?.gameAction('choose-law',{value});
+  } else if(prompt.kind==='usurp-target'){
+    value=await choiceModal({icon:'☾',title:'Usurpação — escolha uma Casa',text:'Escolha qualquer adversário para trocar uma carta fechada. Sua carta fica separada até a escolha, sem poder retornar.',options:prompt.options.map(p=>({value:p.seat,title:p.name,subtitle:'Trocar uma carta fechada',icon:'♜'}))});
+    window.TronoNetwork?.gameAction('usurp-target',{targetSeat:value});
   } else if(prompt.kind==='usurp-pick'){
-    value=await choiceModal({icon:'☾',title:'Usurpação — escolha às cegas',text:`${prompt.otherName||'A Coroa'} embaralhou a mão. Escolha uma posição entre as cartas fechadas elegíveis. A Corte Aberta está protegida.`,options:Array.from({length:prompt.count},(_,i)=>({value:i,type:'hidden-card',title:`Carta ${i+1}`,subtitle:'Face voltada para baixo'}))});
+    value=await choiceModal({icon:'☾',title:'Usurpação — escolha às cegas',text:`${prompt.otherName||'A Casa escolhida'} embaralhou a mão. Escolha uma posição entre as cartas fechadas elegíveis. Sua carta está separada e nunca pode retornar. A Corte Aberta está protegida.`,options:Array.from({length:prompt.count},(_,i)=>({value:i,type:'hidden-card',title:`Carta ${i+1}`,subtitle:'Face voltada para baixo'}))});
     window.TronoNetwork?.gameAction('usurp-pick',{index:value});
-  } else if(['choose-reserva','choose-corte','rotation','challenge','usurp-give'].includes(prompt.kind)){
+  } else if(['choose-reserva','choose-corte','choose-conselho','rotation','challenge','usurp-give'].includes(prompt.kind)){
     const cards=me.hand.filter(c=>(prompt.cardIds||[]).includes(c.id));
     const labels={
       'choose-reserva':['Reserva','Escolha a carta que ficará fora da mão durante as 9 primeiras vazas.'],
+      'choose-conselho':['Conselho','Escolha uma carta fechada para passar à direita. As quatro trocas acontecem simultaneamente.'],
       'choose-corte':['Corte Aberta','Escolha a carta que ficará pública até ser usada.'],
       'rotation':['Rotação','Escolha 1 carta para passar ao jogador à esquerda.'],
       'challenge':['Desafio','Sua Coroa exige um preço: revele 1 carta da sua mão.'],
-      'usurp-give':['Usurpação',`Escolha 1 carta para entregar, virada para baixo, a ${prompt.otherName||'Coroa'}. A carta da Corte Aberta não pode ser trocada.`]
+      'usurp-give':['Usurpação',`Escolha 1 carta para entregar, virada para baixo, a ${prompt.otherName||'a Casa escolhida'}. A carta da Corte Aberta não pode ser trocada.`]
     }[prompt.kind];
     const card=await choiceModal({icon:prompt.kind==='usurp-give'?'☾':'♛',title:labels[0],text:labels[1],options:cards.map(c=>({value:c.id,type:'card',title:`${SUITS[c.suit].name} ${c.value}`,img:cardAsset(c)}))});
-    const action=prompt.kind==='choose-reserva'?'choose-reserva':prompt.kind==='choose-corte'?'choose-corte':prompt.kind==='rotation'?'rotation':prompt.kind==='challenge'?'challenge':'usurp-give';
+    const action=prompt.kind==='choose-reserva'?'choose-reserva':prompt.kind==='choose-corte'?'choose-corte':prompt.kind==='choose-conselho'?'choose-conselho':prompt.kind==='rotation'?'rotation':prompt.kind==='challenge'?'challenge':'usurp-give';
     window.TronoNetwork?.gameAction(action,{cardId:card});
   }
 }
+
+async function showIntelligence(clue){
+  if(!clue?.card)return;
+  const card=clue.card;
+  await infoModal({icon:'◈',title:'Espionagem — informação privada',text:`<div class="intelligence-reveal"><small>UMA CARTA DE ${escAttr(clue.name)}</small><img src="${cardAsset(card)}" alt="${SUITS[card.suit].name} ${card.value}"><strong>${SUITS[card.suit].name} ${card.value}</strong><p>A carta permanece na mão do adversário e pode ser jogada ou trocada depois. Somente você vê esta informação.</p><small>Consulte novamente clicando no Decreto Espionagem.</small></div>`,button:'Ocultar e continuar'});
+}
+$('decreeBadge').tabIndex=0;
+$('decreeBadge').onclick=()=>{if(game?.decree?.id==='espionagem')void showIntelligence(game.online?game.intelligence:game.players[game.localPlayerId]?.intelligence);};
+$('decreeBadge').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('decreeBadge').click();}};
+
 async function showOnlinePrivateUsurpation(msg){
-  const role=msg.role==='shadow'?'SOMBRA':'COROA';
+  const role=msg.role==='shadow'?'SOMBRA':'A CASA ESCOLHIDA';
   const outgoing=msg.outgoing,incoming=msg.incoming;
-  const note=msg.returnedSameCard?'<div class="private-exchange-note neutral"><strong>A própria carta retornou.</strong><span>A carta entregue voltou após o embaralhamento.</span></div>':`<div class="private-exchange-note"><strong>Informação privada</strong><span>Somente você e ${escAttr(msg.otherName||'o outro envolvido')} recebem estes dados.</span></div>`;
+  const note=`<div class="private-exchange-note"><strong>Informação privada</strong><span>Somente você e ${escAttr(msg.otherName||'o outro envolvido')} recebem estes dados. A carta separada nunca retorna à Sombra.</span></div>`;
   await infoModal({icon:msg.role==='shadow'?'☾':'♛',title:'Usurpação — informação privada',text:`<div class="private-exchange-reveal"><div class="private-exchange-role">VOCÊ É ${role}</div><div class="private-exchange-cards"><div class="private-exchange-card outgoing"><small>SAIU DA SUA MÃO</small><img src="${cardAsset(outgoing)}"><strong>${SUITS[outgoing.suit].name} ${outgoing.value}</strong></div><div class="private-exchange-arrow">⇄</div><div class="private-exchange-card incoming"><small>ENTROU NA SUA MÃO</small><img src="${cardAsset(incoming)}"><strong>${SUITS[incoming.suit].name} ${incoming.value}</strong></div></div>${note}</div>`,button:'Ocultar e continuar'});
   window.TronoNetwork?.gameAction('usurp-ack',{});
 }
 async function handleOnlineGameEvent(msg){
+  const session=game;
   const ev=msg.event;
   if(ev==='log'){logEvent(msg.message);return;}
   if(ev==='influence-used'){showInfluenceUseFeedback(msg);return;}
@@ -1222,6 +1191,7 @@ async function handleOnlineGameEvent(msg){
   if(ev==='exchange'){
     onlineExchangeBusy=true;
     await showExchangeAnimation({kind:msg.kind,title:msg.title||'Troca de cartas',subtitle:msg.kind==='rotation'?'Todos passam simultaneamente 1 carta oculta ao jogador à esquerda.':'As cartas estão mudando de mãos.',moves:msg.moves||[]});
+    if(game!==session)return;
     onlineExchangeBusy=false;
     if(onlineQueuedPrivateUsurpation){const queued=onlineQueuedPrivateUsurpation;onlineQueuedPrivateUsurpation=null;showOnlinePrivateUsurpation(queued).catch(fatalError);}
     return;
@@ -1231,6 +1201,7 @@ async function handleOnlineGameEvent(msg){
     if(game){game.plays=(msg.revealedPlays||[]).map(pl=>({...pl,hidden:false,modifier:pl.modifier||0,influenceAction:pl.influenceAction||'none'}));renderTableCards(true);markWinners(msg.crownId,msg.shadowId);}
     const crown=game?.players[msg.crownId],shadow=game?.players[msg.shadowId];
     if(crown&&shadow)await showTrickOutcome(crown,shadow);
+    if(game!==session)return;
     if(msg.influenceGains?.length&&game){
       const gains=msg.influenceGains.map(x=>({player:game.players[x.seat],after:x.after}));showInfluenceGains(gains);
     }
@@ -1246,7 +1217,7 @@ async function handleOnlineGameEvent(msg){
     const winners=(msg.winners||[]).map(id=>msg.scores.find(s=>s.seat===id)?.name).filter(Boolean);
     const finalLog=renderFinalLogHtml(msg.finalLog||clientLogHistory);
     await infoModal({icon:'♛',title:'Fim da Partida Online',text:`<h3 class="winner-title">${winners.length>1?'Vitória compartilhada: '+winners.map(escAttr).join(' e '):escAttr(winners[0]||'A partida terminou.')}</h3>${rows}${finalLog}`,button:'Voltar aos salões'});
-    location.reload();return;
+    backToLobby();return;
   }
   if(ev==='player-replaced-by-bot'){showConnectionNotice(msg.name,msg.botName,msg.reason||'disconnect');return;}
   if(ev==='server-error'){toast(`Erro do servidor: ${msg.message}`,3000);return;}
@@ -1297,16 +1268,18 @@ function consumeOnlineRoom(room){
   updateOnlineRoomControls();
 }
 async function enterRoom(roomId){
+  leavingGame=false;
   const validation=await window.TronoPortal?.validateIdentity?.({game:true});if(validation&&!validation.ok){toast(validation.message||'Escolha um nome disponível.',1800);$('playerIdentity')?.focus();return;}
   const name=(validation?.name||$('playerIdentity').value.trim());if(!name){toast('Digite um nome para entrar.',1600);$('playerIdentity')?.focus();return;}
-  chatOnlyMode=false;chatOnlyRoomState=null;window.TronoSocial?.setChatHubMode?.(false);
+  joiningGame={room:selectedRoom,state:onlineRoomState,me:onlineMe,screen:game?.online?'gameScreen':onlineRoomState?'roomScreen':'setupScreen'};
+  chatOnlyMode=false;window.TronoSocial?.setChatHubMode?.(false);
   selectedRoom=roomDef(roomId); if(!selectedRoom)return;
   storage.setItem('tronoPlayerName',name);
   $('p0Name').value=name; $('p1Name').value='Bonifácio'; $('p2Name').value='Epaminondas'; $('p3Name').value='Cícero';
   $('selectedRoomName').textContent=selectedRoom.name;
   onlineRoomState=null; onlineMe=null;
   renderRoomSeats([]);
-  $('setupScreen').classList.add('hidden'); $('roomScreen').classList.remove('hidden');
+  window.TronoPortal?.showOnly?.('roomScreen');
   $('roomOnlineStatus').textContent='Conectando ao salão online...';
   await ensureAudio();
   const online=await window.TronoNetwork?.joinRoom(roomId,name);
@@ -1331,23 +1304,27 @@ async function enterChatOnly({validatedIdentity,channelId}={}){
   const validation=validatedIdentity||await window.TronoPortal?.validateIdentity?.();if(validation&&!validation.ok){toast(validation.message||'Escolha um nome disponível.',1800);window.TronoPortal?.showPortal?.();$('portalIdentity')?.focus();return false;}
   const name=(validation?.name||$('playerIdentity')?.value?.trim());if(!name){toast('Digite um nome para entrar.',1600);window.TronoPortal?.showPortal?.();return false;}storage.setItem('tronoPlayerName',name);
   await window.TronoCommunityAdmin?.refresh?.().catch(()=>{});
-  if(!channelId||!CHAT_CHANNEL_CATALOG.has(channelId))channelId=(window.TronoDesktop?[...CHAT_CHANNEL_CATALOG.values()].find(channel=>channel.type!=='text')?.id:null)||CHAT_CHANNEL_CATALOG.keys().next().value;
-  selectedRoom=null;onlineRoomState=null;onlineMe=null;onlineGameMode=false;chatOnlyMode=true;chatOnlyRoomState=null;
+  const requested=CHAT_CHANNEL_CATALOG.has(channelId)?channelId:null,current=window.TronoNetwork.currentRoom;
+  const restoreCurrent=CHAT_CHANNEL_CATALOG.has(current)&&(!requested||requested===current);
+  const preserveVoice=!requested&&window.TronoNetwork.independentGameVoice&&window.TronoSocial.voiceJoined;
+  if(!requested)channelId=preserveVoice?[...CHAT_CHANNEL_CATALOG.values()].find(c=>c.type!=='voice')?.id:(window.TronoDesktop?[...CHAT_CHANNEL_CATALOG.values()].find(c=>c.type!=='text')?.id:null)||CHAT_CHANNEL_CATALOG.keys().next().value;
+  if(!window.TronoNetwork.gameRoom){selectedRoom=null;onlineRoomState=null;onlineMe=null;onlineGameMode=false;}chatOnlyMode=true;chatOnlyRoomState=null;
   try{
-    // Prepare the voice controls before replacing the portal. A failed module leaves a usable screen.
     window.TronoSocial.setChatHubMode?.(true);window.TronoSocial.showForRoom(true);
     if(window.TronoPortal?.showOnly)window.TronoPortal.showOnly('chatOnlyScreen');
     else for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen'])$(id)?.classList.toggle('hidden',id!=='chatOnlyScreen');
     document.body.classList.remove('portal-active');document.body.classList.add('chat-only-active');
   }catch(err){chatOnlyMode=false;throw err;}
-  if($('chatOnlyStatus'))$('chatOnlyStatus').textContent='Conectando ao Salão Livre...';
-  if(!channelId){$('chatOnlyStatus').textContent='Nenhum canal disponível. Crie um canal para começar.';window.TronoNetwork.leaveRoom();window.TronoSocial.consumeRoom(null);return true;}
-  void ensureAudio().catch(()=>{});
+  if(restoreCurrent){consumeChatOnlyRoom(window.TronoSocial.chatRoomState);return true;}
+  if(!channelId){$('chatOnlyStatus').textContent=preserveVoice?'Sua chamada continua conectada. Selecione uma sala de voz para trocar de chamada.':'Nenhum canal disponível. Crie um canal para começar.';if(!preserveVoice){window.TronoNetwork.leaveVoiceRoom();window.TronoSocial.consumeRoom(null);}return true;}
+  $('chatOnlyStatus').textContent='Abrindo a comunidade...';void ensureAudio().catch(()=>{});
   try{
-    const online=await (CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text'?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));window.TronoNetwork.requestChatChannels?.();
-    if(window.TronoDesktop&&online&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();
-    if(chatOnlyMode&&!online&&$('chatOnlyStatus'))$('chatOnlyStatus').textContent='Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
-  }catch(err){console.warn('Conexão ao chat:',err);if(chatOnlyMode&&$('chatOnlyStatus'))$('chatOnlyStatus').textContent='Conexão interrompida. Aguarde a reconexão ou volte ao início para tentar novamente.';}
+    const textSubscription=preserveVoice||CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text',wasInVoice=window.TronoSocial.voiceJoined;
+    if(!textSubscription&&window.TronoNetwork.primaryRoom!==channelId&&wasInVoice)await window.TronoSocial.leaveVoice();
+    const online=await (textSubscription?window.TronoNetwork.joinTextChannel(channelId,name):window.TronoNetwork.joinChatChannel(channelId,name));window.TronoNetwork.requestChatChannels?.();
+    if(!textSubscription&&(window.TronoDesktop||wasInVoice)&&online&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();
+    if(chatOnlyMode&&!online)$('chatOnlyStatus').textContent='Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
+  }catch(err){console.warn('Conexão ao chat:',err);if(chatOnlyMode)$('chatOnlyStatus').textContent='Conexão interrompida. Aguarde a reconexão ou volte ao início para tentar novamente.';}
   return true;
 }
 const CHAT_CHANNEL_NAMES={'chat-livre':'Geral','chat-jogos':'Jogos','chat-conversa':'Conversa'};
@@ -1392,15 +1369,21 @@ $('chatChannelList')?.addEventListener('click',e=>{const channel=e.target.closes
 $('textChannelList')?.addEventListener('click',e=>{const channel=e.target.closest('[data-chat-channel]');if(channel)void switchChatChannel(channel.dataset.chatChannel);});
 async function leaveChatOnly(){
   try{sessionStorage.removeItem('mn-resume-chat');}catch{}
-  await window.TronoSocial?.leaveVoice?.();window.TronoSocial?.showForRoom?.(false);window.TronoSocial?.setChatHubMode?.(false);window.TronoNetwork?.leaveRoom();
+  await window.TronoSocial?.leaveVoice?.();window.TronoSocial?.showForRoom?.(false);window.TronoSocial?.setChatHubMode?.(false);window.TronoNetwork?.leaveVoiceRoom();
   chatOnlyMode=false;chatOnlyRoomState=null;document.body.classList.remove('chat-only-active');$('chatOnlyScreen').classList.add('hidden');
   if(window.TronoPortal?.showPortal)window.TronoPortal.showPortal();else $('setupScreen').classList.remove('hidden');
   setTimeout(()=>window.TronoNetwork?.requestRooms(),120);
 }
 function backToLobby(){
-  window.TronoSocial?.leaveVoice?.(); window.TronoSocial?.showForRoom?.(false);window.TronoSocial?.setChatHubMode?.(false);
-  window.TronoNetwork?.leaveRoom(); selectedRoom=null; onlineRoomState=null; onlineMe=null;chatOnlyMode=false;chatOnlyRoomState=null;document.body.classList.remove('chat-only-active');
-  $('roomScreen').classList.add('hidden');$('chatOnlyScreen')?.classList.add('hidden'); $('setupScreen').classList.remove('hidden');
+  leavingGame=true;clearLocalTurnTimer();
+  const cancelled=Object.assign(new Error('A mesa foi encerrada neste aparelho.'),{name:'AbortError'});
+  humanPlayResolver?.reject?.(cancelled);humanPlayResolver=null;modalReject?.(cancelled);modalResolver=null;closeModal();onlineQueuedPrivateUsurpation=null;onlineExchangeBusy=false;
+  if(window.TronoNetwork?.gameRoom&&window.TronoNetwork?.primaryRoom===window.TronoNetwork?.gameRoom)void window.TronoSocial?.leaveVoice?.();
+  window.TronoNetwork?.leaveGameRoom();selectedRoom=null;onlineRoomState=null;onlineMe=null;onlineGameMode=false;game=null;chatOnlyMode=false;
+  window.TronoSocial?.setChatHubMode?.(false);
+  document.body.classList.remove('chat-only-active');
+  window.TronoPortal?.showOnly?.('setupScreen');
+  if(!window.TronoSocial?.voiceJoined)window.TronoSocial?.showForRoom?.(false);
   setTimeout(()=>window.TronoNetwork?.requestRooms(),120);
 }
 
@@ -1434,8 +1417,9 @@ window.TronoNetwork?.onMessage(msg=>{
   if(msg.type==='chat-channels'||(msg.type==='welcome'&&msg.chatChannels))renderChatChannels(msg.channels||msg.chatChannels);
   if(msg.type==='channel-deleted'&&chatOnlyMode&&msg.roomId===chatOnlyRoomState?.id){chatOnlyRoomState=null;chatChannelResumeVoice=false;try{sessionStorage.removeItem('mn-resume-chat');}catch{}window.TronoSocial.consumeChatRoom(null);document.body.classList.remove('channel-text-active','channel-voice-active');$('chatOnlyStatus').textContent='Este canal foi excluído. Escolha outro canal.';window.TronoSocial.clearChannelChat();window.TronoNetwork.requestChatChannels();}
   if(msg.type==='joined-text-channel'&&chatOnlyMode)consumeChatOnlyRoom(msg.room);
+  if(msg.type==='joined-game-room'){joiningGame=null;consumeOnlineRoom(msg.room);}
   if(msg.type==='joined-room'){if(msg.room?.kind==='chat'){chatOnlyMode=true;window.TronoSocial?.setChatHubMode?.(true);consumeChatOnlyRoom(msg.room);if(chatChannelResumeVoice){chatChannelResumeVoice=false;void window.TronoSocial?.joinVoice?.();}}else consumeOnlineRoom(msg.room);}
-  if(msg.type==='room-state'){if(msg.room?.kind==='chat'&&msg.room.id===window.TronoNetwork.currentRoom)consumeChatOnlyRoom(msg.room);else if(msg.room?.kind!=='chat')consumeOnlineRoom(msg.room);}
+  if(msg.type==='room-state'){if(msg.room?.kind==='chat'&&msg.room.id===window.TronoNetwork.currentRoom)consumeChatOnlyRoom(msg.room);else if(msg.room?.kind==='game'&&msg.room.id===(window.TronoNetwork.gameRoom||selectedRoom?.id))consumeOnlineRoom(msg.room);}
   if(msg.type==='player-left'&&!onlineGameMode){if(chatOnlyMode){toast(`${msg.name||'Uma pessoa'} saiu do canal.`,1500);}else if(msg.reason==='disconnect')showConnectionNotice(msg.name,null,'disconnect');else toast(`${msg.name||'Um jogador'} deixou o salão.`,1600);}
   if(msg.type==='game-started'){
     enterOnlineBoard();
@@ -1443,11 +1427,13 @@ window.TronoNetwork?.onMessage(msg=>{
     toast('♛ Partida online iniciada — o servidor controla a mesa.',2200);
     window.TronoNetwork?.requestState();
   }
-  if(msg.type==='game-state')applyOnlineState(msg.state);
-  if(msg.type==='game-prompt')showOnlinePrompt(msg.prompt).catch(fatalError);
-  if(msg.type==='private-usurpation'){if(onlineExchangeBusy)onlineQueuedPrivateUsurpation=msg;else showOnlinePrivateUsurpation(msg).catch(fatalError);}
-  if(msg.type==='game-event')handleOnlineGameEvent(msg).catch(fatalError);
+  if(msg.type==='game-state'&&!leavingGame)applyOnlineState(msg.state);
+  if(msg.type==='game-prompt'&&!leavingGame)showOnlinePrompt(msg.prompt).catch(fatalError);
+  if(msg.type==='private-intelligence'&&!leavingGame)showIntelligence(msg.intelligence).then(()=>window.TronoNetwork.gameAction('intelligence-ack')).catch(fatalError);
+  if(msg.type==='private-usurpation'&&!leavingGame){if(onlineExchangeBusy)onlineQueuedPrivateUsurpation=msg;else showOnlinePrivateUsurpation(msg).catch(fatalError);}
+  if(msg.type==='game-event'&&!leavingGame)handleOnlineGameEvent(msg).catch(fatalError);
   if(msg.type==='error'){
+    if(joiningGame&&['GAME_IN_PROGRESS','ROOM_FULL','ROOM_NOT_FOUND','NO_SEAT'].includes(msg.code)){const previous=joiningGame;joiningGame=null;selectedRoom=previous.room;onlineRoomState=previous.state;onlineMe=previous.me;window.TronoPortal.showOnly(previous.screen);if(previous.state)consumeOnlineRoom(previous.state);if(previous.screen==='gameScreen')window.TronoNetwork.requestState();}
     if(msg.code==='NAME_TAKEN'||msg.code==='NAME_REQUIRED'){
       window.TronoPortal?.setNameFeedback?.({available:false,code:msg.code,message:msg.message||'Nome indisponível.'});
       toast(msg.message||'Escolha outro nome.',2800);
@@ -1480,11 +1466,14 @@ $('influenceToggle').addEventListener('change',async()=>{
   if(!humanPlayResolver?.influenceAction){$('influenceToggle').checked=false;return;}
   if(game&&game.plays.length===0&&game.leader===0)await chooseOpeningInfluenceSuit();else renderHand();
 });
-$('manualBtn').onclick=()=>window.open('manual/A_Lei_do_Trono_Manual_v0.5.5_Edicao_Visual.pdf','_blank');
+function openManual(){if(window.TronoDesktop?.openManual)return window.TronoDesktop.openManual();return window.open('manual/index.html','_blank','noopener');}
+$('manualBtn').onclick=openManual;$('rulesManualBtn').onclick=openManual;
+$('rulesLaws').innerHTML='<h3>As cinco Leis</h3>'+LAW_ORDER.map(id=>`<p><b>${escAttr(LAWS[id].name)}:</b> ${escAttr(LAWS[id].description)}</p>`).join('');
+$('rulesDecrees').innerHTML='<h3>Os dez Decretos</h3>'+DECREES.map(d=>`<p><b>${escAttr(d.name)}:</b> ${escAttr(d.text)}</p>`).join('');
 
 $('startHumanBtn').onclick=()=>startGame(false).catch(fatalError);
 $('startDemoBtn').onclick=()=>startGame(true).catch(fatalError);
-$('restartBtn').onclick=()=>{if(confirm('Voltar à tela de salas? A partida atual será encerrada neste aparelho.')){window.TronoSocial?.leaveVoice?.();if(onlineGameMode)window.TronoNetwork?.leaveRoom();setTimeout(()=>location.reload(),100);}};
+$('restartBtn').onclick=()=>{if(confirm('Sair desta mesa e voltar aos salões? Sua chamada do M&N continua conectada.'))backToLobby();};
 $('rulesBtn').onclick=()=>$('rulesDrawer').classList.remove('hidden');
 $('rulesClose').onclick=()=>$('rulesDrawer').classList.add('hidden');
 $('rulesDrawer').addEventListener('click',e=>{if(e.target===$('rulesDrawer'))$('rulesDrawer').classList.add('hidden');});
@@ -1581,6 +1570,7 @@ function updateTurnTimer(){
 if(!turnTicker) turnTicker=setInterval(updateTurnTimer,250);
 
 function fatalError(err){
+  if(err.name==='AbortError')return;
   console.error(err); logEvent(`<strong>Erro de execução:</strong> ${err.message}`); toast('O jogo encontrou um erro. Veja o console.',3000);
 }
 
@@ -1592,7 +1582,7 @@ window.__LeiDoTrono={
   setFast:()=>{animationScale=.05;},
   toggleMusic,
   usurpacaoRule:()=>({
-    rule:'Sombra entrega 1 carta escolhida; Coroa incorpora e embaralha toda a mão; a Sombra escolhe uma posição entre as cartas fechadas e essa carta volta para sua mão.',
-    privateReveal:'A identidade das duas cartas só é exibida no cliente local quando ele é Coroa ou Sombra.'
+    rule:LAWS.usurpacao.description,
+    privateReveal:'A identidade das duas cartas só é exibida no cliente local quando ele é a Sombra ou a Casa escolhida.'
   })
 };

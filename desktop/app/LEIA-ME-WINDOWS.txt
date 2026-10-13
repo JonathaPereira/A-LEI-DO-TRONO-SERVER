@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.7
+M&N · A Lei do Trono — Windows 0.1.8
 
-1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.7-Windows.exe.
+1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.8-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente após publicar
    o pacote completo do site. Quem usa 0.1.0 instala uma versão atual uma vez.
    Preserve os dados do aplicativo.
@@ -42,7 +42,7 @@ O responsável deve atualizar o backend para habilitar a atividade. Não há SQL
     Exibe só o nome: nunca títulos de janelas ou caminhos. O site mostra a atividade
     recebida do app, mas não detecta programas do Windows. Desligar limpa a atividade.
 
-Na versão 0.1.7, a atividade aparece abaixo do nome nos perfis. Ative-a em
+Na versão 0.1.8, a atividade aparece abaixo do nome nos perfis. Ative-a em
 Configurações > Atividade. A câmera ocupa a prévia e o texto fica no rodapé.
 Há cinco temas novos e configurações que se ajustam ao conteúdo em telas verticais.
 O atualizador permite ir direto para a última versão disponível, sem etapas
@@ -55,3 +55,9 @@ Avisos aparecem em segundo plano; silencie canais em Configurações → Notific
 Volumes dos participantes são lembrados por conta, inclusive ao mudar o apelido.
 Telemetria → Copiar diagnóstico facilita identificar problemas de áudio/rede.
 Conexão → Adaptar vídeo reduz qualidade temporariamente quando necessário.
+
+Revisão da Corte 0.9.0: Ordem, Estandarte e Usurpação atualizados;
+Conselho, Favor Real, Espionagem e Peso da Coroa adicionados. O jogo
+preserva a chamada do M&N ao navegar entre mesa e comunidade.
+Manual temático HTML/PDF disponível no site e dentro do app.
+A troca de Decreto por Influência fica para outra atualização.

@@ -1,3 +1,7 @@
+## Revisão da Corte 0.9.0 · Windows 0.1.8
+
+Regras, manual e animações atualizados; a mesa agora preserva a chamada da comunidade. Publicação: [ATUALIZAR_WINDOWS_v0.1.8.md](ATUALIZAR_WINDOWS_v0.1.8.md). Manual: [frontend/manual/index.html](frontend/manual/index.html). Não há nova migração SQL nesta revisão.
+
 # A Lei do Trono — v0.8.0 Alpha + atualização da comunidade
 
 Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jogar e usar texto e voz da mesa; acesso ao M&N, anexos e operações SFU exige autenticação. Antes do deploy, siga ATUALIZAR_v0.8.0.md e execute supabase/upgrade-v080.sql depois do SQL da v0.7.9. Instalações novas precisam de schema.sql, upgrade-v079.sql, upgrade-v080.sql, upgrade-community.sql, upgrade-chat-history.sql e upgrade-social.sql, nessa ordem. Preserve as configurações de Supabase/SMTP, R2 e Realtime/TURN já utilizadas.
