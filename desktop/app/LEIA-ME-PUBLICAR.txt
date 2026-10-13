@@ -1,8 +1,10 @@
 M&N — publicar o site com download e atualizações do app
 
-1. Primeiro execute SUPABASE-upgrade-social.sql no SQL Editor do Supabase.
-   Depois faça merge e aguarde o deploy do backend no Render.
-   Confira /health: features.socialMessaging e channelNotifications devem ser true.
+1. Não há nova migração SQL nesta revisão. Se você pulou a versão 0.1.7
+   e ainda não aplicou SUPABASE-upgrade-social.sql, aplique-o uma vez no SQL Editor.
+   Se já foi aplicado, não precisa executar novamente.
+   Faça merge e aguarde o deploy do backend no Render.
+   Confira /health: versão 0.9.0-alpha, independentGameVoice true e gameRulesVersion 0.9.0.
 2. Extraia este ZIP. Entre na pasta frontend extraída, que contém index.html
    e a pasta downloads com o instalador e latest.yml.
 3. No Git Bash, dentro dessa pasta frontend, execute:
