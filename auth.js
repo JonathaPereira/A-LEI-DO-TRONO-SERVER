@@ -40,6 +40,12 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{},
       if(code==='weak_password')throw authError('WEAK_PASSWORD',policyMessage);
       if(code==='user_already_exists'||code==='email_exists')throw authError('SIGNUP_FAILED','Não foi possível concluir o cadastro. Tente entrar ou recuperar sua senha.');
       if(code==='signup_disabled')throw authError('SIGNUP_DISABLED','Novos cadastros estão temporariamente indisponíveis.',403);
+      if(path.includes('/rpc/social_')){
+        const reasons={AUTH_REQUIRED:[401,'Entre novamente na sua conta.'],FORBIDDEN:[403,'Esta conversa é privada.'],FRIEND_REQUIRED:[403,'Adicione esta pessoa aos amigos antes de enviar mensagens.'],INVALID_TARGET:[400,'Conta confirmada não encontrada.'],INVALID_MESSAGE:[400,'Mensagem inválida.'],INVALID_CURSOR:[400,'Página de mensagens inválida.'],INVALID_ACTION:[400,'Ação inválida.'],REQUEST_NOT_FOUND:[404,'Esse pedido não está mais disponível.'],CHANNEL_NOT_FOUND:[404,'Esse canal não existe mais.']};
+        const reason=Object.keys(reasons).find(k=>String(data.message||'').includes(k));
+        if(reason)throw authError(reason,reasons[reason][1],reasons[reason][0]);
+        throw authError('SOCIAL_UNAVAILABLE','Amigos e conversas indisponíveis. Confira a migração upgrade-social.sql.',503);
+      }
       if(path.includes('/rpc/community_')){
         const reasons={FORBIDDEN:[403,'Você não tem permissão para realizar essa operação.'],INVALID_ROLE:[400,'Escolha Admin ou Membro.'],CREATOR_PROTECTED:[403,'O cargo de criador é vinculado ao e-mail confirmado.'],MEMBER_NOT_FOUND:[404,'Conta confirmada não encontrada.'],INVALID_CHANNEL:[400,'Canal inválido. Use texto ou voz e um nome de 2 a 40 caracteres.'],CHANNEL_LIMIT:[409,'Limite de 50 canais atingido.'],CHANNEL_NOT_FOUND:[404,'Canal não encontrado.']};
         const reason=Object.keys(reasons).find(k=>String(data.message||'').includes(k));

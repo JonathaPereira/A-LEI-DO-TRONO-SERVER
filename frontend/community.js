@@ -13,7 +13,9 @@ window.TronoCommunity=(()=>{
     if(person.guest){const label=document.createElement('span');label.className='community-guest-tag';label.textContent='Convidado';copy.appendChild(label);}
     else {const badge=document.createElement('span');badge.className='role-badge role-'+(person.role||'member');badge.textContent={creator:'Criador',admin:'Admin',member:'Membro'}[person.role]||'Membro';copy.appendChild(badge);}
     if(window.TronoAuth.user?.permissions?.manageRoles&&!person.guest&&person.role!=='creator'){const edit=document.createElement('button');edit.type='button';edit.className='role-edit-btn';edit.title='Alterar cargo de '+person.name;edit.setAttribute('aria-label',edit.title);edit.textContent='Cargo';edit.onclick=()=>window.TronoCommunityAdmin.editRole(person);el.appendChild(edit);}
-    el.appendChild(copy);return el;
+    el.appendChild(copy);
+    if(!person.guest&&person.id!==window.TronoAuth.user?.id){const message=document.createElement('button');message.type='button';message.className='social-small-button community-message-btn';message.textContent='Conversar';message.onclick=()=>window.TronoMessenger.open(person.id);el.append(message);}
+    return el;
   }
   function render(){
     const host=$('communityMembers');if(!host)return;const offlineExpanded=!!host.querySelector('details')?.open,scroll=host.scrollTop;host.replaceChildren();

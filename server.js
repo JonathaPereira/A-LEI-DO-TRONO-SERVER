@@ -9,6 +9,7 @@ const { createAuth } = require('./auth');
 const {createFiles}=require('./files');
 const {createCommunity}=require('./community');
 const {createChatHistory}=require('./chat-history');
+const {createSocialService}=require('./social-service');
 const {createCommunityManagement}=require('./community-management');
 const {permissions}=require('./roles');
 
@@ -198,9 +199,12 @@ function createRoomPlayer(ws,room,name,seat=nextFreeSeat(room)){
 }
 function joinTextRoom(ws,roomId,rawName){
   const room=rooms.get(roomId);
-  if(!room||room.kind!=='chat'||room.channelType!=='text'){send(ws,{type:'error',code:'TEXT_CHANNEL_REQUIRED',message:'Escolha um canal de texto.'});return;}
+  if(!room||room.kind!=='chat'||room.channelType==='voice'){send(ws,{type:'error',code:'TEXT_CHANNEL_REQUIRED',message:'Escolha um canal com mensagens de texto.'});return;}
   const availability=accountNameAvailability(ws,rawName);
   if(!availability.available){send(ws,{type:'error',code:availability.code,message:availability.message});return;}
+  if(ws.roomId===roomId&&room.channelType!=='text'){
+    leaveTextRoom(ws);send(ws,{type:'joined-text-channel',room:safeRoom(room),primaryRoomId:ws.roomId});void sendChatHistory(ws,room);return;
+  }
   // Upgrade an older client's primary text membership without leaving voice.
   if(ws.roomId===roomId)ws.roomId=null;
   if(ws.textRoomId!==roomId)leaveTextRoom(ws);
@@ -289,6 +293,13 @@ async function handleChatMessage(ws,rawText,attachmentId,requestedRoomId){
     if(!Array.isArray(room.chatHistory))room.chatHistory=[];
     room.chatHistory.push(message);if(room.chatHistory.length>100)room.chatHistory.splice(0,room.chatHistory.length-100);
     for(const p of room.players.values())send(p.ws,{type:'chat-message',message});
+    if(room.kind==='chat')for(const receiver of wss.clients){
+      if(!receiver.account||receiver.account.expiresAt<=Date.now()||receiver.account.id===ws.account?.id)continue;
+      const nickname=receiver.account.nickname.toLocaleLowerCase('pt-BR'),lower=text.toLocaleLowerCase('pt-BR');
+      const start=lower.indexOf('@'+nickname),tail=start<0?'':lower.slice(start+nickname.length+1);
+      const mentioned=start>=0&&(!tail||!/^\p{L}|^\p{N}|^_/u.test(tail));
+      send(receiver,{type:'chat-notice',id:message.id,roomId:room.id,roomName:room.name,name:player.name,text:text||'Enviou um anexo',mentioned});
+    }
   });}catch(e){send(ws,{type:'error',code:e.code||'CHAT_HISTORY_UNAVAILABLE',message:e.message,failedMessage:{roomId:room.id,text}});}
 
 }
@@ -866,18 +877,20 @@ function broadcastGameState(room,revealPlays=false){
 const chatHistory=createChatHistory({auth:accountAuth});
 const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),canAttach:(id,roomId)=>rooms.get(roomId)?.channelType!=='voice'&&[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
 const community=createCommunity({wss,rooms,send,auth:accountAuth});
+const socialService=createSocialService({auth:accountAuth,wss,send,rooms});
 const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
 fileStorage.install(app);
 communityManagement.install(app,express);
+socialService.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,socialMessaging:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,socialMessaging:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}

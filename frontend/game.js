@@ -1356,7 +1356,7 @@ let chatChannelSwitching=false;
 let chatChannelResumeVoice=false;
 async function switchChatChannel(channelId){
   if(!chatOnlyMode||chatChannelSwitching||!CHAT_CHANNEL_CATALOG.has(channelId))return;
-  if(window.TronoNetwork?.currentRoom===channelId){if(window.TronoDesktop&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;}
+  if(window.TronoNetwork?.currentRoom===channelId&&(CHAT_CHANNEL_CATALOG.get(channelId)?.type==='text'||window.TronoNetwork.primaryRoom===channelId)){if(window.TronoDesktop&&CHAT_CHANNEL_CATALOG.get(channelId)?.type!=='text'&&!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;}
   chatChannelSwitching=true;
   try{
     const wasInVoice=Boolean(window.TronoSocial?.voiceJoined);
@@ -1386,6 +1386,7 @@ function renderChatChannels(channels=[]){
   }
   for(const target of [host,textHost])if(!target.children.length){const empty=document.createElement('small');empty.className='channel-empty';empty.textContent='Nenhum canal';target.appendChild(empty);}
   window.TronoCommunity?.renderRoomIcons?.();
+  window.TronoNotifications?.render?.();
 }
 $('chatChannelList')?.addEventListener('click',e=>{const channel=e.target.closest('[data-chat-channel]');if(channel)void switchChatChannel(channel.dataset.chatChannel);});
 $('textChannelList')?.addEventListener('click',e=>{const channel=e.target.closest('[data-chat-channel]');if(channel)void switchChatChannel(channel.dataset.chatChannel);});

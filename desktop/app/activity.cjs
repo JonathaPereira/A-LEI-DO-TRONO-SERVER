@@ -17,13 +17,15 @@ class DesktopActivity{
   constructor(app,publish,options={}){
     this.executable=options.executable||(app.isPackaged?path.join(process.resourcesPath,'native/MN-Application-Audio.exe'):path.resolve(__dirname,'../../artifacts/native-audio/Release/MN-Application-Audio.exe'));
     this.available=options.available??(process.platform==='win32'&&fs.existsSync(this.executable));this.spawn=options.spawn||spawn;this.publish=publish;this.child=null;this.timer=null;this.watchdog=null;this.generation=0;this.busy=false;this.preferred=null;this.customName='';this.steamCache=new Map();
-    this.state={available:this.available,enabled:false,game:null,apps:[],error:null};
+    this.state={available:this.available,enabled:false,game:null,apps:[],error:null};this.candidates=[];
   }
   configure(config={}){
     if(typeof config.enabled!=='boolean'||config.preferredAppId!=null&&!/^[a-f0-9]{64}$/.test(config.preferredAppId)||config.name!=null&&typeof config.name!=='string')throw Error('Atividade inválida.');
     this.preferred=config.preferredAppId||null;this.customName=label(config.name);this.state.enabled=config.enabled&&this.available;
     if(!this.state.enabled){this.stop();this.state.game=null;this.state.apps=[];this.state.error=null;this.emit();return this.snapshot();}
-    if(!this.child)this.start();else this.scan();return this.snapshot();
+    // Selecting an item already shown in the picker must not wait for another
+    // helper scan (which may currently be busy or scheduled 15 seconds later).
+    this.choose();this.emit();if(!this.child)this.start();else this.scan();return this.snapshot();
   }
   snapshot(){return {...this.state,game:this.state.game?{...this.state.game}:null,apps:this.state.apps.map(row=>({...row}))};}
   emit(){this.publish(this.snapshot());}
@@ -54,11 +56,15 @@ class DesktopActivity{
     }
     if(generation!==this.generation||!this.state.enabled)return;clearTimeout(this.watchdog);this.busy=false;
     const unique=[...new Map(apps.map(row=>[row.id,row])).values()];this.state.apps=unique.map(({id,name})=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name));
+    this.candidates=unique;this.choose();this.state.error=null;this.emit();
+  }
+  choose(){
+    const unique=this.candidates;
     const chosen=this.preferred?unique.find(row=>row.id===this.preferred):unique.find(row=>row.game&&row.foreground)||unique.find(row=>row.game&&row.game===this.state.game?.name)||unique.find(row=>row.game);
     const name=chosen?(this.preferred?this.customName||chosen.game||chosen.name:chosen.game):null;
-    this.state.game=name?{name,startedAt:this.state.game?.name===name?this.state.game.startedAt:Date.now()}:null;this.state.error=null;this.emit();
+    this.state.game=name?{name,startedAt:this.state.game?.name===name?this.state.game.startedAt:Date.now()}:null;
   }
-  stop(){++this.generation;clearInterval(this.timer);clearTimeout(this.watchdog);this.timer=null;this.watchdog=null;this.busy=false;const child=this.child;this.child=null;if(child){child.stdin.end();const kill=setTimeout(()=>child.kill(),2000);kill.unref();child.once('close',()=>clearTimeout(kill));}}
+  stop(){++this.generation;this.candidates=[];clearInterval(this.timer);clearTimeout(this.watchdog);this.timer=null;this.watchdog=null;this.busy=false;const child=this.child;this.child=null;if(child){child.stdin.end();const kill=setTimeout(()=>child.kill(),2000);kill.unref();child.once('close',()=>clearTimeout(kill));}}
   dispose(){this.state.enabled=false;this.stop();this.state.game=null;this.state.apps=[];}
 }
 module.exports={DesktopActivity,label,idFor};

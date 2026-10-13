@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.6
+M&N · A Lei do Trono — Windows 0.1.7
 
-1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.6-Windows.exe.
+1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.7-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente após publicar
    o pacote completo do site. Quem usa 0.1.0 instala uma versão atual uma vez.
    Preserve os dados do aplicativo.
@@ -8,7 +8,7 @@ M&N · A Lei do Trono — Windows 0.1.6
    A sessão é criptografada pelo Windows; sua senha não fica salva.
    Desmarcar ou Sair da conta remove a sessão lembrada.
 3. Configurações ficam na engrenagem inferior: Minha conta, Aparência, Áudio,
-   Vídeo, Captura de tela, Jogo, Atividade, Conexão e Privacidade. A música começa desativada.
+   Vídeo, Captura de tela, Jogo, Atividade, Conexão, Notificações e Privacidade. A música começa desativada.
    Supressão leve/nativa é o padrão; RNNoise avançado é opcional.
 4. Clipes está bloqueado: opção em desenvolvimento. Replay, gravação automática
    e atalhos de clipes estão suspensos. Clipes antigos permanecem no perfil local.
@@ -42,9 +42,16 @@ O responsável deve atualizar o backend para habilitar a atividade. Não há SQL
     Exibe só o nome: nunca títulos de janelas ou caminhos. O site mostra a atividade
     recebida do app, mas não detecta programas do Windows. Desligar limpa a atividade.
 
-Na versão 0.1.6, a atividade aparece abaixo do nome nos perfis. Ative-a em
+Na versão 0.1.7, a atividade aparece abaixo do nome nos perfis. Ative-a em
 Configurações > Atividade. A câmera ocupa a prévia e o texto fica no rodapé.
 Há cinco temas novos e configurações que se ajustam ao conteúdo em telas verticais.
 O atualizador permite ir direto para a última versão disponível, sem etapas
 intermediárias; Buscar última versão também verifica uma atualização já baixada.
 Publique também o backend desta versão. Não há SQL novo.
+
+Amigos, no topo: pedidos, conversas privadas e convites para canais. Abrir uma
+conversa mantém sua chamada conectada. Histórico fica no Supabase.
+Avisos aparecem em segundo plano; silencie canais em Configurações → Notificações.
+Volumes dos participantes são lembrados por conta, inclusive ao mudar o apelido.
+Telemetria → Copiar diagnóstico facilita identificar problemas de áudio/rede.
+Conexão → Adaptar vídeo reduz qualidade temporariamente quando necessário.

@@ -1,6 +1,6 @@
 # A Lei do Trono — v0.8.0 Alpha + atualização da comunidade
 
-Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jogar e usar texto e voz da mesa; acesso ao M&N, anexos e operações SFU exige autenticação. Antes do deploy, siga ATUALIZAR_v0.8.0.md e execute supabase/upgrade-v080.sql depois do SQL da v0.7.9. Instalações novas precisam de schema.sql, upgrade-v079.sql, upgrade-v080.sql, upgrade-community.sql e upgrade-chat-history.sql, nessa ordem. Preserve as configurações de Supabase/SMTP, R2 e Realtime/TURN já utilizadas.
+Cadastro, login e recuperação são integrados ao Supabase. Convidados podem jogar e usar texto e voz da mesa; acesso ao M&N, anexos e operações SFU exige autenticação. Antes do deploy, siga ATUALIZAR_v0.8.0.md e execute supabase/upgrade-v080.sql depois do SQL da v0.7.9. Instalações novas precisam de schema.sql, upgrade-v079.sql, upgrade-v080.sql, upgrade-community.sql, upgrade-chat-history.sql e upgrade-social.sql, nessa ordem. Preserve as configurações de Supabase/SMTP, R2 e Realtime/TURN já utilizadas.
 
 Backend autoritativo do jogo + WebSocket + ponte segura para Cloudflare Realtime SFU.
 
@@ -206,3 +206,5 @@ caminhos ou títulos de janelas nem mantém histórico. Atividade offline ou sem
 renovação expira; ocultar envia uma limpeza imediata. `/health` informa
 `presence.gameActivity: true`. Atualize o backend no Render antes de publicar
 o pacote completo do site; não há SQL novo. Consulte [WINDOWS_APP.md](WINDOWS_APP.md).
+
+Windows 0.1.7: amigos, mensagens privadas persistentes, notificações, volumes por conta e diagnóstico. Veja [o passo a passo de publicação](ATUALIZAR_WINDOWS_v0.1.7.md).

@@ -2,7 +2,11 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.1.6',
+  version:'0.1.7',
+  notify:value=>ipcRenderer.invoke('mn:notify',value),
+  onNotificationClick:fn=>listen('mn:notification-click',fn),
+  copyDiagnostics:text=>ipcRenderer.invoke('mn:copy-diagnostics',text),
+  getResources:()=>ipcRenderer.invoke('mn:resources'),
   getActivityState:()=>ipcRenderer.invoke('mn:activity-state'),
   configureActivity:config=>ipcRenderer.invoke('mn:activity-configure',config),
   onActivity:fn=>listen('mn:activity',fn),
