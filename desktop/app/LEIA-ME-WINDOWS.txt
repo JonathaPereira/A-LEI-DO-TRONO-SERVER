@@ -1,69 +1,44 @@
-M&N · A Lei do Trono — Windows 0.1.9
+M&N · A Lei do Trono — Windows 0.1.10
 
-1. Para uma instalação nova, extraia o ZIP e instale MN-Trono-0.1.9-Windows.exe.
-   Quem usa 0.1.1 ou posterior recebe a atualização internamente após publicar
-   o pacote completo do site. Quem usa 0.1.0 instala uma versão atual uma vez.
-   Preserve os dados do aplicativo.
+1. Instalação nova: instale MN-Trono-0.1.10-Windows.exe.
+   Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
+   completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
+   Contas, permissões e preferências lembradas são mantidas.
 2. Entre com a conta do site. Lembre de mim restaura a sessão ao reabrir.
-   A sessão é criptografada pelo Windows; sua senha não fica salva.
-   Desmarcar ou Sair da conta remove a sessão lembrada.
-3. Configurações ficam na engrenagem inferior: Minha conta, Aparência, Áudio,
-   Vídeo, Captura de tela, Jogo, Atividade, Conexão, Notificações e Privacidade. A música começa desativada.
-   Supressão leve/nativa é o padrão; RNNoise avançado é opcional.
-4. Clipes está bloqueado: opção em desenvolvimento. Replay, gravação automática
-   e atalhos de clipes estão suspensos. Clipes antigos permanecem no perfil local.
-5. Clicar em uma sala de voz conecta automaticamente. Os canais de texto
-   continuam independentes. Silenciar voz bloqueia microfone e áudio da chamada.
-   Microfone/câmera pedem autorização na primeira utilização e lembram a escolha.
-   Privacidade permite redefinir; permissões do Windows continuam necessárias.
-6. Efeitos fica na coluna esquerda. Em janelas menores/verticais, Canais abre
-   uma lateral recolhível. Tela cheia funciona pelo botão ou F11.
-   Pessoas e Telemetria ficam no topo e podem ser minimizados.
-7. Compartilhar e Trocar tela continuam disponíveis. Cancelar mantém a fonte
-   anterior. Áudio isolado por aplicativo requer Windows 11 ou build 20348+.
-   Computador inteiro pode incluir vozes da call; Sem áudio também é uma opção.
-8. Fechar mantém a chamada na bandeja. M&N > Sair encerra de verdade.
-   Atualizações baixam internamente; Reiniciar e atualizar pede confirmação.
-   Clique no número da versão para verificar manualmente.
+   A sessão é protegida pelo Windows; sua senha não fica salva.
+   Desmarcar a opção ou sair da conta remove a sessão lembrada.
+3. Aparência oferece Original/Padrão e Discord, além dos temas de cores.
+   A escolha é individual. Trocar a disposição durante a call mantém os recursos.
+4. No layout Discord, o canto inferior esquerdo mostra o canal conectado e o
+   botão de entrar/sair. Câmera e tela ficam como ícones abaixo. Foto e nome
+   aparecem na faixa inferior, junto de microfone, silenciamento e configurações.
+   Passe o mouse para ler os nomes dos ícones. O canal conectado é clicável.
+5. Ler texto, abrir amigos, navegar ao início ou jogar preserva sua chamada.
+   Sair da call mantém o canal de texto e o assento no jogo. Entrar novamente
+   funciona mesmo ao ler outro canal de texto. Sair da conta encerra a sessão.
+6. Configurações fica na engrenagem: conta, aparência, áudio, vídeo, captura,
+   jogo, atividade, conexão, notificações e privacidade. Música começa mutada.
+   A redução de ruído leve/nativa é padrão; RNNoise é opcional.
+7. Silenciar voz bloqueia áudio e microfone, restaurando o mute anterior ao voltar.
+   Permissões de câmera/microfone ficam lembradas. Privacidade permite redefinir.
+8. Compartilhar tela mantém o popup de qualidade/FPS/áudio e a opção Trocar tela.
+   Áudio isolado por aplicativo requer Windows 11 ou build 20348+.
+   Áudio do computador inteiro pode incluir as vozes da chamada.
+9. Efeitos fica na lateral esquerda. Amigos aceita anexos privados com as regras
+   do chat geral. Avisos respeitam Configurações → Notificações e silenciamento.
+10. Somente o criador apaga mensagens e limpa o canal. Mensagens exibem data/hora.
+    O histórico é armazenado no Supabase. Esta revisão não exige SQL novo:
+    reutiliza backend 0.9.1-alpha e as migrações já aplicadas na versão 0.1.9.
+11. F11 e o botão Tela cheia ampliam a janela. Streams têm maximização própria.
+    Perfis expandem detalhes e volume sem empurrar a transmissão.
+12. Configurações → Atividade mostra opcionalmente o nome de um jogo/aplicativo.
+    O padrão é desligado. Títulos de janelas e caminhos não são compartilhados.
+13. Clipes permanece bloqueado em desenvolvimento. Replay e gravação automática
+    continuam suspensos; os clipes locais antigos são preservados.
+14. Fechar mantém o aplicativo na bandeja. M&N → Sair encerra de verdade.
+    Clique na versão no rodapé para buscar atualização. Reiniciar encerra a call;
+    escolha um momento conveniente. O atualizador vai direto para a última versão.
 
-O canal precisa estar publicado em a-lei-do-trono.surge.sh/downloads/.
-O instalador ainda não tem assinatura digital. Use o projeto/domínio oficial.
-Tema, permissões e sessão lembrada são individuais, neste computador.
-O responsável deve publicar o backend e aplicar os dois SQL novos desta versão.
-
-9. As streams cabem na área disponível. Os perfis são menores: Expandir perfil
-   abre detalhes e volume sem empurrar a transmissão. Bolinha verde indica online;
-   uma borda fina indica fala. Modo leve/redução de movimento deixam a borda estática.
-10. A mão do jogo fica acima dos controles e ajusta as cartas ao espaço disponível.
-    Configurações > Jogo agrupa opções da partida, regras/histórico e comunicação.
-    A versão fica no rodapé esquerdo e verifica atualizações ao clicar.
-11. Configurações > Atividade permite mostrar o jogo aberto. Começa desligado.
-    Detecta jogos conhecidos/Steam; selecione outro aplicativo se necessário.
-    Exibe só o nome: nunca títulos de janelas ou caminhos. O site mostra a atividade
-    recebida do app, mas não detecta programas do Windows. Desligar limpa a atividade.
-
-Na versão 0.1.9, a atividade aparece abaixo do nome nos perfis. Ative-a em
-Configurações > Atividade. A câmera ocupa a prévia e o texto fica no rodapé.
-Há cinco temas novos e configurações que se ajustam ao conteúdo em telas verticais.
-O atualizador permite ir direto para a última versão disponível, sem etapas
-intermediárias; Buscar última versão também verifica uma atualização já baixada.
-Publique também o backend e aplique os SQL de moderação e anexos privados.
-
-Amigos, no menu lateral: pedidos, conversas privadas e convites para canais. Abrir uma
-conversa mantém sua chamada conectada. Histórico fica no Supabase.
-Avisos aparecem em segundo plano; silencie canais em Configurações → Notificações.
-Volumes dos participantes são lembrados por conta, inclusive ao mudar o apelido.
-Telemetria → Copiar diagnóstico facilita identificar problemas de áudio/rede.
-Conexão → Adaptar vídeo reduz qualidade temporariamente quando necessário.
-
-Revisão da Corte 0.9.0: Ordem, Estandarte e Usurpação atualizados;
-Conselho, Favor Real, Espionagem e Peso da Coroa adicionados. O jogo
-preserva a chamada do M&N ao navegar entre mesa e comunidade.
-Manual temático HTML/PDF disponível no site e dentro do app.
-A troca de Decreto por Influência fica para outra atualização.
-
-Novidades 0.1.9: em Aparência escolha Original / Padrão ou Discord.
-A troca é pessoal e preserva a chamada. M&N leva ao início, sem botão redundante.
-Mensagens mostram data e hora. Somente o criador apaga mensagens ou limpa o canal.
-Amigos aceitos podem enviar anexos privados com os limites do chat geral.
-Avisos compactos mostram o avatar do amigo e respeitam seu silenciamento.
+O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
+O instalador não tem assinatura digital; use o projeto/domínio oficial.
+Consulte ATUALIZAR_WINDOWS_v0.1.10.md para publicar o pacote completo do site.

@@ -1,3 +1,7 @@
+## Painel de voz Discord · Windows 0.1.10
+
+Conexão, câmera e tela reunidas no canto inferior esquerdo, com perfil e controles de áudio abaixo. Reconexão a partir do texto e menus preservam a chamada. Publicação de frontend/app: [ATUALIZAR_WINDOWS_v0.1.10.md](ATUALIZAR_WINDOWS_v0.1.10.md). Esta revisão reutiliza o backend e banco da 0.1.9, sem SQL novo.
+
 ## Layouts e conversas 0.9.1 · Windows 0.1.9
 
 Dois layouts pessoais (Original e Discord), ajustes para monitores verticais, moderação persistente do chat pelo criador, amigos no menu lateral e anexos privados. Esta versão requer os dois SQL novos e publicação do backend e frontend completos. Siga [ATUALIZAR_WINDOWS_v0.1.9.md](ATUALIZAR_WINDOWS_v0.1.9.md).
