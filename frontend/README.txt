@@ -1,5 +1,5 @@
 M&N · A Lei do Trono e Azul
-Windows atual: 0.1.13 · anterior: 0.1.12
+Windows atual: 0.1.14 · anterior: 0.1.13
 Backend: 0.10.0-alpha · regras de A Lei do Trono: 0.9.0
 
 Publique o frontend do ZIP MN-Trono-Frontend da release privada indicada no PR no Surge.

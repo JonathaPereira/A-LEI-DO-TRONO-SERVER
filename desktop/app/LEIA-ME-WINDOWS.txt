@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.13
+M&N · A Lei do Trono — Windows 0.1.14
 
-1. Instalação nova: instale MN-Trono-0.1.13-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.1.14-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -30,7 +30,8 @@ M&N · A Lei do Trono — Windows 0.1.13
     Azul usa o tabuleiro colorido original: 2–4 participantes e bots opcionais.
     O Top 5 guarda o melhor resultado por conta; bots não recebem recordes.
     Artes aprovadas aplicadas a peças, expositores e cartões murais.
-    Mesa de madeira, capa no catálogo, mercado central e tela cheia própria.
+    Mesa de madeira, capa no catálogo e tela cheia própria.
+    Mercado central maior, murais compactos e seleção em grade nas telas verticais/menores.
     A contagem detalha cada conexão, penalidade e bônus, com efeitos sonoros.
     Concluir contagem mostra o resultado imediatamente; movimento reduzido é respeitado.
     Esta atualização visual mantém backend 0.10.0-alpha e dispensa SQL novo.
@@ -48,4 +49,4 @@ M&N · A Lei do Trono — Windows 0.1.13
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador atual é baixado do próprio site, em downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.1.13.md para publicar o pacote completo do site.
+Consulte ATUALIZAR_WINDOWS_v0.1.14.md para publicar o pacote completo do site.
