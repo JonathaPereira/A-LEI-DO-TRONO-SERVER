@@ -45,6 +45,6 @@ M&N · A Lei do Trono — Windows 0.1.12
     escolha um momento conveniente. O atualizador vai direto para a última versão.
 
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
-O instalador é baixado de github.com/JonathaPereira/MN-Trono-Downloads/releases.
+O instalador atual é baixado do próprio site, em downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
 Consulte ATUALIZAR_WINDOWS_v0.1.12.md para publicar o pacote completo do site.

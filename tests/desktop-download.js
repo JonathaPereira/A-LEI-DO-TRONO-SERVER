@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
 const express=require('express'),{chromium,expect}=require('@playwright/test');
 test('anonymous website login offers a direct Windows download on desktop and mobile',{timeout:45000},async()=>{
-  const downloadURL='https://github.com/JonathaPereira/MN-Trono-Downloads/releases/download/v0.1.12/MN-Trono-0.1.12-Windows.exe';
+  const downloadURL='https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.12-Windows.exe';
   const host=express().use(express.static(path.resolve(__dirname,'../frontend')));
   const server=await new Promise(resolve=>{const value=host.listen(0,'127.0.0.1',()=>resolve(value));}),origin='http://127.0.0.1:'+server.address().port;let browser;
   try{
