@@ -109,7 +109,12 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
      if(req.method==='OPTIONS')return res.sendStatus(204);
      try{req.account=await auth.identity(auth.tokenFrom(req));next();}catch(e){res.status(e.status||503).json({error:{code:e.code,message:e.message}});}
    });
-   function route(method,path,fn){app[method](`/files${path}`,async(req,res)=>{try{if(!configured)throw error('STORAGE_UNCONFIGURED','Anexos ainda não foram ativados no servidor.',503);res.json(await fn(req));}catch(e){if(!res.destroyed)res.status(e.status||503).json({error:{code:e.code||'STORAGE_UNAVAILABLE',message:e.status?e.message:'Não foi possível concluir o envio.'}});}});}
+   function route(method,path,fn){app[method](`/files${path}`,async(req,res)=>{try{if(!configured)throw error('STORAGE_UNCONFIGURED','Anexos ainda não foram ativados no servidor.',503);res.json(await fn(req));}catch(e){if(!res.destroyed){
+     // Rejected uploads may still have a body in flight. Drain it and retire
+     // this connection so the next API call cannot reuse a half-read upload.
+     if(method==='post'){req.resume();res.set('Connection','close');}
+     res.status(e.status||503).json({error:{code:e.code||'STORAGE_UNAVAILABLE',message:e.status?e.message:'Não foi possível concluir o envio.'}});
+   }}});}
    route('get','/status',async()=>({configured:true,used:Number(await db('rpc/chat_storage_usage','POST',{})),limits:LIMITS}));
    route('get','/mine',async req=>{const offset=Math.max(0,Math.min(10000000,Math.floor(Number(req.query.offset)||0)));const rows=await db(`chat_files?owner_id=eq.${req.account.id}&state=eq.ready&order=created_at.desc,id.desc&limit=200&offset=${offset}`);return {files:rows.map(publicFile),hasMore:rows.length===200,nextOffset:offset+rows.length};});
    route('get','/soundboard',async req=>{const offset=Math.max(0,Math.min(10000000,Math.floor(Number(req.query.offset)||0)));const rows=await db(`chat_files?kind=eq.soundboard&state=eq.ready&order=created_at.desc,id.desc&limit=200&offset=${offset}`);return {files:rows.map(publicFile),hasMore:rows.length===200,nextOffset:offset+rows.length};});
