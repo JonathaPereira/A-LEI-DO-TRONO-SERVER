@@ -1,8 +1,8 @@
-M&N — frontend com somente o instalador atual · Windows 0.1.12
+M&N — frontend com somente o instalador atual · Windows 0.1.13
 
-1. Baixe MN-Trono-Frontend-0.1.12.zip na entrega privada indicada no PR.
+1. Baixe MN-Trono-Frontend-0.1.13.zip na entrega privada indicada no PR.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.1.12-Windows.exe
+   MN-Trono-0.1.13-Windows.exe
    latest.yml
 3. Entre na pasta frontend pelo Git Bash e execute:
    npx surge . a-lei-do-trono.surge.sh
@@ -10,7 +10,8 @@ M&N — frontend com somente o instalador atual · Windows 0.1.12
    Ele baixa internamente e permite reiniciar para instalar.
 
 O EXE já vai junto do frontend. Não precisa publicá-lo em outro repositório.
-O total fica perto de 154 MB: um instalador atual e o site completo.
+O pacote contém um instalador atual e o site completo.
+Confira o tamanho exato em TAMANHO-E-DOWNLOAD.json.
 Preserve latest.yml e o SHA-512; não misture arquivos de entregas diferentes.
 Não há SQL ou backend novo nesta atualização.
 Consulte PUBLICAR_SURGE_LEVE.md para o passo a passo completo.
