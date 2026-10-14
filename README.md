@@ -4,7 +4,7 @@ O instalador fica no repositório público de downloads/GitHub Releases. O artef
 
 ## Catálogo e Azul 0.10.0 · Windows 0.1.11
 
-Jogos reúne A Lei do Trono e Azul (tabuleiro colorido, 2–4 pessoas, bots opcionais), mantendo a chamada da comunidade. O servidor valida as jogadas e calcula os pontos. O Top 5 permanente guarda o melhor resultado por conta no Supabase, separado das mesas temporárias. Publicação exige **upgrade-azul.sql**, backend e frontend/app: [ATUALIZAR_WINDOWS_v0.1.11.md](ATUALIZAR_WINDOWS_v0.1.11.md). O roguelite ainda não foi incluído.
+Jogos reúne A Lei do Trono e Azul (tabuleiro colorido, 2–4 pessoas, bots opcionais), mantendo a chamada da comunidade. O servidor valida as jogadas e calcula os pontos. O Top 5 permanente guarda o melhor resultado por conta no Supabase, separado das mesas temporárias. Publicação exige **upgrade-azul.sql**, backend e frontend/app: [ATUALIZAR_WINDOWS_v0.1.11.md](ATUALIZAR_WINDOWS_v0.1.11.md). Cinzas do Abismo v0.5 está integrado ao catálogo, com campanha, horda, salvamento local e capa animada. A chamada é preservada e a renderização pausa ao sair do jogo. No Windows, artes/músicas são baixadas uma vez e guardadas com verificação de integridade; código e interface são instalados localmente. Veja [ATUALIZAR_WINDOWS_v0.1.15.md](ATUALIZAR_WINDOWS_v0.1.15.md).
 
 ## Painel de voz Discord · Windows 0.1.10
 

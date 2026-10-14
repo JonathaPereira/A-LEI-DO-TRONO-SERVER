@@ -1,0 +1,46 @@
+{
+  "edition": "0.5",
+  "method": "Built-in image generation; alpha sprites registered to 512px cells, feet y=480. Shared pose and muzzle transforms in rig.js. Full material textures fill collision polygons.",
+  "assets": [
+    {
+      "key": "blade_special",
+      "prompt": "Use case: stylized-concept. Production realistic painterly dark fantasy 2D animation sprite atlas on true transparent alpha. Same adult Black ranger, teal hood and cape, copper scarf, leather armor, steel shoulder plates as reference. Side view, clean detailed anatomy, full body and weapon in every pose, consistent body scale, each character uses only60% cell height with huge transparent padding, separate nonoverlapping figures. No floor, shadows, text or UI. EXACT4 columns2 rows8 squarecells. Toprowfour phases of SPINNING SWORD ATTACK: loaded crouch facing right sword gripped by right hand behind shoulder, rotates to front view with blade horizontally out to right, rotates to rear view swinging sword to left, completes turn facing right blade sweeping low. Bottomrowfour AIR COMBO phases: raised knees sword high, forceful aerial forward slash, downward slash with feet stretched to land, recovery crouch. One sword firmly held never detached, cloak dynamic natural follow-through.",
+      "production": "dist/assets/v5/blade_special.webp"
+    },
+    {
+      "key": "bow_actions",
+      "prompt": "Use case: stylized-concept. Production realistic painterly dark fantasy 2D animation sprite atlas on true transparent alpha. Same adult Black ranger, teal hood and cape, copper scarf, leather armor, steel shoulder plates as reference. Side view, clean detailed anatomy, full body and weapon in every pose, consistent body scale, each character uses only60% cell height with huge transparent padding, separate nonoverlapping figures. No floor, shadows, text or UI. EXACT4 columns3 rows12 squarecells, all facingRIGHT. Holding wooden recurve bow in left hand in EVERY pose. Row1 four KNEELING arrow attack phases: lower one knee, draw string to cheek, release arrow with bow extended, recover. Row2 four AIRBORNE arrow phases: rising tucked legs holding bow, fullydrawn airborne bow, releasing arrow inair, descending recovery. Row3 four CHARGED POWER ARROW phases: braced ready bow, deeply drawn string with torso rotated back, releasing a powerful shot with fullyextended bow arm, recoil. Arrow nock and bow attached to hands, no floating arrows/fire effects.",
+      "production": "dist/assets/v5/bow_actions.webp"
+    },
+    {
+      "key": "staff_actions",
+      "prompt": "Use case: stylized-concept. Production realistic painterly dark fantasy 2D animation sprite atlas on true transparent alpha. Same adult Black ranger, teal hood and cape, copper scarf, leather armor, steel shoulder plates as reference. Side view, clean detailed anatomy, full body and weapon in every pose, consistent body scale, each character uses only60% cell height with huge transparent padding, separate nonoverlapping figures. No floor, shadows, text or UI. EXACT4 columns3 rows12 squarecells all facingRIGHT. Long bronze wooden staff with cyan crystal firmly in right hand inallframes. Row1 four LOW SWEEP magical attack phases from crouch, draw staffback, extend staffforward with crystal atfront, recover. Row2 four AIRBORNE staff firing phases, tuck knees rising, draw staffback, fullyextend staffhorizontal with crystal front, recover descending. Row3 four SUPER ELEMENTAL SHOT phases: ready staff, charge with staff drawnback bothhands, thrust staffforward horizontally with crystalat front, heavyrecoil. Clearly attached hands, no added spell effects.",
+      "production": "dist/assets/v5/staff_actions.webp"
+    },
+    {
+      "key": "mobs_new",
+      "prompt": "Use case: stylized-concept. Realistic dark fantasy 2D game sprite atlas on transparentalpha, EXACT4columns4rows16 squarecells, all facingRIGHT pure sideview, hugepadding charactersonly60%cellheight, completebody andweapons nonoverlap no text no groundno effects. Eachrowoneconsistent monster4poses: walkleftfootforward, walkrightfootforward, telegraphedwindup, attackrelease. ROW1 ancient skeletonknight in dented bronze armor, firmlyholding shieldinlefthand and short rustyaxe inrighthand; shieldsallposes, swingsaxe forward. ROW2 hooded skeletonarcher in gray leather holding recurvebow, walkwalk drawstring releasearrow, bowattachedleft hand. ROW3 big toxicspider blackpurple carapace greenabdomen, idlecrawl crawl legsraised spitsilk stance. ROW4 volcanic HELLHOUND quadruped black obsidian skin and ember cracks, walkingalternatefeet then crouched snarling then powerful leaping bite. Richtexture naturaljointmotion no unattachedswords.",
+      "production": "dist/assets/v5/mobs_new.webp"
+    },
+    {
+      "key": "wisp_motion",
+      "prompt": "Use case: stylized-concept. Transparent darkfantasy game animation sheet EXACT4columns2rows8 equal square separated cells. Same spectral lightning WISP, floating humanoid skull within tattered translucent blueviolet spirit ribbons with glowing cyan core, clearly distinct from bat/skeleton, detailedrealisticpainterly, eachfigureuses55%cellheight withhugepadding nooverlap nofloor noUI no text. Toprow4 driftinganimation phases, ribbonsdifferent flowingposes. Bottomrow4 energyburst phases: gather curling ribbons inward, swellglowingcore, forcefulextendedspiritbody, collapse/recover. Keepenergywithin eachfigure, no lightning crossingcellboundaries.",
+      "production": "dist/assets/v5/wisp_motion.webp"
+    },
+    {
+      "key": "materials",
+      "prompt": "Use case: photorealistic-natural. Production seamless texture material atlas for darkfantasy 2D game terrain. EXACT4columns2rows8 square texture tiles, no text no borders no objects no transparency. Eachtexture covers entirecell edge-to-edge, uniformflatfrontview subtlelighting no perspective or directional shadows, tiles independently seamless at all four edges. Row1: dark mossy layered shale andpackedearth; weathered gray gothic stone masonry; dark volcanic basaltwithsubtle embercracks; packed underground brown mineral earthwithroots. Row2: frosted bluegranite andthinice; ancient rustyiron plates rivets; dark wetmud withsmallstones; rough oldwood planks. Finelydetailed realistic materials, subdued mids goodshadowdetail, notblack, no grass silhouettes or carvededges, no floatingplatforms.",
+      "production": "dist/assets/v5/material-0.webp … material-7.webp"
+    },
+    {
+      "key": "tunnel_bg",
+      "prompt": "Use case: stylized-concept. Production cinematic panoramic16:9 background for realistic2D darkfantasy side-scroller underground passage. Vast natural root cavern with ancient crypt arches and bluegreen mineral pools, distant underground waterfall, clustersof luminousmushrooms andamber torch lights, layeredrockwalls receeding in atmosphericdepth, photorealistic stone andorganic textures smoothhighdetail. Backgroundonly noforegroundfloor nocharacters noUI no text. Large broad playablelowerregion, centralandbottommoderatelydark butreadable. Warmtorchaccentson coolteal environment.",
+      "production": "dist/assets/v5/tunnel_bg.webp"
+    },
+    {
+      "key": "forest_bg",
+      "prompt": "Use case: stylized-concept. Production cinematic panoramic16:9 background for realistic2D side scrolling darkfantasy game. Deep ancient forest with monumental gnarledtrees, far ruinedcastle through layersof atmosphericmist, moonlit waterfall to a lower cavernentrance, shafts ofsilvermoonlight illuminatingmoss androots, rich photographicnatural materials eleganthighend mattepainting, bluegreenpalette subtlewarm distantlanterns. Distant sceneryonly noforegroundfloor orwalkable platforms nocharacters no UI no text. Lowerplayableregion uncluttered, shadows readable, strong layereddepth, notpixelart.",
+      "production": "dist/assets/v5/forest_bg.webp"
+    }
+  ]
+}

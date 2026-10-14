@@ -1,0 +1,48 @@
+{
+  "composition": "Original procedural ambient/action score",
+  "sample_rate": 22050,
+  "tracks": [
+    {
+      "name": "music-forest",
+      "duration": 50.52630385487528,
+      "peak": 0.7090538532518852,
+      "rms": 0.16
+    },
+    {
+      "name": "music-crypt",
+      "duration": 60.0,
+      "peak": 0.7688564486009564,
+      "rms": 0.16
+    },
+    {
+      "name": "music-forge",
+      "duration": 40.851020408163265,
+      "peak": 0.82,
+      "rms": 0.14298678086238517
+    },
+    {
+      "name": "music-boss",
+      "duration": 33.10344671201814,
+      "peak": 0.82,
+      "rms": 0.14624609649815395
+    },
+    {
+      "name": "pain-1",
+      "duration": 0.42,
+      "peak": 0.68,
+      "rms": 0.09285236022388288
+    },
+    {
+      "name": "pain-2",
+      "duration": 0.4549659863945578,
+      "peak": 0.68,
+      "rms": 0.08939179612312369
+    },
+    {
+      "name": "pain-3",
+      "duration": 0.4899773242630385,
+      "peak": 0.68,
+      "rms": 0.08570204681553714
+    }
+  ]
+}

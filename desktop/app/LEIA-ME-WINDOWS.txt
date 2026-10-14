@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.14
+M&N · A Lei do Trono — Windows 0.1.15
 
-1. Instalação nova: instale MN-Trono-0.1.14-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.1.15-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -26,7 +26,7 @@ M&N · A Lei do Trono — Windows 0.1.14
    Áudio do computador inteiro pode incluir as vozes da chamada.
 9. Efeitos fica na lateral esquerda. Amigos aceita anexos privados com as regras
    do chat geral. Avisos respeitam Configurações → Notificações e silenciamento.
-10. Jogos reúne A Lei do Trono e Azul sem encerrar a chamada da comunidade.
+10. Jogos reúne A Lei do Trono, Azul e Cinzas do Abismo sem encerrar a chamada.
     Azul usa o tabuleiro colorido original: 2–4 participantes e bots opcionais.
     O Top 5 guarda o melhor resultado por conta; bots não recebem recordes.
     Artes aprovadas aplicadas a peças, expositores e cartões murais.
@@ -49,4 +49,12 @@ M&N · A Lei do Trono — Windows 0.1.14
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador atual é baixado do próprio site, em downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.1.14.md para publicar o pacote completo do site.
+Consulte ATUALIZAR_WINDOWS_v0.1.15.md para publicar o pacote completo do site.
+
+Cinzas do Abismo v0.5: campanha de 15 capítulos e horda sem fim.
+Ao abrir pela primeira vez no Windows, aguarde os recursos serem guardados localmente.
+Depois do preparo, é possível reabrir sem conexão. Código e interface são instalados com o app.
+Ao voltar ao chat, a partida pausa e deixa de renderizar, preservando a chamada.
+A horda salva checkpoints entre ondas; campanha em andamento é mantida durante a navegação.
+Música inicia mutada e gráficos em Leve; altere em Controles dentro do jogo.
+Recordes e horda ficam neste dispositivo; exporte/importe backup no menu do jogo.

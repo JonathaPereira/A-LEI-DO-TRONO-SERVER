@@ -6,6 +6,7 @@ const {clipBytes,writeClip}=require('./clip-files.cjs');
 const {DesktopPreferences}=require('./preferences.cjs');
 const {DesktopActivity}=require('./activity.cjs');
 const {createNotifications}=require('./notifications.cjs');
+const {GameAssets}=require('./game-assets.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
 let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences,activity;
@@ -26,6 +27,8 @@ async function start(){
   app.setAppUserModelId('com.jonatha.mn.trono');
   preferences=new DesktopPreferences(app.getPath('userData'),safeStorage);await preferences.load();
   const browserSession=session.fromPartition('persist:mn-trono');
+  const gameManifest=JSON.parse(await fs.readFile(path.join(root,'roguelite/asset-manifest.json'),'utf8'));
+  const gameAssets=new GameAssets({manifest:gameManifest,directory:path.join(app.getPath('userData'),'game-assets'),origin:APP_ORIGIN,fetchAsset:url=>net.fetch(url,{bypassCustomProtocolHandlers:true,credentials:'omit',redirect:'error',signal:AbortSignal.timeout(60000)})});
   const attachmentSession=session.fromPartition('persist:mn-attachments');
   attachmentSession.setPermissionCheckHandler(()=>false);attachmentSession.setPermissionRequestHandler((_,__,callback)=>callback(false));
   // This partition contains only the installed UI. External frames are blocked
@@ -33,8 +36,8 @@ async function start(){
   let testAPI=null;
   if(!app.isPackaged){try{const candidate=new URL(app.commandLine.getSwitchValue('desktop-api-test-origin'));if(candidate.protocol==='https:'&&candidate.hostname==='127.0.0.1')testAPI=candidate.origin;}catch{}}
   // Local, versioned UI uses the existing origin for API/WS compatibility.
-  // Every request to this origin is served only from the installed bundle.
-  // There is no remote-site fallback with desktop privileges.
+  // Code and HTML come only from the installed bundle. Listed game media may
+  // use its verified cache; there is no remote HTML/script fallback.
   await browserSession.protocol.handle('https',async request=>{
     if(!isAppURL(request.url)){
       const headers=new Headers(request.headers),target=new URL(request.url).origin;
@@ -46,6 +49,11 @@ async function start(){
       return net.fetch(request,{headers,bypassCustomProtocolHandlers:true});
     }
     if(!['GET','HEAD'].includes(request.method))return new Response('',{status:405});
+    const gamePath=new URL(request.url).pathname.slice('/roguelite/'.length);
+    if(new URL(request.url).pathname.startsWith('/roguelite/assets/')){
+      if(!gameAssets.has(gamePath))return new Response('',{status:404});
+      try{const data=await gameAssets.read(gamePath);return new Response(request.method==='HEAD'?null:data,{headers:{'Content-Type':gameAssets.entries.get(gamePath).type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}catch{return new Response('Não foi possível preparar os recursos do jogo.',{status:503});}
+    }
     try{
       const file=bundlePath(root,request.url),real=await fs.realpath(file),realRoot=await fs.realpath(root);
       if(!real.startsWith(realRoot+path.sep))return new Response('',{status:403});

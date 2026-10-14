@@ -1,4 +1,18 @@
-# Azul · Windows e site 0.1.14
+# Jogos · Windows e site 0.1.15
+
+Cinzas do Abismo v0.5 integrado ao M&N, com a chamada ativa e a capa animada no catálogo. Capturas da interface real em testes locais; os nomes exibidos são contas de teste.
+
+![Catálogo com os três jogos](CINZAS-CATALOGO-0.1.15.png)
+
+![Cinzas do Abismo com a chamada conectada](CINZAS-PARTIDA-0.1.15.png)
+
+![Visualização em monitor vertical](CINZAS-VERTICAL-0.1.15.png)
+
+O jogo mantém campanha, horda, controles e backups da versão enviada. Ao sair para o chat, a partida pausa e a renderização é interrompida. No Windows, artes e músicas são guardadas na primeira abertura para permitir uso offline depois do preparo. Música começa mutada e gráficos em Leve, ajustáveis no menu Controles do jogo.
+
+Estas imagens de revisão não entram no frontend nem no instalador.
+
+## Azul · versão 0.1.14
 
 O mercado usa uma parte maior da mesa e os murais ficam mais compactos. A disposição muda com a largura disponível e a orientação do monitor, preservando a chamada.
 
@@ -9,12 +23,6 @@ O mercado usa uma parte maior da mesa e os murais ficam mais compactos. A dispos
 ![Mesa em monitor menor de 1280 por 720](AZUL-MONITOR-MENOR-0.1.14.png)
 
 ![Nove expositores acessíveis numa mesa de quatro jogadores em 720p](AZUL-QUATRO-JOGADORES-0.1.14.png)
-
-## Capa preparada para o roguelite
-
-Proposta de fantasia, com espaço para sobrepor o título no catálogo. O jogo ainda depende do fornecimento da última versão feita em paralelo. Esta arte está somente na prévia; não aparece como um jogo disponível e não aumenta o pacote para Surge.
-
-![Capa preparada para o roguelite](ROGUELITE-CAPA-PROPOSTA.png)
 
 ## Artes da versão anterior · 0.1.13
 

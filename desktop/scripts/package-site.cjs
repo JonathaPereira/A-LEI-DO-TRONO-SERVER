@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const DOWNLOAD_REPOSITORY='JonathaPereira/MN-Trono-Downloads';
-const MAX_SITE_BYTES=180*1024*1024;
+const MAX_SITE_BYTES=190*1024*1024;
 async function filesIn(dir){const result=[];for(const entry of await fs.readdir(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())result.push(...await filesIn(file));else result.push({file,size:(await fs.stat(file)).size});}return result;}
 async function prepareSite({root=path.resolve(__dirname,'../..'),version,installerPath,outputRoot,repository=DOWNLOAD_REPOSITORY}={}){
   version??=JSON.parse(await fs.readFile(path.join(root,'desktop/app/package.json'),'utf8')).version;
@@ -33,8 +33,9 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   for(const guide of guides)await fs.copyFile(path.join(root,guide.name),path.join(site,guide.name));
   await fs.copyFile(path.join(root,'supabase/upgrade-azul.sql'),path.join(site,'upgrade-azul.sql'));
   const files=await filesIn(frontend),siteBytes=files.reduce((sum,f)=>sum+f.size,0);
-  if(files.some(f=>/\.(zip|tar|tgz)$/i.test(f.file)||(/\.exe$/i.test(f.file)&&path.relative(frontend,f.file)!==path.join('downloads',filename)))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 180 MiB ou contém instaladores extras/arquivos compactados.');
-  await fs.writeFile(path.join(site,'TAMANHO-E-DOWNLOAD.json'),JSON.stringify({version,siteBytes,installerBytes:bytes.length,installerURL:url,sha512:hash,installerSHA256:crypto.createHash('sha256').update(bytes).digest('hex')},null,2)+'\n');
+  if(files.some(f=>/\.(zip|tar|tgz)$/i.test(f.file)||(/\.exe$/i.test(f.file)&&path.relative(frontend,f.file)!==path.join('downloads',filename)))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados.');
+  const rogueliteBytes=files.filter(f=>path.relative(frontend,f.file).split(path.sep)[0]==='roguelite').reduce((sum,f)=>sum+f.size,0);
+  await fs.writeFile(path.join(site,'TAMANHO-E-DOWNLOAD.json'),JSON.stringify({version,siteBytes,frontendWithoutInstallerBytes:siteBytes-bytes.length,rogueliteBytes,installerBytes:bytes.length,installerURL:url,sha512:hash,installerSHA256:crypto.createHash('sha256').update(bytes).digest('hex')},null,2)+'\n');
   return {version,frontend,direct,site,siteBytes,installerBytes:bytes.length,url,sha512:hash};
 }
 module.exports={prepareSite,DOWNLOAD_REPOSITORY,MAX_SITE_BYTES};

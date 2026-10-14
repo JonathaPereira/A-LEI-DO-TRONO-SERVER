@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="app-layout.css?v=102voicepanel" />
   <link rel="stylesheet" href="games.css?v=106market" />
   <link rel="stylesheet" href="azul-art.css?v=105artwork" />
+  <link rel="stylesheet" href="roguelite-host.css?v=107cinzas" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -410,7 +411,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.14-Windows.exe" download="MN-Trono-0.1.14-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.15-Windows.exe" download="MN-Trono-0.1.15-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -540,8 +541,13 @@
   <section id="gamesScreen" class="screen hidden mn-games-screen" aria-label="Catálogo de jogos">
     <header class="games-heading"><div><span class="games-eyebrow">M&amp;N · JUNTOS NA MESMA MESA</span><h1>Escolha a próxima partida.</h1><p>Sua chamada continua. O próximo jogo é só um convite.</p></div><div class="games-heading-actions"><button id="gamesVoice" type="button" class="games-voice-link">🎙 Voltar à comunidade</button><button id="gamesHome" type="button" class="az-text-button" aria-label="M&N · Voltar ao início">M&amp;N</button></div></header>
     <div class="games-catalog"><button id="playThrone" class="games-card games-card-throne" type="button"><span class="games-cover"><span class="games-crown">♛</span><span>A LEI DO<br><b>TRONO</b></span></span><span class="games-card-body"><small>ESTRATÉGIA · CARTAS · 4 JOGADORES</small><strong>A Lei do Trono</strong><span>Influência, leis e alianças. A Coroa espera pela sua Casa.</span><b class="games-card-cta">Entrar nos salões <i>↗</i></b></span></button>
-    <button id="playAzul" class="games-card games-card-azul" type="button"><span class="games-cover"><img class="games-box-art" src="assets/azul/box-cover.png" alt="Caixa do jogo Azul" width="1230" height="1278" loading="eager" decoding="async" /><span>AZUL<small>O prazer de criar mosaicos.</small></span></span><span class="games-card-body"><small>ESTRATÉGIA · AZULEJOS · 2–4 JOGADORES</small><strong>Azul</strong><span>Um palácio, cinco cores e escolhas que fazem a diferença.</span><b class="games-card-cta">Escolher uma mesa <i>↗</i></b></span></button></div>
+    <button id="playAzul" class="games-card games-card-azul" type="button"><span class="games-cover"><img class="games-box-art" src="assets/azul/box-cover.png" alt="Caixa do jogo Azul" width="1230" height="1278" loading="eager" decoding="async" /><span>AZUL<small>O prazer de criar mosaicos.</small></span></span><span class="games-card-body"><small>ESTRATÉGIA · AZULEJOS · 2–4 JOGADORES</small><strong>Azul</strong><span>Um palácio, cinco cores e escolhas que fazem a diferença.</span><b class="games-card-cta">Escolher uma mesa <i>↗</i></b></span></button>
+    <button id="playRoguelite" class="games-card games-card-cinzas" type="button"><span class="games-cover"><img class="games-cinzas-art" src="roguelite/assets/catalogue-cover.png" alt="Portal das ruínas de Cinzas do Abismo" loading="lazy" decoding="async" width="1536" height="1024"/><span>CINZAS<br>DO ABISMO<small>Uma vida. Infinitas combinações.</small></span></span><span class="games-card-body"><small>ROGUELITE · PLATAFORMA · SOLO · V0.5</small><strong>Cinzas do Abismo</strong><span>Explore túneis, combine cartas e enfrente a campanha ou a horda sem fim.</span><b class="games-card-cta">Atravessar o portal <i>↗</i></b></span></button></div>
     <p class="games-footnote">Partidas online e bots · Controles da chamada sempre disponíveis no aplicativo.</p>
+  </section>
+  <section id="rogueliteScreen" class="screen hidden mn-games-screen rg-screen" aria-label="Cinzas do Abismo">
+    <header class="rg-heading"><button id="rogueliteBack" type="button" aria-label="Voltar ao catálogo de jogos">‹ Jogos</button><div><h1>Cinzas do Abismo <small>v0.5</small></h1><p>Sua chamada continua · Progresso salvo neste dispositivo · Backup no menu do jogo</p></div><button id="rogueliteFullscreen" type="button" aria-pressed="false">Tela cheia</button></header>
+    <div id="rogueliteViewport" class="rg-viewport"><section id="rogueliteLoading" class="rg-loading" role="status"><strong id="rogueliteLoadStatus">Abrindo Cinzas do Abismo…</strong><progress id="rogueliteProgress" max="100" value="0" aria-label="Preparação do jogo"></progress><p>No aplicativo, os recursos são guardados neste computador na primeira abertura para jogar novamente sem conexão.</p><button id="rogueliteRetry" type="button" hidden>Tentar novamente</button></section></div>
   </section>
   <section id="azulScreen" class="screen hidden mn-games-screen az-screen" aria-label="Azul">
     <header class="az-heading"><div class="az-title"><button id="azulBack" type="button" class="az-icon-button" aria-label="Voltar ao catálogo de jogos">‹</button><div><span class="az-eyebrow">ATELIÊ M&amp;N</span><h1>AZUL<span>O jogo dos azulejos</span></h1></div></div><div class="az-heading-actions"><strong id="azulTurnStatus" role="status"></strong><button id="azulFullscreen" type="button" class="az-button" aria-pressed="false">Tela cheia</button><button id="azulRulesButton" type="button" class="az-button">Como jogar</button></div></header>
@@ -567,19 +573,20 @@
   <script src="clip-desktop.js?v=095desktop013"></script>
   <script src="game-rules.js?v=100court"></script>
   <script src="game.js?v=103azul"></script>
-  <script src="portal.js?v=103azul"></script>
+  <script src="portal.js?v=107cinzas"></script>
   <script src="azul-rules.js?v=103azul"></script>
   <script src="azul-presentation.js?v=104ceramic"></script>
-  <script src="games.js?v=106market"></script>
+  <script src="games.js?v=107cinzas"></script>
+  <script src="roguelite-host.js?v=107cinzas"></script>
   <script src="community.js?v=099desktop017"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
   <script src="soundboard-client.js?v=098desktop016"></script>
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=103azul"></script>
+  <script src="desktop-shell.js?v=107cinzas"></script>
   <script src="desktop-settings.js?v=098desktop016"></script>
-  <script src="app-layout.js?v=103azul"></script>
+  <script src="app-layout.js?v=107cinzas"></script>
   <script src="media-layout.js?v=098desktop016"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
   <script src="notifications.js?v=101layouts"></script>
