@@ -1,12 +1,12 @@
 'use strict';
 window.TronoNetwork = (()=>{
-  const CLIENT_VERSION='0.9.1-alpha';
+  const CLIENT_VERSION='0.10.0-alpha';
   const DEFAULT_BACKEND_HTTP='https://a-lei-do-trono-server.onrender.com';
   const normalizeHttp=url=>String(url||'').replace(/\/+$/,'');
   const isLocal=['localhost','127.0.0.1','::1'].includes(location.hostname);
   const BACKEND_HTTP=normalizeHttp(window.TRONO_BACKEND_URL||(isLocal?`http://${location.hostname}:10000`:DEFAULT_BACKEND_HTTP));
   const BACKEND_WS=`${BACKEND_HTTP.replace(/^http:/,'ws:').replace(/^https:/,'wss:')}/ws`;
-  let socket=null,connected=false,clientId=null,currentRoom=null,primaryRoom=null,gameRoom=null,independentGameVoice=false,independentTextChannels=false,gameActivitySupported=false,connectPromise=null,authenticatedToken=null;
+  let socket=null,connected=false,clientId=null,currentRoom=null,primaryRoom=null,gameRoom=null,independentGameVoice=false,independentTextChannels=false,azulSupported=false,gameActivitySupported=false,connectPromise=null,authenticatedToken=null;
   let authenticatedGuest=null;
   const listeners=new Set(),pendingSfu=new Map(),pendingNameChecks=new Map(),pendingAuth=new Map(),pendingGuest=new Map();
   const emit=msg=>listeners.forEach(fn=>{try{fn(msg);}catch(err){console.warn('[TronoNetwork]',err);}});
@@ -31,7 +31,7 @@ window.TronoNetwork = (()=>{
           try{
             const msg=JSON.parse(e.data);
             if(msg.type==='welcome'){
-              clientId=msg.clientId;independentTextChannels=!!msg.features?.independentTextChannels;independentGameVoice=!!msg.features?.independentGameVoice;gameActivitySupported=!!msg.features?.gameActivity;
+              clientId=msg.clientId;azulSupported=!!msg.features?.azul;independentTextChannels=!!msg.features?.independentTextChannels;independentGameVoice=!!msg.features?.independentGameVoice;gameActivitySupported=!!msg.features?.gameActivity;
               if(msg.serverVersion&&msg.serverVersion!==CLIENT_VERSION)emit({type:'version-mismatch',clientVersion:CLIENT_VERSION,serverVersion:msg.serverVersion});
             }
             if(msg.type==='sfu-response'&&msg.requestId&&pendingSfu.has(msg.requestId)){
@@ -118,6 +118,8 @@ window.TronoNetwork = (()=>{
   function leaveGameRoom(){return independentGameVoice?send('leave-game-room'):leaveRoom();}
   function leaveVoiceRoom(){return independentGameVoice?send('leave-voice-room'):leaveRoom();}
   const api={
+    async ensureAzul(){if(!await ensureAuthenticated())return false;if(!azulSupported)throw new Error('Atualize o backend no Render para habilitar Azul.');return true;},
+    azul:(action,payload={})=>azulSupported&&send('azul',{action,...payload}),
     connect,authenticate,authenticateGuest,disconnect,joinRoom,joinTextChannel,leaveRoom,leaveGameRoom,leaveVoiceRoom,joinChatOnly:name=>joinRoom('chat-livre',name),joinChatChannel:(id,name)=>joinRoom(id,name),requestChatChannels:()=>send('list-chat-channels'),requestPresence:()=>send('presence-request'),setActivity:activity=>gameActivitySupported&&send('activity-state',{activity}),get gameActivitySupported(){return gameActivitySupported;},
     requestRooms:()=>send('list-rooms'),setReady:r=>send('ready',{ready:!!r}),startRoom:()=>send('start-room'),
     gameAction:(action,payload={})=>send('game-action',{action,payload}),requestState:()=>send('state-request'),ping:()=>send('ping'),

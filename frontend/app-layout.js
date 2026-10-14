@@ -7,8 +7,9 @@ window.TronoAppLayout=(()=>{
   async function navigate(view){
     if(window.TronoDesktopShell)return window.TronoDesktopShell.navigate(view);
     if(view==='home'){window.TronoPortal.showOnly('portalScreen');return;}
-    if(view==='game'){
-      if(!window.TronoAuth.user&&!window.TronoAuth.guest)return window.TronoPortal.openGame();
+    if(view==='game')return window.TronoGames.openLibrary();
+    if(view==='throne'){
+      if(!window.TronoAuth.user&&!window.TronoAuth.guest)return window.TronoPortal.openGame(true);
       if(!window.TronoNetwork.gameRoom)lastGame='setupScreen';
       window.TronoPortal.showOnly(lastGame);window.TronoNetwork.requestRooms();return;
     }
@@ -40,7 +41,7 @@ window.TronoAppLayout=(()=>{
   }
   async function openVoiceChannel(){
     const call=window.TronoSocial,room=call.voiceRoom;if(!call.voiceJoined||!room)return;
-    if(room.kind==='game'){await navigate('game');return;}
+    if(room.kind==='game'){await navigate('throne');return;}
     await navigate('community');
     if(call.voiceJoined&&call.voiceRoom?.id===room.id)await window.TronoChatHub.switchChannel(room.id);
   }
@@ -82,13 +83,13 @@ window.TronoAppLayout=(()=>{
     }
     if(!window.TronoDesktop){
       const rail=document.createElement('nav');rail.id='webLayoutRail';rail.setAttribute('aria-label','Áreas M&N');
-      rail.innerHTML='<button class="layout-web-home" data-layout-route="home" type="button" aria-label="M&N · Ir para o início" title="Início">M&N</button><button data-layout-route="game" type="button" title="Jogar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 6 4 4 5-6 5 6 4-4-2 13H5z"/></svg><span>Jogar</span></button><button data-layout-route="community" type="button" title="Comunidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H8l-5 3V11a9 9 0 0 1 18 0Z"/></svg><span>Comunidade</span></button>';
+      rail.innerHTML='<button class="layout-web-home" data-layout-route="home" type="button" aria-label="M&N · Ir para o início" title="Início">M&N</button><button data-layout-route="game" type="button" title="Jogos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 6 4 4 5-6 5 6 4-4-2 13H5z"/></svg><span>Jogos</span></button><button data-layout-route="community" type="button" title="Comunidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H8l-5 3V11a9 9 0 0 1 18 0Z"/></svg><span>Comunidade</span></button>';
       rail.addEventListener('click',event=>{const button=event.target.closest('[data-layout-route]');if(button)void navigate(button.dataset.layoutRoute);});document.body.append(rail);
     }
     $('channelHomeBtn').onclick=()=>void navigate('home');
     for(const input of document.querySelectorAll('[name=appLayout]'))input.onchange=()=>{if(input.checked)apply(input.value,{save:true});};
     new MutationObserver(syncView).observe(document.body,{attributes:true,attributeFilter:['class','data-desktop-view']});
-    for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen'])new MutationObserver(syncView).observe($(id),{attributes:true,attributeFilter:['class']});
+    for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen','gamesScreen','azulScreen'])new MutationObserver(syncView).observe($(id),{attributes:true,attributeFilter:['class']});
     window.addEventListener('trono-auth-change',read);window.addEventListener('trono-profile-change',identity);window.addEventListener('trono-call-change',identity);
     window.TronoNetwork.onMessage(event=>{if(['connection','room-state','joined-room','joined-text-channel','voice-room-attached','left-voice-room'].includes(event.type))identity();});
     window.addEventListener('trono-personal-change',event=>{if(event.detail.key==='appLayout'&&window.TronoPersonal.get('appLayout','original')!==current)read();});

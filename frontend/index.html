@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="court.css?v=100court" />
   <link rel="stylesheet" href="chat-moderation.css?v=101layouts" />
   <link rel="stylesheet" href="app-layout.css?v=102voicepanel" />
+  <link rel="stylesheet" href="games.css?v=103azul" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -38,7 +39,7 @@
       <button id="portalBrandBtn" class="portal-brand" type="button" aria-label="Início M&N"><span class="portal-brand-mark">✦</span><strong>M&N</strong></button>
       <nav class="portal-nav" aria-label="Navegação principal">
         <button class="portal-nav-btn" data-portal-target="voice">Chat de Voz</button>
-        <button class="portal-nav-btn" data-portal-target="game">A Lei do Trono</button>
+        <button class="portal-nav-btn" data-portal-target="game">Jogos</button>
       </nav>
       <div class="portal-account">
         <span class="portal-status-dot"></span>
@@ -67,16 +68,16 @@
 
       <div class="portal-rift" aria-hidden="true"><span>✦</span><i></i><b></b></div>
 
-      <article id="gamePortalCard" class="portal-choice portal-choice-game" tabindex="0" aria-label="Abrir A Lei do Trono">
+      <article id="gamePortalCard" class="portal-choice portal-choice-game" tabindex="0" aria-label="Abrir catálogo de jogos">
         <div class="portal-choice-shade"></div>
         <div class="portal-choice-content portal-choice-content-right">
-          <span class="portal-kicker"><i></i> ESTRATÉGIA • INFLUÊNCIA • ALIANÇAS</span>
-          <h1><small>A Lei do</small>TRONO</h1>
-          <p>Prepare sua Casa, escolha suas alianças e dispute a Coroa. Sua próxima partida começa aqui.</p>
+          <span class="portal-kicker"><i></i> UMA COMUNIDADE · VÁRIAS MESAS</span>
+          <h1><small>Encontre sua</small>PARTIDA</h1>
+          <p>A Lei do Trono e Azul. Escolha sua mesa, chame os amigos e continue na mesma chamada.</p>
           <div class="portal-features" aria-label="Recursos do jogo">
             <span>♛ Salões</span><span>⚔ Estratégia</span><span>✦ Influência</span><span>☾ Sombra</span>
           </div>
-          <button id="openGamePortalBtn" class="portal-cta portal-cta-gold" type="button"><span>♛</span> Entrar no Jogo <b>→</b></button>
+          <button id="openGamePortalBtn" class="portal-cta portal-cta-gold" type="button"><span>♛</span> Explorar jogos <b>→</b></button>
           <button id="openGuestGameBtn" class="guest-entry-btn" type="button">Jogar como convidado</button>
           <p class="guest-entry-note">Convidados podem jogar e conversar por voz na mesa. O chat M&amp;N exige uma conta.</p>
         </div>
@@ -408,7 +409,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.10-Windows.exe" download="MN-Trono-0.1.10-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.11-Windows.exe" download="MN-Trono-0.1.11-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -535,8 +536,20 @@
     <header><div><span class="section-eyebrow">VISUALIZAÇÃO EM GRUPO</span><h2 id="mediaFocusTitle">Grade de até 6 pessoas</h2><p>Marque quem quer ver. Use ⛶ na câmera ou na tela para sair da grade e abrir em tela cheia.</p></div><div class="dialog-actions"><button id="mediaFocusFullscreen" class="secondary-button" type="button" title="Abrir a primeira mídia selecionada em tela cheia">⛶ Tela cheia do destaque</button><button id="mediaFocusClose" class="dialog-close" type="button" aria-label="Fechar mosaico">×</button></div></header>
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
+  <section id="gamesScreen" class="screen hidden mn-games-screen" aria-label="Catálogo de jogos">
+    <header class="games-heading"><div><span class="games-eyebrow">M&amp;N · JUNTOS NA MESMA MESA</span><h1>Escolha a próxima partida.</h1><p>Sua chamada continua. O próximo jogo é só um convite.</p></div><div class="games-heading-actions"><button id="gamesVoice" type="button" class="games-voice-link">🎙 Voltar à comunidade</button><button id="gamesHome" type="button" class="az-text-button">Início</button></div></header>
+    <div class="games-catalog"><button id="playThrone" class="games-card games-card-throne" type="button"><span class="games-cover"><span class="games-crown">♛</span><span>A LEI DO<br><b>TRONO</b></span></span><span class="games-card-body"><small>ESTRATÉGIA · CARTAS · 4 JOGADORES</small><strong>A Lei do Trono</strong><span>Influência, leis e alianças. A Coroa espera pela sua Casa.</span><b class="games-card-cta">Entrar nos salões <i>↗</i></b></span></button>
+    <button id="playAzul" class="games-card games-card-azul" type="button"><span class="games-cover"><span class="games-ceramic" aria-hidden="true">✥ ◆ ✿<br>╱ ❖ ✥<br>◆ ✿ ╱</span><span>AZUL<small>O prazer de criar mosaicos.</small></span></span><span class="games-card-body"><small>ESTRATÉGIA · AZULEJOS · 2–4 JOGADORES</small><strong>Azul</strong><span>Um palácio, cinco cores e escolhas que fazem a diferença.</span><b class="games-card-cta">Escolher uma mesa <i>↗</i></b></span></button></div>
+    <p class="games-footnote">Partidas online e bots · Controles da chamada sempre disponíveis no aplicativo.</p>
+  </section>
+  <section id="azulScreen" class="screen hidden mn-games-screen az-screen" aria-label="Azul">
+    <header class="az-heading"><div class="az-title"><button id="azulBack" type="button" class="az-icon-button" aria-label="Voltar ao catálogo de jogos">‹</button><div><span class="az-eyebrow">ATELIÊ M&amp;N</span><h1>AZUL<span>O jogo dos azulejos</span></h1></div></div><div class="az-heading-actions"><strong id="azulTurnStatus" role="status"></strong><button id="azulRulesButton" type="button" class="az-button">Como jogar</button></div></header>
+    <p id="azulNotice" class="az-notice" role="status" aria-live="polite"></p><div class="az-layout"><div id="azulContent"></div><aside id="azulRanking" class="az-ranking" aria-label="Top 5 permanente"></aside></div>
+    <footer class="az-footnote">Regras do tabuleiro colorido de Azul · Michael Kiesling · Implementação de fã para a comunidade M&amp;N. Interface e ilustrações próprias.</footer>
+  </section>
+  <dialog id="azulRulesDialog" class="feature-dialog az-rules-dialog" aria-labelledby="azulRulesTitle"><button id="azulRulesClose" type="button" class="dialog-close" aria-label="Fechar regras">×</button><span class="az-eyebrow">MANUAL DO ARTESÃO</span><h2 id="azulRulesTitle">Como jogar Azul</h2><p>Para 2–4 participantes. O objetivo é terminar com mais pontos. Cada cor tem 20 azulejos; cada fábrica recebe 4. São 5, 7 ou 9 fábricas conforme o número de pessoas. O primeiro jogador da primeira rodada é sorteado.</p><ol><li><b>Escolha uma cor.</b> Pegue todos os azulejos daquela cor em uma fábrica ou no centro. As outras cores da fábrica vão ao centro. A primeira pessoa a pegar do centro leva o marcador 1 para o chão e começa a próxima rodada.</li><li><b>Prepare uma linha.</b> Coloque os azulejos em uma única linha de 1 a 5 espaços, da direita para a esquerda. A linha aceita só uma cor e a parede dessa linha não pode já ter essa cor. As sobras vão para o chão. Você também pode mandar a seleção toda para o chão.</li><li><b>Complete a parede.</b> Quando acabarem os azulejos da mesa, as linhas completas movem um azulejo para a posição da mesma cor na parede, de cima para baixo. Os demais são descartados. Linhas incompletas continuam na próxima rodada.</li><li><b>Pontue as conexões.</b> Um azulejo isolado vale 1 ponto. Se conecta na horizontal ou vertical, vale o comprimento do grupo contínuo. Se conecta nas duas direções, some os dois comprimentos, contando o novo azulejo em ambos.</li><li><b>Aplique as penalidades.</b> Cada espaço ocupado do chão desconta 1, 1, 2, 2, 2, 3 e 3 pontos. O marcador também ocupa um espaço. O total nunca fica negativo. O chão é limpo; o descarte só volta ao saco quando ele esvaziar.</li><li><b>Finalize o mosaico.</b> A partida termina no fim da rodada em que alguém completa uma linha horizontal da parede. Some +2 por linha horizontal, +7 por coluna e +10 por conjunto de 5 da mesma cor. Empate: vence quem completou mais linhas horizontais; persistindo, a vitória é compartilhada.</li></ol><p>O ranking guarda o melhor resultado por conta, incluindo partidas com bots identificadas. Bots e participantes que saíram da partida não recebem recordes. A mesa em andamento fica no servidor e pode ser retomada após uma queda curta; deploys encerram mesas em andamento. Recordes já salvos ficam no Supabase.</p></dialog>
   <script src="audio.js?v=095desktop013"></script>
-  <script src="network.js?v=101layouts"></script>
+  <script src="network.js?v=103azul"></script>
   <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
@@ -552,17 +565,19 @@
   <script src="clips.js?v=095desktop013"></script>
   <script src="clip-desktop.js?v=095desktop013"></script>
   <script src="game-rules.js?v=100court"></script>
-  <script src="game.js?v=101layouts"></script>
-  <script src="portal.js?v=100court"></script>
+  <script src="game.js?v=103azul"></script>
+  <script src="portal.js?v=103azul"></script>
+  <script src="azul-rules.js?v=103azul"></script>
+  <script src="games.js?v=103azul"></script>
   <script src="community.js?v=099desktop017"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
   <script src="soundboard-client.js?v=098desktop016"></script>
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=102voicepanel"></script>
+  <script src="desktop-shell.js?v=103azul"></script>
   <script src="desktop-settings.js?v=098desktop016"></script>
-  <script src="app-layout.js?v=102voicepanel"></script>
+  <script src="app-layout.js?v=103azul"></script>
   <script src="media-layout.js?v=098desktop016"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
   <script src="notifications.js?v=101layouts"></script>
