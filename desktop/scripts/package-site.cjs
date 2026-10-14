@@ -29,7 +29,7 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   await fs.copyFile(path.join(root,'supabase/upgrade-azul.sql'),path.join(site,'upgrade-azul.sql'));
   const files=await filesIn(frontend),siteBytes=files.reduce((sum,f)=>sum+f.size,0);
   if(files.some(f=>/\.(exe|zip|tar|tgz)$/i.test(f.file))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 50 MiB ou contém instaladores/arquivos compactados.');
-  await fs.writeFile(path.join(site,'TAMANHO-E-DOWNLOAD.json'),JSON.stringify({version,siteBytes,installerBytes:bytes.length,installerURL:url,sha512:hash},null,2)+'\n');
+  await fs.writeFile(path.join(site,'TAMANHO-E-DOWNLOAD.json'),JSON.stringify({version,siteBytes,installerBytes:bytes.length,installerURL:url,sha512:hash,installerSHA256:crypto.createHash('sha256').update(bytes).digest('hex')},null,2)+'\n');
   return {version,frontend,direct,site,siteBytes,installerBytes:bytes.length,url,sha512:hash};
 }
 module.exports={prepareSite,DOWNLOAD_REPOSITORY,MAX_SITE_BYTES};
