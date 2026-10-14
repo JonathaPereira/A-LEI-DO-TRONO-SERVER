@@ -7,8 +7,8 @@ test('Azul actual interface, both layouts and portrait displays keep the call an
   await fs.mkdir('artifacts/azul',{recursive:true});browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio','--autoplay-policy=no-user-gesture-required']});
   for(const native of [true,false])await t.test(native?'Windows games and table':'Website games and table',async()=>{
     const data=[];for(let i=0;i<2;i++){const email='azul-browser-'+native+'-'+i+'@example.test';await f.call('signup',{email,nickname:(native?'Windows ':'Site ')+(i?'Amigo':'Artesão'),password:'Senha12!'});await f.call('verify',{token_hash:[...f.links.keys()].at(-1),type:'signup'});data.push((await f.call('login',{email,password:'Senha12!'})).data);}
-    const other=await peer(f.base,data[1].session.access_token),context=await browser.newContext({viewport:{width:1440,height:960},permissions:['microphone','camera']});await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
-    await context.addInitScript(({base,data,native})=>{window.TRONO_BACKEND_URL=base;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('tronoSfxEnabled','0');localStorage.setItem('mnDesktopNoiseMode','native');navigator.mediaDevices.getDisplayMedia=async()=>{const c=document.createElement('canvas');c.width=1280;c.height=720;return c.captureStream(15);};if(native)window.TronoDesktop={version:'0.1.11',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};},{base:f.base,data:data[0],native});
+    const other=await peer(f.base,data[1].session.access_token),context=await browser.newContext({viewport:{width:1440,height:960},permissions:['microphone','camera'],reducedMotion:'reduce'});await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
+    await context.addInitScript(({base,data,native})=>{window.TRONO_BACKEND_URL=base;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('tronoSfxEnabled','0');localStorage.setItem('mnDesktopNoiseMode','native');navigator.mediaDevices.getDisplayMedia=async()=>{const c=document.createElement('canvas');c.width=1280;c.height=720;return c.captureStream(15);};if(native)window.TronoDesktop={version:'0.1.12',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};},{base:f.base,data:data[0],native});
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());page.setDefaultTimeout(8000);
     try{
       await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(()=>window.TronoChatHub.enter({channelId:'chat-jogos'}));if(!await page.evaluate(()=>window.TronoSocial.voiceJoined))await page.locator('#joinVoiceBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);
@@ -24,17 +24,55 @@ test('Azul actual interface, both layouts and portrait displays keep the call an
           if(width===1440||width===480||width===1080)await page.screenshot({path:'artifacts/azul/'+(native?'windows':'web')+'-'+layout+'-'+width+'.png'});
         }
       }
-      await page.setViewportSize({width:1440,height:960});await page.locator('#azulRulesButton').click();await expect(page.locator('#azulRulesDialog')).toContainText('contando o novo azulejo em ambos');await page.locator('#azulRulesClose').click();
-      let turns=0;while(true){
+      await page.setViewportSize({width:1440,height:960});
+      await page.locator('#azulFullscreen').click();await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.id)).toBe('azulScreen');
+      const full=await page.locator('#azulScreen').boundingBox();assert(full.x===0&&full.y===0&&full.width===1440&&full.height===960,JSON.stringify(full));
+      await page.locator('#azulRulesButton').click();await expect(page.locator('#azulRulesDialog')).toBeVisible();await page.locator('#azulRulesClose').click();
+      await page.locator('#azulFullscreen').click();await expect.poll(()=>page.evaluate(()=>document.fullscreenElement===null)).toBe(true);
+      await page.evaluate(()=>{window.__azFull=document.querySelector('#azulScreen').requestFullscreen;document.querySelector('#azulScreen').requestFullscreen=async()=>{throw Error('Unsupported test');};});
+      await page.locator('#azulFullscreen').click();await expect(page.locator('#azulScreen')).toHaveClass(/az-immersive/);await page.keyboard.press('Escape');await expect(page.locator('#azulScreen')).not.toHaveClass(/az-immersive/);await page.evaluate(()=>{document.querySelector('#azulScreen').requestFullscreen=window.__azFull;});assert.deepEqual(await snapshot(),before);
+      await page.locator('#azulRulesButton').click();await expect(page.locator('#azulRulesDialog')).toContainText('contando o novo azulejo em ambos');await page.locator('#azulRulesClose').click();
+      let turns=0,animated=false,cancelled=false;
+      if(native){await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>{window.__azSounds=[];const original=window.TronoAudio.playSfx;window.TronoAudio.playSfx=kind=>{window.__azSounds.push(kind);original(kind);};window.TronoAudio.setSfxEnabled(true);});}
+      while(true){
         const state=await page.evaluate(()=>window.TronoGames.room.state);if(state.phase==='finished')break;const move=R.botMove(state),revision=state.revision;
         if(state.players[state.turn].id===data[0].user.id){
           const label=(move.source===-1?'Centro':'Fábrica '+(move.source+1))+': pegar '+(move.source===-1?state.center:state.factories[move.source]).filter(c=>c===move.color).length+' '+R.colors[move.color];await page.getByRole('button',{name:label,exact:true}).click();
           const mine=page.locator('[data-azul-player="'+data[0].user.id+'"]');if(move.row===-1)await mine.getByRole('button',{name:'Chão',exact:true}).click();else await mine.locator('[data-azul-row="'+move.row+'"]').click();
         }else other.send({type:'azul',action:'move',revision,move});
         await expect.poll(()=>page.evaluate(()=>window.TronoGames.room.state.revision)).toBeGreaterThan(revision);assert(++turns<400);
+        const next=await page.evaluate(()=>window.TronoGames.room.state);
+        if(native&&next.round>state.round&&!animated){
+          animated=true;await expect.poll(()=>page.evaluate(()=>window.TronoGames.animating)).toBe(true);
+          await expect(page.locator('.az-scoring-banner')).toBeVisible();await expect(page.locator('.az-pick:not(:disabled)')).toHaveCount(0);
+          const scored=next.players.find(p=>p.last.placements.length),first=scored.last.placements[0];
+          await expect(page.locator('[data-azul-player="'+scored.id+'"] .az-points-pop').first()).toHaveText('+'+first.points);
+          await expect(page.locator('[data-azul-player="'+scored.id+'"] .az-score')).toHaveText((scored.last.before+first.points)+' pts');
+          await page.screenshot({path:'artifacts/azul/windows-scoring.png'});await page.locator('.az-points-pop').first().evaluate(n=>n.dataset.incomingState='preserved');
+          // A valid next-round move can arrive while the prior score is on screen.
+          const follow=R.botMove(next);if(next.players[next.turn].id===data[0].user.id)await page.evaluate(({revision,move})=>window.TronoNetwork.azul('move',{revision,move}),{revision:next.revision,move:follow});else other.send({type:'azul',action:'move',revision:next.revision,move:follow});
+          await expect.poll(()=>page.evaluate(()=>window.TronoGames.room.state.revision)).toBe(next.revision+1);assert.equal(await page.evaluate(()=>window.TronoGames.animating),true);await expect(page.locator('.az-points-pop').first()).toHaveAttribute('data-incoming-state','preserved');
+          const floored=next.players.find(p=>p.last.penalty);if(floored){await expect(page.locator('.az-scoring-value.az-negative')).toHaveText('−'+Math.min(floored.last.before+floored.last.points,floored.last.penalty),{timeout:25000});await expect(page.locator('[data-azul-player="'+floored.id+'"] .az-score')).toHaveText(Math.max(0,floored.last.before+floored.last.points-floored.last.penalty)+' pts');}
+          assert((await page.evaluate(()=>window.__azSounds)).includes('azul-score'));
+          await page.getByRole('button',{name:'Concluir contagem'}).click();await expect.poll(()=>page.evaluate(()=>window.TronoGames.animating)).toBe(false);
+          const current=await page.evaluate(()=>window.TronoGames.room.state);for(const p of current.players)await expect(page.locator('[data-azul-player="'+p.id+'"] .az-score')).toHaveText(p.score+' pts');
+          assert.deepEqual(await snapshot(),before);
+        }else if(native&&animated&&!cancelled&&next.round>state.round){
+          cancelled=true;await expect.poll(()=>page.evaluate(()=>window.TronoGames.animating)).toBe(true);
+          await page.evaluate(()=>window.TronoAppLayout.navigate('community'));await expect.poll(()=>page.evaluate(()=>window.TronoGames.animating)).toBe(false);assert.deepEqual(await snapshot(),before);
+          await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>{window.TronoAudio.setSfxEnabled(false);window.TronoGames.openAzul();});await expect(page.locator('.az-scoring-banner')).toHaveCount(0);
+        }
+
       }
+      if(native){assert(animated,'Played a detailed round');assert(cancelled,'Cancelled a later replay on navigation');}
       await expect(page.locator('.az-result')).toContainText('Recordes salvos');await expect(page.locator('.az-records li')).toHaveCount(native?2:4);await expect(page.locator('.az-bonus')).toHaveCount(2);assert.deepEqual(await snapshot(),before);await page.screenshot({path:'artifacts/azul/'+(native?'windows':'web')+'-result.png'});
       await page.locator('#azulBack').click();await page.locator('#playThrone').click();await expect(page.locator('#setupScreen')).toBeVisible();assert.deepEqual(await snapshot(),before);await page.evaluate(()=>window.TronoGames.openAzul());await page.getByRole('button',{name:'Nova partida',exact:true}).click();await expect(page.getByRole('button',{name:'Criar mesa',exact:true})).toBeVisible();other.send({type:'azul',action:'leave'});
+      if(native){
+        await page.locator('#azulPlayerCount').selectOption('4');await page.getByRole('button',{name:'Criar mesa',exact:true}).click();await page.getByRole('button',{name:'Completar com bots e iniciar'}).click();await expect(page.locator('.az-board')).toHaveCount(4);await expect(page.locator('.az-factory')).toHaveCount(9);
+        for(const [width,height] of [[1440,960],[1080,1920],[480,800]]){await page.setViewportSize({width,height});await expect.poll(()=>page.locator('#azulScreen').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);await page.screenshot({path:'artifacts/azul/windows-four-'+width+'.png'});}
+        assert.deepEqual(await snapshot(),before);
+      }
+
       assert.deepEqual(errors,[]);
     }finally{other.ws.terminate();await context.close();}
   });

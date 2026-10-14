@@ -2,10 +2,10 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'tests/azul-*.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'tests/azul-*.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   actions: write
 jobs:
   windows:
@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
         working-directory: desktop/app
       - name: Verify revised game rules and independent voice
-        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-sql.js tests/azul-ws.js
+        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
       - name: Verify private attachments and creator moderation
         shell: pwsh
         run: |
@@ -50,7 +50,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/desktop-audio.js tests/desktop-runtime.js tests/site-package.js tests/download-retention.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/desktop-audio.js tests/desktop-runtime.js tests/site-package.js tests/download-retention.js tests/build-downloads.js 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
@@ -76,26 +76,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node desktop/scripts/prepare-downloads.cjs
-      - uses: actions/upload-artifact@v4
+      - name: Compress the lightweight site, including dotfiles
+        shell: pwsh
+        run: |
+          $version = (Get-Content desktop/app/package.json | ConvertFrom-Json).version
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Site-Leve-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+      - name: Publish validated downloads in a private draft release
+        uses: actions/github-script@v7
         with:
-          name: MN-Trono-Windows-x64
-          path: artifacts/windows-download/
-          retention-days: 30
-      - uses: actions/upload-artifact@v4
-        with:
-          name: MN-Trono-Site-Leve
-          path: artifacts/site-download/
-          retention-days: 30
+          script: |
+            const {publishBuild}=require('./desktop/scripts/publish-build.cjs');
+            await publishBuild({github,context,core});
       - name: Retain only current and previous distribution artifacts
         uses: actions/github-script@v7
         with:
           script: |
             const {cleanArtifacts}=require('./desktop/scripts/download-retention.cjs');
             await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: Windows-app-validation
-          path: artifacts/*.png
-          if-no-files-found: ignore
-          retention-days: 14

@@ -25,8 +25,10 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   await fs.writeFile(path.join(frontend,'index.html'),index.replace(/href="[^"]*MN-Trono-[^"/]+-Windows\.exe"/g,'href="'+url+'"').replace(/download="MN-Trono-[^"]+\.exe"/g,'download="'+filename+'"'));
   await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-PUBLICAR.txt'),path.join(site,'LEIA-ME-PUBLICAR.txt'));
   await fs.copyFile(path.join(root,'PUBLICAR_SURGE_LEVE.md'),path.join(site,'PUBLICAR_SURGE_LEVE.md'));
-  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.11.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.11.md'));
-  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.10.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.10.md'));
+  const numeric=v=>v.split('.').map(Number),compare=(a,b)=>{const x=numeric(a),y=numeric(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]-y[i];return 0;};
+  const guides=(await fs.readdir(root)).map(name=>({name,version:/^ATUALIZAR_WINDOWS_v(\d+\.\d+\.\d+)\.md$/.exec(name)?.[1]})).filter(g=>g.version&&compare(g.version,version)<=0).sort((a,b)=>compare(b.version,a.version)).slice(0,2);
+  if(guides[0]?.version!==version)throw Error('Guia de publicação da versão atual não encontrado.');
+  for(const guide of guides)await fs.copyFile(path.join(root,guide.name),path.join(site,guide.name));
   await fs.copyFile(path.join(root,'supabase/upgrade-azul.sql'),path.join(site,'upgrade-azul.sql'));
   const files=await filesIn(frontend),siteBytes=files.reduce((sum,f)=>sum+f.size,0);
   if(files.some(f=>/\.(exe|zip|tar|tgz)$/i.test(f.file))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 50 MiB ou contém instaladores/arquivos compactados.');

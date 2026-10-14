@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.11
+M&N · A Lei do Trono — Windows 0.1.12
 
-1. Instalação nova: instale MN-Trono-0.1.11-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.1.12-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -29,7 +29,10 @@ M&N · A Lei do Trono — Windows 0.1.11
 10. Jogos reúne A Lei do Trono e Azul sem encerrar a chamada da comunidade.
     Azul usa o tabuleiro colorido original: 2–4 participantes e bots opcionais.
     O Top 5 guarda o melhor resultado por conta; bots não recebem recordes.
-    O administrador publica backend 0.10.0-alpha e aplica upgrade-azul.sql.
+    Tabuleiros e peças de cerâmica, mercado central e tela cheia própria.
+    A contagem detalha cada conexão, penalidade e bônus, com efeitos sonoros.
+    Concluir contagem mostra o resultado imediatamente; movimento reduzido é respeitado.
+    Esta atualização visual mantém backend 0.10.0-alpha e dispensa SQL novo.
     Somente o criador apaga mensagens e limpa o chat; o histórico usa Supabase.
 11. F11 e o botão Tela cheia ampliam a janela. Streams têm maximização própria.
     Perfis expandem detalhes e volume sem empurrar a transmissão.
@@ -44,4 +47,4 @@ M&N · A Lei do Trono — Windows 0.1.11
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador é baixado de github.com/JonathaPereira/MN-Trono-Downloads/releases.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.1.11.md para publicar o pacote completo do site.
+Consulte ATUALIZAR_WINDOWS_v0.1.12.md para publicar o pacote completo do site.
