@@ -60,7 +60,9 @@ async function start(){
       const response=await net.fetch(pathToFileURL(real).href),headers=new Headers(response.headers);
       headers.set('Cache-Control','no-store');
       headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'");
-      return new Response(request.method==='HEAD'?null:response.body,{status:response.status,headers});
+      // Complete local responses before handing them back to Chromium. A file
+      // stream crossing the HTTPS handler can leave embedded documents waiting.
+      return new Response(request.method==='HEAD'?null:await response.arrayBuffer(),{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
   const workArea=screen.getPrimaryDisplay().workAreaSize;
