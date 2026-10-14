@@ -23,7 +23,16 @@ jobs:
       - name: Verify revised game rules and independent voice
         run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js
       - name: Verify private attachments and creator moderation
-        run: node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js 2>&1 | Tee-Object artifacts/windows-messaging.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-messaging.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows messaging validation::$details"
+            exit $testExit
+          }
       - name: Build Windows application audio capture
         shell: pwsh
         run: |

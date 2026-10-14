@@ -62,7 +62,7 @@ preserva a chamada do M&N ao navegar entre mesa e comunidade.
 Manual temático HTML/PDF disponível no site e dentro do app.
 A troca de Decreto por Influência fica para outra atualização.
 
-Novidades0.1.9: em Aparência escolha Original / Padrão ou Discord.
+Novidades 0.1.9: em Aparência escolha Original / Padrão ou Discord.
 A troca é pessoal e preserva a chamada. M&N leva ao início, sem botão redundante.
 Mensagens mostram data e hora. Somente o criador apaga mensagens ou limpa o canal.
 Amigos aceitos podem enviar anexos privados com os limites do chat geral.

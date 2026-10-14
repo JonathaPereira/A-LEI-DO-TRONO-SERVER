@@ -2,7 +2,7 @@ M&N — Windows 0.1.9 e site com atualização interna
 
 1. Faça merge no GitHub. No Supabase SQL Editor execute os SQL novos:
    SUPABASE-upgrade-chat-moderation.sql e SUPABASE-upgrade-direct-attachments.sql.
-   As migrações anteriores precisam já estar aplicadas. Quem pulou a versão0.1.7
+   As migrações anteriores precisam já estar aplicadas. Quem pulou a versão 0.1.7
    precisa também do SUPABASE-upgrade-social.sql antes dos SQL novos.
 2. Publique o backend no Render. /health deve mostrar 0.9.1-alpha.
 3. Entre na pasta frontend deste pacote, com index.html, manual/ e downloads/.
@@ -17,6 +17,6 @@ O app instalado busca a versão mais recente ao abrir e a cada quatro horas.
 Também pode clicar na versão no rodapé do menu lateral. Instalar a atualização
 reinicia o aplicativo; escolha um momento em que possa encerrar a chamada.
 Mesmo muitas versões atrasado, o atualizador baixa diretamente a versão atual.
-Somente quem ainda usa0.1.0 precisa instalar manualmente uma vez.
+Somente quem ainda usa 0.1.0 precisa instalar manualmente uma vez.
 
 Consulte ATUALIZAR_WINDOWS_v0.1.9.md para instruções e verificações.
