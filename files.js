@@ -53,6 +53,15 @@ async function peek(req){
  async function* body(){yield prefix;for(;;){const next=await iterator.next();if(next.done)return;yield next.value;}}
  return {prefix,body:Readable.from(body())};
 }
+async function drainRejectedUpload(req){
+ const length=Number(req.headers['content-length']);
+ if(req.destroyed||req.readableEnded||!Number.isSafeInteger(length)||length>LIMITS.video)return;
+ // An async iterator used to inspect the header keeps the request in readable
+ // mode, where resume() alone cannot drain it. Finish reading bounded uploads
+ // before closing; otherwise Windows can reset even the error response.
+ const drained=(async()=>{try{for await(const chunk of req.iterator({destroyOnReturn:false})){/* discard */}}catch{}})();
+ await new Promise(resolve=>{const timer=setTimeout(resolve,2000);void drained.then(()=>{clearTimeout(timer);resolve();});});
+}
 function r2Adapter(env){return {
  async put(key,body,size,mime,name){
    const url=signedUrl(env,'PUT',key);let request;
@@ -112,8 +121,8 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
    function route(method,path,fn){app[method](`/files${path}`,async(req,res)=>{try{if(!configured)throw error('STORAGE_UNCONFIGURED','Anexos ainda não foram ativados no servidor.',503);res.json(await fn(req));}catch(e){if(!res.destroyed){
      // Rejected uploads may still have a body in flight. Drain it and retire
      // this connection so the next API call cannot reuse a half-read upload.
-     if(method==='post'){req.resume();res.set('Connection','close');}
-     res.status(e.status||503).json({error:{code:e.code||'STORAGE_UNAVAILABLE',message:e.status?e.message:'Não foi possível concluir o envio.'}});
+     if(method==='post'){await drainRejectedUpload(req);res.set('Connection','close');}
+     if(!res.destroyed)res.status(e.status||503).json({error:{code:e.code||'STORAGE_UNAVAILABLE',message:e.status?e.message:'Não foi possível concluir o envio.'}});
    }}});}
    route('get','/status',async()=>({configured:true,used:Number(await db('rpc/chat_storage_usage','POST',{})),limits:LIMITS}));
    route('get','/mine',async req=>{const offset=Math.max(0,Math.min(10000000,Math.floor(Number(req.query.offset)||0)));const rows=await db(`chat_files?owner_id=eq.${req.account.id}&state=eq.ready&order=created_at.desc,id.desc&limit=200&offset=${offset}`);return {files:rows.map(publicFile),hasMore:rows.length===200,nextOffset:offset+rows.length};});
