@@ -32,3 +32,5 @@ O cache fica na pasta de dados do M&N, em game-assets/. Somente arquivos de imag
 Recordes e checkpoints da horda são **locais ao dispositivo**, conforme a versão original. A horda salva entre ondas; morrer encerra o save da run. Exportar backup e Importar backup no menu permitem transferir o progresso. O navegador e o app têm armazenamentos separados. A campanha em andamento é preservada ao alternar para o chat na mesma sessão.
 
 **Não há SQL novo nem mudança no backend.** O ranking permanente do Azul e o backend 0.10.0-alpha continuam válidos. Contas, permissões e preferências do M&N são mantidas. Clipes permanecem suspensos.
+
+A integração limita os menus a 12 FPS e a partida no modo Leve a 30 FPS, deixando mais tempo de processamento para a voz e os controles do aplicativo. Os modos Alta/Ultra permitem até 60 FPS; a página independente mantém o ritmo original.

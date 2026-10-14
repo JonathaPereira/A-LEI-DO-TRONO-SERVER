@@ -218,7 +218,7 @@
     // Leave CPU time for voice and the host UI; attract/menu rendering needs
     // fewer frames than gameplay. Standalone keeps the original RAF cadence.
     const interval=embedded?(engine.status==='running'?(renderer.quality==='low'?1000/30:1000/60):1000/12):0;
-    const delay=lastFrame?Math.max(0,interval-(performance.now()-lastFrame)):interval;
+    const delay=interval&&lastFrame?Math.max(0,interval-(performance.now()-lastFrame)):interval;
     if(delay>0)frameTimer=setTimeout(()=>{frameTimer=0;if(hostVisible&&!document.hidden)frameRequest=requestAnimationFrame(frame);},delay);
     else frameRequest=requestAnimationFrame(frame);
   }
