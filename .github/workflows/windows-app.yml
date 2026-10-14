@@ -21,6 +21,16 @@ jobs:
       - run: npm ci
       - run: npm ci
         working-directory: desktop/app
+      - name: Verify native roguelite frame before packaging
+        shell: pwsh
+        run: |
+          node --test tests/desktop-cinzas-runtime.js 2>&1 | Tee-Object artifacts/windows-cinzas-runtime.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-cinzas-runtime.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Native roguelite frame::$details"
+            exit $testExit
+          }
       - name: Verify revised game rules and independent voice
         run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
       - name: Verify private attachments and creator moderation
@@ -59,16 +69,6 @@ jobs:
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Windows app runtime::$details"
-            exit $testExit
-          }
-      - name: Verify native roguelite frame before packaging
-        shell: pwsh
-        run: |
-          node --test tests/desktop-cinzas-runtime.js 2>&1 | Tee-Object artifacts/windows-cinzas-runtime.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-cinzas-runtime.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Native roguelite frame::$details"
             exit $testExit
           }
       - name: Build Windows x64 installer
