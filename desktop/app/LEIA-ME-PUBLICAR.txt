@@ -1,18 +1,19 @@
-M&N — Windows 0.1.10: painel de voz Discord
+M&N — Windows 0.1.11: catálogo de jogos e Azul
 
-Esta revisão atualiza frontend/app. Não há SQL novo para executar.
-Reutilize o backend 0.9.1-alpha e as migrações já aplicadas na0.1.9.
-Quem pulou 0.1.9 deve consultar ATUALIZAR_WINDOWS_v0.1.9.md no GitHub.
-
-1. Faça merge do PR. Aguarde Windows full app terminar com sucesso.
-2. Extraia o artefato MN-Trono-Site-com-Desktop.
-3. Entre na pasta frontend inteira, com index.html, downloads/ e manual/.
-4. No Git Bash execute:
+1. Faça merge do PR com Windows full app verde.
+2. No Supabase SQL Editor execute upgrade-azul.sql (incluído neste pacote).
+   Requer profiles/schema.sql já existente. Não repita outros SQL já aplicados.
+3. Publique main no Render: backend 0.10.0-alpha, features.azul true em /health.
+   Preserve as variáveis atuais; a chave de serviço continua só no backend.
+4. Extraia MN-Trono-Site-com-Desktop. Entre na pasta frontend inteira, com
+   index.html, games.js, azul-rules.js, downloads/ e manual/.
+5. No Git Bash execute:
    npx surge . a-lei-do-trono.surge.sh
-5. Confira downloads/latest.yml: version: 0.1.10.
+6. Confira downloads/latest.yml: version: 0.1.11.
 
 O app instalado recebe a atualização internamente após publicar este pacote.
 Clique na versão no rodapé para buscar. Reinicie quando puder encerrar a call.
 Não remova latest.yml nem o instalador apontado por ele. O EXE não fica no Git.
-
-Consulte ATUALIZAR_WINDOWS_v0.1.10.md para detalhes e verificações.
+Recordes confirmados ficam no Supabase; mesas em andamento ficam em memória.
+Publique quando não houver partidas. Aguarde os recordes pendentes serem salvos.
+Consulte ATUALIZAR_WINDOWS_v0.1.11.md para detalhes e verificações.

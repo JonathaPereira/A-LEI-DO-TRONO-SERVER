@@ -1,3 +1,7 @@
+## Catálogo e Azul 0.10.0 · Windows 0.1.11
+
+Jogos reúne A Lei do Trono e Azul (tabuleiro colorido, 2–4 pessoas, bots opcionais), mantendo a chamada da comunidade. O servidor valida as jogadas e calcula os pontos. O Top 5 permanente guarda o melhor resultado por conta no Supabase, separado das mesas temporárias. Publicação exige **upgrade-azul.sql**, backend e frontend/app: [ATUALIZAR_WINDOWS_v0.1.11.md](ATUALIZAR_WINDOWS_v0.1.11.md). O roguelite ainda não foi incluído.
+
 ## Painel de voz Discord · Windows 0.1.10
 
 Conexão, câmera e tela reunidas no canto inferior esquerdo, com perfil e controles de áudio abaixo. Reconexão a partir do texto e menus preservam a chamada. Publicação de frontend/app: [ATUALIZAR_WINDOWS_v0.1.10.md](ATUALIZAR_WINDOWS_v0.1.10.md). Esta revisão reutiliza o backend e banco da 0.1.9, sem SQL novo.
@@ -30,6 +34,7 @@ atualizar o Supabase, o backend e a publicação no Surge.
 ```bash
 npm ci
 npm test
+npm run test:azul
 npm run test:frontend
 npm run test:clips
 npm start

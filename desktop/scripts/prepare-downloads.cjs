@@ -12,7 +12,8 @@ async function prepare(){
   await fs.writeFile(path.join(downloads,'latest.yml'),`version: ${version}\nfiles:\n  - url: ${filename}\n    sha512: ${hash}\n    size: ${bytes.length}\npath: ${filename}\nsha512: ${hash}\nreleaseDate: '${new Date().toISOString()}'\n`);
   const index=await fs.readFile(path.join(frontend,'index.html'),'utf8');await fs.writeFile(path.join(frontend,'index.html'),index.replace(/\/downloads\/MN-Trono-[^"/]+-Windows\.exe/g,'/downloads/'+filename).replace(/download="MN-Trono-[^"]+\.exe"/g,'download="'+filename+'"'));
   await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-PUBLICAR.txt'),path.join(site,'LEIA-ME-PUBLICAR.txt'));
-  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.10.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.10.md'));
+  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.11.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.11.md'));
+  await fs.copyFile(path.join(root,'supabase/upgrade-azul.sql'),path.join(site,'upgrade-azul.sql'));
   console.log(`Pacotes preparados: instalador ${version}, site e canal de atualização SHA-512.`);
 }
 prepare().catch(error=>{console.error(error.message);process.exitCode=1;});

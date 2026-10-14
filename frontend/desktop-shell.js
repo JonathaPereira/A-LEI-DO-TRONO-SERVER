@@ -14,7 +14,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const rail=document.createElement('nav');rail.id='desktopRail';rail.setAttribute('aria-label','Áreas do aplicativo');
   rail.innerHTML='<button id="desktopHome" type="button" class="desktop-brand" data-desktop-route="home" aria-label="M&N · Ir para o início" title="M&N · Início">M<span>&</span>N</button>';
   rail.firstElementChild.onclick=()=>void navigate('home');
-  for(const [view,label]of [['game','Jogar'],['community','Comunidade'],['clips','Clipes']]){
+  for(const [view,label]of [['game','Jogos'],['community','Comunidade'],['clips','Clipes']]){
     const button=document.createElement('button');button.type='button';button.dataset.desktopRoute=view;button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'+icons[view]+'</svg><span>'+label+'</span>';if(view==='clips'){button.disabled=true;button.title='Opção em desenvolvimento';button.setAttribute('aria-label','Clipes · opção em desenvolvimento');button.querySelector('span').innerHTML='Clipes <span aria-hidden="true">🔒</span><small>Em desenvolvimento</small>';}else button.onclick=()=>void navigate(view);rail.append(button);
   }
   const version=document.createElement('button');version.id='desktopUpdateCheck';version.type='button';version.className='desktop-version';version.title='Verificar atualização';version.textContent='Windows '+window.TronoDesktop.version;rail.append(version);body.append(rail);
@@ -47,7 +47,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const info=document.createElement('div');info.className='desktop-call-info';info.innerHTML='<small>SEU ESPAÇO, SEM INTERRUPÇÕES</small><strong id="desktopCallName">M&N · pronto para conectar</strong><span id="desktopCallStatus"></span>';
   dock.append(info,$('socialPanel').querySelector('.call-toolbar'));body.append(dock,$('voiceSettingsPanel'));
   $('socialBtn').addEventListener('click',()=>{body.classList.add('game-communication-open');window.TronoSocial.showPanel(true);});$('socialCloseBtn').addEventListener('click',()=>body.classList.remove('game-communication-open'));
-  const primary=['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen'];let lastGame='setupScreen',previous='home',clipsOpen=false;
+  const primary=['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen','gamesScreen','azulScreen'];let lastGame='setupScreen',previous='home',clipsOpen=false;
   function setView(view){body.dataset.desktopView=view;for(const b of rail.querySelectorAll('button[data-desktop-route]')){const selected=b.dataset.desktopRoute===view;b.classList.toggle('active',selected);if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}}
   function synchronize(){
     const visible=primary.find(id=>!$(id).classList.contains('hidden'));
@@ -63,12 +63,13 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
     channels(false);
     closeClips();
     if(view==='home'){window.TronoPortal.showOnly('portalScreen');setView(view);return;}
-    if(view==='game'){
-      if(!window.TronoAuth?.user&&!window.TronoAuth?.guest){window.TronoPortal.openGame();return;}
+    if(view==='game')return window.TronoGames.openLibrary();
+    if(view==='throne'){
+      if(!window.TronoAuth?.user&&!window.TronoAuth?.guest){window.TronoPortal.openGame(true);return;}
       // A community entry may have left a previous game. Do not restore its
       // stale waiting-room UI merely because it was the last game screen.
       if(!window.TronoNetwork.gameRoom)lastGame='setupScreen';
-      window.TronoPortal.showOnly(lastGame);window.TronoNetwork.requestRooms();setView(view);return;
+      window.TronoPortal.showOnly(lastGame);window.TronoNetwork.requestRooms();setView('game');return;
     }
     if(view==='community'){
       const room=window.TronoNetwork.currentRoom;

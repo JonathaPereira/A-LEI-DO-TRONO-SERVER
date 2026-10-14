@@ -1092,7 +1092,7 @@ function enterOnlineBoard(){
   if($('speedBtn')){$('speedBtn').textContent='⏱ Online';$('speedBtn').disabled=true;}
   window.TronoPortal?.showOnly?.('gameScreen');
   chatOnlyMode=false;
-  $('versionLabel').textContent='Protótipo digital v0.9.1-alpha • Multiplayer';
+  $('versionLabel').textContent='Protótipo digital v'+window.TronoNetwork.CLIENT_VERSION+' • Multiplayer';
   clearLog();
 }
 function applyOnlineState(state){

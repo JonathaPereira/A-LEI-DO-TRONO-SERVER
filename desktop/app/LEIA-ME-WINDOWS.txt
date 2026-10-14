@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.10
+M&N · A Lei do Trono — Windows 0.1.11
 
-1. Instalação nova: instale MN-Trono-0.1.10-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.1.11-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -26,9 +26,11 @@ M&N · A Lei do Trono — Windows 0.1.10
    Áudio do computador inteiro pode incluir as vozes da chamada.
 9. Efeitos fica na lateral esquerda. Amigos aceita anexos privados com as regras
    do chat geral. Avisos respeitam Configurações → Notificações e silenciamento.
-10. Somente o criador apaga mensagens e limpa o canal. Mensagens exibem data/hora.
-    O histórico é armazenado no Supabase. Esta revisão não exige SQL novo:
-    reutiliza backend 0.9.1-alpha e as migrações já aplicadas na versão 0.1.9.
+10. Jogos reúne A Lei do Trono e Azul sem encerrar a chamada da comunidade.
+    Azul usa o tabuleiro colorido original: 2–4 participantes e bots opcionais.
+    O Top 5 guarda o melhor resultado por conta; bots não recebem recordes.
+    O administrador publica backend 0.10.0-alpha e aplica upgrade-azul.sql.
+    Somente o criador apaga mensagens e limpa o chat; o histórico usa Supabase.
 11. F11 e o botão Tela cheia ampliam a janela. Streams têm maximização própria.
     Perfis expandem detalhes e volume sem empurrar a transmissão.
 12. Configurações → Atividade mostra opcionalmente o nome de um jogo/aplicativo.
@@ -41,4 +43,4 @@ M&N · A Lei do Trono — Windows 0.1.10
 
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.1.10.md para publicar o pacote completo do site.
+Consulte ATUALIZAR_WINDOWS_v0.1.11.md para publicar o pacote completo do site.
