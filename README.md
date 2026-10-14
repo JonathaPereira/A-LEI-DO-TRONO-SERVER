@@ -1,14 +1,14 @@
-## Windows 0.1.16 · Splendor
+## Windows 0.1.17 · Love Letter e Splendor
 
-Quatro jogos no catálogo, capas revisadas e Splendor clássico com mesas online, bots, regras completas, animações e Top 5 persistente. A migração nova é `supabase/upgrade-splendor.sql`; publique o backend 0.11.0-alpha antes do frontend. Veja [o guia da versão](ATUALIZAR_WINDOWS_v0.1.16.md).
+Cinco jogos no catálogo. Love Letter, 2ª edição, chega com mesas para 2–6 pessoas e bots; Splendor recebe novas ilustrações, cartas e mesa. Publique o backend 0.12.0-alpha antes do frontend. Não há SQL novo se `upgrade-splendor.sql` já foi executado na 0.1.16. Veja [o guia da versão](ATUALIZAR_WINDOWS_v0.1.17.md).
 
 ## Correção de publicação no Surge
 
-O pacote **MN-Trono-Frontend-0.1.16.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Execute `upgrade-splendor.sql` e publique o backend antes do frontend; siga [o guia atual](ATUALIZAR_WINDOWS_v0.1.16.md). Os backups automáticos conservam somente a versão atual e anterior.
+O pacote **MN-Trono-Frontend-0.1.17.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Se ainda não executou `upgrade-splendor.sql`, aplique-o. Publique o backend antes do frontend; siga [o guia atual](ATUALIZAR_WINDOWS_v0.1.17.md). Os backups automáticos conservam somente a versão atual e anterior.
 
 ## Catálogo de jogos
 
-Jogos reúne A Lei do Trono, Azul, Cinzas do Abismo v0.5 e Splendor clássico, mantendo a chamada da comunidade. Azul e Splendor têm regras validadas pelo servidor, mesas online, bots e Top 5 permanente por conta no Supabase. Cinzas tem campanha, horda e progresso local com backup. Veja [a publicação da versão atual](ATUALIZAR_WINDOWS_v0.1.16.md).
+Jogos reúne A Lei do Trono, Azul, Cinzas do Abismo v0.5, Splendor clássico e Love Letter 2ª edição, mantendo a chamada da comunidade. Azul e Splendor têm regras validadas pelo servidor, mesas online, bots e Top 5 permanente por conta no Supabase. Cinzas tem campanha, horda e progresso local com backup. Veja [a publicação da versão atual](ATUALIZAR_WINDOWS_v0.1.17.md).
 
 ## Painel de voz Discord · Windows 0.1.10
 

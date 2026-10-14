@@ -15,7 +15,7 @@ window.TronoSplendor=(()=>{
     if(!c)return el('span','sp-card sp-empty');
     const n=button('',()=>openCard(c),'sp-card'+(small?' sp-card-small':''));n.dataset.card=c.id||'';n.dataset.noClickSfx='1';
     if(c.hidden){n.classList.add('sp-card-back','sp-level-'+c.level);n.append(el('span','sp-back-emblem','✦'),el('small','','NÍVEL '+c.level));n.disabled=true;n.setAttribute('aria-label','Carta reservada oculta, nível '+c.level);return n;}
-    const index=(c.level===1?[3,0,2,1,4][c.bonus]:(c.level-1)*4+Number(c.id.slice(1))%4),art=el('span','sp-card-art');art.style.backgroundPosition=(index%4)*100/3+'% '+Math.floor(index/4)*50+'%';n.append(art);
+    const index=(c.level-1)*4+Number(c.id.slice(1))%4,art=el('span','sp-card-art');art.style.backgroundPosition=(index%4)*100/3+'% '+Math.floor(index/4)*50+'%';n.append(art);
     const top=el('span','sp-card-top');top.append(el('b','sp-card-points',c.points?String(c.points):''),gem(c.bonus));n.append(top,costs(c.cost));
     const p=mine(state()),affordable=p&&!!R.payment(p,c);n.classList.toggle('sp-affordable',!!(action&&myTurn(state())&&affordable&&!locked()));
     n.title='Nível '+c.level+' · '+c.points+' ponto(s) · bônus de '+R.colors[c.bonus];n.setAttribute('aria-label',n.title+'. Custo: '+c.cost.map((v,i)=>v?v+' '+R.colors[i]:null).filter(Boolean).join(', ')+(affordable?'. Você pode comprar.':''));

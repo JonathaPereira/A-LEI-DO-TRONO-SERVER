@@ -26,3 +26,5 @@ body[data-games-view=library] .games-card-azul:is(:hover,:focus-visible) .games-
 @container games-catalogue (max-width:650px){.games-catalog{grid-template-columns:minmax(0,1fr)}}
 
 .games-card-cta svg{width:17px;height:17px;display:block}
+
+.games-love-letter-art{position:absolute;inset:0;background:url('assets/love-letter/characters.webp') 100% 100%/500% 200%;transition:transform .7s,filter .5s}.games-card-love-letter .games-cover{background:#56152c}.games-card-love-letter:hover .games-love-letter-art{transform:scale(1.045);filter:brightness(1.1)}
