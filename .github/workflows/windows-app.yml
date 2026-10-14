@@ -24,6 +24,7 @@ jobs:
       - name: Verify native roguelite frame before packaging
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
           node --test tests/desktop-cinzas-runtime.js 2>&1 | Tee-Object artifacts/windows-cinzas-runtime.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
