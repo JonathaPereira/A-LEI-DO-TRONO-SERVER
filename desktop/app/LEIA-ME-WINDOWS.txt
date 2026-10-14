@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.1.16
+M&N · A Lei do Trono — Windows 0.1.17
 
-1. Instalação nova: instale MN-Trono-0.1.16-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.1.17-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -49,7 +49,7 @@ M&N · A Lei do Trono — Windows 0.1.16
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador atual é baixado do próprio site, em downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.1.16.md para publicar o pacote completo do site.
+Consulte ATUALIZAR_WINDOWS_v0.1.17.md para publicar o pacote completo do site.
 
 Cinzas do Abismo v0.5: campanha de 15 capítulos e horda sem fim.
 Ao abrir pela primeira vez no Windows, aguarde os recursos serem guardados localmente.
@@ -64,4 +64,9 @@ Compra, reservas ocultas, pagamento com ouro, escolha de devoluções e visitas 
 Quinze pontos iniciam a última rodada; empate pelo menor número de cartas compradas.
 Sons e animações explicam fichas, bônus e pontos. O manual fica em Como jogar.
 Voz e outros jogos continuam conectados durante a navegação. Recordes no Supabase.
-Publicação desta versão requer o backend 0.11.0-alpha e upgrade-splendor.sql.
+Publicação desta versão requer o backend 0.12.0-alpha. Não há SQL novo se upgrade-splendor.sql já foi aplicado na 0.1.16.
+
+Love Letter, 2ª edição: mesas para 2–6 pessoas e bots, 21 cartas, Espiã e Chanceler.
+Mesa de veludo vinho com cartas ilustradas, descartes públicos e favores.
+Efeitos e escolhas secretas são validados pelo servidor; regras em Como jogar.
+O anfitrião inicia a próxima rodada. Mesas ficam em memória durante a partida.
