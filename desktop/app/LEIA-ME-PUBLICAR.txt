@@ -1,18 +1,16 @@
-M&N — publicação leve no Surge · Windows 0.1.12
+M&N — frontend com somente o instalador atual · Windows 0.1.12
 
-O instalador fica em GitHub Releases. Publique somente frontend/ no Surge.
-
-1. No repositório público JonathaPereira/MN-Trono-Downloads, publique uma release
-   com tag v0.1.12 e o MN-Trono-0.1.12-Windows.exe desta mesma entrega privada indicada no PR.
-2. Confira o link público de download, sem login:
-   https://github.com/JonathaPereira/MN-Trono-Downloads/releases/download/v0.1.12/MN-Trono-0.1.12-Windows.exe
-3. Extraia MN-Trono-Site-Leve-0.1.12.zip e entre em frontend/. Preserve downloads/latest.yml.
-4. No Git Bash execute:
+1. Baixe MN-Trono-Frontend-0.1.12.zip na entrega privada indicada no PR.
+2. Extraia numa pasta nova. frontend/downloads contém somente:
+   MN-Trono-0.1.12-Windows.exe
+   latest.yml
+3. Entre na pasta frontend pelo Git Bash e execute:
    npx surge . a-lei-do-trono.surge.sh
+4. No aplicativo instalado, clique na versão no rodapé e busque a atualização.
+   Ele baixa internamente e permite reiniciar para instalar.
 
-A atualização interna continua: o app consulta latest.yml no Surge, baixa o
-EXE no GitHub e verifica SHA-512 antes de instalar. Nenhum EXE vai para o Surge.
-
-Não há SQL ou backend novo nesta atualização visual do Azul. Para habilitar Azul,
-upgrade-azul.sql e backend 0.10.0-alpha da atualização anterior são necessários.
+O EXE já vai junto do frontend. Não precisa publicá-lo em outro repositório.
+O total fica perto de 154 MB: um instalador atual e o site completo.
+Preserve latest.yml e o SHA-512; não misture arquivos de entregas diferentes.
+Não há SQL ou backend novo nesta atualização.
 Consulte PUBLICAR_SURGE_LEVE.md para o passo a passo completo.

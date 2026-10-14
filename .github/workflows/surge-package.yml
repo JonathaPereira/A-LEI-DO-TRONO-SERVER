@@ -1,21 +1,16 @@
-name: Lightweight Surge package
+name: Frontend with latest installer
 on:
   push:
     branches: ['codex/surge-*']
-    paths: ['desktop/scripts/**', 'frontend/.surgeignore', 'frontend/index.html', 'tests/site-package.js', 'tests/download-retention.js', 'PUBLICAR_SURGE_LEVE.md', '.github/workflows/surge-package.yml']
+    paths: ['desktop/scripts/**', 'frontend/.surgeignore', 'frontend/index.html', 'tests/site-package.js', 'tests/build-downloads.js', 'PUBLICAR_SURGE_LEVE.md', '.github/workflows/surge-package.yml']
   workflow_dispatch:
-    inputs:
-      source_run:
-        description: 'Execução aprovada com MN-Trono-Windows-x64 da versão atual'
-        required: true
-        default: '38570134416'
 permissions:
-  contents: read
+  contents: write
   actions: write
 jobs:
   package:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,41 +18,52 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Test site size, installer separation and update manifest
-        run: node --test tests/site-package.js tests/download-retention.js
-      - name: Check for the already-published installer
-        id: published
+      - name: Test single-installer packaging, manifest and retention
+        run: node --test tests/site-package.js tests/download-retention.js tests/build-downloads.js
+      - name: Find the approved installer for this version
+        id: source
         uses: actions/github-script@v7
         with:
           script: |
             const {version}=require('./desktop/app/package.json');
-            try {
-              const {data}=await github.rest.repos.getReleaseByTag({owner:'JonathaPereira',repo:'MN-Trono-Downloads',tag:'v'+version});
-              core.setOutput('exists',data.assets.some(a=>a.name==='MN-Trono-'+version+'-Windows.exe'&&a.state==='uploaded'));
-            } catch(error) {if(error.status!==404)throw error;core.setOutput('exists',false);}
-      - uses: actions/download-artifact@v4
-        if: steps.published.outputs.exists != 'true'
-        with:
-          name: MN-Trono-Windows-x64
-          github-token: ${{ github.token }}
-          run-id: ${{ inputs.source_run || '38570134416' }}
-          path: artifacts/approved-installer
-      - name: Restore the approved installer if not published yet
-        if: steps.published.outputs.exists != 'true'
-        shell: bash
+            const {planBuildRetention}=require('./desktop/scripts/publish-build.cjs');
+            const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
+            const plan=planBuildRetention(releases);
+            const source=releases.find(r=>plan.keep.includes(r.id)&&r.tag_name.startsWith('desktop-v'+version+'-run-'));
+            if(!source)throw new Error('Nenhum instalador aprovado da versão '+version+' encontrado. Execute Windows full app primeiro.');
+            core.setOutput('tag',source.tag_name);
+      - name: Download the approved installer without rebuilding Windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MN_SOURCE_TAG: ${{ steps.source.outputs.tag }}
         run: |
-          node -e "const fs=require('fs'),p=require('./desktop/app/package.json');const filename='MN-Trono-'+p.version+'-Windows.exe';fs.mkdirSync('artifacts/windows-app',{recursive:true});fs.copyFileSync('artifacts/approved-installer/'+filename,'artifacts/windows-app/'+filename);"
-      - name: Package the validated installer and lightweight frontend
+          mkdir -p artifacts/windows-app
+          version=$(node -p "require('./desktop/app/package.json').version")
+          gh release download "$MN_SOURCE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-$version-Windows.exe" --dir artifacts/windows-app
+      - name: Package frontend with only its current installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           node desktop/scripts/prepare-downloads.cjs
           node -e "const fs=require('fs');const report=JSON.parse(fs.readFileSync('artifacts/site-download/TAMANHO-E-DOWNLOAD.json'));console.log('::notice title=Package size and installer identity::'+JSON.stringify(report));"
-      - uses: actions/upload-artifact@v4
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import json
+          version=json.loads(Path('desktop/app/package.json').read_text())['version']
+          source=Path('artifacts/site-download')
+          with ZipFile(Path('artifacts') / f'MN-Trono-Frontend-{version}.zip','w',ZIP_DEFLATED) as archive:
+              for file in sorted(source.rglob('*')):
+                  if file.is_file(): archive.write(file,file.relative_to(source))
+          PY
+      - name: Publish the matched frontend and installer for review
+        uses: actions/github-script@v7
+        env:
+          MN_SOURCE_TAG: ${{ steps.source.outputs.tag }}
         with:
-          name: MN-Trono-Site-Leve
-          path: artifacts/site-download/
-          retention-days: 30
+          script: |
+            const {publishBuild}=require('./desktop/scripts/publish-build.cjs');
+            await publishBuild({github,context,core});
       - name: Retain only current and previous distribution artifacts
         uses: actions/github-script@v7
         with:

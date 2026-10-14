@@ -76,12 +76,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node desktop/scripts/prepare-downloads.cjs
-      - name: Compress the lightweight site, including dotfiles
+      - name: Compress the frontend with only its latest installer
         shell: pwsh
         run: |
           $version = (Get-Content desktop/app/package.json | ConvertFrom-Json).version
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Site-Leve-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
       - name: Publish validated downloads in a private draft release
         uses: actions/github-script@v7
         with:
