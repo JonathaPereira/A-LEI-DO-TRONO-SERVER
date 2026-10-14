@@ -7,7 +7,7 @@
   let selectedMode='adventure', keys={}, pressed={}, lastFrame=0, visualTime=0, shake=0, toastUntil=0, sound=true, modalPaused=false, codexFilter='all';
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse=window.matchMedia('(pointer: coarse)').matches;
-  const embedded=!!window.parent&&window.parent!==window;let hostVisible=!embedded,frameRequest=0;
+  const embedded=!!window.parent&&window.parent!==window;let hostVisible=!embedded,frameRequest=0,frameTimer=0;
   if(embedded)document.documentElement.classList.add('mn-embedded');
   const keyMap={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',KeyW:'jump',ArrowUp:'jump',KeyJ:'attack',KeyZ:'attack',KeyK:'skill',KeyX:'skill',ShiftLeft:'dash',ShiftRight:'dash',KeyL:'dash',KeyE:'interact',Enter:'interact',KeyS:'down',ArrowDown:'down',KeyQ:'element'};
   const storageKey='cinzas-demo-v1';
@@ -213,10 +213,18 @@
   }
 
   function render(){renderer.draw(engine,visualTime,shake);shake*=.84;}
-  function scheduleFrame(){if(hostVisible&&!document.hidden&&!frameRequest)frameRequest=requestAnimationFrame(frame);}
+  function scheduleFrame(){
+    if(!hostVisible||document.hidden||frameRequest||frameTimer)return;
+    // Leave CPU time for voice and the host UI; attract/menu rendering needs
+    // fewer frames than gameplay. Standalone keeps the original RAF cadence.
+    const interval=embedded?(engine.status==='running'?(renderer.quality==='low'?1000/30:1000/60):1000/12):0;
+    const delay=lastFrame?Math.max(0,interval-(performance.now()-lastFrame)):interval;
+    if(delay>0)frameTimer=setTimeout(()=>{frameTimer=0;if(hostVisible&&!document.hidden)frameRequest=requestAnimationFrame(frame);},delay);
+    else frameRequest=requestAnimationFrame(frame);
+  }
   function syncHostFrame(){
     const visible=hostVisible&&!document.hidden;
-    if(!visible){keys={};pressed={};if(engine.status==='running')pause();if(frameRequest){cancelAnimationFrame(frameRequest);frameRequest=0;}sfx.tick(.1,{paused:true,hidden:true});}
+    if(!visible){keys={};pressed={};if(engine.status==='running')pause();if(frameRequest){cancelAnimationFrame(frameRequest);frameRequest=0;}if(frameTimer){clearTimeout(frameTimer);frameTimer=0;}sfx.tick(.1,{paused:true,hidden:true});}
     else{sfx.tick(.1,{paused:engine.status!=='running',hidden:false});scheduleFrame();}
     lastFrame=0;document.documentElement?.setAttribute('data-host-active',String(visible));
   }
