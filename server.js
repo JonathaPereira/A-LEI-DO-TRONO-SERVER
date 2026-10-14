@@ -11,6 +11,7 @@ const {createCommunity}=require('./community');
 const {createChatHistory}=require('./chat-history');
 const {createSocialService}=require('./social-service');
 const {createAzulService}=require('./azul-service');
+const {createSplendorService}=require('./splendor-service');
 const {createCommunityManagement}=require('./community-management');
 const {permissions,CREATOR_EMAIL}=require('./roles');
 
@@ -18,10 +19,10 @@ const app = express();
 app.set('trust proxy',Number(process.env.TRUST_PROXY_HOPS||1));
 const accountAuth = createAuth({onRevoke:event=>{
   for(const ws of wss.clients)if(ws.account?.id===event.userId&&(event.all||ws.account.sessionId===event.sessionId)){
-    azulService.disconnect(ws);ws.account=null;leaveRoom(ws,'auth-expired');send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Sua sessão foi encerrada. Entre novamente.'});ws.close(4001,'Sessão encerrada');
+    azulService.disconnect(ws);splendorService.disconnect(ws);ws.account=null;leaveRoom(ws,'auth-expired');send(ws,{type:'error',code:'AUTH_REQUIRED',message:'Sua sessão foi encerrada. Entre novamente.'});ws.close(4001,'Sessão encerrada');
   }
 },onProfileChange:account=>{
-  azulService.updateAccount(account);
+  azulService.updateAccount(account);splendorService.updateAccount(account);
   for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};for(const id of new Set([ws.roomId,ws.textRoomId,ws.gameRoomId])){const room=rooms.get(id),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}}
   community.broadcast();
 }});
@@ -31,7 +32,7 @@ const wss = new WebSocketServer({ server, path: '/ws',maxPayload:64*1024,verifyC
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.10.0-alpha';
+const VERSION = '0.11.0-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -916,25 +917,26 @@ const chatHistory=createChatHistory({auth:accountAuth});
 const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),canAttach:(id,roomId)=>rooms.get(roomId)?.channelType!=='voice'&&[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{if(row.kind==='direct'){for(const ws of wss.clients)if(ws.account?.expiresAt>Date.now()&&[row.owner_id,row.direct_peer_id].includes(ws.account.id))send(ws,{type:'attachment-deleted',id:row.id});return;}for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
 const community=createCommunity({wss,rooms,send,auth:accountAuth});
 const azulService=createAzulService({auth:accountAuth,wss,send});
+const splendorService=createSplendorService({auth:accountAuth,wss,send});
 const socialService=createSocialService({auth:accountAuth,wss,send,rooms,files:fileStorage});
 const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else if(p.ws.independentGames)leaveVoiceRoom(p.ws,'channel-deleted');else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
 fileStorage.install(app);
 communityManagement.install(app,express);
 socialService.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),azul:azulService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),azul:azulService.health(),splendor:splendorService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.gameRoomId=null;ws.independentGames=false;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(message.type==='guest-authenticate'){
-      if(ws.account)azulService.disconnect(ws);
+      if(ws.account){azulService.disconnect(ws);splendorService.disconnect(ws);}
       const now=Date.now();if(!ws.guestRate||ws.guestRate.until<now)ws.guestRate={count:0,until:now+60000};
       if(++ws.guestRate.count>15){send(ws,{type:'guest-result',requestId:message.requestId,ok:false,error:{code:'GUEST_RATE_LIMIT',message:'Aguarde um minuto para tentar novamente.'}});return;}
       try{
@@ -953,14 +955,14 @@ wss.on('connection',(ws)=>{
         const priorAccount=ws.account;
         try{
           const account=await accountAuth.identity(message.access_token);if(ws.readyState!==WebSocket.OPEN)return;
-          if(ws.guest||(priorAccount&&priorAccount.id!==account.id)){azulService.disconnect(ws);leaveRoom(ws,'account-change');}
-          if(!priorAccount&&account.sessionId)for(const other of wss.clients)if(other!==ws&&other.account?.id===account.id&&other.account.sessionId===account.sessionId){leaveRoom(other,'session-reconnected');azulService.disconnect(other);other.account=null;other.close(4002,'Sessão reconectada em outra aba');}
+          if(ws.guest||(priorAccount&&priorAccount.id!==account.id)){azulService.disconnect(ws);splendorService.disconnect(ws);leaveRoom(ws,'account-change');}
+          if(!priorAccount&&account.sessionId)for(const other of wss.clients)if(other!==ws&&other.account?.id===account.id&&other.account.sessionId===account.sessionId){leaveRoom(other,'session-reconnected');azulService.disconnect(other);splendorService.disconnect(other);other.account=null;other.close(4002,'Sessão reconectada em outra aba');}
           if(priorAccount?.id!==account.id)ws.activity=null;ws.guest=null;ws.account=account;ws.authAttempts=0;
           send(ws,{type:'auth-result',requestId:message.requestId,ok:true,user:{id:account.id,nickname:account.nickname,role:account.role,permissions:permissions(account.role)},expiresAt:account.expiresAt});
           community.note(ws);community.broadcast();void community.refreshDirectory();send(ws,{type:'chat-channels',channels:safeChatChannels(true)});
           void communityManagement.refreshFor(message.access_token).catch(()=>{});
         }catch(err){
-          if(err.status===401||err.code==='EMAIL_NOT_CONFIRMED'){azulService.disconnect(ws);ws.account=null;leaveRoom(ws,'auth-expired');}
+          if(err.status===401||err.code==='EMAIL_NOT_CONFIRMED'){azulService.disconnect(ws);splendorService.disconnect(ws);ws.account=null;leaveRoom(ws,'auth-expired');}
           send(ws,{type:'auth-result',requestId:message.requestId,ok:false,error:{code:err.code||'AUTH_UNAVAILABLE',message:err.message||'Não foi possível entrar.'}});
         }
       });return;
@@ -976,6 +978,7 @@ wss.on('connection',(ws)=>{
     }
     switch(message.type){
       case 'azul':azulService.handle(ws,message);break;
+      case 'splendor':splendorService.handle(ws,message);break;
       case 'list-rooms':send(ws,{type:'rooms',rooms:safeRooms()});break;
       case 'list-chat-channels':send(ws,{type:'chat-channels',channels:safeChatChannels(!!ws.account&&ws.account.expiresAt>Date.now())});break;
       case 'presence-request':send(ws,community.snapshot(ws));break;
@@ -1004,7 +1007,7 @@ wss.on('connection',(ws)=>{
       default:send(ws,{type:'error',code:'UNKNOWN_TYPE',message:'Tipo de mensagem desconhecido.'});
     }
   });
-  ws.on('close',()=>{azulService.disconnect(ws);community.note(ws);leaveRoom(ws,'disconnect');community.broadcast();});ws.on('error',()=>{});
+  ws.on('close',()=>{azulService.disconnect(ws);splendorService.disconnect(ws);community.note(ws);leaveRoom(ws,'disconnect');community.broadcast();});ws.on('error',()=>{});
 });
 
 const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(accountAuth.required&&ws.account&&ws.account.expiresAt<=Date.now()){leaveRoom(ws,'auth-expired');ws.close(4001,'Sessão expirada');continue;}if(ws.isAlive===false){try{ws.terminate();}catch{}continue;}ws.isAlive=false;try{ws.ping();}catch{}}},30000);
@@ -1012,5 +1015,5 @@ if(require.main===module){
   server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
 }
 module.exports={evaluateTrick,pickWinner,playValue,clampCardValue,legalCards,influenceLegalCards,usurpacaoEligibleCards,prestige,totalPairs,makeDeck,SUITS,LAWS};
-function shutdown(){clearInterval(heartbeat);azulService.stop();community.stop();communityManagement.stop();realtimeSfu.stop();for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
+function shutdown(){clearInterval(heartbeat);azulService.stop();splendorService.stop();community.stop();communityManagement.stop();realtimeSfu.stop();for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
 process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);
