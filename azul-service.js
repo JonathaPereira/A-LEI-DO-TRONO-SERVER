@@ -22,11 +22,11 @@ function createAzulService({auth,send,wss,env=process.env,fetchImpl=fetch,now=Da
   async function persist(room){
     if(room.recordStatus==='saved'||room.saving)return;
     const players=room.state.players.filter(p=>!p.bot&&!room.players.find(x=>x.id===p.id)?.forfeited).map(p=>({id:p.id,score:p.score,rows:Rules.fullRows(p)}));
-    if(!players.length){room.recordStatus='unranked';publish(room);return;}
+    if(!players.length){room.recordStatus='unranked';publish(room);if(!room.players.some(p=>p.ws)){remove(room);lists();}return;}
     room.saving=true;room.recordStatus='saving';publish(room);
-    try{await rpc('azul_record_match',{p_match:room.matchId,p_rounds:room.state.round,p_mode:room.startedWithBots?'bots':'online',p_players:players});room.recordStatus='saved';cancel(room.retryTimer);}
+    try{await rpc('azul_record_match',{p_match:room.matchId,p_rounds:room.state.round,p_mode:room.usedBots?'bots':'online',p_players:players});room.recordStatus='saved';cancel(room.retryTimer);}
     catch{room.recordStatus='pending';room.retryTimer=later(()=>void persist(room),30000);}
-    finally{room.saving=false;publish(room);}
+    finally{room.saving=false;publish(room);if(room.recordStatus==='saved'&&!room.players.some(p=>p.ws)){remove(room);lists();}}
   }
   function schedule(room){
     cancel(room.botTimer);if(!room.state||room.state.phase==='finished')return;
@@ -43,7 +43,7 @@ function createAzulService({auth,send,wss,env=process.env,fetchImpl=fetch,now=Da
     function leave(){
       if(!rooms.has(room.id)||p.ws)return;
       membership.delete(p.id);
-      if(room.state&&room.state.phase!=='finished'){p.bot=true;p.forfeited=true;room.state.players.find(x=>x.id===p.id).forfeited=true;}
+      if(room.state&&room.state.phase!=='finished'){p.bot=true;p.forfeited=true;room.usedBots=true;room.state.players.find(x=>x.id===p.id).forfeited=true;}
       else if(!room.state){room.players=room.players.filter(x=>x!==p);if(room.hostId===p.id)room.hostId=room.players[0]?.id;}
       if(!room.players.some(x=>x.ws)&&(!room.state||room.recordStatus==='saved'||room.recordStatus==='unranked'))remove(room);
       else{publish(room);schedule(room);}lists();
@@ -84,7 +84,7 @@ function createAzulService({auth,send,wss,env=process.env,fetchImpl=fetch,now=Da
         if(room.players.some(p=>!p.ws))throw failure('AZUL_OFFLINE','Aguarde os participantes reconectarem ou saírem da mesa.');
         if(!msg.fillBots&&room.players.length<2)throw failure('AZUL_PLAYERS','Convide outra pessoa ou complete a mesa com bots.');
         if(msg.fillBots)while(room.players.length<room.maxPlayers)room.players.push({id:'bot-'+crypto.randomUUID(),name:'Artesão '+room.players.length,bot:true,ws:null});
-        room.matchId=crypto.randomUUID();room.startedWithBots=room.players.some(p=>p.bot);room.state=Rules.create(room.players);room.updatedAt=now();publish(room);lists();schedule(room);return;
+        room.matchId=crypto.randomUUID();room.usedBots=room.players.some(p=>p.bot);room.state=Rules.create(room.players);room.updatedAt=now();publish(room);lists();schedule(room);return;
       }
       if(action==='move'){
         if(!room.state||room.state.phase==='finished')throw failure('AZUL_NOT_PLAYING','Não há rodada em andamento.');
