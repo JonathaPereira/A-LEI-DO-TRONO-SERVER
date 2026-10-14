@@ -36,6 +36,6 @@ O atualizador continua consultando o pequeno manifesto no Surge e busca o EXE no
 
 ## Próximas versões
 
-Cada pacote leve corresponde ao EXE da mesma execução, registrado em TAMANHO-E-DOWNLOAD.json. Publique esse EXE na tag da versão antes de enviar o frontend. O manifesto precisa corresponder exatamente aos bytes do instalador. Não substitua um EXE por outro enquanto o manifesto antigo estiver em uso.
+Cada pacote leve identifica seu EXE em TAMANHO-E-DOWNLOAD.json. Se a versão já estiver publicada, o empacotador reutiliza o instalador público e verifica o SHA-256 do GitHub antes de gerar o SHA-512 do atualizador. Isso evita trocar os bytes de uma mesma versão ao recompilar. Publique esse EXE na tag da versão antes de enviar o frontend. O manifesto precisa corresponder exatamente aos bytes do instalador. Não substitua um EXE por outro enquanto o manifesto antigo estiver em uso.
 
 O workflow Windows full app passa a gerar o site leve. O workflow Lightweight Surge package permite reaproveitar um instalador já aprovado sem recompilar o aplicativo; informe o ID da execução que contém MN-Trono-Windows-x64 da versão atual. Publicar o site continua sendo uma ação separada no Surge.

@@ -32,6 +32,8 @@ jobs:
           run-id: ${{ inputs.source_run || '38570134416' }}
           path: artifacts/approved-installer
       - name: Package the exact already-validated Windows installer
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           node -e "const fs=require('fs'),p=require('./desktop/app/package.json');const filename='MN-Trono-'+p.version+'-Windows.exe';fs.mkdirSync('artifacts/windows-app',{recursive:true});fs.copyFileSync('artifacts/approved-installer/'+filename,'artifacts/windows-app/'+filename);"

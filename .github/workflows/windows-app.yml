@@ -72,6 +72,8 @@ jobs:
             exit $testExit
           }
       - name: Prepare user download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node desktop/scripts/prepare-downloads.cjs
       - uses: actions/upload-artifact@v4
         with:
