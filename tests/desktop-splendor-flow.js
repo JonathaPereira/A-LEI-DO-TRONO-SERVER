@@ -2,11 +2,11 @@
 // Test-only: inject the fixture URL into the local file response before the
 // installed network module executes. Electron custom protocols bypass the
 // Playwright routing/init-script hooks; no production test flag is introduced.
-const fs=require('node:fs/promises'),path=require('node:path'),{expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),{expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
 async function exerciseSplendor({app,page,frontend,screenshot}){
- const fixture=await startFixture({port:10844,appOrigin:'https://a-lei-do-trono.surge.sh'});
+ const fixture=await startFixture({port:10844,allowedOrigins:['https://a-lei-do-trono.surge.sh']});
  try{
-  const email='installed-splendor@example.test';await fixture.call('signup',{email,nickname:'Mercador instalado',password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});const data=(await fixture.call('login',{email,password:'Senha12!'})).data;
+  const email='installed-splendor@example.test';await fixture.call('signup',{email,nickname:'Mercador instalado',password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});const login=await fixture.call('login',{email,password:'Senha12!'});assert.equal(login.status,200,'Native fixture login must succeed before browser injection');const data=login.data;
   await fs.access(path.join(frontend,'network.js'));
   await app.evaluate(({net},base)=>{
     const original=net.fetch.bind(net);global.__mnSplendorTestFetch=net.fetch;

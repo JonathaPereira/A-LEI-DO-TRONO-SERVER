@@ -4,7 +4,7 @@ O pacote **MN-Trono-Frontend-0.1.16.zip** inclui o site inteiro e **um único EX
 
 ## Passo a passo
 
-1. Faça merge do PR desta correção. Abra o link de downloads indicado no PR, entre na conta GitHub e baixe **MN-Trono-Frontend-0.1.16.zip** da release privada.
+1. Execute `upgrade-splendor.sql` no SQL Editor do Supabase, faça merge do PR e publique o backend **0.11.0-alpha** no Render. Aguarde o serviço ficar Live e o build Windows terminar. Abra o link de downloads indicado no PR, entre na conta GitHub e baixe **MN-Trono-Frontend-0.1.16.zip** da release privada.
 2. Extraia numa **pasta nova**. Dentro de frontend/downloads devem existir somente:
 
    ```text
@@ -21,7 +21,7 @@ O pacote **MN-Trono-Frontend-0.1.16.zip** inclui o site inteiro e **um único EX
 4. Confira https://a-lei-do-trono.surge.sh/downloads/latest.yml: deve mostrar **version: 0.1.16**. O botão Baixe a versão desktop da tela de login baixa o EXE desse mesmo site.
 5. No aplicativo já instalado, clique na versão no rodapé para buscar a atualização. Ele baixa internamente e permite reiniciar para instalar. Conta, permissões e preferências são mantidas.
 
-**Não precisa de SQL novo nem alteração do backend nesta atualização.** A publicação do frontend já inclui o instalador e o manifesto de atualização.
+**Esta versão exige `upgrade-splendor.sql` e o backend 0.11.0-alpha antes do frontend.** Se o SQL de Azul já foi executado, não é necessário repeti-lo. A publicação do frontend inclui o instalador e o manifesto de atualização. Veja [o guia 0.1.16](ATUALIZAR_WINDOWS_v0.1.16.md).
 
 ## Tamanho e versões antigas
 

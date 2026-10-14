@@ -4,9 +4,9 @@ Quatro jogos no catálogo, capas revisadas e Splendor clássico com mesas online
 
 ## Correção de publicação no Surge
 
-O instalador fica no repositório público de downloads/GitHub Releases. O artefato **MN-Trono-Site-Leve** contém só o frontend e o manifesto de atualização; o EXE fica separado em **MN-Trono-Windows-x64**. Consulte [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md). A correção de hospedagem não exige SQL nem mudanças no backend.
+O pacote **MN-Trono-Frontend-0.1.16.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Execute `upgrade-splendor.sql` e publique o backend antes do frontend; siga [o guia atual](ATUALIZAR_WINDOWS_v0.1.16.md). Os backups automáticos conservam somente a versão atual e anterior.
 
-## Catálogo e Azul 0.10.0 · Windows 0.1.11
+## Catálogo de jogos
 
 Jogos reúne A Lei do Trono, Azul, Cinzas do Abismo v0.5 e Splendor clássico, mantendo a chamada da comunidade. Azul e Splendor têm regras validadas pelo servidor, mesas online, bots e Top 5 permanente por conta no Supabase. Cinzas tem campanha, horda e progresso local com backup. Veja [a publicação da versão atual](ATUALIZAR_WINDOWS_v0.1.16.md).
 
