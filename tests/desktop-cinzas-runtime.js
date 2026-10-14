@@ -10,7 +10,8 @@ test('native Electron opens the local roguelite frame with prepared media',{time
   await expect(page.frameLocator('#rogueliteFrame').locator('#startBtn')).toBeVisible({timeout:10000});
   assert.equal(await page.frameLocator('#rogueliteFrame').locator('body').evaluate(()=>typeof window.TronoDesktop),'undefined');
  }catch(error){
-  const state=page?await page.evaluate(()=>{const f=document.querySelector('#rogueliteFrame');return {base:document.baseURI,frame:f?.outerHTML,status:document.querySelector('#rogueliteLoadStatus')?.textContent,child:f?.contentDocument?{url:f.contentDocument.URL,ready:f.contentDocument.readyState,body:f.contentDocument.body?.innerText.slice(0,400)}:null};}).catch(e=>({error:e.message})):{};
-  error.message='Native roguelite diagnostics '+JSON.stringify({state,frames:page?.frames().map(f=>f.url()),console:diagnostics})+'\n'+error.message;throw error;
+  const state=page?await Promise.race([page.evaluate(()=>{const f=document.querySelector('#rogueliteFrame');return {base:document.baseURI,frame:f?.outerHTML,status:document.querySelector('#rogueliteLoadStatus')?.textContent,child:f?.contentDocument?{url:f.contentDocument.URL,ready:f.contentDocument.readyState,body:f.contentDocument.body?.innerText.slice(0,400)}:null};}).catch(e=>({error:e.message})),new Promise(r=>setTimeout(()=>r({renderer:'did not answer in 2 seconds'}),2000))]):{};
+  let paused=null;if(state.renderer&&page){try{const cdp=await app.context().newCDPSession(page);await cdp.send('Debugger.enable');const event=new Promise(r=>{cdp.once('Debugger.paused',r);setTimeout(()=>r(null),2000);});await cdp.send('Debugger.pause');const data=await event;paused=data?.callFrames.slice(0,8).map(f=>({name:f.functionName,url:f.url,line:f.location.lineNumber}));await cdp.send('Debugger.resume');await cdp.detach();}catch(e){paused=e.message;}}
+  throw new Error('Native roguelite diagnostics '+JSON.stringify({state,paused,frames:page?.frames().map(f=>f.url()),console:diagnostics.slice(-12)})+'\n'+error.message);
  }finally{await closeTestApp(app);await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
 });
