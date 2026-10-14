@@ -2,7 +2,7 @@
 window.TronoPortal = (()=>{
   const $=id=>document.getElementById(id);
   const storage=window.TronoStorage||localStorage;
-  const allPrimaryScreens=()=>['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen','gamesScreen','azulScreen','rogueliteScreen'].map($).filter(Boolean);
+  const allPrimaryScreens=()=>['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen','gamesScreen','azulScreen','rogueliteScreen','splendorScreen'].map($).filter(Boolean);
   const safeName=value=>[...String(value??'').replace(/[<>]/g,'').replace(/[\u0000-\u001F\u007F]/g,' ')].slice(0,20).join('');
   let nameCheckTimer=null,nameCheckSeq=0,voiceOpening=null,navigationSeq=0;
 

@@ -1,3 +1,21 @@
+# Jogos · Windows e site 0.1.16
+
+Prévia real do catálogo e Splendor com a chamada ativa. Capturas dos testes do navegador; o executável compilado também é verificado no Windows.
+
+![Quatro jogos e novas capas](SPLENDOR-CATALOGO-0.1.16.png)
+
+![Mesa do Splendor](SPLENDOR-MESA-0.1.16.png)
+
+![Quatro participantes em monitor vertical](SPLENDOR-VERTICAL-0.1.16.png)
+
+![Layout compacto](SPLENDOR-COMPACTO-0.1.16.png)
+
+![Animação de pontos](SPLENDOR-PONTUACAO-0.1.16.png)
+
+Artes de capa sem texto: [A Lei do Trono](ART-TRONO-CAPA.png) e [Splendor](ART-SPLENDOR-CAPA.png). Estes arquivos de revisão não fazem parte do frontend publicado.
+
+---
+
 # Jogos · Windows e site 0.1.15
 
 Cinzas do Abismo v0.5 integrado ao M&N, com a chamada ativa e a capa animada no catálogo. Capturas da interface real em testes locais; os nomes exibidos são contas de teste.

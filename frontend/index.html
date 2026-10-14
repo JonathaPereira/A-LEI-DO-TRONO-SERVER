@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer" />
   <script src="auth-boot.js?v=091sharingclips"></script>
   <script src="desktop-platform.js?v=095desktop013"></script>
-  <script src="application-audio.js?v=095desktop013"></script>
+  <script src="application-audio.js?v=108splendor"></script>
   <link rel="stylesheet" href="style.css?v=091sharingclips" />
   <link rel="stylesheet" href="mn-chat.css?v=091sharingclips" />
   <link rel="stylesheet" href="auth.css?v=095desktop013" />
@@ -30,6 +30,8 @@
   <link rel="stylesheet" href="games.css?v=106market" />
   <link rel="stylesheet" href="azul-art.css?v=105artwork" />
   <link rel="stylesheet" href="roguelite-host.css?v=107cinzas" />
+  <link rel="stylesheet" href="game-covers.css?v=108splendor"/>
+  <link rel="stylesheet" href="splendor.css?v=108splendor"/>
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -411,7 +413,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.15-Windows.exe" download="MN-Trono-0.1.15-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.16-Windows.exe" download="MN-Trono-0.1.16-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -540,9 +542,9 @@
   </dialog>
   <section id="gamesScreen" class="screen hidden mn-games-screen" aria-label="Catálogo de jogos">
     <header class="games-heading"><div><span class="games-eyebrow">M&amp;N · JUNTOS NA MESMA MESA</span><h1>Escolha a próxima partida.</h1><p>Sua chamada continua. O próximo jogo é só um convite.</p></div><div class="games-heading-actions"><button id="gamesVoice" type="button" class="games-voice-link">🎙 Voltar à comunidade</button><button id="gamesHome" type="button" class="az-text-button" aria-label="M&N · Voltar ao início">M&amp;N</button></div></header>
-    <div class="games-catalog"><button id="playThrone" class="games-card games-card-throne" type="button"><span class="games-cover"><span class="games-crown">♛</span><span>A LEI DO<br><b>TRONO</b></span></span><span class="games-card-body"><small>ESTRATÉGIA · CARTAS · 4 JOGADORES</small><strong>A Lei do Trono</strong><span>Influência, leis e alianças. A Coroa espera pela sua Casa.</span><b class="games-card-cta">Entrar nos salões <i>↗</i></b></span></button>
-    <button id="playAzul" class="games-card games-card-azul" type="button"><span class="games-cover"><img class="games-box-art" src="assets/azul/box-cover.png" alt="Caixa do jogo Azul" width="1230" height="1278" loading="eager" decoding="async" /><span>AZUL<small>O prazer de criar mosaicos.</small></span></span><span class="games-card-body"><small>ESTRATÉGIA · AZULEJOS · 2–4 JOGADORES</small><strong>Azul</strong><span>Um palácio, cinco cores e escolhas que fazem a diferença.</span><b class="games-card-cta">Escolher uma mesa <i>↗</i></b></span></button>
-    <button id="playRoguelite" class="games-card games-card-cinzas" type="button"><span class="games-cover"><img class="games-cinzas-art" src="roguelite/assets/catalogue-cover.png" alt="Portal das ruínas de Cinzas do Abismo" loading="lazy" decoding="async" width="1536" height="1024"/><span>CINZAS<br>DO ABISMO<small>Uma vida. Infinitas combinações.</small></span></span><span class="games-card-body"><small>ROGUELITE · PLATAFORMA · SOLO · V0.5</small><strong>Cinzas do Abismo</strong><span>Explore túneis, combine cartas e enfrente a campanha ou a horda sem fim.</span><b class="games-card-cta">Atravessar o portal <i>↗</i></b></span></button></div>
+    <div class="games-catalog"><button id="playThrone" class="games-card games-card-throne" type="button"><span class="games-cover"><img class="games-throne-art" src="assets/games/throne-cover.webp" alt="Trono, coroa, cetro, chave, máscara e lâmina" width="1120" height="1400" loading="lazy" decoding="async"/><span>A LEI DO<br><b>TRONO</b></span></span><span class="games-card-body"><small>ESTRATÉGIA · CARTAS · 4 JOGADORES</small><strong>A Lei do Trono</strong><span>Influência, leis e alianças. A Coroa espera pela sua Casa.</span><b class="games-card-cta">Entrar nos salões <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 17 17 7M7 7h10v10"/></svg></i></b></span></button>
+    <button id="playAzul" class="games-card games-card-azul" type="button"><span class="games-cover"><img class="games-box-art" src="assets/azul/box-cover.webp" alt="Caixa do jogo Azul" width="1230" height="1278" loading="eager" decoding="async" /><span>AZUL<small>O prazer de criar mosaicos.</small></span></span><span class="games-card-body"><small>ESTRATÉGIA · AZULEJOS · 2–4 JOGADORES</small><strong>Azul</strong><span>Um palácio, cinco cores e escolhas que fazem a diferença.</span><b class="games-card-cta">Escolher uma mesa <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 17 17 7M7 7h10v10"/></svg></i></b></span></button>
+    <button id="playRoguelite" class="games-card games-card-cinzas" type="button"><span class="games-cover"><img class="games-cinzas-art" src="roguelite/assets/catalogue-cover.png" alt="Portal das ruínas de Cinzas do Abismo" loading="lazy" decoding="async" width="1536" height="1024"/><span>CINZAS<br>DO ABISMO<small>Uma vida. Infinitas combinações.</small></span></span><span class="games-card-body"><small>ROGUELITE · PLATAFORMA · SOLO · V0.5</small><strong>Cinzas do Abismo</strong><span>Explore túneis, combine cartas e enfrente a campanha ou a horda sem fim.</span><b class="games-card-cta">Atravessar o portal <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 17 17 7M7 7h10v10"/></svg></i></b></span></button><button id="playSplendor" class="games-card games-card-splendor" type="button"><span class="games-cover"><img src="assets/games/splendor-cover.webp" alt="Mercador renascentista e pedras preciosas" width="1120" height="1400" loading="lazy" decoding="async"/><span>SPLENDOR<small>Gemas, comércio e prestígio.</small></span></span><span class="games-card-body"><small>ESTRATÉGIA · GEMAS · 2–4 JOGADORES</small><strong>Splendor</strong><span>Construa sua rede de comércio e conquiste o prestígio da corte.</span><b class="games-card-cta">Negociar uma partida <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 17 17 7M7 7h10v10"/></svg></i></b></span></button></div>
     <p class="games-footnote">Partidas online e bots · Controles da chamada sempre disponíveis no aplicativo.</p>
   </section>
   <section id="rogueliteScreen" class="screen hidden mn-games-screen rg-screen" aria-label="Cinzas do Abismo">
@@ -555,8 +557,28 @@
     <footer class="az-footnote">Regras do tabuleiro colorido de Azul · Michael Kiesling · Implementação de fã para a comunidade M&amp;N. Arte dos componentes aprovada pela comunidade.</footer>
   <dialog id="azulRulesDialog" class="feature-dialog az-rules-dialog" aria-labelledby="azulRulesTitle"><button id="azulRulesClose" type="button" class="dialog-close" aria-label="Fechar regras">×</button><span class="az-eyebrow">MANUAL DO ARTESÃO</span><h2 id="azulRulesTitle">Como jogar Azul</h2><p>Para 2–4 participantes. O objetivo é terminar com mais pontos. Cada cor tem 20 azulejos; cada fábrica recebe 4. São 5, 7 ou 9 fábricas conforme o número de pessoas. O primeiro jogador da primeira rodada é sorteado.</p><ol><li><b>Escolha uma cor.</b> Pegue todos os azulejos daquela cor em uma fábrica ou no centro. As outras cores da fábrica vão ao centro. A primeira pessoa a pegar do centro leva o marcador 1 para o chão e começa a próxima rodada.</li><li><b>Prepare uma linha.</b> Coloque os azulejos em uma única linha de 1 a 5 espaços, da direita para a esquerda. A linha aceita só uma cor e a parede dessa linha não pode já ter essa cor. As sobras vão para o chão. Você também pode mandar a seleção toda para o chão.</li><li><b>Complete a parede.</b> Quando acabarem os azulejos da mesa, as linhas completas movem um azulejo para a posição da mesma cor na parede, de cima para baixo. Os demais são descartados. Linhas incompletas continuam na próxima rodada.</li><li><b>Pontue as conexões.</b> Um azulejo isolado vale 1 ponto. Se conecta na horizontal ou vertical, vale o comprimento do grupo contínuo. Se conecta nas duas direções, some os dois comprimentos, contando o novo azulejo em ambos.</li><li><b>Aplique as penalidades.</b> Cada espaço ocupado do chão desconta 1, 1, 2, 2, 2, 3 e 3 pontos. O marcador também ocupa um espaço. O total nunca fica negativo. O chão é limpo; o descarte só volta ao saco quando ele esvaziar.</li><li><b>Finalize o mosaico.</b> A partida termina no fim da rodada em que alguém completa uma linha horizontal da parede. Some +2 por linha horizontal, +7 por coluna e +10 por conjunto de 5 da mesma cor. Empate: vence quem completou mais linhas horizontais; persistindo, a vitória é compartilhada.</li></ol><p>O ranking guarda o melhor resultado por conta, incluindo partidas com bots identificadas. Bots e participantes que saíram da partida não recebem recordes. A mesa em andamento fica no servidor e pode ser retomada após uma queda curta; deploys encerram mesas em andamento. Recordes já salvos ficam no Supabase.</p></dialog>
   </section>
-  <script src="audio.js?v=104ceramic"></script>
-  <script src="network.js?v=103azul"></script>
+
+  <section id="splendorScreen" class="screen hidden mn-games-screen sp-screen" aria-label="Splendor">
+    <header class="sp-heading"><div class="sp-brand"><button id="splendorBack" type="button" class="sp-button" aria-label="Voltar ao catálogo de jogos">‹ Jogos</button><h1>SPLENDOR<small>GEMAS · COMÉRCIO · PRESTÍGIO</small></h1></div><div class="sp-heading-actions"><strong id="splendorStatus" role="status"></strong><button id="splendorFullscreen" class="sp-button" type="button" aria-pressed="false">Tela cheia</button><button id="splendorRulesButton" class="sp-button" type="button">Como jogar</button></div></header>
+    <p id="splendorNotice" class="sp-notice" role="status" aria-live="polite"></p><div id="splendorContent"></div><aside id="splendorRanking" class="sp-ranking" aria-label="Top 5 permanente do Splendor"></aside>
+    <footer class="sp-footnote">Splendor clássico · Marc André / Space Cowboys · Implementação de fã para a comunidade M&amp;N. Ilustrações e áudio próprios. Mesas ao vivo; recordes salvos no servidor.</footer>
+    <dialog id="splendorCardDialog" class="sp-dialog" aria-label="Carta e pagamento"><button data-close type="button" aria-label="Fechar carta">×</button><div id="splendorCardContent" class="sp-card-content"></div></dialog>
+    <dialog id="splendorReturnDialog" class="sp-dialog" aria-label="Devolver fichas"><button data-close type="button" aria-label="Cancelar devolução">×</button><div id="splendorReturnContent"></div></dialog>
+    <dialog id="splendorCollectionDialog" class="sp-dialog" aria-label="Coleção de desenvolvimentos"><button data-close type="button" aria-label="Fechar coleção">×</button><div id="splendorCollectionContent"></div></dialog>
+    <dialog id="splendorRulesDialog" class="sp-dialog" aria-labelledby="splendorRulesTitle"><button data-close type="button" aria-label="Fechar regras">×</button><span class="sp-eyebrow">O LIVRO DOS MERCADORES</span><h2 id="splendorRulesTitle">Como jogar Splendor</h2>
+      <p>Regras do jogo clássico, para 2–4 pessoas: 90 cartas de desenvolvimento (40 de nível I, 30 de nível II e 20 de nível III), 10 nobres, cinco cores de gemas e ouro curinga. O objetivo é terminar com mais prestígio. O primeiro mercador é sorteado, já que não coletamos a idade dos jogadores.</p>
+      <ol><li><b>Prepare o mercado.</b> Quatro cartas ficam abertas em cada nível. Há 4 fichas por cor com 2 pessoas, 5 com 3 e 7 com 4; sempre 5 ouros. São revelados tantos nobres quanto o número de participantes mais um. Cartas e nobres restantes ficam fora da vista.</li>
+      <li><b>Faça uma ação por turno.</b> Pegue até 3 fichas de cores diferentes; ou 2 da mesma cor, apenas se a pilha tiver pelo menos 4 antes da retirada; ou reserve uma carta; ou compre uma carta.</li>
+      <li><b>Reserve para depois.</b> Escolha uma carta aberta ou uma carta oculta do topo de um dos baralhos. Receba 1 ouro se houver. Você pode ter no máximo 3 cartas reservadas. Elas não podem ser descartadas: só saem da reserva quando compradas. Reservar não paga o custo nem dá o bônus ou os pontos da carta. As reservas dos outros jogadores ficam ocultas.</li>
+      <li><b>Compre e construa sua rede.</b> Compre uma carta aberta ou da sua reserva. Seus bônus permanentes descontam o custo de cada cor; pague o restante com fichas e, se quiser, ouro como curinga. As fichas pagas voltam ao banco. Ganhe o bônus da carta e seus pontos de prestígio. Cartas sem pontos também ajudam: os bônus se acumulam e nunca são gastos. Uma carta pode ficar gratuita. A reposição do mercado usa o mesmo nível; um baralho vazio não é reabastecido.</li>
+      <li><b>Fique com até 10 fichas.</b> Se pegar fichas ou reservar e ultrapassar 10, escolha exatamente o excesso para devolver. Pode devolver até as fichas recém-obtidas, inclusive ouro. A seleção é confirmada junto com a sua ação.</li>
+      <li><b>Receba um nobre.</b> No fim da sua ação, compare seus bônus permanentes com os requisitos dos nobres. Fichas e ouro não contam. Um nobre elegível visita automaticamente e dá 3 pontos. Se houver mais de um, você escolhe um: só há uma visita por turno. A visita não consome uma ação e não gasta bônus.</li>
+      <li><b>Complete a última rodada.</b> Quando alguém termina seu turno com 15 ou mais pontos, os demais completam a rodada para que todos tenham jogado o mesmo número de turnos. Pode haver pontuações acima de 15. Vence quem tiver mais pontos; em empate, quem comprou menos cartas de desenvolvimento. Reservas e nobres não contam nesse desempate. Persistindo o empate, a vitória é compartilhada.</li></ol>
+      <p>Você pode jogar online ou completar uma mesa com bots. Uma queda curta permite retomar sua cadeira; ao sair voluntariamente, um bot assume e esse resultado não gera recorde para você. O Top 5 guarda o melhor resultado por conta, com partidas com bots identificadas. Recordes já salvos resistem a novos deploys; mesas em andamento ficam na memória do servidor.</p>
+    </dialog>
+  </section>
+  <script src="audio.js?v=108splendor"></script>
+  <script src="network.js?v=108splendor"></script>
   <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
@@ -573,10 +595,13 @@
   <script src="clip-desktop.js?v=095desktop013"></script>
   <script src="game-rules.js?v=100court"></script>
   <script src="game.js?v=103azul"></script>
-  <script src="portal.js?v=107cinzas"></script>
+  <script src="portal.js?v=108splendor"></script>
   <script src="azul-rules.js?v=103azul"></script>
   <script src="azul-presentation.js?v=104ceramic"></script>
-  <script src="games.js?v=107cinzas"></script>
+  <script src="games.js?v=108splendor"></script>
+  <script src="splendor-data.js?v=108splendor"></script>
+  <script src="splendor-rules.js?v=108splendor"></script>
+  <script src="splendor.js?v=108splendor"></script>
   <script src="roguelite-host.js?v=107cinzas"></script>
   <script src="community.js?v=099desktop017"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
@@ -584,9 +609,9 @@
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=107cinzas"></script>
+  <script src="desktop-shell.js?v=108splendor"></script>
   <script src="desktop-settings.js?v=098desktop016"></script>
-  <script src="app-layout.js?v=107cinzas"></script>
+  <script src="app-layout.js?v=108splendor"></script>
   <script src="media-layout.js?v=098desktop016"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
   <script src="notifications.js?v=101layouts"></script>

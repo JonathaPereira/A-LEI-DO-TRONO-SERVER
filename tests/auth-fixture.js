@@ -2,9 +2,9 @@
 // TEST ONLY: fake Supabase contracts, no connection to a user's Supabase project.
 const http=require('http'),crypto=require('crypto'),path=require('path'),{spawn}=require('child_process');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false,soundboard=false,directAttachments=false,gameDecree=null}={}){
+async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false,soundboard=false,directAttachments=false,gameDecree=null,allowedOrigins=[]}={}){
   const users=new Map(),access=new Map(),refresh=new Map(),links=new Map(),chatMessages=new Map(),historyState={fail:false};let backend;
-  const azulRecords=new Map();
+  const azulRecords=new Map(),splendorRecords=new Map();
   const channels=new Map([['chat-livre','Geral'],['chat-jogos','Jogos'],['chat-conversa','Conversa']].map(([id,name])=>[id,{id,name,description:'',channel_type:'mixed'}]));
   const socialLinks=new Map(),directMessages=new Map(),readCursors=new Map(),files=new Map();
   const role=u=>u.email_confirmed_at&&u.email.toLowerCase()==='jonathapereira.jj@gmail.com'?'creator':u.community_role||'member';
@@ -47,6 +47,14 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     if(url.pathname==='/rest/v1/rpc/azul_top_five'){
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('FORBIDDEN',403);
       const best=new Map();for(const m of azulRecords.values())for(const p of m.p_players){const u=[...users.values()].find(u=>u.id===p.id),r={playerId:p.id,name:u?.nickname,score:p.score,rows:p.rows,mode:m.p_mode,date:'2026-10-14T12:00:00Z'};if(!best.has(p.id)||best.get(p.id).score<r.score)best.set(p.id,r);}return reply(200,[...best.values()].sort((a,b)=>b.score-a.score||b.rows-a.rows).slice(0,5));
+    }
+    if(url.pathname==='/rest/v1/rpc/splendor_record_match'){
+      if(req.headers.apikey!=='sb_secret_fixture_only')return fail('FORBIDDEN',403);
+      if(!splendorRecords.has(body.p_match))splendorRecords.set(body.p_match,body);return reply(200,{saved:true});
+    }
+    if(url.pathname==='/rest/v1/rpc/splendor_top_five'){
+      if(req.headers.apikey!=='sb_secret_fixture_only')return fail('FORBIDDEN',403);
+      const best=new Map();for(const m of splendorRecords.values())for(const p of m.p_players){const u=[...users.values()].find(u=>u.id===p.id),r={playerId:p.id,name:u?.nickname,score:p.score,cards:p.cards,mode:m.p_mode,date:'2026-10-14T12:00:00Z'};const old=best.get(p.id);if(!old||old.score<r.score||old.score===r.score&&old.cards>r.cards)best.set(p.id,r);}return reply(200,[...best.values()].sort((a,b)=>b.score-a.score||a.cards-b.cards).slice(0,5));
     }
     if(url.pathname==='/rest/v1/rpc/chat_member_directory'){
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
@@ -147,7 +155,7 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
   await new Promise(resolve=>provider.listen(0,'127.0.0.1',resolve));
   const base=`http://127.0.0.1:${port}`;
   async function boot(){
-  backend=spawn(process.execPath,[...(gameDecree?['--require',path.resolve(__dirname,'game-test-clock.cjs')]:[]),...(directAttachments?['--require',path.resolve(__dirname,'direct-attachments-adapter.cjs')]:[]),path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),...(gameDecree?{TRONO_TEST_DECREE:gameDecree}:{}),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',SUPABASE_SECRET_KEY:'sb_secret_fixture_only',APP_URL:appOrigin+'/',CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':'',...(soundboard||directAttachments?{R2_ACCOUNT_ID:'a'.repeat(32),R2_BUCKET:'fixture',R2_ACCESS_KEY_ID:'fixture-only',R2_SECRET_ACCESS_KEY:'fixture-only'}:{})},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
+  backend=spawn(process.execPath,[...(gameDecree?['--require',path.resolve(__dirname,'game-test-clock.cjs')]:[]),...(directAttachments?['--require',path.resolve(__dirname,'direct-attachments-adapter.cjs')]:[]),path.resolve(__dirname,'../server.js')],{env:{...process.env,PORT:String(port),...(gameDecree?{TRONO_TEST_DECREE:gameDecree}:{}),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',SUPABASE_SECRET_KEY:'sb_secret_fixture_only',APP_URL:appOrigin+'/',AUTH_ALLOWED_ORIGINS:allowedOrigins.join(','),CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':'',...(soundboard||directAttachments?{R2_ACCOUNT_ID:'a'.repeat(32),R2_BUCKET:'fixture',R2_ACCESS_KEY_ID:'fixture-only',R2_SECRET_ACCESS_KEY:'fixture-only'}:{})},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
     for(let attempt=0;attempt<100;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===99)throw new Error('Backend did not start: '+logs);await wait(50);}
   }
   async function stopBackend(){const child=backend;if(child.exitCode!==null)return;const closed=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),2000);await closed;clearTimeout(timer);}
@@ -157,6 +165,6 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
   }
   async function stop(){await stopBackend();await new Promise(resolve=>provider.close(resolve));}
   async function restart(){await stopBackend();await boot();}
-  return {base,call,users,links,stop,restart,azulRecords,chatMessages,historyState,appOrigin,soundId,files,directMessages,socialLinks};
+  return {base,call,users,links,stop,restart,azulRecords,splendorRecords,chatMessages,historyState,appOrigin,soundId,files,directMessages,socialLinks};
 }
 module.exports={startFixture};
