@@ -12,10 +12,10 @@
 ## Publicação, nesta ordem
 
 1. Faça merge do PR com **Windows full app** verde. **Não há SQL novo nem mudança no backend** nesta versão. O Azul continua usando o backend 0.10.0-alpha e a migração upgrade-azul.sql já publicados na versão anterior.
-2. Abra a execução verde indicada no PR. Baixe os dois artefatos **MN-Trono-Windows-x64** e **MN-Trono-Site-Leve** da mesma execução.
-3. Extraia o primeiro. Em https://github.com/JonathaPereira/MN-Trono-Downloads/releases/new, crie a tag **v0.1.12**, título **M&N Windows 0.1.12**, anexe **MN-Trono-0.1.12-Windows.exe** e publique. O arquivo precisa abrir sem login em:
+2. Abra o link **Pacotes Windows 0.1.12** indicado no PR, na seção Releases do repositório privado. Baixe **MN-Trono-0.1.12-Windows.exe** e **MN-Trono-Site-Leve-0.1.12.zip** da mesma entrega. Você precisa estar conectado à sua conta GitHub para ver esse rascunho privado. Os arquivos ficam em Releases para não consumir a cota de artefatos dos Actions.
+3. Em https://github.com/JonathaPereira/MN-Trono-Downloads/releases/new, crie a tag **v0.1.12**, título **M&N Windows 0.1.12**, anexe **MN-Trono-0.1.12-Windows.exe** e publique. O arquivo precisa abrir sem login em:
    https://github.com/JonathaPereira/MN-Trono-Downloads/releases/download/v0.1.12/MN-Trono-0.1.12-Windows.exe
-4. Extraia o **MN-Trono-Site-Leve numa pasta nova**. O pacote tem cerca de 20 MB e não inclui EXEs. No Git Bash, entre na pasta frontend extraída e publique:
+4. Extraia o **MN-Trono-Site-Leve-0.1.12.zip numa pasta nova**. O pacote tem cerca de 20 MB e não inclui EXEs. No Git Bash, entre na pasta frontend extraída e publique:
 
    ```bash
    cd "/c/Users/Jonatha/Downloads/PASTA-EXTRAIDA/frontend"
