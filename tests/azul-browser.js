@@ -48,10 +48,10 @@ test('Azul actual interface, both layouts and portrait displays keep the call an
           const scored=next.players.find(p=>p.last.placements.length),first=scored.last.placements[0];
           await expect(page.locator('[data-azul-player="'+scored.id+'"] .az-points-pop').first()).toHaveText('+'+first.points);
           await expect(page.locator('[data-azul-player="'+scored.id+'"] .az-score')).toHaveText((scored.last.before+first.points)+' pts');
-          await page.screenshot({path:'artifacts/azul/windows-scoring.png'});
+          await page.screenshot({path:'artifacts/azul/windows-scoring.png'});await page.locator('.az-points-pop').first().evaluate(n=>n.dataset.incomingState='preserved');
           // A valid next-round move can arrive while the prior score is on screen.
           const follow=R.botMove(next);if(next.players[next.turn].id===data[0].user.id)await page.evaluate(({revision,move})=>window.TronoNetwork.azul('move',{revision,move}),{revision:next.revision,move:follow});else other.send({type:'azul',action:'move',revision:next.revision,move:follow});
-          await expect.poll(()=>page.evaluate(()=>window.TronoGames.room.state.revision)).toBe(next.revision+1);assert.equal(await page.evaluate(()=>window.TronoGames.animating),true);
+          await expect.poll(()=>page.evaluate(()=>window.TronoGames.room.state.revision)).toBe(next.revision+1);assert.equal(await page.evaluate(()=>window.TronoGames.animating),true);await expect(page.locator('.az-points-pop').first()).toHaveAttribute('data-incoming-state','preserved');
           const floored=next.players.find(p=>p.last.penalty);if(floored){await expect(page.locator('.az-scoring-value.az-negative')).toHaveText('−'+Math.min(floored.last.before+floored.last.points,floored.last.penalty),{timeout:25000});await expect(page.locator('[data-azul-player="'+floored.id+'"] .az-score')).toHaveText(Math.max(0,floored.last.before+floored.last.points-floored.last.penalty)+' pts');}
           assert((await page.evaluate(()=>window.__azSounds)).includes('azul-score'));
           await page.getByRole('button',{name:'Concluir contagem'}).click();await expect.poll(()=>page.evaluate(()=>window.TronoGames.animating)).toBe(false);

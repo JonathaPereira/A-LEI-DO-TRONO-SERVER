@@ -154,6 +154,9 @@ window.TronoGames=(()=>{
     room=next;resumeId=room.id;if(changed){selection=null;pending=false;clearTimeout(pendingTimer);}notice='';
     if(job&&replayVisible()&&!reducedMotion())replayQueue.push(job);
     if(!replay&&replayQueue.length){void playReplays();return;}
+    // Keep the current flight/pop intact when a bot, roster or save update
+    // arrives. The authoritative room is already current; reveal it at the end.
+    if(replay)return;
     render();
     if(!job&&!replay&&previous?.state?.revision+1===next.state?.revision&&rect){
       const m=next.state.last,board=document.querySelector('[data-azul-player="'+m.playerId+'"]'),target=m.row>=0?board?.querySelector('[data-azul-row="'+m.row+'"] .az-tile'):[...(board?.querySelectorAll('.az-floor-slot .az-tile')||[])].at(-1);
@@ -196,7 +199,7 @@ window.TronoGames=(()=>{
     document.addEventListener('click',e=>{const target=e.target.closest('#openGamePortalBtn,#gamePortalCard,.portal-nav-btn[data-portal-target=game]');if(target&&!e.target.closest('#openGuestGameBtn')){e.preventDefault();e.stopImmediatePropagation();openLibrary();}},true);
     window.TronoNetwork.onMessage(msg=>{
       if(msg.type==='azul-state'){const savedBefore=room?.recordStatus==='saved';receiveRoom(msg.room);if(room.recordStatus==='saved'&&!savedBefore)refreshRanking();}
-      if(msg.type==='azul-rooms'){rooms=msg.rooms;resumeId=msg.resumeId;render();}
+      if(msg.type==='azul-rooms'){rooms=msg.rooms;resumeId=msg.resumeId;if(!replay)render();}
       if(msg.type==='azul-left'){finishReplay();void exitFullscreen();room=null;resumeId=null;selection=null;notice=msg.reason||'';render();void request('list');}
       if(msg.type==='azul-ranking'&&msg.requestId===rankingRequest){ranking=msg.rows;rankingError='';renderRanking();}
       if(msg.type==='azul-error'){pending=false;clearTimeout(pendingTimer);if(msg.requestId===rankingRequest){rankingError=msg.message;renderRanking();}else{notice=msg.message;render();}}
