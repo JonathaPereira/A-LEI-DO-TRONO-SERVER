@@ -1,5 +1,5 @@
 M&N · A Lei do Trono e Azul
-Windows atual: 0.1.11 · anterior: 0.1.10
+Windows atual: 0.1.12 · anterior: 0.1.11
 Backend: 0.10.0-alpha · regras de A Lei do Trono: 0.9.0
 
 Publique o frontend do artefato MN-Trono-Site-Leve no Surge.

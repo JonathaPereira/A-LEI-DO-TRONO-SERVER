@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
         working-directory: desktop/app
       - name: Verify revised game rules and independent voice
-        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-sql.js tests/azul-ws.js
+        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
       - name: Verify private attachments and creator moderation
         shell: pwsh
         run: |

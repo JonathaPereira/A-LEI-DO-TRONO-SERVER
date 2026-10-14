@@ -130,7 +130,16 @@ function scheduleTavernBar(){
 function playSfx(kind){
   if(!sfxEnabled||!audioCtx||audioCtx.state!=='running'||!sfxMaster) return;
   const t=audioCtx.currentTime+.01;
-  if(kind==='click'){
+  if(kind==='azul-pick'){
+    // Short original ceramic taps, routed through the existing effects bus.
+    tone(1840,t,.11,.045,'sine',sfxMaster,.002,4200);tone(2460,t+.025,.09,.018,'sine',sfxMaster,.002,4800);
+  }else if(kind==='azul-place'){
+    tone(1230,t,.14,.045,'triangle',sfxMaster,.003,3000);tone(820,t+.025,.18,.025,'sine',sfxMaster,.003,2400);
+  }else if(kind==='azul-score'){
+    tone(659.25,t,.30,.055,'sine',sfxMaster,.008,3300);tone(987.77,t+.10,.4,.045,'sine',sfxMaster,.008,3800);tone(1318.51,t+.20,.48,.028,'sine',sfxMaster,.012,4200);
+  }else if(kind==='azul-penalty'){
+    tone(392,t,.22,.04,'triangle',sfxMaster,.006,1800);tone(293.66,t+.10,.35,.035,'sine',sfxMaster,.008,1600);
+  }else if(kind==='click'){
     tone(720,t,.055,.025,'sine',sfxMaster,.004,2600);tone(520,t+.025,.045,.012,'triangle',sfxMaster,.003,1800);
   }else if(kind==='card'){
     noiseHit(t,.055,.055,sfxMaster,1700); tone(170,t,.10,.035,'triangle',sfxMaster,.006,900);
