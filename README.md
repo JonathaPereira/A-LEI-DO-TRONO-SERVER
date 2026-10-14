@@ -1,3 +1,7 @@
+## Correção de publicação no Surge
+
+O instalador fica no repositório público de downloads/GitHub Releases. O artefato **MN-Trono-Site-Leve** contém só o frontend e o manifesto de atualização; o EXE fica separado em **MN-Trono-Windows-x64**. Consulte [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md). A correção de hospedagem não exige SQL nem mudanças no backend.
+
 ## Catálogo e Azul 0.10.0 · Windows 0.1.11
 
 Jogos reúne A Lei do Trono e Azul (tabuleiro colorido, 2–4 pessoas, bots opcionais), mantendo a chamada da comunidade. O servidor valida as jogadas e calcula os pontos. O Top 5 permanente guarda o melhor resultado por conta no Supabase, separado das mesas temporárias. Publicação exige **upgrade-azul.sql**, backend e frontend/app: [ATUALIZAR_WINDOWS_v0.1.11.md](ATUALIZAR_WINDOWS_v0.1.11.md). O roguelite ainda não foi incluído.

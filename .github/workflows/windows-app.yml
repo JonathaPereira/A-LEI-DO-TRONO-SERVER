@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -49,7 +50,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/desktop-audio.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/desktop-audio.js tests/desktop-runtime.js tests/site-package.js tests/download-retention.js 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
@@ -72,6 +73,8 @@ jobs:
             exit $testExit
           }
       - name: Prepare user download
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node desktop/scripts/prepare-downloads.cjs
       - uses: actions/upload-artifact@v4
         with:
@@ -80,9 +83,15 @@ jobs:
           retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
-          name: MN-Trono-Site-com-Desktop
+          name: MN-Trono-Site-Leve
           path: artifacts/site-download/
           retention-days: 30
+      - name: Retain only current and previous distribution artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {cleanArtifacts}=require('./desktop/scripts/download-retention.cjs');
+            await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});
       - uses: actions/upload-artifact@v4
         if: always()
         with:

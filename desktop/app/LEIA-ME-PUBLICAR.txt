@@ -1,19 +1,18 @@
-M&N — Windows 0.1.11: catálogo de jogos e Azul
+M&N — publicação leve no Surge · Windows 0.1.11
 
-1. Faça merge do PR com Windows full app verde.
-2. No Supabase SQL Editor execute upgrade-azul.sql (incluído neste pacote).
-   Requer profiles/schema.sql já existente. Não repita outros SQL já aplicados.
-3. Publique main no Render: backend 0.10.0-alpha, features.azul true em /health.
-   Preserve as variáveis atuais; a chave de serviço continua só no backend.
-4. Extraia MN-Trono-Site-com-Desktop. Entre na pasta frontend inteira, com
-   index.html, games.js, azul-rules.js, downloads/ e manual/.
-5. No Git Bash execute:
+O instalador fica em GitHub Releases. Publique somente frontend/ no Surge.
+
+1. No repositório público JonathaPereira/MN-Trono-Downloads, publique uma release
+   com tag v0.1.11 e o MN-Trono-0.1.11-Windows.exe deste mesmo pacote/execução.
+2. Confira o link público de download, sem login:
+   https://github.com/JonathaPereira/MN-Trono-Downloads/releases/download/v0.1.11/MN-Trono-0.1.11-Windows.exe
+3. Extraia MN-Trono-Site-Leve e entre em frontend/. Preserve downloads/latest.yml.
+4. No Git Bash execute:
    npx surge . a-lei-do-trono.surge.sh
-6. Confira downloads/latest.yml: version: 0.1.11.
 
-O app instalado recebe a atualização internamente após publicar este pacote.
-Clique na versão no rodapé para buscar. Reinicie quando puder encerrar a call.
-Não remova latest.yml nem o instalador apontado por ele. O EXE não fica no Git.
-Recordes confirmados ficam no Supabase; mesas em andamento ficam em memória.
-Publique quando não houver partidas. Aguarde os recordes pendentes serem salvos.
-Consulte ATUALIZAR_WINDOWS_v0.1.11.md para detalhes e verificações.
+A atualização interna continua: o app consulta latest.yml no Surge, baixa o
+EXE no GitHub e verifica SHA-512 antes de instalar. Nenhum EXE vai para o Surge.
+
+Não há SQL ou backend novo nesta correção de hospedagem. Para habilitar Azul,
+upgrade-azul.sql e backend 0.10.0-alpha da atualização anterior são necessários.
+Consulte PUBLICAR_SURGE_LEVE.md para o passo a passo completo.
