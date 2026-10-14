@@ -25,7 +25,7 @@ test('original and Discord arrangements preserve the live app and each account p
         if(!sessionStorage.getItem('layout-fixture-initialized')){sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));sessionStorage.setItem('layout-fixture-initialized','1');}
         localStorage.setItem('tronoSfxEnabled','0');localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('mnDesktopNoiseMode','native');
         navigator.mediaDevices.getDisplayMedia=async()=>{const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const draw=canvas.getContext('2d');draw.fillStyle='#384460';draw.fillRect(0,0,1280,720);return canvas.captureStream(15);};
-        if(native)window.TronoDesktop={version:'0.1.12',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};
+        if(native)window.TronoDesktop={version:'0.1.13',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};
       },{base:fixture.base,data:accounts[0],native});
       const page=await context.newPage();page.setDefaultTimeout(8000);page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
       try{

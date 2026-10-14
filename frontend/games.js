@@ -8,7 +8,7 @@ window.TronoGames=(()=>{
   const locked=()=>pending||!!replay;
   const el=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;};
   function button(text,fn,className='az-button'){const n=el('button',className,text);n.type='button';n.onclick=fn;return n;}
-  function tile(color,{ghost=false}={}){const n=el('span','az-tile az-color-'+color+(ghost?' az-ghost':''),color===5?'1':'');n.setAttribute('aria-label',color===5?'Marcador de primeiro jogador':R.colors[color]);return n;}
+  function tile(color,{ghost=false}={}){const n=el('span','az-tile az-color-'+color+(ghost?' az-ghost':''),'');n.setAttribute('aria-label',color===5?'Marcador de primeiro jogador':R.colors[color]);return n;}
   function show(id){if(id!=='azulScreen'){finishReplay();void exitFullscreen();}window.TronoPortal.showOnly(id);window.TronoSocial.showForRoom(false);document.body.dataset.gamesView=id==='gamesScreen'?'library':'azul';}
   function openLibrary(){show('gamesScreen');if(window.TronoAuth.user)void request('list');}
   function openThrone(){if(window.TronoDesktopShell)return window.TronoDesktopShell.navigate('throne');if(window.TronoAppLayout)return window.TronoAppLayout.navigate('throne');window.TronoPortal.openGame(true);}
@@ -62,7 +62,7 @@ window.TronoGames=(()=>{
     const article=el('article','az-board'+(mine?' az-mine':'')+(active?' az-turn':'')+(scoring?' az-scoring':''));article.dataset.azulPlayer=p.id;
     const h=el('header','az-board-heading'),who=el('div','az-name-plaque');
     who.append(el('strong','',p.name+(mine?' · você':'')),el('small','',p.forfeited?'Saiu · bot jogando':p.bot?'Artesão automático':scoring?'Pontuando o mosaico':active?'Sua escolha de azulejos':'Artesão'));
-    const points=el('div','az-score-plaque');points.append(el('small','','PONTOS'),el('b','az-score',p.score+' pts'));h.append(who,points);article.append(h);
+    const points=el('div','az-score-plaque');points.append(el('small','','PONTOS'),el('b','az-score',p.score+' pts'));const cube=el('span','az-score-cube');cube.setAttribute('aria-hidden','true');points.prepend(cube);h.append(who,points);article.append(h);
     const grid=el('div','az-board-grid'),lines=el('div','az-lines'),arrows=el('div','az-wall-arrows'),wall=el('div','az-wall');
     p.lines.forEach((line,row)=>{
       const valid=mine&&active&&selection&&!locked()&&R.canPlace(p,row,selection.color),lineButton=button('',()=>sendMove(row),'az-pattern-row');
@@ -179,7 +179,7 @@ window.TronoGames=(()=>{
     const content=$('azulContent');if(!content)return;content.replaceChildren();$('azulScreen').dataset.playing=String(!!room?.state);$('azulNotice').textContent=notice;renderRanking();
     const status=$('azulTurnStatus');
     if(!room){
-      status.textContent='Escolha sua mesa';const lobby=el('div','az-lobby');lobby.append(el('span','az-eyebrow','DE 2 A 4 ARTESÃOS'),el('h2','','Seu próximo mosaico começa aqui.'),el('p','','Escolha azulejos, complete as linhas e construa sua parede. Jogue com amigos ou contra os artesãos automáticos.'));
+      status.textContent='Escolha sua mesa';const lobby=el('div','az-lobby');const intro=el('div','az-lobby-intro'),cover=el('img','az-lobby-cover'),copy=el('div');cover.src='assets/azul/box-cover.png';cover.alt='Caixa do jogo Azul';cover.width=1230;cover.height=1278;cover.decoding='async';copy.append(el('span','az-eyebrow','DE 2 A 4 ARTESÃOS'),el('h2','','Seu próximo mosaico começa aqui.'),el('p','','Escolha azulejos, complete as linhas e construa sua parede. Jogue com amigos ou contra os artesãos automáticos.'));intro.append(cover,copy);lobby.append(intro);
       const controls=el('div','az-lobby-controls'),label=el('label','','Participantes '),select=el('select');select.id='azulPlayerCount';for(const n of [2,3,4]){const o=el('option','',String(n));o.value=n;select.append(o);}label.append(select);controls.append(label,button('Criar mesa',()=>void request('create',{maxPlayers:Number(select.value)}),'az-button az-primary'));if(resumeId)controls.append(button('Retomar minha mesa',()=>void request('resume',{roomId:resumeId})));lobby.append(controls);
       const online=el('div','az-open-rooms');online.append(el('h3','','Mesas abertas'),button('Atualizar mesas',()=>void request('list'),'az-text-button'));if(!rooms.length)online.append(el('p','','Nenhuma mesa esperando. Crie a sua e convide seus amigos.'));for(const r of rooms)online.append(button('Mesa de '+r.name+' · '+r.players+'/'+r.maxPlayers,()=>void request('join',{roomId:r.id})));lobby.append(online);content.append(lobby);return;
     }
