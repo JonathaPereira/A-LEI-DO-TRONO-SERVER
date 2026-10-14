@@ -77,7 +77,15 @@ test('Azul actual interface, both layouts and portrait displays keep the call an
       await page.locator('#azulBack').click();await page.locator('#playThrone').click();await expect(page.locator('#setupScreen')).toBeVisible();assert.deepEqual(await snapshot(),before);await page.evaluate(()=>window.TronoGames.openAzul());await page.getByRole('button',{name:'Nova partida',exact:true}).click();await expect(page.getByRole('button',{name:'Criar mesa',exact:true})).toBeVisible();other.send({type:'azul',action:'leave'});
       if(native){
         await page.locator('#azulPlayerCount').selectOption('4');await page.getByRole('button',{name:'Criar mesa',exact:true}).click();await page.getByRole('button',{name:'Completar com bots e iniciar'}).click();await expect(page.locator('.az-board')).toHaveCount(4);await expect(page.locator('.az-factory')).toHaveCount(9);
-        for(const [width,height] of [[1440,960],[1080,1920],[480,800]]){await page.setViewportSize({width,height});await expect.poll(()=>page.locator('#azulScreen').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);await page.screenshot({path:'artifacts/azul/windows-four-'+width+'.png'});}
+        for(const layout of ['original','discord']){
+          await page.evaluate(v=>window.TronoAppLayout.apply(v),layout);
+          for(const [width,height] of [[1440,960],[1280,720],[1080,1920],[480,800]]){
+            await page.setViewportSize({width,height});await expect.poll(()=>page.locator('#azulScreen').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+            const factories=await page.locator('.az-factory').evaluateAll(ns=>ns.map(n=>n.getBoundingClientRect().width));assert(factories.every(w=>w>=80),'All nine factories remain large enough');
+            if(width===1280){const market=await page.locator('.az-supply').boundingBox(),screen=await page.locator('#azulScreen').boundingBox();assert(market.y+market.height<=screen.y+screen.height+1,'All nine factories fit above the call controls in 720p');}
+            await page.screenshot({path:'artifacts/azul/windows-four-'+layout+'-'+width+'.png'});
+          }
+        }
         assert.deepEqual(await snapshot(),before);
       }
 

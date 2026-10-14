@@ -70,6 +70,7 @@ body[data-app-layout=discord]{--games-left:calc(var(--discord-rail) + var(--disc
  @container az-content (min-width:1060px){
   .az-market-ring{max-width:clamp(320px,calc(100dvh - 360px),440px);margin:8px auto}
   .az-market-ring[data-factories='9']{max-width:clamp(375px,calc(100dvh - 360px),440px)}
+  .az-table:has([data-seat='2']) .az-supply{align-self:start}
  }
 }
 @media(max-width:1280px){.az-layout{grid-template-columns:minmax(0,1fr)}.az-ranking{position:static}.az-records{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.games-heading{flex-direction:column;align-items:flex-start}}

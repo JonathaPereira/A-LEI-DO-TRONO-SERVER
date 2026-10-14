@@ -8,6 +8,8 @@ O mercado usa uma parte maior da mesa e os murais ficam mais compactos. A dispos
 
 ![Mesa em monitor menor de 1280 por 720](AZUL-MONITOR-MENOR-0.1.14.png)
 
+![Nove expositores acessíveis numa mesa de quatro jogadores em 720p](AZUL-QUATRO-JOGADORES-0.1.14.png)
+
 ## Capa preparada para o roguelite
 
 Proposta de fantasia, com espaço para sobrepor o título no catálogo. O jogo ainda depende do fornecimento da última versão feita em paralelo. Esta arte está somente na prévia; não aparece como um jogo disponível e não aumenta o pacote para Surge.
