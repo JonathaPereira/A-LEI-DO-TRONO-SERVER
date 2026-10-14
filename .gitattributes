@@ -1,1 +1,4 @@
 *.pdf binary
+
+# Runtime asset hashes are verified on Windows; keep exact binary/data bytes.
+frontend/roguelite/assets/** -text

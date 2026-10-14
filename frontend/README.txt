@@ -1,5 +1,5 @@
-M&N · A Lei do Trono e Azul
-Windows atual: 0.1.14 · anterior: 0.1.13
+M&N · A Lei do Trono, Azul e Cinzas do Abismo
+Windows atual: 0.1.15 · anterior: 0.1.14
 Backend: 0.10.0-alpha · regras de A Lei do Trono: 0.9.0
 
 Publique o frontend do ZIP MN-Trono-Frontend da release privada indicada no PR no Surge.
@@ -7,3 +7,7 @@ O instalador Windows atual já está em downloads/. Nenhum EXE antigo vem junto.
 Mantenha downloads/latest.yml: o app usa esse arquivo para atualizar internamente.
 Os guias PUBLICAR_SURGE_LEVE.md e ATUALIZAR_WINDOWS ficam fora desta pasta.
 As credenciais de Supabase/SMTP/R2 permanecem no backend.
+
+Cinzas do Abismo v0.5: campanha e horda com progresso local.
+No Windows, artes/músicas são baixadas na primeira abertura e guardadas para uso offline.
+Música começa mutada e gráficos no modo Leve; ajuste em Controles dentro do jogo.
