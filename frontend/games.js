@@ -42,7 +42,7 @@ window.TronoGames=(()=>{
     const ring=el('div','az-market-ring');ring.dataset.factories=state.factories.length;
     state.factories.forEach((tiles,source)=>{
       const angle=(-90+source*360/state.factories.length)*Math.PI/180,disk=el('div','az-factory');
-      disk.style.left=(50+37*Math.cos(angle))+'%';disk.style.top=(50+37*Math.sin(angle))+'%';disk.dataset.factory=source;
+      disk.style.setProperty('--factory-x',(50+37*Math.cos(angle))+'%');disk.style.setProperty('--factory-y',(50+37*Math.sin(angle))+'%');disk.dataset.factory=source;
       disk.append(el('span','az-factory-label',String(source+1)));
       const pieces=el('div','az-factory-pieces');
       // Four fixed positions retain the physical layout even when colors repeat.
