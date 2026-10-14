@@ -29,6 +29,18 @@ function createChatHistory({auth,env=process.env,fetchImpl=fetch}={}){
     const hasMore=rows.length>50,messages=rows.slice(0,50).map(r=>r.message).reverse();
     return {messages,hasMore,before:messages[0]?.id||null};
   }
-  return {serial,append,read,health:()=>({configured,ready,persistent:configured})};
+  async function remove(room,id,actorId){
+    if(!persistent(room))throw fail();
+    if(!configured&&!auth.required)return;
+    if(!actorId)throw fail();
+    await rpc('chat_history_delete',{p_actor:actorId,p_room:room.id,p_id:id});
+  }
+  async function clear(room,actorId){
+    if(!persistent(room))throw fail();
+    if(!configured&&!auth.required)return;
+    if(!actorId)throw fail();
+    await rpc('chat_history_clear',{p_actor:actorId,p_room:room.id});
+  }
+  return {serial,append,read,remove,clear,health:()=>({configured,ready,persistent:configured})};
 }
 module.exports={createChatHistory};

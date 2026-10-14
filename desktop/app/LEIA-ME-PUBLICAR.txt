@@ -1,27 +1,22 @@
-M&N — publicar o site com download e atualizações do app
+M&N — Windows 0.1.9 e site com atualização interna
 
-1. Não há nova migração SQL nesta revisão. Se você pulou a versão 0.1.7
-   e ainda não aplicou SUPABASE-upgrade-social.sql, aplique-o uma vez no SQL Editor.
-   Se já foi aplicado, não precisa executar novamente.
-   Faça merge e aguarde o deploy do backend no Render.
-   Confira /health: versão 0.9.0-alpha, independentGameVoice true e gameRulesVersion 0.9.0.
-2. Extraia este ZIP. Entre na pasta frontend extraída, que contém index.html
-   e a pasta downloads com o instalador e latest.yml.
-3. No Git Bash, dentro dessa pasta frontend, execute:
-   surge . a-lei-do-trono.surge.sh
-4. Confira no site o botão "Baixe a versão desktop" na tela de login.
+1. Faça merge no GitHub. No Supabase SQL Editor execute os SQL novos:
+   SUPABASE-upgrade-chat-moderation.sql e SUPABASE-upgrade-direct-attachments.sql.
+   As migrações anteriores precisam já estar aplicadas. Quem pulou a versão 0.1.7
+   precisa também do SUPABASE-upgrade-social.sql antes dos SQL novos.
+2. Publique o backend no Render. /health deve mostrar 0.9.1-alpha.
+3. Entre na pasta frontend deste pacote, com index.html, manual/ e downloads/.
+   No Git Bash execute:
+   npx surge . a-lei-do-trono.surge.sh
+4. Confira downloads/latest.yml: version 0.1.9. Não remova o EXE referenciado.
 
-Não publique apenas os arquivos do código-fonte: o executável não fica no Git.
-Use este pacote completo para que o botão e o atualizador encontrem os arquivos.
-Não remova downloads/latest.yml nem o instalador apontado por esse arquivo.
+Use a pasta frontend completa do artefato, não apenas o checkout do GitHub.
+O executável não fica no Git. Os SQL e este guia ficam fora de frontend/.
 
-O aplicativo verifica atualizações ao abrir e a cada quatro horas.
-Nas próximas versões, publique novamente este pacote completo do site.
-Quem tiver o app 0.1.1 ou posterior receberá a atualização internamente.
-Quem ainda estiver no 0.1.0 precisa instalar a versão atual uma única vez.
+O app instalado busca a versão mais recente ao abrir e a cada quatro horas.
+Também pode clicar na versão no rodapé do menu lateral. Instalar a atualização
+reinicia o aplicativo; escolha um momento em que possa encerrar a chamada.
+Mesmo muitas versões atrasado, o atualizador baixa diretamente a versão atual.
+Somente quem ainda usa 0.1.0 precisa instalar manualmente uma vez.
 
-O domínio do site continua sendo o mesmo. Amigos e conversas requerem backend e SQL atualizados.
-Consulte ATUALIZAR_WINDOWS_v0.1.8.md incluído neste pacote.
-
-Mesmo várias versões atrasado, o atualizador baixa a última versão completa.
-O aviso Buscar última versão também substitui uma atualização antiga já baixada.
+Consulte ATUALIZAR_WINDOWS_v0.1.9.md para instruções e verificações.

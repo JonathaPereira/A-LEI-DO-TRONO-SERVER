@@ -11,7 +11,7 @@ const {createCommunity}=require('./community');
 const {createChatHistory}=require('./chat-history');
 const {createSocialService}=require('./social-service');
 const {createCommunityManagement}=require('./community-management');
-const {permissions}=require('./roles');
+const {permissions,CREATOR_EMAIL}=require('./roles');
 
 const app = express();
 app.set('trust proxy',Number(process.env.TRUST_PROXY_HOPS||1));
@@ -29,7 +29,7 @@ const wss = new WebSocketServer({ server, path: '/ws',maxPayload:64*1024,verifyC
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.9.0-alpha';
+const VERSION = '0.9.1-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
@@ -323,7 +323,8 @@ async function handleChatMessage(ws,rawText,attachmentId,requestedRoomId){
     if(rooms.get(room.id)!==room)return;
     if(!Array.isArray(room.chatHistory))room.chatHistory=[];
     room.chatHistory.push(message);if(room.chatHistory.length>100)room.chatHistory.splice(0,room.chatHistory.length-100);
-    for(const p of room.players.values())send(p.ws,{type:'chat-message',message});
+    room.chatRevision=(room.chatRevision||0)+1;
+    for(const p of room.players.values())send(p.ws,{type:'chat-message',message,revision:room.chatRevision});
     if(room.kind==='chat')for(const receiver of wss.clients){
       if(!receiver.account||receiver.account.expiresAt<=Date.now()||receiver.account.id===ws.account?.id)continue;
       const nickname=receiver.account.nickname.toLocaleLowerCase('pt-BR'),lower=text.toLocaleLowerCase('pt-BR');
@@ -338,7 +339,7 @@ async function sendChatHistory(ws,room,before=null){
   try{await chatHistory.serial(room.id,async()=>{
     const history=await chatHistory.read(room,before);
     if(selectedChatId(ws)!==room.id||room.players.get(ws.clientId)?.ws!==ws)return;
-    send(ws,{type:'chat-history',roomId:room.id,...history,older:!!before});
+    send(ws,{type:'chat-history',roomId:room.id,...history,revision:room.chatRevision||0,older:!!before});
   });}catch(e){send(ws,{type:'error',code:e.code||'CHAT_HISTORY_UNAVAILABLE',message:e.message,roomId:room.id});}
 }
 function requestChatHistory(ws,message){
@@ -347,6 +348,25 @@ function requestChatHistory(ws,message){
   if(message.before!==undefined&&(!/^[0-9a-f-]{36}$/i.test(message.before)))return;
   if(Date.now()-(ws.lastHistoryAt||0)<800){send(ws,{type:'error',code:'CHAT_HISTORY_RATE',message:'Aguarde um instante antes de carregar outra página.'});return;}
   ws.lastHistoryAt=Date.now();void sendChatHistory(ws,room,message.before||null);
+}
+// History reads, appends and moderation share the room queue. A reply that was
+// already loading therefore cannot restore a message after its deletion event.
+async function handleChatModeration(ws,message){
+  const action=message.type==='chat-history-clear'?'clear':'delete',room=rooms.get(message.roomId);
+  const result={type:'chat-moderation-result',requestId:String(message.requestId||'').slice(0,80),action,roomId:message.roomId,id:message.id};
+  const reject=(code,text)=>send(ws,{...result,ok:false,error:{code,message:text}});
+  if(!ws.account||ws.account.expiresAt<=Date.now()||ws.account.role!=='creator'||String(ws.account.email||'').trim().toLowerCase()!==CREATOR_EMAIL){reject('FORBIDDEN','Somente o criador pode apagar mensagens do canal.');return;}
+  if(!room||room.kind!=='chat'||room.channelType==='voice'||selectedChatId(ws)!==room.id||room.players.get(ws.clientId)?.ws!==ws){reject('NOT_IN_ROOM','Selecione um canal de texto para moderar suas mensagens.');return;}
+  if(action==='delete'&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(message.id||'')){reject('INVALID_MESSAGE','Mensagem inválida.');return;}
+  try{await chatHistory.serial(room.id,async()=>{
+    if(rooms.get(room.id)!==room||selectedChatId(ws)!==room.id||room.players.get(ws.clientId)?.ws!==ws){reject('NOT_IN_ROOM','O canal mudou. Selecione novamente antes de apagar.');return;}
+    if(action==='clear')await chatHistory.clear(room,ws.account.id);else await chatHistory.remove(room,message.id,ws.account.id);
+    if(action==='clear')room.chatHistory=[];else room.chatHistory=(room.chatHistory||[]).filter(m=>m.id!==message.id);
+    room.chatRevision=(room.chatRevision||0)+1;
+    const update={type:action==='clear'?'chat-history-cleared':'chat-message-deleted',roomId:room.id,revision:room.chatRevision,...(action==='delete'?{id:message.id}:{})};
+    for(const player of room.players.values())send(player.ws,update);
+    send(ws,{...result,ok:true});
+  });}catch(e){reject(e.code||'CHAT_HISTORY_UNAVAILABLE','Não foi possível apagar as mensagens. Confira a atualização SQL e tente novamente.');}
 }
 function resetVoiceModeIfEmpty(room){if(![...room.players.values()].some(p=>p.voiceJoined)){room.voiceMode=null;room.voiceRevision=(room.voiceRevision||0)+1;}}
 function broadcastVoiceEvent(room,player,kind,reason=''){
@@ -891,22 +911,22 @@ function broadcastGameState(room,revealPlays=false){
 }
 
 const chatHistory=createChatHistory({auth:accountAuth});
-const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),canAttach:(id,roomId)=>rooms.get(roomId)?.channelType!=='voice'&&[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
+const fileStorage=createFiles({auth:accountAuth,membership:(id,roomId)=>[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),canAttach:(id,roomId)=>rooms.get(roomId)?.channelType!=='voice'&&[...rooms.get(roomId)?.players.values()||[]].some(p=>p.ws.account?.id===id),onDeleted:row=>{if(row.kind==='direct'){for(const ws of wss.clients)if(ws.account?.expiresAt>Date.now()&&[row.owner_id,row.direct_peer_id].includes(ws.account.id))send(ws,{type:'attachment-deleted',id:row.id});return;}for(const room of rooms.values())for(const m of room.chatHistory||[])if(m.attachment?.id===row.id)m.attachment.deleted=true;broadcastAll({type:'attachment-deleted',id:row.id});}});
 const community=createCommunity({wss,rooms,send,auth:accountAuth});
-const socialService=createSocialService({auth:accountAuth,wss,send,rooms});
+const socialService=createSocialService({auth:accountAuth,wss,send,rooms,files:fileStorage});
 const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else if(p.ws.independentGames)leaveVoiceRoom(p.ws,'channel-deleted');else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
 fileStorage.install(app);
 communityManagement.install(app,express);
 socialService.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.gameRoomId=null;ws.independentGames=false;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
@@ -966,6 +986,7 @@ wss.on('connection',(ws)=>{
       case 'start-room':requestStart(ws);break;
       case 'game-action':handleGameAction(ws,message);break;
       case 'chat-history-request':requestChatHistory(ws,message);break;
+      case 'chat-message-delete':case 'chat-history-clear':void handleChatModeration(ws,message);break;
       case 'chat-message':void handleChatMessage(ws,message.text,message.attachmentId,message.roomId);break;
       case 'voice-prepare':prepareVoice(ws,message);break;
       case 'voice-fallback':{const room=rooms.get(ws.roomId);if(room?.players.get(ws.clientId)?.voiceJoined)forceRoomP2p(room);break;}

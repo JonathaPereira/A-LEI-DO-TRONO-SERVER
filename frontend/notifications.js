@@ -7,9 +7,12 @@ window.TronoNotifications=(()=>{
   function remember(id){if(seen.has(id))return false;seen.add(id);if(seen.size>500)seen.delete(seen.values().next().value);return true;}
   function channelRead(id){if(!id)return;counts.delete(id);render();}
   function visibleChannel(id){return document.hasFocus()&&document.visibilityState==='visible'&&window.TronoNetwork.currentRoom===id&&!document.getElementById('courtChatForm')?.closest('[hidden]')&&!!document.getElementById('courtChatInput')?.getClientRects().length;}
-  async function notify({key,title,body,target,mention=false,direct=false,request=false}){
-    if(!window.TronoAuth.user||muted(target.id)||prefs().get('notifications','mentions')==='off')return;
-    if(!direct&&!request&&!mention&&prefs().get('notifications','mentions')!=='all')return;
+  function allowed(target,{mention=false,direct=false,request=false}={}){
+    if(!window.TronoAuth.user||!target?.id||muted(target.id)||prefs().get('notifications','mentions')==='off')return false;
+    return direct||request||mention||prefs().get('notifications','mentions')==='all';
+  }
+  async function notify({key,title,body='',target,mention=false,direct=false,request=false}){
+    if(!allowed(target,{mention,direct,request}))return;
     const payload={key:account+':'+key,title,body:body.slice(0,220),target:{...target,accountId:account}};
     if(window.TronoDesktop?.notify){try{await window.TronoDesktop.notify(payload);}catch{}return;}
     if(document.hasFocus()&&document.visibilityState==='visible')return;
@@ -27,7 +30,7 @@ window.TronoNotifications=(()=>{
     const tabs=document.querySelector('.voice-settings-tabs'),host=document.querySelector('.voice-settings-content');
     const button=document.createElement('button');button.type='button';button.className='voice-settings-tab';button.dataset.settingsTab='notifications';button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Notificações';button.onclick=()=>window.TronoSocial.setSettingsTab('notifications');
     const pane=document.createElement('section');pane.className='voice-settings-pane';pane.dataset.settingsPanel='notifications';pane.hidden=true;pane.id='notificationSettings';button.setAttribute('aria-controls',pane.id);pane.setAttribute('role','tabpanel');
-    pane.innerHTML='<h2>Notificações</h2><label class="social-setting">Avisos de mensagens<select id="notificationMode"><option value="mentions">Menções, amigos e mensagens privadas</option><option value="all">Todas as mensagens</option><option value="off">Desligados</option></select></label><p class="appearance-help">Avisos aparecem quando o app está em segundo plano. Use @apelido para mencionar alguém. Os contadores continuam funcionando com avisos desligados.</p><label class="social-setting">Silenciar um canal<select id="notificationChannel"></select></label><label class="auth-check"><input id="notificationChannelMute" type="checkbox"> Não receber avisos deste canal</label><button id="notificationPermission" class="secondary-button" type="button">Ativar avisos neste navegador</button><p id="notificationPermissionStatus" role="status" class="appearance-help"></p>';
+    pane.innerHTML='<h2>Notificações</h2><label class="social-setting">Avisos de mensagens<select id="notificationMode"><option value="mentions">Menções, amigos e mensagens privadas</option><option value="all">Todas as mensagens</option><option value="off">Desligados</option></select></label><p class="appearance-help">Mensagens privadas também aparecem em avisos compactos com o ícone de quem enviou. Em segundo plano, você recebe avisos do sistema. Use @apelido para mencionar alguém. Os contadores continuam funcionando com avisos desligados.</p><label class="social-setting">Silenciar um canal<select id="notificationChannel"></select></label><label class="auth-check"><input id="notificationChannelMute" type="checkbox"> Não receber avisos deste canal</label><button id="notificationPermission" class="secondary-button" type="button">Ativar avisos neste navegador</button><p id="notificationPermissionStatus" role="status" class="appearance-help"></p>';
     tabs.append(button);host.append(pane);
     document.getElementById('notificationMode').onchange=e=>prefs().set('notifications',e.target.value);
     document.getElementById('notificationChannel').onchange=e=>document.getElementById('notificationChannelMute').checked=muted(e.target.value);
@@ -51,5 +54,5 @@ window.TronoNotifications=(()=>{
     for(const type of ['focus','pointerdown'])window.addEventListener(type,()=>{if(visibleChannel(window.TronoNetwork.currentRoom))channelRead(window.TronoNetwork.currentRoom);});
     window.addEventListener('trono-auth-change',sync);window.addEventListener('trono-personal-change',event=>{if(event.detail.key==='notifications'||event.detail.key.startsWith('mute:'))sync();});
   });
-  return {notify,muted,mute,channelRead,render};
+  return {notify,allowed,muted,mute,channelRead,render};
 })();

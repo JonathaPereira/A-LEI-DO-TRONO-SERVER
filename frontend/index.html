@@ -19,12 +19,14 @@
   <link rel="stylesheet" href="call-media.css?v=094desktop012" />
   <link rel="stylesheet" href="clips.css?v=091sharingclips" />
   <link rel="stylesheet" href="desktop-platform.css?v=092desktop" />
-  <link rel="stylesheet" href="desktop-shell.css?v=098desktop016" />
-  <link rel="stylesheet" href="desktop-settings.css?v=098desktop016" />
+  <link rel="stylesheet" href="desktop-shell.css?v=101layouts" />
+  <link rel="stylesheet" href="desktop-settings.css?v=101layouts" />
   <link rel="stylesheet" href="media-layout.css?v=098desktop016" />
-  <link rel="stylesheet" href="messenger.css?v=099desktop017" />
+  <link rel="stylesheet" href="messenger.css?v=101layouts" />
   <link rel="stylesheet" href="call-scene.css?v=098desktop016" />
   <link rel="stylesheet" href="court.css?v=100court" />
+  <link rel="stylesheet" href="chat-moderation.css?v=101layouts" />
+  <link rel="stylesheet" href="app-layout.css?v=101layouts" />
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -35,7 +37,6 @@
     <header class="portal-header">
       <button id="portalBrandBtn" class="portal-brand" type="button" aria-label="Início M&N"><span class="portal-brand-mark">✦</span><strong>M&N</strong></button>
       <nav class="portal-nav" aria-label="Navegação principal">
-        <button class="portal-nav-btn active" data-portal-target="home">Início</button>
         <button class="portal-nav-btn" data-portal-target="voice">Chat de Voz</button>
         <button class="portal-nav-btn" data-portal-target="game">A Lei do Trono</button>
       </nav>
@@ -184,7 +185,7 @@
       </div>
     </header>
     <nav class="mn-channel-sidebar" aria-label="Canais M&N">
-      <div class="mn-sidebar-heading"><div><strong>M&amp;N</strong><small>Seu ponto de encontro.</small></div><button id="createChannelBtn" class="channel-add hidden" type="button" aria-label="Criar ou excluir canais" title="Gerenciar canais">+</button></div>
+      <div class="mn-sidebar-heading"><div><button id="channelHomeBtn" class="channel-home" type="button" aria-label="M&N · Ir para o início">M&amp;N</button><small>Seu ponto de encontro.</small></div><button id="createChannelBtn" class="channel-add hidden" type="button" aria-label="Criar ou excluir canais" title="Gerenciar canais">+</button></div>
       <div class="mn-sidebar-scroll">
       <div class="mn-sidebar-label">TEXTO</div>
       <div id="textChannelList" class="mn-channel-list"><small class="channel-empty">Carregando…</small></div>
@@ -407,7 +408,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.8-Windows.exe" download="MN-Trono-0.1.8-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="/downloads/MN-Trono-0.1.9-Windows.exe" download="MN-Trono-0.1.9-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -452,7 +453,13 @@
       <div class="profile-photo-label"><label for="profilePhoto">Usar uma foto</label><button id="profilePhotoChoose" class="small-btn" type="button">Escolher foto</button><input id="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><small>Até 10 MB. Recorte central automático em 256 × 256 pixels.</small></div>
       <p id="profileMessage" role="status" aria-live="polite"></p><button id="profileSave" class="royal-btn primary" type="submit">Salvar perfil</button>
     </form>
-    <section class="profile-appearance" aria-labelledby="profileAppearanceTitle"><h3 id="profileAppearanceTitle">Aparência</h3><fieldset class="theme-picker"><legend>Cores do tema</legend>
+    <section class="profile-appearance" aria-labelledby="profileAppearanceTitle"><h3 id="profileAppearanceTitle">Aparência</h3>
+      <fieldset class="app-layout-picker"><legend>Disposição do aplicativo</legend>
+        <label class="app-layout-option"><input type="radio" name="appLayout" value="original"><span class="layout-preview layout-preview-original" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>Original / Padrão</strong><small>Visual original, com os controles na barra inferior.</small></label>
+        <label class="app-layout-option"><input type="radio" name="appLayout" value="discord"><span class="layout-preview layout-preview-discord" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>Discord</strong><small>Canais à esquerda, conversa ao centro e seu perfil no canto inferior.</small></label>
+      </fieldset>
+      <p class="appearance-help">A disposição fica salva apenas para você neste aparelho. Você pode trocar durante a chamada.</p><p id="appLayoutStatus" class="appearance-help" role="status"></p>
+      <fieldset class="theme-picker"><legend>Cores do tema</legend>
       <label class="theme-option" style="--swatch:#a99cff"><input type="radio" name="profileTheme" value="purple"><span class="theme-swatch" aria-hidden="true"></span><span>Roxo · padrão</span></label>
       <label class="theme-option" style="--swatch:#69d29b"><input type="radio" name="profileTheme" value="green"><span class="theme-swatch" aria-hidden="true"></span><span>Verde e preto</span></label>
       <label class="theme-option" style="--swatch:#f47b85"><input type="radio" name="profileTheme" value="red"><span class="theme-swatch" aria-hidden="true"></span><span>Preto e vermelho</span></label>
@@ -529,23 +536,23 @@
     <div class="media-focus-selection"><div id="mediaFocusPicker"></div><output id="mediaFocusCount">0 de 6 pessoas</output></div><div id="mediaFocusGrid" class="media-focus-grid"></div>
   </dialog>
   <script src="audio.js?v=095desktop013"></script>
-  <script src="network.js?v=100court"></script>
+  <script src="network.js?v=101layouts"></script>
   <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
   <script src="avatar-icons.js?v=091sharingclips"></script>
-  <script src="profile-files.js?v=095desktop013"></script>
+  <script src="profile-files.js?v=101layouts"></script>
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
   <script src="personal-prefs.js?v=099desktop017"></script>
   <script src="call-stability.js?v=099desktop017"></script>
-  <script src="social.js?v=100court"></script>
+  <script src="social.js?v=101layouts"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
   <script src="clip-desktop.js?v=095desktop013"></script>
   <script src="game-rules.js?v=100court"></script>
-  <script src="game.js?v=100court"></script>
+  <script src="game.js?v=101layouts"></script>
   <script src="portal.js?v=100court"></script>
   <script src="community.js?v=099desktop017"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
@@ -553,12 +560,13 @@
   <script src="media-mosaic.js?v=091sharingclips"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="desktop-shell.js?v=100court"></script>
+  <script src="desktop-shell.js?v=101layouts"></script>
   <script src="desktop-settings.js?v=098desktop016"></script>
+  <script src="app-layout.js?v=101layouts"></script>
   <script src="media-layout.js?v=098desktop016"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
-  <script src="notifications.js?v=099desktop017"></script>
-  <script src="messenger.js?v=100court"></script>
+  <script src="notifications.js?v=101layouts"></script>
+  <script src="messenger.js?v=101layouts"></script>
   <script src="desktop-updates.js?v=098desktop016"></script>
 </body>
 </html>

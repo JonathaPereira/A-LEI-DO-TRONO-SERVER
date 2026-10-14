@@ -1,37 +1,38 @@
 'use strict';
 window.TronoFiles=(()=>{
- const limits={file:10_000_000,video:100_000_000},cache=new Map(),attachments=new WeakMap();
+ const limits={file:10_000_000,video:100_000_000},cache=new Map(),attachments=new WeakMap(),deletedFiles=new Set();
  const size=n=>n>=1e9?`${(n/1e9).toFixed(2)} GB`:n>=1e6?`${(n/1e6).toFixed(1)} MB`:`${Math.ceil(n/1000)} KB`;
  async function api(path,{method='GET',body}={}){
-   const token=await window.TronoAuth.getAccessToken();if(!token)throw new Error('Entre na sua conta para continuar.');
+   const account=window.TronoAuth.user?.id,token=await window.TronoAuth.getAccessToken();if(!token)throw new Error('Entre na sua conta para continuar.');if(account!==window.TronoAuth.user?.id)throw new Error('A conta mudou. Tente novamente.');
    const res=await fetch(`${window.TronoNetwork.BACKEND_HTTP}/files${path}`,{method,headers:{Authorization:`Bearer ${token}`},body,cache:'no-store',signal:AbortSignal.timeout(25000)}),data=await res.json().catch(()=>({}));
+   if(account!==window.TronoAuth.user?.id)throw new Error('A conta mudou. Tente novamente.');
    if(!res.ok)throw Object.assign(new Error(data.error?.message||'Não foi possível acessar esse arquivo.'),{code:data.error?.code});return data;
  }
- async function url(id,download=false){const key=`${id}:${download}`,old=cache.get(key);if(old&&old.expiresAt>Date.now()+30000)return old.url;const data=await api(`/${id}/url${download?'?download=1':''}`);cache.set(key,data);return data.url;}
+ async function url(id,download=false){const missing=()=>Object.assign(new Error('Arquivo excluído ou indisponível.'),{code:'FILE_NOT_FOUND'});if(deletedFiles.has(id))throw missing();const key=`${id}:${download}`,old=cache.get(key);if(old&&old.expiresAt>Date.now()+30000)return old.url;try{const data=await api(`/${id}/url${download?'?download=1':''}`);if(deletedFiles.has(id))throw missing();cache.set(key,data);return data.url;}catch(error){if(error.code==='FILE_NOT_FOUND')markDeleted(id);throw error;}}
  async function openFile(resolveURL,notice){
    if(window.TronoDesktop){try{await window.TronoDesktop.openAttachment({url:await resolveURL()});}catch(error){notice.textContent=error.message;}return;}
    const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;try{const link=await resolveURL();if(tab)tab.location=link;else notice.textContent='Permita abrir a aba para acessar o arquivo.';}catch(error){tab?.close();notice.textContent=error.message;}
  }
- async function upload(file,{kind='chat',roomId,onProgress,signal}={}){
+ async function upload(file,{kind='chat',roomId,peerId,onProgress,signal}={}){
    const video=/\.(mp4|webm)$/i.test(file.name),max=kind==='soundboard'?2_880_044:kind==='avatar'?1_000_000:video?limits.video:limits.file;
    if(!file.size||file.size>max)throw new Error(`Limite: ${size(max)} ${video?'por vídeo':'por arquivo'}.`);
-   const token=await window.TronoAuth.getAccessToken();if(!token)throw new Error('Entre na sua conta.');
+   const account=window.TronoAuth.user?.id,token=await window.TronoAuth.getAccessToken();if(!token)throw new Error('Entre na sua conta.');if(account!==window.TronoAuth.user?.id)throw new Error('A conta mudou. Tente novamente.');
    return new Promise((resolve,reject)=>{
      const xhr=new XMLHttpRequest();xhr.open('POST',`${window.TronoNetwork.BACKEND_HTTP}/files/upload`);xhr.timeout=300000;
-     xhr.setRequestHeader('Authorization',`Bearer ${token}`);xhr.setRequestHeader('Content-Type','application/octet-stream');xhr.setRequestHeader('X-File-Name',encodeURIComponent(file.name));xhr.setRequestHeader('X-File-Kind',kind);if(roomId)xhr.setRequestHeader('X-Room-Id',roomId);
+     xhr.setRequestHeader('Authorization',`Bearer ${token}`);xhr.setRequestHeader('Content-Type','application/octet-stream');xhr.setRequestHeader('X-File-Name',encodeURIComponent(file.name));xhr.setRequestHeader('X-File-Kind',kind);if(roomId)xhr.setRequestHeader('X-Room-Id',roomId);if(peerId)xhr.setRequestHeader('X-Peer-Id',peerId);
      const abort=()=>xhr.abort();signal?.addEventListener('abort',abort,{once:true});
      const done=fn=>{signal?.removeEventListener('abort',abort);fn();};
      xhr.upload.onprogress=e=>{if(e.lengthComputable)onProgress?.(Math.round(e.loaded/e.total*100));};
-     xhr.onload=()=>done(()=>{let data={};try{data=JSON.parse(xhr.responseText);}catch{}if(xhr.status>=200&&xhr.status<300)resolve(data.file);else reject(new Error(data.error?.message||'Falha ao enviar o arquivo.'));});
+     xhr.onload=()=>done(()=>{if(account!==window.TronoAuth.user?.id){reject(new Error('A conta mudou. Tente novamente.'));return;}let data={};try{data=JSON.parse(xhr.responseText);}catch{}if(xhr.status>=200&&xhr.status<300)resolve(data.file);else reject(new Error(data.error?.message||'Falha ao enviar o arquivo.'));});
      xhr.onerror=()=>done(()=>reject(new Error('Conexão interrompida durante o envio.')));xhr.ontimeout=()=>done(()=>reject(new Error('Envio demorou demais. Tente novamente.')));xhr.onabort=()=>done(()=>reject(new Error('Envio cancelado.')));
-     if(signal?.aborted)return abort();xhr.send(file);
+     if(signal?.aborted){done(()=>reject(new Error('Envio cancelado.')));return;}xhr.send(file);
    });
  }
  function invalidate(id){for(const key of cache.keys())if(key.startsWith(`${id}:`))cache.delete(key);}
- function markDeleted(id){invalidate(id);for(const el of document.querySelectorAll('[data-attachment]'))if(el.dataset.attachment===id){const file=attachments.get(el);if(file)file.deleted=true;el.replaceChildren(document.createTextNode('Arquivo excluído.'));}}
+ function markDeleted(id){deletedFiles.add(id);invalidate(id);for(const el of document.querySelectorAll('[data-attachment]'))if(el.dataset.attachment===id){const record=attachments.get(el);if(record)record.file.deleted=true;el.replaceChildren(document.createTextNode('Arquivo excluído.'));}}
  async function remove(id){await api(`/${id}`,{method:'DELETE'});markDeleted(id);}
- function renderAttachment(host,file){
-   attachments.set(host,file);host.replaceChildren();
+ function renderAttachment(host,file,{private:privateMessage=false}={}){
+   if(deletedFiles.has(file.id))file.deleted=true;attachments.set(host,{file,privateMessage});host.replaceChildren();
    host.dataset.attachment=file.id;
    const label=document.createElement('button');label.type='button';label.className='file-download';label.textContent=`${file.name} · ${size(file.bytes)} ↓`;host.appendChild(label);
    const notice=document.createElement('small');host.appendChild(notice);
@@ -45,10 +46,10 @@ window.TronoFiles=(()=>{
    }else if(file.mime==='application/pdf'){
      const open=document.createElement('button');open.type='button';open.className='file-preview';open.textContent='▤ Abrir PDF';host.prepend(open);open.onclick=()=>void openFile(()=>url(file.id),notice);
    }
-   if(file.ownerId===window.TronoAuth.user?.id||window.TronoAuth.user?.permissions?.moderateFiles){const del=document.createElement('button');del.type='button';del.className='file-delete';del.textContent=file.ownerId===window.TronoAuth.user?.id?'Excluir anexo':'Moderar: excluir';host.appendChild(del);del.onclick=async()=>{if(!confirm('Excluir este anexo para todos no canal?'))return;del.disabled=true;try{await remove(file.id);host.replaceChildren(document.createTextNode('Arquivo excluído.'));}catch(e){notice.textContent=e.message;del.disabled=false;}};}
+   if(file.ownerId===window.TronoAuth.user?.id||(!privateMessage&&file.kind!=='direct'&&window.TronoAuth.user?.permissions?.moderateFiles)){const del=document.createElement('button');del.type='button';del.className='file-delete';del.textContent=file.ownerId===window.TronoAuth.user?.id?'Excluir anexo':'Moderar: excluir';host.appendChild(del);del.onclick=async()=>{if(!confirm(privateMessage||file.kind==='direct'?'Excluir este anexo da conversa privada?':'Excluir este anexo para todos no canal?'))return;del.disabled=true;try{await remove(file.id);host.replaceChildren(document.createTextNode('Arquivo excluído.'));}catch(e){notice.textContent=e.message;del.disabled=false;}};}
  }
- let cacheUser=null;window.addEventListener('trono-auth-change',e=>{const id=e.detail.user?.id;if(id!==cacheUser){cache.clear();cacheUser=id;}});
- window.addEventListener('trono-role-change',()=>{for(const host of document.querySelectorAll('[data-attachment]')){const file=attachments.get(host);if(file)renderAttachment(host,file);}});
+ let cacheUser=null;window.addEventListener('trono-auth-change',e=>{const id=e.detail.user?.id;if(id!==cacheUser){cache.clear();deletedFiles.clear();cacheUser=id;}});
+ window.addEventListener('trono-role-change',()=>{for(const host of document.querySelectorAll('[data-attachment]')){const record=attachments.get(host);if(record)renderAttachment(host,record.file,{private:record.privateMessage});}});
  window.TronoNetwork.onMessage(m=>{if(m.type==='attachment-deleted')markDeleted(m.id);});
  return {api,upload,url,remove,size,renderAttachment,limits,openFile};
 })();
