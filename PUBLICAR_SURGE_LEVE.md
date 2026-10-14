@@ -39,3 +39,12 @@ O atualizador continua consultando o pequeno manifesto no Surge e busca o EXE no
 Cada pacote leve identifica seu EXE em TAMANHO-E-DOWNLOAD.json. Se a versão já estiver publicada, o empacotador reutiliza o instalador público e verifica o SHA-256 do GitHub antes de gerar o SHA-512 do atualizador. Isso evita trocar os bytes de uma mesma versão ao recompilar. Publique esse EXE na tag da versão antes de enviar o frontend. O manifesto precisa corresponder exatamente aos bytes do instalador. Não substitua um EXE por outro enquanto o manifesto antigo estiver em uso.
 
 O workflow Windows full app passa a gerar o site leve. O workflow Lightweight Surge package permite reaproveitar um instalador já aprovado sem recompilar o aplicativo; informe o ID da execução que contém MN-Trono-Windows-x64 da versão atual. Publicar o site continua sendo uma ação separada no Surge.
+
+
+## Retenção: versão atual e uma anterior
+
+O repositório público de downloads conserva os instaladores das duas versões estáveis mais recentes. Ao publicar a próxima, o workflow de limpeza remove o EXE e blockmap de versões mais antigas. As notas de lançamento, pequenas, continuam como histórico.
+
+Nos GitHub Actions do projeto, a limpeza mantém um instalador por versão e um pacote leve/validação por versão, para as duas versões numéricas mais recentes. Cópias repetidas, pacotes pesados antigos e versões anteriores são removidos. O instalador aprovado da execução 38570134416 fica protegido enquanto 0.1.11 estiver entre essas duas versões. Builds de outros aplicativos e artefatos cuja versão não pôde ser identificada ficam preservados.
+
+O pacote do Surge não inclui nenhum EXE e omite as instruções antigas do frontend. Fora da pasta frontend ficam os guias Windows atual (0.1.11) e anterior (0.1.10). Extraia o pacote em uma pasta nova: extrair sobre a pasta antiga não apaga arquivos que já estavam no seu PC. Os EXEs antigos da pasta local podem ser apagados depois de conferir o backup desejado; a .surgeignore impede seu envio acidental ao Surge.

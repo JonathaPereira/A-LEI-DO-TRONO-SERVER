@@ -1,12 +1,9 @@
-CHAT M&N / A LEI DO TRONO v0.7.8-alpha
+M&N · A Lei do Trono e Azul
+Windows atual: 0.1.11 · anterior: 0.1.10
+Backend: 0.10.0-alpha · regras de A Lei do Trono: 0.9.0
 
-Esta versão inclui cadastro, login e recuperação de senha.
-Antes de publicar, siga CONFIGURAR_LOGIN_v0.7.8.md e configure Supabase, SMTP e o backend do Render.
-Publique todos os arquivos desta pasta, inclusive auth.js, auth-boot.js e auth.css.
-As credenciais Supabase/SMTP não ficam no frontend.
-O domínio próprio pode ser configurado depois.
-
-CHAT M&N / A LEI DO TRONO — FRONTEND v0.7.7-alpha
-Backend esperado: v0.7.7-alpha.
-Leia LEIA_ME_v0.7.7.txt para instalação e correções de reprodução de voz e abertura da stream.
-Publique o diretório inteiro, incluindo audio.js. Todos devem recarregar com Ctrl+F5 e entrar novamente na voz.
+Publique o frontend do artefato MN-Trono-Site-Leve no Surge.
+O instalador Windows fica em GitHub Releases, no repositório MN-Trono-Downloads.
+Mantenha downloads/latest.yml: o app usa esse arquivo para atualizar internamente.
+Os guias PUBLICAR_SURGE_LEVE.md e ATUALIZAR_WINDOWS ficam fora desta pasta.
+As credenciais de Supabase/SMTP/R2 permanecem no backend.

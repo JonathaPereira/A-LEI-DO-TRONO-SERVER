@@ -2,7 +2,7 @@ name: Lightweight Surge package
 on:
   push:
     branches: ['codex/surge-*']
-    paths: ['desktop/scripts/**', 'frontend/.surgeignore', 'frontend/index.html', 'tests/site-package.js', 'PUBLICAR_SURGE_LEVE.md', '.github/workflows/surge-package.yml']
+    paths: ['desktop/scripts/**', 'frontend/.surgeignore', 'frontend/index.html', 'tests/site-package.js', 'tests/download-retention.js', 'PUBLICAR_SURGE_LEVE.md', '.github/workflows/surge-package.yml']
   workflow_dispatch:
     inputs:
       source_run:
@@ -11,7 +11,7 @@ on:
         default: '38570134416'
 permissions:
   contents: read
-  actions: read
+  actions: write
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -24,19 +24,33 @@ jobs:
         with:
           node-version: '24'
       - name: Test site size, installer separation and update manifest
-        run: node --test tests/site-package.js
+        run: node --test tests/site-package.js tests/download-retention.js
+      - name: Check for the already-published installer
+        id: published
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {version}=require('./desktop/app/package.json');
+            try {
+              const {data}=await github.rest.repos.getReleaseByTag({owner:'JonathaPereira',repo:'MN-Trono-Downloads',tag:'v'+version});
+              core.setOutput('exists',data.assets.some(a=>a.name==='MN-Trono-'+version+'-Windows.exe'&&a.state==='uploaded'));
+            } catch(error) {if(error.status!==404)throw error;core.setOutput('exists',false);}
       - uses: actions/download-artifact@v4
+        if: steps.published.outputs.exists != 'true'
         with:
           name: MN-Trono-Windows-x64
           github-token: ${{ github.token }}
           run-id: ${{ inputs.source_run || '38570134416' }}
           path: artifacts/approved-installer
-      - name: Package the exact already-validated Windows installer
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Restore the approved installer if not published yet
+        if: steps.published.outputs.exists != 'true'
         shell: bash
         run: |
           node -e "const fs=require('fs'),p=require('./desktop/app/package.json');const filename='MN-Trono-'+p.version+'-Windows.exe';fs.mkdirSync('artifacts/windows-app',{recursive:true});fs.copyFileSync('artifacts/approved-installer/'+filename,'artifacts/windows-app/'+filename);"
+      - name: Package the validated installer and lightweight frontend
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
           node desktop/scripts/prepare-downloads.cjs
           node -e "const fs=require('fs');const report=JSON.parse(fs.readFileSync('artifacts/site-download/TAMANHO-E-DOWNLOAD.json'));console.log('::notice title=Package size and installer identity::'+JSON.stringify(report));"
       - uses: actions/upload-artifact@v4
@@ -44,8 +58,9 @@ jobs:
           name: MN-Trono-Site-Leve
           path: artifacts/site-download/
           retention-days: 30
-      - uses: actions/upload-artifact@v4
+      - name: Retain only current and previous distribution artifacts
+        uses: actions/github-script@v7
         with:
-          name: MN-Trono-Windows-x64
-          path: artifacts/windows-download/
-          retention-days: 30
+          script: |
+            const {cleanArtifacts}=require('./desktop/scripts/download-retention.cjs');
+            await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});

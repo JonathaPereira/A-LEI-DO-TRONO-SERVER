@@ -14,7 +14,7 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   await fs.copyFile(source,path.join(direct,filename));await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-WINDOWS.txt'),path.join(direct,'LEIA-ME-WINDOWS.txt'));
   const frontend=path.join(site,'frontend');await fs.cp(path.join(root,'frontend'),frontend,{recursive:true,filter:input=>{
     const relative=path.relative(path.join(root,'frontend'),input),parts=relative.split(path.sep);
-    return !parts.includes('downloads')&&!parts.includes('node_modules')&&!/\.(exe|zip|tar|tgz)$/i.test(relative)&&relative!==path.join('manual','A_Lei_do_Trono_Manual_v0.4_Edicao_Visual.pdf');
+    return !parts.includes('downloads')&&!parts.includes('node_modules')&&!/^(LEIA_ME_v|ATUALIZAR_v|AUDITORIA_PLAYTEST_v)/.test(relative)&&!/\.(exe|zip|tar|tgz)$/i.test(relative)&&relative!==path.join('manual','A_Lei_do_Trono_Manual_v0.4_Edicao_Visual.pdf');
   }});
   const downloads=path.join(frontend,'downloads');await fs.mkdir(downloads,{recursive:true});
   // Existing apps keep the original Surge feed. GenericProvider supports an
@@ -26,6 +26,7 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-PUBLICAR.txt'),path.join(site,'LEIA-ME-PUBLICAR.txt'));
   await fs.copyFile(path.join(root,'PUBLICAR_SURGE_LEVE.md'),path.join(site,'PUBLICAR_SURGE_LEVE.md'));
   await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.11.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.11.md'));
+  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.10.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.10.md'));
   await fs.copyFile(path.join(root,'supabase/upgrade-azul.sql'),path.join(site,'upgrade-azul.sql'));
   const files=await filesIn(frontend),siteBytes=files.reduce((sum,f)=>sum+f.size,0);
   if(files.some(f=>/\.(exe|zip|tar|tgz)$/i.test(f.file))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 50 MiB ou contém instaladores/arquivos compactados.');
