@@ -73,7 +73,7 @@ window.TronoLoveLetter=(()=>{
   const unseen=s.private.filter(p=>p.revision>seenPrivate);if(unseen.length&&visible()){seenPrivate=Math.max(...s.private.map(p=>p.revision));showPrivate();}if(s.round!==before?.state?.round)seenPrivate=0;
  }
  function fullscreenState(){const active=document.fullscreenElement===$('loveLetterScreen')||immersive;$('loveLetterFullscreen').textContent=active?'Sair da tela cheia':'Tela cheia';$('loveLetterFullscreen').setAttribute('aria-pressed',String(active));}
- async function exitFullscreen(){immersive=false;$('loveLetterScreen').classList.remove('ll-immersive');if(document.fullscreenElement===$('loveLetterScreen'))await document.exitFullscreen().catch(()=>{});fullscreenState();}
+ async function exitFullscreen(){if(immersive){immersive=false;$('loveLetterScreen').classList.remove('ll-immersive');}if(document.fullscreenElement===$('loveLetterScreen'))await document.exitFullscreen().catch(()=>{});fullscreenState();}
  window.addEventListener('DOMContentLoaded',()=>{
   $('playLoveLetter').onclick=open;$('loveLetterBack').onclick=()=>window.TronoGames.openLibrary();$('loveLetterRulesButton').onclick=()=>$('loveLetterRulesDialog').showModal();
   for(const id of ['loveLetterPlayDialog','loveLetterRulesDialog','loveLetterPrivateDialog'])$(id).querySelector('[data-close]').onclick=dismiss;

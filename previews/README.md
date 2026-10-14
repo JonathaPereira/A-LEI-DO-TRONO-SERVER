@@ -1,3 +1,16 @@
+# Windows 0.1.17 · Love Letter e Splendor
+
+Capturas da interface real, com chamada, câmera e compartilhamento ativos. Dados e decisões vêm do backend de teste autenticado. As ilustrações são originais; o conceito de Love Letter foi convertido em HTML/CSS funcional.
+
+- [Love Letter · quatro participantes](LOVE-LETTER-MESA-0.1.17.png)
+- [Love Letter · monitor vertical](LOVE-LETTER-VERTICAL-0.1.17.png)
+- [Love Letter · 720p](LOVE-LETTER-COMPACTO-0.1.17.png)
+- [Love Letter · seis participantes](LOVE-LETTER-SEIS-0.1.17.png)
+- [Splendor · nova arte e mesa](SPLENDOR-MESA-0.1.17.png)
+- [Splendor · vertical](SPLENDOR-VERTICAL-0.1.17.png)
+
+Os PNGs desta pasta são referências e originais de arte; não entram no pacote do site/aplicativo.
+
 # Jogos · Windows e site 0.1.16
 
 Prévia real do catálogo e Splendor com a chamada ativa. Capturas dos testes do navegador; o executável compilado também é verificado no Windows.
