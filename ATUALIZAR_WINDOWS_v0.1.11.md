@@ -10,10 +10,12 @@
 
 ## Publicação, nesta ordem
 
+**Correção de tamanho:** siga [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md) para hospedar o EXE no GitHub Releases e publicar **MN-Trono-Site-Leve** no Surge. O site conserva downloads/latest.yml; o instalador fica no endereço público indicado pelo manifesto.
+
 1. No GitHub, faça merge do PR quando o workflow Windows full app estiver verde. O Git recebe os arquivos do backend, frontend, testes e SQL; os instaladores são gerados pelo workflow.
 2. No **Supabase → SQL Editor → New query**, cole todo o arquivo **supabase/upgrade-azul.sql** e clique Run. O arquivo pressupõe profiles/schema.sql já existente. Pode repetir esta migração sem apagar recordes. Não é necessário repetir os SQL anteriores já aplicados. Nenhuma chave precisa ser colada no frontend.
 3. No Render, publique a branch main do backend com Build Command npm install e Start Command npm start. Preserve as variáveis atuais de Supabase, R2, Realtime e autenticação. O ranking usa SUPABASE_SECRET_KEY ou SUPABASE_SERVICE_ROLE_KEY existente, apenas no backend. Confira /health: version 0.10.0-alpha e features.azul true.
-4. Baixe **MN-Trono-Site-com-Desktop** na execução verde do workflow. Extraia o pacote. Ele inclui este guia, upgrade-azul.sql e a pasta frontend completa com downloads/, latest.yml e manual/.
+4. Baixe **MN-Trono-Site-Leve** na execução verde do workflow. Extraia o pacote. Ele inclui este guia, upgrade-azul.sql e a pasta frontend completa com downloads/latest.yml e manual/, sem o EXE.
 5. No Git Bash entre na pasta frontend extraída e publique:
 
    ```bash
@@ -21,9 +23,9 @@
    npx surge . a-lei-do-trono.surge.sh
    ```
 
-6. Confira https://a-lei-do-trono.surge.sh/downloads/latest.yml: version: 0.1.11 e MN-Trono-0.1.11-Windows.exe. O aplicativo já instalado recebe a atualização pelo canal interno. Clique na versão no rodapé e reinicie quando puder encerrar a chamada. Não precisa reinstalar nem apagar dados.
+6. Confira https://a-lei-do-trono.surge.sh/downloads/latest.yml: version: 0.1.11 e o link para MN-Trono-0.1.11-Windows.exe no repositório público de downloads. O aplicativo já instalado recebe a atualização pelo canal interno. Clique na versão no rodapé e reinicie quando puder encerrar a chamada. Não precisa reinstalar nem apagar dados.
 
-Use o frontend completo do artefato: o ZIP do código-fonte não contém o instalador. A sequência SQL → backend → site permite que o app antigo continue usando as funções anteriores enquanto as novas entram.
+Use o frontend completo do artefato: o instalador deve estar publicado separadamente no GitHub Releases. A sequência SQL → backend → site permite que o app antigo continue usando as funções anteriores enquanto as novas entram.
 
 ## Onde ficam os dados
 
