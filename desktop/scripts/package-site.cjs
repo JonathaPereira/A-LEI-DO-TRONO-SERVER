@@ -31,7 +31,7 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   const guides=(await fs.readdir(root)).map(name=>({name,version:/^ATUALIZAR_WINDOWS_v(\d+\.\d+\.\d+)\.md$/.exec(name)?.[1]})).filter(g=>g.version&&compare(g.version,version)<=0).sort((a,b)=>compare(b.version,a.version)).slice(0,2);
   if(guides[0]?.version!==version)throw Error('Guia de publicação da versão atual não encontrado.');
   for(const guide of guides)await fs.copyFile(path.join(root,guide.name),path.join(site,guide.name));
-  await fs.copyFile(path.join(root,'supabase/upgrade-azul.sql'),path.join(site,'upgrade-azul.sql'));
+  for(const file of ['upgrade-azul.sql','upgrade-splendor.sql'])await fs.copyFile(path.join(root,'supabase',file),path.join(site,file));
   const files=await filesIn(frontend),siteBytes=files.reduce((sum,f)=>sum+f.size,0);
   if(files.some(f=>/\.(zip|tar|tgz)$/i.test(f.file)||(/\.exe$/i.test(f.file)&&path.relative(frontend,f.file)!==path.join('downloads',filename)))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados.');
   const rogueliteBytes=files.filter(f=>path.relative(frontend,f.file).split(path.sep)[0]==='roguelite').reduce((sum,f)=>sum+f.size,0);

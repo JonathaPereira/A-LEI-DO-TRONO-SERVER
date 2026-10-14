@@ -4,7 +4,7 @@ const http=require('http'),crypto=require('crypto'),path=require('path'),{spawn}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false,soundboard=false,directAttachments=false,gameDecree=null}={}){
   const users=new Map(),access=new Map(),refresh=new Map(),links=new Map(),chatMessages=new Map(),historyState={fail:false};let backend;
-  const azulRecords=new Map();
+  const azulRecords=new Map(),splendorRecords=new Map();
   const channels=new Map([['chat-livre','Geral'],['chat-jogos','Jogos'],['chat-conversa','Conversa']].map(([id,name])=>[id,{id,name,description:'',channel_type:'mixed'}]));
   const socialLinks=new Map(),directMessages=new Map(),readCursors=new Map(),files=new Map();
   const role=u=>u.email_confirmed_at&&u.email.toLowerCase()==='jonathapereira.jj@gmail.com'?'creator':u.community_role||'member';
@@ -47,6 +47,14 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     if(url.pathname==='/rest/v1/rpc/azul_top_five'){
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('FORBIDDEN',403);
       const best=new Map();for(const m of azulRecords.values())for(const p of m.p_players){const u=[...users.values()].find(u=>u.id===p.id),r={playerId:p.id,name:u?.nickname,score:p.score,rows:p.rows,mode:m.p_mode,date:'2026-10-14T12:00:00Z'};if(!best.has(p.id)||best.get(p.id).score<r.score)best.set(p.id,r);}return reply(200,[...best.values()].sort((a,b)=>b.score-a.score||b.rows-a.rows).slice(0,5));
+    }
+    if(url.pathname==='/rest/v1/rpc/splendor_record_match'){
+      if(req.headers.apikey!=='sb_secret_fixture_only')return fail('FORBIDDEN',403);
+      if(!splendorRecords.has(body.p_match))splendorRecords.set(body.p_match,body);return reply(200,{saved:true});
+    }
+    if(url.pathname==='/rest/v1/rpc/splendor_top_five'){
+      if(req.headers.apikey!=='sb_secret_fixture_only')return fail('FORBIDDEN',403);
+      const best=new Map();for(const m of splendorRecords.values())for(const p of m.p_players){const u=[...users.values()].find(u=>u.id===p.id),r={playerId:p.id,name:u?.nickname,score:p.score,cards:p.cards,mode:m.p_mode,date:'2026-10-14T12:00:00Z'};const old=best.get(p.id);if(!old||old.score<r.score||old.score===r.score&&old.cards>r.cards)best.set(p.id,r);}return reply(200,[...best.values()].sort((a,b)=>b.score-a.score||a.cards-b.cards).slice(0,5));
     }
     if(url.pathname==='/rest/v1/rpc/chat_member_directory'){
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
@@ -157,6 +165,6 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
   }
   async function stop(){await stopBackend();await new Promise(resolve=>provider.close(resolve));}
   async function restart(){await stopBackend();await boot();}
-  return {base,call,users,links,stop,restart,azulRecords,chatMessages,historyState,appOrigin,soundId,files,directMessages,socialLinks};
+  return {base,call,users,links,stop,restart,azulRecords,splendorRecords,chatMessages,historyState,appOrigin,soundId,files,directMessages,socialLinks};
 }
 module.exports={startFixture};

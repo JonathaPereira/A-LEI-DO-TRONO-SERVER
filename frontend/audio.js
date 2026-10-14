@@ -130,7 +130,15 @@ function scheduleTavernBar(){
 function playSfx(kind){
   if(!sfxEnabled||!audioCtx||audioCtx.state!=='running'||!sfxMaster) return;
   const t=audioCtx.currentTime+.01;
-  if(kind==='azul-pick'){
+  if(kind==='splendor-card'){
+    noiseHit(t,.09,.045,sfxMaster,2200);noiseHit(t+.07,.07,.03,sfxMaster,1500);tone(190,t+.04,.12,.018,'triangle',sfxMaster,.005,900);
+  }else if(kind==='splendor-chip'){
+    tone(1580,t,.12,.035,'sine',sfxMaster,.002,3600);tone(2250,t+.045,.16,.025,'sine',sfxMaster,.002,4200);noiseHit(t,.035,.014,sfxMaster,2700);
+  }else if(kind==='splendor-score'){
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,t+i*.11,.45,.032,'sine',sfxMaster,.006,3600));
+  }else if(kind==='splendor-noble'){
+    [392,493.88,587.33,783.99].forEach((f,i)=>tone(f,t+i*.13,.65,.035,'triangle',sfxMaster,.015,2600));
+  }else if(kind==='azul-pick'){
     // Short original ceramic taps, routed through the existing effects bus.
     tone(1840,t,.11,.045,'sine',sfxMaster,.002,4200);tone(2460,t+.025,.09,.018,'sine',sfxMaster,.002,4800);
   }else if(kind==='azul-place'){

@@ -1,8 +1,8 @@
-M&N — frontend com somente o instalador atual · Windows 0.1.15
+M&N — frontend com somente o instalador atual · Windows 0.1.16
 
-1. Baixe MN-Trono-Frontend-0.1.15.zip na entrega privada indicada no PR.
+1. Baixe MN-Trono-Frontend-0.1.16.zip na entrega privada indicada no PR.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.1.15-Windows.exe
+   MN-Trono-0.1.16-Windows.exe
    latest.yml
 3. Entre na pasta frontend pelo Git Bash e execute:
    npx surge . a-lei-do-trono.surge.sh
