@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),express=require('express'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
 test('Cinzas v0.5 runs inside both layouts without disconnecting media; hidden game stops rendering and horde resumes',{timeout:180000},async t=>{
- const server=await new Promise(r=>{const s=express().use(express.static(path.resolve('frontend'))).listen(0,'127.0.0.1',()=>r(s));}),origin='http://127.0.0.1:'+server.address().port,f=await startFixture({port:10851,appOrigin:origin});let browser;
+ const server=await new Promise(r=>{const s=express().use((req,res,next)=>{res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'");next();}).use(express.static(path.resolve('frontend'))).listen(0,'127.0.0.1',()=>r(s));}),origin='http://127.0.0.1:'+server.address().port,f=await startFixture({port:10851,appOrigin:origin});let browser;
  try{
   await fs.mkdir('artifacts/cinzas',{recursive:true});browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio','--autoplay-policy=no-user-gesture-required']});
   for(const native of [true,false])await t.test(native?'Windows integration':'Website integration',async()=>{
