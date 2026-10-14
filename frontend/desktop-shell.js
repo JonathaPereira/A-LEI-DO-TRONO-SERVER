@@ -23,7 +23,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   effects.classList.remove('soundboard-toggle');effects.classList.add('desktop-effects-button');
   effects.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9v6m4-9v12m5-16v20m5-16v12m4-9v6"/></svg><span>Efeitos</span>';
   rail.insertBefore(effects,rail.querySelector('[data-desktop-route="clips"]'));
-  function positionEffects(){if(effectsMenu.hidden)return;const boundsTop=$('desktopTopBar').getBoundingClientRect().bottom+12,boundsBottom=$('desktopCallDock').getBoundingClientRect().top-12;const top=Math.max(boundsTop,Math.min(effects.getBoundingClientRect().top,boundsBottom-effectsMenu.offsetHeight));effectsMenu.style.setProperty('--desktop-effects-top',top+'px');}
+  function positionEffects(){if(effectsMenu.hidden)return;const boundsTop=$('desktopTopBar').getBoundingClientRect().bottom+12,boundsBottom=(body.dataset.appLayout==='discord'?$('layoutVoicePanel').getBoundingClientRect().top:$('desktopCallDock').getBoundingClientRect().top)-12;effectsMenu.style.setProperty('--desktop-effects-height',Math.max(120,boundsBottom-boundsTop)+'px');const top=Math.max(boundsTop,Math.min(effects.getBoundingClientRect().top,boundsBottom-effectsMenu.offsetHeight));effectsMenu.style.setProperty('--desktop-effects-top',top+'px');}
   new MutationObserver(positionEffects).observe(effectsMenu,{attributes:true,attributeFilter:['hidden']});
   new ResizeObserver(positionEffects).observe(effectsMenu);window.addEventListener('resize',positionEffects);
   const fullscreenButton=document.createElement('button');fullscreenButton.id='desktopFullscreen';fullscreenButton.type='button';fullscreenButton.title='Tela cheia · F11';

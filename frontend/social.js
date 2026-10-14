@@ -1641,7 +1641,7 @@ window.TronoSocial = (()=>{
         await leaveVoice();setStatus(err.message||'Não foi possível abrir o microfone.','error');return false;
       }
     })();
-    const tracked=joining.finally(()=>{if(voiceJoinPromise===tracked)voiceJoinPromise=null;});voiceJoinPromise=tracked;return tracked;
+    const tracked=joining.finally(()=>{if(voiceJoinPromise===tracked){voiceJoinPromise=null;updateButtons();}});voiceJoinPromise=tracked;updateButtons();return tracked;
   }
   function leaveVoice(reason='leave'){
     stability.reset();audioStatsPrev.clear();eventLoopLagMs=0;
@@ -1725,10 +1725,13 @@ window.TronoSocial = (()=>{
     $('joinVoiceBtn')?.classList.toggle('call-active',voiceJoined);
     if(m){m.disabled=!voiceJoined||deafened;m.title=deafened?'Ative o áudio da chamada para liberar o microfone.':'';}m?.classList.toggle('danger-active',micMuted);d?.classList.toggle('danger-active',deafened);c?.classList.toggle('camera-active',cameraOn);s?.classList.toggle('screen-active',screenSharing);updateNoiseButton();
     document.body.classList.toggle('call-connected',voiceJoined);
-    const textOnly=inChatHub()&&chatRoomState?.channelType==='text'&&!voiceJoined;for(const id of ['joinVoiceBtn','cameraBtn','screenShareBtn'])if($(id))$(id).disabled=textOnly||(id==='screenShareBtn'&&(!voiceJoined||!communityVoice()));
-    if(c)c.disabled=textOnly||cameraTogglePending||!!cameraRequest;
+    const eligible=!!roomState&&roomState.channelType!=='text',joining=!!voiceJoinPromise&&!voiceJoined,textOnly=inChatHub()&&chatRoomState?.channelType==='text'&&!voiceJoined&&!eligible,j=$('joinVoiceBtn');
+    if(j){j.disabled=!eligible||joining;const label=joining?'Conectando…':voiceJoined?'Sair da voz':'Entrar na voz';if(j.lastElementChild?.textContent!==label)j.innerHTML='<span class="call-icon">☎</span><span>'+label+'</span>';j.classList.toggle('call-joining',joining);}
+    if(d)d.disabled=!voiceJoined;
+    if(c)c.disabled=textOnly||joining||cameraTogglePending||!!cameraRequest||(document.body.dataset.appLayout==='discord'&&!voiceJoined);
+    for(const [button,on]of [[m,micMuted],[d,deafened],[c,cameraOn],[s,screenSharing]])button?.setAttribute('aria-pressed',String(on));
     if($('cameraInputSelect'))$('cameraInputSelect').disabled=cameraTogglePending||!!cameraRequest;
-    window.dispatchEvent(new CustomEvent('trono-call-change',{detail:{joined:voiceJoined,deafened,roomId:roomState?.id}}));
+    window.dispatchEvent(new CustomEvent('trono-call-change',{detail:{joined:voiceJoined,joining,deafened,roomId:roomState?.id}}));
   }
   async function changeInput(e){selectedInput=e.target.value||'';storage.setItem('tronoVoiceInput',selectedInput);if(voiceJoined){try{await acquireMic();await watchStream(meId(),localStream);setStatus('Microfone alterado.','ok');}catch(err){setStatus('Não foi possível trocar o microfone.','error');}}}
   async function changeOutput(e){selectedOutput=e.target.value||'';lastOutputError='';storage.setItem('tronoVoiceOutput',selectedOutput);for(const a of remoteAudio.values())await applyOutput(a);const ctx=ensureMediaAudioContext();if(ctx?.setSinkId)try{await ctx.setSinkId(selectedOutput);}catch{lastOutputError='Não foi possível trocar a saída amplificada.';}for(const id of remoteAudio.keys())attachRemoteAudio(id);if(!lastOutputError)setStatus(selectedOutput?'Saída de áudio alterada.':'Usando saída padrão.','ok');renderTelemetry();}
@@ -1961,11 +1964,12 @@ window.TronoSocial = (()=>{
     window.addEventListener('trono-music-track',updateVoiceMusicUI);updateVoiceMusicUI();
     let previousWide=innerWidth>1000;window.addEventListener('resize',()=>{const wide=innerWidth>1000;if(previousWide&&!wide&&chatRoomState?.channelType!=='text')toggleTextChat(false);previousWide=wide;});
   }
+  window.addEventListener('trono-layout-change',updateButtons);
   window.addEventListener('DOMContentLoaded',bind);
 
   return {
     diagnostics,showPanel,showForRoom,consumeRoom,consumeChatRoom,get chatRoomState(){return chatRoomState;},joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTextChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
-    get voiceJoined(){return voiceJoined;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseMode(){return noiseSuppression?noiseEngine:"off";},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
+    get voiceJoined(){return voiceJoined;},get voiceJoining(){return !!voiceJoinPromise;},get voiceRoom(){return roomState?{id:roomState.id,name:roomState.name,kind:roomState.kind,channelType:roomState.channelType}:null;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseMode(){return noiseSuppression?noiseEngine:"off";},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
     getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},
     getLocalAudioTrack(){return localStream?.getAudioTracks?.()[0]||null;}
