@@ -1,7 +1,7 @@
 'use strict';
 const {authError}=require('./auth');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function createSocialService({auth,wss,send,rooms,now=Date.now}){
+function createSocialService({auth,wss,send,rooms,files,now=Date.now}){
   const rates=new Map();let ready=false;
   function publish(accounts,event){for(const ws of wss.clients)if(accounts.includes(ws.account?.id)&&ws.account.expiresAt>now())send(ws,event);}
   function limit(id,action){const key=id+':'+action,stamp=now();let row=rates.get(key);if(!row||row.until<stamp){row={count:0,until:stamp+60000};rates.set(key,row);}if(++row.count>(action==='send'?60:120))throw authError('SOCIAL_RATE_LIMIT','Aguarde um instante antes de tentar novamente.',429);if(rates.size>2000)for(const [key,row]of rates)if(row.until<stamp)rates.delete(key);}
@@ -21,11 +21,13 @@ function createSocialService({auth,wss,send,rooms,now=Date.now}){
     }else if(action==='mark-read'){
       await rpc('mark_read',{p_peer:uuid(input.peerId),p_message:uuid(input.messageId)});data={ok:true};publish([account.id],{type:'social-changed',kind:'read'});
     }else if(action==='send'){
-      const peer=uuid(input.peerId),id=uuid(input.id),text=typeof input.text==='string'?input.text.trim():'';
+      const peer=uuid(input.peerId),id=uuid(input.id),text=typeof input.text==='string'?input.text.trim():'',attachmentId=input.attachmentId?uuid(input.attachmentId):null;
       const room=input.roomId?rooms.get(input.roomId):null;
       if(input.roomId&&(!room||room.kind!=='chat'))throw authError('CHANNEL_NOT_FOUND','Esse canal não existe mais.',404);
-      if(!input.roomId&&(!text||[...text].length>2000))throw authError('INVALID_MESSAGE','Escreva de 1 a 2000 caracteres.');
-      data=await rpc('send',{p_peer:peer,p_id:id,p_text:text,p_room:room?.id||null});
+      if(attachmentId&&input.roomId)throw authError('INVALID_MESSAGE','Envie o anexo separado do convite.');
+      if(!input.roomId&&((!text&&!attachmentId)||[...text].length>2000))throw authError('INVALID_MESSAGE','Escreva até 2000 caracteres ou escolha um anexo.');
+      if(attachmentId){if(!files)throw authError('STORAGE_UNCONFIGURED','Anexos indisponíveis.',503);await files.directAttachment(attachmentId,account.id,peer);}
+      data=attachmentId?await rpc('send_attachment',{p_peer:peer,p_id:id,p_text:text,p_attachment:attachmentId}):await rpc('send',{p_peer:peer,p_id:id,p_text:text,p_room:room?.id||null});
       if(!data?.id||data.senderId!==account.id)throw authError('SOCIAL_UNAVAILABLE','Não foi possível confirmar a mensagem.',503);
       publish([account.id,peer],{type:'direct-message',peerId:peer,senderName:account.nickname,message:data});
     }else throw authError('INVALID_ACTION','Ação inválida.');

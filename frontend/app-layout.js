@@ -1,0 +1,71 @@
+'use strict';
+// Both arrangements use the same controls, socket and live media tracks.
+window.TronoAppLayout=(()=>{
+  const $=id=>document.getElementById(id),anchors=new Map();let current='original',bound=false,lastGame='setupScreen';
+  function move(id,host){const node=$(id);if(!node)return;if(!anchors.has(id)){const marker=document.createComment('layout:'+id);node.before(marker);anchors.set(id,marker);}host.append(node);}
+  function restore(id){const marker=anchors.get(id);if(marker?.isConnected)marker.after($(id));}
+  async function navigate(view){
+    if(window.TronoDesktopShell)return window.TronoDesktopShell.navigate(view);
+    if(view==='home'){window.TronoPortal.showOnly('portalScreen');return;}
+    if(view==='game'){
+      if(!window.TronoAuth.user&&!window.TronoAuth.guest)return window.TronoPortal.openGame();
+      if(!window.TronoNetwork.gameRoom)lastGame='setupScreen';
+      window.TronoPortal.showOnly(lastGame);window.TronoNetwork.requestRooms();return;
+    }
+    const room=window.TronoNetwork.currentRoom;
+    if(room&&window.TronoChatHub.channels.some(channel=>channel.id===room)){
+      window.TronoPortal.showOnly('chatOnlyScreen');window.TronoSocial.setChatHubMode(true);window.TronoSocial.showForRoom(true);return;
+    }
+    return window.TronoPortal.openVoice();
+  }
+  function identity(){
+    const user=window.TronoAuth.user,icon=$('layoutUserAvatar');if(!icon)return;
+    icon.innerHTML=window.TronoProfile.avatarHtml(user||{});window.TronoProfile.hydrate(icon);
+    $('layoutUserName').textContent=user?.nickname||window.TronoAuth.guest?.name||'Visitante';
+    $('layoutUserStatus').textContent=window.TronoSocial.voiceJoined?'Voz conectada':'Disponível';
+  }
+  function syncView(){
+    const gameView=['setupScreen','roomScreen','gameScreen'].find(id=>!$(id).classList.contains('hidden'));if(gameView)lastGame=gameView;
+    const body=document.body;body.dataset.layoutView=body.classList.contains('chat-only-active')?'community':!$('portalScreen').classList.contains('hidden')?'home':'game';
+    for(const button of document.querySelectorAll('#webLayoutRail [data-layout-route]')){const selected=button.dataset.layoutRoute===body.dataset.layoutView;button.classList.toggle('active',selected);if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
+  }
+  function apply(value,{save=false}={}){
+    const next=value==='discord'?'discord':'original';if(!bound)return;
+    // Reparent event-bound controls; never clone buttons or reacquire media.
+    if(next==='discord'){
+      for(const id of ['muteMicBtn','deafenVoiceBtn','voiceSettingsBtn'])move(id,$('layoutUserControls'));
+      for(const id of ['joinVoiceBtn','cameraBtn','screenShareBtn'])move(id,$('layoutCallActions'));
+      if(!window.TronoDesktop)move('voiceSettingsPanel',document.body);
+    }else for(const id of anchors.keys())restore(id);
+    current=next;document.body.dataset.appLayout=next;
+    for(const input of document.querySelectorAll('[name=appLayout]'))input.checked=input.value===next;
+    if(save){window.TronoPersonal.set('appLayout',next);$('appLayoutStatus').textContent='Layout '+(next==='discord'?'Discord':'Original / Padrão')+' aplicado.';}
+    syncView();identity();window.dispatchEvent(new CustomEvent('trono-layout-change',{detail:{layout:next}}));
+    // Let existing media/resize controllers measure their new available area.
+    window.dispatchEvent(new Event('resize'));
+  }
+  function read(){apply(window.TronoPersonal.get('appLayout','original'));}
+  function bind(){
+    const bar=document.createElement('section');bar.id='layoutUserBar';bar.setAttribute('aria-label','Seu perfil e controles de áudio');
+    bar.innerHTML='<button id="layoutProfile" type="button" title="Minha conta e aparência" aria-label="Abrir meu perfil"><span id="layoutUserAvatar" class="community-avatar"></span><span class="layout-user-copy"><strong id="layoutUserName"></strong><small id="layoutUserStatus"></small></span></button><div id="layoutUserControls"></div>';
+    const actions=document.createElement('section');actions.id='layoutCallActions';actions.setAttribute('aria-label','Chamada, câmera e compartilhamento');document.body.append(bar,actions);
+    $('layoutProfile').onclick=()=>window.TronoDesktopSettings?window.TronoDesktopSettings.open('account'):void window.TronoProfile.open();
+    for(const id of ['muteMicBtn','deafenVoiceBtn','voiceSettingsBtn']){
+      const button=$(id),label=()=>{const text=button.lastElementChild?.textContent||'';button.setAttribute('aria-label',text);button.title=text;};
+      new MutationObserver(label).observe(button,{childList:true,subtree:true,characterData:true});label();
+    }
+    if(!window.TronoDesktop){
+      const rail=document.createElement('nav');rail.id='webLayoutRail';rail.setAttribute('aria-label','Áreas M&N');
+      rail.innerHTML='<button class="layout-web-home" data-layout-route="home" type="button" aria-label="M&N · Ir para o início" title="Início">M&N</button><button data-layout-route="game" type="button" title="Jogar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 6 4 4 5-6 5 6 4-4-2 13H5z"/></svg><span>Jogar</span></button><button data-layout-route="community" type="button" title="Comunidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H8l-5 3V11a9 9 0 0 1 18 0Z"/></svg><span>Comunidade</span></button>';
+      rail.addEventListener('click',event=>{const button=event.target.closest('[data-layout-route]');if(button)void navigate(button.dataset.layoutRoute);});document.body.append(rail);
+    }
+    $('channelHomeBtn').onclick=()=>void navigate('home');
+    for(const input of document.querySelectorAll('[name=appLayout]'))input.onchange=()=>{if(input.checked)apply(input.value,{save:true});};
+    new MutationObserver(syncView).observe(document.body,{attributes:true,attributeFilter:['class','data-desktop-view']});
+    for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen'])new MutationObserver(syncView).observe($(id),{attributes:true,attributeFilter:['class']});
+    window.addEventListener('trono-auth-change',read);window.addEventListener('trono-profile-change',identity);window.addEventListener('trono-call-change',identity);
+    window.addEventListener('trono-personal-change',event=>{if(event.detail.key==='appLayout'&&window.TronoPersonal.get('appLayout','original')!==current)read();});
+    bound=true;read();void window.TronoAuth.ready.then(read);
+  }
+  window.addEventListener('DOMContentLoaded',bind);return {apply,get current(){return current;},navigate};
+})();

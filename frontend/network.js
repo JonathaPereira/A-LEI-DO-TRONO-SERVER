@@ -1,6 +1,6 @@
 'use strict';
 window.TronoNetwork = (()=>{
-  const CLIENT_VERSION='0.9.0-alpha';
+  const CLIENT_VERSION='0.9.1-alpha';
   const DEFAULT_BACKEND_HTTP='https://a-lei-do-trono-server.onrender.com';
   const normalizeHttp=url=>String(url||'').replace(/\/+$/,'');
   const isLocal=['localhost','127.0.0.1','::1'].includes(location.hostname);
@@ -122,6 +122,8 @@ window.TronoNetwork = (()=>{
     requestRooms:()=>send('list-rooms'),setReady:r=>send('ready',{ready:!!r}),startRoom:()=>send('start-room'),
     gameAction:(action,payload={})=>send('game-action',{action,payload}),requestState:()=>send('state-request'),ping:()=>send('ping'),
     requestChatHistory:before=>send('chat-history-request',{roomId:currentRoom,before}),
+    deleteChatMessage:(id,requestId)=>!!currentRoom&&send('chat-message-delete',{roomId:currentRoom,id,requestId}),
+    clearChatHistory:requestId=>!!currentRoom&&send('chat-history-clear',{roomId:currentRoom,requestId}),
     sendChat:(text,attachmentId)=>!!currentRoom&&send('chat-message',{roomId:currentRoom,text,attachmentId}),
     async prepareVoice(){if(!await ((primaryRoom||gameRoom)?.startsWith('sala-')?ensureGameIdentity():ensureAuthenticated()))throw new Error('Entre na sua conta ou como convidado do jogo.');const requestId=makeId();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingSfu.delete(requestId);reject(new Error('Não foi possível sincronizar a chamada.'));},15000);pendingSfu.set(requestId,{resolve,reject,timer});send('voice-prepare',{requestId});});},
     fallbackVoice:()=>send('voice-fallback'),

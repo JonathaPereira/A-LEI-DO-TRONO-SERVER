@@ -41,7 +41,7 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{},
       if(code==='user_already_exists'||code==='email_exists')throw authError('SIGNUP_FAILED','Não foi possível concluir o cadastro. Tente entrar ou recuperar sua senha.');
       if(code==='signup_disabled')throw authError('SIGNUP_DISABLED','Novos cadastros estão temporariamente indisponíveis.',403);
       if(path.includes('/rpc/social_')){
-        const reasons={AUTH_REQUIRED:[401,'Entre novamente na sua conta.'],FORBIDDEN:[403,'Esta conversa é privada.'],FRIEND_REQUIRED:[403,'Adicione esta pessoa aos amigos antes de enviar mensagens.'],INVALID_TARGET:[400,'Conta confirmada não encontrada.'],INVALID_MESSAGE:[400,'Mensagem inválida.'],INVALID_CURSOR:[400,'Página de mensagens inválida.'],INVALID_ACTION:[400,'Ação inválida.'],REQUEST_NOT_FOUND:[404,'Esse pedido não está mais disponível.'],CHANNEL_NOT_FOUND:[404,'Esse canal não existe mais.']};
+        const reasons={AUTH_REQUIRED:[401,'Entre novamente na sua conta.'],FORBIDDEN:[403,'Esta conversa é privada.'],FRIEND_REQUIRED:[403,'Adicione esta pessoa aos amigos antes de enviar mensagens.'],INVALID_TARGET:[400,'Conta confirmada não encontrada.'],INVALID_MESSAGE:[400,'Mensagem inválida.'],INVALID_ATTACHMENT:[400,'Esse anexo não está disponível nesta conversa.'],INVALID_CURSOR:[400,'Página de mensagens inválida.'],INVALID_ACTION:[400,'Ação inválida.'],REQUEST_NOT_FOUND:[404,'Esse pedido não está mais disponível.'],CHANNEL_NOT_FOUND:[404,'Esse canal não existe mais.']};
         const reason=Object.keys(reasons).find(k=>String(data.message||'').includes(k));
         if(reason)throw authError(reason,reasons[reason][1],reasons[reason][0]);
         throw authError('SOCIAL_UNAVAILABLE','Amigos e conversas indisponíveis. Confira a migração upgrade-social.sql.',503);
@@ -144,4 +144,4 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{},
   }
   return {required,configured,health,identity,install,allowedOrigins,tokenFrom,request:(token,path,method='GET',body)=>upstream(path,{token,method,body})};
 }
-module.exports={createAuth,passwordChecks,validPassword,validNickname,policyMessage};
+module.exports={createAuth,passwordChecks,validPassword,validNickname,policyMessage,authError};

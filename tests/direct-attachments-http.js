@@ -1,0 +1,29 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),WebSocket=require('ws');
+const {startFixture}=require('./auth-fixture');
+test('direct upload and send preserve privacy, file limits, idempotency, history and participant-only deletion notices',{timeout:40000},async()=>{
+  const f=await startFixture({port:10724,directAttachments:true}),sockets=[];
+  try{
+    const accounts=[];for(const [email,nickname] of [['ana-attachment@example.test','Ana Anexo'],['bruno-attachment@example.test','Bruno Anexo'],['Jonathapereira.jj@gmail.com','Criador Anexo']]){await f.call('signup',{email,nickname,password:'Senha12!'});await f.call('verify',{token_hash:[...f.links.keys()].at(-1),type:'signup'});accounts.push((await f.call('login',{email,password:'Senha12!'})).data);}
+    const [a,b,c]=accounts;
+    const request=async(path,account=a,{method='GET',body,headers={}}={})=>{const response=await fetch(f.base+path,{method,headers:{Origin:f.appOrigin,Authorization:'Bearer '+account.session.access_token,...headers},...(body===undefined?{}:{body})});return {status:response.status,data:await response.json(),headers:response.headers};};
+    const social=(action,body,account=a)=>request('/social/'+action,account,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'}});
+    const upload=(account=a,peer=b,body=Buffer.from('%PDF-1.7'),kind='direct')=>request('/files/upload',account,{method:'POST',body,headers:{'X-File-Kind':kind,'X-File-Name':'anexo.pdf','X-Peer-Id':peer.user.id}});
+    const open=account=>new Promise((resolve,reject)=>{const ws=new WebSocket(f.base.replace('http','ws')+'/ws'),messages=[];sockets.push(ws);ws.on('error',reject);ws.on('message',raw=>{const m=JSON.parse(raw);messages.push(m);if(m.type==='auth-result'){if(m.ok)resolve(messages);else reject(Error('Authentication failed'));}});ws.on('open',()=>ws.send(JSON.stringify({type:'authenticate',access_token:account.session.access_token})));});
+    const [eventsA,eventsB,eventsC]=await Promise.all(accounts.map(open));
+    assert.equal((await upload()).status,403);await social('friend',{peerId:b.user.id,action:'request'});assert.equal((await upload()).status,403);await social('friend',{peerId:a.user.id,action:'accept'},b);
+    const uploaded=await upload();assert.equal(uploaded.status,200);const file=uploaded.data.file;assert.equal(file.kind,'direct');assert.equal(file.peerId,b.user.id);assert.equal(file.bytes,8);assert(!JSON.stringify(uploaded).includes('object_key'));
+    assert.equal((await request('/files/'+file.id+'/url',b)).status,403);assert.equal((await request('/files/'+file.id+'/url',c)).status,403);assert.equal((await request('/files/'+file.id+'/url')).status,200);
+    assert.equal((await request('/files/mine',b)).data.files.length,0);assert.equal((await request('/files/soundboard',b)).data.files.length,0);assert.equal((await request('/files/'+file.id,c,{method:'DELETE'})).status,403);
+    const id=crypto.randomUUID(),payload={id,peerId:b.user.id,text:'',attachmentId:file.id};const sent=await social('send',payload);assert.equal(sent.status,200);assert.equal(sent.data.attachment.id,file.id);assert.deepEqual((await social('send',payload)).data,sent.data);assert.equal(f.directMessages.size,1);
+    assert.equal((await social('send',{...payload,text:'Texto alterado'})).status,400);assert.equal((await social('send',{...payload,id:crypto.randomUUID(),roomId:'chat-livre'})).status,400);assert.equal((await social('send',{...payload,id:crypto.randomUUID()},b)).status,400);
+    assert.equal((await request('/files/'+file.id+'/url',b)).status,200);assert.equal((await request('/files/'+file.id+'/url',c)).status,403);assert.equal((await social('read',{peerId:a.user.id},b)).data.messages[0].attachment.id,file.id);assert.equal((await social('snapshot',{},c)).data.threads.length,0);
+    const downloaded=(await request('/files/'+file.id+'/url',b)).data;assert.equal(await (await fetch(downloaded.url)).text(),'%PDF-1.7');
+    assert.equal((await upload(a,c)).status,403);assert.equal((await upload(a,a)).status,400);const invalid=await upload(a,b,Buffer.alloc(10000001));assert.equal(invalid.status,413);assert.equal(invalid.data.error.code,'FILE_TOO_LARGE');
+    const cors=await fetch(f.base+'/files/upload',{method:'OPTIONS',headers:{Origin:f.appOrigin,'Access-Control-Request-Headers':'X-Peer-Id'}});assert(cors.headers.get('access-control-allow-headers').includes('X-Peer-Id'));
+    await social('friend',{peerId:b.user.id,action:'remove'});assert.equal((await upload()).status,403);assert.equal((await request('/files/'+file.id+'/url',b)).status,200);assert.equal((await social('read',{peerId:a.user.id},b)).data.messages[0].attachment.id,file.id);
+    const before=eventsC.length;assert.equal((await request('/files/'+file.id,a,{method:'DELETE'})).status,200);await new Promise(resolve=>setTimeout(resolve,50));assert(eventsA.some(m=>m.type==='attachment-deleted'&&m.id===file.id));assert(eventsB.some(m=>m.type==='attachment-deleted'&&m.id===file.id));assert(!eventsC.slice(before).some(m=>(m.type==='attachment-deleted'||m.type==='direct-message')&&(m.id===file.id||m.message?.attachment?.id===file.id)));assert(!eventsC.some(m=>m.type==='direct-message'&&m.message?.attachment?.id===file.id));
+    assert.equal((await request('/files/'+file.id+'/url',b)).status,404);assert.equal((await social('read',{peerId:a.user.id},b)).data.messages[0].attachment.deleted,true);assert.equal((await (await fetch(downloaded.url)).status),404);
+    await f.restart();const history=(await social('read',{peerId:a.user.id},b)).data.messages;assert.equal(history.length,1);assert.equal(history[0].id,id);assert.equal(history[0].attachment.name,'anexo.pdf');assert.equal(history[0].attachment.deleted,true);
+  }finally{for(const ws of sockets)ws.terminate();await f.stop();}
+});

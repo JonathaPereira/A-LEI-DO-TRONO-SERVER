@@ -80,10 +80,10 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
  async function db(path,method='GET',body){
    let res;try{res=await fetchImpl(`${url}/rest/v1/${path}`,{method,headers:{apikey:key,...(!String(key).startsWith('sb_secret_')?{Authorization:`Bearer ${key}`}:{ }),'Content-Type':'application/json',Prefer:'return=representation'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});}catch{throw error('STORAGE_UNAVAILABLE','Não foi possível acessar o armazenamento.',503);}
    const data=await res.json().catch(()=>null);
-   if(!res.ok){const msg=String(data?.message||'');const reason=['STORAGE_FULL','FILE_TOO_LARGE','UPLOAD_BUSY','AVATAR_IN_USE'].find(c=>msg.includes(c));const copy={STORAGE_FULL:'Armazenamento de 8 GB cheio. Exclua anexos para liberar espaço.',FILE_TOO_LARGE:'Arquivo acima do limite permitido.',UPLOAD_BUSY:'Aguarde os envios em andamento.',AVATAR_IN_USE:'Troque seu ícone antes de excluir essa foto.'};throw error(reason||'STORAGE_UNAVAILABLE',copy[reason]||'Armazenamento indisponível. Confira a configuração e a atualização SQL.',reason?409:503);}
+   if(!res.ok){const msg=String(data?.message||'');const reason=['STORAGE_FULL','FILE_TOO_LARGE','UPLOAD_BUSY','AVATAR_IN_USE','FRIEND_REQUIRED','INVALID_ATTACHMENT'].find(c=>msg.includes(c));const copy={STORAGE_FULL:'Armazenamento de 8 GB cheio. Exclua anexos para liberar espaço.',FILE_TOO_LARGE:'Arquivo acima do limite permitido.',UPLOAD_BUSY:'Aguarde os envios em andamento.',AVATAR_IN_USE:'Troque seu ícone antes de excluir essa foto.',FRIEND_REQUIRED:'Adicione esta pessoa aos amigos antes de enviar anexos.',INVALID_ATTACHMENT:'Esse anexo não está disponível nesta conversa.'};throw error(reason||'STORAGE_UNAVAILABLE',copy[reason]||'Armazenamento indisponível. Confira a configuração e a atualização SQL.',reason==='FRIEND_REQUIRED'?403:reason?409:503);}
    return data;
  }
- const publicFile=r=>({id:r.id,name:r.name,bytes:Number(r.bytes),mime:r.mime,kind:r.kind,roomId:r.room_id,ownerId:r.owner_id,createdAt:r.created_at,...(r.kind==='soundboard'?{durationMs:r.duration_ms}:{})});
+ const publicFile=r=>({id:r.id,name:r.name,bytes:Number(r.bytes),mime:r.mime,kind:r.kind,roomId:r.room_id,ownerId:r.owner_id,createdAt:r.created_at,...(r.kind==='direct'?{peerId:r.direct_peer_id}:{}),...(r.kind==='soundboard'?{durationMs:r.duration_ms}:{})});
  const first=data=>Array.isArray(data)?data[0]:data;
  async function lookup(id){if(!/^[a-f0-9-]{36}$/i.test(id||''))throw error('FILE_NOT_FOUND','Arquivo não encontrado.',404);return first(await db(`chat_files?id=eq.${id}&limit=1`));}
  async function remove(row){
@@ -98,12 +98,14 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
  }
  const timer=setInterval(()=>void cleanup(),5*60_000);timer.unref();
  async function attachment(id,owner,roomId){const row=await lookup(id);if(!row||row.state!=='ready'||row.kind!=='chat'||row.owner_id!==owner||row.room_id!==roomId)throw error('INVALID_ATTACHMENT','Esse anexo não está disponível neste canal.');return publicFile(row);}
+ async function directAttachment(id,owner,peerId){const row=await lookup(id);if(!row||row.state!=='ready'||row.kind!=='direct'||row.owner_id!==owner||row.direct_peer_id!==peerId)throw error('INVALID_ATTACHMENT','Esse anexo não está disponível nesta conversa.');return publicFile(row);}
+ async function directTarget(req,peerId){if(!/^[a-f0-9-]{36}$/i.test(peerId||'')||peerId===req.account.id)throw error('INVALID_TARGET','Escolha um amigo para enviar o anexo.');await auth.request(auth.tokenFrom(req),'/rest/v1/rpc/social_attachment_target','POST',{p_peer:peerId});}
  async function sound(id){if(!configured)throw error('STORAGE_UNCONFIGURED','Efeitos sonoros ainda não foram ativados.',503);const row=await lookup(id);if(!row||row.state!=='ready'||row.kind!=='soundboard')throw error('FILE_NOT_FOUND','Efeito sonoro não encontrado.',404);return publicFile(row);}
  function install(app){
    app.use('/files',async(req,res,next)=>{
      res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
      const origin=req.headers.origin;if(origin&&!auth.allowedOrigins.has(origin))return res.status(403).json({error:{code:'ORIGIN_FORBIDDEN',message:'Origem não autorizada.'}});
-     if(origin){res.set({'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Authorization, Content-Type, X-File-Name, X-File-Kind, X-Room-Id','Access-Control-Allow-Methods':'GET, POST, DELETE, OPTIONS'});res.vary('Origin');}
+     if(origin){res.set({'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Authorization, Content-Type, X-File-Name, X-File-Kind, X-Room-Id, X-Peer-Id','Access-Control-Allow-Methods':'GET, POST, DELETE, OPTIONS'});res.vary('Origin');}
      if(req.method==='OPTIONS')return res.sendStatus(204);
      try{req.account=await auth.identity(auth.tokenFrom(req));next();}catch(e){res.status(e.status||503).json({error:{code:e.code,message:e.message}});}
    });
@@ -112,14 +114,15 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
    route('get','/mine',async req=>{const offset=Math.max(0,Math.min(10000000,Math.floor(Number(req.query.offset)||0)));const rows=await db(`chat_files?owner_id=eq.${req.account.id}&state=eq.ready&order=created_at.desc,id.desc&limit=200&offset=${offset}`);return {files:rows.map(publicFile),hasMore:rows.length===200,nextOffset:offset+rows.length};});
    route('get','/soundboard',async req=>{const offset=Math.max(0,Math.min(10000000,Math.floor(Number(req.query.offset)||0)));const rows=await db(`chat_files?kind=eq.soundboard&state=eq.ready&order=created_at.desc,id.desc&limit=200&offset=${offset}`);return {files:rows.map(publicFile),hasMore:rows.length===200,nextOffset:offset+rows.length};});
    route('get','/channel/:roomId',async req=>{if(!membership(req.account.id,req.params.roomId))throw error('NOT_IN_ROOM','Entre no canal para ver seus anexos.',403);const offset=Math.max(0,Math.min(10000000,Math.floor(Number(req.query.offset)||0)));const rows=await db(`chat_files?kind=eq.chat&room_id=eq.${encodeURIComponent(req.params.roomId)}&state=eq.ready&order=created_at.desc,id.desc&limit=200&offset=${offset}`);return {files:rows.map(publicFile),hasMore:rows.length===200,nextOffset:offset+rows.length};});
-   route('get','/:id/url',async req=>{const row=await lookup(req.params.id);if(!row||row.state!=='ready')throw error('FILE_NOT_FOUND','Arquivo excluído ou indisponível.',404);if(row.kind==='chat'&&row.owner_id!==req.account.id&&!membership(req.account.id,row.room_id))throw error('FILE_FORBIDDEN','Entre no canal desse anexo para acessá-lo.',403);return {url:r2.url(row,req.query.download==='1'),expiresAt:Date.now()+300000};});
-   route('delete','/:id',async req=>{const row=await lookup(req.params.id);if(!row||(row.owner_id!==req.account.id&&!permissions(req.account.role).moderateFiles))throw error('FILE_FORBIDDEN','Você só pode excluir seus próprios arquivos.',403);if(row.state==='pending'&&Date.now()-Date.parse(row.created_at)<20*60_000)throw error('FILE_BUSY','Envio ainda reservado. Aguarde a limpeza automática.',409);await remove(row);return {ok:true};});
+   route('get','/:id/url',async req=>{const row=await lookup(req.params.id);if(!row||row.state!=='ready')throw error('FILE_NOT_FOUND','Arquivo excluído ou indisponível.',404);if(row.kind==='direct'&&!await db('rpc/direct_file_access','POST',{p_file:row.id,p_account:req.account.id}))throw error('FILE_FORBIDDEN','Este anexo pertence a uma conversa privada.',403);if(row.kind==='chat'&&row.owner_id!==req.account.id&&!membership(req.account.id,row.room_id))throw error('FILE_FORBIDDEN','Entre no canal desse anexo para acessá-lo.',403);return {url:r2.url(row,req.query.download==='1'),expiresAt:Date.now()+300000};});
+   route('delete','/:id',async req=>{const row=await lookup(req.params.id);if(!row||(row.owner_id!==req.account.id&&(row.kind==='direct'||!permissions(req.account.role).moderateFiles)))throw error('FILE_FORBIDDEN','Você só pode excluir seus próprios arquivos.',403);if(row.state==='pending'&&Date.now()-Date.parse(row.created_at)<20*60_000)throw error('FILE_BUSY','Envio ainda reservado. Aguarde a limpeza automática.',409);await remove(row);return {ok:true};});
    route('post','/upload',async req=>{
-     const owner=req.account.id,size=Number(req.headers['content-length']),kind=req.headers['x-file-kind']||'chat',roomId=kind==='chat'?String(req.headers['x-room-id']||''):null;
-     if(!['avatar','chat','soundboard'].includes(kind))throw error('INVALID_FILE_KIND','Tipo de arquivo inválido.');
+     const owner=req.account.id,size=Number(req.headers['content-length']),kind=req.headers['x-file-kind']||'chat',roomId=kind==='chat'?String(req.headers['x-room-id']||''):null,peerId=kind==='direct'?String(req.headers['x-peer-id']||''):null;
+     if(!['avatar','chat','soundboard','direct'].includes(kind))throw error('INVALID_FILE_KIND','Tipo de arquivo inválido.');
      if(!Number.isSafeInteger(size)||size<=0)throw error('FILE_SIZE_REQUIRED','Informe um arquivo com tamanho válido.',411);
      if(size>(kind==='soundboard'?SOUND_BYTES:kind==='avatar'?LIMITS.avatar:LIMITS.video))throw error('FILE_TOO_LARGE','Arquivo acima do limite permitido.',413);
      if(kind==='chat'&&!canAttach(owner,roomId))throw error('NOT_IN_ROOM','Entre em um canal de texto para anexar arquivos.',403);
+     if(kind==='direct')await directTarget(req,peerId);
      if(active.size>=4||(active.get(owner)||0)>=2)throw error('UPLOAD_BUSY','Aguarde os envios em andamento.',429);
      let name;try{name=decodeURIComponent(req.headers['x-file-name']||'arquivo');}catch{throw error('INVALID_FILENAME','Nome de arquivo inválido.');}
      name=[...name.replace(/[\\/\x00-\x1f\x7f]/g,'_')].slice(0,140).join('').trim()||'arquivo';
@@ -137,15 +140,16 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
        if(size>(kind==='avatar'?LIMITS.avatar:isVideo?LIMITS.video:LIMITS.file))throw error('FILE_TOO_LARGE','Limite: 10 MB por arquivo e 100 MB por vídeo MP4.',413);
        if(kind==='avatar'&&(mime!=='image/png'||prefix.readUInt32BE(16)!==256||prefix.readUInt32BE(20)!==256))throw error('INVALID_AVATAR','A foto do perfil deve ser PNG com 256 × 256 pixels.');
        const id=crypto.randomUUID(),objectKey=`${kind}/${owner}/${id}`;
-       row=first(await db('rpc/reserve_chat_file','POST',{p_id:id,p_owner:owner,p_key:objectKey,p_name:name,p_bytes:size,p_mime:mime,p_kind:kind,p_room:roomId}));
+       row=first(await db(kind==='direct'?'rpc/reserve_direct_file':'rpc/reserve_chat_file','POST',{p_id:id,p_owner:owner,p_key:objectKey,p_name:name,p_bytes:size,p_mime:mime,...(kind==='direct'?{p_peer:peerId}:{p_kind:kind,p_room:roomId})}));
        let received=0;const counted=Readable.from((async function*(){for await(const chunk of body){received+=chunk.length;if(received>size)throw error('FILE_TOO_LARGE','Arquivo ultrapassou o tamanho declarado.',413);yield chunk;}if(received!==size)throw error('UPLOAD_INCOMPLETE','Envio incompleto. Tente novamente.');})());
        await r2.put(objectKey,counted,size,mime,name);putFinished=true;
        if(kind==='chat'&&!canAttach(owner,roomId))throw error('NOT_IN_ROOM','O canal foi fechado durante o envio.',409);
+       if(kind==='direct')await directTarget(req,peerId);
        await db(`chat_files?id=eq.${id}&state=eq.pending`,'PATCH',{state:'ready',...(durationMs?{duration_ms:durationMs}:{})});
        return {file:publicFile({...row,state:'ready',duration_ms:durationMs})};
      }catch(e){if(row){if(putFinished)await remove(row).catch(()=>{});else{await r2.remove(row.object_key).catch(()=>{});/* Keep uncertain PUT reservations until the delayed cleanup confirms deletion again. */}}throw e;}finally{clearTimeout(deadline);const count=(active.get(owner)||1)-1;if(count)active.set(owner,count);else active.delete(owner);}
    });
  }
- return {install,attachment,sound,health:()=>({configured,limits:LIMITS,soundboard:{maxSeconds:15,maxBytes:SOUND_BYTES}}),cleanup,db};
+ return {install,attachment,directAttachment,sound,health:()=>({configured,limits:LIMITS,soundboard:{maxSeconds:15,maxBytes:SOUND_BYTES}}),cleanup,db};
 }
 module.exports={createFiles,signedUrl,detectMime,LIMITS,r2Adapter};

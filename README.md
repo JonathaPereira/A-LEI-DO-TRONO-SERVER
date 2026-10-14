@@ -1,3 +1,7 @@
+## Layouts e conversas 0.9.1 · Windows 0.1.9
+
+Dois layouts pessoais (Original e Discord), ajustes para monitores verticais, moderação persistente do chat pelo criador, amigos no menu lateral e anexos privados. Esta versão requer os dois SQL novos e publicação do backend e frontend completos. Siga [ATUALIZAR_WINDOWS_v0.1.9.md](ATUALIZAR_WINDOWS_v0.1.9.md).
+
 ## Revisão da Corte 0.9.0 · Windows 0.1.8
 
 Regras, manual e animações atualizados; a mesa agora preserva a chamada da comunidade. Publicação: [ATUALIZAR_WINDOWS_v0.1.8.md](ATUALIZAR_WINDOWS_v0.1.8.md). Manual: [frontend/manual/index.html](frontend/manual/index.html). Não há nova migração SQL nesta revisão.

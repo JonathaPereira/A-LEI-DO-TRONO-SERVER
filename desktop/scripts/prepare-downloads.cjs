@@ -13,7 +13,8 @@ async function prepare(){
   const index=await fs.readFile(path.join(frontend,'index.html'),'utf8');await fs.writeFile(path.join(frontend,'index.html'),index.replace(/\/downloads\/MN-Trono-[^"/]+-Windows\.exe/g,'/downloads/'+filename).replace(/download="MN-Trono-[^"]+\.exe"/g,'download="'+filename+'"'));
   await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-PUBLICAR.txt'),path.join(site,'LEIA-ME-PUBLICAR.txt'));
   await fs.copyFile(path.join(root,'supabase/upgrade-social.sql'),path.join(site,'SUPABASE-upgrade-social.sql'));
-  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.8.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.8.md'));
+  for(const name of ['upgrade-chat-moderation.sql','upgrade-direct-attachments.sql'])await fs.copyFile(path.join(root,'supabase',name),path.join(site,'SUPABASE-'+name));
+  await fs.copyFile(path.join(root,'ATUALIZAR_WINDOWS_v0.1.9.md'),path.join(site,'ATUALIZAR_WINDOWS_v0.1.9.md'));
   console.log(`Pacotes preparados: instalador ${version}, site e canal de atualização SHA-512.`);
 }
 prepare().catch(error=>{console.error(error.message);process.exitCode=1;});
