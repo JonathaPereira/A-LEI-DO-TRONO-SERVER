@@ -1,0 +1,66 @@
+/* One table geometry, based on the space actually left by the app shell. */
+body #gameScreen.game-screen{display:grid;grid-template-rows:auto minmax(380px,1fr) auto!important;min-height:0!important;height:calc(100dvh - var(--court-shell-top,0px) - var(--court-shell-bottom,0px));box-sizing:border-box;overflow:auto;}
+body #gameScreen.game-screen.hidden{display:none!important;}
+body.desktop-app{--court-shell-top:var(--desktop-top,52px);--court-shell-bottom:var(--desktop-dock,80px)}
+body #gameScreen .topbar{gap:12px;flex-wrap:wrap;padding:10px 16px;min-height:52px;box-sizing:border-box;}
+body #gameScreen .round-status{display:flex;flex-wrap:wrap;gap:5px;min-width:0;}
+body #gameScreen .round-status span{padding:5px 8px;font-size:11px;}
+body #gameScreen .top-actions{max-width:none;flex-wrap:wrap;justify-content:flex-end;}
+body #gameScreen .board-wrap{container:court-board / inline-size;display:grid!important;grid-template-columns:minmax(110px,180px) minmax(0,1fr) minmax(110px,180px)!important;grid-template-rows:minmax(0,1fr) minmax(0,1fr) auto!important;grid-template-areas:'p2 table p3' 'p1 table p0' 'laws laws laws'!important;gap:12px!important;padding:14px!important;min-height:380px!important;overflow:visible;box-sizing:border-box;}
+body #gameScreen .royal-table{grid-area:table;position:relative!important;inset:auto!important;transform:none!important;align-self:stretch!important;justify-self:stretch;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;border-radius:12%!important;--card-w:clamp(46px,6.5vw,72px);--card-h:calc(var(--card-w) * 1.4);}
+body #gameScreen .royal-table::before{border-radius:11%!important;inset:9px;}
+body #gameScreen .player-panel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;align-self:center;padding:10px!important;box-sizing:border-box;}
+body #gameScreen .player-name{flex-wrap:wrap;gap:4px;font-size:12px!important;overflow-wrap:anywhere;}
+body #gameScreen .stats{gap:4px 8px;font-size:10px!important;}
+body #gameScreen .slot-top{top:10px!important}body #gameScreen .slot-bottom{bottom:10px!important}
+body #gameScreen .slot-left{left:10px!important}body #gameScreen .slot-right{right:10px!important}
+body #gameScreen .center-info{transform:translate(-50%,-50%)!important;max-width:calc(100% - 2 * var(--card-w) - 30px);gap:5px!important;}
+body #gameScreen .law-mini{padding:5px 7px;gap:6px;}body #gameScreen .law-mini img{width:27px;height:38px;}
+body #gameScreen .law-mini strong{font-size:12px}body #gameScreen .decree-badge{min-width:0;width:max-content;max-width:100%;box-sizing:border-box;padding:4px 7px;}
+body #gameScreen .decree-badge strong{font-size:10px}body #gameScreen .trump-info{font-size:9px;padding:3px 6px;text-align:center;}
+body #gameScreen .law-tracker{position:relative!important;inset:auto!important;transform:none!important;grid-area:laws;width:100%!important;box-sizing:border-box;display:flex!important;align-items:center;gap:12px;padding:6px 10px!important;}
+body #gameScreen .law-tracker h3{font-size:9px;margin:0;white-space:nowrap;}
+body #gameScreen #lawTrackerList{display:flex!important;flex:1;flex-wrap:wrap;justify-content:space-around;gap:4px 12px;}
+body #gameScreen .law-track-row{font-size:9px;padding:3px 0;gap:5px;}
+body #gameScreen .hand-zone{position:relative!important;inset:auto!important;width:100%!important;min-height:0!important;height:auto!important;box-sizing:border-box;padding:8px 16px 12px!important;}
+body #gameScreen .hand-toolbar{gap:8px;flex-wrap:wrap;margin-bottom:5px;}body #gameScreen #instructionText{font-size:11px;line-height:1.45;}
+body #gameScreen .hand-card{width:clamp(49px,6vw,78px)!important;height:calc(clamp(49px,6vw,78px) * 1.4)!important;}
+body #gameScreen .hand-cards{min-height:0!important;padding:9px 8px 5px;}
+body .exchange-cinematic{z-index:410;}body .exchange-player-node{max-width:30%;overflow-wrap:anywhere;}
+body .exchange-card-label{white-space:normal;min-width:105px;text-align:center;}
+body.court-fullscreen{--court-shell-top:0px;--court-shell-bottom:0px;overflow:hidden;}
+body.court-fullscreen #gameScreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;margin:0!important;padding:0!important;z-index:100;}
+body.court-fullscreen :is(#desktopRail,#desktopTopBar,#desktopCallDock,#appRail,#appCallDock,#gamesSideNav){display:none!important;}
+@container court-board (max-width:700px){
+ body #gameScreen .royal-table{--card-w:52px;}
+}
+@media(max-width:1000px){
+ body #gameScreen .board-wrap{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:auto minmax(350px,1fr) auto auto!important;grid-template-areas:'p2 p3' 'table table' 'p1 p0' 'laws laws'!important;min-height:540px!important;gap:8px!important;padding:10px!important;}
+ body #gameScreen .player-panel{padding:7px 10px!important;}body #gameScreen .public-cards:empty{display:none;}
+ body #gameScreen .topbar{padding:8px 10px;}body #gameScreen .brand small{display:none;}
+ body #gameScreen .royal-table{--card-w:58px;border-radius:9%!important;}
+ body #gameScreen .center-info{transform:translate(-50%,-50%)!important;max-width:calc(100% - 150px);}
+ body #gameScreen .hand-card{width:53px!important;height:74px!important;}
+}
+@media(orientation:portrait){body #gameScreen.game-screen{grid-template-rows:auto minmax(560px,1fr) auto!important;}body #gameScreen .board-wrap{min-height:560px!important;}}
+@media(max-width:520px){body #gameScreen .board-wrap{grid-template-rows:auto minmax(330px,1fr) auto auto!important;}body #gameScreen .topbar{justify-content:center;}body #gameScreen .round-status{justify-content:center;}body #gameScreen .royal-table{--card-w:46px;}body #gameScreen .center-info{transform:translate(-50%,-50%)!important;max-width:calc(100% - 118px);}body #gameScreen .law-tracker{flex-direction:column;gap:3px;}body #gameScreen .brand strong{font-size:12px;}body #gameScreen .hand-zone{padding:7px!important;}body #gameScreen .hand-card{width:45px!important;height:63px!important;}}
+@media(prefers-reduced-motion:reduce){body .exchange-card-token{animation:none!important;left:50%;top:50%;}body .exchange-center-seal{animation:none!important;}}
+
+body.desktop-app #gameScreen .top-actions{display:flex!important;}
+body #gameScreen #humanHand{height:clamp(94px,17dvh,136px)!important;min-height:94px!important;max-height:136px;box-sizing:border-box;padding:12px 8px 5px;overflow-x:auto;overflow-y:hidden;justify-content:safe center;gap:8px;}
+body #gameScreen #humanHand .hand-card{height:clamp(70px,var(--hand-card-height,108px),126px)!important;width:auto!important;aspect-ratio:5/7;flex:none;}
+body.court-fullscreen #gameScreen .hand-zone{padding-left:16px!important;}
+
+body.desktop-app #gameScreen .top-actions>:not(#courtFullscreen){display:none!important;}
+body #gameScreen .law-tracker{height:auto!important;max-height:none!important;overflow:visible!important;}
+
+/* In the app, the hand owns a bounded row above the call dock. */
+body.desktop-app #gameScreen.game-screen{grid-template-rows:auto minmax(0,1fr) clamp(140px,25dvh,190px)!important;overflow:hidden;}
+body.desktop-app #gameScreen .board-wrap{grid-template-rows:minmax(0,1fr) minmax(0,1fr) auto!important;min-height:0!important;}
+body.desktop-app #gameScreen .hand-zone{display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;padding:7px 12px!important;}
+body.desktop-app #gameScreen #humanHand{height:100%!important;min-height:0!important;max-height:none!important;}
+body.desktop-app #gameScreen .center-info{gap:3px!important;}
+@media(max-width:1000px){body.desktop-app #gameScreen .board-wrap{grid-template-rows:auto minmax(0,1fr) auto auto!important;}body.desktop-app #gameScreen .player-panel{padding:4px 7px!important;}body.desktop-app #gameScreen .score-board{display:flex;gap:7px;justify-content:space-between;}body.desktop-app #gameScreen .score-tile{display:flex;flex-direction:row;gap:3px;padding:2px!important;}body.desktop-app #gameScreen .score-board small{display:none;}body.desktop-app #gameScreen .score-board strong{font-size:12px;}body.desktop-app #gameScreen .score-icon{font-size:13px;}body.desktop-app #gameScreen .influence-meter{margin:2px 0;padding:1px 4px;}body.desktop-app #gameScreen .public-cards{margin-top:2px;}}
+@media(max-height:650px){body.desktop-app #gameScreen .board-wrap{padding:5px!important;gap:5px!important;}body.desktop-app #gameScreen .player-panel{padding:4px!important;}body.desktop-app #gameScreen .score-tile{padding:2px!important;}body.desktop-app #gameScreen .influence-meter{margin:2px 0;}body.desktop-app #gameScreen .law-mini img{width:20px;height:28px;}body.desktop-app #gameScreen .law-mini{padding:3px 5px;}body.desktop-app #gameScreen .law-mini strong{font-size:10px;}body.desktop-app #gameScreen .decree-badge{padding:2px 5px;}body.desktop-app #gameScreen .decree-badge small{display:none;}}
+
+body.desktop-app #gameScreen #humanHand .hand-card{height:var(--hand-card-height,100px)!important;}body.desktop-app #gameScreen #humanHand .hand-card+.hand-card{margin-left:var(--hand-overlap,0px);}

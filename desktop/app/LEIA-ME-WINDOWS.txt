@@ -75,3 +75,5 @@ RECEPÇÃO DE VOZ 0.2.1
 Configurações → Áudio → Proteger a voz recebida durante jogos. Ligada por padrão, local a este aparelho. A margem de reprodução solicitada pode variar de 60 a 140 ms, sem trocar a trilha ou reconectar. Volumes normais permanecem diretos. Amplificação usa contexto separado do microfone.
 No Windows, só o serviço de áudio do próprio app é elegível a prioridade moderada. Prioridades maiores são preservadas; sem permissão, mantém o padrão do sistema. Sair da chamada desfaz os ajustes feitos pelo app. Não é uma reserva fixa de CPU e não exige administrador.
 O diagnóstico compara intervalos recentes e não exporta identidades ou mensagens. Consulte o guia 0.2.1 para limites e avaliação com o seu jogo/headset. Esta revisão não exige SQL novo ou mudança de backend.
+
+Windows 0.2.2: tela cheia nativa e mesa responsiva no Trono; Usurpação online; peças do centro do Azul; recursos por cor e negociações detalhadas no Splendor; filtro leve entre falas. Guia: ATUALIZAR_WINDOWS_v0.2.2.md. Backend 0.13.0-alpha, sem SQL novo.

@@ -36,6 +36,7 @@ let onlineDeclaredSuit = null;
 let onlineInfluenceAction = 'none';
 let onlineLastPromptId = null;
 let onlineExchangeBusy = false;
+let exchangeSequence = 0;
 let onlineQueuedPrivateUsurpation = null;
 let localTurnTimer=null;
 let turnTicker=null;
@@ -325,7 +326,7 @@ function exchangePointForPlayer(id){
 }
 
 function exchangeNodeHtml(p, role=''){
-  return `<div class="exchange-player-node exchange-node-${p.id}"><span>${SUITS[SUIT_ORDER[p.id%4]].glyph}</span><div><b>${p.name}</b>${role?`<div class="node-role">${role}</div>`:''}</div></div>`;
+  return `<div class="exchange-player-node exchange-node-${p.id}"><span>${SUITS[SUIT_ORDER[p.id%4]].glyph}</span><div><b>${escAttr(p.name)}</b>${role?`<div class="node-role">${role}</div>`:''}</div></div>`;
 }
 
 function exchangeArrowHtml(fromId,toId){
@@ -340,7 +341,8 @@ function exchangeArrowHtml(fromId,toId){
 async function showExchangeAnimation({kind='exchange',title='Troca de cartas',subtitle='',moves=[]}){
   const wrap=$('exchangeCinematic'), stage=$('exchangeStage');
   if(!wrap || !stage || !moves.length) return;
-  const duration=Math.max(900,3000*animationScale);
+  const sequence=++exchangeSequence;
+  const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?450:Math.max(900,3000*animationScale);
   wrap.style.setProperty('--exchange-duration',`${duration}ms`);
   $('exchangeIcon').textContent=kind==='rotation'?'⟳':'⇄';
   $('exchangeKicker').textContent=kind==='rotation'?'DECRETO EM MOVIMENTO':'LEI EM MOVIMENTO';
@@ -363,7 +365,7 @@ async function showExchangeAnimation({kind='exchange',title='Troca de cartas',su
     const a=exchangePointForPlayer(m.from), b=exchangePointForPlayer(m.to);
     const cssClass=`exchange-card-token ${kind==='rotation'?'rotation-card':(m.role==='shadow'?'shadow-card':'')}`;
     const label=m.label||`${game.players[m.from].name} → ${game.players[m.to].name}`;
-    return `<div class="${cssClass}" style="--sx:${a.x};--sy:${a.y};--tx:${b.x};--ty:${b.y};--delay:${(m.delay||0)*animationScale}ms;--r0:${i%2?7:-7}deg;--rm:${i%2?-7:7}deg;--r1:${i%2?-5:5}deg"><span class="exchange-card-label">${label}</span></div>`;
+    return `<div class="${cssClass}" style="--sx:${a.x};--sy:${a.y};--tx:${b.x};--ty:${b.y};--delay:${(m.delay||0)*animationScale}ms;--r0:${i%2?7:-7}deg;--rm:${i%2?-7:7}deg;--r1:${i%2?-5:5}deg"><span class="exchange-card-label">${escAttr(label)}</span></div>`;
   }).join('');
   stage.innerHTML=html;
   wrap.classList.remove('hidden');
@@ -371,6 +373,7 @@ async function showExchangeAnimation({kind='exchange',title='Troca de cartas',su
   playSfx('card');
   const maxDelay=Math.max(0,...moves.map(m=>(m.delay||0)*animationScale));
   await sleep(duration+maxDelay+80);
+  if(sequence!==exchangeSequence)return;
   wrap.classList.add('hidden');
   wrap.setAttribute('aria-hidden','true');
   stage.innerHTML='';
@@ -1108,7 +1111,7 @@ function applyOnlineState(state){
       influence:sp.influence||0,prestige:sp.prestige||0,pairs:sp.pairs||0
     };
   });
-  game={
+  const next={
     online:true,players,localPlayerId:you,round:state.round,trick:state.trick,phase:state.phase,
     currentLaw:state.currentLaw,lawUsage:state.lawUsage||Object.fromEntries(LAW_ORDER.map(l=>[l,0])),
     trump:state.trump||null,declaredLeadSuit:state.declaredLeadSuit||null,
@@ -1117,6 +1120,9 @@ function applyOnlineState(state){
     leader:state.leader,turn:state.turn,turnDeadline:state.turnDeadline||null,plays:(state.plays||[]).map(pl=>({playerId:pl.playerId,order:pl.order,hidden:!!pl.hidden,card:pl.card||null,modifier:pl.modifier||0,influenceAction:pl.influenceAction||'none'})),
     gameOver:state.phase==='game-over'
   };
+  // State packets update a live match; they do not start a new animation session.
+  // Keep its identity so exchange/reveal continuations survive the next packet.
+  if(game?.online)Object.assign(game,next);else game=next;
   onlineControl={legalCardIds:state.legalCardIds||[],influenceLegalCardIds:state.influenceLegalCardIds||[],canUseInfluence:!!state.canUseInfluence,canUseManeuver:!!state.canUseManeuver,influenceBlocked:!!state.influenceBlocked};
   if(state.phase==='await-play'&&state.turn===you&&lastOnlineTurnSeat!==you){showYourTurnNotice();}
   lastOnlineTurnSeat=state.phase==='await-play'?state.turn:null;
@@ -1376,6 +1382,7 @@ async function leaveChatOnly(){
 }
 function backToLobby(){
   leavingGame=true;clearLocalTurnTimer();
+  exchangeSequence++;$('exchangeCinematic').classList.add('hidden');$('exchangeCinematic').setAttribute('aria-hidden','true');$('exchangeStage').replaceChildren();
   const cancelled=Object.assign(new Error('A mesa foi encerrada neste aparelho.'),{name:'AbortError'});
   humanPlayResolver?.reject?.(cancelled);humanPlayResolver=null;modalReject?.(cancelled);modalResolver=null;closeModal();onlineQueuedPrivateUsurpation=null;onlineExchangeBusy=false;
   if(window.TronoNetwork?.gameRoom&&window.TronoNetwork?.primaryRoom===window.TronoNetwork?.gameRoom)void window.TronoSocial?.leaveVoice?.();
