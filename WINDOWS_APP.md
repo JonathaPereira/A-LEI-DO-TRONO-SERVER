@@ -1,4 +1,8 @@
-# M&N · A Lei do Trono no Windows — 0.1.6
+# M&N · A Lei do Trono no Windows
+
+Para executar o checkout local, siga o [guia de desenvolvimento desktop](docs/DESENVOLVIMENTO_DESKTOP.md).
+A versão declarada atual é 0.2.2; o conteúdo abaixo conserva detalhes da versão 0.1.6.
+As notas mais recentes estão em [ATUALIZAR_WINDOWS_v0.2.2.md](ATUALIZAR_WINDOWS_v0.2.2.md).
 
 O aplicativo reúne o jogo e o chat com as mesmas contas, salas, cargos e mensagens do site. Mantém temas pessoais, canais independentes de texto/voz, câmeras, volumes, efeitos, compartilhamento com áudio isolado e atualizações internas. Esta versão suspende os clipes para reduzir trabalho de captura e gravação. Atualize também o backend para vincular a atividade aos perfis da chamada; não há SQL novo.
 
