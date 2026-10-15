@@ -18,11 +18,10 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
     const button=document.createElement('button');button.type='button';button.dataset.desktopRoute=view;button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'+icons[view]+'</svg><span>'+label+'</span>';if(view==='clips'){button.disabled=true;button.title='Opção em desenvolvimento';button.setAttribute('aria-label','Clipes · opção em desenvolvimento');button.querySelector('span').innerHTML='Clipes <span aria-hidden="true">🔒</span><small>Em desenvolvimento</small>';}else button.onclick=()=>void navigate(view);rail.append(button);
   }
   const version=document.createElement('button');version.id='desktopUpdateCheck';version.type='button';version.className='desktop-version';version.title='Verificar atualização';version.textContent='Windows '+window.TronoDesktop.version;rail.append(version);body.append(rail);
-  // Move the existing soundboard trigger, preserving its upload/play handlers.
+  // Appearance belongs to the shell; call-controls-layout owns placement.
   const effects=$('soundboardToggle'),effectsMenu=$('soundboardDialog');
   effects.classList.remove('soundboard-toggle');effects.classList.add('desktop-effects-button');
   effects.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9v6m4-9v12m5-16v20m5-16v12m4-9v6"/></svg><span>Efeitos</span>';
-  rail.insertBefore(effects,rail.querySelector('[data-desktop-route="clips"]'));
   function positionEffects(){if(effectsMenu.hidden)return;const boundsTop=$('desktopTopBar').getBoundingClientRect().bottom+12,boundsBottom=(body.dataset.appLayout==='discord'?$('layoutVoicePanel').getBoundingClientRect().top:$('desktopCallDock').getBoundingClientRect().top)-12;effectsMenu.style.setProperty('--desktop-effects-height',Math.max(120,boundsBottom-boundsTop)+'px');const top=Math.max(boundsTop,Math.min(effects.getBoundingClientRect().top,boundsBottom-effectsMenu.offsetHeight));effectsMenu.style.setProperty('--desktop-effects-top',top+'px');}
   new MutationObserver(positionEffects).observe(effectsMenu,{attributes:true,attributeFilter:['hidden']});
   new ResizeObserver(positionEffects).observe(effectsMenu);window.addEventListener('resize',positionEffects);
@@ -38,14 +37,14 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const people=$('communityToggle'),telemetry=$('telemetryOpenBtn'),diagnostics=$('telemetryPanel');
   people.title='Ver pessoas online ou minimizar a lista';people.setAttribute('aria-controls','communityPanel');
   telemetry.textContent='Telemetria';telemetry.setAttribute('aria-controls','telemetryPanel');telemetry.setAttribute('aria-expanded','false');
-  topbar.append(heading,channelToggle,people,telemetry);body.append(topbar,diagnostics);
+  topbar.append(heading,channelToggle,telemetry);body.append(topbar,diagnostics);
   window.addEventListener('trono-telemetry-change',event=>telemetry.setAttribute('aria-expanded',String(event.detail.open)));
   function updateWindowState(state){const on=state.fullscreen===true;fullscreenButton.setAttribute('aria-pressed',String(on));fullscreenButton.setAttribute('aria-label',on?'Sair da tela cheia':'Entrar em tela cheia');fullscreenButton.querySelector('span').textContent=on?'Sair da tela cheia':'Tela cheia';}
   fullscreenButton.onclick=async()=>{fullscreenButton.disabled=true;try{updateWindowState(await window.TronoDesktop.toggleFullscreen());}catch{fullscreenButton.title='Não foi possível alterar a tela cheia. Tente F11.';}finally{fullscreenButton.disabled=false;}};
   window.TronoDesktop.onWindowState(updateWindowState);void window.TronoDesktop.getWindowState().then(updateWindowState).catch(()=>{});
   const dock=document.createElement('footer');dock.id='desktopCallDock';dock.setAttribute('aria-label','Controles da chamada');
   const info=document.createElement('div');info.className='desktop-call-info';info.innerHTML='<small>SEU ESPAÇO, SEM INTERRUPÇÕES</small><strong id="desktopCallName">M&N · pronto para conectar</strong><span id="desktopCallStatus"></span>';
-  dock.append(info,$('socialPanel').querySelector('.call-toolbar'));body.append(dock,$('voiceSettingsPanel'));
+  dock.append(info);body.append(dock);window.TronoCallControlsLayout.refresh();
   $('socialBtn').addEventListener('click',()=>{body.classList.add('game-communication-open');window.TronoSocial.showPanel(true);});$('socialCloseBtn').addEventListener('click',()=>body.classList.remove('game-communication-open'));
   const primary=['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen','gamesScreen','azulScreen','rogueliteScreen','splendorScreen','loveLetterScreen'];let lastGame='setupScreen',previous='home',clipsOpen=false;
   function setView(view){body.dataset.desktopView=view;for(const b of rail.querySelectorAll('button[data-desktop-route]')){const selected=b.dataset.desktopRoute===view;b.classList.toggle('active',selected);if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}}
