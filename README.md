@@ -1,3 +1,11 @@
+## Desenvolvimento atual · desktop Windows
+
+O foco atual é o aplicativo desktop. Para abrir a interface deste checkout,
+execute `npm ci`, `npm run desktop:install` e `npm run desktop:start` na raiz.
+O app conecta ao backend existente e usa um perfil de desenvolvimento separado.
+Veja [o guia de desenvolvimento desktop](docs/DESENVOLVIMENTO_DESKTOP.md) para
+requisitos, recursos nativos e comandos de validação.
+
 ## Windows 0.2.2 · mesas, animações e filtro leve
 
 Tela cheia nativa e mesa responsiva no Trono; continuidade da troca da Usurpação online; peças físicas agrupadas no centro do Azul e pontos em movimento; poder de compra por cor e negociações detalhadas no Splendor. A redução leve combina o processamento nativo disponível com um filtro simples de graves e de fundo entre falas. Veja [o guia atual](ATUALIZAR_WINDOWS_v0.2.2.md). Backend 0.13.0-alpha, sem SQL novo. A investigação de áudio em áreas virtuais permanece separada.

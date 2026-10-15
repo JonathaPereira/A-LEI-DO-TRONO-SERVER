@@ -9,7 +9,7 @@
     "start": "electron .",
     "postinstall": "install-electron",
     "pack:win": "electron-builder --win nsis --x64 --publish never",
-    "build:native": "cmake -S ../native-audio -B ../../artifacts/native-audio && cmake --build ../../artifacts/native-audio --config Release"
+    "build:native": "node ../scripts/build-native.cjs"
   },
   "devDependencies": {
     "electron": "44.7.0",
