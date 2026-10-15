@@ -7,6 +7,7 @@ const {DesktopPreferences}=require('./preferences.cjs');
 const {DesktopActivity}=require('./activity.cjs');
 const {createNotifications}=require('./notifications.cjs');
 const {GameAssets}=require('./game-assets.cjs');
+const {AudioPriority}=require('./audio-priority.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
 const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resolve(__dirname,'../../frontend');
 let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences,activity;
@@ -65,6 +66,9 @@ async function start(){
       return new Response(request.method==='HEAD'?null:await response.arrayBuffer(),{status:response.status,headers});
     }catch{return new Response('Arquivo local indisponível.',{status:404});}
   });
+  const voicePriority=new AudioPriority({metrics:()=>app.getAppMetrics()});
+  app.on('will-quit',()=>voicePriority.dispose());
+  ipcMain.handle('mn:voice-protection',(event,active)=>{trusted(event);return voicePriority.setActive(active);});
   const workArea=screen.getPrimaryDisplay().workAreaSize;
   window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:Math.max(480,Math.min(1440,workArea.width)),height:Math.max(520,Math.min(960,workArea.height)),minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
@@ -72,7 +76,7 @@ async function start(){
   ipcMain.handle('mn:notify',(event,value)=>{trusted(event);return notifications.notify(value);});
   app.on('will-quit',()=>notifications.dispose());
   ipcMain.handle('mn:copy-diagnostics',(event,text)=>{trusted(event);if(typeof text!=='string'||text.length>12000)throw Error('Invalid diagnostic report');clipboard.writeText(text);return {copied:true};});
-  ipcMain.handle('mn:resources',event=>{trusted(event);const metrics=app.getAppMetrics(),memory=process.getSystemMemoryInfo();return {appCpuPercent:Math.round(metrics.reduce((sum,row)=>sum+(row.cpu.percentCPUUsage||0),0)*10)/10,appMemoryMB:Math.round(metrics.reduce((sum,row)=>sum+(row.memory.workingSetSize||0),0)/1024),freeMemoryMB:Math.round(memory.free/1024)};});
+  ipcMain.handle('mn:resources',event=>{trusted(event);const metrics=app.getAppMetrics(),memory=process.getSystemMemoryInfo();return {appCpuPercent:Math.round(metrics.reduce((sum,row)=>sum+(row.cpu.percentCPUUsage||0),0)*10)/10,appMemoryMB:Math.round(metrics.reduce((sum,row)=>sum+(row.memory.workingSetSize||0),0)/1024),freeMemoryMB:Math.round(memory.free/1024),voicePriority:voicePriority.snapshot()};});
   applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
   activity=new DesktopActivity(app,state=>{if(!window.isDestroyed())window.webContents.send('mn:activity',state);});
   ipcMain.handle('mn:activity-state',event=>{trusted(event);return activity.snapshot();});
@@ -99,8 +103,8 @@ async function start(){
     const response=dialog.showMessageBoxSync(window,{type:'question',buttons:['Continuar no app','Sair'],defaultId:0,cancelId:0,message:'Encerrar o M&N?',detail:'Sua chamada será encerrada. A conta lembrada e as preferências ficam salvas neste computador.'});
     if(response===1)event.preventDefault();else quitting=false;
   });
-  window.webContents.on('render-process-gone',()=>{clearHotkey();cancelCapture();applicationAudio.stopAll();activity.dispose();});
-  window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace)cancelCapture();});
+  window.webContents.on('render-process-gone',()=>{voicePriority.setActive(false);clearHotkey();cancelCapture();applicationAudio.stopAll();activity.dispose();});
+  window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace){voicePriority.setActive(false);cancelCapture();}});
   window.webContents.on('did-navigate',()=>{clearHotkey();applicationAudio.stopAll();});
   window.webContents.on('will-navigate',(event,url)=>{if(!isAppURL(url)){event.preventDefault();if(/^https:\/\//.test(url))void shell.openExternal(url);}});
   window.webContents.on('will-attach-webview',event=>event.preventDefault());

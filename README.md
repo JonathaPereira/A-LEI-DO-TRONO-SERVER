@@ -1,10 +1,14 @@
+## Windows 0.2.1 · proteção da voz recebida
+
+Recepção com margem adaptativa por voz, diagnóstico de intervalos, menos trabalho visual em segundo plano e prioridade moderada restrita ao serviço de áudio do app no Windows. Volumes normais permanecem na reprodução direta; amplificação é separada do processamento do microfone. Veja [o guia da versão](ATUALIZAR_WINDOWS_v0.2.1.md). Backend 0.13.0-alpha e SQL anteriores permanecem compatíveis.
+
 ## Windows 0.2.0 · clareza e som nos jogos de mesa
 
 Catálogo compacto, volumes de efeitos pessoais por jogo, fichas e bônus separados no Splendor e mesa de madeira. Love Letter recebe personagens reconstruídos a partir da foto enviada, alvos por clique, apresentação por etapas, histórico visível e contagem de cartas reveladas. Padre substitui Sacerdote; as regras permanecem iguais. Bots usam os nomes da comunidade. Veja [o guia da versão](ATUALIZAR_WINDOWS_v0.2.0.md).
 
 ## Correção de publicação no Surge
 
-O pacote **MN-Trono-Frontend-0.2.0.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Se ainda não executou `upgrade-splendor.sql`, aplique-o. Publique o backend antes do frontend; siga [o guia atual](ATUALIZAR_WINDOWS_v0.2.0.md). Os backups automáticos conservam somente a versão atual e anterior.
+O pacote **MN-Trono-Frontend-0.2.1.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Esta revisão não exige atualização do backend ou SQL novo; siga [o guia atual](ATUALIZAR_WINDOWS_v0.2.1.md). Os backups automáticos conservam somente a versão atual e anterior.
 
 ## Catálogo de jogos
 

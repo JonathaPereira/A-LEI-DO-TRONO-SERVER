@@ -18,7 +18,8 @@
     "test:azul": "node --test tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js tests/azul-browser.js",
     "test:splendor": "node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js tests/splendor-browser.js",
     "test:love-letter": "node --test tests/love-letter-rules.js tests/love-letter-ws.js tests/love-letter-browser.js",
-    "test:tabletop": "node --test tests/bot-names.js tests/love-letter-browser.js tests/splendor-browser.js tests/tabletop-audio-browser.js"
+    "test:tabletop": "node --test tests/bot-names.js tests/love-letter-browser.js tests/splendor-browser.js tests/tabletop-audio-browser.js",
+    "test:voice": "node --test tests/voice-reception.js tests/desktop-audio-priority.js tests/call-stability.js tests/noise-processing.js tests/voice-reception-browser.js"
   },
   "engines": {
     "node": ">=18"
