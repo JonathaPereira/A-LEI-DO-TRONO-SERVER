@@ -1,6 +1,6 @@
 # Windows 0.2.3 — chamadas e perfis
 
-O instalador inclui a interface do PR #29: chamada como área principal, jogos separados, canais e mensagens diretas à esquerda, controles inferiores com rótulos no Original e ícones no Discord. O editor de perfil oferece prévia ao vivo, avatar/capa/fundo em imagem ou GIF, identidade, bio, interesses, links e ajustes de aparência. O miniperfil abre ao clicar no avatar. A lista de e-mails é exclusiva do criador e não consulta senhas.
+O instalador inclui a interface corrigida no PR #30: chamada como área principal, jogos separados, canais e mensagens diretas à esquerda, controles inferiores com rótulos no Original e ícones no Discord. O editor de perfil oferece prévia ao vivo, avatar/capa/fundo em imagem ou GIF, identidade, bio, interesses, links e ajustes de aparência. O miniperfil abre ao clicar no avatar. A lista de e-mails é exclusiva do criador e não consulta senhas.
 
 ## Publicar
 
@@ -13,4 +13,4 @@ O instalador inclui a interface do PR #29: chamada como área principal, jogos s
 
 Não edite o SHA-512 de `latest.yml`: ele identifica os bytes exatos do instalador aprovado. O pacote inclui o site inteiro e apenas este instalador, dentro do limite preventivo de tamanho do empacotador.
 
-O processo Windows executa verificações do runtime e do aplicativo compilado antes de produzir o instalador. A conferência humana do visual/responsividade e uma chamada real entre duas pessoas continuam recomendadas após a publicação.
+O processo Windows executa as verificações do layout, do runtime e do aplicativo compilado antes de produzir o instalador. O layout foi renderizado em Chromium com quatro participantes simulados, câmera e tela ativas, nos modos Original e Discord, com 9 resoluções entre 390 × 844 e 1910 × 955, incluindo formato vertical e janela baixa. Foram verificados limites dos painéis, sobreposição dos controles/participantes, canais de texto, miniperfil e preservação das trilhas durante as trocas de layout e a navegação para jogos. O editor foi conferido em desktop, vertical e celular. Isso verifica a interface; os participantes simulados não substituem uma chamada entre computadores diferentes para avaliar a rede real.

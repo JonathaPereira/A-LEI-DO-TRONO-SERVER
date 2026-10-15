@@ -53,12 +53,13 @@ window.TronoAppLayout=(()=>{
   function apply(value,{save=false}={}){
     const next=value==='discord'?'discord':'original';if(!bound)return;
     // Reparent event-bound controls; never clone buttons or reacquire media.
-    if(next==='discord'){
+    const workspace=document.body.classList.contains('chat-only-active')&&document.body.dataset.callWorkspace==='true';
+    if(!workspace&&next==='discord'){
       for(const id of ['muteMicBtn','deafenVoiceBtn','voiceSettingsBtn'])move(id,$('layoutUserControls'));
       move('joinVoiceBtn',$('layoutConnectionControls'));
       for(const id of ['cameraBtn','screenShareBtn'])move(id,$('layoutCallActions'));
       if(!window.TronoDesktop)move('voiceSettingsPanel',document.body);
-    }else for(const id of anchors.keys())restore(id);
+    }else if(!workspace)for(const id of anchors.keys())restore(id);
     current=next;document.body.dataset.appLayout=next;
     for(const input of document.querySelectorAll('[name=appLayout]'))input.checked=input.value===next;
     if(save){window.TronoPersonal.set('appLayout',next);$('appLayoutStatus').textContent='Layout '+(next==='discord'?'Discord':'Original / Padrão')+' aplicado.';}
