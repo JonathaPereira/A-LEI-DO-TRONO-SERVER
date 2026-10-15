@@ -107,6 +107,8 @@ jobs:
             Write-Output "::error title=Windows app runtime::$details"
             exit $testExit
           }
+      - name: Verify call controls preserve live desktop media across layouts
+        run: npm run test:desktop:layout
       - name: Build Windows application directory
         run: npx electron-builder --win --x64 --dir --publish never
         working-directory: desktop/app

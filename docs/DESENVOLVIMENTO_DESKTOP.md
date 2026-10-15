@@ -59,6 +59,7 @@ superior; câmera e microfone também dependem das permissões do sistema.
 | `npm run desktop:start` | Abrir o aplicativo com perfil de desenvolvimento |
 | `npm run desktop:build:native` | Compilar o helper Windows de áudio e atividade |
 | `npm run test:desktop:core` | Validar políticas, preferências, atualizações, notificações e lógica de áudio |
+| `npm run test:desktop:layout` | Exercitar layouts e navegação em duas instâncias reais do Electron com contas e mídias de teste |
 | `npm run test:profiles` | Validar perfis e autorização com banco local de teste |
 | `npm run desktop:package` | Gerar o instalador Windows; exige o helper compilado |
 
@@ -66,10 +67,38 @@ Os testes de núcleo não substituem a validação de Electron real, dispositivo
 chamadas entre máquinas. Os testes completos e a publicação estão descritos em
 `WINDOWS_APP.md` e `.github/workflows/windows-app.yml`.
 
-## Organização gradual
+## Organização dos controles da chamada
 
-A primeira etapa centraliza os comandos de desenvolvimento e documenta o caminho
-do desktop. As próximas etapas são validar os layouts no Electron, atribuir a um
-único módulo a organização dos controles da chamada e extrair estado de mídia,
-chat e apresentação para responsabilidades menores. Trocar tela, canal ou jogo
-deve preservar a chamada e suas mídias.
+`frontend/call-controls-layout.js` é o único módulo que posiciona os botões da
+chamada, o acesso às pessoas e a barra de controles. Ele registra as posições
+originais antes da montagem do desktop e escolhe diretamente o destino de cada
+elemento. Os botões são movidos, preservando identidade e listeners.
+
+- `desktop-shell.js` monta a navegação e os contêineres do aplicativo.
+- `app-layout.js` aplica a preferência Original/Discord e atualiza perfil e conexão.
+- `call-workspace.js` monta a área da comunidade e controla sua navegação lateral.
+- `call-controls-layout.js` centraliza posicionamento, ícones e rótulos dos controles.
+
+Os módulos de apresentação podem chamar `TronoCallControlsLayout.refresh()` após
+criar seus contêineres. Mudanças de tela e de estado da chamada também atualizam
+o posicionamento. O módulo não captura mídia, não abre conexão e não conecta
+handlers de ações aos botões. As configurações do desktop continuam no diálogo
+montado por `desktop-settings.js`.
+
+O teste `tests/desktop-call-layout.js` usa duas instâncias do Electron e um backend
+local com provedor de contas simulado. Ele verifica os mesmos nós, tracks, socket,
+conexão WebRTC e associações à voz e ao jogo durante a troca de layouts, navegação,
+assinatura de texto e redimensionamento. Também verifica mute e configurações.
+As capturas ficam em `artifacts/call-layout/`. Não usa contas ou dispositivos reais.
+
+Esse teste reproduziu no código anterior a perda da posição do microfone ao
+retornar ao layout Original após alternar entre as áreas. O teste passa com o
+posicionamento centralizado e também integra o workflow Windows existente.
+
+## Próximas etapas de organização
+
+Os comandos de desenvolvimento e o posicionamento dos controles já estão
+centralizados. As próximas etapas são extrair estado de mídia, chat e apresentação
+para responsabilidades menores. Trocar a área visível ou abrir texto/jogos deve
+preservar a chamada e suas mídias; trocar a própria sala de voz segue o fluxo
+explícito de saída e entrada.

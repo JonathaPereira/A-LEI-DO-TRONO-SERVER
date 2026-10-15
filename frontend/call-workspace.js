@@ -9,20 +9,13 @@ window.addEventListener('DOMContentLoaded',()=>{
  function channels(open){body.classList.toggle('workspace-sidebar-open',open);shade.hidden=!open;channel.setAttribute('aria-expanded',String(open));}channel.onclick=()=>channels(!body.classList.contains('workspace-sidebar-open'));shade.onclick=()=>channels(false);
  const layout=document.createElement('button');layout.id='workspaceLayoutToggle';layout.type='button';layout.className='chat-header-action';layout.title='Trocar entre os layouts Original e Discord';layout.onclick=()=>window.TronoAppLayout.apply(body.dataset.appLayout==='discord'?'original':'discord',{save:true});$('chatProfileBtn').before(layout);
  const dock=document.createElement('footer');dock.id='callFocusDock';dock.setAttribute('aria-label','Controles da chamada');document.querySelector('#socialPanel .voice-section').append(dock);
- const controls=['muteMicBtn','deafenVoiceBtn','cameraBtn','screenShareBtn','soundboardToggle','voiceSettingsBtn','joinVoiceBtn'];
- const icons={muteMicBtn:'<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/>',deafenVoiceBtn:'<path d="M3 14v-3a9 9 0 0 1 18 0v3M3 13h4v8H3zM17 13h4v8h-4z"/>',cameraBtn:'<rect x="2" y="5" width="14" height="14" rx="3"/><path d="m16 10 6-4v12l-6-4"/>',screenShareBtn:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8m-4-5v5m-3-12 3-3 3 3m-3-3v7"/>',soundboardToggle:'<path d="M3 10v4m4-7v10m5-15v20m5-15v10m4-7v4"/>',voiceSettingsBtn:'<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>',joinVoiceBtn:'<path d="M3 12c5-5 13-5 18 0l-1 5-4-1v-4M3 12l1 5 4-1v-4"/>'};
- const homes=new Map();let active=false,arranging=false;
- // A single set of event-bound controls owns the live tracks in both layouts.
- function arrange(){if(arranging)return;arranging=true;const on=body.classList.contains('chat-only-active');
-  if(on){for(const id of controls){const node=$(id);if(!node)continue;if(!homes.has(id)){const marker=document.createComment('call-control:'+id);node.before(marker);homes.set(id,marker);}if(node.parentElement!==dock)dock.append(node);if(!node.querySelector('.workspace-control-icon')){const svg=document.createElement('span');svg.className='workspace-control-icon';svg.innerHTML=icon(icons[id]);node.prepend(svg);}node.dataset.workspaceLabel=({muteMicBtn:'Mic',deafenVoiceBtn:'Áudio',cameraBtn:'Câmera',screenShareBtn:'Tela',soundboardToggle:'Efeitos',voiceSettingsBtn:'Ajustes',joinVoiceBtn:window.TronoSocial.voiceJoined?'Sair':'Entrar'})[id];node.setAttribute('aria-label',id==='soundboardToggle'?'Efeitos de áudio':node.lastElementChild?.textContent||node.title);if(id==='soundboardToggle'){node.title='Efeitos de áudio';node.setAttribute('aria-label','Efeitos de áudio');}}
-   const people=$('communityToggle');if(!homes.has('communityToggle')){const marker=document.createComment('call-control:communityToggle');people.before(marker);homes.set('communityToggle',marker);}if(people.parentElement!==document.querySelector('.chat-only-top-actions'))document.querySelector('.chat-only-top-actions').append(people);
-   if(!active){active=true;if(innerWidth>=1180)window.TronoSocial.toggleTextChat(true);}
-  }else if(active){active=false;for(const [id,marker]of homes)if(marker.isConnected)marker.after($(id));window.TronoAppLayout.apply(body.dataset.appLayout);}
-  layout.textContent=body.dataset.appLayout==='discord'?'Discord':'Original';layout.setAttribute('aria-label','Layout '+layout.textContent+' · clique para trocar');arranging=false;
+ let active=false;
+ function synchronize(){const on=body.classList.contains('chat-only-active');
+  if(on&&!active){active=true;if(innerWidth>=1180)window.TronoSocial.toggleTextChat(true);}
+  else if(!on)active=false;
+  layout.textContent=body.dataset.appLayout==='discord'?'Discord':'Original';layout.setAttribute('aria-label','Layout '+layout.textContent+' · clique para trocar');
  }
- window.addEventListener('trono-layout-change',()=>{arrange();});window.addEventListener('trono-call-change',arrange);new MutationObserver(arrange).observe(body,{attributes:true,attributeFilter:['class','data-app-layout']});
- // app-layout moves its controls first. Refresh after that synchronous pass.
- requestAnimationFrame(arrange);
+ window.addEventListener('trono-layout-change',synchronize);new MutationObserver(synchronize).observe(body,{attributes:true,attributeFilter:['class','data-app-layout']});
  document.addEventListener('click',e=>{if(e.target.closest('[data-chat-channel]')){channels(false);window.TronoMessenger.close();}const avatar=e.target.closest('#voiceRoster .mn-person-avatar');if(avatar){const id=avatar.closest('[data-account-id]')?.dataset.accountId;if(id)void window.TronoProfile.openMini(id);}});
  const roster=$('voiceRoster');new MutationObserver(()=>{for(const avatar of roster.querySelectorAll('.mn-person-avatar')){const id=avatar.closest('[data-account-id]')?.dataset.accountId;if(id){avatar.tabIndex=0;avatar.setAttribute('role','button');avatar.setAttribute('aria-label','Ver perfil de '+(avatar.closest('.voice-person').querySelector('strong')?.textContent||'participante'));}}}).observe(roster,{childList:true,subtree:true});
  roster.addEventListener('keydown',e=>{if(e.target.matches('.mn-person-avatar')&&['Enter',' '].includes(e.key)){e.preventDefault();e.target.click();}});
@@ -30,5 +23,5 @@ window.addEventListener('DOMContentLoaded',()=>{
  document.addEventListener('keydown',e=>{if(e.key==='Escape')channels(false);});window.addEventListener('resize',()=>{if(innerWidth>=760)channels(false);});
  window.addEventListener('trono-auth-change',()=>{if(!window.TronoAuth.user){$('workspaceDirectList').replaceChildren();$('workspaceDirectCount').hidden=true;channels(false);}});
  const version=document.querySelector('.chat-app-brand small');if(version)version.textContent='MEMES & NERDS';
- arrange();
+ window.TronoCallControlsLayout.refresh();synchronize();
 });
