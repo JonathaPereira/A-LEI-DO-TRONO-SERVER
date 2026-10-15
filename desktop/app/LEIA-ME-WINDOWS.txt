@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.1
+M&N · A Lei do Trono — Windows 0.2.3
 
-1. Instalação nova: instale MN-Trono-0.2.1-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.3-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -9,10 +9,10 @@ M&N · A Lei do Trono — Windows 0.2.1
    Desmarcar a opção ou sair da conta remove a sessão lembrada.
 3. Aparência oferece Original/Padrão e Discord, além dos temas de cores.
    A escolha é individual. Trocar a disposição durante a call mantém os recursos.
-4. No layout Discord, o canto inferior esquerdo mostra o canal conectado e o
-   botão de entrar/sair. Câmera e tela ficam como ícones abaixo. Foto e nome
-   aparecem na faixa inferior, junto de microfone, silenciamento e configurações.
-   Passe o mouse para ler os nomes dos ícones. O canal conectado é clicável.
+4. A chamada prioriza câmeras e compartilhamentos. Canais e mensagens diretas
+   ficam à esquerda; os jogos têm uma área separada. Os controles ficam abaixo
+   da mídia: rótulos curtos no Original e ícones no Discord. Passe o mouse
+   para ler a função de cada ícone. O canal conectado é clicável.
 5. Ler texto, abrir amigos, navegar ao início ou jogar preserva sua chamada.
    Sair da call mantém o canal de texto e o assento no jogo. Entrar novamente
    funciona mesmo ao ler outro canal de texto. Sair da conta encerra a sessão.
@@ -77,3 +77,8 @@ No Windows, só o serviço de áudio do próprio app é elegível a prioridade m
 O diagnóstico compara intervalos recentes e não exporta identidades ou mensagens. Consulte o guia 0.2.1 para limites e avaliação com o seu jogo/headset. Esta revisão não exige SQL novo ou mudança de backend.
 
 Windows 0.2.2: tela cheia nativa e mesa responsiva no Trono; Usurpação online; peças do centro do Azul; recursos por cor e negociações detalhadas no Splendor; filtro leve entre falas. Guia: ATUALIZAR_WINDOWS_v0.2.2.md. Backend 0.13.0-alpha, sem SQL novo.
+
+Windows 0.2.3: interface focada em chamadas e perfis personalizáveis com GIFs,
+prévia ao vivo e miniperfil. O criador pode consultar os e-mails cadastrados.
+Use o backend com a atualização do PR #29. A migração de perfis já foi aplicada
+no projeto chat-mn. Guia: ATUALIZAR_WINDOWS_v0.2.3.md.
