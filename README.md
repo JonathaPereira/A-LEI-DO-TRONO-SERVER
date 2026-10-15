@@ -1,3 +1,7 @@
+## Windows 0.2.2 · mesas, animações e filtro leve
+
+Tela cheia nativa e mesa responsiva no Trono; continuidade da troca da Usurpação online; peças físicas agrupadas no centro do Azul e pontos em movimento; poder de compra por cor e negociações detalhadas no Splendor. A redução leve combina o processamento nativo disponível com um filtro simples de graves e de fundo entre falas. Veja [o guia atual](ATUALIZAR_WINDOWS_v0.2.2.md). Backend 0.13.0-alpha, sem SQL novo. A investigação de áudio em áreas virtuais permanece separada.
+
 ## Windows 0.2.1 · proteção da voz recebida
 
 Recepção com margem adaptativa por voz, diagnóstico de intervalos, menos trabalho visual em segundo plano e prioridade moderada restrita ao serviço de áudio do app no Windows. Volumes normais permanecem na reprodução direta; amplificação é separada do processamento do microfone. Veja [o guia da versão](ATUALIZAR_WINDOWS_v0.2.1.md). Backend 0.13.0-alpha e SQL anteriores permanecem compatíveis.
@@ -8,7 +12,7 @@ Catálogo compacto, volumes de efeitos pessoais por jogo, fichas e bônus separa
 
 ## Correção de publicação no Surge
 
-O pacote **MN-Trono-Frontend-0.2.1.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Esta revisão não exige atualização do backend ou SQL novo; siga [o guia atual](ATUALIZAR_WINDOWS_v0.2.1.md). Os backups automáticos conservam somente a versão atual e anterior.
+O pacote **MN-Trono-Frontend-0.2.2.zip** das Releases privadas inclui o frontend inteiro e somente o EXE atual, com `latest.yml` correspondente. Use a entrega mais recente após o build do merge. Esta revisão não exige atualização do backend ou SQL novo; siga [o guia atual](ATUALIZAR_WINDOWS_v0.2.2.md). Os backups automáticos conservam somente a versão atual e anterior.
 
 ## Catálogo de jogos
 

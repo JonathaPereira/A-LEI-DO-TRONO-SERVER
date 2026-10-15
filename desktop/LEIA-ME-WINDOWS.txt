@@ -39,3 +39,5 @@ Conexão local: WebSocket 127.0.0.1:32196, autenticado por código aleatório.
 Não aceita conexões de outros computadores. O atalho usa RegisterHotKey
 exclusivamente para a combinação escolhida, sem monitorar outras teclas.
 Compatibilidade: Windows 10/11 x64, navegador Chrome/Edge atualizado.
+
+Windows 0.2.2: tela cheia nativa e mesa responsiva no Trono; Usurpação online; peças do centro do Azul; recursos por cor e negociações detalhadas no Splendor; filtro leve entre falas. Guia: ATUALIZAR_WINDOWS_v0.2.2.md. Backend 0.13.0-alpha, sem SQL novo.

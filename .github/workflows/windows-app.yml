@@ -45,6 +45,8 @@ jobs:
             Write-Output "::error title=Voice reception under load::$details"
             exit $testExit
           }
+      - name: Verify lightweight microphone filter PCM
+        run: node --test tests/light-noise-processing.js
       - name: Verify revised game rules and independent voice
         run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
       - name: Verify private attachments and creator moderation

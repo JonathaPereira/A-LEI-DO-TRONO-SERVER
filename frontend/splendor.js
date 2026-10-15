@@ -80,9 +80,19 @@ window.TronoSplendor=(()=>{
   function player(p,i,s,{self=false}={}){
     const panel=el('article','sp-player'+(self?' sp-self':'')+(s.turn===i&&s.phase!=='finished'?' sp-player-active':''));panel.dataset.player=p.id;
     const header=el('header'),identity=el('div');identity.append(el('strong','',p.name+(self?' · você':'')),el('small','',p.forfeited?'Saiu · bot assume':p.bot?'Mercador automático':i===s.starter?'Primeiro da rodada':'Mercador'));const points=el('b','sp-score',String(detail?.playerId===p.id?detail.displayScore:p.score));points.dataset.score=p.id;points.title='Pontos de prestígio';header.append(identity,points);panel.append(header);
-    const holdings=el('div','sp-holdings sp-inventory');
-    const wallet=el('section','sp-wallet');wallet.setAttribute('aria-label','Fichas disponíveis de '+p.name);wallet.append(el('strong','sp-inventory-title','FICHAS · PARA GASTAR'));const chips=el('div','sp-inventory-row');for(let color=0;color<6;color++){const n=el('div','sp-wallet-color');n.dataset.walletColor=color;n.append(gem(color,p.tokens[color],{chip:true}));n.title=p.tokens[color]+' fichas de '+R.colors[color];chips.append(n);}wallet.append(chips);
-    const discounts=el('section','sp-discounts');discounts.setAttribute('aria-label','Bônus permanentes das cartas de '+p.name);discounts.append(el('strong','sp-inventory-title','CARTAS · DESCONTO PERMANENTE'));const bonuses=el('div','sp-inventory-row');for(let color=0;color<5;color++){const g=el('div','sp-bonus-card');g.dataset.bonus=color;g.append(gem(color),el('b','',String(p.bonuses[color])));g.title=p.bonuses[color]+' cartas de '+R.colors[color]+' · reduz esse custo em '+p.bonuses[color];bonuses.append(g);}discounts.append(bonuses);holdings.append(wallet,discounts);panel.append(holdings);
+    const holdings=el('section','sp-holdings sp-inventory sp-purchasing-power');holdings.setAttribute('aria-label','Poder de compra por cor de '+p.name);
+    holdings.append(el('strong','sp-inventory-title','PODER DE COMPRA · POR COR'));
+    const colors=el('div','sp-resource-colors');
+    for(let color=0;color<6;color++){
+      const group=el('div','sp-resource-color');group.dataset.resourceColor=color;
+      group.append(el('small','sp-resource-name',R.colors[color]));
+      const equation=el('div','sp-resource-equation');
+      if(color<5){const bonus=el('span','sp-bonus-card');bonus.dataset.bonus=color;bonus.append(gem(color),el('b','',String(p.bonuses[color])));bonus.title='Cartas: desconto permanente';equation.append(bonus,el('i','sp-resource-plus','+'));}
+      const chip=el('span','sp-wallet-color');chip.dataset.walletColor=color;chip.append(gem(color,p.tokens[color],{chip:true}));chip.title='Fichas: gastas nas compras';equation.append(chip);
+      group.append(equation,el('b','sp-resource-total',color<5?'= '+(p.bonuses[color]+p.tokens[color]):p.tokens[5]+' curinga(s)'));
+      group.setAttribute('aria-label',color<5?R.colors[color]+': '+p.bonuses[color]+' cartas + '+p.tokens[color]+' fichas = '+(p.bonuses[color]+p.tokens[color])+' de poder de compra':'Ouro: '+p.tokens[5]+' fichas curingas, usadas uma vez');colors.append(group);
+    }
+    holdings.append(colors,el('small','sp-resource-legend','▱ Cartas ficam · ● Fichas gastas voltam ao banco · Ouro completa uma cor'));panel.append(holdings);
     const footer=el('div','sp-player-foot');footer.append(el('small','',R.sum(p.tokens)+'/10 fichas · '+p.cards.length+' cartas · '+p.nobles.length+' nobres'));const collection=button('Ver cartas ('+p.cards.length+')',()=>openCollection(p),'sp-link');footer.append(collection);panel.append(footer);
     const reserved=el('div','sp-reserved');reserved.setAttribute('aria-label','Cartas reservadas de '+p.name);reserved.append(el('strong','sp-reserved-title','RESERVAS · '+p.reserved.length+'/3'));for(const c of p.reserved)reserved.append(card(c,{small:true}));for(let j=p.reserved.length;j<3;j++)reserved.append(el('span','sp-reserved-slot',self?'Reserva '+(j+1):'◇'));panel.append(reserved);return panel;
   }
@@ -113,25 +123,54 @@ window.TronoSplendor=(()=>{
     if(s.phase==='finished'){const result=el('section','sp-result');result.append(el('span','sp-eyebrow','O PRESTÍGIO CONQUISTA A CORTE'),el('h2','',s.winners.map(id=>s.players.find(p=>p.id===id).name).join(' e ')+(s.winners.length>1?' compartilham a vitória':' venceu')),el('p','','Maior pontuação; no empate, menos cartas de desenvolvimento. '+(room.recordStatus==='saved'?'Recordes salvos.':room.recordStatus==='pending'?'Recordes aguardando conexão.':'Conferindo os recordes…')));if(room.recordStatus==='pending')result.append(button('Tentar guardar recordes',()=>void request('retry-record')));content.append(result);}
     if(s.finalRound&&s.phase!=='finished')content.append(el('p','sp-final-round','Última rodada — todos completam o mesmo número de turnos. Vence a maior pontuação, mesmo acima de 15.'));
     content.append(table(s));if(s.last&&!detail){const last=el('p','sp-last-action',eventText(s.last,s));last.setAttribute('role','status');content.append(last);}const history=el('details','sp-history');history.append(el('summary','','Histórico de negociações'));const logs=el('ol');[...s.log].reverse().forEach(event=>logs.append(el('li','',eventText(event,s))));history.append(logs);content.append(history);
-    if(detail){const banner=el('div','sp-event-banner');banner.setAttribute('role','status');banner.append(el('b','sp-event-value',detail.phase==='landed'&&detail.event.points?'+'+detail.event.points:'✦'),el('span','',(detail.phase==='flight'?'1/2 · Em movimento. ':'2/2 · Recebido. ')+eventText(detail.event,s)),button('Concluir animação',stopAnimations,'sp-link'));content.append(banner);}
+    if(detail){
+      const banner=el('div','sp-event-banner');banner.setAttribute('role','status');
+      const phases={payment:'1 · Pagamento: fichas voltam ao banco',showcase:'2 · Conheça a carta adquirida',flight:'Transferindo os recursos',returned:'Devolvendo o excesso de fichas',landed:'Concluído · confira seus recursos'};
+      const copy=el('div','sp-event-copy');copy.append(el('strong','',phases[detail.phase]),el('span','',eventText(detail.event,s)));
+      if(detail.event.payment){const payment=el('div','sp-event-payment');payment.append(el('small','','Fichas gastas: '));detail.event.payment.forEach((n,i)=>{if(n)payment.append(gem(i,n,{chip:true}));});if(!R.sum(detail.event.payment))payment.append(el('small','','nenhuma · descontos cobriram o custo'));copy.append(payment);}
+      banner.append(el('b','sp-event-value',detail.phase==='landed'&&detail.event.points?'+'+detail.event.points:'✦'),copy,button('Concluir animação',stopAnimations,'sp-link'));content.append(banner);
+      if(detail.phase==='showcase'&&detail.event.card){const hero=el('div','sp-purchase-showcase');hero.append(card(detail.event.card,{action:false}),el('strong','','Carta adquirida'),el('span','','+1 desconto permanente de '+R.colors[detail.event.card.bonus]),el('b','',detail.event.card.points?'+'+detail.event.card.points+' pontos de prestígio':'Desconto para as próximas compras'));hero.querySelector('button').disabled=true;content.append(hero);}
+    }
   }
-  function stopAnimations(){generation++;wake?.();wake=null;queue=[];visual=null;busy=false;detail=null;document.querySelectorAll('.sp-flight').forEach(n=>n.remove());render();}
+  function stopAnimations(){generation++;wake?.();wake=null;queue=[];visual=null;busy=false;detail=null;document.querySelectorAll('.sp-flight').forEach(n=>{n.getAnimations().forEach(a=>a.cancel());n.remove();});render();}
   const wait=ms=>new Promise(resolve=>{const timer=setTimeout(()=>{wake=null;resolve();},ms);wake=()=>{clearTimeout(timer);resolve();};});
-  function fly(event,source,target){
-    if(!source||!target)return;const a=source,b=target.getBoundingClientRect(),n=el('span','sp-flight');if(event.card){const image=card(event.card,{small:true,action:false});image.disabled=true;n.append(image);}else n.append(gem(event.kind==='reserve'?5:event.tokens?.findIndex(Boolean)??0,undefined,{chip:true}));$('splendorScreen').append(n);n.style.left=a.left+'px';n.style.top=a.top+'px';n.style.width=Math.max(38,Math.min(95,a.width))+'px';
-    const anim=n.animate([{transform:'translate(0,0) rotate(-7deg) scale(1)',opacity:1},{transform:'translate('+(b.left-a.left)+'px,'+(b.top-a.top)+'px) rotate(5deg) scale(.65)',opacity:1},{transform:'translate('+(b.left-a.left)+'px,'+(b.top-a.top)+'px) scale(.35)',opacity:0}],{duration:1650,easing:'cubic-bezier(.22,.6,.23,1)',fill:'forwards'});anim.finished.catch(()=>{}).finally(()=>n.remove());
+  function fly(event,source,target,{color=null,delay=0}={}){
+    if(!source||!target)return;const a=source.getBoundingClientRect?source.getBoundingClientRect():source,b=target.getBoundingClientRect();if(!a.width||!b.width)return;
+    const n=el('span','sp-flight');if(event.card&&color===null){const image=card(event.card,{small:true,action:false});image.disabled=true;n.append(image);}else if(event.noble&&color===null)n.append(noble(event.noble,state()));else n.append(gem(color??5,undefined,{chip:true}));$('splendorScreen').append(n);n.style.left=a.left+'px';n.style.top=a.top+'px';n.style.width=(color===null?Math.max(38,Math.min(110,a.width)):36)+'px';
+    const dx=b.left+b.width/2-a.left,dy=b.top+b.height/2-a.top;
+    const anim=n.animate([{transform:'translate(0,0) rotate(-7deg)',opacity:0},{transform:'translate(0,-12px) scale(1.08)',opacity:1,offset:.15},{transform:'translate('+dx*.5+'px,'+(dy*.5-36)+'px) rotate(7deg)',opacity:1,offset:.55},{transform:'translate('+dx+'px,'+dy+'px) scale(.6)',opacity:0}],{duration:1800,delay,easing:'cubic-bezier(.22,.6,.23,1)',fill:'both'});anim.finished.catch(()=>{}).finally(()=>n.remove());
+  }
+  function transferTokens(tokens,playerId,toBank){
+    let count=0;for(let color=0;color<6;color++)for(let i=0;i<(tokens?.[color]||0);i++){
+      const bank=$('splendorContent').querySelector('[data-token="'+color+'"]'),player=$('splendorContent').querySelector('[data-player="'+playerId+'"] [data-wallet-color="'+color+'"]');
+      fly({},toBank?player:bank,toBank?bank:player,{color,delay:count++*90});
+    }return count?1800+(count-1)*90:0;
   }
   async function animateQueue(){
     if(busy)return;busy=true;const ticket=generation;
     while(queue.length&&ticket===generation&&visible()){
-      const job=queue.shift(),next=job.to,event=next.last,source=event.card?document.querySelector('#splendorContent [data-card="'+event.card.id+'"]'):event.noble?document.querySelector('#splendorContent [data-noble="'+event.noble.id+'"]'):document.querySelector('#splendorContent [data-token="'+(event.kind==='reserve'?5:event.tokens?.findIndex(Boolean))+'"]');const rect=source?.getBoundingClientRect();
-      visual=JSON.parse(JSON.stringify(next));const incoming=visual.players.find(p=>p.id===event.playerId),before=job.from.players.find(p=>p.id===event.playerId);if(before){incoming.bonuses=before.bonuses;incoming.cards=before.cards;if(event.kind==='take')incoming.tokens=before.tokens;}
-      detail={event,playerId:event.playerId,displayScore:next.players.find(p=>p.id===event.playerId).score-event.points,phase:'flight'};render();sound(event.kind==='take'?'chip':event.kind==='noble'?'noble':'card');const target=document.querySelector('#splendorContent [data-player="'+event.playerId+'"]');fly(event,rect,target);await wait(1750);if(ticket!==generation)return;
-      visual=next;detail.phase='landed';detail.displayScore=next.players.find(p=>p.id===event.playerId).score;render();if(event.points)sound('score');await wait(event.points?1600:1100);
-
+      const job=queue.shift(),next=job.to,event=next.last;
+      visual=JSON.parse(JSON.stringify(job.from));detail={event,playerId:event.playerId,displayScore:job.from.players.find(p=>p.id===event.playerId).score,phase:'flight'};
+      if(event.kind==='buy'){
+        detail.phase='payment';render();sound('chip');await wait(Math.max(1000,transferTokens(event.payment,event.playerId,true)+300));if(ticket!==generation)return;
+        const paying=visual.players.find(p=>p.id===event.playerId);paying.tokens=[...next.players.find(p=>p.id===event.playerId).tokens];visual.bank=[...next.bank];
+        detail.phase='showcase';render();sound('card');await wait(1900);if(ticket!==generation)return;
+        const source=$('splendorContent').querySelector('.sp-purchase-showcase .sp-card')?.getBoundingClientRect();
+        detail.phase='flight';render();fly(event,source,$('splendorContent').querySelector('[data-player="'+event.playerId+'"] [data-bonus="'+event.card.bonus+'"]'));await wait(1900);
+      }else if(event.kind==='take'){
+        render();sound('chip');await wait(transferTokens(event.tokens,event.playerId,false)+350);
+      }else{
+        render();sound(event.kind==='noble'?'noble':'card');
+        const source=event.card?$('splendorContent').querySelector('[data-card="'+event.card.id+'"]'):event.noble?$('splendorContent').querySelector('[data-noble="'+event.noble.id+'"]'):$('splendorContent').querySelector('.sp-level-'+event.level);
+        fly(event,source,$('splendorContent').querySelector('[data-player="'+event.playerId+'"] '+(event.noble?'header':'.sp-reserved')));if(event.gold)transferTokens([0,0,0,0,0,event.gold],event.playerId,false);await wait(2050);
+      }
+      if(ticket!==generation)return;
+      if(R.sum(event.returned||[])){const receiving=visual.players.find(p=>p.id===event.playerId);receiving.tokens=next.players.find(p=>p.id===event.playerId).tokens.map((n,i)=>n+event.returned[i]);visual.bank=next.bank.map((n,i)=>n-event.returned[i]);detail.phase='returned';render();sound('chip');await wait(transferTokens(event.returned,event.playerId,true)+300);if(ticket!==generation)return;}
+      visual=next;detail.phase='landed';detail.displayScore=next.players.find(p=>p.id===event.playerId).score;render();if(event.points)sound('score');await wait(event.points?1900:1400);
     }
     if(ticket===generation){busy=false;visual=null;detail=null;render();}
   }
+
   function accept(next){
     const previous=room;room=next;resume=next.id;notice='';pending=false;clearTimeout(pendingTimer);selected=Array(6).fill(0);if(returnChoice&&returnChoice.revision!==next.state?.revision)dismiss();
     if(next.state?.revision>previous?.state?.revision&&next.state.revision===previous.state.revision+1&&visible()&&!reduced()){queue.push({from:JSON.parse(JSON.stringify(previous.state)),to:JSON.parse(JSON.stringify(next.state))});if(queue.length>12){stopAnimations();return;}void animateQueue();}else if(!busy)render();

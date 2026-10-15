@@ -31,7 +31,7 @@ window.TronoGames=(()=>{
     const count=tiles.filter(c=>c===color).length;
     const n=button('',()=>{selection={source,color};notice='';sound('azul-pick');render();},'az-pick');
     n.dataset.noClickSfx='1';n.dataset.source=source;n.dataset.color=color;n.title='Pegar '+count+' '+R.colors[color];
-    if(factory){n.append(tile(color));}else{n.append(tile(color),el('b','az-pick-count','×'+count));}
+    if(factory){n.append(tile(color));}else{n.classList.add('az-center-group');for(let i=0;i<count;i++)n.append(tile(color));}
     n.setAttribute('aria-label',(source===-1?'Centro':'Fábrica '+(source+1))+': pegar '+count+' '+R.colors[color]);
     n.disabled=locked()||displayState().phase!=='draft'||displayState().players[displayState().turn].id!==window.TronoAuth.user?.id;
     n.classList.toggle('selected',selection?.source===source&&selection.color===color);return n;
@@ -40,6 +40,7 @@ window.TronoGames=(()=>{
     const section=el('section','az-supply');section.setAttribute('aria-label','Fábricas e centro');
     const heading=el('div','az-supply-title');heading.append(el('span','az-eyebrow','A MESA DOS ARTESÃOS'),el('strong','','Mercado de azulejos'),el('small','',state.bagCount+' no saco · '+state.discardCount+' no descarte'));section.append(heading);
     const ring=el('div','az-market-ring');ring.dataset.factories=state.factories.length;
+    ring.classList.toggle('az-market-expanded',state.center.length>10);
     state.factories.forEach((tiles,source)=>{
       const angle=(-90+source*360/state.factories.length)*Math.PI/180,disk=el('div','az-factory');
       disk.style.setProperty('--factory-x',(50+37*Math.cos(angle))+'%');disk.style.setProperty('--factory-y',(50+37*Math.sin(angle))+'%');disk.dataset.factory=source;
@@ -51,7 +52,7 @@ window.TronoGames=(()=>{
       if(!tiles.length)disk.append(el('span','az-empty-factory','✥'));else disk.append(pieces);ring.append(disk);
     });
     const center=el('section','az-center');center.append(el('strong','','CENTRO'));const pool=el('div','az-center-tiles');
-    if(state.marker)pool.append(tile(5));for(const color of new Set(state.center))pool.append(sourceButton(state.center,-1,color));
+    if(state.marker)pool.append(tile(5));for(const color of [...new Set(state.center)].sort((a,b)=>a-b))pool.append(sourceButton(state.center,-1,color));
     if(!state.center.length)pool.append(el('small','',state.phase==='scoring'?'Contando os mosaicos…':'As sobras vêm para cá'));center.append(pool);ring.append(center);section.append(ring);
     const selectedCount=selection?(selection.source===-1?state.center:state.factories[selection.source]).filter(c=>c===selection.color).length:0;
     const instruction=el('p','az-instruction',replay?'Acompanhe cada azulejo e suas conexões.':selection?selectedCount+' × '+R.colors[selection.color]+' · escolha uma linha destacada. As sobras vão para o chão.':'Escolha uma cor. Depois, escolha uma linha no seu tabuleiro.');
@@ -73,7 +74,7 @@ window.TronoGames=(()=>{
       const arrow=el('span','az-wall-arrow','');arrow.setAttribute('aria-hidden','true');arrows.append(arrow);
       for(let col=0;col<5;col++){
         const color=(col-row+5)%5,cell=el('span','az-wall-cell');cell.dataset.cell=row+','+col;cell.append(tile(color,{ghost:!p.wall[row][col]}));
-        if(scoring&&detail.cells?.some(([r,c])=>r===row&&c===col))cell.classList.add('az-connected');
+        if(scoring&&detail.cells?.some(([r,c])=>r===row&&c===col)){cell.classList.add('az-connected');cell.style.setProperty('--connection-index',detail.cells.findIndex(([r,c])=>r===row&&c===col));}
         if(scoring&&detail.kind==='placement'&&detail.row===row&&detail.col===col){cell.classList.add('az-score-target');if(detail.landed)cell.append(el('b','az-points-pop','+'+detail.points));}
         wall.append(cell);
       }
@@ -93,13 +94,22 @@ window.TronoGames=(()=>{
   }
   function finishReplay(){
     replayGeneration++;clearTimeout(replayTimer);replayWake?.();replayWake=null;replayTimer=null;replay=null;replayQueue=[];detail=null;
-    document.querySelectorAll('.az-flying-tile').forEach(n=>{n.getAnimations().forEach(a=>a.cancel());n.remove();});if($('azulContent'))render();
+    document.querySelectorAll('.az-flying-tile,.az-score-flight').forEach(n=>{n.getAnimations().forEach(a=>a.cancel());n.remove();});if($('azulContent'))render();
   }
   function fly(color,from,to,duration=700){
     if(!from||!to||reducedMotion()||!replayVisible())return;
     const a=from.getBoundingClientRect(),b=to.getBoundingClientRect();if(!a.width||!b.width)return;
     const n=tile(color);n.classList.add('az-flying-tile');Object.assign(n.style,{left:a.left+'px',top:a.top+'px',width:a.width+'px',height:a.height+'px'});$('azulScreen').append(n);
     const animation=n.animate([{transform:'translate(0,0) rotate(-5deg) scale(1)',opacity:1},{transform:`translate(${(b.left-a.left)*.5}px,${(b.top-a.top)*.5-25}px) rotate(8deg) scale(1.15)`,offset:.5},{transform:`translate(${b.left-a.left}px,${b.top-a.top}px) rotate(0) scale(${b.width/a.width})`,opacity:1}],{duration,easing:'cubic-bezier(.3,.1,.2,1)',fill:'forwards'});
+    animation.finished.catch(()=>{}).finally(()=>n.remove());
+  }
+  function flyPoints(step){
+    const board=$('azulContent').querySelector('[data-azul-player="'+step.playerId+'"]');
+    const source=step.kind==='placement'?board?.querySelector('[data-cell="'+step.row+','+step.col+'"]'):step.kind==='floor'?board?.querySelector('.az-floor'):board;
+    const target=board?.querySelector('.az-score-plaque');if(!source||!target||reducedMotion())return;
+    const a=source.getBoundingClientRect(),b=target.getBoundingClientRect(),n=el('b','az-score-flight',step.kind==='floor'?'−'+step.applied:'+'+step.points);
+    Object.assign(n.style,{left:(a.left+a.width/2)+'px',top:(a.top+a.height/2)+'px'});$('azulScreen').append(n);
+    const animation=n.animate([{transform:'translate(-50%,-50%) scale(.75)',opacity:0},{transform:'translate(-50%,-65%) scale(1.2)',opacity:1,offset:.2},{transform:'translate(-50%,-90%) scale(1)',opacity:1,offset:.55},{transform:'translate('+(b.left+b.width/2-a.left-a.width/2)+'px,'+(b.top-a.top-a.height/2)+'px) scale(.65)',opacity:0}],{duration:1850,easing:'ease-in-out',fill:'forwards'});
     animation.finished.catch(()=>{}).finally(()=>n.remove());
   }
   function stepCopy(step){
@@ -137,8 +147,9 @@ window.TronoGames=(()=>{
           fly(step.color,board?.querySelector('[data-azul-row="'+step.row+'"] .az-tile:last-child'),board?.querySelector('[data-cell="'+step.row+','+step.col+'"]'));
           await delay(720,generation);if(generation!==replayGeneration)return;
         }
-        P.apply(replay.state,step);detail.landed=true;render();sound(step.kind==='floor'?'azul-penalty':'azul-score');
-        await delay(step.kind==='bonus'?1600:1250,generation);
+        detail.beforeScore=replay.state.players.find(p=>p.id===step.playerId).score;
+        P.apply(replay.state,step);detail.landed=true;render();flyPoints(step);sound(step.kind==='floor'?'azul-penalty':'azul-score');
+        await delay(step.kind==='bonus'?2200:1950,generation);
       }
       if(generation!==replayGeneration)return;
       detail=null;await delay(800,generation);replay=null;
