@@ -65,6 +65,6 @@ test('installed desktop boundary, native shortcut, picker and filesystem integra
     await page.evaluate(()=>document.getElementById('runtimeShare')?.remove());await page.screenshot({path:path.resolve(__dirname,'../artifacts/windows-app-runtime.png')});
     // Closing the window retains the process/call for the tray; quit is explicit.
     phase='tray close';await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].close());assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible()),false);
-  }catch(error){error.message='Desktop phase: '+phase+'\n'+error.message;throw error;}
+  }catch(error){console.error('Desktop runtime failure '+JSON.stringify({phase,message:error.message}));error.message='Desktop phase: '+phase+'\n'+error.message;throw error;}
   finally{finished=true;await closeTestApp(app);await api?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
 });

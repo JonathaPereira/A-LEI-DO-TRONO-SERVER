@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),os=require('node:os');
 async function exerciseVoiceProtection({app,page}){
-  const metrics=()=>app.evaluate(({app})=>{const os=require('node:os');return app.getAppMetrics().map(r=>{let priority=null;try{priority=os.getPriority(r.pid);}catch{}return {pid:r.pid,creationTime:r.creationTime,type:r.type,name:r.name,serviceName:r.serviceName,priority};});});
+  const metrics=()=>app.evaluate(({app})=>{const os=process.getBuiltinModule('node:os');return app.getAppMetrics().map(r=>{let priority=null;try{priority=os.getPriority(r.pid);}catch{}return {pid:r.pid,creationTime:r.creationTime,type:r.type,name:r.name,serviceName:r.serviceName,priority};});});
   const original=await metrics();
   try{
     const state=await page.evaluate(()=>window.TronoDesktop.setVoiceProtection(true));assert.equal(state.active,true);assert(['managed','system','waiting','unavailable'].includes(state.status));

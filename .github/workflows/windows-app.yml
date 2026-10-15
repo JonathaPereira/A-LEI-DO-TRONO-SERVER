@@ -101,7 +101,7 @@ jobs:
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
           if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 25) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Windows app runtime::$details"
             exit $testExit
           }
