@@ -5,7 +5,7 @@ const {Readable}=require('stream');
 const {pipeline}=require('stream/promises');
 const {permissions}=require('./roles');
 const {validateSound,MAX_BYTES:SOUND_BYTES}=require('./soundboard');
-const LIMITS={file:10_000_000,video:100_000_000,avatar:1_000_000,total:8_000_000_000};
+const LIMITS={file:10_000_000,video:100_000_000,avatar:10_000_000,total:8_000_000_000};
 const PREVIEW_MIMES=new Set(['image/png','image/jpeg','image/gif','image/webp','video/mp4','video/webm','application/pdf','audio/wav']);
 const error=(code,message,status=400)=>Object.assign(new Error(message),{code,status});
 const R2_CODES=new Set(['Unauthorized','AccessDenied','InvalidAccessKeyId','SignatureDoesNotMatch','ExpiredRequest','RequestExpired','RequestTimeTooSkewed','NotEntitled','InvalidBucketName','NoSuchBucket','MissingContentLength','IncompleteBody','EntityTooLarge','MetadataTooLarge','InternalError','ServiceUnavailable','TooManyRequests','InvalidArgument','InvalidRequest','AuthorizationHeaderMalformed']);
@@ -152,7 +152,7 @@ function createFiles({auth,env=process.env,membership=()=>false,canAttach=member
        }else({prefix,body}=await peek(req));
        const mime=detectMime(prefix),isVideo=['video/mp4','video/webm'].includes(mime);
        if(size>(kind==='avatar'?LIMITS.avatar:isVideo?LIMITS.video:LIMITS.file))throw error('FILE_TOO_LARGE','Limite: 10 MB por arquivo e 100 MB por vídeo MP4.',413);
-       if(kind==='avatar'&&(mime!=='image/png'||prefix.readUInt32BE(16)!==256||prefix.readUInt32BE(20)!==256))throw error('INVALID_AVATAR','A foto do perfil deve ser PNG com 256 × 256 pixels.');
+       if(kind==='avatar'&&!['image/png','image/jpeg','image/webp','image/gif'].includes(mime))throw error('INVALID_AVATAR','Escolha uma imagem PNG, JPG, WebP ou GIF.');
        const id=crypto.randomUUID(),objectKey=`${kind}/${owner}/${id}`;
        row=first(await db(kind==='direct'?'rpc/reserve_direct_file':'rpc/reserve_chat_file','POST',{p_id:id,p_owner:owner,p_key:objectKey,p_name:name,p_bytes:size,p_mime:mime,...(kind==='direct'?{p_peer:peerId}:{p_kind:kind,p_room:roomId})}));
        let received=0;const counted=Readable.from((async function*(){for await(const chunk of body){received+=chunk.length;if(received>size)throw error('FILE_TOO_LARGE','Arquivo ultrapassou o tamanho declarado.',413);yield chunk;}if(received!==size)throw error('UPLOAD_INCOMPLETE','Envio incompleto. Tente novamente.');})());

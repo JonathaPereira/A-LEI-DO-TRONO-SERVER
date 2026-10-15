@@ -1,5 +1,6 @@
 'use strict';
 const {accountRole,permissions}=require('./roles');
+const {cleanProfile}=require('./profile-customization');
 
 // Supabase keeps password hashes and recovery tokens. The application never stores passwords.
 const SYMBOLS = "!@#$%^&*()_+-=[]{};'\\:\"|<>?,./`~";
@@ -52,6 +53,7 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{},
         if(reason)throw authError(reason,reasons[reason][1],reasons[reason][0]);
         throw authError('COMMUNITY_UNAVAILABLE','Comunidade indisponível. Confira a atualização SQL.',503);
       }
+      if(path.includes('/rpc/save_member_profile')||path.includes('/rpc/read_member_profile')||path.includes('/rpc/creator_registered_accounts')){const messages={FORBIDDEN:'Apenas o criador pode ver os e-mails.',AUTH_REQUIRED:'Entre novamente na sua conta.',HANDLE_TAKEN:'Esse @usuário já está em uso.',NICKNAME_TAKEN:'Esse nome já está em uso.',INVALID_PROFILE:'Confira os campos do perfil.',INVALID_PROFILE_MEDIA:'Escolha imagens enviadas pela sua conta.'};const reason=Object.keys(messages).find(k=>String(data.message||'').includes(k));throw authError(reason||'PROFILE_UNAVAILABLE',messages[reason]||'Perfil indisponível. Confira a atualização do servidor.',reason==='FORBIDDEN'?403:reason?400:503);}
       if(path.includes('/rpc/update_chat_profile')){const messages={NICKNAME_TAKEN:'Esse apelido já está em uso. Escolha outro.',INVALID_NICKNAME:'Use um apelido de 2 a 20 caracteres.',INVALID_AVATAR:'Selecione um ícone ou envie uma foto válida.'};const reason=Object.keys(messages).find(k=>String(data.message||'').includes(k));throw authError(reason||'PROFILE_UPDATE_FAILED',messages[reason]||'Não foi possível salvar. Confira se a atualização SQL foi executada.',reason==='NICKNAME_TAKEN'?409:400);}
       if(path.includes('/verify'))throw authError('RECOVERY_INVALID','Este link expirou ou já foi utilizado. Solicite outro link.',401);
       if(path.includes('/signup'))throw authError('SIGNUP_FAILED','Não foi possível concluir o cadastro. Confira os dados ou tente outro apelido.');
@@ -136,7 +138,8 @@ function createAuth({env=process.env,fetchImpl=globalThis.fetch,onRevoke=()=>{},
       if(!validNickname(nickname))throw authError('INVALID_NICKNAME','Use um apelido de 2 a 20 caracteres: letras, números, espaço, ponto, hífen ou sublinhado.');
       const preset=String(req.body.avatar_preset||'crown'),file=req.body.avatar_file_id||null;
       if(file&&!/^[0-9a-f-]{36}$/i.test(file))throw authError('INVALID_AVATAR','Foto inválida.');
-      await upstream('/rest/v1/rpc/update_chat_profile',{method:'POST',token,body:{p_nickname:nickname,p_preset:preset,p_file:file}});
+      if(req.body.personalization!==undefined)await upstream('/rest/v1/rpc/save_member_profile',{method:'POST',token,body:{p_nickname:nickname,p_preset:preset,p_file:file,p_data:cleanProfile(req.body.personalization)}});
+      else await upstream('/rest/v1/rpc/update_chat_profile',{method:'POST',token,body:{p_nickname:nickname,p_preset:preset,p_file:file}});
       const user=await identity(token);onProfileChange(user);return {user:publicAccount(user)};
     },'profile',15);
     route('post','logout',async req=>{const token=tokenFrom(req),account=await identity(token);await upstream('/auth/v1/logout?scope=local',{method:'POST',token});onRevoke({userId:account.id,sessionId:account.sessionId,all:!account.sessionId});return {ok:true};});

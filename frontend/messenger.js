@@ -33,6 +33,7 @@ window.TronoMessenger=(()=>{
   function render(){
     if(!$('messengerList'))return;const total=state.threads.reduce((sum,row)=>sum+Number(row.unread||0),0)+state.friends.filter(row=>row.state==='pending'&&row.incoming).length;
     const toggle=$('messengerToggle'),badge=$('messengerUnread');badge.textContent=total?String(Math.min(total,99)):'';badge.hidden=!total;toggle.classList.toggle('has-unread',total>0);toggle.setAttribute('aria-label','Amigos'+(total?' · '+total+' avisos não lidos':''));
+    const peers=new Map();for(const entry of [...state.threads,...state.friends.filter(x=>x.state==='accepted')]){const id=entry.id||entry.peerId;if(!peers.has(id))peers.set(id,{...entry,id,name:person(id)?.name||entry.name,unread:state.threads.find(x=>x.peerId===id)?.unread||0});}window.dispatchEvent(new CustomEvent('trono-direct-change',{detail:{people:[...peers.values()],unread:total}}));
     const list=$('messengerList'),scroll=list.scrollTop;list.replaceChildren();
     const ids=new Set();for(const group of [['Pedidos',state.friends.filter(row=>row.state==='pending')],['Conversas',state.threads],['Amigos',state.friends.filter(row=>row.state==='accepted')]]){
       const entries=group[1].filter(row=>!ids.has(row.id||row.peerId));if(!entries.length)continue;list.append(make('h3','',group[0]));for(const entry of entries){ids.add(entry.id||entry.peerId);list.append(row(entry));}
@@ -79,7 +80,7 @@ window.TronoMessenger=(()=>{
   }
   async function markRead(){if(!activeThread(peer)||!messages.length)return;const id=peer,account=owner,last=messages.at(-1).id;try{await request('mark-read',{peerId:id,messageId:last});if(account!==owner)return;const thread=state.threads.find(row=>row.peerId===id);if(thread)thread.unread=0;render();}catch{}}
   async function open(id){
-    if(!window.TronoAuth.user){window.TronoAuth.open('login');return;}window.TronoSocial.toggleTelemetry(false);opened=true;$('messengerPanel').hidden=false;$('messengerToggle').setAttribute('aria-expanded','true');
+    if(!window.TronoAuth.user){window.TronoAuth.open('login');return;}window.TronoSocial.toggleTelemetry(false);if(document.body.classList.contains('chat-only-active'))window.TronoSocial.toggleTextChat(false);opened=true;$('messengerPanel').hidden=false;$('messengerToggle').setAttribute('aria-expanded','true');
     if(id&&id!==peer){keepDraft();stopUpload();peer=id;generation++;messages=[];hasMore=false;before=null;$('messengerInput').value=draft().text;$('messengerFile').value='';status('');paintMessages();}
     removeToast(id);$('messengerPanel').classList.toggle('has-peer',!!peer);render();schedule();if(peer)void read();
   }

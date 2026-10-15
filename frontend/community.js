@@ -6,7 +6,7 @@ window.TronoCommunity=(()=>{
   function avatar(person){const el=document.createElement('span');el.className='community-avatar';el.innerHTML=window.TronoProfile.avatarHtml(person);return el;}
   function row(person){
     const el=document.createElement('div');el.className=`community-person ${person.online?'is-online':'is-offline'}`;
-    const icon=avatar(person),dot=document.createElement('i');dot.className='community-status-dot';icon.appendChild(dot);el.appendChild(icon);
+    const icon=avatar(person),dot=document.createElement('i');dot.className='community-status-dot';icon.appendChild(dot);el.appendChild(icon);if(!person.guest){icon.tabIndex=0;icon.setAttribute('role','button');icon.setAttribute('aria-label','Ver perfil de '+person.name);icon.onclick=()=>void window.TronoProfile.openMini(person.id);icon.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();icon.click();}};}
     const copy=document.createElement('div');copy.className='community-person-copy';const name=document.createElement('strong');name.textContent=person.name;copy.appendChild(name);
     const status=document.createElement('small');status.textContent=!person.online?'Offline':person.roomName?`${person.roomName}${person.inVoice?' · na voz':''}`:'Online · no início';copy.appendChild(status);
     if(person.online&&person.activity?.name){const game=document.createElement('small');game.className='community-game-activity';game.textContent='🎮 '+person.activity.name;game.title='Atividade: '+person.activity.name;copy.appendChild(game);}
@@ -41,7 +41,7 @@ window.TronoCommunity=(()=>{
     for(const channel of channels){const button=document.querySelector(`[data-chat-channel="${channel.id}"]`);if(button){if(channel.type==='text')button.querySelector('.room-presence-icons')?.remove();else icons(button,channel.players||[]);}}
   }
   function toggle(value){open=typeof value==='boolean'?value:!open;document.body.classList.toggle('community-open',open);$('communityPanel').classList.toggle('hidden',!open);$('communityToggle').setAttribute('aria-expanded',String(open));}
-  function syncMode(){const logged=!!window.TronoAuth.user,guest=!!window.TronoAuth.guest;$('communityToggle')?.classList.toggle('hidden',!logged&&!guest);const chat=document.body.classList.contains('chat-only-active');if(chat!==lastChatMode){lastChatMode=chat;if(!window.TronoDesktop)toggle(chat&&matchMedia('(min-width:1280px)').matches);}if(!logged&&!guest){snapshot=null;toggle(false);render();}}
+  function syncMode(){const logged=!!window.TronoAuth.user,guest=!!window.TronoAuth.guest;$('communityToggle')?.classList.toggle('hidden',!logged&&!guest);const chat=document.body.classList.contains('chat-only-active');if(chat!==lastChatMode){lastChatMode=chat;if(!window.TronoDesktop)toggle(false);}if(!logged&&!guest){snapshot=null;toggle(false);render();}}
   function voiceNotice(event){
     if(event.id){if(seenEvents.has(event.id))return;seenEvents.add(event.id);if(seenEvents.size>200)seenEvents.delete(seenEvents.values().next().value);}
     const action=event.kind==='joined'?'entrou na chamada':event.kind==='disconnected'?'foi desconectado da chamada':'saiu da chamada';

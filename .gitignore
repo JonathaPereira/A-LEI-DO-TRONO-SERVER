@@ -6,3 +6,5 @@ artifacts/
 frontend/downloads/*.exe
 desktop/**/bin/
 desktop/**/obj/
+
+supabase/.temp/
