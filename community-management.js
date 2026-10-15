@@ -32,6 +32,18 @@ function createCommunityManagement({auth,rooms,db,onChanged=()=>{},onDeleted=()=
     function route(method,path,fn){app[method]('/community'+path,async(req,res)=>{try{res.json(await fn(req));}catch(e){res.status(e.status||503).json({error:{code:e.code||'COMMUNITY_UNAVAILABLE',message:e.status?e.message:'Não foi possível atualizar a comunidade.'}});}});}
     function requirePermission(req,key){if(!permissions(req.account.role)[key])throw fail('FORBIDDEN','Você não tem permissão para realizar essa operação.',403);}
     route('get','/permissions',async req=>({role:req.account.role,permissions:permissions(req.account.role)}));
+    route('get','/profiles/:id',async req=>{
+      if(!uuid.test(req.params.id))throw fail('MEMBER_NOT_FOUND','Perfil não encontrado.',404);
+      const profile=await auth.request(req.accessToken,'/rest/v1/rpc/read_member_profile','POST',{p_user:req.params.id});
+      if(!profile)throw fail('MEMBER_NOT_FOUND','Perfil não encontrado.',404);
+      return {profile};
+    });
+    route('get','/registered-accounts',async req=>{
+      requirePermission(req,'viewEmails');
+      const offset=Math.max(0,Math.min(1000000,Math.floor(Number(req.query.offset)||0)));
+      const rows=await auth.request(req.accessToken,'/rest/v1/rpc/creator_registered_accounts','POST',{p_offset:offset});
+      return {accounts:rows,hasMore:rows.length===50,nextOffset:offset+rows.length};
+    });
     route('get','/channels',req=>serial(async()=>({channels:await sync(req.accessToken)})));
     route('post','/channels',req=>serial(async()=>{
       requirePermission(req,'manageChannels');
