@@ -1,11 +1,11 @@
-M&N — frontend com somente o instalador atual · Windows 0.1.17
+M&N — frontend com somente o instalador atual · Windows 0.2.0
 
 Não há SQL novo para Love Letter. Se pulou a versão 0.1.16, execute upgrade-splendor.sql no Supabase. Antes do frontend, publique
-o backend 0.12.0-alpha no Render. Confira features.loveLetter: true e features.splendor: true em /health.
+o backend 0.13.0-alpha no Render. Confira features.loveLetter: true e features.splendor: true em /health.
 
-1. Após o merge e o build aprovado, baixe MN-Trono-Frontend-0.1.17.zip na entrega privada mais recente.
+1. Após o merge e o build aprovado, baixe MN-Trono-Frontend-0.2.0.zip na entrega privada mais recente.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.1.17-Windows.exe
+   MN-Trono-0.2.0-Windows.exe
    latest.yml
 3. Entre na pasta frontend pelo Git Bash e execute:
    npx surge . a-lei-do-trono.surge.sh
@@ -18,5 +18,5 @@ Confira o tamanho exato em TAMANHO-E-DOWNLOAD.json.
 Preserve latest.yml e o SHA-512; não misture arquivos de entregas diferentes.
 Esta versão requer o backend atualizado. O SQL de Splendor não precisa ser repetido.
 A migração de Azul não precisa ser repetida se já foi aplicada.
-Consulte ATUALIZAR_WINDOWS_v0.1.17.md para a ordem completa.
+Consulte ATUALIZAR_WINDOWS_v0.2.0.md para a ordem completa.
 Consulte PUBLICAR_SURGE_LEVE.md para o passo a passo completo.

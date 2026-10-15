@@ -1,3 +1,16 @@
+# Windows 0.2.0 · clareza na mesa
+
+Capturas reais, com chamada, câmera e compartilhamento ativos. As artes de Love Letter foram reconstruídas a partir da fotografia fornecida; não são scans.
+
+- [Catálogo compacto](CATALOGO-0.2.png)
+- [Splendor: fichas e descontos permanentes separados](SPLENDOR-MESA-0.2.png)
+- [Splendor vertical](SPLENDOR-VERTICAL-0.2.png)
+- [Love Letter: nova arte e contagem pública](LOVE-LETTER-MESA-0.2.png)
+- [Love Letter vertical](LOVE-LETTER-VERTICAL-0.2.png)
+- [Love Letter: etapa de efeito](LOVE-LETTER-EFEITO-0.2.png)
+
+As imagens desta pasta não entram no frontend publicado nem no instalador.
+
 # Windows 0.1.17 · Love Letter e Splendor
 
 Capturas da interface real, com chamada, câmera e compartilhamento ativos. Dados e decisões vêm do backend de teste autenticado. As ilustrações são originais; o conceito de Love Letter foi convertido em HTML/CSS funcional.

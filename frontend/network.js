@@ -1,6 +1,6 @@
 'use strict';
 window.TronoNetwork = (()=>{
-  const CLIENT_VERSION='0.12.0-alpha';
+  const CLIENT_VERSION='0.13.0-alpha';
   const DEFAULT_BACKEND_HTTP='https://a-lei-do-trono-server.onrender.com';
   const normalizeHttp=url=>String(url||'').replace(/\/+$/,'');
   const isLocal=['localhost','127.0.0.1','::1'].includes(location.hostname);

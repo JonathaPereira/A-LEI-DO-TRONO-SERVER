@@ -4,7 +4,7 @@
  const cards=[
   {rank:0,name:'Espiã',count:2,effect:'No fim da rodada, ganhe 1 favor se só você, entre os sobreviventes, jogou ou descartou uma Espiã.'},
   {rank:1,name:'Guarda',count:6,effect:'Adivinhe a carta de outra pessoa. Não pode dizer Guarda. Se acertar, ela sai da rodada.'},
-  {rank:2,name:'Sacerdote',count:2,effect:'Veja em segredo a carta de outra pessoa.'},
+  {rank:2,name:'Padre',count:2,effect:'Veja em segredo a carta de outra pessoa.'},
   {rank:3,name:'Barão',count:2,effect:'Compare sua carta com a de outra pessoa. O menor valor sai da rodada; empate não elimina.'},
   {rank:4,name:'Aia',count:2,effect:'Você fica protegido dos efeitos de outras pessoas até seu próximo turno.'},
   {rank:5,name:'Príncipe',count:2,effect:'Escolha alguém, inclusive você, para descartar a mão e comprar outra carta.'},

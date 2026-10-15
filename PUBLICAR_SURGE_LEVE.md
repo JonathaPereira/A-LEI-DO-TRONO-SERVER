@@ -1,14 +1,14 @@
 # Publicar o frontend com somente o instalador atual
 
-O pacote **MN-Trono-Frontend-0.1.17.zip** inclui o site inteiro e **um único EXE**, o da versão atual. Não precisa publicar esse instalador separadamente em outro repositório.
+O pacote **MN-Trono-Frontend-0.2.0.zip** inclui o site inteiro e **um único EXE**, o da versão atual. Não precisa publicar esse instalador separadamente em outro repositório.
 
 ## Passo a passo
 
-1. Se pulou a 0.1.16, execute `upgrade-splendor.sql` no SQL Editor do Supabase; se já o executou, não há SQL novo. Faça merge do PR e publique o backend **0.12.0-alpha** no Render. Aguarde o serviço ficar Live e o build Windows terminar. Abra o link de downloads indicado no PR, entre na conta GitHub e baixe **MN-Trono-Frontend-0.1.17.zip** da release privada.
+1. Se pulou a 0.1.16, execute `upgrade-splendor.sql` no SQL Editor do Supabase; se já o executou, não há SQL novo. Faça merge do PR e publique o backend **0.13.0-alpha** no Render. Aguarde o serviço ficar Live e o build Windows terminar. Abra o link de downloads indicado no PR, entre na conta GitHub e baixe **MN-Trono-Frontend-0.2.0.zip** da release privada.
 2. Extraia numa **pasta nova**. Dentro de frontend/downloads devem existir somente:
 
    ```text
-   MN-Trono-0.1.17-Windows.exe
+   MN-Trono-0.2.0-Windows.exe
    latest.yml
    ```
 
@@ -18,10 +18,10 @@ O pacote **MN-Trono-Frontend-0.1.17.zip** inclui o site inteiro e **um único EX
    npx surge . a-lei-do-trono.surge.sh
    ```
 
-4. Confira https://a-lei-do-trono.surge.sh/downloads/latest.yml: deve mostrar **version: 0.1.17**. O botão Baixe a versão desktop da tela de login baixa o EXE desse mesmo site.
+4. Confira https://a-lei-do-trono.surge.sh/downloads/latest.yml: deve mostrar **version: 0.2.0**. O botão Baixe a versão desktop da tela de login baixa o EXE desse mesmo site.
 5. No aplicativo já instalado, clique na versão no rodapé para buscar a atualização. Ele baixa internamente e permite reiniciar para instalar. Conta, permissões e preferências são mantidas.
 
-**Esta versão exige o backend 0.12.0-alpha antes do frontend. Não há SQL novo se a migração de Splendor já foi feita.** Se o SQL de Azul já foi executado, não é necessário repeti-lo. A publicação do frontend inclui o instalador e o manifesto de atualização. Veja [o guia 0.1.17](ATUALIZAR_WINDOWS_v0.1.17.md).
+**Esta versão exige o backend 0.13.0-alpha antes do frontend. Não há SQL novo se a migração de Splendor já foi feita.** Se o SQL de Azul já foi executado, não é necessário repeti-lo. A publicação do frontend inclui o instalador e o manifesto de atualização. Veja [o guia 0.2.0](ATUALIZAR_WINDOWS_v0.2.0.md).
 
 ## Tamanho e versões antigas
 

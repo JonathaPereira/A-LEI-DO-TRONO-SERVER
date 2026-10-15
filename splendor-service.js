@@ -1,7 +1,8 @@
 'use strict';
+const Bots=require('./frontend/bot-names');
 const crypto=require('node:crypto'),Rules=require('./frontend/splendor-rules');
 const failure=(code,message)=>Object.assign(Error(message),{code});
-function createSplendorService({auth,send,wss,env=process.env,fetchImpl=fetch,now=Date.now,botDelay=2200,disconnectDelay=90000}={}){
+function createSplendorService({auth,send,wss,env=process.env,fetchImpl=fetch,now=Date.now,botDelay=3800,disconnectDelay=90000}={}){
   const rooms=new Map(),membership=new Map(),timers=new Set(),rates=new Map();
   const url=String(env.SUPABASE_URL||'').replace(/\/+$/,''),key=env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY,configured=!!(auth.configured&&key);let ready=false;
   function later(fn,ms){const timer=setTimeout(()=>{timers.delete(timer);fn();},ms);timer.unref?.();timers.add(timer);return timer;}
@@ -43,7 +44,7 @@ function createSplendorService({auth,send,wss,env=process.env,fetchImpl=fetch,no
     function leave(){
       if(!rooms.has(room.id)||p.ws)return;
       membership.delete(p.id);
-      if(room.state&&room.state.phase!=='finished'){p.bot=true;p.forfeited=true;room.usedBots=true;Object.assign(room.state.players.find(x=>x.id===p.id),{forfeited:true,bot:true});}
+      if(room.state&&room.state.phase!=='finished'){p.bot=true;p.forfeited=true;p.name=Bots.next(room.players.filter(x=>x!==p));room.usedBots=true;Object.assign(room.state.players.find(x=>x.id===p.id),{forfeited:true,bot:true,name:p.name});}
       else if(!room.state){room.players=room.players.filter(x=>x!==p);if(room.hostId===p.id)room.hostId=room.players[0]?.id;}
       if(!room.players.some(x=>x.ws)&&(!room.state||room.recordStatus==='saved'||room.recordStatus==='unranked'))remove(room);
       else{publish(room);schedule(room);}lists();
@@ -83,7 +84,7 @@ function createSplendorService({auth,send,wss,env=process.env,fetchImpl=fetch,no
         if(room.hostId!==ws.account.id||room.state)throw failure('SPLENDOR_FORBIDDEN','Somente quem criou a mesa pode iniciar.');
         if(room.players.some(p=>!p.ws))throw failure('SPLENDOR_OFFLINE','Aguarde os participantes reconectarem ou saírem da mesa.');
         if(!msg.fillBots&&room.players.length<2)throw failure('SPLENDOR_PLAYERS','Convide outra pessoa ou complete a mesa com bots.');
-        if(msg.fillBots)while(room.players.length<room.maxPlayers)room.players.push({id:'bot-'+crypto.randomUUID(),name:'Mercador '+room.players.length,bot:true,ws:null});
+        if(msg.fillBots)while(room.players.length<room.maxPlayers)room.players.push({id:'bot-'+crypto.randomUUID(),name:Bots.next(room.players),bot:true,ws:null});
         room.matchId=crypto.randomUUID();room.usedBots=room.players.some(p=>p.bot);room.state=Rules.create(room.players);room.updatedAt=now();publish(room);lists();schedule(room);return;
       }
       if(action==='move'){
@@ -96,7 +97,7 @@ function createSplendorService({auth,send,wss,env=process.env,fetchImpl=fetch,no
     }catch(error){send(ws,{type:'splendor-error',requestId:msg.requestId,code:error.code||'SPLENDOR_ERROR',message:error.message});}
   }
   const cleanup=setInterval(()=>{for(const room of rooms.values())if(now()-room.updatedAt>6*3600000&&room.recordStatus!=='pending'&&room.recordStatus!=='saving'){for(const p of room.players)if(p.ws)send(p.ws,{type:'splendor-left',reason:'Mesa encerrada por inatividade.'});remove(room);}for(const [id,r]of rates)if(r.until<now())rates.delete(id);},60000);cleanup.unref?.();
-  function updateAccount(account){for(const room of rooms.values()){const p=room.players.find(p=>p.id===account.id);if(!p)continue;p.name=account.nickname;if(room.state)room.state.players.find(x=>x.id===p.id).name=p.name;publish(room);}lists();}
+  function updateAccount(account){for(const room of rooms.values()){const p=room.players.find(p=>p.id===account.id);if(!p||p.forfeited)continue;p.name=account.nickname;if(room.state)room.state.players.find(x=>x.id===p.id).name=p.name;publish(room);}lists();}
   return {handle,disconnect:detach,updateAccount,health:()=>({configured,ready,persistent:configured}),stop(){clearInterval(cleanup);for(const timer of timers)clearTimeout(timer);timers.clear();},rooms};
 }
 module.exports={createSplendorService};
