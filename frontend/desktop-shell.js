@@ -73,7 +73,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
     if(view==='community'){
       const room=window.TronoNetwork.currentRoom;
       if(room&&window.TronoChatHub.channels.some(channel=>channel.id===room)){
-        window.TronoPortal.showOnly('chatOnlyScreen');body.classList.add('chat-only-active');window.TronoSocial.showForRoom(true);setView(view);if(!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();return;
+        window.TronoPortal.showOnly('chatOnlyScreen');body.classList.add('chat-only-active');window.TronoSocial.showForRoom(true);setView(view);return;
       }
       if(room&&!window.TronoNetwork.independentGameVoice&&!window.confirm('O servidor precisa ser atualizado para manter jogo e voz juntos. Sair da mesa?'))return;
       await window.TronoPortal.openVoice();synchronize();

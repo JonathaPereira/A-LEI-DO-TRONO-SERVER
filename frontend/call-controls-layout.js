@@ -46,7 +46,9 @@ window.TronoCallControlsLayout = (() => {
       icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + definition.icon + '</svg>';
       node.prepend(icon);
     }
-    node.dataset.workspaceLabel = definition.label || (window.TronoSocial.voiceJoined ? 'Sair' : 'Entrar');
+    const active = node.id === 'joinVoiceBtn' ? window.TronoSocial.voiceJoined : node.id === 'cameraBtn' ? window.TronoSocial.cameraOn : node.id === 'screenShareBtn' ? window.TronoSocial.screenSharing : null;
+    if (active !== null) node.dataset.callAction = active ? 'stop' : 'start';
+    node.dataset.workspaceLabel = node.id === 'joinVoiceBtn' ? (active ? 'Sair' : 'Conectar') : node.id === 'cameraBtn' ? (active ? 'Desligar' : 'Câmera') : node.id === 'screenShareBtn' ? (active ? 'Parar tela' : 'Tela') : definition.label;
   }
 
   function refresh() {
@@ -78,6 +80,7 @@ window.TronoCallControlsLayout = (() => {
       } else {
         restore(node);
       }
+      decorate(node, definition);
       label(node);
     }
 
@@ -94,7 +97,7 @@ window.TronoCallControlsLayout = (() => {
     for (const id of [...Object.keys(controls), 'communityToggle', 'voiceSettingsPanel']) remember($(id));
     for (const id of Object.keys(controls)) {
       const node = $(id);
-      new MutationObserver(() => { if (document.body.classList.contains('chat-only-active')) decorate(node, controls[id]); label(node); })
+      new MutationObserver(() => { decorate(node, controls[id]); label(node); })
         .observe(node, {childList: true, subtree: true, characterData: true});
     }
     ready = true;

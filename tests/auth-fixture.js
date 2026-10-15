@@ -144,8 +144,11 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
       if(operation==='mark_read'){const msg=threadMessages.find(m=>m.message.id===body.p_message);if(!msg)return reject('INVALID_MESSAGE');readCursors.set(who+':'+peer,Math.max(readCursors.get(who+':'+peer)||0,msg.ordinal));return reply(200,null);}
       return reply(404,{});
     }
-    if(url.pathname==='/rest/v1/rpc/update_chat_profile'){
-      if(!record)return fail('bad_jwt',401);if([...users.values()].some(u=>u.id!==record.user.id&&u.nickname.toLowerCase()===body.p_nickname.toLowerCase()))return reply(409,{message:'NICKNAME_TAKEN'});record.user.nickname=body.p_nickname;record.user.avatar_preset=body.p_preset;record.user.avatar_file_id=body.p_file;return reply(200,{});
+    if(url.pathname==='/rest/v1/rpc/read_member_profile'){
+      if(!record)return fail('bad_jwt',401);const u=[...users.values()].find(u=>u.id===body.p_user);return reply(200,u?{id:u.id,nickname:u.nickname,avatar_preset:u.avatar_preset||'crown',avatar_file_id:u.avatar_file_id||null,created_at:'2026-10-01T12:00:00Z',personalization:u.personalization||{}}:null);
+    }
+    if(['/rest/v1/rpc/update_chat_profile','/rest/v1/rpc/save_member_profile'].includes(url.pathname)){
+      if(!record)return fail('bad_jwt',401);if([...users.values()].some(u=>u.id!==record.user.id&&u.nickname.toLowerCase()===body.p_nickname.toLowerCase()))return reply(409,{message:'NICKNAME_TAKEN'});record.user.nickname=body.p_nickname;record.user.avatar_preset=body.p_preset;record.user.avatar_file_id=body.p_file;if(body.p_data)record.user.personalization=body.p_data;return reply(200,{});
     }
     if(url.pathname==='/auth/v1/logout'){
       if(!record)return fail('bad_jwt',401);for(const [k,v] of access)if(v.user.id===record.user.id&&(url.searchParams.get('scope')==='global'||v.sid===record.sid))access.delete(k);for(const [k,v] of refresh)if(v.user.id===record.user.id&&(url.searchParams.get('scope')==='global'||v.sid===record.sid))refresh.delete(k);return reply(200,{});
