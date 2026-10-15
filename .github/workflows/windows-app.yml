@@ -2,7 +2,7 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -60,7 +60,7 @@ jobs:
       - name: Verify Love Letter second edition and private hands
         shell: pwsh
         run: |
-          node --test tests/love-letter-rules.js tests/love-letter-ws.js 2>&1 | Tee-Object artifacts/windows-love-letter.log
+          node --test tests/love-letter-rules.js tests/love-letter-ws.js tests/bot-names.js 2>&1 | Tee-Object artifacts/windows-love-letter.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-love-letter.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')

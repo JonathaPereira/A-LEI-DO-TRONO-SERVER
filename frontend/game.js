@@ -154,12 +154,12 @@ function showYourTurnNotice(){
 }
 
 
-const BOT_NAMES=['Bonifácio','Epaminondas','Cícero','Otacílio'];
+const BOT_NAMES=window.TronoBots.names;
 function createPlayers(names, allAI=false){
   let botIndex=0;
   return names.map((name,id)=>{
     const ai=allAI || id!==0;
-    const resolvedName=ai ? BOT_NAMES[botIndex++] : (name.trim()||`Jogador ${id+1}`);
+    const resolvedName=ai ? window.TronoBots.at(botIndex++) : (name.trim()||`Jogador ${id+1}`);
     return {
       id,name:resolvedName,ai,
       hand:[],reserve:null,totalCrowns:0,totalShadows:0,totalPairs:0,prestige:0,
@@ -1275,7 +1275,7 @@ async function enterRoom(roomId){
   chatOnlyMode=false;window.TronoSocial?.setChatHubMode?.(false);
   selectedRoom=roomDef(roomId); if(!selectedRoom)return;
   storage.setItem('tronoPlayerName',name);
-  $('p0Name').value=name; $('p1Name').value='Bonifácio'; $('p2Name').value='Epaminondas'; $('p3Name').value='Cícero';
+  $('p0Name').value=name; $('p1Name').value='Epaminondas'; $('p2Name').value='Bonifácio'; $('p3Name').value='Cícero';
   $('selectedRoomName').textContent=selectedRoom.name;
   onlineRoomState=null; onlineMe=null;
   renderRoomSeats([]);

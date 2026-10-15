@@ -33,13 +33,14 @@ const wss = new WebSocketServer({ server, path: '/ws',maxPayload:64*1024,verifyC
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
-const VERSION = '0.12.0-alpha';
+const VERSION = '0.13.0-alpha';
 const TURN_MS = 60_000;
 
 const SUITS = ['cetro','chave','lamina','mascara'];
 const Rules=require('./frontend/game-rules');
 const LAWS=Rules.lawOrder;
-const BOT_NAMES = ['Bonifácio','Epaminondas','Cícero','Otacílio'];
+const Bots=require('./frontend/bot-names');
+const BOT_NAMES = Bots.names;
 const DECREES=Rules.decrees;
 const decreeById = Object.fromEntries(DECREES.map(d=>[d.id,d]));
 
@@ -223,8 +224,7 @@ function removeRoomPlayer(ws,room,reason){
     const gp=room.game.players[leaving.seat];
     if(gp && !gp.bot){
       gp.bot=true; gp.clientId=null;
-      const usedBotNames=new Set(room.game.players.filter(x=>x.bot&&x!==gp).map(x=>x.name));
-      gp.name=BOT_NAMES.find(n=>!usedBotNames.has(n))||'Otacílio';
+      gp.name=Bots.next(room.game.players.filter(x=>x!==gp));
       broadcastGameEvent(room,{event:'player-replaced-by-bot',seat:leaving.seat,name:leaving.name,botName:gp.name,reason});
       broadcastLog(room,`<strong>${leaving.name}</strong> ${reason==='disconnect'?'se desconectou':'deixou a sala'}. <strong>${gp.name}</strong> assumiu o assento.`);
       broadcastGameState(room);
@@ -478,7 +478,7 @@ function requestStart(ws){
 function startGame(room){
   const players=[0,1,2,3].map(seat=>makeMatchPlayer(room,seat));
   let botIndex=0;
-  for(const p of players) if(p.bot) p.name=BOT_NAMES[botIndex++]||`IA ${p.seat+1}`;
+  for(const p of players) if(p.bot) p.name=Bots.at(botIndex++);
   const firstStarter=rand(4);
   room.game={
     token:crypto.randomUUID(),

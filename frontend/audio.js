@@ -10,7 +10,11 @@ const $=id=>document.getElementById(id),storage=window.TronoStorage;
 let audioCtx = null;
 let masterBus = null;
 let musicMaster = null;
-let sfxMaster = null;
+let sfxMaster = null;const gameBuses=new Map(),gameKeys=['throne','azul','splendor','love-letter'];
+const gameVolumes=Object.fromEntries(gameKeys.map(key=>[key,Math.max(0,Math.min(100,Number(storage.getItem('mnGameVolume:'+key)??(key==='splendor'?90:80))))]));
+function gameVolume(key){return gameVolumes[key]??80;}
+function setGameVolume(key,value){if(!gameKeys.includes(key))return;gameVolumes[key]=Math.max(0,Math.min(100,Number(value)||0));storage.setItem('mnGameVolume:'+key,gameVolumes[key]);const bus=gameBuses.get(key);if(bus&&audioCtx)bus.gain.setTargetAtTime(gameVolumes[key]/100,audioCtx.currentTime,.02);window.dispatchEvent(new CustomEvent('trono-game-volume',{detail:{key,value:gameVolumes[key]}}));}
+function gameBus(key){if(!gameKeys.includes(key))return sfxMaster;let bus=gameBuses.get(key);if(!bus){bus=audioCtx.createGain();bus.gain.value=gameVolume(key)/100;bus.connect(sfxMaster);gameBuses.set(key,bus);}return bus;}
 let musicEnabled = window.TronoDesktop ? storage.getItem('tronoMusicEnabled')==='1' : storage.getItem('tronoMusicEnabled')!=='0';
 let sfxEnabled = storage.getItem('tronoSfxEnabled')!=='0';
 let musicStep = 0;
@@ -127,44 +131,46 @@ function scheduleTavernBar(){
   }
   musicStep=(musicStep+1)%8;
 }
-function playSfx(kind){
+function playSfx(kind,gameOverride=null){
   if(!sfxEnabled||!audioCtx||audioCtx.state!=='running'||!sfxMaster) return;
-  const t=audioCtx.currentTime+.01;
-  if(kind==='splendor-card'){
-    noiseHit(t,.09,.045,sfxMaster,2200);noiseHit(t+.07,.07,.03,sfxMaster,1500);tone(190,t+.04,.12,.018,'triangle',sfxMaster,.005,900);
+  const key=gameOverride||(kind.startsWith('love-letter-')?'love-letter':kind.startsWith('splendor-')?'splendor':kind.startsWith('azul-')?'azul':['card','crown','shadow','influence','decree','turn'].includes(kind)?'throne':null);
+  if(key&&gameVolume(key)===0)return;
+  const destination=gameBus(key),t=audioCtx.currentTime+.01;
+  if(kind==='splendor-card'||kind==='love-letter-card'){
+    noiseHit(t,.16,.095,destination,4200);noiseHit(t+.11,.12,.065,destination,3000);noiseHit(t+.23,.065,.035,destination,1900);tone(180,t+.22,.13,.035,'triangle',destination,.004,1100);
   }else if(kind==='splendor-chip'){
-    tone(1580,t,.12,.035,'sine',sfxMaster,.002,3600);tone(2250,t+.045,.16,.025,'sine',sfxMaster,.002,4200);noiseHit(t,.035,.014,sfxMaster,2700);
-  }else if(kind==='splendor-score'){
-    [523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,t+i*.11,.45,.032,'sine',sfxMaster,.006,3600));
+    tone(1580,t,.18,.052,'sine',destination,.002,3600);tone(2250,t+.065,.22,.040,'sine',destination,.002,4200);noiseHit(t,.035,.014,destination,2700);
+  }else if(kind==='splendor-score'||kind==='love-letter-score'){
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,t+i*.11,.45,.032,'sine',destination,.006,3600));
   }else if(kind==='splendor-noble'){
-    [392,493.88,587.33,783.99].forEach((f,i)=>tone(f,t+i*.13,.65,.035,'triangle',sfxMaster,.015,2600));
+    [392,493.88,587.33,783.99].forEach((f,i)=>tone(f,t+i*.13,.65,.035,'triangle',destination,.015,2600));
   }else if(kind==='azul-pick'){
     // Short original ceramic taps, routed through the existing effects bus.
-    tone(1840,t,.11,.045,'sine',sfxMaster,.002,4200);tone(2460,t+.025,.09,.018,'sine',sfxMaster,.002,4800);
+    tone(1840,t,.11,.045,'sine',destination,.002,4200);tone(2460,t+.025,.09,.018,'sine',destination,.002,4800);
   }else if(kind==='azul-place'){
-    tone(1230,t,.14,.045,'triangle',sfxMaster,.003,3000);tone(820,t+.025,.18,.025,'sine',sfxMaster,.003,2400);
+    tone(1230,t,.14,.045,'triangle',destination,.003,3000);tone(820,t+.025,.18,.025,'sine',destination,.003,2400);
   }else if(kind==='azul-score'){
-    tone(659.25,t,.30,.055,'sine',sfxMaster,.008,3300);tone(987.77,t+.10,.4,.045,'sine',sfxMaster,.008,3800);tone(1318.51,t+.20,.48,.028,'sine',sfxMaster,.012,4200);
+    tone(659.25,t,.30,.055,'sine',destination,.008,3300);tone(987.77,t+.10,.4,.045,'sine',destination,.008,3800);tone(1318.51,t+.20,.48,.028,'sine',destination,.012,4200);
   }else if(kind==='azul-penalty'){
-    tone(392,t,.22,.04,'triangle',sfxMaster,.006,1800);tone(293.66,t+.10,.35,.035,'sine',sfxMaster,.008,1600);
+    tone(392,t,.22,.04,'triangle',destination,.006,1800);tone(293.66,t+.10,.35,.035,'sine',destination,.008,1600);
   }else if(kind==='click'){
-    tone(720,t,.055,.025,'sine',sfxMaster,.004,2600);tone(520,t+.025,.045,.012,'triangle',sfxMaster,.003,1800);
+    tone(720,t,.055,.025,'sine',destination,.004,2600);tone(520,t+.025,.045,.012,'triangle',destination,.003,1800);
   }else if(kind==='card'){
-    noiseHit(t,.055,.055,sfxMaster,1700); tone(170,t,.10,.035,'triangle',sfxMaster,.006,900);
+    noiseHit(t,.055,.055,destination,1700); tone(170,t,.10,.035,'triangle',destination,.006,900);
   }else if(kind==='crown'){
-    tone(293.66,t,.75,.14,'triangle',sfxMaster,.02,2200); tone(369.99,t+.11,.78,.12,'triangle',sfxMaster,.02,2400); tone(440,t+.24,1.05,.13,'sine',sfxMaster,.025,2600); tone(587.33,t+.42,.85,.08,'sine',sfxMaster,.02,2800);
+    tone(293.66,t,.75,.14,'triangle',destination,.02,2200); tone(369.99,t+.11,.78,.12,'triangle',destination,.02,2400); tone(440,t+.24,1.05,.13,'sine',destination,.025,2600); tone(587.33,t+.42,.85,.08,'sine',destination,.02,2800);
   }else if(kind==='shadow'){
-    tone(174.61,t,1.25,.13,'sawtooth',sfxMaster,.04,900); tone(146.83,t+.18,1.45,.11,'triangle',sfxMaster,.04,700); noiseHit(t+.05,.7,.028,sfxMaster,420);
+    tone(174.61,t,1.25,.13,'sawtooth',destination,.04,900); tone(146.83,t+.18,1.45,.11,'triangle',destination,.04,700); noiseHit(t+.05,.7,.028,destination,420);
   }else if(kind==='influence'){
-    tone(659.25,t,.48,.11,'sine',sfxMaster,.01,3000); tone(783.99,t+.13,.58,.10,'sine',sfxMaster,.01,3200);
+    tone(659.25,t,.48,.11,'sine',destination,.01,3000); tone(783.99,t+.13,.58,.10,'sine',destination,.01,3200);
   }else if(kind==='decree'){
-    noiseHit(t,.22,.035,sfxMaster,850); tone(220,t,.42,.06,'triangle',sfxMaster,.02,1200);
+    noiseHit(t,.22,.035,destination,850); tone(220,t,.42,.06,'triangle',destination,.02,1200);
   }else if(kind==='turn'){
     // Arauto curto, mais audível: três notas ascendentes + sino agudo.
-    tone(392.00,t,.24,.12,'triangle',sfxMaster,.006,2200);
-    tone(523.25,t+.10,.32,.13,'sine',sfxMaster,.006,2800);
-    tone(659.25,t+.22,.38,.12,'triangle',sfxMaster,.006,3200);
-    tone(783.99,t+.35,.48,.075,'sine',sfxMaster,.008,3600);
+    tone(392.00,t,.24,.12,'triangle',destination,.006,2200);
+    tone(523.25,t+.10,.32,.13,'sine',destination,.006,2800);
+    tone(659.25,t+.22,.38,.12,'triangle',destination,.006,3200);
+    tone(783.99,t+.35,.48,.075,'sine',destination,.008,3600);
   }
 }
 async function setMusicEnabled(next){
@@ -200,9 +206,9 @@ function bind(){
   document.querySelectorAll('.track-btn').forEach(btn=>btn.addEventListener('click',()=>setMusicTrack(btn.dataset.track)));
   $('bgMusic')?.addEventListener('error',()=>{const el=$('bgMusic'),track=MUSIC_TRACKS[currentMusicTrack];if(!el||!track?.fallback||el.dataset.musicFallback==='1')return;loadMusicSource(el,track,{fallback:true});if(musicEnabled)void startBackgroundMusic();});
   window.addEventListener('pointerdown',()=>{if(musicEnabled||sfxEnabled)void ensureAudio().catch(()=>{});},{once:true});
-  document.addEventListener('click',e=>{const target=e.target?.closest?.('button,[role="button"],a[href],select,input[type="checkbox"],input[type="radio"],summary,.hand-card,.room-card');if(!target||target.matches(':disabled')||target.dataset.noClickSfx==='1'||!sfxEnabled)return;void ensureAudio().then(()=>playSfx('click')).catch(()=>{});},true);
+  document.addEventListener('click',e=>{const target=e.target?.closest?.('button,[role="button"],a[href],select,input[type="checkbox"],input[type="radio"],summary,.hand-card,.room-card');if(!target||target.matches(':disabled')||target.dataset.noClickSfx==='1'||!sfxEnabled)return;const screen=target.closest('#gameScreen,#azulScreen,#splendorScreen,#loveLetterScreen'),key=({gameScreen:'throne',azulScreen:'azul',splendorScreen:'splendor',loveLetterScreen:'love-letter'})[screen?.id]||null;void ensureAudio().then(()=>playSfx('click',key)).catch(()=>{});},true);
 }
 window.addEventListener('DOMContentLoaded',bind);
-return {ensureAudio,playSfx,toggleMusic,setMusicEnabled,toggleSfx,setSfxEnabled,setMusicTrack,setMusicVolume,
+return {ensureAudio,playSfx,gameVolume,setGameVolume,toggleMusic,setMusicEnabled,toggleSfx,setSfxEnabled,setMusicTrack,setMusicVolume,
  get currentTrack(){return currentMusicTrack;},get musicEnabled(){return musicEnabled;},get sfxEnabled(){return sfxEnabled;},get musicVolume(){return Number(storage.getItem('tronoMusicVolume')??32);}};
 })();
