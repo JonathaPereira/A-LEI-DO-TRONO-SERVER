@@ -22,7 +22,7 @@
       videoBitrate:Math.min(base.videoBitrate,severe?450000:1000000),screenBitrate:Math.min(base.screenBitrate,severe?2500000:4000000)};
     }
   }
-  function diagnosticReport({version,platform,call,telemetry,processing,adaptation,resources}){
+  function diagnosticReport({version,platform,call,telemetry,processing,adaptation,resources,reception}){
     const fields=['rttMs','uploadBps','downloadBps','audioLossPct','audioJitterMs','concealedPct','jitterBufferMs','eventLoopLagMs','lossPct','jitterMs','outFps','inFps','outW','outH','inW','inH'];
     const numbers={};for(const key of fields)if(Number.isFinite(telemetry?.[key]))numbers[key]=Math.round(Math.max(0,telemetry[key])*100)/100;
     const safe=value=>String(value||'').replace(/[\r\n]/g,' ').slice(0,80);
@@ -30,6 +30,10 @@
       call:{joined:!!call.joined,muted:!!call.muted,deafened:!!call.deafened,camera:!!call.camera,screen:!!call.screen,transport:safe(call.transport)},
       playback:safe(call.playback),processing:safe(processing),adaptation:safe(adaptation),metrics:numbers,
       network:{state:safe(telemetry?.pcState),route:safe(telemetry?.iceRoute),limiter:safe(telemetry?.limiter)},
+      reception:reception?{enabled:!!reception.enabled,assessment:['output','arrival','local','recovery','local-timing','steady','waiting'].includes(reception.assessment)?reception.assessment:'waiting',priority:['managed','system','waiting','idle','unavailable'].includes(reception.priority)?reception.priority:null,
+        rows:(reception.rows||[]).slice(0,24).map((row,i)=>{const entry={voice:i+1,supported:!!row.supported};for(const k of ['lossPct','jitterMs','concealedPct','bufferMs','targetMs','packets'])entry[k]=Number.isFinite(row[k])?Math.round(Math.max(0,row[k])*100)/100:null;return entry;}),
+        playout:reception.playout?{gapEvents:Math.max(0,Number(reception.playout.gapEvents)||0),gapMs:Math.max(0,Number(reception.playout.gapMs)||0)}:null,
+        recent:(reception.recent||[]).slice(-12).map(row=>{const entry={};for(const k of ['agoMs','lossPct','jitterMs','concealedPct','localLagMs'])entry[k]=Number.isFinite(row[k])?Math.round(Math.max(0,row[k])*100)/100:null;return entry;})}:null,
       resources:resources?{appCpuPercent:Number(resources.appCpuPercent)||0,appMemoryMB:Number(resources.appMemoryMB)||0,freeMemoryMB:Number(resources.freeMemoryMB)||0}:null},null,2);
   }
   root.TronoCallStability={CallStability,diagnosticReport};if(typeof module!=='undefined')module.exports=root.TronoCallStability;

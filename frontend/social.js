@@ -44,7 +44,34 @@ window.TronoSocial = (()=>{
   const hiddenCameras=new Set();
   const streamWatchVersions=new Map();
   const blockedAudio=new Set();
-  let mediaAudioContext=null;
+  let mediaAudioContext=null,playbackAudioContext=null;
+  let voiceProtection=storage.getItem('mnVoiceProtection')!=='0';
+  const reception=new window.TronoVoiceReception.VoiceReception(voiceProtection);
+  let receptionRows=[],playoutSnapshot=null,voicePriorityState=null,voiceOwners=new WeakMap();
+  const playoutPrevious=new Map(),receiveHistory=[];
+  const foreground=()=>!document.hidden&&document.hasFocus();
+  function syncVoiceWork(){
+    const idle=voiceJoined&&!foreground();document.body.classList.toggle('voice-background',idle);
+    for(const [id,meter]of voiceMeters){clearTimeout(meter.timer);meter.timer=0;
+      if(document.hidden){try{meter.source.disconnect();}catch{}meter.connected=false;setSpeaking(id,false);}
+      else{if(!meter.connected){meter.source.connect(meter.analyser);meter.connected=true;}meter.tick?.();}
+    }
+  }
+  async function syncVoicePriority(){
+    if(!window.TronoDesktop?.setVoiceProtection)return;
+    try{voicePriorityState=await window.TronoDesktop.setVoiceProtection(voiceJoined&&voiceProtection);}catch{voicePriorityState={active:false,status:'unavailable'};}
+  }
+  const playbackOutputMatches=ctx=>typeof ctx.setSinkId==='function'?ctx.sinkId===(selectedOutput||''):!selectedOutput;
+  function ensurePlaybackAudioContext(){
+    if(!playbackAudioContext||playbackAudioContext.state==='closed'){
+      const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return null;
+      // Amplification is optional. A modest output buffer avoids coupling its
+      // deadline to the low-latency microphone/RNNoise graph.
+      try{playbackAudioContext=new Ctx({latencyHint:.04,sampleRate:48000});}catch{return null;}
+      if(selectedOutput&&playbackAudioContext.setSinkId)void playbackAudioContext.setSinkId(selectedOutput).then(()=>{for(const key of remoteAudio.keys())attachRemoteAudio(key);}).catch(()=>{});
+      playbackAudioContext.onstatechange=()=>{for(const key of remoteAudio.keys())attachRemoteAudio(key);updateAudioRecoveryUI();};
+    }return playbackAudioContext;
+  }
   const isScreenKind=kind=>kind==='screen'||kind==='screen-audio';
   const wantsSfuPublication=pub=>pub.ownerId!==meId()&&(pub.kind!=='camera'||!hiddenCameras.has(pub.ownerId))&&(!isScreenKind(pub.kind)||(inChatHub()&&watchingStreams.has(pub.ownerId)));
   const streamAudioKey=id=>`stream:${id}`;
@@ -57,7 +84,6 @@ window.TronoSocial = (()=>{
         void refreshMicPipeline().catch(err=>console.warn('[TronoSocial] retomar microfone',err));
         // A destination produced by a paused context is silent even with healthy RTP.
         // Switch receivers back to their original track on every context transition.
-        for(const key of remoteAudio.keys())attachRemoteAudio(key);
         updateAudioRecoveryUI();
       };
     }
@@ -73,6 +99,7 @@ window.TronoSocial = (()=>{
     if(ctx&&ctx.state!=='running')void ctx.resume().then(()=>{
       for(const key of remoteAudio.keys())attachRemoteAudio(key);updateAudioRecoveryUI();
     }).catch(()=>updateAudioRecoveryUI());
+    if(playbackAudioContext&&playbackAudioContext.state==='suspended')void playbackAudioContext.resume().catch(()=>{});
     if(callSoundContext&&callSoundContext.state!=='running')void callSoundContext.resume().catch(()=>{});
     for(const [key,a] of remoteAudio)void playRemoteAudio(key,a);
   }
@@ -126,10 +153,11 @@ window.TronoSocial = (()=>{
     let graph=remoteGraphs.get(id);
     const volume=(outputVolume/100)*((screen?streamVolumes.get(peerId):peerVolumes.get(peerId))??100)/100;
     // Normal listening needs only the received track. Web Audio is needed for amplification.
-    if(graph&&(graph.trackId!==currentTrack.id||volume<=1||graph.ctx.state!=='running')){closeRemoteGain(id);graph=null;}
+    if(graph&&(graph.trackId!==currentTrack.id||volume<=1||graph.ctx.state!=='running'||!playbackOutputMatches(graph.ctx))){closeRemoteGain(id);graph=null;}
     if(!graph&&volume>1){
-      const ctx=ensureMediaAudioContext();
-      if(ctx?.state==='running'&&(!selectedOutput||typeof ctx.setSinkId==='function'))try{
+      const ctx=ensurePlaybackAudioContext();
+      if(ctx?.state==='suspended')void ctx.resume().catch(()=>{});
+      if(ctx?.state==='running'&&playbackOutputMatches(ctx))try{
         graph=window.TronoAudioGain.create(ctx,stream,volume);if(graph)remoteGraphs.set(id,graph);
       }catch(err){console.warn('[TronoSocial] ganho de reprodução indisponível',err);}
     }
@@ -306,7 +334,7 @@ window.TronoSocial = (()=>{
     emojiOpen=typeof force==='boolean'?force:!emojiOpen;populateEmojiPicker();
     $('emojiPicker')?.classList.toggle('hidden',!emojiOpen);$('emojiBtn')?.classList.toggle('active',emojiOpen);$('emojiBtn')?.setAttribute('aria-expanded',emojiOpen?'true':'false');
   }
-  function toggleTelemetry(force){telemetryOpen=typeof force==='boolean'?force:!telemetryOpen;$('telemetryPanel')?.classList.toggle('hidden',!telemetryOpen);$('telemetryOpenBtn')?.setAttribute('aria-expanded',String(telemetryOpen));window.dispatchEvent(new CustomEvent('trono-telemetry-change',{detail:{open:telemetryOpen}}));startTelemetry();}
+  function toggleTelemetry(force){telemetryOpen=typeof force==='boolean'?force:!telemetryOpen;$('telemetryPanel')?.classList.toggle('hidden',!telemetryOpen);$('telemetryOpenBtn')?.setAttribute('aria-expanded',String(telemetryOpen));window.dispatchEvent(new CustomEvent('trono-telemetry-change',{detail:{open:telemetryOpen}}));renderTelemetry();startTelemetry();}
   function ensureLocalStream(){if(!localStream)localStream=new MediaStream();return localStream;}
   function playCallSound(kind='join',id='local'){
     if(deafened||window.TronoAudio?.sfxEnabled===false||storage.getItem('tronoSfxEnabled')==='0')return;
@@ -942,16 +970,16 @@ window.TronoSocial = (()=>{
     try{
       if(voiceMeters.get(id)?.trackId===trackId)return;
       const source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=.72;source.connect(analyser);
-      const data=new Uint8Array(analyser.fftSize),meter={source,analyser,data,trackId,timer:0,lastVoice:0};voiceMeters.set(id,meter);
-      const tick=()=>{if(voiceMeters.get(id)!==meter)return;
+      const data=new Uint8Array(analyser.fftSize),meter={source,analyser,data,trackId,timer:0,lastVoice:0,connected:true,tick:null};voiceMeters.set(id,meter);
+      const tick=()=>{if(voiceMeters.get(id)!==meter)return;if(document.hidden){if(meter.connected){source.disconnect();meter.connected=false;}setSpeaking(id,false);meter.timer=0;return;}if(!meter.connected){source.connect(analyser);meter.connected=true;}
         if(document.visibilityState!=='hidden'){analyser.getByteTimeDomainData(data);let sum=0;for(const v of data){const x=(v-128)/128;sum+=x*x;}const rms=Math.sqrt(sum/data.length),now=performance.now();if(rms>.042)meter.lastVoice=now;setSpeaking(id,now-meter.lastVoice<300);}
-        meter.timer=setTimeout(tick,document.visibilityState==='hidden'?1000:voiceLightMode?200:100);
-      };tick();
+        meter.timer=setTimeout(tick,!foreground()?500:voiceLightMode?200:100);
+      };meter.tick=tick;tick();
     }catch(err){console.warn('[TronoSocial] medidor de voz',err);}
   }
 
   function closePeer(id){
-    const pc=peers.get(id);if(pc){pc._tronoClosing=true;clearTimeout(pc._tronoNegotiationTimer);clearTimeout(pc._tronoOfferRetryTimer);clearTimeout(pc._tronoConnectTimer);try{pc.close();}catch{}peers.delete(id);}
+    const pc=peers.get(id);if(pc){for(const r of pc.getReceivers?.()||[])reception.remove(r);pc._tronoClosing=true;clearTimeout(pc._tronoNegotiationTimer);clearTimeout(pc._tronoOfferRetryTimer);clearTimeout(pc._tronoConnectTimer);try{pc.close();}catch{}peers.delete(id);}
     pendingIce.delete(id);const retry=videoRetryTimers.get(id);if(retry)clearTimeout(retry);videoRetryTimers.delete(id);mediaHealthyAt.delete(`${id}:camera`);mediaHealthyAt.delete(`${id}:screen`);stopMeter(id);
     removeRemoteAudio(id);removeRemoteAudio(streamAudioKey(id));remoteAvStreams.delete(id);remoteScreenStreams.delete(id);
     renderVideoGrid();renderScreenGrid();renderSeatMedia();
@@ -1088,7 +1116,7 @@ window.TronoSocial = (()=>{
     const pc=new RTCPeerConnection(sfuIceConfig),rid=['camera','screen'].includes(pub.kind)&&Array.isArray(pub.rids)&&pub.rids.length?preferredRidForMedia(pub.kind,false):null;
     let result,sub;
     try{
-      pc.ontrack=e=>{if(generation===sfuGeneration&&transportIsSfu()&&wantsSfuPublication(pub)&&(!isScreenKind(pub.kind)||watchVersion===(streamWatchVersions.get(pub.ownerId)||0))){const active=sfuSubscriptions.get(key);if(active?.pc===pc){active.track=e.track;attachSfuRemoteTrack(pub,e.track);}}};
+      pc.ontrack=e=>{if(generation===sfuGeneration&&transportIsSfu()&&wantsSfuPublication(pub)&&(!isScreenKind(pub.kind)||watchVersion===(streamWatchVersions.get(pub.ownerId)||0))){const active=sfuSubscriptions.get(key);if(active?.pc===pc){active.track=e.track;if(pub.kind==='audio'){const receiver=e.receiver||e.transceiver?.receiver;if(receiver){voiceOwners.set(receiver,pub.ownerId);reception.add(receiver);}}attachSfuRemoteTrack(pub,e.track);}}};
       result=await window.TronoNetwork.requestSfu('subscribe-track',{publisherId:pub.ownerId,kind:pub.kind,quality:cappedQuality(),preferredRid:rid});
       ensureCurrent();
       if(result?.sessionDescription?.type!=='offer')throw Object.assign(new Error('SFU não retornou uma oferta válida de assinatura.'),{code:'BAD_SFU_OFFER'});
@@ -1114,7 +1142,7 @@ window.TronoSocial = (()=>{
     if(sub.kind==='screen-audio')removeRemoteAudio(streamAudioKey(sub.publisherId));
   }
   async function closeSfuSubscription(key){
-    const sub=sfuSubscriptions.get(key);if(!sub)return;sfuSubscriptions.delete(key);
+    const sub=sfuSubscriptions.get(key);if(!sub)return;sfuSubscriptions.delete(key);for(const receiver of sub.pc?.getReceivers?.()||[])reception.remove(receiver);
     try{sub.pc?.close();}catch{}
     detachSfuRemoteMedia(sub);
     try{await window.TronoNetwork?.requestSfu('close-subscription',{sessionId:sub.sessionId},8000);}catch(err){console.warn('[TronoSocial] fechar assinatura SFU',key,err.code||err);}
@@ -1237,6 +1265,7 @@ window.TronoSocial = (()=>{
     if(track?.kind==='video'&&!isScreen)track.enabled=!hiddenCameras.has(id);
     if(track&&!stream.getTracks().some(x=>x.id===track.id))stream.addTrack(track);
     if(track.kind==='audio'){
+      if(!isScreen&&transceiver?.receiver){voiceOwners.set(transceiver.receiver,id);reception.add(transceiver.receiver);}
       if(!isScreen||watchingStreams.has(id))attachRemoteAudio(isScreen?streamAudioKey(id):id);
     }
     const rerender=()=>{renderVideoGrid();renderScreenGrid();renderSeatMedia();};
@@ -1625,7 +1654,7 @@ window.TronoSocial = (()=>{
       try{
         const choice=await window.TronoNetwork.prepareVoice();ensureCurrent();roomVoiceMode=choice.mode;
         setStatus('Solicitando acesso ao microfone…');await acquireMic({generation});ensureCurrent();
-        voiceJoined=true;privateVoiceRoster.clear();voiceRosterInitialized=false;
+        voiceJoined=true;syncVoiceWork();void syncVoicePriority();startTelemetry();privateVoiceRoster.clear();voiceRosterInitialized=false;
         mediaTransport=communityVoice()&&roomVoiceMode==='sfu'?'sfu-pending':'p2p';
         window.TronoNetwork?.setVoiceState(true,false,cameraOn,screenSharing,transmissionQuality,announcedTransport());
         playCallSound('join','local');callNotice({kind:'joined',name:'Você'});$('joinVoiceBtn').innerHTML='<span class="call-icon">↩</span><span>Sair da voz</span>';$('muteMicBtn').disabled=false;$('deafenVoiceBtn').disabled=false;$('cameraBtn').disabled=false;if($('screenShareBtn'))$('screenShareBtn').disabled=!communityVoice();
@@ -1644,16 +1673,16 @@ window.TronoSocial = (()=>{
     const tracked=joining.finally(()=>{if(voiceJoinPromise===tracked){voiceJoinPromise=null;updateButtons();}});voiceJoinPromise=tracked;updateButtons();return tracked;
   }
   function leaveVoice(reason='leave'){
-    stability.reset();audioStatsPrev.clear();eventLoopLagMs=0;
+    stability.reset();audioStatsPrev.clear();reception.clear();voiceOwners=new WeakMap();receptionRows=[];playoutPrevious.clear();receiveHistory.length=0;playoutSnapshot=null;eventLoopLagMs=0;
     if($('screenOptionsDialog')?.open)$('screenOptionsDialog').close();
     window.TronoMosaic?.close();
     // Cancel pending permission/SFU work before releasing the current devices.
     const wasInVoice=voiceJoined;
-    voiceGeneration++;micGeneration++;noiseLoading=false;cameraGeneration++;voiceJoinPromise=null;voiceJoined=false;
+    voiceGeneration++;micGeneration++;noiseLoading=false;cameraGeneration++;voiceJoinPromise=null;voiceJoined=false;syncVoiceWork();void syncVoicePriority();
     window.TronoNetwork?.setVoiceState(false,false,false,false,transmissionQuality,'p2p');closeAllPeers();
     if(transportIsSfu()||transportPending()||sfuSubscriptions.size||sfuLocalPublications.size)void stopSfuTransport({toP2p:true});
     watchingStreams.clear();hiddenCameras.clear();privateVoiceRoster.clear();stopMeter(meId());mediaTransport='p2p';
-    for(const key of [...remoteAudio.keys()])removeRemoteAudio(key);updateAudioRecoveryUI();
+    for(const key of [...remoteAudio.keys()])removeRemoteAudio(key);if(playbackAudioContext){playbackAudioContext.onstatechange=null;void playbackAudioContext.close().catch(()=>{});playbackAudioContext=null;}updateAudioRecoveryUI();
     cleanupMicCapture(micCapture);micCapture=null;localStream?.getTracks().forEach(t=>t.stop());localStream=null;
     screenGeneration++;window.TronoClips?.sharedStopped?.(localDisplayStream);localDisplayStream?.getTracks().forEach(t=>t.stop());localDisplayStream=null;
     localScreenStream?.getTracks().forEach(t=>t.stop());localScreenStream=null;screenSharing=false;cameraOn=false;localScreenPreviewPaused=false;localScreenCollapsed=false;
@@ -1734,7 +1763,7 @@ window.TronoSocial = (()=>{
     window.dispatchEvent(new CustomEvent('trono-call-change',{detail:{joined:voiceJoined,joining,deafened,roomId:roomState?.id}}));
   }
   async function changeInput(e){selectedInput=e.target.value||'';storage.setItem('tronoVoiceInput',selectedInput);if(voiceJoined){try{await acquireMic();await watchStream(meId(),localStream);setStatus('Microfone alterado.','ok');}catch(err){setStatus('Não foi possível trocar o microfone.','error');}}}
-  async function changeOutput(e){selectedOutput=e.target.value||'';lastOutputError='';storage.setItem('tronoVoiceOutput',selectedOutput);for(const a of remoteAudio.values())await applyOutput(a);const ctx=ensureMediaAudioContext();if(ctx?.setSinkId)try{await ctx.setSinkId(selectedOutput);}catch{lastOutputError='Não foi possível trocar a saída amplificada.';}for(const id of remoteAudio.keys())attachRemoteAudio(id);if(!lastOutputError)setStatus(selectedOutput?'Saída de áudio alterada.':'Usando saída padrão.','ok');renderTelemetry();}
+  async function changeOutput(e){selectedOutput=e.target.value||'';lastOutputError='';storage.setItem('tronoVoiceOutput',selectedOutput);for(const a of remoteAudio.values())await applyOutput(a);const ctx=mediaAudioContext;if(ctx?.setSinkId)try{await ctx.setSinkId(selectedOutput);}catch{lastOutputError='Não foi possível trocar a saída amplificada.';}if(playbackAudioContext?.setSinkId)try{await playbackAudioContext.setSinkId(selectedOutput);}catch{lastOutputError='Não foi possível trocar a saída amplificada.';}for(const id of remoteAudio.keys())attachRemoteAudio(id);if(!lastOutputError)setStatus(selectedOutput?'Saída de áudio alterada.':'Usando saída padrão.','ok');renderTelemetry();}
   async function changeCamera(e){if(cameraRequest)return;selectedCamera=e.target.value||'';storage.setItem('tronoCameraInput',selectedCamera);if(cameraOn){try{await acquireCamera();setStatus('Câmera alterada.','ok');}catch(err){if(err?.code!=='CAMERA_CANCELLED')setStatus(cameraErrorMessage(err),'error');}}}
 
   function consumeVoiceRoster(list=[]){
@@ -1803,7 +1832,7 @@ window.TronoSocial = (()=>{
     if(voiceJoined&&allTelemetryPeerConnections().some(([,pc])=>['new','connecting'].includes(pc.connectionState)))return {level:'warn',label:'Áudio conectando',detail:'aguardando rota',recommendation:'Ainda há uma ponta conectando. Se persistir, confira o último erro SFU e a disponibilidade de TURN.'};
     if(!voiceJoined||!allTelemetryPeerConnections().length)return {level:'neutral',label:'Aguardando mídia',detail:'sem fluxo',recommendation:'Entre na chamada e ative câmera ou compartilhamento para medir a conexão.'};
     if(['failed','disconnected'].includes(t.pcState))return {level:'poor',label:'Mídia desconectada',detail:t.pcState,recommendation:lastSfuError?`Falha SFU: ${lastSfuError}. Em redes móveis/restritivas, habilite o TURN da Cloudflare.`:'A rota WebRTC caiu. Tente reconectar; em redes móveis/restritivas, habilite TURN.'};
-    if(t.eventLoopLagMs>=180)return {level:'warn',label:'Sobrecarga local detectada',detail:'processamento',recommendation:'O app demorou para responder. Reduza a carga do jogo ou use o modo leve. A adaptação reduz vídeo; nenhum aplicativo web consegue reservar CPU para a voz.'};
+    if(t.eventLoopLagMs>=180)return {level:'warn',label:'Sobrecarga local detectada',detail:'processamento',recommendation:'A interface demorou a responder. Veja Recepção de voz para comparar com perda, jitter e reconstrução; atraso de interface sozinho não confirma falha na reprodução.'};
     if(t.audioLossPct>=5||t.audioJitterMs>=70||t.concealedPct>=8)return {level:'poor',label:'Voz recebida instável',detail:'perda ou atraso',recommendation:'O receptor precisou recuperar áudio. Confira a rede e a carga do computador de quem está falando. A leitura local não mede a CPU do outro participante.'};
     const desired=screenSharing?qualityProfile().screen.fps:qualityProfile().camera.fps;
     const lowFps=desired>=30&&t.outFps>0&&t.outFps<desired*.58;
@@ -1815,8 +1844,15 @@ window.TronoSocial = (()=>{
   }
   function renderTelemetry(){
     const t=telemetrySnapshot||{transport:mediaTransport,rttMs:0,uploadBps:0,downloadBps:0,outFps:0,inFps:0,outW:0,outH:0,inW:0,inH:0,lossPct:0,jitterMs:0,limiter:'none'};const health=assessTelemetry(t),modeState=voiceJoined?announcedTransport():mediaTransport;
-    const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+    const set=(id,v)=>{const el=$(id);if(el&&el.textContent!==v)el.textContent=v;};
+    set('telemetryHealthLabel',health.label.replace('Conexão ',''));set('telemetryHealthDetail',health.detail);
+    set('voiceProtectionStatus',voiceProtection?'Ativa · margem de voz de 60 a 140 ms quando suportada.':'WebRTC gerencia a reprodução sem margem solicitada pelo app.');
+    set('adaptiveQualityStatus',stability.level?`Vídeo reduzido temporariamente: ${stability.reason}. Retorno gradual após 60 segundos estáveis.`:'Qualidade escolhida preservada; reduções temporárias quando necessário.');
+    const statusPill=$('telemetryStatusPill');if(statusPill)statusPill.className=`connection-health ${health.level}`;
+    const modePill=$('chatOnlyTransport');if(modePill){const label=modeState==='sfu-pending'?'⌁ Conectando…':modeState==='sfu'?'☁ SFU':'↔ P2P';if(modePill.textContent!==label)modePill.textContent=label;modePill.classList.toggle('sfu',modeState==='sfu');}
+    if(!telemetryOpen||!foreground())return;
     const playback=audioPlaybackInfo(),output=$('voiceOutputSelect');
+    renderReceptionTelemetry();
     set('telemetryAppVersion',window.TronoDesktop?.version||window.TronoNetwork?.CLIENT_VERSION||'0.9.1-alpha');
     set('telemetryAudioLoss',t.audioLossPct===undefined?'—':t.audioLossPct.toFixed(1)+'%');set('telemetryAudioJitter',t.audioJitterMs===undefined?'—':Math.round(t.audioJitterMs)+' ms');set('telemetryConcealed',t.concealedPct===undefined?'—':t.concealedPct.toFixed(1)+'%');set('telemetryLocalLag',Math.round(eventLoopLagMs)+' ms');set('telemetryResources',nativeResources?`${nativeResources.appCpuPercent}% CPU · ${nativeResources.appMemoryMB} MB · ${nativeResources.freeMemoryMB} MB livres`:'Abra este painel no app Windows para medir recursos.');
     set('adaptiveQualityStatus',stability.level?`Vídeo reduzido temporariamente: ${stability.reason}. Retorno gradual após 60 segundos estáveis.`:'Qualidade escolhida preservada; reduções temporárias quando necessário.');
@@ -1828,24 +1864,48 @@ window.TronoSocial = (()=>{
     const pill=$('telemetryStatusPill');if(pill)pill.className=`connection-health ${health.level}`;
     const transport=$('chatOnlyTransport');if(transport){transport.textContent=modeState==='sfu-pending'?'⌁ Conectando…':modeState==='sfu'?'☁ SFU':'↔ P2P';transport.classList.toggle('sfu',modeState==='sfu');}
   }
+  function renderReceptionTelemetry(){
+    const set=(id,text)=>{const n=$(id);if(n&&n.textContent!==text)n.textContent=text;};
+    set('telemetryVoiceAssessment',window.TronoVoiceReception.assessment(receptionRows,eventLoopLagMs,playoutSnapshot).text);
+    set('telemetryVoicePriority',({managed:'Acima do normal · somente serviço de áudio',system:'Prioridade gerenciada pelo sistema',waiting:'Aguardando serviço de áudio',idle:'Proteção nativa inativa',unavailable:'Windows manteve a prioridade padrão'})[voicePriorityState?.status]||'Gerenciada pelo sistema');
+    set('telemetryOutputGaps',playoutSnapshot?`${playoutSnapshot.gapEvents} eventos · ${Math.round(playoutSnapshot.gapMs)} ms`:'Métrica não fornecida por este motor de áudio');
+    const host=$('telemetryVoiceRows');if(!host)return;
+    const owners=[...reception.receivers.values()].filter(r=>r.metrics).map(r=>privateVoiceRoster.get(voiceOwners.get(r.receiver))?.name);
+    const lines=receptionRows.map(r=>{const fmt=(n,suffix)=>Number.isFinite(n)?n.toFixed(1)+suffix:'—';return `${owners[r.voice-1]||"Participante"} · Voz ${r.voice} · perda ${fmt(r.lossPct,'%')} · jitter ${fmt(r.jitterMs,' ms')} · reconstruída ${fmt(r.concealedPct,'%')} · buffer medido ${fmt(r.bufferMs,' ms')} · margem solicitada ${r.targetMs===null?'automática':r.targetMs+' ms'}`;});
+    const text=lines.length?lines.join('\n'):'Aguardando intervalos de voz recebida.';if(host.textContent!==text)host.textContent=text;
+  }
   function updateTelemetryHeader(){renderTelemetry();}
   async function collectTelemetry(){
     if(telemetryCollecting)return;telemetryCollecting=true;
     try{
-    if(telemetryOpen&&window.TronoDesktop?.getResources)try{nativeResources=await window.TronoDesktop.getResources();}catch{}
-    const pcs=allTelemetryPeerConnections();if(!voiceJoined||!pcs.length){telemetrySnapshot=null;renderTelemetry();return;}
+    if(telemetryOpen&&foreground()&&window.TronoDesktop?.getResources)try{nativeResources=await window.TronoDesktop.getResources();voicePriorityState=nativeResources.voicePriority||voicePriorityState;}catch{}
+    const pcs=allTelemetryPeerConnections();if(!voiceJoined||!pcs.length){reception.prune(new Set());receptionRows=[];telemetrySnapshot=null;renderTelemetry();return;}
+    const liveReceivers=new Set();const sampledReceivers=new Set();const playoutSeen=new Set();let gapEvents=0,gapMs=0,playoutAvailable=false;
     let audioLost=0,audioTotal=0,audioJitterMs=0,concealed=0,samples=0,jitterDelay=0,jitterEmitted=0;
     let uploadBps=0,downloadBps=0,rttSum=0,rttCount=0,jitterSum=0,jitterCount=0,lossLost=0,lossTotal=0,outFps=0,inFps=0,outW=0,outH=0,inW=0,inH=0,iceRoute='',pcState='';const limiters=[];
     for(const [pcKey,pc] of pcs){
+      for(const receiver of pc.getReceivers?.()||[])if(reception.receivers.has(receiver))liveReceivers.add(receiver);
       if(pc.connectionState&&pc.connectionState!=='new')pcState=pc.connectionState;let report;try{report=await pc.getStats();}catch{continue;}
+      const voicePlayoutIds=new Set();
       report.forEach(stat=>{
         const kind=statKind(stat),ts=stat.timestamp||performance.now(),key=`${pcKey}:${stat.id}`;
         if(stat.type==='outbound-rtp'&&!stat.isRemote){uploadBps+=rateFromStat(`tx:${key}`,stat.bytesSent,ts);if(kind==='video'){if(Number(stat.framesPerSecond)>outFps)outFps=Number(stat.framesPerSecond)||0;if((Number(stat.frameWidth)||0)*(Number(stat.frameHeight)||0)>outW*outH){outW=Number(stat.frameWidth)||0;outH=Number(stat.frameHeight)||0;}if(stat.qualityLimitationReason&&stat.qualityLimitationReason!=='none')limiters.push(stat.qualityLimitationReason);}}
-        if(stat.type==='inbound-rtp'&&!stat.isRemote){downloadBps+=rateFromStat(`rx:${key}`,stat.bytesReceived,ts);const loss=lossFromStat(key,stat.packetsReceived,stat.packetsLost,ts);lossLost+=loss.lost;lossTotal+=loss.total;if(kind==='audio'&&!pcKey.endsWith(':screen-audio')&&!(pc._tronoScreenAudioTransceiver?.mid!=null&&String(stat.mid)===String(pc._tronoScreenAudioTransceiver.mid))&&!(stat.trackIdentifier&&stat.trackIdentifier===pc._tronoScreenAudioTransceiver?.receiver?.track?.id)){audioLost+=loss.lost;audioTotal+=loss.total;audioJitterMs=Math.max(audioJitterMs,(Number(stat.jitter)||0)*1000);const prior=audioStatsPrev.get(key);if(prior){concealed+=Math.max(0,(stat.concealedSamples||0)-prior.concealed);samples+=Math.max(0,(stat.totalSamplesReceived||0)-prior.samples);jitterDelay+=Math.max(0,(stat.jitterBufferDelay||0)-prior.delay);jitterEmitted+=Math.max(0,(stat.jitterBufferEmittedCount||0)-prior.emitted);}audioStatsPrev.set(key,{concealed:stat.concealedSamples||0,samples:stat.totalSamplesReceived||0,delay:stat.jitterBufferDelay||0,emitted:stat.jitterBufferEmittedCount||0});}if(Number.isFinite(stat.jitter)){jitterSum+=Number(stat.jitter)*1000;jitterCount++;}if(kind==='video'){if(Number(stat.framesPerSecond)>inFps)inFps=Number(stat.framesPerSecond)||0;if((Number(stat.frameWidth)||0)*(Number(stat.frameHeight)||0)>inW*inH){inW=Number(stat.frameWidth)||0;inH=Number(stat.frameHeight)||0;}}}
+        if(stat.type==='inbound-rtp'&&!stat.isRemote){downloadBps+=rateFromStat(`rx:${key}`,stat.bytesReceived,ts);const loss=lossFromStat(key,stat.packetsReceived,stat.packetsLost,ts);lossLost+=loss.lost;lossTotal+=loss.total;if(kind==='audio'&&!pcKey.endsWith(':screen-audio')&&!(pc._tronoScreenAudioTransceiver?.mid!=null&&String(stat.mid)===String(pc._tronoScreenAudioTransceiver.mid))&&!(stat.trackIdentifier&&stat.trackIdentifier===pc._tronoScreenAudioTransceiver?.receiver?.track?.id)){const candidates=(pc.getTransceivers?.()||[]).filter(t=>t.receiver?.track?.kind==='audio'&&t!==pc._tronoScreenAudioTransceiver);
+          const transceiver=candidates.find(t=>stat.trackIdentifier&&t.receiver.track.id===stat.trackIdentifier)||candidates.find(t=>stat.mid!=null&&String(t.mid)===String(stat.mid))||(candidates.length===1?candidates[0]:null);
+          if(stat.playoutId)voicePlayoutIds.add(stat.playoutId);
+          if(transceiver&&!sampledReceivers.has(transceiver.receiver)){liveReceivers.add(transceiver.receiver);sampledReceivers.add(transceiver.receiver);reception.sample(transceiver.receiver,stat,ts);}
+          audioLost+=loss.lost;audioTotal+=loss.total;audioJitterMs=Math.max(audioJitterMs,(Number(stat.jitter)||0)*1000);const prior=audioStatsPrev.get(key);if(prior){concealed+=Math.max(0,(stat.concealedSamples||0)-prior.concealed);samples+=Math.max(0,(stat.totalSamplesReceived||0)-prior.samples);jitterDelay+=Math.max(0,(stat.jitterBufferDelay||0)-prior.delay);jitterEmitted+=Math.max(0,(stat.jitterBufferEmittedCount||0)-prior.emitted);}audioStatsPrev.set(key,{concealed:stat.concealedSamples||0,samples:stat.totalSamplesReceived||0,delay:stat.jitterBufferDelay||0,emitted:stat.jitterBufferEmittedCount||0});}if(Number.isFinite(stat.jitter)){jitterSum+=Number(stat.jitter)*1000;jitterCount++;}if(kind==='video'){if(Number(stat.framesPerSecond)>inFps)inFps=Number(stat.framesPerSecond)||0;if((Number(stat.frameWidth)||0)*(Number(stat.frameHeight)||0)>inW*inH){inW=Number(stat.frameWidth)||0;inH=Number(stat.frameHeight)||0;}}}
         if(stat.type==='candidate-pair'&&stat.state==='succeeded'&&(stat.nominated||stat.selected)){if(Number.isFinite(stat.currentRoundTripTime)){rttSum+=Number(stat.currentRoundTripTime)*1000;rttCount++;}const lc=report.get(stat.localCandidateId);if(lc?.candidateType)iceRoute=lc.candidateType==='relay'?'TURN relay':lc.candidateType==='srflx'?'STUN / srflx':lc.candidateType;}
         if(stat.type==='remote-inbound-rtp'&&Number.isFinite(stat.roundTripTime)){rttSum+=Number(stat.roundTripTime)*1000;rttCount++;}
       });
+      for(const id of voicePlayoutIds){const stat=report.get(id);if(stat?.type!=='media-playout'||!Number.isFinite(stat.synthesizedSamplesEvents)||!Number.isFinite(stat.synthesizedSamplesDuration))continue;
+        const k=pcKey+':'+id,prev=playoutPrevious.get(k);playoutSeen.add(k);playoutAvailable=true;
+        if(prev){gapEvents+=Math.max(0,stat.synthesizedSamplesEvents-prev.events);gapMs+=Math.max(0,stat.synthesizedSamplesDuration-prev.duration)*1000;}
+        playoutPrevious.set(k,{events:stat.synthesizedSamplesEvents,duration:stat.synthesizedSamplesDuration});
+      }
     }
+    reception.prune(liveReceivers);receptionRows=reception.snapshot();for(const key of playoutPrevious.keys())if(!playoutSeen.has(key))playoutPrevious.delete(key);playoutSnapshot=playoutAvailable?{gapEvents,gapMs}:null;
+    if(receptionRows.length){const highest=k=>{const v=receptionRows.map(r=>r[k]).filter(Number.isFinite);return v.length?Math.max(...v):null;};receiveHistory.push({stamp:performance.now(),lossPct:highest('lossPct'),jitterMs:highest('jitterMs'),concealedPct:highest('concealedPct'),localLagMs:eventLoopLagMs});if(receiveHistory.length>12)receiveHistory.shift();}
     if(!outFps){const track=screenSharing?localScreenStream?.getVideoTracks?.()[0]:localStream?.getVideoTracks?.()[0],settings=track?.getSettings?.()||{};outFps=Number(settings.frameRate)||0;outW=outW||Number(settings.width)||0;outH=outH||Number(settings.height)||0;}
     const limiter=limiters.includes('cpu')?'cpu':limiters.includes('bandwidth')?'bandwidth':limiters[0]||'none';
     telemetrySnapshot={audioLossPct:audioTotal?audioLost/audioTotal*100:0,audioJitterMs,concealedPct:samples?Math.min(100,concealed/samples*100):0,jitterBufferMs:jitterEmitted?jitterDelay/jitterEmitted*1000:0,eventLoopLagMs,transport:mediaTransport,rttMs:rttCount?rttSum/rttCount:0,uploadBps,downloadBps,outFps,inFps,outW,outH,inW,inH,lossPct:lossTotal?lossLost/lossTotal*100:0,jitterMs:jitterCount?jitterSum/jitterCount:0,limiter,iceRoute,pcState};if(stability.sample(telemetrySnapshot,performance.now(),adaptiveEnabled)){await applyQualityToLiveMedia();setStatus(stability.level?'Vídeo adaptado para aliviar '+stability.reason+'.':'Qualidade de vídeo restaurada.','ok');}renderTelemetry();
@@ -1853,10 +1913,10 @@ window.TronoSocial = (()=>{
   }
   function startTelemetry(){
     clearTimeout(telemetryTimer);const generation=++telemetrySchedule;let expected=performance.now();
-    const tick=async()=>{if(generation!==telemetrySchedule)return;const visible=document.visibilityState!=='hidden'||!!window.TronoDesktop,late=performance.now()-expected;eventLoopLagMs=visible&&late<5000?Math.max(0,late):0;try{if(visible)await collectTelemetry();}catch(err){console.warn('[TronoSocial] diagnóstico de mídia',err);}finally{if(generation===telemetrySchedule){const delay=voiceLightMode&&!telemetryOpen?10000:voiceJoined&&!cameraOn&&!screenSharing&&!telemetryOpen?5000:2000;expected=performance.now()+delay;telemetryTimer=setTimeout(tick,delay);}}};
+    const tick=async()=>{if(generation!==telemetrySchedule)return;const visible=document.visibilityState!=='hidden'||!!window.TronoDesktop,late=performance.now()-expected;eventLoopLagMs=visible?Math.min(60000,Math.max(0,late)):0;try{if(visible)await collectTelemetry();}catch(err){console.warn('[TronoSocial] diagnóstico de mídia',err);}finally{if(generation===telemetrySchedule){const delay=voiceJoined?(telemetryOpen&&foreground()?2000:5000):15000;expected=performance.now()+delay;telemetryTimer=setTimeout(tick,delay);}}};
     void tick();
   }
-  function diagnostics(){return window.TronoCallStability.diagnosticReport({version:window.TronoDesktop?.version||window.TronoNetwork.CLIENT_VERSION,platform:window.TronoDesktop?'Windows':'Navegador',call:{joined:voiceJoined,muted:micMuted,deafened,camera:cameraOn,screen:screenSharing,transport:announcedTransport(),playback:audioPlaybackInfo().label},telemetry:telemetrySnapshot,processing:noiseState().mode,adaptation:stability.level?stability.reason:'qualidade escolhida',resources:nativeResources});}
+  function diagnostics(){return window.TronoCallStability.diagnosticReport({version:window.TronoDesktop?.version||window.TronoNetwork.CLIENT_VERSION,platform:window.TronoDesktop?'Windows':'Navegador',call:{joined:voiceJoined,muted:micMuted,deafened,camera:cameraOn,screen:screenSharing,transport:announcedTransport(),playback:audioPlaybackInfo().label},telemetry:telemetrySnapshot,reception:{enabled:voiceProtection,rows:receptionRows,assessment:window.TronoVoiceReception.assessment(receptionRows,eventLoopLagMs,playoutSnapshot).kind,playout:playoutSnapshot,priority:voicePriorityState?.status,recent:receiveHistory.map(r=>({...r,agoMs:Math.max(0,performance.now()-r.stamp)}))},processing:noiseState().mode,adaptation:stability.level?stability.reason:'qualidade escolhida',resources:nativeResources});}
   async function copyDiagnostics(){const label=$('copyDiagnosticsStatus');try{await collectTelemetry();const report=diagnostics();if(window.TronoDesktop?.copyDiagnostics)await window.TronoDesktop.copyDiagnostics(report);else await navigator.clipboard.writeText(report);label.textContent='Copiado. Não contém nomes, mensagens, IPs ou credenciais.';}catch{label.textContent='Não foi possível copiar. Permita o acesso à área de transferência.';}}
 
   function bindFloatingDrag(){
@@ -1875,6 +1935,7 @@ window.TronoSocial = (()=>{
 
   function bind(){
     bindChatModeration();
+    $('voiceProtection').checked=voiceProtection;$('voiceProtection').onchange=e=>{voiceProtection=e.target.checked;storage.setItem('mnVoiceProtection',voiceProtection?'1':'0');reception.configure(voiceProtection);void syncVoicePriority();renderTelemetry();};
     $('adaptiveQuality').checked=adaptiveEnabled;$('adaptiveQuality').onchange=async e=>{adaptiveEnabled=e.target.checked;storage.setItem('mnAdaptiveQuality',adaptiveEnabled?'1':'0');stability.reset();await applyQualityToLiveMedia();renderTelemetry();};$('copyDiagnostics').onclick=copyDiagnostics;
     $('socialBtn')?.addEventListener('click',()=>showPanel(!panelOpen));$('roomSocialBtn')?.addEventListener('click',()=>showPanel(!panelOpen));$('chatOnlyOpenSocialBtn')?.addEventListener('click',()=>showPanel(true));$('socialCloseBtn')?.addEventListener('click',()=>showPanel(false));$('socialModeBtn')?.addEventListener('click',togglePanelMode);$('socialMiniDock')?.addEventListener('click',()=>showPanel(true));
     $('chatOnlyTextBtn')?.addEventListener('click',()=>toggleTextChat());$('mnSidebarTextBtn')?.addEventListener('click',()=>toggleTextChat(true));$('chatDrawerCloseBtn')?.addEventListener('click',()=>toggleTextChat(false));
@@ -1960,7 +2021,8 @@ window.TronoSocial = (()=>{
     navigator.mediaDevices?.addEventListener?.('devicechange',enumerateDevices);window.addEventListener('resize',renderSeatMedia);window.addEventListener('trono-audio-state',updateAudioPreferenceButtons);document.addEventListener('click',e=>{if(emojiOpen&&!e.target.closest('#emojiPicker')&&!e.target.closest('#emojiBtn'))toggleEmojiPicker(false);});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const maximized=document.querySelector('.media-maximized');if(maximized){maximized.classList.remove('media-maximized');document.body.classList.remove('media-focus-open');void setSfuTileLayer(maximized,false);}else if(emojiOpen)toggleEmojiPicker(false);else if(telemetryOpen)toggleTelemetry(false);else if(inChatHub()&&chatDrawerOpen)toggleTextChat(false);else if(settingsOpen)toggleVoiceSettings(false);}});document.addEventListener('fullscreenchange',()=>{document.body.classList.toggle('native-fullscreen-media',!!document.fullscreenElement);if(!document.fullscreenElement){renderVideoGrid();renderScreenGrid();}if(transportIsSfu()&&!document.fullscreenElement)void updateAllSfuSubscriptionLayers();});bindFloatingDrag();bindFloatingResize();applyPanelMode();populateEmojiPicker();renderGainValues();updateChatDrawerUI();setSettingsTab(settingsTab);updateAudioPreferenceButtons();enumerateDevices();updateQualityUI();updateButtons();updatePublicPresence();renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();startRealtimeStatusSync();startTelemetry();
     document.addEventListener('pointerdown',()=>{primeCallSounds();if(voiceJoined)unlockCallAudio();});
     document.addEventListener('keydown',()=>{if(voiceJoined)unlockCallAudio();});
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&voiceJoined){for(const key of remoteAudio.keys())attachRemoteAudio(key);updateAudioRecoveryUI();}});
+    for(const event of ['focus','blur'])window.addEventListener(event,()=>{syncVoiceWork();renderTelemetry();});
+    document.addEventListener('visibilitychange',()=>{syncVoiceWork();if(document.visibilityState==='visible'&&voiceJoined){for(const key of remoteAudio.keys())attachRemoteAudio(key);updateAudioRecoveryUI();}});
     window.addEventListener('trono-music-track',updateVoiceMusicUI);updateVoiceMusicUI();
     let previousWide=innerWidth>1000;window.addEventListener('resize',()=>{const wide=innerWidth>1000;if(previousWide&&!wide&&chatRoomState?.channelType!=='text')toggleTextChat(false);previousWide=wide;});
   }
@@ -1971,6 +2033,7 @@ window.TronoSocial = (()=>{
     diagnostics,showPanel,showForRoom,consumeRoom,consumeChatRoom,get chatRoomState(){return chatRoomState;},joinVoice,leaveVoice,renderVideoGrid,renderScreenGrid,renderSeatMedia,setChatHubMode,clearChannelChat,toggleTextChat,toggleTelemetry,toggleVoiceSettings,setSettingsTab,startScreenShare,stopScreenShare,switchScreenShare,openScreenOptions,
     get voiceJoined(){return voiceJoined;},get voiceJoining(){return !!voiceJoinPromise;},get voiceRoom(){return roomState?{id:roomState.id,name:roomState.name,kind:roomState.kind,channelType:roomState.channelType}:null;},get cameraOn(){return cameraOn;},get screenSharing(){return screenSharing;},get voiceLightMode(){return voiceLightMode;},get noiseSuppression(){return noiseSuppression;},get noiseMode(){return noiseSuppression?noiseEngine:"off";},get noiseState(){return noiseState();},get transmissionQuality(){return transmissionQuality;},get panelMode(){return panelMode;},
     get mediaTransport(){return mediaTransport;},get realtimeStatus(){return realtimeStatus?{...realtimeStatus}:null;},get telemetry(){return telemetrySnapshot?{...telemetrySnapshot}:null;},
+    get voiceReception(){return {enabled:voiceProtection,rows:receptionRows.map(r=>({...r})),background:voiceJoined&&!foreground(),meterMode:document.hidden?'paused':foreground()?'active':'reduced',metersRunning:[...voiceMeters.values()].filter(m=>!!m.timer).length,playbackContext:playbackAudioContext?.state||null,microphoneContext:mediaAudioContext?.state||null,priority:voicePriorityState?.status};},
     getLocalDisplayStream(){return screenSharing?localDisplayStream:null;},
     getLocalAudioTrack(){return localStream?.getAudioTracks?.()[0]||null;}
     ,get screenSettings(){return {...SCREEN_FORMATS[screenFormat],bitrate:effectiveScreenBitrate(),audio:shareStreamAudio};}

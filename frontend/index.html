@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="splendor.css?v=110tabletop"/>
   <link rel="stylesheet" href="tabletop-audio.css?v=110tabletop"/>
   <link rel="stylesheet" href="love-letter.css?v=110tabletop"/>
+  <link rel="stylesheet" href="voice-reception.css?v=111voice">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -325,6 +326,7 @@
             <small id="noiseSuppressionStatus" class="noise-suppression-status" role="status" aria-live="polite"></small>
             <button id="voiceLightModeBtn" class="royal-btn settings-secondary" type="button" aria-pressed="false" aria-describedby="voiceLightModeHelp">Modo leve para jogar: Desligado</button>
             <small id="voiceLightModeHelp" class="noise-suppression-status">Usa a redução de ruído do navegador em vez do RNNoise e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.</small>
+            <label class="auth-check"><input id="voiceProtection" type="checkbox" checked> Proteger a voz recebida durante jogos</label><small id="voiceProtectionStatus" class="settings-context-help">Ajusta a margem de reprodução de cada voz, sem trocar trilhas ou reconectar.</small><small class="settings-context-help">Pode acrescentar um pequeno atraso para tolerar oscilações. No Windows, solicita prioridade moderada somente ao serviço de áudio do app. Não reserva CPU e não altera os volumes.</small>
             <div class="voice-devices voice-devices-vertical"><label><span>Música de fundo</span><select id="voiceMusicTrackSelect" aria-label="Trocar música do chat de voz"></select></label></div>
             <label class="mn-gain-label"><span>Volume da música</span><output id="voiceMusicVolumeValue">32%</output><input id="voiceMusicVolume" type="range" min="0" max="100" value="32" /></label>
             <small id="voiceMusicStatus" class="music-playback-status" role="status" aria-live="polite"></small>
@@ -380,7 +382,7 @@
           <div class="telemetry-wide"><small>Saída de áudio</small><strong id="telemetryOutput">—</strong></div>
           <div class="telemetry-wide"><small>Limitador detectado</small><strong id="telemetryLimiter">—</strong></div><div class="telemetry-wide"><small>Último erro SFU</small><strong id="telemetrySfuError">Nenhum</strong></div>
         </div>
-        <button id="copyDiagnostics" type="button" class="royal-btn settings-secondary">Copiar diagnóstico</button><span id="copyDiagnosticsStatus" role="status"></span><div class="telemetry-grid"><div><small>Perda de voz</small><strong id="telemetryAudioLoss">—</strong></div><div><small>Jitter de voz</small><strong id="telemetryAudioJitter">—</strong></div><div><small>Áudio recuperado</small><strong id="telemetryConcealed">—</strong></div><div><small>Atraso local</small><strong id="telemetryLocalLag">—</strong></div><div class="telemetry-wide"><small>Recursos do app</small><strong id="telemetryResources">—</strong></div></div><small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada aproximadamente a cada 2 segundos. Alguns campos variam conforme navegador e dispositivo.</small>
+        <button id="copyDiagnostics" type="button" class="royal-btn settings-secondary">Copiar diagnóstico</button><span id="copyDiagnosticsStatus" role="status"></span><div class="telemetry-grid"><div><small>Perda de voz</small><strong id="telemetryAudioLoss">—</strong></div><div><small>Jitter de voz</small><strong id="telemetryAudioJitter">—</strong></div><div><small>Áudio recuperado</small><strong id="telemetryConcealed">—</strong></div><div><small>Atraso local</small><strong id="telemetryLocalLag">—</strong></div><div class="telemetry-wide"><small>Recursos do app</small><strong id="telemetryResources">—</strong></div></div><section class="voice-reception-report" aria-label="Recepção de voz"><strong>Recepção de voz</strong><p id="telemetryVoiceAssessment"></p><p id="telemetryVoiceRows"></p><small>Prioridade de áudio</small><p id="telemetryVoicePriority"></p><small>Lacunas na saída, no intervalo medido</small><p id="telemetryOutputGaps"></p><small>Voz 1, 2… são identificadores locais desta chamada. Margem solicitada e buffer medido são grandezas diferentes; nenhum deles mede o atraso total até seu fone.</small></section><small class="telemetry-note">Leitura local via WebRTC getStats(), atualizada a cada 2 segundos com o painel em foco e a cada 5 segundos durante a chamada em segundo plano. Alguns campos variam conforme navegador e dispositivo.</small>
       </section>
       <div class="mn-media-stage">
         <div class="mosaic-toolbar"><div><span class="section-eyebrow">AO VIVO</span><strong>Câmeras &amp; telas</strong></div><button id="expandMosaicBtn" class="small-btn" type="button" disabled>▦ Grade · até 6</button></div>
@@ -415,7 +417,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.0-Windows.exe" download="MN-Trono-0.2.0-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.1-Windows.exe" download="MN-Trono-0.2.1-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -619,8 +621,9 @@
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
   <script src="personal-prefs.js?v=099desktop017"></script>
-  <script src="call-stability.js?v=099desktop017"></script>
-  <script src="social.js?v=102voicepanel"></script>
+  <script src="voice-reception.js?v=111voice"></script>
+  <script src="call-stability.js?v=111voice"></script>
+  <script src="social.js?v=111voice"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>

@@ -1,10 +1,10 @@
-M&N · cinco jogos · Windows atual 0.2.0, anterior 0.1.17
-Backend: 0.13.0-alpha. Não há SQL novo se as migrações de Azul/Splendor já foram aplicadas.
+M&N · Windows atual 0.2.1, anterior 0.2.0
+Backend compatível: 0.13.0-alpha. Esta revisão não exige SQL novo nem mudança do backend.
 
-Catálogo compacto; Splendor com fichas/bônus distintos e madeira; Love Letter com seleção de alvo por clique, histórico e animações detalhadas. Arte reconstruída da referência fotográfica, não scans. Bots: Epaminondas, Bonifácio e Cícero.
+Proteção da voz recebida durante jogos em Configurações → Áudio, ligada por padrão e local a cada usuário. Margem de reprodução adaptativa, prioridade moderada restrita ao serviço de áudio no Windows, menos medições em segundo plano e relatório anônimo de recepção. Não reserva CPU nem garante áudio sob saturação total.
 
-Som pessoal por jogo de mesa no botão Som. Cinzas mantém seu volume em Controles.
-Publique a pasta frontend do ZIP MN-Trono-Frontend-0.2.0.zip das Releases privadas.
+Os jogos, volumes, temas e chamadas existentes permanecem disponíveis.
+Publique frontend/ do ZIP MN-Trono-Frontend-0.2.1.zip das Releases privadas.
 O ZIP inclui somente o instalador atual e downloads/latest.yml para atualizar internamente.
-Leia ATUALIZAR_WINDOWS_v0.2.0.md na raiz do ZIP antes de publicar.
-As credenciais ficam no backend. Não há nenhuma chave administrativa nesta pasta.
+Leia ATUALIZAR_WINDOWS_v0.2.1.md na raiz do ZIP antes de publicar.
+As credenciais administrativas ficam no backend.

@@ -2,7 +2,7 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -30,6 +30,19 @@ jobs:
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-cinzas-runtime.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Native roguelite frame::$details"
+            exit $testExit
+          }
+      - name: Verify received voice under UI load
+        shell: pwsh
+        run: |
+          node --test tests/voice-reception-browser.js 2>&1 | Tee-Object artifacts/windows-voice-reception.log
+          $testExit = $LASTEXITCODE
+          $voiceResult = ((Select-String -Path artifacts/windows-voice-reception.log -Pattern 'Receive PCM under long UI tasks|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+          Write-Output "::notice title=Received voice evidence::$voiceResult"
+          if (Select-String -Path artifacts/windows-voice-reception.log -Pattern 'skipped [1-9]') { $testExit = 1 }
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-voice-reception.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Voice reception under load::$details"
             exit $testExit
           }
       - name: Verify revised game rules and independent voice
@@ -83,7 +96,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/desktop-audio.js tests/desktop-runtime.js tests/site-package.js tests/download-retention.js tests/build-downloads.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/voice-reception.js tests/desktop-audio-priority.js tests/desktop-audio.js tests/desktop-runtime.js tests/site-package.js tests/download-retention.js tests/build-downloads.js 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
