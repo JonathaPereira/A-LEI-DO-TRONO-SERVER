@@ -206,7 +206,7 @@ function bind(){
   document.querySelectorAll('.track-btn').forEach(btn=>btn.addEventListener('click',()=>setMusicTrack(btn.dataset.track)));
   $('bgMusic')?.addEventListener('error',()=>{const el=$('bgMusic'),track=MUSIC_TRACKS[currentMusicTrack];if(!el||!track?.fallback||el.dataset.musicFallback==='1')return;loadMusicSource(el,track,{fallback:true});if(musicEnabled)void startBackgroundMusic();});
   window.addEventListener('pointerdown',()=>{if(musicEnabled||sfxEnabled)void ensureAudio().catch(()=>{});},{once:true});
-  document.addEventListener('click',e=>{const target=e.target?.closest?.('button,[role="button"],a[href],select,input[type="checkbox"],input[type="radio"],summary,.hand-card,.room-card');if(!target||target.matches(':disabled')||target.dataset.noClickSfx==='1'||!sfxEnabled)return;void ensureAudio().then(()=>playSfx('click')).catch(()=>{});},true);
+  document.addEventListener('click',e=>{const target=e.target?.closest?.('button,[role="button"],a[href],select,input[type="checkbox"],input[type="radio"],summary,.hand-card,.room-card');if(!target||target.matches(':disabled')||target.dataset.noClickSfx==='1'||!sfxEnabled)return;const screen=target.closest('#gameScreen,#azulScreen,#splendorScreen,#loveLetterScreen'),key=({gameScreen:'throne',azulScreen:'azul',splendorScreen:'splendor',loveLetterScreen:'love-letter'})[screen?.id]||null;void ensureAudio().then(()=>playSfx('click',key)).catch(()=>{});},true);
 }
 window.addEventListener('DOMContentLoaded',bind);
 return {ensureAudio,playSfx,gameVolume,setGameVolume,toggleMusic,setMusicEnabled,toggleSfx,setSfxEnabled,setMusicTrack,setMusicVolume,
