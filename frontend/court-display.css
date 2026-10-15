@@ -155,3 +155,45 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)){display:
  body.desktop-app #gameScreen.game-screen .slot-right{left:87.5%!important;}
  body.desktop-app #gameScreen.game-screen .center-info{top:5px;transform:translateX(-50%)!important;flex-direction:row;flex-wrap:wrap;justify-content:center;max-width:90%;}
 }
+/* The Discord call panel occupies the left corner on wide screens. */
+body.desktop-app[data-app-layout=discord]:not(.court-fullscreen) #gameScreen.game-screen .hand-zone{padding-left:calc(var(--discord-sidebar) + 12px)!important;}
+body.court-fullscreen #layoutVoicePanel{display:none!important;}
+@media(max-height:650px){
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)){--discord-panel-height:92px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutVoicePanel{grid-template-rows:52px 40px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutVoiceConnection{display:flex;align-items:center;padding:5px 8px;gap:6px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-voice-heading{flex:1;min-width:0;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutCallActions{width:70px;flex:none;gap:5px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutUserBar{height:40px;padding:3px 8px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutProfile .community-avatar{width:25px;height:25px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-user-copy{gap:1px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-user-copy strong{font-size:10px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-user-copy small{font-size:8px;}
+}
+@media(max-height:650px) and (max-width:900px),(max-height:650px) and (max-aspect-ratio:3/4) and (max-width:1200px){body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)){--discord-controls:92px;}}
+/* While playing in a narrow window, keep every Discord call control in two compact rows. */
+@media(max-width:900px),(max-aspect-ratio:3/4) and (max-width:1200px){
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)){--discord-panel-height:92px;--discord-controls:92px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutVoicePanel{grid-template-rows:52px 40px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutVoiceConnection{display:flex;align-items:center;padding:5px 8px;gap:6px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-voice-heading{flex:1;min-width:0;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutCallActions{width:70px;flex:none;gap:5px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutUserBar{height:40px;padding:3px 8px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutProfile .community-avatar{width:25px;height:25px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-user-copy{gap:1px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-user-copy strong{font-size:10px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) .layout-user-copy small{font-size:8px;}
+}
+@media(max-height:650px){
+ body.desktop-app #gameScreen.game-screen .topbar{min-height:44px!important;}
+ body.desktop-app #gameScreen.game-screen #courtFullscreen{width:32px;height:32px;min-height:32px;padding:4px!important;font-size:0;}
+ body.desktop-app #gameScreen.game-screen #courtFullscreen::before{content:'⛶';display:block;font-size:20px;line-height:20px;}
+ body.desktop-app #gameScreen.game-screen .tt-audio>summary{height:32px;box-sizing:border-box;padding:4px 7px;}
+}
+@media(max-height:650px) and (max-width:900px),(max-height:650px) and (max-aspect-ratio:3/4) and (max-width:1200px){
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)){--discord-panel-height:80px;--discord-controls:80px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutVoicePanel{grid-template-rows:44px 36px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutUserBar{height:36px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutUserControls .call-action{height:30px;}
+ body.desktop-app[data-app-layout=discord]:has(#gameScreen.game-screen:not(.hidden)) #layoutProfile{padding:2px;}
+}
