@@ -34,7 +34,7 @@
 .profile-gif-dialog button{border:1px solid #ffffff24;border-radius:8px;background:#2c3750;color:#edf3ff;padding:9px 14px;font:inherit;font-size:12px;cursor:pointer}
 .profile-gif-dialog .profile-gif-close{font-size:23px;padding:0;width:34px;height:34px;flex:none}
 .profile-gif-search{display:flex;gap:8px}
-.profile-gif-search input{min-width:0;flex:1;padding:11px;border-radius:8px;border:1px solid #ffffff24;background:#0e1420;color:#e9effa;font:inherit;font-size:12px}
+.profile-gif-search input,.profile-gif-link input{min-width:0;flex:1;padding:11px;border-radius:8px;border:1px solid #ffffff24;background:#0e1420;color:#e9effa;font:inherit;font-size:12px}
 .profile-gif-dialog .profile-gif-search button{background:#6553d8}
 .profile-gif-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-height:0;overflow:auto;flex:1;align-content:start}
 .profile-gif-results article{min-width:0;background:#202b3d;border:1px solid #ffffff12;border-radius:10px;padding:6px}
@@ -61,3 +61,5 @@ body #callWorkspace #socialPanel #callFocusDock>:is(#joinVoiceBtn,#cameraBtn,#sc
 body #callWorkspace #socialPanel #callFocusDock>:is(#joinVoiceBtn,#cameraBtn,#screenShareBtn)[data-call-action]:disabled{opacity:.45!important;cursor:not-allowed!important}
 @media(max-width:600px){.profile-link-row{grid-template-columns:minmax(0,1fr) 32px}.profile-link-row [data-link-name]{grid-column:1}.profile-link-row [data-link-url]{grid-column:1;grid-row:2}.profile-link-row button{grid-column:2;grid-row:1/3}.profile-gif-results{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-gif-results article>button{height:115px}.profile-gif-dialog{padding:14px}.profile-gif-dialog h2{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.profile-gif-dialog::backdrop{backdrop-filter:none}}
+
+.profile-gif-link{display:flex;gap:8px;margin:12px 0}.profile-gif-link input{min-width:0;flex:1}.profile-gif-link button{flex:none}.profile-gif-external,.profile-gif-attribution{display:inline-block;color:#b9adff;font-size:12px}.profile-gif-attribution{display:block;font-weight:700;text-align:right;margin-top:14px}@media(max-width:500px){.profile-gif-link{flex-direction:column}.profile-gif-link button{align-self:end}}

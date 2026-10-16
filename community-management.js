@@ -3,7 +3,7 @@ const {permissions}=require('./roles');
 const fail=(code,message,status=400)=>Object.assign(Error(message),{code,status});
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function createCommunityManagement({auth,rooms,db,onChanged=()=>{},onDeleted=()=>{},onRoleChanged=()=>{}}){
+function createCommunityManagement({auth,rooms,db,onChanged=()=>{},onDeleted=()=>{},onRoleChanged=()=>{},env=process.env}){
   let ready=false,queue=Promise.resolve();
   // Serialize mutations and refreshes so an older snapshot cannot reintroduce a deleted room.
   function serial(fn){const task=queue.catch(()=>{}).then(fn);queue=task;return task;}
@@ -31,6 +31,8 @@ function createCommunityManagement({auth,rooms,db,onChanged=()=>{},onDeleted=()=
     },express.json({limit:'8kb'}));
     function route(method,path,fn){app[method]('/community'+path,async(req,res)=>{try{res.json(await fn(req));}catch(e){res.status(e.status||503).json({error:{code:e.code||'COMMUNITY_UNAVAILABLE',message:e.status?e.message:'Não foi possível atualizar a comunidade.'}});}});}
     function requirePermission(req,key){if(!permissions(req.account.role)[key])throw fail('FORBIDDEN','Você não tem permissão para realizar essa operação.',403);}
+    // GIPHY uses a public client key; never put service credentials in GIPHY_API_KEY.
+    route('get','/gif-provider',async()=>{const apiKey=String(env.GIPHY_API_KEY||'').trim();const configured=/^[a-zA-Z0-9_-]{10,200}$/.test(apiKey);return {provider:'giphy',configured,...(configured?{apiKey}:{})};});
     route('get','/permissions',async req=>({role:req.account.role,permissions:permissions(req.account.role)}));
     route('get','/profiles/:id',async req=>{
       if(!uuid.test(req.params.id))throw fail('MEMBER_NOT_FOUND','Perfil não encontrado.',404);
