@@ -1006,15 +1006,6 @@ function clampEffectiveValue(v) {
 function playValue(play) {
   return clampEffectiveValue((play?.card?.value || 0) + (play?.modifier || 0));
 }
-function pickWinner(candidates, mode) {
-  return candidates.reduce((best, p) => {
-    if (!best) return p;
-    const v = playValue(p),
-      bv = playValue(best);
-    if (mode === 'max') return v > bv ? p : best;
-    return v < bv ? p : best;
-  }, null);
-}
 
 function evaluateTrick() {
   return window.TronoRules.evaluate(game.plays, game.currentLaw, getLeadSuit(), game.trump);

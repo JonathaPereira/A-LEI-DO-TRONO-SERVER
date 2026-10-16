@@ -943,16 +943,6 @@ window.TronoSocial = (() => {
     }, 15000);
   }
 
-  function cameraMediaConstraints() {
-    const q = qualityProfile().camera;
-    const video = {
-      width: { ideal: q.width },
-      height: { ideal: q.height },
-      frameRate: { ideal: q.fps, max: q.fps },
-    };
-    if (selectedCamera) video.deviceId = { exact: selectedCamera };
-    return video;
-  }
   function cameraFallbackAttempts() {
     const q = qualityProfile().camera,
       base = {

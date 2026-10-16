@@ -46,7 +46,7 @@ scripts/                   Desenvolvimento, mídia e empacotamento
 tests/                     Regressões e integrações
 supabase/                  SQL e migrações existentes
 docs/                      Arquitetura, desenvolvimento e andamento da migração
-docs/archive/              Notas históricas; não são o guia atual
+docs/archive/              Notas usadas na distribuição e originais de arte
 ```
 
 `out/`, `.next/`, `artifacts/` e os JS/CSS gerados na raiz de `public/` são saídas

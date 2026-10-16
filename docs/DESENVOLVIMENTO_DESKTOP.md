@@ -30,6 +30,12 @@ Supabase para contas e persistência; mantenha autenticação obrigatória. As c
 secretas ficam somente no backend. As migrações SQL estão em `supabase/`; esta
 reorganização não executa migrações nem altera serviços remotos.
 
+`APP_URL` identifica o frontend HTTPS usado nos links de autenticação. O backend
+exige HTTPS para essa variável fora dos testes. Para abrir a interface local,
+mantenha `http://127.0.0.1:3000` em `AUTH_ALLOWED_ORIGINS`; isso não exige trocar
+`APP_URL` para HTTP. Use a URL HTTPS do seu ambiente de desenvolvimento e confira
+os redirecionamentos permitidos na configuração de autenticação desse ambiente.
+
 Em um terminal:
 
 ```powershell
@@ -43,8 +49,8 @@ npm run desktop:dev
 ```
 
 O segundo comando inicia Next em `http://127.0.0.1:3000` e abre o Electron nessa
-origem. A interface procura o backend em `http://127.0.0.1:10000`. A origem precisa
-estar em `APP_URL` e `AUTH_ALLOWED_ORIGINS`, como no exemplo.
+origem. A interface procura o backend em `http://127.0.0.1:10000`. A origem local
+precisa estar em `AUTH_ALLOWED_ORIGINS`, como no exemplo.
 
 Páginas, componentes e estilos globais usam a atualização do Next. Controladores
 DOM podem exigir recarga completa: leia o guia de migração antes de introduzir

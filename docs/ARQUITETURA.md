@@ -68,7 +68,8 @@ builds empacotados. Permite atualização de componentes ao salvar.
 ## Documentação e arquivos
 
 README é o ponto de entrada. Desenvolvimento descreve execução; este documento
-registra decisões; MIGRACAO registra pendências. Notas por versão ficam em
-`docs/archive/`, inclusive instruções que ainda acompanham a distribuição.
+registra decisões; MIGRACAO registra pendências. `docs/archive/` conserva as duas
+notas usadas na distribuição, instruções do bridge Windows e originais de arte.
+Documentos substituídos e capturas antigas podem ser recuperados pelo histórico Git.
 Licenças, créditos, modelos de áudio, SQL e recursos de jogos foram mantidos.
 Arquivos gerados ficam fora do Git.

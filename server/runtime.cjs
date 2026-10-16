@@ -2040,15 +2040,6 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
     );
   }
 
-  function pickWinner(candidates, mode) {
-    return candidates.reduce((best, p) => {
-      if (!best) return p;
-      const v = playValue(p),
-        bv = playValue(best);
-      if (mode === 'max') return v > bv ? p : best;
-      return v < bv ? p : best;
-    }, null);
-  }
   function evaluateTrick(g) {
     return Rules.evaluate(g.plays, g.currentLaw, leadSuit(g), g.trump);
   }

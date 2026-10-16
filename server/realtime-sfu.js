@@ -28,9 +28,6 @@ function monthKeyUTC(ts = Date.now()) {
   const d = new Date(ts);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
-function clonePlain(value) {
-  return JSON.parse(JSON.stringify(value));
-}
 function sdpOk(desc, type) {
   return (
     !!desc &&

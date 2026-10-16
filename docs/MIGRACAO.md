@@ -23,6 +23,28 @@ e a captura WebRTC permanecem nesses controladores. `server/runtime.cjs` ainda
 reúne regras de A Lei do Trono e coordenação de canais. Módulos JS existentes
 ainda não recebem a verificação estrita de tipos dos módulos TS.
 
+## Limpeza após a migração
+
+- Removidos 67 arquivos históricos ou redundantes (33,88 MiB na árvore atual):
+  capturas, manuais substituídos, notas antigas e guias sem implementação atual.
+  Continuam recuperáveis no histórico Git.
+- Preservados os oito originais de arte, créditos, licenças, manual distribuído,
+  notas Windows 0.2.4/0.2.3 e instruções do bridge usadas pelo workflow.
+- Removidas cinco funções sem chamadas: `clonePlain`, as duas `pickWinner`,
+  `scheduleTavernBar` e `cameraMediaConstraints`, além do estado `musicStep`.
+  Música, efeitos, fallback de câmera e regras compartilhadas continuam ativos.
+- Configuração do backend consolidada em `PUBLICAR_SURGE_LEVE.md`. O exemplo de
+  `APP_URL` agora usa HTTPS, como exige o backend; `AUTH_ALLOWED_ORIGINS` mantém
+  a origem local. Nenhum segredo ou serviço remoto foi alterado.
+- Corrigidas referências aos arquivos removidos e a espera de inicialização do
+  teste de áudio após o carregamento do Next, mantendo suas verificações de PCM.
+
+Validação desta limpeza: tipagem, formatação, build, `npm test` (4 integrações e
+79 testes), `test:ui` (3), `test:desktop:layout` (1), áudio real no navegador (1)
+e empacotamento/retenção (9) passaram. A configuração de autenticação do exemplo
+foi conferida localmente, com valores fictícios e sem chamadas ao Supabase.
+A limitação da suíte antiga `test:frontend` descrita abaixo permanece.
+
 ## Próximas alterações, em ordem
 
 1. Extrair de `legacy/network.js` um transporte tipado em `lib/socket/`.
@@ -41,6 +63,8 @@ ainda não recebem a verificação estrita de tipos dos módulos TS.
    de `createApplication`. Converter os módulos JS por domínio.
 6. Consolidar estilos por domínio após retirar os controladores. A ordem atual
    contém sobreposições necessárias para estados de chamada não visíveis no início.
+7. Documentar e validar uma instalação nova do banco, com ordem única para os
+   SQL legados e as migrações datadas, sem reaplicar mudanças em bases existentes.
 
 ## Critérios por fluxo convertido
 

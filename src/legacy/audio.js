@@ -79,7 +79,6 @@ window.TronoAudio = (() => {
     ? storage.getItem('tronoMusicEnabled') === '1'
     : storage.getItem('tronoMusicEnabled') !== '0';
   let sfxEnabled = storage.getItem('tronoSfxEnabled') !== '0';
-  let musicStep = 0;
   let musicRequest = 0;
   const MUSIC_TRACKS = {
     // Faixas modernas liberadas em CC0/Public Domain pelo próprio autor no OpenGameArt.
@@ -286,32 +285,6 @@ window.TronoAudio = (() => {
     gain.connect(destination);
     src.start(when);
     src.stop(when + dur);
-  }
-  function scheduleTavernBar() {
-    if (!audioCtx || audioCtx.state !== 'running' || !musicEnabled || !musicMaster) return;
-    const now = audioCtx.currentTime + 0.08;
-    // Frase original em Ré menor/dórico: alaúde, bordão e percussão leve.
-    const phraseA = [
-      293.66, 349.23, 392, 440, 392, 349.23, 329.63, 293.66, 261.63, 293.66, 349.23, 392, 349.23,
-      329.63, 293.66, 261.63,
-    ];
-    const phraseB = [
-      293.66, 329.63, 349.23, 392, 440, 392, 349.23, 293.66, 261.63, 293.66, 329.63, 349.23, 392,
-      349.23, 329.63, 293.66,
-    ];
-    const melody = musicStep % 2 === 0 ? phraseA : phraseB;
-    const bassRoots = [146.83, 130.81, 174.61, 146.83];
-    for (let i = 0; i < 16; i++) {
-      const t = now + i * 0.46;
-      tone(melody[i], t, 0.33, 0.095, i % 4 === 0 ? 'triangle' : 'sine', musicMaster, 0.014, 1450);
-      if (i % 4 === 0) {
-        const root = bassRoots[(musicStep + i / 4) % bassRoots.length];
-        tone(root, t, 0.92, 0.055, 'triangle', musicMaster, 0.025, 750);
-        tone(root * 1.5, t + 0.02, 0.58, 0.025, 'sine', musicMaster, 0.025, 950);
-        noiseHit(t, 0.075, 0.018, musicMaster, 520);
-      } else if (i % 2 === 0) noiseHit(t, 0.045, 0.008, musicMaster, 1200);
-    }
-    musicStep = (musicStep + 1) % 8;
   }
   function playSfx(kind, gameOverride = null) {
     if (!sfxEnabled || !audioCtx || audioCtx.state !== 'running' || !sfxMaster) return;
