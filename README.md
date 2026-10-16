@@ -1,3 +1,7 @@
+## Windows 0.2.8 · GIFs do GIPHY
+
+Seletor de GIFs com pesquisa e tendências do GIPHY quando `GIPHY_API_KEY` estiver configurada no Render. Sem chave, permite abrir o catálogo externo e importar pelo link. Exige o novo SQL de créditos e o backend desta revisão para busca integrada. Veja [configuração e publicação com o EXE](ATUALIZAR_WINDOWS_v0.2.8.md).
+
 ## Windows 0.2.7 · chat, voz e jogos
 
 Imagens sem nomes extensos; chat da sala por botão próprio; microfone nativo sem filtro adicional; quatro jogadores do Splendor junto ao mercado; histórico do Love Letter aberto e estável, com carta, alvo e resultado. Veja [como publicar o frontend com o EXE](ATUALIZAR_WINDOWS_v0.2.7.md). Backend 0.13.0-alpha, sem SQL novo.

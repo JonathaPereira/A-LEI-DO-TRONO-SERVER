@@ -32,8 +32,9 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   if(guides[0]?.version!==version)throw Error('Guia de publicação da versão atual não encontrado.');
   for(const guide of guides)await fs.copyFile(path.join(root,guide.name),path.join(site,guide.name));
   for(const file of ['upgrade-azul.sql','upgrade-splendor.sql'])await fs.copyFile(path.join(root,'supabase',file),path.join(site,file));
+  await fs.copyFile(path.join(root,'supabase/migrations/20261016140000_giphy_profile_credits.sql'),path.join(site,'20261016140000_giphy_profile_credits.sql'));
   const files=await filesIn(frontend),siteBytes=files.reduce((sum,f)=>sum+f.size,0);
-  if(files.some(f=>/\.(zip|tar|tgz)$/i.test(f.file)||(/\.exe$/i.test(f.file)&&path.relative(frontend,f.file)!==path.join('downloads',filename)))||siteBytes>MAX_SITE_BYTES)throw Error('O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados.');
+  if(files.some(f=>/\.(zip|tar|tgz)$/i.test(f.file)||(/\.exe$/i.test(f.file)&&path.relative(frontend,f.file)!==path.join('downloads',filename)))||siteBytes>MAX_SITE_BYTES)throw Error(`O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados. Total: ${siteBytes} bytes; limite: ${MAX_SITE_BYTES} bytes.`);
   const rogueliteBytes=files.filter(f=>path.relative(frontend,f.file).split(path.sep)[0]==='roguelite').reduce((sum,f)=>sum+f.size,0);
   await fs.writeFile(path.join(site,'TAMANHO-E-DOWNLOAD.json'),JSON.stringify({version,siteBytes,frontendWithoutInstallerBytes:siteBytes-bytes.length,rogueliteBytes,installerBytes:bytes.length,installerURL:url,sha512:hash,installerSHA256:crypto.createHash('sha256').update(bytes).digest('hex')},null,2)+'\n');
   return {version,frontend,direct,site,siteBytes,installerBytes:bytes.length,url,sha512:hash};
