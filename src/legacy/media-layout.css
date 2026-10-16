@@ -1,0 +1,810 @@
+/* Compact profiles preserve their streams and controls when expanded. */
+body.chat-only-active #socialPanel .voice-roster {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 288px)) !important;
+  gap: 8px !important;
+  justify-content: start !important;
+  align-content: start !important;
+  align-items: start !important;
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person {
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr) 26px;
+  grid-template-areas: 'avatar name expand' 'avatar meta expand' 'details details details';
+  grid-template-rows: 20px 20px;
+  align-items: center !important;
+  justify-items: start !important;
+  gap: 6px 10px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  padding: 10px !important;
+  text-align: left !important;
+  justify-content: stretch !important;
+  border-radius: 12px !important;
+  overflow: visible !important;
+  box-sizing: border-box;
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person > .mn-person-avatar {
+  grid-area: avatar;
+  display: flex !important;
+  position: relative !important;
+  width: 32px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  flex: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-width: 2px !important;
+  box-sizing: border-box;
+  font-size: 12px !important;
+}
+body.chat-only-active #socialPanel #voiceRoster .mn-person-avatar :is(img, svg) {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+}
+body.chat-only-active #socialPanel #voiceRoster .mn-person-avatar .participant-online-dot {
+  display: block !important;
+  position: absolute !important;
+  right: -6px !important;
+  bottom: -4px !important;
+  width: 9px !important;
+  height: 9px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 2px solid var(--theme-panel) !important;
+  border-radius: 50% !important;
+  background: #42d98d !important;
+  box-shadow: none !important;
+  box-sizing: content-box;
+  transform: none !important;
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person > strong {
+  grid-area: name;
+  max-width: 100%;
+  font-size: 12px !important;
+  margin: 0 !important;
+  line-height: 1.4;
+}
+body.chat-only-active #socialPanel #voiceRoster .participant-voice-status {
+  gap: 4px;
+}
+.participant-status-icon {
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+}
+.participant-status-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.participant-expand {
+  grid-area: expand;
+  align-self: center;
+  width: 26px;
+  height: 30px;
+  border: 1px solid var(--theme-line);
+  border-radius: 7px;
+  background: var(--theme-soft);
+  color: var(--theme-text);
+  font: 16px var(--ui-font);
+  cursor: pointer;
+}
+.participant-expand:hover,
+.participant-expand:focus-visible {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+}
+.participant-details {
+  grid-area: details;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-line);
+  min-width: 0;
+}
+.participant-details[hidden] {
+  display: none !important;
+}
+.participant-summary {
+  font: 10px/1.5 var(--ui-font);
+  color: var(--theme-muted);
+}
+body.chat-only-active #socialPanel .participant-details .mn-peer-gain {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .voice-person
+  :is(.participant-camera-slot, .participant-screen-slot) {
+  grid-area: preview;
+  width: 100%;
+  max-width: none;
+  align-self: center;
+  min-width: 0;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .voice-person:not(.participant-expanded)
+  :is(.participant-camera-slot, .participant-screen-slot)
+  > :is(.camera-tile, .screen-share-tile):not(:fullscreen):not(.media-maximized) {
+  height: 80px !important;
+  aspect-ratio: auto !important;
+  min-height: 0 !important;
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person.speaking {
+  border-color: #49d99a !important;
+  box-shadow: none !important;
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person.speaking:after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid #49d99a;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: participant-speaking 1.4s ease-in-out infinite alternate;
+}
+@keyframes participant-speaking {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.chat-only-active #socialPanel #voiceRoster .voice-person.speaking:after {
+    animation: none;
+  }
+}
+.community-avatar {
+  overflow: visible;
+}
+.community-status-dot {
+  right: -10px;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+}
+.community-person .community-game-activity {
+  color: var(--theme-accent, #62dba1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.desktop-activity-field {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  font: 13px var(--ui-font);
+}
+.desktop-activity-field[hidden] {
+  display: none !important;
+}
+.desktop-activity-field :is(input, select) {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--theme-line);
+  border-radius: 8px;
+  background: var(--theme-panel);
+  color: var(--theme-text);
+  font: inherit;
+}
+/* Fit the complete video inside the available call area, without cropping. */
+body.chat-only-active:not(.channel-text-active)
+  #socialPanel
+  .voice-section:has(.mn-media-stage.has-screen) {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  gap: 8px !important;
+}
+body.chat-only-active #socialPanel .voice-section:has(.mn-media-stage.has-screen) > .voice-title {
+  flex: none;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+body.chat-only-active #socialPanel .voice-section:has(.mn-media-stage.has-screen) > .voice-help {
+  display: none !important;
+}
+body.chat-only-active #socialPanel .mn-media-stage.has-screen {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  flex: 1 1 0;
+  width: 100% !important;
+  align-self: stretch !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  gap: 8px !important;
+}
+body.chat-only-active #socialPanel .mn-media-stage.has-screen .mosaic-toolbar {
+  min-height: 28px;
+  order: 0 !important;
+}
+.mn-media-stage.has-screen .mosaic-toolbar .section-eyebrow {
+  display: none;
+}
+body.chat-only-active #socialPanel .mn-media-stage.has-screen #mediaMosaic {
+  height: 100% !important;
+  min-height: 0 !important;
+  order: 1 !important;
+  align-items: stretch !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  overflow: hidden;
+}
+body.chat-only-active #socialPanel .mn-media-stage.has-screen #screenShareGrid:not(.hidden) {
+  display: grid !important;
+  grid-template-columns: repeat(var(--stream-columns, 1), minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(var(--stream-rows, 1), minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  height: 100%;
+  min-height: 0;
+  align-items: stretch;
+}
+body.chat-only-active
+  #socialPanel
+  .mn-media-stage.has-screen
+  #mediaMosaic
+  .screen-share-tile:not(:fullscreen):not(.media-maximized) {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: 100% !important;
+  aspect-ratio: auto !important;
+}
+body.chat-only-active
+  #socialPanel
+  .mn-media-stage.has-screen
+  #mediaMosaic
+  .screen-share-tile
+  video {
+  object-fit: contain !important;
+}
+body.chat-only-active
+  #socialPanel
+  .mn-media-stage.has-screen
+  #mediaMosaic
+  .screen-share-tile.share-collapsed {
+  height: 48px !important;
+  align-self: start;
+}
+body.chat-only-active #socialPanel .mn-media-stage.has-screen #mediaMosaic .media-resize-grip {
+  display: none;
+}
+body.chat-only-active #socialPanel .mn-media-stage.has-screen #voiceRoster {
+  display: grid !important;
+  grid-template-columns: none !important;
+  grid-auto-flow: column;
+  grid-auto-columns: min(288px, 100%);
+  grid-template-rows: 68px !important;
+  max-height: 78px !important;
+  overflow: auto !important;
+  order: 2 !important;
+  align-items: start !important;
+  padding: 2px 2px 5px !important;
+  min-height: 0;
+  scrollbar-width: thin;
+}
+.desktop-app #desktopRail .desktop-version {
+  margin-top: auto !important;
+  padding-top: 12px !important;
+  padding-bottom: 6px !important;
+}
+/* Game cards sit above the app dock and scale with the remaining viewport. */
+.desktop-app #gameScreen {
+  display: grid;
+  grid-template-rows: 54px minmax(0, 1fr) clamp(140px, 24dvh, 220px);
+  height: calc(100dvh - var(--desktop-top) - var(--desktop-dock));
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.desktop-app #gameScreen.hidden {
+  display: none !important;
+}
+.desktop-app #gameScreen .topbar {
+  min-height: 0;
+  padding: 8px 14px;
+  gap: 8px;
+}
+.desktop-app #gameScreen .top-actions {
+  display: none !important;
+}
+.desktop-app #gameScreen .board-wrap {
+  min-height: 0 !important;
+  overflow: hidden;
+}
+.desktop-app #gameScreen .table-aura {
+  height: 70%;
+  max-height: 380px;
+}
+.desktop-app #gameScreen .royal-table {
+  width: 75% !important;
+  min-width: 0 !important;
+  height: 80% !important;
+  min-height: 0 !important;
+  max-height: 420px;
+}
+.desktop-app #gameScreen .player-panel {
+  width: clamp(100px, 17%, 180px);
+  min-height: 0;
+  padding: 7px;
+}
+.desktop-app #gameScreen .pos-bottom {
+  bottom: 6px;
+}
+.desktop-app #gameScreen .pos-top {
+  top: 6px;
+}
+.desktop-app #gameScreen .table-card-slot {
+  --card-w: clamp(40px, 6dvh, 70px);
+  --card-h: calc(var(--card-w) * 1.4);
+}
+.desktop-app #gameScreen .hand-zone {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  position: relative;
+  inset: auto !important;
+  height: auto !important;
+  padding: 8px 12px !important;
+}
+.desktop-app #gameScreen .hand-toolbar {
+  gap: 6px;
+  min-height: 32px;
+  flex-wrap: nowrap;
+}
+.desktop-app #gameScreen #instructionText {
+  font-size: 10px;
+}
+.desktop-app #humanHand {
+  height: 100% !important;
+  min-height: 0;
+  align-items: center;
+  justify-content: safe center;
+  gap: 5px;
+  padding: 12px 8px 10px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.desktop-app #humanHand .hand-card {
+  height: var(--hand-card-height, min(clamp(65px, calc(24dvh - 70px), 136px), 100%)) !important;
+  width: auto !important;
+  aspect-ratio: 5/7;
+  flex: 0 0 auto;
+  margin: 0;
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+.desktop-app #humanHand .hand-card img {
+  object-fit: contain;
+  background: #0b0c12;
+}
+.desktop-app #gameScreen .hand-card:hover:not(.illegal):not(.locked) {
+  transform: translateY(-6px);
+}
+.desktop-app #gameScreen .law-tracker {
+  max-height: calc(100% - 16px);
+  overflow: auto;
+  max-width: 150px;
+  font-size: 10px;
+}
+.desktop-app[data-desktop-view='game']:not(.game-communication-open) #socialPanel {
+  display: none !important;
+}
+.desktop-app #gameScreen .board-wrap {
+  display: grid !important;
+  grid-template-columns: minmax(90px, 18%) minmax(0, 1fr) minmax(90px, 18%) !important;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 32px !important;
+  grid-template-areas: 'p2 table p3' 'p1 table p0' 'laws laws laws';
+  gap: 6px !important;
+  padding: 8px !important;
+}
+.desktop-app #gameScreen .royal-table {
+  grid-area: table;
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+}
+.desktop-app #gameScreen .player-panel {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  max-height: 100%;
+  overflow: auto;
+  padding: 6px !important;
+}
+.desktop-app #gameScreen .player-name {
+  font-size: 11px;
+  gap: 4px;
+  margin: 0 0 4px;
+}
+.desktop-app #gameScreen .player-name small {
+  font-size: 7px;
+}
+.desktop-app #gameScreen .score-board {
+  gap: 4px;
+  margin: 0;
+}
+.desktop-app #gameScreen .score-tile {
+  min-height: 0;
+  padding: 4px;
+  gap: 3px;
+}
+.desktop-app #gameScreen .score-icon {
+  font-size: 18px;
+}
+.desktop-app #gameScreen .score-board small {
+  font-size: 6px;
+}
+.desktop-app #gameScreen .score-board strong {
+  font-size: 16px;
+}
+.desktop-app #gameScreen .influence-meter {
+  margin: 4px 0;
+  padding: 3px 5px;
+  min-height: 0;
+  font-size: 7px;
+}
+.desktop-app #gameScreen .player-meta {
+  font-size: 7px;
+  line-height: 1.4;
+}
+.desktop-app #gameScreen .public-cards:has(> .tag:only-child) {
+  display: none;
+}
+.desktop-app #gameScreen .public-cards {
+  max-height: 40px;
+}
+.desktop-app #gameScreen .law-tracker {
+  grid-area: laws;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 32px;
+  max-height: 32px;
+  padding: 4px 6px !important;
+  gap: 8px;
+}
+.desktop-app #gameScreen .law-tracker h3 {
+  font-size: 9px;
+  margin: 0 !important;
+}
+.desktop-app #lawTrackerList {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.desktop-app #gameScreen .law-track-row {
+  font-size: 8px;
+  padding: 2px 0;
+}
+.desktop-app #gameScreen .round-status {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.desktop-app #gameScreen .round-status span {
+  font-size: 10px;
+  padding: 4px 6px;
+}
+.desktop-app #desktopSettingsDialog .game-settings-group {
+  margin: 0 0 18px;
+  padding: 12px;
+  border: 1px solid var(--theme-line);
+  border-radius: 10px;
+  background: var(--theme-panel);
+}
+.game-settings-group summary {
+  font: 600 14px var(--ui-font);
+  cursor: pointer;
+}
+.game-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.game-settings-group .icon-btn {
+  font-size: 12px;
+  min-height: 36px;
+}
+@media (max-width: 640px) {
+  .desktop-app #gameScreen {
+    grid-template-rows: 64px minmax(0, 1fr) 158px;
+  }
+  .desktop-app #gameScreen .brand {
+    display: none;
+  }
+  .desktop-app #gameScreen .hand-toolbar {
+    flex-wrap: wrap;
+  }
+  .desktop-app #gameScreen .royal-table {
+    width: 100% !important;
+  }
+  .desktop-app #humanHand .hand-card {
+    height: var(--hand-card-height, min(88px, 100%)) !important;
+  }
+  .desktop-app #gameScreen .hand-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .desktop-app #gameScreen .player-panel {
+    font-size: 9px;
+  }
+  .desktop-app #gameScreen .center-info {
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+}
+
+/* Expanded profiles use a flyout, preserving the space reserved for the stream. */
+.participant-details[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(260px, calc(100vw - 24px));
+  max-height: calc(100dvh - 120px);
+  overflow: auto;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--theme-line);
+  border-radius: 12px;
+  background: var(--theme-panel);
+  color: var(--theme-text);
+  box-shadow: 0 14px 50px #0007;
+}
+.participant-details[popover]:not(:popover-open) {
+  display: none !important;
+}
+.participant-popup-name {
+  font: 700 14px var(--ui-font);
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person.media-in-profile {
+  grid-template-columns: 32px minmax(0, 1fr) 80px 26px !important;
+  grid-template-areas: 'avatar name preview expand' 'avatar meta preview expand' 'details details details details';
+  gap: 6px 6px !important;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .voice-person.media-in-profile
+  :is(.participant-camera-slot, .participant-screen-slot)
+  > :is(.camera-tile, .screen-share-tile):not(:fullscreen):not(.media-maximized) {
+  height: 46px !important;
+  aspect-ratio: auto !important;
+}
+body.chat-only-active
+  #socialPanel
+  .voice-section:has(.mn-media-stage.has-screen)
+  .voice-title
+  > div {
+  display: none;
+}
+body.chat-only-active #socialPanel .voice-section:has(.mn-media-stage.has-screen) #voiceStatus {
+  font-size: 10px !important;
+  max-width: 100% !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .participant-camera-slot
+  .camera-tile:not(:fullscreen):not(.media-maximized)
+  .media-dock-btn {
+  display: none;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  :is(.camera-tile, .screen-share-tile):not(:fullscreen):not(.media-maximized)
+  .media-fullscreen-btn {
+  width: 22px !important;
+  height: 22px !important;
+  top: 4px !important;
+  right: 4px !important;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .participant-screen-slot
+  .screen-share-tile:not(:fullscreen):not(.media-maximized)
+  > :is(
+    .mn-watch-stream,
+    .mn-stream-volume,
+    .mn-stream-name,
+    .mn-stream-audio-state,
+    .screen-collapse-btn,
+    .screen-resource-btn,
+    .screen-switch-btn
+  ) {
+  display: none;
+}
+
+/* A single compact row stays the same height, with or without a camera. */
+body.chat-only-active #socialPanel #voiceRoster .participant-meta {
+  grid-area: meta;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  height: 20px;
+}
+body.chat-only-active #socialPanel #voiceRoster .participant-caption {
+  font: 500 10px/1.3 var(--ui-font);
+  color: var(--theme-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+body.chat-only-active #socialPanel #voiceRoster .participant-voice-status {
+  flex: none;
+}
+body.chat-only-active #socialPanel #voiceRoster .voice-person > strong {
+  width: 100%;
+  text-align: left;
+  font-weight: 650 !important;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .voice-person
+  :is(.camera-tile, .screen-share-tile):not(:fullscreen):not(.media-maximized) {
+  box-shadow: none !important;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .voice-person
+  :is(.camera-tile, .screen-share-tile):is(:hover, :focus-within)
+  .media-fullscreen-btn {
+  opacity: 1;
+}
+body.chat-only-active
+  #socialPanel
+  #voiceRoster
+  .voice-person
+  :is(.camera-tile, .screen-share-tile):is(:fullscreen, .media-maximized)
+  .media-fullscreen-btn {
+  opacity: 1;
+}
+body.chat-only-active #socialPanel .mn-media-stage:not(.has-screen) {
+  justify-content: flex-start !important;
+  width: 100% !important;
+  align-self: stretch !important;
+}
+body.chat-only-active #socialPanel .mn-media-stage:not(.has-screen) #voiceRoster {
+  order: 2 !important;
+  flex: none !important;
+}
+body.chat-only-active #socialPanel .mn-media-stage:not(.has-screen) .mosaic-toolbar {
+  order: 0 !important;
+  flex: none !important;
+}
+body.chat-only-active #socialPanel .mn-media-stage:not(.has-screen) #mediaMosaic {
+  order: 1 !important;
+}
+body.chat-only-active #socialPanel .mosaic-toolbar button {
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+body.desktop-app.chat-only-active #socialPanel.social-chat-hub {
+  padding-bottom: 0 !important;
+}
+.desktop-app #desktopCallDock .call-action > span:not(.call-icon) {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.2;
+  text-align: center;
+}
+@media (max-width: 640px) {
+  body.chat-only-active #socialPanel .mn-media-stage:not(.has-screen) #voiceRoster {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 288px)) !important;
+  }
+  body.desktop-app.chat-only-active #socialPanel .mn-media-stage:not(.has-screen) {
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+  body.desktop-app.chat-only-active #socialPanel .voice-section {
+    padding: 8px !important;
+  }
+  body.desktop-app.chat-only-active #socialPanel .voice-title {
+    min-height: 52px !important;
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+  body.desktop-app.chat-only-active #socialPanel .voice-title strong {
+    font-size: 17px !important;
+  }
+  body.desktop-app.chat-only-active #socialPanel .voice-subtitle {
+    font-size: 10px !important;
+  }
+}
+/* Dense effect tiles keep names legible and actions accessible. */
+.soundboard-menu {
+  width: min(384px, calc(100vw - 16px));
+  padding: 14px;
+  border-radius: 14px;
+}
+.soundboard-menu #soundboardCallHint {
+  font-size: 10px;
+  margin: 6px 0 8px;
+}
+.soundboard-menu .soundboard-list {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 5px;
+  max-height: 216px;
+  margin-bottom: 10px;
+}
+.soundboard-menu .sound-play {
+  min-height: 54px;
+  padding: 4px;
+  gap: 2px;
+}
+.soundboard-menu .sound-thumbnail {
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+.soundboard-menu .sound-play strong {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.soundboard-menu .sound-play small {
+  font-size: 9px;
+  line-height: 1.2;
+}
+.soundboard-menu .sound-card {
+  border-radius: 7px;
+}
+.soundboard-menu .sound-card-actions {
+  padding: 1px 3px;
+  gap: 2px;
+}
+.soundboard-menu .sound-card-actions button {
+  min-height: 24px;
+  padding: 2px 3px;
+  font-size: 9px;
+  line-height: 1;
+}
+.soundboard-menu .sound-volume {
+  padding: 8px 0 10px;
+}
+.desktop-app .soundboard-menu {
+  width: min(384px, calc(100vw - var(--desktop-rail) - 24px)) !important;
+  max-height: calc(100dvh - var(--desktop-top) - var(--desktop-dock) - 24px) !important;
+}

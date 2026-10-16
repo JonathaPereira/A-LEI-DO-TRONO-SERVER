@@ -1,7 +1,7 @@
 'use strict';
 // TEST ONLY: install an in-memory object store in child fixture servers. No real R2.
 const crypto=require('node:crypto'),assert=require('node:assert/strict');
-const files=require('../files'),original=files.createFiles;
+const files=require('../server/files'),original=files.createFiles;
 files.createFiles=options=>{
   const objects=new Map(),capabilities=new Map();
   const storage=original({...options,adapter:{

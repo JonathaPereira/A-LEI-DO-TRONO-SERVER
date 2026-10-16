@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),os=require('node:os');
-const {AudioPriority}=require('../desktop/app/audio-priority.cjs');
+const {AudioPriority}=require('../electron/audio-priority.cjs');
 const audio=(pid=2,creationTime=100)=>({pid,creationTime,type:'Utility',serviceName:'audio.mojom.AudioService'});
 test('Windows priority changes only owned audio services during voice, preserving stronger priorities and restoring on exit',()=>{
   let rows=[audio(),{pid:3,creationTime:100,type:'Tab',name:'Audio Service'},audio(4)],calls=[];const priorities=new Map([[2,0],[3,0],[4,os.constants.priority.PRIORITY_HIGH]]);

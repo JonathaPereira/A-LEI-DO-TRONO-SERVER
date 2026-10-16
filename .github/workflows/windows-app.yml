@@ -1,8 +1,8 @@
 name: Windows full app
 on:
   push:
-    branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/member-profiles.js', 'profile-customization.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    branches: [main, codex/windows-app-foundation, 'codex/desktop-*', 'codex/next-*']
+    paths: ['electron/**', 'src/**', 'public/**', 'server/**', 'scripts/**', 'tests/**', 'supabase/**', 'package*.json', '*config*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,7 +20,11 @@ jobs:
           node-version: '24'
       - run: npm ci
       - run: npm ci
-        working-directory: desktop/app
+        working-directory: electron
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm run build
+      - run: npm run test:server:lifecycle
       - name: Verify profile validation and persistence
         run: node --test tests/member-profiles.js tests/profile-media.js
       - name: Verify call workspace and profile layouts
@@ -28,7 +32,7 @@ jobs:
         run: |
           npx playwright install chromium
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test tests/app-layout-browser.js tests/profile-media-browser.js
+          node --test tests/chat-composer-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
           node --test tests/app-layout-browser.js tests/profile-media-browser.js
@@ -106,7 +110,7 @@ jobs:
             Write-Output "::error title=Windows native audio::$details"
             exit $buildExit
           }
-        working-directory: desktop/app
+        working-directory: electron
       - name: Test desktop policy and native Windows runtime
         shell: pwsh
         run: |
@@ -124,7 +128,7 @@ jobs:
         run: npm run test:desktop:layout
       - name: Build Windows application directory
         run: npx electron-builder --win --x64 --dir --publish never
-        working-directory: desktop/app
+        working-directory: electron
       - name: Verify the compiled Windows app
         shell: pwsh
         run: |
@@ -137,26 +141,26 @@ jobs:
           }
       - name: Build Windows x64 installer
         run: npm run pack:win
-        working-directory: desktop/app
+        working-directory: electron
       - name: Prepare user download
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node desktop/scripts/prepare-downloads.cjs
+        run: node scripts/desktop/prepare-downloads.cjs
       - name: Compress the frontend with only its latest installer
         shell: pwsh
         run: |
-          $version = (Get-Content desktop/app/package.json | ConvertFrom-Json).version
+          $version = (Get-Content electron/package.json | ConvertFrom-Json).version
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
       - name: Publish validated downloads in a private draft release
         uses: actions/github-script@v7
         with:
           script: |
-            const {publishBuild}=require('./desktop/scripts/publish-build.cjs');
+            const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
             await publishBuild({github,context,core});
       - name: Retain only current and previous distribution artifacts
         uses: actions/github-script@v7
         with:
           script: |
-            const {cleanArtifacts}=require('./desktop/scripts/download-retention.cjs');
+            const {cleanArtifacts}=require('./scripts/desktop/download-retention.cjs');
             await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});

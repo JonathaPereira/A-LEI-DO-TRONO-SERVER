@@ -17,6 +17,7 @@ function client(base){return new Promise((resolve,reject)=>{const ws=new WebSock
    g.send({type:'chat-message',text:'Olá da mesa'});assert.equal((await a.wait(m=>m.type==='chat-message')).message.text,'Olá da mesa');
    g.send({type:'voice-prepare',requestId:'prepare'});assert.equal((await g.wait(m=>m.type==='sfu-response')).data.mode,'p2p');
    a.send({type:'voice-state',joined:true,transport:'p2p'});g.send({type:'voice-state',joined:true,transport:'p2p'});assert.equal((await a.wait(m=>m.type==='voice-event'&&m.name==='Visitante')).kind,'joined');
+   await g.wait(m=>m.type==='voice-roster'&&m.players.some(p=>p.id===aw.clientId));
    const gwelcomeId=joined.me.id;g.send({type:'voice-signal',targetId:aw.clientId,signalType:'offer',data:{sdp:'test'}});assert.equal((await a.wait(m=>m.type==='voice-signal')).fromId,gwelcomeId);
    g.send({type:'voice-state',joined:false});assert.equal((await a.wait(m=>m.type==='voice-event'&&m.name==='Visitante')).kind,'left');
    g.send({type:'voice-state',joined:true});await a.wait(m=>m.type==='voice-event'&&m.name==='Visitante'&&m.kind==='joined');g.ws.terminate();assert.equal((await a.wait(m=>m.type==='voice-event'&&m.name==='Visitante')).kind,'disconnected');

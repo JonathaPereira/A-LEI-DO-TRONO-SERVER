@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto'),http=require('node:http');
-const {GameAssets,validateManifest}=require('../desktop/app/game-assets.cjs');
+const {GameAssets,validateManifest}=require('../electron/game-assets.cjs');
 function fixture(){const data=Array.from({length:6},(_,i)=>Buffer.from('approved asset '+i)),files=data.map((b,i)=>({path:'assets/image-'+i+'.webp',bytes:b.length,sha256:crypto.createHash('sha256').update(b).digest('hex'),type:'image/webp'}));return {data,manifest:{schema:1,id:'cinzas-do-abismo',version:'0.5',cacheKey:'1234567890abcdef1234',bytes:data.reduce((n,b)=>n+b.length,0),files}};}
 test('game cache accepts only a bounded manifest of media/data, never scripts or traversal',()=>{
  const {manifest}=fixture();assert.equal(validateManifest(manifest),manifest);

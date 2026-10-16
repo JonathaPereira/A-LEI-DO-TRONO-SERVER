@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {PGlite}=require('@electric-sql/pglite');
-const {createChatHistory}=require('../chat-history');
+const {createChatHistory}=require('../server/chat-history');
 test('persistent chat SQL: ordering, pagination, replay, attachment deletion, channel isolation and private permissions',async()=>{
   const db=new PGlite(),account='10000000-0000-4000-8000-000000000001',attachment='20000000-0000-4000-8000-000000000001';
   try{

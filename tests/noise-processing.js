@@ -5,7 +5,7 @@ const express=require('express'),{chromium}=require('@playwright/test');
 test('real RNNoise worklet reduces stationary noise while retaining speech; destroys cleanly', {timeout:30000},async()=>{
   const app=express();app.get('/',(_,res)=>res.send('<script src="/noise-suppression.js"></script>'));
   app.get('/speech.ogg',(_,res)=>res.sendFile(path.resolve(__dirname,'fixtures/speech-flite.ogg')));
-  app.use(express.static(path.resolve(__dirname,'../frontend')));
+  app.use(express.static(path.resolve(__dirname,'../out')));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});let browser;
   try{
     browser=await chromium.launch({executablePath:process.env.AUTH_TEST_CHROMIUM||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});

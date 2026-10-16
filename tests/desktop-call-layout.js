@@ -31,8 +31,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       assert.equal(login.status, 200);
       const {data} = login;
       const app = await _electron.launch({
-        executablePath: require('../desktop/app/node_modules/electron'),
-        args: [path.join(root, 'desktop/app'), '--user-data-dir=' + path.join(directory, nickname),
+        executablePath: require('../electron/node_modules/electron'),
+        args: [path.join(root, 'electron'), '--user-data-dir=' + path.join(directory, nickname),
           '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
           '--autoplay-policy=no-user-gesture-required', '--mute-audio'],
         timeout: 30000
@@ -80,7 +80,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await page.waitForLoadState('load');
       await page.evaluate(() => window.TronoAuth.ready);
       page.on('pageerror', error => errors.push(error.message));
-      await page.reload();
+      await page.reload();await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       assert.equal(await page.evaluate(() => window.TronoNetwork.BACKEND_HTTP), fixture.base);
       await expect(page.locator('#authDialog')).toBeVisible();
@@ -94,13 +94,13 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await expect(page.locator('#desktopRail')).toBeVisible();
       await expect(page.locator('body')).toHaveAttribute('data-app-layout', layout);
       await page.evaluate(() => window.TronoChatHub.enter({channelId: 'chat-jogos'}));
-      await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-jogos');
+      await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe('chat-jogos');
       assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
       await page.locator('#joinVoiceBtn').click();
       try {
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), {timeout: 15000}).toBe(true);
       } catch (error) {
-        console.error('Voice fixture:', nickname, await page.evaluate(() => ({user: window.TronoAuth.user?.nickname, connected: window.TronoNetwork.connected, room: window.TronoNetwork.currentRoom, voiceRoom: window.TronoSocial.voiceRoom, status: document.getElementById('voiceStatus').textContent, errors: document.getElementById('chatOnlyStatus').textContent})));
+        console.error('Voice fixture:', nickname, await page.evaluate(() => ({user: window.TronoAuth.user?.nickname, connected: window.TronoNetwork.connected, room: window.TronoNetwork?.currentRoom, voiceRoom: window.TronoSocial.voiceRoom, status: document.getElementById('voiceStatus').textContent, errors: document.getElementById('chatOnlyStatus').textContent})));
         throw error;
       }
       return {app, page};
@@ -201,10 +201,10 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(created.status, 200);
     const {channel} = await created.json();
     await page.evaluate(id => window.TronoNetwork.joinTextChannel(id), channel.id);
-    await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe(channel.id);
+    await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe(channel.id);
     await preserved();
     await page.evaluate(() => window.TronoNetwork.joinRoom('chat-jogos'));
-    await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-jogos');
+    await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe('chat-jogos');
     await preserved();
 
     await page.locator('#muteMicBtn').click();

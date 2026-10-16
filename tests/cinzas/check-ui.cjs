@@ -2,7 +2,7 @@
 const fs=require('node:fs');
 const vm=require('node:vm');
 const assert=require('node:assert/strict');
-const html=fs.readFileSync('../../frontend/roguelite/index.html','utf8');
+const html=fs.readFileSync('../../public/roguelite/index.html','utf8');
 const elements=[];
 function match(el,selector){if(selector.startsWith('.'))return el.classList.contains(selector.slice(1));const m=selector.match(/^\[data-([\w-]+)\]$/);return m?Object.hasOwn(el.dataset,m[1].replace(/-([a-z])/g,(_,x)=>x.toUpperCase())):el.tagName.toLowerCase()===selector;}
 function parse(source){const result=[];for(const match of source.matchAll(/<([a-z][a-z\d]*)\b([^>]*)>/gi)){const el=new Element(match[1]);for(const attr of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)){const k=attr[1],v=attr[2]||'';if(k==='id')el.id=v;if(k==='class')v.split(' ').forEach(c=>el.classList.add(c));if(k.startsWith('data-'))el.dataset[k.slice(5).replace(/-([a-z])/g,(_,x)=>x.toUpperCase())]=v;if(k==='value')el.value=v;if(k==='type')el.type=v;if(k==='hidden')el.hidden=true;}result.push(el);}return result;}
@@ -28,20 +28,20 @@ const document={getElementById:id=>ids.get(id)||null,createElement:tag=>new Elem
 const winListeners={},window={matchMedia:()=>({matches:false}),addEventListener:(type,cb)=>(winListeners[type]||=[]).push(cb),scrollTo(){}};
 let nextFrame;
 let pads=[];
-class MockImage{constructor(){this.width=1774;this.height=887;}set src(v){assert(fs.existsSync('../../frontend/roguelite/'+v),'Missing texture '+v);this.onload?.();}}
+class MockImage{constructor(){this.width=1774;this.height=887;}set src(v){assert(fs.existsSync('../../public/roguelite/'+v),'Missing texture '+v);this.onload?.();}}
 const memory={};
 const context=vm.createContext({console,document,window,navigator:{getGamepads:()=>pads},Image:MockImage,localStorage:{getItem:k=>memory[k]||null,setItem:(k,v)=>memory[k]=v},requestAnimationFrame:cb=>nextFrame=cb,setTimeout:cb=>cb(),Math,Date});
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/levels.js','utf8'),context);
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/rig.js','utf8'),context);
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/audio.js','utf8'),context);
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/persistence.js','utf8'),context);
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/core.js','utf8'),context);
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/controller.js','utf8'),context);
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/renderer.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/levels.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/rig.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/audio.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/persistence.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/core.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/controller.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/renderer.js','utf8'),context);
 let captured;
 const Original=context.Abyss.Engine;
 context.Abyss.Engine=class extends Original{constructor(){super();if(!captured)captured=this;}};
-vm.runInContext(fs.readFileSync('../../frontend/roguelite/game.js','utf8'),context);
+vm.runInContext(fs.readFileSync('../../public/roguelite/game.js','utf8'),context);
 assert.equal(captured.status,'menu');
 ids.get('inputMode').value='playstation';ids.get('inputMode').onchange();assert.equal(ids.get('dashKey').textContent,'○');assert.equal(ids.get('padHelp').hidden,false);assert(ids.get('mappingButtons').innerHTML.includes('R1'));ids.get('inputMode').value='auto';ids.get('inputMode').onchange();
 ids.get('startBtn').onclick();
@@ -62,7 +62,7 @@ ids.get('menuBtn').onclick();assert.equal(captured.status,'menu');
 document.querySelectorAll('.modecard').find(el=>el.dataset.mode==='horde').onclick();
 ids.get('startBtn').onclick();assert.equal(captured.mode,'horde');
 captured.end(false);nextFrame(13016);assert(ids.get('scores').innerHTML.includes('Andarilho'));
-for(const asset of ['core.js','game.js','style.css','icon.svg'])assert(fs.existsSync('../../frontend/roguelite/'+asset));
+for(const asset of ['core.js','game.js','style.css','icon.svg'])assert(fs.existsSync('../../public/roguelite/'+asset));
 // Connect a simulated standard controller to the actual UI/game frame loop.
 const pad={index:0,id:'Xbox test fixture',connected:true,mapping:'standard',axes:[0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};
 pads=[pad];nextFrame(14000);assert(ids.get('controllerStatus').textContent.includes('Xbox test'));

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowJs": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "moduleDetection": "legacy",
+    "rootDir": "./src",
+    "outDir": "./artifacts/renderer",
+    "plugins": []
+  },
+  "include": ["src/lib/voice/control-layout.ts"],
+  "exclude": ["node_modules"]
+}

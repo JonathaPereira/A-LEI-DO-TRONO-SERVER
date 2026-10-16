@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {Controller}=require('../../frontend/roguelite/controller.js');
+const {Controller}=require('../../public/roguelite/controller.js');
 const pad=(index=0)=>({index,id:'Xbox fixture',connected:true,mapping:'standard',axes:[0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))});
 let p=pad(),c=new Controller();c.poll([null,p],0);
 p.axes[0]=.1;assert.equal(c.poll([p],.1).held.right,false);

@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {CallStability,diagnosticReport}=require('../frontend/call-stability');
+const {CallStability,diagnosticReport}=require('../src/legacy/call-stability');
 test('temporary video adaptation needs sustained trouble and restores slowly without modifying audio or selected settings',()=>{
   const controller=new CallStability(),base={camera:{width:1280,height:720,fps:30},screen:{width:1920,height:1080,fps:60},screenBitrate:10000000,videoBitrate:3000000,audioBitrate:96000};
   assert.equal(controller.sample({audioLossPct:10},0),false);assert.equal(controller.sample({},2000),false);assert.equal(controller.level,0);

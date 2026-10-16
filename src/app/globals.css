@@ -1,0 +1,15 @@
+/* Global additions belong here. Existing styles retain their order in legacy/manifest.json. */
+html {
+  color-scheme: dark;
+}
+
+.application-load-error {
+  position: fixed;
+  inset: auto 1rem 1rem;
+  z-index: 100000;
+  padding: 1rem;
+  border: 1px solid #f47b85;
+  border-radius: 0.75rem;
+  background: #21141d;
+  color: #fff;
+}

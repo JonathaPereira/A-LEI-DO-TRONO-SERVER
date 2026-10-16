@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),express=r
 const {chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
 
 test('desktop settings fill their dialog across portrait and short monitors',{timeout:120000},async()=>{
-  const host=express().use(express.static(path.resolve(__dirname,'../frontend')));
+  const host=express().use(express.static(path.resolve(__dirname,'../out')));
   const server=await new Promise(resolve=>{const listening=host.listen(0,'127.0.0.1',()=>resolve(listening));});
   const origin='http://127.0.0.1:'+server.address().port,fixture=await startFixture({port:10721,appOrigin:origin});
   let browser;const errors=[];
@@ -11,7 +11,7 @@ test('desktop settings fill their dialog across portrait and short monitors',{ti
     await fixture.call('signup',{email:'portrait-settings@example.test',nickname:'Monitor vertical',password:'Senha12!'});
     await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});
     const data=(await fixture.call('login',{email:'portrait-settings@example.test',password:'Senha12!'})).data;
-    browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','--mute-audio']});
+    browser=await chromium.launch({executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','--mute-audio']});
     const context=await browser.newContext({viewport:{width:1080,height:1920},permissions:['microphone','camera']});
     await context.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
     await context.addInitScript(({base,data})=>{
@@ -19,7 +19,7 @@ test('desktop settings fill their dialog across portrait and short monitors',{ti
       window.TronoDesktop={version:'0.1.8',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};
     },{base:fixture.base,data});
     const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
-    await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);
+    await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
     await expect(page.locator('#voiceSettingsBtn')).toBeVisible();
     await page.locator('#voiceSettingsBtn').click();
     await expect(page.locator('#desktopSettingsDialog')).toBeVisible();

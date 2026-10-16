@@ -2,11 +2,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),express=require('express');
 const {chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
 test('received voice keeps its tracks and audio through focus changes, long UI tasks, volume and protection changes',{timeout:150000},async t=>{
-  const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve('frontend'))).listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port;
+  const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve('out'))).listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port;
   let restricted=false;if(process.platform==='linux')try{restricted=JSON.parse(await fs.readFile('/etc/chromium/policies/managed/misc.json','utf8')).WebRtcIPHandling==='disable_non_proxied_udp';}catch{}
   const fixture=await startFixture({port:10867,appOrigin:origin});let browser;const errors=[];
   try{
-    await fs.mkdir('artifacts/voice021',{recursive:true});browser=await chromium.launch({...process.platform==='win32'?{channel:'msedge'}:{executablePath:'/usr/bin/chromium'},args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','--mute-audio']});
+    await fs.mkdir('artifacts/voice021',{recursive:true});browser=await chromium.launch({...process.platform==='win32'?{channel:'msedge'}:{executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined},args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','--mute-audio']});
     async function client(i){
       const email='receive-'+i+'@example.test';await fixture.call('signup',{email,nickname:'Voz Teste '+i,password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});const data=(await fixture.call('login',{email,password:'Senha12!'})).data;
       const context=await browser.newContext({viewport:{width:1280,height:900},permissions:['camera','microphone']});await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
@@ -20,7 +20,7 @@ window.__focused=true;window.__hidden=false;document.hasFocus=()=>window.__focus
           const ctx=new AudioContext({sampleRate:48000});await ctx.resume();const oscillator=ctx.createOscillator(),gain=ctx.createGain(),out=ctx.createMediaStreamDestination();oscillator.frequency.value=440+i*110;gain.gain.value=.1;oscillator.connect(gain);gain.connect(out);oscillator.start();(window.__toneContexts||=[]).push(ctx);return out.stream;
         };
       },{base:fixture.base,data,i});
-      const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(async()=>{await window.TronoPortal.openVoice();if(!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();});try{await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);}catch(error){console.error('Voice join diagnostics',await page.evaluate(()=>({status:document.querySelector('#voiceStatus')?.textContent,room:window.TronoNetwork.primaryRoom,joined:window.TronoSocial.voiceJoined,joining:window.TronoSocial.voiceJoining})),errors);throw error;}return {page,context,data};
+      const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(async()=>{await window.TronoPortal.openVoice();if(!window.TronoSocial.voiceJoined)await window.TronoSocial.joinVoice();});try{await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);}catch(error){console.error('Voice join diagnostics',await page.evaluate(()=>({status:document.querySelector('#voiceStatus')?.textContent,room:window.TronoNetwork.primaryRoom,joined:window.TronoSocial.voiceJoined,joining:window.TronoSocial.voiceJoining})),errors);throw error;}return {page,context,data};
     }
     const a=await client(1),b=await client(2),p=a.page,q=b.page;
     await expect.poll(()=>p.locator('#remoteAudioHost audio').count()).toBe(1);

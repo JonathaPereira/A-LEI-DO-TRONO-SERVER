@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../frontend/love-letter-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/legacy/love-letter-rules');
 const players=n=>Array.from({length:n},(_,i)=>({id:'p'+i,name:'Pessoa '+i}));
 function setup(a,b,others=[4,4]){const s=R.create(players(others.length+2),()=>0);s.turn=0;s.phase='action';s.players.forEach((p,i)=>{p.hand=(i===0?a:i===1?[b]:[others[i-2]]).map((rank,j)=>({id:'test-'+i+'-'+j,rank}));p.discards=[];p.eliminated=false;p.protected=false;});return s;}
 const play=(s,rank,opts={})=>R.move(s,s.players[s.turn].id,{kind:'play',cardId:s.players[s.turn].hand.find(c=>c.rank===rank).id,...opts});

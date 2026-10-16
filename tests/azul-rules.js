@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../frontend/azul-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/legacy/azul-rules');
 const players=n=>Array.from({length:n},(_,i)=>({id:'p'+i,name:'Pessoa '+i}));
 function conservation(s){const counts=Array(5).fill(0),add=c=>{if(c!==5)counts[c]++;};s.bag.forEach(add);s.discard.forEach(add);s.factories.flat().forEach(add);s.center.forEach(add);for(const p of s.players){p.floor.forEach(add);p.lines.forEach(l=>Array(l.count).fill(l.color).forEach(add));p.wall.forEach((line,row)=>line.forEach((v,col)=>{if(v)add((col-row+5)%5);}));}assert.deepEqual(counts,[20,20,20,20,20]);}
 function seeded(seed){return()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};}

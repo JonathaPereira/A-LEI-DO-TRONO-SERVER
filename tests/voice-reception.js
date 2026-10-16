@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {VoiceReception,assessment}=require('../frontend/voice-reception');
-const {diagnosticReport}=require('../frontend/call-stability');
+const {VoiceReception,assessment}=require('../src/legacy/voice-reception');
+const {diagnosticReport}=require('../src/legacy/call-stability');
 const receiver=(value=null)=>({track:{kind:'audio',readyState:'live'},jitterBufferTarget:value});
 function stats(n,{jitter=.005,loss=0,concealed=0}={}){return {packetsReceived:n*100,packetsLost:n*loss,totalSamplesReceived:n*48000,concealedSamples:n*concealed,jitterBufferDelay:n*48,jitterBufferEmittedCount:n*1000,jitter};}
 test('voice margin responds to interval recovery, remains bounded and restores slowly without touching tracks',()=>{

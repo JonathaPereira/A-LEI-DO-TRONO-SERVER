@@ -1,10 +1,16 @@
 node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+public/*.js
+public/*.css
 npm-debug.log*
 .env
 .DS_Store
 artifacts/
-frontend/downloads/*.exe
-desktop/**/bin/
-desktop/**/obj/
+public/downloads/*.exe
+electron/**/bin/
+electron/**/obj/
 
 supabase/.temp/

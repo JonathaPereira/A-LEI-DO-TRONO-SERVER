@@ -2,7 +2,7 @@ name: Windows clips helper
 on:
   push:
     branches: [main, codex/clips-sharing-refinements]
-    paths: ['desktop/**', '.github/workflows/windows-clips.yml']
+    paths: ['electron/clips-helper/**', 'electron/tests/**', '.github/workflows/windows-clips.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,14 +17,14 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Test local bridge and Windows hotkey registration
-        run: dotnet run --project desktop/tests -c Release
+        run: dotnet run --project electron/tests -c Release
       - name: Publish standalone Windows x64 helper
-        run: dotnet publish desktop/TronoClips -c Release -r win-x64 --self-contained true -o build/windows-clips
+        run: dotnet publish electron/clips-helper -c Release -r win-x64 --self-contained true -o build/windows-clips
       - name: Package executable and user instructions
         shell: pwsh
         run: |
           Remove-Item build/windows-clips/*.pdb
-          Copy-Item desktop/LEIA-ME-WINDOWS.txt build/windows-clips/
+          Copy-Item docs/archive/desktop-bridge.txt build/windows-clips/LEIA-ME-WINDOWS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: MN-Clipes-Windows-x64

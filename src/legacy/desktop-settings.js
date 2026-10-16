@@ -1,0 +1,260 @@
+'use strict';
+if (window.TronoDesktop)
+  window.addEventListener('trono:ready', () => {
+    const $ = (id) => document.getElementById(id),
+      panel = $('voiceSettingsPanel'),
+      tabs = panel.querySelector('.voice-settings-tabs'),
+      content = panel.querySelector('.voice-settings-content');
+    const dialog = document.createElement('dialog');
+    dialog.id = 'desktopSettingsDialog';
+    dialog.setAttribute('aria-label', 'Configurações');
+    dialog.className = 'desktop-settings-dialog';
+    document.body.append(dialog);
+    dialog.append(panel);
+    panel.querySelector('.voice-settings-head strong').textContent = 'Configurações';
+    tabs.setAttribute('aria-label', 'Tópicos das configurações');
+    function addTopic(id, label) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'voice-settings-tab';
+      button.dataset.settingsTab = id;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', 'false');
+      button.textContent = label;
+      button.onclick = () => select(id);
+      tabs.append(button);
+      const section = document.createElement('section');
+      section.className = 'voice-settings-pane';
+      section.dataset.settingsPanel = id;
+      section.hidden = true;
+      section.setAttribute('role', 'tabpanel');
+      content.append(section);
+      return section;
+    }
+    const account = addTopic('account', 'Meu perfil'),
+      appearance = addTopic('appearance', 'Aparência'),
+      files = addTopic('files', 'Meus arquivos'),
+      capture = addTopic('capture', 'Captura de tela'),
+      privacy = addTopic('privacy', 'Privacidade'),
+      game = addTopic('game', 'Jogo'),
+      activity = addTopic('activity', 'Atividade');
+    const profile = $('profileDialog'),
+      appearanceSection = profile.querySelector('.profile-appearance');
+    appearanceSection.hidden = false;
+    appearance.append(appearanceSection);
+    account.innerHTML =
+      '<h2>Minha conta</h2><p id="desktopAccountName"></p><button id="desktopAccountLogin" class="primary-button" type="button">Entrar na conta</button><label class="auth-check desktop-remember"><input id="settingsRemember" type="checkbox"> Lembre de mim neste computador</label><p id="settingsRememberHelp" class="appearance-help" role="status"></p>';
+    const accountDetails = document.createElement('div');
+    accountDetails.id = 'desktopAccountDetails';
+    accountDetails.append($('profileForm'));
+    const filesHeading = document.createElement('h2');
+    filesHeading.textContent = 'Meus arquivos';
+    files.append(
+      filesHeading,
+      document.querySelector('.profile-files-load'),
+      $('storageUsage'),
+      $('profileFiles'),
+    );
+    account.append(accountDetails, $('accountLogoutBtn'));
+    capture.innerHTML =
+      '<h2>Captura de tela</h2><p class="appearance-help">Qualidade e áudio da transmissão. Você escolhe a tela ou janela ao compartilhar, e pode trocar sem interromper a anterior.</p><div class="voice-devices voice-devices-vertical"></div>';
+    const captureDevices = capture.querySelector('.voice-devices');
+    for (const id of ['screenFormatSelect', 'screenBitrateSelect', 'screenContentSelect'])
+      captureDevices.append($(id).closest('label'));
+    const video = content.querySelector('[data-settings-panel="video"]');
+    capture.append(
+      $('shareStreamAudio').closest('label'),
+      video.querySelector('.settings-context-help'),
+    );
+    capture.querySelector('.settings-context-help').textContent =
+      'Para áudio isolado, escolha o aplicativo/jogo no seletor. O áudio do computador inteiro pode incluir as vozes da chamada.';
+    video.querySelector('.settings-section-heading strong').textContent = 'Câmera';
+    video.querySelector('.settings-section-heading small').textContent = 'VÍDEO DA CHAMADA';
+    privacy.innerHTML =
+      '<h2>Privacidade e permissões</h2><p class="appearance-help">As permissões aceitas de microfone e câmera ficam salvas neste computador. A câmera continua desligada até você ativá-la. Cada compartilhamento de tela exige escolher a fonte.</p><p id="desktopPermissionsStatus" role="status"></p><button id="desktopResetPermissions" class="secondary-button" type="button">Redefinir permissões de voz e câmera</button><p id="desktopPermissionsMessage" role="status"></p>';
+    game.innerHTML =
+      '<h2>Jogo</h2><p class="appearance-help">As opções da partida ficam aqui. Ordenar cartas e usar Influência continuam ao alcance da sua mão.</p><details class="game-settings-group" open><summary>Partida e velocidade</summary><div class="game-settings-actions" data-game-group="match"></div></details><details class="game-settings-group"><summary>Regras e histórico</summary><div class="game-settings-actions" data-game-group="help"></div></details><details class="game-settings-group"><summary>Comunicação e gravação manual</summary><div class="game-settings-actions" data-game-group="media"></div></details>';
+    const groups = {
+      match: ['speedBtn', 'restartBtn'],
+      help: ['rulesBtn', 'logBtn'],
+      media: ['socialBtn', 'recordMatchBtn'],
+    };
+    for (const [group, ids] of Object.entries(groups))
+      for (const id of ids) game.querySelector('[data-game-group="' + group + '"]').append($(id));
+    game.addEventListener('click', (event) => {
+      if (event.target.closest('button')) close();
+    });
+    activity.innerHTML =
+      '<h2>Atividade</h2><label class="auth-check"><input id="desktopActivityEnabled" type="checkbox"> Mostrar meu jogo ou aplicativo</label><p class="appearance-help">Opcional. Detecta jogos conhecidos e da Steam no Windows. Exibe apenas o nome do jogo; títulos das janelas e caminhos de arquivos não são compartilhados. Você também pode escolher outro aplicativo aberto.</p><label class="desktop-activity-field">Aplicativo<select id="desktopActivityApp"><option value="">Detecção automática</option></select></label><label class="desktop-activity-field" id="desktopActivityNameLabel" hidden>Nome exibido<input id="desktopActivityName" maxlength="80" placeholder="Nome do jogo ou aplicativo"></label><p id="desktopActivityStatus" role="status"></p>';
+    const noise = $('noiseModeLabel');
+    noise.hidden = false;
+    $('noiseSuppressionBtn').hidden = true;
+    // Keep one settings entrance; account/theme controls are now inside it.
+    const order = [
+      'account',
+      'appearance',
+      'audio',
+      'video',
+      'capture',
+      'game',
+      'activity',
+      'files',
+      'connection',
+      'privacy',
+    ];
+    for (const id of order) tabs.append(tabs.querySelector('[data-settings-tab="' + id + '"]'));
+    for (const button of tabs.children) {
+      button.setAttribute('aria-controls', 'desktop-settings-' + button.dataset.settingsTab);
+      const section = content.querySelector(
+        '[data-settings-panel="' + button.dataset.settingsTab + '"]',
+      );
+      section.id = 'desktop-settings-' + button.dataset.settingsTab;
+      button.id = 'desktop-settings-tab-' + button.dataset.settingsTab;
+      section.setAttribute('aria-labelledby', button.id);
+    }
+    let fitPending = false;
+    function fit() {
+      fitPending = false;
+      if (!dialog.open) return;
+      const pane = content.querySelector('.voice-settings-pane:not([hidden])');
+      if (!pane) return;
+      const stacked = matchMedia(
+        '(max-width:640px), (max-aspect-ratio:1/1) and (max-width:1200px)',
+      ).matches;
+      const style = getComputedStyle(content),
+        padding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+      const bodyHeight = pane.scrollHeight + padding,
+        navHeight = stacked ? 60 : Math.min(tabs.scrollHeight, 560),
+        desired = 64 + (stacked ? navHeight + bodyHeight : Math.max(navHeight, bodyHeight)) + 2;
+      dialog.style.height =
+        Math.min(innerHeight - 24, Math.max(stacked ? 260 : 420, desired)) + 'px';
+    }
+    function scheduleFit() {
+      if (!fitPending) {
+        fitPending = true;
+        requestAnimationFrame(fit);
+      }
+    }
+    const observer = new ResizeObserver(scheduleFit);
+    for (const pane of content.children) observer.observe(pane);
+    new MutationObserver(scheduleFit).observe(content, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'class'],
+    });
+    window.addEventListener('resize', scheduleFit);
+    function select(topic) {
+      window.TronoSocial.setSettingsTab(topic);
+      content.scrollTop = 0;
+      if (topic === 'account' && window.TronoAuth.user)
+        void window.TronoProfile.open({ inline: true });
+      if (topic === 'privacy') void permissions();
+      scheduleFit();
+    }
+    function close() {
+      dialog.close();
+      panel.classList.add('hidden');
+      $('voiceSettingsBtn').setAttribute('aria-expanded', 'false');
+      $('voiceSettingsBtn').classList.remove('settings-active');
+    }
+    function open(topic) {
+      panel.classList.remove('hidden');
+      if (topic) select(topic);
+      if (!dialog.open) dialog.showModal();
+      scheduleFit();
+      $('voiceSettingsBtn').setAttribute('aria-expanded', 'true');
+      $('voiceSettingsBtn').classList.add('settings-active');
+    }
+    window.TronoDesktopSettings = {
+      open,
+      close,
+      toggle(force) {
+        if (typeof force === 'boolean' ? force : !dialog.open) open();
+        else close();
+      },
+    };
+    dialog.addEventListener('close', () => {
+      panel.classList.add('hidden');
+      $('voiceSettingsBtn').setAttribute('aria-expanded', 'false');
+      $('voiceSettingsBtn').classList.remove('settings-active');
+    });
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) close();
+    });
+    tabs.addEventListener('keydown', (event) => {
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
+        return;
+      const buttons = [...tabs.children],
+        index = buttons.indexOf(document.activeElement);
+      if (index < 0) return;
+      event.preventDefault();
+      const next =
+        event.key === 'Home'
+          ? 0
+          : event.key === 'End'
+            ? buttons.length - 1
+            : (index + (['ArrowUp', 'ArrowLeft'].includes(event.key) ? -1 : 1) + buttons.length) %
+              buttons.length;
+      buttons[next].focus();
+      buttons[next].click();
+    });
+    function syncAccount() {
+      const user = window.TronoAuth.user;
+      $('desktopAccountName').textContent = user
+        ? user.nickname + ' · ' + user.email
+        : 'Entre para editar seu perfil e seus arquivos.';
+      $('desktopAccountLogin').hidden = !!user;
+      accountDetails.hidden = !user;
+      account.querySelector('.desktop-remember').hidden = !user;
+      $('settingsRemember').checked = window.TronoAuth.remembered;
+      $('settingsRememberHelp').textContent =
+        window.TronoAuth.rememberError ||
+        'A sessão é protegida pelo Windows. Sua senha não é salva. Sair da conta remove a sessão lembrada.';
+    }
+    $('settingsRemember').onchange = () =>
+      void window.TronoAuth.setRemember($('settingsRemember').checked);
+    $('desktopAccountLogin').onclick = () => {
+      close();
+      window.TronoAuth.open('login');
+    };
+    $('accountLogoutBtn').addEventListener('click', close);
+    window.addEventListener('trono-auth-change', syncAccount);
+    window.addEventListener('trono-remember-change', syncAccount);
+    void window.TronoAuth.ready.then(syncAccount);
+    syncAccount();
+    async function permissions() {
+      try {
+        const granted = await window.TronoDesktop.getMediaPermissions();
+        $('desktopPermissionsStatus').textContent =
+          'Microfone: ' +
+          (granted.includes('audio') ? 'permitido' : 'perguntar ao usar') +
+          ' · Câmera: ' +
+          (granted.includes('video') ? 'permitida' : 'perguntar ao usar');
+      } catch {
+        $('desktopPermissionsStatus').textContent = 'Não foi possível consultar as permissões.';
+      }
+    }
+    $('desktopResetPermissions').onclick = async () => {
+      if (
+        window.TronoSocial.voiceJoined &&
+        !confirm('Redefinir as permissões encerrará sua chamada. Continuar?')
+      )
+        return;
+      const button = $('desktopResetPermissions');
+      button.disabled = true;
+      try {
+        await window.TronoSocial.leaveVoice();
+        await window.TronoDesktop.resetMediaPermissions();
+        await permissions();
+        $('desktopPermissionsMessage').textContent =
+          'Permissões redefinidas. O app perguntará novamente ao usar microfone e câmera.';
+      } catch {
+        $('desktopPermissionsMessage').textContent = 'Não foi possível redefinir as permissões.';
+      } finally {
+        button.disabled = false;
+      }
+    };
+    select('audio');
+  });

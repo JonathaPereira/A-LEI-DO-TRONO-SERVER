@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events');
-const {createNotifications,notificationPayload}=require('../desktop/app/notifications.cjs');
+const {createNotifications,notificationPayload}=require('../electron/notifications.cjs');
 test('Windows notices respect focus, duplicates and rate limits; clicks have a bounded application target',()=>{
   const created=[],clicks=[];let focused=true,clock=0;
   class Fake extends EventEmitter{static isSupported(){return true;}constructor(value){super();this.value=value;created.push(this);}show(){this.shown=true;}close(){this.emit('close');}}

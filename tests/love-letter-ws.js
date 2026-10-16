@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),WebSocket=require('ws'),{startFixture}=require('./auth-fixture'),{createLoveLetterService}=require('../love-letter-service'),R=require('../frontend/love-letter-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),WebSocket=require('ws'),{startFixture}=require('./auth-fixture'),{createLoveLetterService}=require('../server/love-letter-service'),R=require('../src/legacy/love-letter-rules');
 async function peer(base,token){const ws=new WebSocket(base.replace(/^http/,'ws')+'/ws'),messages=[];ws.on('message',raw=>messages.push(JSON.parse(raw)));await new Promise((r,j)=>{ws.once('open',r);ws.once('error',j);});const wait=async(fn,from=0)=>{for(let n=0;n<600;n++){const m=messages.slice(from).find(fn);if(m)return m;await new Promise(r=>setTimeout(r,10));}throw Error('Missing message '+fn);};const send=m=>ws.send(JSON.stringify(m));if(token){send({type:'authenticate',access_token:token});await wait(m=>m.type==='auth-result'&&m.ok);}return {ws,messages,send,wait};}
 test('Love Letter real authenticated server preserves private cards, validates actions and independent voice/text/Splendor memberships',{timeout:30000},async()=>{
  const f=await startFixture({port:10845}),clients=[];

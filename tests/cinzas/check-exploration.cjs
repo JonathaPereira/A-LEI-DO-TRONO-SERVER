@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {Engine,CHAPTERS,FLOOR}=require('../../frontend/roguelite/core.js');
+const {Engine,CHAPTERS,FLOOR}=require('../../public/roguelite/core.js');
 const make=(options={})=>{const e=new Engine();e.start({seed:'exploration-check',...options});return e;};
 const tick=(e,n,input={})=>{for(let i=0;i<n;i++)e.update(1/60,input);};
 let passed=0;

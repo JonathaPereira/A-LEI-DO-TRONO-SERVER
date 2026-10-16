@@ -10,7 +10,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function waitFor(fn,timeout=8000){const start=Date.now();while(Date.now()-start<timeout){if(await fn())return;await wait(80);}throw new Error('timeout aguardando backend');}
 function connect(){return new Promise((resolve,reject)=>{const ws=new WebSocket(`ws://127.0.0.1:${port}/ws`),queue=[],waiters=[];ws.on('message',raw=>{const m=JSON.parse(raw.toString());const i=waiters.findIndex(w=>w.pred(m));if(i>=0){const w=waiters.splice(i,1)[0];clearTimeout(w.timer);w.resolve(m);}else queue.push(m);});ws.once('error',reject);ws.once('open',()=>resolve({ws,wait(pred,timeout=5000){const i=queue.findIndex(pred);if(i>=0)return Promise.resolve(queue.splice(i,1)[0]);return new Promise((res,rej)=>{const w={pred,resolve:res,timer:setTimeout(()=>{const x=waiters.indexOf(w);if(x>=0)waiters.splice(x,1);rej(new Error('mensagem WebSocket não recebida'));},timeout)};waiters.push(w);});}}));});}
 (async()=>{
- const proc=spawn(process.execPath,[path.join(backend,'server.js')],{cwd:backend,env:{...process.env,PORT:String(port),AUTH_REQUIRED:'false',CLOUDFLARE_REALTIME_ENABLED:'false'},stdio:['ignore','pipe','pipe']});let logs='';proc.stdout.on('data',d=>logs+=d);proc.stderr.on('data',d=>logs+=d);
+ const proc=spawn(process.execPath,[path.join(backend,'server/index.ts')],{cwd:backend,env:{...process.env,PORT:String(port),AUTH_REQUIRED:'false',CLOUDFLARE_REALTIME_ENABLED:'false'},stdio:['ignore','pipe','pipe']});let logs='';proc.stdout.on('data',d=>logs+=d);proc.stderr.on('data',d=>logs+=d);
  try{
   await waitFor(async()=>{try{const r=await fetch(`http://127.0.0.1:${port}/health`);const j=await r.json();return r.ok&&j.ok&&j.version===VERSION;}catch{return false;}});
   console.log('✓ /health');

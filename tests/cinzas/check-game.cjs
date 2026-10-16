@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const {Engine, CARDS, CHAPTERS, FLOOR} = require('../../frontend/roguelite/core.js');
+const {Engine, CARDS, CHAPTERS, FLOOR} = require('../../public/roguelite/core.js');
 let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name);}
 function create(options={}){const e=new Engine();e.start({seed:'qa-fixed',...options});return e;}

@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../frontend/splendor-rules'),D=require('../frontend/splendor-data');
+const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/legacy/splendor-rules'),D=require('../src/legacy/splendor-data');
 const players=n=>Array.from({length:n},(_,i)=>({id:'p'+i,name:'Mercador '+i})),start=n=>R.create(players(n),()=>.01),take=(...indices)=>({kind:'take',tokens:Array.from({length:6},(_,i)=>indices.filter(v=>v===i).length)});
 const current=s=>s.players[s.turn],play=(s,m)=>R.move(s,current(s).id,m);
 function seed(v){return ()=>{v=(Math.imul(v,1664525)+1013904223)>>>0;return v/4294967296;};}
