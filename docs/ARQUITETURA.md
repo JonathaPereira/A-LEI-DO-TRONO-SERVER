@@ -269,9 +269,32 @@ participantes ficam separados das linhas anônimas de voz. O controlador conserv
 a renderização dos nomes na tela e o exportador existente permite só campos
 anônimos. `legacy/voice-reception.js` e sua entrada no manifesto foram removidos.
 
+`speaking-indicators.ts` possui os medidores visuais, estado de fala, pedidos de
+inicialização, nós de análise, timers e listeners de foco/visibilidade/contexto/trilha.
+O contexto do microfone e a trilha original são emprestados. O módulo cria só um
+invólucro de stream com a mesma trilha; não abre dispositivos, clona/encerra trilhas,
+conecta à saída de som ou retoma/fecha o contexto compartilhado.
+
+A análise conserva FFT 256, suavização 0,72, limiar RMS 0,042 e permanência de
+300 ms. O timer usa 100 ms em primeiro plano, 200 ms no modo leve e 500 ms sem
+foco. Páginas que informam `document.hidden` e contextos suspensos desconectam
+os nós de análise e param os timers; retomar reutiliza os mesmos medidores. Há
+um listener de estado por contexto e um conjunto de listeners de página somente
+enquanto existem medidores/pedidos. No Electron, `backgroundThrottling: false`
+pode manter a página reportada como visível/focada mesmo com a janela oculta;
+essa política anterior foi preservada, sem forçar suspensão do áudio.
+
+Trocar trilha, retirar participante, encerrar a trilha ou sair invalida pedidos
+e remove os nós/listeners/timers correspondentes. Uma inicialização antiga não
+substitui a atual, mesmo com IDs iguais; callbacks antigos não afetam uma chamada
+nova. Falhar na construção também desconecta os nós parciais. `social.js` recebe
+mudanças para pintar cartões/câmeras, sem outro conjunto de participantes falando
+ou loop de medidores. Seus listeners de página restantes cuidam da classe visual
+de segundo plano, recuperação da reprodução e renderização do diagnóstico.
+
 `social.js` conserva coordenação/entrada da chamada, bootstrap ICE/TURN, escolha do
-transporte, status/consumo, regras de qualidade/adaptação, medidores visuais de fala,
-contextos do microfone/medidores/avisos e interface. Os módulos notificam esse
+transporte, status/consumo, regras de qualidade/adaptação,
+contextos do microfone/avisos e interface. Os módulos notificam esse
 controlador para anexar
 áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.

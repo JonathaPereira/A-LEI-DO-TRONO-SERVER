@@ -199,7 +199,9 @@ test(
             if (added) diagnostics.registerReceiver(id, receiver);
             else diagnostics.removeReceiver(receiver);
           },
-          onAudioReady() {},
+          onAudioReady(id, kind) {
+            if (kind === 'audio') void indicators.watch(id, remote.getStreams(id).av);
+          },
           onChange() {},
           onRecover: async () => false,
         });
@@ -228,7 +230,10 @@ test(
             }),
           onSubscriptionClosed: (sub) => {
             remote.detachSubscription(sub);
-            if (sub.kind === 'audio') playback.remove(sub.publisherId);
+            if (sub.kind === 'audio') {
+              playback.remove(sub.publisherId);
+              indicators.remove(sub.publisherId);
+            }
           },
           onReady() {},
           onRetry(info) {
@@ -255,6 +260,19 @@ test(
           ],
           getLocalVideo: () => video,
           onSample: async () => {},
+          onChange() {},
+        });
+        const indicators = window.TronoVoiceCapture.createSpeakingIndicators({
+          getSettings: () => ({
+            enabled: settings.enabled,
+            hidden: document.hidden,
+            foreground: document.hasFocus(),
+            lightMode: false,
+          }),
+          getContext: () => ctx,
+          createStream: (track) => new MediaStream([track]),
+          windowEvents: window,
+          documentEvents: document,
           onChange() {},
         });
         async function connect() {
@@ -292,8 +310,10 @@ test(
           playback,
           playbackContexts,
           diagnostics,
+          indicators,
           connect,
           async close() {
+            indicators.reset();
             diagnostics.stop();
             diagnostics.reset();
             session.reset();
@@ -350,6 +370,9 @@ test(
         };
       });
       assert.deepEqual(first, { ready: true, fps: 60, bitrate: 8000000, captureFps: 60 });
+      await expect
+        .poll(() => page.evaluate(() => window.__sfuFixture.indicators.isSpeaking('relay-peer')))
+        .toBe(true);
       await page.evaluate(() => window.__sfuFixture.diagnostics.collect());
       await expect
         .poll(() =>
@@ -423,6 +446,7 @@ test(
       );
       await page.evaluate(async () => {
         const h = window.__sfuFixture;
+        h.indicators.reset();
         h.diagnostics.reset();
         h.session.reset();
         h.remote.reset();
@@ -459,6 +483,9 @@ test(
         true,
       );
       assert.deepEqual(errors, []);
+      await expect
+        .poll(() => page.evaluate(() => window.__sfuFixture.indicators.isSpeaking('relay-peer')))
+        .toBe(true);
       await require('./desktop-voice-flow').exerciseVoiceProtection({ app, page });
       await page.evaluate(() => window.__sfuFixture.close());
     } finally {

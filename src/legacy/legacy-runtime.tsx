@@ -14,6 +14,7 @@ import { createScreenCapture } from '../lib/voice/screen-capture';
 import { createCamera } from '../lib/voice/camera';
 import { createP2pPeers } from '../lib/voice/p2p-peers';
 import { createRemoteMedia } from '../lib/voice/remote-media';
+import { createSpeakingIndicators } from '../lib/voice/speaking-indicators';
 import { createVoiceTelemetry } from '../lib/voice/telemetry';
 import { createAudioPlayback } from '../lib/voice/audio-playback';
 import { createSfuSession } from '../lib/voice/sfu-session';
@@ -53,6 +54,7 @@ export function LegacyRuntime() {
           createSfuSession,
           createAudioPlayback,
           createVoiceTelemetry,
+          createSpeakingIndicators,
         },
       });
       initializeFiles(window);

@@ -29,6 +29,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Negociação SFU, catálogo, publicação, assinaturas, camadas e retries em TypeScript.
 - Players, ganhos de reprodução, autoplay e roteamento da saída em TypeScript.
 - Coleta de diagnóstico, métricas/proteção de recepção e prioridade nativa em TypeScript.
+- Indicadores visuais de fala, nós de análise, listeners e timers em TypeScript.
 
 ## Conversão ainda necessária
 
@@ -598,15 +599,56 @@ O teste manual do usuário continua reservado para o fim da migração. Os teste
 sintéticos não medem entrega de jogos a 60 FPS ou rotas SFU/TURN externas.
 Não houve publicação ou alteração de serviços remotos.
 
+## Indicadores visuais de fala — 16/10/2026
+
+- `lib/voice/speaking-indicators.ts` possui medidores, estado de fala, inicializações
+  pendentes, nós de análise, timers e listeners. `social.js` perdeu os mapas, conjunto
+  de fala, variável auxiliar de contexto e implementações substituídas. Conserva
+  só a seleção da trilha/contexto e a pintura de cartões/câmeras.
+- Contexto do microfone e trilha são emprestados; nenhum dispositivo, sender ou peer
+  é criado/alterado. O invólucro de stream usa a mesma trilha. Os nós não se conectam
+  à saída de som; limpar o medidor não fecha/retoma o contexto nem encerra a trilha.
+- Conservados FFT 256, suavização 0,72, RMS 0,042, permanência de 300 ms e intervalos
+  visuais de 100/200/500 ms. Páginas que reportam ocultação ou contextos suspensos
+  desconectam a análise e param os timers. Retomar reutiliza os mesmos nós.
+- Pedidos da mesma trilha são deduplicados. Trocar/parar/sair/encerrar a trilha
+  invalida resultados pendentes e limpa seus listeners. Inicializações e callbacks
+  antigos não reinstalam medidores numa chamada nova. Falhas parciais também limpam
+  nós já construídos. Há um listener por contexto e listeners de página só enquanto
+  existem medidores ou pedidos; o módulo não registra outro loop de reprodução.
+- `npm run test:voice:indicators` executa 16 regressões, também na suíte principal.
+  Os testes de mídia agora verificam a classe de fala com áudio P2P recebido, a
+  detecção real no SFU do Electron e o estado visual nos nove cenários Windows.
+- O Electron deste projeto usa `backgroundThrottling: false` e, nos cenários Windows
+  executados, reportou página visível/focada mesmo minimizado/oculto. A extração
+  respeita esse sinal e preserva a política de continuidade do áudio. A pausa visual
+  foi conferida com ocultação informada pela página no teste do navegador; não foi
+  acrescentada uma política baseada no estado físico da janela.
+
+Passaram tipagem, formatação, build estático, `npm test` (4 integrações e 294
+checks), quatro fluxos de `test:ui` e 15 checks de mídia/controles no navegador.
+Os três testes no Electron também passaram: chamada P2P com layouts/recapturas,
+SFU via relay local e os nove cenários de segundo plano. A regressão SFU detecta
+fala recebida antes e depois da reconexão, inclusive após eventos de trilhas
+retiradas; o navegador confere a classe visual e PCM contínuo ao pausar os medidores.
+
+Evidências: `artifacts/speaking-unit.log`, `speaking-regressions.log`,
+`speaking-ui.log`, `speaking-media.log`, `speaking-desktop.log`,
+`speaking-typecheck.log`, `speaking-format.log` e `speaking-build.log`.
+Fontes sintéticas e serviços locais; não houve medição de jogos a 60 FPS, rotas
+SFU/TURN externas, publicação ou alteração de serviços remotos. O teste manual
+do usuário continua reservado para o fim da migração.
+
 ## Próximas alterações, em ordem
 
-1. Extrair medidores visuais de fala e coordenação/entrada da chamada para `lib/voice/`.
+1. Extrair coordenação/entrada da chamada para `lib/voice/`.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
    Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.
    Publicações/assinaturas, filas, catálogo e retries SFU estão em `sfu-session.ts`.
    Players/ganhos, autoplay e roteamento de saída estão em `audio-playback.ts`.
    Coleta, métricas, proteção de recepção e prioridade estão em `telemetry.ts`/`reception-policy.ts`.
+   Indicadores visuais, listeners e timers estão em `speaking-indicators.ts`.
    Adaptação de qualidade e exportação anônima ainda usam `legacy/call-stability.js`.
    Bootstrap ICE/TURN e status/consumo ainda pertencem ao coordenador legado.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,

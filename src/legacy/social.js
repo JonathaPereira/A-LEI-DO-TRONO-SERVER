@@ -2,8 +2,6 @@
 window.TronoSocial = (() => {
   const $ = (id) => document.getElementById(id);
   const storage = window.TronoStorage || localStorage;
-  const voiceMeters = new Map();
-  const speakingPeers = new Set();
   const privateVoiceRoster = new Map();
   const profileActivities = new Map();
   let realtimeStatus = null;
@@ -19,7 +17,6 @@ window.TronoSocial = (() => {
     profileMedia = new Map();
   let mutedBeforeDeafen = false;
 
-  let meterAudioContext = null;
   const clampGain = (v) => Math.min(300, Math.max(0, Math.round((Number(v) || 0) / 5) * 5));
   let microphoneVolume = clampGain(storage.getItem('mnMicrophoneGain') ?? 100);
   let volumeOwner = null;
@@ -28,26 +25,8 @@ window.TronoSocial = (() => {
   const streamWatchVersions = new Map();
   let mediaAudioContext = null;
   const foreground = () => !document.hidden && document.hasFocus();
-  function syncVoiceWork() {
-    const idle = voiceJoined && !foreground();
-    document.body.classList.toggle('voice-background', idle);
-    for (const [id, meter] of voiceMeters) {
-      clearTimeout(meter.timer);
-      meter.timer = 0;
-      if (document.hidden) {
-        try {
-          meter.source.disconnect();
-        } catch {}
-        meter.connected = false;
-        setSpeaking(id, false);
-      } else {
-        if (!meter.connected) {
-          meter.source.connect(meter.analyser);
-          meter.connected = true;
-        }
-        meter.tick?.();
-      }
-    }
+  function updateVoiceBackgroundClass() {
+    document.body.classList.toggle('voice-background', voiceJoined && !foreground());
   }
   const isScreenKind = (kind) => kind === 'screen' || kind === 'screen-audio';
   const wantsSfuPublication = (pub) =>
@@ -126,7 +105,7 @@ window.TronoSocial = (() => {
       return;
     }
     const stream = audioPlayback.attach(key, track);
-    if (!screen && stream) void watchStream(peerId, stream);
+    if (!screen && stream) void speakingIndicators.watch(peerId, stream);
   }
   const removeRemoteAudio = (key) => audioPlayback.remove(key);
   function setStreamGain(id, value) {
@@ -261,6 +240,19 @@ window.TronoSocial = (() => {
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
     );
   const meId = () => window.TronoNetwork?.clientId;
+  const speakingIndicators = window.TronoVoiceCapture.createSpeakingIndicators({
+    getSettings: () => ({
+      enabled: voiceJoined,
+      hidden: document.hidden,
+      foreground: foreground(),
+      lightMode: voiceLightMode,
+    }),
+    getContext: ensureMediaAudioContext,
+    createStream: (track) => new MediaStream([track]),
+    windowEvents: window,
+    documentEvents: document,
+    onChange: updateMediaIndicators,
+  });
   const microphone = window.TronoVoiceCapture.createMicrophone({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
@@ -1366,7 +1358,7 @@ window.TronoSocial = (() => {
       if (!isCurrent()) return;
       const pub = sfuLocalPublications.get('audio');
       if (pub?.sender) await pub.sender.replaceTrack(track);
-      if (isCurrent()) void watchStream(meId(), stream);
+      if (isCurrent()) void speakingIndicators.watch(meId(), stream);
       return;
     }
     for (const [id, pc] of [...peers])
@@ -1692,98 +1684,12 @@ window.TronoSocial = (() => {
     );
   }
 
-  function setSpeaking(id, on) {
-    const had = speakingPeers.has(id);
-    if (on) speakingPeers.add(id);
-    else speakingPeers.delete(id);
-    if (had !== on) updateMediaIndicators();
-  }
-  function stopMeter(id) {
-    const m = voiceMeters.get(id);
-    if (m) {
-      clearTimeout(m.timer);
-      try {
-        m.source.disconnect();
-      } catch {}
-      try {
-        m.analyser.disconnect();
-      } catch {}
-      voiceMeters.delete(id);
-    }
-    setSpeaking(id, false);
-  }
-  async function ensureMeterContext() {
-    meterAudioContext = ensureMediaAudioContext();
-    return meterAudioContext?.state === 'running' ? meterAudioContext : null;
-  }
-  async function watchStream(id, stream) {
-    if (!id || !stream?.getAudioTracks?.().length) return;
-    const trackId = stream.getAudioTracks()[0].id;
-    if (voiceMeters.get(id)?.trackId === trackId) return;
-    stopMeter(id);
-    const ctx = await ensureMeterContext();
-    if (!ctx || !voiceJoined || stream.getAudioTracks()[0]?.readyState !== 'live') return;
-    try {
-      if (voiceMeters.get(id)?.trackId === trackId) return;
-      const source = ctx.createMediaStreamSource(stream),
-        analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.72;
-      source.connect(analyser);
-      const data = new Uint8Array(analyser.fftSize),
-        meter = {
-          source,
-          analyser,
-          data,
-          trackId,
-          timer: 0,
-          lastVoice: 0,
-          connected: true,
-          tick: null,
-        };
-      voiceMeters.set(id, meter);
-      const tick = () => {
-        if (voiceMeters.get(id) !== meter) return;
-        if (document.hidden) {
-          if (meter.connected) {
-            source.disconnect();
-            meter.connected = false;
-          }
-          setSpeaking(id, false);
-          meter.timer = 0;
-          return;
-        }
-        if (!meter.connected) {
-          source.connect(analyser);
-          meter.connected = true;
-        }
-        if (document.visibilityState !== 'hidden') {
-          analyser.getByteTimeDomainData(data);
-          let sum = 0;
-          for (const v of data) {
-            const x = (v - 128) / 128;
-            sum += x * x;
-          }
-          const rms = Math.sqrt(sum / data.length),
-            now = performance.now();
-          if (rms > 0.042) meter.lastVoice = now;
-          setSpeaking(id, now - meter.lastVoice < 300);
-        }
-        meter.timer = setTimeout(tick, !foreground() ? 500 : voiceLightMode ? 200 : 100);
-      };
-      meter.tick = tick;
-      tick();
-    } catch (err) {
-      console.warn('[TronoSocial] medidor de voz', err);
-    }
-  }
-
   function closePeer(id) {
     if (!p2pPeers.close(id)) clearPeerMedia(id);
   }
   function clearPeerMedia(id, pc) {
     for (const r of pc?.getReceivers?.() || []) voiceTelemetry.removeReceiver(r);
-    stopMeter(id);
+    speakingIndicators.remove(id);
     removeRemoteAudio(id);
     removeRemoteAudio(streamAudioKey(id));
     remoteMedia.clear(id);
@@ -1815,7 +1721,7 @@ window.TronoSocial = (() => {
     remoteMedia.detachSubscription(sub);
     if (sub.kind === 'audio') {
       removeRemoteAudio(sub.publisherId);
-      stopMeter(sub.publisherId);
+      speakingIndicators.remove(sub.publisherId);
     }
     if (sub.kind === 'screen-audio') removeRemoteAudio(streamAudioKey(sub.publisherId));
   }
@@ -1848,7 +1754,7 @@ window.TronoSocial = (() => {
     sfuSession.reset();
     for (const { key: id } of audioPlayback.getSnapshot().entries) {
       removeRemoteAudio(id);
-      if (id !== meId()) stopMeter(id);
+      if (id !== meId()) speakingIndicators.remove(id);
     }
     remoteMedia.reset();
     mediaTransport = toP2p ? 'p2p' : 'none';
@@ -2115,7 +2021,7 @@ window.TronoSocial = (() => {
       screen = self ? screenSharing() : !!p.screen,
       transport = self ? announcedTransport() : p.transport || 'p2p';
     return (
-      (muted ? 'microfone mutado' : speakingPeers.has(p.id) ? 'falando…' : 'na voz') +
+      (muted ? 'microfone mutado' : speakingIndicators.isSpeaking(p.id) ? 'falando…' : 'na voz') +
       ((self ? deafened : p.deafened) ? ' • áudio silenciado' : '') +
       (cam ? (hiddenCameras.has(p.id) ? ' • câmera oculta' : ' • 📷 câmera') : '') +
       (screen ? ' • 🖥 tela' : '') +
@@ -2203,7 +2109,7 @@ window.TronoSocial = (() => {
         silenced = self ? deafened : !!p.deafened,
         cam = self ? cameraOn() : !!p.camera,
         screen = self ? screenSharing() : !!p.screen,
-        speaking = !muted && speakingPeers.has(p.id),
+        speaking = !muted && speakingIndicators.isSpeaking(p.id),
         transport = self ? announcedTransport() : p.transport || 'p2p',
         hidden = hiddenCameras.has(p.id);
       let card = findPeerTile(host, p.id, '.voice-person');
@@ -2530,7 +2436,7 @@ window.TronoSocial = (() => {
         live = personHasLiveCamera(p),
         video = tile.querySelector('video');
       tile.classList.toggle('has-video', live);
-      tile.classList.toggle('speaking', speakingPeers.has(p.id));
+      tile.classList.toggle('speaking', speakingIndicators.isSpeaking(p.id));
       if (live) {
         remoteMedia.cancelRecovery(p.id);
         updateVideoElement(video, stream);
@@ -2785,7 +2691,7 @@ window.TronoSocial = (() => {
       tile.className = `seat-camera-tile seat-camera-${p.seat}`;
       bindSeatTileResize(tile, p.seat);
       const muted = p.id === me ? micMuted : !!p.muted,
-        speaking = !muted && speakingPeers.has(p.id);
+        speaking = !muted && speakingIndicators.isSpeaking(p.id);
       tile.classList.toggle('speaking', speaking);
       tile.querySelector('.seat-camera-name').textContent =
         `${p.name}${p.id === me ? ' • você' : ''}`;
@@ -2810,7 +2716,7 @@ window.TronoSocial = (() => {
     for (const card of document.querySelectorAll('#voiceRoster .voice-person')) {
       const p = privateVoiceRoster.get(card.dataset.peer);
       if (!p) continue;
-      const speaking = !(p.id === me ? micMuted : p.muted) && speakingPeers.has(p.id);
+      const speaking = !(p.id === me ? micMuted : p.muted) && speakingIndicators.isSpeaking(p.id);
       card.classList.toggle('speaking', speaking);
       const summary = card.querySelector('.participant-summary');
       if (summary) summary.textContent = personVoiceSummary(p);
@@ -2819,7 +2725,7 @@ window.TronoSocial = (() => {
       const p = privateVoiceRoster.get(tile.dataset.peer);
       if (!p) continue;
       const muted = p.id === me ? micMuted : !!p.muted,
-        speaking = !muted && speakingPeers.has(p.id);
+        speaking = !muted && speakingIndicators.isSpeaking(p.id);
       tile.classList.toggle('speaking', speaking);
       renderVoiceStatus(
         tile.querySelector('.seat-camera-mic'),
@@ -2855,7 +2761,7 @@ window.TronoSocial = (() => {
         await acquireMic({ generation });
         ensureCurrent();
         voiceJoined = true;
-        syncVoiceWork();
+        updateVoiceBackgroundClass();
         void voiceTelemetry.syncPriority();
         voiceTelemetry.start();
         privateVoiceRoster.clear();
@@ -2883,7 +2789,7 @@ window.TronoSocial = (() => {
         renderVideoGrid();
         renderScreenGrid();
         renderSeatMedia();
-        await watchStream(meId(), localStream);
+        await speakingIndicators.watch(meId(), localStream);
         ensureCurrent();
         if (communityVoice() && roomVoiceMode === 'sfu') {
           const sfuOk = await startSfuTransport({ callGeneration: generation });
@@ -2931,10 +2837,11 @@ window.TronoSocial = (() => {
     microphone.stop();
     voiceJoinPromise = null;
     voiceJoined = false;
+    speakingIndicators.reset();
     voiceTelemetry.reset();
     cameraTogglePending = null;
     cameraCapture.stop();
-    syncVoiceWork();
+    updateVoiceBackgroundClass();
     void voiceTelemetry.syncPriority();
     window.TronoNetwork?.setVoiceState(false, false, false, false, transmissionQuality, 'p2p');
     closeAllPeers();
@@ -2949,7 +2856,6 @@ window.TronoSocial = (() => {
     watchingStreams.clear();
     hiddenCameras.clear();
     privateVoiceRoster.clear();
-    stopMeter(meId());
     mediaTransport = 'p2p';
     audioPlayback.reset();
     updateAudioRecoveryUI();
@@ -2958,8 +2864,6 @@ window.TronoSocial = (() => {
     screenCapture.stop();
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
-    for (const id of [...voiceMeters.keys()]) stopMeter(id);
-    meterAudioContext = null;
     if (wasInVoice) {
       playCallSound(reason === 'disconnect' ? 'disconnect' : 'leave', 'local');
       callNotice({
@@ -3140,7 +3044,7 @@ window.TronoSocial = (() => {
     if (voiceJoined) {
       try {
         await acquireMic();
-        await watchStream(meId(), localStream);
+        await speakingIndicators.watch(meId(), localStream);
         setStatus(
           noiseState().mode === 'rnnoise'
             ? 'RNNoise ativo no microfone.'
@@ -3180,7 +3084,7 @@ window.TronoSocial = (() => {
     try {
       if (voiceJoined) {
         await acquireMic();
-        await watchStream(meId(), localStream);
+        await speakingIndicators.watch(meId(), localStream);
       }
       setStatus(
         value === 'native'
@@ -3201,6 +3105,7 @@ window.TronoSocial = (() => {
     }
   }
   function updateVoiceLightMode() {
+    speakingIndicators.refresh();
     const button = $('voiceLightModeBtn');
     if (button) {
       button.disabled = microphone.getSnapshot().loading;
@@ -3225,7 +3130,7 @@ window.TronoSocial = (() => {
     if (!voiceJoined) return;
     try {
       await acquireMic();
-      await watchStream(meId(), localStream);
+      await speakingIndicators.watch(meId(), localStream);
       setStatus(
         voiceLightMode
           ? 'Modo leve ativo: redução nativa e menos trabalho visual.'
@@ -3312,7 +3217,7 @@ window.TronoSocial = (() => {
     if (voiceJoined) {
       try {
         await acquireMic();
-        await watchStream(meId(), localStream);
+        await speakingIndicators.watch(meId(), localStream);
         setStatus('Microfone alterado.', 'ok');
       } catch (err) {
         setStatus('Não foi possível trocar o microfone.', 'error');
@@ -3979,7 +3884,7 @@ window.TronoSocial = (() => {
       unlockCallAudio();
       if (voiceJoined && !microphone.getSnapshot().capture?.processor)
         void acquireMic()
-          .then(() => watchStream(meId(), localStream))
+          .then(() => speakingIndicators.watch(meId(), localStream))
           .catch((err) => setStatus(err.message, 'warn'));
     });
     $('voiceMusicTrackSelect')?.addEventListener('change', (e) =>
@@ -4240,11 +4145,11 @@ window.TronoSocial = (() => {
     });
     for (const event of ['focus', 'blur'])
       window.addEventListener(event, () => {
-        syncVoiceWork();
+        updateVoiceBackgroundClass();
         renderTelemetry();
       });
     document.addEventListener('visibilitychange', () => {
-      syncVoiceWork();
+      updateVoiceBackgroundClass();
       if (document.visibilityState === 'visible' && voiceJoined) {
         audioPlayback.refresh();
         updateAudioRecoveryUI();
@@ -4342,8 +4247,8 @@ window.TronoSocial = (() => {
         enabled,
         rows: rows.map((r) => ({ ...r })),
         background: voiceJoined && !foreground(),
-        meterMode: document.hidden ? 'paused' : foreground() ? 'active' : 'reduced',
-        metersRunning: [...voiceMeters.values()].filter((m) => !!m.timer).length,
+        meterMode: speakingIndicators.getSnapshot().mode,
+        metersRunning: speakingIndicators.getSnapshot().running,
         playbackContext: audioPlayback.getSnapshot().context,
         microphoneContext: mediaAudioContext?.state || null,
         priority: priority?.status,

@@ -28,6 +28,9 @@ window.__focused=true;window.__hidden=false;document.hasFocus=()=>window.__focus
     await t.test('normal volume stays direct; native receiver buffer and per-voice interval metrics are real',{skip:restricted?'Managed Chromium policy blocks non-proxied WebRTC; this real-RTP check is required on Windows':false},async()=>{
     try{await expect.poll(()=>p.evaluate(()=>window.TronoSocial.voiceReception.rows.length),{timeout:18000}).toBe(1);}catch(error){console.error('Receiver diagnostics',JSON.stringify(await p.evaluate(async()=>({rx:window.TronoSocial.voiceReception,telemetry:window.TronoSocial.telemetry,pcs:await Promise.all(window.__pcs.map(async pc=>({state:pc.connectionState,signal:pc.signalingState,ice:pc.iceConnectionState,local:pc.localDescription?.type,remote:pc.remoteDescription?.type,transceivers:pc.getTransceivers().map(t=>({mid:t.mid,kind:t.receiver.track.kind,id:t.receiver.track.id})),stats:[...await pc.getStats()].map(([,v])=>v).filter(v=>v.type==='inbound-rtp')})))}))),errors);throw error;}
 
+      const remoteId = await p.locator('#remoteAudioHost audio').getAttribute('data-peer');
+      await expect.poll(() => p.evaluate(id => [...document.querySelectorAll('#voiceRoster .voice-person')]
+        .some(card => card.dataset.peer === id && card.classList.contains('speaking')), remoteId)).toBe(true);
       const r=await p.evaluate(()=>window.TronoSocial.voiceReception);assert.equal(r.rows[0].supported,true);assert(r.rows[0].targetMs>=60&&r.rows[0].targetMs<=140);assert.equal(r.playbackContext,null);
       const report=JSON.parse(await p.evaluate(()=>window.TronoSocial.diagnostics()));assert.equal(report.reception.rows.length,1);assert(report.reception.recent.length>0);assert(report.playback.includes('direto'));assert(!JSON.stringify(report).includes('Voz Teste'));assert(!JSON.stringify(report).includes(a.data.session.access_token));
       assert.equal(await p.evaluate(()=>window.__nativeStates.at(-1)),true);
@@ -42,7 +45,7 @@ window.__focused=true;window.__hidden=false;document.hasFocus=()=>window.__focus
         for(let i=0;i<8;i++){await new Promise(r=>setTimeout(r,300));const until=performance.now()+90;while(performance.now()<until)Math.sqrt(Math.random());}
         const pcm=await measured;source.disconnect();meter.disconnect();meter.port.close();await ctx.close();return {background,pcm,joined:window.TronoSocial.voiceJoined};
       });
-      console.log('Receive PCM under long UI tasks:',JSON.stringify(result));assert(result.background.background);assert.equal(result.background.metersRunning,0);assert(result.joined);assert(result.pcm.frames>=240000);assert(result.pcm.rms>.015);assert(result.pcm.quietMs<250);
+      console.log('Receive PCM under long UI tasks:',JSON.stringify(result));assert(result.background.background);assert.equal(result.background.metersRunning,0);assert.equal(result.background.meterMode,'paused');assert(result.joined);assert(result.pcm.frames>=240000);assert(result.pcm.rms>.015);assert(result.pcm.quietMs<250);
       await p.evaluate(()=>{window.__focused=true;window.__hidden=false;document.dispatchEvent(new Event('visibilitychange'));dispatchEvent(new Event('focus'));});await expect.poll(()=>p.evaluate(()=>window.TronoSocial.voiceReception.metersRunning)).toBeGreaterThan(0);assert.deepEqual(await voiceState(),before);
     });
     await t.test('protection toggle restores native target without changing call or microphone; amplified output uses its own context',async()=>{
