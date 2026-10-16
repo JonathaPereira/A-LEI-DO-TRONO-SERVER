@@ -1274,10 +1274,7 @@ window.TronoSocial = (() => {
     renderSeatMedia();
   }
   function clearChannelChat() {
-    chatHistoryBefore = null;
-    $('olderChatMessages')?.classList.add('hidden');
-    const host = $('courtChatMessages');
-    if (host) host.replaceChildren();
+    window.TronoChatMessages.clear();
     setUnreadCount(0);
     toggleTextChat(false);
   }
@@ -1340,197 +1337,19 @@ window.TronoSocial = (() => {
     }
   }
 
-  let chatHistoryBefore = null,
-    chatModerationSupported = false,
-    moderationPending = null,
-    moderationChoice = null;
-  const chatRevisions = new Map();
-  function acceptsChatRevision(roomId, revision) {
-    if (!Number.isSafeInteger(revision)) return true;
-    if (revision < (chatRevisions.get(roomId) || 0)) return false;
-    chatRevisions.set(roomId, revision);
-    return true;
-  }
-  function canModerateChat() {
-    return (
-      chatModerationSupported &&
-      window.TronoAuth?.user?.role === 'creator' &&
-      chatRoomState?.kind === 'chat' &&
-      chatRoomState.channelType !== 'voice' &&
-      chatRoomState.id === window.TronoNetwork?.currentRoom
-    );
-  }
-  function addMessageDeleteButton(row) {
-    if (!row.dataset.messageId || row.querySelector('.chat-message-delete')) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'chat-message-delete';
-    button.title = 'Apagar mensagem';
-    button.setAttribute(
-      'aria-label',
-      'Apagar mensagem de ' + (row.querySelector('strong')?.textContent || 'usuário'),
-    );
-    button.innerHTML =
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/></svg>';
-    button.onclick = () => confirmChatModeration('delete', row.dataset.messageId);
-    row.firstElementChild?.appendChild(button);
-  }
-  function updateChatModeration() {
-    const allowed = canModerateChat(),
-      clear = $('clearChatHistoryBtn');
-    if (clear) {
-      clear.hidden = !allowed;
-      clear.disabled = !!moderationPending;
+  function onChatActivity(activity) {
+    if (activity.type === 'read') {
+      markRead();
+      return;
     }
-    for (const row of $('courtChatMessages')?.children || []) {
-      if (allowed) addMessageDeleteButton(row);
-      else row.querySelector('.chat-message-delete')?.remove();
-      const button = row.querySelector('.chat-message-delete');
-      if (button) button.disabled = !!moderationPending;
-    }
-  }
-  function finishChatModeration(result) {
-    if (!moderationPending || result.requestId !== moderationPending.requestId) return;
-    const pending = moderationPending;
-    clearTimeout(pending.timer);
-    moderationPending = null;
-    updateChatModeration();
-    if (pending.roomId === window.TronoNetwork?.currentRoom)
-      window.TronoChatComposer.reportStatus(
-        result.ok
-          ? pending.action === 'clear'
-            ? 'Histórico do canal apagado.'
-            : 'Mensagem apagada.'
-          : result.error?.message || 'Não foi possível apagar as mensagens.',
-      );
-  }
-  function confirmChatModeration(action, id) {
-    if (!canModerateChat() || moderationPending) return;
-    const dialog = $('chatModerationDialog');
-    moderationChoice = { action, id, roomId: window.TronoNetwork.currentRoom };
-    $('chatModerationTitle').textContent =
-      action === 'clear' ? 'Apagar o histórico do canal?' : 'Apagar esta mensagem?';
-    $('chatModerationDescription').textContent =
-      action === 'clear'
-        ? 'Todas as mensagens deste canal serão apagadas para todos. A sala e os arquivos da galeria serão mantidos. Esta ação não pode ser desfeita.'
-        : 'A mensagem será apagada para todos. Os arquivos da galeria serão mantidos. Esta ação não pode ser desfeita.';
-    $('chatModerationConfirm').textContent =
-      action === 'clear' ? 'Apagar histórico' : 'Apagar mensagem';
-    dialog.showModal();
-    $('chatModerationCancel').focus();
-  }
-  function bindChatModeration() {
-    const clear = document.createElement('button');
-    clear.id = 'clearChatHistoryBtn';
-    clear.type = 'button';
-    clear.className = 'small-btn chat-history-clear';
-    clear.textContent = 'Limpar chat';
-    clear.title = 'Apagar todo o histórico deste canal';
-    clear.hidden = true;
-    clear.onclick = () => confirmChatModeration('clear');
-    document.querySelector('.chat-title-actions')?.prepend(clear);
-    const dialog = document.createElement('dialog');
-    dialog.id = 'chatModerationDialog';
-    dialog.className = 'feature-dialog chat-moderation-dialog';
-    dialog.setAttribute('aria-labelledby', 'chatModerationTitle');
-    dialog.setAttribute('aria-describedby', 'chatModerationDescription');
-    dialog.innerHTML =
-      '<h2 id="chatModerationTitle"></h2><p id="chatModerationDescription"></p><div class="chat-moderation-actions"><button id="chatModerationCancel" type="button">Cancelar</button><button id="chatModerationConfirm" type="button">Apagar</button></div>';
-    document.body.appendChild(dialog);
-    $('chatModerationCancel').onclick = () => {
-      moderationChoice = null;
-      dialog.close();
-    };
-    dialog.addEventListener('cancel', () => {
-      moderationChoice = null;
-    });
-    $('chatModerationConfirm').onclick = () => {
-      const choice = moderationChoice;
-      moderationChoice = null;
-      dialog.close();
-      if (!choice || !canModerateChat() || choice.roomId !== window.TronoNetwork.currentRoom)
-        return;
-      const requestId = crypto.randomUUID(),
-        sent =
-          choice.action === 'clear'
-            ? window.TronoNetwork.clearChatHistory(requestId)
-            : window.TronoNetwork.deleteChatMessage(choice.id, requestId);
-      if (!sent) {
-        window.TronoChatComposer.reportStatus(
-          'Conexão interrompida. Aguarde a reconexão para apagar.',
-        );
-        return;
-      }
-      moderationPending = {
-        ...choice,
-        requestId,
-        timer: setTimeout(
-          () =>
-            finishChatModeration({
-              requestId,
-              ok: false,
-              error: { message: 'A confirmação demorou. Confira a conexão e tente novamente.' },
-            }),
-          30000,
-        ),
-      };
-      updateChatModeration();
-    };
-  }
-  function appendChat(m, { silent = false } = {}) {
-    const box = $('courtChatMessages');
-    if (!box || !m) return;
-    if (m.id && [...box.children].some((row) => row.dataset.messageId === m.id)) return;
-    const mine = m.accountId ? m.accountId === window.TronoAuth?.user?.id : m.senderId === meId(),
-      row = document.createElement('div');
-    row.dataset.messageId = m.id || '';
-    row.className = `court-chat-msg ${mine ? 'mine' : ''}`;
-    const timestamp = new Date(m.ts || Date.now()),
-      validDate = !Number.isNaN(timestamp.getTime()),
-      t = validDate
-        ? timestamp.toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : 'Data indisponível';
-    row.innerHTML = `<div><span class="chat-author-icon">${window.TronoProfile?.avatarHtml(m) || '👤'}</span><strong>${esc(m.name || 'Jogador')}</strong><time${validDate ? ' datetime="' + timestamp.toISOString() + '"' : ''}>${esc(t)}</time></div><p>${esc(m.text || '')}</p>`;
-    if (m.attachment) {
-      const host = document.createElement('div');
-      host.className = 'chat-attachment';
-      row.appendChild(host);
-      window.TronoFiles?.renderAttachment(host, m.attachment);
-    }
-    if (canModerateChat()) addMessageDeleteButton(row);
-    window.TronoProfile?.hydrate(row);
-    box.appendChild(row);
-    box.scrollTop = box.scrollHeight;
-    if (!mine && !silent) {
+    const message = activity.message;
+    const mine = message.accountId
+      ? message.accountId === window.TronoAuth?.user?.id
+      : message.senderId === meId();
+    if (!mine) {
       bumpUnread();
       if (!chatMuted) playCallSound('message', 'text');
     }
-  }
-  function loadHistory(messages = [], meta = {}) {
-    const box = $('courtChatMessages');
-    if (!box) return;
-    const height = box.scrollHeight,
-      top = box.scrollTop,
-      existing = meta.older ? [...box.children] : [];
-    box.replaceChildren();
-    messages.forEach((m) => appendChat(m, { silent: true }));
-    for (const row of existing)
-      if (![...box.children].some((item) => item.dataset.messageId === row.dataset.messageId))
-        box.appendChild(row);
-    if (meta.older) box.scrollTop = top + box.scrollHeight - height;
-    chatHistoryBefore = meta.before || null;
-    const button = $('olderChatMessages');
-    if (button) {
-      button.disabled = false;
-      button.classList.toggle('hidden', !meta.hasMore);
-    }
-    markRead();
   }
   function toggleTextMute() {
     chatMuted = !chatMuted;
@@ -4983,12 +4802,6 @@ window.TronoSocial = (() => {
     syncPeers();
   }
   function consumeChatRoom(room) {
-    if (room?.id !== chatRoomState?.id) {
-      if ($('chatModerationDialog')?.open) {
-        moderationChoice = null;
-        $('chatModerationDialog').close();
-      }
-    }
     chatRoomState = room || null;
     document.body.classList.toggle(
       'channel-text-active',
@@ -5002,7 +4815,6 @@ window.TronoSocial = (() => {
     if (inChatHub() && room?.channelType === 'text') toggleTextChat(true);
     updateChatDrawerUI();
     updateButtons();
-    updateChatModeration();
   }
   function consumeRoom(room) {
     if (room?.id !== roomState?.id) roomVoiceMode = null;
@@ -5807,7 +5619,6 @@ window.TronoSocial = (() => {
   }
 
   function bind() {
-    bindChatModeration();
     $('voiceProtection').checked = voiceProtection;
     $('voiceProtection').onchange = (e) => {
       voiceProtection = e.target.checked;
@@ -5834,10 +5645,6 @@ window.TronoSocial = (() => {
     $('chatOnlyTextBtn')?.addEventListener('click', () => toggleTextChat());
     $('mnSidebarTextBtn')?.addEventListener('click', () => toggleTextChat(true));
     $('chatDrawerCloseBtn')?.addEventListener('click', () => toggleTextChat(false));
-    $('olderChatMessages')?.addEventListener('click', () => {
-      if (chatHistoryBefore && window.TronoNetwork.requestChatHistory(chatHistoryBefore))
-        $('olderChatMessages').disabled = true;
-    });
     $('returnToVoiceRoom')?.addEventListener('click', () => {
       const id = window.TronoNetwork.primaryRoom;
       for (const button of document.querySelectorAll('[data-chat-channel]'))
@@ -5944,7 +5751,6 @@ window.TronoSocial = (() => {
       playCallSound('join', 'test');
     });
     window.addEventListener('trono-auth-change', () => {
-      updateChatModeration();
       profileActivities.clear();
       if (volumeOwner !== window.TronoAuth.user?.id) {
         volumeOwner = window.TronoAuth.user?.id || null;
@@ -5962,9 +5768,6 @@ window.TronoSocial = (() => {
         renderProfileActivities();
       }
       if (msg.type === 'welcome') {
-        chatRevisions.clear();
-        chatModerationSupported = !!msg.features?.chatModeration;
-        updateChatModeration();
         voiceEventsSupported = !!msg.features?.voiceEvents;
         void syncRealtimeStatus({ quiet: true });
       }
@@ -6004,49 +5807,6 @@ window.TronoSocial = (() => {
         roomState = null;
         updateButtons();
       }
-      if (
-        msg.type === 'error' &&
-        ['CHAT_HISTORY_UNAVAILABLE', 'CHAT_HISTORY_RATE'].includes(msg.code)
-      ) {
-        if ($('olderChatMessages')) $('olderChatMessages').disabled = false;
-      }
-      if (
-        msg.type === 'chat-history' &&
-        msg.roomId === window.TronoNetwork.currentRoom &&
-        acceptsChatRevision(msg.roomId, msg.revision)
-      ) {
-        loadHistory(msg.messages || [], msg);
-        updateChatModeration();
-      }
-      if (
-        msg.type === 'chat-message' &&
-        msg.message?.roomId === window.TronoNetwork.currentRoom &&
-        acceptsChatRevision(msg.message.roomId, msg.revision)
-      )
-        appendChat(msg.message);
-      if (
-        ['chat-message-deleted', 'chat-history-cleared'].includes(msg.type) &&
-        msg.roomId === window.TronoNetwork.currentRoom &&
-        acceptsChatRevision(msg.roomId, msg.revision)
-      ) {
-        const box = $('courtChatMessages');
-        if (msg.type === 'chat-history-cleared') {
-          box?.replaceChildren();
-          chatHistoryBefore = null;
-          $('olderChatMessages')?.classList.add('hidden');
-          markRead();
-        } else {
-          for (const row of box?.children || [])
-            if (row.dataset.messageId === msg.id) {
-              row.remove();
-              break;
-            }
-          if (chatHistoryBefore === msg.id)
-            chatHistoryBefore = box?.firstElementChild?.dataset.messageId || null;
-          if (!chatHistoryBefore) $('olderChatMessages')?.classList.add('hidden');
-        }
-      }
-      if (msg.type === 'chat-moderation-result') finishChatModeration(msg);
       if (msg.type === 'voice-mode' && msg.roomId === roomState?.id) {
         roomVoiceMode = msg.mode;
         if (voiceJoined && msg.mode === 'p2p' && (transportIsSfu() || transportPending()))
@@ -6206,6 +5966,7 @@ window.TronoSocial = (() => {
   window.addEventListener('trono:ready', bind);
 
   return {
+    onChatActivity,
     diagnostics,
     showPanel,
     showForRoom,

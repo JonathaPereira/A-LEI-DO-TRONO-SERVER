@@ -18,9 +18,19 @@ Trocar de conta limpa o rascunho. Não há um segundo socket ou captura de mídi
 
 O envio usa o cliente de rede tipado. O transporte HTTP compartilhado de arquivos
 continua em `legacy/profile-files.js`, também usado por perfis e mensagens diretas.
-`legacy/social.js` conserva lista, histórico, revisões e moderação, e reporta seu
-feedback por `TronoChatComposer.reportStatus()`. Não escreve mais no campo de texto
-nem no feedback do compositor. O adaptador `lib/socket/chat-actions.ts` foi excluído.
+`lib/chat/messages.ts` possui mensagens, histórico, paginação, revisões e confirmações
+de moderação. `message-protocol.ts` valida páginas completas antes de aceitar sua
+revisão. Snapshots e mensagens são imutáveis; respostas antigas não restauram linhas
+apagadas. Trocar de canal, desconectar ou perder a permissão invalida confirmações.
+As permissões da interface não substituem a autorização do servidor.
+
+`chat-messages.tsx` renderiza lista, paginação e diálogo em React, preservando a
+posição de leitura ao inserir mensagens anteriores. Avatares e anexos ainda usam
+os renderizadores compartilhados em hosts vazios pertencentes a esses módulos.
+Anexos recebem uma cópia do DTO para não permitir mutações no snapshot. A contagem
+de não lidas e os sons continuam em `legacy/social.js`, pelo evento `onChatActivity`.
+Esse controlador não escreve mais na lista, no compositor ou no diálogo de moderação.
+O adaptador `lib/socket/chat-actions.ts` foi excluído.
 
 `lib/socket/transport.ts` possui a conexão WebSocket, correlação de respostas,
 timeouts e fila de autenticação de conta/convidado. Requisições correlacionam tipo

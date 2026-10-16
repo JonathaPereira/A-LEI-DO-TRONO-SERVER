@@ -1,4 +1,5 @@
 import { ChatComposer } from './chat-composer';
+import { ChatClearButton, ChatMessages, ChatModerationDialog } from './chat-messages';
 
 export function ChatPanel() {
   return (
@@ -10,6 +11,7 @@ export function ChatPanel() {
             <strong># conversa</strong>
           </div>
           <div className={'chat-title-actions'}>
+            <ChatClearButton />
             <button
               id={'channelFilesBtn'}
               className={'small-btn'}
@@ -26,14 +28,12 @@ export function ChatPanel() {
             </button>
           </div>
         </div>
-        <button id={'olderChatMessages'} type={'button'} className={'older-chat-messages hidden'}>
-          Mensagens anteriores
-        </button>
-        <div id={'courtChatMessages'} className={'court-chat-messages'} aria-live={'polite'}></div>
+        <ChatMessages />
         <ChatComposer />
         <small className={'chat-help'}>
           Enter envia • 10 MB por arquivo • 100 MB por vídeo MP4/WebM • 300 caracteres
         </small>
+        <ChatModerationDialog />
       </section>
     </>
   );

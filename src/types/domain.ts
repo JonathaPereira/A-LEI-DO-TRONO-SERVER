@@ -11,6 +11,18 @@ export interface Channel {
   voiceActive: boolean;
 }
 
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  mime: string;
+  bytes: number;
+  ownerId?: string;
+  roomId?: string | null;
+  kind?: string;
+  createdAt?: string;
+  deleted?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   roomId: string;
@@ -20,7 +32,9 @@ export interface ChatMessage {
   seat: number;
   accountId: string | null;
   ts: number;
-  attachment?: { id: string; name: string; mime: string; bytes: number } | null;
+  avatar_preset?: string;
+  avatar_file_id?: string | null;
+  attachment?: ChatAttachment | null;
 }
 
 export interface VoiceControlState {

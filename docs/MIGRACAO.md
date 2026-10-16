@@ -17,12 +17,14 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Transporte WebSocket em TypeScript, com pendências e fila de identidade únicas.
 - Comandos e estado de participação em TypeScript; `legacy/network.js` removido.
 - Compositor React com rascunho, emojis e ciclo de upload tipado; adaptador de envio removido.
+- Lista React com histórico, paginação, revisões e moderação em TypeScript.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
 React ou TypeScript apenas porque a marcação foi convertida. Captura WebRTC,
-renderização de mensagens, anexos e jogos permanecem nesses controladores.
+avatares/anexos compartilhados, canais, notificações e jogos permanecem nesses controladores.
+Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
 Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
 Os payloads de jogos e sinalização ainda não têm validação completa nesse módulo.
 `server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
@@ -120,8 +122,8 @@ backend de teste. Não houve publicação ou mudança em serviços remotos.
   desconexão preserva texto e cancela o arquivo selecionado/ativo.
 - Removidos o adaptador `lib/socket/chat-actions.ts`, o envio de `TronoSocial`, o
   estado de upload e os listeners antigos de arquivo/emojis em `legacy/social.js`.
-  Histórico e moderação continuam no controlador e somente delegam feedback ao
-  novo módulo. O React é o único responsável pelo campo e pelo feedback.
+  Histórico e moderação continuavam no controlador e delegavam feedback ao novo
+  módulo; foram convertidos na etapa seguinte. O React possui o campo e o feedback.
 
 Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
 113 testes, incluindo 13 em `test:chat`), `test:ui` (3), moderação no navegador (1)
@@ -130,15 +132,46 @@ ao backend local e armazenamento simulado, cancelamento, falha de persistência 
 paginação de 55 mensagens sem duplicatas após recarga. No Electron, o envio em um
 canal de texto preservou socket, peers, trilhas de mídia e jogo ativo. Nada publicado.
 
+## Mensagens, histórico e moderação — 16/10/2026
+
+- `lib/chat/messages.ts` possui mensagens, revisões, cursor, paginação e moderação.
+  Uma única assinatura do cliente de rede recebe eventos; não há socket adicional.
+  `message-protocol.ts` valida cada página inteira antes de aceitar sua revisão.
+  Mensagens e anexos são imutáveis; a mesclagem elimina IDs duplicados e preserva
+  a identidade das linhas existentes. Revisões antigas não restauram exclusões.
+- `chat-messages.tsx` possui lista, botão de histórico e diálogo em React.
+  O snapshot anterior à alteração do DOM preserva a posição de leitura ao carregar
+  mensagens anteriores. Texto usa o escape do React, e datas incluem dia e ano.
+- Confirmações pertencem ao canal e expiram ao navegar, trocar de conta, desconectar,
+  perder permissão ou receber a exclusão da mensagem escolhida. Respostas precisam
+  coincidir em requisição, canal, ação e mensagem; timeouts liberam operações pendentes.
+  Descartar o controlador remove listeners e impede novos pedidos. O backend mantém
+  a decisão final de autorização; somente criadores veem controles em canais de texto.
+- Avatares e anexos continuam nos renderizadores compartilhados usados também por
+  perfis e DMs. Cada host vazio tem um dono e limpeza explícita; o anexo recebe uma
+  cópia para que o renderizador antigo não altere o estado imutável do chat.
+- Removidas cerca de 250 linhas substituídas de `legacy/social.js`, incluindo estado,
+  listeners, renderização e moderação antigos. Não lidas e sons continuam ali pelo
+  pequeno ponto de integração `onChatActivity`; captura e jogos não foram duplicados.
+  O arquivo permanece porque ainda contém esses outros recursos ativos.
+
+Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
+127 testes, incluindo 27 em `test:chat`), `test:ui` (3), moderação no navegador (1)
+e `test:desktop:layout` (1) passaram. O navegador conferiu paginação de 55 mensagens
+sem duplicatas e com âncora de rolagem preservada, exclusão de anexo compartilhado
+e cancelamento da confirmação ao trocar de canal. O Electron preservou socket,
+peers, trilhas e jogo durante o envio. Backend e armazenamento de teste são locais;
+nenhum serviço remoto foi alterado e nada foi publicado.
+
 ## Próximas alterações, em ordem
 
-1. Converter lista de mensagens, paginação, revisões e moderação de `legacy/social.js`
-   para estado React. Compositor e ciclo de upload já foram extraídos para `lib/chat/`.
+1. Converter listas de canais para estado React. Consumir o cliente e seu snapshot
+   de `lib/socket/`; não criar sockets, mapas de pendências ou filas de identidade
+   nos componentes. Compositor, mensagens e moderação já estão em `lib/chat/`.
    Manter transporte HTTP e visualização de arquivos compartilhados em um único
    módulo ao converter `legacy/profile-files.js`, pois também atendem perfis e DMs.
-   Converter listas de canais. Consumir o cliente e seu snapshot de `lib/socket/`; não criar
-   sockets, mapas de pendências ou filas de identidade nos componentes.
-   Validar anexos, histórico, moderação e os respectivos payloads do protocolo.
+   Converter o renderizador compartilhado de avatares e substituir os hosts temporários
+   conforme esses módulos forem convertidos.
 2. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.

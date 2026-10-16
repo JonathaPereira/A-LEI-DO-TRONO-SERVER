@@ -36,7 +36,7 @@
     "format": "prettier --write src server electron scripts",
     "format:check": "prettier --check src server electron scripts",
     "desktop:dev": "node scripts/dev-desktop.cjs",
-    "test:chat": "node --test tests/chat-composer.cjs",
+    "test:chat": "node --test tests/chat-composer.cjs tests/chat-messages.cjs",
     "test:socket": "node --test tests/socket-transport.cjs tests/socket-client.cjs tests/socket-network.cjs",
     "test:server:lifecycle": "node --test tests/server-lifecycle.cjs tests/server-modules.cjs",
     "test:ui": "node --test tests/chat-composer-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js"

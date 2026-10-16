@@ -1,3 +1,5 @@
+import type { ChatMessage } from './domain';
+
 export interface ChatUploadOptions {
   roomId: string;
   signal: AbortSignal;
@@ -17,3 +19,25 @@ export interface ComposerSnapshot {
   readonly status: string;
   readonly focusVersion: number;
 }
+
+export type ModerationAction =
+  { readonly action: 'clear' } | { readonly action: 'delete'; readonly id: string };
+
+export type ModerationChoice = ModerationAction & { readonly roomId: string };
+
+export interface MessagesSnapshot {
+  readonly roomId: string | null;
+  readonly messages: readonly ChatMessage[];
+  readonly before: string | null;
+  readonly hasMore: boolean;
+  readonly loadingOlder: boolean;
+  readonly canModerate: boolean;
+  readonly accountId: string | null;
+  readonly clientId: string | null;
+  readonly viewVersion: number;
+  readonly change: 'replace' | 'append' | 'prepend' | 'remove';
+  readonly choice: ModerationChoice | null;
+  readonly pending: (ModerationChoice & { readonly requestId: string }) | null;
+}
+
+export type ChatActivity = { type: 'read' } | { type: 'message'; message: ChatMessage };

@@ -161,15 +161,38 @@ test(
         .toBe('chat-livre');
       await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
       await expect(messages.locator('.court-chat-msg')).toHaveCount(50);
+      const anchor = await messages.evaluate((element) => {
+        element.scrollTop = 0;
+        const first = element.firstElementChild;
+        return {
+          id: first.dataset.messageId,
+          y: first.getBoundingClientRect().top - element.getBoundingClientRect().top,
+        };
+      });
       await page.locator('#olderChatMessages').click();
       await expect(messages.locator('.court-chat-msg')).toHaveCount(55);
       await expect(messages.locator('.file-download')).toContainText('documento.pdf');
+      const anchorY = await messages
+        .locator('[data-message-id="' + anchor.id + '"]')
+        .evaluate(
+          (element) =>
+            element.getBoundingClientRect().top - element.parentElement.getBoundingClientRect().top,
+        );
+      assert(
+        Math.abs(anchorY - anchor.y) <= 2,
+        'older messages preserve the visible scroll anchor',
+      );
+
       assert.equal(
         await messages
           .locator('.court-chat-msg')
           .evaluateAll((rows) => new Set(rows.map((row) => row.dataset.messageId)).size),
         55,
       );
+      page.once('dialog', (dialog) => void dialog.accept());
+      await messages.locator('.file-delete').click();
+      await expect(messages.locator('.chat-attachment')).toContainText('Arquivo excluído.');
+      await expect.poll(() => fixture.files.size).toBe(0);
       assert.deepEqual(errors, []);
     } finally {
       await browser?.close();
