@@ -23,11 +23,12 @@ window.TronoCommunityAdmin = (() => {
     if (!window.TronoAuth.user) return [];
     if (loading) return loading;
     const version = requestVersion;
+    const catalogVersion = window.TronoChannels.getSnapshot().version;
     loading = (async () => {
       const data = await api('/channels');
       if (version !== requestVersion) return [];
       channels = data.channels.map((c) => ({ ...c, type: c.channel_type }));
-      window.TronoChatHub.setChannels(channels);
+      window.TronoChannels.replace(channels, catalogVersion);
       window.TronoNetwork.requestChatChannels();
       renderChannels();
       return channels;

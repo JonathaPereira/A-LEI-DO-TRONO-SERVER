@@ -13,11 +13,8 @@ import type { ChatAttachment, ChatMessage } from '../../types/domain';
 import type { MessagesSnapshot } from '../../types/chat';
 import { EMPTY_MESSAGES } from '../../lib/chat/messages';
 import type { ChatMessagesController } from '../../lib/chat/messages';
-import {
-  initializeChatMessages,
-  renderMessageAvatar,
-  renderMessageAttachment,
-} from '../../lib/chat/browser';
+import { initializeChatMessages, renderMessageAttachment } from '../../lib/chat/browser';
+import { renderProfileAvatar } from '../../lib/profiles/avatar';
 
 const emptySubscribe = () => () => {};
 const emptySnapshot = () => EMPTY_MESSAGES;
@@ -39,7 +36,7 @@ function Avatar({ message, version }: { message: ChatMessage; version: number })
   useLayoutEffect(() => {
     const element = host.current;
     if (!element) return;
-    renderMessageAvatar(element, message);
+    renderProfileAvatar(element, message);
     return () => element.replaceChildren();
   }, [message.avatar_file_id, message.avatar_preset, version]);
   return <span className="chat-author-icon" ref={host} />;

@@ -200,14 +200,17 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     }, body: JSON.stringify({name: 'Layout texto', type: 'text', description: ''})});
     assert.equal(created.status, 200);
     const {channel} = await created.json();
-    await page.evaluate(id => window.TronoNetwork.joinTextChannel(id), channel.id);
+    await expect(page.locator('[data-chat-channel="' + channel.id + '"]')).toBeVisible();
+    await page.locator('[data-chat-channel="' + channel.id + '"]').click();
+    await expect(page.locator('[data-chat-channel="' + channel.id + '"]')).toHaveAttribute('aria-current', 'page');
     await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe(channel.id);
     await page.locator('#courtChatInput').fill('Compositor React com voz e jogo ativos');
     await page.locator('#courtChatSend').click();
     await expect(page.locator('#courtChatMessages')).toContainText('Compositor React com voz e jogo ativos');
     await expect(page.locator('#courtChatInput')).toHaveValue('');
     await preserved();
-    await page.evaluate(() => window.TronoNetwork.joinRoom('chat-jogos'));
+    await page.locator('[data-chat-channel="chat-jogos"]').click();
+    await expect(page.locator('[data-chat-channel="chat-jogos"]')).toHaveAttribute('aria-current', 'page');
     await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe('chat-jogos');
     await preserved();
 

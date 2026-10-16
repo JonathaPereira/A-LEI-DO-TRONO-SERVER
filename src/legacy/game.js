@@ -2552,17 +2552,17 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
   }
   storage.setItem('tronoPlayerName', name);
   await window.TronoCommunityAdmin?.refresh?.().catch(() => {});
-  const requested = CHAT_CHANNEL_CATALOG.has(channelId) ? channelId : null,
+  const requested = window.TronoChannels.get(channelId) ? channelId : null,
     current = window.TronoNetwork.currentRoom;
-  const restoreCurrent = CHAT_CHANNEL_CATALOG.has(current) && (!requested || requested === current);
+  const restoreCurrent = window.TronoChannels.get(current) && (!requested || requested === current);
   const preserveVoice =
     !requested && window.TronoNetwork.independentGameVoice && window.TronoSocial.voiceJoined;
   if (!requested)
     channelId = preserveVoice
-      ? [...CHAT_CHANNEL_CATALOG.values()].find((c) => c.type !== 'voice')?.id
+      ? window.TronoChannels.getSnapshot().channels.find((c) => c.type !== 'voice')?.id
       : (window.TronoDesktop
-          ? [...CHAT_CHANNEL_CATALOG.values()].find((c) => c.type !== 'text')?.id
-          : null) || CHAT_CHANNEL_CATALOG.keys().next().value;
+          ? window.TronoChannels.getSnapshot().channels.find((c) => c.type !== 'text')?.id
+          : null) || window.TronoChannels.getSnapshot().channels[0]?.id;
   if (!window.TronoNetwork.gameRoom) {
     selectedRoom = null;
     onlineRoomState = null;
@@ -2607,7 +2607,7 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
   $('chatOnlyStatus').textContent = 'Abrindo a comunidade...';
   void ensureAudio().catch(() => {});
   try {
-    const textSubscription = preserveVoice || CHAT_CHANNEL_CATALOG.get(channelId)?.type === 'text',
+    const textSubscription = preserveVoice || window.TronoChannels.get(channelId)?.type === 'text',
       wasInVoice = window.TronoSocial.voiceJoined;
     if (!textSubscription && window.TronoNetwork.primaryRoom !== channelId && wasInVoice)
       await window.TronoSocial.leaveVoice();
@@ -2626,26 +2626,18 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
   }
   return true;
 }
-const CHAT_CHANNEL_NAMES = {
-  'chat-livre': 'Geral',
-  'chat-jogos': 'Jogos',
-  'chat-conversa': 'Conversa',
-};
-const CHAT_CHANNEL_CATALOG = new Map(
-  Object.entries(CHAT_CHANNEL_NAMES).map(([id, name]) => [id, { id, name, type: 'mixed' }]),
-);
 let chatChannelSwitching = false;
 let chatChannelResumeVoice = null;
 async function switchChatChannel(channelId, { connectVoice = false } = {}) {
-  if (!chatOnlyMode || chatChannelSwitching || !CHAT_CHANNEL_CATALOG.has(channelId)) return;
+  if (!chatOnlyMode || chatChannelSwitching || !window.TronoChannels.get(channelId)) return;
   if (
     window.TronoNetwork?.currentRoom === channelId &&
-    (CHAT_CHANNEL_CATALOG.get(channelId)?.type === 'text' ||
+    (window.TronoChannels.get(channelId)?.type === 'text' ||
       window.TronoNetwork.primaryRoom === channelId)
   ) {
     if (
       connectVoice &&
-      CHAT_CHANNEL_CATALOG.get(channelId)?.type !== 'text' &&
+      window.TronoChannels.get(channelId)?.type !== 'text' &&
       !window.TronoSocial.voiceJoined
     )
       await window.TronoSocial.joinVoice();
@@ -2654,7 +2646,7 @@ async function switchChatChannel(channelId, { connectVoice = false } = {}) {
   chatChannelSwitching = true;
   try {
     const wasInVoice = Boolean(window.TronoSocial?.voiceJoined);
-    const textChannel = CHAT_CHANNEL_CATALOG.get(channelId)?.type === 'text';
+    const textChannel = window.TronoChannels.get(channelId)?.type === 'text';
     const keepVoice = textChannel || channelId === window.TronoNetwork.primaryRoom;
     if (!keepVoice) await window.TronoSocial?.leaveVoice?.();
     const name = (
@@ -2678,7 +2670,7 @@ async function switchChatChannel(channelId, { connectVoice = false } = {}) {
     if (!online) throw new Error('Servidor indisponível.');
     $('chatOnlyStatus').textContent = textChannel
       ? 'Abrindo mensagens...'
-      : `Entrando no canal ${CHAT_CHANNEL_CATALOG.get(channelId).name}...`;
+      : `Entrando no canal ${window.TronoChannels.get(channelId).name}...`;
     window.TronoSocial?.clearChannelChat?.();
   } catch (err) {
     chatChannelResumeVoice = false;
@@ -2687,55 +2679,6 @@ async function switchChatChannel(channelId, { connectVoice = false } = {}) {
     chatChannelSwitching = false;
   }
 }
-function renderChatChannels(channels = []) {
-  const host = $('chatChannelList'),
-    textHost = $('textChannelList');
-  if (!host || !textHost) return;
-  CHAT_CHANNEL_CATALOG.clear();
-  for (const c of channels) if (c && typeof c.id === 'string') CHAT_CHANNEL_CATALOG.set(c.id, c);
-  const selected = window.TronoNetwork?.currentRoom;
-  host.replaceChildren();
-  textHost.replaceChildren();
-  for (const c of CHAT_CHANNEL_CATALOG.values()) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'mn-channel' + (c.id === selected ? ' active' : '');
-    button.dataset.chatChannel = c.id;
-    button.setAttribute('aria-current', c.id === selected ? 'page' : 'false');
-    const icon = document.createElement('span');
-    icon.className = 'channel-kind-icon';
-    icon.textContent = c.type === 'text' ? '#' : '♬';
-    const copy = document.createElement('span');
-    copy.className = 'mn-channel-meta';
-    const name = document.createElement('strong');
-    name.textContent = c.name;
-    const info = document.createElement('small');
-    info.textContent =
-      c.type === 'text'
-        ? 'Canal de texto'
-        : `${Number(c.count) || 0} pessoas${c.voiceActive ? ' · voz ativa' : ''}${c.type === 'mixed' ? ' · texto e voz' : ''}`;
-    copy.append(name, info);
-    button.append(icon, copy);
-    (c.type === 'text' ? textHost : host).appendChild(button);
-  }
-  for (const target of [host, textHost])
-    if (!target.children.length) {
-      const empty = document.createElement('small');
-      empty.className = 'channel-empty';
-      empty.textContent = 'Nenhum canal';
-      target.appendChild(empty);
-    }
-  window.TronoCommunity?.renderRoomIcons?.();
-  window.TronoNotifications?.render?.();
-}
-$('chatChannelList')?.addEventListener('click', (e) => {
-  const channel = e.target.closest('[data-chat-channel]');
-  if (channel) void switchChatChannel(channel.dataset.chatChannel, { connectVoice: true });
-});
-$('textChannelList')?.addEventListener('click', (e) => {
-  const channel = e.target.closest('[data-chat-channel]');
-  if (channel) void switchChatChannel(channel.dataset.chatChannel);
-});
 async function leaveChatOnly() {
   chatChannelResumeVoice = null;
   try {
@@ -2837,8 +2780,6 @@ window.TronoNetwork?.onMessage((msg) => {
     $('networkStatus').textContent =
       `Servidor multiplayer conectado • ${msg.serverVersion || 'online'}.`;
   }
-  if (msg.type === 'chat-channels' || (msg.type === 'welcome' && msg.chatChannels))
-    renderChatChannels(msg.channels || msg.chatChannels);
   if (msg.type === 'channel-deleted' && chatOnlyMode && msg.roomId === chatOnlyRoomState?.id) {
     chatOnlyRoomState = null;
     chatChannelResumeVoice = false;
@@ -3223,9 +3164,8 @@ window.TronoChatHub = {
   enter: enterChatOnly,
   leave: leaveChatOnly,
   switchChannel: switchChatChannel,
-  setChannels: renderChatChannels,
   get channels() {
-    return [...CHAT_CHANNEL_CATALOG.values()];
+    return window.TronoChannels.getSnapshot().channels;
   },
 };
 window.__LeiDoTrono = {

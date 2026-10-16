@@ -86,21 +86,7 @@ window.TronoNotifications = (() => {
     else window.TronoMessenger.openFriends();
   }
   function render() {
-    for (const el of document.querySelectorAll('[data-chat-channel]')) {
-      const id = el.dataset.chatChannel;
-      el.classList.toggle('channel-muted', muted(id));
-      let badge = el.querySelector('.channel-unread');
-      const count = counts.get(id) || 0;
-      if (count) {
-        if (!badge) {
-          badge = document.createElement('span');
-          badge.className = 'channel-unread';
-          el.append(badge);
-        }
-        badge.textContent = String(Math.min(count, 99));
-        badge.setAttribute('aria-label', count + ' mensagens não lidas');
-      } else badge?.remove();
-    }
+    window.dispatchEvent(new Event('trono-channel-notifications-change'));
     const select = document.getElementById('notificationChannel');
     if (select) {
       const selected = select.value;
@@ -186,15 +172,6 @@ window.TronoNotifications = (() => {
           if (visibleChannel(event.room.id)) channelRead(event.room.id);
         });
     });
-    const channelsHost = document.getElementById('chatChannelList'),
-      textHost = document.getElementById('textChannelList');
-    for (const host of [channelsHost, textHost])
-      new MutationObserver(() => {
-        for (const el of host.children) {
-          const id = el.dataset.chatChannel;
-          if (id) el.classList.toggle('channel-muted', muted(id));
-        }
-      }).observe(host, { childList: true });
     for (const type of ['focus', 'pointerdown'])
       window.addEventListener(type, () => {
         if (visibleChannel(window.TronoNetwork.currentRoom))
@@ -205,5 +182,8 @@ window.TronoNotifications = (() => {
       if (event.detail.key === 'notifications' || event.detail.key.startsWith('mute:')) sync();
     });
   });
-  return { notify, allowed, muted, mute, channelRead, render };
+  function getChannelState(id) {
+    return { unread: counts.get(id) || 0, muted: muted(id) };
+  }
+  return { notify, allowed, muted, mute, channelRead, render, getChannelState };
 })();

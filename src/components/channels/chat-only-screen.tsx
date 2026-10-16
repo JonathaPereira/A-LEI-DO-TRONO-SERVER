@@ -1,3 +1,5 @@
+import { ChannelList } from './channel-list';
+
 export function ChatOnlyScreen() {
   return (
     <>
@@ -111,13 +113,9 @@ export function ChatOnlyScreen() {
           </div>
           <div className={'mn-sidebar-scroll'}>
             <div className={'mn-sidebar-label'}>TEXTO</div>
-            <div id={'textChannelList'} className={'mn-channel-list'}>
-              <small className={'channel-empty'}>Carregando…</small>
-            </div>
+            <ChannelList group="text" />
             <div className={'mn-sidebar-label'}>SALAS DE VOZ</div>
-            <div id={'chatChannelList'} className={'mn-channel-list'}>
-              <span className={'mn-channel-loading'}>Carregando canais...</span>
-            </div>
+            <ChannelList group="voice" />
           </div>
           <div className={'mn-sidebar-bottom'}>
             <span className={'mn-online-dot'}></span>

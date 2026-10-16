@@ -2,6 +2,11 @@ export type AccountRole = 'guest' | 'member' | 'admin' | 'creator';
 export type ChannelType = 'text' | 'voice' | 'mixed';
 export type MediaTransport = 'p2p' | 'sfu' | 'sfu-pending';
 
+export interface AvatarAppearance {
+  readonly avatar_preset?: string;
+  readonly avatar_file_id?: string | null;
+}
+
 export interface Channel {
   id: string;
   name: string;

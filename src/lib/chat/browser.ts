@@ -1,6 +1,6 @@
 import type { ChatFiles } from '../../types/chat';
 import type { ChatActivity } from '../../types/chat';
-import type { ChatAttachment, ChatMessage } from '../../types/domain';
+import type { ChatAttachment } from '../../types/domain';
 import { createChatMessages } from './messages.ts';
 import type { ChatMessagesController } from './messages.ts';
 import { initializeNetwork } from '../socket/browser.ts';
@@ -16,7 +16,6 @@ interface ChatRuntime
   TronoSocial?: NonNullable<NetworkRuntime['TronoSocial']> & {
     onChatActivity?(activity: ChatActivity): void;
   };
-  TronoProfile?: { avatarHtml(message: ChatMessage): string; hydrate(host: HTMLElement): void };
 }
 
 export function initializeChatMessages(runtime: ChatRuntime): ChatMessagesController {
@@ -40,11 +39,6 @@ export function initializeChatMessages(runtime: ChatRuntime): ChatMessagesContro
 }
 
 /** These empty React hosts belong to the shared legacy renderers until their conversion. */
-export function renderMessageAvatar(host: HTMLElement, message: ChatMessage): void {
-  const profile = (window as ChatRuntime).TronoProfile;
-  host.innerHTML = profile?.avatarHtml(message) ?? '👤';
-  profile?.hydrate(host);
-}
 export function renderMessageAttachment(host: HTMLElement, attachment: ChatAttachment): void {
   (window as ChatRuntime).TronoFiles?.renderAttachment?.(host, { ...attachment });
 }

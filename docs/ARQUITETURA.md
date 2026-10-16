@@ -48,7 +48,27 @@ com seus consumidores; o protocolo inteiro ainda não está tipado.
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
 para consumidores não convertidos. `legacy/network.js` e sua entrada no manifesto
-foram excluídos. O estado ainda não é renderizado em React.
+foram excluídos. O catálogo de canais consome esse snapshot para refletir a seleção
+imediatamente, sem esperar outro broadcast da lista.
+
+`lib/channels/catalog.ts` possui um catálogo imutável por página, inicializado em
+`browser.ts`. Recebe listas do socket e metadados HTTP, validados em `protocol.ts`.
+Uma resposta HTTP só é aplicada se o catálogo e a conta não mudaram durante a
+requisição; não pode desfazer um broadcast ou recriar um canal excluído. Metadados
+sem contagem/presença preservam os valores recebidos da rede. Trocar de conta
+descarta os participantes privados do catálogo anterior.
+
+`components/channels/channel-list.tsx` renderiza texto e voz, seleção, presença,
+silenciamento e não lidas. `legacy/notifications.js` ainda possui os contadores,
+preferências e avisos; publica mudanças e expõe `getChannelState()` sem escrever
+nos botões React. `legacy/community.js` mantém apenas os ícones das mesas de jogo.
+`lib/profiles/avatar.ts` compartilha o host do renderizador de perfil entre chat
+e canais, sem duplicar acesso a arquivos ou resolver URLs no catálogo.
+
+A navegação do hub e a troca de chamada continuam em `legacy/game.js` e
+`legacy/social.js`. Os cliques React delegam a esse fluxo, que consulta o catálogo
+tipado; ele não conserva outra lista nem listeners DOM de seleção de canais.
+O gerenciamento de canais e seus diálogos permanecem em `legacy/community-admin.js`.
 
 ## Compatibilidade durante a conversão
 

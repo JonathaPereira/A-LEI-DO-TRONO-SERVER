@@ -3,7 +3,6 @@ window.TronoCommunity = (() => {
   const $ = (id) => document.getElementById(id);
   let snapshot = null,
     rooms = [],
-    channels = [],
     lastChatMode = null,
     open = false,
     authenticating = false;
@@ -160,17 +159,6 @@ window.TronoCommunity = (() => {
       const card = document.querySelector(`article.room-card[data-room="${room.id}"]`);
       if (card) icons(card, room.players || []);
     }
-    for (const channel of channels) {
-      const button = document.querySelector(`[data-chat-channel="${channel.id}"]`);
-      if (button) {
-        if (channel.type === 'text') button.querySelector('.room-presence-icons')?.remove();
-        else
-          icons(
-            button,
-            (channel.players || []).filter((player) => player.inVoice),
-          );
-      }
-    }
   }
   function toggle(value) {
     open = typeof value === 'boolean' ? value : !open;
@@ -248,10 +236,6 @@ window.TronoCommunity = (() => {
       }
       if (msg.type === 'rooms' || msg.type === 'welcome') {
         rooms = msg.rooms || rooms;
-        renderRoomIcons();
-      }
-      if (msg.type === 'chat-channels') {
-        channels = msg.channels || [];
         renderRoomIcons();
       }
       if (msg.type === 'connection' && !msg.connected) {

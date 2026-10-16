@@ -18,12 +18,15 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Comandos e estado de participação em TypeScript; `legacy/network.js` removido.
 - Compositor React com rascunho, emojis e ciclo de upload tipado; adaptador de envio removido.
 - Lista React com histórico, paginação, revisões e moderação em TypeScript.
+- Listas de canais React com catálogo tipado, seleção, presença e indicadores de notificação.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
 React ou TypeScript apenas porque a marcação foi convertida. Captura WebRTC,
-avatares/anexos compartilhados, canais, notificações e jogos permanecem nesses controladores.
+avatares/anexos compartilhados, navegação/gerenciamento de canais, notificações e jogos
+permanecem nesses controladores. As listas de canais já são renderizadas em React;
+o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
 Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
 Os payloads de jogos e sinalização ainda não têm validação completa nesse módulo.
@@ -163,20 +166,49 @@ e cancelamento da confirmação ao trocar de canal. O Electron preservou socket,
 peers, trilhas e jogo durante o envio. Backend e armazenamento de teste são locais;
 nenhum serviço remoto foi alterado e nada foi publicado.
 
+## Catálogo e listas de canais — 16/10/2026
+
+- `lib/channels/catalog.ts` concentra catálogo, seleção recebida de `lib/socket/`
+  e projeção dos indicadores de notificação. `protocol.ts` valida listas e
+  participantes antes de aplicar uma atualização; snapshots e dados são imutáveis.
+  Duplicatas e páginas inválidas não alteram a lista anterior.
+- A atualização HTTP de `community-admin.js` registra a geração do catálogo.
+  Respostas atrasadas não substituem broadcasts posteriores nem ressuscitam canais
+  excluídos. Metadados sem informações de presença preservam os dados ao vivo;
+  mudanças de conta removem participantes privados e invalidam a requisição antiga.
+- `ChannelList` possui botões, grupos de texto/voz, canal selecionado, até oito
+  avatares com indicador de excedentes, não lidas e silenciamento em React.
+  O renderizador de avatar compartilhado também atende mensagens, sem implementar
+  outro transporte de imagens. O destaque de seleção acompanha o snapshot da rede.
+- Removidos o catálogo duplicado, renderização, listeners de clique e listener de
+  lista em `game.js`; retiradas as escritas nos canais em `community.js` e
+  `notifications.js`, incluindo os MutationObservers de silenciamento. Notificações
+  ainda possuem seus contadores/preferências e agora publicam uma projeção para React.
+- Navegação, bloqueio de troca concorrente e retomada de voz continuam no fluxo
+  existente do hub. O gerenciamento e seus diálogos continuam no controlador próprio.
+  Não há socket, captura, peer ou proprietário de chamada adicional nesta conversão.
+
+Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
+136 testes, incluindo 9 em `test:channels`), `test:ui` (4) e
+`test:desktop:layout` (1) passaram. O teste novo usa backend local para criar canais,
+clicar texto/voz, verificar não lidas/silenciamento e excluir o texto selecionado
+sem encerrar a chamada. O Electron usa os próprios botões React ao trocar para texto
+e voltar, preservando socket, peers, microfone, câmera, tela e jogo. Os serviços
+externos são simulados; nada foi publicado nem alterado em infraestrutura remota.
+
 ## Próximas alterações, em ordem
 
-1. Converter listas de canais para estado React. Consumir o cliente e seu snapshot
-   de `lib/socket/`; não criar sockets, mapas de pendências ou filas de identidade
-   nos componentes. Compositor, mensagens e moderação já estão em `lib/chat/`.
-   Manter transporte HTTP e visualização de arquivos compartilhados em um único
-   módulo ao converter `legacy/profile-files.js`, pois também atendem perfis e DMs.
-   Converter o renderizador compartilhado de avatares e substituir os hosts temporários
-   conforme esses módulos forem convertidos.
+1. Converter os renderizadores e o transporte HTTP de arquivos compartilhados,
+   mantendo uma única implementação para chat, perfis e DMs ao retirar
+   `legacy/profile-files.js`. Converter o renderizador de avatares e substituir
+   os hosts temporários. Compositor, mensagens e moderação já estão em `lib/chat/`;
+   catálogo e listas de canais estão em `lib/channels/` e React.
 2. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
-3. Converter perfis/configurações e jogos. Cada controlador convertido perde
-   sua entrada no manifesto e seus listeners DOM.
+3. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
+   e jogos. Cada controlador convertido perde sua entrada no manifesto e seus
+   listeners DOM. Não recriar o catálogo, socket ou estado de participação no processo.
 4. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
    de `createApplication`. Converter os módulos JS por domínio.
 5. Consolidar estilos por domínio após retirar os controladores. A ordem atual
