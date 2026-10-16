@@ -52,6 +52,23 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         localStorage.setItem('mn-personal:' + accountId, JSON.stringify({appLayout: layout}));
         window.__layoutPeers = [];
         window.__layoutDescriptions = [];
+        const trackListeners = new WeakMap();
+        window.__receiveListenerCount = track => [...(trackListeners.get(track)?.values() || [])].reduce((n, listeners) => n + listeners.size, 0);
+        const addTrackListener = MediaStreamTrack.prototype.addEventListener;
+        const removeTrackListener = MediaStreamTrack.prototype.removeEventListener;
+        MediaStreamTrack.prototype.addEventListener = function(type, listener, options) {
+          if (['ended', 'mute', 'unmute'].includes(type)) {
+            if (!trackListeners.has(this)) trackListeners.set(this, new Map());
+            const types = trackListeners.get(this);
+            if (!types.has(type)) types.set(type, new Set());
+            types.get(type).add(listener);
+          }
+          return addTrackListener.call(this, type, listener, options);
+        };
+        MediaStreamTrack.prototype.removeEventListener = function(type, listener, options) {
+          trackListeners.get(this)?.get(type)?.delete(listener);
+          return removeTrackListener.call(this, type, listener, options);
+        };
         const Peer = window.RTCPeerConnection;
         window.RTCPeerConnection = class extends Peer {
           constructor(config) { super({...config, iceServers: [], iceCandidatePoolSize: 0}); window.__layoutPeers.push(this); }
@@ -341,6 +358,10 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack() === window.__layoutBaseline.mic), true);
 
     // Leaving while a display picker is pending releases the late native track.
+    await receiver.evaluate(() => {
+      window.__retiredReceiveTracks = window.__layoutPeers.flatMap(pc => pc.getReceivers().map(r => r.track)).filter(track => window.__receiveListenerCount(track) > 0);
+      if (window.__retiredReceiveTracks.length < 2) throw new Error('Receiver fixture did not bind media listeners');
+    });
     await page.evaluate(() => {
       window.__delayDisplay = true;
       window.__pendingDisplay = window.TronoSocial.startScreenShare();
@@ -354,6 +375,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.__pendingDisplay), false);
     assert.equal(await page.evaluate(() => window.__lateDisplay.getTracks().every(track => track.readyState === 'ended')), true);
     assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
+    await expect.poll(() => receiver.evaluate(() => window.__retiredReceiveTracks.every(track => window.__receiveListenerCount(track) === 0))).toBe(true);
     assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
 
     // A late camera permission cannot replace a camera from a newer call.
@@ -384,6 +406,20 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await window.__releaseCamera();
     });
     await expect.poll(() => page.evaluate(() => window.__lateCameraTracks.every(track => track.readyState === 'ended') && window.TronoSocial.cameraOn && window.__newCallCamera.readyState === 'live' && window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0] === window.__newCallCamera)).toBe(true);
+    await expect.poll(() => receiver.evaluate(id => {
+      const track = window.TronoSocial.getMediaSources().find(source => source.id === id)?.camera?.getVideoTracks()[0];
+      return track?.readyState === 'live' && !track.muted && window.__receiveListenerCount(track) === 3;
+    }, senderId)).toBe(true);
+    await receiver.evaluate(id => {
+      window.__currentReceiveCamera = window.TronoSocial.getMediaSources().find(source => source.id === id).camera.getVideoTracks()[0];
+      for (const track of window.__retiredReceiveTracks)
+        for (const type of ['mute', 'unmute', 'ended']) track.dispatchEvent(new Event(type));
+    }, senderId);
+    await expect.poll(() => receiver.evaluate(id => {
+      const track = window.TronoSocial.getMediaSources().find(source => source.id === id)?.camera?.getVideoTracks()[0];
+      const video = [...document.querySelectorAll('video')].find(v => v.srcObject?.getVideoTracks().includes(track));
+      return track === window.__currentReceiveCamera && track?.readyState === 'live' && video?.getVideoPlaybackQuality().totalVideoFrames > 0;
+    }, senderId)).toBe(true);
 
     // A permission result arriving after leave must release its device and never rejoin.
     await page.evaluate(async () => {

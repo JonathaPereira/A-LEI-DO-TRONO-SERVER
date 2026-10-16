@@ -3,12 +3,8 @@ window.TronoSocial = (() => {
   const $ = (id) => document.getElementById(id);
   const storage = window.TronoStorage || localStorage;
   const remoteAudio = new Map();
-  const remoteAvStreams = new Map();
-  const remoteScreenStreams = new Map();
   const voiceMeters = new Map();
   const speakingPeers = new Set();
-  const videoRetryTimers = new Map();
-  const mediaHealthyAt = new Map();
   const privateVoiceRoster = new Map();
   const profileActivities = new Map();
   const sfuLocalPublications = new Map();
@@ -240,7 +236,9 @@ window.TronoSocial = (() => {
     const screen = id.startsWith('stream:'),
       peerId = screen ? id.slice(7) : id;
     if (screen && !watchingStreams.has(peerId)) return;
-    const sourceStream = screen ? remoteScreenStreamFor(peerId) : remoteAvStreamFor(peerId);
+    const sourceStream = screen
+      ? remoteMedia.getStreams(peerId).screen
+      : remoteMedia.getStreams(peerId).av;
     const currentTrack = sourceStream.getAudioTracks().find((t) => t.readyState === 'live');
     if (!currentTrack) return;
     let state = remotePlayback.get(id);
@@ -328,9 +326,7 @@ window.TronoSocial = (() => {
     if (watchingStreams.has(id)) {
       watchingStreams.delete(id);
       removeRemoteAudio(streamAudioKey(id));
-      const retry = videoRetryTimers.get(id);
-      clearTimeout(retry);
-      videoRetryTimers.delete(id);
+      remoteMedia.cancelRecovery(id);
       if (transportIsSfu())
         for (const kind of ['screen', 'screen-audio']) void closeSfuSubscription(sfuKey(id, kind));
       const tile = findPeerTile($('screenShareGrid'), id, '.screen-share-tile'),
@@ -548,12 +544,40 @@ window.TronoSocial = (() => {
     applyQuality: applySenderQuality,
     sendSignal: (id, type, data) => window.TronoNetwork?.sendVoiceSignal(id, type, data),
     getScreenWatch: (id) => watchingStreams.has(id),
-    onTrack: attachRemoteTrack,
+    onTrack: (id, track, transceiver) => remoteMedia.attachPeer(id, track, transceiver),
     onClosed: clearPeerMedia,
     onStateChange: renderVoiceRoster,
     onStatus: peerStatus,
   });
   const peers = p2pPeers.connections;
+  const remoteMedia = window.TronoVoiceCapture.createRemoteMedia({
+    enabled: () => voiceJoined,
+    createStream: () => new MediaStream(),
+    getPeer: (id) => peers.get(id),
+    isPeerCurrent: (id, pc) => p2pPeers.isCurrent(id, pc),
+    getInterest: (id) => ({
+      camera: !!privateVoiceRoster.get(id)?.camera && !hiddenCameras.has(id),
+      screen: !!privateVoiceRoster.get(id)?.screen && watchingStreams.has(id),
+    }),
+    isCameraHidden: (id) => hiddenCameras.has(id),
+    onVoiceReceiver: (id, receiver, added) => {
+      if (added) {
+        voiceOwners.set(receiver, id);
+        reception.add(receiver);
+      } else {
+        voiceOwners.delete(receiver);
+        reception.remove(receiver);
+      }
+    },
+    onAudioReady: (id, kind) =>
+      attachRemoteAudio(kind === 'screen-audio' ? streamAudioKey(id) : id),
+    onChange: () => {
+      renderVideoGrid();
+      renderScreenGrid();
+      renderSeatMedia();
+    },
+    onRecover: recoverRemoteMedia,
+  });
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
@@ -1382,7 +1406,7 @@ window.TronoSocial = (() => {
     const hidden = !hiddenCameras.has(id);
     if (hidden) hiddenCameras.add(id);
     else hiddenCameras.delete(id);
-    for (const track of remoteAvStreamFor(id).getVideoTracks()) track.enabled = !hidden;
+    for (const track of remoteMedia.getStreams(id).av.getVideoTracks()) track.enabled = !hidden;
     const key = sfuKey(id, 'camera');
     clearSfuRetry(key);
     if (hidden) {
@@ -1891,16 +1915,10 @@ window.TronoSocial = (() => {
   }
   function clearPeerMedia(id, pc) {
     for (const r of pc?.getReceivers?.() || []) reception.remove(r);
-    const retry = videoRetryTimers.get(id);
-    if (retry) clearTimeout(retry);
-    videoRetryTimers.delete(id);
-    mediaHealthyAt.delete(`${id}:camera`);
-    mediaHealthyAt.delete(`${id}:screen`);
     stopMeter(id);
     removeRemoteAudio(id);
     removeRemoteAudio(streamAudioKey(id));
-    remoteAvStreams.delete(id);
-    remoteScreenStreams.delete(id);
+    remoteMedia.clear(id);
     renderVideoGrid();
     renderScreenGrid();
     renderSeatMedia();
@@ -1932,15 +1950,6 @@ window.TronoSocial = (() => {
       }
     }
   }
-  function remoteAvStreamFor(id) {
-    if (!remoteAvStreams.has(id)) remoteAvStreams.set(id, new MediaStream());
-    return remoteAvStreams.get(id);
-  }
-  function remoteScreenStreamFor(id) {
-    if (!remoteScreenStreams.has(id)) remoteScreenStreams.set(id, new MediaStream());
-    return remoteScreenStreams.get(id);
-  }
-
   function sfuKey(ownerId, kind) {
     return `${ownerId}:${kind}`;
   }
@@ -2108,44 +2117,22 @@ window.TronoSocial = (() => {
       'not_found_track_error',
     ].includes(String(err?.code || ''));
   }
-  function attachSfuRemoteTrack(pub, track) {
+  function attachSfuRemoteTrack(pub, track, sub, receiver) {
     if (!pub || !track || !wantsSfuPublication(pub)) return;
-    const id = pub.ownerId;
-    const stream = isScreenKind(pub.kind) ? remoteScreenStreamFor(id) : remoteAvStreamFor(id);
-    if (!stream.getTracks().some((t) => t.id === track.id)) stream.addTrack(track);
-    const generation = sfuGeneration,
-      current = () =>
+    const generation = sfuGeneration;
+    remoteMedia.attachSubscription({
+      id: pub.ownerId,
+      kind: pub.kind,
+      track,
+      owner: sub,
+      receiver,
+      isCurrent: () =>
         voiceJoined &&
         transportIsSfu() &&
         generation === sfuGeneration &&
-        stream.getTracks().includes(track) &&
-        wantsSfuPublication(pub);
-    if (pub.kind === 'audio' || pub.kind === 'screen-audio') {
-      attachRemoteAudio(pub.kind === 'screen-audio' ? streamAudioKey(id) : id);
-      track.addEventListener?.('unmute', () => {
-        if (current()) attachRemoteAudio(pub.kind === 'screen-audio' ? streamAudioKey(id) : id);
-      });
-    } else {
-      if (!track.muted)
-        mediaHealthyAt.set(`${id}:${pub.kind === 'screen' ? 'screen' : 'camera'}`, Date.now());
-      track.addEventListener?.('unmute', () => {
-        if (!current()) return;
-        mediaHealthyAt.set(`${id}:${pub.kind === 'screen' ? 'screen' : 'camera'}`, Date.now());
-        renderVideoGrid();
-        renderScreenGrid();
-        renderSeatMedia();
-      });
-      track.addEventListener?.('ended', () => {
-        if (current()) {
-          renderVideoGrid();
-          renderScreenGrid();
-          renderSeatMedia();
-        }
-      });
-    }
-    renderVideoGrid();
-    renderScreenGrid();
-    renderSeatMedia();
+        sfuSubscriptions.get(sub.key) === sub &&
+        wantsSfuPublication(pub),
+    });
   }
   async function publishSfuTrack(kind, track) {
     if (!transportIsSfu() || !track) return null;
@@ -2293,14 +2280,7 @@ window.TronoSocial = (() => {
           const active = sfuSubscriptions.get(key);
           if (active?.pc === pc) {
             active.track = e.track;
-            if (pub.kind === 'audio') {
-              const receiver = e.receiver || e.transceiver?.receiver;
-              if (receiver) {
-                voiceOwners.set(receiver, pub.ownerId);
-                reception.add(receiver);
-              }
-            }
-            attachSfuRemoteTrack(pub, e.track);
+            attachSfuRemoteTrack(pub, e.track, active, e.receiver || e.transceiver?.receiver);
           }
         }
       };
@@ -2372,18 +2352,7 @@ window.TronoSocial = (() => {
   }
   function detachSfuRemoteMedia(sub) {
     if (!sub) return;
-    const stream = isScreenKind(sub.kind)
-      ? remoteScreenStreams.get(sub.publisherId)
-      : remoteAvStreams.get(sub.publisherId);
-    if (stream) {
-      for (const t of [...stream.getTracks()])
-        if (t === sub.track) {
-          try {
-            stream.removeTrack(t);
-            t.stop();
-          } catch {}
-        }
-    }
+    remoteMedia.detachSubscription(sub);
     if (sub.kind === 'audio') {
       removeRemoteAudio(sub.publisherId);
       stopMeter(sub.publisherId);
@@ -2541,8 +2510,7 @@ window.TronoSocial = (() => {
       removeRemoteAudio(id);
       if (id !== meId()) stopMeter(id);
     }
-    remoteAvStreams.clear();
-    remoteScreenStreams.clear();
+    remoteMedia.reset();
     mediaTransport = toP2p ? 'p2p' : 'none';
     updateRealtimeUI();
     renderVideoGrid();
@@ -2670,121 +2638,33 @@ window.TronoSocial = (() => {
     }
   }
 
-  function recoverReceiverTracks(id) {
-    const pc = peers.get(id),
-      av = remoteAvStreamFor(id),
-      screen = remoteScreenStreamFor(id);
-    if (!pc) return { av, screen };
-    const add = (stream, track) => {
-      if (track && !stream.getTracks().some((x) => x.id === track.id)) stream.addTrack(track);
-    };
-    add(av, pc._tronoAudioTransceiver?.receiver?.track);
-    add(av, pc._tronoVideoTransceiver?.receiver?.track);
-    add(screen, pc._tronoScreenTransceiver?.receiver?.track);
-    add(screen, pc._tronoScreenAudioTransceiver?.receiver?.track);
-    return { av, screen };
-  }
-  function scheduleVideoRecovery(id) {
-    if (!id || videoRetryTimers.has(id)) return;
-    videoRetryTimers.set(
-      id,
-      setTimeout(async () => {
-        videoRetryTimers.delete(id);
-        const person = privateVoiceRoster.get(id);
-        if (!voiceJoined || (!person?.camera && !person?.screen)) return;
-        const { av, screen } = recoverReceiverTracks(id),
-          cameraLive = av.getVideoTracks().some((t) => t.readyState === 'live' && !t.muted),
-          screenLive = screen.getVideoTracks().some((t) => t.readyState === 'live' && !t.muted);
-        if (!(
-          (person.camera && !hiddenCameras.has(id) && !cameraLive) ||
-          (person.screen && watchingStreams.has(id) && !screenLive)
-        ))
-          return;
-        if (transportIsSfu()) {
-          const generation = sfuGeneration;
-          const keys = [];
-          if (person.camera && !hiddenCameras.has(id) && !cameraLive)
-            keys.push(sfuKey(id, 'camera'));
-          if (person.screen && watchingStreams.has(id) && !screenLive)
-            keys.push(sfuKey(id, 'screen'));
-          let retry = false;
-          for (const key of keys) {
-            const sub = sfuSubscriptions.get(key);
-            // ICE gathering + answering + first video frames can exceed this timer.
-            // Let the negotiation's own bounded timeout handle a pending receiver.
-            if (!sub || sub.negotiating || !sub.readyAt || Date.now() - sub.readyAt < 8000) {
-              retry = true;
-              continue;
-            }
-            void closeSfuSubscription(key);
-          }
-          if (!keys.every((key) => sfuSubscriptions.has(key))) await refreshSfuPublicationList();
-          if (!voiceJoined || !transportIsSfu() || generation !== sfuGeneration) return;
-          void syncSfuSubscriptions();
-          if (retry) scheduleVideoRecovery(id);
-          return;
+  async function recoverRemoteMedia(id, missing, isCurrent) {
+    if (!isCurrent()) return false;
+    if (transportIsSfu()) {
+      const generation = sfuGeneration,
+        keys = [];
+      if (missing.camera) keys.push(sfuKey(id, 'camera'));
+      if (missing.screen) keys.push(sfuKey(id, 'screen'));
+      let retry = false;
+      for (const key of keys) {
+        const sub = sfuSubscriptions.get(key);
+        // Give pending negotiations and initial frames their existing grace period.
+        if (!sub || sub.negotiating || !sub.readyAt || Date.now() - sub.readyAt < 8000) {
+          retry = true;
+          continue;
         }
-        const pc = peers.get(id);
-        if (!pc) return;
-        p2pPeers.negotiate(id, true, true);
-        setStatus('Ressincronizando mídia da chamada...', 'warn');
-      }, 3800),
-    );
-  }
-
-  function attachRemoteTrack(id, track, transceiver) {
-    const pc = peers.get(id);
-    const remoteVideoTransceivers =
-      pc?.getTransceivers?.().filter((t) => t.receiver?.track?.kind === 'video') || [];
-    // No lado que responde, ontrack dispara durante setRemoteDescription, antes de guardarmos
-    // as referências dos transceivers. A ordem dos m-lines do iniciador é câmera -> tela.
-    const remoteAudioTransceivers =
-      pc?.getTransceivers?.().filter((t) => t.receiver?.track?.kind === 'audio') || [];
-    const isScreen =
-      (track?.kind === 'video' &&
-        (transceiver === pc?._tronoScreenTransceiver ||
-          remoteVideoTransceivers.indexOf(transceiver) === 1)) ||
-      (track?.kind === 'audio' &&
-        (transceiver === pc?._tronoScreenAudioTransceiver ||
-          remoteAudioTransceivers.indexOf(transceiver) === 1));
-    const stream = isScreen ? remoteScreenStreamFor(id) : remoteAvStreamFor(id);
-    if (track?.kind === 'video' && !isScreen) track.enabled = !hiddenCameras.has(id);
-    if (track && !stream.getTracks().some((x) => x.id === track.id)) stream.addTrack(track);
-    if (track.kind === 'audio') {
-      if (!isScreen && transceiver?.receiver) {
-        voiceOwners.set(transceiver.receiver, id);
-        reception.add(transceiver.receiver);
+        void closeSfuSubscription(key);
       }
-      if (!isScreen || watchingStreams.has(id))
-        attachRemoteAudio(isScreen ? streamAudioKey(id) : id);
+      if (!keys.every((key) => sfuSubscriptions.has(key))) await refreshSfuPublicationList();
+      if (!isCurrent() || !transportIsSfu() || generation !== sfuGeneration) return false;
+      void syncSfuSubscriptions();
+      return retry;
     }
-    const rerender = () => {
-      renderVideoGrid();
-      renderScreenGrid();
-      renderSeatMedia();
-    };
-    // 'mute' pode oscilar por poucos quadros durante jitter/renegociação. Não escondemos
-    // o <video> nesses pulsos para evitar o efeito de câmera piscando na mesa.
-    track.addEventListener?.('ended', rerender);
-    track.addEventListener?.('mute', () => {
-      if (track.kind === 'video') scheduleVideoRecovery(id);
-    });
-    track.addEventListener?.('unmute', () => {
-      if (!pc || !p2pPeers.isCurrent(id, pc)) return;
-      if (track.kind === 'audio' && (!isScreen || watchingStreams.has(id)))
-        attachRemoteAudio(isScreen ? streamAudioKey(id) : id);
-      if (track.kind === 'video') {
-        const kind = isScreen ? 'screen' : 'camera';
-        mediaHealthyAt.set(`${id}:${kind}`, Date.now());
-      }
-      const retry = videoRetryTimers.get(id);
-      if (retry) clearTimeout(retry);
-      videoRetryTimers.delete(id);
-      rerender();
-    });
-    if (track.kind === 'video' && !track.muted)
-      mediaHealthyAt.set(`${id}:${isScreen ? 'screen' : 'camera'}`, Date.now());
-    rerender();
+    if (peers.has(id)) {
+      p2pPeers.negotiate(id, true, true);
+      setStatus('Ressincronizando mídia da chamada...', 'warn');
+    }
+    return false;
   }
 
   function peerStatus(status) {
@@ -3148,40 +3028,25 @@ window.TronoSocial = (() => {
     }
   }
   function cameraStreamForPerson(p) {
-    return p.id === meId() ? localStream : recoverReceiverTracks(p.id).av;
+    return p.id === meId() ? localStream : remoteMedia.recover(p.id).av;
   }
   function screenStreamForPerson(p) {
     return p.id === meId()
       ? screenCapture.getCapture()?.outgoing
-      : recoverReceiverTracks(p.id).screen;
-  }
-  // Tracks remotas podem oscilar o flag `muted` por jitter. Depois que uma câmera já entregou
-  // quadros, mantemos o vídeo visível por alguns segundos durante um pulso de mute; porém uma
-  // trilha que nunca entregou mídia não é tratada como pronta e aciona a recuperação WebRTC.
-  function remoteVideoUsable(id, stream, kind) {
-    const track = stream?.getVideoTracks?.().find((t) => t.readyState === 'live');
-    if (!track) return false;
-    const key = `${id}:${kind}`,
-      now = Date.now();
-    if (!track.muted) {
-      mediaHealthyAt.set(key, now);
-      return true;
-    }
-    const last = mediaHealthyAt.get(key) || 0;
-    return last > 0 && now - last < 5200;
+      : remoteMedia.recover(p.id).screen;
   }
   function personHasLiveCamera(p) {
     const stream = cameraStreamForPerson(p);
     if (p.id !== meId() && hiddenCameras.has(p.id)) return false;
     return p.id === meId()
       ? cameraOn() && !!stream?.getVideoTracks?.().length
-      : remoteVideoUsable(p.id, stream, 'camera');
+      : remoteMedia.videoUsable(p.id, stream, 'camera');
   }
   function personHasLiveScreen(p) {
     const stream = screenStreamForPerson(p);
     return p.id === meId()
       ? screenSharing() && !!stream?.getVideoTracks?.().length
-      : remoteVideoUsable(p.id, stream, 'screen');
+      : remoteMedia.videoUsable(p.id, stream, 'screen');
   }
 
   function findPeerTile(host, id, selector) {
@@ -3327,11 +3192,9 @@ window.TronoSocial = (() => {
       tile.classList.toggle('has-video', live);
       tile.classList.toggle('speaking', speakingPeers.has(p.id));
       if (live) {
-        const retry = videoRetryTimers.get(p.id);
-        if (retry) clearTimeout(retry);
-        videoRetryTimers.delete(p.id);
+        remoteMedia.cancelRecovery(p.id);
         updateVideoElement(video, stream);
-      } else if (p.id !== me) scheduleVideoRecovery(p.id);
+      } else if (p.id !== me) remoteMedia.scheduleRecovery(p.id);
     }
     if (!visible.length && !dock)
       host.innerHTML = '<div class="camera-grid-note">Nenhuma câmera visível nesta chamada.</div>';
@@ -3470,7 +3333,7 @@ window.TronoSocial = (() => {
       } else if (live) {
         placeholder.textContent = 'Conectando compartilhamento…';
         updateVideoElement(video, stream);
-      } else if (!self) scheduleVideoRecovery(p.id);
+      } else if (!self) remoteMedia.scheduleRecovery(p.id);
       tile.setAttribute('aria-label', 'Transmissão de ' + p.name);
       window.TronoStreamControls?.update(
         tile,
@@ -3595,7 +3458,7 @@ window.TronoSocial = (() => {
         tile.classList.add('has-video');
       } else {
         tile.classList.remove('has-video');
-        if (p.id !== me) scheduleVideoRecovery(p.id);
+        if (p.id !== me) remoteMedia.scheduleRecovery(p.id);
       }
     }
   }
@@ -3739,6 +3602,7 @@ window.TronoSocial = (() => {
     void syncVoicePriority();
     window.TronoNetwork?.setVoiceState(false, false, false, false, transmissionQuality, 'p2p');
     closeAllPeers();
+    remoteMedia.reset();
     if (
       transportIsSfu() ||
       transportPending() ||

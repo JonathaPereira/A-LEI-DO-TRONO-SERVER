@@ -25,6 +25,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Captura e ciclo de vida da tela em TypeScript, preservando a fonte do replay e o clone de envio.
 - Captura, fallback de dispositivo e ciclo de vida da câmera em TypeScript.
 - Conexões P2P, transceivers, filas de sinalização/trilhas e negociação em TypeScript.
+- Streams recebidos, listeners, tolerância de vídeo e recuperação em TypeScript.
 
 ## Conversão ainda necessária
 
@@ -427,11 +428,51 @@ incluindo PCM recebido durante tarefas longas e mudanças de foco. Evidências:
 Mídia sintética e backend local; SFU/TURN externos e jogos reais a 60 FPS não foram
 medidos. Não houve publicação ou alteração de infraestrutura remota.
 
+## Streams recebidos e ciclo de vida das trilhas — 16/10/2026
+
+- `lib/voice/remote-media.ts` possui os streams AV/tela recebidos, classificação
+  das trilhas P2P, listeners P2P/SFU, histórico de vídeo e recuperação. Cada binding
+  identifica seu peer ou assinatura; substituição/saída retira listeners e trilhas
+  juntos. Um evento antigo não reabre áudio, renderiza ou renegocia a conexão nova.
+- Removidos de `social.js` os mapas duplicados de streams, timestamps de vídeo,
+  timers, classificação/recuperação de receivers e listeners substituídos. O
+  controlador publica a intenção de assistir/esconder e recebe callbacks para
+  renderizar, anexar áudio e registrar/remover a proteção dos receivers.
+- Streams e trilhas são emprestados aos players, sem clones ou processamento de
+  quadros. P2P mantém o encerramento das trilhas sob responsabilidade do peer;
+  retirar uma assinatura SFU conserva o `stop()` explícito. Uma retirada antiga
+  só pode remover seus próprios bindings, preservando a publicação nova.
+- Mantidos 3800 ms para recuperar vídeo ausente e 5200 ms de tolerância a mute
+  breve. A tolerância pertence à identidade da trilha. A recuperação considera
+  apenas vídeo desejado e deduplica também pedidos enquanto aguarda sinalização.
+  Cancelar, sair ou limpar invalida continuações/retries. A escolha de P2P/SFU e
+  a tolerância SFU de 8 s para início de recepção continuam no controlador.
+- Players, ganhos/saída, contextos de áudio, métricas/proteção e negociação SFU
+  continuam legados. Esta etapa não mudou buffer de voz, codec, bitrate, captura
+  ou parâmetros de FPS/resolução.
+
+Validação: 14 novos testes em `tests/remote-media.cjs` (29 com negociação P2P),
+incluídos na suíte principal. Cobrem identidade, m-lines, descarte/listeners,
+assinaturas SFU, jitter breve e cancelamento/deduplicação de recuperação.
+Tipagem, formatação, build estático, quatro regressões da interface e `npm test`
+(4 integrações e 225 testes) passaram.
+O Electron verificou a remoção dos listeners das trilhas antigas, reconexão com
+novos quadros de câmera e eventos antigos sem afetar a captura atual; preservou
+microfone, tela, peers, socket, jogo e os fluxos anteriores de layout/renegociação.
+Os 15 checks de controles e áudio no navegador passaram, incluindo 240 mil
+amostras PCM recebidas com foco alterado e tarefas longas na interface.
+Evidências: `artifacts/receive-regressions.log`, `receive-electron.log`,
+`receive-media.log`, `receive-ui.log` e `receive-build.log`.
+Mídia sintética e backend local; ciclos de assinatura SFU são simulados nos testes
+do módulo. Não houve medição de SFU/TURN externos ou jogos reais a 60 FPS,
+publicação ou mudança em infraestrutura remota.
+
 ## Próximas alterações, em ordem
 
-1. Extrair SFU, recepção/players e coordenação da chamada para `lib/voice/`.
+1. Extrair negociação SFU, players/ganhos, métricas de recepção e coordenação da chamada para `lib/voice/`.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
+   Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações

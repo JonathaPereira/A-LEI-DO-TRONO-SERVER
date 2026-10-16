@@ -173,10 +173,30 @@ reconfere a trilha desejada após `replaceTrack`, evitando restaurar uma captura
 `connections` é uma visão tipada somente para leitura, com referências emprestadas
 dos peers e senders para renderização, publicação e diagnósticos existentes.
 
-`social.js` conserva a coordenação da chamada, seleção ICE/TURN e de transporte,
-SFU, regras de qualidade, recepção/players, contextos de áudio e interface.
-O callback de fechamento ainda limpa streams, áudio e medidores remotos. A voz
-não foi toda convertida; o estado de negociação P2P já não vive no controlador.
+`remote-media.ts` possui a composição dos streams recebidos de câmera/voz e tela,
+seus listeners, a tolerância de vídeo a mute breve e os timers de recuperação.
+Classifica P2P pela ordem dos m-lines, inclusive antes da vinculação do respondente;
+SFU informa o tipo e a identidade da assinatura explicitamente. Os players recebem
+os mesmos streams/trilhas por referência, sem clones ou processamento de quadros.
+
+Cada binding pertence ao peer ou à assinatura. Substituir, sair ou fechar remove
+os listeners junto com a trilha do stream. Eventos de conexões antigas não renderizam,
+reabrem áudio ou recuperam a conexão nova. P2P empresta a trilha do peer e não chama
+`stop()` nela; SFU conserva o descarte explícito na retirada da assinatura.
+Limpar uma assinatura antiga não remove a trilha que a substituiu.
+
+A tolerância de vídeo conserva 5200 ms e pertence à identidade da trilha, para
+uma fonte nova ainda muda não herdar o histórico da anterior. A recuperação espera
+3800 ms, só considera vídeo desejado e não faz pedidos simultâneos enquanto aguarda
+sinalização. Cancelar ou limpar invalida também continuações e retries pendentes.
+O callback legado ainda escolhe a renegociação P2P ou o retry SFU, com a tolerância
+anterior de 8 s para assinaturas em início de recepção.
+
+`social.js` conserva coordenação da chamada, seleção ICE/TURN e de transporte,
+negociação SFU, regras de qualidade, players/ganhos, métricas de recepção, contextos
+de áudio e interface. O módulo de recepção notifica esse controlador quando deve
+anexar áudio, registrar/remover proteção do receiver ou renderizar. A voz ainda
+não foi toda convertida; streams, listeners e timers de recepção não estão duplicados.
 
 `components/files/image-viewer.tsx` mantém um único visualizador React para anexos
 do chat e dos consumidores legados. Trocar de conta ou excluir o arquivo invalida

@@ -36,7 +36,7 @@
     "format": "prettier --write src server electron scripts",
     "format:check": "prettier --check src server electron scripts",
     "desktop:dev": "node scripts/dev-desktop.cjs",
-    "test:voice:peers": "node --test tests/p2p-peers.cjs",
+    "test:voice:peers": "node --test tests/p2p-peers.cjs tests/remote-media.cjs",
     "test:voice:capture": "node --test tests/microphone.cjs tests/microphone-processor.cjs tests/screen-capture.cjs tests/camera.cjs",
     "test:files": "node --test tests/files-client.cjs",
     "test:channels": "node --test tests/channels.cjs",
