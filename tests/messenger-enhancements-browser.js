@@ -60,10 +60,15 @@ test('private attachments and avatar notices stay private and preserve calls and
       for(const size of [{width:720,height:1280},{width:480,height:800},{width:480,height:520}]){await p.setViewportSize(size);await expect(p.locator('#messengerAttach')).toBeInViewport();await expect(p.locator('#messengerSend')).toBeInViewport();assert(await p.locator('#messengerPanel').evaluate(el=>el.scrollWidth<=el.clientWidth+1));}await p.setViewportSize({width:1280,height:900});
       for(const page of [p,q])assert(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack()===window.__mic&&window.__mic.readyState==='live'&&window.TronoNetwork.primaryRoom===window.__primary));
     });
-    await t.test('friends remain visible when resizing the original website between wide and portrait screens',async()=>{
-      await p.locator('#messengerClose').click();await p.evaluate(()=>window.__friendsButton=document.getElementById('messengerToggle'));
-      for(const size of [{width:720,height:1280},{width:480,height:800},{width:900,height:600},{width:1280,height:900}]){await p.setViewportSize(size);await expect(p.locator('#messengerToggle')).toBeVisible();await expect(p.locator('#messengerToggle')).toBeInViewport();assert(await p.evaluate(()=>window.__friendsButton===document.getElementById('messengerToggle')));if(!await p.locator('.mn-sidebar-heading').isVisible()){await expect(p.locator('.mn-sidebar-scroll>#messengerToggle')).toHaveClass(/messenger-inline-button/);const bounds=await p.locator('#messengerToggle').boundingBox(),nav=await p.locator('.mn-channel-sidebar').boundingBox(),stage=await p.locator('.mn-media-stage').boundingBox();assert(bounds.x>=nav.x-1&&bounds.x+bounds.width<=nav.x+nav.width+1&&bounds.y>=nav.y-1&&bounds.y+bounds.height<=nav.y+nav.height+1,JSON.stringify({size,bounds,nav}));assert(bounds.y+bounds.height<=stage.y,JSON.stringify({size,bounds,stage}));}await p.locator('#messengerToggle').click();await expect(p.locator('#messengerPanel')).toBeVisible();await p.locator('#messengerClose').click();}
-      await p.locator('#messengerToggle').click();await expect(p.locator('#messengerInput')).toBeEnabled();
+    await t.test('direct messages remain reachable through the channels drawer when resizing the original layout',async()=>{
+      await p.locator('#messengerClose').click();await p.evaluate(()=>window.__friendsButton=document.getElementById('workspaceDirectOpen'));
+      const friends=p.locator('#workspaceDirectOpen');
+      for(const size of [{width:720,height:1280},{width:480,height:800},{width:900,height:600},{width:1280,height:900}]){
+        await p.setViewportSize(size);if(!await friends.isVisible())await p.locator('#workspaceSidebarBtn').click();
+        await expect(friends).toBeVisible();await expect(friends).toBeInViewport();assert(await p.evaluate(()=>window.__friendsButton===document.getElementById('workspaceDirectOpen')));
+        await friends.click();await expect(p.locator('#messengerPanel')).toBeVisible();await p.locator('#messengerClose').click();
+      }
+      await friends.click();await p.locator('#messengerList .messenger-person-main').filter({hasText:'Bruno'}).click();await expect(p.locator('#messengerInput')).toBeEnabled();
     });
     await t.test('account switch clears drafts and rejects a signed URL response from the previous account',async()=>{
       await p.locator('#messengerInput').fill('Rascunho exclusivo de Ana');await p.locator('#messengerFile').setInputFiles({name:'rascunho-ana.png',mimeType:'image/png',buffer:png});

@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.4
+M&N · A Lei do Trono — Windows 0.2.5
 
-1. Instalação nova: instale MN-Trono-0.2.4-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.5-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -84,3 +84,10 @@ O avatar na lista de salas aparece somente durante a chamada. Há busca pública
 de GIFs no perfil, ajuste vertical/zoom da capa, links e emojis corrigidos,
 cartões menores com o fundo do perfil e botões verdes/vermelhos por ação.
 Use o backend desta revisão. Guia: ATUALIZAR_WINDOWS_v0.2.4.md.
+
+Windows 0.2.5: Assistir stream funciona sem maximizar. Desligar câmera/tela
+atualiza a chamada sem esperar a limpeza da conexão. Mensagens diretas ficam
+mais acima no Original, capas emolduram os cartões e o Discord mantém o ícone
+de atualização no canto inferior esquerdo. A seta no canto superior direito
+oculta/restaura a barra superior, com preferência salva por conta.
+Backend 0.13.0-alpha compatível, sem SQL novo. Guia: ATUALIZAR_WINDOWS_v0.2.5.md.
