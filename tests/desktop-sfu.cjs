@@ -163,6 +163,31 @@ test(
           if (action === 'update-subscription') return { preferredRid: null };
           throw new Error('Unexpected local SFU action: ' + action);
         }
+        const playbackContexts = [];
+        const playback = window.TronoVoiceCapture.createAudioPlayback({
+          volume: 100,
+          output: '',
+          createAudio() {
+            const player = document.createElement('audio');
+            player.id = 'sfu-fixture-audio';
+            player.autoplay = true;
+            document.body.append(player);
+            return player;
+          },
+          createStream: (track) => new MediaStream([track]),
+          createContext() {
+            const ctx = new AudioContext({ sampleRate: 48000, latencyHint: 0.04 });
+            playbackContexts.push(ctx);
+            return ctx;
+          },
+          onChange() {},
+          onBlocked() {
+            throw new Error('Unexpected blocked playback');
+          },
+          onOutputFallback() {
+            throw new Error('Unexpected output fallback');
+          },
+        });
         const remote = window.TronoVoiceCapture.createRemoteMedia({
           enabled: () => settings.enabled,
           createStream: () => new MediaStream(),
@@ -198,7 +223,10 @@ test(
               receiver,
               isCurrent,
             }),
-          onSubscriptionClosed: (sub) => remote.detachSubscription(sub),
+          onSubscriptionClosed: (sub) => {
+            remote.detachSubscription(sub);
+            if (sub.kind === 'audio') playback.remove(sub.publisherId);
+          },
           onReady() {},
           onRetry(info) {
             throw new Error('Unexpected SFU retry: ' + info.code);
@@ -230,13 +258,7 @@ test(
           player.srcObject = streams.screen;
           document.body.append(player);
           await player.play();
-          document.getElementById('sfu-fixture-audio')?.remove();
-          const audioPlayer = document.createElement('audio');
-          audioPlayer.id = 'sfu-fixture-audio';
-          audioPlayer.autoplay = true;
-          audioPlayer.srcObject = streams.av;
-          document.body.append(audioPlayer);
-          await audioPlayer.play();
+          playback.attach('relay-peer', streams.av.getAudioTracks()[0]);
         }
         window.__sfuFixture = {
           session,
@@ -246,10 +268,13 @@ test(
           calls,
           audio,
           video,
+          playback,
+          playbackContexts,
           connect,
           async close() {
             session.reset();
             remote.reset();
+            playback.reset();
             for (const pc of peers) pc.close();
             clearInterval(timer);
             source.getTracks().forEach((t) => t.stop());
@@ -301,10 +326,55 @@ test(
         };
       });
       assert.deepEqual(first, { ready: true, fps: 60, bitrate: 8000000, captureFps: 60 });
+      assert.equal(
+        await page.evaluate(() => window.__sfuFixture.playback.getSnapshot().context),
+        null,
+      );
+      await page.evaluate(() => {
+        const h = window.__sfuFixture;
+        window.__playbackBaseline = {
+          peers: [...h.peers],
+          player: document.getElementById('sfu-fixture-audio'),
+          track: h.remote.getStreams('relay-peer').av.getAudioTracks()[0],
+        };
+        h.playback.setVolume(180);
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(() => window.__sfuFixture.playback.getSnapshot().entries[0].route),
+        )
+        .toBe('gain');
+      assert.equal(
+        await page.evaluate(async () => {
+          const h = window.__sfuFixture,
+            before = window.__playbackBaseline;
+          h.playback.setDeafened(true);
+          if (!before.player.muted) return false;
+          h.playback.setDeafened(false);
+          await h.playback.setOutput('');
+          h.playback.setVolume(80);
+          return (
+            h.playback.getSnapshot().entries[0].route === 'direct' &&
+            document.getElementById('sfu-fixture-audio') === before.player &&
+            before.player.srcObject.getAudioTracks()[0] === before.track &&
+            !before.player.muted &&
+            before.player.volume === 0.8 &&
+            h.peers.length === before.peers.length &&
+            before.peers.every((pc) => pc.connectionState === 'connected') &&
+            h.audio.readyState === 'live' &&
+            h.video.readyState === 'live' &&
+            h.playbackContexts.length === 1
+          );
+        }),
+        true,
+      );
       await page.evaluate(async () => {
         const h = window.__sfuFixture;
         h.session.reset();
         h.remote.reset();
+        h.playback.reset();
+        if (h.playbackContexts.some((ctx) => ctx.state !== 'closed'))
+          throw new Error('Playback context was not closed');
         if (window.__sfuOldPeers.some((pc) => pc.connectionState !== 'closed'))
           throw new Error('A local relay peer was not closed synchronously');
         await h.connect();

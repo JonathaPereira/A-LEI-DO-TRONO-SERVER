@@ -219,9 +219,33 @@ quadros ou alteração das constraints da captura. A qualidade dos senders conti
 aplicada pelo controlador existente. O helper de encoding de tela que não tinha
 chamadas foi retirado junto com a implementação antiga.
 
+`audio-playback.ts` possui elementos de áudio, streams de reprodução, ganhos por
+participante/tela, volume geral, deafen, grafo de amplificação e contexto de saída.
+A trilha recebida é emprestada: remover ou trocar o player não chama `stop()` nem
+clona a trilha. Até ganho efetivo 1, a reprodução usa o elemento nativo, sem criar
+um contexto Web Audio. Acima disso, `audio-gain.ts` conecta ganho e limiter à saída
+do contexto de reprodução, com a margem anterior de 40 ms a 48 kHz. Falhar durante
+a construção desconecta todos os nós já criados e conserva a reprodução direta.
+Suspender o contexto também restaura o caminho direto; o microfone não participa
+desse grafo. A amplificação nasce em zero quando deafen está ativo.
+
+Pedidos de `play()` são deduplicados por player e começam dentro do gesto do
+usuário. Trocar trilha ou sair invalida os resultados anteriores: uma rejeição
+atrasada não bloqueia o player novo. Mudanças de `setSinkId` são serializadas por
+elemento/contexto; uma resposta antiga não restaura a saída anterior nem apaga
+a seleção mais recente. Uma saída indisponível leva todos os players e o contexto
+para a padrão, preservando o erro no diagnóstico. Reset fecha o contexto e remove
+os elementos sem encerrar capturas ou peers; callbacks antigos não recriam grafos.
+Os snapshots de diagnóstico são imutáveis e não expõem elementos/nós mutáveis.
+
+`social.js` adapta seleção de trilha, preferências persistidas e controles ao
+módulo de reprodução, sem outros mapas de players, ganhos ou bloqueios. O antigo
+`legacy/audio-gain.js` e sua entrada no manifesto foram excluídos. Sons de aviso,
+soundboard e áudio dos jogos mantêm seus controladores próprios.
+
 `social.js` conserva coordenação/entrada da chamada, bootstrap ICE/TURN, escolha do
-transporte, status/consumo, regras de qualidade, players/ganhos, métricas de recepção,
-contextos de áudio e interface. Os módulos notificam esse controlador para anexar
+transporte, status/consumo, regras de qualidade, métricas de recepção,
+contextos do microfone/medidores/avisos e interface. Os módulos notificam esse controlador para anexar
 áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
 O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.

@@ -27,6 +27,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Conexões P2P, transceivers, filas de sinalização/trilhas e negociação em TypeScript.
 - Streams recebidos, listeners, tolerância de vídeo e recuperação em TypeScript.
 - Negociação SFU, catálogo, publicação, assinaturas, camadas e retries em TypeScript.
+- Players, ganhos de reprodução, autoplay e roteamento da saída em TypeScript.
 
 ## Conversão ainda necessária
 
@@ -510,13 +511,54 @@ esperava. O commit local `daef5e8` usa IDs ordenados apenas na fixture e acresce
 um caso com inserção fora de ordem/horário igual para conferir desempate e cursor.
 Asserções, permissões, SQL e backend de produção foram preservados.
 
+## Players e ganhos de reprodução — 16/10/2026
+
+- `lib/voice/audio-playback.ts` possui players, streams de reprodução, ganhos de
+  voz/tela, volume geral, deafen, bloqueios de autoplay, contexto e roteamento de
+  saída. Os mapas e funções substituídos foram removidos de `social.js`; ele
+  conserva controles, preferências persistidas e seleção das trilhas recebidas.
+- Até ganho efetivo 1, o áudio usa a trilha original pelo elemento nativo. A
+  amplificação usa um contexto separado do microfone, com 40 ms e 48 kHz como
+  antes. Não há novo dispositivo, peer, socket, clone de trilha ou processamento
+  de vídeo. Suspender o contexto restaura a reprodução direta.
+- `audio-gain.ts` possui ganho/limiter e limpa também construções parciais.
+  Deafen inicializa o grafo em zero. Retirar player desconecta seus nós e libera
+  o elemento, sem encerrar a trilha recebida. Sair fecha o contexto e invalida
+  resultados de reprodução/saída anteriores.
+- Pedidos de play são deduplicados e preservam o gesto do usuário. Rejeições de
+  players retirados não bloqueiam os novos. Trocas de saída são serializadas por
+  destino, preservando a escolha mais recente diante de sucessos/erros antigos.
+  Fallback para a saída padrão também atualiza os outros players e o contexto.
+- `legacy/audio-gain.js` e sua entrada no manifesto foram excluídos; a preparação
+  do renderer também removeu sua cópia gerada de `public/` e do build estático.
+  Sons de chamada, soundboard e jogos continuam preservados nos seus módulos.
+- `npm run test:voice:playback` executa 13 regressões, também incluídas em
+  `npm test`. Cobrem trilha emprestada, ganho/deafen, suspensão, falha parcial,
+  autoplay, respostas atrasadas e descarte/troca de saída.
+
+Passaram tipagem, formatação, build estático, `npm test` (4 integrações e 258
+checks), os quatro fluxos de `test:ui` e 15 checks de controles/áudio no navegador.
+O teste de recepção mediu PCM contínuo durante tarefas longas da interface,
+conservando a mesma captura e peers. No Electron, os três testes passaram:
+chamada P2P com layouts/recapturas, SFU com relay local e nove cenários de
+segundo plano no Windows. O teste SFU agora usa o player tipado e verifica ganho,
+deafen, retorno à reprodução direta, identidade de player/trilha/peers e descarte
+do contexto ao reconectar. Nos cenários coberto, minimizado e oculto, a recepção
+PCM permaneceu contínua nos modos nativo e RNNoise, sem recaptura ou reconexão.
+As fontes de teste são sintéticas; isso não mede jogos a 60 FPS, saídas físicas
+específicas ou rotas SFU/TURN externas. O teste manual fica para o fim da migração.
+Evidências locais: `artifacts/playback-unit.log`, `playback-regressions.log`,
+`playback-media.log`, `playback-ui.log`, `playback-build.log` e
+`playback-desktop.log`. Não houve publicação ou alteração de serviços remotos.
+
 ## Próximas alterações, em ordem
 
-1. Extrair players/ganhos, métricas de recepção e coordenação/entrada da chamada para `lib/voice/`.
+1. Extrair métricas de recepção e coordenação/entrada da chamada para `lib/voice/`.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
    Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.
    Publicações/assinaturas, filas, catálogo e retries SFU estão em `sfu-session.ts`.
+   Players/ganhos, autoplay e roteamento de saída estão em `audio-playback.ts`.
    Bootstrap ICE/TURN e status/consumo ainda pertencem ao coordenador legado.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.

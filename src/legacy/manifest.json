@@ -7,7 +7,6 @@
     "tabletop-audio.js",
     "auth.js",
     "rtc-config.js",
-    "audio-gain.js",
     "profile-data.js",
     "profile-gifs.js",
     "profile-files.js",

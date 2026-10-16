@@ -14,6 +14,7 @@ import { createScreenCapture } from '../lib/voice/screen-capture';
 import { createCamera } from '../lib/voice/camera';
 import { createP2pPeers } from '../lib/voice/p2p-peers';
 import { createRemoteMedia } from '../lib/voice/remote-media';
+import { createAudioPlayback } from '../lib/voice/audio-playback';
 import { createSfuSession } from '../lib/voice/sfu-session';
 
 let startup: Promise<void> | undefined;
@@ -49,6 +50,7 @@ export function LegacyRuntime() {
           createP2pPeers,
           createRemoteMedia,
           createSfuSession,
+          createAudioPlayback,
         },
       });
       initializeFiles(window);

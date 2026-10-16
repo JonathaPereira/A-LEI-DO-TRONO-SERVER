@@ -2,7 +2,6 @@
 window.TronoSocial = (() => {
   const $ = (id) => document.getElementById(id);
   const storage = window.TronoStorage || localStorage;
-  const remoteAudio = new Map();
   const voiceMeters = new Map();
   const speakingPeers = new Set();
   const privateVoiceRoster = new Map();
@@ -23,20 +22,11 @@ window.TronoSocial = (() => {
   let meterAudioContext = null;
   const clampGain = (v) => Math.min(300, Math.max(0, Math.round((Number(v) || 0) / 5) * 5));
   let microphoneVolume = clampGain(storage.getItem('mnMicrophoneGain') ?? 100);
-  let outputVolume = clampGain(storage.getItem('mnOutputGain') ?? 100);
-  const peerVolumes = new Map();
   let volumeOwner = null;
-  const remoteGraphs = new Map();
-  const remotePlayback = new Map();
-  const audioPlayRequests = new WeakMap();
-  let lastOutputError = '';
-  const streamVolumes = new Map();
   const watchingStreams = new Set();
   const hiddenCameras = new Set();
   const streamWatchVersions = new Map();
-  const blockedAudio = new Set();
-  let mediaAudioContext = null,
-    playbackAudioContext = null;
+  let mediaAudioContext = null;
   let voiceProtection = storage.getItem('mnVoiceProtection') !== '0';
   const reception = new window.TronoVoiceReception.VoiceReception(voiceProtection);
   let receptionRows = [],
@@ -77,33 +67,6 @@ window.TronoSocial = (() => {
       voicePriorityState = { active: false, status: 'unavailable' };
     }
   }
-  const playbackOutputMatches = (ctx) =>
-    typeof ctx.setSinkId === 'function' ? ctx.sinkId === (selectedOutput || '') : !selectedOutput;
-  function ensurePlaybackAudioContext() {
-    if (!playbackAudioContext || playbackAudioContext.state === 'closed') {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return null;
-      // Amplification is optional. A modest output buffer avoids coupling its
-      // deadline to the low-latency microphone/RNNoise graph.
-      try {
-        playbackAudioContext = new Ctx({ latencyHint: 0.04, sampleRate: 48000 });
-      } catch {
-        return null;
-      }
-      if (selectedOutput && playbackAudioContext.setSinkId)
-        void playbackAudioContext
-          .setSinkId(selectedOutput)
-          .then(() => {
-            for (const key of remoteAudio.keys()) attachRemoteAudio(key);
-          })
-          .catch(() => {});
-      playbackAudioContext.onstatechange = () => {
-        for (const key of remoteAudio.keys()) attachRemoteAudio(key);
-        updateAudioRecoveryUI();
-      };
-    }
-    return playbackAudioContext;
-  }
   const isScreenKind = (kind) => kind === 'screen' || kind === 'screen-audio';
   const wantsSfuPublication = (pub) =>
     pub.ownerId !== meId() &&
@@ -123,8 +86,8 @@ window.TronoSocial = (() => {
         console.warn('[TronoSocial] Web Audio indisponível; usando áudio direto', err);
         return null;
       }
-      if (selectedOutput && mediaAudioContext.setSinkId)
-        void mediaAudioContext.setSinkId(selectedOutput).catch(() => {});
+      if (audioPlayback.getSnapshot().output && mediaAudioContext.setSinkId)
+        void mediaAudioContext.setSinkId(audioPlayback.getSnapshot().output).catch(() => {});
       mediaAudioContext.onstatechange = () => {
         void refreshMicPipeline().catch((err) =>
           console.warn('[TronoSocial] retomar microfone', err),
@@ -138,7 +101,7 @@ window.TronoSocial = (() => {
   }
   function updateAudioRecoveryUI() {
     const blocked =
-      blockedAudio.size > 0 ||
+      audioPlayback.getSnapshot().entries.some((entry) => entry.blocked) ||
       (voiceJoined && mediaAudioContext && mediaAudioContext.state !== 'running');
     $('resumeAudioBtn')?.classList.toggle('hidden', !blocked);
   }
@@ -149,55 +112,18 @@ window.TronoSocial = (() => {
       void ctx
         .resume()
         .then(() => {
-          for (const key of remoteAudio.keys()) attachRemoteAudio(key);
+          audioPlayback.refresh();
           updateAudioRecoveryUI();
         })
         .catch(() => updateAudioRecoveryUI());
-    if (playbackAudioContext && playbackAudioContext.state === 'suspended')
-      void playbackAudioContext.resume().catch(() => {});
+    audioPlayback.unlock();
     if (callSoundContext && callSoundContext.state !== 'running')
       void callSoundContext.resume().catch(() => {});
-    for (const [key, a] of remoteAudio) void playRemoteAudio(key, a);
   }
-  function playRemoteAudio(key, a) {
-    const playback = a.srcObject,
-      pending = audioPlayRequests.get(a);
-    if (pending?.playback === playback) return pending.promise;
-    const current = () =>
-      remoteAudio.get(key) === a &&
-      a.srcObject === playback &&
-      remotePlayback.get(key)?.route !== 'gain';
-    const request = { playback, promise: null };
-    audioPlayRequests.set(a, request);
-    request.promise = (async () => {
-      try {
-        // Invoke play in the gesture, rather than after an asynchronous sink change.
-        const routed = applyOutput(a),
-          playing = a.play();
-        await Promise.all([routed, playing]);
-        if (!current()) return;
-        blockedAudio.delete(key);
-        const state = remotePlayback.get(key);
-        if (state) state.error = '';
-      } catch (err) {
-        // Replacing srcObject cancels the previous play promise; it is not an autoplay denial.
-        if (!current() || err?.name === 'AbortError') return;
-        blockedAudio.add(key);
-        const state = remotePlayback.get(key);
-        if (state) state.error = err?.name || err?.message || 'PLAYBACK_FAILED';
-        setStatus('Áudio recebido. Toque em Liberar áudio para ouvir.', 'warn');
-      } finally {
-        if (audioPlayRequests.get(a) === request) audioPlayRequests.delete(a);
-        updateAudioRecoveryUI();
-      }
-    })();
-    return request.promise;
-  }
-  // A reprodução é encaminhada por um destino MediaStream para preservar setSinkId.
   function renderGainValues() {
     for (const [prefix, value] of [
       ['mic', microphoneVolume],
-      ['output', outputVolume],
+      ['output', audioPlayback.getSnapshot().volume],
     ]) {
       const slider = $(`${prefix}GainSlider`),
         label = $(`${prefix}GainValue`);
@@ -205,113 +131,29 @@ window.TronoSocial = (() => {
       if (label) label.textContent = `${value}%`;
     }
   }
-  function updateRemoteGain(id) {
-    const graph = remoteGraphs.get(id),
-      stream = id.startsWith('stream:'),
-      peer = (stream ? streamVolumes.get(id.slice(7)) : peerVolumes.get(id)) ?? 100;
-    const gain = (outputVolume / 100) * (peer / 100);
-    if (graph && graph.ctx.state === 'running') {
-      graph.gain.gain.setTargetAtTime(deafened ? 0 : gain, graph.ctx.currentTime, 0.012);
-    } else {
-      const el = remoteAudio.get(id);
-      if (el) el.volume = Math.min(1, gain);
-    }
-  }
-  function closeRemoteGain(id) {
-    const graph = remoteGraphs.get(id);
-    if (!graph) return;
-    remoteGraphs.delete(id);
-    try {
-      graph.close();
-    } catch {}
-  }
-  function attachRemoteAudio(id) {
-    const screen = id.startsWith('stream:'),
-      peerId = screen ? id.slice(7) : id;
+  function attachRemoteAudio(key) {
+    const screen = key.startsWith('stream:'),
+      peerId = screen ? key.slice(7) : key;
     if (screen && !watchingStreams.has(peerId)) return;
-    const sourceStream = screen
-      ? remoteMedia.getStreams(peerId).screen
-      : remoteMedia.getStreams(peerId).av;
-    const currentTrack = sourceStream.getAudioTracks().find((t) => t.readyState === 'live');
-    if (!currentTrack) return;
-    let state = remotePlayback.get(id);
-    if (state?.track !== currentTrack) {
-      state = {
-        track: currentTrack,
-        stream: new MediaStream([currentTrack]),
-        error: '',
-        route: 'direct',
-      };
-      remotePlayback.set(id, state);
+    const streams = remoteMedia.getStreams(peerId);
+    const track = (screen ? streams.screen : streams.av)
+      .getAudioTracks()
+      .find((t) => t.readyState === 'live');
+    if (!track) {
+      audioPlayback.remove(key);
+      return;
     }
-    const stream = state.stream;
-    let a = remoteAudio.get(id);
-    if (!a) {
-      a = document.createElement('audio');
-      a.autoplay = true;
-      a.playsInline = true;
-      a.dataset.peer = id;
-      $('remoteAudioHost')?.appendChild(a);
-      remoteAudio.set(id, a);
-    }
-    let graph = remoteGraphs.get(id);
-    const volume =
-      ((outputVolume / 100) *
-        ((screen ? streamVolumes.get(peerId) : peerVolumes.get(peerId)) ?? 100)) /
-      100;
-    // Normal listening needs only the received track. Web Audio is needed for amplification.
-    if (
-      graph &&
-      (graph.trackId !== currentTrack.id ||
-        volume <= 1 ||
-        graph.ctx.state !== 'running' ||
-        !playbackOutputMatches(graph.ctx))
-    ) {
-      closeRemoteGain(id);
-      graph = null;
-    }
-    if (!graph && volume > 1) {
-      const ctx = ensurePlaybackAudioContext();
-      if (ctx?.state === 'suspended') void ctx.resume().catch(() => {});
-      if (ctx?.state === 'running' && playbackOutputMatches(ctx))
-        try {
-          graph = window.TronoAudioGain.create(ctx, stream, volume);
-          if (graph) remoteGraphs.set(id, graph);
-        } catch (err) {
-          console.warn('[TronoSocial] ganho de reprodução indisponível', err);
-        }
-    }
-    // Keep the original received stream attached. Mute only while the running
-    // Web Audio graph actually supplies the output; suspension restores it.
-    state.route = graph && graph.ctx.state === 'running' ? 'gain' : 'direct';
-    if (state.route === 'gain') blockedAudio.delete(id);
-    if (a.srcObject !== stream) a.srcObject = stream;
-    a.muted = deafened || state.route === 'gain';
-    a.volume = Math.min(1, volume);
-    updateRemoteGain(id);
-    if (state.route === 'direct') void playRemoteAudio(id, a);
-    if (!screen) void watchStream(id, stream);
+    const stream = audioPlayback.attach(key, track);
+    if (!screen && stream) void watchStream(peerId, stream);
   }
-  function removeRemoteAudio(key) {
-    closeRemoteGain(key);
-    blockedAudio.delete(key);
-    remotePlayback.delete(key);
-    const a = remoteAudio.get(key);
-    if (a) {
-      a.pause?.();
-      a.srcObject = null;
-      a.remove();
-      remoteAudio.delete(key);
-    }
-    updateAudioRecoveryUI();
-  }
+  const removeRemoteAudio = (key) => audioPlayback.remove(key);
   function setStreamGain(id, value) {
     unlockCallAudio();
-    streamVolumes.set(id, clampGain(value));
+    audioPlayback.setGain(streamAudioKey(id), value);
     attachRemoteAudio(streamAudioKey(id));
     const tile = findPeerTile($('screenShareGrid'), id, '.screen-share-tile');
     const label = tile?.querySelector('.mn-stream-volume output');
-    if (label) label.textContent = `${streamVolumes.get(id)}%`;
+    if (label) label.textContent = `${audioPlayback.getGain(streamAudioKey(id))}%`;
   }
   async function toggleWatchStream(id) {
     if (!voiceJoined || !privateVoiceRoster.get(id)?.screen) return;
@@ -351,21 +193,20 @@ window.TronoSocial = (() => {
   }
   function setOutputGain(value) {
     unlockCallAudio();
-    outputVolume = clampGain(value);
-    storage.setItem('mnOutputGain', String(outputVolume));
-    for (const id of remoteAudio.keys()) attachRemoteAudio(id);
+    audioPlayback.setVolume(value);
+    storage.setItem('mnOutputGain', String(audioPlayback.getSnapshot().volume));
     renderGainValues();
   }
   function setPeerGain(id, value) {
     if (!privateVoiceRoster.has(id) || id === meId()) return;
     unlockCallAudio();
-    peerVolumes.set(id, clampGain(value));
+    audioPlayback.setGain(id, value);
     attachRemoteAudio(id);
     const account = privateVoiceRoster.get(id)?.accountId;
-    if (account) window.TronoPersonal?.set('volume:' + account, peerVolumes.get(id));
+    if (account) window.TronoPersonal?.set('volume:' + account, audioPlayback.getGain(id));
     const slider = document.querySelector(`[data-peer-volume="${CSS.escape(id)}"]`);
     const label = slider?.closest('.mn-peer-gain')?.querySelector('output');
-    if (label) label.textContent = `${peerVolumes.get(id)}%`;
+    if (label) label.textContent = `${audioPlayback.getGain(id)}%`;
   }
 
   let roomState = null,
@@ -388,7 +229,6 @@ window.TronoSocial = (() => {
   if (window.TronoDesktop) noiseSuppression = noiseEngine !== 'off';
   let voiceLightMode = storage.getItem('tronoVoiceLightMode') === '1';
   let selectedInput = storage.getItem('tronoVoiceInput') || '';
-  let selectedOutput = storage.getItem('tronoVoiceOutput') || '';
   let selectedCamera = storage.getItem('tronoCameraInput') || '';
   let transmissionQuality = ['economy', 'balanced', 'high'].includes(
     storage.getItem('tronoTransmissionQuality'),
@@ -570,6 +410,36 @@ window.TronoSocial = (() => {
       renderSeatMedia();
     },
     onRecover: recoverRemoteMedia,
+  });
+
+  const audioPlayback = window.TronoVoiceCapture.createAudioPlayback({
+    volume: storage.getItem('mnOutputGain') ?? 100,
+    output: storage.getItem('tronoVoiceOutput') || '',
+    createAudio: (key) => {
+      const audio = document.createElement('audio');
+      audio.autoplay = true;
+      audio.playsInline = true;
+      audio.dataset.peer = key;
+      $('remoteAudioHost')?.appendChild(audio);
+      return audio;
+    },
+    createStream: (track) => new MediaStream([track]),
+    createContext: () => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      return Ctx ? new Ctx({ latencyHint: 0.04, sampleRate: 48000 }) : null;
+    },
+    onChange: updateAudioRecoveryUI,
+    onBlocked: () => setStatus('Áudio recebido. Toque em Liberar áudio para ouvir.', 'warn'),
+    onOutputFallback: (failed) => {
+      storage.setItem('tronoVoiceOutput', audioPlayback.getSnapshot().output);
+      if ($('voiceOutputSelect')) $('voiceOutputSelect').value = audioPlayback.getSnapshot().output;
+      setStatus(
+        failed
+          ? 'Não foi possível abrir a saída de áudio. Escolha outra saída em Configurações.'
+          : 'Saída escolhida indisponível. Usando a saída padrão.',
+        failed ? 'error' : 'warn',
+      );
+    },
   });
 
   const sfuSession = window.TronoVoiceCapture.createSfuSession({
@@ -814,8 +684,8 @@ window.TronoSocial = (() => {
     try {
       if (!callSoundContext || callSoundContext.state === 'closed') callSoundContext = new Ctx();
       if (callSoundContext.state === 'suspended') void callSoundContext.resume().catch(() => {});
-      if (selectedOutput && callSoundContext.setSinkId)
-        void callSoundContext.setSinkId(selectedOutput).catch(() => {});
+      if (audioPlayback.getSnapshot().output && callSoundContext.setSinkId)
+        void callSoundContext.setSinkId(audioPlayback.getSnapshot().output).catch(() => {});
     } catch {}
   }
   function callNotice(event) {
@@ -1463,8 +1333,9 @@ window.TronoSocial = (() => {
           .join('');
       if (ins.some((d) => d.deviceId === selectedInput)) input.value = selectedInput;
       else selectedInput = input.value || '';
-      if (outs.some((d) => d.deviceId === selectedOutput)) output.value = selectedOutput;
-      else selectedOutput = output.value || '';
+      if (outs.some((d) => d.deviceId === audioPlayback.getSnapshot().output))
+        output.value = audioPlayback.getSnapshot().output;
+      else if (audioPlayback.getSnapshot().output) void audioPlayback.setOutput(output.value || '');
       if (cams.some((d) => d.deviceId === selectedCamera)) camera.value = selectedCamera;
       else if (cams.some((d) => d.deviceId)) {
         selectedCamera = '';
@@ -1919,30 +1790,6 @@ window.TronoSocial = (() => {
   function closeAllPeers() {
     [...peers.keys()].forEach(closePeer);
   }
-  async function applyOutput(audio) {
-    if (!audio || typeof audio.setSinkId !== 'function') return;
-    const target = selectedOutput || '';
-    if (audio.sinkId === target) return;
-    try {
-      await audio.setSinkId(target);
-    } catch (err) {
-      console.warn('[TronoSocial] saída', err);
-      lastOutputError = `${err?.name || 'OUTPUT_FAILED'} — saída escolhida indisponível`;
-      selectedOutput = '';
-      storage.setItem('tronoVoiceOutput', '');
-      if ($('voiceOutputSelect')) $('voiceOutputSelect').value = '';
-      try {
-        await audio.setSinkId('');
-        setStatus('Saída escolhida indisponível. Usando a saída padrão.', 'warn');
-      } catch (fallback) {
-        lastOutputError = `${fallback?.name || 'OUTPUT_FAILED'} — saída padrão indisponível`;
-        setStatus(
-          'Não foi possível abrir a saída de áudio. Escolha outra saída em Configurações.',
-          'error',
-        );
-      }
-    }
-  }
   function sfuKey(ownerId, kind) {
     return `${ownerId}:${kind}`;
   }
@@ -1995,7 +1842,7 @@ window.TronoSocial = (() => {
     mixedTransportTimer = null;
     mediaTransport = 'stopping';
     sfuSession.reset();
-    for (const id of [...remoteAudio.keys()]) {
+    for (const { key: id } of audioPlayback.getSnapshot().entries) {
       removeRemoteAudio(id);
       if (id !== meId()) stopMeter(id);
     }
@@ -2472,8 +2319,8 @@ window.TronoSocial = (() => {
       toggle.setAttribute('aria-pressed', String(hidden));
       toggle.title = 'Esta preferência muda apenas o que você vê.';
       if (!self) {
-        card.querySelector('[data-peer-volume]').value = String(peerVolumes.get(p.id) ?? 100);
-        card.querySelector('output').textContent = (peerVolumes.get(p.id) ?? 100) + '%';
+        card.querySelector('[data-peer-volume]').value = String(audioPlayback.getGain(p.id));
+        card.querySelector('output').textContent = audioPlayback.getGain(p.id) + '%';
       }
     }
     renderProfileActivities();
@@ -2796,9 +2643,10 @@ window.TronoSocial = (() => {
             .some((pub) => pub.ownerId === p.id && pub.kind === 'screen-audio'));
       const volume = tile.querySelector('.mn-stream-volume');
       volume.hidden = self || !watching;
-      volume.querySelector('input').value = String(streamVolumes.get(p.id) ?? 100);
+      volume.querySelector('input').value = String(audioPlayback.getGain(streamAudioKey(p.id)));
       volume.querySelector('input').disabled = !hasAudio;
-      volume.querySelector('output').textContent = `${streamVolumes.get(p.id) ?? 100}%`;
+      volume.querySelector('output').textContent =
+        `${audioPlayback.getGain(streamAudioKey(p.id))}%`;
       const soundState = tile.querySelector('.mn-stream-audio-state');
       soundState.hidden = !watching;
       soundState.textContent = hasAudio
@@ -3106,12 +2954,7 @@ window.TronoSocial = (() => {
     privateVoiceRoster.clear();
     stopMeter(meId());
     mediaTransport = 'p2p';
-    for (const key of [...remoteAudio.keys()]) removeRemoteAudio(key);
-    if (playbackAudioContext) {
-      playbackAudioContext.onstatechange = null;
-      void playbackAudioContext.close().catch(() => {});
-      playbackAudioContext = null;
-    }
+    audioPlayback.reset();
     updateAudioRecoveryUI();
     localStream?.getTracks().forEach((t) => t.stop());
     localStream = null;
@@ -3176,10 +3019,7 @@ window.TronoSocial = (() => {
       micMuted = mutedBeforeDeafen;
     }
     applyMicrophoneMute();
-    for (const [id, audio] of remoteAudio) {
-      audio.muted = deafened || remotePlayback.get(id)?.route === 'gain';
-      updateRemoteGain(id);
-    }
+    audioPlayback.setDeafened(deafened);
     if (!deafened) unlockCallAudio();
     window.TronoNetwork?.setVoiceState(
       true,
@@ -3483,26 +3323,14 @@ window.TronoSocial = (() => {
     }
   }
   async function changeOutput(e) {
-    selectedOutput = e.target.value || '';
-    lastOutputError = '';
-    storage.setItem('tronoVoiceOutput', selectedOutput);
-    for (const a of remoteAudio.values()) await applyOutput(a);
-    const ctx = mediaAudioContext;
-    if (ctx?.setSinkId)
-      try {
-        await ctx.setSinkId(selectedOutput);
-      } catch {
-        lastOutputError = 'Não foi possível trocar a saída amplificada.';
-      }
-    if (playbackAudioContext?.setSinkId)
-      try {
-        await playbackAudioContext.setSinkId(selectedOutput);
-      } catch {
-        lastOutputError = 'Não foi possível trocar a saída amplificada.';
-      }
-    for (const id of remoteAudio.keys()) attachRemoteAudio(id);
-    if (!lastOutputError)
-      setStatus(selectedOutput ? 'Saída de áudio alterada.' : 'Usando saída padrão.', 'ok');
+    const request = audioPlayback.setOutput(e.target.value || '');
+    storage.setItem('tronoVoiceOutput', audioPlayback.getSnapshot().output);
+    if (await request) {
+      setStatus(
+        audioPlayback.getSnapshot().output ? 'Saída de áudio alterada.' : 'Usando saída padrão.',
+        'ok',
+      );
+    }
     renderTelemetry();
   }
   async function changeCamera(e) {
@@ -3547,9 +3375,9 @@ window.TronoSocial = (() => {
     for (const [id, p] of next) {
       if (
         p.accountId &&
-        (privateVoiceRoster.get(id)?.accountId !== p.accountId || !peerVolumes.has(id))
+        (privateVoiceRoster.get(id)?.accountId !== p.accountId || !audioPlayback.hasGain(id))
       )
-        peerVolumes.set(
+        audioPlayback.setGain(
           id,
           clampGain(window.TronoPersonal?.get('volume:' + p.accountId, 100) ?? 100),
         );
@@ -3651,7 +3479,8 @@ window.TronoSocial = (() => {
     );
   }
   function audioPlaybackInfo() {
-    const received = [...remoteAudio.entries()].filter(([key]) => !key.startsWith('stream:'));
+    const snapshot = audioPlayback.getSnapshot();
+    const received = snapshot.entries.filter(({ key }) => !key.startsWith('stream:'));
     const expected = detailedPlayers().filter((p) => p.id !== meId() && p.joined).length;
     if (!voiceJoined) return { label: 'Fora da chamada', expected, count: 0 };
     if (deafened)
@@ -3661,18 +3490,18 @@ window.TronoSocial = (() => {
         count: received.length,
         problem: true,
       };
-    if (outputVolume === 0)
+    if (snapshot.volume === 0)
       return { label: 'Volume de saída em 0%', expected, count: received.length, problem: true };
-    if (received.some(([key]) => blockedAudio.has(key)))
+    if (received.some((entry) => entry.blocked))
       return {
         label: 'Reprodução bloqueada pelo navegador',
         expected,
         count: received.length,
         problem: true,
       };
-    if (received.some(([key, a]) => remotePlayback.get(key)?.route !== 'gain' && a.paused))
+    if (received.some((entry) => entry.route !== 'gain' && entry.paused))
       return { label: 'Reprodução pausada', expected, count: received.length, problem: true };
-    if (received.length && received.every(([key]) => (peerVolumes.get(key) ?? 100) === 0))
+    if (received.length && received.every((entry) => entry.gain === 0))
       return {
         label: 'Volume dos participantes em 0%',
         expected,
@@ -3685,7 +3514,7 @@ window.TronoSocial = (() => {
         expected,
         count: 0,
       };
-    const boosted = received.some(([key]) => remotePlayback.get(key)?.route === 'gain');
+    const boosted = received.some((entry) => entry.route === 'gain');
     return {
       label: boosted ? 'Reproduzindo com amplificação' : 'Reproduzindo áudio direto',
       expected,
@@ -3694,13 +3523,13 @@ window.TronoSocial = (() => {
   }
   function assessTelemetry(t) {
     const playback = audioPlaybackInfo();
-    if (playback.problem || lastOutputError)
+    if (playback.problem || audioPlayback.getSnapshot().outputError)
       return {
         level: 'warn',
         label: 'Confira a reprodução de áudio',
         detail: 'saída local',
-        recommendation: lastOutputError
-          ? `Saída de áudio: ${lastOutputError}. Confira o dispositivo em Configurações → Áudio.`
+        recommendation: audioPlayback.getSnapshot().outputError
+          ? `Saída de áudio: ${audioPlayback.getSnapshot().outputError}. Confira o dispositivo em Configurações → Áudio.`
           : `${playback.label}. Confira o volume e use Liberar áudio se o navegador bloqueou a reprodução.`,
       };
     if (voiceJoined && announcedTransport() === 'sfu-pending')
@@ -3903,10 +3732,11 @@ window.TronoSocial = (() => {
     set('telemetryAudioContext', mediaAudioContext?.state || 'Áudio direto');
     set(
       'telemetryOutput',
-      lastOutputError ||
+      audioPlayback.getSnapshot().outputError ||
         (output?.options &&
-          [...output.options].find((o) => o.value === selectedOutput)?.textContent) ||
-        (selectedOutput ? 'Dispositivo escolhido' : 'Saída padrão'),
+          [...output.options].find((o) => o.value === audioPlayback.getSnapshot().output)
+            ?.textContent) ||
+        (audioPlayback.getSnapshot().output ? 'Dispositivo escolhido' : 'Saída padrão'),
     );
     set(
       'telemetryTransport',
@@ -4512,7 +4342,7 @@ window.TronoSocial = (() => {
       profileActivities.clear();
       if (volumeOwner !== window.TronoAuth.user?.id) {
         volumeOwner = window.TronoAuth.user?.id || null;
-        peerVolumes.clear();
+        audioPlayback.clearVoiceGains();
       }
       renderProfileActivities();
     });
@@ -4709,7 +4539,7 @@ window.TronoSocial = (() => {
     document.addEventListener('visibilitychange', () => {
       syncVoiceWork();
       if (document.visibilityState === 'visible' && voiceJoined) {
-        for (const key of remoteAudio.keys()) attachRemoteAudio(key);
+        audioPlayback.refresh();
         updateAudioRecoveryUI();
       }
     });
@@ -4806,7 +4636,7 @@ window.TronoSocial = (() => {
         background: voiceJoined && !foreground(),
         meterMode: document.hidden ? 'paused' : foreground() ? 'active' : 'reduced',
         metersRunning: [...voiceMeters.values()].filter((m) => !!m.timer).length,
-        playbackContext: playbackAudioContext?.state || null,
+        playbackContext: audioPlayback.getSnapshot().context,
         microphoneContext: mediaAudioContext?.state || null,
         priority: voicePriorityState?.status,
       };
