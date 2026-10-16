@@ -1,3 +1,7 @@
+## Windows 0.2.9 · voz em segundo plano
+
+O microfone nativo em 100% usa a captura diretamente; o Electron preserva a prioridade do renderer quando a janela perde visibilidade. RNNoise, volumes personalizados e mute permanecem disponíveis. A correção exige o EXE 0.2.9 no computador de quem fala. Veja [como atualizar e publicar](ATUALIZAR_WINDOWS_v0.2.9.md).
+
 ## Windows 0.2.8 · GIFs do GIPHY
 
 Seletor de GIFs com pesquisa e tendências do GIPHY quando `GIPHY_API_KEY` estiver configurada no Render. Sem chave, permite abrir o catálogo externo e importar pelo link. Exige o novo SQL de créditos e o backend desta revisão para busca integrada. Veja [configuração e publicação com o EXE](ATUALIZAR_WINDOWS_v0.2.8.md).

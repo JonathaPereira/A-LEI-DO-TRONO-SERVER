@@ -78,7 +78,8 @@ window.TronoSocial = (()=>{
   function ensureMediaAudioContext(){
     const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return null;
     if(!mediaAudioContext||mediaAudioContext.state==='closed'){
-      try{mediaAudioContext=new Ctx({latencyHint:'interactive',sampleRate:48000});}catch(err){console.warn('[TronoSocial] Web Audio indisponível; usando áudio direto',err);return null;}
+      // Custom gain/RNNoise needs scheduling margin while games own the CPU.
+      try{mediaAudioContext=new Ctx({latencyHint:window.TronoDesktop ? .04 : 'interactive',sampleRate:48000});}catch(err){console.warn('[TronoSocial] Web Audio indisponível; usando áudio direto',err);return null;}
       if(selectedOutput&&mediaAudioContext.setSinkId)void mediaAudioContext.setSinkId(selectedOutput).catch(()=>{});
       mediaAudioContext.onstatechange=()=>{
         void refreshMicPipeline().catch(err=>console.warn('[TronoSocial] retomar microfone',err));
@@ -196,6 +197,7 @@ window.TronoSocial = (()=>{
   function setMicrophoneGain(value){
     microphoneVolume=clampGain(value);storage.setItem('mnMicrophoneGain',String(microphoneVolume));
     const proc=micCapture?.processor;if(proc?.gainNode)proc.gainNode.gain.setTargetAtTime(microphoneVolume/100,proc.ctx.currentTime,.012);
+    applyMicrophoneMute();void refreshMicPipeline().catch(err=>console.warn('[TronoSocial] ganho do microfone',err));
     renderGainValues();
   }
   function setOutputGain(value){
@@ -760,12 +762,12 @@ window.TronoSocial = (()=>{
     outputLimiter.threshold.value=-3;outputLimiter.knee.value=0;outputLimiter.ratio.value=16;outputLimiter.attack.value=.003;outputLimiter.release.value=.08;
     gainNode.connect(outputLimiter);outputLimiter.connect(destination);
     let denoiser=null,stopped=false;
-    const processor={ctx,source,gainNode,outputLimiter,destination,track:destination.stream.getAudioTracks()[0],mode:'gain-only',
+    const processor={ctx,source,gainNode,outputLimiter,destination,rawAtUnity:!!window.TronoDesktop&&(!enabled||nativeOnly),track:destination.stream.getAudioTracks()[0],mode:'gain-only',
       stop(){if(stopped)return;stopped=true;denoiser?.destroy();for(const node of [source,gainNode,outputLimiter])try{node.disconnect();}catch{}processor.track?.stop();}
     };
     const fallback=async()=>{
       if(stopped)return;try{source.disconnect();}catch{}denoiser?.destroy();denoiser=null;
-      source.connect(gainNode);processor.mode='unavailable';
+      source.connect(gainNode);processor.rawAtUnity=!!window.TronoDesktop;processor.mode='unavailable';
       const native=await enableNativeSuppression(rawStream);if(stopped)return;processor.mode=native?'native':'unavailable';updateNoiseButton();
       // Some browsers only change native suppression when acquiring a new input.
       if(!native&&voiceJoined&&micCapture?.processor===processor)void acquireMic({nativeOnly:true}).catch(err=>{if(err?.code!=='VOICE_CANCELLED')setStatus('Microfone ativo, mas a redução nativa não iniciou.','warn');});
@@ -789,14 +791,21 @@ window.TronoSocial = (()=>{
     try{capture.processor?.stop?.();}catch{}
     try{capture.rawStream?.getTracks?.().forEach(t=>t.stop());}catch{}
   }
+  function microphoneTrack(capture){
+    const processor=capture.processor;
+    // Native/off at 100% already has the desired signal. Keep it on WebRTC's
+    // capture path instead of making transmission depend on a renderer graph.
+    return processor&&processor.ctx.state==='running'&&!(processor.rawAtUnity&&microphoneVolume===100)?processor.track:capture.rawStream.getAudioTracks()[0];
+  }
   async function refreshMicPipeline(){
     updateNoiseButton();
     if(!micCapture||!voiceJoined)return;
-    const track=micCapture.processor&&mediaAudioContext?.state==='running'?micCapture.processor.track:micCapture.rawStream.getAudioTracks()[0];
+    const capture=micCapture,track=microphoneTrack(capture);
     if(!track||track.readyState!=='live'||track===micCapture.outgoingTrack)return;
-    if(track===micCapture.processor?.track)micCapture.rawStream.getAudioTracks()[0].enabled=!micMuted;
-    track.enabled=!micMuted;const stream=ensureLocalStream();for(const old of stream.getAudioTracks())stream.removeTrack(old);stream.addTrack(track);micCapture.outgoingTrack=track;
+    if(track===micCapture.processor?.track)micCapture.rawStream.getAudioTracks()[0].enabled=!micMuted&&microphoneVolume>0;
+    track.enabled=!micMuted&&microphoneVolume>0;const stream=ensureLocalStream();for(const old of stream.getAudioTracks())stream.removeTrack(old);stream.addTrack(track);micCapture.outgoingTrack=track;
     for(const pc of peers.values())await syncInitiatorTracks(pc);
+    if(micCapture!==capture||microphoneTrack(capture)!==track)return;
     const pub=sfuLocalPublications.get('audio');if(pub?.sender)await pub.sender.replaceTrack(track);
     void watchStream(meId(),stream);
   }
@@ -820,6 +829,7 @@ window.TronoSocial = (()=>{
       processor=await createIntegratedNoiseProcessor(rawStream,{enabled,nativeOnly:true});outgoingTrack=processor?.track||rawStream.getAudioTracks()[0];
     }
     if(!current()){cleanupMicCapture({rawStream,processor});throw Object.assign(new Error('Entrada na chamada cancelada.'),{code:'VOICE_CANCELLED'});}
+    outgoingTrack=microphoneTrack({rawStream,processor});
     if(!outgoingTrack){cleanupMicCapture({rawStream,processor});throw new Error('Nenhuma trilha de microfone foi recebida.');}
     outgoingTrack.enabled=!micMuted;
     const stream=ensureLocalStream(),oldCapture=micCapture;
@@ -1714,7 +1724,7 @@ window.TronoSocial = (()=>{
     micMuted=false;deafened=false;updateButtons();updateRealtimeUI();setStatus('Fora do chat de voz.');renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();
     return Promise.resolve();
   }
-  function applyMicrophoneMute(){localStream?.getAudioTracks().forEach(track=>track.enabled=!micMuted);micCapture?.rawStream.getAudioTracks().forEach(track=>track.enabled=!micMuted);}
+  function applyMicrophoneMute(){const enabled=!micMuted&&microphoneVolume>0;localStream?.getAudioTracks().forEach(track=>track.enabled=enabled);micCapture?.rawStream.getAudioTracks().forEach(track=>track.enabled=enabled);if(micCapture?.processor?.track)micCapture.processor.track.enabled=enabled;}
   function toggleMute(){if(!voiceJoined||deafened)return;micMuted=!micMuted;applyMicrophoneMute();window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());updateButtons();renderVoiceRoster();updateMediaIndicators();}
   function toggleDeafen(){
     if(!voiceJoined)return;
@@ -1736,7 +1746,7 @@ window.TronoSocial = (()=>{
   function noiseState(){
     const processor=micCapture?.processor,settings=micCapture?.rawStream.getAudioTracks()[0]?.getSettings?.()||{};
     const activeMode=processor?.mode==='gain-only'?null:processor?.mode;
-    const mode=noiseLoading?'loading':!voiceJoined?'idle':processor&&processor.ctx.state!=='running'?'paused':activeMode|| (settings.noiseSuppression?'native':'unavailable');
+    const mode=noiseLoading?'loading':!voiceJoined?'idle':processor&&micCapture.outgoingTrack===processor.track&&processor.ctx.state!=='running'?'paused':activeMode|| (settings.noiseSuppression?'native':'unavailable');
     return {requested:noiseSuppression,mode:noiseSuppression?mode:'off',nativeSuppression:settings.noiseSuppression===true,sampleRate:processor?.ctx.sampleRate||settings.sampleRate||null};
   }
   function updateNoiseButton(){
