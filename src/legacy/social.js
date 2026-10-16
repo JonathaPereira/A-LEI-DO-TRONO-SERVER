@@ -27,14 +27,6 @@ window.TronoSocial = (() => {
   const hiddenCameras = new Set();
   const streamWatchVersions = new Map();
   let mediaAudioContext = null;
-  let voiceProtection = storage.getItem('mnVoiceProtection') !== '0';
-  const reception = new window.TronoVoiceReception.VoiceReception(voiceProtection);
-  let receptionRows = [],
-    playoutSnapshot = null,
-    voicePriorityState = null,
-    voiceOwners = new WeakMap();
-  const playoutPrevious = new Map(),
-    receiveHistory = [];
   const foreground = () => !document.hidden && document.hasFocus();
   function syncVoiceWork() {
     const idle = voiceJoined && !foreground();
@@ -55,16 +47,6 @@ window.TronoSocial = (() => {
         }
         meter.tick?.();
       }
-    }
-  }
-  async function syncVoicePriority() {
-    if (!window.TronoDesktop?.setVoiceProtection) return;
-    try {
-      voicePriorityState = await window.TronoDesktop.setVoiceProtection(
-        voiceJoined && voiceProtection,
-      );
-    } catch {
-      voicePriorityState = { active: false, status: 'unavailable' };
     }
   }
   const isScreenKind = (kind) => kind === 'screen' || kind === 'screen-audio';
@@ -267,16 +249,8 @@ window.TronoSocial = (() => {
   let localScreenPreviewPaused = false;
   let localScreenCollapsed = false;
   let telemetryOpen = false;
-  let telemetryTimer = null,
-    telemetrySchedule = 0,
-    telemetryCollecting = false;
-  let telemetrySnapshot = null;
-  const telemetryPrev = new Map();
   const stability = new window.TronoCallStability.CallStability();
-  let adaptiveEnabled = storage.getItem('mnAdaptiveQuality') !== '0',
-    eventLoopLagMs = 0,
-    nativeResources = null;
-  const audioStatsPrev = new Map();
+  let adaptiveEnabled = storage.getItem('mnAdaptiveQuality') !== '0';
 
   const rtcConfig = window.TRONO_RTC_CONFIG || {
     iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }],
@@ -394,13 +368,8 @@ window.TronoSocial = (() => {
     }),
     isCameraHidden: (id) => hiddenCameras.has(id),
     onVoiceReceiver: (id, receiver, added) => {
-      if (added) {
-        voiceOwners.set(receiver, id);
-        reception.add(receiver);
-      } else {
-        voiceOwners.delete(receiver);
-        reception.remove(receiver);
-      }
+      if (added) voiceTelemetry.registerReceiver(id, receiver);
+      else voiceTelemetry.removeReceiver(receiver);
     },
     onAudioReady: (id, kind) =>
       attachRemoteAudio(kind === 'screen-audio' ? streamAudioKey(id) : id),
@@ -440,6 +409,41 @@ window.TronoSocial = (() => {
         failed ? 'error' : 'warn',
       );
     },
+  });
+
+  const voiceTelemetry = window.TronoVoiceCapture.createVoiceTelemetry({
+    protection: storage.getItem('mnVoiceProtection') !== '0',
+    getSettings: () => ({
+      joined: voiceJoined,
+      transport: mediaTransport,
+      detailsOpen: telemetryOpen,
+      foreground: foreground(),
+      visible: document.visibilityState !== 'hidden',
+      desktop: !!window.TronoDesktop,
+    }),
+    getConnections: allTelemetryPeerConnections,
+    getLocalVideo: () =>
+      screenSharing()
+        ? screenCapture.getCapture()?.outgoing.getVideoTracks()[0]
+        : localStream?.getVideoTracks()[0],
+    getResources: window.TronoDesktop?.getResources
+      ? () => window.TronoDesktop.getResources()
+      : undefined,
+    setVoiceProtection: window.TronoDesktop?.setVoiceProtection
+      ? (active) => window.TronoDesktop.setVoiceProtection(active)
+      : undefined,
+    onSample: async (snapshot, isCurrent) => {
+      if (!isCurrent() || !stability.sample(snapshot, performance.now(), adaptiveEnabled)) return;
+      await applyQualityToLiveMedia();
+      if (isCurrent())
+        setStatus(
+          stability.level
+            ? 'Vídeo adaptado para aliviar ' + stability.reason + '.'
+            : 'Qualidade de vídeo restaurada.',
+          'ok',
+        );
+    },
+    onChange: renderTelemetry,
   });
 
   const sfuSession = window.TronoVoiceCapture.createSfuSession({
@@ -621,7 +625,7 @@ window.TronoSocial = (() => {
       new CustomEvent('trono-telemetry-change', { detail: { open: telemetryOpen } }),
     );
     renderTelemetry();
-    startTelemetry();
+    voiceTelemetry.start();
   }
   function ensureLocalStream() {
     if (!localStream) localStream = new MediaStream();
@@ -1778,7 +1782,7 @@ window.TronoSocial = (() => {
     if (!p2pPeers.close(id)) clearPeerMedia(id);
   }
   function clearPeerMedia(id, pc) {
-    for (const r of pc?.getReceivers?.() || []) reception.remove(r);
+    for (const r of pc?.getReceivers?.() || []) voiceTelemetry.removeReceiver(r);
     stopMeter(id);
     removeRemoteAudio(id);
     removeRemoteAudio(streamAudioKey(id));
@@ -1807,7 +1811,7 @@ window.TronoSocial = (() => {
     });
   }
   function detachSfuRemoteMedia(sub) {
-    for (const receiver of sub.pc.getReceivers()) reception.remove(receiver);
+    for (const receiver of sub.pc.getReceivers()) voiceTelemetry.removeReceiver(receiver);
     remoteMedia.detachSubscription(sub);
     if (sub.kind === 'audio') {
       removeRemoteAudio(sub.publisherId);
@@ -2852,8 +2856,8 @@ window.TronoSocial = (() => {
         ensureCurrent();
         voiceJoined = true;
         syncVoiceWork();
-        void syncVoicePriority();
-        startTelemetry();
+        void voiceTelemetry.syncPriority();
+        voiceTelemetry.start();
         privateVoiceRoster.clear();
         voiceRosterInitialized = false;
         mediaTransport = communityVoice() && roomVoiceMode === 'sfu' ? 'sfu-pending' : 'p2p';
@@ -2919,14 +2923,6 @@ window.TronoSocial = (() => {
   }
   function leaveVoice(reason = 'leave') {
     stability.reset();
-    audioStatsPrev.clear();
-    reception.clear();
-    voiceOwners = new WeakMap();
-    receptionRows = [];
-    playoutPrevious.clear();
-    receiveHistory.length = 0;
-    playoutSnapshot = null;
-    eventLoopLagMs = 0;
     if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
     window.TronoMosaic?.close();
     // Cancel pending permission/SFU work before releasing the current devices.
@@ -2935,10 +2931,11 @@ window.TronoSocial = (() => {
     microphone.stop();
     voiceJoinPromise = null;
     voiceJoined = false;
+    voiceTelemetry.reset();
     cameraTogglePending = null;
     cameraCapture.stop();
     syncVoiceWork();
-    void syncVoicePriority();
+    void voiceTelemetry.syncPriority();
     window.TronoNetwork?.setVoiceState(false, false, false, false, transmissionQuality, 'p2p');
     closeAllPeers();
     remoteMedia.reset();
@@ -3177,7 +3174,7 @@ window.TronoSocial = (() => {
       storage.setItem('tronoNoiseSuppression', noiseSuppression ? '1' : '0');
       storage.setItem('tronoVoiceLightMode', voiceLightMode ? '1' : '0');
       updateNoiseButton();
-      startTelemetry();
+      voiceTelemetry.start();
     };
     save();
     try {
@@ -3224,7 +3221,7 @@ window.TronoSocial = (() => {
     }
     storage.setItem('tronoVoiceLightMode', voiceLightMode ? '1' : '0');
     updateNoiseButton();
-    startTelemetry();
+    voiceTelemetry.start();
     if (!voiceJoined) return;
     try {
       await acquireMic();
@@ -3241,7 +3238,7 @@ window.TronoSocial = (() => {
       if (window.TronoDesktop) storage.setItem('mnDesktopNoiseMode', noiseEngine);
       storage.setItem('tronoVoiceLightMode', previous ? '1' : '0');
       updateNoiseButton();
-      startTelemetry();
+      voiceTelemetry.start();
       if (err?.code !== 'VOICE_CANCELLED')
         setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.', 'error');
     }
@@ -3422,43 +3419,13 @@ window.TronoSocial = (() => {
 
   function allTelemetryPeerConnections() {
     const list = [];
-    let i = 0;
     for (const [id, pc] of peers)
-      if (pc && pc.connectionState !== 'closed') list.push([`p2p:${id}:${i++}`, pc]);
+      if (pc && pc.connectionState !== 'closed') list.push([`p2p:${id}`, pc]);
     for (const [kind, pub] of sfuLocalPublications)
       if (pub?.pc && pub.pc.connectionState !== 'closed') list.push([`sfu-pub:${kind}`, pub.pc]);
     for (const [key, sub] of sfuSubscriptions)
       if (sub?.pc && sub.pc.connectionState !== 'closed') list.push([`sfu-sub:${key}`, sub.pc]);
     return list;
-  }
-  function statKind(stat) {
-    return stat.kind || stat.mediaType || '';
-  }
-  function rateFromStat(key, bytes, ts) {
-    const prev = telemetryPrev.get(key);
-    telemetryPrev.set(key, {
-      ...(prev || {}),
-      bytes: Number(bytes) || 0,
-      ts: Number(ts) || performance.now(),
-    });
-    if (!prev || !Number.isFinite(prev.bytes) || !Number.isFinite(prev.ts)) return 0;
-    const dt = Math.max(1, (Number(ts) || performance.now()) - prev.ts),
-      delta = Math.max(0, (Number(bytes) || 0) - prev.bytes);
-    return (delta * 8 * 1000) / dt;
-  }
-  function lossFromStat(key, received, lost, ts) {
-    const stateKey = `loss:${key}`,
-      prev = telemetryPrev.get(stateKey),
-      cur = {
-        received: Number(received) || 0,
-        lost: Math.max(0, Number(lost) || 0),
-        ts: Number(ts) || performance.now(),
-      };
-    telemetryPrev.set(stateKey, cur);
-    if (!prev) return { lost: 0, total: 0 };
-    const dr = Math.max(0, cur.received - prev.received),
-      dl = Math.max(0, cur.lost - prev.lost);
-    return { lost: dl, total: dr + dl };
   }
   function formatRate(v) {
     if (!Number.isFinite(v) || v <= 0) return '—';
@@ -3656,6 +3623,12 @@ window.TronoSocial = (() => {
     };
   }
   function renderTelemetry() {
+    const {
+      telemetry: telemetrySnapshot,
+      resources: nativeResources,
+      lagMs: eventLoopLagMs,
+      enabled: voiceProtection,
+    } = voiceTelemetry.getSnapshot();
     const t = telemetrySnapshot || {
       transport: mediaTransport,
       rttMs: 0,
@@ -3781,14 +3754,18 @@ window.TronoSocial = (() => {
     }
   }
   function renderReceptionTelemetry() {
+    const {
+      rows: receptionRows,
+      playout: playoutSnapshot,
+      priority: voicePriorityState,
+      assessment,
+      owners,
+    } = voiceTelemetry.getSnapshot();
     const set = (id, text) => {
       const n = $(id);
       if (n && n.textContent !== text) n.textContent = text;
     };
-    set(
-      'telemetryVoiceAssessment',
-      window.TronoVoiceReception.assessment(receptionRows, eventLoopLagMs, playoutSnapshot).text,
-    );
+    set('telemetryVoiceAssessment', assessment.text);
     set(
       'telemetryVoicePriority',
       {
@@ -3807,12 +3784,9 @@ window.TronoSocial = (() => {
     );
     const host = $('telemetryVoiceRows');
     if (!host) return;
-    const owners = [...reception.receivers.values()]
-      .filter((r) => r.metrics)
-      .map((r) => privateVoiceRoster.get(voiceOwners.get(r.receiver))?.name);
     const lines = receptionRows.map((r) => {
       const fmt = (n, suffix) => (Number.isFinite(n) ? n.toFixed(1) + suffix : '—');
-      return `${owners[r.voice - 1] || 'Participante'} · Voz ${r.voice} · perda ${fmt(r.lossPct, '%')} · jitter ${fmt(r.jitterMs, ' ms')} · reconstruída ${fmt(r.concealedPct, '%')} · buffer medido ${fmt(r.bufferMs, ' ms')} · margem solicitada ${r.targetMs === null ? 'automática' : r.targetMs + ' ms'}`;
+      return `${privateVoiceRoster.get(owners[r.voice - 1])?.name || 'Participante'} · Voz ${r.voice} · perda ${fmt(r.lossPct, '%')} · jitter ${fmt(r.jitterMs, ' ms')} · reconstruída ${fmt(r.concealedPct, '%')} · buffer medido ${fmt(r.bufferMs, ' ms')} · margem solicitada ${r.targetMs === null ? 'automática' : r.targetMs + ' ms'}`;
     });
     const text = lines.length ? lines.join('\n') : 'Aguardando intervalos de voz recebida.';
     if (host.textContent !== text) host.textContent = text;
@@ -3820,279 +3794,17 @@ window.TronoSocial = (() => {
   function updateTelemetryHeader() {
     renderTelemetry();
   }
-  async function collectTelemetry() {
-    if (telemetryCollecting) return;
-    telemetryCollecting = true;
-    try {
-      if (telemetryOpen && foreground() && window.TronoDesktop?.getResources)
-        try {
-          nativeResources = await window.TronoDesktop.getResources();
-          voicePriorityState = nativeResources.voicePriority || voicePriorityState;
-        } catch {}
-      const pcs = allTelemetryPeerConnections();
-      if (!voiceJoined || !pcs.length) {
-        reception.prune(new Set());
-        receptionRows = [];
-        telemetrySnapshot = null;
-        renderTelemetry();
-        return;
-      }
-      const liveReceivers = new Set();
-      const sampledReceivers = new Set();
-      const playoutSeen = new Set();
-      let gapEvents = 0,
-        gapMs = 0,
-        playoutAvailable = false;
-      let audioLost = 0,
-        audioTotal = 0,
-        audioJitterMs = 0,
-        concealed = 0,
-        samples = 0,
-        jitterDelay = 0,
-        jitterEmitted = 0;
-      let uploadBps = 0,
-        downloadBps = 0,
-        rttSum = 0,
-        rttCount = 0,
-        jitterSum = 0,
-        jitterCount = 0,
-        lossLost = 0,
-        lossTotal = 0,
-        outFps = 0,
-        inFps = 0,
-        outW = 0,
-        outH = 0,
-        inW = 0,
-        inH = 0,
-        iceRoute = '',
-        pcState = '';
-      const limiters = [];
-      for (const [pcKey, pc] of pcs) {
-        for (const receiver of pc.getReceivers?.() || [])
-          if (reception.receivers.has(receiver)) liveReceivers.add(receiver);
-        if (pc.connectionState && pc.connectionState !== 'new') pcState = pc.connectionState;
-        let report;
-        try {
-          report = await pc.getStats();
-        } catch {
-          continue;
-        }
-        const voicePlayoutIds = new Set();
-        report.forEach((stat) => {
-          const kind = statKind(stat),
-            ts = stat.timestamp || performance.now(),
-            key = `${pcKey}:${stat.id}`;
-          if (stat.type === 'outbound-rtp' && !stat.isRemote) {
-            uploadBps += rateFromStat(`tx:${key}`, stat.bytesSent, ts);
-            if (kind === 'video') {
-              if (Number(stat.framesPerSecond) > outFps) outFps = Number(stat.framesPerSecond) || 0;
-              if ((Number(stat.frameWidth) || 0) * (Number(stat.frameHeight) || 0) > outW * outH) {
-                outW = Number(stat.frameWidth) || 0;
-                outH = Number(stat.frameHeight) || 0;
-              }
-              if (stat.qualityLimitationReason && stat.qualityLimitationReason !== 'none')
-                limiters.push(stat.qualityLimitationReason);
-            }
-          }
-          if (stat.type === 'inbound-rtp' && !stat.isRemote) {
-            downloadBps += rateFromStat(`rx:${key}`, stat.bytesReceived, ts);
-            const loss = lossFromStat(key, stat.packetsReceived, stat.packetsLost, ts);
-            lossLost += loss.lost;
-            lossTotal += loss.total;
-            if (
-              kind === 'audio' &&
-              !pcKey.endsWith(':screen-audio') &&
-              !(
-                pc._tronoScreenAudioTransceiver?.mid != null &&
-                String(stat.mid) === String(pc._tronoScreenAudioTransceiver.mid)
-              ) &&
-              !(
-                stat.trackIdentifier &&
-                stat.trackIdentifier === pc._tronoScreenAudioTransceiver?.receiver?.track?.id
-              )
-            ) {
-              const candidates = (pc.getTransceivers?.() || []).filter(
-                (t) => t.receiver?.track?.kind === 'audio' && t !== pc._tronoScreenAudioTransceiver,
-              );
-              const transceiver =
-                candidates.find(
-                  (t) => stat.trackIdentifier && t.receiver.track.id === stat.trackIdentifier,
-                ) ||
-                candidates.find((t) => stat.mid != null && String(t.mid) === String(stat.mid)) ||
-                (candidates.length === 1 ? candidates[0] : null);
-              if (stat.playoutId) voicePlayoutIds.add(stat.playoutId);
-              if (transceiver && !sampledReceivers.has(transceiver.receiver)) {
-                liveReceivers.add(transceiver.receiver);
-                sampledReceivers.add(transceiver.receiver);
-                reception.sample(transceiver.receiver, stat, ts);
-              }
-              audioLost += loss.lost;
-              audioTotal += loss.total;
-              audioJitterMs = Math.max(audioJitterMs, (Number(stat.jitter) || 0) * 1000);
-              const prior = audioStatsPrev.get(key);
-              if (prior) {
-                concealed += Math.max(0, (stat.concealedSamples || 0) - prior.concealed);
-                samples += Math.max(0, (stat.totalSamplesReceived || 0) - prior.samples);
-                jitterDelay += Math.max(0, (stat.jitterBufferDelay || 0) - prior.delay);
-                jitterEmitted += Math.max(0, (stat.jitterBufferEmittedCount || 0) - prior.emitted);
-              }
-              audioStatsPrev.set(key, {
-                concealed: stat.concealedSamples || 0,
-                samples: stat.totalSamplesReceived || 0,
-                delay: stat.jitterBufferDelay || 0,
-                emitted: stat.jitterBufferEmittedCount || 0,
-              });
-            }
-            if (Number.isFinite(stat.jitter)) {
-              jitterSum += Number(stat.jitter) * 1000;
-              jitterCount++;
-            }
-            if (kind === 'video') {
-              if (Number(stat.framesPerSecond) > inFps) inFps = Number(stat.framesPerSecond) || 0;
-              if ((Number(stat.frameWidth) || 0) * (Number(stat.frameHeight) || 0) > inW * inH) {
-                inW = Number(stat.frameWidth) || 0;
-                inH = Number(stat.frameHeight) || 0;
-              }
-            }
-          }
-          if (
-            stat.type === 'candidate-pair' &&
-            stat.state === 'succeeded' &&
-            (stat.nominated || stat.selected)
-          ) {
-            if (Number.isFinite(stat.currentRoundTripTime)) {
-              rttSum += Number(stat.currentRoundTripTime) * 1000;
-              rttCount++;
-            }
-            const lc = report.get(stat.localCandidateId);
-            if (lc?.candidateType)
-              iceRoute =
-                lc.candidateType === 'relay'
-                  ? 'TURN relay'
-                  : lc.candidateType === 'srflx'
-                    ? 'STUN / srflx'
-                    : lc.candidateType;
-          }
-          if (stat.type === 'remote-inbound-rtp' && Number.isFinite(stat.roundTripTime)) {
-            rttSum += Number(stat.roundTripTime) * 1000;
-            rttCount++;
-          }
-        });
-        for (const id of voicePlayoutIds) {
-          const stat = report.get(id);
-          if (
-            stat?.type !== 'media-playout' ||
-            !Number.isFinite(stat.synthesizedSamplesEvents) ||
-            !Number.isFinite(stat.synthesizedSamplesDuration)
-          )
-            continue;
-          const k = pcKey + ':' + id,
-            prev = playoutPrevious.get(k);
-          playoutSeen.add(k);
-          playoutAvailable = true;
-          if (prev) {
-            gapEvents += Math.max(0, stat.synthesizedSamplesEvents - prev.events);
-            gapMs += Math.max(0, stat.synthesizedSamplesDuration - prev.duration) * 1000;
-          }
-          playoutPrevious.set(k, {
-            events: stat.synthesizedSamplesEvents,
-            duration: stat.synthesizedSamplesDuration,
-          });
-        }
-      }
-      reception.prune(liveReceivers);
-      receptionRows = reception.snapshot();
-      for (const key of playoutPrevious.keys())
-        if (!playoutSeen.has(key)) playoutPrevious.delete(key);
-      playoutSnapshot = playoutAvailable ? { gapEvents, gapMs } : null;
-      if (receptionRows.length) {
-        const highest = (k) => {
-          const v = receptionRows.map((r) => r[k]).filter(Number.isFinite);
-          return v.length ? Math.max(...v) : null;
-        };
-        receiveHistory.push({
-          stamp: performance.now(),
-          lossPct: highest('lossPct'),
-          jitterMs: highest('jitterMs'),
-          concealedPct: highest('concealedPct'),
-          localLagMs: eventLoopLagMs,
-        });
-        if (receiveHistory.length > 12) receiveHistory.shift();
-      }
-      if (!outFps) {
-        const track = screenSharing()
-            ? screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0]
-            : localStream?.getVideoTracks?.()[0],
-          settings = track?.getSettings?.() || {};
-        outFps = Number(settings.frameRate) || 0;
-        outW = outW || Number(settings.width) || 0;
-        outH = outH || Number(settings.height) || 0;
-      }
-      const limiter = limiters.includes('cpu')
-        ? 'cpu'
-        : limiters.includes('bandwidth')
-          ? 'bandwidth'
-          : limiters[0] || 'none';
-      telemetrySnapshot = {
-        audioLossPct: audioTotal ? (audioLost / audioTotal) * 100 : 0,
-        audioJitterMs,
-        concealedPct: samples ? Math.min(100, (concealed / samples) * 100) : 0,
-        jitterBufferMs: jitterEmitted ? (jitterDelay / jitterEmitted) * 1000 : 0,
-        eventLoopLagMs,
-        transport: mediaTransport,
-        rttMs: rttCount ? rttSum / rttCount : 0,
-        uploadBps,
-        downloadBps,
-        outFps,
-        inFps,
-        outW,
-        outH,
-        inW,
-        inH,
-        lossPct: lossTotal ? (lossLost / lossTotal) * 100 : 0,
-        jitterMs: jitterCount ? jitterSum / jitterCount : 0,
-        limiter,
-        iceRoute,
-        pcState,
-      };
-      if (stability.sample(telemetrySnapshot, performance.now(), adaptiveEnabled)) {
-        await applyQualityToLiveMedia();
-        setStatus(
-          stability.level
-            ? 'Vídeo adaptado para aliviar ' + stability.reason + '.'
-            : 'Qualidade de vídeo restaurada.',
-          'ok',
-        );
-      }
-      renderTelemetry();
-    } finally {
-      telemetryCollecting = false;
-    }
-  }
-  function startTelemetry() {
-    clearTimeout(telemetryTimer);
-    const generation = ++telemetrySchedule;
-    let expected = performance.now();
-    const tick = async () => {
-      if (generation !== telemetrySchedule) return;
-      const visible = document.visibilityState !== 'hidden' || !!window.TronoDesktop,
-        late = performance.now() - expected;
-      eventLoopLagMs = visible ? Math.min(60000, Math.max(0, late)) : 0;
-      try {
-        if (visible) await collectTelemetry();
-      } catch (err) {
-        console.warn('[TronoSocial] diagnóstico de mídia', err);
-      } finally {
-        if (generation === telemetrySchedule) {
-          const delay = voiceJoined ? (telemetryOpen && foreground() ? 2000 : 5000) : 15000;
-          expected = performance.now() + delay;
-          telemetryTimer = setTimeout(tick, delay);
-        }
-      }
-    };
-    void tick();
-  }
   function diagnostics() {
+    const {
+      telemetry: telemetrySnapshot,
+      resources: nativeResources,
+      enabled: voiceProtection,
+      rows: receptionRows,
+      playout: playoutSnapshot,
+      priority: voicePriorityState,
+      assessment,
+      history: receiveHistory,
+    } = voiceTelemetry.getSnapshot();
     return window.TronoCallStability.diagnosticReport({
       version: window.TronoDesktop?.version || window.TronoNetwork.CLIENT_VERSION,
       platform: window.TronoDesktop ? 'Windows' : 'Navegador',
@@ -4109,11 +3821,7 @@ window.TronoSocial = (() => {
       reception: {
         enabled: voiceProtection,
         rows: receptionRows,
-        assessment: window.TronoVoiceReception.assessment(
-          receptionRows,
-          eventLoopLagMs,
-          playoutSnapshot,
-        ).kind,
+        assessment: assessment.kind,
         playout: playoutSnapshot,
         priority: voicePriorityState?.status,
         recent: receiveHistory.map((r) => ({
@@ -4129,7 +3837,7 @@ window.TronoSocial = (() => {
   async function copyDiagnostics() {
     const label = $('copyDiagnosticsStatus');
     try {
-      await collectTelemetry();
+      await voiceTelemetry.collect();
       const report = diagnostics();
       if (window.TronoDesktop?.copyDiagnostics) await window.TronoDesktop.copyDiagnostics(report);
       else await navigator.clipboard.writeText(report);
@@ -4207,12 +3915,11 @@ window.TronoSocial = (() => {
   }
 
   function bind() {
-    $('voiceProtection').checked = voiceProtection;
+    $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
-      voiceProtection = e.target.checked;
-      storage.setItem('mnVoiceProtection', voiceProtection ? '1' : '0');
-      reception.configure(voiceProtection);
-      void syncVoicePriority();
+      const enabled = e.target.checked;
+      storage.setItem('mnVoiceProtection', enabled ? '1' : '0');
+      voiceTelemetry.configureProtection(enabled);
       renderTelemetry();
     };
     $('adaptiveQuality').checked = adaptiveEnabled;
@@ -4523,7 +4230,7 @@ window.TronoSocial = (() => {
     renderScreenGrid();
     renderSeatMedia();
     startRealtimeStatusSync();
-    startTelemetry();
+    voiceTelemetry.start();
     document.addEventListener('pointerdown', () => {
       primeCallSounds();
       if (voiceJoined) unlockCallAudio();
@@ -4627,18 +4334,19 @@ window.TronoSocial = (() => {
       return realtimeStatus ? { ...realtimeStatus } : null;
     },
     get telemetry() {
-      return telemetrySnapshot ? { ...telemetrySnapshot } : null;
+      return voiceTelemetry.getSnapshot().telemetry;
     },
     get voiceReception() {
+      const { enabled, rows, priority } = voiceTelemetry.getSnapshot();
       return {
-        enabled: voiceProtection,
-        rows: receptionRows.map((r) => ({ ...r })),
+        enabled,
+        rows: rows.map((r) => ({ ...r })),
         background: voiceJoined && !foreground(),
         meterMode: document.hidden ? 'paused' : foreground() ? 'active' : 'reduced',
         metersRunning: [...voiceMeters.values()].filter((m) => !!m.timer).length,
         playbackContext: audioPlayback.getSnapshot().context,
         microphoneContext: mediaAudioContext?.state || null,
-        priority: voicePriorityState?.status,
+        priority: priority?.status,
       };
     },
     getLocalDisplayStream() {

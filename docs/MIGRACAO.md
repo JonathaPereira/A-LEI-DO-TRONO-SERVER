@@ -28,6 +28,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Streams recebidos, listeners, tolerância de vídeo e recuperação em TypeScript.
 - Negociação SFU, catálogo, publicação, assinaturas, camadas e retries em TypeScript.
 - Players, ganhos de reprodução, autoplay e roteamento da saída em TypeScript.
+- Coleta de diagnóstico, métricas/proteção de recepção e prioridade nativa em TypeScript.
 
 ## Conversão ainda necessária
 
@@ -551,14 +552,62 @@ Evidências locais: `artifacts/playback-unit.log`, `playback-regressions.log`,
 `playback-media.log`, `playback-ui.log`, `playback-build.log` e
 `playback-desktop.log`. Não houve publicação ou alteração de serviços remotos.
 
+## Métricas e proteção da recepção — 16/10/2026
+
+- `lib/voice/telemetry.ts` possui registro/identidade dos receivers de voz, coleta
+  assíncrona e agendamento do diagnóstico, contadores por peer, histórico, métricas
+  de saída e recursos/prioridade nativos. `types/voice-diagnostics.ts` descreve os
+  dados consumidos de WebRTC e os snapshots apresentados à interface.
+- `reception-policy.ts` conserva a margem inicial de 60 ms, teto de 140 ms, passos
+  de 40 ms, intervalo mínimo de aumento de 10 s e redução após 60 s estáveis.
+  A proteção só ajusta receivers de voz; áudio de tela/jogos e vídeo permanecem
+  fora dessa política. Capturas, trilhas, senders, conexões e socket são emprestados.
+- Uma coleta é compartilhada por geração. Sair invalida leituras e libera o bloqueio
+  sem esperar WebRTC/IPC; uma chamada nova pode coletar enquanto a antiga responde.
+  Resultados de peers retirados não recriam receivers ou sobrescrevem baselines de
+  conexões novas. A limpeza final conserva registros que chegaram durante a leitura.
+- Contadores são ligados ao objeto do peer e limpos quando a conexão/estatística
+  sai. Intervalos faltantes/reiniciados não contam como estabilidade da recepção;
+  falhas de `getStats` retiram a medição antiga e não restauram a qualidade adaptativa.
+- Pedidos de prioridade nativa são serializados, com resultados antigos invalidados.
+  Reset também solicita a liberação da prioridade. Recursos/prioridade do preload
+  são validados; uma leitura de recursos anterior não desfaz uma decisão mais nova.
+  O agendamento conserva 2/5/15 s e a diferença entre web oculta e desktop.
+- `social.js` perdeu registro de recepção, histórico, contadores, filas de prioridade,
+  coleta e timer de diagnóstico. Conserva a renderização, adaptação de qualidade e
+  exportador anônimo de `call-stability.js`. Os medidores visuais de quem fala e
+  seus timers/contexto ainda precisam de extração. `legacy/voice-reception.js` e sua
+  entrada no manifesto foram removidos, inclusive a cópia do renderer gerado.
+- `npm run test:voice:diagnostics` reúne quatro regressões anteriores da política
+  e 16 do coletor, agora incluídas em `npm test`. Cobrem troca de peer/chamada,
+  leitura/IPC atrasados, prioridade, intervalos, saída, histórico e agendamento.
+
+Passaram tipagem, formatação, build estático, `npm test` (4 integrações e 278
+checks), quatro fluxos de `test:ui` e 15 checks de mídia/controles no navegador.
+O Electron passou nos três testes: chamada P2P com layouts/recapturas, SFU via
+relay local e nove cenários de segundo plano no Windows. O teste SFU agora coleta
+métricas do receiver real, liga/desliga a proteção e verifica restauração da
+margem original mantendo a mesma trilha. O helper compartilhado com os testes de
+runtime/empacotamento usa a fábrica tipada e foi exercitado nessa regressão,
+incluindo a restauração da prioridade do serviço de áudio nativo.
+
+Evidências locais: `artifacts/telemetry-unit.log`, `telemetry-regressions.log`,
+`telemetry-media.log`, `telemetry-ui.log`, `telemetry-desktop.log`,
+`telemetry-typecheck.log`, `telemetry-format.log` e `telemetry-build.log`.
+O teste manual do usuário continua reservado para o fim da migração. Os testes
+sintéticos não medem entrega de jogos a 60 FPS ou rotas SFU/TURN externas.
+Não houve publicação ou alteração de serviços remotos.
+
 ## Próximas alterações, em ordem
 
-1. Extrair métricas de recepção e coordenação/entrada da chamada para `lib/voice/`.
+1. Extrair medidores visuais de fala e coordenação/entrada da chamada para `lib/voice/`.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
    Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.
    Publicações/assinaturas, filas, catálogo e retries SFU estão em `sfu-session.ts`.
    Players/ganhos, autoplay e roteamento de saída estão em `audio-playback.ts`.
+   Coleta, métricas, proteção de recepção e prioridade estão em `telemetry.ts`/`reception-policy.ts`.
+   Adaptação de qualidade e exportação anônima ainda usam `legacy/call-stability.js`.
    Bootstrap ICE/TURN e status/consumo ainda pertencem ao coordenador legado.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.

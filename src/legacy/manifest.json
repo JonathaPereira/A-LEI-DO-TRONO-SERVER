@@ -14,7 +14,6 @@
     "noise-suppression.js",
     "stream-controls.js",
     "personal-prefs.js",
-    "voice-reception.js",
     "call-stability.js",
     "social.js",
     "recording.js",

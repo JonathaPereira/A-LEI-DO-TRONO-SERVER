@@ -243,9 +243,36 @@ módulo de reprodução, sem outros mapas de players, ganhos ou bloqueios. O ant
 `legacy/audio-gain.js` e sua entrada no manifesto foram excluídos. Sons de aviso,
 soundboard e áudio dos jogos mantêm seus controladores próprios.
 
+`telemetry.ts` possui registro de receivers de voz, associação ao participante,
+coleta `getStats`, deltas de tráfego/perda, métricas de vídeo/ICE/saída, histórico
+limitado e agendamento do diagnóstico. Os contadores pertencem ao objeto do peer,
+com descarte de peers e IDs de estatística retirados; uma conexão nova não herda
+baseline de outra que usava o mesmo identificador. Há uma coleta em andamento por
+geração. Sair invalida a leitura e libera o bloqueio imediatamente, sem aguardar
+`getStats` ou IPC. Respostas de peers retirados não registram novamente receivers.
+
+`reception-policy.ts` conserva a política de margem solicitada ao WebRTC: começa
+em 60 ms, aumenta em passos de 40 até 140 ms com intervalo mínimo de 10 s e reduz
+após 60 s estáveis. A decisão usa jitter e reconstrução no intervalo, sem alterar
+trilhas ou renegociar. Perda isolada e atraso da interface não aumentam a margem.
+Áudio de tela/jogos e vídeo não recebem esses ajustes. Remover receiver ou desativar
+proteção restaura seu valor original; browsers sem suporte usam o comportamento
+nativo. Uma leitura falha não reapresenta intervalos antigos como medições novas
+nem dispara recuperação da qualidade adaptativa por ausência de dados.
+
+O mesmo módulo serializa pedidos de prioridade ao preload e valida os valores de
+recursos/prioridade devolvidos pelo Electron. Reset solicita liberação da prioridade;
+respostas de uma chamada anterior não alteram o estado da nova. O timer conserva
+2 s com painel ativo, 5 s em chamada e 15 s fora dela; páginas web ocultas pulam a
+coleta, e o desktop continua coletando. Snapshots e histórico são imutáveis; IDs de
+participantes ficam separados das linhas anônimas de voz. O controlador conserva
+a renderização dos nomes na tela e o exportador existente permite só campos
+anônimos. `legacy/voice-reception.js` e sua entrada no manifesto foram removidos.
+
 `social.js` conserva coordenação/entrada da chamada, bootstrap ICE/TURN, escolha do
-transporte, status/consumo, regras de qualidade, métricas de recepção,
-contextos do microfone/medidores/avisos e interface. Os módulos notificam esse controlador para anexar
+transporte, status/consumo, regras de qualidade/adaptação, medidores visuais de fala,
+contextos do microfone/medidores/avisos e interface. Os módulos notificam esse
+controlador para anexar
 áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
 O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.

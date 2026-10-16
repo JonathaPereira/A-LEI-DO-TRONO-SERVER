@@ -195,7 +195,10 @@ test(
           isPeerCurrent: () => false,
           getInterest: () => ({ camera: true, screen: true }),
           isCameraHidden: () => false,
-          onVoiceReceiver() {},
+          onVoiceReceiver(id, receiver, added) {
+            if (added) diagnostics.registerReceiver(id, receiver);
+            else diagnostics.removeReceiver(receiver);
+          },
           onAudioReady() {},
           onChange() {},
           onRecover: async () => false,
@@ -236,6 +239,24 @@ test(
           },
           onChange() {},
         });
+        const diagnostics = window.TronoVoiceCapture.createVoiceTelemetry({
+          protection: true,
+          getSettings: () => ({
+            joined: settings.enabled,
+            transport: 'sfu',
+            detailsOpen: false,
+            foreground: true,
+            visible: true,
+            desktop: true,
+          }),
+          getConnections: () => [
+            ...[...session.publications].map(([kind, pub]) => ['sfu-pub:' + kind, pub.pc]),
+            ...[...session.subscriptions].map(([key, sub]) => ['sfu-sub:' + key, sub.pc]),
+          ],
+          getLocalVideo: () => video,
+          onSample: async () => {},
+          onChange() {},
+        });
         async function connect() {
           const audioPub = await session.publish('audio', audio),
             screenPub = await session.publish('screen', video);
@@ -270,8 +291,11 @@ test(
           video,
           playback,
           playbackContexts,
+          diagnostics,
           connect,
           async close() {
+            diagnostics.stop();
+            diagnostics.reset();
             session.reset();
             remote.reset();
             playback.reset();
@@ -326,6 +350,35 @@ test(
         };
       });
       assert.deepEqual(first, { ready: true, fps: 60, bitrate: 8000000, captureFps: 60 });
+      await page.evaluate(() => window.__sfuFixture.diagnostics.collect());
+      await expect
+        .poll(() =>
+          page.evaluate(async () => {
+            const h = window.__sfuFixture;
+            await h.diagnostics.collect();
+            return h.diagnostics.getSnapshot().rows[0]?.packets ?? 0;
+          }),
+        )
+        .toBeGreaterThan(0);
+      assert.equal(
+        await page.evaluate(() => {
+          const h = window.__sfuFixture,
+            receiver = h.session.subscriptions.get('relay-peer:audio').pc.getReceivers()[0];
+          const before = receiver.track;
+          const initial = h.diagnostics.getSnapshot();
+          h.diagnostics.configureProtection(false);
+          const restored = receiver.jitterBufferTarget === null;
+          h.diagnostics.configureProtection(true);
+          return (
+            initial.rows.length === 1 &&
+            initial.rows[0].supported &&
+            restored &&
+            receiver.jitterBufferTarget === 60 &&
+            receiver.track === before
+          );
+        }),
+        true,
+      );
       assert.equal(
         await page.evaluate(() => window.__sfuFixture.playback.getSnapshot().context),
         null,
@@ -370,6 +423,7 @@ test(
       );
       await page.evaluate(async () => {
         const h = window.__sfuFixture;
+        h.diagnostics.reset();
         h.session.reset();
         h.remote.reset();
         h.playback.reset();
@@ -405,6 +459,7 @@ test(
         true,
       );
       assert.deepEqual(errors, []);
+      await require('./desktop-voice-flow').exerciseVoiceProtection({ app, page });
       await page.evaluate(() => window.__sfuFixture.close());
     } finally {
       finished = true;

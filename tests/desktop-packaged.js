@@ -117,7 +117,6 @@ test(
             '/tabletop-refinements.css',
             '/light-noise.js',
             '/light-noise-worklet.js',
-            '/voice-reception.js',
             '/voice-reception.css',
             '/bot-names.js',
             '/tabletop-audio.js',
