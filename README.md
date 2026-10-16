@@ -1,3 +1,7 @@
+## Windows 0.2.5 · controles da chamada e layouts
+
+Assistir stream sem maximizar; desligamento de câmera/tela sem aguardar a limpeza da conexão; mensagens diretas reposicionadas; capas emoldurando participantes; ícones e atualização no Discord; barra superior recolhível e responsiva. A entrega usa `MN-Trono-Frontend-0.2.5.zip`, com o EXE e `latest.yml` juntos. Veja [como publicar](ATUALIZAR_WINDOWS_v0.2.5.md). Backend 0.13.0-alpha, sem SQL novo.
+
 ## Desenvolvimento atual · desktop Windows
 
 O foco atual é o aplicativo desktop. Para abrir a interface deste checkout,

@@ -4,7 +4,8 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   banner.className='desktop-update-banner';banner.hidden=true;banner.setAttribute('role','status');
   const text=document.createElement('span'),restart=document.createElement('button'),refresh=document.createElement('button'),close=document.createElement('button');restart.type=refresh.type=close.type='button';restart.textContent='Reiniciar e atualizar';restart.hidden=true;refresh.textContent='Buscar última versão';refresh.hidden=true;close.textContent='×';close.setAttribute('aria-label','Fechar aviso de atualização');banner.append(text,restart,refresh,close);document.body.append(banner);
   function render(value){const previous=state.status;state=value;const ready=state.status==='ready';restart.hidden=!ready;refresh.hidden=!ready;
-    check.textContent=ready?'Atualização pronta':state.status==='downloading'?'Baixando · '+state.percent+'%':'Windows '+native.version;
+    const label=ready?'Atualização pronta':state.status==='downloading'?'Baixando · '+state.percent+'%':'Windows '+native.version;
+    check.querySelector('span').textContent=label;check.setAttribute('aria-label',label+' · Buscar versão mais recente');
     check.title=ready?'Atualizar diretamente para '+(state.version||'a versão mais recente'):'Buscar versão mais recente';
     restart.textContent=state.version?'Instalar '+state.version+' e reiniciar':'Reiniciar e atualizar';
     const target=state.version?'de '+native.version+' direto para '+state.version:'direto para a versão mais recente';

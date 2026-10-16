@@ -24,7 +24,7 @@ body.chat-only-active #callWorkspace{position:fixed!important;inset:0!important;
 #callWorkspace :is(#desktopRail,#webLayoutRail)>button svg{width:22px!important;height:22px!important}
 #callWorkspace :is(#desktopRail,#webLayoutRail)>button>span{display:none!important}
 #callWorkspace :is(#desktopHome,.layout-web-home){font-size:12px!important;font-weight:800!important;color:white!important;background:#6b5bf2!important}
-#callWorkspace #desktopUpdateCheck{margin-top:auto!important;font-size:8px!important;line-height:1.5!important;height:auto!important}
+#callWorkspace #desktopRail #desktopUpdateCheck{margin-top:auto!important}
 #callWorkspace #messengerToggle{display:none!important}
 #callWorkspace #callWorkspaceSidebar{grid-area:sidebar!important;display:flex!important;flex-direction:column!important;position:relative!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;border-right:1px solid #ffffff0c!important;background:#191e29!important;overflow:hidden!important;z-index:3!important}
 #callWorkspace #callWorkspaceSidebar .mn-channel-sidebar{display:flex!important;flex-direction:column!important;position:relative!important;inset:auto!important;width:100%!important;height:auto!important;min-width:0!important;min-height:0!important;max-height:none!important;flex:1 1 0!important;padding:16px 12px 10px!important;margin:0!important;background:transparent!important;border:0!important;border-radius:0!important;overflow:hidden!important;transform:none!important}
@@ -163,3 +163,37 @@ body.chat-only-active[data-call-workspace] #messengerToggle{display:none!importa
 @media(max-height:550px){#callWorkspace #socialPanel .mn-media-stage.has-screen #voiceRoster{height:85px!important;min-height:85px!important;max-height:85px!important;flex-basis:85px!important;gap:8px!important}#callWorkspace #socialPanel .mn-media-stage.has-screen #voiceRoster>.voice-person{width:120px!important;min-height:79px!important;max-height:79px!important;height:79px!important;flex-basis:120px!important}#callWorkspace #socialPanel .mn-media-stage.has-screen #voiceRoster>.voice-person.media-in-profile{grid-template-rows:40px 22px!important;grid-template-areas:"preview preview" "avatar name"!important;gap:3px 5px!important}#callWorkspace #socialPanel .mn-media-stage.has-screen #voiceRoster>.voice-person.media-in-profile :is(.participant-camera-slot,.participant-screen-slot):not([hidden]){height:40px!important;min-height:40px!important}}
 @media(max-width:759px){#callWorkspace[data-messages=channel] #socialPanel .voice-section #callFocusDock,#callWorkspace[data-messages=direct] #socialPanel .voice-section #callFocusDock{visibility:visible!important;pointer-events:auto!important;z-index:25!important}#callWorkspace[data-messages=channel] #socialPanel .court-chat-section,#callWorkspace[data-messages=direct] #socialPanel #messengerPanel{height:calc(100% - 68px)!important;align-self:start!important}}
 #callWorkspace #webLayoutRail>.layout-web-home{font-size:12px!important;font-weight:800!important;color:#fff!important;background:#6b5bf2!important}
+
+/* Invitations must not inherit the full-height video box of an active stream. */
+#callWorkspace #socialPanel #screenShareGrid>.screen-share-tile.stream-invitation{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:14px!important;padding:18px!important;text-align:center!important;
+}
+#callWorkspace #socialPanel .screen-share-tile.stream-invitation>video{display:none!important}
+#callWorkspace #socialPanel .stream-invitation .mn-stream-invite{max-width:100%!important;min-width:0;overflow-wrap:anywhere;pointer-events:none}
+#callWorkspace #socialPanel .stream-invitation .mn-watch-stream{position:relative!important;inset:auto!important;flex:none;max-width:100%;white-space:normal!important;min-height:36px;z-index:5}
+
+/* Keep the header reversible, including when it is hidden on a narrow screen. */
+#callWorkspace #workspaceHeaderToggle{position:absolute;right:8px;top:16px;z-index:40;display:grid;place-items:center;width:32px;height:32px;min-height:32px;padding:6px;border:1px solid #ffffff20;border-radius:8px;background:#222938;color:#d7deef;box-shadow:0 2px 8px #0003}
+#workspaceHeaderToggle svg{width:18px;height:18px}
+#callWorkspace .chat-only-topbar{padding-right:48px!important}
+#callWorkspace.workspace-header-collapsed{--cw-header:0px!important}
+#callWorkspace.workspace-header-collapsed .chat-only-topbar{display:none!important}
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle{top:6px;opacity:.85}
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle:hover,#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle:focus-visible{opacity:1}
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle svg{transform:rotate(180deg)}
+#callWorkspace.workspace-header-collapsed .voice-title{padding-right:48px!important}
+body[data-app-layout=original] #callWorkspace #socialPanel #messengerPanel{padding-top:8px!important}
+body[data-app-layout=original] #callWorkspace #socialPanel #messengerPanel .messenger-conversation header{padding-top:8px!important}
+body[data-app-layout=original] #callWorkspace #callWorkspaceSidebar .mn-channel-sidebar{padding-top:8px!important}
+body[data-app-layout=original] #callWorkspace .mn-sidebar-heading{min-height:28px!important;height:28px!important;padding:0 0 4px!important}
+@media(max-width:759px){#callWorkspace #workspaceHeaderToggle{top:13px}#callWorkspace .chat-only-topbar{gap:4px!important}#callWorkspace .chat-only-top-actions{gap:3px!important}#callWorkspace .chat-only-top-actions :is(.chat-header-action,#communityToggle){padding:5px!important;min-width:28px!important}#callWorkspace #workspaceLayoutToggle{font-size:9px!important}#callWorkspace .chat-only-topbar>.workspace-area-tabs{gap:0}#callWorkspace .chat-only-topbar>.workspace-area-tabs button{padding:5px!important}}
+@media(max-height:550px){#callWorkspace #workspaceHeaderToggle{top:10px}}
+
+/* The member's cover frames the call card without covering media or controls. */
+#callWorkspace #voiceRoster .participant-background{background:linear-gradient(135deg,var(--participant-accent,#7865ff),#253650 70%);isolation:isolate}
+#callWorkspace #voiceRoster .participant-background img{object-position:center var(--participant-position,50%)}
+#callWorkspace #voiceRoster .participant-background:after{inset:4px;border-radius:8px;background:linear-gradient(180deg,#11182730,#111827df 58%,#111827f5)}
+#callWorkspace #socialPanel #voiceRoster .voice-person>.participant-background{z-index:0!important;pointer-events:none!important}
+#callWorkspace>#desktopUpdateCheck.workspace-update-compact{position:absolute!important;left:8px!important;bottom:78px!important;inset-inline-end:auto!important;top:auto!important;z-index:26!important;display:grid!important;place-items:center!important;width:32px!important;height:32px!important;min-height:32px!important;margin:0!important;padding:6px!important;border:1px solid #ffffff20!important;border-radius:9px!important;background:#222938!important;color:#d7deef!important}
+#callWorkspace>#desktopUpdateCheck.workspace-update-compact svg{width:20px;height:20px}
+#callWorkspace>#desktopUpdateCheck.workspace-update-compact>span{display:none}

@@ -872,9 +872,12 @@ window.TronoSocial = (()=>{
     cameraGeneration++;
     cameraOn=false;
     for(const t of localStream?.getVideoTracks?.()||[]){localStream.removeTrack(t);t.stop();}
-    if(transportIsSfu())await closeSfuPublication('camera');else for(const pc of peers.values())if(pc._tronoVideoSender)await pc._tronoVideoSender.replaceTrack(null).catch(()=>{});
     if(sendState)window.TronoNetwork?.setVoiceState(voiceJoined,micMuted,false,screenSharing,transmissionQuality,announcedTransport());
-    renderVideoGrid();renderSeatMedia();renderVoiceRoster();
+    updateButtons();renderVideoGrid();renderSeatMedia();renderVoiceRoster();
+    // Stopping a device and announcing it must not wait for an SFU request or
+    // a slow peer's replaceTrack(). Start every detach now, before a new capture.
+    if(transportIsSfu())void closeSfuPublication('camera');
+    else void Promise.allSettled([...peers.values()].map(async pc=>{if(pc._tronoVideoSender)await pc._tronoVideoSender.replaceTrack(null);}));
   }
 
   async function startScreenShare({replace=false}={}){
@@ -925,9 +928,13 @@ window.TronoSocial = (()=>{
     screenGeneration++;if(!screenSharing&&!localScreenStream&&!localDisplayStream)return;
     window.TronoClips?.sharedStopped?.(localDisplayStream);localDisplayStream?.getTracks().forEach(t=>t.stop());localDisplayStream=null;
     screenSharing=false;localScreenPreviewPaused=false;localScreenCollapsed=false;localScreenStream?.getTracks?.().forEach(t=>t.stop());localScreenStream=null;
-    if(transportIsSfu()){await closeSfuPublication('screen-audio');await closeSfuPublication('screen');}else for(const pc of peers.values()){pc._tronoWatchingScreen=false;if(pc._tronoScreenSender)await pc._tronoScreenSender.replaceTrack(null).catch(()=>{});if(pc._tronoScreenAudioSender)await pc._tronoScreenAudioSender.replaceTrack(null).catch(()=>{});}
     if(sendState)window.TronoNetwork?.setVoiceState(voiceJoined,micMuted,cameraOn,false,transmissionQuality,announcedTransport());
     updateButtons();renderScreenGrid();renderVoiceRoster();
+    if(transportIsSfu()){void closeSfuPublication('screen-audio');void closeSfuPublication('screen');}
+    else void Promise.allSettled([...peers.values()].flatMap(pc=>{
+      pc._tronoWatchingScreen=false;
+      return [pc._tronoScreenSender,pc._tronoScreenAudioSender].filter(Boolean).map(async sender=>sender.replaceTrack(null));
+    }));
   }
   async function toggleScreenShare(){if(screenSharing)await stopScreenShare(true);else openScreenOptions();}
   function openScreenOptions(){
