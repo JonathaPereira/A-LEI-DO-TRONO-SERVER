@@ -85,8 +85,19 @@ export function createMicrophone({
   }
   function mute(capture: MicrophoneCapture | null, muted: boolean) {
     if (!capture) return;
-    for (const track of capture.rawStream.getAudioTracks()) track.enabled = !muted;
-    capture.outgoingTrack.enabled = !muted;
+    const enabled = !muted && getSettings().gain > 0;
+    for (const track of capture.rawStream.getAudioTracks()) track.enabled = enabled;
+    capture.outgoingTrack.enabled = enabled;
+    if (capture.processor?.track) capture.processor.track.enabled = enabled;
+  }
+  function outgoingTrack(resource: Pick<Resource, 'rawStream' | 'processor'>) {
+    const { processor, rawStream } = resource;
+    // Native/off at unity gain can stay on WebRTC's capture path. Custom gain
+    // and RNNoise still use the same owned graph, without reopening the device.
+    return processor?.ctx.state === 'running' &&
+      !(processor.rawAtUnity && getSettings().gain === 100)
+      ? processor.track
+      : rawStream.getAudioTracks()[0];
   }
   function attach(capture: MicrophoneCapture): MediaStream {
     const stream = getStream();
@@ -158,7 +169,7 @@ export function createMicrophone({
         candidate = await open(true);
         ensureCurrent();
       }
-      const track = candidate.processor?.track ?? candidate.rawStream.getAudioTracks()[0];
+      const track = outgoingTrack(candidate);
       if (!track || track.readyState !== 'live')
         throw new Error('Nenhuma trilha de microfone foi recebida.');
       candidate.processor?.setGain(getSettings().gain);
@@ -176,7 +187,11 @@ export function createMicrophone({
         stream,
         track,
         reason: 'acquire',
-        isCurrent: () => current() && active === candidate,
+        isCurrent: () =>
+          current() &&
+          active === candidate &&
+          state.capture?.outgoingTrack === track &&
+          outgoingTrack(candidate) === track,
       });
       ensureCurrent();
       return stream;
@@ -192,15 +207,14 @@ export function createMicrophone({
     if (disposed || !capture || !owner) return;
     const request = generation,
       callGeneration = getSettings().generation;
+    const track = outgoingTrack(owner);
     const current = () =>
       !disposed &&
       owner === active &&
       request === generation &&
-      callGeneration === getSettings().generation;
-    const track =
-      capture.processor?.ctx.state === 'running'
-        ? capture.processor.track
-        : capture.rawStream.getAudioTracks()[0];
+      callGeneration === getSettings().generation &&
+      state.capture?.outgoingTrack === track &&
+      outgoingTrack(owner) === track;
     if (!track || track.readyState !== 'live' || track === capture.outgoingTrack) return;
     const next = Object.freeze({ ...capture, outgoingTrack: track });
     const stream = attach(next);
@@ -235,6 +249,7 @@ export function createMicrophone({
     },
     setGain(percent: number) {
       state.capture?.processor?.setGain(percent);
+      mute(state.capture, getSettings().muted);
     },
     dispose() {
       stop();

@@ -1,4 +1,5 @@
 'use strict';
+const { installCanvasCamera } = require('./camera-fixture');
 const { test } = require('node:test'),
   assert = require('node:assert/strict'),
   path = require('node:path'),
@@ -101,6 +102,7 @@ test(
         },
         { base: f.base, data: users[0] },
       );
+      await context.addInitScript(installCanvasCamera);
       const page = await context.newPage(),
         errors = [],
         missing = [];

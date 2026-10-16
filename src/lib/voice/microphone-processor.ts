@@ -8,6 +8,7 @@ interface ProcessorOptions {
   signal: AbortSignal;
 }
 interface ProcessorDependencies {
+  desktop?: boolean;
   getContext(): AudioContext | null;
   nativeSuppressionSupported(): boolean;
   createNoise(context: AudioContext, onFailure: () => void): Promise<NoiseFilter>;
@@ -21,6 +22,7 @@ export async function createMicrophoneProcessor(
   rawStream: MediaStream,
   options: ProcessorOptions,
   {
+    desktop = false,
     getContext,
     nativeSuppressionSupported,
     createNoise,
@@ -63,6 +65,7 @@ export async function createMicrophoneProcessor(
     ctx,
     track: destination.stream.getAudioTracks()[0],
     mode: 'gain-only',
+    rawAtUnity: desktop && (!options.enabled || options.nativeOnly),
     setGain(percent) {
       if (!stopped) gain.gain.setTargetAtTime(percent / 100, ctx.currentTime, 0.012);
     },
@@ -93,6 +96,7 @@ export async function createMicrophoneProcessor(
     destroy(denoiser);
     denoiser = null;
     source.connect(gain);
+    processor.rawAtUnity = desktop;
     processor.mode = 'unavailable';
     const native = await enableNativeSuppression(rawStream, nativeSuppressionSupported());
     if (stopped) return;

@@ -115,6 +115,10 @@ RNNoise, com fallback nativo. O modo nativo não empilha um expander sobre a cap
 preservando sílabas baixas. Recebe os worklets existentes por dependências;
 cancelar durante sua inicialização desconecta o grafo e descarta filtros atrasados.
 O AudioContext é emprestado da chamada e não é fechado pelo processador.
+No desktop, `rawAtUnity` indica que nativo/off podem enviar a captura diretamente
+em 100%; outros ganhos e RNNoise usam a trilha processada. `microphone.ts` escolhe
+a saída, aplica mute/ganho zero a todas as trilhas e invalida publicações antigas
+quando a seleção muda. Não reabre o dispositivo ao alternar o ganho.
 
 `legacy/social.js` cria uma instância pelas fábricas de compatibilidade instaladas
 pelo Next. Conserva preferências e intenção dos controles; delega aquisição, mute,
@@ -173,6 +177,11 @@ captura. O renderer mantém isolamento de contexto e acesso nativo pelo preload.
 O instalador carrega `resources/renderer`; o modo compilado local carrega `out/`.
 A política de scripts calcula hashes dos bootstraps do HTML instalado, sem
 liberar scripts inline arbitrários.
+
+No Windows, os switches de backgrounding preservam o agendamento do renderer
+quando coberto/minimizado. O contexto de envio solicita uma margem de 40 ms no
+desktop; isso não é uma medição de latência final. O teste de segundo plano mede
+PCM recebido em outro cliente com janelas Windows reais, sem simular visibility.
 
 O modo Next de desenvolvimento é explícito, aceita loopback e não funciona em
 builds empacotados. Permite atualização de componentes ao salvar.

@@ -68,6 +68,11 @@ const trace = (...values) => {
   if (!app.isPackaged && app.commandLine.hasSwitch('desktop-diagnostics'))
     console.error('[desktop]', ...values);
 };
+// Keep renderer Web Audio/RNNoise scheduled when Windows occludes or minimizes the app.
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+}
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => {

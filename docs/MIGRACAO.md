@@ -1,6 +1,7 @@
 # Andamento da migração
 
-Base: `7db2d81`. Branch: `codex/next-typescript-structure`.
+Base inicial: `7db2d81`. Branch: `codex/next-typescript-structure`.
+Main integrada até `35c5c5f` (desktop 0.2.9).
 Preservar jogos, clipes, soundboard, perfis, mensagens e chamadas.
 Atualize este arquivo para permitir continuidade sem o histórico do chat.
 
@@ -320,6 +321,40 @@ Tipagem, formatação, build, suíte geral, nove verificações de controles/lay
 perfis/GIPHY/empacotamento e o Electron passaram. O fluxo de perfil também passou
 com as correções da main. As próximas alterações da main estão em 0.2.9 e serão
 integradas em seguida; esta entrada registra o ponto validado da 0.2.8.
+
+## Integração da main 0.2.9 — 16/10/2026
+
+- Integrada `origin/main` em `35c5c5f`, após o merge 0.2.8 `bc9d457`.
+  Electron, preload, lockfile, link de download e documentação acompanham 0.2.9.
+- Switches Windows impedem redução de prioridade do renderer coberto/minimizado;
+  o contexto de envio do desktop solicita margem de 40 ms em 48 kHz.
+- `rawAtUnity` foi adaptado ao processador TS: nativo/off em 100% usam captura
+  direta; outros ganhos e RNNoise continuam no mesmo grafo. Ganho zero/mute
+  desabilitam fonte, saída e trilha processada. Mudar volume não reabre o microfone.
+- A validade das publicações também confere a trilha selecionada, evitando que
+  uma troca de ganho atrasada substitua uma saída mais recente. Três regressões
+  novas cobrem seleção direta, fallback e mudanças concorrentes; captura soma 34 testes.
+- Importado o teste Windows de áudio em segundo plano, com caminhos `electron/`
+  e `out/`, inicialização Next e navegador local configurável. O workflow o executa
+  cedo e cria o diretório do relatório antes de iniciar a verificação.
+- Fixtures de perfil/jogos compartilham a câmera animada dos testes de layout,
+  mantendo todos os asserts de identidade e encerramento. Canais e rede passaram
+  a usar portas diferentes; sua colisão causava 403 ao executar suítes em paralelo.
+- Teste do pacote valida `resources/renderer` e a versão de `electron/package.json`,
+  incluindo a ausência do manual antigo e a presença do manual atual.
+
+Passaram tipagem, formatação, build estático, `npm test` (4 integrações e 185 testes),
+34 testes de captura, 15 de voz/PCM, controles/layout, perfis/GIPHY, mensagens privadas e jogos.
+Splendor completou os fluxos desktop/web e Love Letter manteve as trilhas da chamada.
+Também passaram os 13 checks de política/layout Electron, os 17 de perfis/pacotes,
+a montagem do executável Windows local e sua regressão com recursos instalados.
+
+O teste Windows mediu nove cenários: nativo 100%, nativo 180% e RNNoise 100%, cada
+um com janela coberta, minimizada e oculta. Cada coleta recebeu 240 mil amostras
+PCM em cerca de cinco segundos, sem concealment nessa execução, sem recapturar
+microfone e sem reconectar peers. Evidências locais: `artifacts/main-029-background.log`
+e `artifacts/windows-background-voice.json`. Não mede jogos reais, SFU/TURN externos
+ou a latência final da chamada. Nenhum push, instalação ou banco remoto foi alterado.
 
 ## Próximas alterações, em ordem
 

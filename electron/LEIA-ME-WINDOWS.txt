@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.8
+M&N · A Lei do Trono — Windows 0.2.9
 
-1. Instalação nova: instale MN-Trono-0.2.8-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.9-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -49,7 +49,7 @@ M&N · A Lei do Trono — Windows 0.2.8
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador atual é baixado do próprio site, em downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.2.4.md para publicar o pacote completo do site.
+Consulte ATUALIZAR_WINDOWS_v0.2.9.md para publicar o pacote completo do site.
 
 Cinzas do Abismo v0.5: campanha de 15 capítulos e horda sem fim.
 Ao abrir pela primeira vez no Windows, aguarde os recursos serem guardados localmente.
@@ -114,3 +114,10 @@ cole o link para ver a prévia e usar no avatar, capa ou fundo. A busca dentro
 do app exige GIPHY_API_KEY no Render e o backend desta revisão.
 Execute 20261016140000_giphy_profile_credits.sql no Supabase antes de salvar
 novos créditos. O arquivo está na raiz do ZIP. Guia: ATUALIZAR_WINDOWS_v0.2.8.md.
+
+Windows 0.2.9: envio da voz em segundo plano. O microfone nativo/desligado
+em 100% usa a captura diretamente; RNNoise e ganho personalizado mantêm
+seu processamento. O renderer conserva prioridade normal no Windows ao
+minimizar, cobrir ou esconder a janela. Instale o EXE novo no computador
+que transmite a voz. A correção de voz não exige SQL nem backend novo.
+Guia: ATUALIZAR_WINDOWS_v0.2.9.md.

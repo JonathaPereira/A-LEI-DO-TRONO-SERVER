@@ -16,7 +16,7 @@ test(
         .listen(0, '127.0.0.1', () => resolve(listener));
     });
     const origin = 'http://127.0.0.1:' + server.address().port;
-    const fixture = await startFixture({ port: 11974, appOrigin: origin });
+    const fixture = await startFixture({ port: 11975, appOrigin: origin });
     let browser;
     const errors = [];
     try {

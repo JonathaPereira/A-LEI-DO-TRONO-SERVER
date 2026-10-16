@@ -125,6 +125,45 @@ async function setup(t) {
   };
 }
 
+test('desktop native unity bypasses the graph; custom gain and mute reuse the same capture', async (t) => {
+  const h = await setup(t), raw = track(), processed = processor('native');
+  processed.rawAtUnity = true;
+  h.open(async () => stream(raw));
+  h.process(async () => processed);
+  await h.mic.acquire();
+  assert.equal(h.mic.getSnapshot().capture.outgoingTrack, raw);
+  h.settings.gain = 180; h.mic.setGain(180); await h.mic.refresh();
+  assert.equal(h.mic.getSnapshot().capture.outgoingTrack, processed.track);
+  h.settings.gain = 0; h.mic.setGain(0);
+  assert.equal(raw.enabled, false); assert.equal(processed.track.enabled, false);
+  h.settings.muted = true; h.mic.setMuted(true);
+  h.settings.gain = 100; h.mic.setGain(100); await h.mic.refresh();
+  assert.equal(h.mic.getSnapshot().capture.outgoingTrack, raw);
+  assert.equal(raw.enabled, false);
+  h.settings.muted = false; h.mic.setMuted(false);
+  assert.equal(raw.enabled, true);
+  assert.equal(h.requests.length, 1);
+  assert.equal(processed.stops, 0); assert.equal(h.camera.stops, 0);
+});
+
+test('a gain refresh invalidates publication of a superseded microphone track', async (t) => {
+  const h = await setup(t), raw = track(), processed = processor('native'), gate = deferred();
+  processed.rawAtUnity = true;
+  h.open(async () => stream(raw)); h.process(async () => processed);
+  await h.mic.acquire();
+  let pending;
+  h.publish(async change => { pending = change; await gate.promise; });
+  h.settings.gain = 180; h.mic.setGain(180);
+  const first = h.mic.refresh();
+  assert.equal(pending.isCurrent(), true);
+  h.publish(async () => {});
+  h.settings.gain = 100; h.mic.setGain(100); await h.mic.refresh();
+  assert.equal(pending.isCurrent(), false);
+  gate.resolve(); await first;
+  assert.equal(h.output.getAudioTracks()[0], raw);
+  assert.equal(h.requests.length, 1);
+});
+
 test('capture owns raw and processed tracks, preserving the camera, selected input, mute and gain', async (t) => {
   const h = await setup(t),
     raw = track(),

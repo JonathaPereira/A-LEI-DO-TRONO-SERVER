@@ -1,4 +1,5 @@
 'use strict';
+const { installCanvasCamera } = require('./camera-fixture');
 const { test } = require('node:test'),
   assert = require('node:assert/strict'),
   express = require('express'),
@@ -168,6 +169,7 @@ test(
         },
         { base: fixture.base, data, native: process.env.QA_NATIVE === '1' },
       );
+      await context.addInitScript(installCanvasCamera);
       const page = await context.newPage();
       page.setDefaultTimeout(12000);
       page.on('pageerror', (e) => errors.push(e.message));

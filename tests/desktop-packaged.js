@@ -83,10 +83,10 @@ test(
       );
       await assert.rejects(
         fs.access(
-          path.join(resourceRoot, 'frontend/manual/A_Lei_do_Trono_Manual_v0.4_Edicao_Visual.pdf'),
+          path.join(resourceRoot, 'renderer/manual/A_Lei_do_Trono_Manual_v0.4_Edicao_Visual.pdf'),
         ),
       );
-      await fs.access(path.join(resourceRoot, 'frontend/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf'));
+      await fs.access(path.join(resourceRoot, 'renderer/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf'));
       phase = 'installed interface';
       page = await app.firstWindow();
       page.setDefaultTimeout(15000);
@@ -100,7 +100,7 @@ test(
       assert.equal(await page.evaluate(() => typeof require), 'undefined');
       assert.equal(
         await page.evaluate(() => window.TronoDesktop.version),
-        require('../desktop/app/package.json').version,
+        require('../electron/package.json').version,
       );
       const geometry = await app.evaluate(({ BrowserWindow, screen }) => ({
         window: BrowserWindow.getAllWindows()[0].getBounds(),

@@ -3,9 +3,10 @@
 Aplicativo de comunicação e jogos, com interface Next.js + React + TypeScript,
 desktop Electron e backend Express/WebSocket. O foco de validação é Windows.
 
-A integração da main traz o desktop **0.2.8**, com os ajustes de chamada, chat e
-GIPHY adaptados à arquitetura desta branch. Veja as
-[notas da versão](docs/archive/ATUALIZAR_WINDOWS_v0.2.8.md).
+A integração da main traz o desktop **0.2.9**, com os ajustes de chamada, chat e
+GIPHY adaptados à arquitetura desta branch, além da correção de voz em segundo
+plano. Veja as
+[notas da versão](docs/archive/ATUALIZAR_WINDOWS_v0.2.9.md).
 
 ## Começar
 

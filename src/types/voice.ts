@@ -5,6 +5,7 @@ export interface MicrophoneProcessor {
   readonly track: MediaStreamTrack | undefined;
   mode: MicrophoneMode;
   nativeSuppression?: boolean;
+  rawAtUnity?: boolean;
   setGain(percent: number): void;
   stop(): void;
 }

@@ -128,7 +128,10 @@ window.TronoSocial = (() => {
     if (!Ctx) return null;
     if (!mediaAudioContext || mediaAudioContext.state === 'closed') {
       try {
-        mediaAudioContext = new Ctx({ latencyHint: 'interactive', sampleRate: 48000 });
+        mediaAudioContext = new Ctx({
+          latencyHint: window.TronoDesktop ? 0.04 : 'interactive',
+          sampleRate: 48000,
+        });
       } catch (err) {
         console.warn('[TronoSocial] Web Audio indisponível; usando áudio direto', err);
         return null;
@@ -356,6 +359,7 @@ window.TronoSocial = (() => {
     microphoneVolume = clampGain(value);
     storage.setItem('mnMicrophoneGain', String(microphoneVolume));
     microphone.setGain(microphoneVolume);
+    void refreshMicPipeline().catch((err) => console.warn('[TronoSocial] ganho do microfone', err));
     renderGainValues();
   }
   function setOutputGain(value) {
@@ -473,6 +477,7 @@ window.TronoSocial = (() => {
     customSuppressionSupported: () => !!window.TronoNoise?.supported(ensureMediaAudioContext()),
     createProcessor: (stream, options) =>
       window.TronoVoiceCapture.createMicrophoneProcessor(stream, options, {
+        desktop: !!window.TronoDesktop,
         getContext: ensureMediaAudioContext,
         nativeSuppressionSupported: () =>
           !!navigator.mediaDevices?.getSupportedConstraints?.().noiseSuppression,
@@ -4265,7 +4270,9 @@ window.TronoSocial = (() => {
       ? 'loading'
       : !voiceJoined
         ? 'idle'
-        : processor && processor.ctx.state !== 'running'
+        : processor &&
+            microphone.getSnapshot().capture?.outgoingTrack === processor.track &&
+            processor.ctx.state !== 'running'
           ? 'paused'
           : activeMode || (settings.noiseSuppression ? 'native' : 'unavailable');
     return {

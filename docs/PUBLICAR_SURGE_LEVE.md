@@ -11,7 +11,7 @@ o site com um único instalador e seu manifesto de atualização, mantendo a pas
 
 As notas por versão necessárias ao pacote ficam em `docs/archive/`. O workflow
 Windows valida o build antes de preparar os downloads. A branch acompanha o
-desktop 0.2.8; sincronizar os fontes não publica nem instala uma nova distribuição.
+desktop 0.2.9; sincronizar os fontes não publica nem instala uma nova distribuição.
 
 O GIPHY exige a migração `supabase/migrations/20261016140000_giphy_profile_credits.sql`
 no banco de destino e o endpoint autenticado `/community/gif-provider` do backend.

@@ -21,8 +21,8 @@ export function AuthDialog() {
         <a
           id={'authDesktopDownload'}
           className={'auth-desktop-download'}
-          href={'https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.8-Windows.exe'}
-          download={'MN-Trono-0.2.8-Windows.exe'}
+          href={'https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.9-Windows.exe'}
+          download={'MN-Trono-0.2.9-Windows.exe'}
         >
           <svg
             viewBox={'0 0 24 24'}

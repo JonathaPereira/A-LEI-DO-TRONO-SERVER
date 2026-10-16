@@ -139,6 +139,24 @@ async function setup(t) {
   };
 }
 
+test('desktop native/off and native fallback allow raw unity; RNNoise and browser processing do not', async (t) => {
+  const h = await setup(t);
+  h.dependencies.desktop = true; h.options.nativeOnly = true;
+  let processor = await h.create();
+  assert.equal(processor.rawAtUnity, true); processor.stop();
+  h.options.nativeOnly = false;
+  processor = await h.create();
+  assert.equal(processor.mode, 'rnnoise'); assert.equal(processor.rawAtUnity, false);
+  h.fail(); await tick();
+  assert.equal(processor.rawAtUnity, true); processor.stop();
+  h.options.enabled = false;
+  processor = await h.create();
+  assert.equal(processor.rawAtUnity, true); processor.stop();
+  h.dependencies.desktop = false;
+  processor = await h.create();
+  assert.equal(processor.rawAtUnity, false);
+});
+
 test('gain-only processing keeps a live output and borrowed context; stop disconnects once', async (t) => {
   const h = await setup(t);
   h.options.enabled = false;
