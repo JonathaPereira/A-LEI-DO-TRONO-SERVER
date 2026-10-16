@@ -28,6 +28,7 @@ jobs:
       - name: Verify outgoing microphone PCM with real Windows background windows
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
           node --test tests/desktop-background-voice.js 2>&1 | Tee-Object artifacts/windows-background-voice.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
