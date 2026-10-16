@@ -35,7 +35,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 
  function arrange(){if(arranging)return;arranging=true;const active=body.classList.contains('chat-only-active');
   if(active){const first=!mounted;mounted=true;move('socialPanel',main);move('messengerPanel',$('socialPanel'));move('layoutVoicePanel',sidebar);move('communityPanel',shell);move(window.TronoDesktop?'desktopRail':'webLayoutRail',shell);
-   if(first&&innerWidth>=1100)window.TronoSocial.toggleTextChat(true);
   }else if(mounted){mounted=false;showChannels(false);for(const [id,marker]of homes)if(marker.isConnected&&$(id))marker.after($(id));window.TronoCallControlsLayout.refresh();}
   window.TronoCallControlsLayout.refresh();labels();syncPanels();arranging=false;
  }

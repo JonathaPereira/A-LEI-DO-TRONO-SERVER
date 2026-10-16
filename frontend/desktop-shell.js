@@ -6,7 +6,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   body.classList.add('desktop-app');
   const help={
     '.appearance-help':'Aplica na hora, só para você neste aplicativo. Não muda o tema dos outros na chamada.',
-    '#voiceLightModeHelp':'Usa a redução nativa com filtro leve de graves e de fundo entre falas, e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.',
+    '#voiceLightModeHelp':'Usa a redução nativa e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.',
     '[data-settings-panel="video"] .settings-context-help':'Escolha áudio isolado do aplicativo/jogo para transmitir seu som. Computador inteiro pode incluir as vozes da chamada e causar eco.'
   };
   for(const [selector,text]of Object.entries(help))document.querySelector(selector).textContent=text;
