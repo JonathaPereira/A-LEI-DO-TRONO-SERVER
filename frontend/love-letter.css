@@ -37,3 +37,4 @@
 @media(prefers-reduced-motion:reduce){.ll-valid-target,.ll-effect-target{animation:none!important}.ll-guess{transition:none!important}}
 
 .ll-log-entry{display:flex;gap:10px;align-items:start}.ll-log-entry>.ll-reference-art{flex:none;width:34px;height:40px;border-radius:5px}.ll-log-entry>div{min-width:0;display:grid;gap:4px}.ll-log-entry strong{font-size:11px;color:#f0d9ad}.ll-log-entry p{font-size:10px;line-height:1.65;color:#d0c0b8}.ll-log-round{font-size:8px;color:#bba8ac}
+.ll-court>.ll-last{margin:0 0 12px;padding:0 0 12px;border-top:0;border-bottom:1px solid #b69c5a55}
