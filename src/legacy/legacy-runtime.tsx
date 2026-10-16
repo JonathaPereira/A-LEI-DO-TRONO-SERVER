@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
-import { createSocketTransport } from '../lib/socket/transport';
+import { initializeNetwork } from '../lib/socket/browser';
 
 let startup: Promise<void> | undefined;
 
@@ -27,10 +27,7 @@ export function LegacyRuntime() {
 
   useEffect(() => {
     startup ??= (async () => {
-      const runtime = window as Window & {
-        TronoSocketTransport?: { create: typeof createSocketTransport };
-      };
-      runtime.TronoSocketTransport = { create: createSocketTransport };
+      initializeNetwork(window);
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
       }

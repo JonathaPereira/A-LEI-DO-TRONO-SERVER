@@ -3,6 +3,7 @@
     "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "strict": true,
+    "rewriteRelativeImportExtensions": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",

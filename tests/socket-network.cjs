@@ -2,16 +2,14 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
 const { startFixture } = require('./auth-fixture');
 
 test(
-  'the legacy commands use one typed transport for account, guest, chat, voice and game flows',
+  'typed commands use one transport for account, guest, chat, voice and game flows',
   { timeout: 30000 },
   async () => {
     const { createSocketTransport } = await import('../src/lib/socket/transport.ts');
+    const { createNetworkClient } = await import('../src/lib/socket/client.ts');
     const fixture = await startFixture({ port: 11974 });
     const sockets = [];
     const sent = [];
@@ -36,23 +34,6 @@ test(
       const { session, user } = login.data;
       const runtime = {
         TRONO_BACKEND_URL: fixture.base,
-        TronoSocketTransport: {
-          create: (options) =>
-            createSocketTransport({
-              ...options,
-              warn: (...message) => errors.push(message),
-              createSocket(url) {
-                const socket = new WebSocket(url);
-                sockets.push(socket);
-                const send = socket.send.bind(socket);
-                socket.send = (message) => {
-                  sent.push(JSON.parse(message));
-                  send(message);
-                };
-                return socket;
-              },
-            }),
-        },
         TronoAuth: {
           user,
           getAccessToken: async () => session.access_token,
@@ -65,15 +46,27 @@ test(
         },
         TronoSocial: { deafened: true, screenSettings: { fps: 15 } },
       };
-      vm.runInNewContext(
-        fs.readFileSync(path.resolve(__dirname, '../src/legacy/network.js'), 'utf8'),
-        {
-          window: runtime,
-          location: { hostname: '127.0.0.1' },
-          console,
+      const transport = createSocketTransport({
+        url: fixture.base.replace('http:', 'ws:') + '/ws',
+        warn: (...message) => errors.push(message),
+        createSocket(url) {
+          const socket = new WebSocket(url);
+          sockets.push(socket);
+          const send = socket.send.bind(socket);
+          socket.send = (message) => {
+            sent.push(JSON.parse(message));
+            send(message);
+          };
+          return socket;
         },
-      );
-      network = runtime.TronoNetwork;
+      });
+      network = createNetworkClient({
+        backendHttp: fixture.base,
+        transport,
+        getIdentity: () => runtime.TronoAuth,
+        getVoiceContext: () => runtime.TronoSocial,
+        warn: (error) => errors.push(error),
+      });
       function wait(type, predicate = () => true) {
         return new Promise((resolve, reject) => {
           const cancel = () => {

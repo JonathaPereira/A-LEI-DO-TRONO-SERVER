@@ -5,7 +5,6 @@
     "application-audio.js",
     "audio.js",
     "tabletop-audio.js",
-    "network.js",
     "auth.js",
     "rtc-config.js",
     "audio-gain.js",

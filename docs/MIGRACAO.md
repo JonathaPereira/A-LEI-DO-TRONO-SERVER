@@ -15,16 +15,17 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Comandos de desenvolvimento, formatação, tipagem e build.
 - Documentos históricos fora da raiz e caminhos de CI/empacotamento atualizados.
 - Transporte WebSocket em TypeScript, com pendências e fila de identidade únicas.
+- Comandos e estado de participação em TypeScript; `legacy/network.js` removido.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Os comandos de rede,
-estado de participação e captura WebRTC permanecem nesses controladores. O socket,
-timeouts, requisições e fila de identidade agora pertencem a `lib/socket/transport.ts`.
+React ou TypeScript apenas porque a marcação foi convertida. Captura WebRTC,
+renderização de mensagens, anexos e jogos permanecem nesses controladores.
+Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
+Os payloads de jogos e sinalização ainda não têm validação completa nesse módulo.
 `server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
-Módulos JS existentes
-ainda não recebem a verificação estrita de tipos dos módulos TS.
+Módulos JS existentes ainda não recebem a verificação estrita dos módulos TS.
 
 ## Limpeza após a migração
 
@@ -57,8 +58,8 @@ A limitação da suíte antiga `test:frontend` descrita abaixo permanece.
 - Operações de identidade usam a conexão recebida em `serializeIdentity`, ligada
   àquela sessão. Após logout, não podem autenticar um socket novo nem restaurar
   resultados que chegaram antes de a operação assíncrona continuar.
-- `legacy/network.js` perdeu socket, timers e mapas de pendências. Permanece como
-  adaptador de comandos e estado de participação até a conversão dos domínios.
+- `legacy/network.js` perdeu socket, timers e mapas de pendências. Na etapa
+  seguinte, abaixo, o restante foi convertido e o arquivo removido.
 - `LegacyRuntime` fornece a fábrica importada pelo Next antes de carregar os
   controladores. Não há outra implementação copiada do transporte em `public/`.
 - `npm run test:socket` executa 13 regressões do transporte e uma integração com
@@ -70,25 +71,53 @@ socket, peers e trilhas de mídia ao navegar e trocar layouts. A integração no
 conferiu cache e troca de identidade, reconexão, mensagens e participação
 independente em texto, voz e jogo. Não houve acesso a infraestrutura remota.
 
+## Cliente e estado de rede — 16/10/2026
+
+- `lib/socket/client.ts` substitui os comandos e o cache de identidade do antigo
+  controlador. Recebe transporte e acesso à conta/mídia por dependências explícitas.
+- `state.ts` concentra participação e capacidades em snapshots imutáveis, com
+  assinatura de mudanças. Os listeners de mensagens veem o estado atualizado.
+  Desconexão remota preserva a última participação conhecida para o descarte dos
+  controladores; saída explícita limpa texto, voz e jogo, como no fluxo anterior.
+- `protocol.ts` valida os eventos que alteram esse estado e respostas de conta,
+  convidado, nome e preparo de chamada. Mensagens inválidas de participação não
+  chegam aos controladores antigos. Outros payloads permanecem opacos.
+- `browser.ts` inicializa um cliente por página. O nome global `TronoNetwork`
+  continua para compatibilidade, sem uma segunda implementação. A fábrica global
+  intermediária `TronoSocketTransport` deixou de existir.
+- Excluídos `src/legacy/network.js` e sua entrada no manifesto. A preparação do
+  renderer remove JS/CSS gerados que perderam o fonte. Conferida a ausência de
+  `network.js` em `public/`, `out/` e nos recursos do pacote Windows.
+- A integração de rede importa o cliente TS diretamente, sem avaliar JS legado.
+  O teste empacotado configura seu backend nos chunks Next, sem alterar a política
+  de segurança do aplicativo. Imports relativos TS explícitos funcionam também
+  nos testes Node; o compilador reescreve suas extensões quando há emissão.
+
+Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
+100 testes, incluindo 21 em `test:socket`), `test:ui` (3), `test:desktop:layout`
+(1) e `tests/desktop-packaged.js` (1) passaram. Sete regressões novas verificam
+participação independente, snapshots, listeners, mensagens inválidas, respostas
+tipadas, compatibilidade com capacidades ausentes e inicialização única.
+O pacote Windows local validou recursos, mídia, Splendor e Love Letter com o
+backend de teste. Não houve publicação ou mudança em serviços remotos.
+
 ## Próximas alterações, em ordem
 
-1. Converter comandos, capacidades e estado de participação de `legacy/network.js`
-   por fluxo. O transporte já foi extraído para `lib/socket/transport.ts`; não
-   recriar sockets, mapas de pendências ou fila de identidade nos consumidores.
-   Tipar e validar os payloads por domínio e apagar o adaptador quando não houver usos.
-2. Extrair envio/estado de mensagens e anexos de `legacy/social.js`.
+1. Extrair envio/estado de mensagens e anexos de `legacy/social.js`.
    Substituir `chat-actions.ts` e converter listas de mensagens e canais para
-   estado React. Validar anexos, histórico e moderação.
-3. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
+   estado React. Consumir o cliente e seu snapshot de `lib/socket/`; não criar
+   sockets, mapas de pendências ou filas de identidade nos componentes.
+   Validar anexos, histórico, moderação e os respectivos payloads do protocolo.
+2. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
-4. Converter perfis/configurações e jogos. Cada controlador convertido perde
+3. Converter perfis/configurações e jogos. Cada controlador convertido perde
    sua entrada no manifesto e seus listeners DOM.
-5. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
+4. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
    de `createApplication`. Converter os módulos JS por domínio.
-6. Consolidar estilos por domínio após retirar os controladores. A ordem atual
+5. Consolidar estilos por domínio após retirar os controladores. A ordem atual
    contém sobreposições necessárias para estados de chamada não visíveis no início.
-7. Documentar e validar uma instalação nova do banco, com ordem única para os
+6. Documentar e validar uma instalação nova do banco, com ordem única para os
    SQL legados e as migrações datadas, sem reaplicar mudanças em bases existentes.
 
 ## Critérios por fluxo convertido

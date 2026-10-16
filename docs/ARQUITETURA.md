@@ -18,17 +18,25 @@ de resposta e ID; fechar a conexão rejeita pendências e invalida operações a
 O transporte valida o envelope JSON; os domínios continuam responsáveis pelo
 conteúdo de cada mensagem. Não abre dispositivos nem conhece elementos da tela.
 
-`legacy-runtime.tsx` importa esse módulo pelo Next e disponibiliza sua fábrica
-antes dos controladores. `legacy/network.js` cria uma única instância e conserva
-comandos, capacidades negociadas e participação em texto/voz/jogo. Esses dados
-ainda não são estado React nem um protocolo inteiramente tipado. Consumidores
-usam `TronoNetwork` enquanto cada fluxo é convertido.
+`lib/socket/client.ts` reúne comandos de rede e identidade. `state.ts` mantém um
+snapshot imutável de capacidades e participação em texto/voz/jogo, com
+`getSnapshot()` e `subscribe()`. `protocol.ts` valida os eventos que alteram esse
+estado e as respostas de conta, convidado, nome e preparo da chamada. Payloads
+de jogos, sinalização e outras operações SFU ainda são opacos e serão convertidos
+com seus consumidores; o protocolo inteiro ainda não está tipado.
+
+`browser.ts` instala uma única instância por página, importada pelo Next antes
+dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
+para consumidores não convertidos. `legacy/network.js` e sua entrada no manifesto
+foram excluídos. O estado ainda não é renderizado em React.
 
 ## Compatibilidade durante a conversão
 
 `src/legacy/manifest.json` define a ordem dos estilos e controladores.
 `scripts/prepare-renderer.cjs` prepara JS/CSS públicos antes de iniciar ou compilar
-Next. Os arquivos copiados são descartáveis, com um único fonte.
+Next. Os arquivos copiados são descartáveis, com um único fonte. Após compilar,
+a preparação remove JS/CSS gerados na raiz de `public/` que perderam seu fonte;
+isso impede incluir controladores retirados no próximo pacote.
 
 `legacy-runtime.tsx` carrega os controladores uma vez, após hidratação, e dispara
 `trono:ready`. Isso substitui a dependência de `DOMContentLoaded`, que pode ocorrer
