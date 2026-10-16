@@ -232,6 +232,33 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
     await page.locator('#voiceSettingsClose').click();
     await preserved();
+
+    // A permission result arriving after leave must release its device and never rejoin.
+    await page.evaluate(async () => {
+      window.__releasedMicrophone = window.TronoSocial.getLocalAudioTrack();
+      await window.TronoSocial.leaveVoice();
+      window.__normalCapture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = constraints => new Promise(resolve => {
+        window.__releaseDelayedCapture = async () => {
+          const stream = await window.__normalCapture(constraints);
+          window.__delayedCaptureTracks = stream.getTracks();
+          resolve(stream);
+        };
+      });
+      window.__cancelledJoin = window.TronoSocial.joinVoice();
+    });
+    await page.waitForFunction(() => !!window.__releaseDelayedCapture);
+    await page.evaluate(async () => {
+      await window.TronoSocial.leaveVoice();
+      navigator.mediaDevices.getUserMedia = window.__normalCapture;
+      await window.__releaseDelayedCapture();
+    });
+    assert.equal(await page.evaluate(() => window.__cancelledJoin), false);
+    assert(await page.evaluate(() => window.__releasedMicrophone.readyState === 'ended' && window.__delayedCaptureTracks.every(track => track.readyState === 'ended')));
+    assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack()), null);
+    assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
+    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().readyState), 'live');
     assert.deepEqual(errors, []);
   } finally {
     finished = true;

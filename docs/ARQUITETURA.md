@@ -103,7 +103,24 @@ edição/visualização de perfis e galeria, mas perdeu transporte, cache e rend
 
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.
-A captura e o ciclo de vida WebRTC ainda estão em `legacy/social.js`.
+`lib/voice/microphone.ts` possui captura de microfone, troca de entrada, mute físico,
+seleção entre trilha bruta/processada e descarte. A geração da chamada e a do pedido
+invalidam permissões, processadores e publicações antigas. O módulo acompanha também
+capturas retiradas que aguardam substituição do sender, para liberá-las ao sair.
+O snapshot tem um invólucro imutável; streams, trilhas e processador são referências
+de mídia pertencentes ao módulo, não DTOs que a interface deva modificar.
+
+`microphone-processor.ts` constrói e encerra o grafo de ganho, limiter e filtro
+RNNoise/leve, com fallback nativo. Recebe os worklets existentes por dependências;
+cancelar durante sua inicialização desconecta o grafo e descarta filtros atrasados.
+O AudioContext é emprestado da chamada e não é fechado pelo processador.
+
+`legacy/social.js` cria uma instância pelas fábricas de compatibilidade instaladas
+pelo Next. Conserva preferências e intenção dos controles; delega aquisição, mute,
+ganho e encerramento físico ao módulo. Seu callback publica a nova trilha nos peers
+ou SFU, verificando se o pedido continua válido entre operações assíncronas.
+Câmera, tela, peers, sinalização, contextos compartilhados e coordenação da chamada
+ainda pertencem ao controlador legado; esta etapa não converteu toda a voz.
 
 ## Backend
 

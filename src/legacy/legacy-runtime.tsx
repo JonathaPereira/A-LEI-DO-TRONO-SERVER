@@ -8,6 +8,8 @@ import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
 import { installLegacyAvatars } from '../lib/profiles/avatar';
+import { createMicrophone } from '../lib/voice/microphone';
+import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
 
 let startup: Promise<void> | undefined;
 
@@ -33,6 +35,7 @@ export function LegacyRuntime() {
   useEffect(() => {
     startup ??= (async () => {
       initializeNetwork(window);
+      Object.assign(window, { TronoVoiceCapture: { createMicrophone, createMicrophoneProcessor } });
       initializeFiles(window);
       installLegacyAttachments(window);
       installLegacyAvatars(window);

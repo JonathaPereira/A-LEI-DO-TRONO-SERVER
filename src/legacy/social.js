@@ -355,9 +355,7 @@ window.TronoSocial = (() => {
   function setMicrophoneGain(value) {
     microphoneVolume = clampGain(value);
     storage.setItem('mnMicrophoneGain', String(microphoneVolume));
-    const proc = micCapture?.processor;
-    if (proc?.gainNode)
-      proc.gainNode.gain.setTargetAtTime(microphoneVolume / 100, proc.ctx.currentTime, 0.012);
+    microphone.setGain(microphoneVolume);
     renderGainValues();
   }
   function setOutputGain(value) {
@@ -386,9 +384,6 @@ window.TronoSocial = (() => {
   let localScreenStream = null,
     localDisplayStream = null,
     screenGeneration = 0;
-  let micCapture = null,
-    micGeneration = 0,
-    noiseLoading = false;
   let voiceJoined = false;
   let micMuted = false;
   let deafened = false;
@@ -468,7 +463,37 @@ window.TronoSocial = (() => {
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
     );
   const meId = () => window.TronoNetwork?.clientId;
-  const supportedMedia = () => navigator.mediaDevices?.getSupportedConstraints?.() || {};
+  const microphone = window.TronoVoiceCapture.createMicrophone({
+    mediaDevices: navigator.mediaDevices,
+    getSettings: () => ({
+      generation: voiceGeneration,
+      enabled: noiseSuppression,
+      nativeOnly: !!(voiceLightMode || (window.TronoDesktop && noiseEngine === 'native')),
+      deviceId: selectedInput,
+      gain: microphoneVolume,
+      muted: micMuted,
+    }),
+    getStream: ensureLocalStream,
+    customSuppressionSupported: () => !!window.TronoNoise?.supported(ensureMediaAudioContext()),
+    createProcessor: (stream, options) =>
+      window.TronoVoiceCapture.createMicrophoneProcessor(stream, options, {
+        getContext: ensureMediaAudioContext,
+        nativeSuppressionSupported: () =>
+          !!navigator.mediaDevices?.getSupportedConstraints?.().noiseSuppression,
+        createNoise: (ctx, onFailure) => window.TronoNoise.create(ctx, { onFailure }),
+        createLightNoise: (ctx, onFailure) => window.TronoLightNoise.create(ctx, { onFailure }),
+        onModeChange: updateNoiseButton,
+        onNativeUnavailable: (processor) => {
+          if (voiceJoined && microphone.getSnapshot().capture?.processor === processor)
+            void acquireMic({ nativeOnly: true }).catch((err) => {
+              if (err?.code !== 'VOICE_CANCELLED')
+                setStatus('Microfone ativo, mas a redução nativa não iniciou.', 'warn');
+            });
+        },
+      }),
+    onTrackChanged: publishMicrophone,
+  });
+  microphone.subscribe(updateNoiseButton);
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
     [...privateVoiceRoster.values()].sort((a, b) => (a.seat ?? 999) - (b.seat ?? 999));
@@ -1448,268 +1473,55 @@ window.TronoSocial = (() => {
     }
   }
 
-  function buildAudioConstraints({ nativeOnly = false } = {}) {
-    const support = supportedMedia(),
-      audio = {};
-    if (support.echoCancellation) audio.echoCancellation = true;
-    if (support.noiseSuppression)
-      audio.noiseSuppression =
-        !!noiseSuppression &&
-        (nativeOnly || !window.TronoNoise?.supported(ensureMediaAudioContext()));
-    if (support.autoGainControl) audio.autoGainControl = false;
-    if (support.channelCount) audio.channelCount = { ideal: 1 };
-    if (support.sampleRate) audio.sampleRate = { ideal: 48000 };
-    if (selectedInput) audio.deviceId = { exact: selectedInput };
-    return audio;
-  }
-
-  async function enableNativeSuppression(rawStream) {
-    const track = rawStream.getAudioTracks()[0];
-    if (supportedMedia().noiseSuppression)
-      try {
-        await track.applyConstraints({ noiseSuppression: true, autoGainControl: false });
-      } catch {}
-    return track?.getSettings?.().noiseSuppression === true;
-  }
-  async function createIntegratedNoiseProcessor(
-    rawStream,
-    { enabled = noiseSuppression, nativeOnly = false } = {},
-  ) {
-    const ctx = ensureMediaAudioContext();
-    if (!ctx) return null;
-    // Never transmit a silent destination when the audio context is suspended.
-    if (ctx.state !== 'running') {
-      void ctx.resume().catch(() => {});
-      return null;
+  async function publishMicrophone({ stream, track, reason, isCurrent }) {
+    if (!isCurrent()) return;
+    if (reason === 'resume') {
+      for (const pc of peers.values()) {
+        if (!isCurrent()) return;
+        await syncInitiatorTracks(pc);
+      }
+      if (!isCurrent()) return;
+      const pub = sfuLocalPublications.get('audio');
+      if (pub?.sender) await pub.sender.replaceTrack(track);
+      if (isCurrent()) void watchStream(meId(), stream);
+      return;
     }
-    const source = ctx.createMediaStreamSource(rawStream),
-      gainNode = ctx.createGain(),
-      outputLimiter = ctx.createDynamicsCompressor(),
-      destination = ctx.createMediaStreamDestination();
-    gainNode.gain.value = microphoneVolume / 100;
-    outputLimiter.threshold.value = -3;
-    outputLimiter.knee.value = 0;
-    outputLimiter.ratio.value = 16;
-    outputLimiter.attack.value = 0.003;
-    outputLimiter.release.value = 0.08;
-    gainNode.connect(outputLimiter);
-    outputLimiter.connect(destination);
-    let denoiser = null,
-      stopped = false;
-    const processor = {
-      ctx,
-      source,
-      gainNode,
-      outputLimiter,
-      destination,
-      track: destination.stream.getAudioTracks()[0],
-      mode: 'gain-only',
-      stop() {
-        if (stopped) return;
-        stopped = true;
-        denoiser?.destroy();
-        for (const node of [source, gainNode, outputLimiter])
-          try {
-            node.disconnect();
-          } catch {}
-        processor.track?.stop();
-      },
-    };
-    const fallback = async () => {
-      if (stopped) return;
-      try {
-        source.disconnect();
-      } catch {}
-      denoiser?.destroy();
-      denoiser = null;
-      source.connect(gainNode);
-      processor.mode = 'unavailable';
-      const native = await enableNativeSuppression(rawStream);
-      if (stopped) return;
-      processor.mode = native ? 'native' : 'unavailable';
-      updateNoiseButton();
-      // Some browsers only change native suppression when acquiring a new input.
-      if (!native && voiceJoined && micCapture?.processor === processor)
-        void acquireMic({ nativeOnly: true }).catch((err) => {
-          if (err?.code !== 'VOICE_CANCELLED')
-            setStatus('Microfone ativo, mas a redução nativa não iniciou.', 'warn');
-        });
-    };
-    if (!enabled) {
-      source.connect(gainNode);
-      return processor;
-    }
-    if (nativeOnly) {
-      processor.nativeSuppression =
-        rawStream.getAudioTracks()[0]?.getSettings?.().noiseSuppression === true;
-      try {
-        denoiser = await window.TronoLightNoise.create(ctx, { onFailure: () => void fallback() });
-        source.connect(denoiser.input);
-        denoiser.node.connect(gainNode);
-        processor.mode = 'light';
-      } catch (err) {
-        console.warn('[TronoSocial] filtro leve indisponível', err);
-        source.connect(gainNode);
-        processor.mode = processor.nativeSuppression ? 'native' : 'unavailable';
-      }
-      return processor;
-    }
-    try {
-      denoiser = await window.TronoNoise.create(ctx, { onFailure: () => void fallback() });
-      source.connect(denoiser.node);
-      denoiser.node.connect(gainNode);
-      processor.mode = 'rnnoise';
-    } catch (err) {
-      console.warn('[TronoSocial] RNNoise indisponível; verificando redução nativa.', err);
-      await fallback();
-    }
-    return processor;
-  }
-
-  function cleanupMicCapture(capture) {
-    if (!capture) return;
-    try {
-      capture.processor?.stop?.();
-    } catch {}
-    try {
-      capture.rawStream?.getTracks?.().forEach((t) => t.stop());
-    } catch {}
-  }
-  async function refreshMicPipeline() {
-    updateNoiseButton();
-    if (!micCapture || !voiceJoined) return;
-    const track =
-      micCapture.processor && mediaAudioContext?.state === 'running'
-        ? micCapture.processor.track
-        : micCapture.rawStream.getAudioTracks()[0];
-    if (!track || track.readyState !== 'live' || track === micCapture.outgoingTrack) return;
-    if (track === micCapture.processor?.track)
-      micCapture.rawStream.getAudioTracks()[0].enabled = !micMuted;
-    track.enabled = !micMuted;
-    const stream = ensureLocalStream();
-    for (const old of stream.getAudioTracks()) stream.removeTrack(old);
-    stream.addTrack(track);
-    micCapture.outgoingTrack = track;
-    for (const pc of peers.values()) await syncInitiatorTracks(pc);
-    const pub = sfuLocalPublications.get('audio');
-    if (pub?.sender) await pub.sender.replaceTrack(track);
-    void watchStream(meId(), stream);
-  }
-
-  async function acquireMic({
-    generation = voiceGeneration,
-    nativeOnly = voiceLightMode || (window.TronoDesktop && noiseEngine === 'native'),
-  } = {}) {
-    if (!navigator.mediaDevices?.getUserMedia)
-      throw new Error(
-        'Seu navegador não oferece acesso ao microfone nesta página. Use HTTPS em navegador atualizado.',
-      );
-    const request = ++micGeneration,
-      enabled = noiseSuppression,
-      current = () => generation === voiceGeneration && request === micGeneration;
-    noiseLoading = true;
-    updateNoiseButton();
-    let rawStream = null,
-      processor = null,
-      installed = false;
-    try {
-      rawStream = await navigator.mediaDevices.getUserMedia({
-        audio: buildAudioConstraints({ nativeOnly }),
-        video: false,
-      });
-      if (!current()) {
-        cleanupMicCapture({ rawStream });
-        throw Object.assign(new Error('Entrada na chamada cancelada.'), {
-          code: 'VOICE_CANCELLED',
-        });
-      }
-      let outgoingTrack = rawStream.getAudioTracks()[0];
-      try {
-        processor = await createIntegratedNoiseProcessor(rawStream, { enabled, nativeOnly });
-        if (processor?.track) outgoingTrack = processor.track;
-      } catch (err) {
-        console.warn('[TronoSocial] processador de áudio', err);
-      }
-      if (!current()) {
-        cleanupMicCapture({ rawStream, processor });
-        throw Object.assign(new Error('Entrada na chamada cancelada.'), {
-          code: 'VOICE_CANCELLED',
-        });
-      }
-      if (enabled && !processor) await enableNativeSuppression(rawStream);
-      if (
-        enabled &&
-        !nativeOnly &&
-        processor?.mode !== 'rnnoise' &&
-        rawStream.getAudioTracks()[0]?.getSettings?.().noiseSuppression !== true &&
-        supportedMedia().noiseSuppression &&
-        current()
-      ) {
-        cleanupMicCapture({ rawStream, processor });
-        rawStream = await navigator.mediaDevices.getUserMedia({
-          audio: buildAudioConstraints({ nativeOnly: true }),
-          video: false,
-        });
-        if (!current()) {
-          cleanupMicCapture({ rawStream });
-          throw Object.assign(new Error('Entrada na chamada cancelada.'), {
-            code: 'VOICE_CANCELLED',
-          });
-        }
-        processor = await createIntegratedNoiseProcessor(rawStream, { enabled, nativeOnly: true });
-        outgoingTrack = processor?.track || rawStream.getAudioTracks()[0];
-      }
-      if (!current()) {
-        cleanupMicCapture({ rawStream, processor });
-        throw Object.assign(new Error('Entrada na chamada cancelada.'), {
-          code: 'VOICE_CANCELLED',
-        });
-      }
-      if (!outgoingTrack) {
-        cleanupMicCapture({ rawStream, processor });
-        throw new Error('Nenhuma trilha de microfone foi recebida.');
-      }
-      outgoingTrack.enabled = !micMuted;
-      const stream = ensureLocalStream(),
-        oldCapture = micCapture;
-      for (const old of stream.getAudioTracks()) stream.removeTrack(old);
-      stream.addTrack(outgoingTrack);
-      micCapture = { rawStream, processor, outgoingTrack };
-      applyMicrophoneMute();
-      installed = true;
-      for (const [id, pc] of [...peers])
-        if (pc._tronoAudioSender) {
-          try {
-            await syncInitiatorTracks(pc);
-          } catch (err) {
-            console.warn('[TronoSocial] reconectando novo microfone', err);
-            closePeer(id);
-            ensurePeer(id);
-          }
-        }
-      const sfuAudio = sfuLocalPublications.get('audio');
-      if (sfuAudio?.sender) {
+    for (const [id, pc] of [...peers])
+      if (pc._tronoAudioSender && isCurrent()) {
         try {
-          await sfuAudio.sender.replaceTrack(outgoingTrack);
-          await applySenderQuality(sfuAudio.sender, 'audio');
+          await syncInitiatorTracks(pc);
         } catch (err) {
-          try {
-            await publishSfuTrack('audio', outgoingTrack);
-          } catch {
-            await fallbackToP2p('Microfone alterado. Reconectando a chamada por P2P.');
-          }
+          if (!isCurrent()) return;
+          console.warn('[TronoSocial] reconectando novo microfone', err);
+          closePeer(id);
+          ensurePeer(id);
         }
       }
-      cleanupMicCapture(oldCapture);
-      await enumerateDevices();
-      return stream;
-    } finally {
-      if (!installed) cleanupMicCapture({ rawStream, processor });
-      if (request === micGeneration) {
-        noiseLoading = false;
-        updateNoiseButton();
+    if (!isCurrent()) return;
+    const sfuAudio = sfuLocalPublications.get('audio');
+    if (sfuAudio?.sender) {
+      try {
+        await sfuAudio.sender.replaceTrack(track);
+        if (!isCurrent()) return;
+        await applySenderQuality(sfuAudio.sender, 'audio');
+      } catch (err) {
+        if (!isCurrent()) return;
+        try {
+          await publishSfuTrack('audio', track);
+        } catch {
+          if (!isCurrent()) return;
+          await fallbackToP2p('Microfone alterado. Reconectando a chamada por P2P.');
+        }
       }
     }
+    if (isCurrent()) await enumerateDevices();
+  }
+  function acquireMic(options) {
+    return microphone.acquire(options);
+  }
+  function refreshMicPipeline() {
+    updateNoiseButton();
+    return voiceJoined ? microphone.refresh() : Promise.resolve();
   }
 
   async function acquireCamera() {
@@ -4315,8 +4127,7 @@ window.TronoSocial = (() => {
     // Cancel pending permission/SFU work before releasing the current devices.
     const wasInVoice = voiceJoined;
     voiceGeneration++;
-    micGeneration++;
-    noiseLoading = false;
+    microphone.stop();
     cameraGeneration++;
     voiceJoinPromise = null;
     voiceJoined = false;
@@ -4343,8 +4154,6 @@ window.TronoSocial = (() => {
       playbackAudioContext = null;
     }
     updateAudioRecoveryUI();
-    cleanupMicCapture(micCapture);
-    micCapture = null;
     localStream?.getTracks().forEach((t) => t.stop());
     localStream = null;
     screenGeneration++;
@@ -4386,8 +4195,7 @@ window.TronoSocial = (() => {
     return Promise.resolve();
   }
   function applyMicrophoneMute() {
-    localStream?.getAudioTracks().forEach((track) => (track.enabled = !micMuted));
-    micCapture?.rawStream.getAudioTracks().forEach((track) => (track.enabled = !micMuted));
+    microphone.setMuted(micMuted);
   }
   function toggleMute() {
     if (!voiceJoined || deafened) return;
@@ -4470,10 +4278,11 @@ window.TronoSocial = (() => {
   }
 
   function noiseState() {
-    const processor = micCapture?.processor,
-      settings = micCapture?.rawStream.getAudioTracks()[0]?.getSettings?.() || {};
+    const processor = microphone.getSnapshot().capture?.processor,
+      settings =
+        microphone.getSnapshot().capture?.rawStream.getAudioTracks()[0]?.getSettings?.() || {};
     const activeMode = processor?.mode === 'gain-only' ? null : processor?.mode;
-    const mode = noiseLoading
+    const mode = microphone.getSnapshot().loading
       ? 'loading'
       : !voiceJoined
         ? 'idle'
@@ -4492,7 +4301,7 @@ window.TronoSocial = (() => {
     const select = $('noiseModeSelect');
     if (select) {
       select.value = noiseSuppression ? noiseEngine : 'off';
-      select.disabled = noiseLoading;
+      select.disabled = microphone.getSnapshot().loading;
     }
     const b = $('noiseSuppressionBtn');
     if (!b) return;
@@ -4532,7 +4341,7 @@ window.TronoSocial = (() => {
         'O filtro leve e a redução nativa serão solicitados ao entrar na voz.',
       ];
     const [label, detail] = labels[mode];
-    b.disabled = noiseLoading;
+    b.disabled = microphone.getSnapshot().loading;
     b.classList.toggle('noise-active', noiseSuppression);
     b.classList.toggle('danger-active', !noiseSuppression);
     b.textContent = 'Supressor: ' + label;
@@ -4542,7 +4351,7 @@ window.TronoSocial = (() => {
     if ($('noiseSuppressionStatus')) $('noiseSuppressionStatus').textContent = detail;
   }
   async function toggleNoiseSuppression() {
-    if (noiseLoading) return;
+    if (microphone.getSnapshot().loading) return;
     const previous = noiseSuppression;
     noiseSuppression = !noiseSuppression;
     storage.setItem('tronoNoiseSuppression', noiseSuppression ? '1' : '0');
@@ -4569,7 +4378,11 @@ window.TronoSocial = (() => {
     }
   }
   async function setNoiseMode(value) {
-    if (!window.TronoDesktop || noiseLoading || !['native', 'rnnoise', 'off'].includes(value))
+    if (
+      !window.TronoDesktop ||
+      microphone.getSnapshot().loading ||
+      !['native', 'rnnoise', 'off'].includes(value)
+    )
       return;
     const previous = { noiseEngine, noiseSuppression, voiceLightMode };
     noiseEngine = value;
@@ -4609,7 +4422,7 @@ window.TronoSocial = (() => {
   function updateVoiceLightMode() {
     const button = $('voiceLightModeBtn');
     if (button) {
-      button.disabled = noiseLoading;
+      button.disabled = microphone.getSnapshot().loading;
       button.textContent = 'Modo leve para jogar: ' + (voiceLightMode ? 'Ligado' : 'Desligado');
       button.setAttribute('aria-pressed', String(voiceLightMode));
       button.classList.toggle('noise-active', voiceLightMode);
@@ -4617,7 +4430,7 @@ window.TronoSocial = (() => {
     document.body.classList.toggle('voice-light-mode', voiceLightMode);
   }
   async function toggleVoiceLightMode() {
-    if (noiseLoading) return;
+    if (microphone.getSnapshot().loading) return;
     const previous = voiceLightMode,
       previousEngine = noiseEngine;
     voiceLightMode = !voiceLightMode;
@@ -5682,7 +5495,7 @@ window.TronoSocial = (() => {
     $('outputGainSlider')?.addEventListener('input', (e) => setOutputGain(e.target.value));
     $('resumeAudioBtn')?.addEventListener('click', () => {
       unlockCallAudio();
-      if (voiceJoined && !micCapture?.processor)
+      if (voiceJoined && !microphone.getSnapshot().capture?.processor)
         void acquireMic()
           .then(() => watchStream(meId(), localStream))
           .catch((err) => setStatus(err.message, 'warn'));

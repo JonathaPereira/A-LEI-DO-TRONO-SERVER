@@ -20,11 +20,12 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Lista React com histórico, paginação, revisões e moderação em TypeScript.
 - Listas de canais React com catálogo tipado, seleção, presença e indicadores de notificação.
 - Transporte HTTP de arquivos tipado e componentes React compartilhados para anexos e avatares.
+- Captura, processamento e descarte do microfone em TypeScript, com cancelamento por geração.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Captura WebRTC,
+React ou TypeScript apenas porque a marcação foi convertida. Câmera/tela, peers e publicação WebRTC,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -232,9 +233,44 @@ e exclusão de PDF preservaram socket, peers, microfone, câmera, tela e jogo.
 Os testes usam backend local, armazenamento simulado e mídia sintética; não validam
 R2/TURN reais. Nenhuma infraestrutura remota foi alterada e nada foi publicado.
 
+## Captura e processamento do microfone — 16/10/2026
+
+- `lib/voice/microphone.ts` é o dono dos recursos brutos/processados, pedidos em
+  andamento, troca de entrada e descarte, incluindo capturas antigas que aguardam
+  substituição do sender. Cancelar a chamada impede que permissões/processadores
+  atrasados instalem trilhas ou alterem o estado de uma chamada posterior.
+- `audio-constraints.ts` mantém as restrições e o fallback nativo, preservando o
+  dispositivo selecionado. O módulo aplica mute e ganho atuais mesmo quando o
+  usuário os altera durante a permissão; câmera e trilhas de tela não são descartadas
+  ao trocar somente o microfone.
+- `microphone-processor.ts` possui grafo, ganho, limiter, conexão dos worklets e
+  fallback. O cancelamento desconecta o grafo; um filtro que termina depois é
+  destruído sem ser conectado. O AudioContext continua compartilhado pela chamada.
+  Uma falha do filtro durante sua inicialização não sobrescreve o fallback nativo.
+- Removidos cerca de 270 linhas substituídas de `legacy/social.js`, incluindo os
+  donos antigos de captura, gerações, loading e processamento. As fábricas tipadas
+  entram pelo `LegacyRuntime`; há uma instância de microfone no controlador.
+  Publicação P2P/SFU fica em um callback que verifica a validade da operação.
+- Câmera, tela, peers, coordenação da chamada e contextos compartilhados continuam
+  no legado. Preferências e intenção de mute ainda são lidas desse controlador;
+  não há um segundo socket, peer ou captura de microfone nesta conversão.
+- O teste RNNoise deixou de fixar `/usr/bin/chromium`: respeita os overrides
+  existentes e usa o Chromium do Playwright por padrão, inclusive no Windows.
+
+Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
+170 testes, incluindo 20 em `test:voice:capture`), `test:ui` (4), `test:voice` (14)
+e `test:desktop:layout` (1) passaram. O Electron preservou chamada, câmera, tela,
+peers e jogo durante navegação, texto e anexos; também conferiu saída com captura
+pendente, encerramento das trilhas atrasadas e nova entrada. Medições reais de PCM
+mantiveram áudio contínuo em segundo plano, e RNNoise reduziu ruído preservando fala.
+Dispositivos e serviços externos são de teste; SFU/TURN reais não foram consultados.
+Uma execução de `npm test` oscilou na ordenação de duas mensagens do teste SQL de
+histórico e passou na reexecução, sem alterar o backend ou silenciar o teste.
+
 ## Próximas alterações, em ordem
 
-1. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
+1. Extrair câmera/tela, peers, sinalização e coordenação da chamada para `lib/voice/`.
+   Captura e processamento do microfone já estão extraídos e devem manter um único dono.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
