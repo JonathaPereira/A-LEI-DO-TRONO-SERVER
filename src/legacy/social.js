@@ -2,11 +2,9 @@
 window.TronoSocial = (() => {
   const $ = (id) => document.getElementById(id);
   const storage = window.TronoStorage || localStorage;
-  const peers = new Map();
   const remoteAudio = new Map();
   const remoteAvStreams = new Map();
   const remoteScreenStreams = new Map();
-  const pendingIce = new Map();
   const voiceMeters = new Map();
   const speakingPeers = new Set();
   const videoRetryTimers = new Map();
@@ -531,6 +529,31 @@ window.TronoSocial = (() => {
   });
   const cameraOn = () => cameraCapture.getSnapshot().capture !== null;
   cameraCapture.subscribe(renderCameraState);
+  const p2pPeers = window.TronoVoiceCapture.createP2pPeers({
+    getSettings: () => ({
+      enabled: voiceJoined && !transportIsSfu() && !transportPending(),
+      localId: meId(),
+    }),
+    createConnection: () => new RTCPeerConnection(p2pIceConfig()),
+    getTracks: () => ({
+      audio: localStream?.getAudioTracks()[0] || null,
+      camera: localStream?.getVideoTracks()[0] || null,
+      screen: screenCapture.getCapture()?.outgoing.getVideoTracks()[0] || null,
+      'screen-audio':
+        screenCapture
+          .getCapture()
+          ?.outgoing.getAudioTracks()
+          .find((t) => t.readyState === 'live') || null,
+    }),
+    applyQuality: applySenderQuality,
+    sendSignal: (id, type, data) => window.TronoNetwork?.sendVoiceSignal(id, type, data),
+    getScreenWatch: (id) => watchingStreams.has(id),
+    onTrack: attachRemoteTrack,
+    onClosed: clearPeerMedia,
+    onStateChange: renderVoiceRoster,
+    onStatus: peerStatus,
+  });
+  const peers = p2pPeers.connections;
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
@@ -1446,7 +1469,7 @@ window.TronoSocial = (() => {
     if (reason === 'resume') {
       for (const pc of peers.values()) {
         if (!isCurrent()) return;
-        await syncInitiatorTracks(pc);
+        await p2pPeers.syncTracks(pc);
       }
       if (!isCurrent()) return;
       const pub = sfuLocalPublications.get('audio');
@@ -1457,12 +1480,12 @@ window.TronoSocial = (() => {
     for (const [id, pc] of [...peers])
       if (pc._tronoAudioSender && isCurrent()) {
         try {
-          await syncInitiatorTracks(pc);
+          await p2pPeers.syncTracks(pc);
         } catch (err) {
           if (!isCurrent()) return;
           console.warn('[TronoSocial] reconectando novo microfone', err);
           closePeer(id);
-          ensurePeer(id);
+          p2pPeers.ensure(id);
         }
       }
     if (!isCurrent()) return;
@@ -1618,7 +1641,7 @@ window.TronoSocial = (() => {
     if (!transportIsSfu())
       await Promise.all(
         [...peers.values()].map(async (pc) => {
-          if (isCurrent()) await syncInitiatorTracks(pc);
+          if (isCurrent()) await p2pPeers.syncTracks(pc);
         }),
       );
     if (!isCurrent()) return;
@@ -1705,7 +1728,7 @@ window.TronoSocial = (() => {
     } else
       void Promise.allSettled(
         [...peers.values()].flatMap((pc) => {
-          pc._tronoWatchingScreen = false;
+          p2pPeers.stopWatching(pc);
           return [pc._tronoScreenSender, pc._tronoScreenAudioSender]
             .filter(Boolean)
             .map(async (sender) => sender.replaceTrack(null));
@@ -1864,19 +1887,10 @@ window.TronoSocial = (() => {
   }
 
   function closePeer(id) {
-    const pc = peers.get(id);
-    if (pc) {
-      for (const r of pc.getReceivers?.() || []) reception.remove(r);
-      pc._tronoClosing = true;
-      clearTimeout(pc._tronoNegotiationTimer);
-      clearTimeout(pc._tronoOfferRetryTimer);
-      clearTimeout(pc._tronoConnectTimer);
-      try {
-        pc.close();
-      } catch {}
-      peers.delete(id);
-    }
-    pendingIce.delete(id);
+    if (!p2pPeers.close(id)) clearPeerMedia(id);
+  }
+  function clearPeerMedia(id, pc) {
+    for (const r of pc?.getReceivers?.() || []) reception.remove(r);
     const retry = videoRetryTimers.get(id);
     if (retry) clearTimeout(retry);
     videoRetryTimers.delete(id);
@@ -2712,8 +2726,7 @@ window.TronoSocial = (() => {
         }
         const pc = peers.get(id);
         if (!pc) return;
-        if (pc._tronoInitiator) requestNegotiation(id, pc, true, true);
-        else window.TronoNetwork?.sendVoiceSignal(id, 'renegotiate-request', { iceRestart: true });
+        p2pPeers.negotiate(id, true, true);
         setStatus('Ressincronizando mídia da chamada...', 'warn');
       }, 3800),
     );
@@ -2757,7 +2770,7 @@ window.TronoSocial = (() => {
       if (track.kind === 'video') scheduleVideoRecovery(id);
     });
     track.addEventListener?.('unmute', () => {
-      if (!voiceJoined || peers.get(id) !== pc || pc?._tronoClosing) return;
+      if (!pc || !p2pPeers.isCurrent(id, pc)) return;
       if (track.kind === 'audio' && (!isScreen || watchingStreams.has(id)))
         attachRemoteAudio(isScreen ? streamAudioKey(id) : id);
       if (track.kind === 'video') {
@@ -2774,317 +2787,21 @@ window.TronoSocial = (() => {
     rerender();
   }
 
-  async function makeOffer(id, pc, iceRestart = false) {
-    if (!pc || pc._tronoClosing || pc.connectionState === 'closed' || !pc._tronoInitiator) return;
-    if (pc._tronoMakingOffer) return;
-    if (pc.signalingState !== 'stable') {
-      if (pc.signalingState === 'have-local-offer' && pc.localDescription?.type === 'offer') {
-        // The other endpoint may have dropped this offer while still on SFU.
-        // Resend the pending SDP instead of waiting forever for its lost answer.
-        window.TronoNetwork?.sendVoiceSignal(id, 'offer', plainSdp(pc.localDescription));
-        scheduleOfferRetry(id, pc);
-      }
-      if (iceRestart) {
-        pc._tronoRenegotiatePending = true;
-        pc._tronoIceRestartPending = true;
-      }
-      return;
-    }
-    pc._tronoMakingOffer = true;
-    try {
-      await syncInitiatorTracks(pc);
-      if (iceRestart)
-        try {
-          pc.restartIce?.();
-        } catch {}
-      const offer = await pc.createOffer({ iceRestart: !!iceRestart });
-      if (pc.signalingState !== 'stable') {
-        pc._tronoRenegotiatePending = true;
-        return;
-      }
-      await pc.setLocalDescription(offer);
-      if (pc._tronoClosing) return;
-      pc._tronoOfferRetries = 0;
-      window.TronoNetwork?.sendVoiceSignal(id, 'offer', plainSdp(pc.localDescription));
-      scheduleOfferRetry(id, pc);
-    } catch (err) {
-      console.warn('[TronoSocial] oferta', id, err);
-    } finally {
-      pc._tronoMakingOffer = false;
-    }
-  }
-  function scheduleOfferRetry(id, pc) {
-    clearTimeout(pc._tronoOfferRetryTimer);
-    pc._tronoOfferRetryTimer = setTimeout(() => {
-      if (
-        !voiceJoined ||
-        transportIsSfu() ||
-        transportPending() ||
-        peers.get(id) !== pc ||
-        pc._tronoClosing ||
-        pc.signalingState !== 'have-local-offer'
-      )
-        return;
-      pc._tronoOfferRetries = (pc._tronoOfferRetries || 0) + 1;
-      if (pc._tronoOfferRetries > 5) {
-        setStatus(
-          'A outra ponta ainda não respondeu à conexão de áudio. Tentando restabelecer a chamada…',
-          'warn',
-        );
-        return;
-      }
-      window.TronoNetwork?.sendVoiceSignal(id, 'offer', plainSdp(pc.localDescription));
-      scheduleOfferRetry(id, pc);
-    }, 2500);
-  }
-  function schedulePeerConnectionCheck(id, pc) {
-    clearTimeout(pc._tronoConnectTimer);
-    if (pc.connectionState === 'connected') return;
-    pc._tronoConnectTimer = setTimeout(() => {
-      if (
-        !voiceJoined ||
-        transportIsSfu() ||
-        transportPending() ||
-        peers.get(id) !== pc ||
-        pc._tronoClosing ||
-        pc.connectionState === 'connected'
-      )
-        return;
-      pc._tronoConnectAttempts = (pc._tronoConnectAttempts || 0) + 1;
-      if (pc._tronoConnectAttempts > 2) {
-        setStatus(
-          sfuTurnActive
-            ? 'Não foi possível conectar o áudio com este participante. Saia e entre na voz para tentar novamente.'
-            : 'P2P sem rota de áudio. Verifique TURN em Configurações → Conexão.',
-          'error',
-        );
-        return;
-      }
-      requestNegotiation(id, pc, true, true);
-      schedulePeerConnectionCheck(id, pc);
-    }, 10000);
-  }
-  function requestNegotiation(id, pc, iceRestart = false, immediate = false) {
-    if (!voiceJoined || !pc || pc._tronoClosing) return;
-    if (!pc._tronoInitiator) {
-      window.TronoNetwork?.sendVoiceSignal(id, 'renegotiate-request', { iceRestart: !!iceRestart });
-      return;
-    }
-    clearTimeout(pc._tronoNegotiationTimer);
-    pc._tronoNegotiationTimer = setTimeout(() => makeOffer(id, pc, iceRestart), immediate ? 0 : 90);
-  }
-  async function flushPendingNegotiation(id, pc) {
-    if (!pc || pc.signalingState !== 'stable' || !pc._tronoRenegotiatePending) return;
-    const ice = !!pc._tronoIceRestartPending;
-    pc._tronoRenegotiatePending = false;
-    pc._tronoIceRestartPending = false;
-    await makeOffer(id, pc, ice);
-  }
-
-  function configureInitiatorTransceivers(pc) {
-    if (pc._tronoAudioTransceiver) return;
-    pc._tronoAudioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
-    pc._tronoVideoTransceiver = pc.addTransceiver('video', { direction: 'sendrecv' });
-    pc._tronoScreenTransceiver = pc.addTransceiver('video', { direction: 'sendrecv' });
-    pc._tronoScreenAudioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
-    pc._tronoAudioSender = pc._tronoAudioTransceiver.sender;
-    pc._tronoVideoSender = pc._tronoVideoTransceiver.sender;
-    pc._tronoScreenSender = pc._tronoScreenTransceiver.sender;
-    pc._tronoScreenAudioSender = pc._tronoScreenAudioTransceiver.sender;
-  }
-  async function bindAnswererTransceivers(pc) {
-    // IMPORTANT: quem responde não cria transceivers antes do offer. Fazer isso cria m-lines
-    // paralelos (sendrecv locais + recvonly remotos) e causa exatamente o bug em que só quem
-    // iniciou a chamada é visto. Em vez disso, reaproveitamos os m-lines recebidos no offer.
-    const all = pc.getTransceivers(),
-      audios = all.filter((t) => t.receiver?.track?.kind === 'audio'),
-      audio = audios[0],
-      screenAudio = audios[1];
-    const videos = all.filter((t) => t.receiver?.track?.kind === 'video');
-    const camera = videos[0] || null,
-      screen = videos[1] || null;
-    if (audio) {
-      pc._tronoAudioTransceiver = audio;
-      pc._tronoAudioSender = audio.sender;
-      audio.direction = 'sendrecv';
-    }
-    if (camera) {
-      pc._tronoVideoTransceiver = camera;
-      pc._tronoVideoSender = camera.sender;
-      camera.direction = 'sendrecv';
-    }
-    if (screen) {
-      pc._tronoScreenTransceiver = screen;
-      pc._tronoScreenSender = screen.sender;
-      screen.direction = 'sendrecv';
-    }
-    if (screenAudio) {
-      pc._tronoScreenAudioTransceiver = screenAudio;
-      pc._tronoScreenAudioSender = screenAudio.sender;
-      screenAudio.direction = 'sendrecv';
-    }
-    await syncInitiatorTracks(pc);
-  }
-  function syncInitiatorTracks(pc) {
-    const next = (pc._tronoTrackQueue || Promise.resolve())
-      .catch(() => {})
-      .then(() => syncPeerTracksNow(pc));
-    pc._tronoTrackQueue = next;
-    return next;
-  }
-  async function syncPeerTracksNow(pc) {
-    if (pc._tronoClosing) return;
-    const stream = ensureLocalStream(),
-      screenTrack = pc._tronoWatchingScreen
-        ? screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0] || null
-        : null,
-      screenAudio = pc._tronoWatchingScreen
-        ? screenCapture
-            .getCapture()
-            ?.outgoing?.getAudioTracks?.()
-            .find((t) => t.readyState === 'live') || null
-        : null;
-    for (const [sender, track, kind] of [
-      [pc._tronoAudioSender, stream.getAudioTracks()[0] || null, 'audio'],
-      [pc._tronoVideoSender, stream.getVideoTracks()[0] || null, 'camera'],
-      [pc._tronoScreenSender, screenTrack, 'screen'],
-      [pc._tronoScreenAudioSender, screenAudio, 'screen-audio'],
-    ]) {
-      if (sender) {
-        await sender.replaceTrack(track);
-        await applySenderQuality(sender, kind);
-      }
-    }
-  }
-
-  function ensurePeer(id) {
-    if (!voiceJoined || !id || id === meId()) return null;
-    if (peers.has(id)) return peers.get(id);
-    const pc = new RTCPeerConnection(p2pIceConfig());
-    peers.set(id, pc);
-    pc._tronoClosing = false;
-    pc._tronoMakingOffer = false;
-    pc._tronoIgnoreOffer = false;
-    pc._tronoRenegotiatePending = false;
-    pc._tronoIceRestartPending = false;
-    pc._tronoInitiator = String(meId()) < String(id);
-    pc._tronoPolite = !pc._tronoInitiator;
-    pc.onicecandidate = (e) => {
-      if (e.candidate) window.TronoNetwork?.sendVoiceSignal(id, 'ice', e.candidate);
-    };
-    pc.onicecandidateerror = (e) =>
-      console.warn('[TronoSocial] ICE', id, e.errorCode, e.errorText || '');
-    pc.ontrack = (e) => {
-      if (peers.get(id) === pc && !pc._tronoClosing) attachRemoteTrack(id, e.track, e.transceiver);
-    };
-    pc.onnegotiationneeded = () => requestNegotiation(id, pc, false, false);
-    pc.onconnectionstatechange = () => {
-      if (pc._tronoClosing) return;
-      if (pc.connectionState === 'failed') {
-        if (pc._tronoInitiator) requestNegotiation(id, pc, true, true);
-        else window.TronoNetwork?.sendVoiceSignal(id, 'renegotiate-request', { iceRestart: true });
-        setStatus('Reconectando mídia da chamada...', 'warn');
-      }
-      if (pc.connectionState === 'connected') {
-        clearTimeout(pc._tronoConnectTimer);
-        pc._tronoConnectAttempts = 0;
-        setStatus('Voz conectada. Malha P2P sincronizada.', 'ok');
-        window.TronoNetwork?.sendVoiceSignal(id, 'stream-watch', {
-          watching: watchingStreams.has(id),
-        });
-      }
-      if (pc.connectionState === 'closed') closePeer(id);
-      renderVoiceRoster();
-    };
-    pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === 'failed') {
-        if (pc._tronoInitiator) requestNegotiation(id, pc, true, true);
-        else window.TronoNetwork?.sendVoiceSignal(id, 'renegotiate-request', { iceRestart: true });
-      }
-    };
-
-    // Somente o iniciador cria os m-lines. O respondente os recebe pelo offer e os converte
-    // para sendrecv em bindAnswererTransceivers(), evitando transceivers duplicados/recvonly.
-    if (pc._tronoInitiator) {
-      configureInitiatorTransceivers(pc);
-      requestNegotiation(id, pc, false, true);
-    } else
-      setTimeout(
-        () =>
-          window.TronoNetwork?.sendVoiceSignal(id, 'renegotiate-request', { iceRestart: false }),
-        120,
+  function peerStatus(status) {
+    if (status === 'connected') setStatus('Voz conectada. Malha P2P sincronizada.', 'ok');
+    if (status === 'reconnecting') setStatus('Reconectando mídia da chamada...', 'warn');
+    if (status === 'offer-timeout')
+      setStatus(
+        'A outra ponta ainda não respondeu à conexão de áudio. Tentando restabelecer a chamada…',
+        'warn',
       );
-    schedulePeerConnectionCheck(id, pc);
-    return pc;
-  }
-
-  function handleSignal(msg) {
-    if (!voiceJoined || transportIsSfu() || transportPending()) return;
-    const id = msg.fromId;
-    if (!id) return;
-    const pc = ensurePeer(id);
-    if (!pc) return;
-    const next = (pc._tronoSignalQueue || Promise.resolve())
-      .catch(() => {})
-      .then(() => handleSignalNow(msg, id, pc));
-    pc._tronoSignalQueue = next;
-    return next;
-  }
-  async function handleSignalNow(msg, id, pc) {
-    if (pc._tronoClosing || !voiceJoined) return;
-    try {
-      if (msg.signalType === 'stream-watch') {
-        pc._tronoWatchingScreen = msg.data?.watching === true;
-        await syncInitiatorTracks(pc);
-        return;
-      }
-      if (msg.signalType === 'renegotiate-request') {
-        if (pc._tronoInitiator) requestNegotiation(id, pc, !!msg.data?.iceRestart, true);
-        return;
-      }
-      if (msg.signalType === 'offer' || msg.signalType === 'answer') {
-        const desc = new RTCSessionDescription(msg.data),
-          isOffer = desc.type === 'offer';
-        if (!isOffer && pc.signalingState !== 'have-local-offer') return;
-        const collision = isOffer && (pc._tronoMakingOffer || pc.signalingState !== 'stable');
-        pc._tronoIgnoreOffer = !pc._tronoPolite && collision;
-        if (pc._tronoIgnoreOffer) return;
-        if (collision && pc._tronoPolite && pc.signalingState !== 'stable') {
-          try {
-            await pc.setLocalDescription({ type: 'rollback' });
-          } catch {}
-        }
-        await pc.setRemoteDescription(desc);
-        if (!isOffer) clearTimeout(pc._tronoOfferRetryTimer);
-        // No primeiro offer recebido, os transceivers remotos já existem. Vincule nossos tracks
-        // a esses mesmos m-lines ANTES de criar a resposta para que a mídia seja bidirecional.
-        if (isOffer) await bindAnswererTransceivers(pc);
-        for (const c of pendingIce.get(id) || []) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(c));
-          } catch {}
-        }
-        pendingIce.delete(id);
-        if (isOffer) {
-          await pc.setLocalDescription(await pc.createAnswer());
-          window.TronoNetwork?.sendVoiceSignal(id, 'answer', pc.localDescription);
-        } else await flushPendingNegotiation(id, pc);
-      } else if (msg.signalType === 'ice' && msg.data) {
-        if (pc.remoteDescription) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(msg.data));
-          } catch (err) {
-            if (!pc._tronoIgnoreOffer) throw err;
-          }
-        } else {
-          const q = pendingIce.get(id) || [];
-          q.push(msg.data);
-          pendingIce.set(id, q);
-        }
-      }
-    } catch (err) {
-      console.warn('[TronoSocial] signal', id, msg.signalType, err);
-    }
+    if (status === 'connection-timeout')
+      setStatus(
+        sfuTurnActive
+          ? 'Não foi possível conectar o áudio com este participante. Saia e entre na voz para tentar novamente.'
+          : 'P2P sem rota de áudio. Verifique TURN em Configurações → Conexão.',
+        'error',
+      );
   }
 
   function syncPeers() {
@@ -3137,8 +2854,8 @@ window.TronoSocial = (() => {
           .map((p) => p.id),
       );
     for (const id of active) {
-      const pc = ensurePeer(id);
-      if (pc?.connectionState === 'failed') requestNegotiation(id, pc, true, true);
+      const pc = p2pPeers.ensure(id);
+      if (pc?.connectionState === 'failed') p2pPeers.negotiate(id, true, true);
     }
     for (const id of [...peers.keys()]) if (!active.has(id)) closePeer(id);
     renderVoiceRoster();
@@ -5541,7 +5258,7 @@ window.TronoSocial = (() => {
         syncPeers();
       }
       if (msg.type === 'voice-signal' && !transportIsSfu() && !transportPending())
-        handleSignal(msg);
+        void p2pPeers.handleSignal(msg);
       if (msg.type === 'player-left' && msg.roomId === roomState?.id) {
         const wasInCall = privateVoiceRoster.has(msg.playerId);
         privateVoiceRoster.delete(msg.playerId);

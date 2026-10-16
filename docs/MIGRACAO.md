@@ -24,11 +24,12 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Captura, processamento e descarte do microfone em TypeScript, com cancelamento por geração.
 - Captura e ciclo de vida da tela em TypeScript, preservando a fonte do replay e o clone de envio.
 - Captura, fallback de dispositivo e ciclo de vida da câmera em TypeScript.
+- Conexões P2P, transceivers, filas de sinalização/trilhas e negociação em TypeScript.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Peers e publicação WebRTC,
+React ou TypeScript apenas porque a marcação foi convertida. SFU e coordenação da chamada,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -36,7 +37,8 @@ Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e compo
 Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham componentes
 React, com adaptadores para os chamadores legados ainda ativos.
 Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
-Os payloads de jogos e sinalização ainda não têm validação completa nesse módulo.
+Os sinais P2P são validados em `lib/voice/peer-protocol.ts`. Payloads de jogos
+e operações SFU ainda não têm validação completa.
 `server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
 Módulos JS existentes ainda não recebem a verificação estrita dos módulos TS.
 
@@ -390,10 +392,46 @@ Evidências locais: `artifacts/camera-regressions.log`, `camera-controls.log`,
 As câmeras/telas são sintéticas; não medimos webcam física, jogos a 60 FPS ou
 SFU/TURN externos. Nada foi publicado nem alterado em infraestrutura remota.
 
+## Conexões e negociação P2P — 16/10/2026
+
+- `lib/voice/p2p-peers.ts` possui o mapa único de conexões, transceivers, filas de
+  sinalização e trilhas, ICE pendente, colisões de oferta e timers de negociação,
+  repetição e reconexão. Estado privado deixa de ser anexado aos objetos do browser;
+  apenas referências emprestadas dos senders/transceivers conservam seus nomes
+  de compatibilidade para publicação, recepção e diagnóstico ainda legados.
+- `peer-protocol.ts` valida remetente, tipo/SDP, campos ICE e comandos antes de
+  criar peers. O protocolo enviado ao backend e a comparação dos IDs para escolher
+  o iniciador continuam iguais. O iniciador cria os quatro m-lines na ordem atual;
+  quem responde reutiliza os recebidos, sem duplicar transceivers.
+- Fechar remove callbacks, cancela todos os timers (inclusive o pedido inicial
+  atrasado), limpa ICE e invalida operações em andamento. Um SDP antigo não envia
+  resposta ou oferta depois que outra conexão passou a usar o mesmo ID.
+- Reinícios ICE não se perdem ao agrupar pedidos ou enquanto uma oferta está
+  sendo preparada/aguarda resposta. As trilhas são relidas após substituições
+  assíncronas, preservando a captura atual. Nenhum dispositivo é aberto/encerrado
+  pelo módulo; os parâmetros de mídia e a assinatura de tela foram preservados.
+- Retirados de `social.js` mapa/filas/flags/timers de negociação, listeners P2P,
+  criação/vinculação de transceivers e handlers SDP/ICE substituídos. O controlador
+  conserva SFU, seleção de transporte/ICE, coordenação da chamada, UI, players e
+  limpeza de recepção/streams/medidores; ainda não pode ser excluído.
+
+Validação: tipagem, formatação, build, quatro regressões da interface e suíte principal
+(4 integrações e 211 testes) passaram. Há 15 testes P2P em `npm run test:voice:peers`, incluídos em `npm test`,
+cobrindo filas, colisões, ICE, retries, encerramento e operações antigas.
+Dois Electron negociaram novamente com reinício ICE, câmera, tela e áudio ativos,
+mantendo peers, socket, trilhas e jogo e recebendo novos quadros de tela. Também
+passaram as trocas de câmera/permissões atrasadas e navegação/layouts existentes.
+Os 15 checks de controles, microfone nativo e recepção de áudio no browser passaram,
+incluindo PCM recebido durante tarefas longas e mudanças de foco. Evidências:
+`artifacts/peers-regressions.log`, `peers-electron.log`, `peers-ui.log` e `peers-media.log`.
+Mídia sintética e backend local; SFU/TURN externos e jogos reais a 60 FPS não foram
+medidos. Não houve publicação ou alteração de infraestrutura remota.
+
 ## Próximas alterações, em ordem
 
-1. Extrair peers, sinalização e coordenação da chamada para `lib/voice/`.
+1. Extrair SFU, recepção/players e coordenação da chamada para `lib/voice/`.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
+   Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações

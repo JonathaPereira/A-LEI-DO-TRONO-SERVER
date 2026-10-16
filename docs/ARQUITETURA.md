@@ -46,9 +46,10 @@ conteúdo de cada mensagem. Não abre dispositivos nem conhece elementos da tela
 `lib/socket/client.ts` reúne comandos de rede e identidade. `state.ts` mantém um
 snapshot imutável de capacidades e participação em texto/voz/jogo, com
 `getSnapshot()` e `subscribe()`. `protocol.ts` valida os eventos que alteram esse
-estado e as respostas de conta, convidado, nome e preparo da chamada. Payloads
-de jogos, sinalização e outras operações SFU ainda são opacos e serão convertidos
-com seus consumidores; o protocolo inteiro ainda não está tipado.
+estado e as respostas de conta, convidado, nome e preparo da chamada. O consumidor
+P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`. Payloads de jogos
+e operações SFU ainda são opacos e serão convertidos com seus consumidores;
+o protocolo inteiro ainda não está tipado.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -153,8 +154,29 @@ Seu callback de parada anuncia e inicia o desligamento dos senders imediatamente
 No P2P, uma substituição atrasada reconcilia o sender com a trilha atual para que
 um attach/detach anterior não sobrescreva uma câmera nova.
 
-Configuração dos senders, peers, sinalização, contextos compartilhados e coordenação
-da chamada ainda pertencem ao controlador legado; a voz não foi toda convertida.
+`p2p-peers.ts` possui o mapa de conexões P2P, transceivers, filas de trilhas/sinais,
+ICE pendente, colisões de oferta e timers de negociação/reconexão. A escolha do
+iniciador conserva a comparação dos IDs. Apenas ele cria os m-lines, nesta ordem:
+microfone, câmera, tela, áudio de tela; quem responde reutiliza os transceivers
+recebidos antes de criar a resposta, mantendo mídia bidirecional.
+
+`peer-protocol.ts` valida sinais antes de alocar um peer. Fechar uma conexão remove
+seus callbacks, cancela todos os timers e invalida filas/continuações assíncronas,
+inclusive quando outra conexão já usa o mesmo ID. SDP e ICE tardios não são enviados.
+Requisições de reinício ICE sobrevivem à coalescência de negociações e aguardam a
+resposta de uma oferta em andamento. As tentativas conservam os limites anteriores.
+
+O módulo recebe as trilhas existentes e a aplicação de qualidade por dependências;
+não abre ou encerra dispositivos, cria sockets ou modifica os parâmetros de captura.
+Tela/áudio de tela só entram nos senders com assinatura do participante. A publicação
+reconfere a trilha desejada após `replaceTrack`, evitando restaurar uma captura antiga.
+`connections` é uma visão tipada somente para leitura, com referências emprestadas
+dos peers e senders para renderização, publicação e diagnósticos existentes.
+
+`social.js` conserva a coordenação da chamada, seleção ICE/TURN e de transporte,
+SFU, regras de qualidade, recepção/players, contextos de áudio e interface.
+O callback de fechamento ainda limpa streams, áudio e medidores remotos. A voz
+não foi toda convertida; o estado de negociação P2P já não vive no controlador.
 
 `components/files/image-viewer.tsx` mantém um único visualizador React para anexos
 do chat e dos consumidores legados. Trocar de conta ou excluir o arquivo invalida

@@ -51,9 +51,14 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         localStorage.setItem('mnDesktopNoiseMode', 'off');
         localStorage.setItem('mn-personal:' + accountId, JSON.stringify({appLayout: layout}));
         window.__layoutPeers = [];
+        window.__layoutDescriptions = [];
         const Peer = window.RTCPeerConnection;
         window.RTCPeerConnection = class extends Peer {
           constructor(config) { super({...config, iceServers: [], iceCandidatePoolSize: 0}); window.__layoutPeers.push(this); }
+          async setLocalDescription(description) {
+            await super.setLocalDescription(description);
+            window.__layoutDescriptions.push(this.localDescription?.type);
+          }
         };
         window.__layoutCanvases = [];
         const canvasStream = (fps = 10) => {
@@ -170,6 +175,19 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
     const artifacts = path.join(root, 'artifacts/call-layout');
+    // Exercise real ICE restart/offer/answer while camera, screen and audio are live.
+    const receiverId = await receiver.evaluate(() => window.TronoNetwork.clientId);
+    const initiator = senderId < receiverId ? page : receiver;
+    const answerer = senderId < receiverId ? receiver : page;
+    const initiatorId = senderId < receiverId ? senderId : receiverId;
+    const offersBefore = await initiator.evaluate(() => window.__layoutDescriptions.filter(type => type === 'offer').length);
+    const framesBeforeRestart = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
+    await answerer.evaluate(id => window.TronoNetwork.sendVoiceSignal(id, 'renegotiate-request', {iceRestart: true}), initiatorId);
+    await expect.poll(() => initiator.evaluate(() => window.__layoutDescriptions.filter(type => type === 'offer').length)).toBeGreaterThan(offersBefore);
+    await expect.poll(() => page.evaluate(() => window.__layoutPeers.every(peer => peer.connectionState === 'connected'))).toBe(true);
+    await expect.poll(() => receiver.evaluate(() => window.__layoutPeers.every(peer => peer.connectionState === 'connected'))).toBe(true);
+    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforeRestart);
+    await preserved();
     await fs.mkdir(artifacts, {recursive: true});
     const capture = process.env.LAYOUT_CAPTURE_PREFIX || 'after';
     async function communityControls(layout) {

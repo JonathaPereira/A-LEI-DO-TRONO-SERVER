@@ -12,6 +12,7 @@ import { createMicrophone } from '../lib/voice/microphone';
 import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
 import { createScreenCapture } from '../lib/voice/screen-capture';
 import { createCamera } from '../lib/voice/camera';
+import { createP2pPeers } from '../lib/voice/p2p-peers';
 
 let startup: Promise<void> | undefined;
 
@@ -43,6 +44,7 @@ export function LegacyRuntime() {
           createMicrophoneProcessor,
           createScreenCapture,
           createCamera,
+          createP2pPeers,
         },
       });
       initializeFiles(window);
