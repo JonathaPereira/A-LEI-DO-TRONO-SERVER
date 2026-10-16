@@ -13,6 +13,13 @@ const root=app.isPackaged?path.join(process.resourcesPath,'frontend'):path.resol
 let window,tray,quitting=false,hotkey=null,capture=null,clipActive=false,applicationAudio,updates,installingUpdate=false,preferences,activity;
 const folders=new Map();
 const trace=(...values)=>{if(!app.isPackaged&&app.commandLine.hasSwitch('desktop-diagnostics'))console.error('[desktop]',...values);};
+// Web Audio capture/RNNoise runs in the renderer, not the Audio Service alone.
+// Keep its Windows scheduling priority when covered, minimized or on another
+// desktop. backgroundThrottling:false only controls the window/page policy.
+if(process.platform==='win32'){
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+}
 if(!app.requestSingleInstanceLock())app.quit();
 else{
   app.on('second-instance',()=>{window?.show();window?.focus();});
