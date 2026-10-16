@@ -23,6 +23,10 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await fixture.call('verify', {token_hash: [...fixture.links.keys()].at(-1), type: 'signup'});
       accounts.push((await fixture.call('login', {email, password: 'Senha12!'})).data);
     }
+    for(const [account, peerId, action] of [[accounts[0], accounts[1].user.id, 'request'], [accounts[1], accounts[0].user.id, 'accept']]) {
+      const response=await fetch(fixture.base+'/social/friend',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+account.session.access_token,'Content-Type':'application/json'},body:JSON.stringify({peerId,action})});
+      assert.equal(response.status,200);
+    }
     browser = await chromium.launch({executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || (process.platform === 'linux' ? '/usr/bin/chromium' : undefined), args: [
       '--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
       '--autoplay-policy=no-user-gesture-required', '--mute-audio'
@@ -34,6 +38,7 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
         nickname: data.user.nickname, personalization: {cover_file_id: 'test-cover', background_file_id: 'test-background', accent: '#bd6fe8', cover_position: 25}
       }}}));
       await context.route('**/files/test-cover/url', route => route.fulfill({json: {url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#723da8"/><circle cx="260" cy="30" r="100" fill="#dd8a68"/></svg>')}}));
+      await context.route('**/files/test-background/url', route => route.fulfill({json: {url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#185a80"/></svg>')}}));
       await context.addInitScript(({base, data, native}) => {
         window.TRONO_BACKEND_URL = base;
         sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
@@ -59,11 +64,19 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
         window.__peers = [];
         const NativePeer = window.RTCPeerConnection;
         window.RTCPeerConnection = class extends NativePeer {
-          constructor(...args) {super(...args); window.__peers.push(this);}
+          constructor(config) {super({...config,iceServers:[],iceCandidatePoolSize:0}); window.__peers.push(this);}
         };
         const replace = RTCRtpSender.prototype.replaceTrack;
         window.__detachReleases = [];
+        window.__attachReleases = [];
+        window.__constraintReleases = [];
+        const constraints=MediaStreamTrack.prototype.applyConstraints;
+        MediaStreamTrack.prototype.applyConstraints=function(value){
+          if(this.kind==='video'&&window.__holdScreenQuality)return new Promise((resolve,reject)=>window.__constraintReleases.push(()=>constraints.call(this,value).then(resolve,reject)));
+          return constraints.call(this,value);
+        };
         RTCRtpSender.prototype.replaceTrack = function(track) {
+          if (track?.kind === 'video' && window.__holdAttach) return new Promise((resolve,reject)=>window.__attachReleases.push(()=>replace.call(this,track).then(resolve,reject)));
           if (track === null && window.__holdDetach) {
             return new Promise((resolve, reject) => window.__detachReleases.push(() => replace.call(this, track).then(resolve, reject)));
           }
@@ -103,6 +116,24 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
           await expect(invitation).toBeVisible();
         }
       }
+    });
+
+    await t.test('remote camera and stream state appears while sender setup is still pending', async () => {
+      await owner.locator('#screenShareBtn').click();
+      await expect(viewer.locator('.screen-share-tile')).toHaveCount(0);
+      await owner.evaluate(()=>window.__holdAttach=true);
+      await owner.locator('#cameraBtn').click();
+      await expect(viewer.locator('.voice-person.camera-in-profile')).toHaveCount(1,{timeout:1500});
+      await expect(owner.locator('#cameraBtn')).toBeEnabled();
+      assert(await owner.evaluate(()=>window.__attachReleases.length>0));
+      await owner.evaluate(()=>{window.__holdAttach=false;for(const release of window.__attachReleases.splice(0))release();});
+      await expect.poll(()=>owner.locator('#cameraInputSelect').isEnabled()).toBe(true);
+      await owner.locator('#cameraBtn').click();
+      await owner.evaluate(()=>window.__holdScreenQuality=true);
+      await owner.locator('#screenShareBtn').click();await owner.locator('#screenOptionsConfirm').click();
+      await expect(viewer.locator('.screen-share-tile.stream-invitation')).toBeVisible({timeout:1500});
+      assert(await owner.evaluate(()=>window.__constraintReleases.length>0));
+      await owner.evaluate(()=>{window.__holdScreenQuality=false;for(const release of window.__constraintReleases.splice(0))release();});
     });
 
     await t.test('camera and screen disappear on both clients while sender teardown is stalled', async () => {
@@ -151,11 +182,16 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await viewer.locator('#workspaceHeaderToggle').click();
     });
 
-    await t.test('covers frame each participant and direct messages align with the call', async () => {
+    await t.test('call cards keep their background and direct-message names use their cover', async () => {
       await owner.setViewportSize({width: 1440, height: 900});
       await owner.evaluate(() => {window.TronoAppLayout.apply('original'); window.TronoMessenger.openFriends();});
       await expect(owner.locator('.participant-background img').first()).toBeVisible();
       assert(await owner.locator('.participant-background img').first().evaluate(img => img.naturalWidth > 0));
+      assert(await owner.locator('.participant-background img').first().evaluate(img=>decodeURIComponent(img.src).includes('#185a80')));
+      const direct=owner.locator('.workspace-direct-person').filter({hasText:'Bruno'});
+      await expect(direct.locator('.direct-profile-banner img')).toBeVisible();
+      assert(await direct.locator('.direct-profile-banner img').evaluate(img=>decodeURIComponent(img.src).includes('#723da8')));
+      await direct.click();await expect(owner.locator('#messengerInput')).toBeEnabled();
       const panel = await owner.locator('#messengerPanel').boundingBox();
       const main = await owner.locator('#callWorkspaceMain').boundingBox();
       assert.equal(panel.y, main.y);
@@ -171,6 +207,47 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
     await t.test('desktop update icon survives updater state changes and stays at the bottom left', async () => {
       const desktop = await client(accounts[2], true);
       await desktop.evaluate(() => window.TronoAppLayout.apply('discord'));
+      for(const view of ['game','community','game','community']){
+        await desktop.evaluate(view=>window.TronoAppLayout.navigate(view),view);
+        for(const [host,id]of [['layoutConnectionControls','joinVoiceBtn'],['layoutCallActions','cameraBtn'],['layoutCallActions','screenShareBtn'],['layoutUserControls','muteMicBtn'],['layoutUserControls','deafenVoiceBtn'],['layoutUserControls','voiceSettingsBtn']]){
+          await expect(desktop.locator('#'+host+' #'+id)).toBeVisible();
+          assert.equal(await desktop.locator('#'+id).count(),1);
+        }
+        await desktop.locator('#muteMicBtn').click();await expect(desktop.locator('#muteMicBtn')).toHaveAttribute('aria-pressed','true');
+        await desktop.locator('#muteMicBtn').click();await expect(desktop.locator('#muteMicBtn')).toHaveAttribute('aria-pressed','false');
+        assert.equal(await desktop.locator('#muteMicBtn .workspace-control-icon').count(),view==='community'?1:0);
+      }
+      for(const mode of ['original','discord']){
+        await desktop.evaluate(mode=>window.TronoAppLayout.apply(mode),mode);
+        await desktop.evaluate(()=>window.TronoAppLayout.navigate('game'));
+        await expect(desktop.locator('#cameraBtn .workspace-control-icon')).toHaveCount(0);
+        await expect(desktop.locator('#cameraBtn .call-icon')).toBeVisible();
+        await desktop.evaluate(()=>window.TronoAppLayout.navigate('community'));
+        await expect(desktop.locator('#cameraBtn .workspace-control-icon')).toHaveCount(1);
+        await expect(desktop.locator('#cameraBtn .call-icon')).toBeHidden();
+        await desktop.evaluate(()=>{window.TronoMessenger.close();window.TronoSocial.toggleTextChat(false);});
+        for(const id of ['joinVoiceBtn','cameraBtn','screenShareBtn','muteMicBtn','deafenVoiceBtn','voiceSettingsBtn']){
+          assert(await desktop.locator('#'+id).evaluate(button=>{
+            const r=button.getBoundingClientRect();
+            return [.2,.5,.8].every(x=>document.elementFromPoint(r.x+r.width*x,r.y+r.height/2)?.closest('button')===button);
+          }),mode+' '+id+' must receive its own clicks');
+        }
+        if(mode==='original'){
+          const dock=await desktop.locator('#callFocusDock').boundingBox(),stage=await desktop.locator('.voice-section').boundingBox();
+          assert(Math.abs(dock.x+dock.width/2-stage.x-stage.width/2)<2);
+          assert(Math.abs(dock.y+dock.height-stage.y-stage.height)<2);
+        }
+        await desktop.locator('#layoutVoiceLocation').click();
+        await expect(desktop.locator('#callWorkspace')).toHaveAttribute('data-messages','none');
+        await desktop.locator('#cameraBtn').click();
+        await expect.poll(()=>desktop.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);
+        await desktop.locator('#cameraBtn').click();
+        await expect.poll(()=>desktop.evaluate(()=>window.TronoSocial.cameraOn)).toBe(false);
+        await desktop.locator('#screenShareBtn').click();
+        await expect(desktop.locator('#screenOptionsDialog')).toBeVisible();
+        await desktop.locator('#screenOptionsCancel').click();
+        await expect(desktop.locator('#callWorkspace')).toHaveAttribute('data-messages','none');
+      }
       for (const state of [{status: 'idle'}, {status: 'downloading', percent: 62}, {status: 'ready', version: '0.2.5'}]) {
         await desktop.evaluate(state => window.__updateState(state), state);
         await expect(desktop.locator('#desktopUpdateCheck svg')).toBeVisible();

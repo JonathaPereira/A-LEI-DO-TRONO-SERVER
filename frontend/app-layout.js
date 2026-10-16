@@ -39,6 +39,7 @@ window.TronoAppLayout=(()=>{
   }
   async function openVoiceChannel(){
     const call=window.TronoSocial,room=call.voiceRoom;if(!call.voiceJoined||!room)return;
+    if(document.body.classList.contains('chat-only-active')&&window.TronoNetwork.currentRoom===room.id)return;
     if(room.kind==='game'){await navigate('throne');return;}
     await navigate('community');
     if(call.voiceJoined&&call.voiceRoom?.id===room.id)await window.TronoChatHub.switchChannel(room.id);

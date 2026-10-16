@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.5
+M&N · A Lei do Trono — Windows 0.2.6
 
-1. Instalação nova: instale MN-Trono-0.2.5-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.6-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -91,3 +91,11 @@ mais acima no Original, capas emolduram os cartões e o Discord mantém o ícone
 de atualização no canto inferior esquerdo. A seta no canto superior direito
 oculta/restaura a barra superior, com preferência salva por conta.
 Backend 0.13.0-alpha compatível, sem SQL novo. Guia: ATUALIZAR_WINDOWS_v0.2.5.md.
+
+Windows 0.2.6: controles visíveis na lateral do Discord e no centro inferior
+do Original, sem ícones duplicados ao trocar de aba. O status da voz não
+reabre o chat da sala atual. Cartões centrais usam o fundo do perfil; a capa
+aparece somente atrás dos nomes nas mensagens diretas. Câmera e transmissão
+avisam os outros participantes assim que a captura começa, sem aguardar a
+publicação na rede. Backend 0.13.0-alpha compatível, sem SQL novo.
+Guia: ATUALIZAR_WINDOWS_v0.2.6.md.

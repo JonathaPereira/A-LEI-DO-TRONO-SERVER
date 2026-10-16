@@ -62,35 +62,24 @@ window.TronoProfile=(()=>{
  function hydrate(host=document){for(const img of host.querySelectorAll('[data-avatar-file]')){if(img.dataset.loading)continue;img.dataset.loading='1';const fallback=()=>{const el=make('span');el.innerHTML=window.TronoAvatarIcons.html(img.dataset.avatarPreset||'person');img.replaceWith(el.firstElementChild);};window.TronoFiles.url(img.dataset.avatarFile).then(link=>{if(img.isConnected){img.src=link;img.onerror=fallback;}}).catch(fallback);}}
  async function api(path){const id=window.TronoAuth.user?.id,token=await window.TronoAuth.getAccessToken();if(!id||id!==window.TronoAuth.user?.id||!token)throw Error('Entre na sua conta.');const res=await fetch(window.TronoNetwork.BACKEND_HTTP+'/community/'+path,{headers:{Authorization:'Bearer '+token},cache:'no-store',signal:AbortSignal.timeout(15000)}),data=await res.json();if(id!==window.TronoAuth.user?.id)throw Error('A conta mudou. Abra novamente.');if(!res.ok)throw Error(data.error?.message||'Não foi possível carregar o perfil.');return data;}
  const profileCache=new Map();let profileScope=null;
- function callBackgrounds(host=$('voiceRoster')){
-  if(!host)return;const viewer=window.TronoAuth.user?.id;if(!viewer)return;
-  for(const card of host.querySelectorAll('.voice-person[data-account-id]')){
-   const id=card.dataset.accountId;if(!id)continue;
-   let entry=profileCache.get(id);
-   if(!entry||entry.expires<Date.now()){
-    entry={expires:Date.now()+60000};entry.promise=api('profiles/'+id).then(data=>data.profile).catch(()=>null);profileCache.set(id,entry);
-   }
-   if(card._profileBackground===entry)continue;
-   card._profileBackground=entry;card.querySelector('.participant-background')?.remove();
-   const current=()=>card.isConnected&&viewer===window.TronoAuth.user?.id&&card.dataset.accountId===id&&card._profileBackground===entry;
+ function callBackgrounds(host=$('voiceRoster')){if(!host)return;const viewer=window.TronoAuth.user?.id;if(!viewer)return;for(const card of host.querySelectorAll('.voice-person[data-account-id]')){const id=card.dataset.accountId;if(!id)continue;let entry=profileCache.get(id);if(!entry||entry.expires<Date.now()){entry={expires:Date.now()+60000};entry.promise=api('profiles/'+id).then(data=>data.profile).catch(()=>null);profileCache.set(id,entry);}if(card._profileBackground===entry)continue;card._profileBackground=entry;card.querySelector('.participant-background')?.remove();entry.promise.then(async person=>{if(!person||!card.isConnected||viewer!==window.TronoAuth.user?.id||card.dataset.accountId!==id||card._profileBackground!==entry)return;const d={...defaults,...person.personalization};if(!d.background_file_id)return;try{const url=await window.TronoFiles.url(d.background_file_id);if(!card.isConnected||viewer!==window.TronoAuth.user?.id||card.dataset.accountId!==id||card._profileBackground!==entry)return;const background=make('div','participant-background'),img=make('img');img.alt='';img.src=url;img.loading='lazy';img.onerror=()=>background.remove();background.append(img);background.style.setProperty('--participant-darkness',d.darkness/100);background.style.setProperty('--participant-blur',d.blur+'px');card.prepend(background);}catch{}});}}
+ function directBanners(host=document){
+  const viewer=window.TronoAuth.user?.id;if(!viewer)return;
+  for(const row of host.querySelectorAll('[data-direct-profile]')){
+   const id=row.dataset.directProfile;let entry=profileCache.get(id);
+   if(!entry||entry.expires<Date.now()){entry={expires:Date.now()+60000};entry.promise=api('profiles/'+id).then(data=>data.profile).catch(()=>null);profileCache.set(id,entry);}
+   if(row._profileBanner===entry)continue;row._profileBanner=entry;row.querySelector('.direct-profile-banner')?.remove();
+   const current=()=>row.isConnected&&viewer===window.TronoAuth.user?.id&&row.dataset.directProfile===id&&row._profileBanner===entry;
    entry.promise.then(async person=>{
-    if(!person||!current())return;
-    const d={...defaults,...person.personalization},background=make('div','participant-background');
-    background.setAttribute('aria-hidden','true');
-    background.style.setProperty('--participant-accent',/^#[0-9a-f]{6}$/i.test(d.accent)?d.accent:defaults.accent);
-    background.style.setProperty('--participant-darkness',d.darkness/100);
-    background.style.setProperty('--participant-blur',(d.cover_file_id?0:d.blur)+'px');
-    background.style.setProperty('--participant-position',Math.max(0,Math.min(100,d.cover_position))+'%');
-    card.prepend(background);
-    const file=d.cover_file_id||d.background_file_id;if(!file)return;
-    try{
-     const url=await window.TronoFiles.url(file);if(!current())return;
-     const img=make('img');img.alt='';img.src=url;img.loading='lazy';img.onerror=()=>img.remove();background.append(img);
+    const d={...defaults,...person?.personalization};if(!d.cover_file_id||!current())return;
+    try{const url=await window.TronoFiles.url(d.cover_file_id);if(!current())return;
+     const banner=make('span','direct-profile-banner'),img=make('img');banner.setAttribute('aria-hidden','true');img.alt='';img.src=url;img.loading='lazy';img.onerror=()=>banner.remove();
+     img.style.objectPosition='center '+Math.max(0,Math.min(100,d.cover_position))+'%';banner.append(img);row.prepend(banner);
     }catch{}
    });
   }
  }
- function invalidateProfile(id){profileCache.delete(id);callBackgrounds();}
+ function invalidateProfile(id){profileCache.delete(id);callBackgrounds();directBanners();}
  window.addEventListener('trono-profile-change',()=>invalidateProfile(window.TronoAuth.user?.id));
  window.addEventListener('trono-auth-change',()=>{const id=window.TronoAuth.user?.id;if(id!==profileScope){profileScope=id;profileCache.clear();for(const card of document.querySelectorAll('.voice-person')){delete card._profileBackground;card.querySelector('.participant-background')?.remove();}}});
  window.TronoNetwork.onMessage(m=>{if(m.type==='member-profile-updated'&&typeof m.accountId==='string')invalidateProfile(m.accountId);});
@@ -150,5 +139,5 @@ window.TronoProfile=(()=>{
   function auth(){const u=window.TronoAuth.user;adminButton.hidden=u?.role!=='creator';adminProfile.hidden=u?.role!=='creator';if(u?.role!=='creator'&&admin.open)admin.close();if(owner&&owner!==u?.id){epoch++;owner=null;loaded=false;discard();$('profileDialog').close();view.close();admin.close();emojiPicker.hidePopover();window.TronoProfileGifs.close();$('profileForm').reset();$('profileLivePreview').replaceChildren();$('profileFiles').replaceChildren();}}
   window.addEventListener('trono-auth-change',auth);window.addEventListener('trono-role-change',auth);void window.TronoAuth.ready.then(auth);
  });
- return {open,avatarHtml,hydrate,formatPhoto,openMini,callBackgrounds};
+ return {open,avatarHtml,hydrate,formatPhoto,openMini,callBackgrounds,directBanners};
 })();

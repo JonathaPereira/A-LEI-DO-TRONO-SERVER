@@ -1,3 +1,7 @@
+## Windows 0.2.6 · controles visíveis e perfis corrigidos
+
+Botões na lateral do Discord e no centro inferior do Original, sem ícones duplicados. O fundo volta aos cartões centrais, e a capa fica atrás dos nomes nas mensagens diretas. Câmera e transmissão avisam o início sem esperar a preparação da rede. Veja [como publicar o frontend com o EXE](ATUALIZAR_WINDOWS_v0.2.6.md). Backend 0.13.0-alpha, sem SQL novo.
+
 ## Windows 0.2.5 · controles da chamada e layouts
 
 Assistir stream sem maximizar; desligamento de câmera/tela sem aguardar a limpeza da conexão; mensagens diretas reposicionadas; capas emoldurando participantes; ícones e atualização no Discord; barra superior recolhível e responsiva. A entrega usa `MN-Trono-Frontend-0.2.5.zip`, com o EXE e `latest.yml` juntos. Veja [como publicar](ATUALIZAR_WINDOWS_v0.2.5.md). Backend 0.13.0-alpha, sem SQL novo.
