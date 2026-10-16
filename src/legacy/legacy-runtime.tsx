@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
 import { initializeNetwork } from '../lib/socket/browser';
+import { initializeChatComposer } from '../lib/chat/browser';
 
 let startup: Promise<void> | undefined;
 
@@ -28,6 +29,7 @@ export function LegacyRuntime() {
   useEffect(() => {
     startup ??= (async () => {
       initializeNetwork(window);
+      initializeChatComposer(window);
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
       }

@@ -16,6 +16,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Documentos históricos fora da raiz e caminhos de CI/empacotamento atualizados.
 - Transporte WebSocket em TypeScript, com pendências e fila de identidade únicas.
 - Comandos e estado de participação em TypeScript; `legacy/network.js` removido.
+- Compositor React com rascunho, emojis e ciclo de upload tipado; adaptador de envio removido.
 
 ## Conversão ainda necessária
 
@@ -101,11 +102,41 @@ tipadas, compatibilidade com capacidades ausentes e inicialização única.
 O pacote Windows local validou recursos, mídia, Splendor e Love Letter com o
 backend de teste. Não houve publicação ou mudança em serviços remotos.
 
+## Compositor e upload — 16/10/2026
+
+- `lib/chat/composer.ts` possui rascunho, seleção, limites, progresso, cancelamento
+  e descarte de uploads. O estado e os eventos passaram juntos para o novo módulo.
+  `browser.ts` mantém uma instância por página e lê conta e biblioteca de arquivos
+  já existentes; não duplica conexão ou implementação HTTP de upload.
+- `ChatComposer` controla texto, arquivo, emojis, feedback e teclado em React.
+  Preserva Enter, Shift+Enter e composição IME, posição de inserção de emoji e
+  Escape. Limites continuam em 300 caracteres, 10 MB por arquivo e 100 MB por vídeo.
+- Operações canceladas/antigas não enviam anexos nem sobrescrevem uma operação
+  nova. Arquivos já enviados, mas não vinculados, são removidos quando a mesma
+  conta ainda permite a limpeza. Após troca de conta, não se tenta remover usando
+  credenciais da conta seguinte. O transporte compartilhado também valida a conta.
+- Erros de persistência restauram rascunho somente no canal correto e quando não
+  existe texto mais recente. Mudança de conta limpa o rascunho; troca de canal ou
+  desconexão preserva texto e cancela o arquivo selecionado/ativo.
+- Removidos o adaptador `lib/socket/chat-actions.ts`, o envio de `TronoSocial`, o
+  estado de upload e os listeners antigos de arquivo/emojis em `legacy/social.js`.
+  Histórico e moderação continuam no controlador e somente delegam feedback ao
+  novo módulo. O React é o único responsável pelo campo e pelo feedback.
+
+Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
+113 testes, incluindo 13 em `test:chat`), `test:ui` (3), moderação no navegador (1)
+e `test:desktop:layout` (1) passaram. O compositor real foi testado com PDF enviado
+ao backend local e armazenamento simulado, cancelamento, falha de persistência e
+paginação de 55 mensagens sem duplicatas após recarga. No Electron, o envio em um
+canal de texto preservou socket, peers, trilhas de mídia e jogo ativo. Nada publicado.
+
 ## Próximas alterações, em ordem
 
-1. Extrair envio/estado de mensagens e anexos de `legacy/social.js`.
-   Substituir `chat-actions.ts` e converter listas de mensagens e canais para
-   estado React. Consumir o cliente e seu snapshot de `lib/socket/`; não criar
+1. Converter lista de mensagens, paginação, revisões e moderação de `legacy/social.js`
+   para estado React. Compositor e ciclo de upload já foram extraídos para `lib/chat/`.
+   Manter transporte HTTP e visualização de arquivos compartilhados em um único
+   módulo ao converter `legacy/profile-files.js`, pois também atendem perfis e DMs.
+   Converter listas de canais. Consumir o cliente e seu snapshot de `lib/socket/`; não criar
    sockets, mapas de pendências ou filas de identidade nos componentes.
    Validar anexos, histórico, moderação e os respectivos payloads do protocolo.
 2. Extrair captura, peers, sinalização e descarte para `lib/voice/`.

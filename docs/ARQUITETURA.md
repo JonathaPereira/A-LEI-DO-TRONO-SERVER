@@ -8,9 +8,19 @@ API Routes ou cookies do servidor Next: conta, dados e WebSocket pertencem ao
 backend existente.
 
 `components/application.tsx` compõe as telas por domínio. As telas preservam IDs
-e hierarquia relevantes dos controles anteriores. `chat-composer.tsx` trata envio
-e teclado em React; `lib/socket/chat-actions.ts` delega ao controlador que mantém
-o estado do upload. Não há um segundo socket ou uma segunda captura de mídia.
+e hierarquia relevantes dos controles anteriores. `chat-composer.tsx` possui o
+campo de texto, seletor de arquivo/emojis e feedback em React. `lib/chat/composer.ts`
+concentra rascunho, arquivo selecionado, progresso e ciclo de vida do upload.
+Há uma instância por página, com `getSnapshot()` e `subscribe()`, consumida com
+`useSyncExternalStore`. Trocar canal, desconectar ou cancelar invalida a operação;
+uma resposta antiga não pode enviar no canal novo ou liberar um upload posterior.
+Trocar de conta limpa o rascunho. Não há um segundo socket ou captura de mídia.
+
+O envio usa o cliente de rede tipado. O transporte HTTP compartilhado de arquivos
+continua em `legacy/profile-files.js`, também usado por perfis e mensagens diretas.
+`legacy/social.js` conserva lista, histórico, revisões e moderação, e reporta seu
+feedback por `TronoChatComposer.reportStatus()`. Não escreve mais no campo de texto
+nem no feedback do compositor. O adaptador `lib/socket/chat-actions.ts` foi excluído.
 
 `lib/socket/transport.ts` possui a conexão WebSocket, correlação de respostas,
 timeouts e fila de autenticação de conta/convidado. Requisições correlacionam tipo

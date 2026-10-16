@@ -445,7 +445,6 @@ window.TronoSocial = (() => {
   const callSoundCooldown = new Map();
   let chatDrawerOpen = false;
   let chatUnreadCount = 0;
-  let emojiOpen = false;
   let localScreenPreviewPaused = false;
   let localScreenCollapsed = false;
   let telemetryOpen = false;
@@ -594,86 +593,6 @@ window.TronoSocial = (() => {
       setUnreadCount(0);
       setTimeout(() => $('courtChatInput')?.focus(), 80);
     }
-  }
-  const EMOJIS = [
-    '😀',
-    '😄',
-    '😂',
-    '🤣',
-    '😊',
-    '😍',
-    '🥰',
-    '😎',
-    '🤔',
-    '😮',
-    '😢',
-    '😡',
-    '👍',
-    '👎',
-    '👏',
-    '🙌',
-    '🙏',
-    '💪',
-    '🤝',
-    '❤️',
-    '💙',
-    '💜',
-    '🔥',
-    '✨',
-    '⚡',
-    '🎉',
-    '🏆',
-    '🎮',
-    '🎲',
-    '♛',
-    '⚔️',
-    '🛡️',
-    '👑',
-    '☕',
-    '🍻',
-    '🫡',
-    '👀',
-    '✅',
-    '❌',
-    '💬',
-    '📷',
-    '🎙️',
-    '🖥️',
-    '🚀',
-    '💯',
-    '🤡',
-    '😅',
-    '😉',
-  ];
-  function populateEmojiPicker() {
-    const box = $('emojiPicker');
-    if (!box || box.childElementCount) return;
-    box.innerHTML = EMOJIS.map(
-      (e) =>
-        `<button type="button" class="emoji-option" data-emoji="${e}" aria-label="${e}">${e}</button>`,
-    ).join('');
-    box.addEventListener('click', (ev) => {
-      const b = ev.target.closest('.emoji-option');
-      if (!b) return;
-      insertEmoji(b.dataset.emoji || '');
-    });
-  }
-  function insertEmoji(emoji) {
-    const input = $('courtChatInput');
-    if (!input || !emoji) return;
-    const start = input.selectionStart ?? input.value.length,
-      end = input.selectionEnd ?? start;
-    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
-    const pos = start + emoji.length;
-    input.setSelectionRange?.(pos, pos);
-    input.focus();
-  }
-  function toggleEmojiPicker(force) {
-    emojiOpen = typeof force === 'boolean' ? force : !emojiOpen;
-    populateEmojiPicker();
-    $('emojiPicker')?.classList.toggle('hidden', !emojiOpen);
-    $('emojiBtn')?.classList.toggle('active', emojiOpen);
-    $('emojiBtn')?.setAttribute('aria-expanded', emojiOpen ? 'true' : 'false');
   }
   function toggleTelemetry(force) {
     telemetryOpen = typeof force === 'boolean' ? force : !telemetryOpen;
@@ -1477,7 +1396,7 @@ window.TronoSocial = (() => {
     moderationPending = null;
     updateChatModeration();
     if (pending.roomId === window.TronoNetwork?.currentRoom)
-      attachmentStatus(
+      window.TronoChatComposer.reportStatus(
         result.ok
           ? pending.action === 'clear'
             ? 'Histórico do canal apagado.'
@@ -1537,7 +1456,9 @@ window.TronoSocial = (() => {
             ? window.TronoNetwork.clearChatHistory(requestId)
             : window.TronoNetwork.deleteChatMessage(choice.id, requestId);
       if (!sent) {
-        attachmentStatus('Conexão interrompida. Aguarde a reconexão para apagar.');
+        window.TronoChatComposer.reportStatus(
+          'Conexão interrompida. Aguarde a reconexão para apagar.',
+        );
         return;
       }
       moderationPending = {
@@ -1621,71 +1542,6 @@ window.TronoSocial = (() => {
     }
     if (chatMuted) markRead();
   }
-  let pendingChatFile = null,
-    chatUploadController = null;
-  function attachmentStatus(text = '', cancel = false) {
-    const host = $('attachmentStatus');
-    if (!host) return;
-    host.replaceChildren(document.createTextNode(text));
-    if (cancel) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '× Cancelar';
-      btn.onclick = () => {
-        chatUploadController?.abort();
-        pendingChatFile = null;
-        $('chatFileInput').value = '';
-        attachmentStatus();
-      };
-      host.appendChild(btn);
-    }
-  }
-  async function sendChat() {
-    const input = $('courtChatInput');
-    if (!input || chatUploadController) return;
-    const text = input.value.trim(),
-      file = pendingChatFile,
-      roomId = window.TronoNetwork?.currentRoom;
-    if (!text && !file) return;
-    if (!file) {
-      if (window.TronoNetwork?.sendChat(text)) {
-        attachmentStatus();
-        input.value = '';
-        input.focus();
-      } else attachmentStatus('Conexão interrompida. Aguarde a reconexão para enviar.');
-      return;
-    }
-    chatUploadController = new AbortController();
-    $('courtChatSend').disabled = true;
-    $('attachFileBtn').disabled = true;
-    input.disabled = true;
-    let uploaded;
-    try {
-      uploaded = await window.TronoFiles.upload(file, {
-        roomId,
-        signal: chatUploadController.signal,
-        onProgress: (n) => attachmentStatus(`Enviando ${file.name}: ${n}%`, true),
-      });
-      if (roomId !== window.TronoNetwork.currentRoom)
-        throw new Error('O canal mudou durante o envio.');
-      if (!window.TronoNetwork.sendChat(text, uploaded.id))
-        throw new Error('Conexão interrompida. Tente novamente.');
-      pendingChatFile = null;
-      $('chatFileInput').value = '';
-      input.value = '';
-      attachmentStatus('Arquivo enviado.');
-    } catch (e) {
-      if (uploaded) await window.TronoFiles.remove(uploaded.id).catch(() => {});
-      attachmentStatus(e.message);
-    } finally {
-      chatUploadController = null;
-      $('courtChatSend').disabled = false;
-      $('attachFileBtn').disabled = false;
-      input.disabled = false;
-      input.focus();
-    }
-  }
-
   async function toggleWatchCamera(id) {
     if (!voiceJoined || id === meId() || !privateVoiceRoster.get(id)?.camera) return;
     const hidden = !hiddenCameras.has(id);
@@ -5132,10 +4988,6 @@ window.TronoSocial = (() => {
         moderationChoice = null;
         $('chatModerationDialog').close();
       }
-      chatUploadController?.abort();
-      pendingChatFile = null;
-      if ($('chatFileInput')) $('chatFileInput').value = '';
-      attachmentStatus();
     }
     chatRoomState = room || null;
     document.body.classList.toggle(
@@ -5994,31 +5846,7 @@ window.TronoSocial = (() => {
           break;
         }
     });
-    $('attachFileBtn')?.addEventListener('click', () => {
-      if (window.TronoNetwork?.currentRoom) $('chatFileInput').click();
-      else attachmentStatus('Entre em um canal para anexar arquivos.');
-    });
-    $('chatFileInput')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const max = /\.(mp4|webm)$/i.test(file.name) ? 100_000_000 : 10_000_000;
-      if (!file.size || file.size > max) {
-        pendingChatFile = null;
-        e.target.value = '';
-        attachmentStatus(`Limite: ${window.TronoFiles.size(max)} por arquivo.`);
-        return;
-      }
-      pendingChatFile = file;
-      attachmentStatus(
-        `${file.name} · ${window.TronoFiles.size(file.size)}. Clique em enviar.`,
-        true,
-      );
-    });
     $('muteTextBtn')?.addEventListener('click', toggleTextMute);
-    $('emojiBtn')?.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      toggleEmojiPicker();
-    });
     if ($('muteTextBtn')) {
       $('muteTextBtn').textContent = chatMuted ? 'Ativar chat' : 'Silenciar chat';
       $('muteTextBtn').classList.toggle('danger-active', chatMuted);
@@ -6181,12 +6009,6 @@ window.TronoSocial = (() => {
         ['CHAT_HISTORY_UNAVAILABLE', 'CHAT_HISTORY_RATE'].includes(msg.code)
       ) {
         if ($('olderChatMessages')) $('olderChatMessages').disabled = false;
-        const failed = msg.failedMessage,
-          input = $('courtChatInput');
-        if (failed?.roomId === window.TronoNetwork.currentRoom && input && !input.value)
-          input.value = failed.text || '';
-        if ((failed?.roomId || msg.roomId) === window.TronoNetwork.currentRoom)
-          attachmentStatus(msg.message);
       }
       if (
         msg.type === 'chat-history' &&
@@ -6315,10 +6137,6 @@ window.TronoSocial = (() => {
     navigator.mediaDevices?.addEventListener?.('devicechange', enumerateDevices);
     window.addEventListener('resize', renderSeatMedia);
     window.addEventListener('trono-audio-state', updateAudioPreferenceButtons);
-    document.addEventListener('click', (e) => {
-      if (emojiOpen && !e.target.closest('#emojiPicker') && !e.target.closest('#emojiBtn'))
-        toggleEmojiPicker(false);
-    });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const maximized = document.querySelector('.media-maximized');
@@ -6326,8 +6144,7 @@ window.TronoSocial = (() => {
           maximized.classList.remove('media-maximized');
           document.body.classList.remove('media-focus-open');
           void setSfuTileLayer(maximized, false);
-        } else if (emojiOpen) toggleEmojiPicker(false);
-        else if (telemetryOpen) toggleTelemetry(false);
+        } else if (telemetryOpen) toggleTelemetry(false);
         else if (inChatHub() && chatDrawerOpen) toggleTextChat(false);
         else if (settingsOpen) toggleVoiceSettings(false);
       }
@@ -6343,7 +6160,6 @@ window.TronoSocial = (() => {
     bindFloatingDrag();
     bindFloatingResize();
     applyPanelMode();
-    populateEmojiPicker();
     renderGainValues();
     updateChatDrawerUI();
     setSettingsTab(settingsTab);
@@ -6390,7 +6206,6 @@ window.TronoSocial = (() => {
   window.addEventListener('trono:ready', bind);
 
   return {
-    sendChat,
     diagnostics,
     showPanel,
     showForRoom,

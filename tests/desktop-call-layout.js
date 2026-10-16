@@ -202,6 +202,10 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     const {channel} = await created.json();
     await page.evaluate(id => window.TronoNetwork.joinTextChannel(id), channel.id);
     await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe(channel.id);
+    await page.locator('#courtChatInput').fill('Compositor React com voz e jogo ativos');
+    await page.locator('#courtChatSend').click();
+    await expect(page.locator('#courtChatMessages')).toContainText('Compositor React com voz e jogo ativos');
+    await expect(page.locator('#courtChatInput')).toHaveValue('');
     await preserved();
     await page.evaluate(() => window.TronoNetwork.joinRoom('chat-jogos'));
     await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe('chat-jogos');

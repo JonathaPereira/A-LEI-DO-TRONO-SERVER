@@ -31,12 +31,6 @@ export function ChatPanel() {
         </button>
         <div id={'courtChatMessages'} className={'court-chat-messages'} aria-live={'polite'}></div>
         <ChatComposer />
-        <div
-          id={'attachmentStatus'}
-          className={'attachment-status'}
-          role={'status'}
-          aria-live={'polite'}
-        ></div>
         <small className={'chat-help'}>
           Enter envia • 10 MB por arquivo • 100 MB por vídeo MP4/WebM • 300 caracteres
         </small>
