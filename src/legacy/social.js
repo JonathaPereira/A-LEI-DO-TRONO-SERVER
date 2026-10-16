@@ -388,10 +388,7 @@ window.TronoSocial = (() => {
   let voiceJoined = false;
   let micMuted = false;
   let deafened = false;
-  let cameraOn = false;
-  let cameraRequest = null,
-    cameraGeneration = 0,
-    cameraTogglePending = false;
+  let cameraTogglePending = null;
   let panelOpen = false;
   let chatHubMode = false;
   let panelMode = storage.getItem('tronoSocialMode') === 'floating' ? 'floating' : 'full';
@@ -515,6 +512,25 @@ window.TronoSocial = (() => {
     },
   });
   const screenSharing = () => screenCapture.getCapture() !== null;
+  const cameraCapture = window.TronoVoiceCapture.createCamera({
+    mediaDevices: navigator.mediaDevices,
+    getSettings: () => ({
+      generation: voiceGeneration,
+      joined: voiceJoined,
+      deviceId: selectedCamera,
+      format: qualityProfile().camera,
+    }),
+    getStream: ensureLocalStream,
+    onStarted: publishCamera,
+    onStopped: cameraStopped,
+    onDeviceMissing: (deviceId) => {
+      if (selectedCamera !== deviceId) return;
+      selectedCamera = '';
+      storage.removeItem('tronoCameraInput');
+    },
+  });
+  const cameraOn = () => cameraCapture.getSnapshot().capture !== null;
+  cameraCapture.subscribe(renderCameraState);
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
@@ -909,50 +925,6 @@ window.TronoSocial = (() => {
     }, 15000);
   }
 
-  function cameraFallbackAttempts() {
-    const q = qualityProfile().camera,
-      base = {
-        width: { ideal: q.width },
-        height: { ideal: q.height },
-        frameRate: { ideal: Math.min(q.fps, 30) },
-      };
-    // Retain the selected input when relaxing quality; never silently switch cameras.
-    return selectedCamera
-      ? [{ ...base, deviceId: { exact: selectedCamera } }, { deviceId: { exact: selectedCamera } }]
-      : [{ ...base, facingMode: { ideal: 'user' } }, true];
-  }
-  function cameraErrorCanFallback(err) {
-    return (
-      [
-        'OverconstrainedError',
-        'NotFoundError',
-        'NotReadableError',
-        'AbortError',
-        'TypeError',
-      ].includes(err?.name) || ['OVERCONSTRAINED', 'DEVICE_NOT_FOUND'].includes(err?.code)
-    );
-  }
-  async function openCameraStream() {
-    let last = null;
-    for (const video of cameraFallbackAttempts()) {
-      try {
-        return await navigator.mediaDevices.getUserMedia({ audio: false, video });
-      } catch (err) {
-        last = err;
-        if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') throw err;
-        if (!cameraErrorCanFallback(err)) throw err;
-      }
-    }
-    if (selectedCamera && ['NotFoundError', 'OverconstrainedError'].includes(last?.name)) {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      if (!devices.some((d) => d.kind === 'videoinput' && d.deviceId === selectedCamera)) {
-        selectedCamera = '';
-        storage.removeItem('tronoCameraInput');
-        return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-      }
-    }
-    throw last || new Error('Não foi possível iniciar a câmera.');
-  }
   function cameraErrorMessage(err) {
     if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError')
       return 'Permita o acesso à câmera nas configurações deste site no navegador.';
@@ -1084,15 +1056,8 @@ window.TronoSocial = (() => {
     }
   }
   async function applyQualityToLiveMedia() {
-    const q = qualityProfile();
     try {
-      const cam = localStream?.getVideoTracks?.()[0];
-      if (cam && cameraOn)
-        await cam.applyConstraints({
-          width: { ideal: q.camera.width },
-          height: { ideal: q.camera.height },
-          frameRate: { ideal: q.camera.fps, max: q.camera.fps },
-        });
+      await cameraCapture.refreshQuality();
     } catch (err) {
       console.warn('[TronoSocial] qualidade câmera', err);
     }
@@ -1136,7 +1101,7 @@ window.TronoSocial = (() => {
     window.TronoNetwork?.setVoiceState(
       voiceJoined,
       micMuted,
-      cameraOn,
+      cameraOn(),
       screenSharing(),
       transmissionQuality,
       announcedTransport(),
@@ -1527,153 +1492,83 @@ window.TronoSocial = (() => {
     return voiceJoined ? microphone.refresh() : Promise.resolve();
   }
 
-  async function acquireCamera() {
-    if (cameraRequest) return cameraRequest;
-    if (!navigator.mediaDevices?.getUserMedia)
-      throw new Error('Seu navegador não oferece acesso à câmera nesta página.');
-    const generation = ++cameraGeneration,
-      callGeneration = voiceGeneration;
-    const current = () =>
-      voiceJoined && generation === cameraGeneration && callGeneration === voiceGeneration;
-    const run = (async () => {
-      // Release the device before reopening it (some webcams allow only one capture).
-      cameraOn = false;
-      for (const old of localStream?.getVideoTracks() || []) {
-        localStream.removeTrack(old);
-        old.stop();
-      }
-      renderVideoGrid();
-      renderSeatMedia();
-      const temp = await openCameraStream(),
-        track = temp.getVideoTracks()[0];
-      if (!current()) {
-        temp.getTracks().forEach((t) => t.stop());
-        throw Object.assign(new Error('Abertura da câmera cancelada.'), {
-          code: 'CAMERA_CANCELLED',
-        });
-      }
-      const stream = ensureLocalStream();
-      if (!track) {
-        temp.getTracks().forEach((t) => t.stop());
-        throw new Error('Nenhuma trilha de câmera foi recebida.');
-      }
-      for (const old of stream.getVideoTracks()) {
-        stream.removeTrack(old);
-        old.stop();
-      }
-      stream.addTrack(track);
-      cameraOn = true;
-      track.addEventListener(
-        'ended',
-        () => {
-          if (current() && stream.getVideoTracks().includes(track))
-            void disableCamera(true).then(updateButtons);
-        },
-        { once: true },
-      );
-      // Announce a live capture immediately. Transport setup may take seconds;
-      // remote clients can show the camera and start negotiating meanwhile.
-      window.TronoNetwork?.setVoiceState(
-        voiceJoined,
-        micMuted,
-        true,
-        screenSharing(),
-        transmissionQuality,
-        announcedTransport(),
-      );
-      updateButtons();
-      renderVideoGrid();
-      renderSeatMedia();
-      renderVoiceRoster();
-      if (transportIsSfu()) {
-        try {
-          const existing = sfuLocalPublications.get('camera');
-          if (existing?.sender) {
-            await existing.sender.replaceTrack(track);
-            await applySenderQuality(existing.sender, 'camera');
-          } else await publishSfuTrack('camera', track);
-        } catch (err) {
-          if (!current())
-            throw Object.assign(new Error('Abertura da câmera cancelada.'), {
-              code: 'CAMERA_CANCELLED',
-            });
-          console.warn('[TronoSocial] câmera SFU; acionando fallback', err?.code || err);
-          await fallbackToP2p(
-            'A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.',
-          );
-        }
-      }
-      if (!transportIsSfu())
-        await Promise.all(
-          [...peers.values()].map(async (pc) => {
-            if (pc._tronoVideoSender) {
-              await pc._tronoVideoSender.replaceTrack(track).catch(() => {});
-              await applySenderQuality(pc._tronoVideoSender, 'camera');
-            }
-          }),
-        );
-      if (!current()) {
-        track.stop();
-        throw Object.assign(new Error('Abertura da câmera cancelada.'), {
-          code: 'CAMERA_CANCELLED',
-        });
-      }
-      window.TronoNetwork?.setVoiceState(
-        voiceJoined,
-        micMuted,
-        cameraOn,
-        screenSharing(),
-        transmissionQuality,
-        announcedTransport(),
-      );
-      await enumerateDevices();
-      renderVideoGrid();
-      renderSeatMedia();
-      renderVoiceRoster();
-      return track;
-    })();
-    const tracked = run
-      .catch(async (err) => {
-        if (current()) await disableCamera(true);
-        throw err;
-      })
-      .finally(() => {
-        if (cameraRequest === tracked) {
-          cameraRequest = null;
-          updateButtons();
-        }
-      });
-    cameraRequest = tracked;
-    updateButtons();
-    return tracked;
+  function acquireCamera() {
+    return cameraCapture.acquire();
   }
-  async function disableCamera(sendState = true) {
-    cameraGeneration++;
-    cameraOn = false;
-    for (const t of localStream?.getVideoTracks?.() || []) {
-      localStream.removeTrack(t);
-      t.stop();
+  async function syncCameraSender(pc) {
+    const sender = pc._tronoVideoSender;
+    if (!sender) return;
+    // A delayed attach/detach can finish after the next camera operation.
+    // Reconcile that same sender with the currently owned track before returning.
+    while (voiceJoined && [...peers.values()].includes(pc)) {
+      await sender.replaceTrack(cameraCapture.getSnapshot().capture?.track || null);
+      if (sender.track === (cameraCapture.getSnapshot().capture?.track || null)) return;
     }
-    if (sendState)
-      window.TronoNetwork?.setVoiceState(
-        voiceJoined,
-        micMuted,
-        false,
-        screenSharing(),
-        transmissionQuality,
-        announcedTransport(),
+  }
+  async function publishCamera({ capture, isCurrent }) {
+    const track = capture.track;
+    if (!isCurrent()) return;
+    // Announce before publication, which may wait on a slow peer or SFU.
+    announceCamera();
+    if (transportIsSfu()) {
+      try {
+        const existing = sfuLocalPublications.get('camera');
+        if (existing?.sender) {
+          await existing.sender.replaceTrack(track);
+          if (!isCurrent()) return;
+          await applySenderQuality(existing.sender, 'camera');
+        } else await publishSfuTrack('camera', track);
+      } catch (err) {
+        if (!isCurrent()) return;
+        console.warn('[TronoSocial] câmera SFU; acionando fallback', err?.code || err);
+        await fallbackToP2p(
+          'A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.',
+        );
+      }
+    }
+    if (!isCurrent()) return;
+    if (!transportIsSfu())
+      await Promise.all(
+        [...peers.values()].map(async (pc) => {
+          if (!isCurrent()) return;
+          if (pc._tronoVideoSender) {
+            await syncCameraSender(pc).catch(() => {});
+            if (!isCurrent()) return;
+            await applySenderQuality(pc._tronoVideoSender, 'camera');
+          }
+        }),
       );
+    if (!isCurrent()) return;
+    announceCamera();
+    await enumerateDevices();
+  }
+  function renderCameraState() {
     updateButtons();
     renderVideoGrid();
     renderSeatMedia();
     renderVoiceRoster();
-    // Stopping a device and announcing it must not wait for an SFU request or
-    // a slow peer's replaceTrack(). Start every detach now, before a new capture.
+  }
+  function announceCamera() {
+    window.TronoNetwork?.setVoiceState(
+      voiceJoined,
+      micMuted,
+      cameraOn(),
+      screenSharing(),
+      transmissionQuality,
+      announcedTransport(),
+    );
+    renderCameraState();
+  }
+  function cameraStopped() {
+    if (!voiceJoined) return;
+    cameraTogglePending = null;
+    announceCamera();
+    // Device release and state announcements cannot wait for transport detach.
     if (transportIsSfu()) void closeSfuPublication('camera');
     else
       void Promise.allSettled(
         [...peers.values()].map(async (pc) => {
-          if (pc._tronoVideoSender) await pc._tronoVideoSender.replaceTrack(null);
+          await syncCameraSender(pc);
         }),
       );
   }
@@ -1686,7 +1581,7 @@ window.TronoSocial = (() => {
     window.TronoNetwork?.setVoiceState(
       true,
       micMuted,
-      cameraOn,
+      cameraOn(),
       true,
       transmissionQuality,
       announcedTransport(),
@@ -1731,7 +1626,7 @@ window.TronoSocial = (() => {
     window.TronoNetwork?.setVoiceState(
       true,
       micMuted,
-      cameraOn,
+      cameraOn(),
       true,
       transmissionQuality,
       announcedTransport(),
@@ -1796,7 +1691,7 @@ window.TronoSocial = (() => {
       window.TronoNetwork?.setVoiceState(
         voiceJoined,
         micMuted,
-        cameraOn,
+        cameraOn(),
         false,
         transmissionQuality,
         announcedTransport(),
@@ -2679,7 +2574,7 @@ window.TronoSocial = (() => {
       const audio = localStream?.getAudioTracks?.()[0];
       if (audio) await publishSfuTrack('audio', audio);
       const camera = localStream?.getVideoTracks?.()[0];
-      if (cameraOn && camera) await publishSfuTrack('camera', camera);
+      if (cameraOn() && camera) await publishSfuTrack('camera', camera);
       const screen = screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0];
       if (screenSharing() && screen && status.screenAllowed)
         await publishSfuTrack('screen', screen);
@@ -2689,7 +2584,7 @@ window.TronoSocial = (() => {
       window.TronoNetwork?.setVoiceState(
         true,
         micMuted,
-        cameraOn,
+        cameraOn(),
         screenSharing(),
         transmissionQuality,
         'sfu',
@@ -2727,7 +2622,7 @@ window.TronoSocial = (() => {
     window.TronoNetwork?.setVoiceState(
       true,
       micMuted,
-      cameraOn,
+      cameraOn(),
       screenSharing(),
       transmissionQuality,
       'p2p',
@@ -3279,7 +3174,7 @@ window.TronoSocial = (() => {
   function personVoiceSummary(p) {
     const self = p.id === meId(),
       muted = self ? micMuted : !!p.muted,
-      cam = self ? cameraOn : !!p.camera,
+      cam = self ? cameraOn() : !!p.camera,
       screen = self ? screenSharing() : !!p.screen,
       transport = self ? announcedTransport() : p.transport || 'p2p';
     return (
@@ -3327,7 +3222,7 @@ window.TronoSocial = (() => {
       'has-camera',
       voiceJoined &&
         detailedPlayers().some((p) =>
-          p.id === meId() ? cameraOn : p.camera && !hiddenCameras.has(p.id),
+          p.id === meId() ? cameraOn() : p.camera && !hiddenCameras.has(p.id),
         ),
     );
     stage?.classList.toggle('screens-layout', camerasInProfiles());
@@ -3336,7 +3231,7 @@ window.TronoSocial = (() => {
       voiceJoined &&
         !detailedPlayers().some((p) =>
           p.id === meId()
-            ? cameraOn || screenSharing()
+            ? cameraOn() || screenSharing()
             : (p.camera && !hiddenCameras.has(p.id)) || p.screen,
         ),
     );
@@ -3369,7 +3264,7 @@ window.TronoSocial = (() => {
       const self = p.id === me,
         muted = self ? micMuted : !!p.muted,
         silenced = self ? deafened : !!p.deafened,
-        cam = self ? cameraOn : !!p.camera,
+        cam = self ? cameraOn() : !!p.camera,
         screen = self ? screenSharing() : !!p.screen,
         speaking = !muted && speakingPeers.has(p.id),
         transport = self ? announcedTransport() : p.transport || 'p2p',
@@ -3562,7 +3457,7 @@ window.TronoSocial = (() => {
     const stream = cameraStreamForPerson(p);
     if (p.id !== meId() && hiddenCameras.has(p.id)) return false;
     return p.id === meId()
-      ? cameraOn && !!stream?.getVideoTracks?.().length
+      ? cameraOn() && !!stream?.getVideoTracks?.().length
       : remoteVideoUsable(p.id, stream, 'camera');
   }
   function personHasLiveScreen(p) {
@@ -3667,7 +3562,7 @@ window.TronoSocial = (() => {
     const me = meId(),
       players = detailedPlayers(),
       visible = players.filter((p) =>
-        p.id === me ? cameraOn : p.camera && !hiddenCameras.has(p.id),
+        p.id === me ? cameraOn() : p.camera && !hiddenCameras.has(p.id),
       ),
       desired = new Set(visible.map((p) => p.id)),
       dock = visible.length ? visible.every((p) => cameraInProfile(p.id)) : camerasInProfiles();
@@ -3946,7 +3841,7 @@ window.TronoSocial = (() => {
         }))
         .filter(
           (p) =>
-            (p.id === me ? cameraOn : !!p.camera) &&
+            (p.id === me ? cameraOn() : !!p.camera) &&
             Number.isInteger(p.seat) &&
             p.seat >= 0 &&
             p.seat <= 3,
@@ -4046,7 +3941,7 @@ window.TronoSocial = (() => {
         window.TronoNetwork?.setVoiceState(
           true,
           false,
-          cameraOn,
+          cameraOn(),
           screenSharing(),
           transmissionQuality,
           announcedTransport(),
@@ -4077,7 +3972,7 @@ window.TronoSocial = (() => {
             window.TronoNetwork?.setVoiceState(
               true,
               micMuted,
-              cameraOn,
+              cameraOn(),
               screenSharing(),
               transmissionQuality,
               'p2p',
@@ -4119,9 +4014,10 @@ window.TronoSocial = (() => {
     const wasInVoice = voiceJoined;
     voiceGeneration++;
     microphone.stop();
-    cameraGeneration++;
     voiceJoinPromise = null;
     voiceJoined = false;
+    cameraTogglePending = null;
+    cameraCapture.stop();
     syncVoiceWork();
     void syncVoicePriority();
     window.TronoNetwork?.setVoiceState(false, false, false, false, transmissionQuality, 'p2p');
@@ -4148,7 +4044,6 @@ window.TronoSocial = (() => {
     localStream?.getTracks().forEach((t) => t.stop());
     localStream = null;
     screenCapture.stop();
-    cameraOn = false;
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
     for (const id of [...voiceMeters.keys()]) stopMeter(id);
@@ -4189,7 +4084,7 @@ window.TronoSocial = (() => {
     window.TronoNetwork?.setVoiceState(
       true,
       micMuted,
-      cameraOn,
+      cameraOn(),
       screenSharing(),
       transmissionQuality,
       announcedTransport(),
@@ -4217,7 +4112,7 @@ window.TronoSocial = (() => {
     window.TronoNetwork?.setVoiceState(
       true,
       micMuted,
-      cameraOn,
+      cameraOn(),
       screenSharing(),
       transmissionQuality,
       announcedTransport(),
@@ -4227,21 +4122,24 @@ window.TronoSocial = (() => {
     updateMediaIndicators();
   }
   async function toggleCamera() {
-    if (cameraOn) {
-      await disableCamera(true);
+    if (cameraOn()) {
+      cameraCapture.stop();
       setStatus('Câmera desligada.', 'ok');
       return;
     }
-    if (cameraTogglePending || cameraRequest) return;
-    cameraTogglePending = true;
+    if (cameraTogglePending || cameraCapture.getSnapshot().loading) return;
+    const intent = {};
+    cameraTogglePending = intent;
     updateButtons();
     try {
       if (!voiceJoined) {
         const ok = await joinVoice();
         if (!ok) return;
       }
+      if (cameraTogglePending !== intent) return;
       setStatus('Solicitando acesso à câmera...');
       await acquireCamera();
+      if (cameraTogglePending !== intent) return;
       setStatus(
         transportIsSfu()
           ? 'Câmera publicada no Cloudflare SFU.'
@@ -4256,7 +4154,7 @@ window.TronoSocial = (() => {
         renderSeatMedia();
       }
     } finally {
-      cameraTogglePending = false;
+      if (cameraTogglePending === intent) cameraTogglePending = null;
       updateButtons();
     }
   }
@@ -4447,7 +4345,7 @@ window.TronoSocial = (() => {
     if (d)
       d.innerHTML = `<span class="call-icon">${deafened ? '🔈' : '🔊'}</span><span>${deafened ? 'Ouvir voz' : 'Silenciar voz'}</span>`;
     if (c)
-      c.innerHTML = `<span class="call-icon">${cameraOn ? '▧' : '▣'}</span><span>${cameraOn ? 'Desligar câmera' : 'Ligar câmera'}</span>`;
+      c.innerHTML = `<span class="call-icon">${cameraOn() ? '▧' : '▣'}</span><span>${cameraOn() ? 'Desligar câmera' : 'Ligar câmera'}</span>`;
     if (s) {
       s.innerHTML = `<span class="call-icon">${screenSharing() ? '■' : '▤'}</span><span>${screenSharing() ? (window.TronoDesktop ? 'Parar tela' : 'Parar compartilhamento') : 'Compartilhar tela'}</span>`;
       s.title = screenSharing() ? 'Parar compartilhamento' : 'Compartilhar tela';
@@ -4461,7 +4359,7 @@ window.TronoSocial = (() => {
     }
     m?.classList.toggle('danger-active', micMuted);
     d?.classList.toggle('danger-active', deafened);
-    c?.classList.toggle('camera-active', cameraOn);
+    c?.classList.toggle('camera-active', cameraOn());
     s?.classList.toggle('screen-active', screenSharing());
     updateNoiseButton();
     document.body.classList.toggle('call-connected', voiceJoined);
@@ -4481,17 +4379,18 @@ window.TronoSocial = (() => {
       c.disabled =
         textOnly ||
         joining ||
-        (!cameraOn && (cameraTogglePending || !!cameraRequest)) ||
+        (!cameraOn() && (cameraTogglePending || !!cameraCapture.getSnapshot().loading)) ||
         (document.body.dataset.appLayout === 'discord' && !voiceJoined);
     for (const [button, on] of [
       [m, micMuted],
       [d, deafened],
-      [c, cameraOn],
+      [c, cameraOn()],
       [s, screenSharing()],
     ])
       button?.setAttribute('aria-pressed', String(on));
     if ($('cameraInputSelect'))
-      $('cameraInputSelect').disabled = cameraTogglePending || !!cameraRequest;
+      $('cameraInputSelect').disabled =
+        cameraTogglePending || !!cameraCapture.getSnapshot().loading;
     window.dispatchEvent(
       new CustomEvent('trono-call-change', {
         detail: { joined: voiceJoined, joining, deafened, roomId: roomState?.id },
@@ -4535,10 +4434,10 @@ window.TronoSocial = (() => {
     renderTelemetry();
   }
   async function changeCamera(e) {
-    if (cameraRequest) return;
+    if (cameraCapture.getSnapshot().loading) return;
     selectedCamera = e.target.value || '';
     storage.setItem('tronoCameraInput', selectedCamera);
-    if (cameraOn) {
+    if (cameraOn()) {
       try {
         await acquireCamera();
         setStatus('Câmera alterada.', 'ok');
@@ -5299,7 +5198,7 @@ window.TronoSocial = (() => {
         joined: voiceJoined,
         muted: micMuted,
         deafened,
-        camera: cameraOn,
+        camera: cameraOn(),
         screen: screenSharing(),
         transport: announcedTransport(),
         playback: audioPlaybackInfo().label,
@@ -5794,7 +5693,7 @@ window.TronoSocial = (() => {
         : null;
     },
     get cameraOn() {
-      return cameraOn;
+      return cameraOn();
     },
     get screenSharing() {
       return screenSharing();
@@ -5861,16 +5760,16 @@ window.TronoSocial = (() => {
       return voiceJoined
         ? detailedPlayers()
             .filter(
-              (p) => p.camera || p.screen || (p.id === meId() && (cameraOn || screenSharing())),
+              (p) => p.camera || p.screen || (p.id === meId() && (cameraOn() || screenSharing())),
             )
             .map((p) => ({
               id: p.id,
               name: p.name,
               self: p.id === meId(),
-              camera: (p.id === meId() ? cameraOn : p.camera && !hiddenCameras.has(p.id))
+              camera: (p.id === meId() ? cameraOn() : p.camera && !hiddenCameras.has(p.id))
                 ? cameraStreamForPerson(p)
                 : null,
-              cameraOffered: p.id === meId() ? cameraOn : !!p.camera,
+              cameraOffered: p.id === meId() ? cameraOn() : !!p.camera,
               cameraHidden: hiddenCameras.has(p.id),
               screen: (p.id === meId() ? screenSharing() : watchingStreams.has(p.id))
                 ? screenStreamForPerson(p)

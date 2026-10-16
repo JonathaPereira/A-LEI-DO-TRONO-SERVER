@@ -23,11 +23,12 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Transporte HTTP de arquivos tipado e componentes React compartilhados para anexos e avatares.
 - Captura, processamento e descarte do microfone em TypeScript, com cancelamento por geração.
 - Captura e ciclo de vida da tela em TypeScript, preservando a fonte do replay e o clone de envio.
+- Captura, fallback de dispositivo e ciclo de vida da câmera em TypeScript.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Câmera, peers e publicação WebRTC,
+React ou TypeScript apenas porque a marcação foi convertida. Peers e publicação WebRTC,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -356,10 +357,43 @@ microfone e sem reconectar peers. Evidências locais: `artifacts/main-029-backgr
 e `artifacts/windows-background-voice.json`. Não mede jogos reais, SFU/TURN externos
 ou a latência final da chamada. Nenhum push, instalação ou banco remoto foi alterado.
 
+## Captura e ciclo de vida da câmera — 16/10/2026
+
+- `lib/voice/camera.ts` concentra captura, fallback de qualidade/dispositivo,
+  pedido pendente, listener de encerramento e descarte. `types/voice.ts` define
+  configurações e snapshots imutáveis; as referências de mídia são emprestadas.
+- Removidos de `legacy/social.js` o estado duplicado da câmera, a geração,
+  promessa de captura, abertura/fallback, listener e descarte físico substituídos.
+  O controlador deriva disponibilidade do módulo e conserva preferências,
+  intenção dos controles, mensagens e publicação SFU/P2P.
+- A troca libera a webcam anterior antes de abrir outra. Relaxar qualidade mantém
+  a entrada escolhida; a preferência só é limpa quando a enumeração confirma que
+  esse dispositivo sumiu. Negar permissão não dispara novas tentativas.
+- Parar/sair libera a trilha e invalida pedidos imediatamente, mesmo com permissão
+  ou publicação pendente. Uma chamada nova não espera o pedido antigo; resultados
+  atrasados são descartados e não alteram o loading ou os controles novos.
+- A disponibilidade continua anunciada antes da publicação. Attach/detach P2P
+  atrasado reconcilia o sender com a captura atual. A integração SFU existente
+  conserva seus identificadores e cancelamento, sem alterar o protocolo remoto.
+- O módulo toca somente na trilha de câmera que possui no stream AV compartilhado.
+  Microfone e tela mantêm suas instâncias e seus parâmetros de captura.
+
+Validação: tipagem, formatação, build estático e `npm test` passaram (4 integrações
+e 196 testes, incluindo 45 de captura e 11 novos de câmera). No navegador, passaram
+layout, compositor, canais, perfis e controles, com substituições de sender atrasadas.
+A regressão com dois Electron conferiu troca e encerramento da câmera, permissão
+atrasada após sair/entrar e preservação de microfone, tela, peers, socket e jogo.
+Também passaram 11 verificações de permissões, política do renderer, PCM do
+microfone nativo e recepção contínua de áudio com foco alterado e tarefas longas.
+Evidências locais: `artifacts/camera-regressions.log`, `camera-controls.log`,
+`camera-ui.log`, `camera-electron.log` e `camera-voice.log`.
+As câmeras/telas são sintéticas; não medimos webcam física, jogos a 60 FPS ou
+SFU/TURN externos. Nada foi publicado nem alterado em infraestrutura remota.
+
 ## Próximas alterações, em ordem
 
-1. Extrair câmera, peers, sinalização e coordenação da chamada para `lib/voice/`.
-   Captura/processamento do microfone e captura de tela já têm módulos com um único dono.
+1. Extrair peers, sinalização e coordenação da chamada para `lib/voice/`.
+   Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações

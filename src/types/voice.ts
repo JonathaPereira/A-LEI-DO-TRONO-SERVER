@@ -37,6 +37,20 @@ export interface ScreenFormat {
   readonly height: number;
   readonly fps: number;
 }
+export interface CameraSettings {
+  readonly generation: number;
+  readonly joined: boolean;
+  readonly deviceId: string;
+  readonly format: ScreenFormat;
+}
+export interface CameraCapture {
+  readonly source: MediaStream;
+  readonly track: MediaStreamTrack;
+}
+export interface CameraSnapshot {
+  readonly capture: CameraCapture | null;
+  readonly loading: boolean;
+}
 export interface ScreenCaptureSettings {
   readonly generation: number;
   readonly joined: boolean;

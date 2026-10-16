@@ -263,6 +263,37 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#voiceSettingsClose').click();
     await preserved();
 
+    // Switching cameras replaces only video; an obsolete ended event cannot stop it.
+    await page.evaluate(() => {
+      const select = document.getElementById('cameraInputSelect');
+      select.add(new Option('Fixture second camera', 'fixture-second'));
+      select.value = 'fixture-second';
+      select.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+    await expect.poll(() => page.evaluate(() => {
+      const track = window.TronoSocial.getMediaSources().find(source => source.self)?.camera?.getVideoTracks()[0];
+      return track && track !== window.__layoutBaseline.camera && track.readyState === 'live';
+    })).toBe(true);
+    await expect(page.locator('#cameraInputSelect')).toBeEnabled();
+    await page.evaluate(() => {
+      const before = window.__layoutBaseline.camera;
+      if (before.readyState !== 'ended') throw new Error('Previous camera was not released');
+      before.dispatchEvent(new Event('ended'));
+      window.__layoutBaseline.camera = window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0];
+    });
+    await preserved();
+    // Native device removal announces camera-off without disturbing screen or audio.
+    await page.evaluate(() => {
+      const track = window.__layoutBaseline.camera;
+      track.stop(); track.dispatchEvent(new Event('ended'));
+    });
+    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(false);
+    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack() === window.__layoutBaseline.mic && window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0] === window.__layoutBaseline.screen), true);
+    await page.locator('#cameraBtn').click();
+    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+    await page.evaluate(() => { window.__layoutBaseline.camera = window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0]; });
+    await preserved();
+
     // Canceling a source change must leave the original capture and call intact.
     await page.evaluate(() => { window.__denyDisplay = true; });
     assert.equal(await page.evaluate(() => window.TronoSocial.startScreenShare({replace: true})), false);
@@ -306,6 +337,35 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.__lateDisplay.getTracks().every(track => track.readyState === 'ended')), true);
     assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
     assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
+
+    // A late camera permission cannot replace a camera from a newer call.
+    await page.evaluate(() => {
+      window.__normalCameraCapture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = constraints => {
+        if (!constraints.video) return window.__normalCameraCapture(constraints);
+        return new Promise(resolve => {
+          window.__releaseCamera = async () => {
+            const stream = await window.__normalCameraCapture(constraints);
+            window.__lateCameraTracks = stream.getTracks();
+            resolve(stream);
+          };
+        });
+      };
+      document.getElementById('cameraBtn').click();
+    });
+    await page.waitForFunction(() => !!window.__releaseCamera);
+    await page.evaluate(async () => {
+      window.TronoSocial.leaveVoice();
+      navigator.mediaDevices.getUserMedia = window.__normalCameraCapture;
+      await window.TronoSocial.joinVoice();
+      document.getElementById('cameraBtn').click();
+    });
+    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+    await page.evaluate(async () => {
+      window.__newCallCamera = window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0];
+      await window.__releaseCamera();
+    });
+    await expect.poll(() => page.evaluate(() => window.__lateCameraTracks.every(track => track.readyState === 'ended') && window.TronoSocial.cameraOn && window.__newCallCamera.readyState === 'live' && window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0] === window.__newCallCamera)).toBe(true);
 
     // A permission result arriving after leave must release its device and never rejoin.
     await page.evaluate(async () => {

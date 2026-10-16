@@ -11,6 +11,7 @@ import { installLegacyAvatars } from '../lib/profiles/avatar';
 import { createMicrophone } from '../lib/voice/microphone';
 import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
 import { createScreenCapture } from '../lib/voice/screen-capture';
+import { createCamera } from '../lib/voice/camera';
 
 let startup: Promise<void> | undefined;
 
@@ -37,7 +38,12 @@ export function LegacyRuntime() {
     startup ??= (async () => {
       initializeNetwork(window);
       Object.assign(window, {
-        TronoVoiceCapture: { createMicrophone, createMicrophoneProcessor, createScreenCapture },
+        TronoVoiceCapture: {
+          createMicrophone,
+          createMicrophoneProcessor,
+          createScreenCapture,
+          createCamera,
+        },
       });
       initializeFiles(window);
       installLegacyAttachments(window);

@@ -135,9 +135,26 @@ O acesso ao par fonte/saída é emprestado; consumidores não devem encerrar sua
 
 `social.js` deriva o estado de compartilhamento desse módulo, sem outra cópia de
 streams, geração ou listeners. Continua publicando as trilhas em P2P/SFU e avisando
-o controlador de clipes sobre a fonte original. Câmera, configuração dos senders,
-peers, sinalização, contextos compartilhados e coordenação da chamada ainda
-pertencem ao controlador legado; esta etapa não converteu toda a voz.
+o controlador de clipes sobre a fonte original.
+
+`camera.ts` possui captura, qualidade do dispositivo, listener de encerramento,
+pedido pendente e descarte da câmera. O snapshot imutável contém uma referência
+emprestada à fonte/trilha. O módulo adiciona e remove somente sua trilha no stream
+AV da chamada; não encerra microfone ou tela. Uma troca libera a webcam anterior
+antes de abrir outra, pois alguns dispositivos aceitam apenas uma captura.
+O fallback relaxa qualidade mantendo o dispositivo escolhido; só passa à câmera
+padrão após confirmar que a entrada salva não existe mais.
+
+Parar ou sair invalida a geração do pedido sem aguardar permissão/publicação.
+Uma captura atrasada é encerrada; callbacks antigos não limpam o estado de um
+pedido posterior. `social.js` deriva `cameraOn` do snapshot, conserva preferências
+e intenção do botão e anuncia disponibilidade antes de aguardar publicação.
+Seu callback de parada anuncia e inicia o desligamento dos senders imediatamente.
+No P2P, uma substituição atrasada reconcilia o sender com a trilha atual para que
+um attach/detach anterior não sobrescreva uma câmera nova.
+
+Configuração dos senders, peers, sinalização, contextos compartilhados e coordenação
+da chamada ainda pertencem ao controlador legado; a voz não foi toda convertida.
 
 `components/files/image-viewer.tsx` mantém um único visualizador React para anexos
 do chat e dos consumidores legados. Trocar de conta ou excluir o arquivo invalida

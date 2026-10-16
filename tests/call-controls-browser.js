@@ -180,6 +180,32 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await owner.evaluate(() => {window.__holdDetach = false; for (const release of window.__detachReleases.splice(0)) release();});
     });
 
+    await t.test('late camera attach and detach cannot overwrite a newer live capture', async () => {
+      await owner.evaluate(() => { window.__holdAttach = true; });
+      await owner.locator('#cameraBtn').click();
+      await expect.poll(() => owner.evaluate(() => window.__attachReleases.length)).toBeGreaterThan(0);
+      await owner.locator('#cameraBtn').click();
+      await owner.evaluate(() => { window.__holdAttach = false; });
+      await owner.locator('#cameraBtn').click();
+      await expect(owner.locator('#cameraInputSelect')).toBeEnabled();
+      await owner.evaluate(async () => { await Promise.all(window.__attachReleases.splice(0).map(release => release())); });
+      const correctlyPublished = () => owner.evaluate(() => {
+        const track = document.querySelector('.camera-tile video')?.srcObject?.getVideoTracks()[0];
+        const senders = window.__peers.filter(pc => pc.connectionState === 'connected' && pc._tronoVideoSender).map(pc => pc._tronoVideoSender);
+        return track?.readyState === 'live' && senders.length > 0 && senders.every(sender => sender.track === track);
+      });
+      await expect.poll(correctlyPublished).toBe(true);
+      await owner.evaluate(() => { window.__holdDetach = true; });
+      await owner.locator('#cameraBtn').click();
+      await expect.poll(() => owner.evaluate(() => window.__detachReleases.length)).toBeGreaterThan(0);
+      await owner.evaluate(() => { window.__holdDetach = false; });
+      await owner.locator('#cameraBtn').click();
+      await expect(owner.locator('#cameraInputSelect')).toBeEnabled();
+      await owner.evaluate(async () => { await Promise.all(window.__detachReleases.splice(0).map(release => release())); });
+      await expect.poll(correctlyPublished).toBe(true);
+      await owner.locator('#cameraBtn').click();
+    });
+
     await t.test('header collapse persists and restores its actions without changing the call', async () => {
       for (const mode of ['original', 'discord']) {
         await viewer.evaluate(mode => window.TronoAppLayout.apply(mode), mode);
