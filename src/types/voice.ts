@@ -30,3 +30,21 @@ export interface NoiseFilter {
   readonly node: AudioNode;
   destroy(): void;
 }
+
+export interface ScreenFormat {
+  readonly width: number;
+  readonly height: number;
+  readonly fps: number;
+}
+export interface ScreenCaptureSettings {
+  readonly generation: number;
+  readonly joined: boolean;
+  readonly format: ScreenFormat;
+  readonly replay: ScreenFormat | null | undefined;
+  readonly audio: boolean;
+  readonly contentHint: 'motion' | 'detail';
+}
+export interface ScreenCapture {
+  readonly source: MediaStream;
+  readonly outgoing: MediaStream;
+}

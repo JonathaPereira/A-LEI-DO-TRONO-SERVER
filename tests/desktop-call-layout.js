@@ -56,13 +56,21 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           constructor(config) { super({...config, iceServers: [], iceCandidatePoolSize: 0}); window.__layoutPeers.push(this); }
         };
         window.__layoutCanvases = [];
-        const canvasStream = () => {
+        const canvasStream = (fps = 10) => {
           const canvas = document.createElement('canvas');
           canvas.width = 640; canvas.height = 360;
           const draw = canvas.getContext('2d');
           draw.fillStyle = '#384460'; draw.fillRect(0, 0, 640, 360);
           window.__layoutCanvases.push(canvas);
-          return canvas.captureStream(10);
+          const stream = canvas.captureStream(fps);
+          let frame = 0;
+          const timer = setInterval(() => {
+            draw.fillStyle = frame++ % 2 ? '#384460' : '#486480';
+            draw.fillRect(0, 0, 640, 360);
+          }, 1000 / fps);
+          const track = stream.getVideoTracks()[0], stop = track.stop.bind(track);
+          track.stop = () => { clearInterval(timer); stop(); };
+          return stream;
         };
         const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
         navigator.mediaDevices.getUserMedia = async constraints => {
@@ -71,7 +79,16 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           if (constraints.audio) for (const track of (await capture({audio: constraints.audio})).getTracks()) stream.addTrack(track);
           return stream;
         };
-        navigator.mediaDevices.getDisplayMedia = async () => canvasStream();
+        window.__displayRequests = [];
+        navigator.mediaDevices.getDisplayMedia = async options => {
+          window.__displayRequests.push(options);
+          if (window.__denyDisplay) throw new DOMException('Canceled', 'NotAllowedError');
+          const source = canvasStream(options.video.frameRate.ideal);
+          if (window.__delayDisplay) await new Promise(resolve => {
+            window.__releaseDisplay = () => { window.__lateDisplay = source; resolve(); };
+          });
+          return source;
+        };
       }, {base: fixture.base, accountId: data.user.id, layout});
       const authResponses = [];
       page.on('response', response => { if (response.url().startsWith(fixture.base + '/auth/')) authResponses.push({path: new URL(response.url()).pathname, status: response.status()}); });
@@ -107,13 +124,18 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     }
 
     const {app, page} = await launch('layout-main@example.test', 'Layout Principal');
-    await launch('layout-peer@example.test', 'Layout Amigo', 'discord');
+    const {page: receiver} = await launch('layout-peer@example.test', 'Layout Amigo', 'discord');
     await expect.poll(() => page.evaluate(() => window.__layoutPeers.some(peer => peer.connectionState === 'connected')), {timeout: 20000}).toBe(true);
     await page.locator('#cameraBtn').click();
     await expect(page.locator('#cameraBtn')).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
     await page.evaluate(() => window.TronoSocial.startScreenShare());
     await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
+    const senderId = await page.evaluate(() => window.TronoNetwork.clientId);
+    await expect(receiver.locator('#screenShareGrid .mn-watch-stream')).toBeVisible();
+    await receiver.evaluate(id => window.TronoSocial.toggleWatchStream(id), senderId);
+    const remoteScreen = receiver.locator('#screenShareGrid .screen-share-tile[data-peer="' + senderId + '"] video');
+    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(0);
     await page.evaluate(() => window.TronoNetwork.joinRoom('sala-cetro'));
     await expect.poll(() => page.evaluate(() => window.TronoNetwork.gameRoom)).toBe('sala-cetro');
     await page.evaluate(() => window.TronoAppLayout.navigate('community'));
@@ -232,6 +254,50 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
     await page.locator('#voiceSettingsClose').click();
     await preserved();
+
+    // Canceling a source change must leave the original capture and call intact.
+    await page.evaluate(() => { window.__denyDisplay = true; });
+    assert.equal(await page.evaluate(() => window.TronoSocial.startScreenShare({replace: true})), false);
+    await expect(page.locator('#voiceStatus')).toContainText('anterior continua');
+    await preserved();
+    await page.evaluate(() => { window.__denyDisplay = false; });
+    const request = await page.evaluate(() => window.__displayRequests[0]);
+    assert.equal(request.audio.restrictOwnAudio, true);
+    assert.equal(request.windowAudio, 'window');
+    assert.equal(request.video.frameRate.max, undefined);
+
+    // A successful source change releases the old source and keeps the peers/socket.
+    const framesBeforeSwitch = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
+    assert.equal(await page.evaluate(() => window.TronoSocial.startScreenShare({replace: true})), true);
+    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforeSwitch);
+    assert.equal(await page.evaluate(() => window.__layoutBaseline.screen.readyState), 'ended');
+    await page.evaluate(() => {
+      window.__layoutBaseline.screen = window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0];
+    });
+    await preserved();
+    await page.evaluate(() => {
+      const track = window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0];
+      track.stop(); track.dispatchEvent(new Event('ended'));
+    });
+    await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(false);
+    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream()), null);
+    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack() === window.__layoutBaseline.mic), true);
+
+    // Leaving while a display picker is pending releases the late native track.
+    await page.evaluate(() => {
+      window.__delayDisplay = true;
+      window.__pendingDisplay = window.TronoSocial.startScreenShare();
+    });
+    await page.waitForFunction(() => !!window.__releaseDisplay);
+    await page.evaluate(async () => {
+      await window.TronoSocial.leaveVoice();
+      window.__delayDisplay = false;
+      window.__releaseDisplay();
+    });
+    assert.equal(await page.evaluate(() => window.__pendingDisplay), false);
+    assert.equal(await page.evaluate(() => window.__lateDisplay.getTracks().every(track => track.readyState === 'ended')), true);
+    assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
+    assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
 
     // A permission result arriving after leave must release its device and never rejoin.
     await page.evaluate(async () => {

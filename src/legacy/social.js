@@ -381,9 +381,6 @@ window.TronoSocial = (() => {
     chatRoomState = null,
     gameRoomState = null;
   let localStream = null;
-  let localScreenStream = null,
-    localDisplayStream = null,
-    screenGeneration = 0;
   let voiceJoined = false;
   let micMuted = false;
   let deafened = false;
@@ -391,7 +388,6 @@ window.TronoSocial = (() => {
   let cameraRequest = null,
     cameraGeneration = 0,
     cameraTogglePending = false;
-  let screenSharing = false;
   let panelOpen = false;
   let chatHubMode = false;
   let panelMode = storage.getItem('tronoSocialMode') === 'floating' ? 'floating' : 'full';
@@ -494,6 +490,28 @@ window.TronoSocial = (() => {
     onTrackChanged: publishMicrophone,
   });
   microphone.subscribe(updateNoiseButton);
+  const screenCapture = window.TronoVoiceCapture.createScreenCapture({
+    mediaDevices: navigator.mediaDevices,
+    getSettings: () => ({
+      generation: voiceGeneration,
+      joined: voiceJoined,
+      format: qualityProfile().screen,
+      replay: window.TronoClips?.captureProfile?.(),
+      audio: shareStreamAudio,
+      contentHint: screenContent,
+    }),
+    onStarted: publishScreen,
+    onEnded: () => stopScreenShare(true),
+    onAudioEnded: detachScreenAudio,
+    onSourceStarted: (source) => {
+      void window.TronoClips?.sharedStarted?.(source);
+    },
+    onSourceStopped: (source) => {
+      window.TronoClips?.sharedStopped?.(source);
+    },
+  });
+  const screenSharing = () => screenCapture.getCapture() !== null;
+
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
     [...privateVoiceRoster.values()].sort((a, b) => (a.seat ?? 999) - (b.seat ?? 999));
@@ -942,24 +960,6 @@ window.TronoSocial = (() => {
       return 'Esta câmera não aceitou a captura. Escolha outra entrada em Configurações → Vídeo.';
     return err?.message || 'Não foi possível abrir a câmera.';
   }
-  // getDisplayMedia rejects min/exact/max capture constraints; apply the ceiling after capture.
-  function screenMediaConstraints() {
-    const q = qualityProfile().screen,
-      r = window.TronoClips?.captureProfile?.();
-    return {
-      width: { ideal: Math.max(q.width, r?.width || 0) },
-      height: { ideal: Math.max(q.height, r?.height || 0) },
-      frameRate: { ideal: Math.max(q.fps, r?.fps || 0) },
-    };
-  }
-  async function optimizeScreenTrack(track) {
-    if (!track) return;
-    try {
-      if ('contentHint' in track) track.contentHint = screenContent;
-    } catch {}
-    // Constraints on cloned capture tracks can affect their shared source.
-    // Downscale the outgoing encoder instead, preserving the local replay.
-  }
   function waitPeerConnected(pc, timeout = 10000) {
     if (!pc) return Promise.reject(new Error('PeerConnection ausente.'));
     if (
@@ -1093,8 +1093,7 @@ window.TronoSocial = (() => {
       console.warn('[TronoSocial] qualidade câmera', err);
     }
     try {
-      const scr = localScreenStream?.getVideoTracks?.()[0];
-      if (scr && screenSharing) await optimizeScreenTrack(scr);
+      screenCapture.refreshHint();
     } catch (err) {
       console.warn('[TronoSocial] qualidade tela', err);
     }
@@ -1134,7 +1133,7 @@ window.TronoSocial = (() => {
       voiceJoined,
       micMuted,
       cameraOn,
-      screenSharing,
+      screenSharing(),
       transmissionQuality,
       announcedTransport(),
     );
@@ -1598,7 +1597,7 @@ window.TronoSocial = (() => {
         voiceJoined,
         micMuted,
         cameraOn,
-        screenSharing,
+        screenSharing(),
         transmissionQuality,
         announcedTransport(),
       );
@@ -1639,7 +1638,7 @@ window.TronoSocial = (() => {
         voiceJoined,
         micMuted,
         false,
-        screenSharing,
+        screenSharing(),
         transmissionQuality,
         announcedTransport(),
       );
@@ -1648,173 +1647,106 @@ window.TronoSocial = (() => {
     renderVoiceRoster();
   }
 
+  async function publishScreen({ capture, replace, isCurrent }) {
+    const stream = capture.outgoing,
+      track = stream.getVideoTracks()[0];
+    localScreenPreviewPaused = false;
+    localScreenCollapsed = false;
+    if (transportIsSfu()) {
+      try {
+        // Reuse publications and subscriptions when changing an active source.
+        for (const [kind, next] of [
+          ['screen', track],
+          ['screen-audio', stream.getAudioTracks()[0]],
+        ]) {
+          if (!isCurrent()) return;
+          const publication = replace ? sfuLocalPublications.get(kind) : null;
+          if (next && publication?.sender) {
+            await publication.sender.replaceTrack(next);
+            if (!isCurrent()) return;
+            await applySenderQuality(publication.sender, kind);
+          } else if (next) await publishSfuTrack(kind, next);
+          else if (publication) await closeSfuPublication(kind);
+        }
+      } catch (err) {
+        if (!isCurrent()) return;
+        console.warn('[TronoSocial] tela SFU; acionando fallback', err?.code || err);
+        await fallbackToP2p(
+          'O compartilhamento não conseguiu publicar pelo SFU; chamada mantida em P2P para preservar a tela.',
+        );
+      }
+    }
+    if (!transportIsSfu())
+      for (const pc of peers.values()) {
+        if (!isCurrent()) return;
+        await syncInitiatorTracks(pc);
+      }
+    if (!isCurrent()) return;
+    const sound = stream.getAudioTracks()[0];
+    window.TronoNetwork?.setVoiceState(
+      true,
+      micMuted,
+      cameraOn,
+      true,
+      transmissionQuality,
+      announcedTransport(),
+    );
+    updateButtons();
+    renderScreenGrid();
+    renderVoiceRoster();
+    setStatus(
+      sound
+        ? 'Compartilhando tela e áudio.'
+        : shareStreamAudio
+          ? 'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.'
+          : 'Compartilhando tela sem áudio.',
+      sound ? 'ok' : 'warn',
+    );
+  }
+  async function detachScreenAudio({ isCurrent }) {
+    if (!isCurrent()) return;
+    if (transportIsSfu()) await closeSfuPublication('screen-audio');
+    else
+      for (const pc of peers.values()) {
+        if (!isCurrent()) return;
+        await pc._tronoScreenAudioSender?.replaceTrack(null);
+      }
+    if (isCurrent()) renderScreenGrid();
+  }
   async function startScreenShare({ replace = false } = {}) {
     if (!communityVoice()) return false;
-    if (screenSharing && !replace) return true;
+    if (screenSharing() && !replace) return true;
     if (!navigator.mediaDevices?.getDisplayMedia) {
       setStatus('Compartilhamento de tela não é suportado neste navegador.', 'error');
       return false;
     }
-    if (!voiceJoined) {
-      const ok = await joinVoice();
-      if (!ok) return false;
-    }
+    if (!voiceJoined && !(await joinVoice())) return false;
     if (transportIsSfu() && realtimeStatus && !realtimeStatus.screenAllowed) {
       setStatus('Compartilhamento bloqueado pelo freio mensal de consumo.', 'warn');
       return false;
     }
-    const previousSource = localDisplayStream,
-      previousStream = localScreenStream;
-    const request = ++screenGeneration,
-      callGeneration = voiceGeneration;
-    let source,
-      outgoing,
-      committed = false;
     try {
-      // A game window must request window audio explicitly; some browsers otherwise
-      // offer the entire system mix, including voices played by this call.
-      // restrictOwnAudio also requests removal of this page from system capture.
-      // These are browser controls, so older implementations may ignore them.
-      source = await navigator.mediaDevices.getDisplayMedia({
-        video: screenMediaConstraints(),
-        audio: shareStreamAudio
-          ? {
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-              suppressLocalAudioPlayback: false,
-              restrictOwnAudio: true,
-            }
-          : false,
-        systemAudio: shareStreamAudio ? 'include' : 'exclude',
-        windowAudio: shareStreamAudio ? 'window' : 'exclude',
-        selfBrowserSurface: 'exclude',
-      });
-      if (request !== screenGeneration || callGeneration !== voiceGeneration || !voiceJoined) {
-        source.getTracks().forEach((t) => t.stop());
-        return false;
-      }
-      // Keep the local source at replay quality. Only the outgoing clones get
-      // the call's resolution/FPS ceilings and network bitrate limits.
-      outgoing = source.clone();
-      const stream = outgoing,
-        track = stream.getVideoTracks()[0];
-      if (!track) throw new Error('Nenhuma tela foi selecionada.');
-      await optimizeScreenTrack(track);
-      if (request !== screenGeneration || callGeneration !== voiceGeneration || !voiceJoined) {
-        source.getTracks().forEach((t) => t.stop());
-        outgoing.getTracks().forEach((t) => t.stop());
-        return false;
-      }
-      localDisplayStream = source;
-      localScreenStream = stream;
-      screenSharing = true;
-      committed = true;
-      localScreenPreviewPaused = false;
-      localScreenCollapsed = false;
-      source.getVideoTracks()[0].addEventListener(
-        'ended',
-        () => {
-          if (localDisplayStream === source) void stopScreenShare(true);
-        },
-        { once: true },
-      );
-      void window.TronoClips?.sharedStarted?.(source);
-      if (transportIsSfu()) {
-        try {
-          // Keep publication IDs and subscriptions when changing an active source.
-          // A canceled picker never reaches this point or stops the previous source.
-          for (const [kind, next] of [
-            ['screen', track],
-            ['screen-audio', stream.getAudioTracks()[0]],
-          ]) {
-            const publication = replace ? sfuLocalPublications.get(kind) : null;
-            if (next && publication?.sender) {
-              await publication.sender.replaceTrack(next);
-              await applySenderQuality(publication.sender, kind);
-            } else if (next) await publishSfuTrack(kind, next);
-            else if (publication) await closeSfuPublication(kind);
-          }
-        } catch (err) {
-          console.warn('[TronoSocial] tela SFU; acionando fallback', err?.code || err);
-          await fallbackToP2p(
-            'O compartilhamento não conseguiu publicar pelo SFU; chamada mantida em P2P para preservar a tela.',
-          );
-        }
-      }
-      if (!transportIsSfu()) for (const pc of peers.values()) await syncInitiatorTracks(pc);
-      if (request !== screenGeneration || callGeneration !== voiceGeneration || !voiceJoined)
-        return false;
-      const sound = stream.getAudioTracks()[0];
-      sound?.addEventListener(
-        'ended',
-        async () => {
-          if (localScreenStream !== stream) return;
-          if (transportIsSfu()) await closeSfuPublication('screen-audio');
-          else
-            for (const pc of peers.values()) await pc._tronoScreenAudioSender?.replaceTrack(null);
-          renderScreenGrid();
-        },
-        { once: true },
-      );
-      window.TronoNetwork?.setVoiceState(
-        true,
-        micMuted,
-        cameraOn,
-        true,
-        transmissionQuality,
-        announcedTransport(),
-      );
-      updateButtons();
-      renderScreenGrid();
-      renderVoiceRoster();
-      setStatus(
-        sound
-          ? 'Compartilhando tela e áudio.'
-          : shareStreamAudio
-            ? 'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.'
-            : 'Compartilhando tela sem áudio.',
-        sound ? 'ok' : 'warn',
-      );
-      return true;
+      return await screenCapture.start({ replace });
     } catch (err) {
-      if (localDisplayStream === source && screenSharing) await stopScreenShare(true);
-      else {
-        source?.getTracks().forEach((t) => t.stop());
-        outgoing?.getTracks().forEach((t) => t.stop());
-      }
-      if (request !== screenGeneration || callGeneration !== voiceGeneration) return false;
       setStatus(
         ['NotAllowedError', 'AbortError'].includes(err?.name)
-          ? replace && screenSharing
+          ? replace && screenSharing()
             ? 'Troca cancelada. A tela anterior continua sendo compartilhada.'
             : 'Compartilhamento de tela cancelado.'
           : err.message || 'Não foi possível compartilhar a tela.',
         'error',
       );
       return false;
-    } finally {
-      if (committed) {
-        previousSource?.getTracks().forEach((t) => t.stop());
-        previousStream?.getTracks().forEach((t) => t.stop());
-      }
     }
   }
   async function switchScreenShare() {
-    if (screenSharing) return startScreenShare({ replace: true });
+    if (screenSharing()) return startScreenShare({ replace: true });
     return false;
   }
   async function stopScreenShare(sendState = true) {
-    screenGeneration++;
-    if (!screenSharing && !localScreenStream && !localDisplayStream) return;
-    window.TronoClips?.sharedStopped?.(localDisplayStream);
-    localDisplayStream?.getTracks().forEach((t) => t.stop());
-    localDisplayStream = null;
-    screenSharing = false;
+    if (!screenCapture.stop()) return;
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
-    localScreenStream?.getTracks?.().forEach((t) => t.stop());
-    localScreenStream = null;
     if (transportIsSfu()) {
       await closeSfuPublication('screen-audio');
       await closeSfuPublication('screen');
@@ -1839,7 +1771,7 @@ window.TronoSocial = (() => {
     renderVoiceRoster();
   }
   async function toggleScreenShare() {
-    if (screenSharing) await stopScreenShare(true);
+    if (screenSharing()) await stopScreenShare(true);
     else openScreenOptions();
   }
   function openScreenOptions() {
@@ -1891,7 +1823,7 @@ window.TronoSocial = (() => {
     void startScreenShare();
   }
   function toggleLocalScreenPreview() {
-    if (!screenSharing) return;
+    if (!screenSharing()) return;
     localScreenPreviewPaused = !localScreenPreviewPaused;
     if (localScreenPreviewPaused) localScreenCollapsed = true;
     renderScreenGrid();
@@ -2695,16 +2627,17 @@ window.TronoSocial = (() => {
       if (audio) await publishSfuTrack('audio', audio);
       const camera = localStream?.getVideoTracks?.()[0];
       if (cameraOn && camera) await publishSfuTrack('camera', camera);
-      const screen = localScreenStream?.getVideoTracks?.()[0];
-      if (screenSharing && screen && status.screenAllowed) await publishSfuTrack('screen', screen);
-      const screenAudio = localScreenStream?.getAudioTracks?.()[0];
-      if (screenSharing && screenAudio && status.screenAllowed)
+      const screen = screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0];
+      if (screenSharing() && screen && status.screenAllowed)
+        await publishSfuTrack('screen', screen);
+      const screenAudio = screenCapture.getCapture()?.outgoing?.getAudioTracks?.()[0];
+      if (screenSharing() && screenAudio && status.screenAllowed)
         await publishSfuTrack('screen-audio', screenAudio);
       window.TronoNetwork?.setVoiceState(
         true,
         micMuted,
         cameraOn,
-        screenSharing,
+        screenSharing(),
         transmissionQuality,
         'sfu',
       );
@@ -2742,7 +2675,7 @@ window.TronoSocial = (() => {
       true,
       micMuted,
       cameraOn,
-      screenSharing,
+      screenSharing(),
       transmissionQuality,
       'p2p',
     );
@@ -2761,7 +2694,7 @@ window.TronoSocial = (() => {
       );
       return;
     }
-    if (transportIsSfu() && !status.screenAllowed && screenSharing) await stopScreenShare(true);
+    if (transportIsSfu() && !status.screenAllowed && screenSharing()) await stopScreenShare(true);
     if (
       transportIsSfu() &&
       status.maxQuality &&
@@ -3055,10 +2988,13 @@ window.TronoSocial = (() => {
     if (pc._tronoClosing) return;
     const stream = ensureLocalStream(),
       screenTrack = pc._tronoWatchingScreen
-        ? localScreenStream?.getVideoTracks?.()[0] || null
+        ? screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0] || null
         : null,
       screenAudio = pc._tronoWatchingScreen
-        ? localScreenStream?.getAudioTracks?.().find((t) => t.readyState === 'live') || null
+        ? screenCapture
+            .getCapture()
+            ?.outgoing?.getAudioTracks?.()
+            .find((t) => t.readyState === 'live') || null
         : null;
     for (const [sender, track, kind] of [
       [pc._tronoAudioSender, stream.getAudioTracks()[0] || null, 'audio'],
@@ -3291,7 +3227,7 @@ window.TronoSocial = (() => {
     const self = p.id === meId(),
       muted = self ? micMuted : !!p.muted,
       cam = self ? cameraOn : !!p.camera,
-      screen = self ? screenSharing : !!p.screen,
+      screen = self ? screenSharing() : !!p.screen,
       transport = self ? announcedTransport() : p.transport || 'p2p';
     return (
       (muted ? 'microfone mutado' : speakingPeers.has(p.id) ? 'falando…' : 'na voz') +
@@ -3318,7 +3254,7 @@ window.TronoSocial = (() => {
     return (
       inChatHub() &&
       voiceJoined &&
-      detailedPlayers().some((p) => (p.id === meId() ? screenSharing : p.screen))
+      detailedPlayers().some((p) => (p.id === meId() ? screenSharing() : p.screen))
     );
   }
   function renderVoiceRoster() {
@@ -3331,7 +3267,7 @@ window.TronoSocial = (() => {
         detailedPlayers().some(
           (p) =>
             !screenInProfile(p.id) &&
-            (p.id === meId() ? screenSharing : p.screen && watchingStreams.has(p.id)),
+            (p.id === meId() ? screenSharing() : p.screen && watchingStreams.has(p.id)),
         ),
     );
     stage?.classList.toggle(
@@ -3347,7 +3283,7 @@ window.TronoSocial = (() => {
       voiceJoined &&
         !detailedPlayers().some((p) =>
           p.id === meId()
-            ? cameraOn || screenSharing
+            ? cameraOn || screenSharing()
             : (p.camera && !hiddenCameras.has(p.id)) || p.screen,
         ),
     );
@@ -3381,7 +3317,7 @@ window.TronoSocial = (() => {
         muted = self ? micMuted : !!p.muted,
         silenced = self ? deafened : !!p.deafened,
         cam = self ? cameraOn : !!p.camera,
-        screen = self ? screenSharing : !!p.screen,
+        screen = self ? screenSharing() : !!p.screen,
         speaking = !muted && speakingPeers.has(p.id),
         transport = self ? announcedTransport() : p.transport || 'p2p',
         hidden = hiddenCameras.has(p.id);
@@ -3550,7 +3486,9 @@ window.TronoSocial = (() => {
     return p.id === meId() ? localStream : recoverReceiverTracks(p.id).av;
   }
   function screenStreamForPerson(p) {
-    return p.id === meId() ? localScreenStream : recoverReceiverTracks(p.id).screen;
+    return p.id === meId()
+      ? screenCapture.getCapture()?.outgoing
+      : recoverReceiverTracks(p.id).screen;
   }
   // Tracks remotas podem oscilar o flag `muted` por jitter. Depois que uma câmera já entregou
   // quadros, mantemos o vídeo visível por alguns segundos durante um pulso de mute; porém uma
@@ -3577,7 +3515,7 @@ window.TronoSocial = (() => {
   function personHasLiveScreen(p) {
     const stream = screenStreamForPerson(p);
     return p.id === meId()
-      ? screenSharing && !!stream?.getVideoTracks?.().length
+      ? screenSharing() && !!stream?.getVideoTracks?.().length
       : remoteVideoUsable(p.id, stream, 'screen');
   }
 
@@ -3750,7 +3688,7 @@ window.TronoSocial = (() => {
       return;
     }
     const me = meId(),
-      visible = detailedPlayers().filter((p) => (p.id === me ? screenSharing : !!p.screen)),
+      visible = detailedPlayers().filter((p) => (p.id === me ? screenSharing() : !!p.screen)),
       desired = new Set(visible.map((p) => p.id));
     host.className = `screen-share-grid ${visible.length ? '' : 'screen-share-empty'}`;
     host.querySelector('.screen-share-note')?.remove();
@@ -4056,7 +3994,7 @@ window.TronoSocial = (() => {
           true,
           false,
           cameraOn,
-          screenSharing,
+          screenSharing(),
           transmissionQuality,
           announcedTransport(),
         );
@@ -4087,7 +4025,7 @@ window.TronoSocial = (() => {
               true,
               micMuted,
               cameraOn,
-              screenSharing,
+              screenSharing(),
               transmissionQuality,
               'p2p',
             );
@@ -4156,13 +4094,7 @@ window.TronoSocial = (() => {
     updateAudioRecoveryUI();
     localStream?.getTracks().forEach((t) => t.stop());
     localStream = null;
-    screenGeneration++;
-    window.TronoClips?.sharedStopped?.(localDisplayStream);
-    localDisplayStream?.getTracks().forEach((t) => t.stop());
-    localDisplayStream = null;
-    localScreenStream?.getTracks().forEach((t) => t.stop());
-    localScreenStream = null;
-    screenSharing = false;
+    screenCapture.stop();
     cameraOn = false;
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
@@ -4205,7 +4137,7 @@ window.TronoSocial = (() => {
       true,
       micMuted,
       cameraOn,
-      screenSharing,
+      screenSharing(),
       transmissionQuality,
       announcedTransport(),
     );
@@ -4233,7 +4165,7 @@ window.TronoSocial = (() => {
       true,
       micMuted,
       cameraOn,
-      screenSharing,
+      screenSharing(),
       transmissionQuality,
       announcedTransport(),
     );
@@ -4475,8 +4407,8 @@ window.TronoSocial = (() => {
     if (c)
       c.innerHTML = `<span class="call-icon">${cameraOn ? '▧' : '▣'}</span><span>${cameraOn ? 'Desligar câmera' : 'Ligar câmera'}</span>`;
     if (s) {
-      s.innerHTML = `<span class="call-icon">${screenSharing ? '■' : '▤'}</span><span>${screenSharing ? (window.TronoDesktop ? 'Parar tela' : 'Parar compartilhamento') : 'Compartilhar tela'}</span>`;
-      s.title = screenSharing ? 'Parar compartilhamento' : 'Compartilhar tela';
+      s.innerHTML = `<span class="call-icon">${screenSharing() ? '■' : '▤'}</span><span>${screenSharing() ? (window.TronoDesktop ? 'Parar tela' : 'Parar compartilhamento') : 'Compartilhar tela'}</span>`;
+      s.title = screenSharing() ? 'Parar compartilhamento' : 'Compartilhar tela';
       s.setAttribute('aria-label', s.title);
       s.disabled = !voiceJoined || !communityVoice();
     }
@@ -4488,7 +4420,7 @@ window.TronoSocial = (() => {
     m?.classList.toggle('danger-active', micMuted);
     d?.classList.toggle('danger-active', deafened);
     c?.classList.toggle('camera-active', cameraOn);
-    s?.classList.toggle('screen-active', screenSharing);
+    s?.classList.toggle('screen-active', screenSharing());
     updateNoiseButton();
     document.body.classList.toggle('call-connected', voiceJoined);
     const eligible = !!roomState && roomState.channelType !== 'text',
@@ -4514,7 +4446,7 @@ window.TronoSocial = (() => {
       [m, micMuted],
       [d, deafened],
       [c, cameraOn],
-      [s, screenSharing],
+      [s, screenSharing()],
     ])
       button?.setAttribute('aria-pressed', String(on));
     if ($('cameraInputSelect'))
@@ -4823,7 +4755,7 @@ window.TronoSocial = (() => {
         recommendation:
           'O receptor precisou recuperar áudio. Confira a rede e a carga do computador de quem está falando. A leitura local não mede a CPU do outro participante.',
       };
-    const desired = screenSharing ? qualityProfile().screen.fps : qualityProfile().camera.fps;
+    const desired = screenSharing() ? qualityProfile().screen.fps : qualityProfile().camera.fps;
     const lowFps = desired >= 30 && t.outFps > 0 && t.outFps < desired * 0.58;
     if (t.lossPct >= 8 || t.rttMs >= 450 || t.jitterMs >= 100 || lowFps) {
       const captureIssue = lowFps && t.limiter === 'none' && t.lossPct < 3 && t.rttMs < 180;
@@ -5245,8 +5177,8 @@ window.TronoSocial = (() => {
         if (receiveHistory.length > 12) receiveHistory.shift();
       }
       if (!outFps) {
-        const track = screenSharing
-            ? localScreenStream?.getVideoTracks?.()[0]
+        const track = screenSharing()
+            ? screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0]
             : localStream?.getVideoTracks?.()[0],
           settings = track?.getSettings?.() || {};
         outFps = Number(settings.frameRate) || 0;
@@ -5326,7 +5258,7 @@ window.TronoSocial = (() => {
         muted: micMuted,
         deafened,
         camera: cameraOn,
-        screen: screenSharing,
+        screen: screenSharing(),
         transport: announcedTransport(),
         playback: audioPlaybackInfo().label,
       },
@@ -5823,7 +5755,7 @@ window.TronoSocial = (() => {
       return cameraOn;
     },
     get screenSharing() {
-      return screenSharing;
+      return screenSharing();
     },
     get voiceLightMode() {
       return voiceLightMode;
@@ -5865,7 +5797,7 @@ window.TronoSocial = (() => {
       };
     },
     getLocalDisplayStream() {
-      return screenSharing ? localDisplayStream : null;
+      return screenSharing() ? screenCapture.getCapture()?.source : null;
     },
     getLocalAudioTrack() {
       return localStream?.getAudioTracks?.()[0] || null;
@@ -5886,7 +5818,9 @@ window.TronoSocial = (() => {
     getMediaSources() {
       return voiceJoined
         ? detailedPlayers()
-            .filter((p) => p.camera || p.screen || (p.id === meId() && (cameraOn || screenSharing)))
+            .filter(
+              (p) => p.camera || p.screen || (p.id === meId() && (cameraOn || screenSharing())),
+            )
             .map((p) => ({
               id: p.id,
               name: p.name,
@@ -5896,7 +5830,7 @@ window.TronoSocial = (() => {
                 : null,
               cameraOffered: p.id === meId() ? cameraOn : !!p.camera,
               cameraHidden: hiddenCameras.has(p.id),
-              screen: (p.id === meId() ? screenSharing : watchingStreams.has(p.id))
+              screen: (p.id === meId() ? screenSharing() : watchingStreams.has(p.id))
                 ? screenStreamForPerson(p)
                 : null,
               screenOffered: p.screen,

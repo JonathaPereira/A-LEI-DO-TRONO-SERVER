@@ -119,8 +119,20 @@ O AudioContext é emprestado da chamada e não é fechado pelo processador.
 pelo Next. Conserva preferências e intenção dos controles; delega aquisição, mute,
 ganho e encerramento físico ao módulo. Seu callback publica a nova trilha nos peers
 ou SFU, verificando se o pedido continua válido entre operações assíncronas.
-Câmera, tela, peers, sinalização, contextos compartilhados e coordenação da chamada
-ainda pertencem ao controlador legado; esta etapa não converteu toda a voz.
+
+`screen-capture.ts` possui a fonte de tela e seu clone de saída, os listeners de
+encerramento e o descarte de capturas atuais, atrasadas e em substituição. O pedido
+de captura considera a maior resolução/FPS entre chamada e replay; o módulo não
+aplica constraints às trilhas clonadas, pois compartilham a fonte com os clipes.
+O cancelamento do seletor conserva a fonte anterior. Sua liberação após uma troca
+aguarda a publicação, mas sair da chamada descarta também as fontes em retirada.
+O acesso ao par fonte/saída é emprestado; consumidores não devem encerrar suas trilhas.
+
+`social.js` deriva o estado de compartilhamento desse módulo, sem outra cópia de
+streams, geração ou listeners. Continua publicando as trilhas em P2P/SFU e avisando
+o controlador de clipes sobre a fonte original. Câmera, configuração dos senders,
+peers, sinalização, contextos compartilhados e coordenação da chamada ainda
+pertencem ao controlador legado; esta etapa não converteu toda a voz.
 
 ## Backend
 

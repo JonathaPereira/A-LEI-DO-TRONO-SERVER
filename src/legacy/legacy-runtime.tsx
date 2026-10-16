@@ -10,6 +10,7 @@ import { installLegacyAttachments } from '../components/files/legacy-attachments
 import { installLegacyAvatars } from '../lib/profiles/avatar';
 import { createMicrophone } from '../lib/voice/microphone';
 import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
+import { createScreenCapture } from '../lib/voice/screen-capture';
 
 let startup: Promise<void> | undefined;
 
@@ -35,7 +36,9 @@ export function LegacyRuntime() {
   useEffect(() => {
     startup ??= (async () => {
       initializeNetwork(window);
-      Object.assign(window, { TronoVoiceCapture: { createMicrophone, createMicrophoneProcessor } });
+      Object.assign(window, {
+        TronoVoiceCapture: { createMicrophone, createMicrophoneProcessor, createScreenCapture },
+      });
       initializeFiles(window);
       installLegacyAttachments(window);
       installLegacyAvatars(window);

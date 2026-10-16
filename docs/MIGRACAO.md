@@ -21,11 +21,12 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Listas de canais React com catálogo tipado, seleção, presença e indicadores de notificação.
 - Transporte HTTP de arquivos tipado e componentes React compartilhados para anexos e avatares.
 - Captura, processamento e descarte do microfone em TypeScript, com cancelamento por geração.
+- Captura e ciclo de vida da tela em TypeScript, preservando a fonte do replay e o clone de envio.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Câmera/tela, peers e publicação WebRTC,
+React ou TypeScript apenas porque a marcação foi convertida. Câmera, peers e publicação WebRTC,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -267,10 +268,42 @@ Dispositivos e serviços externos são de teste; SFU/TURN reais não foram consu
 Uma execução de `npm test` oscilou na ordenação de duas mensagens do teste SQL de
 histórico e passou na reexecução, sem alterar o backend ou silenciar o teste.
 
+## Captura de tela — 16/10/2026
+
+- `lib/voice/screen-capture.ts` possui a fonte original, o clone de saída, os
+  listeners e o descarte. Foram removidos de `social.js` os streams, a geração
+  de captura e os listeners substituídos; compartilhamento ativo é estado derivado.
+- Mantidos os pedidos nativos de vídeo/áudio, o máximo entre qualidade da chamada
+  e replay, o contentHint escolhido e a ausência de constraints nas trilhas clonadas.
+  Bitrate, FPS do sender, SDP, camada única de tela no SFU e adaptação continuam com
+  os parâmetros anteriores. `backgroundThrottling: false` no Electron foi preservado.
+- Trocar fonte aguarda a publicação antes de liberar a anterior; cancelar o seletor
+  conserva a captura e seus listeners. Sair libera também fontes em retirada e
+  resultados atrasados. Falhas de publicações antigas não cancelam um seletor novo.
+- O controlador ainda publica em P2P/SFU, atualiza a interface e conecta a fonte
+  original ao controlador de clipes. Câmera e negociação WebRTC ainda não foram convertidas.
+- `test:voice:capture` inclui 11 regressões de tela, totalizando 31 testes de captura.
+  O teste Electron usa fonte animada e verifica quadros decodificados no segundo
+  participante antes/depois da troca, preservação de peers/socket/microfone/câmera,
+  cancelamento, encerramento da fonte e saída com seletor pendente.
+
+Validação: tipagem, formatação, build estático, suíte geral, 31 testes de captura,
+14 regressões de voz/PCM e o Electron passaram. No navegador Edge, compositor,
+canais e layouts passaram; `profile-media-browser.js` falhou na verificação de
+estado/cor do botão de câmera. A mesma falha de cor foi reproduzida usando o
+`social.js` de `9ba0bc5`, antes desta extração; evidência local em
+`artifacts/screen-profile-baseline.log`. Corrigir esse fluxo é pendência da câmera.
+A ordenação SQL do histórico oscilou novamente e passou na reexecução da suíte geral.
+
+Os testes usam fontes sintéticas e serviços locais. Não medem 60 FPS em jogos
+reais nem conectividade SFU/TURN externa. Antes de alterar codec, limites do sender
+ou negociação, comparar envio e recepção sob o mesmo jogo/carga; o indicador atual
+pode recorrer ao FPS configurado na captura quando faltam estatísticas de envio.
+
 ## Próximas alterações, em ordem
 
-1. Extrair câmera/tela, peers, sinalização e coordenação da chamada para `lib/voice/`.
-   Captura e processamento do microfone já estão extraídos e devem manter um único dono.
+1. Extrair câmera, peers, sinalização e coordenação da chamada para `lib/voice/`.
+   Captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
