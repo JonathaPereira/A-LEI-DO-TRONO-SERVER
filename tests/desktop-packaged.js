@@ -19,7 +19,7 @@ test('compiled Windows app starts with its own game, interface and RNNoise resou
     app=await _electron.launch({executablePath:executable,args:['--user-data-dir='+directory],timeout:40000});
     assert.equal(await app.evaluate(({app})=>app.isPackaged),true);
     await app.evaluate(({net})=>{global.__cinzasRemoteDownloads=0;const original=net.fetch.bind(net);net.fetch=(input,options)=>{if(typeof input==='string'&&input.startsWith('https://a-lei-do-trono.surge.sh/roguelite/assets/'))global.__cinzasRemoteDownloads++;return original(input,options);};});
-    const resourceRoot=await app.evaluate(()=>process.resourcesPath);await assert.rejects(fs.access(path.join(resourceRoot,'frontend/roguelite/assets/catalogue-cover.png')));
+    const resourceRoot=await app.evaluate(()=>process.resourcesPath);await assert.rejects(fs.access(path.join(resourceRoot,'frontend/roguelite/assets/catalogue-cover.png')));await assert.rejects(fs.access(path.join(resourceRoot,'frontend/manual/A_Lei_do_Trono_Manual_v0.4_Edicao_Visual.pdf')));await fs.access(path.join(resourceRoot,'frontend/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf'));
     phase='installed interface';page=await app.firstWindow();page.setDefaultTimeout(15000);page.on('console',m=>{if(m.type()==='error'||/Native bridge|Refused|Content Security/i.test(m.text()))diagnostics.push(m.text().slice(0,600));});page.on('pageerror',e=>diagnostics.push(e.message));await expect(page.locator('#desktopRail')).toBeVisible({timeout:30000});
     assert.equal(page.url(),'https://a-lei-do-trono.surge.sh/');
     assert.equal(await page.evaluate(()=>typeof require),'undefined');
