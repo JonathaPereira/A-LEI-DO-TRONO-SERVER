@@ -23,11 +23,21 @@ jobs:
         working-directory: desktop/app
       - name: Verify profile validation and persistence
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
+      - name: Install Chromium for integration tests
+        run: npx playwright install chromium
+      - name: Verify outgoing microphone PCM with real Windows background windows
+        shell: pwsh
+        run: |
+          node --test tests/desktop-background-voice.js 2>&1 | Tee-Object artifacts/windows-background-voice.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-background-voice.log | Select-Object -Last 70) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Background outgoing microphone::$details"
+            exit $testExit
+          }
       - name: Verify call workspace and profile layouts
         shell: pwsh
         run: |
-          npx playwright install chromium
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test --test-concurrency=1 tests/app-layout-browser.js tests/profile-media-browser.js tests/call-controls-browser.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
@@ -60,16 +70,6 @@ jobs:
           }
       - name: Verify microphone PCM and native processing
         run: node --test --test-concurrency=1 tests/native-microphone-browser.js tests/light-noise-processing.js
-      - name: Verify outgoing microphone PCM with real Windows background windows
-        shell: pwsh
-        run: |
-          node --test tests/desktop-background-voice.js 2>&1 | Tee-Object artifacts/windows-background-voice.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-background-voice.log | Select-Object -Last 70) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Background outgoing microphone::$details"
-            exit $testExit
-          }
       - name: Verify Splendor player visibility and stable Love Letter logs
         run: node --test --test-concurrency=1 tests/splendor-browser.js tests/love-letter-browser.js
       - name: Verify revised game rules and independent voice
