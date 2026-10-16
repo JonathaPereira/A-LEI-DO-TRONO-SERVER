@@ -13,15 +13,16 @@ test('persistent profiles are atomic; creator emails remain private across authe
   for(const name of ['schema.sql','upgrade-v079.sql','upgrade-v080.sql','upgrade-community.sql','upgrade-social.sql','upgrade-direct-attachments.sql'])await db.exec(fs.readFileSync(path.join(__dirname,'../supabase',name),'utf8'));
   for(const [id,name,email]of [[a,'Dono','jonathapereira.jj@gmail.com'],[b,'Membro','member@example.test'],[c,'Admin','admin@example.test']])await db.query('insert into auth.users values($1,$2,now(),$3)',[id,email,JSON.stringify({nickname:name})]);
   await db.query("update public.profiles set community_role='admin' where id=$1",[c]);
-  const migration=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20261015145458_member_profiles.sql'),'utf8');await db.exec(migration);
+  const migration=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20261015145458_member_profiles.sql'),'utf8');await db.exec(migration);await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations/20261015194333_profile_media_controls.sql'),'utf8'));
   await db.query("insert into public.chat_files(id,owner_id,object_key,name,bytes,mime,kind,state) values($1,$2,'avatar/gif','animated.gif',500,'image/gif','avatar','ready')",[g,b]);
   async function as(id,role='authenticated'){await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id||'']);await db.exec('set role '+role);}
   const save=(name,preset,file,d)=>db.query('select public.save_member_profile($1,$2,$3,$4)',[name,preset,file,d]);
-  await as(b);await save('Membro','crown',g,{...data(),cover_file_id:g,background_file_id:g});
-  const first=(await db.query('select public.read_member_profile($1) value',[b])).rows[0].value;assert.equal(first.personalization.bio,'Música e jogos');assert.equal(first.avatar_file_id,g);assert(!JSON.stringify(first).includes('@example.test'));
+  await as(b);await save('Membro','crown',g,{...data(),cover_file_id:g,background_file_id:g,cover_position:22,cover_zoom:155,emoji:'👨‍👩‍👧‍👦',media_credits:{background:{title:'Animation.gif',author:'An artist',license:'CC BY-SA 4.0',source:'https://commons.wikimedia.org/wiki/File:Animation.gif',license_url:'https://creativecommons.org/licenses/by-sa/4.0/'}}});
+  const first=(await db.query('select public.read_member_profile($1) value',[b])).rows[0].value;assert.equal(first.personalization.bio,'Música e jogos');assert.equal(first.personalization.cover_position,22);assert.equal(first.personalization.cover_zoom,155);assert.equal(first.personalization.emoji,'👨‍👩‍👧‍👦');assert.equal(first.personalization.media_credits.background.author,'An artist');assert.equal(first.avatar_file_id,g);assert(!JSON.stringify(first).includes('@example.test'));
   await assert.rejects(db.query('select * from public.creator_registered_accounts(0)'),/FORBIDDEN/);
   await assert.rejects(db.query('select * from private.creator_registered_accounts(0)'),/FORBIDDEN/);
   await assert.rejects(save('Mudou','crown',g,{...data(),links:[{label:'x',url:'javascript:alert(1)'}]}),/INVALID_PROFILE/);
+  for(const patch of [{cover_position:-1},{cover_zoom:251},{cover_zoom:100.5},{media_credits:{background:{title:'gif',author:'x',license:'x',source:'https://evil.example.test',license_url:''}}}])await assert.rejects(save('Mudou','crown',g,{...data(),...patch}),/INVALID_PROFILE/);
   assert.equal((await db.query('select nickname from public.profiles where id=$1',[b])).rows[0].nickname,'Membro');
   await as(c);await assert.rejects(db.query('select * from public.creator_registered_accounts(0)'),/FORBIDDEN/);
   await assert.rejects(save('Admin','crown',null,data()),/HANDLE_TAKEN/);

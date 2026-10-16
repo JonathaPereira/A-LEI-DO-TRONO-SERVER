@@ -94,6 +94,9 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await expect(page.locator('#desktopRail')).toBeVisible();
       await expect(page.locator('body')).toHaveAttribute('data-app-layout', layout);
       await page.evaluate(() => window.TronoChatHub.enter({channelId: 'chat-jogos'}));
+      await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-jogos');
+      assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+      await page.locator('#joinVoiceBtn').click();
       try {
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), {timeout: 15000}).toBe(true);
       } catch (error) {

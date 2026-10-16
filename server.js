@@ -25,6 +25,7 @@ const accountAuth = createAuth({onRevoke:event=>{
 },onProfileChange:account=>{
   azulService.updateAccount(account);splendorService.updateAccount(account);loveLetterService.updateAccount(account);
   for(const ws of wss.clients)if(ws.account?.id===account.id){ws.account={...ws.account,...account};for(const id of new Set([ws.roomId,ws.textRoomId,ws.gameRoomId])){const room=rooms.get(id),player=room?.players.get(ws.clientId);if(player){player.name=account.nickname;player.avatar_preset=account.avatar_preset;player.avatar_file_id=account.avatar_file_id;if(room.game?.players[player.seat]&&!room.game.players[player.seat].bot)room.game.players[player.seat].name=account.nickname;broadcastRoom(room);broadcastVoiceRoster(room);if(room.game)broadcastGameState(room);}}}
+  for(const ws of wss.clients)if(ws.account?.expiresAt>Date.now())send(ws,{type:'member-profile-updated',accountId:account.id});
   community.broadcast();
 }});
 accountAuth.install(app,express);

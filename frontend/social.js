@@ -1486,7 +1486,7 @@ window.TronoSocial = (()=>{
       const toggle=card.querySelector('.participant-camera-toggle');toggle.hidden=self||!cam;toggle.textContent=hidden?'Mostrar câmera':'Ocultar câmera';toggle.setAttribute('aria-label',(hidden?'Mostrar':'Ocultar')+' câmera de '+p.name);toggle.setAttribute('aria-pressed',String(hidden));toggle.title='Esta preferência muda apenas o que você vê.';
       if(!self){card.querySelector('[data-peer-volume]').value=String(peerVolumes.get(p.id)??100);card.querySelector('output').textContent=(peerVolumes.get(p.id)??100)+'%';}
     }
-    renderProfileActivities();window.TronoProfile?.hydrate(host);renderVideoGrid();
+    renderProfileActivities();window.TronoProfile?.hydrate(host);window.TronoProfile?.callBackgrounds(host);renderVideoGrid();
   }
 
   function positionProfileControls(card,details){

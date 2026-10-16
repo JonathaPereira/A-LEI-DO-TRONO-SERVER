@@ -1,5 +1,6 @@
 'use strict';
 const fail=message=>Object.assign(new Error(message),{code:'INVALID_PROFILE',status:400});
+const profileData=require('./frontend/profile-data');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function cleanProfile(value){
   if(!value||typeof value!=='object'||Array.isArray(value))throw fail('Perfil inválido.');
@@ -10,8 +11,8 @@ function cleanProfile(value){
   const tags=value.tags??[],links=value.links??[];
   if(!Array.isArray(tags)||tags.length>12||tags.some(s=>typeof s!=='string'||!s.trim()||[...s].length>24))throw fail('Escolha até 12 interesses, com 24 caracteres cada.');
   if(!Array.isArray(links)||links.length>8)throw fail('Adicione até 8 links.');
-  const safeLinks=links.map(link=>{if(!link||typeof link.label!=='string'||!link.label.trim()||link.label.length>32||typeof link.url!=='string'||link.url.length>400)throw fail('Link inválido.');let u;try{u=new URL(link.url);}catch{throw fail('Use links completos começando com https://.');}if(u.protocol!=='https:'||u.username||u.password)throw fail('Use links completos começando com https://.');return {label:link.label.trim(),url:u.href};});
+  let safeLinks,emoji,mediaCredits;try{safeLinks=profileData.links(links);emoji=profileData.emoji(text('emoji',12));mediaCredits=profileData.credits(value.media_credits);}catch(e){throw fail(e.message);}
   const accent=value.accent??'#7865ff';if(typeof accent!=='string'||!/^#[0-9a-f]{6}$/i.test(accent))throw fail('Cor inválida.');
-  return {handle,bio:text('bio',300),status:text('status',100),emoji:text('emoji',12),tags:[...new Set(tags.map(s=>s.trim()))],links:safeLinks,cover_file_id:file('cover_file_id'),background_file_id:file('background_file_id'),accent,darkness:number('darkness',60,0,90),blur:number('blur',0,0,20),opacity:number('opacity',90,40,100),reduce_motion:value.reduce_motion===true};
+  return {handle,bio:text('bio',300),status:text('status',100),emoji,tags:[...new Set(tags.map(s=>s.trim()))],links:safeLinks,cover_file_id:file('cover_file_id'),background_file_id:file('background_file_id'),accent,darkness:number('darkness',60,0,90),blur:number('blur',0,0,20),opacity:number('opacity',90,40,100),reduce_motion:value.reduce_motion===true,cover_position:number('cover_position',50,0,100),cover_zoom:number('cover_zoom',100,100,250),media_credits:mediaCredits};
 }
 module.exports={cleanProfile};
