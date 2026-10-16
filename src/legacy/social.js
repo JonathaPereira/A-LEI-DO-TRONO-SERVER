@@ -7,18 +7,11 @@ window.TronoSocial = (() => {
   const speakingPeers = new Set();
   const privateVoiceRoster = new Map();
   const profileActivities = new Map();
-  const sfuLocalPublications = new Map();
-  const sfuSubscriptions = new Map();
-  const sfuRetryTimers = new Map();
-  const sfuRetryCount = new Map();
-  let sfuPublicationList = [];
   let realtimeStatus = null;
   let realtimeSyncError = '';
   let realtimeSyncTimer = null;
   let mediaTransport = 'p2p';
-  let sfuSyncChain = Promise.resolve();
   let lastSfuError = '';
-  let sfuGeneration = 0;
   let mixedTransportTimer = null,
     roomVoiceMode = null;
   let voiceGeneration = 0,
@@ -579,6 +572,53 @@ window.TronoSocial = (() => {
     onRecover: recoverRemoteMedia,
   });
 
+  const sfuSession = window.TronoVoiceCapture.createSfuSession({
+    getSettings: () => ({
+      enabled: voiceJoined && transportIsSfu(),
+      screenAllowed: !!realtimeStatus?.screenAllowed,
+      quality: cappedQuality(),
+      screenBitrate: effectiveScreenBitrate(),
+      videoBitrate: qualityProfile().videoBitrate,
+      camera: qualityProfile().camera,
+      screen: qualityProfile().screen,
+      ice: sfuIceConfig,
+    }),
+    createConnection: (config) => new RTCPeerConnection(config),
+    request: (action, payload, timeout) => window.TronoNetwork.requestSfu(action, payload, timeout),
+    wants: wantsSfuPublication,
+    watchVersion: (id) => streamWatchVersions.get(id) || 0,
+    preferredRid: (kind) => preferredRidForMedia(kind, false),
+    applyQuality: applySenderQuality,
+    onTrack: attachSfuRemoteTrack,
+    onSubscriptionClosed: detachSfuRemoteMedia,
+    onReady: (kind, receiving) => {
+      if (receiving || lastSfuError.toLowerCase().includes(kind)) lastSfuError = '';
+    },
+    onRetry: reportSfuRetry,
+    onFallback: (reason) =>
+      fallbackToP2p(
+        reason === 'publisher'
+          ? 'A conexão com o SFU falhou; retornando ao P2P.'
+          : 'Não foi possível negociar a mídia pelo SFU. Reconectando a chamada por P2P.',
+      ),
+    onChange: () => {
+      renderVoiceRoster();
+      renderVideoGrid();
+      renderScreenGrid();
+      renderSeatMedia();
+    },
+  });
+  const sfuLocalPublications = sfuSession.publications,
+    sfuSubscriptions = sfuSession.subscriptions;
+  const {
+    publish: publishSfuTrack,
+    closePublication: closeSfuPublication,
+    closeSubscription: closeSfuSubscription,
+    refreshPublications: refreshSfuPublicationList,
+    syncSubscriptions: syncSfuSubscriptions,
+    clearRetry: clearSfuRetry,
+  } = sfuSession;
+
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
     [...privateVoiceRoster.values()].sort((a, b) => (a.seat ?? 999) - (b.seat ?? 999));
@@ -637,7 +677,6 @@ window.TronoSocial = (() => {
       screen: SCREEN_FORMATS[screenFormat],
       screenBitrate: effectiveScreenBitrate(),
     });
-  const plainSdp = (desc) => (desc ? { type: desc.type, sdp: desc.sdp } : null);
   const transportIsSfu = () => mediaTransport === 'sfu';
   const transportPending = () => mediaTransport === 'sfu-pending' || mediaTransport === 'stopping';
   const announcedTransport = () =>
@@ -983,46 +1022,6 @@ window.TronoSocial = (() => {
       return 'Esta câmera não aceitou a captura. Escolha outra entrada em Configurações → Vídeo.';
     return err?.message || 'Não foi possível abrir a câmera.';
   }
-  function waitPeerConnected(pc, timeout = 10000) {
-    if (!pc) return Promise.reject(new Error('PeerConnection ausente.'));
-    if (
-      pc.connectionState === 'connected' ||
-      pc.iceConnectionState === 'connected' ||
-      pc.iceConnectionState === 'completed'
-    )
-      return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        pc.removeEventListener('connectionstatechange', check);
-        pc.removeEventListener('iceconnectionstatechange', check);
-        ok
-          ? resolve()
-          : reject(
-              Object.assign(new Error('Tempo esgotado ao conectar mídia ao SFU.'), {
-                code: 'SFU_CONNECT_TIMEOUT',
-              }),
-            );
-      };
-      const check = () => {
-        if (
-          pc.connectionState === 'connected' ||
-          pc.iceConnectionState === 'connected' ||
-          pc.iceConnectionState === 'completed'
-        )
-          finish(true);
-        else if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed')
-          finish(false);
-      };
-      const timer = setTimeout(() => finish(false), timeout);
-      pc.addEventListener('connectionstatechange', check);
-      pc.addEventListener('iceconnectionstatechange', check);
-      check();
-    });
-  }
   async function refreshSfuIceConfig() {
     const generation = voiceGeneration;
     try {
@@ -1173,14 +1172,8 @@ window.TronoSocial = (() => {
     const sub = sfuSubscriptions.get(sfuKey(peerId, kind));
     if (!sub) return;
     const requested = preferredRidForMedia(kind, maximized);
-    if (sub.preferredRid === requested) return;
     try {
-      const result = await window.TronoNetwork?.requestSfu(
-        'update-subscription',
-        { sessionId: sub.sessionId, preferredRid: requested },
-        9000,
-      );
-      sub.preferredRid = result?.preferredRid || requested;
+      await sfuSession.setLayer(sub.key, requested);
     } catch (err) {
       console.warn('[TronoSocial] qualidade ao maximizar', kind, err.code || err);
     }
@@ -1956,402 +1949,18 @@ window.TronoSocial = (() => {
   function preferredRidForQuality(q = cappedQuality()) {
     return q === 'economy' ? 'q' : 'f';
   }
-  function waitIceGathering(pc, timeout = 4200) {
-    if (!pc || pc.iceGatheringState === 'complete') return Promise.resolve();
-    return new Promise((resolve) => {
-      let done = false;
-      const finish = () => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        pc.removeEventListener('icegatheringstatechange', onchange);
-        resolve();
-      };
-      const onchange = () => {
-        if (pc.iceGatheringState === 'complete') finish();
-      };
-      const timer = setTimeout(finish, timeout);
-      pc.addEventListener('icegatheringstatechange', onchange);
-    });
-  }
-  function sfuSimulcastEncodings() {
-    const q = qualityProfile();
-    return [
-      {
-        rid: 'f',
-        scaleResolutionDownBy: 1,
-        maxBitrate: q.videoBitrate,
-        maxFramerate: q.camera.fps,
-      },
-      {
-        rid: 'h',
-        scaleResolutionDownBy: 2,
-        maxBitrate: Math.max(180000, Math.round(q.videoBitrate * 0.42)),
-        maxFramerate: q.camera.fps,
-      },
-      {
-        rid: 'q',
-        scaleResolutionDownBy: 4,
-        maxBitrate: Math.max(90000, Math.round(q.videoBitrate * 0.16)),
-        maxFramerate: Math.min(q.camera.fps, 24),
-      },
-    ];
-  }
-  function sfuScreenEncodings() {
-    const q = qualityProfile();
-    return [{ maxBitrate: q.screenBitrate, maxFramerate: q.screen.fps, scaleResolutionDownBy: 1 }];
-  }
-  // Chromium's startup hint is advisory; congestion control still owns actual bandwidth.
-  function screenStartupOffer(offer) {
-    if (!offer?.sdp) return offer;
-    const max = Math.round(effectiveScreenBitrate() / 1000),
-      start = Math.min(6000, Math.round(max * 0.65));
-    const parts = offer.sdp.split(/(?=m=)/);
-    return {
-      type: offer.type,
-      sdp: parts
-        .map((part) => {
-          if (!part.startsWith('m=video')) return part;
-          const ids = [...part.matchAll(/^a=rtpmap:(\d+) (?:VP8|VP9|H264|AV1)\/90000/gim)].map(
-            (m) => m[1],
-          );
-          for (const id of ids) {
-            const re = new RegExp('^a=fmtp:' + id + ' (.*)$', 'm'),
-              hint = `x-google-start-bitrate=${start};x-google-max-bitrate=${max}`;
-            if (re.test(part))
-              part = part.replace(
-                re,
-                (_, params) =>
-                  `a=fmtp:${id} ${params.replace(/;?\s*x-google-(?:start|max|min)-bitrate=\d+/g, '')};${hint}`,
-              );
-            else
-              part = part.replace(
-                new RegExp('(^a=rtpmap:' + id + ' [^\r\n]+\r?\n)', 'm'),
-                `$1a=fmtp:${id} ${hint}\r\n`,
-              );
-          }
-          return part;
-        })
-        .join(''),
-    };
-  }
-  function advertisedSfuRids(transceiver, pc) {
-    const allowed = new Set(['f', 'h', 'q']),
-      rids = [];
-    try {
-      for (const enc of transceiver?.sender?.getParameters?.().encodings || [])
-        if (enc?.rid && allowed.has(enc.rid) && !rids.includes(enc.rid)) rids.push(enc.rid);
-    } catch {}
-    if (!rids.length) {
-      const sdp = pc?.localDescription?.sdp || '';
-      for (const match of sdp.matchAll(/^a=rid:([^\s]+)\s+send/gm)) {
-        const rid = match[1];
-        if (allowed.has(rid) && !rids.includes(rid)) rids.push(rid);
-      }
-    }
-    return rids;
-  }
-  async function prepareSfuPublisher(kind, track, { simulcast = true } = {}) {
-    const pc = new RTCPeerConnection(sfuIceConfig);
-    let transceiver;
-    try {
-      let init = { direction: 'sendonly' };
-      if (simulcast && kind === 'camera')
-        init = { ...init, sendEncodings: sfuSimulcastEncodings() };
-      if (simulcast && kind === 'screen') init = { ...init, sendEncodings: sfuScreenEncodings() };
-      transceiver = pc.addTransceiver(track, init);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(kind === 'screen' ? screenStartupOffer(offer) : offer);
-      await waitIceGathering(pc);
-      return { pc, transceiver, rids: simulcast ? advertisedSfuRids(transceiver, pc) : [] };
-    } catch (err) {
-      try {
-        pc.close();
-      } catch {}
-      throw err;
-    }
-  }
-  function shouldRetrySingleLayer(err) {
-    const code = String(err?.code || ''),
-      name = String(err?.name || '');
-    if (
-      [
-        'SCREEN_BUDGET_BLOCKED',
-        'REALTIME_DISABLED',
-        'REALTIME_HARD_LIMIT',
-        'SFU_ROOM_SAFETY_LIMIT',
-        'NETWORK_OFFLINE',
-      ].includes(code)
-    )
-      return false;
-    return (
-      ['TypeError', 'InvalidAccessError', 'OperationError', 'NotSupportedError'].includes(name) ||
-      [
-        'PUBLICATION_NOT_ACTIVE',
-        'BAD_SFU_PUBLISH',
-        'SFU_CONNECT_TIMEOUT',
-        'SFU_REQUEST_FAILED',
-      ].includes(code) ||
-      code.includes('simulcast')
-    );
-  }
-  async function refreshSfuPublicationList() {
-    if (!transportIsSfu()) return [];
-    const generation = sfuGeneration;
-    try {
-      const r = await window.TronoNetwork?.requestSfu('list-publications', {}, 8000);
-      if (generation !== sfuGeneration || !transportIsSfu()) return sfuPublicationList;
-      sfuPublicationList = Array.isArray(r?.publications) ? r.publications : [];
-      return sfuPublicationList;
-    } catch (err) {
-      console.warn('[TronoSocial] atualizar publicações SFU', err?.code || err);
-      return sfuPublicationList;
-    }
-  }
-  function isStalePublicationError(err) {
-    return [
-      'PUBLICATION_STALE',
-      'PUBLICATION_NOT_FOUND',
-      'PUBLICATION_NOT_READY',
-      'SFU_SESSION_STALE',
-      'not_found_track_error',
-    ].includes(String(err?.code || ''));
-  }
-  function attachSfuRemoteTrack(pub, track, sub, receiver) {
-    if (!pub || !track || !wantsSfuPublication(pub)) return;
-    const generation = sfuGeneration;
+  function attachSfuRemoteTrack(pub, track, sub, receiver, isCurrent) {
     remoteMedia.attachSubscription({
       id: pub.ownerId,
       kind: pub.kind,
       track,
       owner: sub,
       receiver,
-      isCurrent: () =>
-        voiceJoined &&
-        transportIsSfu() &&
-        generation === sfuGeneration &&
-        sfuSubscriptions.get(sub.key) === sub &&
-        wantsSfuPublication(pub),
+      isCurrent,
     });
   }
-  async function publishSfuTrack(kind, track) {
-    if (!transportIsSfu() || !track) return null;
-    const generation = sfuGeneration;
-    const ensureCurrent = () => {
-      if (
-        generation !== sfuGeneration ||
-        !voiceJoined ||
-        !transportIsSfu() ||
-        track.readyState === 'ended'
-      )
-        throw Object.assign(
-          new Error('A publicação foi cancelada pela troca de chamada ou encerramento da captura.'),
-          { code: 'SFU_CANCELLED' },
-        );
-    };
-    if (isScreenKind(kind) && !realtimeStatus?.screenAllowed)
-      throw Object.assign(new Error('Compartilhamento bloqueado pelo freio de consumo.'), {
-        code: 'SCREEN_BUDGET_BLOCKED',
-      });
-    if (sfuLocalPublications.has(kind)) await closeSfuPublication(kind);
-    const mediaKind = kind === 'camera',
-      attempts = mediaKind ? [true, false] : [false];
-    let lastError = null;
-    for (const simulcast of attempts) {
-      let prepared = null,
-        result = null;
-      try {
-        prepared = await prepareSfuPublisher(kind, track, { simulcast });
-        ensureCurrent();
-        const { pc, transceiver, rids } = prepared;
-        result = await window.TronoNetwork.requestSfu('publish-track', {
-          kind,
-          screenBitrate: effectiveScreenBitrate(),
-          quality: cappedQuality(),
-          mid: String(transceiver.mid),
-          rids,
-          sessionDescription: plainSdp(pc.localDescription),
-        });
-        ensureCurrent();
-        if (result?.sessionDescription) await pc.setRemoteDescription(result.sessionDescription);
-        const pub = {
-          kind,
-          pc,
-          sessionId: result.sessionId,
-          mid: String(transceiver.mid),
-          sender: transceiver.sender,
-          trackName: result.publication?.trackName || kind,
-          rids: Array.isArray(result.publication?.rids) ? result.publication.rids : rids,
-        };
-        sfuLocalPublications.set(kind, pub);
-        await applySenderQuality(pub.sender, kind);
-        await waitPeerConnected(pc, 14000);
-        const ready = await window.TronoNetwork.requestSfu(
-          'publication-ready',
-          { sessionId: pub.sessionId },
-          9000,
-        );
-        ensureCurrent();
-        pub.ready = true;
-        if (Array.isArray(ready?.rids)) pub.rids = ready.rids;
-        if (lastSfuError.toLowerCase().includes(kind)) lastSfuError = '';
-        pc.onconnectionstatechange = () => {
-          if (pc.connectionState === 'failed' && transportIsSfu())
-            fallbackToP2p('A conexão com o SFU falhou; retornando ao P2P.');
-        };
-        return pub;
-      } catch (err) {
-        lastError = err;
-        if (sfuLocalPublications.get(kind)?.pc === prepared?.pc) sfuLocalPublications.delete(kind);
-        try {
-          prepared?.pc?.close();
-        } catch {}
-        if (result?.sessionId)
-          void window.TronoNetwork?.requestSfu(
-            'close-publication',
-            { sessionId: result.sessionId },
-            6000,
-          ).catch(() => {});
-        if (simulcast && shouldRetrySingleLayer(err)) {
-          console.warn(
-            `[TronoSocial] ${kind} simulcast indisponível; tentando camada única`,
-            err?.code || err?.name || err,
-          );
-          continue;
-        }
-        break;
-      }
-    }
-    throw lastError || new Error(`Não foi possível publicar ${kind} no SFU.`);
-  }
-  async function closeSfuPublication(kind) {
-    const pub = sfuLocalPublications.get(kind);
-    if (!pub) return;
-    sfuLocalPublications.delete(kind);
-    try {
-      pub.pc?.close();
-    } catch {}
-    try {
-      await window.TronoNetwork?.requestSfu(
-        'close-publication',
-        { sessionId: pub.sessionId },
-        9000,
-      );
-    } catch (err) {
-      console.warn('[TronoSocial] fechar publicação SFU', kind, err.code || err);
-    }
-  }
-  async function subscribeSfuPublication(pub) {
-    if (!transportIsSfu() || !pub || !wantsSfuPublication(pub)) return null;
-    const key = sfuKey(pub.ownerId, pub.kind),
-      current = sfuSubscriptions.get(key);
-    if (current?.publisherSessionId === pub.sessionId) return current;
-    if (current) await closeSfuSubscription(key);
-    const generation = sfuGeneration,
-      watchVersion = streamWatchVersions.get(pub.ownerId) || 0;
-    const ensureCurrent = () => {
-      if (
-        generation !== sfuGeneration ||
-        !voiceJoined ||
-        !transportIsSfu() ||
-        !wantsSfuPublication(pub) ||
-        (isScreenKind(pub.kind) && watchVersion !== (streamWatchVersions.get(pub.ownerId) || 0)) ||
-        (sub && sfuSubscriptions.get(key) !== sub)
-      )
-        throw Object.assign(
-          new Error('A chamada mudou ou você parou de assistir durante a negociação.'),
-          { code: 'SFU_CANCELLED' },
-        );
-    };
-    const pc = new RTCPeerConnection(sfuIceConfig),
-      rid =
-        ['camera', 'screen'].includes(pub.kind) && Array.isArray(pub.rids) && pub.rids.length
-          ? preferredRidForMedia(pub.kind, false)
-          : null;
-    let result, sub;
-    try {
-      pc.ontrack = (e) => {
-        if (
-          generation === sfuGeneration &&
-          transportIsSfu() &&
-          wantsSfuPublication(pub) &&
-          (!isScreenKind(pub.kind) || watchVersion === (streamWatchVersions.get(pub.ownerId) || 0))
-        ) {
-          const active = sfuSubscriptions.get(key);
-          if (active?.pc === pc) {
-            active.track = e.track;
-            attachSfuRemoteTrack(pub, e.track, active, e.receiver || e.transceiver?.receiver);
-          }
-        }
-      };
-      result = await window.TronoNetwork.requestSfu('subscribe-track', {
-        publisherId: pub.ownerId,
-        kind: pub.kind,
-        quality: cappedQuality(),
-        preferredRid: rid,
-      });
-      ensureCurrent();
-      if (result?.sessionDescription?.type !== 'offer')
-        throw Object.assign(new Error('SFU não retornou uma oferta válida de assinatura.'), {
-          code: 'BAD_SFU_OFFER',
-        });
-      sub = {
-        key,
-        pc,
-        sessionId: result.sessionId,
-        mid: result.mid,
-        publisherSessionId: pub.sessionId,
-        publisherId: pub.ownerId,
-        kind: pub.kind,
-        preferredRid: result.preferredRid || rid,
-        track: null,
-        negotiating: true,
-        readyAt: 0,
-      };
-      sfuSubscriptions.set(key, sub);
-      await pc.setRemoteDescription(result.sessionDescription);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      await waitIceGathering(pc);
-      ensureCurrent();
-      const localAnswer = plainSdp(pc.localDescription);
-      if (localAnswer?.type !== 'answer' || !localAnswer.sdp)
-        throw Object.assign(new Error('Resposta SDP local inválida.'), { code: 'BAD_SFU_ANSWER' });
-      await window.TronoNetwork.requestSfu('renegotiate', {
-        sessionId: sub.sessionId,
-        sessionDescription: localAnswer,
-      });
-      ensureCurrent();
-      await waitPeerConnected(pc, 18000);
-      ensureCurrent();
-      sub.negotiating = false;
-      sub.readyAt = Date.now();
-      lastSfuError = '';
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' && transportIsSfu()) {
-          closeSfuSubscription(key).finally(() => setTimeout(() => syncSfuSubscriptions(), 900));
-        }
-      };
-      return sub;
-    } catch (err) {
-      try {
-        pc.close();
-      } catch {}
-      if (sfuSubscriptions.get(key)?.pc === pc) {
-        sfuSubscriptions.delete(key);
-        detachSfuRemoteMedia(sub);
-      }
-      if (result?.sessionId)
-        void window.TronoNetwork?.requestSfu(
-          'close-subscription',
-          { sessionId: result.sessionId },
-          6000,
-        ).catch(() => {});
-      throw err;
-    }
-  }
   function detachSfuRemoteMedia(sub) {
-    if (!sub) return;
+    for (const receiver of sub.pc.getReceivers()) reception.remove(receiver);
     remoteMedia.detachSubscription(sub);
     if (sub.kind === 'audio') {
       removeRemoteAudio(sub.publisherId);
@@ -2359,153 +1968,33 @@ window.TronoSocial = (() => {
     }
     if (sub.kind === 'screen-audio') removeRemoteAudio(streamAudioKey(sub.publisherId));
   }
-  async function closeSfuSubscription(key) {
-    const sub = sfuSubscriptions.get(key);
-    if (!sub) return;
-    sfuSubscriptions.delete(key);
-    for (const receiver of sub.pc?.getReceivers?.() || []) reception.remove(receiver);
-    try {
-      sub.pc?.close();
-    } catch {}
-    detachSfuRemoteMedia(sub);
-    try {
-      await window.TronoNetwork?.requestSfu(
-        'close-subscription',
-        { sessionId: sub.sessionId },
-        8000,
-      );
-    } catch (err) {
-      console.warn('[TronoSocial] fechar assinatura SFU', key, err.code || err);
-    }
-  }
-  async function updateAllSfuSubscriptionLayers() {
-    if (!transportIsSfu()) return;
-    const rid = preferredRidForQuality();
-    const jobs = [];
-    for (const sub of sfuSubscriptions.values())
-      if (['camera', 'screen'].includes(sub.kind)) {
-        const target = preferredRidForMedia(sub.kind, false);
-        if (sub.preferredRid !== target)
-          jobs.push(
-            window.TronoNetwork.requestSfu(
-              'update-subscription',
-              { sessionId: sub.sessionId, preferredRid: target },
-              9000,
-            )
-              .then((r) => {
-                sub.preferredRid = r?.preferredRid || target;
-              })
-              .catch((err) => console.warn('[TronoSocial] camada SFU', err.code || err)),
-          );
-      }
-    await Promise.allSettled(jobs);
-  }
-  function clearSfuRetry(key) {
-    const t = sfuRetryTimers.get(key);
-    if (t) clearTimeout(t);
-    sfuRetryTimers.delete(key);
-    sfuRetryCount.delete(key);
-  }
-  function scheduleSfuRetry(key, pub, err) {
-    if (sfuRetryTimers.has(key) || !transportIsSfu()) return;
-    const n = (sfuRetryCount.get(key) || 0) + 1;
-    sfuRetryCount.set(key, n);
-    const stale = isStalePublicationError(err),
-      delay = stale
-        ? Math.min(5000, 500 * Math.pow(1.7, Math.min(n - 1, 4)))
-        : Math.min(12000, 900 * Math.pow(2, Math.min(n - 1, 4)));
-    const label = pub?.kind === 'screen' ? 'Tela' : pub?.kind === 'camera' ? 'Câmera' : 'Áudio',
-      code = err?.code || 'mídia indisponível';
+  function reportSfuRetry({ publication: pub, code, stale }) {
+    const label = pub.kind === 'screen' ? 'Tela' : pub.kind === 'camera' ? 'Câmera' : 'Áudio';
     lastSfuError = `${label}: ${code}`;
-    if (
-      !stale &&
-      n >= 3 &&
-      [
-        'BAD_SFU_ANSWER',
-        'BAD_SFU_OFFER',
-        'BAD_SFU_RENEGOTIATE',
-        'SFU_ANSWER_REJECTED',
-        'SFU_CONNECT_TIMEOUT',
-      ].includes(String(code))
-    ) {
-      void fallbackToP2p(
-        'Não foi possível negociar a mídia pelo SFU. Reconectando a chamada por P2P.',
-      );
-      return;
-    }
     let message = stale
       ? `${label} SFU foi atualizado enquanto conectava. Ressincronizando a publicação…`
       : `${label} SFU reconectando… (${code}).`;
     if (
       !stale &&
       !sfuTurnActive &&
-      ['SFU_CONNECT_TIMEOUT', 'NETWORK_CLOSED', 'NETWORK_OFFLINE'].includes(String(code))
+      ['SFU_CONNECT_TIMEOUT', 'NETWORK_CLOSED', 'NETWORK_OFFLINE'].includes(code)
     )
       message += ' A rota ICE falhou; TURN pode ajudar em redes móveis/CGNAT.';
     setStatus(message, 'warn');
     renderTelemetry();
-    sfuRetryTimers.set(
-      key,
-      setTimeout(async () => {
-        sfuRetryTimers.delete(key);
-        if (!transportIsSfu()) return;
-        if (stale) await refreshSfuPublicationList();
-        void syncSfuSubscriptions();
-      }, delay),
-    );
   }
-  async function syncSfuSubscriptions() {
-    if (!transportIsSfu()) return;
-    const generation = sfuGeneration;
-    sfuSyncChain = sfuSyncChain
-      .then(async () => {
-        if (generation !== sfuGeneration || !transportIsSfu()) return;
-        const desired = new Map();
-        for (const pub of sfuPublicationList) {
-          if (wantsSfuPublication(pub)) desired.set(sfuKey(pub.ownerId, pub.kind), pub);
-        }
-        for (const key of [...sfuSubscriptions.keys()]) {
-          if (generation !== sfuGeneration || !transportIsSfu()) break;
-          if (!desired.has(key)) await closeSfuSubscription(key);
-        }
-        for (const [key, pub] of desired) {
-          if (generation !== sfuGeneration || !transportIsSfu()) break;
-          const existing = sfuSubscriptions.get(key);
-          if (!existing || existing.publisherSessionId !== pub.sessionId) {
-            try {
-              await subscribeSfuPublication(pub);
-              clearSfuRetry(key);
-            } catch (err) {
-              console.warn('[TronoSocial] assinatura SFU', key, err.code || err);
-              if (isStalePublicationError(err)) await refreshSfuPublicationList();
-              if (err?.code !== 'SFU_CANCELLED') scheduleSfuRetry(key, pub, err);
-            }
-          }
-        }
-        renderVoiceRoster();
-        renderVideoGrid();
-        renderScreenGrid();
-        renderSeatMedia();
-      })
-      .catch((err) => console.warn('[TronoSocial] fila SFU', err));
-    return sfuSyncChain;
+  async function updateAllSfuSubscriptionLayers() {
+    await Promise.allSettled(
+      [...sfuSubscriptions.values()]
+        .filter((sub) => ['camera', 'screen'].includes(sub.kind))
+        .map((sub) => sfuSession.setLayer(sub.key, preferredRidForMedia(sub.kind, false))),
+    );
   }
   async function stopSfuTransport({ toP2p = true } = {}) {
     clearTimeout(mixedTransportTimer);
     mixedTransportTimer = null;
-    sfuGeneration++;
     mediaTransport = 'stopping';
-    sfuSyncChain = Promise.resolve();
-    // Detach the old resources synchronously. Cloudflare cleanup may be slow;
-    // it must not delay P2P readiness or delete media from the next connection.
-    for (const t of sfuRetryTimers.values()) clearTimeout(t);
-    sfuRetryTimers.clear();
-    sfuRetryCount.clear();
-    const cleanup = [
-      ...[...sfuSubscriptions.keys()].map(closeSfuSubscription),
-      ...[...sfuLocalPublications.keys()].map(closeSfuPublication),
-    ];
-    sfuPublicationList = [];
+    sfuSession.reset();
     for (const id of [...remoteAudio.keys()]) {
       removeRemoteAudio(id);
       if (id !== meId()) stopMeter(id);
@@ -2516,16 +2005,15 @@ window.TronoSocial = (() => {
     renderVideoGrid();
     renderScreenGrid();
     renderSeatMedia();
-    void Promise.allSettled(cleanup);
   }
   async function startSfuTransport({ callGeneration = voiceGeneration } = {}) {
     if (!voiceJoined || !communityVoice()) return false;
-    const generation = sfuGeneration,
+    const generation = sfuSession.getGeneration(),
       ensureCurrent = () => {
         if (
           !voiceJoined ||
           callGeneration !== voiceGeneration ||
-          generation !== sfuGeneration ||
+          generation !== sfuSession.getGeneration() ||
           roomVoiceMode === 'p2p'
         )
           throw Object.assign(new Error('Entrada SFU cancelada.'), { code: 'SFU_CANCELLED' });
@@ -2580,7 +2068,7 @@ window.TronoSocial = (() => {
       if (
         err?.code === 'SFU_CANCELLED' ||
         callGeneration !== voiceGeneration ||
-        generation !== sfuGeneration
+        generation !== sfuSession.getGeneration()
       )
         return false;
       console.warn('[TronoSocial] inicialização SFU', err);
@@ -2641,7 +2129,7 @@ window.TronoSocial = (() => {
   async function recoverRemoteMedia(id, missing, isCurrent) {
     if (!isCurrent()) return false;
     if (transportIsSfu()) {
-      const generation = sfuGeneration,
+      const generation = sfuSession.getGeneration(),
         keys = [];
       if (missing.camera) keys.push(sfuKey(id, 'camera'));
       if (missing.screen) keys.push(sfuKey(id, 'screen'));
@@ -2656,7 +2144,8 @@ window.TronoSocial = (() => {
         void closeSfuSubscription(key);
       }
       if (!keys.every((key) => sfuSubscriptions.has(key))) await refreshSfuPublicationList();
-      if (!isCurrent() || !transportIsSfu() || generation !== sfuGeneration) return false;
+      if (!isCurrent() || !transportIsSfu() || generation !== sfuSession.getGeneration())
+        return false;
       void syncSfuSubscriptions();
       return retry;
     }
@@ -3302,7 +2791,9 @@ window.TronoSocial = (() => {
       const hasAudio =
         stream?.getAudioTracks().some((t) => t.readyState === 'live' && !t.muted) ||
         (!self &&
-          sfuPublicationList.some((pub) => pub.ownerId === p.id && pub.kind === 'screen-audio'));
+          sfuSession
+            .getPublications()
+            .some((pub) => pub.ownerId === p.id && pub.kind === 'screen-audio'));
       const volume = tile.querySelector('.mn-stream-volume');
       volume.hidden = self || !watching;
       volume.querySelector('input').value = String(streamVolumes.get(p.id) ?? 100);
@@ -5090,7 +4581,7 @@ window.TronoSocial = (() => {
       }
       if (msg.type === 'realtime-status') void applyRealtimeStatus(msg);
       if (msg.type === 'sfu-publications' && msg.roomId === roomState?.id) {
-        sfuPublicationList = Array.isArray(msg.publications) ? msg.publications : [];
+        sfuSession.setPublications(msg.publications);
         if (transportIsSfu()) void syncSfuSubscriptions();
       }
       if (msg.type === 'voice-state' && voiceJoined) {
@@ -5140,7 +4631,9 @@ window.TronoSocial = (() => {
             const key = sfuKey(msg.playerId, kind);
             if (sfuSubscriptions.has(key)) void closeSfuSubscription(key);
           }
-          sfuPublicationList = sfuPublicationList.filter((p) => p.ownerId !== msg.playerId);
+          sfuSession.setPublications(
+            sfuSession.getPublications().filter((p) => p.ownerId !== msg.playerId),
+          );
           void syncSfuSubscriptions();
         }
         renderVoiceRoster();

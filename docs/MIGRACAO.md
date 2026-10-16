@@ -26,11 +26,12 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Captura, fallback de dispositivo e ciclo de vida da câmera em TypeScript.
 - Conexões P2P, transceivers, filas de sinalização/trilhas e negociação em TypeScript.
 - Streams recebidos, listeners, tolerância de vídeo e recuperação em TypeScript.
+- Negociação SFU, catálogo, publicação, assinaturas, camadas e retries em TypeScript.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. SFU e coordenação da chamada,
+React ou TypeScript apenas porque a marcação foi convertida. Coordenação da chamada e status/ICE,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -38,8 +39,9 @@ Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e compo
 Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham componentes
 React, com adaptadores para os chamadores legados ainda ativos.
 Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
-Os sinais P2P são validados em `lib/voice/peer-protocol.ts`. Payloads de jogos
-e operações SFU ainda não têm validação completa.
+Os sinais P2P e a negociação SFU são validados em `lib/voice/peer-protocol.ts` e
+`sfu-protocol.ts`. Payloads de jogos, status/ICE e controles de consumo ainda
+não têm validação completa.
 `server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
 Módulos JS existentes ainda não recebem a verificação estrita dos módulos TS.
 
@@ -467,12 +469,55 @@ Mídia sintética e backend local; ciclos de assinatura SFU são simulados nos t
 do módulo. Não houve medição de SFU/TURN externos ou jogos reais a 60 FPS,
 publicação ou mudança em infraestrutura remota.
 
+## Negociação e recursos SFU — 16/10/2026
+
+- `lib/voice/sfu-session.ts` possui peers ativos e em negociação, mapas de publicação
+  e assinatura, catálogo, fila de assinaturas/camadas, timers de retry e cancelamento.
+  Foram removidos os mapas, filas, geração, timers, listeners e negociação substituídos
+  de `social.js`; esse controlador recebe visões emprestadas e callbacks de interface.
+- `sfu-protocol.ts` valida IDs, SDP, tipo de mídia/RIDs, listas completas e respostas
+  de prontidão, renegociação e camada. Uma lista inválida preserva a anterior; uma
+  resposta HTTP antiga não desfaz um broadcast mais recente. O socket e o protocolo
+  de `server/realtime-sfu.js` continuam os existentes.
+- O descarte local é síncrono. Abortar retira listeners/deadlines e fecha peers
+  sem aguardar a rede. Respostas atrasadas ainda têm seu sessionId encerrado, sem
+  selecionar recursos da chamada nova. Trocar catálogo cancela também assinaturas
+  pendentes; retirar uma publicação não trava a próxima negociação.
+- Trocar microfone/câmera enquanto a confirmação está pendente conserva a publicação
+  quando o sender já possui uma trilha nova. Camadas são atualizadas em sequência;
+  respostas antigas não alteram assinaturas novas, e camada única conserva RID nulo.
+- `sfu-encoding.ts` conserva o simulcast da câmera e a dica de bitrate do SDP de
+  tela. A tela continua em camada única no fluxo nativo. O helper sem chamadas
+  `sfuScreenEncodings` foi retirado. `peer-wait.ts` conserva 4200 ms de coleta ICE,
+  14 s para publicação e 18 s para recepção, com limpeza ao cancelar.
+- Bootstrap ICE/TURN, escolha do transporte, status/consumo e coordenação da chamada
+  ainda pertencem a `social.js`, assim como players, ganhos e métricas de recepção.
+
+Passaram tipagem, formatação, build estático, `npm test` (4 integrações e 245 testes),
+os quatro fluxos de `test:ui` e 15 checks de controles/áudio no navegador. Os 20 novos
+testes de SFU estão em `npm run test:voice:sfu` e na suíte principal.
+`npm run test:desktop:sfu` usa o módulo real no Electron com relay WebRTC local:
+publica áudio/tela, recebe quadros e energia de áudio, reseta e reconecta sem reabrir
+capturas; verifica 60 FPS solicitados e 8 Mbps no sender de tela. A regressão P2P
+com dois Electron também passou, preservando socket, peers, trilhas, jogo e layouts.
+Isso não mede entrega sustentada de 60 FPS em jogos, redes reais ou SFU/TURN externos.
+Evidências: `artifacts/sfu-desktop-final.log`, `sfu-regressions.log`, `sfu-media.log`,
+`sfu-ui.log` e `sfu-build.log`. Nenhum serviço remoto foi alterado ou publicado.
+
+A falha intermitente do histórico SQL foi isolada em PGlite: mensagens podiam ter
+o mesmo timestamp, e os UUIDs aleatórios não sustentavam a sequência que a fixture
+esperava. O commit local `daef5e8` usa IDs ordenados apenas na fixture e acrescenta
+um caso com inserção fora de ordem/horário igual para conferir desempate e cursor.
+Asserções, permissões, SQL e backend de produção foram preservados.
+
 ## Próximas alterações, em ordem
 
-1. Extrair negociação SFU, players/ganhos, métricas de recepção e coordenação da chamada para `lib/voice/`.
+1. Extrair players/ganhos, métricas de recepção e coordenação/entrada da chamada para `lib/voice/`.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
    Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.
+   Publicações/assinaturas, filas, catálogo e retries SFU estão em `sfu-session.ts`.
+   Bootstrap ICE/TURN e status/consumo ainda pertencem ao coordenador legado.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações

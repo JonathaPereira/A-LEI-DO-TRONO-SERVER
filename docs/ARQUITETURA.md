@@ -47,8 +47,9 @@ conteúdo de cada mensagem. Não abre dispositivos nem conhece elementos da tela
 snapshot imutável de capacidades e participação em texto/voz/jogo, com
 `getSnapshot()` e `subscribe()`. `protocol.ts` valida os eventos que alteram esse
 estado e as respostas de conta, convidado, nome e preparo da chamada. O consumidor
-P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`. Payloads de jogos
-e operações SFU ainda são opacos e serão convertidos com seus consumidores;
+P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`; a negociação SFU
+valida respostas e catálogos em `sfu-protocol.ts`. Payloads de jogos, status/ICE
+e controles de consumo SFU ainda serão convertidos com seus consumidores;
 o protocolo inteiro ainda não está tipado.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
@@ -189,14 +190,41 @@ A tolerância de vídeo conserva 5200 ms e pertence à identidade da trilha, par
 uma fonte nova ainda muda não herdar o histórico da anterior. A recuperação espera
 3800 ms, só considera vídeo desejado e não faz pedidos simultâneos enquanto aguarda
 sinalização. Cancelar ou limpar invalida também continuações e retries pendentes.
-O callback legado ainda escolhe a renegociação P2P ou o retry SFU, com a tolerância
-anterior de 8 s para assinaturas em início de recepção.
+O callback legado ainda escolhe a renegociação P2P ou solicita novas assinaturas
+ao módulo SFU, com a tolerância anterior de 8 s para início de recepção.
 
-`social.js` conserva coordenação da chamada, seleção ICE/TURN e de transporte,
-negociação SFU, regras de qualidade, players/ganhos, métricas de recepção, contextos
-de áudio e interface. O módulo de recepção notifica esse controlador quando deve
-anexar áudio, registrar/remover proteção do receiver ou renderizar. A voz ainda
-não foi toda convertida; streams, listeners e timers de recepção não estão duplicados.
+`sfu-session.ts` possui peers de publicação/assinatura, recursos em negociação,
+catálogo de publicações, filas de assinatura/camada, retries e cancelamento SFU.
+As visões dos mapas são somente para leitura; senders/peers são emprestados aos
+controles de mídia e aos diagnósticos existentes. Captura e socket não são duplicados.
+
+Fechar ou resetar cancela esperas e remove listeners/peers imediatamente, sem
+aguardar o backend. O ID de uma sessão remota é guardado antes de validar a resposta;
+se ela chegar atrasada, sua limpeza usa esse ID, sem atingir a conexão nova.
+Publicações substituídas no catálogo cancelam assinaturas anteriores inclusive
+durante a requisição inicial. Respostas de listagem antigas não desfazem broadcasts.
+Trocas de trilha durante a confirmação usam o sender atual, sem invalidar uma
+publicação saudável porque a captura anterior terminou.
+
+`sfu-protocol.ts` valida SDP, IDs, tipos de mídia, RIDs, catálogo e confirmações de
+negociação/prontidão. `peer-wait.ts` possui listeners e deadlines abortáveis:
+4200 ms de coleta ICE, 14 s para conectar publicações e 18 s para assinaturas.
+Os retries conservam backoff e fallback após três falhas de negociação reconhecidas.
+Atualizações de camada são serializadas e não restauram estado de assinaturas fechadas;
+respostas de camada única conservam RID nulo.
+
+`sfu-encoding.ts` conserva as três camadas de câmera e a dica de bitrate inicial
+do SDP de tela. A tela mantém camada única e o fluxo nativo, sem processamento de
+quadros ou alteração das constraints da captura. A qualidade dos senders continua
+aplicada pelo controlador existente. O helper de encoding de tela que não tinha
+chamadas foi retirado junto com a implementação antiga.
+
+`social.js` conserva coordenação/entrada da chamada, bootstrap ICE/TURN, escolha do
+transporte, status/consumo, regras de qualidade, players/ganhos, métricas de recepção,
+contextos de áudio e interface. Os módulos notificam esse controlador para anexar
+áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.
+A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
+O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.
 
 `components/files/image-viewer.tsx` mantém um único visualizador React para anexos
 do chat e dos consumidores legados. Trocar de conta ou excluir o arquivo invalida
