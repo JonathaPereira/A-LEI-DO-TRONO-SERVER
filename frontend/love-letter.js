@@ -91,12 +91,12 @@ window.TronoLoveLetter=(()=>{
  function stopAnimations(){clearTimeout(effectTimer);document.querySelectorAll('.ll-effect-target').forEach(n=>n.classList.remove('ll-effect-target'));}
  function checkPrivate(){const s=room?.state;if(!s||!visible())return;const unseen=s.private.filter(p=>p.revision>seenPrivate);if(unseen.length){seenPrivate=Math.max(...s.private.map(p=>p.revision));showPrivate();}}
  function accept(next){
-  const before=room,changed=before?.id!==next.id||before?.state?.revision!==next.state?.revision;
+  const before=room,changed=before?.id!==next.id||before?.state?.revision!==next.state?.revision,rosterChanged=before?.hostId!==next.hostId||JSON.stringify(before?.players)!==JSON.stringify(next.players);
   if(before?.id!==next.id){stopAnimations();seenPrivate=0;}
   room=next;resume=next.id;notice='';pending=false;clearTimeout(pendingTimer);
   if(changed){selected=null;if($('loveLetterPlayDialog').open)$('loveLetterPlayDialog').close();}
   if(before?.state?.round!==next.state?.round){seenPrivate=0;if($('loveLetterPrivateDialog').open)$('loveLetterPrivateDialog').close();}
-  if(changed||!next.state){stopAnimations();render();const s=next.state;if(s?.last&&visible()){
+  if(changed||rosterChanged||!next.state){stopAnimations();render();const s=next.state;if(changed&&s?.last&&visible()){
     sound(s.last.roundResult?'score':'card');
     const target=[...document.querySelectorAll('[data-ll-player]')].find(n=>n.dataset.llPlayer===s.last.targetId)||(s.last.targetId===uid()?document.querySelector('.ll-self'):null);
     if(target){target.classList.add('ll-effect-target');effectTimer=setTimeout(()=>target.classList.remove('ll-effect-target'),1100);}
