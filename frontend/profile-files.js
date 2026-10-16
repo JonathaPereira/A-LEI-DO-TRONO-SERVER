@@ -13,6 +13,16 @@ window.TronoFiles=(()=>{
    if(window.TronoDesktop){try{await window.TronoDesktop.openAttachment({url:await resolveURL()});}catch(error){notice.textContent=error.message;}return;}
    const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;try{const link=await resolveURL();if(tab)tab.location=link;else notice.textContent='Permita abrir a aba para acessar o arquivo.';}catch(error){tab?.close();notice.textContent=error.message;}
  }
+ async function openImage(id,notice){
+   const account=window.TronoAuth.user?.id;
+   try{const link=await url(id);if(account!==window.TronoAuth.user?.id)return;
+     document.querySelector('.attachment-image-viewer')?.close();
+     const dialog=document.createElement('dialog'),img=document.createElement('img'),close=document.createElement('button');
+     dialog.className='attachment-image-viewer';dialog.dataset.imageFile=id;dialog.setAttribute('aria-label','Imagem anexada');img.alt='Imagem anexada';img.src=link;
+     close.type='button';close.textContent='×';close.setAttribute('aria-label','Fechar imagem');close.onclick=()=>dialog.close();
+     dialog.append(img,close);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.onclick=e=>{if(e.target===dialog)dialog.close();};document.body.append(dialog);dialog.showModal();
+   }catch(e){notice.textContent=e.message;}
+ }
  async function upload(file,{kind='chat',roomId,peerId,onProgress,signal}={}){
    const video=/\.(mp4|webm)$/i.test(file.name),max=kind==='soundboard'?2_880_044:kind==='avatar'?10_000_000:video?limits.video:limits.file;
    if(!file.size||file.size>max)throw new Error(`Limite: ${size(max)} ${video?'por vídeo':'por arquivo'}.`);
@@ -29,26 +39,27 @@ window.TronoFiles=(()=>{
    });
  }
  function invalidate(id){for(const key of cache.keys())if(key.startsWith(`${id}:`))cache.delete(key);}
- function markDeleted(id){deletedFiles.add(id);invalidate(id);for(const el of document.querySelectorAll('[data-attachment]'))if(el.dataset.attachment===id){const record=attachments.get(el);if(record)record.file.deleted=true;el.replaceChildren(document.createTextNode('Arquivo excluído.'));}}
+ function markDeleted(id){deletedFiles.add(id);invalidate(id);const viewer=document.querySelector('.attachment-image-viewer');if(viewer?.dataset.imageFile===id)viewer.close();for(const el of document.querySelectorAll('[data-attachment]'))if(el.dataset.attachment===id){const record=attachments.get(el);if(record)record.file.deleted=true;el.replaceChildren(document.createTextNode('Arquivo excluído.'));}}
  async function remove(id){await api(`/${id}`,{method:'DELETE'});markDeleted(id);}
  function renderAttachment(host,file,{private:privateMessage=false}={}){
    if(deletedFiles.has(file.id))file.deleted=true;attachments.set(host,{file,privateMessage});host.replaceChildren();
-   host.dataset.attachment=file.id;
-   const label=document.createElement('button');label.type='button';label.className='file-download';label.textContent=`${file.name} · ${size(file.bytes)} ↓`;host.appendChild(label);
+   host.dataset.attachment=file.id;host.classList.toggle('image-attachment',['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime));
+   const image=['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime);
+   const label=document.createElement('button');label.type='button';label.className=image?'file-image-open':'file-download';label.textContent=image?'':`${file.name} · ${size(file.bytes)} ↓`;label.setAttribute('aria-label',image?'Abrir imagem':`Baixar ${file.name}`);host.appendChild(label);
    const notice=document.createElement('small');host.appendChild(notice);
    if(file.deleted){label.disabled=true;notice.textContent='Arquivo excluído.';return;}
    label.onclick=()=>void openFile(()=>url(file.id,true),notice);
-   if(['image/png','image/jpeg','image/gif','image/webp'].includes(file.mime)){
-     const img=document.createElement('img');img.className='chat-file-image';img.alt=file.name;img.loading='lazy';host.prepend(img);url(file.id).then(link=>{if(img.isConnected)img.src=link;}).catch(e=>{img.remove();notice.textContent=e.message;});
+   if(image){
+     const img=document.createElement('img');img.className='chat-file-image';img.alt='Imagem anexada';img.loading='lazy';label.append(img);label.onclick=()=>void openImage(file.id,notice);const failed=e=>{label.hidden=true;notice.textContent=e?.message||'Não foi possível carregar a imagem.';};img.onerror=()=>failed();url(file.id).then(link=>{if(img.isConnected)img.src=link;}).catch(failed);
    }else if(['video/mp4','video/webm'].includes(file.mime)){
      const load=document.createElement('button');load.type='button';load.className='file-preview';load.textContent='▶ Abrir vídeo';host.prepend(load);
      load.onclick=async()=>{try{const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.className='chat-file-video';video.src=await url(file.id);load.replaceWith(video);}catch(e){notice.textContent=e.message;}};
    }else if(file.mime==='application/pdf'){
      const open=document.createElement('button');open.type='button';open.className='file-preview';open.textContent='▤ Abrir PDF';host.prepend(open);open.onclick=()=>void openFile(()=>url(file.id),notice);
    }
-   if(file.ownerId===window.TronoAuth.user?.id||(!privateMessage&&file.kind!=='direct'&&window.TronoAuth.user?.permissions?.moderateFiles)){const del=document.createElement('button');del.type='button';del.className='file-delete';del.textContent=file.ownerId===window.TronoAuth.user?.id?'Excluir anexo':'Moderar: excluir';host.appendChild(del);del.onclick=async()=>{if(!confirm(privateMessage||file.kind==='direct'?'Excluir este anexo da conversa privada?':'Excluir este anexo para todos no canal?'))return;del.disabled=true;try{await remove(file.id);host.replaceChildren(document.createTextNode('Arquivo excluído.'));}catch(e){notice.textContent=e.message;del.disabled=false;}};}
+   if(file.ownerId===window.TronoAuth.user?.id||(!privateMessage&&file.kind!=='direct'&&window.TronoAuth.user?.permissions?.moderateFiles)){const del=document.createElement('button');del.type='button';del.className='file-delete';del.textContent=file.ownerId===window.TronoAuth.user?.id?'Excluir anexo':'Moderar: excluir';if(image){del.setAttribute('aria-label',del.textContent);del.title=del.textContent;del.textContent='×';}host.appendChild(del);del.onclick=async()=>{if(!confirm(privateMessage||file.kind==='direct'?'Excluir este anexo da conversa privada?':'Excluir este anexo para todos no canal?'))return;del.disabled=true;try{await remove(file.id);host.replaceChildren(document.createTextNode('Arquivo excluído.'));}catch(e){notice.textContent=e.message;del.disabled=false;}};}
  }
- let cacheUser=null;window.addEventListener('trono-auth-change',e=>{const id=e.detail.user?.id;if(id!==cacheUser){cache.clear();deletedFiles.clear();cacheUser=id;}});
+ let cacheUser=null;window.addEventListener('trono-auth-change',e=>{const id=e.detail.user?.id;if(id!==cacheUser){cache.clear();deletedFiles.clear();document.querySelector('.attachment-image-viewer')?.close();cacheUser=id;}});
  window.addEventListener('trono-role-change',()=>{for(const host of document.querySelectorAll('[data-attachment]')){const record=attachments.get(host);if(record)renderAttachment(host,record.file,{private:record.privateMessage});}});
  window.TronoNetwork.onMessage(m=>{if(m.type==='attachment-deleted')markDeleted(m.id);});
  return {api,upload,url,remove,size,renderAttachment,limits,openFile};

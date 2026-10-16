@@ -600,7 +600,7 @@ window.TronoSocial = (()=>{
     chatHubMode=!!active;
     if(!chatHubMode)document.body.classList.remove('channel-text-active','channel-voice-active');
     document.body.classList.toggle('chat-only-active',chatHubMode);
-    if(chatHubMode)chatDrawerOpen=innerWidth>1000;
+    if(chatHubMode)chatDrawerOpen=chatRoomState?.channelType==='text';
     applyPanelMode();updateChatDrawerUI();updateButtons();updateTelemetryHeader();
     if(chatHubMode)showPanel(true);
   }
@@ -698,7 +698,7 @@ window.TronoSocial = (()=>{
     const input=$('courtChatInput');if(!input||chatUploadController)return;const text=input.value.trim(),file=pendingChatFile,roomId=window.TronoNetwork?.currentRoom;if(!text&&!file)return;
     if(!file){if(window.TronoNetwork?.sendChat(text)){attachmentStatus();input.value='';input.focus();}else attachmentStatus('Conexão interrompida. Aguarde a reconexão para enviar.');return;}
     chatUploadController=new AbortController();$('courtChatSend').disabled=true;$('attachFileBtn').disabled=true;input.disabled=true;let uploaded;
-    try{uploaded=await window.TronoFiles.upload(file,{roomId,signal:chatUploadController.signal,onProgress:n=>attachmentStatus(`Enviando ${file.name}: ${n}%`,true)});if(roomId!==window.TronoNetwork.currentRoom)throw new Error('O canal mudou durante o envio.');if(!window.TronoNetwork.sendChat(text,uploaded.id))throw new Error('Conexão interrompida. Tente novamente.');pendingChatFile=null;$('chatFileInput').value='';input.value='';attachmentStatus('Arquivo enviado.');}
+    try{uploaded=await window.TronoFiles.upload(file,{roomId,signal:chatUploadController.signal,onProgress:n=>attachmentStatus(`Enviando ${file.type.startsWith('image/')?'imagem':file.name}: ${n}%`,true)});if(roomId!==window.TronoNetwork.currentRoom)throw new Error('O canal mudou durante o envio.');if(!window.TronoNetwork.sendChat(text,uploaded.id))throw new Error('Conexão interrompida. Tente novamente.');pendingChatFile=null;$('chatFileInput').value='';input.value='';attachmentStatus('Arquivo enviado.');}
     catch(e){if(uploaded)await window.TronoFiles.remove(uploaded.id).catch(()=>{});attachmentStatus(e.message);}
     finally{chatUploadController=null;$('courtChatSend').disabled=false;$('attachFileBtn').disabled=false;input.disabled=false;input.focus();}
   }
@@ -772,9 +772,9 @@ window.TronoSocial = (()=>{
     };
     if(!enabled){source.connect(gainNode);return processor;}
     if(nativeOnly){
-      processor.nativeSuppression=rawStream.getAudioTracks()[0]?.getSettings?.().noiseSuppression===true;
-      try{denoiser=await window.TronoLightNoise.create(ctx,{onFailure:()=>void fallback()});source.connect(denoiser.input);denoiser.node.connect(gainNode);processor.mode='light';}
-      catch(err){console.warn('[TronoSocial] filtro leve indisponível',err);source.connect(gainNode);processor.mode=processor.nativeSuppression?'native':'unavailable';}
+      // Native suppression already runs on the capture. Stacking an expander
+      // here attenuated quiet syllables and changed the sound of native mode.
+      source.connect(gainNode);processor.mode=rawStream.getAudioTracks()[0]?.getSettings?.().noiseSuppression===true?'native':'unavailable';
       return processor;
     }
     try{
@@ -1743,9 +1743,8 @@ window.TronoSocial = (()=>{
     updateVoiceLightMode();
     const select=$('noiseModeSelect');if(select){select.value=noiseSuppression?noiseEngine:'off';select.disabled=noiseLoading;}
     const b=$('noiseSuppressionBtn');if(!b)return;const {mode}=noiseState();
-    const labels={off:['Desligado','Supressão desligada. O controle de volume continua ativo.'],idle:['Preparado',voiceLightMode?'Modo leve: a redução nativa será solicitada ao entrar na voz.':'O RNNoise será ativado no seu microfone ao entrar na voz.'],loading:['Iniciando…','Carregando o processamento do microfone…'],rnnoise:['RNNoise','RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.'],native:['Navegador',voiceLightMode?'Modo leve: redução nativa do navegador ativa; RNNoise pausado.':'RNNoise indisponível. A redução nativa do navegador está ativa.'],paused:['Pausado','Processamento pausado. Use Liberar áudio para retomá-lo.'],unavailable:['Indisponível','Não foi possível ativar a supressão. O microfone continua transmitindo.']};
-    labels.light=['Leve',`Filtro leve ativo: reduz graves e atenua o fundo entre falas. Redução nativa ${noiseState().nativeSuppression?'ativa':'não confirmada'}. Ruídos junto da voz podem permanecer.`];
-    if(mode==='idle'&&(voiceLightMode||noiseEngine==='native'))labels.idle=['Preparado','O filtro leve e a redução nativa serão solicitados ao entrar na voz.'];
+    const labels={off:['Desligado','Supressão desligada. O controle de volume continua ativo.'],idle:['Preparado',voiceLightMode?'Modo leve: a redução nativa será solicitada ao entrar na voz.':'O RNNoise será ativado no seu microfone ao entrar na voz.'],loading:['Iniciando…','Carregando o processamento do microfone…'],rnnoise:['RNNoise','RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.'],native:['Navegador','Redução nativa ativa no microfone.'],paused:['Pausado','Processamento pausado. Use Liberar áudio para retomá-lo.'],unavailable:['Indisponível','Não foi possível ativar a supressão. O microfone continua transmitindo.']};
+    if(mode==='idle'&&(voiceLightMode||noiseEngine==='native'))labels.idle=['Preparado','A redução nativa será solicitada ao entrar na voz.'];
     const [label,detail]=labels[mode];b.disabled=noiseLoading;b.classList.toggle('noise-active',noiseSuppression);b.classList.toggle('danger-active',!noiseSuppression);b.textContent='Supressor: '+label;b.title=detail;b.dataset.engine=mode;b.setAttribute('aria-pressed',String(noiseSuppression));
     if($('noiseSuppressionStatus'))$('noiseSuppressionStatus').textContent=detail;
   }
@@ -1758,7 +1757,7 @@ window.TronoSocial = (()=>{
     if(!window.TronoDesktop||noiseLoading||!['native','rnnoise','off'].includes(value))return;
     const previous={noiseEngine,noiseSuppression,voiceLightMode};noiseEngine=value;noiseSuppression=value!=='off';if(value==='rnnoise')voiceLightMode=false;
     const save=()=>{storage.setItem('mnDesktopNoiseMode',noiseEngine);storage.setItem('tronoNoiseSuppression',noiseSuppression?'1':'0');storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();};save();
-    try{if(voiceJoined){await acquireMic();await watchStream(meId(),localStream);}setStatus(value==='native'?'Redução leve selecionada. Confira o estado do filtro abaixo.':value==='rnnoise'?'RNNoise selecionado.':'Redução de ruído desligada.','ok');}
+    try{if(voiceJoined){await acquireMic();await watchStream(meId(),localStream);}setStatus(value==='native'?'Redução nativa selecionada.':value==='rnnoise'?'RNNoise selecionado.':'Redução de ruído desligada.','ok');}
     catch(err){({noiseEngine,noiseSuppression,voiceLightMode}=previous);save();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar a redução de ruído. A opção anterior foi mantida.','error');}
   }
   function updateVoiceLightMode(){
@@ -1769,7 +1768,7 @@ window.TronoSocial = (()=>{
     if(noiseLoading)return;const previous=voiceLightMode,previousEngine=noiseEngine;
     voiceLightMode=!voiceLightMode;if(window.TronoDesktop&&voiceLightMode&&noiseSuppression){noiseEngine='native';storage.setItem('mnDesktopNoiseMode',noiseEngine);}storage.setItem('tronoVoiceLightMode',voiceLightMode?'1':'0');updateNoiseButton();startTelemetry();
     if(!voiceJoined)return;
-    try{await acquireMic();await watchStream(meId(),localStream);setStatus(voiceLightMode?'Modo leve ativo: filtro de fundo entre falas e redução nativa quando disponível.':'Modo leve desligado. Preferências de áudio restauradas.','ok');}
+    try{await acquireMic();await watchStream(meId(),localStream);setStatus(voiceLightMode?'Modo leve ativo: redução nativa e menos trabalho visual.':'Modo leve desligado. Preferências de áudio restauradas.','ok');}
     catch(err){voiceLightMode=previous;noiseEngine=previousEngine;if(window.TronoDesktop)storage.setItem('mnDesktopNoiseMode',noiseEngine);storage.setItem('tronoVoiceLightMode',previous?'1':'0');updateNoiseButton();startTelemetry();if(err?.code!=='VOICE_CANCELLED')setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.','error');}
   }
 
@@ -1799,6 +1798,7 @@ window.TronoSocial = (()=>{
     privateVoiceRoster.clear();for(const [id,p] of next)privateVoiceRoster.set(id,p);syncPeers();
   }
   function consumeChatRoom(room){
+    if(room?.id!==chatRoomState?.id)chatDrawerOpen=room?.channelType==='text';
     if(room?.id!==chatRoomState?.id){if($('chatModerationDialog')?.open){moderationChoice=null;$('chatModerationDialog').close();}chatUploadController?.abort();pendingChatFile=null;if($('chatFileInput'))$('chatFileInput').value='';attachmentStatus();}
     chatRoomState=room||null;
     document.body.classList.toggle('channel-text-active',inChatHub()&&room?.channelType==='text');
@@ -1967,7 +1967,7 @@ window.TronoSocial = (()=>{
     $('olderChatMessages')?.addEventListener('click',()=>{if(chatHistoryBefore&&window.TronoNetwork.requestChatHistory(chatHistoryBefore))$('olderChatMessages').disabled=true;});
     $('returnToVoiceRoom')?.addEventListener('click',()=>{const id=window.TronoNetwork.primaryRoom;for(const button of document.querySelectorAll('[data-chat-channel]'))if(button.dataset.chatChannel===id){button.click();break;}});
     $('attachFileBtn')?.addEventListener('click',()=>{if(window.TronoNetwork?.currentRoom)$('chatFileInput').click();else attachmentStatus('Entre em um canal para anexar arquivos.');});
-    $('chatFileInput')?.addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const max=/\.(mp4|webm)$/i.test(file.name)?100_000_000:10_000_000;if(!file.size||file.size>max){pendingChatFile=null;e.target.value='';attachmentStatus(`Limite: ${window.TronoFiles.size(max)} por arquivo.`);return;}pendingChatFile=file;attachmentStatus(`${file.name} · ${window.TronoFiles.size(file.size)}. Clique em enviar.`,true);});
+    $('chatFileInput')?.addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const max=/\.(mp4|webm)$/i.test(file.name)?100_000_000:10_000_000;if(!file.size||file.size>max){pendingChatFile=null;e.target.value='';attachmentStatus(`Limite: ${window.TronoFiles.size(max)} por arquivo.`);return;}pendingChatFile=file;attachmentStatus(file.type.startsWith('image/')?'Imagem pronta. Clique em enviar.':`${file.name} · ${window.TronoFiles.size(file.size)}. Clique em enviar.`,true);});
     $('courtChatSend')?.addEventListener('click',sendChat);$('muteTextBtn')?.addEventListener('click',toggleTextMute);$('emojiBtn')?.addEventListener('click',ev=>{ev.stopPropagation();toggleEmojiPicker();});if($('muteTextBtn')){$('muteTextBtn').textContent=chatMuted?'Ativar chat':'Silenciar chat';$('muteTextBtn').classList.toggle('danger-active',chatMuted);}
     $('courtChatInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
     $('joinVoiceBtn')?.addEventListener('click',joinVoice);$('muteMicBtn')?.addEventListener('click',toggleMute);$('deafenVoiceBtn')?.addEventListener('click',toggleDeafen);$('cameraBtn')?.addEventListener('click',toggleCamera);$('screenShareBtn')?.addEventListener('click',toggleScreenShare);$('voiceSettingsBtn')?.addEventListener('click',()=>toggleVoiceSettings());$('voiceSettingsClose')?.addEventListener('click',()=>toggleVoiceSettings(false));$('noiseSuppressionBtn')?.addEventListener('click',toggleNoiseSuppression);$('voiceSfxBtn')?.addEventListener('click',toggleVoiceSfx);$('voiceMusicBtn')?.addEventListener('click',toggleVoiceMusic);$('refreshDevicesBtn')?.addEventListener('click',enumerateDevices);$('telemetryStatusPill')?.addEventListener('click',()=>toggleTelemetry());$('telemetryOpenBtn')?.addEventListener('click',()=>toggleTelemetry());$('telemetryCloseBtn')?.addEventListener('click',()=>toggleTelemetry(false));

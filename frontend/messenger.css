@@ -14,3 +14,5 @@ body:not(.desktop-app)>#messengerToggle.messenger-home-button{position:fixed;lef
 
 /* In the original narrow layout, Friends belongs to the channel strip. */
 #messengerToggle.messenger-inline-button{position:sticky;left:0;z-index:3;display:grid;justify-items:center;align-content:center;align-self:center;gap:3px;flex:0 0 62px;width:62px;min-width:62px;height:50px;min-height:50px;margin:0;padding:4px;border-radius:9px;background:var(--theme-panel,#142134);font-size:10px;box-shadow:3px 0 9px color-mix(in srgb,var(--theme-bg,#0b1420) 75%,transparent)}#messengerToggle.messenger-inline-button>svg{width:19px;height:19px}#chatOnlyScreen .mn-sidebar-scroll:has(>#messengerToggle.messenger-inline-button){display:flex;align-items:center;gap:8px;flex:0 0 auto;width:max-content;min-width:100%;overflow:visible;padding-top:0}#chatOnlyScreen .mn-sidebar-scroll:has(>#messengerToggle.messenger-inline-button)>.mn-channel-list{display:flex;width:auto;flex:0 0 auto;overflow:visible}
+
+#messengerAttachmentDraft .messenger-draft-image{display:block;max-height:100px;max-width:70%;object-fit:contain;border-radius:6px}

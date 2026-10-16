@@ -40,9 +40,11 @@ window.TronoMessenger=(()=>{
     }
     if(!ids.size)list.append(make('p','appearance-help','Adicione alguém da comunidade para conversar em particular.'));list.scrollTop=scroll;window.TronoProfile.hydrate(list);renderHeader();
   }
+  let draftPreviewURL=null;
   function renderAttachmentDraft(){
+    if(draftPreviewURL){URL.revokeObjectURL(draftPreviewURL);draftPreviewURL=null;}
     const host=$('messengerAttachmentDraft');host.replaceChildren();if(!peer||!draft().file){host.hidden=true;return;}host.hidden=false;
-    const selected=draft().file;host.append(make('span','',selected.name+' · '+window.TronoFiles.size(selected.size)));
+    const selected=draft().file;if(selected.type.startsWith('image/')){const img=make('img','messenger-draft-image');img.alt='Prévia da imagem';draftPreviewURL=URL.createObjectURL(selected);img.src=draftPreviewURL;host.append(img);}else host.append(make('span','',selected.name+' · '+window.TronoFiles.size(selected.size)));
     const remove=actionButton('Remover anexo',()=>{if(sending()&&operation.stage==='upload'){operation.controller.abort();operation=null;}const item=draft();item.file=null;item.uploaded=null;item.pending=null;$('messengerFile').value='';renderAttachmentDraft();renderHeader();status('Anexo removido.');});remove.disabled=!!sending()&&operation.stage==='send';host.append(remove);
   }
   function renderHeader(){
@@ -91,7 +93,7 @@ window.TronoMessenger=(()=>{
     item.text=$('messengerInput').value;const op={owner,peer,generation,controller:new AbortController(),stage:file&&!item.uploaded?'upload':'send'};operation=op;renderHeader();status(file?'Preparando anexo…':'Enviando…');
     try{
       let attachment=item.uploaded;
-      if(file&&!attachment){attachment=await window.TronoFiles.upload(file,{kind:'direct',peerId:op.peer,signal:op.controller.signal,onProgress:percent=>{if(currentOperation(op))status('Enviando '+file.name+': '+percent+'%');}});if(op.owner!==owner)return;if(item.file===file)item.uploaded=attachment;}
+      if(file&&!attachment){attachment=await window.TronoFiles.upload(file,{kind:'direct',peerId:op.peer,signal:op.controller.signal,onProgress:percent=>{if(currentOperation(op))status('Enviando '+(file.type.startsWith('image/')?'imagem':file.name)+': '+percent+'%');}});if(op.owner!==owner)return;if(item.file===file)item.uploaded=attachment;}
       if(!currentOperation(op))return;op.stage='send';renderHeader();
       const attachmentId=file?attachment.id:null,prior=item.pending,payload=prior&&prior.peerId===op.peer&&prior.text===text&&prior.roomId===roomId&&prior.attachmentId===attachmentId?prior:{id:crypto.randomUUID(),peerId:op.peer,text,roomId,attachmentId};item.pending=payload;
       const message=await request('send',payload);if(owner!==op.owner)return;

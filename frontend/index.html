@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="style.css?v=091sharingclips" />
   <link rel="stylesheet" href="mn-chat.css?v=091sharingclips" />
   <link rel="stylesheet" href="auth.css?v=095desktop013" />
-  <link rel="stylesheet" href="profile-files.css?v=091sharingclips" />
+  <link rel="stylesheet" href="profile-files.css?v=119polish" />
   <link rel="stylesheet" href="community.css?v=091sharingclips" />
   <link rel="stylesheet" href="modern.css?v=091sharingclips" />
   <link rel="stylesheet" href="refinements.css?v=091sharingclips" />
@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="desktop-shell.css?v=118communitycontrols" />
   <link rel="stylesheet" href="desktop-settings.css?v=101layouts" />
   <link rel="stylesheet" href="media-layout.css?v=098desktop016" />
-  <link rel="stylesheet" href="messenger.css?v=101layouts" />
+  <link rel="stylesheet" href="messenger.css?v=119polish" />
   <link rel="stylesheet" href="call-scene.css?v=098desktop016" />
   <link rel="stylesheet" href="court.css?v=100court" />
   <link rel="stylesheet" href="chat-moderation.css?v=101layouts" />
@@ -31,13 +31,13 @@
   <link rel="stylesheet" href="azul-art.css?v=105artwork" />
   <link rel="stylesheet" href="roguelite-host.css?v=107cinzas" />
   <link rel="stylesheet" href="game-covers.css?v=110tabletop"/>
-  <link rel="stylesheet" href="splendor.css?v=110tabletop"/>
+  <link rel="stylesheet" href="splendor.css?v=119polish"/>
   <link rel="stylesheet" href="tabletop-audio.css?v=110tabletop"/>
-  <link rel="stylesheet" href="love-letter.css?v=110tabletop"/>
+  <link rel="stylesheet" href="love-letter.css?v=119polish"/>
   <link rel="stylesheet" href="voice-reception.css?v=111voice">
   <link rel="stylesheet" href="court-display.css?v=112tabletop">
-  <link rel="stylesheet" href="tabletop-refinements.css?v=112tabletop">
-  <link rel="stylesheet" href="call-workspace.css?v=118communitycontrols">
+  <link rel="stylesheet" href="tabletop-refinements.css?v=119polish">
+  <link rel="stylesheet" href="call-workspace.css?v=119polish">
   <link rel="stylesheet" href="member-profile.css?v=115workspace">
   <link rel="stylesheet" href="profile-media.css?v=116profilemedia" />
 </head>
@@ -328,10 +328,10 @@
               <button id="voiceSfxBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar efeitos da interface e avisos da chamada">🔔 Efeitos: Ligados</button>
               <button id="voiceMusicBtn" class="royal-btn settings-secondary audio-pref-btn" type="button" title="Ativar ou silenciar a música da aplicação">♫ Música: Ligada</button>
             </div>
-            <label id="noiseModeLabel" class="desktop-noise-mode" hidden>Redução de ruído<select id="noiseModeSelect"><option value="native">Leve · nativa + filtro de fundo</option><option value="rnnoise">RNNoise · redução mais forte</option><option value="off">Desligada</option></select></label>
+            <label id="noiseModeLabel" class="desktop-noise-mode" hidden>Redução de ruído<select id="noiseModeSelect"><option value="native">Nativa · padrão</option><option value="rnnoise">RNNoise · redução mais forte</option><option value="off">Desligada</option></select></label>
             <small id="noiseSuppressionStatus" class="noise-suppression-status" role="status" aria-live="polite"></small>
             <button id="voiceLightModeBtn" class="royal-btn settings-secondary" type="button" aria-pressed="false" aria-describedby="voiceLightModeHelp">Modo leve para jogar: Desligado</button>
-            <small id="voiceLightModeHelp" class="noise-suppression-status">Usa a redução nativa com filtro leve de graves e de fundo entre falas, e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.</small>
+            <small id="voiceLightModeHelp" class="noise-suppression-status">Usa a redução nativa e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.</small>
             <label class="auth-check"><input id="voiceProtection" type="checkbox" checked> Proteger a voz recebida durante jogos</label><small id="voiceProtectionStatus" class="settings-context-help">Ajusta a margem de reprodução de cada voz, sem trocar trilhas ou reconectar.</small><small class="settings-context-help">Pode acrescentar um pequeno atraso para tolerar oscilações. No Windows, solicita prioridade moderada somente ao serviço de áudio do app. Não reserva CPU e não altera os volumes.</small>
             <div class="voice-devices voice-devices-vertical"><label><span>Música de fundo</span><select id="voiceMusicTrackSelect" aria-label="Trocar música do chat de voz"></select></label></div>
             <label class="mn-gain-label"><span>Volume da música</span><output id="voiceMusicVolumeValue">32%</output><input id="voiceMusicVolume" type="range" min="0" max="100" value="32" /></label>
@@ -423,7 +423,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.6-Windows.exe" download="MN-Trono-0.2.6-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.7-Windows.exe" download="MN-Trono-0.2.7-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -625,21 +625,21 @@
   <script src="avatar-icons.js?v=091sharingclips"></script>
   <script src="profile-data.js?v=116profilemedia"></script>
   <script src="profile-gifs.js?v=116profilemedia"></script>
-  <script src="profile-files.js?v=118communitycontrols"></script>
+  <script src="profile-files.js?v=119polish"></script>
   <script src="light-noise.js?v=112tabletop"></script>
   <script src="noise-suppression.js?v=091sharingclips"></script>
   <script src="stream-controls.js?v=091sharingclips"></script>
   <script src="personal-prefs.js?v=099desktop017"></script>
   <script src="voice-reception.js?v=111voice"></script>
   <script src="call-stability.js?v=111voice"></script>
-  <script src="social.js?v=118communitycontrols"></script>
+  <script src="social.js?v=119polish"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
   <script src="clip-desktop.js?v=095desktop013"></script>
   <script src="game-rules.js?v=100court"></script>
   <script src="bot-names.js?v=110tabletop"></script>
-  <script src="game.js?v=116profilemedia"></script>
+  <script src="game.js?v=119polish"></script>
   <script src="court-display.js?v=112tabletop"></script>
   <script src="portal.js?v=110tabletop"></script>
   <script src="azul-rules.js?v=103azul"></script>
@@ -647,9 +647,9 @@
   <script src="games.js?v=112tabletop"></script>
   <script src="splendor-data.js?v=110tabletop"></script>
   <script src="splendor-rules.js?v=110tabletop"></script>
-  <script src="splendor.js?v=112tabletop"></script>
+  <script src="splendor.js?v=119polish"></script>
   <script src="love-letter-rules.js?v=110tabletop"></script>
-  <script src="love-letter.js?v=110tabletop"></script>
+  <script src="love-letter.js?v=119polish"></script>
   <script src="roguelite-host.js?v=107cinzas"></script>
   <script src="community.js?v=116profilemedia"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
@@ -658,14 +658,14 @@
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
   <script src="call-controls-layout.js?v=118communitycontrols"></script>
-  <script src="desktop-shell.js?v=117callcontrols"></script>
+  <script src="desktop-shell.js?v=119polish"></script>
   <script src="desktop-settings.js?v=115workspace"></script>
   <script src="app-layout.js?v=118communitycontrols"></script>
   <script src="media-layout.js?v=112tabletop"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
   <script src="notifications.js?v=101layouts"></script>
-  <script src="messenger.js?v=113profiles"></script>
+  <script src="messenger.js?v=119polish"></script>
   <script src="desktop-updates.js?v=117callcontrols"></script>
-  <script src="call-workspace.js?v=118communitycontrols"></script>
+  <script src="call-workspace.js?v=119polish"></script>
 </body>
 </html>

@@ -101,6 +101,26 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
     await expect.poll(() => owner.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
     const invitation = viewer.locator('.screen-share-tile.stream-invitation');
 
+    await t.test('room rows keep text closed and the small chat button opens text without moving voice',async()=>{
+      for(const layout of ['original','discord']){
+        await viewer.evaluate(layout=>window.TronoAppLayout.apply(layout),layout);
+        const identity=await viewer.evaluate(()=>({mic:window.TronoSocial.getLocalAudioTrack().id,room:window.TronoNetwork.primaryRoom}));
+        await viewer.locator('[data-chat-channel="chat-livre"]').click();
+        await expect(viewer.locator('#callWorkspace')).toHaveAttribute('data-messages','none');
+        await viewer.locator('[data-channel-text="chat-livre"]').click();
+        await expect(viewer.locator('#callWorkspace')).toHaveAttribute('data-messages','channel');
+        await viewer.locator('[data-chat-channel="chat-livre"]').click();
+        await expect(viewer.locator('#callWorkspace')).toHaveAttribute('data-messages','none');
+        await viewer.locator('[data-channel-text="chat-jogos"]').click();
+        await expect.poll(()=>viewer.evaluate(()=>window.TronoNetwork.currentRoom)).toBe('chat-jogos');
+        await expect(viewer.locator('#courtChatInput')).toBeVisible();
+        assert.deepEqual(await viewer.evaluate(()=>({mic:window.TronoSocial.getLocalAudioTrack().id,room:window.TronoNetwork.primaryRoom})),identity);
+        await viewer.locator('[data-chat-channel="chat-livre"]').click();
+        await expect.poll(()=>viewer.evaluate(()=>window.TronoNetwork.currentRoom)).toBe('chat-livre');
+        await expect(viewer.locator('#callWorkspace')).toHaveAttribute('data-messages','none');
+      }
+    });
+
     await t.test('watch button is reachable without maximizing, in both layouts and small windows', async () => {
       for (const mode of ['original', 'discord']) {
         await viewer.evaluate(mode => window.TronoAppLayout.apply(mode), mode);
