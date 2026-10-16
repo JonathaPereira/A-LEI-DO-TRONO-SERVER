@@ -14,13 +14,16 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Electron em `electron/`, consumindo o renderer gerado pelo Next.
 - Comandos de desenvolvimento, formatação, tipagem e build.
 - Documentos históricos fora da raiz e caminhos de CI/empacotamento atualizados.
+- Transporte WebSocket em TypeScript, com pendências e fila de identidade únicas.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. O transporte de rede
-e a captura WebRTC permanecem nesses controladores. `server/runtime.cjs` ainda
-reúne regras de A Lei do Trono e coordenação de canais. Módulos JS existentes
+React ou TypeScript apenas porque a marcação foi convertida. Os comandos de rede,
+estado de participação e captura WebRTC permanecem nesses controladores. O socket,
+timeouts, requisições e fila de identidade agora pertencem a `lib/socket/transport.ts`.
+`server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
+Módulos JS existentes
 ainda não recebem a verificação estrita de tipos dos módulos TS.
 
 ## Limpeza após a migração
@@ -45,12 +48,34 @@ e empacotamento/retenção (9) passaram. A configuração de autenticação do e
 foi conferida localmente, com valores fictícios e sem chamadas ao Supabase.
 A limitação da suíte antiga `test:frontend` descrita abaixo permanece.
 
+## Transporte WebSocket — 16/10/2026
+
+- `lib/socket/transport.ts` concentra conexão única, listeners, deadlines e todas
+  as requisições correlacionadas. Respostas precisam coincidir em tipo e ID.
+- Timeout de abertura fecha o socket e permite uma nova tentativa. Desconexão
+  rejeita pendências, cancela a fila de identidade e ignora eventos antigos.
+- Operações de identidade usam a conexão recebida em `serializeIdentity`, ligada
+  àquela sessão. Após logout, não podem autenticar um socket novo nem restaurar
+  resultados que chegaram antes de a operação assíncrona continuar.
+- `legacy/network.js` perdeu socket, timers e mapas de pendências. Permanece como
+  adaptador de comandos e estado de participação até a conversão dos domínios.
+- `LegacyRuntime` fornece a fábrica importada pelo Next antes de carregar os
+  controladores. Não há outra implementação copiada do transporte em `public/`.
+- `npm run test:socket` executa 13 regressões do transporte e uma integração com
+  backend real local e autenticação simulada. Também faz parte de `npm test`.
+
+Tipagem, formatação, build estático, `npm test` (4 integrações anteriores e 93
+testes), `test:ui` (3) e `test:desktop:layout` (1) passaram. O Electron manteve
+socket, peers e trilhas de mídia ao navegar e trocar layouts. A integração nova
+conferiu cache e troca de identidade, reconexão, mensagens e participação
+independente em texto, voz e jogo. Não houve acesso a infraestrutura remota.
+
 ## Próximas alterações, em ordem
 
-1. Extrair de `legacy/network.js` um transporte tipado em `lib/socket/`.
-   Preservar uma conexão por sessão, correlação de requisições, autenticação
-   serializada e independência entre texto, voz e jogo. Converter consumidores
-   por fluxo e apagar o transporte antigo quando não houver usos.
+1. Converter comandos, capacidades e estado de participação de `legacy/network.js`
+   por fluxo. O transporte já foi extraído para `lib/socket/transport.ts`; não
+   recriar sockets, mapas de pendências ou fila de identidade nos consumidores.
+   Tipar e validar os payloads por domínio e apagar o adaptador quando não houver usos.
 2. Extrair envio/estado de mensagens e anexos de `legacy/social.js`.
    Substituir `chat-actions.ts` e converter listas de mensagens e canais para
    estado React. Validar anexos, histórico e moderação.

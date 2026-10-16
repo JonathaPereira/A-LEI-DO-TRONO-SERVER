@@ -9,9 +9,8 @@ window.TronoNetwork = (() => {
       (isLocal ? `http://${location.hostname}:10000` : DEFAULT_BACKEND_HTTP),
   );
   const BACKEND_WS = `${BACKEND_HTTP.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')}/ws`;
-  let socket = null,
-    connected = false,
-    clientId = null,
+  const transport = window.TronoSocketTransport.create({ url: BACKEND_WS });
+  let clientId = null,
     currentRoom = null,
     primaryRoom = null,
     gameRoom = null,
@@ -21,14 +20,10 @@ window.TronoNetwork = (() => {
     splendorSupported = false,
     loveLetterSupported = false,
     gameActivitySupported = false,
-    connectPromise = null,
-    authenticatedToken = null;
-  let authenticatedGuest = null;
-  const listeners = new Set(),
-    pendingSfu = new Map(),
-    pendingNameChecks = new Map(),
-    pendingAuth = new Map(),
-    pendingGuest = new Map();
+    authenticatedToken = null,
+    authenticatedGuest = null;
+  const listeners = new Set();
+  const { connect, send } = transport;
   const emit = (msg) =>
     listeners.forEach((fn) => {
       try {
@@ -37,226 +32,93 @@ window.TronoNetwork = (() => {
         console.warn('[TronoNetwork]', err);
       }
     });
-  const makeId = () =>
-    globalThis.crypto?.randomUUID?.() ||
-    `r${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
-  function rejectPending(reason = 'Conexão encerrada.') {
-    for (const [id, p] of pendingSfu) {
-      clearTimeout(p.timer);
-      p.reject(Object.assign(new Error(reason), { code: 'NETWORK_CLOSED' }));
-      pendingSfu.delete(id);
+  transport.onMessage((msg) => {
+    if (msg.type === 'connection' && !msg.connected) {
+      gameActivitySupported = false;
+      authenticatedToken = null;
+      authenticatedGuest = null;
     }
-    for (const [id, p] of pendingNameChecks) {
-      clearTimeout(p.timer);
-      p.reject(Object.assign(new Error(reason), { code: 'NETWORK_CLOSED' }));
-      pendingNameChecks.delete(id);
+    if (msg.type === 'welcome') {
+      clientId = msg.clientId;
+      azulSupported = !!msg.features?.azul;
+      splendorSupported = !!msg.features?.splendor;
+      loveLetterSupported = !!msg.features?.loveLetter;
+      independentTextChannels = !!msg.features?.independentTextChannels;
+      independentGameVoice = !!msg.features?.independentGameVoice;
+      gameActivitySupported = !!msg.features?.gameActivity;
+      if (msg.serverVersion && msg.serverVersion !== CLIENT_VERSION)
+        emit({
+          type: 'version-mismatch',
+          clientVersion: CLIENT_VERSION,
+          serverVersion: msg.serverVersion,
+        });
     }
-    for (const [id, p] of pendingAuth) {
-      clearTimeout(p.timer);
-      p.reject(Object.assign(new Error(reason), { code: 'NETWORK_CLOSED' }));
-      pendingAuth.delete(id);
+    if (msg.type === 'joined-room') {
+      primaryRoom = msg.room?.id || null;
+      currentRoom = primaryRoom;
+      if (msg.room?.kind === 'game') gameRoom = primaryRoom;
     }
-    for (const [id, p] of pendingGuest) {
-      clearTimeout(p.timer);
-      p.reject(Object.assign(new Error(reason), { code: 'NETWORK_CLOSED' }));
-      pendingGuest.delete(id);
+    if (msg.type === 'joined-game-room') {
+      gameRoom = msg.room.id;
+      primaryRoom = msg.primaryRoomId || null;
+      currentRoom = msg.chatRoomId || null;
     }
-  }
-  function connect() {
-    if (connected && socket?.readyState === WebSocket.OPEN) return Promise.resolve(true);
-    if (connectPromise) return connectPromise;
-    connectPromise = new Promise((resolve) => {
-      let settled = false;
-      const finish = (v) => {
-        if (!settled) {
-          settled = true;
-          resolve(v);
-        }
-      };
-      try {
-        const connection = new WebSocket(BACKEND_WS);
-        socket = connection;
-        const timer = setTimeout(() => finish(false), 15000);
-        socket.onopen = () => {
-          if (socket !== connection) return;
-          clearTimeout(timer);
-          connected = true;
-          emit({ type: 'connection', connected: true });
-          finish(true);
-        };
-        socket.onmessage = (e) => {
-          if (socket !== connection) return;
-          try {
-            const msg = JSON.parse(e.data);
-            if (msg.type === 'welcome') {
-              clientId = msg.clientId;
-              azulSupported = !!msg.features?.azul;
-              splendorSupported = !!msg.features?.splendor;
-              loveLetterSupported = !!msg.features?.loveLetter;
-              independentTextChannels = !!msg.features?.independentTextChannels;
-              independentGameVoice = !!msg.features?.independentGameVoice;
-              gameActivitySupported = !!msg.features?.gameActivity;
-              if (msg.serverVersion && msg.serverVersion !== CLIENT_VERSION)
-                emit({
-                  type: 'version-mismatch',
-                  clientVersion: CLIENT_VERSION,
-                  serverVersion: msg.serverVersion,
-                });
-            }
-            if (msg.type === 'sfu-response' && msg.requestId && pendingSfu.has(msg.requestId)) {
-              const p = pendingSfu.get(msg.requestId);
-              pendingSfu.delete(msg.requestId);
-              clearTimeout(p.timer);
-              if (msg.ok) p.resolve(msg.data);
-              else
-                p.reject(
-                  Object.assign(new Error(msg.error?.message || 'Falha na operação SFU.'), {
-                    code: msg.error?.code || 'SFU_ERROR',
-                    detail: msg.error,
-                  }),
-                );
-            }
-            if (
-              msg.type === 'name-check-result' &&
-              msg.requestId &&
-              pendingNameChecks.has(msg.requestId)
-            ) {
-              const p = pendingNameChecks.get(msg.requestId);
-              pendingNameChecks.delete(msg.requestId);
-              clearTimeout(p.timer);
-              p.resolve(msg);
-            }
-            if (msg.type === 'auth-result' && pendingAuth.has(msg.requestId)) {
-              const p = pendingAuth.get(msg.requestId);
-              pendingAuth.delete(msg.requestId);
-              clearTimeout(p.timer);
-              if (msg.ok) {
-                authenticatedToken = p.token;
-                authenticatedGuest = null;
-                p.resolve(msg.user);
-              } else {
-                authenticatedToken = null;
-                p.reject(
-                  Object.assign(new Error(msg.error?.message || 'Entre novamente na sua conta.'), {
-                    code: msg.error?.code || 'AUTH_REQUIRED',
-                  }),
-                );
-              }
-            }
-            if (msg.type === 'guest-result' && pendingGuest.has(msg.requestId)) {
-              const p = pendingGuest.get(msg.requestId);
-              pendingGuest.delete(msg.requestId);
-              clearTimeout(p.timer);
-              if (msg.ok) {
-                authenticatedGuest = msg.guest;
-                authenticatedToken = null;
-                p.resolve(msg.guest);
-              } else
-                p.reject(
-                  Object.assign(
-                    new Error(msg.error?.message || 'Não foi possível entrar como convidado.'),
-                    { code: msg.error?.code || 'GUEST_FAILED' },
-                  ),
-                );
-            }
-            if (msg.type === 'joined-room') {
-              primaryRoom = msg.room?.id || null;
-              currentRoom = primaryRoom;
-              if (msg.room?.kind === 'game') gameRoom = primaryRoom;
-            }
-            if (msg.type === 'joined-game-room') {
-              gameRoom = msg.room.id;
-              primaryRoom = msg.primaryRoomId || null;
-              currentRoom = msg.chatRoomId || null;
-            }
-            if (msg.type === 'left-game-room') {
-              gameRoom = null;
-              primaryRoom = msg.primaryRoomId || null;
-              currentRoom = msg.chatRoomId || null;
-            }
-            if (msg.type === 'left-voice-room') {
-              primaryRoom = null;
-              currentRoom = msg.chatRoomId || null;
-            }
-            if (msg.type === 'voice-room-attached') {
-              primaryRoom = msg.room.id;
-              if (!currentRoom) currentRoom = primaryRoom;
-            }
-            if (msg.type === 'joined-text-channel') {
-              currentRoom = msg.room?.id || null;
-              primaryRoom = msg.primaryRoomId || null;
-            }
-            if (msg.type === 'channel-deleted' && msg.roomId === primaryRoom) primaryRoom = null;
-            if (msg.type === 'channel-deleted' && msg.roomId === currentRoom) currentRoom = null;
-            emit(msg);
-          } catch (err) {
-            console.warn('[TronoNetwork] mensagem inválida', err);
-          }
-        };
-        socket.onclose = (e) => {
-          clearTimeout(timer);
-          if (socket !== connection) {
-            finish(false);
-            return;
-          }
-          connected = false;
-          gameActivitySupported = false;
-          authenticatedToken = null;
-          authenticatedGuest = null;
-          socket = null;
-          connectPromise = null;
-          rejectPending();
-          emit({ type: 'connection', connected: false, code: e.code });
-          finish(false);
-        };
-        socket.onerror = () => {};
-      } catch {
-        connectPromise = null;
-        finish(false);
-      }
-    }).finally(() => {
-      if (!connected) connectPromise = null;
+    if (msg.type === 'left-game-room') {
+      gameRoom = null;
+      primaryRoom = msg.primaryRoomId || null;
+      currentRoom = msg.chatRoomId || null;
+    }
+    if (msg.type === 'left-voice-room') {
+      primaryRoom = null;
+      currentRoom = msg.chatRoomId || null;
+    }
+    if (msg.type === 'voice-room-attached') {
+      primaryRoom = msg.room.id;
+      if (!currentRoom) currentRoom = primaryRoom;
+    }
+    if (msg.type === 'joined-text-channel') {
+      currentRoom = msg.room?.id || null;
+      primaryRoom = msg.primaryRoomId || null;
+    }
+    if (msg.type === 'channel-deleted' && msg.roomId === primaryRoom) primaryRoom = null;
+    if (msg.type === 'channel-deleted' && msg.roomId === currentRoom) currentRoom = null;
+    emit(msg);
+  });
+
+  function responseError(msg, message, code) {
+    return Object.assign(new Error(msg.error?.message || message), {
+      code: msg.error?.code || code,
+      detail: msg.error,
     });
-    return connectPromise;
   }
-  function send(type, payload = {}) {
-    if (!connected || socket?.readyState !== WebSocket.OPEN) return false;
-    socket.send(JSON.stringify({ type, ...payload }));
-    return true;
-  }
-  let authChain = Promise.resolve();
   function authenticate(token) {
-    const task = authChain.catch(() => {}).then(() => authenticateNow(token));
-    authChain = task;
-    return task;
+    return transport.serializeIdentity((connection) => authenticateNow(token, connection));
   }
-  async function authenticateNow(token) {
+  async function authenticateNow(token, connection) {
     if (!token)
       throw Object.assign(new Error('Entre na sua conta para continuar.'), {
         code: 'AUTH_REQUIRED',
       });
-    if (!connected) await connect();
-    if (!connected) throw new Error('Servidor indisponível. Tente novamente.');
+    if (!connection.connected) await connection.connect();
+    if (!connection.connected) throw new Error('Servidor indisponível. Tente novamente.');
     if (authenticatedToken === token) return window.TronoAuth?.user;
-    const existing = [...pendingAuth.values()].find((p) => p.token === token);
-    if (existing) return existing.promise;
-    const requestId = makeId();
-    let pending;
-    const promise = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        pendingAuth.delete(requestId);
-        reject(new Error('Tempo limite ao entrar na conta.'));
-      }, 18000);
-      pending = { resolve, reject, timer, token, promise: null };
-      pendingAuth.set(requestId, pending);
-      if (!send('authenticate', { requestId, access_token: token })) {
-        clearTimeout(timer);
-        pendingAuth.delete(requestId);
-        reject(new Error('Conexão interrompida.'));
-      }
-    });
-    pending.promise = promise;
-    return promise;
+    const msg = await connection.request(
+      'authenticate',
+      { access_token: token },
+      {
+        responseType: 'auth-result',
+        timeoutMs: 18000,
+        timeoutMessage: 'Tempo limite ao entrar na conta.',
+        offlineMessage: 'Conexão interrompida.',
+      },
+    );
+    if (msg.ok !== true || !msg.user || typeof msg.user.id !== 'string') {
+      authenticatedToken = null;
+      throw responseError(msg, 'Entre novamente na sua conta.', 'AUTH_REQUIRED');
+    }
+    authenticatedToken = token;
+    authenticatedGuest = null;
+    return msg.user;
   }
   async function ensureAuthenticated() {
     if (!window.TronoAuth) return true; // Only used by isolated older fixtures.
@@ -275,29 +137,36 @@ window.TronoNetwork = (() => {
     }
   }
   function authenticateGuest(name, ticket) {
-    const task = authChain
-      .catch(() => {})
-      .then(async () => {
-        if (!connected) await connect();
-        if (!connected) throw new Error('Servidor indisponível.');
-        if (
-          authenticatedGuest &&
-          authenticatedGuest.ticket === ticket &&
-          authenticatedGuest.nickname === name
-        )
-          return authenticatedGuest;
-        const requestId = makeId();
-        return new Promise((resolve, reject) => {
-          const timer = setTimeout(() => {
-            pendingGuest.delete(requestId);
-            reject(new Error('Tempo limite ao entrar como convidado.'));
-          }, 15000);
-          pendingGuest.set(requestId, { resolve, reject, timer });
-          send('guest-authenticate', { requestId, name, ticket });
-        });
-      });
-    authChain = task;
-    return task;
+    return transport.serializeIdentity(async (connection) => {
+      if (!connection.connected) await connection.connect();
+      if (!connection.connected) throw new Error('Servidor indisponível.');
+      if (
+        authenticatedGuest &&
+        authenticatedGuest.ticket === ticket &&
+        authenticatedGuest.nickname === name
+      )
+        return authenticatedGuest;
+      const msg = await connection.request(
+        'guest-authenticate',
+        { name, ticket },
+        {
+          responseType: 'guest-result',
+          timeoutMs: 15000,
+          timeoutMessage: 'Tempo limite ao entrar como convidado.',
+        },
+      );
+      if (
+        msg.ok !== true ||
+        typeof msg.guest?.id !== 'string' ||
+        typeof msg.guest.ticket !== 'string' ||
+        typeof msg.guest.nickname !== 'string' ||
+        !Number.isFinite(msg.guest.expiresAt)
+      )
+        throw responseError(msg, 'Não foi possível entrar como convidado.', 'GUEST_FAILED');
+      authenticatedGuest = msg.guest;
+      authenticatedToken = null;
+      return msg.guest;
+    });
   }
   async function ensureGameIdentity(name) {
     if (window.TronoAuth && !window.TronoAuth.user) {
@@ -306,46 +175,25 @@ window.TronoNetwork = (() => {
     return ensureAuthenticated();
   }
   function disconnect() {
-    const previous = socket;
-    socket = null;
-    connected = false;
-    gameActivitySupported = false;
-    authenticatedToken = null;
-    authenticatedGuest = null;
     currentRoom = null;
     primaryRoom = null;
     gameRoom = null;
-    connectPromise = null;
-    rejectPending();
-    previous?.close(1000, 'Saída da conta');
-    emit({ type: 'connection', connected: false });
+    transport.disconnect();
   }
-  function requestSfu(action, payload = {}, timeoutMs = 18000) {
-    if (!connected || socket?.readyState !== WebSocket.OPEN)
-      return Promise.reject(
-        Object.assign(new Error('Servidor offline.'), { code: 'NETWORK_OFFLINE' }),
-      );
-    const requestId = makeId();
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        pendingSfu.delete(requestId);
-        reject(
-          Object.assign(new Error('Tempo limite da operação SFU excedido.'), {
-            code: 'SFU_TIMEOUT',
-          }),
-        );
-      }, timeoutMs);
-      pendingSfu.set(requestId, { resolve, reject, timer });
-      if (!send('sfu-request', { requestId, action, payload })) {
-        clearTimeout(timer);
-        pendingSfu.delete(requestId);
-        reject(
-          Object.assign(new Error('Não foi possível enviar a operação SFU.'), {
-            code: 'NETWORK_OFFLINE',
-          }),
-        );
-      }
-    });
+  async function requestSfu(action, payload = {}, timeoutMs = 18000) {
+    const msg = await transport.request(
+      'sfu-request',
+      { action, payload },
+      {
+        responseType: 'sfu-response',
+        timeoutMs,
+        timeoutMessage: 'Tempo limite da operação SFU excedido.',
+        timeoutCode: 'SFU_TIMEOUT',
+        offlineMessage: 'Não foi possível enviar a operação SFU.',
+      },
+    );
+    if (msg.ok !== true) throw responseError(msg, 'Falha na operação SFU.', 'SFU_ERROR');
+    return msg.data;
   }
   async function checkName(name, timeoutMs = 5000) {
     if (!(await ensureGameIdentity(name)))
@@ -354,40 +202,40 @@ window.TronoNetwork = (() => {
         code: 'AUTH_REQUIRED',
         message: 'Entre na sua conta ou escolha um nome de convidado para jogar.',
       };
-    if (!connected) await connect();
-    if (!connected || socket?.readyState !== WebSocket.OPEN)
+    if (!transport.connected) await connect();
+    if (!transport.connected)
       return {
         available: false,
         name: String(name || ''),
         code: 'NETWORK_OFFLINE',
         message: 'Servidor offline; não foi possível validar o nome.',
       };
-    const requestId = makeId();
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        pendingNameChecks.delete(requestId);
-        reject(
-          Object.assign(new Error('Tempo limite ao validar nome.'), { code: 'NAME_CHECK_TIMEOUT' }),
-        );
-      }, timeoutMs);
-      pendingNameChecks.set(requestId, { resolve, reject, timer });
-      if (!send('check-name', { requestId, name })) {
-        clearTimeout(timer);
-        pendingNameChecks.delete(requestId);
-        reject(Object.assign(new Error('Servidor offline.'), { code: 'NETWORK_OFFLINE' }));
-      }
-    });
+    const msg = await transport.request(
+      'check-name',
+      { name },
+      {
+        responseType: 'name-check-result',
+        timeoutMs,
+        timeoutMessage: 'Tempo limite ao validar nome.',
+        timeoutCode: 'NAME_CHECK_TIMEOUT',
+      },
+    );
+    if (typeof msg.available !== 'boolean')
+      throw Object.assign(new Error('Resposta inválida ao validar nome.'), {
+        code: 'INVALID_RESPONSE',
+      });
+    return msg;
   }
   async function joinRoom(roomId, name) {
     if (!(await (roomId.startsWith('sala-') ? ensureGameIdentity(name) : ensureAuthenticated())))
       return false;
-    if (!connected) await connect();
-    if (connected)
+    if (!transport.connected) await connect();
+    if (transport.connected)
       send(roomId.startsWith('sala-') && independentGameVoice ? 'join-game-room' : 'join-room', {
         roomId,
         name,
       });
-    return connected;
+    return transport.connected;
   }
   async function joinTextChannel(roomId, name) {
     if (!(await ensureAuthenticated())) return false;
@@ -468,15 +316,17 @@ window.TronoNetwork = (() => {
           : ensureAuthenticated()))
       )
         throw new Error('Entre na sua conta ou como convidado do jogo.');
-      const requestId = makeId();
-      return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          pendingSfu.delete(requestId);
-          reject(new Error('Não foi possível sincronizar a chamada.'));
-        }, 15000);
-        pendingSfu.set(requestId, { resolve, reject, timer });
-        send('voice-prepare', { requestId });
-      });
+      const msg = await transport.request(
+        'voice-prepare',
+        {},
+        {
+          responseType: 'sfu-response',
+          timeoutMs: 15000,
+          timeoutMessage: 'Não foi possível sincronizar a chamada.',
+        },
+      );
+      if (msg.ok !== true) throw responseError(msg, 'Falha na operação SFU.', 'SFU_ERROR');
+      return msg.data;
     },
     fallbackVoice: () => send('voice-fallback'),
     setVoiceState: (
@@ -511,7 +361,7 @@ window.TronoNetwork = (() => {
     BACKEND_WS,
     CLIENT_VERSION,
     get connected() {
-      return connected;
+      return transport.connected;
     },
     get clientId() {
       return clientId;

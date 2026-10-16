@@ -12,6 +12,18 @@ e hierarquia relevantes dos controles anteriores. `chat-composer.tsx` trata envi
 e teclado em React; `lib/socket/chat-actions.ts` delega ao controlador que mantém
 o estado do upload. Não há um segundo socket ou uma segunda captura de mídia.
 
+`lib/socket/transport.ts` possui a conexão WebSocket, correlação de respostas,
+timeouts e fila de autenticação de conta/convidado. Requisições correlacionam tipo
+de resposta e ID; fechar a conexão rejeita pendências e invalida operações antigas.
+O transporte valida o envelope JSON; os domínios continuam responsáveis pelo
+conteúdo de cada mensagem. Não abre dispositivos nem conhece elementos da tela.
+
+`legacy-runtime.tsx` importa esse módulo pelo Next e disponibiliza sua fábrica
+antes dos controladores. `legacy/network.js` cria uma única instância e conserva
+comandos, capacidades negociadas e participação em texto/voz/jogo. Esses dados
+ainda não são estado React nem um protocolo inteiramente tipado. Consumidores
+usam `TronoNetwork` enquanto cada fluxo é convertido.
+
 ## Compatibilidade durante a conversão
 
 `src/legacy/manifest.json` define a ordem dos estilos e controladores.
