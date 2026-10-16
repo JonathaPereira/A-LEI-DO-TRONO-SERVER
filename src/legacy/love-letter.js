@@ -35,18 +35,11 @@ window.TronoLoveLetter = (() => {
     selected = null,
     immersive = false,
     seenPrivate = 0,
-    lastRevision = -1,
-    animationTimer,
-    visual = null,
-    busy = false,
-    queue = [],
-    generation = 0,
-    wake = null,
-    presentation = null;
+    effectTimer;
   const uid = () => window.TronoAuth.user?.id,
     visible = () => !$('loveLetterScreen').classList.contains('hidden') && !document.hidden,
-    locked = () => pending || busy || !window.TronoNetwork.connected;
-  const state = () => visual || room?.state;
+    locked = () => pending || !window.TronoNetwork.connected;
+  const state = () => room?.state;
   const own = (s) => s.players.find((p) => p.id === uid()),
     myTurn = (s) => ['action', 'chancellor'].includes(s.phase) && s.players[s.turn]?.id === uid();
   const name = (s, id) => s.players.find((p) => p.id === id)?.name || 'Cortesão';
@@ -426,7 +419,7 @@ window.TronoLoveLetter = (() => {
       el('h3', '', 'Última jogada'),
       el('p', '', s.last ? eventText(s.last, s) : 'As cartas foram distribuídas.'),
     );
-    side.append(last);
+    side.prepend(last);
     const recent = el('section', 'll-recent');
     recent.append(el('h3', '', 'Jogadas desta rodada'));
     const list = el('ol');
@@ -560,19 +553,17 @@ window.TronoLoveLetter = (() => {
     identity.querySelector('h3').prepend(avatarFor(me.id, 9));
     hand.append(identity);
     const instructions = el('p', 'll-hand-instruction');
-    instructions.textContent = busy
-      ? 'Acompanhe a resolução da jogada acima.'
-      : me.eliminated
-        ? 'Você retorna na próxima rodada.'
-        : s.phase === 'chancellor'
-          ? myTurn(s)
-            ? 'Escolha do Chanceler acima.'
-            : 'Aguardando a escolha do Chanceler.'
-          : myTurn(s)
-            ? R.forced(me)
-              ? 'Você precisa jogar a Condessa.'
-              : 'Clique na carta que deseja usar.'
-            : 'Sua mão é secreta. Aguarde sua vez.';
+    instructions.textContent = me.eliminated
+      ? 'Você retorna na próxima rodada.'
+      : s.phase === 'chancellor'
+        ? myTurn(s)
+          ? 'Escolha do Chanceler acima.'
+          : 'Aguardando a escolha do Chanceler.'
+        : myTurn(s)
+          ? R.forced(me)
+            ? 'Você precisa jogar a Condessa.'
+            : 'Clique na carta que deseja usar.'
+          : 'Sua mão é secreta. Aguarde sua vez.';
     const cards = el('div', 'll-hand');
     (s.phase === 'chancellor' && myTurn(s) ? [] : me.hand).forEach((c) => {
       const wrapper = el('div', 'll-hand-card'),
@@ -595,7 +586,7 @@ window.TronoLoveLetter = (() => {
     hand.append(discard);
     addTarget(hand, me, s);
     if (['round-over', 'finished'].includes(s.phase)) felt.append(roundResult(s));
-    else if (s.phase === 'chancellor' && myTurn(s) && !busy) felt.append(chancellor(s));
+    else if (s.phase === 'chancellor' && myTurn(s)) felt.append(chancellor(s));
     felt.append(hand);
     table.append(felt, reference(s));
     return table;
@@ -726,15 +717,31 @@ window.TronoLoveLetter = (() => {
     }
     const guide = actionGuide(s);
     if (guide) content.append(guide);
-    if (presentation) content.append(presentationBanner(s));
     content.append(table(s));
     const history = el('details', 'll-history');
     history.open = true;
-    history.append(el('summary', '', 'Histórico completo · rodadas e efeitos'));
+    history.append(el('summary', '', 'Histórico de jogadas · ' + s.log.length));
     const list = el('ol');
-    [...s.log]
-      .reverse()
-      .forEach((e) => list.append(el('li', '', 'Rodada ' + e.round + ' · ' + eventText(e, s))));
+    [...s.log].reverse().forEach((e) => {
+      const item = el('li', 'll-log-entry'),
+        copy = el('div');
+      if (e.revision !== undefined) item.dataset.logRevision = e.revision;
+      if (e.card) item.append(portrait(e.card.rank, 'll-reference-art'));
+      const heading =
+        e.kind === 'play'
+          ? name(s, e.playerId) +
+            ' jogou ' +
+            R.cards[e.card.rank].name +
+            (e.targetId ? ' em ' + name(s, e.targetId) : '')
+          : e.kind === 'chancellor'
+            ? name(s, e.playerId) + ' concluiu o Chanceler'
+            : 'Nova rodada';
+      copy.append(el('small', 'll-log-round', 'Rodada ' + e.round), el('strong', '', heading));
+      const text = eventText(e, s);
+      copy.append(el('p', '', e.kind === 'play' ? text.slice(heading.length + 2) : text));
+      item.append(copy);
+      list.append(item);
+    });
     history.append(list);
     content.append(history);
     if (s.private.length) content.append(btn('Rever informação secreta', showPrivate, 'll-link'));
@@ -758,62 +765,11 @@ window.TronoLoveLetter = (() => {
     );
     if (!$('loveLetterPrivateDialog').open) $('loveLetterPrivateDialog').showModal();
   }
-  function presentationBanner(s) {
-    const host = el('section', 'll-presentation');
-    host.setAttribute('role', 'status');
-    host.setAttribute('aria-live', 'polite');
-    if (presentation.event.card) host.append(card(presentation.event.card, { small: true }));
-    const copy = el('div');
-    copy.append(
-      el(
-        'span',
-        'll-eyebrow',
-        presentation.phase === 'card'
-          ? '1/3 · CARTA JOGADA'
-          : presentation.phase === 'effect'
-            ? '2/3 · EFEITO'
-            : '3/3 · RESULTADO',
-      ),
-      el(
-        'strong',
-        '',
-        presentation.phase === 'card'
-          ? name(s, presentation.event.playerId) +
-              (presentation.event.card
-                ? ' jogou ' + R.cards[presentation.event.card.rank].name
-                : ' concluiu o Chanceler') +
-              (presentation.event.targetId ? ' em ' + name(s, presentation.event.targetId) : '') +
-              '.'
-          : eventText(presentation.event, s),
-      ),
-    );
-    host.append(copy, btn('Concluir animação', stopAnimations, 'll-link'));
-    return host;
-  }
-  const wait = (ms) =>
-    new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        wake = null;
-        resolve();
-      }, ms);
-      wake = () => {
-        clearTimeout(timer);
-        resolve();
-      };
-    });
   function stopAnimations() {
-    generation++;
-    wake?.();
-    wake = null;
-    queue = [];
-    visual = null;
-    busy = false;
-    presentation = null;
-    document.querySelectorAll('.ll-flight').forEach((n) => {
-      n.getAnimations().forEach((a) => a.cancel());
-      n.remove();
-    });
-    render();
+    clearTimeout(effectTimer);
+    document
+      .querySelectorAll('.ll-effect-target')
+      .forEach((n) => n.classList.remove('ll-effect-target'));
   }
   function checkPrivate() {
     const s = room?.state;
@@ -824,49 +780,15 @@ window.TronoLoveLetter = (() => {
       showPrivate();
     }
   }
-  async function animateQueue() {
-    if (busy) return;
-    busy = true;
-    const ticket = generation;
-    while (queue.length && ticket === generation && visible()) {
-      const job = queue.shift(),
-        event = job.to.last;
-      visual = job.from;
-      presentation = { event, phase: 'card' };
-      render();
-      sound('card');
-      await wait(1200);
-      if (ticket !== generation) return;
-      visual = job.to;
-      presentation.phase = 'effect';
-      render();
-      const target =
-        document.querySelector('[data-ll-player="' + event.targetId + '"]') ||
-        (event.targetId === uid() ? document.querySelector('.ll-self') : null);
-      target?.classList.add('ll-effect-target');
-      await wait(1100);
-      if (ticket !== generation) return;
-      presentation.phase = 'result';
-      render();
-      if (event.roundResult) sound('score');
-      await wait(1100);
-      if (ticket !== generation) return;
-    }
-    if (ticket === generation) {
-      busy = false;
-      visual = null;
-      presentation = null;
-      render();
-      checkPrivate();
-    }
-  }
   function accept(next) {
     const before = room,
-      changed = before?.id !== next.id || before?.state?.revision !== next.state?.revision;
+      changed = before?.id !== next.id || before?.state?.revision !== next.state?.revision,
+      rosterChanged =
+        before?.hostId !== next.hostId ||
+        JSON.stringify(before?.players) !== JSON.stringify(next.players);
     if (before?.id !== next.id) {
       stopAnimations();
       seenPrivate = 0;
-      lastRevision = -1;
     }
     room = next;
     resume = next.id;
@@ -881,30 +803,23 @@ window.TronoLoveLetter = (() => {
       seenPrivate = 0;
       if ($('loveLetterPrivateDialog').open) $('loveLetterPrivateDialog').close();
     }
-    const s = next.state;
-    if (
-      s &&
-      before?.state &&
-      ['play', 'chancellor'].includes(s.last?.kind) &&
-      s.revision === before.state.revision + 1 &&
-      visible() &&
-      !matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      queue.push({
-        from: JSON.parse(JSON.stringify(before.state)),
-        to: JSON.parse(JSON.stringify(s)),
-      });
-      if (queue.length > 12) {
-        stopAnimations();
-        checkPrivate();
-        return;
-      }
-      void animateQueue();
-    } else if (!busy) {
+    if (changed || rosterChanged || !next.state) {
+      stopAnimations();
       render();
-      if (changed && s?.last && visible()) sound(s.last.roundResult ? 'score' : 'card');
-      checkPrivate();
+      const s = next.state;
+      if (changed && s?.last && visible()) {
+        sound(s.last.roundResult ? 'score' : 'card');
+        const target =
+          [...document.querySelectorAll('[data-ll-player]')].find(
+            (n) => n.dataset.llPlayer === s.last.targetId,
+          ) || (s.last.targetId === uid() ? document.querySelector('.ll-self') : null);
+        if (target) {
+          target.classList.add('ll-effect-target');
+          effectTimer = setTimeout(() => target.classList.remove('ll-effect-target'), 1100);
+        }
+      }
     }
+    checkPrivate();
   }
   function fullscreenState() {
     const active = document.fullscreenElement === $('loveLetterScreen') || immersive;
@@ -961,7 +876,7 @@ window.TronoLoveLetter = (() => {
       if (msg.type === 'love-letter-rooms') {
         rooms = msg.rooms;
         resume = msg.resumeId;
-        render();
+        if (!room) render();
       }
       if (msg.type === 'love-letter-left') {
         pending = false;
@@ -1014,7 +929,7 @@ window.TronoLoveLetter = (() => {
       return room;
     },
     get animating() {
-      return busy;
+      return false;
     },
   };
 })();

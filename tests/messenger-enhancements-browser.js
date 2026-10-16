@@ -136,7 +136,10 @@ test(
           await p
             .locator('#messengerFile')
             .setInputFiles({ name: 'imagem-privada.png', mimeType: 'image/png', buffer: png });
-          await expect(p.locator('#messengerAttachmentDraft')).toContainText('imagem-privada.png');
+          await expect(p.locator('#messengerAttachmentDraft img')).toBeVisible();
+          await expect(p.locator('#messengerAttachmentDraft')).not.toContainText(
+            'imagem-privada.png',
+          );
           await p.locator('#messengerSend').click();
           await expect(p.locator('#messengerMessages .direct-attachment')).toHaveCount(1);
           await expect(p.locator('#messengerMessages img')).toBeVisible();
@@ -161,6 +164,19 @@ test(
           await expect(q.locator('#messengerMessages .direct-attachment')).toHaveCount(1);
           await expect(q.locator('#messengerMessages .file-delete')).toHaveCount(0);
           await expect(q.locator('.messenger-toast')).toHaveCount(0);
+          for (const page of [p, q]) {
+            await expect(page.locator('#messengerMessages')).not.toContainText(
+              'imagem-privada.png',
+            );
+            await expect(page.locator('#messengerMessages .file-download')).toHaveCount(0);
+            await expect(page.locator('#messengerMessages .file-image-open img')).toBeVisible();
+          }
+          await q.locator('.file-image-open').click();
+          await expect(q.locator('.attachment-image-viewer img')).toBeVisible();
+          await expect(q.locator('.attachment-image-viewer')).not.toContainText(
+            'imagem-privada.png',
+          );
+          await q.getByRole('button', { name: 'Fechar imagem' }).click();
           const time = q.locator('.direct-message time').first();
           await expect(time).toHaveText(/\d{2}\/\d{2}\/\d{4}/);
           assert(Number.isFinite(Date.parse(await time.getAttribute('datetime'))));
@@ -280,7 +296,8 @@ test(
           await p.locator('#messengerSend').click();
           await expect(p.locator('#messengerStatus')).toContainText('mantidos');
           await expect(p.locator('#messengerInput')).toHaveValue('Texto mantido na falha');
-          await expect(p.locator('#messengerAttachmentDraft')).toContainText('retry.png');
+          await expect(p.locator('#messengerAttachmentDraft img')).toBeVisible();
+          await expect(p.locator('#messengerAttachmentDraft')).not.toContainText('retry.png');
           await p.locator('#messengerSend').click();
           await expect(p.locator('#messengerInput')).toHaveValue('');
           await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
@@ -323,17 +340,18 @@ test(
           assert(!sent[0].attachment);
           await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
           await expect(p.locator('#messengerInput')).toHaveValue('Arquivo só para Bruno');
-          await expect(p.locator('#messengerAttachmentDraft')).toContainText('apenas-bruno.png');
+          await expect(p.locator('#messengerAttachmentDraft img')).toBeVisible();
+          await expect(p.locator('#messengerAttachmentDraft')).not.toContainText(
+            'apenas-bruno.png',
+          );
           await p.locator('#messengerSend').click();
           await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
           await expect(p.locator('#messengerMessages')).toContainText('Arquivo só para Bruno');
-          await p
-            .locator('#messengerFile')
-            .setInputFiles({
-              name: 'grande.png',
-              mimeType: 'image/png',
-              buffer: Buffer.alloc(10_000_001),
-            });
+          await p.locator('#messengerFile').setInputFiles({
+            name: 'grande.png',
+            mimeType: 'image/png',
+            buffer: Buffer.alloc(10_000_001),
+          });
           await expect(p.locator('#messengerStatus')).toContainText('10.0 MB');
           await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
         },
@@ -347,12 +365,28 @@ test(
             .locator('#messengerFile')
             .setInputFiles({ name: 'arquivo-do-amigo.png', mimeType: 'image/png', buffer: png });
           await q.locator('#messengerSend').click();
-          const row = p.locator('.direct-message').filter({ hasText: 'arquivo-do-amigo.png' });
+          await expect
+            .poll(
+              async () =>
+                (await api('read', { peerId: bob.user.id })).data.messages.filter(
+                  (m) => m.attachment?.name === 'arquivo-do-amigo.png',
+                ).length,
+            )
+            .toBe(1);
+          const attachment = (await api('read', { peerId: bob.user.id })).data.messages.findLast(
+            (m) => m.attachment?.name === 'arquivo-do-amigo.png',
+          ).attachment.id;
+          const row = p
+            .locator('.direct-message')
+            .filter({ has: p.locator('[data-attachment="' + attachment + '"]') });
           await expect(row).toBeVisible();
           await expect(row.locator('.file-delete')).toHaveCount(0);
           const messageId = await row.getAttribute('data-message-id'),
             deleted = p.locator('[data-message-id="' + messageId + '"]');
-          const own = q.locator('.direct-message').filter({ hasText: 'arquivo-do-amigo.png' });
+          const own = q
+            .locator('.direct-message')
+            .filter({ has: q.locator('[data-attachment="' + attachment + '"]') });
+          await own.locator('.direct-attachment').hover();
           await own.locator('.file-delete').click();
           await expect(deleted).toContainText('Arquivo excluído.');
           await expect(deleted.locator('.file-download')).toHaveCount(0);
@@ -389,6 +423,7 @@ test(
           await p.evaluate(
             () => (window.__friendsButton = document.getElementById('workspaceDirectOpen')),
           );
+          const friends = p.locator('#workspaceDirectOpen');
           for (const size of [
             { width: 720, height: 1280 },
             { width: 480, height: 800 },

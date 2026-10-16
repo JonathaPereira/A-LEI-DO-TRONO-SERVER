@@ -477,7 +477,6 @@ window.TronoSocial = (() => {
         nativeSuppressionSupported: () =>
           !!navigator.mediaDevices?.getSupportedConstraints?.().noiseSuppression,
         createNoise: (ctx, onFailure) => window.TronoNoise.create(ctx, { onFailure }),
-        createLightNoise: (ctx, onFailure) => window.TronoLightNoise.create(ctx, { onFailure }),
         onModeChange: updateNoiseButton,
         onNativeUnavailable: (processor) => {
           if (voiceJoined && microphone.getSnapshot().capture?.processor === processor)
@@ -1306,7 +1305,7 @@ window.TronoSocial = (() => {
     chatHubMode = !!active;
     if (!chatHubMode) document.body.classList.remove('channel-text-active', 'channel-voice-active');
     document.body.classList.toggle('chat-only-active', chatHubMode);
-    if (chatHubMode) chatDrawerOpen = innerWidth > 1000;
+    if (chatHubMode) chatDrawerOpen = chatRoomState?.channelType === 'text';
     applyPanelMode();
     updateChatDrawerUI();
     updateButtons();
@@ -1567,6 +1566,20 @@ window.TronoSocial = (() => {
         },
         { once: true },
       );
+      // Announce a live capture immediately. Transport setup may take seconds;
+      // remote clients can show the camera and start negotiating meanwhile.
+      window.TronoNetwork?.setVoiceState(
+        voiceJoined,
+        micMuted,
+        true,
+        screenSharing(),
+        transmissionQuality,
+        announcedTransport(),
+      );
+      updateButtons();
+      renderVideoGrid();
+      renderSeatMedia();
+      renderVoiceRoster();
       if (transportIsSfu()) {
         try {
           const existing = sfuLocalPublications.get('camera');
@@ -1575,6 +1588,10 @@ window.TronoSocial = (() => {
             await applySenderQuality(existing.sender, 'camera');
           } else await publishSfuTrack('camera', track);
         } catch (err) {
+          if (!current())
+            throw Object.assign(new Error('Abertura da câmera cancelada.'), {
+              code: 'CAMERA_CANCELLED',
+            });
           console.warn('[TronoSocial] câmera SFU; acionando fallback', err?.code || err);
           await fallbackToP2p(
             'A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.',
@@ -1582,11 +1599,14 @@ window.TronoSocial = (() => {
         }
       }
       if (!transportIsSfu())
-        for (const pc of peers.values())
-          if (pc._tronoVideoSender) {
-            await pc._tronoVideoSender.replaceTrack(track).catch(() => {});
-            await applySenderQuality(pc._tronoVideoSender, 'camera');
-          }
+        await Promise.all(
+          [...peers.values()].map(async (pc) => {
+            if (pc._tronoVideoSender) {
+              await pc._tronoVideoSender.replaceTrack(track).catch(() => {});
+              await applySenderQuality(pc._tronoVideoSender, 'camera');
+            }
+          }),
+        );
       if (!current()) {
         track.stop();
         throw Object.assign(new Error('Abertura da câmera cancelada.'), {
@@ -1629,10 +1649,6 @@ window.TronoSocial = (() => {
       localStream.removeTrack(t);
       t.stop();
     }
-    if (transportIsSfu()) await closeSfuPublication('camera');
-    else
-      for (const pc of peers.values())
-        if (pc._tronoVideoSender) await pc._tronoVideoSender.replaceTrack(null).catch(() => {});
     if (sendState)
       window.TronoNetwork?.setVoiceState(
         voiceJoined,
@@ -1642,9 +1658,19 @@ window.TronoSocial = (() => {
         transmissionQuality,
         announcedTransport(),
       );
+    updateButtons();
     renderVideoGrid();
     renderSeatMedia();
     renderVoiceRoster();
+    // Stopping a device and announcing it must not wait for an SFU request or
+    // a slow peer's replaceTrack(). Start every detach now, before a new capture.
+    if (transportIsSfu()) void closeSfuPublication('camera');
+    else
+      void Promise.allSettled(
+        [...peers.values()].map(async (pc) => {
+          if (pc._tronoVideoSender) await pc._tronoVideoSender.replaceTrack(null);
+        }),
+      );
   }
 
   async function publishScreen({ capture, replace, isCurrent }) {
@@ -1652,22 +1678,35 @@ window.TronoSocial = (() => {
       track = stream.getVideoTracks()[0];
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
+    window.TronoNetwork?.setVoiceState(
+      true,
+      micMuted,
+      cameraOn,
+      true,
+      transmissionQuality,
+      announcedTransport(),
+    );
+    updateButtons();
+    renderScreenGrid();
+    renderVoiceRoster();
     if (transportIsSfu()) {
       try {
         // Reuse publications and subscriptions when changing an active source.
-        for (const [kind, next] of [
-          ['screen', track],
-          ['screen-audio', stream.getAudioTracks()[0]],
-        ]) {
-          if (!isCurrent()) return;
-          const publication = replace ? sfuLocalPublications.get(kind) : null;
-          if (next && publication?.sender) {
-            await publication.sender.replaceTrack(next);
+        await Promise.all(
+          [
+            ['screen', track],
+            ['screen-audio', stream.getAudioTracks()[0]],
+          ].map(async ([kind, next]) => {
             if (!isCurrent()) return;
-            await applySenderQuality(publication.sender, kind);
-          } else if (next) await publishSfuTrack(kind, next);
-          else if (publication) await closeSfuPublication(kind);
-        }
+            const publication = replace ? sfuLocalPublications.get(kind) : null;
+            if (next && publication?.sender) {
+              await publication.sender.replaceTrack(next);
+              if (!isCurrent()) return;
+              await applySenderQuality(publication.sender, kind);
+            } else if (next) await publishSfuTrack(kind, next);
+            else if (publication) await closeSfuPublication(kind);
+          }),
+        );
       } catch (err) {
         if (!isCurrent()) return;
         console.warn('[TronoSocial] tela SFU; acionando fallback', err?.code || err);
@@ -1677,10 +1716,11 @@ window.TronoSocial = (() => {
       }
     }
     if (!transportIsSfu())
-      for (const pc of peers.values()) {
-        if (!isCurrent()) return;
-        await syncInitiatorTracks(pc);
-      }
+      await Promise.all(
+        [...peers.values()].map(async (pc) => {
+          if (isCurrent()) await syncInitiatorTracks(pc);
+        }),
+      );
     if (!isCurrent()) return;
     const sound = stream.getAudioTracks()[0];
     window.TronoNetwork?.setVoiceState(
@@ -1747,16 +1787,6 @@ window.TronoSocial = (() => {
     if (!screenCapture.stop()) return;
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
-    if (transportIsSfu()) {
-      await closeSfuPublication('screen-audio');
-      await closeSfuPublication('screen');
-    } else
-      for (const pc of peers.values()) {
-        pc._tronoWatchingScreen = false;
-        if (pc._tronoScreenSender) await pc._tronoScreenSender.replaceTrack(null).catch(() => {});
-        if (pc._tronoScreenAudioSender)
-          await pc._tronoScreenAudioSender.replaceTrack(null).catch(() => {});
-      }
     if (sendState)
       window.TronoNetwork?.setVoiceState(
         voiceJoined,
@@ -1769,6 +1799,18 @@ window.TronoSocial = (() => {
     updateButtons();
     renderScreenGrid();
     renderVoiceRoster();
+    if (transportIsSfu()) {
+      void closeSfuPublication('screen-audio');
+      void closeSfuPublication('screen');
+    } else
+      void Promise.allSettled(
+        [...peers.values()].flatMap((pc) => {
+          pc._tronoWatchingScreen = false;
+          return [pc._tronoScreenSender, pc._tronoScreenAudioSender]
+            .filter(Boolean)
+            .map(async (sender) => sender.replaceTrack(null));
+        }),
+      );
   }
   async function toggleScreenShare() {
     if (screenSharing()) await stopScreenShare(true);
@@ -2195,10 +2237,16 @@ window.TronoSocial = (() => {
     if (!transportIsSfu() || !track) return null;
     const generation = sfuGeneration;
     const ensureCurrent = () => {
-      if (generation !== sfuGeneration || !voiceJoined || !transportIsSfu())
-        throw Object.assign(new Error('A publicação foi cancelada pela troca de chamada.'), {
-          code: 'SFU_CANCELLED',
-        });
+      if (
+        generation !== sfuGeneration ||
+        !voiceJoined ||
+        !transportIsSfu() ||
+        track.readyState === 'ended'
+      )
+        throw Object.assign(
+          new Error('A publicação foi cancelada pela troca de chamada ou encerramento da captura.'),
+          { code: 'SFU_CANCELLED' },
+        );
     };
     if (isScreenKind(kind) && !realtimeStatus?.screenAllowed)
       throw Object.assign(new Error('Compartilhamento bloqueado pelo freio de consumo.'), {
@@ -4174,16 +4222,15 @@ window.TronoSocial = (() => {
     updateMediaIndicators();
   }
   async function toggleCamera() {
+    if (cameraOn) {
+      await disableCamera(true);
+      setStatus('Câmera desligada.', 'ok');
+      return;
+    }
     if (cameraTogglePending || cameraRequest) return;
     cameraTogglePending = true;
     updateButtons();
     try {
-      if (cameraOn) {
-        await disableCamera(true);
-        setStatus('Câmera desligada.', 'ok');
-        updateButtons();
-        return;
-      }
       if (!voiceJoined) {
         const ok = await joinVoice();
         if (!ok) return;
@@ -4251,27 +4298,15 @@ window.TronoSocial = (() => {
         'RNNoise',
         'RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.',
       ],
-      native: [
-        'Navegador',
-        voiceLightMode
-          ? 'Modo leve: redução nativa do navegador ativa; RNNoise pausado.'
-          : 'RNNoise indisponível. A redução nativa do navegador está ativa.',
-      ],
+      native: ['Navegador', 'Redução nativa ativa no microfone.'],
       paused: ['Pausado', 'Processamento pausado. Use Liberar áudio para retomá-lo.'],
       unavailable: [
         'Indisponível',
         'Não foi possível ativar a supressão. O microfone continua transmitindo.',
       ],
     };
-    labels.light = [
-      'Leve',
-      `Filtro leve ativo: reduz graves e atenua o fundo entre falas. Redução nativa ${noiseState().nativeSuppression ? 'ativa' : 'não confirmada'}. Ruídos junto da voz podem permanecer.`,
-    ];
     if (mode === 'idle' && (voiceLightMode || noiseEngine === 'native'))
-      labels.idle = [
-        'Preparado',
-        'O filtro leve e a redução nativa serão solicitados ao entrar na voz.',
-      ];
+      labels.idle = ['Preparado', 'A redução nativa será solicitada ao entrar na voz.'];
     const [label, detail] = labels[mode];
     b.disabled = microphone.getSnapshot().loading;
     b.classList.toggle('noise-active', noiseSuppression);
@@ -4335,7 +4370,7 @@ window.TronoSocial = (() => {
       }
       setStatus(
         value === 'native'
-          ? 'Redução leve selecionada. Confira o estado do filtro abaixo.'
+          ? 'Redução nativa selecionada.'
           : value === 'rnnoise'
             ? 'RNNoise selecionado.'
             : 'Redução de ruído desligada.',
@@ -4379,7 +4414,7 @@ window.TronoSocial = (() => {
       await watchStream(meId(), localStream);
       setStatus(
         voiceLightMode
-          ? 'Modo leve ativo: filtro de fundo entre falas e redução nativa quando disponível.'
+          ? 'Modo leve ativo: redução nativa e menos trabalho visual.'
           : 'Modo leve desligado. Preferências de áudio restauradas.',
         'ok',
       );
@@ -4439,8 +4474,7 @@ window.TronoSocial = (() => {
       c.disabled =
         textOnly ||
         joining ||
-        cameraTogglePending ||
-        !!cameraRequest ||
+        (!cameraOn && (cameraTogglePending || !!cameraRequest)) ||
         (document.body.dataset.appLayout === 'discord' && !voiceJoined);
     for (const [button, on] of [
       [m, micMuted],
@@ -4547,6 +4581,7 @@ window.TronoSocial = (() => {
     syncPeers();
   }
   function consumeChatRoom(room) {
+    if (room?.id !== chatRoomState?.id) chatDrawerOpen = room?.channelType === 'text';
     chatRoomState = room || null;
     document.body.classList.toggle(
       'channel-text-active',

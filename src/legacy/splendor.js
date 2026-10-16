@@ -492,13 +492,14 @@ window.TronoSplendor = (() => {
     );
     footer.append(collection);
     panel.append(footer);
+    const details = el('details', 'sp-player-details');
+    details.append(el('summary', '', 'Reservas · ' + p.reserved.length + '/3'));
     const reserved = el('div', 'sp-reserved');
     reserved.setAttribute('aria-label', 'Cartas reservadas de ' + p.name);
-    reserved.append(el('strong', 'sp-reserved-title', 'RESERVAS · ' + p.reserved.length + '/3'));
     for (const c of p.reserved) reserved.append(card(c, { small: true }));
-    for (let j = p.reserved.length; j < 3; j++)
-      reserved.append(el('span', 'sp-reserved-slot', self ? 'Reserva ' + (j + 1) : '◇'));
-    panel.append(reserved);
+    if (!p.reserved.length) reserved.append(el('small', '', 'Nenhuma carta reservada.'));
+    details.append(reserved);
+    panel.append(details);
     return panel;
   }
   function openCollection(p) {
@@ -689,7 +690,12 @@ window.TronoSplendor = (() => {
   }
   function table(s) {
     const root = el('div', 'sp-table'),
-      opponents = el('aside', 'sp-opponents');
+      players = el('aside', 'sp-players'),
+      opponents = el('div', 'sp-opponents');
+    players.setAttribute('aria-label', 'Mercadores e recursos');
+    const me = mine(s);
+    if (me) players.append(player(me, s.players.indexOf(me), s, { self: true }));
+    players.append(opponents);
     opponents.setAttribute('aria-label', 'Outros mercadores');
     s.players.forEach((p, i) => {
       if (p.id !== window.TronoAuth.user?.id) opponents.append(player(p, i, s));
@@ -704,10 +710,7 @@ window.TronoSplendor = (() => {
     s.nobles.forEach((n) => list.append(noble(n, s)));
     nobles.append(list);
     sidebar.append(nobles);
-    root.append(opponents, center, sidebar);
-    const p = mine(s);
-    if (p) root.append(player(p, s.players.indexOf(p), s, { self: true }));
-    root.append(actionBar(s));
+    root.append(players, center, sidebar, actionBar(s));
     return root;
   }
   function renderRanking() {

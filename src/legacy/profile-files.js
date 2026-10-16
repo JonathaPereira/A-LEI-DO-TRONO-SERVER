@@ -105,9 +105,51 @@ window.TronoProfile = (() => {
       });
     }
   }
+  function directBanners(host = document) {
+    const viewer = window.TronoAuth.user?.id;
+    if (!viewer) return;
+    for (const row of host.querySelectorAll('[data-direct-profile]')) {
+      const id = row.dataset.directProfile;
+      let entry = profileCache.get(id);
+      if (!entry || entry.expires < Date.now()) {
+        entry = { expires: Date.now() + 60000 };
+        entry.promise = api('profiles/' + id)
+          .then((data) => data.profile)
+          .catch(() => null);
+        profileCache.set(id, entry);
+      }
+      if (row._profileBanner === entry) continue;
+      row._profileBanner = entry;
+      row.querySelector('.direct-profile-banner')?.remove();
+      const current = () =>
+        row.isConnected &&
+        viewer === window.TronoAuth.user?.id &&
+        row.dataset.directProfile === id &&
+        row._profileBanner === entry;
+      entry.promise.then(async (person) => {
+        const d = { ...defaults, ...person?.personalization };
+        if (!d.cover_file_id || !current()) return;
+        try {
+          const url = await window.TronoFiles.url(d.cover_file_id);
+          if (!current()) return;
+          const banner = make('span', 'direct-profile-banner'),
+            img = make('img');
+          banner.setAttribute('aria-hidden', 'true');
+          img.alt = '';
+          img.src = url;
+          img.loading = 'lazy';
+          img.onerror = () => banner.remove();
+          img.style.objectPosition = 'center ' + Math.max(0, Math.min(100, d.cover_position)) + '%';
+          banner.append(img);
+          row.prepend(banner);
+        } catch {}
+      });
+    }
+  }
   function invalidateProfile(id) {
     profileCache.delete(id);
     callBackgrounds();
+    directBanners();
   }
   window.addEventListener('trono-profile-change', () =>
     invalidateProfile(window.TronoAuth.user?.id),
@@ -271,7 +313,7 @@ window.TronoProfile = (() => {
         let source;
         try {
           source = window.TronoProfileData.url(item.source);
-          if (new URL(source).hostname !== 'commons.wikimedia.org') continue;
+          if (!['commons.wikimedia.org', 'giphy.com'].includes(new URL(source).hostname)) continue;
         } catch {
           continue;
         }
@@ -948,5 +990,5 @@ window.TronoProfile = (() => {
     window.addEventListener('trono-role-change', auth);
     void window.TronoAuth.ready.then(auth);
   });
-  return { open, avatarHtml, hydrate, formatPhoto, openMini, callBackgrounds };
+  return { open, avatarHtml, hydrate, formatPhoto, openMini, callBackgrounds, directBanners };
 })();

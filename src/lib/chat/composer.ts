@@ -155,7 +155,12 @@ export function createChatComposer({
         update({ file: null, status: `Limite: ${formatFileSize(max)} por arquivo.` });
         return false;
       }
-      update({ file, status: `${file.name} · ${formatFileSize(file.size)}. Clique em enviar.` });
+      update({
+        file,
+        status: (file.type ?? '').startsWith('image/')
+          ? 'Imagem pronta. Clique em enviar.'
+          : `${file.name} · ${formatFileSize(file.size)}. Clique em enviar.`,
+      });
       return true;
     },
     reportStatus,
@@ -199,7 +204,7 @@ export function createChatComposer({
           onProgress: (percent) => {
             if (isCurrent(operation) && Number.isFinite(percent))
               reportStatus(
-                `Enviando ${file.name}: ${Math.max(0, Math.min(100, Math.round(percent)))}%`,
+                `Enviando ${(file.type ?? '').startsWith('image/') ? 'imagem' : file.name}: ${Math.max(0, Math.min(100, Math.round(percent)))}%`,
               );
           },
         });

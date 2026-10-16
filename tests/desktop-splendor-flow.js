@@ -7,7 +7,24 @@ const assert = require('node:assert/strict'),
   path = require('node:path'),
   { expect } = require('@playwright/test'),
   { startFixture } = require('./auth-fixture');
-async function exerciseSplendor({ app, page, frontend, screenshot }) {
+async function exerciseSplendor({ app, page, frontend, screenshot, onPhase = () => {} }) {
+  const step = async (name, run, timeout = 15000) => {
+    onPhase('Splendor: ' + name);
+    let timer;
+    try {
+      return await Promise.race([
+        run(),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(Error('Native Splendor timeout: ' + name)), timeout);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  page.setDefaultTimeout(15000);
+  page.setDefaultNavigationTimeout(20000);
+  onPhase('Splendor: start local fixture');
   const fixture = await startFixture({
     port: 10844,
     loveLetterSeed: 1,
@@ -47,11 +64,9 @@ async function exerciseSplendor({ app, page, frontend, screenshot }) {
       localStorage.setItem('tronoMusicEnabled', '0');
       localStorage.setItem('tronoSfxEnabled', '0');
     }, data);
-    await page.reload();
-    await page.waitForFunction(() => window.TronoAuth?.ready);
-    await page.evaluate(() => window.TronoAuth.ready);
-    await page.waitForFunction(() => window.TronoAuth?.ready);
-    await page.evaluate(() => window.TronoAuth.ready);
+    await step('reload local document', () => page.reload({ waitUntil: 'domcontentloaded' }), 25000);
+    await step('load local controllers', () => page.waitForFunction(() => window.TronoAuth?.ready));
+    await step('restore local test session', () => page.evaluate(() => window.TronoAuth.ready));
     if (!(await page.evaluate(() => !!window.TronoAuth.user)))
       throw Error(
         'Installed fixture session ' +
@@ -63,6 +78,7 @@ async function exerciseSplendor({ app, page, frontend, screenshot }) {
             })),
           ),
       );
+    onPhase('Splendor: open native game');
     await page.locator('[data-desktop-route=game]').click();
     await page.locator('#playSplendor').click();
     await page.locator('#splendorPlayerCount').selectOption('4');
@@ -81,19 +97,23 @@ async function exerciseSplendor({ app, page, frontend, screenshot }) {
       .poll(() => page.evaluate(() => window.TronoSplendor.room.state.revision))
       .toBeGreaterThan(before);
     if (screenshot) await page.screenshot({ path: screenshot });
+    onPhase('native Love Letter session');
     await require('./desktop-love-letter-flow').exerciseLoveLetter({
       page,
       screenshot: screenshot?.replace('splendor', 'love-letter'),
     });
   } finally {
-    await app
-      .evaluate(({ net }) => {
-        if (global.__mnSplendorTestFetch) {
-          net.fetch = global.__mnSplendorTestFetch;
-          delete global.__mnSplendorTestFetch;
-        }
-      })
-      .catch(() => {});
+    await step(
+      'restore protocol',
+      () =>
+        app.evaluate(({ net }) => {
+          if (global.__mnSplendorTestFetch) {
+            net.fetch = global.__mnSplendorTestFetch;
+            delete global.__mnSplendorTestFetch;
+          }
+        }),
+      3000,
+    ).catch(() => {});
     await fixture.stop();
   }
 }

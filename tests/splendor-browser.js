@@ -1,45 +1,512 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),express=require('express'),WebSocket=require('ws'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture'),R=require('../src/legacy/splendor-rules');
-async function peer(base,token){const ws=new WebSocket(base.replace(/^http/,'ws')+'/ws'),messages=[];ws.on('message',raw=>messages.push(JSON.parse(raw)));await new Promise(r=>ws.once('open',r));const wait=async fn=>{for(let n=0;n<500;n++){const found=messages.findLast(fn);if(found)return found;await new Promise(r=>setTimeout(r,10));}throw Error('Missing peer message');};const send=m=>ws.send(JSON.stringify(m));send({type:'authenticate',access_token:token});await wait(m=>m.type==='auth-result'&&m.ok);return {ws,messages,send,wait};}
-test('Splendor actual controls play full matches, reveal payments/scores, fit portrait monitors and preserve all live call tracks',{timeout:240000},async t=>{
- const server=await new Promise(r=>{const s=express().use(express.static(path.resolve('out'))).listen(0,'127.0.0.1',()=>r(s));}),origin='http://127.0.0.1:'+server.address().port,f=await startFixture({port:10843,appOrigin:origin});let browser;
- try{
-  await fs.mkdir('artifacts/splendor',{recursive:true});browser=await chromium.launch({executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio','--autoplay-policy=no-user-gesture-required']});
-  for(const native of [true,false])await t.test(native?'Windows integration':'Website integration',async()=>{
-   const data=[];for(let i=0;i<2;i++){const email='splendor-ui-'+native+'-'+i+'@example.test';await f.call('signup',{email,nickname:(native?'App ':'Site ')+(i?'Amigo':'Mercador'),password:'Senha12!'});await f.call('verify',{token_hash:[...f.links.keys()].at(-1),type:'signup'});data.push((await f.call('login',{email,password:'Senha12!'})).data);}
-   const other=await peer(f.base,data[1].session.access_token),context=await browser.newContext({viewport:{width:1440,height:960},permissions:['microphone','camera'],reducedMotion:'reduce'});await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
-   await context.addInitScript(({base,data,native})=>{window.TRONO_BACKEND_URL=base;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('tronoSfxEnabled','0');localStorage.setItem('mnDesktopNoiseMode','native');navigator.mediaDevices.getDisplayMedia=async()=>{const c=document.createElement('canvas');c.width=1280;c.height=720;return c.captureStream(15);};if(native)window.TronoDesktop={version:'0.2.0',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};},{base:f.base,data:data[0],native});
-   const page=await context.newPage(),errors=[],missing=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400&&(r.url().includes('/assets/')||r.url().endsWith('.js')||r.url().endsWith('.css')))missing.push(r.url()+':'+r.status());});page.on('dialog',d=>d.accept());page.setDefaultTimeout(8000);
-   const snapshot=()=>page.evaluate(()=>({socket:window.TronoNetwork.clientId,voice:window.TronoNetwork.primaryRoom,track:window.TronoSocial.getLocalAudioTrack()?.id,camera:window.TronoSocial.getMediaSources().find(s=>s.self)?.camera?.getVideoTracks()[0]?.id,screen:window.TronoSocial.getLocalDisplayStream()?.getVideoTracks()[0]?.id,joined:window.TronoSocial.voiceJoined}));
-   async function ownMove(move){
-    if(move.kind==='noble')await page.locator('[data-noble="'+move.id+'"]').click();
-    if(move.kind==='take'){for(let i=0;i<5;i++)for(let n=0;n<move.tokens[i];n++)await page.locator('[data-token="'+i+'"]').click();await page.locator('#splendorTake').click();}
-    if(move.kind==='buy'){await page.locator('#splendorContent [data-card="'+move.id+'"]').click();await expect(page.locator('#splendorCardDialog')).toBeVisible();await expect(page.locator('#splendorCardContent')).toContainText('Custo após seus bônus');await page.locator('#splendorBuy').click();}
-    if(move.kind==='reserve'){if(move.level)await page.getByRole('button',{name:new RegExp('Reservar do baralho de nível '+move.level+',')}).click();else{await page.locator('#splendorContent [data-card="'+move.id+'"]').click();await page.locator('#splendorReserve').click();}}
-    if(await page.locator('#splendorReturnDialog').isVisible()){assert(move.returnTokens,'UI asks to return the same excess as the rules');for(let i=0;i<6;i++)for(let n=0;n<move.returnTokens[i];n++)await page.locator('[data-return-token="'+i+'"]').click();await page.locator('#splendorReturnContent').getByRole('button',{name:/^Devolver \d+ \/ \d+$/}).click();}
-   }
-   try{
-    await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(()=>window.TronoChatHub.enter({channelId:'chat-jogos'}));if(!await page.evaluate(()=>window.TronoSocial.voiceJoined))await page.locator('#joinVoiceBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);await page.evaluate(()=>window.TronoSocial.startScreenShare());await expect.poll(()=>page.evaluate(()=>window.TronoSocial.screenSharing)).toBe(true);const before=await snapshot();assert(before.track&&before.camera&&before.screen);
-    await page.evaluate(()=>window.TronoAppLayout.navigate('game'));await expect(page.locator('.games-card')).toHaveCount(5);await page.evaluate(()=>document.fonts.ready);await expect.poll(()=>page.locator('.games-box-art').evaluate(n=>n.complete&&n.naturalWidth>0)).toBe(true);for(const img of ['.games-throne-art','.games-card-splendor img'])await expect.poll(()=>page.locator(img).evaluate(n=>n.complete&&n.naturalWidth>0)).toBe(true);
-    for(const [width,height]of [[1440,960],[1080,1920],[480,800],[360,740]]){if(native&&width<480)continue;await page.setViewportSize({width,height});const covers=await page.locator('.games-card').evaluateAll(ns=>ns.map(n=>{const c=n.querySelector('.games-cover').getBoundingClientRect(),t=n.querySelector('.games-cover>span:last-child').getBoundingClientRect();return {left:c.left,right:c.right,textLeft:t.left,textRight:t.right};}));assert(covers.every(r=>r.textLeft>=r.left&&r.textRight<=r.right));assert(await page.locator('#gamesScreen').evaluate(n=>n.scrollWidth<=n.clientWidth+1));}
-    await page.setViewportSize({width:1440,height:960});await page.screenshot({path:'artifacts/splendor/'+(native?'windows':'web')+'-catalogue.png'});await page.locator('#playSplendor').click();await expect(page.locator('#splendorScreen')).toBeVisible();await page.getByRole('button',{name:'Criar mesa',exact:true}).click();await expect(page.locator('.sp-seats')).toBeVisible();const id=await page.evaluate(()=>window.TronoSplendor.room.id);other.send({type:'splendor',action:'join',roomId:id});await expect(page.locator('.sp-seats')).toContainText(data[1].user.nickname);await page.getByRole('button',{name:'Começar com os presentes'}).click();await expect(page.locator('.sp-market-row')).toHaveCount(3);await expect(page.locator('.sp-market .sp-card')).toHaveCount(12);await expect(page.locator('.sp-noble')).toHaveCount(3);await expect(page.locator('.sp-player')).toHaveCount(2);
-    for(const layout of ['original','discord']){await page.evaluate(v=>window.TronoAppLayout.apply(v),layout);for(const [width,height]of [[1440,960],[1280,720],[1080,1920],[720,1280],[480,800],[480,520],[360,740]]){if(native&&width<480)continue;await page.setViewportSize({width,height});const bounds=await page.locator('#splendorScreen').evaluate(n=>({scroll:n.scrollWidth,width:n.clientWidth}));assert(bounds.scroll<=bounds.width+1,JSON.stringify({native,layout,width,bounds}));const cards=await page.locator('.sp-market .sp-card').evaluateAll(ns=>ns.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width};}));assert(cards.every(r=>r.width>=45&&r.left>=0&&r.right<=width),JSON.stringify({native,layout,width,cards}));if((width===1280||width===1440)&&layout==='original'){const personal=await page.locator('.sp-self').boundingBox(),bar=await page.locator('.sp-action-bar').boundingBox();assert(personal.y+personal.height<=bar.y+1||bar.y+bar.height<=personal.y+1,'Action bar must not cover the player panel: '+JSON.stringify({personal,bar,width}));const market=await page.locator('.sp-market').boundingBox(),screen=await page.locator('#splendorScreen').boundingBox();assert(market.y+market.height<=screen.y+screen.height,'All three tiers fit above the call dock in 720p');}assert.deepEqual(await snapshot(),before);if(width===1440||width===1080||width===480)await page.screenshot({path:'artifacts/splendor/'+(native?'windows':'web')+'-'+layout+'-'+width+'.png'});}}
-    await page.setViewportSize({width:1440,height:960});const volume=page.locator('#splendorScreen [data-game-audio=splendor]');await volume.locator('summary').click();await volume.locator('input').press('Home');assert.equal(await page.evaluate(()=>window.TronoAudio.gameVolume('splendor')),0);await volume.locator('input').press('End');await volume.locator('summary').click();await page.locator('#splendorFullscreen').click();await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.id)).toBe('splendorScreen');await page.locator('#splendorRulesButton').click();await expect(page.locator('#splendorRulesDialog')).toContainText('quem comprou menos cartas');await page.locator('#splendorRulesDialog [data-close]').click();await page.locator('#splendorFullscreen').click();await expect.poll(()=>page.evaluate(()=>document.fullscreenElement===null)).toBe(true);
-    await page.evaluate(()=>{window.__spFull=document.querySelector('#splendorScreen').requestFullscreen;document.querySelector('#splendorScreen').requestFullscreen=async()=>{throw Error('Expected unsupported API');};});await page.locator('#splendorFullscreen').click();await expect(page.locator('#splendorScreen')).toHaveClass(/sp-immersive/);await page.keyboard.press('Escape');await expect(page.locator('#splendorScreen')).not.toHaveClass(/sp-immersive/);await page.evaluate(()=>{document.querySelector('#splendorScreen').requestFullscreen=window.__spFull;});
-    await page.evaluate(()=>{window.__spSounds=[];const original=window.TronoAudio.playSfx;window.TronoAudio.playSfx=kind=>{window.__spSounds.push(kind);original(kind);};});
-    let turns=0,animated=false,returned=false,bought=false,noble=false;
-    while(true){const s=await page.evaluate(()=>window.TronoSplendor.room.state);if(s.phase==='finished')break;const revision=s.revision;
-      if(s.players[s.turn].id===data[0].user.id){const move=R.botMove(s);if(move.kind==='buy')bought=true;if(move.returnTokens)returned=true;if(move.kind==='noble')noble=true;if(native&&move.kind==='buy'&&R.cardById(move.id).points>0&&!animated){await page.emulateMedia({reducedMotion:'no-preference'});animated=true;}await ownMove(move);}
-      else{await other.wait(m=>m.type==='splendor-state'&&m.room.state?.revision===revision);const own=other.messages.findLast(m=>m.type==='splendor-state').room.state;other.send({type:'splendor',action:'move',revision,move:R.botMove(own)});}
-      await expect.poll(()=>page.evaluate(()=>window.TronoSplendor.room.state.revision)).toBeGreaterThan(revision);assert(++turns<500);
-      if(await page.evaluate(()=>window.TronoSplendor.animating)){await expect(page.locator('.sp-event-banner')).toBeVisible();await expect(page.locator('.sp-event-value')).toHaveText(/^(\+\d+|✦)$/);await expect(page.locator('#splendorContent .sp-affordable')).toHaveCount(0);assert((await page.evaluate(()=>window.__spSounds)).some(k=>k.startsWith('splendor-')));await page.screenshot({path:'artifacts/splendor/windows-animation.png'});const event=await page.evaluate(()=>window.TronoSplendor.room.state.last);if(event.kind==='buy'){await expect(page.locator('.sp-purchase-showcase')).toBeVisible({timeout:8000});await expect(page.locator('.sp-purchase-showcase')).toContainText('desconto permanente');await page.screenshot({path:'artifacts/splendor/purchase-showcase.png'});await expect(page.locator('.sp-event-copy>strong')).toContainText('Concluído',{timeout:8000});}await page.evaluate(()=>window.TronoAppLayout.navigate('community'));await expect.poll(()=>page.evaluate(()=>window.TronoSplendor.animating)).toBe(false);assert.deepEqual(await snapshot(),before);await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>window.TronoSplendor.open());}
+const { test } = require('node:test'),
+  assert = require('node:assert/strict'),
+  path = require('node:path'),
+  fs = require('node:fs/promises'),
+  express = require('express'),
+  WebSocket = require('ws'),
+  { chromium, expect } = require('@playwright/test'),
+  { startFixture } = require('./auth-fixture'),
+  R = require('../src/legacy/splendor-rules');
+async function peer(base, token) {
+  const ws = new WebSocket(base.replace(/^http/, 'ws') + '/ws'),
+    messages = [];
+  ws.on('message', (raw) => messages.push(JSON.parse(raw)));
+  await new Promise((r) => ws.once('open', r));
+  const wait = async (fn) => {
+    for (let n = 0; n < 500; n++) {
+      const found = messages.findLast(fn);
+      if (found) return found;
+      await new Promise((r) => setTimeout(r, 10));
     }
-    assert(bought);if(native)assert(animated);await expect(page.locator('.sp-result')).toContainText('Recordes salvos.');await expect(page.locator('.sp-action-bar')).toContainText('Partida encerrada');await expect(page.locator('.sp-records li')).toHaveCount(native?2:4);const final=await page.evaluate(()=>window.TronoSplendor.room.state);for(const p of final.players){const panel=page.locator('#splendorContent [data-player="'+p.id+'"]');await expect(panel.locator('[data-score]')).toHaveText(String(p.score));await expect(panel.locator('.sp-wallet-color .sp-gem b')).toHaveText(p.tokens.map(String));await expect(panel.locator('.sp-bonus-card>b')).toHaveText(p.bonuses.map(String));await expect(panel.locator('.sp-resource-total')).toHaveText([...p.bonuses.map((v,i)=>'= '+(v+p.tokens[i])),p.tokens[5]+' curinga(s)']);}assert.deepEqual(await snapshot(),before);await page.screenshot({path:'artifacts/splendor/'+(native?'windows':'web')+'-result.png'});
-    const first=await page.locator('.sp-market .sp-card').first().getAttribute('data-card');await page.locator('.sp-market .sp-card').first().click();await page.setViewportSize({width:480,height:520});const dialog=await page.locator('#splendorCardDialog').boundingBox();assert(dialog.x>=0&&dialog.y>=0&&dialog.x+dialog.width<=480&&dialog.y+dialog.height<=520);await page.locator('#splendorCardDialog [data-close]').click();await page.setViewportSize({width:1440,height:960});await page.locator('#splendorBack').click();await page.locator('#playThrone').click();assert.deepEqual(await snapshot(),before);
-    await page.evaluate(()=>window.TronoSplendor.open());await page.getByRole('button',{name:'Sair da mesa',exact:true}).click();await expect(page.locator('#splendorPlayerCount')).toBeVisible();other.send({type:'splendor',action:'leave'});
-    if(native){await page.locator('#splendorPlayerCount').selectOption('4');await page.getByRole('button',{name:'Criar mesa',exact:true}).click();await page.getByRole('button',{name:'Completar com bots e começar'}).click();await expect(page.locator('.sp-player')).toHaveCount(4);await expect(page.locator('.sp-noble')).toHaveCount(5);for(const [width,height]of [[1440,960],[1080,1920],[480,800]]){await page.setViewportSize({width,height});assert(await page.locator('#splendorScreen').evaluate(n=>n.scrollWidth<=n.clientWidth+1));await page.screenshot({path:'artifacts/splendor/windows-four-'+width+'.png'});}assert.deepEqual(await snapshot(),before);}
-    assert.deepEqual(missing,[]);assert.deepEqual(errors,[]);
-   }finally{other.ws.terminate();await context.close();}
-  });
- }finally{await browser?.close();await f.stop();await new Promise(r=>server.close(r));}
-});
+    throw Error('Missing peer message');
+  };
+  const send = (m) => ws.send(JSON.stringify(m));
+  send({ type: 'authenticate', access_token: token });
+  await wait((m) => m.type === 'auth-result' && m.ok);
+  return { ws, messages, send, wait };
+}
+test(
+  'Splendor actual controls play full matches, reveal payments/scores, fit portrait monitors and preserve all live call tracks',
+  { timeout: 240000 },
+  async (t) => {
+    const server = await new Promise((r) => {
+        const s = express()
+          .use(express.static(path.resolve('out')))
+          .listen(0, '127.0.0.1', () => r(s));
+      }),
+      origin = 'http://127.0.0.1:' + server.address().port,
+      f = await startFixture({ port: 10843, appOrigin: origin });
+    let browser;
+    try {
+      await fs.mkdir('artifacts/splendor', { recursive: true });
+      browser = await chromium.launch({
+        executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
+        args: [
+          '--no-sandbox',
+          '--use-fake-device-for-media-stream',
+          '--use-fake-ui-for-media-stream',
+          '--mute-audio',
+          '--autoplay-policy=no-user-gesture-required',
+        ],
+      });
+      for (const native of [true, false])
+        await t.test(native ? 'Windows integration' : 'Website integration', async () => {
+          const data = [];
+          for (let i = 0; i < 2; i++) {
+            const email = 'splendor-ui-' + native + '-' + i + '@example.test';
+            await f.call('signup', {
+              email,
+              nickname: (native ? 'App ' : 'Site ') + (i ? 'Amigo' : 'Mercador'),
+              password: 'Senha12!',
+            });
+            await f.call('verify', { token_hash: [...f.links.keys()].at(-1), type: 'signup' });
+            data.push((await f.call('login', { email, password: 'Senha12!' })).data);
+          }
+          const other = await peer(f.base, data[1].session.access_token),
+            context = await browser.newContext({
+              viewport: { width: 1440, height: 960 },
+              permissions: ['microphone', 'camera'],
+              reducedMotion: 'reduce',
+            });
+          await context.route('**/*', (r) =>
+            new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort(),
+          );
+          await context.addInitScript(
+            ({ base, data, native }) => {
+              window.TRONO_BACKEND_URL = base;
+              sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+              localStorage.setItem('tronoMusicEnabled', '0');
+              localStorage.setItem('tronoSfxEnabled', '0');
+              localStorage.setItem('mnDesktopNoiseMode', 'native');
+              navigator.mediaDevices.getDisplayMedia = async () => {
+                const c = document.createElement('canvas');
+                c.width = 1280;
+                c.height = 720;
+                return c.captureStream(15);
+              };
+              if (native)
+                window.TronoDesktop = {
+                  version: '0.2.0',
+                  clipsSuspended: true,
+                  readSession: async () => null,
+                  saveSession: async () => {},
+                  getMediaPermissions: async () => ['audio', 'video'],
+                  onCapture: () => {},
+                  onCaptureCancel: () => {},
+                  getWindowState: async () => ({ fullscreen: false }),
+                  onWindowState: () => {},
+                  onUpdateState: () => {},
+                  getUpdateState: async () => ({ status: 'idle' }),
+                  onApplicationAudio: () => {},
+                  configureClips: async () => ({ suspended: true }),
+                };
+            },
+            { base: f.base, data: data[0], native },
+          );
+          const page = await context.newPage(),
+            errors = [],
+            missing = [];
+          page.on('pageerror', (e) => errors.push(e.message));
+          page.on('response', (r) => {
+            if (
+              r.status() >= 400 &&
+              (r.url().includes('/assets/') || r.url().endsWith('.js') || r.url().endsWith('.css'))
+            )
+              missing.push(r.url() + ':' + r.status());
+          });
+          page.on('dialog', (d) => d.accept());
+          page.setDefaultTimeout(8000);
+          const snapshot = () =>
+            page.evaluate(() => ({
+              socket: window.TronoNetwork.clientId,
+              voice: window.TronoNetwork.primaryRoom,
+              track: window.TronoSocial.getLocalAudioTrack()?.id,
+              camera: window.TronoSocial.getMediaSources()
+                .find((s) => s.self)
+                ?.camera?.getVideoTracks()[0]?.id,
+              screen: window.TronoSocial.getLocalDisplayStream()?.getVideoTracks()[0]?.id,
+              joined: window.TronoSocial.voiceJoined,
+            }));
+          async function ownMove(move) {
+            if (move.kind === 'noble') await page.locator('[data-noble="' + move.id + '"]').click();
+            if (move.kind === 'take') {
+              for (let i = 0; i < 5; i++)
+                for (let n = 0; n < move.tokens[i]; n++)
+                  await page.locator('[data-token="' + i + '"]').click();
+              await page.locator('#splendorTake').click();
+            }
+            if (move.kind === 'buy') {
+              const target = page.locator('#splendorContent [data-card="' + move.id + '"]');
+              if (!(await target.isVisible()))
+                await page.locator('.sp-self .sp-player-details summary').click();
+              await target.click();
+              await expect(page.locator('#splendorCardDialog')).toBeVisible();
+              await expect(page.locator('#splendorCardContent')).toContainText(
+                'Custo após seus bônus',
+              );
+              await page.locator('#splendorBuy').click();
+            }
+            if (move.kind === 'reserve') {
+              if (move.level)
+                await page
+                  .getByRole('button', {
+                    name: new RegExp('Reservar do baralho de nível ' + move.level + ','),
+                  })
+                  .click();
+              else {
+                await page.locator('#splendorContent [data-card="' + move.id + '"]').click();
+                await page.locator('#splendorReserve').click();
+              }
+            }
+            if (await page.locator('#splendorReturnDialog').isVisible()) {
+              assert(move.returnTokens, 'UI asks to return the same excess as the rules');
+              for (let i = 0; i < 6; i++)
+                for (let n = 0; n < move.returnTokens[i]; n++)
+                  await page.locator('[data-return-token="' + i + '"]').click();
+              await page
+                .locator('#splendorReturnContent')
+                .getByRole('button', { name: /^Devolver \d+ \/ \d+$/ })
+                .click();
+            }
+          }
+          try {
+            await page.goto(origin);
+            await page.waitForFunction(() => window.TronoAuth?.ready);
+            await page.evaluate(() => window.TronoAuth.ready);
+            await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
+            if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
+              await page.locator('#joinVoiceBtn').click();
+            await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+            await page.locator('#cameraBtn').click();
+            await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+            await page.evaluate(() => window.TronoSocial.startScreenShare());
+            await expect
+              .poll(() => page.evaluate(() => window.TronoSocial.screenSharing))
+              .toBe(true);
+            const before = await snapshot();
+            assert(before.track && before.camera && before.screen);
+            await page.evaluate(() => window.TronoAppLayout.navigate('game'));
+            await expect(page.locator('.games-card')).toHaveCount(5);
+            await page.evaluate(() => document.fonts.ready);
+            await expect
+              .poll(() =>
+                page.locator('.games-box-art').evaluate((n) => n.complete && n.naturalWidth > 0),
+              )
+              .toBe(true);
+            for (const img of ['.games-throne-art', '.games-card-splendor img'])
+              await expect
+                .poll(() => page.locator(img).evaluate((n) => n.complete && n.naturalWidth > 0))
+                .toBe(true);
+            for (const [width, height] of [
+              [1440, 960],
+              [1080, 1920],
+              [480, 800],
+              [360, 740],
+            ]) {
+              if (native && width < 480) continue;
+              await page.setViewportSize({ width, height });
+              const covers = await page.locator('.games-card').evaluateAll((ns) =>
+                ns.map((n) => {
+                  const c = n.querySelector('.games-cover').getBoundingClientRect(),
+                    t = n.querySelector('.games-cover>span:last-child').getBoundingClientRect();
+                  return { left: c.left, right: c.right, textLeft: t.left, textRight: t.right };
+                }),
+              );
+              assert(covers.every((r) => r.textLeft >= r.left && r.textRight <= r.right));
+              assert(
+                await page
+                  .locator('#gamesScreen')
+                  .evaluate((n) => n.scrollWidth <= n.clientWidth + 1),
+              );
+            }
+            await page.setViewportSize({ width: 1440, height: 960 });
+            await page.screenshot({
+              path: 'artifacts/splendor/' + (native ? 'windows' : 'web') + '-catalogue.png',
+            });
+            await page.locator('#playSplendor').click();
+            await expect(page.locator('#splendorScreen')).toBeVisible();
+            await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();
+            await expect(page.locator('.sp-seats')).toBeVisible();
+            const id = await page.evaluate(() => window.TronoSplendor.room.id);
+            other.send({ type: 'splendor', action: 'join', roomId: id });
+            await expect(page.locator('.sp-seats')).toContainText(data[1].user.nickname);
+            await page.getByRole('button', { name: 'Começar com os presentes' }).click();
+            await expect(page.locator('.sp-market-row')).toHaveCount(3);
+            await expect(page.locator('.sp-market .sp-card')).toHaveCount(12);
+            await expect(page.locator('.sp-noble')).toHaveCount(3);
+            await expect(page.locator('.sp-player')).toHaveCount(2);
+            for (const layout of ['original', 'discord']) {
+              await page.evaluate((v) => window.TronoAppLayout.apply(v), layout);
+              for (const [width, height] of [
+                [1440, 960],
+                [1280, 720],
+                [1080, 1920],
+                [720, 1280],
+                [480, 800],
+                [480, 520],
+                [360, 740],
+              ]) {
+                if (native && width < 480) continue;
+                await page.setViewportSize({ width, height });
+                const bounds = await page
+                  .locator('#splendorScreen')
+                  .evaluate((n) => ({ scroll: n.scrollWidth, width: n.clientWidth }));
+                assert(
+                  bounds.scroll <= bounds.width + 1,
+                  JSON.stringify({ native, layout, width, bounds }),
+                );
+                const cards = await page.locator('.sp-market .sp-card').evaluateAll((ns) =>
+                  ns.map((n) => {
+                    const r = n.getBoundingClientRect();
+                    return { left: r.left, right: r.right, width: r.width };
+                  }),
+                );
+                assert(
+                  cards.every((r) => r.width >= 45 && r.left >= 0 && r.right <= width),
+                  JSON.stringify({ native, layout, width, cards }),
+                );
+                if ((width === 1280 || width === 1440) && layout === 'original') {
+                  const personal = await page.locator('.sp-self').boundingBox(),
+                    bar = await page.locator('.sp-action-bar').boundingBox();
+                  assert(
+                    personal.y + personal.height <= bar.y + 1 ||
+                      bar.y + bar.height <= personal.y + 1,
+                    'Action bar must not cover the player panel: ' +
+                      JSON.stringify({ personal, bar, width }),
+                  );
+                  const market = await page.locator('.sp-market').boundingBox(),
+                    screen = await page.locator('#splendorScreen').boundingBox();
+                  assert(
+                    market.y + market.height <= screen.y + screen.height,
+                    'All three tiers fit above the call dock in 720p',
+                  );
+                }
+                assert.deepEqual(await snapshot(), before);
+                if (width === 1440 || width === 1080 || width === 480)
+                  await page.screenshot({
+                    path:
+                      'artifacts/splendor/' +
+                      (native ? 'windows' : 'web') +
+                      '-' +
+                      layout +
+                      '-' +
+                      width +
+                      '.png',
+                  });
+              }
+            }
+            await page.setViewportSize({ width: 1440, height: 960 });
+            const volume = page.locator('#splendorScreen [data-game-audio=splendor]');
+            await volume.locator('summary').click();
+            await volume.locator('input').press('Home');
+            assert.equal(await page.evaluate(() => window.TronoAudio.gameVolume('splendor')), 0);
+            await volume.locator('input').press('End');
+            await volume.locator('summary').click();
+            await page.locator('#splendorFullscreen').click();
+            await expect
+              .poll(() => page.evaluate(() => document.fullscreenElement?.id))
+              .toBe('splendorScreen');
+            await page.locator('#splendorRulesButton').click();
+            await expect(page.locator('#splendorRulesDialog')).toContainText(
+              'quem comprou menos cartas',
+            );
+            await page.locator('#splendorRulesDialog [data-close]').click();
+            await page.locator('#splendorFullscreen').click();
+            await expect
+              .poll(() => page.evaluate(() => document.fullscreenElement === null))
+              .toBe(true);
+            await page.evaluate(() => {
+              window.__spFull = document.querySelector('#splendorScreen').requestFullscreen;
+              document.querySelector('#splendorScreen').requestFullscreen = async () => {
+                throw Error('Expected unsupported API');
+              };
+            });
+            await page.locator('#splendorFullscreen').click();
+            await expect(page.locator('#splendorScreen')).toHaveClass(/sp-immersive/);
+            await page.keyboard.press('Escape');
+            await expect(page.locator('#splendorScreen')).not.toHaveClass(/sp-immersive/);
+            await page.evaluate(() => {
+              document.querySelector('#splendorScreen').requestFullscreen = window.__spFull;
+            });
+            await page.evaluate(() => {
+              window.__spSounds = [];
+              const original = window.TronoAudio.playSfx;
+              window.TronoAudio.playSfx = (kind) => {
+                window.__spSounds.push(kind);
+                original(kind);
+              };
+            });
+            let turns = 0,
+              animated = false,
+              returned = false,
+              bought = false,
+              noble = false;
+            while (true) {
+              const s = await page.evaluate(() => window.TronoSplendor.room.state);
+              if (s.phase === 'finished') break;
+              const revision = s.revision;
+              if (s.players[s.turn].id === data[0].user.id) {
+                const move = R.botMove(s);
+                if (move.kind === 'buy') bought = true;
+                if (move.returnTokens) returned = true;
+                if (move.kind === 'noble') noble = true;
+                if (native && move.kind === 'buy' && R.cardById(move.id).points > 0 && !animated) {
+                  await page.emulateMedia({ reducedMotion: 'no-preference' });
+                  animated = true;
+                }
+                await ownMove(move);
+              } else {
+                await other.wait(
+                  (m) => m.type === 'splendor-state' && m.room.state?.revision === revision,
+                );
+                const own = other.messages.findLast((m) => m.type === 'splendor-state').room.state;
+                other.send({ type: 'splendor', action: 'move', revision, move: R.botMove(own) });
+              }
+              await expect
+                .poll(() => page.evaluate(() => window.TronoSplendor.room.state.revision))
+                .toBeGreaterThan(revision);
+              assert(++turns < 500);
+              if (await page.evaluate(() => window.TronoSplendor.animating)) {
+                await expect(page.locator('.sp-event-banner')).toBeVisible();
+                await expect(page.locator('.sp-event-value')).toHaveText(/^(\+\d+|✦)$/);
+                await expect(page.locator('#splendorContent .sp-affordable')).toHaveCount(0);
+                assert(
+                  (await page.evaluate(() => window.__spSounds)).some((k) =>
+                    k.startsWith('splendor-'),
+                  ),
+                );
+                await page.screenshot({ path: 'artifacts/splendor/windows-animation.png' });
+                const event = await page.evaluate(() => window.TronoSplendor.room.state.last);
+                if (event.kind === 'buy') {
+                  await expect(page.locator('.sp-purchase-showcase')).toBeVisible({
+                    timeout: 8000,
+                  });
+                  await expect(page.locator('.sp-purchase-showcase')).toContainText(
+                    'desconto permanente',
+                  );
+                  await page.screenshot({ path: 'artifacts/splendor/purchase-showcase.png' });
+                  await expect(page.locator('.sp-event-copy>strong')).toContainText('Concluído', {
+                    timeout: 8000,
+                  });
+                }
+                await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+                await expect
+                  .poll(() => page.evaluate(() => window.TronoSplendor.animating))
+                  .toBe(false);
+                assert.deepEqual(await snapshot(), before);
+                await page.emulateMedia({ reducedMotion: 'reduce' });
+                await page.evaluate(() => window.TronoSplendor.open());
+              }
+            }
+            assert(bought);
+            if (native) assert(animated);
+            await expect(page.locator('.sp-result')).toContainText('Recordes salvos.');
+            await expect(page.locator('.sp-action-bar')).toContainText('Partida encerrada');
+            await expect(page.locator('.sp-records li')).toHaveCount(native ? 2 : 4);
+            const final = await page.evaluate(() => window.TronoSplendor.room.state);
+            for (const p of final.players) {
+              const panel = page.locator('#splendorContent [data-player="' + p.id + '"]');
+              await expect(panel.locator('[data-score]')).toHaveText(String(p.score));
+              await expect(panel.locator('.sp-wallet-color .sp-gem b')).toHaveText(
+                p.tokens.map(String),
+              );
+              await expect(panel.locator('.sp-bonus-card>b')).toHaveText(p.bonuses.map(String));
+              await expect(panel.locator('.sp-resource-total')).toHaveText([
+                ...p.bonuses.map((v, i) => '= ' + (v + p.tokens[i])),
+                p.tokens[5] + ' curinga(s)',
+              ]);
+            }
+            assert.deepEqual(await snapshot(), before);
+            await page.screenshot({
+              path: 'artifacts/splendor/' + (native ? 'windows' : 'web') + '-result.png',
+            });
+            const first = await page
+              .locator('.sp-market .sp-card')
+              .first()
+              .getAttribute('data-card');
+            await page.locator('.sp-market .sp-card').first().click();
+            await page.setViewportSize({ width: 480, height: 520 });
+            const dialog = await page.locator('#splendorCardDialog').boundingBox();
+            assert(
+              dialog.x >= 0 &&
+                dialog.y >= 0 &&
+                dialog.x + dialog.width <= 480 &&
+                dialog.y + dialog.height <= 520,
+            );
+            await page.locator('#splendorCardDialog [data-close]').click();
+            await page.setViewportSize({ width: 1440, height: 960 });
+            await page.locator('#splendorBack').click();
+            await page.locator('#playThrone').click();
+            assert.deepEqual(await snapshot(), before);
+            await page.evaluate(() => window.TronoSplendor.open());
+            await page.getByRole('button', { name: 'Sair da mesa', exact: true }).click();
+            await expect(page.locator('#splendorPlayerCount')).toBeVisible();
+            other.send({ type: 'splendor', action: 'leave' });
+            if (native) {
+              await page.locator('#splendorPlayerCount').selectOption('4');
+              await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();
+              await page.getByRole('button', { name: 'Completar com bots e começar' }).click();
+              await expect(page.locator('.sp-player')).toHaveCount(4);
+              await expect(page.locator('.sp-noble')).toHaveCount(5);
+              for (const layout of ['original', 'discord']) {
+                await page.evaluate((layout) => window.TronoAppLayout.apply(layout), layout);
+                for (const [width, height] of [
+                  [1536, 960],
+                  [1280, 720],
+                ]) {
+                  await page.setViewportSize({ width, height });
+                  await page.locator('#splendorScreen').evaluate((n) => (n.scrollTop = 0));
+                  const screen = await page.locator('#splendorScreen').boundingBox();
+                  const players = await page.locator('.sp-player').evaluateAll((ns) =>
+                    ns.map((n) => {
+                      const r = n.getBoundingClientRect();
+                      return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+                    }),
+                  );
+                  assert(
+                    players.every((r) => r.top >= screen.y && r.bottom <= screen.y + screen.height),
+                    'All four player panels must fit without scrolling ' +
+                      JSON.stringify({ layout, width, height, screen, players }),
+                  );
+                  const market = await page.locator('.sp-market').boundingBox();
+                  assert(
+                    players.every((r) => r.right <= market.x),
+                    'Player panels stay beside the market',
+                  );
+                  await page.screenshot({
+                    path: 'artifacts/splendor/four-visible-' + layout + '-' + width + '.png',
+                  });
+                }
+              }
+              for (const [width, height] of [
+                [1440, 960],
+                [1080, 1920],
+                [480, 800],
+              ]) {
+                await page.setViewportSize({ width, height });
+                assert(
+                  await page
+                    .locator('#splendorScreen')
+                    .evaluate((n) => n.scrollWidth <= n.clientWidth + 1),
+                );
+                await page.screenshot({
+                  path: 'artifacts/splendor/windows-four-' + width + '.png',
+                });
+              }
+              assert.deepEqual(await snapshot(), before);
+            }
+            assert.deepEqual(missing, []);
+            assert.deepEqual(errors, []);
+          } finally {
+            other.ws.terminate();
+            await context.close();
+          }
+        });
+    } finally {
+      await browser?.close();
+      await f.stop();
+      await new Promise((r) => server.close(r));
+    }
+  },
+);

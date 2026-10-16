@@ -660,3 +660,11 @@ body:not(.desktop-app) > #messengerToggle.messenger-home-button {
   flex: 0 0 auto;
   overflow: visible;
 }
+
+#messengerAttachmentDraft .messenger-draft-image {
+  display: block;
+  max-height: 100px;
+  max-width: 70%;
+  object-fit: contain;
+  border-radius: 6px;
+}

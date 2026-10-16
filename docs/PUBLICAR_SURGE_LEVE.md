@@ -10,8 +10,14 @@ o site com um único instalador e seu manifesto de atualização, mantendo a pas
 `frontend/` dentro do ZIP para compatibilidade com a distribuição existente.
 
 As notas por versão necessárias ao pacote ficam em `docs/archive/`. O workflow
-Windows valida o build antes de preparar os downloads. Esta migração não altera
-versões, não faz push e não publica builds.
+Windows valida o build antes de preparar os downloads. A branch acompanha o
+desktop 0.2.8; sincronizar os fontes não publica nem instala uma nova distribuição.
+
+O GIPHY exige a migração `supabase/migrations/20261016140000_giphy_profile_credits.sql`
+no banco de destino e o endpoint autenticado `/community/gif-provider` do backend.
+`GIPHY_API_KEY` é a chave pública do cliente GIPHY, enviada ao navegador autenticado;
+nunca use uma credencial privada de serviço nessa variável. Sem ela, a importação
+por link continua disponível. Veja as [notas da 0.2.8](archive/ATUALIZAR_WINDOWS_v0.2.8.md).
 
 ## Configuração do backend
 

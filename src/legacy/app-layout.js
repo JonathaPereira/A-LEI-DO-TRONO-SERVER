@@ -85,6 +85,11 @@ window.TronoAppLayout = (() => {
     const call = window.TronoSocial,
       room = call.voiceRoom;
     if (!call.voiceJoined || !room) return;
+    if (
+      document.body.classList.contains('chat-only-active') &&
+      window.TronoNetwork.currentRoom === room.id
+    )
+      return;
     if (room.kind === 'game') {
       await navigate('throne');
       return;

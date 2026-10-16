@@ -60,38 +60,51 @@ test(
       await context.route('**/*', (r) =>
         new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort(),
       );
-      const imageURL = 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Animation.gif';
-      let catalogueFail = false;
-      await context.route('https://commons.wikimedia.org/w/api.php?*', (r) =>
-        catalogueFail
+      const imageURL = 'https://media.giphy.com/media/abc123/giphy.gif';
+      let catalogueFail = false,
+        configured = true;
+      const requests = [];
+      await context.route('**/community/gif-provider', (r) =>
+        r.fulfill({
+          json: {
+            provider: 'giphy',
+            configured,
+            ...(configured ? { apiKey: 'fixture-client-key' } : {}),
+          },
+        }),
+      );
+      await context.route('https://api.giphy.com/v1/gifs/*', (r) => {
+        requests.push(r.request());
+        const url = new URL(r.request().url()),
+          paged = url.searchParams.get('q') === 'stars & sky',
+          offset = Number(url.searchParams.get('offset') || 0);
+        return catalogueFail
           ? r.fulfill({ status: 503, body: 'Unavailable' })
           : r.fulfill({
               json: {
-                query: {
-                  pages: [
-                    {
-                      pageid: 1,
-                      title: 'File:Animation.gif',
-                      imageinfo: [
-                        {
-                          mime: 'image/gif',
-                          size: gif.length,
-                          width: 1,
-                          height: 1,
-                          url: imageURL,
-                          descriptionurl: 'https://commons.wikimedia.org/wiki/File:Animation.gif',
-                          extmetadata: {
-                            Artist: { value: '<b>Auteur</b>' },
-                            LicenseShortName: { value: 'CC0' },
-                          },
-                        },
-                      ],
+                data: [
+                  {
+                    id: offset ? 'def456' : 'abc123',
+                    type: 'gif',
+                    rating: 'g',
+                    title: 'Animation',
+                    url: 'https://giphy.com/gifs/animation-abc123',
+                    user: { display_name: 'Auteur' },
+                    images: {
+                      original: {
+                        url: imageURL,
+                        size: String(gif.length),
+                        width: '1',
+                        height: '1',
+                      },
                     },
-                  ],
-                },
+                  },
+                ],
+                pagination: { offset, count: 1, total_count: paged ? 2 : 1 },
+                meta: { status: 200 },
               },
-            }),
-      );
+            });
+      });
       await context.route(imageURL, (r) => r.fulfill({ contentType: 'image/gif', body: gif }));
       await context.route('**/files/upload', (r) => {
         const id = ids[uploads.length];
@@ -192,6 +205,18 @@ test(
         await page.locator('.profile-gif-results article>button').click();
         await expect(page.locator('#profileGifDialog')).not.toBeVisible();
       }
+      await page.locator('[data-profile-gif=avatar]').click();
+      await expect(page.locator('.profile-gif-results article')).toHaveCount(1);
+      await page.getByRole('searchbox', { name: 'Buscar GIFs' }).fill('stars & sky');
+      await page.locator('.profile-gif-search button').click();
+      await expect(page.locator('.profile-gif-message')).toContainText('Escolha um GIF');
+      assert.equal(new URL(requests.at(-1).url()).searchParams.get('q'), 'stars & sky');
+      await page.getByRole('searchbox', { name: 'Buscar GIFs' }).fill('outro termo');
+      await page.getByRole('button', { name: 'Carregar mais', exact: true }).click();
+      await expect(page.locator('.profile-gif-results article')).toHaveCount(2);
+      assert.equal(new URL(requests.at(-1).url()).searchParams.get('offset'), '1');
+      assert.equal(new URL(requests.at(-1).url()).searchParams.get('q'), 'stars & sky');
+      await page.keyboard.press('Escape');
       await page.locator('#profile-cover_position').fill('18');
       await page.locator('#profile-cover_zoom').fill('150');
       const image = page.locator('#profileLivePreview .member-cover img');
@@ -252,6 +277,30 @@ test(
       await page.locator('.profile-gif-search button').click();
       await expect(page.locator('.profile-gif-results article')).toHaveCount(1);
       await page.keyboard.press('Escape');
+      assert(requests.some((r) => new URL(r.url()).pathname.endsWith('/trending')));
+      assert(requests.every((r) => !r.headers().authorization));
+      configured = false;
+      await page.locator('[data-profile-gif=avatar]').click();
+      await expect(page.locator('.profile-gif-message')).toContainText('cole o link');
+      await page.getByRole('searchbox', { name: 'Buscar GIFs' }).fill('gato feliz');
+      await expect(page.locator('.profile-gif-external')).toHaveAttribute(
+        'href',
+        'https://giphy.com/search/gato%20feliz',
+      );
+      const before = requests.length;
+      await page.locator('.profile-gif-search button').click();
+      await expect(page.locator('.profile-gif-message')).toContainText('cole o link');
+      assert.equal(requests.length, before);
+      await page
+        .getByRole('textbox', { name: 'Link do GIF no GIPHY' })
+        .fill('https://giphy.com/gifs/animation-abc123');
+      await page.getByRole('button', { name: 'Pré-visualizar', exact: true }).click();
+      await expect(page.locator('.profile-gif-results article')).toHaveCount(1);
+      await page.locator('.profile-gif-results article>button').click();
+      await expect(page.locator('#profileGifDialog')).not.toBeVisible();
+      await page.locator('#profileSave').click();
+      await expect(page.locator('#profileMessage')).toContainText('Perfil atualizado.');
+      assert.equal(uploads.length, 3);
       await close();
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.locator('[data-chat-channel=chat-conversa]').click();
@@ -271,7 +320,10 @@ test(
         await expect(page.locator('#cameraBtn')).toHaveAttribute('data-call-action', 'start');
         await page.locator('#cameraBtn').click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-        await page.mouse.move(0, 0);
+        await page.locator('#workspaceHeaderToggle').hover();
+        await expect
+          .poll(() => page.locator('#cameraBtn').evaluate((e) => e.matches(':hover')))
+          .toBe(false);
         await expect
           .poll(() =>
             page.locator('#cameraBtn').evaluate((e) => getComputedStyle(e).backgroundColor),
@@ -279,7 +331,10 @@ test(
           .toBe('rgb(123, 41, 54)');
         await page.locator('#cameraBtn').click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(false);
-        await page.mouse.move(0, 0);
+        await page.locator('#workspaceHeaderToggle').hover();
+        await expect
+          .poll(() => page.locator('#cameraBtn').evaluate((e) => e.matches(':hover')))
+          .toBe(false);
         await expect
           .poll(() =>
             page.locator('#cameraBtn').evaluate((e) => getComputedStyle(e).backgroundColor),

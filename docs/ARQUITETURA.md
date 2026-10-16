@@ -111,7 +111,8 @@ O snapshot tem um invólucro imutável; streams, trilhas e processador são refe
 de mídia pertencentes ao módulo, não DTOs que a interface deva modificar.
 
 `microphone-processor.ts` constrói e encerra o grafo de ganho, limiter e filtro
-RNNoise/leve, com fallback nativo. Recebe os worklets existentes por dependências;
+RNNoise, com fallback nativo. O modo nativo não empilha um expander sobre a captura,
+preservando sílabas baixas. Recebe os worklets existentes por dependências;
 cancelar durante sua inicialização desconecta o grafo e descarta filtros atrasados.
 O AudioContext é emprestado da chamada e não é fechado pelo processador.
 
@@ -133,6 +134,14 @@ streams, geração ou listeners. Continua publicando as trilhas em P2P/SFU e avi
 o controlador de clipes sobre a fonte original. Câmera, configuração dos senders,
 peers, sinalização, contextos compartilhados e coordenação da chamada ainda
 pertencem ao controlador legado; esta etapa não converteu toda a voz.
+
+`components/files/image-viewer.tsx` mantém um único visualizador React para anexos
+do chat e dos consumidores legados. Trocar de conta ou excluir o arquivo invalida
+a imagem aberta; URLs atrasadas não reabrem seleções anteriores.
+
+O catálogo de GIFs usa GIPHY com configuração autenticada pelo backend e importação
+por link quando a chave pública do cliente está ausente. A validação de créditos
+continua aceitando Wikimedia para conservar os perfis existentes.
 
 ## Backend
 

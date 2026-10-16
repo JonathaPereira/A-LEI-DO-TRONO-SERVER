@@ -1,4 +1,4 @@
-export type MicrophoneMode = 'gain-only' | 'rnnoise' | 'light' | 'native' | 'unavailable';
+export type MicrophoneMode = 'gain-only' | 'rnnoise' | 'native' | 'unavailable';
 
 export interface MicrophoneProcessor {
   readonly ctx: AudioContext;

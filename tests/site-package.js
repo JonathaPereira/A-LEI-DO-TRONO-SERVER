@@ -13,7 +13,7 @@ async function fixture() {
     'out/manual',
     'out/vendor/rnnoise',
     'electron',
-    'supabase',
+    'supabase/migrations',
     'installer',
     'docs/archive',
   ])
@@ -26,6 +26,7 @@ async function fixture() {
     'docs/archive/ATUALIZAR_WINDOWS_v0.1.10.md',
     'docs/archive/ATUALIZAR_WINDOWS_v0.1.9.md',
     'docs/archive/ATUALIZAR_WINDOWS_v0.1.12.md',
+    'supabase/migrations/20261016140000_giphy_profile_credits.sql',
     'supabase/upgrade-azul.sql',
     'supabase/upgrade-splendor.sql',
   ])
@@ -59,10 +60,12 @@ test('Surge package contains the entire frontend and exactly the latest installe
   try {
     const result = await prepareSite({ ...f, version: '0.1.11' });
     assert(result.siteBytes < MAX_SITE_BYTES);
+    assert.equal(
+      await fs.readFile(path.join(result.site, '20261016140000_giphy_profile_credits.sql'), 'utf8'),
+      'fixture',
+    );
     assert.deepEqual(
-      (await fs.readdir(result.site))
-        .filter((n) => n.startsWith('ATUALIZAR_WINDOWS_'))
-        .sort(),
+      (await fs.readdir(result.site)).filter((n) => n.startsWith('ATUALIZAR_WINDOWS_')).sort(),
       ['ATUALIZAR_WINDOWS_v0.1.10.md', 'ATUALIZAR_WINDOWS_v0.1.11.md'],
     );
     const index = await fs.readFile(path.join(result.frontend, 'index.html'), 'utf8');

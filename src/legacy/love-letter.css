@@ -1328,19 +1328,10 @@
     font-size: 12px;
   }
 }
-.ll-flight {
-  position: fixed;
-  z-index: 31000;
-  pointer-events: none;
-  filter: drop-shadow(0 5px 8px #0007);
-}
 .ll-update .ll-result ~ .ll-self .ll-favors {
   animation: llPulse 0.9s ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ll-flight {
-    display: none;
-  }
 }
 @container love-letter (min-width:851px) {
   .ll-felt {
@@ -1617,40 +1608,6 @@
 .ll-guard-heading p {
   font-size: 12px;
 }
-.ll-presentation {
-  position: sticky;
-  top: -9px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid #e2b96b;
-  border-radius: 15px;
-  padding: 12px 18px;
-  margin-bottom: 12px;
-  background: linear-gradient(115deg, #39202ef7, #241d29fa);
-  box-shadow: 0 10px 28px #0008;
-  z-index: 35;
-}
-.ll-presentation > .ll-card {
-  width: 54px;
-  flex: none;
-  transform: rotate(-4deg);
-  animation: llPlayedReveal 1.2s ease-out;
-}
-.ll-presentation > div {
-  flex: 1;
-  min-width: 0;
-}
-.ll-presentation strong {
-  display: block;
-  font: 500 13px/1.65 var(--ui-font);
-  margin-top: 5px;
-  color: #f2dfbd;
-}
-.ll-presentation .ll-link {
-  white-space: nowrap;
-  font-size: 9px;
-}
 .ll-effect-target {
   outline: 2px solid #e9b35a;
   outline-offset: 4px;
@@ -1738,16 +1695,6 @@
     box-shadow: 0 0 10px #efb35d22;
   }
 }
-@keyframes llPlayedReveal {
-  from {
-    opacity: 0;
-    transform: translateY(-12px) rotate(-12deg) scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: rotate(-4deg);
-  }
-}
 @container love-letter (max-width:850px) {
   .ll-recent {
     grid-column: 1/-1;
@@ -1768,16 +1715,6 @@
   .ll-action-guide > .ll-button {
     margin-left: auto;
   }
-  .ll-presentation {
-    padding: 10px 13px;
-    gap: 10px;
-  }
-  .ll-presentation strong {
-    font-size: 11px;
-  }
-  .ll-presentation > .ll-card {
-    width: 42px;
-  }
 }
 @media (max-width: 500px) {
   .ll-guess-grid {
@@ -1793,23 +1730,52 @@
   .ll-action-guide strong {
     font-size: 15px;
   }
-  .ll-presentation {
-    flex-wrap: wrap;
-  }
-  .ll-presentation .ll-link {
-    margin-left: auto;
-  }
   .ll-history {
     font-size: 10px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .ll-valid-target,
-  .ll-presentation > .ll-card,
   .ll-effect-target {
     animation: none !important;
   }
   .ll-guess {
     transition: none !important;
   }
+}
+
+.ll-log-entry {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+}
+.ll-log-entry > .ll-reference-art {
+  flex: none;
+  width: 34px;
+  height: 40px;
+  border-radius: 5px;
+}
+.ll-log-entry > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.ll-log-entry strong {
+  font-size: 11px;
+  color: #f0d9ad;
+}
+.ll-log-entry p {
+  font-size: 10px;
+  line-height: 1.65;
+  color: #d0c0b8;
+}
+.ll-log-round {
+  font-size: 8px;
+  color: #bba8ac;
+}
+.ll-court > .ll-last {
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+  border-top: 0;
+  border-bottom: 1px solid #b69c5a55;
 }

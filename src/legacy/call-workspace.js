@@ -27,6 +27,33 @@ window.addEventListener('trono:ready', () => {
     channels = screen.querySelector('.mn-channel-sidebar');
   shell.prepend(header);
   sidebar.append(channels);
+  header.id = 'workspaceHeader';
+  const headerToggle = make('button', 'workspaceHeaderToggle');
+  headerToggle.type = 'button';
+  headerToggle.setAttribute('aria-controls', header.id);
+  headerToggle.innerHTML = svg('<path d="m6 14 6-6 6 6"/>');
+  shell.append(headerToggle);
+  function compactHeader(collapsed) {
+    shell.classList.toggle('workspace-header-collapsed', collapsed);
+    header.inert = collapsed;
+    headerToggle.setAttribute('aria-expanded', String(!collapsed));
+    headerToggle.title = collapsed ? 'Mostrar barra superior' : 'Ocultar barra superior';
+    headerToggle.setAttribute('aria-label', headerToggle.title);
+  }
+  function readHeader() {
+    compactHeader(window.TronoPersonal.get('workspaceHeaderCollapsed', false) === true);
+  }
+  headerToggle.onclick = () => {
+    const collapsed = !shell.classList.contains('workspace-header-collapsed');
+    compactHeader(collapsed);
+    window.TronoPersonal.set('workspaceHeaderCollapsed', collapsed);
+    window.dispatchEvent(new Event('resize'));
+  };
+  window.addEventListener('trono-auth-change', readHeader);
+  window.addEventListener('trono-personal-change', (e) => {
+    if (e.detail.key === 'workspaceHeaderCollapsed') readHeader();
+  });
+  void window.TronoAuth.ready.then(readHeader);
   header.querySelector('.chat-app-crest').innerHTML = svg(
     '<path d="M3 19V5l9 9 9-9v14l-9-9-9 9"/>',
   );
@@ -113,6 +140,13 @@ window.addEventListener('trono:ready', () => {
       isChannel = panel.classList.contains('chat-drawer-open');
     shell.dataset.messages = isDirect ? 'direct' : isChannel ? 'channel' : 'none';
   }
+  function updatePlacement() {
+    const button = $('desktopUpdateCheck');
+    if (!button) return;
+    const compact = mounted && body.dataset.appLayout === 'discord' && innerWidth < 760;
+    button.classList.toggle('workspace-update-compact', compact);
+    if (mounted) move(button.id, compact ? shell : $('desktopRail'));
+  }
   function labels() {
     const discord = body.dataset.appLayout === 'discord';
     layout.textContent = discord ? 'Discord' : 'Original';
@@ -125,6 +159,7 @@ window.addEventListener('trono:ready', () => {
     header.querySelector('h2').textContent = discord
       ? $('mnStageRoomName').textContent.trim() || 'Comunidade M&N'
       : 'M&N';
+    updatePlacement();
   }
 
   function arrange() {
@@ -139,7 +174,6 @@ window.addEventListener('trono:ready', () => {
       move('layoutVoicePanel', sidebar);
       move('communityPanel', shell);
       move(window.TronoDesktop ? 'desktopRail' : 'webLayoutRail', shell);
-      if (first && innerWidth >= 1100) window.TronoSocial.toggleTextChat(true);
     } else if (mounted) {
       mounted = false;
       showChannels(false);
@@ -210,9 +244,10 @@ window.addEventListener('trono:ready', () => {
     for (const person of e.detail.people.slice(0, 7)) {
       const button = make('button', null, 'workspace-direct-person');
       button.type = 'button';
+      button.dataset.directProfile = person.id;
       const avatar = make('span', null, 'community-avatar');
       avatar.innerHTML = window.TronoProfile.avatarHtml(person);
-      const name = make('span');
+      const name = make('span', null, 'workspace-direct-name');
       name.textContent = person.name;
       button.append(avatar, name);
       if (person.unread) {
@@ -230,12 +265,14 @@ window.addEventListener('trono:ready', () => {
     badge.textContent = String(e.detail.unread);
     badge.hidden = !e.detail.unread;
     window.TronoProfile.hydrate(host);
+    window.TronoProfile.directBanners(host);
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') showChannels(false);
   });
   window.addEventListener('resize', () => {
     if (innerWidth >= 1100) showChannels(false);
+    updatePlacement();
   });
   window.addEventListener('trono-auth-change', () => {
     if (!window.TronoAuth.user) {

@@ -114,6 +114,10 @@ async function prepareSite({
     await fs.copyFile(path.join(root, 'docs/archive', guide.name), path.join(site, guide.name));
   for (const file of ['upgrade-azul.sql', 'upgrade-splendor.sql'])
     await fs.copyFile(path.join(root, 'supabase', file), path.join(site, file));
+  await fs.copyFile(
+    path.join(root, 'supabase/migrations/20261016140000_giphy_profile_credits.sql'),
+    path.join(site, '20261016140000_giphy_profile_credits.sql'),
+  );
   const files = await filesIn(frontend),
     siteBytes = files.reduce((sum, f) => sum + f.size, 0);
   if (
@@ -126,7 +130,7 @@ async function prepareSite({
     siteBytes > MAX_SITE_BYTES
   )
     throw Error(
-      'O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados.',
+      `O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados. Total: ${siteBytes} bytes; limite: ${MAX_SITE_BYTES} bytes.`,
     );
   const rogueliteBytes = files
     .filter((f) => path.relative(frontend, f.file).split(path.sep)[0] === 'roguelite')

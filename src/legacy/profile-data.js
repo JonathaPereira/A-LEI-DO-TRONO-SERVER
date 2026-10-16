@@ -80,7 +80,15 @@
         throw Error('Créditos da mídia inválidos.');
       const source = url(item.source),
         licenseURL = item.license_url ? url(item.license_url) : '';
-      if (new URL(source).hostname !== 'commons.wikimedia.org')
+      const origin = new URL(source);
+      if (
+        origin.port ||
+        !(
+          origin.hostname === 'commons.wikimedia.org' ||
+          (origin.hostname === 'giphy.com' &&
+            /^\/(gifs|stickers)\/[\w-]+\/?$/.test(origin.pathname))
+        )
+      )
         throw Error('Fonte de GIF inválida.');
       result[key] = {
         title: String(item.title || 'GIF').slice(0, 200),

@@ -310,3 +310,179 @@
   font-size: 9px;
   line-height: 1.5;
 }
+
+/* Keep every merchant beside the market; expand reserves only when needed. */
+.sp-table {
+  display: grid;
+  max-width: 1500px;
+  margin: auto;
+  align-items: start;
+  grid-template-columns: 245px minmax(0, 1fr) 170px;
+  gap: 12px;
+}
+.sp-players {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+.sp-players .sp-opponents {
+  display: contents;
+}
+.sp-players .sp-player {
+  display: block;
+  grid-column: auto;
+  grid-row: auto;
+  padding: 7px 8px;
+  min-width: 0;
+}
+.sp-players .sp-player > header {
+  margin-bottom: 4px;
+  gap: 4px;
+  min-height: 23px;
+}
+.sp-players .sp-player > header strong {
+  font-size: 11px;
+}
+.sp-players .sp-player > header small {
+  display: none;
+}
+.sp-players .sp-score {
+  width: 25px;
+  height: 25px;
+  font-size: 16px;
+}
+.sp-players .sp-inventory.sp-purchasing-power {
+  padding: 3px !important;
+  border: 0;
+  background: none;
+}
+.sp-players :is(.sp-inventory-title, .sp-resource-legend, .sp-resource-name, .sp-resource-plus) {
+  display: none;
+}
+.sp-players .sp-resource-colors {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+}
+.sp-players .sp-resource-color {
+  gap: 2px;
+  padding: 2px 0;
+}
+.sp-players .sp-resource-equation {
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.sp-players .sp-resource-equation .sp-bonus-card {
+  width: 16px;
+  height: 20px !important;
+}
+.sp-players .sp-resource-equation .sp-chip {
+  width: 17px !important;
+  height: 17px !important;
+  border-width: 1px;
+}
+.sp-players .sp-resource-equation :is(.sp-chip b, .sp-bonus-card > b) {
+  font-size: 10px !important;
+}
+.sp-players .sp-resource-total {
+  font-size: 9px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.sp-players .sp-resource-color:last-child .sp-resource-total {
+  font-size: 7px;
+}
+.sp-players .sp-player-foot {
+  margin: 3px 0 0;
+  gap: 2px;
+}
+.sp-players .sp-player-foot > .sp-link {
+  padding: 0;
+  font-size: 8px;
+}
+.sp-player-details {
+  font-size: 8px;
+  color: #c9bdab;
+  margin-top: 3px;
+}
+.sp-player-details summary {
+  cursor: pointer;
+}
+.sp-player-details .sp-reserved {
+  margin-top: 5px;
+  display: flex;
+  gap: 5px;
+}
+.sp-player-details .sp-card {
+  width: 45px;
+}
+@container sp-screen (min-width:801px) {
+  .sp-table > .sp-center {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .sp-table > .sp-side {
+    grid-column: 3;
+    grid-row: 2;
+  }
+}
+@container sp-screen (max-width:800px) {
+  .sp-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-players {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sp-table > .sp-center {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .sp-table > .sp-side {
+    grid-column: 1;
+    grid-row: 4;
+  }
+}
+@container sp-screen (max-width:480px) {
+  .sp-players {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (orientation: landscape) and (max-height: 800px) {
+  .sp-screen[data-playing='true'] .sp-heading {
+    margin-bottom: 4px;
+  }
+  .sp-screen[data-playing='true'] .sp-brand h1 {
+    font-size: 23px;
+  }
+  .sp-screen[data-playing='true'] .sp-room-tools {
+    margin-bottom: 4px;
+  }
+  .sp-screen[data-playing='true'] .sp-action-bar {
+    padding: 8px 12px;
+  }
+  .sp-screen[data-playing='true'] .sp-action-bar small {
+    display: none;
+  }
+  .sp-players .sp-player {
+    padding: 5px 7px;
+  }
+  .sp-players .sp-player > header {
+    min-height: 20px;
+    margin-bottom: 2px;
+  }
+  .sp-players .sp-score {
+    width: 21px;
+    height: 21px;
+    font-size: 14px;
+  }
+  .sp-players .sp-player-foot {
+    margin-top: 0;
+  }
+  .sp-players .sp-player-details {
+    margin-top: 1px;
+  }
+}

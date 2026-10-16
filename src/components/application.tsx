@@ -37,6 +37,7 @@ import { AzulScreen } from '@/components/games/azul-screen';
 import { SplendorScreen } from '@/components/games/splendor-screen';
 import { LoveLetterScreen } from '@/components/games/love-letter-screen';
 import { LegacyRuntime } from '@/legacy/legacy-runtime';
+import { AttachmentImageViewer } from '@/components/files/image-viewer';
 
 export function Application() {
   return (
@@ -79,6 +80,7 @@ export function Application() {
       <AzulScreen />
       <SplendorScreen />
       <LoveLetterScreen />
+      <AttachmentImageViewer />
       <LegacyRuntime />
     </>
   );

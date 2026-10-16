@@ -223,16 +223,17 @@ test('unavailable native suppression requests reacquisition without creating ano
   assert.deepEqual(h.source.outputs, [h.gain]);
 });
 
-test('light processing uses its input filter and preserves native capture settings', async (t) => {
+test('native processing preserves quiet audio without loading an expander or RNNoise', async (t) => {
   const h = await setup(t);
   h.options.nativeOnly = true;
   h.settings.noiseSuppression = true;
   const processor = await h.create();
-  assert.equal(processor.mode, 'light');
+  assert.equal(processor.mode, 'native');
   assert.equal(processor.nativeSuppression, true);
-  assert.deepEqual(h.source.outputs, [h.filters[0].input]);
+  assert.deepEqual(h.source.outputs, [h.gain]);
+  assert.equal(h.filters.length, 0);
   processor.stop();
-  assert.equal(h.filters[0].destroys, 1);
+  assert.equal(h.output.stops, 1);
   assert.equal(h.output.stops, 1);
 });
 

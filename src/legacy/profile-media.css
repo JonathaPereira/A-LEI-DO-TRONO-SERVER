@@ -221,7 +221,8 @@
   display: flex;
   gap: 8px;
 }
-.profile-gif-search input {
+.profile-gif-search input,
+.profile-gif-link input {
   min-width: 0;
   flex: 1;
   padding: 11px;
@@ -422,5 +423,38 @@ body
 @media (prefers-reduced-motion: reduce) {
   .profile-gif-dialog::backdrop {
     backdrop-filter: none;
+  }
+}
+
+.profile-gif-link {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.profile-gif-link input {
+  min-width: 0;
+  flex: 1;
+}
+.profile-gif-link button {
+  flex: none;
+}
+.profile-gif-external,
+.profile-gif-attribution {
+  display: inline-block;
+  color: #b9adff;
+  font-size: 12px;
+}
+.profile-gif-attribution {
+  display: block;
+  font-weight: 700;
+  text-align: right;
+  margin-top: 14px;
+}
+@media (max-width: 500px) {
+  .profile-gif-link {
+    flex-direction: column;
+  }
+  .profile-gif-link button {
+    align-self: end;
   }
 }

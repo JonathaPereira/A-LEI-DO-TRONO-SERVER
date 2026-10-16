@@ -222,3 +222,85 @@ body.chat-only-active .court-chat-compose #attachFileBtn {
 .profile-file-row > button:last-child {
   flex: none;
 }
+
+.file-image-open {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: zoom-in;
+}
+.file-image-open img {
+  cursor: inherit;
+}
+.chat-attachment small:empty {
+  display: none;
+}
+.image-attachment {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+.image-attachment > .file-delete {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #161b23c9;
+  color: white;
+  font-size: 18px;
+  opacity: 0;
+}
+.image-attachment:is(:hover, :focus-within) > .file-delete {
+  opacity: 1;
+}
+@media (hover: none) {
+  .image-attachment > .file-delete {
+    opacity: 1;
+  }
+}
+.attachment-image-viewer {
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: #10141b;
+  max-width: 95vw;
+  max-height: 94dvh;
+  overflow: hidden;
+}
+.attachment-image-viewer::backdrop {
+  background: #000c;
+}
+.attachment-image-viewer img {
+  display: block;
+  max-width: 95vw;
+  max-height: 94dvh;
+  object-fit: contain;
+}
+.attachment-image-viewer button {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: #202631cc;
+  color: white;
+  width: 30px;
+  height: 30px;
+  font-size: 22px;
+  cursor: pointer;
+}
+.attachment-image-viewer {
+  min-width: 96px;
+  min-height: 64px;
+}
+.attachment-image-viewer[open] {
+  display: grid;
+  place-items: center;
+}

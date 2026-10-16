@@ -28,11 +28,13 @@ if (window.TronoDesktop)
       const ready = state.status === 'ready';
       restart.hidden = !ready;
       refresh.hidden = !ready;
-      check.textContent = ready
+      const label = ready
         ? 'Atualização pronta'
         : state.status === 'downloading'
           ? 'Baixando · ' + state.percent + '%'
           : 'Windows ' + native.version;
+      check.querySelector('span').textContent = label;
+      check.setAttribute('aria-label', label + ' · Buscar versão mais recente');
       check.title = ready
         ? 'Atualizar diretamente para ' + (state.version || 'a versão mais recente')
         : 'Buscar versão mais recente';

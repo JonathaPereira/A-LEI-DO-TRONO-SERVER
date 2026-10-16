@@ -76,7 +76,10 @@ callControlWindow.TronoCallControlsLayout = (() => {
 
   function decorate(node: HTMLElement | null, definition: { label?: string; icon: string }) {
     if (!node) return;
-    if (!node.querySelector('.workspace-control-icon')) {
+    const workspace =
+      document.body.classList.contains('chat-only-active') && node.closest('#callWorkspace');
+    if (!workspace) node.querySelector('.workspace-control-icon')?.remove();
+    else if (!node.querySelector('.workspace-control-icon')) {
       const icon = document.createElement('span');
       icon.className = 'workspace-control-icon';
       icon.innerHTML =
@@ -115,6 +118,9 @@ callControlWindow.TronoCallControlsLayout = (() => {
     const desktop = !!callControlWindow.TronoDesktop;
     const community = document.body.classList.contains('chat-only-active');
     const discord = document.body.dataset.appLayout === 'discord';
+    const sidebar = community && discord && innerWidth >= 1100;
+    const workspace = $('callWorkspace');
+    if (workspace) workspace.dataset.controls = sidebar ? 'sidebar' : 'dock';
 
     if (desktop) place(toolbar, $('desktopCallDock'));
     if (!desktop) {
@@ -122,15 +128,14 @@ callControlWindow.TronoCallControlsLayout = (() => {
       else restore($('voiceSettingsPanel'));
     }
 
-    // The community dock takes precedence over both arrangements. Other views
-    // choose the original group or the sidebar explicitly, without intermediate homes.
+    // Original and narrow windows use the central dock; wide Discord uses its sidebar.
     for (const [id, definition] of Object.entries(controls)) {
       const node = $(id);
-      if (community && $('callFocusDock')) {
+      if (community && !sidebar && $('callFocusDock')) {
         place(node, $('callFocusDock'));
         decorate(node, definition);
-      } else if (id === 'soundboardToggle' && desktop) {
-        const rail = $('desktopRail');
+      } else if (id === 'soundboardToggle' && (desktop || sidebar)) {
+        const rail = $(desktop ? 'desktopRail' : 'webLayoutRail');
         place(node, rail, rail?.querySelector('[data-desktop-route="clips"]'));
       } else if (discord && id !== 'soundboardToggle') {
         const host =
@@ -173,6 +178,7 @@ callControlWindow.TronoCallControlsLayout = (() => {
       attributeFilter: ['class', 'data-app-layout'],
     });
     window.addEventListener('trono-call-change', refresh);
+    window.addEventListener('resize', refresh);
     refresh();
   });
 

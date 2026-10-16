@@ -6,6 +6,7 @@ import type { FilesClient } from '../../lib/files/client';
 import { formatFileSize } from '../../lib/files/client';
 import { openFile } from '../../lib/files/open';
 import { useFiles, useFileUrl } from './use-files';
+import { openAttachmentImage } from './image-viewer';
 
 interface AttachmentProps {
   file: ChatAttachment;
@@ -44,14 +45,28 @@ export function AttachmentContent({
   if (deleted) return <small>Arquivo excluído.</small>;
   return (
     <>
-      {image && source?.url && (
-        <img
-          className="chat-file-image"
-          src={source.url}
-          alt={file.name}
-          loading="lazy"
-          onError={() => notice('Não foi possível abrir a imagem.')}
-        />
+      {image && (
+        <button
+          className="file-image-open"
+          type="button"
+          aria-label="Abrir imagem"
+          disabled={!client}
+          onClick={() => {
+            void openAttachmentImage(client!, file.id).catch((error) =>
+              notice(error instanceof Error ? error.message : 'Imagem indisponível.'),
+            );
+          }}
+        >
+          {source?.url && (
+            <img
+              className="chat-file-image"
+              src={source.url}
+              alt="Imagem anexada"
+              loading="lazy"
+              onError={() => notice('Não foi possível abrir a imagem.')}
+            />
+          )}
+        </button>
       )}
       {['video/mp4', 'video/webm'].includes(file.mime) &&
         (video?.key === key ? (
@@ -89,18 +104,22 @@ export function AttachmentContent({
           ▤ Abrir PDF
         </button>
       )}
-      <button
-        className="file-download"
-        type="button"
-        disabled={!client}
-        onClick={() => void openFile(() => client!.url(file.id, true), notice, current)}
-      >
-        {file.name} · {formatFileSize(file.bytes)} ↓
-      </button>
+      {!image && (
+        <button
+          className="file-download"
+          type="button"
+          disabled={!client}
+          onClick={() => void openFile(() => client!.url(file.id, true), notice, current)}
+        >
+          {file.name} · {formatFileSize(file.bytes)} ↓
+        </button>
+      )}
       <small>{status?.key === key ? status.text : (source?.error ?? '')}</small>
       {canRemove && (
         <button
           className="file-delete"
+          aria-label={owned ? 'Excluir anexo' : 'Moderar: excluir'}
+          title={owned ? 'Excluir anexo' : 'Moderar: excluir'}
           type="button"
           disabled={removing === key || !client}
           onClick={async () => {
@@ -125,7 +144,7 @@ export function AttachmentContent({
             }
           }}
         >
-          {owned ? 'Excluir anexo' : 'Moderar: excluir'}
+          {image ? '×' : owned ? 'Excluir anexo' : 'Moderar: excluir'}
         </button>
       )}
     </>
@@ -134,7 +153,10 @@ export function AttachmentContent({
 
 export function Attachment(props: AttachmentProps) {
   return (
-    <div className="chat-attachment" data-attachment={props.file.id}>
+    <div
+      className={`chat-attachment${['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(props.file.mime) ? ' image-attachment' : ''}`}
+      data-attachment={props.file.id}
+    >
       <AttachmentContent key={props.file.id} {...props} />
     </div>
   );

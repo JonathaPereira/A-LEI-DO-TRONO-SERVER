@@ -234,20 +234,8 @@
   border-radius: 9px;
   font-size: 12px;
 }
-.sp-table {
-  display: grid;
-  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr) minmax(160px, 210px);
-  gap: clamp(12px, 1.5vw, 22px);
-  max-width: 1550px;
-  margin: auto;
-  align-items: start;
-}
 .sp-table > * {
   min-width: 0;
-}
-.sp-opponents {
-  display: grid;
-  gap: 10px;
 }
 .sp-center {
   min-width: 0;
@@ -758,33 +746,6 @@
 .sp-reserved .sp-card-top > .sp-gem i {
   font-size: 11px;
 }
-.sp-self {
-  grid-column: 2/-1;
-  display: grid;
-  grid-template-columns: minmax(120px, 0.8fr) minmax(200px, 1.5fr) minmax(130px, 1fr);
-  gap: 8px 16px;
-  align-items: center;
-  min-width: 0;
-}
-.sp-self > header {
-  margin: 0;
-}
-.sp-self .sp-holdings {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 5px;
-}
-.sp-self > .sp-player-foot {
-  grid-column: 1/3;
-  margin: 0;
-}
-.sp-self > .sp-reserved {
-  grid-column: 3;
-  grid-row: 1/3;
-  margin: 0;
-}
-.sp-self .sp-reserved .sp-card {
-  max-width: 60px;
-}
 .sp-action-bar {
   grid-column: 1/-1;
   display: flex;
@@ -1133,15 +1094,6 @@
   line-height: 1.7;
 }
 @container sp-screen (max-width:1000px) {
-  .sp-table {
-    grid-template-columns: minmax(0, 1fr) minmax(160px, 200px);
-  }
-  .sp-opponents {
-    grid-column: 1/-1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 10px;
-  }
   .sp-opponents .sp-reserved {
     display: none;
   }
@@ -1155,21 +1107,11 @@
   .sp-opponents .sp-player {
     padding: 10px;
   }
-  .sp-self {
-    grid-column: 1/-1;
-  }
   .sp-card-points {
     font-size: 24px;
   }
 }
 @container sp-screen (max-width:690px) {
-  .sp-table {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 15px;
-  }
-  .sp-opponents {
-    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-  }
   .sp-side {
     grid-row: 2;
     grid-column: 1;
@@ -1220,33 +1162,6 @@
   }
   .sp-nobles-section > .sp-eyebrow {
     font-size: 7px;
-  }
-  .sp-self {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-    gap: 10px;
-  }
-  .sp-self > .sp-reserved {
-    grid-column: 1/-1;
-    grid-row: auto;
-    grid-template-columns: repeat(3, minmax(0, 75px));
-    justify-content: center;
-  }
-  .sp-self > .sp-player-foot {
-    grid-column: 1/-1;
-    grid-row: 2;
-  }
-  .sp-self .sp-reserved .sp-card {
-    max-width: 65px;
-  }
-  .sp-self .sp-reserved .sp-costs {
-    display: flex;
-  }
-  .sp-self .sp-reserved .sp-costs > .sp-gem {
-    width: 15px;
-    height: 15px;
-  }
-  .sp-self .sp-reserved .sp-costs > .sp-gem b {
-    font-size: 10px;
   }
   .sp-market-row {
     gap: 8px;
@@ -1460,21 +1375,6 @@
   .sp-market {
     gap: 8px;
   }
-  .sp-table {
-    gap: 10px 16px;
-  }
-  .sp-self {
-    padding: 9px;
-  }
-  .sp-self .sp-reserved .sp-card {
-    max-width: 42px;
-  }
-  .sp-self .sp-reserved-slot {
-    min-height: 21px;
-  }
-  .sp-self .sp-player-foot {
-    margin: 0;
-  }
   .sp-action-bar {
     padding: 10px 13px;
     gap: 8px;
@@ -1520,12 +1420,6 @@
     grid-row: 3;
     max-width: none;
   }
-  .sp-self {
-    grid-row: 4;
-  }
-  .sp-opponents {
-    grid-row: 5;
-  }
   .sp-screen {
     scroll-padding-top: 120px;
   }
@@ -1558,9 +1452,6 @@
 }
 .sp-side .sp-noble-points {
   font-size: 17px;
-}
-.sp-self {
-  grid-column: 1/-1;
 }
 .sp-bank .sp-chip {
   width: 43px;
@@ -1610,9 +1501,6 @@
     width: 32px;
     height: 32px;
   }
-  .sp-self {
-    grid-row: 4;
-  }
   .sp-center {
     max-width: none;
   }
@@ -1630,11 +1518,6 @@
     repeating-linear-gradient(32deg, #d8e4e806 0 1px, transparent 1px 5px), #233c4c;
   --sp-line: #c2b79566;
   --sp-muted: #c5d3d8;
-}
-.sp-table {
-  grid-template-columns: minmax(135px, 165px) minmax(0, 1fr) minmax(165px, 190px);
-  gap: 16px;
-  max-width: 1500px;
 }
 .sp-center {
   --sp-card-height: clamp(
@@ -1882,60 +1765,6 @@
   height: 25px;
   border-radius: 6px;
 }
-.sp-self {
-  grid-column: 1/-1;
-  display: grid;
-  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr) minmax(130px, 235px);
-  gap: 10px 18px;
-  align-items: center;
-  padding: 13px 16px;
-  background: linear-gradient(120deg, #142634dd, #283c4bdd);
-}
-.sp-self > header {
-  margin: 0;
-}
-.sp-self .sp-holdings {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-.sp-self .sp-holding {
-  flex: 1;
-  max-width: 75px;
-}
-.sp-self .sp-player-foot {
-  grid-column: 1/-1;
-  grid-row: 2;
-  margin: 0;
-}
-.sp-self .sp-reserved {
-  margin: 0;
-  grid-column: 3;
-  grid-row: 1;
-}
-.sp-self .sp-reserved .sp-card {
-  max-width: 53px;
-}
-.sp-self .sp-reserved .sp-costs {
-  display: flex;
-  gap: 0;
-  left: 2px;
-  bottom: 2px;
-}
-.sp-self .sp-reserved .sp-costs > .sp-gem {
-  width: 12px;
-  height: 12px;
-}
-.sp-self .sp-reserved .sp-costs > .sp-gem b {
-  font-size: 9px;
-}
-.sp-self .sp-reserved .sp-card-top > .sp-gem {
-  width: 13px;
-  height: 12px;
-}
-.sp-self .sp-reserved .sp-card-points {
-  font-size: 15px;
-}
 .sp-action-bar {
   border-color: #b9bac16b;
   background: linear-gradient(110deg, #17222ff5, #263c49f5);
@@ -1959,10 +1788,6 @@
   border-color: #e6c079;
 }
 @media (orientation: landscape) and (max-height: 800px) {
-  .sp-table {
-    gap: 10px 14px;
-    grid-template-columns: 140px minmax(0, 1fr) 160px;
-  }
   .sp-center {
     --sp-card-height: clamp(
       92px,
@@ -2018,25 +1843,8 @@
   .sp-side .sp-noble-points {
     font-size: 18px;
   }
-  .sp-self {
-    padding: 9px 12px;
-    gap: 8px 15px;
-  }
-  .sp-self .sp-reserved .sp-card {
-    max-width: 43px;
-  }
-  .sp-self .sp-holding {
-    padding: 4px;
-  }
-  .sp-self .sp-holding .sp-gem {
-    width: 23px;
-    height: 23px;
-  }
 }
 @container sp-screen (max-width:800px) {
-  .sp-table {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .sp-action-bar {
     grid-row: 1;
   }
@@ -2081,29 +1889,6 @@
   .sp-center {
     grid-row: 3;
     max-width: 680px;
-  }
-  .sp-self {
-    grid-row: 4;
-    grid-template-columns: minmax(0, 1fr) minmax(100px, 160px);
-    gap: 12px;
-  }
-  .sp-self .sp-holdings {
-    grid-column: 1/-1;
-    grid-row: 2;
-  }
-  .sp-self .sp-reserved {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .sp-self .sp-player-foot {
-    grid-row: 3;
-  }
-  .sp-self > header {
-    margin: 0;
-  }
-  .sp-opponents {
-    grid-row: 5;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
   .sp-market-row {
     gap: 10px;
@@ -2164,32 +1949,8 @@
   .sp-deck .sp-back-emblem:after {
     font-size: 23px;
   }
-  .sp-self .sp-holdings {
-    gap: 4px;
-  }
-  .sp-self .sp-holding {
-    padding: 5px 2px;
-  }
-  .sp-self .sp-holding small {
-    font-size: 7px;
-  }
-  .sp-self .sp-holding .sp-gem {
-    width: 23px;
-    height: 23px;
-  }
-  .sp-self > header strong {
-    font-size: 11px;
-  }
-  .sp-self .sp-score {
-    width: 28px;
-    height: 28px;
-    font-size: 19px;
-  }
 }
 @container sp-screen (min-width:801px) and (max-width:1000px) {
-  .sp-table {
-    grid-template-columns: minmax(0, 1fr) 180px;
-  }
   .sp-center {
     grid-column: 1;
     grid-row: 2;
@@ -2197,13 +1958,6 @@
   .sp-side {
     grid-column: 2;
     grid-row: 2;
-  }
-  .sp-self {
-    grid-row: 3;
-  }
-  .sp-opponents {
-    grid-row: 4;
-    grid-column: 1/-1;
   }
 }
 /* Real wood shared with Azul, without duplicating the image asset. */
@@ -2297,35 +2051,6 @@
   letter-spacing: 0.07em;
   color: #c8b5a0;
 }
-.sp-self .sp-inventory {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 12px;
-}
-.sp-self .sp-inventory-row {
-  justify-content: space-around;
-}
-.sp-self .sp-wallet .sp-chip {
-  width: 30px;
-  height: 30px;
-}
-.sp-self .sp-wallet .sp-chip b {
-  font-size: 17px;
-}
-.sp-self .sp-bonus-card {
-  min-width: 35px;
-  height: 32px;
-}
-.sp-self .sp-bonus-card .sp-gem {
-  width: 19px;
-  height: 19px;
-}
-.sp-self {
-  grid-template-columns: minmax(100px, 160px) minmax(0, 1fr) minmax(120px, 190px);
-}
-.sp-self .sp-reserved {
-  row-gap: 5px;
-}
 .sp-last-action {
   max-width: 1500px;
   margin: 12px auto 0 !important;
@@ -2353,32 +2078,12 @@
   box-shadow: 0 0 20px #dcb2692a;
 }
 @media (orientation: landscape) and (max-height: 800px) {
-  .sp-self .sp-inventory {
-    gap: 8px;
-  }
   .sp-inventory section {
     padding: 6px;
   }
   .sp-inventory-title {
     font-size: 6px;
     margin-bottom: 5px;
-  }
-  .sp-self .sp-wallet .sp-chip {
-    width: 24px;
-    height: 24px;
-  }
-  .sp-self .sp-wallet .sp-chip b {
-    font-size: 14px;
-  }
-  .sp-self .sp-bonus-card {
-    min-width: 24px;
-    height: 25px;
-    font-size: 11px;
-    padding: 2px;
-  }
-  .sp-self .sp-bonus-card .sp-gem {
-    width: 14px;
-    height: 14px;
   }
   .sp-opponents .sp-inventory {
     gap: 7px;
@@ -2421,35 +2126,14 @@
   }
 }
 @container sp-screen (max-width:800px) {
-  .sp-self {
-    grid-template-columns: minmax(0, 1fr) minmax(100px, 160px);
-  }
-  .sp-self .sp-inventory {
-    grid-column: 1/-1;
-    grid-row: 2;
-  }
   .sp-opponents .sp-inventory {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .sp-self .sp-bonus-card {
-    min-width: 26px;
   }
   .sp-inventory-title {
     font-size: 7px;
   }
 }
 @container sp-screen (max-width:420px) {
-  .sp-self .sp-inventory {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
-  }
-  .sp-self .sp-wallet .sp-chip {
-    width: 31px;
-    height: 31px;
-  }
-  .sp-self .sp-bonus-card {
-    min-width: 36px;
-  }
   .sp-event-banner {
     flex-wrap: wrap;
   }

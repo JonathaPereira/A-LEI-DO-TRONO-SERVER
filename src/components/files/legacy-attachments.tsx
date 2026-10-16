@@ -54,6 +54,10 @@ export function installLegacyAttachments(runtime: FilesRuntime): void {
         roots.set(host, root);
       }
       host.dataset.attachment = file.id;
+      host.classList.toggle(
+        'image-attachment',
+        ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.mime),
+      );
       flushSync(() =>
         root.render(
           <AttachmentContent

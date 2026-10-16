@@ -11,7 +11,6 @@ interface ProcessorDependencies {
   getContext(): AudioContext | null;
   nativeSuppressionSupported(): boolean;
   createNoise(context: AudioContext, onFailure: () => void): Promise<NoiseFilter>;
-  createLightNoise(context: AudioContext, onFailure: () => void): Promise<NoiseFilter>;
   onModeChange(): void;
   onNativeUnavailable(processor: MicrophoneProcessor): void;
   warn?: (error: unknown) => void;
@@ -25,7 +24,6 @@ export async function createMicrophoneProcessor(
     getContext,
     nativeSuppressionSupported,
     createNoise,
-    createLightNoise,
     onModeChange,
     onNativeUnavailable,
     warn = (error) => console.warn('[MicrophoneProcessor]', error),
@@ -116,14 +114,19 @@ export async function createMicrophoneProcessor(
       source.connect(gain);
       return processor;
     }
-    if (options.nativeOnly)
+    if (options.nativeOnly) {
+      // Native capture suppression must not be stacked with an expander: doing
+      // so gated quiet syllables in the desktop's default microphone mode.
       processor.nativeSuppression =
         rawStream.getAudioTracks()[0]?.getSettings().noiseSuppression === true;
+      source.connect(gain);
+      processor.mode = processor.nativeSuppression ? 'native' : 'unavailable';
+      return processor;
+    }
     try {
-      const create = options.nativeOnly ? createLightNoise : createNoise;
       let failed = false;
       let failure: Promise<void> | null = null;
-      const filter = await create(ctx, () => {
+      const filter = await createNoise(ctx, () => {
         if (failed) return;
         failed = true;
         failure = fallback();
@@ -139,16 +142,13 @@ export async function createMicrophoneProcessor(
         return stopped ? null : processor;
       }
       denoiser = filter;
-      source.connect(options.nativeOnly ? (filter.input ?? filter.node) : filter.node);
+      source.connect(filter.node);
       filter.node.connect(gain);
-      processor.mode = options.nativeOnly ? 'light' : 'rnnoise';
+      processor.mode = 'rnnoise';
     } catch (error) {
       if (stopped) return null;
       warn(error);
-      if (options.nativeOnly) {
-        source.connect(gain);
-        processor.mode = processor.nativeSuppression ? 'native' : 'unavailable';
-      } else await fallback();
+      await fallback();
     }
     return stopped ? null : processor;
   } catch (error) {

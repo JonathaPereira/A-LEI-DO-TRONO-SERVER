@@ -208,7 +208,12 @@ window.TronoMessenger = (() => {
     window.TronoProfile.hydrate(list);
     renderHeader();
   }
+  let draftPreviewURL = null;
   function renderAttachmentDraft() {
+    if (draftPreviewURL) {
+      URL.revokeObjectURL(draftPreviewURL);
+      draftPreviewURL = null;
+    }
     const host = $('messengerAttachmentDraft');
     host.replaceChildren();
     if (!peer || !draft().file) {
@@ -217,7 +222,14 @@ window.TronoMessenger = (() => {
     }
     host.hidden = false;
     const selected = draft().file;
-    host.append(make('span', '', selected.name + ' · ' + window.TronoFiles.size(selected.size)));
+    if (selected.type.startsWith('image/')) {
+      const img = make('img', 'messenger-draft-image');
+      img.alt = 'Prévia da imagem';
+      draftPreviewURL = URL.createObjectURL(selected);
+      img.src = draftPreviewURL;
+      host.append(img);
+    } else
+      host.append(make('span', '', selected.name + ' · ' + window.TronoFiles.size(selected.size)));
     const remove = actionButton('Remover anexo', () => {
       if (sending() && operation.stage === 'upload') {
         operation.controller.abort();
@@ -438,7 +450,14 @@ window.TronoMessenger = (() => {
           peerId: op.peer,
           signal: op.controller.signal,
           onProgress: (percent) => {
-            if (currentOperation(op)) status('Enviando ' + file.name + ': ' + percent + '%');
+            if (currentOperation(op))
+              status(
+                'Enviando ' +
+                  (file.type.startsWith('image/') ? 'imagem' : file.name) +
+                  ': ' +
+                  percent +
+                  '%',
+              );
           },
         });
         if (op.owner !== owner) return;

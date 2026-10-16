@@ -2,7 +2,19 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*', 'codex/next-*']
-    paths: ['electron/**', 'src/**', 'public/**', 'server/**', 'scripts/**', 'tests/**', 'supabase/**', 'package*.json', '*config*', '.github/workflows/windows-app.yml']
+    paths:
+      [
+        'electron/**',
+        'src/**',
+        'public/**',
+        'server/**',
+        'scripts/**',
+        'tests/**',
+        'supabase/**',
+        'package*.json',
+        '*config*',
+        '.github/workflows/windows-app.yml',
+      ]
   workflow_dispatch:
 permissions:
   contents: write
@@ -26,16 +38,16 @@ jobs:
       - run: npm run build
       - run: npm run test:server:lifecycle
       - name: Verify profile validation and persistence
-        run: node --test tests/member-profiles.js tests/profile-media.js
+        run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Verify call workspace and profile layouts
         shell: pwsh
         run: |
           npx playwright install chromium
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test tests/chat-composer-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js
+          node --test --test-concurrency=1 tests/chat-composer-browser.cjs tests/channels-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js tests/call-controls-browser.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
-          node --test tests/app-layout-browser.js tests/profile-media-browser.js
+          node --test --test-concurrency=1 tests/app-layout-browser.js tests/profile-media-browser.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Remove-Item Env:QA_NATIVE
       - name: Verify native roguelite frame before packaging
@@ -62,8 +74,10 @@ jobs:
             Write-Output "::error title=Voice reception under load::$details"
             exit $testExit
           }
-      - name: Verify lightweight microphone filter PCM
-        run: node --test tests/light-noise-processing.js
+      - name: Verify microphone PCM and native processing
+        run: node --test --test-concurrency=1 tests/native-microphone-browser.js tests/light-noise-processing.js
+      - name: Verify Splendor player visibility and stable Love Letter logs
+        run: node --test --test-concurrency=1 tests/splendor-browser.js tests/love-letter-browser.js
       - name: Verify revised game rules and independent voice
         run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
       - name: Verify private attachments and creator moderation

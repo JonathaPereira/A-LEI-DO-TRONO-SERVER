@@ -211,11 +211,8 @@ body.chat-only-active #callWorkspace {
   color: white !important;
   background: #6b5bf2 !important;
 }
-#callWorkspace #desktopUpdateCheck {
+#callWorkspace #desktopRail #desktopUpdateCheck {
   margin-top: auto !important;
-  font-size: 8px !important;
-  line-height: 1.5 !important;
-  height: auto !important;
 }
 #callWorkspace #messengerToggle {
   display: none !important;
@@ -376,7 +373,7 @@ body.chat-only-active #callWorkspace {
   height: 27px;
   flex: none;
 }
-#callWorkspace .workspace-direct-person > span:nth-child(2) {
+#callWorkspace .workspace-direct-person > .workspace-direct-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1421,7 +1418,7 @@ body.chat-only-active #callWorkspace #messengerToggle {
   font-size: 10px !important;
   color: #7f8ba6 !important;
 }
-#callWorkspace
+#callWorkspace[data-controls='dock']
   #callWorkspaceSidebar
   :is(#layoutUserControls, #layoutConnectionControls, #layoutCallActions) {
   display: none !important;
@@ -1947,4 +1944,287 @@ body.chat-only-active[data-call-workspace] #messengerToggle {
   font-weight: 800 !important;
   color: #fff !important;
   background: #6b5bf2 !important;
+}
+
+/* Invitations must not inherit the full-height video box of an active stream. */
+#callWorkspace #socialPanel #screenShareGrid > .screen-share-tile.stream-invitation {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 14px !important;
+  padding: 18px !important;
+  text-align: center !important;
+}
+#callWorkspace #socialPanel .screen-share-tile.stream-invitation > video {
+  display: none !important;
+}
+#callWorkspace #socialPanel .stream-invitation .mn-stream-invite {
+  max-width: 100% !important;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+#callWorkspace #socialPanel .stream-invitation .mn-watch-stream {
+  position: relative !important;
+  inset: auto !important;
+  flex: none;
+  max-width: 100%;
+  white-space: normal !important;
+  min-height: 36px;
+  z-index: 5;
+}
+
+/* Keep the header reversible, including when it is hidden on a narrow screen. */
+#callWorkspace #workspaceHeaderToggle {
+  position: absolute;
+  right: 8px;
+  top: 16px;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px;
+  border: 1px solid #ffffff20;
+  border-radius: 8px;
+  background: #222938;
+  color: #d7deef;
+  box-shadow: 0 2px 8px #0003;
+}
+#workspaceHeaderToggle svg {
+  width: 18px;
+  height: 18px;
+}
+#callWorkspace .chat-only-topbar {
+  padding-right: 48px !important;
+}
+#callWorkspace.workspace-header-collapsed {
+  --cw-header: 0px !important;
+}
+#callWorkspace.workspace-header-collapsed .chat-only-topbar {
+  display: none !important;
+}
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle {
+  top: 6px;
+  opacity: 0.85;
+}
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle:hover,
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle:focus-visible {
+  opacity: 1;
+}
+#callWorkspace.workspace-header-collapsed #workspaceHeaderToggle svg {
+  transform: rotate(180deg);
+}
+#callWorkspace.workspace-header-collapsed .voice-title {
+  padding-right: 48px !important;
+}
+body[data-app-layout='original'] #callWorkspace #socialPanel #messengerPanel {
+  padding-top: 8px !important;
+}
+body[data-app-layout='original']
+  #callWorkspace
+  #socialPanel
+  #messengerPanel
+  .messenger-conversation
+  header {
+  padding-top: 8px !important;
+}
+body[data-app-layout='original'] #callWorkspace #callWorkspaceSidebar .mn-channel-sidebar {
+  padding-top: 8px !important;
+}
+body[data-app-layout='original'] #callWorkspace .mn-sidebar-heading {
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 0 4px !important;
+}
+@media (max-width: 759px) {
+  #callWorkspace #workspaceHeaderToggle {
+    top: 13px;
+  }
+  #callWorkspace .chat-only-topbar {
+    gap: 4px !important;
+  }
+  #callWorkspace .chat-only-top-actions {
+    gap: 3px !important;
+  }
+  #callWorkspace .chat-only-top-actions :is(.chat-header-action, #communityToggle) {
+    padding: 5px !important;
+    min-width: 28px !important;
+  }
+  #callWorkspace #workspaceLayoutToggle {
+    font-size: 9px !important;
+  }
+  #callWorkspace .chat-only-topbar > .workspace-area-tabs {
+    gap: 0;
+  }
+  #callWorkspace .chat-only-topbar > .workspace-area-tabs button {
+    padding: 5px !important;
+  }
+}
+@media (max-height: 550px) {
+  #callWorkspace #workspaceHeaderToggle {
+    top: 10px;
+  }
+}
+
+#callWorkspace > #desktopUpdateCheck.workspace-update-compact {
+  position: absolute !important;
+  left: 8px !important;
+  bottom: 78px !important;
+  inset-inline-end: auto !important;
+  top: auto !important;
+  z-index: 26 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  margin: 0 !important;
+  padding: 6px !important;
+  border: 1px solid #ffffff20 !important;
+  border-radius: 9px !important;
+  background: #222938 !important;
+  color: #d7deef !important;
+}
+#callWorkspace > #desktopUpdateCheck.workspace-update-compact svg {
+  width: 20px;
+  height: 20px;
+}
+#callWorkspace > #desktopUpdateCheck.workspace-update-compact > span {
+  display: none;
+}
+
+/* Discord keeps the same call controls in the sidebar in both areas. */
+#callWorkspace[data-controls='sidebar'] #socialPanel .voice-section #callFocusDock {
+  display: none !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutVoiceConnection {
+  display: grid !important;
+  grid-template-rows: 40px 32px !important;
+  gap: 8px !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutConnectionControls,
+#callWorkspace[data-controls='sidebar'] #layoutUserControls {
+  display: flex !important;
+  flex: none !important;
+  gap: 2px !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutCallActions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+#callWorkspace[data-controls='sidebar']
+  #layoutVoicePanel
+  .call-action
+  > :not(.workspace-control-icon) {
+  display: none !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutVoicePanel .workspace-control-icon {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutVoicePanel .workspace-control-icon svg {
+  width: 18px;
+  height: 18px;
+}
+#callWorkspace[data-controls='sidebar'] #layoutVoicePanel .call-action:before,
+#callWorkspace[data-controls='sidebar'] #layoutVoicePanel .call-action:after {
+  display: none !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutVoicePanel #layoutUserBar {
+  height: 48px !important;
+  gap: 4px !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutVoicePanel #layoutUserAvatar {
+  width: 30px !important;
+  height: 30px !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutUserControls .call-action {
+  width: 28px !important;
+  height: 32px !important;
+  padding: 5px !important;
+}
+#callWorkspace[data-controls='sidebar'] #layoutProfile {
+  flex: 1 1 0 !important;
+}
+#callWorkspace[data-controls='sidebar'] .layout-user-copy strong {
+  max-width: 100% !important;
+}
+#callWorkspace :is(#desktopRail, #webLayoutRail) > #soundboardToggle > .workspace-control-icon {
+  display: block !important;
+}
+#callWorkspace
+  :is(#desktopRail, #webLayoutRail)
+  > #soundboardToggle
+  > :not(.workspace-control-icon) {
+  display: none !important;
+}
+
+/* Covers decorate direct-message names; call cards retain their own background. */
+#callWorkspace .workspace-direct-person {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 42px !important;
+  margin: 4px 0;
+  border-radius: 8px !important;
+}
+#callWorkspace .workspace-direct-person > :not(.direct-profile-banner) {
+  position: relative;
+  z-index: 1;
+}
+#callWorkspace .direct-profile-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+#callWorkspace .direct-profile-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+#callWorkspace .direct-profile-banner:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #1016228c, #101622bb);
+}
+
+#callWorkspace .mn-channel-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+#callWorkspace .mn-channel-row > .mn-channel {
+  flex: 1;
+  min-width: 0;
+}
+#callWorkspace .mn-channel-row > .mn-channel-chat {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 28px;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  color: #9ba5bc;
+}
+#callWorkspace .mn-channel-chat:hover {
+  background: #ffffff0d;
+  color: #eee;
+}
+#callWorkspace .mn-channel-chat svg {
+  width: 16px;
+  height: 16px;
 }

@@ -10,6 +10,7 @@ function createCommunityManagement({
   onChanged = () => {},
   onDeleted = () => {},
   onRoleChanged = () => {},
+  env = process.env,
 }) {
   let ready = false,
     queue = Promise.resolve();
@@ -116,6 +117,12 @@ function createCommunityManagement({
       if (!permissions(req.account.role)[key])
         throw fail('FORBIDDEN', 'Você não tem permissão para realizar essa operação.', 403);
     }
+    // GIPHY uses a public client key; never put service credentials in GIPHY_API_KEY.
+    route('get', '/gif-provider', async () => {
+      const apiKey = String(env.GIPHY_API_KEY || '').trim();
+      const configured = /^[a-zA-Z0-9_-]{10,200}$/.test(apiKey);
+      return { provider: 'giphy', configured, ...(configured ? { apiKey } : {}) };
+    });
     route('get', '/permissions', async (req) => ({
       role: req.account.role,
       permissions: permissions(req.account.role),

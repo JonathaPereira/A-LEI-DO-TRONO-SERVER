@@ -300,6 +300,27 @@ reais nem conectividade SFU/TURN externa. Antes de alterar codec, limites do sen
 ou negociação, comparar envio e recepção sob o mesmo jogo/carga; o indicador atual
 pode recorrer ao FPS configurado na captura quando faltam estatísticas de envio.
 
+## Integração da main 0.2.8 — 16/10/2026
+
+- Integrada `origin/main` em `a68ed1c`, mantendo os caminhos de Next/TypeScript,
+  backend e Electron. Os arquivos de `frontend/` e `desktop/app/` não foram restaurados.
+- Versão, preload, download, manifesto e notas de distribuição atualizados para 0.2.8.
+- Correções de início/desligamento de câmera/tela e layouts incorporadas ao controlador
+  e ao módulo tipado de posicionamento. Pedidos lentos de rede não bloqueiam os controles.
+- Modo nativo do microfone sem expander adicional, preservando fala baixa; RNNoise mantido.
+- Chat por botão próprio nos canais mistos, visualizador de imagens React compartilhado,
+  capas em mensagens diretas, cabeçalho recolhível e ajustes de Splendor/Love Letter.
+- GIPHY e migração de créditos importados da main, com testes autenticados, URLs e SQL
+  locais. Nenhuma migração foi aplicada ao banco remoto e nenhuma chave foi configurada.
+- Fixtures agora aguardam os controladores Next; URLs de arquivos incluem validade e
+  respeitam o parser tipado. Testes de layout usam câmera animada estável no Windows,
+  preservando as verificações de identidade e encerramento das trilhas.
+
+Tipagem, formatação, build, suíte geral, nove verificações de controles/layout,
+perfis/GIPHY/empacotamento e o Electron passaram. O fluxo de perfil também passou
+com as correções da main. As próximas alterações da main estão em 0.2.9 e serão
+integradas em seguida; esta entrada registra o ponto validado da 0.2.8.
+
 ## Próximas alterações, em ordem
 
 1. Extrair câmera, peers, sinalização e coordenação da chamada para `lib/voice/`.

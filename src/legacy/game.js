@@ -3164,6 +3164,11 @@ window.TronoChatHub = {
   enter: enterChatOnly,
   leave: leaveChatOnly,
   switchChannel: switchChatChannel,
+  openChannelText(id) {
+    void window.TronoMessenger.joinChannel(id, { showText: true }).catch((e) =>
+      toast(e.message, 2200),
+    );
+  },
   get channels() {
     return window.TronoChannels.getSnapshot().channels;
   },

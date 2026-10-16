@@ -8,7 +8,14 @@ interface ChannelsRuntime
   extends NetworkRuntime, Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>> {
   TronoChannels?: ChannelsController;
   TronoNotifications?: { getChannelState(id: string): ChannelNotice };
-  TronoChatHub?: { switchChannel(id: string, options: { connectVoice: boolean }): Promise<void> };
+  TronoChatHub?: {
+    switchChannel(id: string, options: { connectVoice: boolean }): Promise<void>;
+    openChannelText(id: string): void;
+  };
+  TronoMessenger?: { close(): void };
+  TronoSocial?: NonNullable<NetworkRuntime['TronoSocial']> & {
+    toggleTextChat(open: boolean): void;
+  };
 }
 export function initializeChannels(runtime: ChannelsRuntime): ChannelsController {
   if (runtime.TronoChannels) return runtime.TronoChannels;
@@ -26,5 +33,13 @@ export function initializeChannels(runtime: ChannelsRuntime): ChannelsController
   }));
 }
 export function selectChannel(id: string, connectVoice: boolean): void {
-  void (window as ChannelsRuntime).TronoChatHub?.switchChannel(id, { connectVoice });
+  const runtime = window as ChannelsRuntime;
+  if (connectVoice) {
+    runtime.TronoMessenger?.close();
+    runtime.TronoSocial?.toggleTextChat(false);
+  }
+  void runtime.TronoChatHub?.switchChannel(id, { connectVoice });
+}
+export function openChannelText(id: string): void {
+  (window as ChannelsRuntime).TronoChatHub?.openChannelText(id);
 }

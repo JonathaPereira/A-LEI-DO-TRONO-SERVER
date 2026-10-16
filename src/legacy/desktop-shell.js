@@ -10,7 +10,7 @@ if (window.TronoDesktop)
       '.appearance-help':
         'Aplica na hora, só para você neste aplicativo. Não muda o tema dos outros na chamada.',
       '#voiceLightModeHelp':
-        'Usa a redução nativa com filtro leve de graves e de fundo entre falas, e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.',
+        'Usa a redução nativa e reduz animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.',
       '[data-settings-panel="video"] .settings-context-help':
         'Escolha áudio isolado do aplicativo/jogo para transmitir seu som. Computador inteiro pode incluir as vozes da chamada e causar eco.',
     };
@@ -28,7 +28,7 @@ if (window.TronoDesktop)
     rail.id = 'desktopRail';
     rail.setAttribute('aria-label', 'Áreas do aplicativo');
     rail.innerHTML =
-      '<button id="desktopHome" type="button" class="desktop-brand" data-desktop-route="home" aria-label="M&N · Ir para o início" title="M&N · Início">M<span>&</span>N</button>';
+      '<button id="desktopHome" type="button" class="desktop-brand" data-desktop-route="home" aria-label="M&N · Ir para o início" title="M&N · Início"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 19V5l9 9 9-9v14l-9-9-9 9"/></svg><span>M&N</span></button>';
     rail.firstElementChild.onclick = () => void navigate('home');
     for (const [view, label] of [
       ['game', 'Jogos'],
@@ -58,7 +58,14 @@ if (window.TronoDesktop)
     version.type = 'button';
     version.className = 'desktop-version';
     version.title = 'Verificar atualização';
-    version.textContent = 'Windows ' + window.TronoDesktop.version;
+    version.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 2M4 16l2 2a7 7 0 0 0 12-1"/></svg><span>Windows ' +
+      window.TronoDesktop.version +
+      '</span>';
+    version.setAttribute(
+      'aria-label',
+      'Windows ' + window.TronoDesktop.version + ' · Verificar atualização',
+    );
     rail.append(version);
     body.append(rail);
     // Appearance belongs to the shell; call-controls-layout owns placement.

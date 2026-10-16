@@ -254,7 +254,7 @@ export function VoicePanel() {
               <label id={'noiseModeLabel'} className={'desktop-noise-mode'} hidden>
                 Redução de ruído
                 <select id={'noiseModeSelect'}>
-                  <option value={'native'}>Leve · nativa + filtro de fundo</option>
+                  <option value={'native'}>Nativa · padrão</option>
                   <option value={'rnnoise'}>RNNoise · redução mais forte</option>
                   <option value={'off'}>Desligada</option>
                 </select>
@@ -275,9 +275,8 @@ export function VoicePanel() {
                 Modo leve para jogar: Desligado
               </button>
               <small id={'voiceLightModeHelp'} className={'noise-suppression-status'}>
-                Usa a redução nativa com filtro leve de graves e de fundo entre falas, e reduz
-                animações e medições. Pode ajudar em jogos pesados; não reserva recursos nem garante
-                áudio sem cortes. Vale apenas neste aparelho.
+                Usa a redução nativa e reduz animações e medições. Pode ajudar em jogos pesados; não
+                reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.
               </small>
               <label className={'auth-check'}>
                 <input id={'voiceProtection'} type={'checkbox'} defaultChecked /> Proteger a voz
