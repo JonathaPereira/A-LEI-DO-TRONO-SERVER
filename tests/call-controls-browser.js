@@ -222,6 +222,11 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
         await desktop.evaluate(()=>window.TronoAppLayout.navigate('game'));
         await expect(desktop.locator('#cameraBtn .workspace-control-icon')).toHaveCount(0);
         await expect(desktop.locator('#cameraBtn .call-icon')).toBeVisible();
+        if(mode==='original'){
+          const toolbar=await desktop.locator('#desktopCallDock .call-toolbar').boundingBox(),dock=await desktop.locator('#desktopCallDock').boundingBox();
+          assert(Math.abs(toolbar.x+toolbar.width/2-dock.x-dock.width/2)<2,'Original games controls must stay centered');
+          await desktop.screenshot({path:path.resolve(__dirname,'../artifacts/call-controls/original-games.png')});
+        }
         await desktop.evaluate(()=>window.TronoAppLayout.navigate('community'));
         await expect(desktop.locator('#cameraBtn .workspace-control-icon')).toHaveCount(1);
         await expect(desktop.locator('#cameraBtn .call-icon')).toBeHidden();
