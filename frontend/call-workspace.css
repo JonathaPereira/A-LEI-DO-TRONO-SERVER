@@ -40,7 +40,7 @@ body.chat-only-active #callWorkspace{position:fixed!important;inset:0!important;
 #callWorkspace .workspace-direct-menu{padding:0 0 12px;margin:0 0 8px;border-bottom:1px solid #ffffff0d}
 #callWorkspace .workspace-direct-menu button{display:flex;align-items:center;gap:8px;width:100%;min-height:35px;padding:6px;border:0;border-radius:7px;background:transparent;color:#b6c0d8;text-align:left;font-size:11px;font-weight:550}
 #callWorkspace .workspace-direct-menu button:hover{background:#ffffff08}#callWorkspace .workspace-direct-menu svg{width:17px;height:17px;flex:none}#callWorkspace .workspace-direct-menu b{margin-left:auto;padding:2px 6px;border-radius:5px;background:#6f60ee33;color:#c6bdff;font-size:9px}
-#callWorkspace .workspace-direct-person>.community-avatar{width:27px;height:27px;flex:none}#callWorkspace .workspace-direct-person>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#callWorkspace .workspace-direct-person>.community-avatar{width:27px;height:27px;flex:none}#callWorkspace .workspace-direct-person>.workspace-direct-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #callWorkspace #workspaceTools{position:relative;flex:none}#callWorkspace #workspaceTools summary{list-style:none;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;cursor:pointer;color:#9ca8c4}#callWorkspace #workspaceTools summary svg{width:20px;height:20px}
 #callWorkspace #workspaceTools>div{position:absolute;top:34px;right:0;z-index:20;width:180px;padding:8px;border:1px solid #434c62;border-radius:10px;background:#202737;box-shadow:0 10px 30px #0006}
 #callWorkspace #workspaceTools>div button{display:block;width:100%;padding:9px;border:0;border-radius:6px;background:transparent;color:#d4dbed;font-size:11px;text-align:left}#callWorkspace #workspaceTools>div button:hover{background:#ffffff0c}
@@ -127,7 +127,7 @@ body.chat-only-active #callWorkspace #messengerToggle{display:none!important}
 #callWorkspace #callWorkspaceSidebar .mn-sidebar-label{padding:0!important;margin:18px 7px 8px!important}
 #callWorkspace #callWorkspaceSidebar .mn-channel-list{padding:0!important;margin:0!important}
 #callWorkspace #callWorkspaceSidebar :is(.channel-empty,.mn-channel-loading){padding:7px!important;margin:0!important;font-size:10px!important;color:#7f8ba6!important}
-#callWorkspace #callWorkspaceSidebar :is(#layoutUserControls,#layoutConnectionControls,#layoutCallActions){display:none!important}
+#callWorkspace[data-controls=dock] #callWorkspaceSidebar :is(#layoutUserControls,#layoutConnectionControls,#layoutCallActions){display:none!important}
 #callWorkspace #socialPanel .mn-media-stage.has-screen #voiceRoster{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),260px))!important;justify-content:center!important;margin:0 auto!important;max-height:210px!important;overflow:auto!important}
 #callWorkspace .mn-sidebar-heading #createChannelBtn{width:28px!important;height:28px!important;min-height:28px!important;padding:3px!important;font-size:21px!important;border:0!important;background:transparent!important;color:#a7b3cf!important;box-shadow:none!important}
 body.chat-only-active[data-app-layout=original] #callWorkspace{--cw-rail:0px;grid-template-columns:var(--cw-sidebar) minmax(0,1fr)!important;grid-template-areas:"header header" "sidebar main"!important}
@@ -189,11 +189,30 @@ body[data-app-layout=original] #callWorkspace .mn-sidebar-heading{min-height:28p
 @media(max-width:759px){#callWorkspace #workspaceHeaderToggle{top:13px}#callWorkspace .chat-only-topbar{gap:4px!important}#callWorkspace .chat-only-top-actions{gap:3px!important}#callWorkspace .chat-only-top-actions :is(.chat-header-action,#communityToggle){padding:5px!important;min-width:28px!important}#callWorkspace #workspaceLayoutToggle{font-size:9px!important}#callWorkspace .chat-only-topbar>.workspace-area-tabs{gap:0}#callWorkspace .chat-only-topbar>.workspace-area-tabs button{padding:5px!important}}
 @media(max-height:550px){#callWorkspace #workspaceHeaderToggle{top:10px}}
 
-/* The member's cover frames the call card without covering media or controls. */
-#callWorkspace #voiceRoster .participant-background{background:linear-gradient(135deg,var(--participant-accent,#7865ff),#253650 70%);isolation:isolate}
-#callWorkspace #voiceRoster .participant-background img{object-position:center var(--participant-position,50%)}
-#callWorkspace #voiceRoster .participant-background:after{inset:4px;border-radius:8px;background:linear-gradient(180deg,#11182730,#111827df 58%,#111827f5)}
-#callWorkspace #socialPanel #voiceRoster .voice-person>.participant-background{z-index:0!important;pointer-events:none!important}
 #callWorkspace>#desktopUpdateCheck.workspace-update-compact{position:absolute!important;left:8px!important;bottom:78px!important;inset-inline-end:auto!important;top:auto!important;z-index:26!important;display:grid!important;place-items:center!important;width:32px!important;height:32px!important;min-height:32px!important;margin:0!important;padding:6px!important;border:1px solid #ffffff20!important;border-radius:9px!important;background:#222938!important;color:#d7deef!important}
 #callWorkspace>#desktopUpdateCheck.workspace-update-compact svg{width:20px;height:20px}
 #callWorkspace>#desktopUpdateCheck.workspace-update-compact>span{display:none}
+
+/* Discord keeps the same call controls in the sidebar in both areas. */
+#callWorkspace[data-controls=sidebar] #socialPanel .voice-section #callFocusDock{display:none!important}
+#callWorkspace[data-controls=sidebar] #layoutVoiceConnection{display:grid!important;grid-template-rows:40px 32px!important;gap:8px!important}
+#callWorkspace[data-controls=sidebar] #layoutConnectionControls,#callWorkspace[data-controls=sidebar] #layoutUserControls{display:flex!important;flex:none!important;gap:2px!important}
+#callWorkspace[data-controls=sidebar] #layoutCallActions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#callWorkspace[data-controls=sidebar] #layoutVoicePanel .call-action>:not(.workspace-control-icon){display:none!important}
+#callWorkspace[data-controls=sidebar] #layoutVoicePanel .workspace-control-icon{display:block!important;width:18px!important;height:18px!important}
+#callWorkspace[data-controls=sidebar] #layoutVoicePanel .workspace-control-icon svg{width:18px;height:18px}
+#callWorkspace[data-controls=sidebar] #layoutVoicePanel .call-action:before,#callWorkspace[data-controls=sidebar] #layoutVoicePanel .call-action:after{display:none!important}
+#callWorkspace[data-controls=sidebar] #layoutVoicePanel #layoutUserBar{height:48px!important;gap:4px!important}
+#callWorkspace[data-controls=sidebar] #layoutVoicePanel #layoutUserAvatar{width:30px!important;height:30px!important}
+#callWorkspace[data-controls=sidebar] #layoutUserControls .call-action{width:28px!important;height:32px!important;padding:5px!important}
+#callWorkspace[data-controls=sidebar] #layoutProfile{flex:1 1 0!important}
+#callWorkspace[data-controls=sidebar] .layout-user-copy strong{max-width:100%!important}
+#callWorkspace :is(#desktopRail,#webLayoutRail)>#soundboardToggle>.workspace-control-icon{display:block!important}
+#callWorkspace :is(#desktopRail,#webLayoutRail)>#soundboardToggle>:not(.workspace-control-icon){display:none!important}
+
+/* Covers decorate direct-message names; call cards retain their own background. */
+#callWorkspace .workspace-direct-person{position:relative;isolation:isolate;overflow:hidden;min-height:42px!important;margin:4px 0;border-radius:8px!important}
+#callWorkspace .workspace-direct-person>:not(.direct-profile-banner){position:relative;z-index:1}
+#callWorkspace .direct-profile-banner{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+#callWorkspace .direct-profile-banner img{width:100%;height:100%;object-fit:cover;display:block}
+#callWorkspace .direct-profile-banner:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#1016228c,#101622bb)}

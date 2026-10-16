@@ -150,9 +150,17 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     const artifacts = path.join(root, 'artifacts/call-layout');
     await fs.mkdir(artifacts, {recursive: true});
     const capture = process.env.LAYOUT_CAPTURE_PREFIX || 'after';
+    async function communityControls(layout) {
+      const sidebar=layout==='discord'&&await page.evaluate(()=>innerWidth>=1100);
+      for(const id of controls){
+        const host=!sidebar?'callFocusDock':id==='soundboardToggle'?'desktopRail':id==='joinVoiceBtn'?'layoutConnectionControls':['cameraBtn','screenShareBtn'].includes(id)?'layoutCallActions':'layoutUserControls';
+        await expect(page.locator('#'+host+' #'+id)).toHaveCount(1);
+        await expect(page.locator('#'+id)).toBeVisible();
+      }
+    }
     for (const layout of ['original', 'discord', 'original', 'discord']) {
       await page.evaluate(layout => window.TronoAppLayout.apply(layout, {save: true}), layout);
-      for (const id of controls) await expect(page.locator('#callFocusDock #' + id)).toHaveCount(1);
+      await communityControls(layout);
       await preserved();
       await page.screenshot({path: path.join(artifacts, `${capture}-community-${layout}.png`)});
 
@@ -172,7 +180,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await expect(page.locator('#setupScreen')).toBeVisible();
       await preserved();
       await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-      await expect(page.locator('#callFocusDock #muteMicBtn')).toBeVisible();
+      await communityControls(layout);
       await preserved();
     }
 
