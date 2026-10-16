@@ -34,7 +34,6 @@ export interface MessagesSnapshot {
   readonly canModerate: boolean;
   readonly accountId: string | null;
   readonly clientId: string | null;
-  readonly viewVersion: number;
   readonly change: 'replace' | 'append' | 'prepend' | 'remove';
   readonly choice: ModerationChoice | null;
   readonly pending: (ModerationChoice & { readonly requestId: string }) | null;

@@ -22,7 +22,6 @@ export interface ChannelsSnapshot {
   readonly ready: boolean;
   /** Catalog/identity generation; guards HTTP responses against newer socket data or accounts. */
   readonly version: number;
-  readonly avatarVersion: number;
   readonly notices: Readonly<Record<string, ChannelNotice>>;
 }
 

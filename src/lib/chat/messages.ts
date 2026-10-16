@@ -31,7 +31,6 @@ export const EMPTY_MESSAGES: MessagesSnapshot = Object.freeze({
   canModerate: false,
   accountId: null,
   clientId: null,
-  viewVersion: 0,
   change: 'replace',
   choice: null,
   pending: null,
@@ -121,7 +120,6 @@ export function createChatMessages({
   const unsubscribeIdentity = subscribeIdentity(() => {
     if (state.accountId !== (getAccount()?.id ?? null)) clear();
     refreshPermissions();
-    update({ viewVersion: state.viewVersion + 1 });
   });
   syncRoom();
 

@@ -687,7 +687,9 @@ window.TronoMessenger = (() => {
     $('messengerFile').onchange = (e) => {
       const file = e.target.files[0];
       if (!file || !peer) return;
-      const max = /\.(mp4|webm)$/i.test(file.name) ? 100_000_000 : 10_000_000;
+      const max = /\.(mp4|webm)$/i.test(file.name)
+        ? window.TronoFiles.limits.video
+        : window.TronoFiles.limits.file;
       if (!file.size || file.size > max) {
         e.target.value = '';
         status('Limite: ' + window.TronoFiles.size(max) + ' por arquivo.');

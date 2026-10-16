@@ -8,7 +8,6 @@
     "auth.js",
     "rtc-config.js",
     "audio-gain.js",
-    "avatar-icons.js",
     "profile-data.js",
     "profile-gifs.js",
     "profile-files.js",

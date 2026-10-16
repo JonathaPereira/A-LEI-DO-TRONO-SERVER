@@ -165,7 +165,6 @@ test('account changes discard private presence and invalidate old HTTP refreshes
   identity('another-account');
   assert.deepEqual(controller.get('a').players, []);
   assert.equal(controller.replace([channel('old')], version), false);
-  assert.equal(controller.getSnapshot().avatarVersion, 1);
 });
 
 test('observer failure does not block other subscribers; disposal removes every listener', async (t) => {

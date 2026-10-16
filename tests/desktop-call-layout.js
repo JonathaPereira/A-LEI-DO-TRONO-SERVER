@@ -23,7 +23,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
   let fixture, finished = false;
   t.signal.addEventListener('abort', () => { if (!finished) apps.forEach(killTestApp); }, {once: true});
   try {
-    fixture = await startFixture({port: 10743, allowedOrigins: [origin]});
+    fixture = await startFixture({port: 10743, allowedOrigins: [origin], directAttachments: true});
     async function launch(email, nickname, layout = 'original') {
       await fixture.call('signup', {email, nickname, password: 'LayoutTest12!'});
       await fixture.call('verify', {token_hash: [...fixture.links.keys()].at(-1), type: 'signup'});
@@ -208,6 +208,16 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#courtChatSend').click();
     await expect(page.locator('#courtChatMessages')).toContainText('Compositor React com voz e jogo ativos');
     await expect(page.locator('#courtChatInput')).toHaveValue('');
+    await preserved();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await page.locator('#chatFileInput').setInputFiles({name: 'desktop.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7 desktop fixture')});
+    await page.locator('#courtChatInput').fill('Anexo React no Electron');
+    await page.locator('#courtChatSend').click();
+    await expect(page.locator('#courtChatMessages .file-download')).toContainText('desktop.pdf');
+    await preserved();
+    // Electron's native confirmation is already accepted by this fixture's dialog adapter.
+    await page.locator('#courtChatMessages .file-delete').click();
+    await expect(page.locator('#courtChatMessages .chat-attachment')).toContainText('Arquivo excluído.');
     await preserved();
     await page.locator('[data-chat-channel="chat-jogos"]').click();
     await expect(page.locator('[data-chat-channel="chat-jogos"]')).toHaveAttribute('aria-current', 'page');

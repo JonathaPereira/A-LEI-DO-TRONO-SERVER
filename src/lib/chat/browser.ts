@@ -1,6 +1,5 @@
 import type { ChatFiles } from '../../types/chat';
 import type { ChatActivity } from '../../types/chat';
-import type { ChatAttachment } from '../../types/domain';
 import { createChatMessages } from './messages.ts';
 import type { ChatMessagesController } from './messages.ts';
 import { initializeNetwork } from '../socket/browser.ts';
@@ -10,7 +9,7 @@ import type { ChatComposerController } from './composer.ts';
 
 interface ChatRuntime
   extends NetworkRuntime, Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>> {
-  TronoFiles?: ChatFiles & { renderAttachment?(host: HTMLElement, file: ChatAttachment): void };
+  TronoFiles?: ChatFiles;
   TronoChatComposer?: ChatComposerController;
   TronoChatMessages?: ChatMessagesController;
   TronoSocial?: NonNullable<NetworkRuntime['TronoSocial']> & {
@@ -36,11 +35,6 @@ export function initializeChatMessages(runtime: ChatRuntime): ChatMessagesContro
   });
   runtime.TronoChatMessages = controller;
   return controller;
-}
-
-/** These empty React hosts belong to the shared legacy renderers until their conversion. */
-export function renderMessageAttachment(host: HTMLElement, attachment: ChatAttachment): void {
-  (window as ChatRuntime).TronoFiles?.renderAttachment?.(host, { ...attachment });
 }
 
 export function initializeChatComposer(runtime: ChatRuntime): ChatComposerController {

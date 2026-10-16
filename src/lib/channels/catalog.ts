@@ -23,7 +23,6 @@ export const EMPTY_CHANNELS: ChannelsSnapshot = Object.freeze({
   selectedId: null,
   ready: false,
   version: 0,
-  avatarVersion: 0,
   notices: Object.freeze({}),
 });
 
@@ -91,7 +90,6 @@ export function createChannels({
     update({
       channels,
       version: state.version + 1,
-      avatarVersion: state.avatarVersion + 1,
       notices: notices(channels),
     });
   });

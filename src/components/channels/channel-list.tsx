@@ -1,26 +1,14 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { ChannelGroup, ChannelParticipant } from '../../types/channels';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import type { ChannelGroup } from '../../types/channels';
 import type { ChannelsController } from '../../lib/channels/catalog';
 import { EMPTY_CHANNELS } from '../../lib/channels/catalog';
 import { initializeChannels, selectChannel } from '../../lib/channels/browser';
-import { renderProfileAvatar } from '../../lib/profiles/avatar';
+import { Avatar } from '../profiles/avatar';
 
 const emptySubscribe = () => () => {};
 const emptySnapshot = () => EMPTY_CHANNELS;
-
-function PresenceAvatar({ person, version }: { person: ChannelParticipant; version: number }) {
-  const host = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const element = host.current;
-    if (!element) return;
-    renderProfileAvatar(element, person);
-    return () => element.replaceChildren();
-  }, [person.avatar_preset, person.avatar_file_id, version]);
-  const title = `${person.name}${person.guest ? ' · convidado' : ''} · na voz`;
-  return <span ref={host} className="community-avatar" title={title} aria-label={title} />;
-}
 
 export function ChannelList({ group }: { group: ChannelGroup }) {
   const [controller, setController] = useState<ChannelsController | null>(null);
@@ -67,7 +55,12 @@ export function ChannelList({ group }: { group: ChannelGroup }) {
               {channel.type !== 'text' && (
                 <span className="room-presence-icons">
                   {people.slice(0, 8).map((person) => (
-                    <PresenceAvatar key={person.id} person={person} version={state.avatarVersion} />
+                    <Avatar
+                      key={person.id}
+                      person={person}
+                      className="community-avatar"
+                      title={`${person.name}${person.guest ? ' · convidado' : ''} · na voz`}
+                    />
                   ))}
                   {people.length > 8 && <small>+{people.length - 8}</small>}
                 </span>

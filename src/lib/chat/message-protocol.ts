@@ -1,3 +1,4 @@
+import { readFile } from '../files/protocol.ts';
 import type { ChatAttachment, ChatMessage } from '../../types/domain';
 import type { SocketMessage } from '../../types/socket';
 
@@ -37,31 +38,7 @@ export function readChatMessage(value: unknown, roomId: string): ChatMessage {
   )
     return fail();
   let attachment: ChatAttachment | null = null;
-  if (value.attachment != null) {
-    const file = value.attachment;
-    if (
-      !record(file) ||
-      typeof file.name !== 'string' ||
-      typeof file.mime !== 'string' ||
-      typeof file.bytes !== 'number' ||
-      !Number.isSafeInteger(file.bytes) ||
-      file.bytes < 0 ||
-      (file.deleted !== undefined && typeof file.deleted !== 'boolean') ||
-      (file.roomId != null && typeof file.roomId !== 'string')
-    )
-      return fail();
-    attachment = Object.freeze({
-      id: identifier(file.id),
-      name: file.name,
-      mime: file.mime,
-      bytes: file.bytes,
-      ownerId: optionalString(file.ownerId),
-      kind: optionalString(file.kind),
-      roomId: file.roomId as string | null | undefined,
-      createdAt: optionalString(file.createdAt),
-      deleted: file.deleted as boolean | undefined,
-    });
-  }
+  if (value.attachment != null) attachment = readFile(value.attachment);
   if (value.avatar_file_id != null && typeof value.avatar_file_id !== 'string') return fail();
   return Object.freeze({
     id: identifier(value.id),

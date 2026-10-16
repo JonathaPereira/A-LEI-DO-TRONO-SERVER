@@ -5,6 +5,9 @@ import manifest from './manifest.json';
 import { initializeNetwork } from '../lib/socket/browser';
 import { initializeChatComposer, initializeChatMessages } from '../lib/chat/browser';
 import { initializeChannels } from '../lib/channels/browser';
+import { initializeFiles } from '../lib/files/browser';
+import { installLegacyAttachments } from '../components/files/legacy-attachments';
+import { installLegacyAvatars } from '../lib/profiles/avatar';
 
 let startup: Promise<void> | undefined;
 
@@ -30,6 +33,9 @@ export function LegacyRuntime() {
   useEffect(() => {
     startup ??= (async () => {
       initializeNetwork(window);
+      initializeFiles(window);
+      installLegacyAttachments(window);
+      installLegacyAvatars(window);
       initializeChatComposer(window);
       initializeChatMessages(window);
       initializeChannels(window);

@@ -1,3 +1,4 @@
+import { FILE_LIMITS, formatFileSize } from '../files/client.ts';
 import type { NetworkClient } from '../socket/client.ts';
 import type { ChatFiles, ComposerSnapshot } from '../../types/chat';
 import type { SocketMessage } from '../../types/socket';
@@ -25,14 +26,6 @@ export const EMPTY_COMPOSER: ComposerSnapshot = Object.freeze({
   status: '',
   focusVersion: 0,
 });
-
-export function formatFileSize(bytes: number): string {
-  return bytes >= 1e9
-    ? `${(bytes / 1e9).toFixed(2)} GB`
-    : bytes >= 1e6
-      ? `${(bytes / 1e6).toFixed(1)} MB`
-      : `${Math.ceil(bytes / 1000)} KB`;
-}
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
@@ -157,7 +150,7 @@ export function createChatComposer({
         reportStatus('Entre em um canal para anexar arquivos.');
         return false;
       }
-      const max = /\.(mp4|webm)$/i.test(file.name) ? 100_000_000 : 10_000_000;
+      const max = /\.(mp4|webm)$/i.test(file.name) ? FILE_LIMITS.video : FILE_LIMITS.file;
       if (!file.size || file.size > max) {
         update({ file: null, status: `Limite: ${formatFileSize(max)} por arquivo.` });
         return false;

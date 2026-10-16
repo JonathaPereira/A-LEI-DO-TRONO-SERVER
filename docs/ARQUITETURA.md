@@ -16,8 +16,12 @@ Há uma instância por página, com `getSnapshot()` e `subscribe()`, consumida c
 uma resposta antiga não pode enviar no canal novo ou liberar um upload posterior.
 Trocar de conta limpa o rascunho. Não há um segundo socket ou captura de mídia.
 
-O envio usa o cliente de rede tipado. O transporte HTTP compartilhado de arquivos
-continua em `legacy/profile-files.js`, também usado por perfis e mensagens diretas.
+O envio usa o cliente de rede tipado. `lib/files/client.ts` possui o transporte
+HTTP compartilhado por chat, perfis, mensagens diretas e soundboard. Há um cache
+de links por conta, com pedidos simultâneos deduplicados, expiração e invalidação
+por exclusão. Mudanças de conta incrementam uma geração: respostas anteriores não
+entram no cache e uploads ativos são cancelados. `protocol.ts` valida arquivos
+e links; o parser de mensagens reutiliza essa validação para seus anexos.
 `lib/chat/messages.ts` possui mensagens, histórico, paginação, revisões e confirmações
 de moderação. `message-protocol.ts` valida páginas completas antes de aceitar sua
 revisão. Snapshots e mensagens são imutáveis; respostas antigas não restauram linhas
@@ -25,9 +29,10 @@ apagadas. Trocar de canal, desconectar ou perder a permissão invalida confirma�
 As permissões da interface não substituem a autorização do servidor.
 
 `chat-messages.tsx` renderiza lista, paginação e diálogo em React, preservando a
-posição de leitura ao inserir mensagens anteriores. Avatares e anexos ainda usam
-os renderizadores compartilhados em hosts vazios pertencentes a esses módulos.
-Anexos recebem uma cópia do DTO para não permitir mutações no snapshot. A contagem
+posição de leitura ao inserir mensagens anteriores. Avatares e anexos usam
+componentes React compartilhados em `components/profiles/` e `components/files/`,
+sem mutar o DTO. URLs, erros e previews pertencem ao arquivo e à geração da conta;
+respostas antigas não reaparecem em uma linha reutilizada. A contagem
 de não lidas e os sons continuam em `legacy/social.js`, pelo evento `onChatActivity`.
 Esse controlador não escreve mais na lista, no compositor ou no diálogo de moderação.
 O adaptador `lib/socket/chat-actions.ts` foi excluído.
@@ -62,8 +67,11 @@ descarta os participantes privados do catálogo anterior.
 silenciamento e não lidas. `legacy/notifications.js` ainda possui os contadores,
 preferências e avisos; publica mudanças e expõe `getChannelState()` sem escrever
 nos botões React. `legacy/community.js` mantém apenas os ícones das mesas de jogo.
-`lib/profiles/avatar.ts` compartilha o host do renderizador de perfil entre chat
-e canais, sem duplicar acesso a arquivos ou resolver URLs no catálogo.
+`lib/profiles/icons.ts` contém os desenhos e o catálogo único de avatares.
+`avatar.ts` conserva `avatarHtml`/`hydrate` para perfis e jogos não convertidos;
+as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.
+O componente React usa o mesmo catálogo e cliente de arquivos, sem hosts de
+renderização imperativa no chat ou nos canais. `legacy/avatar-icons.js` foi removido.
 
 A navegação do hub e a troca de chamada continuam em `legacy/game.js` e
 `legacy/social.js`. Os cliques React delegam a esse fluxo, que consulta o catálogo
@@ -86,6 +94,12 @@ Os controladores podem mover ou reescrever seus elementos. Enquanto um controlad
 for dono de uma subárvore, evite renderizações React reativas dentro dela. Para
 converter um fluxo, transfira estado e eventos juntos e remova o listener antigo.
 Renomear extensões não constitui uma conversão de arquitetura.
+
+O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados de
+`renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
+mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
+existe somente enquanto há raízes ativas. `legacy/profile-files.js` ainda possui
+edição/visualização de perfis e galeria, mas perdeu transporte, cache e renderizadores.
 
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.

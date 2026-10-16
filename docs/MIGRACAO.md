@@ -19,15 +19,18 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Compositor React com rascunho, emojis e ciclo de upload tipado; adaptador de envio removido.
 - Lista React com histórico, paginação, revisões e moderação em TypeScript.
 - Listas de canais React com catálogo tipado, seleção, presença e indicadores de notificação.
+- Transporte HTTP de arquivos tipado e componentes React compartilhados para anexos e avatares.
 
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
 React ou TypeScript apenas porque a marcação foi convertida. Captura WebRTC,
-avatares/anexos compartilhados, navegação/gerenciamento de canais, notificações e jogos
+edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
+Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham componentes
+React, com adaptadores para os chamadores legados ainda ativos.
 Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
 Os payloads de jogos e sinalização ainda não têm validação completa nesse módulo.
 `server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
@@ -196,24 +199,54 @@ sem encerrar a chamada. O Electron usa os próprios botões React ao trocar para
 e voltar, preservando socket, peers, microfone, câmera, tela e jogo. Os serviços
 externos são simulados; nada foi publicado nem alterado em infraestrutura remota.
 
+## Arquivos e avatares compartilhados — 16/10/2026
+
+- `lib/files/client.ts` possui HTTP autenticado, upload com progresso/cancelamento,
+  cache e deduplicação de links, permissões e avisos de exclusão. Trocas de conta,
+  inclusive A → B → A, invalidam resultados antigos e cancelam uploads ativos.
+  Preview e download mantêm links distintos; exclusões invalidam cache e pendências.
+- `protocol.ts` valida metadados e URLs HTTP(S) com expiração. O chat reutiliza o
+  parser de arquivos. Limites e formatação de tamanho são compartilhados entre
+  compositor, mensagens privadas e transporte. Os limites anteriores foram mantidos.
+- `components/files/attachment.tsx` renderiza imagens, vídeos, PDFs, download e
+  exclusão. Chat, DMs e galeria usam a mesma implementação React; a compatibilidade
+  das telas antigas monta e desmonta raízes por host, sem mutar objetos de mensagens.
+  A autorização final continua no servidor, inclusive para anexos privados.
+- `components/profiles/avatar.tsx` substitui os hosts imperativos no chat/canais.
+  `lib/profiles/` concentra ícones, catálogo e compatibilidade de hidratação para
+  telas antigas, com proteção contra respostas de outra conta ou tentativa anterior.
+- Removido `legacy/avatar-icons.js` e sua entrada no manifesto. A preparação do
+  renderer retirou a cópia gerada. `legacy/profile-files.js` perdeu cerca de 300
+  linhas substituídas e conserva somente seus fluxos ativos de perfil e galeria.
+  Retirados adaptadores antigos de renderização no chat e contadores de redesenho
+  que ficaram sem consumidores. Não há segunda implementação frontend do transporte HTTP.
+- A suíte de anexos privados esperava o antigo botão Amigos em telas estreitas.
+  A falha foi reproduzida no commit anterior `537bf49`; o teste agora verifica a
+  entrada atual de mensagens diretas, sua posição e clique em quatro tamanhos.
+  A troca de conta tem preparação própria e preserva suas verificações de privacidade.
+
+Validação: tipagem, formatação, build, `npm test` (4 integrações anteriores e
+150 testes, incluindo 14 em `test:files`), `test:ui` (4), anexos privados no navegador
+(9 contando os subtestes) e `test:desktop:layout` (1) passaram. No Electron, upload
+e exclusão de PDF preservaram socket, peers, microfone, câmera, tela e jogo.
+Os testes usam backend local, armazenamento simulado e mídia sintética; não validam
+R2/TURN reais. Nenhuma infraestrutura remota foi alterada e nada foi publicado.
+
 ## Próximas alterações, em ordem
 
-1. Converter os renderizadores e o transporte HTTP de arquivos compartilhados,
-   mantendo uma única implementação para chat, perfis e DMs ao retirar
-   `legacy/profile-files.js`. Converter o renderizador de avatares e substituir
-   os hosts temporários. Compositor, mensagens e moderação já estão em `lib/chat/`;
-   catálogo e listas de canais estão em `lib/channels/` e React.
-2. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
+1. Extrair captura, peers, sinalização e descarte para `lib/voice/`.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
-3. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
+2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
    e jogos. Cada controlador convertido perde sua entrada no manifesto e seus
    listeners DOM. Não recriar o catálogo, socket ou estado de participação no processo.
-4. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
+   Ao retirar `legacy/profile-files.js`, conservar o cliente de `lib/files/` e os
+   componentes já compartilhados; remover os adaptadores quando não houver chamadores.
+3. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
    de `createApplication`. Converter os módulos JS por domínio.
-5. Consolidar estilos por domínio após retirar os controladores. A ordem atual
+4. Consolidar estilos por domínio após retirar os controladores. A ordem atual
    contém sobreposições necessárias para estados de chamada não visíveis no início.
-6. Documentar e validar uma instalação nova do banco, com ordem única para os
+5. Documentar e validar uma instalação nova do banco, com ordem única para os
    SQL legados e as migrações datadas, sem reaplicar mudanças em bases existentes.
 
 ## Critérios por fluxo convertido

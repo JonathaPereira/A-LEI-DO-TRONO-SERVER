@@ -1,20 +1,13 @@
 'use client';
 
-import {
-  Component,
-  memo,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
-import type { ChatAttachment, ChatMessage } from '../../types/domain';
+import { Component, memo, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { ChatMessage } from '../../types/domain';
 import type { MessagesSnapshot } from '../../types/chat';
 import { EMPTY_MESSAGES } from '../../lib/chat/messages';
 import type { ChatMessagesController } from '../../lib/chat/messages';
-import { initializeChatMessages, renderMessageAttachment } from '../../lib/chat/browser';
-import { renderProfileAvatar } from '../../lib/profiles/avatar';
+import { initializeChatMessages } from '../../lib/chat/browser';
+import { Avatar } from '../profiles/avatar';
+import { Attachment } from '../files/attachment';
 
 const emptySubscribe = () => () => {};
 const emptySnapshot = () => EMPTY_MESSAGES;
@@ -31,33 +24,11 @@ function useMessages() {
   return { controller, state };
 }
 
-function Avatar({ message, version }: { message: ChatMessage; version: number }) {
-  const host = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const element = host.current;
-    if (!element) return;
-    renderProfileAvatar(element, message);
-    return () => element.replaceChildren();
-  }, [message.avatar_file_id, message.avatar_preset, version]);
-  return <span className="chat-author-icon" ref={host} />;
-}
-function Attachment({ file, version }: { file: ChatAttachment; version: number }) {
-  const host = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const element = host.current;
-    if (!element) return;
-    renderMessageAttachment(element, file);
-    return () => element.replaceChildren();
-  }, [file, version]);
-  return <div ref={host} className="chat-attachment" />;
-}
-
 interface RowProps {
   message: ChatMessage;
   mine: boolean;
   canModerate: boolean;
   pending: boolean;
-  version: number;
   controller: ChatMessagesController | null;
 }
 const MessageRow = memo(function MessageRow({
@@ -65,7 +36,6 @@ const MessageRow = memo(function MessageRow({
   mine,
   canModerate,
   pending,
-  version,
   controller,
 }: RowProps) {
   const timestamp = new Date(message.ts);
@@ -73,7 +43,7 @@ const MessageRow = memo(function MessageRow({
   return (
     <div data-message-id={message.id} className={`court-chat-msg${mine ? ' mine' : ''}`}>
       <div>
-        <Avatar message={message} version={version} />
+        <Avatar person={message} className="chat-author-icon" />
         <strong>{message.name || 'Jogador'}</strong>
         <time dateTime={valid ? timestamp.toISOString() : undefined}>
           {valid
@@ -109,7 +79,7 @@ const MessageRow = memo(function MessageRow({
         )}
       </div>
       <p>{message.text}</p>
-      {message.attachment && <Attachment file={message.attachment} version={version} />}
+      {message.attachment && <Attachment file={message.attachment} />}
     </div>
   );
 });
@@ -162,7 +132,6 @@ class MessageList extends Component<ListProps> {
             }
             canModerate={state.canModerate}
             pending={!!state.pending}
-            version={state.viewVersion}
           />
         ))}
       </div>

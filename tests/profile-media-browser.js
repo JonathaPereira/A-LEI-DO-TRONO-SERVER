@@ -99,7 +99,17 @@ test(
           kind: r.request().headers()['x-file-kind'],
           bytes: r.request().postDataBuffer().length,
         });
-        return r.fulfill({ json: { file: { id } } });
+        return r.fulfill({
+          json: {
+            file: {
+              id,
+              name: decodeURIComponent(r.request().headers()['x-file-name']),
+              bytes: r.request().postDataBuffer().length,
+              mime: 'image/gif',
+              kind: 'avatar',
+            },
+          },
+        });
       });
       await context.route('**/files/*/url', (r) =>
         r.fulfill({
