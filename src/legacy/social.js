@@ -7,8 +7,6 @@ window.TronoSocial = (() => {
   let mediaTransport = 'p2p';
   let lastSfuError = '';
   let roomVoiceMode = null;
-  let voiceGeneration = 0,
-    voiceJoinPromise = null;
   const senderQualityQueues = new WeakMap(),
     profileMedia = new Map();
   let mutedBeforeDeafen = false;
@@ -22,7 +20,10 @@ window.TronoSocial = (() => {
   let mediaAudioContext = null;
   const foreground = () => !document.hidden && document.hasFocus();
   function updateVoiceBackgroundClass() {
-    document.body.classList.toggle('voice-background', voiceJoined && !foreground());
+    document.body.classList.toggle(
+      'voice-background',
+      voiceCall.getSnapshot().joined && !foreground(),
+    );
   }
   const isScreenKind = (kind) => kind === 'screen' || kind === 'screen-audio';
   const wantsSfuPublication = (pub) =>
@@ -59,7 +60,9 @@ window.TronoSocial = (() => {
   function updateAudioRecoveryUI() {
     const blocked =
       audioPlayback.getSnapshot().entries.some((entry) => entry.blocked) ||
-      (voiceJoined && mediaAudioContext && mediaAudioContext.state !== 'running');
+      (voiceCall.getSnapshot().joined &&
+        mediaAudioContext &&
+        mediaAudioContext.state !== 'running');
     $('resumeAudioBtn')?.classList.toggle('hidden', !blocked);
   }
   function unlockCallAudio() {
@@ -113,7 +116,7 @@ window.TronoSocial = (() => {
     if (label) label.textContent = `${audioPlayback.getGain(streamAudioKey(id))}%`;
   }
   async function toggleWatchStream(id) {
-    if (!voiceJoined || !privateVoiceRoster.get(id)?.screen) return;
+    if (!voiceCall.getSnapshot().joined || !privateVoiceRoster.get(id)?.screen) return;
     streamWatchVersions.set(id, (streamWatchVersions.get(id) || 0) + 1);
     if (watchingStreams.has(id)) {
       watchingStreams.delete(id);
@@ -170,7 +173,6 @@ window.TronoSocial = (() => {
     chatRoomState = null,
     gameRoomState = null;
   let localStream = null;
-  let voiceJoined = false;
   let micMuted = false;
   let deafened = false;
   let cameraTogglePending = null;
@@ -236,7 +238,7 @@ window.TronoSocial = (() => {
   const realtime = window.TronoVoiceCapture.createRealtimeConfiguration({
     connected: () => !!window.TronoNetwork?.connected,
     visible: () => document.visibilityState !== 'hidden',
-    callGeneration: () => voiceGeneration,
+    callGeneration: () => voiceCall.getSnapshot().generation,
     baseIce: window.TRONO_RTC_CONFIG,
     requestStatus: () => window.TronoNetwork.getRealtimeStatus(),
     requestIce: () => window.TronoNetwork.requestSfu('ice-config', {}, 8000),
@@ -246,7 +248,7 @@ window.TronoSocial = (() => {
   });
   const speakingIndicators = window.TronoVoiceCapture.createSpeakingIndicators({
     getSettings: () => ({
-      enabled: voiceJoined,
+      enabled: voiceCall.getSnapshot().joined,
       hidden: document.hidden,
       foreground: foreground(),
       lightMode: voiceLightMode,
@@ -260,7 +262,7 @@ window.TronoSocial = (() => {
   const microphone = window.TronoVoiceCapture.createMicrophone({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
-      generation: voiceGeneration,
+      generation: voiceCall.getSnapshot().generation,
       enabled: noiseSuppression,
       nativeOnly: !!(voiceLightMode || (window.TronoDesktop && noiseEngine === 'native')),
       deviceId: selectedInput,
@@ -278,7 +280,10 @@ window.TronoSocial = (() => {
         createNoise: (ctx, onFailure) => window.TronoNoise.create(ctx, { onFailure }),
         onModeChange: updateNoiseButton,
         onNativeUnavailable: (processor) => {
-          if (voiceJoined && microphone.getSnapshot().capture?.processor === processor)
+          if (
+            voiceCall.getSnapshot().joined &&
+            microphone.getSnapshot().capture?.processor === processor
+          )
             void acquireMic({ nativeOnly: true }).catch((err) => {
               if (err?.code !== 'VOICE_CANCELLED')
                 setStatus('Microfone ativo, mas a redução nativa não iniciou.', 'warn');
@@ -291,8 +296,8 @@ window.TronoSocial = (() => {
   const screenCapture = window.TronoVoiceCapture.createScreenCapture({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
-      generation: voiceGeneration,
-      joined: voiceJoined,
+      generation: voiceCall.getSnapshot().generation,
+      joined: voiceCall.getSnapshot().joined,
       format: qualityProfile().screen,
       replay: window.TronoClips?.captureProfile?.(),
       audio: shareStreamAudio,
@@ -312,8 +317,8 @@ window.TronoSocial = (() => {
   const cameraCapture = window.TronoVoiceCapture.createCamera({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
-      generation: voiceGeneration,
-      joined: voiceJoined,
+      generation: voiceCall.getSnapshot().generation,
+      joined: voiceCall.getSnapshot().joined,
       deviceId: selectedCamera,
       format: qualityProfile().camera,
     }),
@@ -330,7 +335,7 @@ window.TronoSocial = (() => {
   cameraCapture.subscribe(renderCameraState);
   const p2pPeers = window.TronoVoiceCapture.createP2pPeers({
     getSettings: () => ({
-      enabled: voiceJoined && !transportIsSfu() && !transportPending(),
+      enabled: voiceCall.getSnapshot().joined && !transportIsSfu() && !transportPending(),
       localId: meId(),
     }),
     createConnection: () => new RTCPeerConnection(realtime.configuration('p2p')),
@@ -354,7 +359,7 @@ window.TronoSocial = (() => {
   });
   const peers = p2pPeers.connections;
   const remoteMedia = window.TronoVoiceCapture.createRemoteMedia({
-    enabled: () => voiceJoined,
+    enabled: () => voiceCall.getSnapshot().joined,
     createStream: () => new MediaStream(),
     getPeer: (id) => peers.get(id),
     isPeerCurrent: (id, pc) => p2pPeers.isCurrent(id, pc),
@@ -410,7 +415,7 @@ window.TronoSocial = (() => {
   const voiceTelemetry = window.TronoVoiceCapture.createVoiceTelemetry({
     protection: storage.getItem('mnVoiceProtection') !== '0',
     getSettings: () => ({
-      joined: voiceJoined,
+      joined: voiceCall.getSnapshot().joined,
       transport: mediaTransport,
       detailsOpen: telemetryOpen,
       foreground: foreground(),
@@ -444,7 +449,7 @@ window.TronoSocial = (() => {
 
   const sfuSession = window.TronoVoiceCapture.createSfuSession({
     getSettings: () => ({
-      enabled: voiceJoined && transportIsSfu(),
+      enabled: voiceCall.getSnapshot().joined && transportIsSfu(),
       screenAllowed: !!realtime.getSnapshot().status?.screenAllowed,
       quality: cappedQuality(),
       screenBitrate: effectiveScreenBitrate(),
@@ -517,6 +522,40 @@ window.TronoSocial = (() => {
     syncSubscriptions: syncSfuSubscriptions,
     clearRetry: clearSfuRetry,
   } = sfuSession;
+
+  const voiceCall = window.TronoVoiceCapture.createVoiceCall({
+    prepare: () => window.TronoNetwork.prepareVoice(),
+    microphone,
+    roomId: () => roomState?.id,
+    onMessage: (listener) => window.TronoNetwork.onMessage(listener),
+    onPreparing: prepareCallUi,
+    onPrepared: (choice) => {
+      roomVoiceMode = choice.mode;
+      setStatus('Solicitando acesso ao microfone…');
+    },
+    onJoined: showJoinedCall,
+    connect: connectCall,
+    onLeaving: prepareLeaveUi,
+    release: [
+      realtime.cancelIce,
+      speakingIndicators.reset,
+      voiceTelemetry.reset,
+      cameraCapture.stop,
+      closeAllPeers,
+      remoteMedia.reset,
+      sfuSession.reset,
+      audioPlayback.reset,
+      () => {
+        localStream?.getTracks().forEach((track) => track.stop());
+        localStream = null;
+      },
+      screenCapture.stop,
+    ],
+    onLeft: showLeftCall,
+    onError: (error) => setStatus(error?.message || 'Não foi possível abrir o microfone.', 'error'),
+    onChange: updateButtons,
+  });
+  const { toggle: joinVoice, leave: leaveVoice } = voiceCall;
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () =>
@@ -834,7 +873,7 @@ window.TronoSocial = (() => {
       policy = $('realtimePolicyLabel');
     if (!card) return;
     const r = realtime.getSnapshot().status;
-    const modeState = voiceJoined ? announcedTransport() : mediaTransport;
+    const modeState = voiceCall.getSnapshot().joined ? announcedTransport() : mediaTransport;
     card.classList.toggle('realtime-live', modeState === 'sfu');
     card.classList.toggle('realtime-warning', !!r?.softWarning);
     card.classList.toggle('realtime-blocked', !!r?.hardBlocked);
@@ -842,7 +881,7 @@ window.TronoSocial = (() => {
       if (!inChatHub()) mode.textContent = 'WebRTC P2P (partida)';
       else if (modeState === 'sfu') mode.textContent = 'Cloudflare SFU';
       else if (modeState === 'sfu-pending') mode.textContent = 'Conectando ao SFU…';
-      else if (!voiceJoined && r?.enabled && r?.configured && !r?.hardBlocked)
+      else if (!voiceCall.getSnapshot().joined && r?.enabled && r?.configured && !r?.hardBlocked)
         mode.textContent = 'Cloudflare SFU pronto';
       else mode.textContent = 'WebRTC P2P (fallback)';
     }
@@ -986,7 +1025,7 @@ window.TronoSocial = (() => {
     updateQualityUI();
     await applyQualityToLiveMedia();
     window.TronoNetwork?.setVoiceState(
-      voiceJoined,
+      voiceCall.getSnapshot().joined,
       micMuted,
       cameraOn(),
       screenSharing(),
@@ -1234,7 +1273,8 @@ window.TronoSocial = (() => {
     if (chatMuted) markRead();
   }
   async function toggleWatchCamera(id) {
-    if (!voiceJoined || id === meId() || !privateVoiceRoster.get(id)?.camera) return;
+    if (!voiceCall.getSnapshot().joined || id === meId() || !privateVoiceRoster.get(id)?.camera)
+      return;
     const hidden = !hiddenCameras.has(id);
     if (hidden) hiddenCameras.add(id);
     else hiddenCameras.delete(id);
@@ -1369,7 +1409,7 @@ window.TronoSocial = (() => {
   }
   function refreshMicPipeline() {
     updateNoiseButton();
-    return voiceJoined ? microphone.refresh() : Promise.resolve();
+    return voiceCall.getSnapshot().joined ? microphone.refresh() : Promise.resolve();
   }
 
   function acquireCamera() {
@@ -1380,7 +1420,7 @@ window.TronoSocial = (() => {
     if (!sender) return;
     // A delayed attach/detach can finish after the next camera operation.
     // Reconcile that same sender with the currently owned track before returning.
-    while (voiceJoined && [...peers.values()].includes(pc)) {
+    while (voiceCall.getSnapshot().joined && [...peers.values()].includes(pc)) {
       await sender.replaceTrack(cameraCapture.getSnapshot().capture?.track || null);
       if (sender.track === (cameraCapture.getSnapshot().capture?.track || null)) return;
     }
@@ -1428,7 +1468,7 @@ window.TronoSocial = (() => {
   }
   function announceCamera() {
     window.TronoNetwork?.setVoiceState(
-      voiceJoined,
+      voiceCall.getSnapshot().joined,
       micMuted,
       cameraOn(),
       screenSharing(),
@@ -1438,7 +1478,7 @@ window.TronoSocial = (() => {
     renderCameraState();
   }
   function cameraStopped() {
-    if (!voiceJoined) return;
+    if (!voiceCall.getSnapshot().joined) return;
     cameraTogglePending = null;
     announceCamera();
     // Device release and state announcements cannot wait for transport detach.
@@ -1540,7 +1580,7 @@ window.TronoSocial = (() => {
       setStatus('Compartilhamento de tela não é suportado neste navegador.', 'error');
       return false;
     }
-    if (!voiceJoined && !(await joinVoice())) return false;
+    if (!voiceCall.getSnapshot().joined && !(await joinVoice())) return false;
     if (
       transportIsSfu() &&
       realtime.getSnapshot().status &&
@@ -1573,7 +1613,7 @@ window.TronoSocial = (() => {
     localScreenCollapsed = false;
     if (sendState)
       window.TronoNetwork?.setVoiceState(
-        voiceJoined,
+        voiceCall.getSnapshot().joined,
         micMuted,
         cameraOn(),
         false,
@@ -1601,7 +1641,7 @@ window.TronoSocial = (() => {
     else openScreenOptions();
   }
   function openScreenOptions() {
-    if (!voiceJoined) return;
+    if (!voiceCall.getSnapshot().joined) return;
     const setting = SCREEN_FORMATS[screenFormat];
     $('shareResolution').value = String(setting.height);
     $('shareFps').value = String(setting.fps);
@@ -1623,7 +1663,7 @@ window.TronoSocial = (() => {
   }
   function confirmScreenOptions(e) {
     e.preventDefault();
-    if (!voiceJoined) {
+    if (!voiceCall.getSnapshot().joined) {
       $('screenOptionsDialog').close();
       return;
     }
@@ -1743,13 +1783,13 @@ window.TronoSocial = (() => {
     renderScreenGrid();
     renderSeatMedia();
   }
-  async function startSfuTransport({ callGeneration = voiceGeneration } = {}) {
-    if (!voiceJoined || !communityVoice()) return false;
+  async function startSfuTransport({ callGeneration = voiceCall.getSnapshot().generation } = {}) {
+    if (!voiceCall.getSnapshot().joined || !communityVoice()) return false;
     const generation = sfuSession.getGeneration(),
       ensureCurrent = () => {
         if (
-          !voiceJoined ||
-          callGeneration !== voiceGeneration ||
+          !voiceCall.getSnapshot().joined ||
+          callGeneration !== voiceCall.getSnapshot().generation ||
           generation !== sfuSession.getGeneration() ||
           roomVoiceMode === 'p2p'
         )
@@ -1826,7 +1866,7 @@ window.TronoSocial = (() => {
     } catch (err) {
       if (
         err?.code === 'SFU_CANCELLED' ||
-        callGeneration !== voiceGeneration ||
+        callGeneration !== voiceCall.getSnapshot().generation ||
         generation !== sfuSession.getGeneration()
       )
         return false;
@@ -1841,13 +1881,14 @@ window.TronoSocial = (() => {
     }
   }
   async function fallbackToP2p(reason = 'SFU indisponível; retornando ao P2P.') {
-    if (!voiceJoined) return;
+    if (!voiceCall.getSnapshot().joined) return;
     window.TronoNetwork?.fallbackVoice?.();
     roomVoiceMode = 'p2p';
     if (mediaTransport === 'p2p') return;
-    const generation = voiceGeneration;
+    const generation = voiceCall.getSnapshot().generation;
     await stopSfuTransport({ toP2p: true });
-    if (!voiceJoined || generation !== voiceGeneration) return;
+    if (!voiceCall.getSnapshot().joined || generation !== voiceCall.getSnapshot().generation)
+      return;
     window.TronoNetwork?.setVoiceState(
       true,
       micMuted,
@@ -1860,8 +1901,8 @@ window.TronoSocial = (() => {
     syncPeers();
   }
   async function applyRealtimeStatus(status, isCurrent) {
-    const call = voiceGeneration;
-    const current = () => isCurrent() && call === voiceGeneration;
+    const call = voiceCall.getSnapshot().generation;
+    const current = () => isCurrent() && call === voiceCall.getSnapshot().generation;
     if (!current()) return;
     if (transportIsSfu() && (!status.enabled || status.hardBlocked)) {
       await fallbackToP2p(
@@ -1935,7 +1976,7 @@ window.TronoSocial = (() => {
   }
 
   function syncPeers() {
-    if (!voiceJoined) {
+    if (!voiceCall.getSnapshot().joined) {
       closeAllPeers();
       renderVoiceRoster();
       renderVideoGrid();
@@ -2032,7 +2073,7 @@ window.TronoSocial = (() => {
   function camerasInProfiles() {
     return (
       inChatHub() &&
-      voiceJoined &&
+      voiceCall.getSnapshot().joined &&
       detailedPlayers().some((p) => (p.id === meId() ? screenSharing() : p.screen))
     );
   }
@@ -2042,7 +2083,7 @@ window.TronoSocial = (() => {
     const stage = host.closest('.mn-media-stage');
     stage?.classList.toggle(
       'has-screen',
-      voiceJoined &&
+      voiceCall.getSnapshot().joined &&
         detailedPlayers().some(
           (p) =>
             !screenInProfile(p.id) &&
@@ -2051,7 +2092,7 @@ window.TronoSocial = (() => {
     );
     stage?.classList.toggle(
       'has-camera',
-      voiceJoined &&
+      voiceCall.getSnapshot().joined &&
         detailedPlayers().some((p) =>
           p.id === meId() ? cameraOn() : p.camera && !hiddenCameras.has(p.id),
         ),
@@ -2059,7 +2100,7 @@ window.TronoSocial = (() => {
     stage?.classList.toggle('screens-layout', camerasInProfiles());
     stage?.classList.toggle(
       'room-idle',
-      voiceJoined &&
+      voiceCall.getSnapshot().joined &&
         !detailedPlayers().some((p) =>
           p.id === meId()
             ? cameraOn() || screenSharing()
@@ -2072,7 +2113,7 @@ window.TronoSocial = (() => {
     const roomName = roomState?.name || (inChatHub() ? 'Geral' : 'Voz da mesa');
     if ($('mnStageRoomName')) $('mnStageRoomName').textContent = roomName;
     if ($('textVoiceRoomName')) $('textVoiceRoomName').textContent = 'Voz conectada · ' + roomName;
-    if (!voiceJoined) {
+    if (!voiceCall.getSnapshot().joined) {
       const active = publicVoiceActive();
       host.classList.add('voice-roster-private');
       for (const video of host.querySelectorAll('video')) video.srcObject = null;
@@ -2363,7 +2404,7 @@ window.TronoSocial = (() => {
   function renderVideoGrid() {
     const host = $('cameraGrid');
     if (!host) return;
-    if (!voiceJoined) {
+    if (!voiceCall.getSnapshot().joined) {
       host.className = 'camera-grid camera-grid-empty camera-grid-private';
       host.innerHTML =
         '<div class="camera-grid-note">Entre na voz para acessar as câmeras da chamada.</div>';
@@ -2436,7 +2477,7 @@ window.TronoSocial = (() => {
         watchingStreams.delete(id);
         removeRemoteAudio(streamAudioKey(id));
       }
-    if (!voiceJoined || !communityVoice()) {
+    if (!voiceCall.getSnapshot().joined || !communityVoice()) {
       for (const tile of host.querySelectorAll('.screen-share-tile'))
         window.TronoStreamControls?.dispose(tile);
       host.className = 'screen-share-grid hidden';
@@ -2609,16 +2650,7 @@ window.TronoSocial = (() => {
     }
   }
 
-  function joinVoice() {
-    if (voiceJoined) return leaveVoice().then(() => false);
-    if (voiceJoinPromise) return voiceJoinPromise;
-    const generation = ++voiceGeneration;
-    const ensureCurrent = () => {
-      if (generation !== voiceGeneration)
-        throw Object.assign(new Error('Entrada na chamada cancelada.'), {
-          code: 'VOICE_CANCELLED',
-        });
-    };
+  function prepareCallUi() {
     unlockCallAudio();
     micMuted = false;
     deafened = false;
@@ -2626,117 +2658,72 @@ window.TronoSocial = (() => {
     watchingStreams.clear();
     hiddenCameras.clear();
     profileMedia.clear();
-    const joining = (async () => {
-      try {
-        const choice = await window.TronoNetwork.prepareVoice();
-        ensureCurrent();
-        roomVoiceMode = choice.mode;
-        setStatus('Solicitando acesso ao microfone…');
-        await acquireMic({ generation });
-        ensureCurrent();
-        voiceJoined = true;
-        updateVoiceBackgroundClass();
-        void voiceTelemetry.syncPriority();
-        voiceTelemetry.start();
-        privateVoiceRoster.clear();
-        voiceRosterInitialized = false;
-        mediaTransport = communityVoice() && roomVoiceMode === 'sfu' ? 'sfu-pending' : 'p2p';
+  }
+  async function showJoinedCall() {
+    updateVoiceBackgroundClass();
+    void voiceTelemetry.syncPriority();
+    voiceTelemetry.start();
+    privateVoiceRoster.clear();
+    voiceRosterInitialized = false;
+    mediaTransport = communityVoice() && roomVoiceMode === 'sfu' ? 'sfu-pending' : 'p2p';
+    window.TronoNetwork?.setVoiceState(
+      true,
+      false,
+      cameraOn(),
+      screenSharing(),
+      transmissionQuality,
+      announcedTransport(),
+    );
+    playCallSound('join', 'local');
+    callNotice({ kind: 'joined', name: 'Você' });
+    $('muteMicBtn').disabled = false;
+    $('deafenVoiceBtn').disabled = false;
+    $('cameraBtn').disabled = false;
+    if ($('screenShareBtn')) $('screenShareBtn').disabled = !communityVoice();
+    updateButtons();
+    updateRealtimeUI();
+    setStatus('Conectando o áudio da chamada…', 'warn');
+    renderVoiceRoster();
+    renderVideoGrid();
+    renderScreenGrid();
+    renderSeatMedia();
+    await speakingIndicators.watch(meId(), localStream);
+  }
+  async function connectCall(operation) {
+    if (communityVoice() && roomVoiceMode === 'sfu') {
+      const sfuOk = await startSfuTransport({ callGeneration: operation.generation });
+      if (!operation.isCurrent()) return;
+      if (!sfuOk && voiceCall.getSnapshot().joined) {
+        window.TronoNetwork?.fallbackVoice?.();
+        roomVoiceMode = 'p2p';
+        mediaTransport = 'p2p';
         window.TronoNetwork?.setVoiceState(
           true,
-          false,
+          micMuted,
           cameraOn(),
           screenSharing(),
           transmissionQuality,
-          announcedTransport(),
+          'p2p',
         );
-        playCallSound('join', 'local');
-        callNotice({ kind: 'joined', name: 'Você' });
-        $('joinVoiceBtn').innerHTML = '<span class="call-icon">↩</span><span>Sair da voz</span>';
-        $('muteMicBtn').disabled = false;
-        $('deafenVoiceBtn').disabled = false;
-        $('cameraBtn').disabled = false;
-        if ($('screenShareBtn')) $('screenShareBtn').disabled = !communityVoice();
-        updateButtons();
-        updateRealtimeUI();
-        setStatus('Conectando o áudio da chamada…', 'warn');
-        renderVoiceRoster();
-        renderVideoGrid();
-        renderScreenGrid();
-        renderSeatMedia();
-        await speakingIndicators.watch(meId(), localStream);
-        ensureCurrent();
-        if (communityVoice() && roomVoiceMode === 'sfu') {
-          const sfuOk = await startSfuTransport({ callGeneration: generation });
-          ensureCurrent();
-          if (!sfuOk && voiceJoined) {
-            window.TronoNetwork?.fallbackVoice?.();
-            roomVoiceMode = 'p2p';
-            mediaTransport = 'p2p';
-            window.TronoNetwork?.setVoiceState(
-              true,
-              micMuted,
-              cameraOn(),
-              screenSharing(),
-              transmissionQuality,
-              'p2p',
-            );
-            syncPeers();
-          }
-        } else syncPeers();
-        return voiceJoined;
-      } catch (err) {
-        if (generation !== voiceGeneration || err?.code === 'VOICE_CANCELLED') return false;
-        await leaveVoice();
-        setStatus(err.message || 'Não foi possível abrir o microfone.', 'error');
-        return false;
+        syncPeers();
       }
-    })();
-    const tracked = joining.finally(() => {
-      if (voiceJoinPromise === tracked) {
-        voiceJoinPromise = null;
-        updateButtons();
-      }
-    });
-    voiceJoinPromise = tracked;
-    updateButtons();
-    return tracked;
+    } else syncPeers();
   }
-  function leaveVoice(reason = 'leave') {
+  function prepareLeaveUi() {
     stability.reset();
     if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
     window.TronoMosaic?.close();
-    // Cancel pending permission/SFU work before releasing the current devices.
-    const wasInVoice = voiceJoined;
-    voiceGeneration++;
-    realtime.cancelIce();
-    microphone.stop();
-    voiceJoinPromise = null;
-    voiceJoined = false;
-    speakingIndicators.reset();
-    voiceTelemetry.reset();
-    cameraTogglePending = null;
-    cameraCapture.stop();
-    updateVoiceBackgroundClass();
-    void voiceTelemetry.syncPriority();
     window.TronoNetwork?.setVoiceState(false, false, false, false, transmissionQuality, 'p2p');
-    closeAllPeers();
-    remoteMedia.reset();
-    if (
-      transportIsSfu() ||
-      transportPending() ||
-      sfuSubscriptions.size ||
-      sfuLocalPublications.size
-    )
-      void stopSfuTransport({ toP2p: true });
+  }
+  function showLeftCall(reason, wasInVoice) {
+    cameraTogglePending = null;
     watchingStreams.clear();
     hiddenCameras.clear();
     privateVoiceRoster.clear();
     mediaTransport = 'p2p';
-    audioPlayback.reset();
+    updateVoiceBackgroundClass();
+    void voiceTelemetry.syncPriority();
     updateAudioRecoveryUI();
-    localStream?.getTracks().forEach((t) => t.stop());
-    localStream = null;
-    screenCapture.stop();
     localScreenPreviewPaused = false;
     localScreenCollapsed = false;
     if (wasInVoice) {
@@ -2749,7 +2736,6 @@ window.TronoSocial = (() => {
       });
     }
     voiceRosterInitialized = false;
-    $('joinVoiceBtn').innerHTML = '<span class="call-icon">☎</span><span>Entrar na voz</span>';
     $('muteMicBtn').disabled = true;
     $('deafenVoiceBtn').disabled = true;
     $('cameraBtn').disabled = false;
@@ -2763,13 +2749,12 @@ window.TronoSocial = (() => {
     renderVideoGrid();
     renderScreenGrid();
     renderSeatMedia();
-    return Promise.resolve();
   }
   function applyMicrophoneMute() {
     microphone.setMuted(micMuted);
   }
   function toggleMute() {
-    if (!voiceJoined || deafened) return;
+    if (!voiceCall.getSnapshot().joined || deafened) return;
     micMuted = !micMuted;
     applyMicrophoneMute();
     window.TronoNetwork?.setVoiceState(
@@ -2785,7 +2770,7 @@ window.TronoSocial = (() => {
     updateMediaIndicators();
   }
   function toggleDeafen() {
-    if (!voiceJoined) return;
+    if (!voiceCall.getSnapshot().joined) return;
     if (!deafened) {
       mutedBeforeDeafen = micMuted;
       deafened = true;
@@ -2820,7 +2805,7 @@ window.TronoSocial = (() => {
     cameraTogglePending = intent;
     updateButtons();
     try {
-      if (!voiceJoined) {
+      if (!voiceCall.getSnapshot().joined) {
         const ok = await joinVoice();
         if (!ok) return;
       }
@@ -2854,7 +2839,7 @@ window.TronoSocial = (() => {
     const activeMode = processor?.mode === 'gain-only' ? null : processor?.mode;
     const mode = microphone.getSnapshot().loading
       ? 'loading'
-      : !voiceJoined
+      : !voiceCall.getSnapshot().joined
         ? 'idle'
         : processor &&
             microphone.getSnapshot().capture?.outgoingTrack === processor.track &&
@@ -2916,7 +2901,7 @@ window.TronoSocial = (() => {
     noiseSuppression = !noiseSuppression;
     storage.setItem('tronoNoiseSuppression', noiseSuppression ? '1' : '0');
     updateNoiseButton();
-    if (voiceJoined) {
+    if (voiceCall.getSnapshot().joined) {
       try {
         await acquireMic();
         await speakingIndicators.watch(meId(), localStream);
@@ -2957,7 +2942,7 @@ window.TronoSocial = (() => {
     };
     save();
     try {
-      if (voiceJoined) {
+      if (voiceCall.getSnapshot().joined) {
         await acquireMic();
         await speakingIndicators.watch(meId(), localStream);
       }
@@ -3002,7 +2987,7 @@ window.TronoSocial = (() => {
     storage.setItem('tronoVoiceLightMode', voiceLightMode ? '1' : '0');
     updateNoiseButton();
     voiceTelemetry.start();
-    if (!voiceJoined) return;
+    if (!voiceCall.getSnapshot().joined) return;
     try {
       await acquireMic();
       await speakingIndicators.watch(meId(), localStream);
@@ -3039,11 +3024,11 @@ window.TronoSocial = (() => {
       s.innerHTML = `<span class="call-icon">${screenSharing() ? '■' : '▤'}</span><span>${screenSharing() ? (window.TronoDesktop ? 'Parar tela' : 'Parar compartilhamento') : 'Compartilhar tela'}</span>`;
       s.title = screenSharing() ? 'Parar compartilhamento' : 'Compartilhar tela';
       s.setAttribute('aria-label', s.title);
-      s.disabled = !voiceJoined || !communityVoice();
+      s.disabled = !voiceCall.getSnapshot().joined || !communityVoice();
     }
-    $('joinVoiceBtn')?.classList.toggle('call-active', voiceJoined);
+    $('joinVoiceBtn')?.classList.toggle('call-active', voiceCall.getSnapshot().joined);
     if (m) {
-      m.disabled = !voiceJoined || deafened;
+      m.disabled = !voiceCall.getSnapshot().joined || deafened;
       m.title = deafened ? 'Ative o áudio da chamada para liberar o microfone.' : '';
     }
     m?.classList.toggle('danger-active', micMuted);
@@ -3051,25 +3036,33 @@ window.TronoSocial = (() => {
     c?.classList.toggle('camera-active', cameraOn());
     s?.classList.toggle('screen-active', screenSharing());
     updateNoiseButton();
-    document.body.classList.toggle('call-connected', voiceJoined);
+    document.body.classList.toggle('call-connected', voiceCall.getSnapshot().joined);
     const eligible = !!roomState && roomState.channelType !== 'text',
-      joining = !!voiceJoinPromise && !voiceJoined,
-      textOnly = inChatHub() && chatRoomState?.channelType === 'text' && !voiceJoined && !eligible,
+      joining = !!voiceCall.getSnapshot().joining && !voiceCall.getSnapshot().joined,
+      textOnly =
+        inChatHub() &&
+        chatRoomState?.channelType === 'text' &&
+        !voiceCall.getSnapshot().joined &&
+        !eligible,
       j = $('joinVoiceBtn');
     if (j) {
       j.disabled = !eligible || joining;
-      const label = joining ? 'Conectando…' : voiceJoined ? 'Sair da voz' : 'Entrar na voz';
+      const label = joining
+        ? 'Conectando…'
+        : voiceCall.getSnapshot().joined
+          ? 'Sair da voz'
+          : 'Entrar na voz';
       if (j.lastElementChild?.textContent !== label)
         j.innerHTML = '<span class="call-icon">☎</span><span>' + label + '</span>';
       j.classList.toggle('call-joining', joining);
     }
-    if (d) d.disabled = !voiceJoined;
+    if (d) d.disabled = !voiceCall.getSnapshot().joined;
     if (c)
       c.disabled =
         textOnly ||
         joining ||
         (!cameraOn() && (cameraTogglePending || !!cameraCapture.getSnapshot().loading)) ||
-        (document.body.dataset.appLayout === 'discord' && !voiceJoined);
+        (document.body.dataset.appLayout === 'discord' && !voiceCall.getSnapshot().joined);
     for (const [button, on] of [
       [m, micMuted],
       [d, deafened],
@@ -3082,14 +3075,19 @@ window.TronoSocial = (() => {
         cameraTogglePending || !!cameraCapture.getSnapshot().loading;
     window.dispatchEvent(
       new CustomEvent('trono-call-change', {
-        detail: { joined: voiceJoined, joining, deafened, roomId: roomState?.id },
+        detail: {
+          joined: voiceCall.getSnapshot().joined,
+          joining,
+          deafened,
+          roomId: roomState?.id,
+        },
       }),
     );
   }
   async function changeInput(e) {
     selectedInput = e.target.value || '';
     storage.setItem('tronoVoiceInput', selectedInput);
-    if (voiceJoined) {
+    if (voiceCall.getSnapshot().joined) {
       try {
         await acquireMic();
         await speakingIndicators.watch(meId(), localStream);
@@ -3125,7 +3123,7 @@ window.TronoSocial = (() => {
   }
 
   function consumeVoiceRoster(list = []) {
-    if (!voiceJoined) return;
+    if (!voiceCall.getSnapshot().joined) return;
     const before = new Set(privateVoiceRoster.keys()),
       next = new Map();
     for (const p of list)
@@ -3174,7 +3172,7 @@ window.TronoSocial = (() => {
       'channel-voice-active',
       inChatHub() && room?.channelType === 'voice',
     );
-    if (room || voiceJoined) showForRoom(true);
+    if (room || voiceCall.getSnapshot().joined) showForRoom(true);
     if (inChatHub() && room?.channelType === 'text') toggleTextChat(true);
     updateChatDrawerUI();
     updateButtons();
@@ -3183,7 +3181,7 @@ window.TronoSocial = (() => {
     if (room?.id !== roomState?.id) roomVoiceMode = null;
     roomState = room || null;
     if (roomState) showForRoom(true);
-    else if (!voiceJoined) {
+    else if (!voiceCall.getSnapshot().joined) {
       privateVoiceRoster.clear();
       closeAllPeers();
       if (transportIsSfu() || transportPending()) void stopSfuTransport({ toP2p: true });
@@ -3229,7 +3227,7 @@ window.TronoSocial = (() => {
     const snapshot = audioPlayback.getSnapshot();
     const received = snapshot.entries.filter(({ key }) => !key.startsWith('stream:'));
     const expected = detailedPlayers().filter((p) => p.id !== meId() && p.joined).length;
-    if (!voiceJoined) return { label: 'Fora da chamada', expected, count: 0 };
+    if (!voiceCall.getSnapshot().joined) return { label: 'Fora da chamada', expected, count: 0 };
     if (deafened)
       return {
         label: 'Voz silenciada neste aparelho',
@@ -3279,7 +3277,7 @@ window.TronoSocial = (() => {
           ? `Saída de áudio: ${audioPlayback.getSnapshot().outputError}. Confira o dispositivo em Configurações → Áudio.`
           : `${playback.label}. Confira o volume e use Liberar áudio se o navegador bloqueou a reprodução.`,
       };
-    if (voiceJoined && announcedTransport() === 'sfu-pending')
+    if (voiceCall.getSnapshot().joined && announcedTransport() === 'sfu-pending')
       return {
         level: 'neutral',
         label: 'Conectando áudio',
@@ -3288,7 +3286,7 @@ window.TronoSocial = (() => {
           'Aguardando a conexão de voz. O microfone já foi aberto, mas a rota de mídia ainda está sendo negociada.',
       };
     if (
-      voiceJoined &&
+      voiceCall.getSnapshot().joined &&
       transportIsSfu() &&
       [...sfuSubscriptions.values()].some((sub) => sub.negotiating)
     )
@@ -3300,7 +3298,7 @@ window.TronoSocial = (() => {
           'A conexão de rede já pode estar pronta enquanto o receptor termina a negociação. Aguarde a reprodução iniciar.',
       };
     if (
-      voiceJoined &&
+      voiceCall.getSnapshot().joined &&
       allTelemetryPeerConnections().some(([, pc]) =>
         ['new', 'connecting'].includes(pc.connectionState),
       )
@@ -3312,7 +3310,7 @@ window.TronoSocial = (() => {
         recommendation:
           'Ainda há uma ponta conectando. Se persistir, confira o último erro SFU e a disponibilidade de TURN.',
       };
-    if (!voiceJoined || !allTelemetryPeerConnections().length)
+    if (!voiceCall.getSnapshot().joined || !allTelemetryPeerConnections().length)
       return {
         level: 'neutral',
         label: 'Aguardando mídia',
@@ -3425,7 +3423,7 @@ window.TronoSocial = (() => {
       limiter: 'none',
     };
     const health = assessTelemetry(t),
-      modeState = voiceJoined ? announcedTransport() : mediaTransport;
+      modeState = voiceCall.getSnapshot().joined ? announcedTransport() : mediaTransport;
     const set = (id, v) => {
       const el = $(id);
       if (el && el.textContent !== v) el.textContent = v;
@@ -3589,7 +3587,7 @@ window.TronoSocial = (() => {
       version: window.TronoDesktop?.version || window.TronoNetwork.CLIENT_VERSION,
       platform: window.TronoDesktop ? 'Windows' : 'Navegador',
       call: {
-        joined: voiceJoined,
+        joined: voiceCall.getSnapshot().joined,
         muted: micMuted,
         deafened,
         camera: cameraOn(),
@@ -3695,6 +3693,7 @@ window.TronoSocial = (() => {
   }
 
   function bind() {
+    voiceCall.start();
     $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
       const enabled = e.target.checked;
@@ -3757,7 +3756,7 @@ window.TronoSocial = (() => {
     $('outputGainSlider')?.addEventListener('input', (e) => setOutputGain(e.target.value));
     $('resumeAudioBtn')?.addEventListener('click', () => {
       unlockCallAudio();
-      if (voiceJoined && !microphone.getSnapshot().capture?.processor)
+      if (voiceCall.getSnapshot().joined && !microphone.getSnapshot().capture?.processor)
         void acquireMic()
           .then(() => speakingIndicators.watch(meId(), localStream))
           .catch((err) => setStatus(err.message, 'warn'));
@@ -3853,13 +3852,11 @@ window.TronoSocial = (() => {
       if (msg.type === 'left-game-room') {
         gameRoomState = null;
         if (roomState?.id === msg.roomId) {
-          void leaveVoice();
           consumeRoom(null);
         }
       }
       if (msg.type === 'left-voice-room') {
         if (roomState?.id === msg.roomId) {
-          void leaveVoice();
           consumeRoom(null);
         }
       }
@@ -3875,13 +3872,16 @@ window.TronoSocial = (() => {
         else if (msg.room?.id === window.TronoNetwork.currentRoom) consumeChatRoom(msg.room);
       }
       if (msg.type === 'channel-deleted' && msg.roomId === roomState?.id) {
-        void leaveVoice();
         roomState = null;
         updateButtons();
       }
       if (msg.type === 'voice-mode' && msg.roomId === roomState?.id) {
         roomVoiceMode = msg.mode;
-        if (voiceJoined && msg.mode === 'p2p' && (transportIsSfu() || transportPending()))
+        if (
+          voiceCall.getSnapshot().joined &&
+          msg.mode === 'p2p' &&
+          (transportIsSfu() || transportPending())
+        )
           void fallbackToP2p(msg.reason || 'Chamada sincronizada em P2P.');
       }
       if (msg.type === 'voice-roster' && msg.roomId === roomState?.id)
@@ -3897,7 +3897,7 @@ window.TronoSocial = (() => {
         sfuSession.setPublications(msg.publications);
         if (transportIsSfu()) void syncSfuSubscriptions();
       }
-      if (msg.type === 'voice-state' && voiceJoined) {
+      if (msg.type === 'voice-state' && voiceCall.getSnapshot().joined) {
         const was = privateVoiceRoster.has(msg.playerId),
           old = privateVoiceRoster.get(msg.playerId) || {
             id: msg.playerId,
@@ -3932,7 +3932,7 @@ window.TronoSocial = (() => {
         privateVoiceRoster.delete(msg.playerId);
         if (
           !voiceEventsSupported &&
-          voiceJoined &&
+          voiceCall.getSnapshot().joined &&
           voiceRosterInitialized &&
           wasInCall &&
           msg.playerId !== meId()
@@ -3957,7 +3957,6 @@ window.TronoSocial = (() => {
       if (msg.type === 'connection' && !msg.connected) {
         profileActivities.clear();
         renderProfileActivities();
-        void leaveVoice('disconnect');
         setStatus(
           'Servidor desconectado. Recarregue a página para entrar na voz novamente.',
           'error',
@@ -4010,10 +4009,10 @@ window.TronoSocial = (() => {
     voiceTelemetry.start();
     document.addEventListener('pointerdown', () => {
       primeCallSounds();
-      if (voiceJoined) unlockCallAudio();
+      if (voiceCall.getSnapshot().joined) unlockCallAudio();
     });
     document.addEventListener('keydown', () => {
-      if (voiceJoined) unlockCallAudio();
+      if (voiceCall.getSnapshot().joined) unlockCallAudio();
     });
     for (const event of ['focus', 'blur'])
       window.addEventListener(event, () => {
@@ -4022,7 +4021,7 @@ window.TronoSocial = (() => {
       });
     document.addEventListener('visibilitychange', () => {
       updateVoiceBackgroundClass();
-      if (document.visibilityState === 'visible' && voiceJoined) {
+      if (document.visibilityState === 'visible' && voiceCall.getSnapshot().joined) {
         audioPlayback.refresh();
         updateAudioRecoveryUI();
       }
@@ -4066,10 +4065,10 @@ window.TronoSocial = (() => {
     switchScreenShare,
     openScreenOptions,
     get voiceJoined() {
-      return voiceJoined;
+      return voiceCall.getSnapshot().joined;
     },
     get voiceJoining() {
-      return !!voiceJoinPromise;
+      return !!voiceCall.getSnapshot().joining;
     },
     get voiceRoom() {
       return roomState
@@ -4119,7 +4118,7 @@ window.TronoSocial = (() => {
       return {
         enabled,
         rows: rows.map((r) => ({ ...r })),
-        background: voiceJoined && !foreground(),
+        background: voiceCall.getSnapshot().joined && !foreground(),
         meterMode: speakingIndicators.getSnapshot().mode,
         metersRunning: speakingIndicators.getSnapshot().running,
         playbackContext: audioPlayback.getSnapshot().context,
@@ -4147,7 +4146,7 @@ window.TronoSocial = (() => {
     toggleWatchCamera,
     fullscreenMedia,
     getMediaSources() {
-      return voiceJoined
+      return voiceCall.getSnapshot().joined
         ? detailedPlayers()
             .filter(
               (p) => p.camera || p.screen || (p.id === meId() && (cameraOn() || screenSharing())),

@@ -31,6 +31,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Coleta de diagnóstico, métricas/proteção de recepção e prioridade nativa em TypeScript.
 - Indicadores visuais de fala, nós de análise, listeners e timers em TypeScript.
 - Status/consumo e configuração ICE/TURN do cliente, consultas e atualização em TypeScript.
+- Entrada/saída da chamada, fase, geração, cancelamento e listeners de saída em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -57,7 +58,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Coordenação da chamada e aplicação dos limites à mídia,
+React ou TypeScript apenas porque a marcação foi convertida. Seleção/fallback do transporte e aplicação dos limites à mídia,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -696,9 +697,47 @@ Fontes sintéticas e serviços locais não medem jogos a 60 FPS nem rotas TURN/S
 externas. O teste manual permanece reservado ao fim da migração.
 Não houve push, publicação ou mudança de infraestrutura.
 
+## Entrada e saída da chamada — 16/10/2026
+
+- `lib/voice/call-lifecycle.ts` possui fase, geração, participação, promessa única
+  de entrada e cancelamento. `types/voice-call.ts` descreve snapshot/operação.
+  `social.js` perdeu as três variáveis antigas e a sequência assíncrona de entrada.
+- Preparação da voz precede captura; desbloqueio de áudio mantém o gesto síncrono.
+  Após obter o microfone, o usuário já pode sair enquanto a conexão negocia.
+  Pedidos repetidos anteriores à participação compartilham a mesma promessa.
+- Sair invalida o sinal e a geração antes de parar o microfone e liberar os donos
+  existentes. Exceções numa limpeza não impedem o descarte dos demais recursos.
+  Cancelar não espera permissões, medidores ou sinalização; respostas/finalizações
+  antigas não entram numa chamada nova nem limpam o seu indicador de entrada.
+- Listeners de desconexão e saída/exclusão da sala passaram junto para o módulo;
+  as chamadas antigas de saída no listener DOM foram retiradas. A instalação
+  ocorre antes do listener de apresentação para preservar a ordem da atualização.
+- Interface, sons/notificações, preferências e seleção/fallback SFU/P2P continuam
+  no controlador. Os módulos anteriores mantêm capturas, peers, playback e timers.
+  Nenhum mapa de mídia ou socket foi duplicado.
+- `test:voice:lifecycle` cobre 16 regressões, também incluídas em `npm test` e
+  `test:sfu`: cancelamento em cada fase, respostas atrasadas, exceções de limpeza,
+  cliques repetidos, troca de chamada, eventos de sala e descarte do listener.
+
+Passaram typecheck, formatação, build estático, `npm test`, quatro fluxos de
+interface, 15 checks de mídia/controles e os 65 checks de `test:sfu`.
+Os três testes no Electron real passaram: P2P entre janelas/layouts com saída e
+reentrada durante permissões pendentes, relay SFU nativo e nove cenários de PCM
+em segundo plano. Capturas atrasadas foram descartadas sem reentrar na voz.
+
+Evidências locais: `artifacts/call-lifecycle-unit.log`, `call-lifecycle-regressions.log`,
+`call-lifecycle-ui.log`, `call-lifecycle-media.log`, `call-lifecycle-sfu.log`,
+`call-lifecycle-desktop.log`, `call-lifecycle-typecheck.log`,
+`call-lifecycle-format.log` e `call-lifecycle-build.log`.
+Fontes sintéticas e serviços locais não medem jogos a 60 FPS nem rotas SFU/TURN
+externas. O teste manual do usuário continua reservado ao fim da migração.
+Não houve push, publicação ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair coordenação/entrada da chamada para `lib/voice/`.
+1. Extrair seleção/fallback do transporte e regras de qualidade da chamada para `lib/voice/`.
+   Entrada/saída, fase, geração, promessa e listeners de saída estão em `call-lifecycle.ts`.
+   Não recriar flags de participação ou entrada nos controladores DOM.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
    Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
    Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.

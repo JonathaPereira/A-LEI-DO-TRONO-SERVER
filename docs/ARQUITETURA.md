@@ -320,7 +320,26 @@ geração da chamada depois de esperar o encerramento da tela ou ajustes de qual
 A consulta não possui capturas, peers ou outro socket. `social.js` conserva a pintura
 na tela e aplicação da política aos controles, sem cache/listener/timer paralelos.
 
-`social.js` conserva coordenação/entrada da chamada, escolha do
+`call-lifecycle.ts` possui fase, geração, participação local e promessa de entrada.
+A interface é `toggle()`, `leave()`, snapshot e instalação/descarte do listener de
+saída. O desbloqueio de áudio permanece síncrono no gesto; preparar a voz precede
+capturar o microfone, e a participação só inicia após a captura. A conexão pode
+continuar pendente enquanto a interface já oferece sair da voz.
+
+Sair invalida geração/sinal antes dos callbacks, interrompe o dono do microfone e
+libera os demais donos em ordem, isolando exceções de limpeza. Cancelar não aguarda
+permissão, WebSocket, medidor ou negociação. Resultados antigos não conectam, limpam
+recursos nem alteram o indicador de entrada de uma chamada posterior. O sinal da
+operação continua válido após conectar e é abortado ao sair.
+
+O mesmo módulo possui o listener de desconexão e de saída/exclusão da sala atual.
+Mensagens de outra sala não encerram a chamada. `social.js` instala esse listener
+antes de seus listeners de apresentação, para que eles já vejam participação
+encerrada. O controlador conserva somente ganchos de interface, composição da
+lista de descarte dos donos existentes e conexão SFU/P2P. Não há outro socket ou
+captura, nem cópias de fase, geração ou promessa no controlador.
+
+`social.js` conserva escolha e fallback do
 transporte, aplicação dos limites à mídia, regras de qualidade/adaptação,
 contextos do microfone/avisos e interface. Os módulos notificam esse
 controlador para anexar
