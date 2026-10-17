@@ -5,8 +5,7 @@ window.TronoSocial = (() => {
   const privateVoiceRoster = new Map();
   const profileActivities = new Map();
   let lastSfuError = '';
-  const senderQualityQueues = new WeakMap(),
-    profileMedia = new Map();
+  const profileMedia = new Map();
   let mutedBeforeDeafen = false;
 
   const clampGain = (v) => Math.min(300, Math.max(0, Math.round((Number(v) || 0) / 5) * 5));
@@ -187,27 +186,8 @@ window.TronoSocial = (() => {
   let voiceLightMode = storage.getItem('tronoVoiceLightMode') === '1';
   let selectedInput = storage.getItem('tronoVoiceInput') || '';
   let selectedCamera = storage.getItem('tronoCameraInput') || '';
-  let transmissionQuality = ['economy', 'balanced', 'high'].includes(
-    storage.getItem('tronoTransmissionQuality'),
-  )
-    ? storage.getItem('tronoTransmissionQuality')
-    : 'balanced';
-  const SCREEN_BITRATES = [4, 6, 8, 10, 12, 15];
-  let screenBitrateMbps = SCREEN_BITRATES.includes(Number(storage.getItem('mnScreenBitrate')))
-    ? Number(storage.getItem('mnScreenBitrate'))
-    : 8;
-  let screenContent = storage.getItem('mnScreenContent') === 'motion' ? 'motion' : 'detail';
-  const SCREEN_FORMATS = {
-    '720-15': { width: 1280, height: 720, fps: 15 },
-    '1080-15': { width: 1920, height: 1080, fps: 15 },
-    '720-30': { width: 1280, height: 720, fps: 30 },
-    '720-60': { width: 1280, height: 720, fps: 60 },
-    '1080-30': { width: 1920, height: 1080, fps: 30 },
-    '1080-60': { width: 1920, height: 1080, fps: 60 },
-  };
-  let screenFormat = SCREEN_FORMATS[storage.getItem('mnScreenFormat')]
-    ? storage.getItem('mnScreenFormat')
-    : '720-30';
+  const { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } = window.TronoVoiceCapture;
+  const qualityPreferences = () => callQuality.getSnapshot().preferences;
   let shareStreamAudio = storage.getItem('mnShareStreamAudio') !== '0';
   let settingsOpen = false;
   let settingsTab = storage.getItem('tronoVoiceSettingsTab') || 'audio';
@@ -224,8 +204,28 @@ window.TronoSocial = (() => {
   let localScreenPreviewPaused = false;
   let localScreenCollapsed = false;
   let telemetryOpen = false;
-  const stability = new window.TronoCallStability.CallStability();
-  let adaptiveEnabled = storage.getItem('mnAdaptiveQuality') !== '0';
+  const callQuality = window.TronoVoiceCapture.createCallQuality({
+    storage,
+    policy: () => ({
+      sfu: transportIsSfu(),
+      maxQuality: realtime.getSnapshot().status?.maxQuality,
+      highAllowed: realtime.getSnapshot().status?.highAllowed,
+    }),
+    call: () => voiceCall.getSnapshot(),
+    refreshCamera: () => cameraCapture.refreshQuality(),
+    refreshScreenHint: () => screenCapture.refreshHint(),
+    *senders() {
+      for (const pc of peers.values()) {
+        yield { sender: pc._tronoAudioSender, kind: 'audio' };
+        yield { sender: pc._tronoVideoSender, kind: 'camera' };
+        yield { sender: pc._tronoScreenSender, kind: 'screen' };
+        yield { sender: pc._tronoScreenAudioSender, kind: 'screen-audio' };
+      }
+      for (const pub of sfuLocalPublications.values()) yield { sender: pub.sender, kind: pub.kind };
+    },
+    subscriptions: () => sfuSubscriptions.values(),
+    setLayer: (key, rid) => sfuSession.setLayer(key, rid),
+  });
 
   const esc = (s) =>
     String(s ?? '').replace(
@@ -299,7 +299,7 @@ window.TronoSocial = (() => {
       format: qualityProfile().screen,
       replay: window.TronoClips?.captureProfile?.(),
       audio: shareStreamAudio,
-      contentHint: screenContent,
+      contentHint: qualityPreferences().screenContent,
     }),
     onStarted: publishScreen,
     onEnded: () => stopScreenShare(true),
@@ -432,12 +432,12 @@ window.TronoSocial = (() => {
       ? (active) => window.TronoDesktop.setVoiceProtection(active)
       : undefined,
     onSample: async (snapshot, isCurrent) => {
-      if (!isCurrent() || !stability.sample(snapshot, performance.now(), adaptiveEnabled)) return;
+      if (!isCurrent() || !callQuality.sample(snapshot, performance.now())) return;
       await applyQualityToLiveMedia();
       if (isCurrent())
         setStatus(
-          stability.level
-            ? 'Vídeo adaptado para aliviar ' + stability.reason + '.'
+          callQuality.getSnapshot().adaptation.level
+            ? 'Vídeo adaptado para aliviar ' + callQuality.getSnapshot().adaptation.reason + '.'
             : 'Qualidade de vídeo restaurada.',
           'ok',
         );
@@ -550,7 +550,7 @@ window.TronoSocial = (() => {
         micMuted,
         cameraOn(),
         screenSharing(),
-        transmissionQuality,
+        qualityPreferences().transmissionQuality,
         mode,
       ),
     fallbackRoom: () => window.TronoNetwork?.fallbackVoice?.(),
@@ -610,58 +610,9 @@ window.TronoSocial = (() => {
   const inGame = () => !$('gameScreen')?.classList.contains('hidden');
   const communityVoice = () => roomState?.kind === 'chat';
   const inChatHub = () => chatHubMode || !$('chatOnlyScreen')?.classList.contains('hidden');
-  const QUALITY_PROFILES = {
-    economy: {
-      label: 'Economia',
-      camera: { width: 1280, height: 720, fps: 30 },
-      screen: { width: 1280, height: 720, fps: 30 },
-      videoBitrate: 900000,
-      screenBitrate: 4000000,
-      audioBitrate: 64000,
-      hint: '720p/30 FPS.',
-    },
-    balanced: {
-      label: 'Equilibrada',
-      camera: { width: 1280, height: 720, fps: 30 },
-      screen: { width: 1280, height: 720, fps: 30 },
-      videoBitrate: 2200000,
-      screenBitrate: 8000000,
-      audioBitrate: 96000,
-      hint: '720p/30 FPS.',
-    },
-    high: {
-      label: 'Alta',
-      camera: { width: 1280, height: 720, fps: 30 },
-      screen: { width: 1280, height: 720, fps: 30 },
-      videoBitrate: 3500000,
-      screenBitrate: 10000000,
-      audioBitrate: 128000,
-      hint: '720p/30 FPS.',
-    },
-  };
-  const QUALITY_ORDER = ['economy', 'balanced', 'high'];
-  function cappedQuality() {
-    const max = realtime.getSnapshot().status?.maxQuality;
-    if (
-      voiceTransport.getSnapshot().mode === 'sfu' &&
-      max &&
-      QUALITY_ORDER.includes(max) &&
-      QUALITY_ORDER.indexOf(transmissionQuality) > QUALITY_ORDER.indexOf(max)
-    )
-      return max;
-    return transmissionQuality;
-  }
-  const effectiveScreenBitrate = () =>
-    Math.min(
-      screenBitrateMbps,
-      realtime.getSnapshot().status?.highAllowed === false && transportIsSfu() ? 6 : 15,
-    ) * 1000000;
-  const qualityProfile = () =>
-    stability.profile({
-      ...(QUALITY_PROFILES[cappedQuality()] || QUALITY_PROFILES.balanced),
-      screen: SCREEN_FORMATS[screenFormat],
-      screenBitrate: effectiveScreenBitrate(),
-    });
+  const cappedQuality = () => callQuality.getSnapshot().effectiveQuality;
+  const effectiveScreenBitrate = () => callQuality.getSnapshot().screenBitrate;
+  const qualityProfile = () => callQuality.getSnapshot().profile;
   const transportIsSfu = () => voiceTransport.getSnapshot().mode === 'sfu';
   const transportPending = () =>
     voiceTransport.getSnapshot().mode === 'sfu-pending' ||
@@ -874,7 +825,7 @@ window.TronoSocial = (() => {
     const select = $('transmissionQualitySelect'),
       hint = $('qualityHint');
     if (select) {
-      select.value = transmissionQuality;
+      select.value = qualityPreferences().transmissionQuality;
       const p = realtime.getSnapshot().status;
       for (const opt of select.options) {
         if (voiceTransport.getSnapshot().mode !== 'sfu' || !p) {
@@ -889,21 +840,22 @@ window.TronoSocial = (() => {
       const q = qualityProfile(),
         cap = cappedQuality();
       const why =
-        cap !== transmissionQuality
+        cap !== qualityPreferences().transmissionQuality
           ? ' • Freio de uso ativo: qualidade reduzida automaticamente.'
           : '';
       hint.textContent = `${q.screen.height}p / ${q.screen.fps} FPS · Bitrate máximo: ${q.screenBitrate / 1000000} Mbps.${why} A taxa real depende da rede e do conteúdo.`;
     }
     if ($('screenBitrateSelect')) {
-      $('screenBitrateSelect').value = String(screenBitrateMbps);
+      $('screenBitrateSelect').value = String(qualityPreferences().screenBitrateMbps);
       for (const o of $('screenBitrateSelect').options)
         o.disabled =
           transportIsSfu() &&
           realtime.getSnapshot().status?.highAllowed === false &&
           Number(o.value) > 6;
     }
-    if ($('screenContentSelect')) $('screenContentSelect').value = screenContent;
-    if ($('screenFormatSelect')) $('screenFormatSelect').value = screenFormat;
+    if ($('screenContentSelect'))
+      $('screenContentSelect').value = qualityPreferences().screenContent;
+    if ($('screenFormatSelect')) $('screenFormatSelect').value = qualityPreferences().screenFormat;
     if ($('shareStreamAudio')) $('shareStreamAudio').checked = shareStreamAudio;
     updateRealtimeUI();
   }
@@ -966,122 +918,30 @@ window.TronoSocial = (() => {
     return err?.message || 'Não foi possível abrir a câmera.';
   }
   function applySenderQuality(sender, kind) {
-    if (!sender) return Promise.resolve();
-    const next = (senderQualityQueues.get(sender) || Promise.resolve())
-      .catch(() => {})
-      .then(() => applySenderQualityNow(sender, kind));
-    senderQualityQueues.set(sender, next);
-    return next;
+    return callQuality.applySender(sender, kind);
   }
-  async function applySenderQualityNow(sender, kind) {
-    if (!sender?.track || !sender.setParameters) return;
-    try {
-      const p = sender.getParameters() || {};
-      if (!p.encodings?.length) p.encodings = [{}];
-      const q = qualityProfile();
-      if (kind === 'audio' || kind === 'screen-audio') {
-        p.encodings[0].maxBitrate = kind === 'screen-audio' ? 192000 : q.audioBitrate;
-      } else if (kind === 'screen') {
-        p.degradationPreference = 'maintain-resolution';
-        sender.track.contentHint = screenContent;
-        const source = sender.track.getSettings?.() || {};
-        const scale = Math.max(
-          1,
-          (source.width || q.screen.width) / q.screen.width,
-          (source.height || q.screen.height) / q.screen.height,
-        );
-        const byRid = {
-          f: q.screenBitrate,
-          h: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
-          q: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
-        };
-        for (const e of p.encodings) {
-          e.scaleResolutionDownBy = scale * (e.rid === 'h' ? 2 : e.rid === 'q' ? 4 : 1);
-          e.maxBitrate = byRid[e.rid] || q.screenBitrate;
-          e.maxFramerate =
-            e.rid === 'q'
-              ? Math.min(q.screen.fps, 20)
-              : e.rid === 'h'
-                ? Math.min(q.screen.fps, 30)
-                : q.screen.fps;
-        }
-      } else if (p.encodings.length >= 3 && p.encodings.some((e) => e.rid)) {
-        const byRid = {
-          f: q.videoBitrate,
-          h: Math.max(180000, Math.round(q.videoBitrate * 0.42)),
-          q: Math.max(90000, Math.round(q.videoBitrate * 0.16)),
-        };
-        for (const e of p.encodings) {
-          e.maxBitrate = byRid[e.rid] || q.videoBitrate;
-          e.maxFramerate = q.camera.fps;
-        }
-      } else {
-        p.encodings[0].maxBitrate = q.videoBitrate;
-        p.encodings[0].maxFramerate = q.camera.fps;
-      }
-      await sender.setParameters(p);
-    } catch (err) {
-      console.warn('[TronoSocial] parâmetros de qualidade', kind, err);
-    }
-  }
-  async function applyQualityToLiveMedia() {
-    try {
-      await cameraCapture.refreshQuality();
-    } catch (err) {
-      console.warn('[TronoSocial] qualidade câmera', err);
-    }
-    try {
-      screenCapture.refreshHint();
-    } catch (err) {
-      console.warn('[TronoSocial] qualidade tela', err);
-    }
-    const jobs = [];
-    for (const pc of peers.values()) {
-      jobs.push(
-        applySenderQuality(pc._tronoAudioSender, 'audio'),
-        applySenderQuality(pc._tronoVideoSender, 'camera'),
-        applySenderQuality(pc._tronoScreenSender, 'screen'),
-        applySenderQuality(pc._tronoScreenAudioSender, 'screen-audio'),
-      );
-    }
-    for (const pub of sfuLocalPublications.values())
-      jobs.push(applySenderQuality(pub.sender, pub.kind));
-    await Promise.allSettled(jobs);
-    if (transportIsSfu()) await updateAllSfuSubscriptionLayers();
+  function applyQualityToLiveMedia() {
+    return callQuality.applyAll();
   }
   async function changeTransmissionQuality(e) {
-    let requested = e?.target?.value || transmissionQuality;
-    if (!QUALITY_PROFILES[requested]) requested = 'balanced';
-    if (
-      voiceTransport.getSnapshot().mode === 'sfu' &&
-      realtime.getSnapshot().status?.maxQuality &&
-      QUALITY_ORDER.indexOf(requested) >
-        QUALITY_ORDER.indexOf(realtime.getSnapshot().status.maxQuality)
-    ) {
-      requested = realtime.getSnapshot().status.maxQuality;
-      setStatus(
-        `Freio de consumo: qualidade limitada a ${QUALITY_PROFILES[requested].label}.`,
-        'warn',
-      );
-    }
-    transmissionQuality = requested;
-    storage.setItem('tronoTransmissionQuality', transmissionQuality);
+    const generation = voiceCall.getSnapshot().generation;
+    if (callQuality.selectQuality(e?.target?.value || qualityPreferences().transmissionQuality))
+      setStatus(`Freio de consumo: qualidade limitada a ${qualityProfile().label}.`, 'warn');
     updateQualityUI();
     await applyQualityToLiveMedia();
+    if (generation !== voiceCall.getSnapshot().generation) return;
     window.TronoNetwork?.setVoiceState(
       voiceCall.getSnapshot().joined,
       micMuted,
       cameraOn(),
       screenSharing(),
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     setStatus(`Qualidade ${qualityProfile().label.toLowerCase()} aplicada.`, 'ok');
   }
   function preferredRidForMedia(kind, maximized = false) {
-    if (stability.level) return stability.level === 2 ? 'q' : 'h';
-    if (maximized) return 'f';
-    return kind === 'screen' && cappedQuality() !== 'economy' ? 'f' : preferredRidForQuality();
+    return callQuality.preferredRid(kind, maximized);
   }
   async function setSfuTileLayer(tile, maximized) {
     if (!transportIsSfu() || !tile) return;
@@ -1516,7 +1376,7 @@ window.TronoSocial = (() => {
       micMuted,
       cameraOn(),
       screenSharing(),
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     renderCameraState();
@@ -1545,7 +1405,7 @@ window.TronoSocial = (() => {
       micMuted,
       cameraOn(),
       true,
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     updateButtons();
@@ -1592,7 +1452,7 @@ window.TronoSocial = (() => {
       micMuted,
       cameraOn(),
       true,
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     updateButtons();
@@ -1661,7 +1521,7 @@ window.TronoSocial = (() => {
         micMuted,
         cameraOn(),
         false,
-        transmissionQuality,
+        qualityPreferences().transmissionQuality,
         announcedTransport(),
       );
     updateButtons();
@@ -1686,7 +1546,7 @@ window.TronoSocial = (() => {
   }
   function openScreenOptions() {
     if (!voiceCall.getSnapshot().joined) return;
-    const setting = SCREEN_FORMATS[screenFormat];
+    const setting = SCREEN_FORMATS[qualityPreferences().screenFormat];
     $('shareResolution').value = String(setting.height);
     $('shareFps').value = String(setting.fps);
     $('shareAudio').checked = shareStreamAudio;
@@ -1711,21 +1571,21 @@ window.TronoSocial = (() => {
       $('screenOptionsDialog').close();
       return;
     }
-    screenFormat = $('shareResolution').value + '-' + $('shareFps').value;
-    if (!SCREEN_FORMATS[screenFormat]) return;
-    transmissionQuality = $('shareResolution').value === '1080' ? 'high' : 'balanced';
-    screenBitrateMbps =
-      $('shareResolution').value === '1080'
-        ? $('shareFps').value === '60'
-          ? 10
-          : 8
-        : $('shareFps').value === '15'
-          ? 4
-          : 6;
+    const format = $('shareResolution').value + '-' + $('shareFps').value;
+    if (!Object.hasOwn(SCREEN_FORMATS, format)) return;
+    callQuality.configure({
+      screenFormat: format,
+      transmissionQuality: $('shareResolution').value === '1080' ? 'high' : 'balanced',
+      screenBitrateMbps:
+        $('shareResolution').value === '1080'
+          ? $('shareFps').value === '60'
+            ? 10
+            : 8
+          : $('shareFps').value === '15'
+            ? 4
+            : 6,
+    });
     shareStreamAudio = $('shareAudio').checked;
-    storage.setItem('mnScreenFormat', screenFormat);
-    storage.setItem('mnScreenBitrate', String(screenBitrateMbps));
-    storage.setItem('tronoTransmissionQuality', transmissionQuality);
     storage.setItem('mnShareStreamAudio', shareStreamAudio ? '1' : '0');
     updateQualityUI();
     $('screenOptionsDialog').close();
@@ -1763,9 +1623,6 @@ window.TronoSocial = (() => {
   }
   function sfuKey(ownerId, kind) {
     return `${ownerId}:${kind}`;
-  }
-  function preferredRidForQuality(q = cappedQuality()) {
-    return q === 'economy' ? 'q' : 'f';
   }
   function attachSfuRemoteTrack(pub, track, sub, receiver, isCurrent) {
     remoteMedia.attachSubscription({
@@ -1806,12 +1663,8 @@ window.TronoSocial = (() => {
     setStatus(message, 'warn');
     renderTelemetry();
   }
-  async function updateAllSfuSubscriptionLayers() {
-    await Promise.allSettled(
-      [...sfuSubscriptions.values()]
-        .filter((sub) => ['camera', 'screen'].includes(sub.kind))
-        .map((sub) => sfuSession.setLayer(sub.key, preferredRidForMedia(sub.kind, false))),
-    );
+  function updateAllSfuSubscriptionLayers() {
+    return callQuality.applyLayers();
   }
   async function applyRealtimeStatus(status, isCurrent) {
     const call = voiceCall.getSnapshot().generation;
@@ -1830,10 +1683,10 @@ window.TronoSocial = (() => {
     if (
       transportIsSfu() &&
       status.maxQuality &&
-      QUALITY_ORDER.indexOf(transmissionQuality) > QUALITY_ORDER.indexOf(status.maxQuality)
+      QUALITY_ORDER.indexOf(qualityPreferences().transmissionQuality) >
+        QUALITY_ORDER.indexOf(status.maxQuality)
     ) {
-      transmissionQuality = status.maxQuality;
-      storage.setItem('tronoTransmissionQuality', transmissionQuality);
+      callQuality.selectQuality(status.maxQuality);
       updateQualityUI();
       await applyQualityToLiveMedia();
       if (!current()) return;
@@ -2584,7 +2437,7 @@ window.TronoSocial = (() => {
       false,
       cameraOn(),
       screenSharing(),
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     playCallSound('join', 'local');
@@ -2603,10 +2456,17 @@ window.TronoSocial = (() => {
     await speakingIndicators.watch(meId(), localStream);
   }
   function prepareLeaveUi() {
-    stability.reset();
+    callQuality.reset();
     if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
     window.TronoMosaic?.close();
-    window.TronoNetwork?.setVoiceState(false, false, false, false, transmissionQuality, 'p2p');
+    window.TronoNetwork?.setVoiceState(
+      false,
+      false,
+      false,
+      false,
+      qualityPreferences().transmissionQuality,
+      'p2p',
+    );
   }
   function showLeftCall(reason, wasInVoice) {
     cameraTogglePending = null;
@@ -2654,7 +2514,7 @@ window.TronoSocial = (() => {
       micMuted,
       cameraOn(),
       screenSharing(),
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     updateButtons();
@@ -2679,7 +2539,7 @@ window.TronoSocial = (() => {
       micMuted,
       cameraOn(),
       screenSharing(),
-      transmissionQuality,
+      qualityPreferences().transmissionQuality,
       announcedTransport(),
     );
     updateButtons();
@@ -3332,8 +3192,8 @@ window.TronoSocial = (() => {
     );
     set(
       'adaptiveQualityStatus',
-      stability.level
-        ? `Vídeo reduzido temporariamente: ${stability.reason}. Retorno gradual após 60 segundos estáveis.`
+      callQuality.getSnapshot().adaptation.level
+        ? `Vídeo reduzido temporariamente: ${callQuality.getSnapshot().adaptation.reason}. Retorno gradual após 60 segundos estáveis.`
         : 'Qualidade escolhida preservada; reduções temporárias quando necessário.',
     );
     const statusPill = $('telemetryStatusPill');
@@ -3368,8 +3228,8 @@ window.TronoSocial = (() => {
     );
     set(
       'adaptiveQualityStatus',
-      stability.level
-        ? `Vídeo reduzido temporariamente: ${stability.reason}. Retorno gradual após 60 segundos estáveis.`
+      callQuality.getSnapshot().adaptation.level
+        ? `Vídeo reduzido temporariamente: ${callQuality.getSnapshot().adaptation.reason}. Retorno gradual após 60 segundos estáveis.`
         : 'Qualidade escolhida preservada; reduções temporárias quando necessário.',
     );
     set('telemetryPlayback', playback.label);
@@ -3477,7 +3337,7 @@ window.TronoSocial = (() => {
       assessment,
       history: receiveHistory,
     } = voiceTelemetry.getSnapshot();
-    return window.TronoCallStability.diagnosticReport({
+    return window.TronoVoiceCapture.diagnosticReport({
       version: window.TronoDesktop?.version || window.TronoNetwork.CLIENT_VERSION,
       platform: window.TronoDesktop ? 'Windows' : 'Navegador',
       call: {
@@ -3502,7 +3362,9 @@ window.TronoSocial = (() => {
         })),
       },
       processing: noiseState().mode,
-      adaptation: stability.level ? stability.reason : 'qualidade escolhida',
+      adaptation: callQuality.getSnapshot().adaptation.level
+        ? callQuality.getSnapshot().adaptation.reason
+        : 'qualidade escolhida',
       resources: nativeResources,
     });
   }
@@ -3596,11 +3458,9 @@ window.TronoSocial = (() => {
       voiceTelemetry.configureProtection(enabled);
       renderTelemetry();
     };
-    $('adaptiveQuality').checked = adaptiveEnabled;
+    $('adaptiveQuality').checked = qualityPreferences().adaptiveEnabled;
     $('adaptiveQuality').onchange = async (e) => {
-      adaptiveEnabled = e.target.checked;
-      storage.setItem('mnAdaptiveQuality', adaptiveEnabled ? '1' : '0');
-      stability.reset();
+      callQuality.configure({ adaptiveEnabled: !!e.target.checked });
       await applyQualityToLiveMedia();
       renderTelemetry();
     };
@@ -3664,9 +3524,8 @@ window.TronoSocial = (() => {
       updateVoiceMusicUI();
     });
     $('screenFormatSelect')?.addEventListener('change', async (e) => {
-      if (!SCREEN_FORMATS[e.target.value]) return;
-      screenFormat = e.target.value;
-      storage.setItem('mnScreenFormat', screenFormat);
+      if (!Object.hasOwn(SCREEN_FORMATS, e.target.value)) return;
+      callQuality.configure({ screenFormat: e.target.value });
       updateQualityUI();
       await applyQualityToLiveMedia();
     });
@@ -3686,8 +3545,7 @@ window.TronoSocial = (() => {
     $('screenBitrateSelect')?.addEventListener('change', async (e) => {
       const value = Number(e.target.value);
       if (!SCREEN_BITRATES.includes(value)) return;
-      screenBitrateMbps = value;
-      storage.setItem('mnScreenBitrate', String(value));
+      callQuality.configure({ screenBitrateMbps: value });
       updateQualityUI();
       await applyQualityToLiveMedia();
       if (transportIsSfu())
@@ -3697,8 +3555,7 @@ window.TronoSocial = (() => {
       setStatus(`Tela configurada para até ${value} Mbps.`, 'ok');
     });
     $('screenContentSelect')?.addEventListener('change', async (e) => {
-      screenContent = e.target.value === 'motion' ? 'motion' : 'detail';
-      storage.setItem('mnScreenContent', screenContent);
+      callQuality.configure({ screenContent: e.target.value === 'motion' ? 'motion' : 'detail' });
       await applyQualityToLiveMedia();
     });
     $('voiceInputSelect')?.addEventListener('change', changeInput);
@@ -3985,7 +3842,7 @@ window.TronoSocial = (() => {
       return noiseState();
     },
     get transmissionQuality() {
-      return transmissionQuality;
+      return qualityPreferences().transmissionQuality;
     },
     get panelMode() {
       return panelMode;
@@ -4020,7 +3877,7 @@ window.TronoSocial = (() => {
     },
     get screenSettings() {
       return {
-        ...SCREEN_FORMATS[screenFormat],
+        ...SCREEN_FORMATS[qualityPreferences().screenFormat],
         bitrate: effectiveScreenBitrate(),
         audio: shareStreamAudio,
       };

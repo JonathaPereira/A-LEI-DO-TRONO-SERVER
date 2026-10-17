@@ -2,7 +2,7 @@
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const policy = import('../src/lib/voice/reception-policy.ts');
-const { diagnosticReport } = require('../src/legacy/call-stability');
+const reportModule = import('../src/lib/voice/diagnostic-report.ts');
 const receiver = (value = null) => ({
   track: { kind: 'audio', readyState: 'live' },
   jitterBufferTarget: value,
@@ -113,6 +113,7 @@ test('diagnostics separate arrival/output/timing clues and export only bounded a
     packets: 100,
     token: 'secret',
   };
+  const { diagnosticReport } = await reportModule;
   const report = diagnosticReport({
     call: {},
     reception: {

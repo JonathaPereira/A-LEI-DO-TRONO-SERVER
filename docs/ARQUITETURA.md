@@ -358,10 +358,31 @@ O módulo usa os donos existentes de sessão, configuração, peers e mídia rec
 sem mapas de transporte duplicados. `social.js` monta as dependências e mantém a
 sincronização do roster P2P e a apresentação dos erros de diagnóstico.
 
-`social.js` conserva aplicação dos limites à mídia, regras de qualidade/adaptação,
-contextos do microfone/avisos e interface. Os módulos notificam esse
-controlador para anexar
-áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.
+`quality.ts` possui preferências de transmissão, formato/bitrate/conteúdo da tela,
+ativação da adaptação e filas por sender para `getParameters`/`setParameters`.
+Seu snapshot imutável separa a escolha persistida, o teto de consumo SFU e o perfil
+adaptado. P2P ignora o orçamento SFU. `quality-policy.ts` contém os perfis e limiares
+anteriores: 12 s de instabilidade, pelo menos 20 s entre reduções, dois níveis e
+60 s estáveis por etapa de recuperação. A adaptação não reduz o bitrate do microfone;
+áudio de aplicativo conserva 192 kbps. A seleção de camada recebida usa essa mesma
+política e respeita maximização quando não há adaptação.
+
+O módulo empresta senders/assinaturas dos donos existentes, sem recapturar, clonar
+ou encerrar trilhas. Atualiza bitrate, FPS e escala do encoder; o caminho nativo
+da tela e a fonte compartilhada com clipes permanecem nos módulos de captura.
+Cada fila lê o perfil/trilha atual ao executar. Sair invalida os ajustes pendentes;
+continuar uma atualização após câmera/IPC antigo não atinge a chamada seguinte.
+`social.js` conserva controles e mensagens da interface, delegando preferências e
+aplicação da qualidade ao módulo. Não possui cópias dessas preferências ou filas.
+
+`diagnostic-report.ts` exporta somente os campos técnicos permitidos, com até 24
+linhas de recepção e 12 amostras recentes. Não inclui nomes, IDs, IPs, credenciais,
+mensagens ou timestamps internos de participantes. `legacy/call-stability.js` e sua
+entrada no manifesto foram removidos.
+
+`social.js` conserva sincronização do roster P2P, contextos do microfone/avisos e
+interface. Os módulos notificam esse controlador para anexar áudio, registrar/remover
+proteção do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
 O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.
 

@@ -205,6 +205,24 @@ test(
           onChange() {},
           onRecover: async () => false,
         });
+        const quality = window.TronoVoiceCapture.createCallQuality({
+          storage: {
+            getItem: (key) =>
+              ({ mnScreenFormat: '1080-60', mnScreenBitrate: '8', mnAdaptiveQuality: '0' })[key] ??
+              null,
+            setItem() {},
+          },
+          policy: () => ({ sfu: true }),
+          call: () => ({ joined: settings.enabled, generation: 1 }),
+          refreshCamera: async () => {},
+          refreshScreenHint() {},
+          senders: () => session.publications.values(),
+          subscriptions: () => session.subscriptions.values(),
+          setLayer: (key, rid) => session.setLayer(key, rid),
+          warn(error) {
+            throw error;
+          },
+        });
         const session = window.TronoVoiceCapture.createSfuSession({
           getSettings: () => settings,
           createConnection: () => create(),
@@ -212,13 +230,7 @@ test(
           wants: () => true,
           watchVersion: () => 0,
           preferredRid: () => 'f',
-          applyQuality: async (sender, kind) => {
-            const p = sender.getParameters();
-            if (!p.encodings.length) p.encodings = [{}];
-            p.encodings[0].maxBitrate = kind === 'screen' ? 8000000 : 96000;
-            if (kind === 'screen') p.encodings[0].maxFramerate = 60;
-            await sender.setParameters(p);
-          },
+          applyQuality: quality.applySender,
           onTrack: (pub, track, sub, receiver, isCurrent) =>
             remote.attachSubscription({
               id: pub.ownerId,
@@ -301,6 +313,7 @@ test(
         }
         window.__sfuFixture = {
           session,
+          quality,
           remote,
           relay,
           peers,
@@ -370,6 +383,38 @@ test(
         };
       });
       assert.deepEqual(first, { ready: true, fps: 60, bitrate: 8000000, captureFps: 60 });
+      const adaptation = await page.evaluate(async () => {
+        const h = window.__sfuFixture,
+          original = h.session.publications.get('screen').sender.track;
+        const audioBitrate = h.session.publications.get('audio').sender.getParameters()
+          .encodings[0].maxBitrate;
+        h.quality.configure({ adaptiveEnabled: true });
+        h.quality.sample({ limiter: 'cpu' }, 0);
+        h.quality.sample({ limiter: 'cpu' }, 12000);
+        await h.quality.applyAll();
+        const reduced = h.session.publications.get('screen').sender.getParameters().encodings[0];
+        const voiceUnchanged =
+          audioBitrate ===
+          h.session.publications.get('audio').sender.getParameters().encodings[0].maxBitrate;
+        h.quality.configure({ adaptiveEnabled: false });
+        await h.quality.applyAll();
+        const restored = h.session.publications.get('screen').sender.getParameters().encodings[0];
+        return {
+          reduced: [reduced.maxFramerate, reduced.maxBitrate],
+          restored: [restored.maxFramerate, restored.maxBitrate],
+          voiceUnchanged,
+          sameTrack: original === h.session.publications.get('screen').sender.track,
+          sourceFps: h.video.getSettings().frameRate,
+        };
+      });
+      assert.deepEqual(adaptation, {
+        reduced: [30, 4000000],
+        restored: [60, 8000000],
+        voiceUnchanged: true,
+        sameTrack: true,
+        sourceFps: 60,
+      });
+
       await expect
         .poll(() => page.evaluate(() => window.__sfuFixture.indicators.isSpeaking('relay-peer')))
         .toBe(true);

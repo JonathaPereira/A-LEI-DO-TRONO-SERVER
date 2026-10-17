@@ -33,6 +33,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Status/consumo e configuração ICE/TURN do cliente, consultas e atualização em TypeScript.
 - Entrada/saída da chamada, fase, geração, cancelamento e listeners de saída em TypeScript.
 - Seleção, inicialização e fallback SFU/P2P, com modo da sala e listener, em TypeScript.
+- Preferências/qualidade/adaptação, filas dos encoders e exportação anônima em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -59,8 +60,9 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Aplicação dos limites à mídia, qualidade/adaptação e sincronização do roster P2P,
-edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
+React ou TypeScript apenas porque a marcação foi convertida. Sincronização do roster
+P2P, edição/visualização de perfis e galeria, navegação/gerenciamento de canais,
+notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -780,9 +782,55 @@ externas. Qualidade/adaptação, interface e sincronização do roster P2P conti
 no controlador. O teste manual segue reservado ao fim da migração.
 Não houve push, publicação ou mudança de infraestrutura.
 
+## Qualidade e adaptação da chamada em TypeScript — 17/10/2026
+
+- `lib/voice/quality.ts` é o dono único das preferências de transmissão, formato,
+  bitrate/conteúdo de tela, adaptação e filas de parâmetros por sender. O controlador
+  mantém os listeners dos controles como adaptadores, sem estado ou filas paralelos.
+- `quality-policy.ts` conserva os três perfis, seis formatos, bitrates e limiares
+  anteriores. Redução exige 12 s de instabilidade, intervalo de 20 s e no máximo
+  dois níveis; recuperação exige 60 s estáveis por nível. Microfone e áudio de
+  aplicativo não são reduzidos pela adaptação.
+- O snapshot separa preferência persistida, teto do orçamento SFU e perfil adaptado.
+  Publicações continuam sinalizando o bitrate limitado pelo orçamento; o encoder
+  recebe a redução temporária. P2P não herda limites de orçamento do SFU.
+- Ajustes são serializados por sender e leem o perfil/trilha mais recente ao executar.
+  Geração da chamada e reset invalidam filas antigas e continuações após câmera.
+  Capturas, peers, publicações, assinaturas e socket continuam com seus donos atuais.
+- `diagnostic-report.ts` recebeu o exportador técnico com a mesma lista permitida e
+  limites de anonimização. `legacy/call-stability.js` e a entrada no manifesto foram
+  excluídos; `public/` e `out/` já não contêm a cópia gerada.
+- `test:voice:quality` reúne 13 regressões novas e duas anteriores. Cobre preferências
+  inválidas, imutabilidade, orçamento, recuperação, áudio, simulcast, escala/FPS,
+  transações nativas serializadas, falhas independentes e chamadas antigas.
+
+Passaram typecheck, formatação, build estático, `npm test`, quatro fluxos de
+interface, 15 checks de mídia/controles e os 101 checks de `test:sfu`.
+No Electron real passaram P2P/layout/permissões e SFU com relay WebRTC local.
+O teste SFU agora usa `createCallQuality` com senders nativos: confirmou redução
+para 30 FPS/4 Mbps e restauração para 60 FPS/8 Mbps, mantendo a mesma trilha,
+a fonte em 60 FPS e o bitrate de voz. Isso não mede desempenho em jogos ou em
+rotas SFU/TURN externas. Testes manuais continuam reservados ao fim da migração.
+
+Evidências locais: `artifacts/quality-unit.log`, `quality-regressions.log`,
+`quality-ui.log`, `quality-sfu.log`, `quality-media.log`, `quality-desktop.log`,
+`quality-desktop-adaptation.log`, `quality-typecheck.log`, `quality-format.log`
+e `quality-build.log`. O exportador também passou nas 20 regressões de diagnóstico
+(`quality-diagnostics.log`).
+
+A checagem isolada de segundo plano (`quality-background.log`) repetiu a limitação
+já comparada ao commit anterior na etapa de transporte: ganho nativo 180%, janela
+minimizada, 240 mil frames em 7,603 s para um teto de 7,5 s. Havia PCM finito,
+379 pacotes, 364.800 amostras e zero reconstruídas, com captura e peers preservados.
+Os três estados em ganho 100% passaram em cerca de 5 s. O teste interrompeu nessa
+falha; os nove cenários não estão todos validados nesta etapa. O teto e o
+processamento de áudio não foram alterados.
+Sem push, publicação ou mudança de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair regras de qualidade/adaptação e sincronização do roster P2P para `lib/voice/`.
+1. Extrair sincronização do roster P2P para `lib/voice/`.
+   Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.
    Seleção, inicialização/fallback e listener do modo da sala estão em `transport.ts`.
    Entrada/saída, fase, geração, promessa e listeners de saída estão em `call-lifecycle.ts`.
    Não recriar flags de participação ou entrada nos controladores DOM.
@@ -793,7 +841,7 @@ Não houve push, publicação ou mudança de infraestrutura.
    Players/ganhos, autoplay e roteamento de saída estão em `audio-playback.ts`.
    Coleta, métricas, proteção de recepção e prioridade estão em `telemetry.ts`/`reception-policy.ts`.
    Indicadores visuais, listeners e timers estão em `speaking-indicators.ts`.
-   Adaptação de qualidade e exportação anônima ainda usam `legacy/call-stability.js`.
+   Exportação anônima está em `diagnostic-report.ts`; `legacy/call-stability.js` foi removido.
    Bootstrap ICE/TURN e status/consumo estão em `realtime.ts`, com validação em
    `realtime-protocol.ts`; não restaurar seus caches/listeners no coordenador.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
