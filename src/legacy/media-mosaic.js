@@ -31,6 +31,7 @@ window.TronoMosaic = (() => {
     for (const id of selected) if (!ids.has(id)) selected.delete(id);
     const toolbar = $('expandMosaicBtn');
     toolbar.disabled = !list.length;
+    if ($('socialModeBtn')) $('socialModeBtn').disabled = !list.length;
     // Pair a person's screen and camera consecutively in the shared base grid.
     const order = new Map(list.map((p, i) => [p.id, i]));
     for (const tile of document.querySelectorAll('#mediaMosaic [data-peer]'))

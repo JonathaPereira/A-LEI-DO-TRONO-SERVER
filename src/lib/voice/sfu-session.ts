@@ -1,3 +1,4 @@
+import { SfuPublicationRecovery, SfuSubscriptionQueue, globalSfuFailure } from './sfu-recovery.ts';
 import type {
   SfuLocalPublication,
   SfuPublication,
@@ -31,6 +32,8 @@ interface SfuOptions {
   createConnection(config: RTCConfiguration): RTCPeerConnection;
   request(action: string, payload: Record<string, unknown>, timeout?: number): Promise<unknown>;
   wants(publication: SfuPublication): boolean;
+  getTrack?(kind: VoiceMediaKind): MediaStreamTrack | null | undefined;
+  onPublicationRetry?(kind: VoiceMediaKind, error: unknown, attempt: number, done: boolean): void;
   watchVersion(id: string): number;
   preferredRid(kind: VoiceMediaKind): SfuRid;
   applyQuality(sender: RTCRtpSender, kind: VoiceMediaKind): Promise<void>;
@@ -86,9 +89,21 @@ export function createSfuSession(options: SfuOptions) {
   >();
   const retryCounts = new Map<string, number>();
   const warn = options.warn ?? ((error: unknown) => console.warn('[SfuSession]', error));
+  const retryVersions = new Map<string, string>();
+  const subscriptionQueue = new SfuSubscriptionQueue();
+  const publicationRecovery = new SfuPublicationRecovery({
+    active: () => options.getSettings().enabled,
+    track: (kind) =>
+      options.getTrack ? options.getTrack(kind) : publications.get(kind)?.sender.track,
+    publish: (kind, track) => publish(kind, track, true),
+    report: (kind, error, attempt, done) =>
+      options.onPublicationRetry?.(kind, error, attempt, done),
+    exhausted: async (kind, error) => {
+      if (kind === 'audio' || globalSfuFailure(error)) await options.onFallback('publisher');
+    },
+  });
   let generation = 0,
-    catalogRevision = 0,
-    syncChain = Promise.resolve();
+    catalogRevision = 0;
   let catalog: readonly SfuPublication[] = Object.freeze([]);
   const enabled = (token: Token) =>
     !token.cancelled && token.generation === generation && options.getSettings().enabled;
@@ -162,7 +177,8 @@ export function createSfuSession(options: SfuOptions) {
     });
     return abortable(result, r.controller.signal);
   }
-  function closePublication(kind: VoiceMediaKind): Promise<void> {
+  function closePublication(kind: VoiceMediaKind, cancelRecovery = true): Promise<void> {
+    if (cancelRecovery) publicationRecovery.cancel(kind);
     const token = publishTokens.get(kind);
     if (token) token.cancelled = true;
     publishTokens.delete(kind);
@@ -175,8 +191,10 @@ export function createSfuSession(options: SfuOptions) {
     clearTimeout(retries.get(key)?.timer);
     retries.delete(key);
     retryCounts.delete(key);
+    retryVersions.delete(key);
   }
-  function closeSubscription(key: string, clearRetries = true): Promise<void> {
+  function closeSubscription(key: string, clearRetries = true, cancelQueued = true): Promise<void> {
+    if (cancelQueued) subscriptionQueue.cancel(key);
     const token = subscribeTokens.get(key);
     if (token) token.cancelled = true;
     subscribeTokens.delete(key);
@@ -189,13 +207,14 @@ export function createSfuSession(options: SfuOptions) {
   async function publish(
     kind: VoiceMediaKind,
     track: MediaStreamTrack,
+    recovery = false,
   ): Promise<SfuLocalPublication | null> {
     if (!options.getSettings().enabled || !track) return null;
     if (screenKind(kind) && !options.getSettings().screenAllowed)
       throw Object.assign(new Error('Compartilhamento bloqueado pelo freio de consumo.'), {
         code: 'SCREEN_BUDGET_BLOCKED',
       });
-    void closePublication(kind);
+    void closePublication(kind, !recovery);
     const token: Token = { generation, cancelled: false };
     publishTokens.set(kind, token);
     const owned = () => enabled(token) && publishTokens.get(kind) === token;
@@ -226,14 +245,19 @@ export function createSfuSession(options: SfuOptions) {
         ensure();
         const rids = simulcast ? advertisedRids(tr, pc) : [];
         const reply = readPublish(
-          await request(r, 'publish-track', {
-            kind,
-            screenBitrate: options.getSettings().screenBitrate,
-            quality: options.getSettings().quality,
-            mid: String(tr.mid),
-            rids,
-            sessionDescription: description(pc.localDescription, 'offer'),
-          }),
+          await request(
+            r,
+            'publish-track',
+            {
+              kind,
+              screenBitrate: options.getSettings().screenBitrate,
+              quality: options.getSettings().quality,
+              mid: String(tr.mid),
+              rids,
+              sessionDescription: description(pc.localDescription, 'offer'),
+            },
+            recovery ? 9000 : 15000,
+          ),
         );
         ensure();
         if (reply.description) {
@@ -253,7 +277,7 @@ export function createSfuSession(options: SfuOptions) {
         publications.set(kind, pub);
         await abortable(options.applyQuality(pub.sender, kind), r.controller.signal);
         ensure();
-        await waitForPeer(pc, 'connect', 14000, r.controller.signal);
+        await waitForPeer(pc, 'connect', recovery ? 7000 : 14000, r.controller.signal);
         ensure();
         const readyRids = readReady(
           await request(r, 'publication-ready', { sessionId: pub.sessionId }, 9000),
@@ -269,8 +293,24 @@ export function createSfuSession(options: SfuOptions) {
             publications.get(kind) === pub &&
             pc.connectionState === 'failed'
           )
-            void options.onFallback('publisher').catch(warn);
+            void publicationRecovery
+              .recover(
+                kind,
+                Object.assign(new Error('Conexão SFU interrompida.'), {
+                  code: 'SFU_CONNECTION_FAILED',
+                }),
+              )
+              .catch(warn);
         };
+        if (kind === 'audio') {
+          const latest = options.getTrack?.('audio');
+          if (latest?.readyState === 'live' && pub.sender.track !== latest) {
+            await abortable(pub.sender.replaceTrack(latest), r.controller.signal);
+            ensure();
+            await abortable(options.applyQuality(pub.sender, kind), r.controller.signal);
+            ensure();
+          }
+        }
         return pub;
       } catch (error) {
         r.cleanupTimeout = 6000;
@@ -291,12 +331,15 @@ export function createSfuSession(options: SfuOptions) {
         sfuKey(p.ownerId, p.kind) === sfuKey(pub.ownerId, pub.kind) &&
         p.sessionId === pub.sessionId,
     );
-  async function subscribe(pub: SfuPublication): Promise<SfuSubscription | null> {
+  async function subscribe(
+    pub: SfuPublication,
+    currentJob: () => boolean,
+  ): Promise<SfuSubscription | null> {
     if (!options.getSettings().enabled || !options.wants(pub) || !catalogHas(pub)) return null;
     const key = sfuKey(pub.ownerId, pub.kind),
       existing = subscriptions.get(key);
     if (existing?.publisherSessionId === pub.sessionId) return existing;
-    void closeSubscription(key, false);
+    void closeSubscription(key, false, false);
     const token: Token = { generation, cancelled: false, publisherSessionId: pub.sessionId },
       watch = options.watchVersion(pub.ownerId);
     subscribeTokens.set(key, token);
@@ -306,6 +349,7 @@ export function createSfuSession(options: SfuOptions) {
       enabled(token) &&
       !r.closed &&
       subscribeTokens.get(key) === token &&
+      (r.subscription?.negotiating === false || currentJob()) &&
       options.wants(pub) &&
       catalogHas(pub) &&
       (!screenKind(pub.kind) || watch === options.watchVersion(pub.ownerId));
@@ -370,8 +414,13 @@ export function createSfuSession(options: SfuOptions) {
       options.onReady(pub.kind, true);
       pc.onconnectionstatechange = () => {
         if (current() && pc.connectionState === 'failed') {
-          void closeSubscription(key);
-          scheduleTimer(key, pub, 900, false);
+          void closeSubscription(key, false);
+          retry(
+            pub,
+            Object.assign(new Error('Conexão SFU interrompida.'), {
+              code: 'SFU_CONNECTION_FAILED',
+            }),
+          );
         }
       };
       return sub;
@@ -385,6 +434,12 @@ export function createSfuSession(options: SfuOptions) {
   function applyCatalog(next: readonly SfuPublication[]) {
     catalog = next;
     catalogRevision++;
+    for (const [key, sessionId] of retryVersions)
+      if (!next.some((pub) => sfuKey(pub.ownerId, pub.kind) === key && pub.sessionId === sessionId))
+        clearRetry(key);
+    for (const key of [...subscriptionQueue.keys()])
+      if (!next.some((pub) => sfuKey(pub.ownerId, pub.kind) === key && options.wants(pub)))
+        subscriptionQueue.cancel(key);
     for (const [key, token] of [...subscribeTokens]) {
       if (
         !next.some(
@@ -453,6 +508,7 @@ export function createSfuSession(options: SfuOptions) {
       code = errorCode(error);
     options.onRetry({ publication: pub, code, attempt, stale });
     if (
+      pub.kind === 'audio' &&
       !stale &&
       attempt >= 3 &&
       [
@@ -466,6 +522,8 @@ export function createSfuSession(options: SfuOptions) {
       void options.onFallback('subscription').catch(warn);
       return;
     }
+    retryVersions.set(key, pub.sessionId);
+    if (pub.kind !== 'audio' && attempt >= 4) return;
     const delay = stale
       ? Math.min(5000, 500 * 1.7 ** Math.min(attempt - 1, 4))
       : Math.min(12000, 900 * 2 ** Math.min(attempt - 1, 4));
@@ -475,41 +533,40 @@ export function createSfuSession(options: SfuOptions) {
     const epoch = generation;
     if (!options.getSettings().enabled) return Promise.resolve();
     const current = () => epoch === generation && options.getSettings().enabled;
-    const next = syncChain
-      .catch(() => {})
-      .then(async () => {
-        if (!current()) return;
-        const desired = new Map(
-          catalog.filter(options.wants).map((pub) => [sfuKey(pub.ownerId, pub.kind), pub]),
-        );
-        for (const key of [...subscriptions.keys()])
-          if (current() && !desired.has(key)) void closeSubscription(key);
-        for (const [key, pub] of desired) {
-          if (!current()) return;
-          if (!options.wants(pub) || !catalogHas(pub)) continue;
-          if (subscriptions.get(key)?.publisherSessionId === pub.sessionId) continue;
+    const desired = new Map(
+      catalog.filter(options.wants).map((pub) => [sfuKey(pub.ownerId, pub.kind), pub]),
+    );
+    for (const key of [...subscriptionQueue.keys()])
+      if (!desired.has(key)) subscriptionQueue.cancel(key);
+    for (const key of [...subscriptions.keys()]) if (!desired.has(key)) void closeSubscription(key);
+    const jobs: Promise<unknown>[] = [];
+    for (const [key, pub] of desired) {
+      if (retryVersions.has(key) && retryVersions.get(key) !== pub.sessionId) clearRetry(key);
+      if (retries.has(key) || (pub.kind !== 'audio' && (retryCounts.get(key) ?? 0) >= 4)) continue;
+      if (subscriptions.get(key)?.publisherSessionId === pub.sessionId) continue;
+      jobs.push(
+        subscriptionQueue.schedule(key, pub.kind, pub.sessionId, async (currentJob) => {
           try {
-            await subscribe(pub);
-            clearRetry(key);
+            await subscribe(pub, currentJob);
+            if (current() && currentJob()) clearRetry(key);
           } catch (error) {
-            if (!current()) return;
-            if (errorCode(error) === 'SFU_CANCELLED') continue;
+            if (!current() || !currentJob() || errorCode(error) === 'SFU_CANCELLED') return;
             warn(error);
             if (stalePublication(error)) {
               await refreshPublications();
               if (current() && !catalogHas(pub)) {
                 void syncSubscriptions();
-                continue;
+                return;
               }
             }
-            if (current()) retry(pub, error);
+            if (current() && currentJob()) retry(pub, error);
+          } finally {
+            if (current()) options.onChange();
           }
-        }
-        if (current()) options.onChange();
-      })
-      .catch(warn);
-    syncChain = next;
-    return next;
+        }),
+      );
+    }
+    return Promise.allSettled(jobs).then(() => {});
   }
   function setLayer(key: string, rid: SfuRid): Promise<void> {
     const sub = subscriptions.get(key),
@@ -540,7 +597,9 @@ export function createSfuSession(options: SfuOptions) {
     generation++;
     catalogRevision++;
     catalog = Object.freeze([]);
-    syncChain = Promise.resolve();
+    publicationRecovery.clear();
+    subscriptionQueue.clear();
+    retryVersions.clear();
     for (const token of [...publishTokens.values(), ...subscribeTokens.values()])
       token.cancelled = true;
     publishTokens.clear();
@@ -557,6 +616,8 @@ export function createSfuSession(options: SfuOptions) {
     setPublications,
     refreshPublications,
     publish,
+    recoverPublication: (kind: VoiceMediaKind, error: unknown) =>
+      publicationRecovery.recover(kind, error),
     closePublication,
     closeSubscription: (key: string) => closeSubscription(key),
     syncSubscriptions,

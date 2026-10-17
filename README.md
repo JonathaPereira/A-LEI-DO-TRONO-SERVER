@@ -1,5 +1,9 @@
 # M&N · A Lei do Trono
 
+Atualização desktop **0.2.10** integrada: painel de chamada compacto e recuperação
+independente de mídias SFU. Veja a [política de recuperação](docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md)
+e as [notas da versão](docs/archive/ATUALIZAR_WINDOWS_v0.2.10.md).
+
 Aplicativo de comunicação e jogos, com interface Next.js + React + TypeScript,
 desktop Electron e backend Express/WebSocket. O foco de validação é Windows.
 

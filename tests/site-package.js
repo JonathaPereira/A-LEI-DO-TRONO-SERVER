@@ -22,6 +22,7 @@ async function fixture() {
     'electron/LEIA-ME-WINDOWS.txt',
     'electron/LEIA-ME-PUBLICAR.txt',
     'docs/PUBLICAR_SURGE_LEVE.md',
+    'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md',
     'docs/archive/ATUALIZAR_WINDOWS_v0.1.11.md',
     'docs/archive/ATUALIZAR_WINDOWS_v0.1.10.md',
     'docs/archive/ATUALIZAR_WINDOWS_v0.1.9.md',
@@ -60,6 +61,10 @@ test('Surge package contains the entire frontend and exactly the latest installe
   try {
     const result = await prepareSite({ ...f, version: '0.1.11' });
     assert(result.siteBytes < MAX_SITE_BYTES);
+    assert.equal(
+      await fs.readFile(path.join(result.site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'), 'utf8'),
+      'fixture',
+    );
     assert.equal(
       await fs.readFile(path.join(result.site, '20261016140000_giphy_profile_credits.sql'), 'utf8'),
       'fixture',

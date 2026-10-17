@@ -15,8 +15,8 @@ export function CommunicationPanel() {
             <strong id={'mnStageRoomName'}>Geral</strong>
           </div>
           <div className={'social-head-actions'}>
-            <button id={'socialModeBtn'} title={'Alternar janela completa/flutuante'}>
-              ▱ Flutuante
+            <button id={'socialModeBtn'} title={'Ampliar câmeras e telas da chamada'}>
+              Ampliar
             </button>
             <button id={'socialCloseBtn'} title={'Minimizar'}>
               —

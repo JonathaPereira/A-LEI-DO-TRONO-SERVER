@@ -1,7 +1,7 @@
 # Andamento da migração
 
 Base inicial: `7db2d81`. Branch: `codex/next-typescript-structure`.
-Main integrada até `35c5c5f` (desktop 0.2.9).
+Main integrada até `8044ec4` (desktop 0.2.10).
 Preservar jogos, clipes, soundboard, perfis, mensagens e chamadas.
 Atualize este arquivo para permitir continuidade sem o histórico do chat.
 
@@ -30,6 +30,28 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Players, ganhos de reprodução, autoplay e roteamento da saída em TypeScript.
 - Coleta de diagnóstico, métricas/proteção de recepção e prioridade nativa em TypeScript.
 - Indicadores visuais de fala, nós de análise, listeners e timers em TypeScript.
+
+## Integração da main: desktop 0.2.10
+
+- Incorporado `8044ec4`, incluindo `ea7af75`, na branch de contribuição.
+  Os arquivos antigos de `frontend/` e `desktop/` não foram restaurados.
+- Recuperação SFU portada para `src/lib/voice/sfu-recovery.ts`, integrada ao dono
+  existente das sessões. Voz, câmera, tela e áudio da tela recuperam separadamente;
+  assinaturas usam filas independentes e limitadas, preservando cancelamento,
+  validação de respostas e descarte de sessões antigas.
+- Painel compacto incorporado nos dois layouts; Ampliar usa o diálogo de mídia
+  compartilhado. Câmeras ficam nos perfis, sem cópia na mesa. Retiradas funções
+  de redimensionamento das câmeras de mesa que deixaram de ter chamadas.
+- Preload, pacote Electron, links de instalador, guias e workflow alinhados à 0.2.10.
+  Notas Windows históricas ficam em `docs/archive/`; análise SFU fica em `docs/`.
+- Validação: typecheck, formatação e build estático passaram; `npm test` passou
+  (quatro integrações e 302 verificações, antes de acrescentar três regressões SFU).
+  A suíte SFU final cobre 23 cenários de sessão, oito de recuperação e dois de
+  navegador. Também passaram quatro testes de interface, 15 de controles/mídia,
+  quatro de empacotamento e três no Electron real: P2P entre janelas, relay SFU
+  com áudio/vídeo nativos e nove cenários de PCM em segundo plano.
+- Testes locais não medem a qualidade da Cloudflare em produção. Nenhum push,
+  publicação, instalação ou mudança de infraestrutura foi realizado.
 
 ## Conversão ainda necessária
 

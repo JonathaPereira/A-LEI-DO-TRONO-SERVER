@@ -41,6 +41,11 @@ jobs:
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
+      - name: Verify SFU recovery and floating call layout
+        shell: pwsh
+        run: |
+          npm run test:sfu
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify outgoing microphone PCM with real Windows background windows
         shell: pwsh
         run: |

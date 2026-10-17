@@ -9,8 +9,7 @@ window.TronoSocial = (() => {
   let realtimeSyncTimer = null;
   let mediaTransport = 'p2p';
   let lastSfuError = '';
-  let mixedTransportTimer = null,
-    roomVoiceMode = null;
+  let roomVoiceMode = null;
   let voiceGeneration = 0,
     voiceJoinPromise = null;
   const senderQualityQueues = new WeakMap(),
@@ -180,7 +179,7 @@ window.TronoSocial = (() => {
   let cameraTogglePending = null;
   let panelOpen = false;
   let chatHubMode = false;
-  let panelMode = storage.getItem('tronoSocialMode') === 'floating' ? 'floating' : 'full';
+  const panelMode = 'floating';
   let chatMuted = storage.getItem('tronoChatMuted') === '1';
   let noiseSuppression = storage.getItem('tronoNoiseSuppression') !== '0';
   let noiseEngine = window.TronoDesktop
@@ -452,6 +451,36 @@ window.TronoSocial = (() => {
     createConnection: (config) => new RTCPeerConnection(config),
     request: (action, payload, timeout) => window.TronoNetwork.requestSfu(action, payload, timeout),
     wants: wantsSfuPublication,
+    getTrack: (kind) =>
+      kind === 'audio'
+        ? localStream?.getAudioTracks()[0]
+        : kind === 'camera'
+          ? cameraCapture.getSnapshot().capture?.track
+          : kind === 'screen'
+            ? screenCapture.getCapture()?.outgoing.getVideoTracks()[0]
+            : screenCapture
+                .getCapture()
+                ?.outgoing.getAudioTracks()
+                .find((t) => t.readyState === 'live'),
+    onPublicationRetry: (kind, error, attempt, done) => {
+      if (error?.code === 'HIGH_BUDGET_BLOCKED') {
+        realtimeStatus = { ...realtimeStatus, highAllowed: false, maxQuality: 'balanced' };
+        updateQualityUI();
+      }
+      const label = {
+        audio: 'Microfone',
+        camera: 'Câmera',
+        screen: 'Tela',
+        'screen-audio': 'Áudio da tela',
+      }[kind];
+      lastSfuError = label + ': ' + (error?.code || 'SFU_ERROR');
+      setStatus(
+        done && kind !== 'audio'
+          ? label + ' não conectou. A voz continua pelo SFU.'
+          : label + ' reconectando pelo SFU…',
+        'warn',
+      );
+    },
     watchVersion: (id) => streamWatchVersions.get(id) || 0,
     preferredRid: (kind) => preferredRidForMedia(kind, false),
     applyQuality: applySenderQuality,
@@ -862,7 +891,7 @@ window.TronoSocial = (() => {
       updateRealtimeUI();
       if (!quiet)
         setStatus(
-          'Não foi possível sincronizar o status do Cloudflare Realtime; mantendo P2P por segurança.',
+          'Não foi possível conferir o servidor de mídia. Tentando sincronizar novamente.',
           'warn',
         );
       return null;
@@ -1107,7 +1136,7 @@ window.TronoSocial = (() => {
     });
     tile.querySelector('video')?.addEventListener('dblclick', () => toggleMediaFullscreen(tile));
   }
-  const FLOATING_RECT_KEY = 'tronoSocialFloatingRectV2';
+  const FLOATING_RECT_KEY = 'tronoSocialFloatingRectV3';
   function readFloatingRect() {
     try {
       return JSON.parse(storage.getItem(FLOATING_RECT_KEY) || 'null');
@@ -1139,8 +1168,8 @@ window.TronoSocial = (() => {
     if (!panel || panelMode !== 'floating' || inChatHub() || innerWidth <= 760) return;
     const saved = readFloatingRect();
     if (!saved) return;
-    const width = Math.max(330, Math.min(Number(saved.width) || 330, innerWidth - 10)),
-      height = Math.max(330, Math.min(Number(saved.height) || 360, innerHeight - 10));
+    const width = Math.max(280, Math.min(Number(saved.width) || 360, 460, innerWidth - 16)),
+      height = Math.max(220, Math.min(Number(saved.height) || 360, 560, innerHeight - 16));
     const left = Math.max(0, Math.min(Number(saved.left) || 0, innerWidth - width)),
       top = Math.max(0, Math.min(Number(saved.top) || 0, innerHeight - height));
     panel.style.width = `${width}px`;
@@ -1157,13 +1186,12 @@ window.TronoSocial = (() => {
     if (!panel) return;
     const hub = inChatHub();
     panel.classList.toggle('social-chat-hub', hub);
-    panel.classList.toggle('social-full', !hub && panelMode === 'full');
+    panel.classList.remove('social-full');
     panel.classList.toggle('social-floating', !hub && panelMode === 'floating');
     if (modeBtn) {
       modeBtn.classList.toggle('hidden', hub);
-      modeBtn.textContent = panelMode === 'full' ? '▱ Flutuante' : '▣ Completa';
-      modeBtn.title =
-        panelMode === 'full' ? 'Usar janela flutuante compacta' : 'Abrir janela completa';
+      modeBtn.textContent = 'Ampliar';
+      modeBtn.title = 'Ampliar câmeras e telas da chamada';
     }
     clearFloatingInlineStyles();
     if (!hub && panelMode === 'floating') restoreFloatingRect();
@@ -1190,8 +1218,7 @@ window.TronoSocial = (() => {
   }
   function togglePanelMode() {
     if (inChatHub()) return;
-    panelMode = panelMode === 'full' ? 'floating' : 'full';
-    applyPanelMode();
+    window.TronoMosaic?.open();
   }
   function showPanel(show = true) {
     panelOpen = !!show;
@@ -1383,9 +1410,9 @@ window.TronoSocial = (() => {
         if (!isCurrent()) return;
         try {
           await publishSfuTrack('audio', track);
-        } catch {
+        } catch (error) {
           if (!isCurrent()) return;
-          await fallbackToP2p('Microfone alterado. Reconectando a chamada por P2P.');
+          void sfuSession.recoverPublication('audio', error);
         }
       }
     }
@@ -1427,10 +1454,8 @@ window.TronoSocial = (() => {
         } else await publishSfuTrack('camera', track);
       } catch (err) {
         if (!isCurrent()) return;
-        console.warn('[TronoSocial] câmera SFU; acionando fallback', err?.code || err);
-        await fallbackToP2p(
-          'A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.',
-        );
+        console.warn('[TronoSocial] recuperar câmera SFU', err?.code || err);
+        void sfuSession.recoverPublication('camera', err);
       }
     }
     if (!isCurrent()) return;
@@ -1504,22 +1529,24 @@ window.TronoSocial = (() => {
             ['screen', track],
             ['screen-audio', stream.getAudioTracks()[0]],
           ].map(async ([kind, next]) => {
-            if (!isCurrent()) return;
-            const publication = replace ? sfuLocalPublications.get(kind) : null;
-            if (next && publication?.sender) {
-              await publication.sender.replaceTrack(next);
+            try {
               if (!isCurrent()) return;
-              await applySenderQuality(publication.sender, kind);
-            } else if (next) await publishSfuTrack(kind, next);
-            else if (publication) await closeSfuPublication(kind);
+              const publication = replace ? sfuLocalPublications.get(kind) : null;
+              if (next && publication?.sender) {
+                await publication.sender.replaceTrack(next);
+                if (!isCurrent()) return;
+                await applySenderQuality(publication.sender, kind);
+              } else if (next) await publishSfuTrack(kind, next);
+              else if (publication) await closeSfuPublication(kind);
+            } catch (error) {
+              if (isCurrent()) void sfuSession.recoverPublication(kind, error);
+            }
           }),
         );
       } catch (err) {
         if (!isCurrent()) return;
-        console.warn('[TronoSocial] tela SFU; acionando fallback', err?.code || err);
-        await fallbackToP2p(
-          'O compartilhamento não conseguiu publicar pelo SFU; chamada mantida em P2P para preservar a tela.',
-        );
+        console.warn('[TronoSocial] recuperar tela SFU', err?.code || err);
+        void sfuSession.recoverPublication('screen', err);
       }
     }
     if (!transportIsSfu())
@@ -1725,9 +1752,14 @@ window.TronoSocial = (() => {
     }
     if (sub.kind === 'screen-audio') removeRemoteAudio(streamAudioKey(sub.publisherId));
   }
-  function reportSfuRetry({ publication: pub, code, stale }) {
+  function reportSfuRetry({ publication: pub, code, stale, attempt }) {
     const label = pub.kind === 'screen' ? 'Tela' : pub.kind === 'camera' ? 'Câmera' : 'Áudio';
     lastSfuError = `${label}: ${code}`;
+    if (pub.kind !== 'audio' && attempt >= 4) {
+      setStatus(`${label} não conectou. A voz continua pelo SFU.`, 'warn');
+      renderTelemetry();
+      return;
+    }
     let message = stale
       ? `${label} SFU foi atualizado enquanto conectava. Ressincronizando a publicação…`
       : `${label} SFU reconectando… (${code}).`;
@@ -1748,8 +1780,6 @@ window.TronoSocial = (() => {
     );
   }
   async function stopSfuTransport({ toP2p = true } = {}) {
-    clearTimeout(mixedTransportTimer);
-    mixedTransportTimer = null;
     mediaTransport = 'stopping';
     sfuSession.reset();
     for (const { key: id } of audioPlayback.getSnapshot().entries) {
@@ -1780,7 +1810,14 @@ window.TronoSocial = (() => {
     try {
       await refreshSfuIceConfig();
       ensureCurrent();
-      const status = await syncRealtimeStatus({ quiet: false });
+      let status = await syncRealtimeStatus({ quiet: true });
+      ensureCurrent();
+      if (!status) {
+        setStatus('Conferindo o servidor de mídia novamente…', 'warn');
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        ensureCurrent();
+        status = await syncRealtimeStatus({ quiet: true });
+      }
       realtimeStatus = status || realtimeStatus;
       updateQualityUI();
       ensureCurrent();
@@ -1799,15 +1836,31 @@ window.TronoSocial = (() => {
       closeAllPeers();
       updateRealtimeUI();
       const audio = localStream?.getAudioTracks?.()[0];
-      if (audio) await publishSfuTrack('audio', audio);
+      if (audio) {
+        try {
+          await publishSfuTrack('audio', audio);
+        } catch (error) {
+          if (!(await sfuSession.recoverPublication('audio', error))) {
+            ensureCurrent();
+            return false;
+          }
+        }
+      }
       const camera = localStream?.getVideoTracks?.()[0];
-      if (cameraOn() && camera) await publishSfuTrack('camera', camera);
+      if (cameraOn() && camera)
+        void publishSfuTrack('camera', camera).catch((error) =>
+          sfuSession.recoverPublication('camera', error),
+        );
       const screen = screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0];
       if (screenSharing() && screen && status.screenAllowed)
-        await publishSfuTrack('screen', screen);
+        void publishSfuTrack('screen', screen).catch((error) =>
+          sfuSession.recoverPublication('screen', error),
+        );
       const screenAudio = screenCapture.getCapture()?.outgoing?.getAudioTracks?.()[0];
       if (screenSharing() && screenAudio && status.screenAllowed)
-        await publishSfuTrack('screen-audio', screenAudio);
+        void publishSfuTrack('screen-audio', screenAudio).catch((error) =>
+          sfuSession.recoverPublication('screen-audio', error),
+        );
       window.TronoNetwork?.setVoiceState(
         true,
         micMuted,
@@ -1950,22 +2003,6 @@ window.TronoSocial = (() => {
     if (transportIsSfu()) {
       closeAllPeers();
       void syncSfuSubscriptions();
-      if (detailedPlayers().some((p) => p.id !== meId() && p.transport === 'p2p')) {
-        if (!mixedTransportTimer)
-          mixedTransportTimer = setTimeout(() => {
-            mixedTransportTimer = null;
-            if (
-              transportIsSfu() &&
-              detailedPlayers().some((p) => p.id !== meId() && p.transport === 'p2p')
-            )
-              void fallbackToP2p(
-                'Um participante está em P2P. Reconectando a chamada no mesmo modo para manter o áudio nos dois sentidos.',
-              );
-          }, 5000);
-      } else {
-        clearTimeout(mixedTransportTimer);
-        mixedTransportTimer = null;
-      }
       renderVoiceRoster();
       renderVideoGrid();
       renderScreenGrid();
@@ -2030,7 +2067,7 @@ window.TronoSocial = (() => {
   }
   function cameraInProfile(id) {
     const mode = profileMedia.get(id) || 'auto';
-    return mode === 'camera' || (mode === 'auto' && inChatHub());
+    return mode === 'camera' || mode === 'auto';
   }
   function screenInProfile(id) {
     return profileMedia.get(id) === 'screen';
@@ -2381,12 +2418,6 @@ window.TronoSocial = (() => {
         '<div class="camera-grid-note">Entre na voz para acessar as câmeras da chamada.</div>';
       return;
     }
-    if (panelMode === 'floating' && inGame() && !inChatHub()) {
-      host.className = 'camera-grid camera-grid-empty';
-      host.innerHTML =
-        '<div class="camera-grid-note">No modo flutuante, as câmeras aparecem junto à mesa.</div>';
-      return;
-    }
     const me = meId(),
       players = detailedPlayers(),
       visible = players.filter((p) =>
@@ -2596,120 +2627,12 @@ window.TronoSocial = (() => {
         '</div>';
   }
 
-  function seatSizeKey(seat) {
-    return `tronoSeatCameraSize${seat}`;
-  }
-  function applyStoredSeatSize(tile, seat) {
-    try {
-      const saved = JSON.parse(storage.getItem(seatSizeKey(seat)) || 'null');
-      if (saved?.w && saved?.h) {
-        tile.style.width = `${saved.w}px`;
-        tile.style.height = `${saved.h}px`;
-      }
-    } catch {}
-  }
-  function persistSeatSize(tile, seat) {
-    const r = tile.getBoundingClientRect();
-    if (r.width > 90 && r.height > 50)
-      storage.setItem(
-        seatSizeKey(seat),
-        JSON.stringify({ w: Math.round(r.width), h: Math.round(r.height) }),
-      );
-  }
-  function bindSeatTileResize(tile, seat) {
-    if (tile.dataset.resizeBound) return;
-    tile.dataset.resizeBound = '1';
-    applyStoredSeatSize(tile, seat);
-    const grip = tile.querySelector('.seat-camera-resize');
-    let resize = null;
-    grip?.addEventListener('pointerdown', (e) => {
-      if (innerWidth <= 900) return;
-      const r = tile.getBoundingClientRect();
-      resize = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
-      grip.setPointerCapture?.(e.pointerId);
-      e.preventDefault();
-      e.stopPropagation();
-      tile.classList.add('resizing');
-    });
-    grip?.addEventListener('pointermove', (e) => {
-      if (!resize) return;
-      const maxW = Math.min(560, Math.max(220, innerWidth * 0.38)),
-        maxH = Math.min(360, Math.max(140, innerHeight * 0.4));
-      const w = Math.max(110, Math.min(maxW, resize.w + (e.clientX - resize.x)));
-      const h = Math.max(62, Math.min(maxH, resize.h + (e.clientY - resize.y)));
-      tile.style.width = `${Math.round(w)}px`;
-      tile.style.height = `${Math.round(h)}px`;
-    });
-    const stop = () => {
-      if (!resize) return;
-      resize = null;
-      tile.classList.remove('resizing');
-      persistSeatSize(tile, seat);
-    };
-    grip?.addEventListener('pointerup', stop);
-    grip?.addEventListener('pointercancel', stop);
-    // Mantém compatibilidade com o resize nativo do CSS em navegadores que o oferecem.
-    tile.addEventListener('pointerup', () => persistSeatSize(tile, seat));
-  }
   function renderSeatMedia() {
     const host = $('seatMediaLayer');
     if (!host) return;
-    const active = voiceJoined && panelMode === 'floating' && inGame() && !inChatHub();
-    host.classList.toggle('active', active);
-    if (!active) {
-      host.innerHTML = '';
-      return;
-    }
-    const me = meId(),
-      players = detailedPlayers()
-        .map((p) => ({
-          ...p,
-          seat:
-            gameRoomState?.players.find((x) => x.id === p.id)?.seat ??
-            (roomState?.kind === 'game' ? p.seat : null),
-        }))
-        .filter(
-          (p) =>
-            (p.id === me ? cameraOn() : !!p.camera) &&
-            Number.isInteger(p.seat) &&
-            p.seat >= 0 &&
-            p.seat <= 3,
-        ),
-      desired = new Set(players.map((p) => p.id));
-    for (const old of [...host.querySelectorAll('.seat-camera-tile')])
-      if (!desired.has(old.dataset.peer)) old.remove();
-    for (const p of players) {
-      let tile = findPeerTile(host, p.id, '.seat-camera-tile');
-      if (!tile) {
-        tile = document.createElement('div');
-        tile.dataset.peer = p.id;
-        tile.innerHTML =
-          '<video autoplay playsinline muted></video><div class="seat-camera-label"><span class="seat-camera-name"></span><span class="seat-camera-mic"></span></div><i class="seat-camera-resize" title="Arraste o canto para redimensionar">↘</i>';
-        host.appendChild(tile);
-        bindSeatTileResize(tile, p.seat);
-      }
-      tile.className = `seat-camera-tile seat-camera-${p.seat}`;
-      bindSeatTileResize(tile, p.seat);
-      const muted = p.id === me ? micMuted : !!p.muted,
-        speaking = !muted && speakingIndicators.isSpeaking(p.id);
-      tile.classList.toggle('speaking', speaking);
-      tile.querySelector('.seat-camera-name').textContent =
-        `${p.name}${p.id === me ? ' • você' : ''}`;
-      renderVoiceStatus(
-        tile.querySelector('.seat-camera-mic'),
-        muted,
-        p.id === me ? deafened : !!p.deafened,
-      );
-      const stream = cameraStreamForPerson(p),
-        video = tile.querySelector('video');
-      if (personHasLiveCamera(p)) {
-        updateVideoElement(video, stream);
-        tile.classList.add('has-video');
-      } else {
-        tile.classList.remove('has-video');
-        if (p.id !== me) remoteMedia.scheduleRecovery(p.id);
-      }
-    }
+    for (const video of host.querySelectorAll('video')) video.srcObject = null;
+    host.classList.remove('active');
+    host.replaceChildren();
   }
   function updateMediaIndicators() {
     const me = meId();
@@ -4097,7 +4020,10 @@ window.TronoSocial = (() => {
       if (msg.type === 'game-started' || msg.type === 'game-state') setTimeout(renderSeatMedia, 0);
     });
     navigator.mediaDevices?.addEventListener?.('devicechange', enumerateDevices);
-    window.addEventListener('resize', renderSeatMedia);
+    window.addEventListener('resize', () => {
+      restoreFloatingRect();
+      renderSeatMedia();
+    });
     window.addEventListener('trono-audio-state', updateAudioPreferenceButtons);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -4160,7 +4086,8 @@ window.TronoSocial = (() => {
     let previousWide = innerWidth > 1000;
     window.addEventListener('resize', () => {
       const wide = innerWidth > 1000;
-      if (previousWide && !wide && chatRoomState?.channelType !== 'text') toggleTextChat(false);
+      if (inChatHub() && previousWide && !wide && chatRoomState?.channelType !== 'text')
+        toggleTextChat(false);
       previousWide = wide;
     });
   }

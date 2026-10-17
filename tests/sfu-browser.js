@@ -1,0 +1,419 @@
+'use strict';
+const { test } = require('node:test'),
+  assert = require('node:assert/strict'),
+  path = require('node:path'),
+  express = require('express'),
+  { chromium, expect } = require('@playwright/test'),
+  { startFixture } = require('./auth-fixture');
+test(
+  'SFU retries media independently and retains room audio before using fallback',
+  { timeout: 90000 },
+  async () => {
+    const server = await new Promise((resolve) => {
+        const s = express()
+          .use(express.static(path.resolve('out')))
+          .listen(0, '127.0.0.1', () => resolve(s));
+      }),
+      origin = 'http://127.0.0.1:' + server.address().port,
+      fixture = await startFixture({ port: 10857, appOrigin: origin, realtime: true });
+    let browser;
+    const errors = [];
+    try {
+      assert.equal(
+        (
+          await fixture.call('signup', {
+            email: 'sfu-browser@example.test',
+            nickname: 'SFU Teste',
+            password: 'Senha12!',
+          })
+        ).status,
+        200,
+      );
+      await fixture.call('verify', {
+        token_hash: [...fixture.links.keys()].at(-1),
+        type: 'signup',
+      });
+      const data = (
+        await fixture.call('login', { email: 'sfu-browser@example.test', password: 'Senha12!' })
+      ).data;
+      browser = await chromium.launch({
+        executablePath:
+          process.env.CHROMIUM_EXECUTABLE_PATH ||
+          (process.platform === 'linux' ? '/usr/bin/chromium' : undefined),
+        args: [
+          '--no-sandbox',
+          '--use-fake-device-for-media-stream',
+          '--use-fake-ui-for-media-stream',
+          '--autoplay-policy=no-user-gesture-required',
+          '--mute-audio',
+        ],
+      });
+      const context = await browser.newContext({ permissions: ['microphone', 'camera'] });
+      await context.route('**/*', (r) =>
+        new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort(),
+      );
+      await context.addInitScript(
+        ({ base, data }) => {
+          window.TRONO_BACKEND_URL = base;
+          sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+          localStorage.setItem('tronoNoiseSuppression', '0');
+          localStorage.setItem('tronoSfxEnabled', '0');
+          localStorage.setItem('tronoMusicEnabled', '0');
+          window.__sfu = {
+            peers: [],
+            requests: [],
+            failures: {},
+            fallbacks: 0,
+            listeners: [],
+            closeResolvers: [],
+          };
+          let network;
+          Object.defineProperty(window, 'TronoNetwork', {
+            configurable: true,
+            get: () => network,
+            set: (api) => {
+              network = api;
+              const listen = api.onMessage;
+              api.onMessage = (fn) => {
+                window.__sfu.listeners.push(fn);
+                return listen((m) => {
+                  if (m.type === 'sfu-publications' && window.__sfu.keepCatalogue) return;
+                  fn(m);
+                });
+              };
+            },
+          });
+          class Peer extends EventTarget {
+            constructor() {
+              super();
+              this.connectionState = 'connected';
+              this.iceConnectionState = 'connected';
+              this.iceGatheringState = 'complete';
+              this.signalingState = 'stable';
+              this.localDescription = null;
+              this.remoteDescription = null;
+              this.transceivers = [];
+              window.__sfu.peers.push(this);
+            }
+            addTransceiver(track, options) {
+              const sender = {
+                  track,
+                  getParameters: () => ({ encodings: [{}] }),
+                  setParameters: async () => {},
+                  replaceTrack: async (t) => {
+                    sender.track = t;
+                  },
+                },
+                t = {
+                  mid: '0',
+                  sender,
+                  receiver: {
+                    track: {
+                      kind: typeof track === 'string' ? track : track.kind,
+                      readyState: 'live',
+                    },
+                  },
+                };
+              this.transceivers.push(t);
+              return t;
+            }
+            async createOffer() {
+              return {
+                type: 'offer',
+                sdp: 'v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\na=rtpmap:111 opus/48000/2\r\n',
+              };
+            }
+            async createAnswer() {
+              return { type: 'answer', sdp: 'v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n' };
+            }
+            async setLocalDescription(sdp) {
+              this.localDescription = sdp;
+            }
+            async setRemoteDescription(sdp) {
+              this.remoteDescription = sdp;
+            }
+            getSenders() {
+              return this.transceivers.map((t) => t.sender);
+            }
+            getReceivers() {
+              return this.transceivers.map((t) => t.receiver);
+            }
+            getTransceivers() {
+              return this.transceivers;
+            }
+            async getStats() {
+              return new Map();
+            }
+            close() {
+              this.connectionState = 'closed';
+            }
+            fail() {
+              this.connectionState = 'failed';
+              this.onconnectionstatechange?.();
+              this.dispatchEvent(new Event('connectionstatechange'));
+            }
+          }
+          window.RTCPeerConnection = Peer;
+          navigator.mediaDevices.getDisplayMedia = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 360;
+            canvas.getContext('2d').fillRect(0, 0, 640, 360);
+            window.__screenCanvas = canvas;
+            return canvas.captureStream(10);
+          };
+        },
+        { base: fixture.base, data },
+      );
+      const page = await context.newPage();
+      page.on('pageerror', (e) => errors.push(e.message));
+      await page.goto(origin);
+      await page.waitForFunction(() => window.TronoAuth?.ready);
+      await page.evaluate(() => window.TronoAuth.ready);
+      await page.evaluate(() => {
+        let sequence = 0;
+        window.__sfu.statusFailures = 1;
+        window.__sfu.statusAttempts = 0;
+        const status = window.TronoNetwork.getRealtimeStatus;
+        window.TronoNetwork.getRealtimeStatus = async () => {
+          window.__sfu.statusAttempts++;
+          if (window.__sfu.statusFailures-- > 0) throw Error('Transient status failure');
+          return status();
+        };
+        const fallback = window.TronoNetwork.fallbackVoice;
+        window.TronoNetwork.fallbackVoice = () => {
+          window.__sfu.fallbacks++;
+          fallback();
+        };
+        window.TronoNetwork.requestSfu = async (action, payload = {}) => {
+          const state = window.__sfu;
+          state.requests.push({ action, kind: payload.kind, sessionId: payload.sessionId });
+          if (action === 'ice-config')
+            return { iceServers: [{ urls: ['stun:example.invalid'] }], turn: false };
+          if (action === 'subscribe-track') {
+            if (state.failures['subscribe_' + payload.kind]) {
+              state.failures['subscribe_' + payload.kind]--;
+              return {
+                sessionId: 'sub-' + ++sequence,
+                mid: '0',
+                sessionDescription: { type: 'wrong', sdp: 'v=0' },
+              };
+            }
+            return {
+              sessionId: 'sub-' + ++sequence,
+              mid: '0',
+              sessionDescription: { type: 'offer', sdp: 'v=0\r\n' },
+            };
+          }
+          if (action === 'close-publication' && state.delayClose)
+            return new Promise((resolve) => state.closeResolvers.push(resolve));
+          if (action === 'publish-track') {
+            if (state.failures[payload.kind]) {
+              state.failures[payload.kind]--;
+              throw Object.assign(Error('Simulated signaling failure'), {
+                code: 'SFU_REQUEST_FAILED',
+              });
+            }
+            return {
+              sessionId: 'session-' + ++sequence,
+              sessionDescription: { type: 'answer', sdp: 'v=0\r\n' },
+              publication: { trackName: payload.kind, rids: [] },
+            };
+          }
+          if (action === 'publication-ready') return { ready: true, rids: [] };
+          if (action === 'list-publications') return { publications: [] };
+          if (action === 'renegotiate') return { accepted: true };
+          return { ok: true };
+        };
+      });
+      await page.evaluate(async () => {
+        await window.TronoChatHub.enter({ channelId: 'chat-jogos' });
+        await window.TronoSocial.joinVoice();
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(() => window.__sfu.requests.some((r) => r.action === 'publication-ready')),
+        )
+        .toBeTruthy();
+      assert(await page.evaluate(() => window.__sfu.statusAttempts >= 2));
+      assert.equal(await page.evaluate(() => window.__sfu.fallbacks), 0);
+      await page.evaluate(() => {
+        window.__voiceBaseline = window.TronoSocial.getLocalAudioTrack();
+        window.__sfu.failures.camera = 10;
+      });
+      await page.locator('#cameraBtn').click();
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              window.__sfu.requests.filter(
+                (r) => r.action === 'publish-track' && r.kind === 'camera',
+              ).length,
+          ),
+        )
+        .toBeGreaterThan(1);
+      assert.equal(await page.evaluate(() => window.__sfu.fallbacks), 0);
+      assert(
+        await page.evaluate(
+          () => window.TronoSocial.getLocalAudioTrack() === window.__voiceBaseline,
+        ),
+      );
+      await page.locator('#cameraBtn').click();
+      const cameraAttempts = await page.evaluate(
+        () =>
+          window.__sfu.requests.filter((r) => r.action === 'publish-track' && r.kind === 'camera')
+            .length,
+      );
+      await new Promise((r) => setTimeout(r, 2200));
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.__sfu.requests.filter((r) => r.action === 'publish-track' && r.kind === 'camera')
+              .length,
+        ),
+        cameraAttempts,
+      );
+      await page.evaluate(() => {
+        window.__sfu.failures.screen = 10;
+      });
+      await page.evaluate(() => window.TronoSocial.startScreenShare());
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              window.__sfu.requests.filter(
+                (r) => r.action === 'publish-track' && r.kind === 'screen',
+              ).length,
+          ),
+        )
+        .toBeGreaterThan(1);
+      assert.equal(await page.evaluate(() => window.__sfu.fallbacks), 0);
+      await page.evaluate(() => window.TronoSocial.stopScreenShare());
+      await page.evaluate(() => {
+        window.__sfu.keepCatalogue = true;
+        window.__sfu.failures.subscribe_camera = 10;
+        for (const fn of window.__sfu.listeners)
+          fn({
+            type: 'voice-roster',
+            roomId: window.TronoNetwork.primaryRoom,
+            players: [
+              {
+                id: window.TronoNetwork.clientId,
+                name: 'SFU Teste',
+                joined: true,
+                transport: 'sfu',
+              },
+              {
+                id: '10000000-0000-4000-8000-000000000099',
+                name: 'Estado atrasado',
+                joined: true,
+                transport: 'p2p',
+              },
+            ],
+          });
+        for (const fn of window.__sfu.listeners)
+          fn({
+            type: 'sfu-publications',
+            roomId: window.TronoNetwork.primaryRoom,
+            publications: [
+              {
+                ownerId: 'camera-peer',
+                kind: 'camera',
+                sessionId: 'camera-v1',
+                trackName: 'camera',
+                rids: [],
+              },
+              {
+                ownerId: 'audio-peer',
+                kind: 'audio',
+                sessionId: 'audio-v1',
+                trackName: 'audio',
+                rids: [],
+              },
+            ],
+          });
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            window.__sfu.requests.some((r) => r.action === 'subscribe-track' && r.kind === 'audio'),
+          ),
+        )
+        .toBe(true);
+      await expect
+        .poll(
+          () =>
+            page.evaluate(
+              () =>
+                window.__sfu.requests.filter(
+                  (r) => r.action === 'subscribe-track' && r.kind === 'camera',
+                ).length,
+            ),
+          { timeout: 12000 },
+        )
+        .toBe(4);
+      assert.equal(await page.evaluate(() => window.__sfu.fallbacks), 0);
+      await page.evaluate(() => {
+        for (const fn of window.__sfu.listeners)
+          fn({
+            type: 'sfu-publications',
+            roomId: window.TronoNetwork.primaryRoom,
+            publications: [],
+          });
+        window.__sfu.delayClose = true;
+      });
+      await page.evaluate(() => {
+        window.__sfu.failures.audio = 1;
+        window.__sfu.peers
+          .find(
+            (pc) =>
+              pc.connectionState === 'connected' &&
+              pc.getSenders().some((s) => s.track?.kind === 'audio'),
+          )
+          .fail();
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => window.__sfu.requests.filter((r) => r.action === 'publication-ready').length,
+          ),
+        )
+        .toBeGreaterThan(1);
+      assert.equal(await page.evaluate(() => window.__sfu.fallbacks), 0);
+      assert(
+        await page.evaluate(
+          () => window.TronoSocial.getLocalAudioTrack() === window.__voiceBaseline,
+        ),
+      );
+      await page.evaluate(() => {
+        window.__sfu.delayClose = false;
+        window.__sfu.closeResolvers.splice(0).forEach((resolve) => resolve({ closed: true }));
+      });
+      await page.evaluate(() => {
+        window.__sfu.failures.audio = 10;
+        window.__sfu.peers
+          .find(
+            (pc) =>
+              pc.connectionState === 'connected' &&
+              pc.getSenders().some((s) => s.track?.kind === 'audio'),
+          )
+          .fail();
+      });
+      await expect
+        .poll(() => page.evaluate(() => window.__sfu.fallbacks), { timeout: 10000 })
+        .toBe(1);
+      assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), true);
+      assert(
+        await page.evaluate(
+          () => window.TronoSocial.getLocalAudioTrack() === window.__voiceBaseline,
+        ),
+      );
+      await page.evaluate(() => window.TronoSocial.leaveVoice());
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await fixture.stop();
+      await new Promise((r) => server.close(r));
+    }
+  },
+);

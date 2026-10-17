@@ -112,6 +112,7 @@ test(
       const resources = await page.evaluate(async () =>
         Promise.all(
           [
+            '/call-floating.css',
             '/court-display.js',
             '/court-display.css',
             '/tabletop-refinements.css',

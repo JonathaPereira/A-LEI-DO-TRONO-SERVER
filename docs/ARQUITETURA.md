@@ -209,7 +209,15 @@ publicação saudável porque a captura anterior terminou.
 `sfu-protocol.ts` valida SDP, IDs, tipos de mídia, RIDs, catálogo e confirmações de
 negociação/prontidão. `peer-wait.ts` possui listeners e deadlines abortáveis:
 4200 ms de coleta ICE, 14 s para conectar publicações e 18 s para assinaturas.
-Os retries conservam backoff e fallback após três falhas de negociação reconhecidas.
+`sfu-recovery.ts` possui recuperação independente por publicação e filas de assinatura
+separadas (três slots de voz, dois de vídeo). A voz tenta republicar duas vezes;
+câmera/tela/áudio da tela tentam quatro, sem derrubar a voz saudável. Publicações em
+recuperação usam 9 s de requisição e 7 s de conexão. Sair ou substituir a captura
+invalida o trabalho antigo sem parar trilhas emprestadas. Assinaturas de vídeo
+param após quatro falhas por sessão; uma sessão nova reabre o orçamento. A voz
+mantém fallback após três falhas reconhecidas de negociação. Erros globais de
+disponibilidade/limite também conservam fallback. O backend coordena o modo da sala;
+listas de presença atrasadas não acionam troca por temporizador.
 Atualizações de camada são serializadas e não restauram estado de assinaturas fechadas;
 respostas de camada única conservam RID nulo.
 

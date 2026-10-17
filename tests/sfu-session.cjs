@@ -424,9 +424,9 @@ test('layer updates are serialized and null responses preserve single-layer trut
   await assert.rejects(h.session.setLayer(sub.key, 'f'), { code: 'BAD_SFU_RIDS' });
   assert.equal(sub.preferredRid, null);
 });
-test('malformed subscription offers retry with the existing backoff and fall back after three attempts', async (t) => {
+test('malformed audio subscription offers retry with the existing backoff and fall back after three attempts', async (t) => {
   const h = await setup(t);
-  h.session.setPublications([metadata()]);
+  h.session.setPublications([metadata('audio')]);
   h.request(async (a, p) =>
     a === 'subscribe-track'
       ? { sessionId: 'bad', mid: '0', sessionDescription: sdp('answer') }
@@ -584,7 +584,71 @@ test('replacing a live sender during readiness preserves the publication and its
   assert.equal(pub.ready, true);
   pub.pc.connectionState = 'failed';
   pub.pc.onconnectionstatechange();
-  await tick();
-  assert.deepEqual(h.fallback, ['publisher']);
+  await h.advance(500);
+  assert.deepEqual(h.fallback, []);
+  assert.notEqual(h.session.publications.get('audio'), pub);
+  assert.equal(h.session.publications.get('audio').sender.track, replacement);
   assert.equal(replacement.stops, 0);
+});
+
+test('video subscription exhausts four attempts without changing voice transport; a new session resets the budget', async (t) => {
+  const h = await setup(t);
+  h.session.setPublications([metadata()]);
+  h.request(async (action, payload) =>
+    action === 'subscribe-track'
+      ? { sessionId: 'bad', mid: '0', sessionDescription: sdp('answer') }
+      : h.base(action, payload),
+  );
+  await h.session.syncSubscriptions();
+  for (const delay of [900, 1800, 3600]) await h.advance(delay);
+  assert.deepEqual(
+    h.retries.map((r) => r.attempt),
+    [1, 2, 3, 4],
+  );
+  await h.advance(60000);
+  await h.session.syncSubscriptions();
+  assert.equal(h.retries.length, 4);
+  assert.deepEqual(h.fallback, []);
+  h.request(h.base);
+  h.session.setPublications([metadata('camera', 'remote-2')]);
+  await h.session.syncSubscriptions();
+  assert.equal(h.session.subscriptions.get('peer:camera').publisherSessionId, 'remote-2');
+});
+
+test('an unfinished video request cannot block voice subscriptions and reset settles both negotiations', async (t) => {
+  const h = await setup(t),
+    gate = deferred();
+  h.session.setPublications([metadata(), metadata('audio', 'voice-1')]);
+  h.request((action, payload) =>
+    action === 'subscribe-track' && payload.kind === 'camera'
+      ? gate.promise
+      : h.base(action, payload),
+  );
+  const pending = h.session.syncSubscriptions();
+  await tick();
+  assert.equal(h.session.subscriptions.get('peer:audio').negotiating, false);
+  assert(h.calls.some((c) => c.action === 'renegotiate'));
+  h.session.reset();
+  await pending;
+  gate.resolve({ sessionId: 'late-video', mid: '0', sessionDescription: sdp('offer') });
+  await tick();
+  assert.equal(h.session.subscriptions.size, 0);
+  assert(
+    h.calls.some((c) => c.action === 'close-subscription' && c.payload.sessionId === 'late-video'),
+  );
+});
+
+test('native subscription failure after the queue finishes schedules a new negotiation', async (t) => {
+  const h = await setup(t);
+  h.session.setPublications([metadata('audio')]);
+  await h.session.syncSubscriptions();
+  const old = h.session.subscriptions.get('peer:audio');
+  old.pc.connectionState = 'failed';
+  old.pc.onconnectionstatechange();
+  assert.equal(h.session.subscriptions.size, 0);
+  assert.equal(h.retries.length, 1);
+  await h.advance(900);
+  const next = h.session.subscriptions.get('peer:audio');
+  assert(next && next !== old && !next.negotiating);
+  assert.deepEqual(h.fallback, []);
 });

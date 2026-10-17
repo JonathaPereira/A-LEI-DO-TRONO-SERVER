@@ -83,6 +83,7 @@
     "tabletop-refinements.css",
     "call-workspace.css",
     "member-profile.css",
-    "profile-media.css"
+    "profile-media.css",
+    "call-floating.css"
   ]
 }

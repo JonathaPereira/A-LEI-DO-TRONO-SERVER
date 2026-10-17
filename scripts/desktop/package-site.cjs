@@ -96,6 +96,10 @@ async function prepareSite({
     path.join(root, 'docs/PUBLICAR_SURGE_LEVE.md'),
     path.join(site, 'PUBLICAR_SURGE_LEVE.md'),
   );
+  await fs.copyFile(
+    path.join(root, 'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
+    path.join(site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
+  );
   const numeric = (v) => v.split('.').map(Number),
     compare = (a, b) => {
       const x = numeric(a),
