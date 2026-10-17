@@ -447,6 +447,19 @@ ativação de mídia. `social.js` consulta snapshots e pinta os nós existentes;
 renderização e os painéis de configuração ainda precisam de conversão React.
 Não criar outro estado de mute, preferências ou intenção de câmera nessa conversão.
 
+`media-interest.ts` possui a seleção de telas assistidas, câmeras ocultas e versões
+por participante. O filtro de publicações SFU e os consumidores P2P/recepção consultam
+esse mesmo dono. Parar uma tela remove seu áudio e recuperação; SFU fecha somente
+tela/áudio de tela. Ocultar câmera altera apenas o vídeo recebido, sem parar a trilha.
+Ações pendentes após tela cheia são invalidadas por revisão, geração e intenção nova.
+Reset mantém versões monotônicas entre chamadas; desaparecimento da tela limpa a
+seleção e invalida assinaturas pendentes, sem tocar na voz.
+
+`media-interest-bindings.ts` delega os cliques dos controles dinâmicos, sem listeners
+por tile. Também limpa players/maximização e sai da tela cheia. `social.js` conserva
+a pintura e adaptadores públicos, sem conjuntos, versões ou handlers paralelos para
+assistir/ocultar mídia. Capturas, peers, players e assinaturas continuam emprestados.
+
 `social.js` conserva apresentação, navegação e controles de compartilhamento ainda
 não convertidos.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção

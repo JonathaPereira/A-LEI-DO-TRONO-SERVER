@@ -37,6 +37,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Lista privada de voz, eventos e sincronização de participantes P2P/SFU em TypeScript.
 - Contexto compartilhado do microfone, desbloqueio de áudio e avisos em TypeScript.
 - Estado, ações e listeners dos controles de áudio/câmera em TypeScript.
+- Intenções de assistir/ocultar mídias e seus cliques em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -64,7 +65,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
 React ou TypeScript apenas porque a marcação foi convertida. Renderização/configurações
-da chamada e intenções de assistir mídias, edição/visualização de perfis e galeria, navegação/
+da chamada, edição/visualização de perfis e galeria, navegação/
 gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -935,9 +936,35 @@ Evidências: `artifacts/controls-unit.log`, `controls-regressions.log`,
 `controls-background.log`.
 Sem push, publicação ou mudança de infraestrutura.
 
+## Visualização de câmera/tela em TypeScript — 17/10/2026
+
+- `lib/voice/media-interest.ts` possui telas assistidas, câmeras ocultas, versões e
+  ações de visualização. `social.js` perdeu conjuntos/mapa, regras e handlers por tile;
+  conserva renderização e adaptadores públicos. Os consumidores P2P, SFU e recepção
+  consultam o mesmo dono, sem outro socket, captura ou catálogo.
+- `media-interest-bindings.ts` possui clique delegado, limpeza dos players e saída
+  de tela cheia. Recriar/mover cards não registra novos handlers. Parar a tela fecha
+  apenas suas mídias SFU ou anuncia o watch P2P; ocultar câmera não encerra a trilha.
+- Revisão/geração e versões por participante impedem continuações antigas de desfazer
+  uma escolha nova. Reset invalida pendências entre chamadas e a retirada de uma
+  tela limpa seu áudio/interesse. A voz e demais participantes permanecem intactos.
+- `test:voice:interest` cobre 12 regressões e integra `npm test`, incluindo corridas
+  de tela cheia, filtros de publicação, descarte e independência dos participantes.
+
+Passaram tipagem, formatação, build estático, `npm test`, quatro fluxos de interface,
+124 checks SFU, 14 checks de controles/recepção no navegador e dois testes no Electron
+real (P2P/layouts/permissões e relay SFU). Captura, processamento e encoders não foram
+alterados. O teste isolado de segundo plano não foi repetido; os nove cenários
+passaram na etapa anterior. Mídia sintética não mede desempenho em jogos/rotas externas.
+
+Evidências: `artifacts/interest-unit.log`, `interest-regressions.log`, `interest-ui.log`,
+`interest-sfu.log`, `interest-media.log`, `interest-desktop.log`, `interest-typecheck.log`,
+`interest-format.log` e `interest-build.log`. Sem push ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair intenções de assistir câmera/tela e opções restantes de compartilhamento;
+1. Extrair opções restantes de compartilhamento; intenções de assistir/ocultar
+   mídias e seus cliques estão em `media-interest.ts`/`media-interest-bindings.ts`.
    converter apresentação dos controles/painéis em `social.js` para React quando
    cada subárvore tiver um único dono. Estado/ações e os nove listeners de áudio/
    câmera estão em `controls.ts`/`control-bindings.ts`; não restaurar flags locais.

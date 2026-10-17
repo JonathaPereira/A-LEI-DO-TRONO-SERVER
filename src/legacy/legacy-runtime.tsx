@@ -20,6 +20,8 @@ import { createRemoteMedia } from '../lib/voice/remote-media';
 import { createSpeakingIndicators } from '../lib/voice/speaking-indicators';
 import { createVoiceTelemetry } from '../lib/voice/telemetry';
 import { createCallControlBindings } from '../lib/voice/control-bindings';
+import { createMediaInterest } from '../lib/voice/media-interest';
+import { createMediaInterestBindings } from '../lib/voice/media-interest-bindings';
 import { createCallControls } from '../lib/voice/controls';
 import { createCallAudio } from '../lib/voice/call-audio';
 import { createCallAlerts } from '../lib/voice/call-alerts';
@@ -76,6 +78,8 @@ export function LegacyRuntime() {
           clampAudioGain,
           createCallAudio,
           createCallControls,
+          createMediaInterest,
+          createMediaInterestBindings,
           createCallControlBindings,
           createCallAlerts,
           createVoiceTelemetry,

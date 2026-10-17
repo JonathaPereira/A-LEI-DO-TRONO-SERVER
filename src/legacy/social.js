@@ -9,9 +9,6 @@ window.TronoSocial = (() => {
   const clampGain = window.TronoVoiceCapture.clampAudioGain;
   const controlState = () => callControls.getSnapshot();
   let volumeOwner = null;
-  const watchingStreams = new Set();
-  const hiddenCameras = new Set();
-  const streamWatchVersions = new Map();
   const foreground = () => !document.hidden && document.hasFocus();
   function updateVoiceBackgroundClass() {
     document.body.classList.toggle(
@@ -20,10 +17,7 @@ window.TronoSocial = (() => {
     );
   }
   const isScreenKind = (kind) => kind === 'screen' || kind === 'screen-audio';
-  const wantsSfuPublication = (pub) =>
-    pub.ownerId !== meId() &&
-    (pub.kind !== 'camera' || !hiddenCameras.has(pub.ownerId)) &&
-    (!isScreenKind(pub.kind) || (inChatHub() && watchingStreams.has(pub.ownerId)));
+  const wantsSfuPublication = (pub) => mediaInterest.wants(pub);
   const streamAudioKey = (id) => `stream:${id}`;
   function ensureMediaAudioContext() {
     return callAudio.ensureContext();
@@ -52,7 +46,7 @@ window.TronoSocial = (() => {
   function attachRemoteAudio(key) {
     const screen = key.startsWith('stream:'),
       peerId = screen ? key.slice(7) : key;
-    if (screen && !watchingStreams.has(peerId)) return;
+    if (screen && !mediaInterest.isWatching(peerId)) return;
     const streams = remoteMedia.getStreams(peerId);
     const track = (screen ? streams.screen : streams.av)
       .getAudioTracks()
@@ -73,35 +67,7 @@ window.TronoSocial = (() => {
     const label = tile?.querySelector('.mn-stream-volume output');
     if (label) label.textContent = `${audioPlayback.getGain(streamAudioKey(id))}%`;
   }
-  async function toggleWatchStream(id) {
-    if (!voiceCall.getSnapshot().joined || !privateVoiceRoster.get(id)?.screen) return;
-    streamWatchVersions.set(id, (streamWatchVersions.get(id) || 0) + 1);
-    if (watchingStreams.has(id)) {
-      watchingStreams.delete(id);
-      removeRemoteAudio(streamAudioKey(id));
-      remoteMedia.cancelRecovery(id);
-      if (transportIsSfu())
-        for (const kind of ['screen', 'screen-audio']) void closeSfuSubscription(sfuKey(id, kind));
-      const tile = findPeerTile($('screenShareGrid'), id, '.screen-share-tile'),
-        video = tile?.querySelector('video');
-      if (video) {
-        video.pause();
-        video.srcObject = null;
-      }
-      if (document.fullscreenElement === tile) await document.exitFullscreen().catch(() => {});
-    } else {
-      watchingStreams.add(id);
-      unlockCallAudio();
-    }
-    if (transportIsSfu()) void syncSfuSubscriptions();
-    else
-      window.TronoNetwork?.sendVoiceSignal(id, 'stream-watch', {
-        watching: watchingStreams.has(id),
-      });
-    if (watchingStreams.has(id)) attachRemoteAudio(streamAudioKey(id));
-    renderVoiceRoster();
-    renderScreenGrid();
-  }
+  const toggleWatchStream = (id) => mediaInterest.toggleScreen(id);
   function setOutputGain(value) {
     unlockCallAudio();
     audioPlayback.setVolume(value);
@@ -282,7 +248,7 @@ window.TronoSocial = (() => {
     }),
     applyQuality: applySenderQuality,
     sendSignal: (id, type, data) => window.TronoNetwork?.sendVoiceSignal(id, type, data),
-    getScreenWatch: (id) => watchingStreams.has(id),
+    getScreenWatch: (id) => mediaInterest.isWatching(id),
     onTrack: (id, track, transceiver) => remoteMedia.attachPeer(id, track, transceiver),
     onClosed: clearPeerMedia,
     onStateChange: renderVoiceRoster,
@@ -295,10 +261,10 @@ window.TronoSocial = (() => {
     getPeer: (id) => peers.get(id),
     isPeerCurrent: (id, pc) => p2pPeers.isCurrent(id, pc),
     getInterest: (id) => ({
-      camera: !!privateVoiceRoster.get(id)?.camera && !hiddenCameras.has(id),
-      screen: !!privateVoiceRoster.get(id)?.screen && watchingStreams.has(id),
+      camera: !!privateVoiceRoster.get(id)?.camera && !mediaInterest.isCameraHidden(id),
+      screen: !!privateVoiceRoster.get(id)?.screen && mediaInterest.isWatching(id),
     }),
-    isCameraHidden: (id) => hiddenCameras.has(id),
+    isCameraHidden: (id) => mediaInterest.isCameraHidden(id),
     onVoiceReceiver: (id, receiver, added) => {
       if (added) voiceTelemetry.registerReceiver(id, receiver);
       else voiceTelemetry.removeReceiver(receiver);
@@ -452,7 +418,7 @@ window.TronoSocial = (() => {
         'warn',
       );
     },
-    watchVersion: (id) => streamWatchVersions.get(id) || 0,
+    watchVersion: (id) => mediaInterest.watchVersion(id),
     preferredRid: (kind) => preferredRidForMedia(kind, false),
     applyQuality: applySenderQuality,
     onTrack: attachSfuRemoteTrack,
@@ -628,6 +594,38 @@ window.TronoSocial = (() => {
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
   });
   const privateVoiceRoster = voiceRoster.members;
+  const mediaInterest = window.TronoVoiceCapture.createMediaInterest({
+    call: () => voiceCall.getSnapshot(),
+    localId: meId,
+    participant: (id) => privateVoiceRoster.get(id),
+    community: () => inChatHub(),
+    isSfu: () => transportIsSfu(),
+    cameraTracks: (id) => remoteMedia.getStreams(id).av.getVideoTracks(),
+    unlockAudio: unlockCallAudio,
+    removeScreenAudio: (id) => removeRemoteAudio(streamAudioKey(id)),
+    attachScreenAudio: (id) => attachRemoteAudio(streamAudioKey(id)),
+    cancelRecovery: (id) => remoteMedia.cancelRecovery(id),
+    clearCameraRetry: (id) => clearSfuRetry(sfuKey(id, 'camera')),
+    closeSubscription: (id, kind) => closeSfuSubscription(sfuKey(id, kind)),
+    syncSubscriptions: syncSfuSubscriptions,
+    sendWatch: (id, watching) =>
+      window.TronoNetwork?.sendVoiceSignal(id, 'stream-watch', { watching }),
+    hide: (id, kind) => mediaInterestBindings.hide(id, kind),
+    onChange: (kind) => {
+      renderVoiceRoster();
+      if (kind === 'screen') renderScreenGrid();
+      else {
+        renderVideoGrid();
+        renderSeatMedia();
+        window.dispatchEvent(new CustomEvent('trono-media-change'));
+      }
+    },
+  });
+  const mediaInterestBindings = window.TronoVoiceCapture.createMediaInterestBindings({
+    document,
+    toggleScreen: (id) => toggleWatchStream(id),
+    toggleCamera: (id) => toggleWatchCamera(id),
+  });
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () => voiceRoster.getSnapshot().participants;
@@ -1134,36 +1132,7 @@ window.TronoSocial = (() => {
     }
     if (chatMuted) markRead();
   }
-  async function toggleWatchCamera(id) {
-    if (!voiceCall.getSnapshot().joined || id === meId() || !privateVoiceRoster.get(id)?.camera)
-      return;
-    const hidden = !hiddenCameras.has(id);
-    if (hidden) hiddenCameras.add(id);
-    else hiddenCameras.delete(id);
-    for (const track of remoteMedia.getStreams(id).av.getVideoTracks()) track.enabled = !hidden;
-    const key = sfuKey(id, 'camera');
-    clearSfuRetry(key);
-    if (hidden) {
-      const full = document.fullscreenElement;
-      if (full?.classList.contains('camera-tile') && full.dataset.peer === id)
-        await document.exitFullscreen().catch(() => {});
-      for (const tile of document.querySelectorAll('#socialPanel .camera-tile'))
-        if (tile.dataset.peer === id) {
-          tile.classList.remove('media-maximized');
-          const video = tile.querySelector('video');
-          video.pause();
-          video.srcObject = null;
-        }
-      if (!document.querySelector('.media-maximized'))
-        document.body.classList.remove('media-focus-open');
-      if (transportIsSfu()) void closeSfuSubscription(key);
-    }
-    if (transportIsSfu()) void syncSfuSubscriptions();
-    renderVoiceRoster();
-    renderVideoGrid();
-    renderSeatMedia();
-    window.dispatchEvent(new CustomEvent('trono-media-change'));
-  }
+  const toggleWatchCamera = (id) => mediaInterest.toggleCamera(id);
 
   async function enumerateDevices() {
     const input = $('voiceInputSelect'),
@@ -1742,7 +1711,7 @@ window.TronoSocial = (() => {
     return (
       (muted ? 'microfone mutado' : speakingIndicators.isSpeaking(p.id) ? 'falando…' : 'na voz') +
       ((self ? controlState().deafened : p.deafened) ? ' • áudio silenciado' : '') +
-      (cam ? (hiddenCameras.has(p.id) ? ' • câmera oculta' : ' • 📷 câmera') : '') +
+      (cam ? (mediaInterest.isCameraHidden(p.id) ? ' • câmera oculta' : ' • 📷 câmera') : '') +
       (screen ? ' • 🖥 tela' : '') +
       (transport === 'sfu' ? ' • ☁ SFU' : transport === 'sfu-pending' ? ' • conectando…' : '')
     );
@@ -1777,14 +1746,14 @@ window.TronoSocial = (() => {
         detailedPlayers().some(
           (p) =>
             !screenInProfile(p.id) &&
-            (p.id === meId() ? screenSharing() : p.screen && watchingStreams.has(p.id)),
+            (p.id === meId() ? screenSharing() : p.screen && mediaInterest.isWatching(p.id)),
         ),
     );
     stage?.classList.toggle(
       'has-camera',
       voiceCall.getSnapshot().joined &&
         detailedPlayers().some((p) =>
-          p.id === meId() ? cameraOn() : p.camera && !hiddenCameras.has(p.id),
+          p.id === meId() ? cameraOn() : p.camera && !mediaInterest.isCameraHidden(p.id),
         ),
     );
     stage?.classList.toggle('screens-layout', camerasInProfiles());
@@ -1794,7 +1763,7 @@ window.TronoSocial = (() => {
         !detailedPlayers().some((p) =>
           p.id === meId()
             ? cameraOn() || screenSharing()
-            : (p.camera && !hiddenCameras.has(p.id)) || p.screen,
+            : (p.camera && !mediaInterest.isCameraHidden(p.id)) || p.screen,
         ),
     );
     const title = stage?.querySelector('.mosaic-toolbar strong');
@@ -1830,7 +1799,7 @@ window.TronoSocial = (() => {
         screen = self ? screenSharing() : !!p.screen,
         speaking = !muted && speakingIndicators.isSpeaking(p.id),
         transport = self ? announcedTransport() : p.transport || 'p2p',
-        hidden = hiddenCameras.has(p.id);
+        hidden = mediaInterest.isCameraHidden(p.id);
       let card = findPeerTile(host, p.id, '.voice-person');
       if (!card) {
         card = document.createElement('div');
@@ -1882,8 +1851,6 @@ window.TronoSocial = (() => {
           }
         });
         card.append(expand);
-        card.querySelector('.participant-camera-toggle').onclick = () =>
-          void toggleWatchCamera(p.id);
         card.querySelector('.participant-media-layout select').onchange = (event) =>
           setProfileMedia(p.id, event.target.value);
         if (!self) {
@@ -1899,7 +1866,7 @@ window.TronoSocial = (() => {
       }
       card.classList.toggle('speaking', speaking);
       const dock = cameraInProfile(p.id) && cam && !hidden,
-        screenDock = screenInProfile(p.id) && screen && (self || watchingStreams.has(p.id));
+        screenDock = screenInProfile(p.id) && screen && (self || mediaInterest.isWatching(p.id));
       card.classList.toggle('camera-in-profile', dock);
       card.querySelector('.participant-camera-slot').hidden = !dock;
       card.querySelector('.participant-screen-slot').hidden = !screenDock;
@@ -2002,7 +1969,7 @@ window.TronoSocial = (() => {
   }
   function personHasLiveCamera(p) {
     const stream = cameraStreamForPerson(p);
-    if (p.id !== meId() && hiddenCameras.has(p.id)) return false;
+    if (p.id !== meId() && mediaInterest.isCameraHidden(p.id)) return false;
     return p.id === meId()
       ? cameraOn() && !!stream?.getVideoTracks?.().length
       : remoteMedia.videoUsable(p.id, stream, 'camera');
@@ -2103,7 +2070,7 @@ window.TronoSocial = (() => {
     const me = meId(),
       players = detailedPlayers(),
       visible = players.filter((p) =>
-        p.id === me ? cameraOn() : p.camera && !hiddenCameras.has(p.id),
+        p.id === me ? cameraOn() : p.camera && !mediaInterest.isCameraHidden(p.id),
       ),
       desired = new Set(visible.map((p) => p.id)),
       dock = visible.length ? visible.every((p) => cameraInProfile(p.id)) : camerasInProfiles();
@@ -2162,11 +2129,7 @@ window.TronoSocial = (() => {
   function renderScreenGrid() {
     const host = $('screenShareGrid');
     if (!host) return;
-    for (const id of [...watchingStreams])
-      if (!privateVoiceRoster.get(id)?.screen) {
-        watchingStreams.delete(id);
-        removeRemoteAudio(streamAudioKey(id));
-      }
+    mediaInterest.prune();
     if (!voiceCall.getSnapshot().joined || !communityVoice()) {
       for (const tile of host.querySelectorAll('.screen-share-tile'))
         window.TronoStreamControls?.dispose(tile);
@@ -2188,7 +2151,7 @@ window.TronoSocial = (() => {
       }
     for (const p of visible) {
       const self = p.id === me,
-        watching = self || watchingStreams.has(p.id);
+        watching = self || mediaInterest.isWatching(p.id);
       const card = findPeerTile($('voiceRoster'), p.id, '.voice-person'),
         target =
           screenInProfile(p.id) && watching && card
@@ -2204,9 +2167,6 @@ window.TronoSocial = (() => {
         host.appendChild(tile);
         bindMediaFullscreen(tile);
         bindMediaResize(tile, 'screen');
-        tile
-          .querySelector('.mn-watch-stream')
-          .addEventListener('click', () => toggleWatchStream(p.id));
         tile
           .querySelector('.mn-stream-volume input')
           .addEventListener('input', (e) => setStreamGain(p.id, e.target.value));
@@ -2344,8 +2304,7 @@ window.TronoSocial = (() => {
   function prepareCallUi() {
     unlockCallAudio();
     callControls.resetParticipation();
-    watchingStreams.clear();
-    hiddenCameras.clear();
+    mediaInterest.reset();
     profileMedia.clear();
   }
   async function showJoinedCall() {
@@ -2392,8 +2351,7 @@ window.TronoSocial = (() => {
   }
   function showLeftCall(reason, wasInVoice) {
     callControls.cancelPending();
-    watchingStreams.clear();
-    hiddenCameras.clear();
+    mediaInterest.reset();
     voiceRoster.reset();
     updateVoiceBackgroundClass();
     void voiceTelemetry.syncPriority();
@@ -3112,6 +3070,7 @@ window.TronoSocial = (() => {
     voiceTransport.start();
     voiceRoster.start();
     controlBindings.start();
+    mediaInterestBindings.start();
     $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
       const enabled = e.target.checked;
@@ -3468,16 +3427,18 @@ window.TronoSocial = (() => {
               id: p.id,
               name: p.name,
               self: p.id === meId(),
-              camera: (p.id === meId() ? cameraOn() : p.camera && !hiddenCameras.has(p.id))
+              camera: (
+                p.id === meId() ? cameraOn() : p.camera && !mediaInterest.isCameraHidden(p.id)
+              )
                 ? cameraStreamForPerson(p)
                 : null,
               cameraOffered: p.id === meId() ? cameraOn() : !!p.camera,
-              cameraHidden: hiddenCameras.has(p.id),
-              screen: (p.id === meId() ? screenSharing() : watchingStreams.has(p.id))
+              cameraHidden: mediaInterest.isCameraHidden(p.id),
+              screen: (p.id === meId() ? screenSharing() : mediaInterest.isWatching(p.id))
                 ? screenStreamForPerson(p)
                 : null,
               screenOffered: p.screen,
-              watching: p.id === meId() || watchingStreams.has(p.id),
+              watching: p.id === meId() || mediaInterest.isWatching(p.id),
             }))
         : [];
     },
