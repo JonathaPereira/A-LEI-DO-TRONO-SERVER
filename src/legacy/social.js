@@ -5,10 +5,9 @@ window.TronoSocial = (() => {
   const profileActivities = new Map();
   let lastSfuError = '';
   const profileMedia = new Map();
-  let mutedBeforeDeafen = false;
 
-  const clampGain = (v) => Math.min(300, Math.max(0, Math.round((Number(v) || 0) / 5) * 5));
-  let microphoneVolume = clampGain(storage.getItem('mnMicrophoneGain') ?? 100);
+  const clampGain = window.TronoVoiceCapture.clampAudioGain;
+  const controlState = () => callControls.getSnapshot();
   let volumeOwner = null;
   const watchingStreams = new Set();
   const hiddenCameras = new Set();
@@ -41,7 +40,7 @@ window.TronoSocial = (() => {
   }
   function renderGainValues() {
     for (const [prefix, value] of [
-      ['mic', microphoneVolume],
+      ['mic', controlState().microphoneVolume],
       ['output', audioPlayback.getSnapshot().volume],
     ]) {
       const slider = $(`${prefix}GainSlider`),
@@ -103,13 +102,6 @@ window.TronoSocial = (() => {
     renderVoiceRoster();
     renderScreenGrid();
   }
-  function setMicrophoneGain(value) {
-    microphoneVolume = clampGain(value);
-    storage.setItem('mnMicrophoneGain', String(microphoneVolume));
-    microphone.setGain(microphoneVolume);
-    void refreshMicPipeline().catch((err) => console.warn('[TronoSocial] ganho do microfone', err));
-    renderGainValues();
-  }
   function setOutputGain(value) {
     unlockCallAudio();
     audioPlayback.setVolume(value);
@@ -132,22 +124,10 @@ window.TronoSocial = (() => {
     chatRoomState = null,
     gameRoomState = null;
   let localStream = null;
-  let micMuted = false;
-  let deafened = false;
-  let cameraTogglePending = null;
   let panelOpen = false;
   let chatHubMode = false;
   const panelMode = 'floating';
   let chatMuted = storage.getItem('tronoChatMuted') === '1';
-  let noiseSuppression = storage.getItem('tronoNoiseSuppression') !== '0';
-  let noiseEngine = window.TronoDesktop
-    ? storage.getItem('mnDesktopNoiseMode') || (noiseSuppression ? 'native' : 'off')
-    : 'rnnoise';
-  if (!['native', 'rnnoise', 'off'].includes(noiseEngine)) noiseEngine = 'native';
-  if (window.TronoDesktop) noiseSuppression = noiseEngine !== 'off';
-  let voiceLightMode = storage.getItem('tronoVoiceLightMode') === '1';
-  let selectedInput = storage.getItem('tronoVoiceInput') || '';
-  let selectedCamera = storage.getItem('tronoCameraInput') || '';
   const { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } = window.TronoVoiceCapture;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
   let shareStreamAudio = storage.getItem('mnShareStreamAudio') !== '0';
@@ -203,7 +183,7 @@ window.TronoSocial = (() => {
       enabled: voiceCall.getSnapshot().joined,
       hidden: document.hidden,
       foreground: foreground(),
-      lightMode: voiceLightMode,
+      lightMode: controlState().voiceLightMode,
     }),
     getContext: ensureMediaAudioContext,
     createStream: (track) => new MediaStream([track]),
@@ -215,11 +195,14 @@ window.TronoSocial = (() => {
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
       generation: voiceCall.getSnapshot().generation,
-      enabled: noiseSuppression,
-      nativeOnly: !!(voiceLightMode || (window.TronoDesktop && noiseEngine === 'native')),
-      deviceId: selectedInput,
-      gain: microphoneVolume,
-      muted: micMuted,
+      enabled: controlState().noiseSuppression,
+      nativeOnly: !!(
+        controlState().voiceLightMode ||
+        (window.TronoDesktop && controlState().noiseEngine === 'native')
+      ),
+      deviceId: controlState().selectedInput,
+      gain: controlState().microphoneVolume,
+      muted: controlState().micMuted,
     }),
     getStream: ensureLocalStream,
     customSuppressionSupported: () => !!window.TronoNoise?.supported(ensureMediaAudioContext()),
@@ -271,17 +254,13 @@ window.TronoSocial = (() => {
     getSettings: () => ({
       generation: voiceCall.getSnapshot().generation,
       joined: voiceCall.getSnapshot().joined,
-      deviceId: selectedCamera,
+      deviceId: controlState().selectedCamera,
       format: qualityProfile().camera,
     }),
     getStream: ensureLocalStream,
     onStarted: publishCamera,
     onStopped: cameraStopped,
-    onDeviceMissing: (deviceId) => {
-      if (selectedCamera !== deviceId) return;
-      selectedCamera = '';
-      storage.removeItem('tronoCameraInput');
-    },
+    onDeviceMissing: (deviceId) => callControls.forgetCamera(deviceId),
   });
   const cameraOn = () => cameraCapture.getSnapshot().capture !== null;
   cameraCapture.subscribe(renderCameraState);
@@ -368,7 +347,7 @@ window.TronoSocial = (() => {
     storage,
     getSettings: () => ({
       enabled: window.TronoAudio?.sfxEnabled !== false,
-      muted: deafened || storage.getItem('tronoSfxEnabled') === '0',
+      muted: controlState().deafened || storage.getItem('tronoSfxEnabled') === '0',
       output: audioPlayback.getSnapshot().output,
     }),
     createContext: () => {
@@ -532,7 +511,7 @@ window.TronoSocial = (() => {
     announce: (mode) =>
       window.TronoNetwork?.setVoiceState(
         true,
-        micMuted,
+        controlState().micMuted,
         cameraOn(),
         screenSharing(),
         qualityPreferences().transmissionQuality,
@@ -588,6 +567,48 @@ window.TronoSocial = (() => {
     onChange: updateButtons,
   });
   const { toggle: joinVoice, leave: leaveVoice } = voiceCall;
+  const callControls = window.TronoVoiceCapture.createCallControls({
+    desktop: !!window.TronoDesktop,
+    storage,
+    call: () => voiceCall.getSnapshot(),
+    join: joinVoice,
+    microphone,
+    camera: cameraCapture,
+    watchMicrophone: () => speakingIndicators.watch(meId(), localStream),
+    setDeafened: (value) => audioPlayback.setDeafened(value),
+    unlockAudio: unlockCallAudio,
+    announce: () =>
+      window.TronoNetwork?.setVoiceState(
+        voiceCall.getSnapshot().joined,
+        controlState().micMuted,
+        cameraOn(),
+        screenSharing(),
+        qualityPreferences().transmissionQuality,
+        announcedTransport(),
+      ),
+    restartTelemetry: () => voiceTelemetry.start(),
+    isSfu: () => transportIsSfu(),
+    onStatus: setStatus,
+    onChange: (change) => {
+      if (change === 'processing' || change === 'gain') updateNoiseButton();
+      if (change === 'gain') renderGainValues();
+      if (change === 'mute') {
+        updateButtons();
+        renderVoiceRoster();
+        updateMediaIndicators();
+      }
+      if (change === 'camera') {
+        updateButtons();
+        renderVideoGrid();
+        renderSeatMedia();
+      }
+    },
+  });
+
+  const controlBindings = window.TronoVoiceCapture.createCallControlBindings({
+    controls: callControls,
+    root: document,
+  });
   const voiceRoster = window.TronoVoiceCapture.createVoiceRoster({
     localId: meId,
     call: () => voiceCall.getSnapshot(),
@@ -854,17 +875,6 @@ window.TronoSocial = (() => {
     }
     updateTelemetryHeader();
   }
-  function cameraErrorMessage(err) {
-    if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError')
-      return 'Permita o acesso à câmera nas configurações deste site no navegador.';
-    if (err?.name === 'NotReadableError' || err?.name === 'AbortError')
-      return 'A câmera está ocupada ou não iniciou. Feche outros aplicativos que usam a câmera e escolha a entrada em Configurações → Vídeo.';
-    if (err?.name === 'NotFoundError')
-      return 'Nenhuma câmera disponível. Conecte uma câmera e escolha a entrada em Configurações → Vídeo.';
-    if (err?.name === 'OverconstrainedError')
-      return 'Esta câmera não aceitou a captura. Escolha outra entrada em Configurações → Vídeo.';
-    return err?.message || 'Não foi possível abrir a câmera.';
-  }
   function applySenderQuality(sender, kind) {
     return callQuality.applySender(sender, kind);
   }
@@ -880,7 +890,7 @@ window.TronoSocial = (() => {
     if (generation !== voiceCall.getSnapshot().generation) return;
     window.TronoNetwork?.setVoiceState(
       voiceCall.getSnapshot().joined,
-      micMuted,
+      controlState().micMuted,
       cameraOn(),
       screenSharing(),
       qualityPreferences().transmissionQuality,
@@ -1160,6 +1170,7 @@ window.TronoSocial = (() => {
       output = $('voiceOutputSelect'),
       camera = $('cameraInputSelect');
     if (!input || !output || !camera) return;
+    const observed = controlState();
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const ins = devices.filter((d) => d.kind === 'audioinput'),
@@ -1192,17 +1203,16 @@ window.TronoSocial = (() => {
               `<option value="${esc(d.deviceId)}">${esc(d.label || `Câmera ${i + 1}`)}</option>`,
           )
           .join('');
-      if (ins.some((d) => d.deviceId === selectedInput)) input.value = selectedInput;
-      else selectedInput = input.value || '';
+      callControls.reconcileDevices(
+        ins.map((d) => d.deviceId),
+        cams.map((d) => d.deviceId),
+        observed,
+      );
+      input.value = controlState().selectedInput;
+      camera.value = controlState().selectedCamera;
       if (outs.some((d) => d.deviceId === audioPlayback.getSnapshot().output))
         output.value = audioPlayback.getSnapshot().output;
       else if (audioPlayback.getSnapshot().output) void audioPlayback.setOutput(output.value || '');
-      if (cams.some((d) => d.deviceId === selectedCamera)) camera.value = selectedCamera;
-      else if (cams.some((d) => d.deviceId)) {
-        selectedCamera = '';
-        camera.value = '';
-        storage.removeItem('tronoCameraInput');
-      }
       if (!('setSinkId' in HTMLMediaElement.prototype)) {
         output.disabled = true;
         output.title = 'Este navegador não permite escolher a saída de áudio pelo site.';
@@ -1321,7 +1331,7 @@ window.TronoSocial = (() => {
   function announceCamera() {
     window.TronoNetwork?.setVoiceState(
       voiceCall.getSnapshot().joined,
-      micMuted,
+      controlState().micMuted,
       cameraOn(),
       screenSharing(),
       qualityPreferences().transmissionQuality,
@@ -1331,7 +1341,7 @@ window.TronoSocial = (() => {
   }
   function cameraStopped() {
     if (!voiceCall.getSnapshot().joined) return;
-    cameraTogglePending = null;
+    callControls.cancelPending();
     announceCamera();
     // Device release and state announcements cannot wait for transport detach.
     if (transportIsSfu()) void closeSfuPublication('camera');
@@ -1350,7 +1360,7 @@ window.TronoSocial = (() => {
     localScreenCollapsed = false;
     window.TronoNetwork?.setVoiceState(
       true,
-      micMuted,
+      controlState().micMuted,
       cameraOn(),
       true,
       qualityPreferences().transmissionQuality,
@@ -1397,7 +1407,7 @@ window.TronoSocial = (() => {
     const sound = stream.getAudioTracks()[0];
     window.TronoNetwork?.setVoiceState(
       true,
-      micMuted,
+      controlState().micMuted,
       cameraOn(),
       true,
       qualityPreferences().transmissionQuality,
@@ -1466,7 +1476,7 @@ window.TronoSocial = (() => {
     if (sendState)
       window.TronoNetwork?.setVoiceState(
         voiceCall.getSnapshot().joined,
-        micMuted,
+        controlState().micMuted,
         cameraOn(),
         false,
         qualityPreferences().transmissionQuality,
@@ -1725,13 +1735,13 @@ window.TronoSocial = (() => {
   }
   function personVoiceSummary(p) {
     const self = p.id === meId(),
-      muted = self ? micMuted : !!p.muted,
+      muted = self ? controlState().micMuted : !!p.muted,
       cam = self ? cameraOn() : !!p.camera,
       screen = self ? screenSharing() : !!p.screen,
       transport = self ? announcedTransport() : p.transport || 'p2p';
     return (
       (muted ? 'microfone mutado' : speakingIndicators.isSpeaking(p.id) ? 'falando…' : 'na voz') +
-      ((self ? deafened : p.deafened) ? ' • áudio silenciado' : '') +
+      ((self ? controlState().deafened : p.deafened) ? ' • áudio silenciado' : '') +
       (cam ? (hiddenCameras.has(p.id) ? ' • câmera oculta' : ' • 📷 câmera') : '') +
       (screen ? ' • 🖥 tela' : '') +
       (transport === 'sfu' ? ' • ☁ SFU' : transport === 'sfu-pending' ? ' • conectando…' : '')
@@ -1814,8 +1824,8 @@ window.TronoSocial = (() => {
       }
     for (const p of players) {
       const self = p.id === me,
-        muted = self ? micMuted : !!p.muted,
-        silenced = self ? deafened : !!p.deafened,
+        muted = self ? controlState().micMuted : !!p.muted,
+        silenced = self ? controlState().deafened : !!p.deafened,
         cam = self ? cameraOn() : !!p.camera,
         screen = self ? screenSharing() : !!p.screen,
         speaking = !muted && speakingIndicators.isSpeaking(p.id),
@@ -2311,7 +2321,8 @@ window.TronoSocial = (() => {
     for (const card of document.querySelectorAll('#voiceRoster .voice-person')) {
       const p = privateVoiceRoster.get(card.dataset.peer);
       if (!p) continue;
-      const speaking = !(p.id === me ? micMuted : p.muted) && speakingIndicators.isSpeaking(p.id);
+      const speaking =
+        !(p.id === me ? controlState().micMuted : p.muted) && speakingIndicators.isSpeaking(p.id);
       card.classList.toggle('speaking', speaking);
       const summary = card.querySelector('.participant-summary');
       if (summary) summary.textContent = personVoiceSummary(p);
@@ -2319,22 +2330,20 @@ window.TronoSocial = (() => {
     for (const tile of document.querySelectorAll('.seat-camera-tile,.camera-tile')) {
       const p = privateVoiceRoster.get(tile.dataset.peer);
       if (!p) continue;
-      const muted = p.id === me ? micMuted : !!p.muted,
+      const muted = p.id === me ? controlState().micMuted : !!p.muted,
         speaking = !muted && speakingIndicators.isSpeaking(p.id);
       tile.classList.toggle('speaking', speaking);
       renderVoiceStatus(
         tile.querySelector('.seat-camera-mic'),
         muted,
-        p.id === me ? deafened : !!p.deafened,
+        p.id === me ? controlState().deafened : !!p.deafened,
       );
     }
   }
 
   function prepareCallUi() {
     unlockCallAudio();
-    micMuted = false;
-    deafened = false;
-    mutedBeforeDeafen = false;
+    callControls.resetParticipation();
     watchingStreams.clear();
     hiddenCameras.clear();
     profileMedia.clear();
@@ -2382,7 +2391,7 @@ window.TronoSocial = (() => {
     );
   }
   function showLeftCall(reason, wasInVoice) {
-    cameraTogglePending = null;
+    callControls.cancelPending();
     watchingStreams.clear();
     hiddenCameras.clear();
     voiceRoster.reset();
@@ -2404,8 +2413,7 @@ window.TronoSocial = (() => {
     $('deafenVoiceBtn').disabled = true;
     $('cameraBtn').disabled = false;
     if ($('screenShareBtn')) $('screenShareBtn').disabled = true;
-    micMuted = false;
-    deafened = false;
+    callControls.resetParticipation();
     updateButtons();
     updateRealtimeUI();
     setStatus('Fora do chat de voz.');
@@ -2414,114 +2422,14 @@ window.TronoSocial = (() => {
     renderScreenGrid();
     renderSeatMedia();
   }
-  function applyMicrophoneMute() {
-    microphone.setMuted(micMuted);
-  }
-  function toggleMute() {
-    if (!voiceCall.getSnapshot().joined || deafened) return;
-    micMuted = !micMuted;
-    applyMicrophoneMute();
-    window.TronoNetwork?.setVoiceState(
-      true,
-      micMuted,
-      cameraOn(),
-      screenSharing(),
-      qualityPreferences().transmissionQuality,
-      announcedTransport(),
-    );
-    updateButtons();
-    renderVoiceRoster();
-    updateMediaIndicators();
-  }
-  function toggleDeafen() {
-    if (!voiceCall.getSnapshot().joined) return;
-    if (!deafened) {
-      mutedBeforeDeafen = micMuted;
-      deafened = true;
-      micMuted = true;
-    } else {
-      deafened = false;
-      micMuted = mutedBeforeDeafen;
-    }
-    applyMicrophoneMute();
-    audioPlayback.setDeafened(deafened);
-    if (!deafened) unlockCallAudio();
-    window.TronoNetwork?.setVoiceState(
-      true,
-      micMuted,
-      cameraOn(),
-      screenSharing(),
-      qualityPreferences().transmissionQuality,
-      announcedTransport(),
-    );
-    updateButtons();
-    renderVoiceRoster();
-    updateMediaIndicators();
-  }
-  async function toggleCamera() {
-    if (cameraOn()) {
-      cameraCapture.stop();
-      setStatus('Câmera desligada.', 'ok');
-      return;
-    }
-    if (cameraTogglePending || cameraCapture.getSnapshot().loading) return;
-    const intent = {};
-    cameraTogglePending = intent;
-    updateButtons();
-    try {
-      if (!voiceCall.getSnapshot().joined) {
-        const ok = await joinVoice();
-        if (!ok) return;
-      }
-      if (cameraTogglePending !== intent) return;
-      setStatus('Solicitando acesso à câmera...');
-      await acquireCamera();
-      if (cameraTogglePending !== intent) return;
-      setStatus(
-        transportIsSfu()
-          ? 'Câmera publicada no Cloudflare SFU.'
-          : 'Câmera ligada e distribuída à malha P2P.',
-        'ok',
-      );
-      updateButtons();
-    } catch (err) {
-      if (err?.code !== 'CAMERA_CANCELLED') {
-        setStatus(cameraErrorMessage(err), 'error');
-        renderVideoGrid();
-        renderSeatMedia();
-      }
-    } finally {
-      if (cameraTogglePending === intent) cameraTogglePending = null;
-      updateButtons();
-    }
-  }
-
   function noiseState() {
-    const processor = microphone.getSnapshot().capture?.processor,
-      settings =
-        microphone.getSnapshot().capture?.rawStream.getAudioTracks()[0]?.getSettings?.() || {};
-    const activeMode = processor?.mode === 'gain-only' ? null : processor?.mode;
-    const mode = microphone.getSnapshot().loading
-      ? 'loading'
-      : !voiceCall.getSnapshot().joined
-        ? 'idle'
-        : processor &&
-            microphone.getSnapshot().capture?.outgoingTrack === processor.track &&
-            processor.ctx.state !== 'running'
-          ? 'paused'
-          : activeMode || (settings.noiseSuppression ? 'native' : 'unavailable');
-    return {
-      requested: noiseSuppression,
-      mode: noiseSuppression ? mode : 'off',
-      nativeSuppression: settings.noiseSuppression === true,
-      sampleRate: processor?.ctx.sampleRate || settings.sampleRate || null,
-    };
+    return callControls.noiseState();
   }
   function updateNoiseButton() {
     updateVoiceLightMode();
     const select = $('noiseModeSelect');
     if (select) {
-      select.value = noiseSuppression ? noiseEngine : 'off';
+      select.value = controlState().noiseSuppression ? controlState().noiseEngine : 'off';
       select.disabled = microphone.getSnapshot().loading;
     }
     const b = $('noiseSuppressionBtn');
@@ -2531,7 +2439,7 @@ window.TronoSocial = (() => {
       off: ['Desligado', 'Supressão desligada. O controle de volume continua ativo.'],
       idle: [
         'Preparado',
-        voiceLightMode
+        controlState().voiceLightMode
           ? 'Modo leve: a redução nativa será solicitada ao entrar na voz.'
           : 'O RNNoise será ativado no seu microfone ao entrar na voz.',
       ],
@@ -2547,130 +2455,32 @@ window.TronoSocial = (() => {
         'Não foi possível ativar a supressão. O microfone continua transmitindo.',
       ],
     };
-    if (mode === 'idle' && (voiceLightMode || noiseEngine === 'native'))
+    if (
+      mode === 'idle' &&
+      (controlState().voiceLightMode || controlState().noiseEngine === 'native')
+    )
       labels.idle = ['Preparado', 'A redução nativa será solicitada ao entrar na voz.'];
     const [label, detail] = labels[mode];
     b.disabled = microphone.getSnapshot().loading;
-    b.classList.toggle('noise-active', noiseSuppression);
-    b.classList.toggle('danger-active', !noiseSuppression);
+    b.classList.toggle('noise-active', controlState().noiseSuppression);
+    b.classList.toggle('danger-active', !controlState().noiseSuppression);
     b.textContent = 'Supressor: ' + label;
     b.title = detail;
     b.dataset.engine = mode;
-    b.setAttribute('aria-pressed', String(noiseSuppression));
+    b.setAttribute('aria-pressed', String(controlState().noiseSuppression));
     if ($('noiseSuppressionStatus')) $('noiseSuppressionStatus').textContent = detail;
-  }
-  async function toggleNoiseSuppression() {
-    if (microphone.getSnapshot().loading) return;
-    const previous = noiseSuppression;
-    noiseSuppression = !noiseSuppression;
-    storage.setItem('tronoNoiseSuppression', noiseSuppression ? '1' : '0');
-    updateNoiseButton();
-    if (voiceCall.getSnapshot().joined) {
-      try {
-        await acquireMic();
-        await speakingIndicators.watch(meId(), localStream);
-        setStatus(
-          noiseState().mode === 'rnnoise'
-            ? 'RNNoise ativo no microfone.'
-            : noiseSuppression
-              ? 'Processamento do microfone atualizado.'
-              : 'Supressor desligado.',
-          'ok',
-        );
-      } catch (err) {
-        noiseSuppression = previous;
-        storage.setItem('tronoNoiseSuppression', previous ? '1' : '0');
-        updateNoiseButton();
-        if (err?.code !== 'VOICE_CANCELLED')
-          setStatus('Não foi possível atualizar o processamento do microfone.', 'error');
-      }
-    }
-  }
-  async function setNoiseMode(value) {
-    if (
-      !window.TronoDesktop ||
-      microphone.getSnapshot().loading ||
-      !['native', 'rnnoise', 'off'].includes(value)
-    )
-      return;
-    const previous = { noiseEngine, noiseSuppression, voiceLightMode };
-    noiseEngine = value;
-    noiseSuppression = value !== 'off';
-    if (value === 'rnnoise') voiceLightMode = false;
-    const save = () => {
-      storage.setItem('mnDesktopNoiseMode', noiseEngine);
-      storage.setItem('tronoNoiseSuppression', noiseSuppression ? '1' : '0');
-      storage.setItem('tronoVoiceLightMode', voiceLightMode ? '1' : '0');
-      updateNoiseButton();
-      voiceTelemetry.start();
-    };
-    save();
-    try {
-      if (voiceCall.getSnapshot().joined) {
-        await acquireMic();
-        await speakingIndicators.watch(meId(), localStream);
-      }
-      setStatus(
-        value === 'native'
-          ? 'Redução nativa selecionada.'
-          : value === 'rnnoise'
-            ? 'RNNoise selecionado.'
-            : 'Redução de ruído desligada.',
-        'ok',
-      );
-    } catch (err) {
-      ({ noiseEngine, noiseSuppression, voiceLightMode } = previous);
-      save();
-      if (err?.code !== 'VOICE_CANCELLED')
-        setStatus(
-          'Não foi possível mudar a redução de ruído. A opção anterior foi mantida.',
-          'error',
-        );
-    }
   }
   function updateVoiceLightMode() {
     speakingIndicators.refresh();
     const button = $('voiceLightModeBtn');
     if (button) {
       button.disabled = microphone.getSnapshot().loading;
-      button.textContent = 'Modo leve para jogar: ' + (voiceLightMode ? 'Ligado' : 'Desligado');
-      button.setAttribute('aria-pressed', String(voiceLightMode));
-      button.classList.toggle('noise-active', voiceLightMode);
+      button.textContent =
+        'Modo leve para jogar: ' + (controlState().voiceLightMode ? 'Ligado' : 'Desligado');
+      button.setAttribute('aria-pressed', String(controlState().voiceLightMode));
+      button.classList.toggle('noise-active', controlState().voiceLightMode);
     }
-    document.body.classList.toggle('voice-light-mode', voiceLightMode);
-  }
-  async function toggleVoiceLightMode() {
-    if (microphone.getSnapshot().loading) return;
-    const previous = voiceLightMode,
-      previousEngine = noiseEngine;
-    voiceLightMode = !voiceLightMode;
-    if (window.TronoDesktop && voiceLightMode && noiseSuppression) {
-      noiseEngine = 'native';
-      storage.setItem('mnDesktopNoiseMode', noiseEngine);
-    }
-    storage.setItem('tronoVoiceLightMode', voiceLightMode ? '1' : '0');
-    updateNoiseButton();
-    voiceTelemetry.start();
-    if (!voiceCall.getSnapshot().joined) return;
-    try {
-      await acquireMic();
-      await speakingIndicators.watch(meId(), localStream);
-      setStatus(
-        voiceLightMode
-          ? 'Modo leve ativo: redução nativa e menos trabalho visual.'
-          : 'Modo leve desligado. Preferências de áudio restauradas.',
-        'ok',
-      );
-    } catch (err) {
-      voiceLightMode = previous;
-      noiseEngine = previousEngine;
-      if (window.TronoDesktop) storage.setItem('mnDesktopNoiseMode', noiseEngine);
-      storage.setItem('tronoVoiceLightMode', previous ? '1' : '0');
-      updateNoiseButton();
-      voiceTelemetry.start();
-      if (err?.code !== 'VOICE_CANCELLED')
-        setStatus('Não foi possível mudar o processamento. O modo anterior foi mantido.', 'error');
-    }
+    document.body.classList.toggle('voice-light-mode', controlState().voiceLightMode);
   }
 
   function updateButtons() {
@@ -2679,9 +2489,9 @@ window.TronoSocial = (() => {
       c = $('cameraBtn'),
       s = $('screenShareBtn');
     if (m)
-      m.innerHTML = `<span class="call-icon">${micMuted ? '🔇' : '🎙'}</span><span>${micMuted ? 'Ativar microfone' : 'Mutar microfone'}</span>`;
+      m.innerHTML = `<span class="call-icon">${controlState().micMuted ? '🔇' : '🎙'}</span><span>${controlState().micMuted ? 'Ativar microfone' : 'Mutar microfone'}</span>`;
     if (d)
-      d.innerHTML = `<span class="call-icon">${deafened ? '🔈' : '🔊'}</span><span>${deafened ? 'Ouvir voz' : 'Silenciar voz'}</span>`;
+      d.innerHTML = `<span class="call-icon">${controlState().deafened ? '🔈' : '🔊'}</span><span>${controlState().deafened ? 'Ouvir voz' : 'Silenciar voz'}</span>`;
     if (c)
       c.innerHTML = `<span class="call-icon">${cameraOn() ? '▧' : '▣'}</span><span>${cameraOn() ? 'Desligar câmera' : 'Ligar câmera'}</span>`;
     if (s) {
@@ -2692,11 +2502,11 @@ window.TronoSocial = (() => {
     }
     $('joinVoiceBtn')?.classList.toggle('call-active', voiceCall.getSnapshot().joined);
     if (m) {
-      m.disabled = !voiceCall.getSnapshot().joined || deafened;
-      m.title = deafened ? 'Ative o áudio da chamada para liberar o microfone.' : '';
+      m.disabled = !voiceCall.getSnapshot().joined || controlState().deafened;
+      m.title = controlState().deafened ? 'Ative o áudio da chamada para liberar o microfone.' : '';
     }
-    m?.classList.toggle('danger-active', micMuted);
-    d?.classList.toggle('danger-active', deafened);
+    m?.classList.toggle('danger-active', controlState().micMuted);
+    d?.classList.toggle('danger-active', controlState().deafened);
     c?.classList.toggle('camera-active', cameraOn());
     s?.classList.toggle('screen-active', screenSharing());
     updateNoiseButton();
@@ -2725,41 +2535,29 @@ window.TronoSocial = (() => {
       c.disabled =
         textOnly ||
         joining ||
-        (!cameraOn() && (cameraTogglePending || !!cameraCapture.getSnapshot().loading)) ||
+        (!cameraOn() &&
+          (controlState().cameraTogglePending || !!cameraCapture.getSnapshot().loading)) ||
         (document.body.dataset.appLayout === 'discord' && !voiceCall.getSnapshot().joined);
     for (const [button, on] of [
-      [m, micMuted],
-      [d, deafened],
+      [m, controlState().micMuted],
+      [d, controlState().deafened],
       [c, cameraOn()],
       [s, screenSharing()],
     ])
       button?.setAttribute('aria-pressed', String(on));
     if ($('cameraInputSelect'))
       $('cameraInputSelect').disabled =
-        cameraTogglePending || !!cameraCapture.getSnapshot().loading;
+        controlState().cameraTogglePending || !!cameraCapture.getSnapshot().loading;
     window.dispatchEvent(
       new CustomEvent('trono-call-change', {
         detail: {
           joined: voiceCall.getSnapshot().joined,
           joining,
-          deafened,
+          deafened: controlState().deafened,
           roomId: roomState?.id,
         },
       }),
     );
-  }
-  async function changeInput(e) {
-    selectedInput = e.target.value || '';
-    storage.setItem('tronoVoiceInput', selectedInput);
-    if (voiceCall.getSnapshot().joined) {
-      try {
-        await acquireMic();
-        await speakingIndicators.watch(meId(), localStream);
-        setStatus('Microfone alterado.', 'ok');
-      } catch (err) {
-        setStatus('Não foi possível trocar o microfone.', 'error');
-      }
-    }
   }
   async function changeOutput(e) {
     const request = audioPlayback.setOutput(e.target.value || '');
@@ -2771,19 +2569,6 @@ window.TronoSocial = (() => {
       );
     }
     renderTelemetry();
-  }
-  async function changeCamera(e) {
-    if (cameraCapture.getSnapshot().loading) return;
-    selectedCamera = e.target.value || '';
-    storage.setItem('tronoCameraInput', selectedCamera);
-    if (cameraOn()) {
-      try {
-        await acquireCamera();
-        setStatus('Câmera alterada.', 'ok');
-      } catch (err) {
-        if (err?.code !== 'CAMERA_CANCELLED') setStatus(cameraErrorMessage(err), 'error');
-      }
-    }
   }
 
   function consumeChatRoom(room) {
@@ -2854,7 +2639,7 @@ window.TronoSocial = (() => {
     const received = snapshot.entries.filter(({ key }) => !key.startsWith('stream:'));
     const expected = detailedPlayers().filter((p) => p.id !== meId() && p.joined).length;
     if (!voiceCall.getSnapshot().joined) return { label: 'Fora da chamada', expected, count: 0 };
-    if (deafened)
+    if (controlState().deafened)
       return {
         label: 'Voz silenciada neste aparelho',
         expected,
@@ -3216,8 +3001,8 @@ window.TronoSocial = (() => {
       platform: window.TronoDesktop ? 'Windows' : 'Navegador',
       call: {
         joined: voiceCall.getSnapshot().joined,
-        muted: micMuted,
-        deafened,
+        muted: controlState().micMuted,
+        deafened: controlState().deafened,
         camera: cameraOn(),
         screen: screenSharing(),
         transport: announcedTransport(),
@@ -3326,6 +3111,7 @@ window.TronoSocial = (() => {
     voiceCall.start();
     voiceTransport.start();
     voiceRoster.start();
+    controlBindings.start();
     $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
       const enabled = e.target.checked;
@@ -3364,13 +3150,9 @@ window.TronoSocial = (() => {
     }
 
     $('joinVoiceBtn')?.addEventListener('click', joinVoice);
-    $('muteMicBtn')?.addEventListener('click', toggleMute);
-    $('deafenVoiceBtn')?.addEventListener('click', toggleDeafen);
-    $('cameraBtn')?.addEventListener('click', toggleCamera);
     $('screenShareBtn')?.addEventListener('click', toggleScreenShare);
     $('voiceSettingsBtn')?.addEventListener('click', () => toggleVoiceSettings());
     $('voiceSettingsClose')?.addEventListener('click', () => toggleVoiceSettings(false));
-    $('noiseSuppressionBtn')?.addEventListener('click', toggleNoiseSuppression);
     $('voiceSfxBtn')?.addEventListener('click', toggleVoiceSfx);
     $('voiceMusicBtn')?.addEventListener('click', toggleVoiceMusic);
     $('refreshDevicesBtn')?.addEventListener('click', enumerateDevices);
@@ -3382,7 +3164,6 @@ window.TronoSocial = (() => {
       .forEach((btn) =>
         btn.addEventListener('click', () => setSettingsTab(btn.dataset.settingsTab)),
       );
-    $('micGainSlider')?.addEventListener('input', (e) => setMicrophoneGain(e.target.value));
     $('outputGainSlider')?.addEventListener('input', (e) => setOutputGain(e.target.value));
     $('resumeAudioBtn')?.addEventListener('click', () => {
       unlockCallAudio();
@@ -3433,12 +3214,8 @@ window.TronoSocial = (() => {
       callQuality.configure({ screenContent: e.target.value === 'motion' ? 'motion' : 'detail' });
       await applyQualityToLiveMedia();
     });
-    $('voiceInputSelect')?.addEventListener('change', changeInput);
     $('voiceOutputSelect')?.addEventListener('change', changeOutput);
-    $('cameraInputSelect')?.addEventListener('change', changeCamera);
     $('transmissionQualitySelect')?.addEventListener('change', changeTransmissionQuality);
-    $('noiseModeSelect')?.addEventListener('change', (e) => void setNoiseMode(e.target.value));
-    $('voiceLightModeBtn')?.addEventListener('click', toggleVoiceLightMode);
     if ($('callAlertVolume')) $('callAlertVolume').value = callAlerts.getSnapshot().volume;
     if ($('callAlertVolumeValue'))
       $('callAlertVolumeValue').textContent = `${callAlerts.getSnapshot().volume}%`;
@@ -3623,13 +3400,13 @@ window.TronoSocial = (() => {
       return screenSharing();
     },
     get voiceLightMode() {
-      return voiceLightMode;
+      return controlState().voiceLightMode;
     },
     get noiseSuppression() {
-      return noiseSuppression;
+      return controlState().noiseSuppression;
     },
     get noiseMode() {
-      return noiseSuppression ? noiseEngine : 'off';
+      return controlState().noiseSuppression ? controlState().noiseEngine : 'off';
     },
     get noiseState() {
       return noiseState();
@@ -3676,7 +3453,7 @@ window.TronoSocial = (() => {
       };
     },
     get deafened() {
-      return deafened;
+      return controlState().deafened;
     },
     toggleWatchStream,
     toggleWatchCamera,

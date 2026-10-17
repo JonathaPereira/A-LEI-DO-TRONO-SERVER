@@ -36,6 +36,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Preferências/qualidade/adaptação, filas dos encoders e exportação anônima em TypeScript.
 - Lista privada de voz, eventos e sincronização de participantes P2P/SFU em TypeScript.
 - Contexto compartilhado do microfone, desbloqueio de áudio e avisos em TypeScript.
+- Estado, ações e listeners dos controles de áudio/câmera em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -62,8 +63,8 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Controles/configurações
-da chamada, edição/visualização de perfis e galeria, navegação/
+React ou TypeScript apenas porque a marcação foi convertida. Renderização/configurações
+da chamada e intenções de assistir mídias, edição/visualização de perfis e galeria, navegação/
 gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -895,9 +896,51 @@ não se reproduziu nesta execução; isso não prova sua correção definitiva. 
 de 7,5 s e o processamento de áudio não foram alterados.
 Sem push, publicação ou alteração de infraestrutura.
 
+## Estado, ações e listeners dos controles em TypeScript — 17/10/2026
+
+- `lib/voice/controls.ts` possui mute, silenciamento/restauração do mute anterior,
+  ganho, preferências de ruído/modo leve, entradas de microfone/câmera e intenção
+  de abrir câmera. `types/voice-controls.ts` descreve snapshots e diagnóstico.
+- Os donos de captura/processamento, reprodução, chamada e transporte são os mesmos.
+  Mute/silenciamento e ganho não abrem dispositivos. Perfis web/desktop, chaves de
+  armazenamento, passos/limites do ganho e mensagens de erro foram preservados.
+  Ganho reutiliza `clampAudioGain`, também exposto ao adaptador de volumes legados.
+- Processamento persiste antes da aquisição e faz rollback só dos campos alterados
+  em falhas atuais. Revisão/geração protegem preferências e status contra resultados
+  antigos. Câmera mantém autoentrada, bloqueio de cliques repetidos e cancelamento.
+  Enumeração atrasada não apaga uma entrada selecionada durante a espera.
+- `control-bindings.ts` possui os nove listeners de mute, silenciamento, câmera,
+  supressão, modo leve, dispositivos, ruído e ganho. Não há os listeners ou funções
+  substituídos em `social.js`, nem cópias das flags/preferências. Mover o mesmo nó
+  entre layouts conserva o listener; o descarte remove todos os registros.
+- `social.js` ainda renderiza botões/painéis e conserva opções de compartilhamento,
+  visualização das mídias e outros fluxos não convertidos. Esta etapa não declara
+  esses painéis convertidos em React. `test:voice:controls` cobre 25 regressões e
+  integra `npm test`, incluindo rollback, cancelamento, dispositivos e bindings.
+
+Passaram tipagem, formatação, build estático, `npm test`, quatro fluxos de interface,
+124 checks de SFU e 15 checks de mídia/controles no navegador. No Electron passaram
+P2P/layouts/navegação/permissões, relay SFU e PCM dos avisos com contextos separados.
+A rodada isolada de segundo plano (`controls-background.log`) também passou nos
+nove cenários: nativo a 100%/180% e RNNoise a 100%, com janela coberta, minimizada
+e oculta. Houve PCM finito, zero amostras reconstruídas e as mesmas capturas/peers;
+240 mil frames levaram de 4,989 a 5,000 s. O limite de 7,5 s foi mantido. As falhas
+de tempo anteriores não reapareceram nesta execução, sem afirmar correção definitiva.
+Nenhuma regra de bitrate/FPS ou grafo de captura/processamento foi alterada;
+testes locais não medem jogos ou rotas SFU/TURN externas.
+
+Evidências: `artifacts/controls-unit.log`, `controls-regressions.log`,
+`controls-ui.log`, `controls-sfu.log`, `controls-media.log`, `controls-desktop.log`,
+`controls-typecheck.log`, `controls-format.log`, `controls-build.log` e
+`controls-background.log`.
+Sem push, publicação ou mudança de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Converter controles/configurações da chamada ainda em `social.js`.
+1. Extrair intenções de assistir câmera/tela e opções restantes de compartilhamento;
+   converter apresentação dos controles/painéis em `social.js` para React quando
+   cada subárvore tiver um único dono. Estado/ações e os nove listeners de áudio/
+   câmera estão em `controls.ts`/`control-bindings.ts`; não restaurar flags locais.
    Contextos, desbloqueio e avisos estão em `call-audio.ts`/`call-alerts.ts`.
    O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
    Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.

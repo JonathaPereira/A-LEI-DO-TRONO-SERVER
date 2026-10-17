@@ -124,8 +124,8 @@ a saída, aplica mute/ganho zero a todas as trilhas e invalida publicações ant
 quando a seleção muda. Não reabre o dispositivo ao alternar o ganho.
 
 `legacy/social.js` cria uma instância pelas fábricas de compatibilidade instaladas
-pelo Next. Conserva preferências e intenção dos controles; delega aquisição, mute,
-ganho e encerramento físico ao módulo. Seu callback publica a nova trilha nos peers
+pelo Next. Conserva a apresentação dos controles; `controls.ts` possui preferências
+e intenção, delegando aquisição, mute, ganho e encerramento físico aos donos de mídia. Seu callback publica a nova trilha nos peers
 ou SFU, verificando se o pedido continua válido entre operações assíncronas.
 
 `screen-capture.ts` possui a fonte de tela e seu clone de saída, os listeners de
@@ -426,7 +426,29 @@ emprestado pelo processador. Reprodução recebida continua em `audio-playback.t
 separada do envio e dos avisos. `social.js` consulta os snapshots e conserva os
 adaptadores dos controles, sem contextos, cooldown ou listeners de desbloqueio próprios.
 
-`social.js` conserva a interface e a coordenação ainda não convertida dos controles.
+`controls.ts` possui mute/silenciamento, lembrança do mute anterior, ganho,
+preferências de supressão/modo leve, dispositivos escolhidos e intenção de abrir
+câmera. Não conserva participação, peers, trilhas ou outra cópia das capturas.
+As operações usam os donos de microfone/câmera existentes. Mute e silenciamento
+não recapturam; voltar a ouvir restaura o mute anterior. Ganho mantém passos de
+5% e limite de 300%, com o mesmo validador da reprodução recebida.
+
+Mudanças de processamento são persistidas antes da captura e restauradas em caso
+de falha atual. Revisão e geração impedem que uma falha antiga sobrescreva preferências
+ou status novos. RNNoise desliga o modo leve; no desktop o modo leve solicita nativo
+quando a supressão está ativa. A intenção da câmera pode iniciar a entrada na voz,
+mas é invalidada ao sair. Enumeração atrasada não limpa uma seleção mais recente;
+lista vazia de câmeras conserva a preferência até existir uma alternativa confirmada.
+
+`control-bindings.ts` possui os nove listeners desses botões/seletores/sliders.
+O registro é único; mover os nós entre layouts conserva os handlers e descartar
+remove os mesmos listeners. A ação começa dentro do evento original, preservando
+ativação de mídia. `social.js` consulta snapshots e pinta os nós existentes; sua
+renderização e os painéis de configuração ainda precisam de conversão React.
+Não criar outro estado de mute, preferências ou intenção de câmera nessa conversão.
+
+`social.js` conserva apresentação, navegação e controles de compartilhamento ainda
+não convertidos.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
