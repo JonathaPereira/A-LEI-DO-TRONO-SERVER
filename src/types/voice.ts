@@ -65,6 +65,10 @@ export interface CameraCapture {
   readonly source: MediaStream;
   readonly track: MediaStreamTrack;
 }
+export interface CameraCaptureChange {
+  readonly capture: CameraCapture;
+  isCurrent(): boolean;
+}
 export interface CameraSnapshot {
   readonly capture: CameraCapture | null;
   readonly loading: boolean;

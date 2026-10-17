@@ -1,10 +1,10 @@
-import type { CameraCapture, CameraSettings, CameraSnapshot } from '../../types/voice';
+import type { CameraCaptureChange, CameraSettings, CameraSnapshot } from '../../types/voice';
 
 interface CameraOptions {
   mediaDevices: Pick<MediaDevices, 'getUserMedia' | 'enumerateDevices'> | undefined;
   getSettings(): CameraSettings;
   getStream(): MediaStream;
-  onStarted(change: { capture: CameraCapture; isCurrent(): boolean }): Promise<void>;
+  onStarted(change: CameraCaptureChange): Promise<void>;
   onStopped(): void;
   onDeviceMissing(deviceId: string): void;
   warn?: (error: unknown) => void;

@@ -125,8 +125,9 @@ quando a seleção muda. Não reabre o dispositivo ao alternar o ganho.
 
 `legacy/social.js` cria uma instância pelas fábricas de compatibilidade instaladas
 pelo Next. Conserva a apresentação dos controles; `controls.ts` possui preferências
-e intenção, delegando aquisição, mute, ganho e encerramento físico aos donos de mídia. Seu callback publica a nova trilha nos peers
-ou SFU, verificando se o pedido continua válido entre operações assíncronas.
+e intenção, delegando aquisição, mute, ganho e encerramento físico aos donos de mídia.
+`device-publication.ts` recebe as trocas de trilha e publica nos peers/SFU,
+verificando a validade da operação entre esperas de transporte.
 
 `screen-capture.ts` possui a fonte de tela e seu clone de saída, os listeners de
 encerramento e o descarte de capturas atuais, atrasadas e em substituição. O pedido
@@ -150,9 +151,9 @@ padrão após confirmar que a entrada salva não existe mais.
 
 Parar ou sair invalida a geração do pedido sem aguardar permissão/publicação.
 Uma captura atrasada é encerrada; callbacks antigos não limpam o estado de um
-pedido posterior. `social.js` deriva `cameraOn` do snapshot, conserva preferências
-e intenção do botão e anuncia disponibilidade antes de aguardar publicação.
-Seu callback de parada anuncia e inicia o desligamento dos senders imediatamente.
+pedido posterior. `social.js` deriva `cameraOn` do snapshot; preferências e intenção
+do botão pertencem a `controls.ts`. `device-publication.ts` anuncia disponibilidade
+antes de aguardar publicação e inicia a retirada dos senders imediatamente ao parar.
 No P2P, uma substituição atrasada reconcilia o sender com a trilha atual para que
 um attach/detach anterior não sobrescreva uma câmera nova.
 
@@ -482,11 +483,23 @@ continuações antigas não aplicam qualidade, recuperam ou anunciam uma captura
 Não há mapas, trilhas, filas, timers ou conexões próprios nesse adaptador. O fallback
 SFU/P2P continua no dono do transporte; ele é reconsultado após a publicação.
 
-`social.js` conserva apresentação, navegação e adaptação de publicação do microfone
-(`publishMicrophone`) e câmera (`publishCamera`/`syncCameraSender`/`cameraStopped`).
-Esses callbacks também precisam sair do controlador; captura e negociação dos
-dispositivos já pertencem aos módulos tipados. A publicação da tela já está em
-`screen-publication.ts`, sem implementação paralela no legado.
+`device-publication.ts` coordena publicação/retomada do microfone e publicação/parada
+da câmera. Reutiliza senders, filas P2P, qualidade e recuperação SFU existentes;
+recebe trilhas emprestadas e não adquire ou encerra dispositivos. Ao trocar microfone,
+um peer com falha é recriado pelo seu dono; retomada conserva trilha e sender sem
+refazer captura ou qualidade. Falhas SFU de áudio/câmera permanecem independentes.
+Resultados obsoletos não recuperam, reconfiguram ou anunciam a chamada posterior.
+
+A reconciliação P2P da câmera reconsulta o snapshot de captura após cada replaceTrack:
+um attach/detach atrasado converge na trilha atual. Sair ou retirar o peer encerra
+a reconciliação. Parar anuncia a câmera desligada e cancela a intenção pendente sem
+aguardar a retirada do transporte. Não há estado, mapa de peers, timers ou captura
+paralelos no adaptador. `CameraCaptureChange` descreve seu evento em `types/voice.ts`.
+
+`social.js` conserva composição, apresentação e navegação, incluindo enumeração e
+pintura dos seletores de dispositivo. Os callbacks de publicação de microfone/câmera
+foram removidos; tela permanece em `screen-publication.ts`. A interface da chamada
+e seus painéis ainda precisam de conversão para React.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.

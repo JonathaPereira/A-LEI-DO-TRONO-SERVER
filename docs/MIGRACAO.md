@@ -40,6 +40,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Intenções de assistir/ocultar mídias e seus cliques em TypeScript.
 - Comandos/opções de compartilhar tela, diálogo e controles de prévia em TypeScript.
 - Coordenação da publicação da tela e fim do áudio compartilhado em TypeScript.
+- Publicação/retomada do microfone e publicação/parada da câmera em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -1028,14 +1029,49 @@ legados de publicação do microfone/câmera (`publishMicrophone`, `publishCamer
 `syncCameraSender`, `cameraStopped`). A captura e negociação desses dispositivos já
 estão nos módulos tipados; faltam os adaptadores de publicação, sem refazer os donos.
 
+## Publicação do microfone e da câmera — 17/10/2026
+
+- `lib/voice/device-publication.ts` recebe os eventos dos donos de microfone/câmera
+  e coordena seus senders e recuperação P2P/SFU. `publishMicrophone`, `publishCamera`,
+  `syncCameraSender`, `cameraStopped` e o alias sem uso `publishSfuTrack` foram
+  removidos de `social.js`. Ficaram composição, anúncios e pintura da interface.
+- Preservadas retomada do microfone sem recaptura, recriação exclusiva do peer
+  com falha e republicação/recuperação do áudio pelo dono SFU existente. Operações
+  antigas não configuram qualidade, recuperam ou anunciam a chamada seguinte.
+- A câmera continua anunciada antes de esperas do transporte. Attach/detach P2P
+  atrasado reconcilia a trilha com o snapshot atual; retirar o peer/sair interrompe
+  esse trabalho. Parar cancela a intenção e anuncia imediatamente, sem esperar SFU.
+- Capturas, grafo de áudio, parâmetros dos encoders, replay e negociação não mudaram.
+  O novo adaptador não possui outro mapa, socket, trilha ou timer.
+  `CameraCaptureChange` agora descreve o evento em `types/voice.ts`.
+- `test:voice:publication` está em `npm test` e cobre 18 cenários, incluindo respostas
+  antigas, reuso de sender, falhas isoladas, fallback, retomada e corridas de câmera.
+- O teste do relay SFU no Electron exercita o novo módulo com trilhas reais:
+  substitui/retoma o microfone no mesmo sender, publica/troca a câmera sem recriar
+  seus peers, verifica quadros codificados e para somente sua publicação. Voz e
+  compartilhamento permanecem ativos. A fixture conserva o descarte de suas trilhas.
+
+Passaram tipagem, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 15 de controles/recepção/microfone nativo no navegador e
+os dois testes no Electron real (P2P/layouts e relay SFU). Também passaram os nove
+cenários de PCM em segundo plano no Windows: nativo em 100%/180% e RNNoise em 100%,
+com janela coberta/minimizada/oculta, sem recaptura/reconexão nem amostras ocultadas.
+Cada coleta recebeu cinco segundos de PCM em aproximadamente cinco segundos.
+Essas fontes são sintéticas; não medem jogos, saídas físicas ou rotas SFU/TURN externas.
+
+Evidências em `artifacts/device-publication-{tests,typecheck,format,build,ui,sfu,browser,desktop,background}.log`.
+Os adaptadores de publicação desta etapa estão concluídos. A próxima frente da chamada
+é a interface: seletores/configurações, controles, lista e painéis em React. Manter
+um dono por subárvore e preservar os nós de mídia durante navegação/troca de layout.
+Não houve push, publicação ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair os adaptadores restantes de publicação do microfone/câmera
-   (`publishMicrophone`, `publishCamera`, `syncCameraSender`, `cameraStopped`),
-   preservando reconciliação de trilhas e donos de captura/sessão. A publicação
-   da tela e o fim de seu áudio já estão em `screen-publication.ts`.
-   Converter apresentação dos controles/lista/painéis em `social.js` para React
-   quando cada subárvore tiver um único dono.
+1. Converter apresentação dos controles/lista/painéis e seletores/configurações
+   em `social.js` para React quando cada subárvore tiver um único dono.
+   Publicação de microfone/câmera está em `device-publication.ts`; publicação da
+   tela e o fim de seu áudio estão em `screen-publication.ts`. Não restaurar esses
+   callbacks no controlador nem duplicar os donos de captura/sessão.
    Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
    `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
    `media-interest.ts`/`media-interest-bindings.ts`.

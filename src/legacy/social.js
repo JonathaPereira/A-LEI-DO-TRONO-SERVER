@@ -188,7 +188,7 @@ window.TronoSocial = (() => {
             });
         },
       }),
-    onTrackChanged: publishMicrophone,
+    onTrackChanged: (change) => devicePublication.publishMicrophone(change),
   });
   microphone.subscribe(updateNoiseButton);
   const screenCapture = window.TronoVoiceCapture.createScreenCapture({
@@ -221,8 +221,8 @@ window.TronoSocial = (() => {
       format: qualityProfile().camera,
     }),
     getStream: ensureLocalStream,
-    onStarted: publishCamera,
-    onStopped: cameraStopped,
+    onStarted: (change) => devicePublication.publishCamera(change),
+    onStopped: () => devicePublication.cameraStopped(),
     onDeviceMissing: (deviceId) => callControls.forgetCamera(deviceId),
   });
   const cameraOn = () => cameraCapture.getSnapshot().capture !== null;
@@ -440,7 +440,6 @@ window.TronoSocial = (() => {
   const sfuLocalPublications = sfuSession.publications,
     sfuSubscriptions = sfuSession.subscriptions;
   const {
-    publish: publishSfuTrack,
     closePublication: closeSfuPublication,
     closeSubscription: closeSfuSubscription,
     refreshPublications: refreshSfuPublicationList,
@@ -690,6 +689,32 @@ window.TronoSocial = (() => {
     },
     onAudioDetached: renderScreenGrid,
     onStatus: setStatus,
+  });
+
+  const devicePublication = window.TronoVoiceCapture.createDevicePublication({
+    call: () => voiceCall.getSnapshot(),
+    isSfu: () => transportIsSfu(),
+    sfu: sfuSession,
+    p2p: p2pPeers,
+    quality: callQuality,
+    camera: cameraCapture,
+    controls: callControls,
+    closePeer,
+    announceCamera: () => {
+      window.TronoNetwork?.setVoiceState(
+        voiceCall.getSnapshot().joined,
+        controlState().micMuted,
+        cameraOn(),
+        screenSharing(),
+        qualityPreferences().transmissionQuality,
+        announcedTransport(),
+      );
+      renderCameraState();
+    },
+    onMicrophoneResumed: (stream) => {
+      void speakingIndicators.watch(meId(), stream);
+    },
+    onDevicesChanged: enumerateDevices,
   });
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
@@ -1257,49 +1282,6 @@ window.TronoSocial = (() => {
     }
   }
 
-  async function publishMicrophone({ stream, track, reason, isCurrent }) {
-    if (!isCurrent()) return;
-    if (reason === 'resume') {
-      for (const pc of peers.values()) {
-        if (!isCurrent()) return;
-        await p2pPeers.syncTracks(pc);
-      }
-      if (!isCurrent()) return;
-      const pub = sfuLocalPublications.get('audio');
-      if (pub?.sender) await pub.sender.replaceTrack(track);
-      if (isCurrent()) void speakingIndicators.watch(meId(), stream);
-      return;
-    }
-    for (const [id, pc] of [...peers])
-      if (pc._tronoAudioSender && isCurrent()) {
-        try {
-          await p2pPeers.syncTracks(pc);
-        } catch (err) {
-          if (!isCurrent()) return;
-          console.warn('[TronoSocial] reconectando novo microfone', err);
-          closePeer(id);
-          p2pPeers.ensure(id);
-        }
-      }
-    if (!isCurrent()) return;
-    const sfuAudio = sfuLocalPublications.get('audio');
-    if (sfuAudio?.sender) {
-      try {
-        await sfuAudio.sender.replaceTrack(track);
-        if (!isCurrent()) return;
-        await applySenderQuality(sfuAudio.sender, 'audio');
-      } catch (err) {
-        if (!isCurrent()) return;
-        try {
-          await publishSfuTrack('audio', track);
-        } catch (error) {
-          if (!isCurrent()) return;
-          void sfuSession.recoverPublication('audio', error);
-        }
-      }
-    }
-    if (isCurrent()) await enumerateDevices();
-  }
   function acquireMic(options) {
     return microphone.acquire(options);
   }
@@ -1311,82 +1293,12 @@ window.TronoSocial = (() => {
   function acquireCamera() {
     return cameraCapture.acquire();
   }
-  async function syncCameraSender(pc) {
-    const sender = pc._tronoVideoSender;
-    if (!sender) return;
-    // A delayed attach/detach can finish after the next camera operation.
-    // Reconcile that same sender with the currently owned track before returning.
-    while (voiceCall.getSnapshot().joined && [...peers.values()].includes(pc)) {
-      await sender.replaceTrack(cameraCapture.getSnapshot().capture?.track || null);
-      if (sender.track === (cameraCapture.getSnapshot().capture?.track || null)) return;
-    }
-  }
-  async function publishCamera({ capture, isCurrent }) {
-    const track = capture.track;
-    if (!isCurrent()) return;
-    // Announce before publication, which may wait on a slow peer or SFU.
-    announceCamera();
-    if (transportIsSfu()) {
-      try {
-        const existing = sfuLocalPublications.get('camera');
-        if (existing?.sender) {
-          await existing.sender.replaceTrack(track);
-          if (!isCurrent()) return;
-          await applySenderQuality(existing.sender, 'camera');
-        } else await publishSfuTrack('camera', track);
-      } catch (err) {
-        if (!isCurrent()) return;
-        console.warn('[TronoSocial] recuperar câmera SFU', err?.code || err);
-        void sfuSession.recoverPublication('camera', err);
-      }
-    }
-    if (!isCurrent()) return;
-    if (!transportIsSfu())
-      await Promise.all(
-        [...peers.values()].map(async (pc) => {
-          if (!isCurrent()) return;
-          if (pc._tronoVideoSender) {
-            await syncCameraSender(pc).catch(() => {});
-            if (!isCurrent()) return;
-            await applySenderQuality(pc._tronoVideoSender, 'camera');
-          }
-        }),
-      );
-    if (!isCurrent()) return;
-    announceCamera();
-    await enumerateDevices();
-  }
   function renderCameraState() {
     updateButtons();
     renderVideoGrid();
     renderSeatMedia();
     renderVoiceRoster();
   }
-  function announceCamera() {
-    window.TronoNetwork?.setVoiceState(
-      voiceCall.getSnapshot().joined,
-      controlState().micMuted,
-      cameraOn(),
-      screenSharing(),
-      qualityPreferences().transmissionQuality,
-      announcedTransport(),
-    );
-    renderCameraState();
-  }
-  function cameraStopped() {
-    if (!voiceCall.getSnapshot().joined) return;
-    callControls.cancelPending();
-    announceCamera();
-    // Device release and state announcements cannot wait for transport detach.
-    if (transportIsSfu()) void closeSfuPublication('camera');
-    else
-      void Promise.allSettled(
-        [...peers.values()].map(async (pc) => {
-          await syncCameraSender(pc);
-        }),
-      );
-  }
-
   function startScreenShare(options) {
     return screenSharingControls.start(options);
   }

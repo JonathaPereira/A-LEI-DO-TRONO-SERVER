@@ -18,6 +18,7 @@ import { createScreenSharingBindings } from '../lib/voice/screen-sharing-binding
 import { createScreenCapture } from '../lib/voice/screen-capture';
 import { createScreenPublication } from '../lib/voice/screen-publication';
 import { createCamera } from '../lib/voice/camera';
+import { createDevicePublication } from '../lib/voice/device-publication';
 import { createP2pPeers } from '../lib/voice/p2p-peers';
 import { createRemoteMedia } from '../lib/voice/remote-media';
 import { createSpeakingIndicators } from '../lib/voice/speaking-indicators';
@@ -73,6 +74,7 @@ export function LegacyRuntime() {
           createScreenSharing,
           createScreenSharingBindings,
           createCamera,
+          createDevicePublication,
           createP2pPeers,
           createRemoteMedia,
           createSfuSession,

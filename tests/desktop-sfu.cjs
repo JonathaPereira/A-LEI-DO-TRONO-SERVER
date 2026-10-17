@@ -302,6 +302,34 @@ test(
           onAudioDetached() {},
           onStatus() {},
         });
+        const deviceTracks = [],
+          deviceEvents = [];
+        const devicePublication = window.TronoVoiceCapture.createDevicePublication({
+          call: () => ({ joined: settings.enabled }),
+          isSfu: () => true,
+          sfu: session,
+          p2p: {
+            connections: new Map(),
+            syncTracks: async () => {},
+            ensure() {
+              throw new Error('Unexpected P2P reconnect');
+            },
+          },
+          quality,
+          camera: { getSnapshot: () => ({ capture: window.__sfuFixture?.cameraCapture ?? null }) },
+          controls: { cancelPending: () => deviceEvents.push('cancel') },
+          closePeer() {
+            throw new Error('Unexpected P2P close');
+          },
+          announceCamera: () => deviceEvents.push('announce'),
+          onMicrophoneResumed: () => deviceEvents.push('resume'),
+          onDevicesChanged: async () => {
+            deviceEvents.push('devices');
+          },
+          warn(error) {
+            throw error;
+          },
+        });
         async function connect() {
           const audioPub = await session.publish('audio', audio);
           await screenPublication.publish({
@@ -334,6 +362,9 @@ test(
         window.__sfuFixture = {
           session,
           screenPublication,
+          devicePublication,
+          deviceTracks,
+          deviceEvents,
           quality,
           remote,
           relay,
@@ -357,6 +388,7 @@ test(
             clearInterval(timer);
             source.getTracks().forEach((t) => t.stop());
             window.__sfuFixture.screenReplacement?.stop();
+            deviceTracks.forEach((track) => track.stop());
             destination.stream.getTracks().forEach((t) => t.stop());
             tone.stop();
             await ctx.close();
@@ -600,6 +632,107 @@ test(
       await expect
         .poll(() => page.evaluate(() => window.__sfuFixture.indicators.isSpeaking('relay-peer')))
         .toBe(true);
+      // Exercise microphone replacement/resume and camera lifecycle through the typed adapter.
+      await page.evaluate(async () => {
+        const h = window.__sfuFixture;
+        const voice = h.session.publications.get('audio');
+        const screen = h.session.publications.get('screen');
+        const subscription = h.session.subscriptions.get('relay-peer:audio');
+        const microphone = h.audio.clone();
+        h.deviceTracks.push(microphone);
+        await h.devicePublication.publishMicrophone({
+          stream: new MediaStream([microphone]),
+          track: microphone,
+          reason: 'acquire',
+          isCurrent: () => true,
+        });
+        if (
+          h.session.publications.get('audio') !== voice ||
+          voice.sender.track !== microphone ||
+          h.session.subscriptions.get('relay-peer:audio') !== subscription ||
+          h.session.publications.get('screen') !== screen
+        )
+          throw new Error('Microphone replacement disturbed existing publications/subscriptions');
+        await h.devicePublication.publishMicrophone({
+          stream: new MediaStream([h.audio]),
+          track: h.audio,
+          reason: 'resume',
+          isCurrent: () => true,
+        });
+        if (voice.sender.track !== h.audio || !h.deviceEvents.includes('resume'))
+          throw new Error('Microphone did not resume on the existing sender');
+        const camera = h.video.clone();
+        h.deviceTracks.push(camera);
+        h.cameraCapture = { source: new MediaStream([camera]), track: camera };
+        await h.devicePublication.publishCamera({
+          capture: h.cameraCapture,
+          isCurrent: () => true,
+        });
+        h.cameraPublication = h.session.publications.get('camera');
+        const replacement = h.video.clone();
+        h.deviceTracks.push(replacement);
+        h.cameraCapture = { source: new MediaStream([replacement]), track: replacement };
+        const peerCount = h.peers.length;
+        await h.devicePublication.publishCamera({
+          capture: h.cameraCapture,
+          isCurrent: () => true,
+        });
+        if (
+          h.session.publications.get('camera') !== h.cameraPublication ||
+          h.cameraPublication.sender.track !== replacement ||
+          h.peers.length !== peerCount ||
+          voice.sender.track !== h.audio ||
+          h.session.publications.get('screen') !== screen
+        )
+          throw new Error('Camera replacement reopened peers or changed another publication');
+      });
+      await expect
+        .poll(
+          () =>
+            page.evaluate(async () => {
+              let frames = 0;
+              for (const row of (
+                await window.__sfuFixture.cameraPublication.pc.getStats()
+              ).values())
+                if (row.type === 'outbound-rtp' && row.kind === 'video')
+                  frames += row.framesEncoded || 0;
+              return frames;
+            }),
+          { timeout: 15000 },
+        )
+        .toBeGreaterThan(0);
+      const framesBeforeCameraStop = await page.evaluate(
+        () =>
+          document.getElementById('sfu-fixture-video').getVideoPlaybackQuality().totalVideoFrames,
+      );
+      assert.equal(
+        await page.evaluate(() => {
+          const h = window.__sfuFixture;
+          h.cameraCapture = null;
+          h.devicePublication.cameraStopped();
+          return (
+            !h.session.publications.has('camera') &&
+            h.cameraPublication.pc.connectionState === 'closed' &&
+            h.deviceEvents.includes('cancel') &&
+            h.session.publications.get('audio').sender.track === h.audio &&
+            h.audio.readyState === 'live' &&
+            h.session.publications.get('screen').sender.track === h.video &&
+            h.video.readyState === 'live'
+          );
+        }),
+        true,
+      );
+      await expect
+        .poll(
+          () =>
+            page.evaluate(
+              () =>
+                document.getElementById('sfu-fixture-video').getVideoPlaybackQuality()
+                  .totalVideoFrames,
+            ),
+          { timeout: 15000 },
+        )
+        .toBeGreaterThan(framesBeforeCameraStop);
       await require('./desktop-voice-flow').exerciseVoiceProtection({ app, page });
       await page.evaluate(() => window.__sfuFixture.close());
     } finally {
