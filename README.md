@@ -1,3 +1,7 @@
+## Windows 0.2.10 · painel compacto e prioridade ao SFU
+
+Janela flutuante sem área vazia nem avatares excessivos, com ampliação compartilhada. Recuperação por mídia e filas separadas evitam que falhas de vídeo derrubem ou atrasem a voz SFU. Veja [a análise do fallback](ANALISE_SFU_E_JANELA_FLUTUANTE.md) e [como atualizar e publicar](ATUALIZAR_WINDOWS_v0.2.10.md).
+
 ## Windows 0.2.9 · voz em segundo plano
 
 O microfone nativo em 100% usa a captura diretamente; o Electron preserva a prioridade do renderer quando a janela perde visibilidade. RNNoise, volumes personalizados e mute permanecem disponíveis. A correção exige o EXE 0.2.9 no computador de quem fala. Veja [como atualizar e publicar](ATUALIZAR_WINDOWS_v0.2.9.md).

@@ -22,10 +22,17 @@ window.TronoSocial = (()=>{
   let realtimeSyncError='';
   let realtimeSyncTimer=null;
   let mediaTransport='p2p';
-  let sfuSyncChain=Promise.resolve();
   let lastSfuError='';
   let sfuGeneration=0;
-  let mixedTransportTimer=null,roomVoiceMode=null;
+  let roomVoiceMode=null;
+  const sfuRetryVersions=new Map(),subscriptionQueue=new window.TronoSfuRecovery.SfuSubscriptionQueue();
+  const publicationRecovery=new window.TronoSfuRecovery.SfuPublicationRecovery({
+    active:()=>voiceJoined&&transportIsSfu(),
+    track:kind=>kind==='audio'?localStream?.getAudioTracks()[0]:kind==='camera'?(cameraOn?localStream?.getVideoTracks()[0]:null):kind==='screen'?(screenSharing?localScreenStream?.getVideoTracks()[0]:null):(screenSharing?localScreenStream?.getAudioTracks()[0]:null),
+    publish:(kind,track)=>publishSfuTrack(kind,track,{recovery:true}),
+    report:(kind,err,attempt,done)=>{if(err?.code==='HIGH_BUDGET_BLOCKED'){realtimeStatus={...realtimeStatus,highAllowed:false,maxQuality:'balanced'};updateQualityUI();}const label={audio:'Microfone',camera:'Câmera',screen:'Tela','screen-audio':'Áudio da tela'}[kind];lastSfuError=label+': '+(err?.code||'SFU_ERROR');setStatus(done&&kind!=='audio'?label+' não conectou. A voz continua pelo SFU.':label+' reconectando pelo SFU…','warn');},
+    exhausted:async(kind,err)=>{if(kind==='audio'||['REALTIME_DISABLED','REALTIME_NOT_CONFIGURED','REALTIME_HARD_LIMIT','SFU_ROOM_SAFETY_LIMIT'].includes(err?.code))await fallbackToP2p(kind==='audio'?'O SFU não conseguiu recuperar o microfone. Mantendo a chamada por P2P.':'O servidor de mídia não está disponível. Mantendo a chamada por P2P.');}
+  });
   let voiceGeneration=0,voiceJoinPromise=null;
   const senderQualityQueues=new WeakMap(),profileMedia=new Map();
   let mutedBeforeDeafen=false;
@@ -224,7 +231,7 @@ window.TronoSocial = (()=>{
   let screenSharing=false;
   let panelOpen=false;
   let chatHubMode=false;
-  let panelMode=storage.getItem('tronoSocialMode')==='floating'?'floating':'full';
+  const panelMode='floating';
   let chatMuted=storage.getItem('tronoChatMuted')==='1';
   let noiseSuppression=storage.getItem('tronoNoiseSuppression')!=='0';
   let noiseEngine=window.TronoDesktop?(storage.getItem('mnDesktopNoiseMode')|| (noiseSuppression?'native':'off')):'rnnoise';
@@ -435,7 +442,7 @@ window.TronoSocial = (()=>{
       console.warn('[TronoSocial] status Realtime',err?.code||err);
       realtimeSyncError='Falha ao sincronizar com o backend';
       updateRealtimeUI();
-      if(!quiet)setStatus('Não foi possível sincronizar o status do Cloudflare Realtime; mantendo P2P por segurança.','warn');
+      if(!quiet)setStatus('Não foi possível conferir o servidor de mídia. Tentando sincronizar novamente.','warn');
       return null;
     }
   }
@@ -570,14 +577,14 @@ window.TronoSocial = (()=>{
     if(tile)return toggleMediaFullscreen(tile);
   }
   function bindMediaFullscreen(tile){if(!tile||tile.dataset.fullscreenBound)return;tile.dataset.fullscreenBound='1';tile.querySelector('.media-fullscreen-btn')?.addEventListener('click',e=>{e.stopPropagation();toggleMediaFullscreen(tile);});tile.querySelector('video')?.addEventListener('dblclick',()=>toggleMediaFullscreen(tile));}
-  const FLOATING_RECT_KEY='tronoSocialFloatingRectV2';
+  const FLOATING_RECT_KEY='tronoSocialFloatingRectV3';
   function readFloatingRect(){try{return JSON.parse(storage.getItem(FLOATING_RECT_KEY)||'null');}catch{return null;}}
   function persistFloatingRect(){const panel=$('socialPanel');if(!panel||panelMode!=='floating'||inChatHub())return;const r=panel.getBoundingClientRect();storage.setItem(FLOATING_RECT_KEY,JSON.stringify({left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height)}));}
   function clearFloatingInlineStyles(){const panel=$('socialPanel');if(!panel)return;for(const k of ['left','top','right','bottom','width','height'])panel.style[k]='';}
   function restoreFloatingRect(){
     const panel=$('socialPanel');if(!panel||panelMode!=='floating'||inChatHub()||innerWidth<=760)return;
     const saved=readFloatingRect();if(!saved)return;
-    const width=Math.max(330,Math.min(Number(saved.width)||330,innerWidth-10)),height=Math.max(330,Math.min(Number(saved.height)||360,innerHeight-10));
+    const width=Math.max(280,Math.min(Number(saved.width)||360,460,innerWidth-16)),height=Math.max(220,Math.min(Number(saved.height)||360,560,innerHeight-16));
     const left=Math.max(0,Math.min(Number(saved.left)||0,innerWidth-width)),top=Math.max(0,Math.min(Number(saved.top)||0,innerHeight-height));
     panel.style.width=`${width}px`;panel.style.height=`${height}px`;panel.style.left=`${left}px`;panel.style.top=`${top}px`;panel.style.right='auto';panel.style.bottom='auto';
   }
@@ -586,12 +593,12 @@ window.TronoSocial = (()=>{
     const panel=$('socialPanel'),modeBtn=$('socialModeBtn');if(!panel)return;
     const hub=inChatHub();
     panel.classList.toggle('social-chat-hub',hub);
-    panel.classList.toggle('social-full',!hub&&panelMode==='full');
+    panel.classList.remove('social-full');
     panel.classList.toggle('social-floating',!hub&&panelMode==='floating');
     if(modeBtn){
       modeBtn.classList.toggle('hidden',hub);
-      modeBtn.textContent=panelMode==='full'?'▱ Flutuante':'▣ Completa';
-      modeBtn.title=panelMode==='full'?'Usar janela flutuante compacta':'Abrir janela completa';
+      modeBtn.textContent='Ampliar';
+      modeBtn.title='Ampliar câmeras e telas da chamada';
     }
     clearFloatingInlineStyles();if(!hub&&panelMode==='floating')restoreFloatingRect();
     storage.setItem('tronoSocialMode',panelMode);
@@ -606,7 +613,7 @@ window.TronoSocial = (()=>{
     applyPanelMode();updateChatDrawerUI();updateButtons();updateTelemetryHeader();
     if(chatHubMode)showPanel(true);
   }
-  function togglePanelMode(){if(inChatHub())return;panelMode=panelMode==='full'?'floating':'full';applyPanelMode();}
+  function togglePanelMode(){if(inChatHub())return;window.TronoMosaic?.open();}
   function showPanel(show=true){
     panelOpen=!!show;
     const panel=$('socialPanel');panel?.classList.toggle('social-hidden',!panelOpen);
@@ -837,7 +844,7 @@ window.TronoSocial = (()=>{
     stream.addTrack(outgoingTrack);
     micCapture={rawStream,processor,outgoingTrack};applyMicrophoneMute();installed=true;
     for(const [id,pc] of [...peers])if(pc._tronoAudioSender){try{await syncInitiatorTracks(pc);}catch(err){console.warn('[TronoSocial] reconectando novo microfone',err);closePeer(id);ensurePeer(id);}}
-    const sfuAudio=sfuLocalPublications.get('audio');if(sfuAudio?.sender){try{await sfuAudio.sender.replaceTrack(outgoingTrack);await applySenderQuality(sfuAudio.sender,'audio');}catch(err){try{await publishSfuTrack('audio',outgoingTrack);}catch{await fallbackToP2p('Microfone alterado. Reconectando a chamada por P2P.');}}}
+    const sfuAudio=sfuLocalPublications.get('audio');if(sfuAudio?.sender){try{await sfuAudio.sender.replaceTrack(outgoingTrack);await applySenderQuality(sfuAudio.sender,'audio');}catch(err){try{await publishSfuTrack('audio',outgoingTrack);}catch(err){void publicationRecovery.recover('audio',err);}}}
     cleanupMicCapture(oldCapture);
     await enumerateDevices();return stream;
     }finally{if(!installed)cleanupMicCapture({rawStream,processor});if(request===micGeneration){noiseLoading=false;updateNoiseButton();}}
@@ -871,8 +878,8 @@ window.TronoSocial = (()=>{
           else await publishSfuTrack('camera',track);
         }catch(err){
           if(!current())throw Object.assign(new Error('Abertura da câmera cancelada.'),{code:'CAMERA_CANCELLED'});
-          console.warn('[TronoSocial] câmera SFU; acionando fallback',err?.code||err);
-          await fallbackToP2p('A câmera não conseguiu publicar pelo SFU; chamada mantida em P2P para não interromper o vídeo.');
+          console.warn('[TronoSocial] recuperar câmera SFU',err?.code||err);
+          void publicationRecovery.recover('camera',err);
         }
       }
       if(!transportIsSfu())await Promise.all([...peers.values()].map(async pc=>{if(pc._tronoVideoSender){await pc._tronoVideoSender.replaceTrack(track).catch(()=>{});await applySenderQuality(pc._tronoVideoSender,'camera');}}));
@@ -932,7 +939,7 @@ window.TronoSocial = (()=>{
             else if(publication)await closeSfuPublication(kind);
           }));
         }
-        catch(err){if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined)return false;console.warn('[TronoSocial] tela SFU; acionando fallback',err?.code||err);await fallbackToP2p('O compartilhamento não conseguiu publicar pelo SFU; chamada mantida em P2P para preservar a tela.');}
+        catch(err){if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined)return false;console.warn('[TronoSocial] recuperar tela SFU',err?.code||err);void publicationRecovery.recover('screen',err);if(localScreenStream?.getAudioTracks().length)void publicationRecovery.recover('screen-audio',err);}
       }
       if(!transportIsSfu())await Promise.all([...peers.values()].map(pc=>syncInitiatorTracks(pc)));
       if(request!==screenGeneration||callGeneration!==voiceGeneration||!voiceJoined)return false;
@@ -1106,23 +1113,24 @@ window.TronoSocial = (()=>{
     }
     renderVideoGrid();renderScreenGrid();renderSeatMedia();
   }
-  async function publishSfuTrack(kind,track){
+  async function publishSfuTrack(kind,track,{recovery=false}={}){
     if(!transportIsSfu()||!track)return null;
     const generation=sfuGeneration;const ensureCurrent=()=>{if(generation!==sfuGeneration||!voiceJoined||!transportIsSfu()||track.readyState==='ended')throw Object.assign(new Error('A publicação foi cancelada pela troca de chamada ou encerramento da captura.'),{code:'SFU_CANCELLED'});};
     if(isScreenKind(kind)&&!realtimeStatus?.screenAllowed)throw Object.assign(new Error('Compartilhamento bloqueado pelo freio de consumo.'),{code:'SCREEN_BUDGET_BLOCKED'});
-    if(sfuLocalPublications.has(kind))await closeSfuPublication(kind);
+    if(sfuLocalPublications.has(kind))void closeSfuPublication(kind,{cancelRecovery:false});
     const mediaKind=kind==='camera',attempts=mediaKind?[true,false]:[false];let lastError=null;
     for(const simulcast of attempts){
       let prepared=null,result=null;
       try{
         prepared=await prepareSfuPublisher(kind,track,{simulcast});
         ensureCurrent();const {pc,transceiver,rids}=prepared;
-        result=await window.TronoNetwork.requestSfu('publish-track',{kind,screenBitrate:effectiveScreenBitrate(),quality:cappedQuality(),mid:String(transceiver.mid),rids,sessionDescription:plainSdp(pc.localDescription)});
+        result=await window.TronoNetwork.requestSfu('publish-track',{kind,screenBitrate:effectiveScreenBitrate(),quality:cappedQuality(),mid:String(transceiver.mid),rids,sessionDescription:plainSdp(pc.localDescription)},recovery?9000:15000);
         ensureCurrent();if(result?.sessionDescription)await pc.setRemoteDescription(result.sessionDescription);
         const pub={kind,pc,sessionId:result.sessionId,mid:String(transceiver.mid),sender:transceiver.sender,trackName:result.publication?.trackName||kind,rids:Array.isArray(result.publication?.rids)?result.publication.rids:rids};
-        sfuLocalPublications.set(kind,pub);await applySenderQuality(pub.sender,kind);await waitPeerConnected(pc,14000);const ready=await window.TronoNetwork.requestSfu('publication-ready',{sessionId:pub.sessionId},9000);ensureCurrent();pub.ready=true;if(Array.isArray(ready?.rids))pub.rids=ready.rids;
+        sfuLocalPublications.set(kind,pub);await applySenderQuality(pub.sender,kind);await waitPeerConnected(pc,recovery?7000:14000);const ready=await window.TronoNetwork.requestSfu('publication-ready',{sessionId:pub.sessionId},9000);ensureCurrent();pub.ready=true;if(Array.isArray(ready?.rids))pub.rids=ready.rids;
         if(lastSfuError.toLowerCase().includes(kind))lastSfuError='';
-        pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'&&transportIsSfu())fallbackToP2p('A conexão com o SFU falhou; retornando ao P2P.');};
+        pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'&&transportIsSfu()&&sfuLocalPublications.get(kind)===pub)void publicationRecovery.recover(kind,Object.assign(new Error('Conexão interrompida.'),{code:'SFU_CONNECTION_FAILED'}));};
+        if(kind==='audio'){const latest=localStream?.getAudioTracks()[0];if(latest&&latest.readyState==='live'&&pub.sender.track!==latest){await pub.sender.replaceTrack(latest);await applySenderQuality(pub.sender,'audio');ensureCurrent();}}
         return pub;
       }catch(err){
         lastError=err;if(sfuLocalPublications.get(kind)?.pc===prepared?.pc)sfuLocalPublications.delete(kind);try{prepared?.pc?.close();}catch{}
@@ -1133,22 +1141,23 @@ window.TronoSocial = (()=>{
     }
     throw lastError||new Error(`Não foi possível publicar ${kind} no SFU.`);
   }
-  async function closeSfuPublication(kind){
+  async function closeSfuPublication(kind,{cancelRecovery=true}={}){
+    if(cancelRecovery)publicationRecovery.cancel(kind);
     const pub=sfuLocalPublications.get(kind);if(!pub)return;sfuLocalPublications.delete(kind);
     try{pub.pc?.close();}catch{}
     try{await window.TronoNetwork?.requestSfu('close-publication',{sessionId:pub.sessionId},9000);}catch(err){console.warn('[TronoSocial] fechar publicação SFU',kind,err.code||err);}
   }
-  async function subscribeSfuPublication(pub){
+  async function subscribeSfuPublication(pub,currentJob=()=>true){
     if(!transportIsSfu()||!pub||!wantsSfuPublication(pub))return null;
     const key=sfuKey(pub.ownerId,pub.kind),current=sfuSubscriptions.get(key);
     if(current?.publisherSessionId===pub.sessionId)return current;
-    if(current)await closeSfuSubscription(key);
+    if(current)void closeSfuSubscription(key);
     const generation=sfuGeneration,watchVersion=streamWatchVersions.get(pub.ownerId)||0;
-    const ensureCurrent=()=>{if(generation!==sfuGeneration||!voiceJoined||!transportIsSfu()||!wantsSfuPublication(pub)||(isScreenKind(pub.kind)&&watchVersion!==(streamWatchVersions.get(pub.ownerId)||0))||(sub&&sfuSubscriptions.get(key)!==sub))throw Object.assign(new Error('A chamada mudou ou você parou de assistir durante a negociação.'),{code:'SFU_CANCELLED'});};
+    const ensureCurrent=()=>{if(!currentJob()||generation!==sfuGeneration||!voiceJoined||!transportIsSfu()||!wantsSfuPublication(pub)||(isScreenKind(pub.kind)&&watchVersion!==(streamWatchVersions.get(pub.ownerId)||0))||(sub&&sfuSubscriptions.get(key)!==sub))throw Object.assign(new Error('A chamada mudou ou você parou de assistir durante a negociação.'),{code:'SFU_CANCELLED'});};
     const pc=new RTCPeerConnection(sfuIceConfig),rid=['camera','screen'].includes(pub.kind)&&Array.isArray(pub.rids)&&pub.rids.length?preferredRidForMedia(pub.kind,false):null;
     let result,sub;
     try{
-      pc.ontrack=e=>{if(generation===sfuGeneration&&transportIsSfu()&&wantsSfuPublication(pub)&&(!isScreenKind(pub.kind)||watchVersion===(streamWatchVersions.get(pub.ownerId)||0))){const active=sfuSubscriptions.get(key);if(active?.pc===pc){active.track=e.track;if(pub.kind==='audio'){const receiver=e.receiver||e.transceiver?.receiver;if(receiver){voiceOwners.set(receiver,pub.ownerId);reception.add(receiver);}}attachSfuRemoteTrack(pub,e.track);}}};
+      pc.ontrack=e=>{if(generation===sfuGeneration&&sfuPublicationList.some(p=>p.ownerId===pub.ownerId&&p.kind===pub.kind&&p.sessionId===pub.sessionId)&&transportIsSfu()&&wantsSfuPublication(pub)&&(!isScreenKind(pub.kind)||watchVersion===(streamWatchVersions.get(pub.ownerId)||0))){const active=sfuSubscriptions.get(key);if(active?.pc===pc){active.track=e.track;if(pub.kind==='audio'){const receiver=e.receiver||e.transceiver?.receiver;if(receiver){voiceOwners.set(receiver,pub.ownerId);reception.add(receiver);}}attachSfuRemoteTrack(pub,e.track);}}};
       result=await window.TronoNetwork.requestSfu('subscribe-track',{publisherId:pub.ownerId,kind:pub.kind,quality:cappedQuality(),preferredRid:rid});
       ensureCurrent();
       if(result?.sessionDescription?.type!=='offer')throw Object.assign(new Error('SFU não retornou uma oferta válida de assinatura.'),{code:'BAD_SFU_OFFER'});
@@ -1157,7 +1166,7 @@ window.TronoSocial = (()=>{
       await pc.setRemoteDescription(result.sessionDescription);const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await waitIceGathering(pc);ensureCurrent();
       const localAnswer=plainSdp(pc.localDescription);if(localAnswer?.type!=='answer'||!localAnswer.sdp)throw Object.assign(new Error('Resposta SDP local inválida.'),{code:'BAD_SFU_ANSWER'});
       await window.TronoNetwork.requestSfu('renegotiate',{sessionId:sub.sessionId,sessionDescription:localAnswer});ensureCurrent();await waitPeerConnected(pc,18000);ensureCurrent();sub.negotiating=false;sub.readyAt=Date.now();lastSfuError='';
-      pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'&&transportIsSfu()){closeSfuSubscription(key).finally(()=>setTimeout(()=>syncSfuSubscriptions(),900));}};
+      pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'&&generation===sfuGeneration&&transportIsSfu()&&sfuSubscriptions.get(key)===sub){void closeSfuSubscription(key);scheduleSfuRetry(key,pub,{code:'SFU_CONNECTION_FAILED'});}};
       return sub;
     }catch(err){
       try{pc.close();}catch{}
@@ -1184,31 +1193,37 @@ window.TronoSocial = (()=>{
     for(const sub of sfuSubscriptions.values())if(['camera','screen'].includes(sub.kind)){const target=preferredRidForMedia(sub.kind,false);if(sub.preferredRid!==target)jobs.push(window.TronoNetwork.requestSfu('update-subscription',{sessionId:sub.sessionId,preferredRid:target},9000).then(r=>{sub.preferredRid=r?.preferredRid||target;}).catch(err=>console.warn('[TronoSocial] camada SFU',err.code||err)));}
     await Promise.allSettled(jobs);
   }
-  function clearSfuRetry(key){const t=sfuRetryTimers.get(key);if(t)clearTimeout(t);sfuRetryTimers.delete(key);sfuRetryCount.delete(key);}
+  function clearSfuRetry(key){const t=sfuRetryTimers.get(key);if(t)clearTimeout(t);sfuRetryTimers.delete(key);sfuRetryCount.delete(key);sfuRetryVersions.delete(key);}
   function scheduleSfuRetry(key,pub,err){
     if(sfuRetryTimers.has(key)||!transportIsSfu())return;const n=(sfuRetryCount.get(key)||0)+1;sfuRetryCount.set(key,n);const stale=isStalePublicationError(err),delay=stale?Math.min(5000,500*Math.pow(1.7,Math.min(n-1,4))):Math.min(12000,900*Math.pow(2,Math.min(n-1,4)));
     const label=pub?.kind==='screen'?'Tela':pub?.kind==='camera'?'Câmera':'Áudio',code=err?.code||'mídia indisponível';lastSfuError=`${label}: ${code}`;
-    if(!stale&&n>=3&&['BAD_SFU_ANSWER','BAD_SFU_OFFER','BAD_SFU_RENEGOTIATE','SFU_ANSWER_REJECTED','SFU_CONNECT_TIMEOUT'].includes(String(code))){void fallbackToP2p('Não foi possível negociar a mídia pelo SFU. Reconectando a chamada por P2P.');return;}
+    if(pub?.kind==='audio'&&!stale&&n>=3&&['BAD_SFU_ANSWER','BAD_SFU_OFFER','BAD_SFU_RENEGOTIATE','SFU_ANSWER_REJECTED','SFU_CONNECT_TIMEOUT'].includes(String(code))){void fallbackToP2p('Não foi possível negociar a mídia pelo SFU. Reconectando a chamada por P2P.');return;}
+    sfuRetryVersions.set(key,pub?.sessionId);if(pub?.kind!=='audio'&&n>=4){setStatus(label+' não conectou. A voz continua pelo SFU.','warn');return;}
     let message=stale?`${label} SFU foi atualizado enquanto conectava. Ressincronizando a publicação…`:`${label} SFU reconectando… (${code}).`;
     if(!stale&&!sfuTurnActive&&['SFU_CONNECT_TIMEOUT','NETWORK_CLOSED','NETWORK_OFFLINE'].includes(String(code)))message+=' A rota ICE falhou; TURN pode ajudar em redes móveis/CGNAT.';
     setStatus(message,'warn');renderTelemetry();
     sfuRetryTimers.set(key,setTimeout(async()=>{sfuRetryTimers.delete(key);if(!transportIsSfu())return;if(stale)await refreshSfuPublicationList();void syncSfuSubscriptions();},delay));
   }
   async function syncSfuSubscriptions(){
-    if(!transportIsSfu())return;
-    const generation=sfuGeneration;
-    sfuSyncChain=sfuSyncChain.then(async()=>{
-      if(generation!==sfuGeneration||!transportIsSfu())return;
-      const desired=new Map();for(const pub of sfuPublicationList){if(wantsSfuPublication(pub))desired.set(sfuKey(pub.ownerId,pub.kind),pub);}
-      for(const key of [...sfuSubscriptions.keys()]){if(generation!==sfuGeneration||!transportIsSfu())break;if(!desired.has(key))await closeSfuSubscription(key);}
-      for(const [key,pub] of desired){if(generation!==sfuGeneration||!transportIsSfu())break;const existing=sfuSubscriptions.get(key);if(!existing||existing.publisherSessionId!==pub.sessionId){try{await subscribeSfuPublication(pub);clearSfuRetry(key);}catch(err){console.warn('[TronoSocial] assinatura SFU',key,err.code||err);if(isStalePublicationError(err))await refreshSfuPublicationList();if(err?.code!=='SFU_CANCELLED')scheduleSfuRetry(key,pub,err);}}}
-      renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();
-    }).catch(err=>console.warn('[TronoSocial] fila SFU',err));
-    return sfuSyncChain;
+    if(!transportIsSfu())return;const generation=sfuGeneration,desired=new Map();
+    for(const pub of sfuPublicationList)if(wantsSfuPublication(pub))desired.set(sfuKey(pub.ownerId,pub.kind),pub);
+    for(const key of [...subscriptionQueue.jobs.keys()])if(!desired.has(key))subscriptionQueue.cancel(key);
+    for(const key of [...sfuSubscriptions.keys()])if(!desired.has(key))void closeSfuSubscription(key);
+    for(const [key,pub] of desired){
+      if(sfuRetryVersions.has(key)&&sfuRetryVersions.get(key)!==pub.sessionId)clearSfuRetry(key);
+      if(sfuRetryTimers.has(key)||(pub.kind!=='audio'&&(sfuRetryCount.get(key)||0)>=4))continue;
+      const existing=sfuSubscriptions.get(key);if(existing?.publisherSessionId===pub.sessionId)continue;
+      void subscriptionQueue.schedule(key,pub.kind,pub.sessionId,async current=>{
+        try{await subscribeSfuPublication(pub,current);if(current())clearSfuRetry(key);}
+        catch(err){if(!current()||generation!==sfuGeneration||err?.code==='SFU_CANCELLED')return;console.warn('[TronoSocial] assinatura SFU',key,err.code||err);if(isStalePublicationError(err))await refreshSfuPublicationList();if(current()&&generation===sfuGeneration)scheduleSfuRetry(key,pub,err);}
+        finally{if(generation===sfuGeneration){renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();}}
+      }).catch(err=>console.warn('[TronoSocial] fila SFU',err));
+    }
+    renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();
   }
   async function stopSfuTransport({toP2p=true}={}){
-    clearTimeout(mixedTransportTimer);mixedTransportTimer=null;
-    sfuGeneration++;mediaTransport='stopping';sfuSyncChain=Promise.resolve();
+    publicationRecovery.clear();subscriptionQueue.clear();sfuRetryVersions.clear();
+    sfuGeneration++;mediaTransport='stopping';
     // Detach the old resources synchronously. Cloudflare cleanup may be slow;
     // it must not delay P2P readiness or delete media from the next connection.
     for(const t of sfuRetryTimers.values())clearTimeout(t);sfuRetryTimers.clear();sfuRetryCount.clear();
@@ -1225,14 +1240,14 @@ window.TronoSocial = (()=>{
     try{
       await refreshSfuIceConfig();
       ensureCurrent();
-      const status=await syncRealtimeStatus({quiet:false});realtimeStatus=status||realtimeStatus;updateQualityUI();
+      let status=await syncRealtimeStatus({quiet:true});ensureCurrent();if(!status){setStatus('Conferindo o servidor de mídia novamente…','warn');await new Promise(resolve=>setTimeout(resolve,500));ensureCurrent();status=await syncRealtimeStatus({quiet:true});}realtimeStatus=status||realtimeStatus;updateQualityUI();
       ensureCurrent();
       if(roomVoiceMode==='p2p'||!status?.enabled||!status?.configured||status?.hardBlocked){mediaTransport='p2p';updateRealtimeUI();return false;}
       mediaTransport='sfu';lastSfuError='';closeAllPeers();updateRealtimeUI();
-      const audio=localStream?.getAudioTracks?.()[0];if(audio)await publishSfuTrack('audio',audio);
-      const camera=localStream?.getVideoTracks?.()[0];if(cameraOn&&camera)await publishSfuTrack('camera',camera);
-      const screen=localScreenStream?.getVideoTracks?.()[0];if(screenSharing&&screen&&status.screenAllowed)await publishSfuTrack('screen',screen);
-      const screenAudio=localScreenStream?.getAudioTracks?.()[0];if(screenSharing&&screenAudio&&status.screenAllowed)await publishSfuTrack('screen-audio',screenAudio);
+      const audio=localStream?.getAudioTracks?.()[0];if(audio){try{await publishSfuTrack('audio',audio);}catch(err){if(!await publicationRecovery.recover('audio',err)){ensureCurrent();return false;}}}
+      const camera=localStream?.getVideoTracks?.()[0];if(cameraOn&&camera)void publishSfuTrack('camera',camera).catch(err=>publicationRecovery.recover('camera',err));
+      const screen=localScreenStream?.getVideoTracks?.()[0];if(screenSharing&&status.screenAllowed&&screen)void publishSfuTrack('screen',screen).catch(err=>publicationRecovery.recover('screen',err));
+      const screenAudio=localScreenStream?.getAudioTracks?.()[0];if(screenSharing&&status.screenAllowed&&screenAudio)void publishSfuTrack('screen-audio',screenAudio).catch(err=>publicationRecovery.recover('screen-audio',err));
       window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,'sfu');
       await syncSfuSubscriptions();ensureCurrent();syncPeers();setStatus('Voz conectada pelo Cloudflare SFU.','ok');return true;
     }catch(err){
@@ -1455,9 +1470,8 @@ window.TronoSocial = (()=>{
     if(transportPending()){closeAllPeers();renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();return;}
     if(transportIsSfu()){
       closeAllPeers();void syncSfuSubscriptions();
-      if(detailedPlayers().some(p=>p.id!==meId()&&p.transport==='p2p')){
-        if(!mixedTransportTimer)mixedTransportTimer=setTimeout(()=>{mixedTransportTimer=null;if(transportIsSfu()&&detailedPlayers().some(p=>p.id!==meId()&&p.transport==='p2p'))void fallbackToP2p('Um participante está em P2P. Reconectando a chamada no mesmo modo para manter o áudio nos dois sentidos.');},5000);
-      }else{clearTimeout(mixedTransportTimer);mixedTransportTimer=null;}
+      // The backend coordinates the room mode. A stale roster must not make
+      // this client downgrade everyone after an unrelated five-second timer.
       renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();return;
     }
     // Wait until both endpoints have announced P2P readiness before sending SDP.
@@ -1473,7 +1487,7 @@ window.TronoSocial = (()=>{
   }
   function renderVoiceStatus(host,muted,silenced){if(!host)return;const html=voiceStatusIcons(muted,silenced);if(host.innerHTML!==html)host.innerHTML=html;host.hidden=!html;}
   function personVoiceSummary(p){const self=p.id===meId(),muted=self?micMuted:!!p.muted,cam=self?cameraOn:!!p.camera,screen=self?screenSharing:!!p.screen,transport=self?announcedTransport():(p.transport||'p2p');return (muted?'microfone mutado':speakingPeers.has(p.id)?'falando…':'na voz')+((self?deafened:p.deafened)?' • áudio silenciado':'')+(cam?(hiddenCameras.has(p.id)?' • câmera oculta':' • 📷 câmera'):'')+(screen?' • 🖥 tela':'')+(transport==='sfu'?' • ☁ SFU':transport==='sfu-pending'?' • conectando…':'');}
-  function cameraInProfile(id){const mode=profileMedia.get(id)||'auto';return mode==='camera'||(mode==='auto'&&inChatHub());}
+  function cameraInProfile(id){const mode=profileMedia.get(id)||'auto';return mode==='camera'||mode==='auto';}
   function screenInProfile(id){return profileMedia.get(id)==='screen';}
   function setProfileMedia(id,value){if(!['auto','camera','screen','stage'].includes(value))return;profileMedia.set(id,value);renderVoiceRoster();renderScreenGrid();}
   function camerasInProfiles(){return inChatHub()&&voiceJoined&&detailedPlayers().some(p=>p.id===meId()?screenSharing:p.screen);}
@@ -1557,7 +1571,6 @@ window.TronoSocial = (()=>{
   function renderVideoGrid(){
     const host=$('cameraGrid');if(!host)return;
     if(!voiceJoined){host.className='camera-grid camera-grid-empty camera-grid-private';host.innerHTML='<div class="camera-grid-note">Entre na voz para acessar as câmeras da chamada.</div>';return;}
-    if(panelMode==='floating'&&inGame()&&!inChatHub()){host.className='camera-grid camera-grid-empty';host.innerHTML='<div class="camera-grid-note">No modo flutuante, as câmeras aparecem junto à mesa.</div>';return;}
     const me=meId(),players=detailedPlayers(),visible=players.filter(p=>p.id===me?cameraOn:p.camera&&!hiddenCameras.has(p.id)),desired=new Set(visible.map(p=>p.id)),dock=visible.length?visible.every(p=>cameraInProfile(p.id)):camerasInProfiles();
     host.className=`camera-grid ${dock?'camera-grid-docked':visible.length?'':'camera-grid-empty'} ${visible.length===1?'one-camera':''}`;
     host.querySelector('.camera-grid-note')?.remove();
@@ -1657,19 +1670,11 @@ window.TronoSocial = (()=>{
     tile.addEventListener('pointerup',()=>persistSeatSize(tile,seat));
   }
   function renderSeatMedia(){
-    const host=$('seatMediaLayer');if(!host)return;const active=voiceJoined&&panelMode==='floating'&&inGame()&&!inChatHub();host.classList.toggle('active',active);if(!active){host.innerHTML='';return;}
-    const me=meId(),players=detailedPlayers().map(p=>({...p,seat:gameRoomState?.players.find(x=>x.id===p.id)?.seat??(roomState?.kind==='game'?p.seat:null)})).filter(p=>(p.id===me?cameraOn:!!p.camera)&&Number.isInteger(p.seat)&&p.seat>=0&&p.seat<=3),desired=new Set(players.map(p=>p.id));
-    for(const old of [...host.querySelectorAll('.seat-camera-tile')])if(!desired.has(old.dataset.peer))old.remove();
-    for(const p of players){
-      let tile=findPeerTile(host,p.id,'.seat-camera-tile');
-      if(!tile){
-        tile=document.createElement('div');tile.dataset.peer=p.id;tile.innerHTML='<video autoplay playsinline muted></video><div class="seat-camera-label"><span class="seat-camera-name"></span><span class="seat-camera-mic"></span></div><i class="seat-camera-resize" title="Arraste o canto para redimensionar">↘</i>';host.appendChild(tile);bindSeatTileResize(tile,p.seat);
-      }
-      tile.className=`seat-camera-tile seat-camera-${p.seat}`;bindSeatTileResize(tile,p.seat);
-      const muted=p.id===me?micMuted:!!p.muted,speaking=!muted&&speakingPeers.has(p.id);tile.classList.toggle('speaking',speaking);
-      tile.querySelector('.seat-camera-name').textContent=`${p.name}${p.id===me?' • você':''}`;renderVoiceStatus(tile.querySelector('.seat-camera-mic'),muted,p.id===me?deafened:!!p.deafened);
-      const stream=cameraStreamForPerson(p),video=tile.querySelector('video');if(personHasLiveCamera(p)){updateVideoElement(video,stream);tile.classList.add('has-video');}else{tile.classList.remove('has-video');if(p.id!==me)scheduleVideoRecovery(p.id);}
-    }
+    // The floating panel owns the existing camera elements; do not mirror them
+    // around the game board or create a second set of video controls.
+    const host=$('seatMediaLayer');if(!host)return;host.classList.remove('active');
+    for(const video of host.querySelectorAll('video'))video.srcObject=null;
+    if(host.firstChild)host.replaceChildren();
   }
   function updateMediaIndicators(){
     const me=meId();
@@ -2053,13 +2058,13 @@ window.TronoSocial = (()=>{
       }
       if(msg.type==='game-started'||msg.type==='game-state')setTimeout(renderSeatMedia,0);
     });
-    navigator.mediaDevices?.addEventListener?.('devicechange',enumerateDevices);window.addEventListener('resize',renderSeatMedia);window.addEventListener('trono-audio-state',updateAudioPreferenceButtons);document.addEventListener('click',e=>{if(emojiOpen&&!e.target.closest('#emojiPicker')&&!e.target.closest('#emojiBtn'))toggleEmojiPicker(false);});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const maximized=document.querySelector('.media-maximized');if(maximized){maximized.classList.remove('media-maximized');document.body.classList.remove('media-focus-open');void setSfuTileLayer(maximized,false);}else if(emojiOpen)toggleEmojiPicker(false);else if(telemetryOpen)toggleTelemetry(false);else if(inChatHub()&&chatDrawerOpen)toggleTextChat(false);else if(settingsOpen)toggleVoiceSettings(false);}});document.addEventListener('fullscreenchange',()=>{document.body.classList.toggle('native-fullscreen-media',!!document.fullscreenElement);if(!document.fullscreenElement){renderVideoGrid();renderScreenGrid();}if(transportIsSfu()&&!document.fullscreenElement)void updateAllSfuSubscriptionLayers();});bindFloatingDrag();bindFloatingResize();applyPanelMode();populateEmojiPicker();renderGainValues();updateChatDrawerUI();setSettingsTab(settingsTab);updateAudioPreferenceButtons();enumerateDevices();updateQualityUI();updateButtons();updatePublicPresence();renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();startRealtimeStatusSync();startTelemetry();
+    navigator.mediaDevices?.addEventListener?.('devicechange',enumerateDevices);window.addEventListener('resize',()=>{restoreFloatingRect();renderSeatMedia();});window.addEventListener('trono-audio-state',updateAudioPreferenceButtons);document.addEventListener('click',e=>{if(emojiOpen&&!e.target.closest('#emojiPicker')&&!e.target.closest('#emojiBtn'))toggleEmojiPicker(false);});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const maximized=document.querySelector('.media-maximized');if(maximized){maximized.classList.remove('media-maximized');document.body.classList.remove('media-focus-open');void setSfuTileLayer(maximized,false);}else if(emojiOpen)toggleEmojiPicker(false);else if(telemetryOpen)toggleTelemetry(false);else if(inChatHub()&&chatDrawerOpen)toggleTextChat(false);else if(settingsOpen)toggleVoiceSettings(false);}});document.addEventListener('fullscreenchange',()=>{document.body.classList.toggle('native-fullscreen-media',!!document.fullscreenElement);if(!document.fullscreenElement){renderVideoGrid();renderScreenGrid();}if(transportIsSfu()&&!document.fullscreenElement)void updateAllSfuSubscriptionLayers();});bindFloatingDrag();bindFloatingResize();applyPanelMode();populateEmojiPicker();renderGainValues();updateChatDrawerUI();setSettingsTab(settingsTab);updateAudioPreferenceButtons();enumerateDevices();updateQualityUI();updateButtons();updatePublicPresence();renderVoiceRoster();renderVideoGrid();renderScreenGrid();renderSeatMedia();startRealtimeStatusSync();startTelemetry();
     document.addEventListener('pointerdown',()=>{primeCallSounds();if(voiceJoined)unlockCallAudio();});
     document.addEventListener('keydown',()=>{if(voiceJoined)unlockCallAudio();});
     for(const event of ['focus','blur'])window.addEventListener(event,()=>{syncVoiceWork();renderTelemetry();});
     document.addEventListener('visibilitychange',()=>{syncVoiceWork();if(document.visibilityState==='visible'&&voiceJoined){for(const key of remoteAudio.keys())attachRemoteAudio(key);updateAudioRecoveryUI();}});
     window.addEventListener('trono-music-track',updateVoiceMusicUI);updateVoiceMusicUI();
-    let previousWide=innerWidth>1000;window.addEventListener('resize',()=>{const wide=innerWidth>1000;if(previousWide&&!wide&&chatRoomState?.channelType!=='text')toggleTextChat(false);previousWide=wide;});
+    let previousWide=innerWidth>1000;window.addEventListener('resize',()=>{const wide=innerWidth>1000;if(previousWide&&!wide&&inChatHub()&&chatRoomState?.channelType!=='text')toggleTextChat(false);previousWide=wide;});
   }
   window.addEventListener('trono-layout-change',updateButtons);
   window.addEventListener('DOMContentLoaded',bind);

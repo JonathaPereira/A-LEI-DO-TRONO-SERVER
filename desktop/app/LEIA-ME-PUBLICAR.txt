@@ -1,10 +1,10 @@
-M&N — frontend com instalador Windows 0.2.9
+M&N — frontend com instalador Windows 0.2.10
 
-1. Baixe MN-Trono-Frontend-0.2.9.zip da entrega validada no GitHub.
+1. Baixe MN-Trono-Frontend-0.2.10.zip da entrega validada no GitHub.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.2.9-Windows.exe
+   MN-Trono-0.2.10-Windows.exe
    latest.yml
-3. A correção de voz 0.2.9 não exige SQL nem redeploy do backend.
+3. A revisão 0.2.10 não exige SQL nem redeploy do backend.
    Se vier de uma versão anterior à 0.2.8, conclua também a configuração
    do GIPHY descrita no guia. O SQL de créditos continua no ZIP.
 4. Entre na pasta frontend pelo Git Bash e execute:
@@ -13,4 +13,4 @@ M&N — frontend com instalador Windows 0.2.9
 
 O instalador já acompanha o frontend. Preserve latest.yml e seu SHA-512.
 Não misture arquivos de entregas diferentes. Contas e preferências são mantidas.
-Consulte ATUALIZAR_WINDOWS_v0.2.9.md e PUBLICAR_SURGE_LEVE.md.
+Consulte ATUALIZAR_WINDOWS_v0.2.10.md e PUBLICAR_SURGE_LEVE.md.

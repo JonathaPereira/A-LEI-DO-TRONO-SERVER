@@ -9,7 +9,7 @@ window.TronoMosaic=(()=>{
   function render(){
     const list=sources(),ids=new Set(list.map(p=>p.id));
     for(const id of selected)if(!ids.has(id))selected.delete(id);
-    const toolbar=$('expandMosaicBtn');toolbar.disabled=!list.length;
+    const toolbar=$('expandMosaicBtn');toolbar.disabled=!list.length;if($('socialModeBtn'))$('socialModeBtn').disabled=!list.length;
     // Pair a person's screen and camera consecutively in the shared base grid.
     const order=new Map(list.map((p,i)=>[p.id,i]));
     for(const tile of document.querySelectorAll('#mediaMosaic [data-peer]'))tile.style.order=String((order.get(tile.dataset.peer)||0)*2+(tile.classList.contains('camera-tile')?1:0));
