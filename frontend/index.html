@@ -40,6 +40,7 @@
   <link rel="stylesheet" href="call-workspace.css?v=119polish">
   <link rel="stylesheet" href="member-profile.css?v=115workspace">
   <link rel="stylesheet" href="profile-media.css?v=120giphy" />
+  <link rel="stylesheet" href="call-floating.css?v=122sfufloating">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -258,7 +259,7 @@
   </section>
 
   <aside id="socialPanel" class="social-panel hidden social-hidden" aria-label="Comunicação da Corte">
-    <div id="socialDragHandle" class="social-head"><div><small>SALA DE VOZ</small><strong id="mnStageRoomName">Geral</strong></div><div class="social-head-actions"><button id="socialModeBtn" title="Alternar janela completa/flutuante">▱ Flutuante</button><button id="socialCloseBtn" title="Minimizar">—</button></div></div>
+    <div id="socialDragHandle" class="social-head"><div><small>SALA DE VOZ</small><strong id="mnStageRoomName">Geral</strong></div><div class="social-head-actions"><button id="socialModeBtn" title="Ampliar câmeras e telas da chamada">Ampliar</button><button id="socialCloseBtn" title="Minimizar">—</button></div></div>
     <section class="court-chat-section" aria-label="Mensagens de texto">
       <div class="court-chat-title"><div><small>MENSAGENS</small><strong># conversa</strong></div><div class="chat-title-actions"><button id="channelFilesBtn" class="small-btn" type="button" title="Ver fotos e anexos do canal">Anexos</button><button id="muteTextBtn" class="small-btn">Silenciar chat</button><button id="chatDrawerCloseBtn" class="chat-drawer-close" title="Fechar chat">×</button></div></div>
       <button id="olderChatMessages" type="button" class="older-chat-messages hidden">Mensagens anteriores</button>
@@ -423,7 +424,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.9-Windows.exe" download="MN-Trono-0.2.9-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.10-Windows.exe" download="MN-Trono-0.2.10-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -632,7 +633,8 @@
   <script src="personal-prefs.js?v=099desktop017"></script>
   <script src="voice-reception.js?v=111voice"></script>
   <script src="call-stability.js?v=111voice"></script>
-  <script src="social.js?v=121backgroundvoice"></script>
+  <script src="sfu-recovery.js?v=122sfufloating"></script>
+  <script src="social.js?v=122sfufloating"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
@@ -654,7 +656,7 @@
   <script src="community.js?v=116profilemedia"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
   <script src="soundboard-client.js?v=098desktop016"></script>
-  <script src="media-mosaic.js?v=091sharingclips"></script>
+  <script src="media-mosaic.js?v=122sfufloating"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
   <script src="call-controls-layout.js?v=118communitycontrols"></script>

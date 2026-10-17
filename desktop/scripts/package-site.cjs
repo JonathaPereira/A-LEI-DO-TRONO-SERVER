@@ -28,6 +28,7 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-PUBLICAR.txt'),path.join(site,'LEIA-ME-PUBLICAR.txt'));
   await fs.copyFile(path.join(root,'PUBLICAR_SURGE_LEVE.md'),path.join(site,'PUBLICAR_SURGE_LEVE.md'));
   const numeric=v=>v.split('.').map(Number),compare=(a,b)=>{const x=numeric(a),y=numeric(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]-y[i];return 0;};
+  await fs.copyFile(path.join(root,'ANALISE_SFU_E_JANELA_FLUTUANTE.md'),path.join(site,'ANALISE_SFU_E_JANELA_FLUTUANTE.md'));
   const guides=(await fs.readdir(root)).map(name=>({name,version:/^ATUALIZAR_WINDOWS_v(\d+\.\d+\.\d+)\.md$/.exec(name)?.[1]})).filter(g=>g.version&&compare(g.version,version)<=0).sort((a,b)=>compare(b.version,a.version)).slice(0,2);
   if(guides[0]?.version!==version)throw Error('Guia de publicação da versão atual não encontrado.');
   for(const guide of guides)await fs.copyFile(path.join(root,guide.name),path.join(site,guide.name));
