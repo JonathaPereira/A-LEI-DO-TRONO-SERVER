@@ -80,6 +80,7 @@ window.TronoAudio = (() => {
     : storage.getItem('tronoMusicEnabled') !== '0';
   let sfxEnabled = storage.getItem('tronoSfxEnabled') !== '0';
   let musicRequest = 0;
+  let musicPlaybackStatus = '';
   const MUSIC_TRACKS = {
     // Faixas modernas liberadas em CC0/Public Domain pelo próprio autor no OpenGameArt.
     // Cada faixa possui fallback local original do protótipo para evitar silêncio caso a origem externa esteja indisponível.
@@ -159,10 +160,11 @@ window.TronoAudio = (() => {
     }
   }
   function setMusicPlaybackStatus(message = '') {
-    for (const id of ['portalMusicStatus', 'voiceMusicStatus']) {
-      const el = $(id);
-      if (el) el.textContent = message;
-    }
+    const el = $('portalMusicStatus');
+    if (el) el.textContent = message;
+    if (musicPlaybackStatus === message) return;
+    musicPlaybackStatus = message;
+    window.dispatchEvent(new Event('trono-music-playback'));
   }
   async function startBackgroundMusic() {
     const el = $('bgMusic');
@@ -202,16 +204,11 @@ window.TronoAudio = (() => {
     }
   }
   function syncVolumeControls(value) {
-    for (const id of ['musicVolume', 'lobbyMusicVolume', 'portalMusicVolume', 'voiceMusicVolume']) {
+    for (const id of ['musicVolume', 'lobbyMusicVolume', 'portalMusicVolume']) {
       const input = $(id);
       if (input && String(input.value) !== String(value)) input.value = value;
     }
-    for (const id of [
-      'musicVolumeValue',
-      'lobbyMusicVolumeValue',
-      'portalMusicVolumeValue',
-      'voiceMusicVolumeValue',
-    ]) {
+    for (const id of ['musicVolumeValue', 'lobbyMusicVolumeValue', 'portalMusicVolumeValue']) {
       const out = $(id);
       if (out) out.textContent = `${value}%`;
     }
@@ -225,6 +222,7 @@ window.TronoAudio = (() => {
     }
     syncVolumeControls(value);
     storage.setItem('tronoMusicVolume', String(value));
+    window.dispatchEvent(new Event('trono-music-volume'));
   }
   function setMusicTrack(id, { play = true } = {}) {
     if (!MUSIC_TRACKS[id]) return;
@@ -493,6 +491,9 @@ window.TronoAudio = (() => {
     },
     get sfxEnabled() {
       return sfxEnabled;
+    },
+    get musicStatus() {
+      return musicPlaybackStatus;
     },
     get musicVolume() {
       return Number(storage.getItem('tronoMusicVolume') ?? 32);

@@ -774,9 +774,6 @@ window.TronoSocial = (() => {
   function playCallSound(kind = 'join', id = 'local') {
     callAlerts.play(kind, id);
   }
-  function primeCallSounds() {
-    callAlerts.prime();
-  }
   function callNotice(event) {
     window.TronoCommunity?.voiceNotice?.(event);
   }
@@ -785,50 +782,6 @@ window.TronoSocial = (() => {
   }
   function setSettingsTab(tab = 'audio') {
     window.TronoCallSettings.select(tab);
-  }
-  function updateAudioPreferenceButtons() {
-    const sfx = window.TronoAudio?.sfxEnabled ?? storage.getItem('tronoSfxEnabled') !== '0',
-      music = window.TronoAudio?.musicEnabled ?? storage.getItem('tronoMusicEnabled') !== '0';
-    const sb = $('voiceSfxBtn'),
-      mb = $('voiceMusicBtn');
-    if (sb) {
-      sb.textContent = sfx ? '🔔 Efeitos: Ligados' : '🔕 Efeitos: Mutados';
-      sb.classList.toggle('audio-muted', !sfx);
-      sb.setAttribute('aria-pressed', sfx ? 'true' : 'false');
-    }
-    if (mb) {
-      mb.textContent = music ? '♫ Música: Ligada' : '♫ Música: Mutada';
-      mb.classList.toggle('audio-muted', !music);
-      mb.setAttribute('aria-pressed', music ? 'true' : 'false');
-    }
-  }
-  async function toggleVoiceSfx() {
-    if (window.TronoAudio?.toggleSfx) window.TronoAudio.toggleSfx();
-    else storage.setItem('tronoSfxEnabled', storage.getItem('tronoSfxEnabled') === '0' ? '1' : '0');
-    updateAudioPreferenceButtons();
-  }
-  async function toggleVoiceMusic() {
-    if (window.TronoAudio?.toggleMusic) await window.TronoAudio.toggleMusic();
-    else
-      storage.setItem(
-        'tronoMusicEnabled',
-        storage.getItem('tronoMusicEnabled') === '0' ? '1' : '0',
-      );
-    updateAudioPreferenceButtons();
-  }
-  function updateVoiceMusicUI() {
-    const select = $('voiceMusicTrackSelect'),
-      tracks = window.TRONO_MUSIC_TRACKS || {};
-    if (select) {
-      select.innerHTML = Object.entries(tracks)
-        .map(([id, t]) => `<option value="${esc(id)}">${esc(t.label)} • ${esc(t.artist)}</option>`)
-        .join('');
-      select.value =
-        window.TronoAudio?.currentTrack || storage.getItem('tronoMusicTrack') || 'lofi';
-    }
-    const volume = window.TronoAudio?.musicVolume ?? 32;
-    if ($('voiceMusicVolume')) $('voiceMusicVolume').value = String(volume);
-    if ($('voiceMusicVolumeValue')) $('voiceMusicVolumeValue').textContent = `${volume}%`;
   }
   function updateQualityUI() {
     voiceSettings.refresh();
@@ -2313,11 +2266,11 @@ window.TronoSocial = (() => {
     };
   }
   function renderTelemetry() {
+    audioPreferences.refresh();
     const {
       telemetry: telemetrySnapshot,
       resources: nativeResources,
       lagMs: eventLoopLagMs,
-      enabled: voiceProtection,
     } = voiceTelemetry.getSnapshot();
     const t = telemetrySnapshot || {
       transport: voiceTransport.getSnapshot().mode,
@@ -2344,12 +2297,6 @@ window.TronoSocial = (() => {
     };
     set('telemetryHealthLabel', health.label.replace('Conexão ', ''));
     set('telemetryHealthDetail', health.detail);
-    set(
-      'voiceProtectionStatus',
-      voiceProtection
-        ? 'Ativa · margem de voz de 60 a 140 ms quando suportada.'
-        : 'WebRTC gerencia a reprodução sem margem solicitada pelo app.',
-    );
     set(
       'adaptiveQualityStatus',
       callQuality.getSnapshot().adaptation.level
@@ -2615,13 +2562,7 @@ window.TronoSocial = (() => {
     controlBindings.start();
     mediaInterestBindings.start();
     screenSharingBindings.start();
-    $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
-    $('voiceProtection').onchange = (e) => {
-      const enabled = e.target.checked;
-      storage.setItem('mnVoiceProtection', enabled ? '1' : '0');
-      voiceTelemetry.configureProtection(enabled);
-      renderTelemetry();
-    };
+    audioPreferences.start();
     $('adaptiveQuality').checked = qualityPreferences().adaptiveEnabled;
     $('adaptiveQuality').onchange = async (e) => {
       callQuality.configure({ adaptiveEnabled: !!e.target.checked });
@@ -2653,8 +2594,6 @@ window.TronoSocial = (() => {
     }
 
     $('joinVoiceBtn')?.addEventListener('click', joinVoice);
-    $('voiceSfxBtn')?.addEventListener('click', toggleVoiceSfx);
-    $('voiceMusicBtn')?.addEventListener('click', toggleVoiceMusic);
     $('telemetryStatusPill')?.addEventListener('click', () => toggleTelemetry());
     $('telemetryOpenBtn')?.addEventListener('click', () => toggleTelemetry());
     $('telemetryCloseBtn')?.addEventListener('click', () => toggleTelemetry(false));
@@ -2665,30 +2604,11 @@ window.TronoSocial = (() => {
           .then(() => speakingIndicators.watch(meId(), localStream))
           .catch((err) => setStatus(err.message, 'warn'));
     });
-    $('voiceMusicTrackSelect')?.addEventListener('change', (e) =>
-      window.TronoAudio?.setMusicTrack(e.target.value),
-    );
-    $('voiceMusicVolume')?.addEventListener('input', (e) => {
-      window.TronoAudio?.setMusicVolume(e.target.value);
-      updateVoiceMusicUI();
-    });
     window.addEventListener('resize', repositionProfileControls);
     $('voiceRoster')?.addEventListener('scroll', repositionProfileControls, { passive: true });
     $('voiceRoster')?.addEventListener('input', (e) => {
       if (e.target.matches('[data-peer-volume]'))
         setPeerGain(e.target.dataset.peerVolume, e.target.value);
-    });
-    if ($('callAlertVolume')) $('callAlertVolume').value = callAlerts.getSnapshot().volume;
-    if ($('callAlertVolumeValue'))
-      $('callAlertVolumeValue').textContent = `${callAlerts.getSnapshot().volume}%`;
-    $('callAlertVolume')?.addEventListener('input', (e) => {
-      callAlerts.setVolume(e.target.value);
-      $('callAlertVolumeValue').textContent = `${callAlerts.getSnapshot().volume}%`;
-      primeCallSounds();
-    });
-    $('testCallAlert')?.addEventListener('click', () => {
-      primeCallSounds();
-      playCallSound('join', 'test');
     });
     window.addEventListener('trono-auth-change', () => {
       profileActivities.clear();
@@ -2753,7 +2673,6 @@ window.TronoSocial = (() => {
       restoreFloatingRect();
       renderSeatMedia();
     });
-    window.addEventListener('trono-audio-state', updateAudioPreferenceButtons);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const maximized = document.querySelector('.media-maximized');
@@ -2779,7 +2698,6 @@ window.TronoSocial = (() => {
     applyPanelMode();
     voiceSettings.refresh();
     updateChatDrawerUI();
-    updateAudioPreferenceButtons();
     voiceSettings.start();
     updateQualityUI();
     updateButtons();
@@ -2799,8 +2717,6 @@ window.TronoSocial = (() => {
     document.addEventListener('visibilitychange', () => {
       updateVoiceBackgroundClass();
     });
-    window.addEventListener('trono-music-track', updateVoiceMusicUI);
-    updateVoiceMusicUI();
     let previousWide = innerWidth > 1000;
     window.addEventListener('resize', () => {
       const wide = innerWidth > 1000;
@@ -2840,6 +2756,15 @@ window.TronoSocial = (() => {
     onStatus: setStatus,
   });
   window.TronoVoiceSettings = voiceSettings;
+  const audioPreferences = window.TronoVoiceCapture.createAudioPreferences({
+    audio: () => window.TronoAudio,
+    tracks: () => window.TRONO_MUSIC_TRACKS,
+    alerts: callAlerts,
+    protection: voiceTelemetry,
+    events: window,
+    storage,
+  });
+  window.TronoAudioPreferences = audioPreferences;
 
   window.addEventListener('trono-layout-change', updateButtons);
   window.addEventListener('trono:ready', bind);

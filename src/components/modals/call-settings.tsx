@@ -10,6 +10,7 @@ import {
   VoiceVideoSettings,
   VoiceCaptureSettings,
 } from '../voice/settings-fields';
+import { VoiceAudioPreferences } from '../voice/audio-preferences';
 import { SettingsActivityFields } from './settings-activity-fields';
 
 /** These empty slots explicitly lend their children to controllers not converted yet. */
@@ -347,7 +348,7 @@ export function CallSettings({
               </>
             ) : topic === 'audio' ? (
               <VoiceAudioSettings client={runtime.TronoVoiceSettings} desktop={!!dialog}>
-                <ContentSlot content={contents.audio} />
+                <VoiceAudioPreferences client={runtime.TronoAudioPreferences} />
               </VoiceAudioSettings>
             ) : topic === 'video' ? (
               <VoiceVideoSettings client={runtime.TronoVoiceSettings} desktop={!!dialog} />

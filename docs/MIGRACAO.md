@@ -43,6 +43,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Publicação/retomada do microfone e publicação/parada da câmera em TypeScript.
 - Estrutura das configurações web/desktop, navegação, conta e permissões em React.
 - Campos de dispositivos, ganhos, supressão/modo leve e transmissão em React.
+- Aba Áudio integralmente React, incluindo avisos, música, efeitos e proteção de recepção.
 
 ## Integração da main: desktop 0.2.10
 
@@ -69,8 +70,8 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Renderização/configurações
-da chamada, edição/visualização de perfis e galeria, navegação/
+React ou TypeScript apenas porque a marcação foi convertida. Apresentação de participantes/
+mídias, conexão/diagnóstico, edição/visualização de perfis e galeria, navegação/
 gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -1143,12 +1144,52 @@ Fontes sintéticas não medem jogos, dispositivos físicos ou rotas externas.
 Evidências: `artifacts/voice-fields-{tests,checks,build,ui,sfu,layouts,media,desktop,background}.log`
 e `artifacts/settings/audio-480x520.png`. Sem push ou alteração de infraestrutura.
 
+## Avisos, música e proteção recebida em React — 17/10/2026
+
+- A aba Áudio foi concluída em React: avisos de entrada/saída, prévia, efeitos,
+  música/faixa/volume/status e proteção da voz recebida estão em
+  `components/voice/audio-preferences.tsx`.
+- `lib/voice/audio-preferences.ts` projeta o player compartilhado, `call-alerts.ts`
+  e `telemetry.ts`. Não cria contextos, players ou capturas; executa ações dentro
+  do gesto original e deduplica os volumes de input/change. Descarte remove as
+  quatro assinaturas e invalida atualizações pendentes, preservando mídia emprestada.
+- `legacy/audio.js` expõe status e eventos de reprodução/volume para a projeção,
+  além dos eventos existentes de faixa/efeitos/música. Mudanças feitas em outras
+  telas atualizam React; o player mantém catálogo, fallback, preferências e áudio
+  dos jogos. Não remover esse arquivo enquanto os jogos/portal ainda o utilizarem.
+- Removidos os handlers, seletores/options e escritores manuais substituídos em
+  `social.js`/`audio.js`; a marcação antiga da aba saiu de `VoicePanel`, sem slot
+  legado para Áudio. Os módulos de captura, processamento e encoders não mudaram.
+- Sete regressões novas cobrem sincronização externa, ativação síncrona, resposta
+  atrasada, erros, catálogo, persistência/proteção, volumes e descarte sem fechar
+  recursos emprestados. `test:settings` possui 21 casos.
+- O teste de chamada ativa usa os controles React, confere mudanças feitas pelo
+  player compartilhado, status de bloqueio de reprodução e preservação das fontes
+  de microfone/tela. O bloqueio é simulado; esse teste não mede reprodução musical.
+- No Electron real, a projeção aciona o aviso original com volume de 45%, produz
+  PCM finito com sinal e libera as três notas. Descartar a projeção mantém os dois
+  contextos abertos; descartar os avisos fecha somente o seu contexto.
+
+Validação: typecheck, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 11 de layouts/configurações, sete de áudio/microfone/recepção
+no navegador e três no Electron real passaram. A onda de áudio do jogo Splendor
+respeitou volume alto, baixo e silêncio. Os nove cenários Windows de áudio
+coberto/minimizado/oculto passaram: nativo em 100%/180% e RNNoise em 100%, PCM
+contínuo e sem amostras ocultadas. O layout em janela curta foi conferido.
+Fontes sintéticas não substituem testes com jogos, dispositivos físicos ou rede externa.
+
+Evidências: `artifacts/audio-preferences-{checks,build,tests,ui,sfu,layouts,media,desktop,background}.log`
+e `artifacts/settings/audio-480x520.png`. Commit local; sem push ou infraestrutura alterada.
+
 ## Próximas alterações, em ordem
 
-1. Converter avisos/música/proteção recebida e conexão/diagnóstico, barra,
+1. Converter conexão/diagnóstico, barra,
    lista de participantes e painéis de câmera/tela para React, com um dono por
    subárvore. Dispositivos, ganhos, supressão/modo leve e opções de transmissão
    já são campos React em `settings-fields.tsx`, usando `lib/voice/settings.ts`.
+   Avisos, música, efeitos e proteção recebida também são React em
+   `audio-preferences.tsx`, usando `lib/voice/audio-preferences.ts`. O player
+   compartilhado com jogos permanece em `legacy/audio.js`; ele não pinta esses campos.
    A estrutura de configurações (abas/abertura/conta/permissões) também é React;
    seus slots conservam somente os conteúdos ainda legados.
    Publicação de microfone/câmera está em `device-publication.ts`; publicação da

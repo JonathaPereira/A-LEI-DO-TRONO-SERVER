@@ -123,6 +123,45 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await owner.locator('#outputGainSlider').fill('150');
       await expect(owner.locator('#outputGainValue')).toHaveText('150%');
       await owner.locator('#outputGainSlider').fill('100');
+      await owner.locator('#voiceSfxBtn').click();
+      await expect(owner.locator('#voiceSfxBtn')).toHaveAttribute('aria-pressed','true');
+      assert.equal(await owner.evaluate(()=>window.TronoAudio.sfxEnabled),true);
+      await owner.locator('#voiceSfxBtn').click();
+      await expect(owner.locator('#voiceSfxBtn')).toHaveAttribute('aria-pressed','false');
+      // Use a deterministic media failure to check status propagation, not playback quality.
+      await owner.evaluate(()=>{
+        const player=document.getElementById('bgMusic');
+        window.__restoreMusicPlay=player.play;
+        player.play=()=>Promise.reject(new DOMException('test activation required','NotAllowedError'));
+      });
+      await owner.locator('#voiceMusicBtn').click();
+      await expect(owner.locator('#voiceMusicBtn')).toHaveAttribute('aria-pressed','true');
+      await expect(owner.locator('#voiceMusicStatus')).toContainText('O navegador bloqueou');
+      await owner.locator('#voiceMusicTrackSelect').selectOption('rock');
+      await expect.poll(()=>owner.evaluate(()=>window.TronoAudio.currentTrack)).toBe('rock');
+      await owner.locator('#voiceMusicVolume').fill('47');
+      await expect(owner.locator('#voiceMusicVolumeValue')).toHaveText('47%');
+      assert.equal(await owner.evaluate(()=>document.getElementById('bgMusic').volume),.47);
+      // Other screens still use the same owner; their changes must reach React.
+      await owner.evaluate(()=>window.TronoAudio.setMusicVolume(19));
+      await expect(owner.locator('#voiceMusicVolume')).toHaveValue('19');
+      await expect(owner.locator('#voiceMusicVolumeValue')).toHaveText('19%');
+      await owner.evaluate(()=>window.TronoAudio.setMusicTrack('lofi',{play:false}));
+      await expect(owner.locator('#voiceMusicTrackSelect')).toHaveValue('lofi');
+      await owner.locator('#voiceMusicBtn').click();
+      await expect(owner.locator('#voiceMusicStatus')).toHaveText('Música silenciada.');
+      await owner.evaluate(()=>{document.getElementById('bgMusic').play=window.__restoreMusicPlay;});
+      await owner.locator('#callAlertVolume').fill('40');
+      await expect(owner.locator('#callAlertVolumeValue')).toHaveText('40%');
+      assert.equal(await owner.evaluate(()=>localStorage.getItem('mnCallAlertVolume')),'40');
+      await owner.locator('#testCallAlert').click();
+      await owner.locator('#voiceProtection').uncheck();
+      await expect(owner.locator('#voiceProtectionStatus')).toContainText('WebRTC gerencia');
+      assert.equal(await owner.evaluate(()=>localStorage.getItem('mnVoiceProtection')),'0');
+      await owner.locator('#voiceProtection').check();
+      await expect(owner.locator('#voiceProtectionStatus')).toContainText('Ativa');
+      assert.equal(await owner.evaluate(()=>localStorage.getItem('mnVoiceProtection')),'1');
+
       await owner.locator('[data-settings-tab="video"]').click();
       await owner.locator('#voiceSettingsClose').click();
       await owner.locator('#voiceSettingsBtn').click();

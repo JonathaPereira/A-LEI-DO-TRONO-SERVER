@@ -100,11 +100,27 @@ test(
           documentEvents: events,
           onChange() {},
         });
+        const preferences = window.TronoVoiceCapture.createAudioPreferences({
+          audio: () => ({
+            sfxEnabled: true,
+            musicEnabled: false,
+            musicVolume: 32,
+            currentTrack: 'lofi',
+            musicStatus: '',
+          }),
+          tracks: () => ({}),
+          alerts,
+          protection: { getSnapshot: () => ({ enabled: true }) },
+          events,
+          storage: { setItem() {} },
+        });
+        preferences.start();
         audio.start();
         events.dispatchEvent(new Event('pointerdown'));
         window.__callAudioProbe = {
           audio,
           alerts,
+          preferences,
           gains,
           oscillators,
           pcm() {
@@ -119,6 +135,7 @@ test(
           },
           contexts: () => ({ microphone: microphoneContext.state, alerts: alertsContext.state }),
           close() {
+            preferences.dispose();
             analyzer.disconnect();
             alerts.dispose();
             audio.dispose();
@@ -128,7 +145,14 @@ test(
       await expect
         .poll(() => page.evaluate(() => window.__callAudioProbe.contexts()))
         .toEqual({ microphone: 'running', alerts: 'running' });
-      await page.evaluate(() => window.__callAudioProbe.alerts.play('join'));
+      await page.evaluate(() => {
+        window.__callAudioProbe.preferences.setAlertVolume(45);
+        window.__callAudioProbe.preferences.testAlert();
+      });
+      assert.equal(
+        await page.evaluate(() => window.__callAudioProbe.alerts.getSnapshot().volume),
+        45,
+      );
       await expect
         .poll(() => page.evaluate(() => window.__callAudioProbe.pcm().rms), {
           intervals: [20, 40, 60],
@@ -140,6 +164,11 @@ test(
         .poll(() => page.evaluate(() => window.__callAudioProbe.gains.every((g) => g.disconnected)))
         .toBe(true);
       assert.equal(await page.evaluate(() => window.__callAudioProbe.oscillators.length), 3);
+      await page.evaluate(() => window.__callAudioProbe.preferences.dispose());
+      assert.deepEqual(await page.evaluate(() => window.__callAudioProbe.contexts()), {
+        microphone: 'running',
+        alerts: 'running',
+      });
       await page.evaluate(() => window.__callAudioProbe.alerts.dispose());
       await expect
         .poll(() => page.evaluate(() => window.__callAudioProbe.contexts()))

@@ -555,7 +555,21 @@ aplicam os encoders existentes, com revisão/geração para não anunciar a cham
 anterior; bitrate enviado ao SFU respeita o teto do dono de qualidade. O descarte
 remove a escuta e invalida continuações sem encerrar mídia emprestada.
 
-Conexão, avisos/música/proteção recebida, perfil, aparência, arquivos e jogo continuam
+`components/voice/audio-preferences.tsx` completa a aba Áudio em React: efeitos,
+faixa/volume/status da música, volume/prévia dos avisos e proteção da voz recebida.
+`lib/voice/audio-preferences.ts` projeta os donos de áudio, avisos e telemetria;
+possui somente assinaturas de interface, sem abrir players ou contextos. Comandos
+começam no gesto original; input/change iguais aplicam volume uma vez. O descarte
+remove listeners e ignora continuações sem fechar os recursos emprestados.
+
+O player compartilhado com portal/jogos continua em `legacy/audio.js`. Expõe o
+status por getter e evento `trono-music-playback`, além de `trono-music-volume`,
+`trono-music-track` e `trono-audio-state`. Alterações feitas em outras telas chegam
+à projeção; o player não escreve mais nos campos React. `call-alerts.ts` mantém
+volume, síntese e contexto dos avisos; `telemetry.ts` mantém proteção/prioridade.
+`social.js` somente compõe esses donos e avisa a projeção quando a telemetria muda.
+
+Conexão, perfil, aparência, arquivos e jogo continuam
 em slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
 possui contêiner/visibilidade; cada controlador conserva somente seus filhos.
 Notificações preenche seu slot, sem criar abas/painéis paralelos. Esses conteúdos,
