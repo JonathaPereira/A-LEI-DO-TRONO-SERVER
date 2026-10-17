@@ -404,8 +404,31 @@ com as proteções dos donos de peers/sessões. Não há segundo socket ou captu
 `social.js` não mantém outro mapa, flags ou listeners desses eventos; conserva os
 adaptadores de navegação, ganho, sons e renderização.
 
-`social.js` conserva contextos do microfone/avisos e interface. Os módulos notificam esse controlador para anexar áudio, registrar/remover
-proteção do receiver, pedir fallback ou renderizar.
+`call-audio.ts` possui o contexto compartilhado do microfone, seu listener de estado
+e os listeners de gesto/visibilidade que desbloqueiam o áudio. A criação é tardia:
+48 kHz, margem solicitada de 40 ms no desktop e `interactive` na web. O contexto
+é emprestado ao processador e aos medidores; permanece reutilizável entre chamadas.
+`resume`, desbloqueio dos players e dos avisos são chamados sincronamente dentro
+do gesto. Retomar em andamento é deduplicado e conclusões antigas não atualizam
+players da chamada seguinte. Um contexto substituído perde seu listener.
+
+`call-alerts.ts` possui outro contexto, volume salvo, intervalo de 750 ms por aviso/
+participante e osciladores dos sons de entrada, saída, desconexão e mensagem.
+Frequências, envelopes, volume padrão de 85% e condições de silêncio foram mantidos;
+volume zero de avisos de chamada não silencia o som independente de mensagem.
+Ao terminar, os nós são desconectados; uma construção parcial também é descartada.
+Roteamento nativo de avisos é serializado e lê a saída atual, sem reabrir capturas.
+
+Ambas as instâncias vivem por página. `dispose` remove listeners, encerra somente
+os recursos pertencentes ao módulo e invalida continuações; não deve ser usado
+como saída da chamada. Ao desmontar a aplicação, libere a chamada antes do contexto
+emprestado pelo processador. Reprodução recebida continua em `audio-playback.ts`,
+separada do envio e dos avisos. `social.js` consulta os snapshots e conserva os
+adaptadores dos controles, sem contextos, cooldown ou listeners de desbloqueio próprios.
+
+`social.js` conserva a interface e a coordenação ainda não convertida dos controles.
+Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
+do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
 O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.
 

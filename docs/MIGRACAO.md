@@ -35,6 +35,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Seleção, inicialização e fallback SFU/P2P, com modo da sala e listener, em TypeScript.
 - Preferências/qualidade/adaptação, filas dos encoders e exportação anônima em TypeScript.
 - Lista privada de voz, eventos e sincronização de participantes P2P/SFU em TypeScript.
+- Contexto compartilhado do microfone, desbloqueio de áudio e avisos em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -62,7 +63,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
 React ou TypeScript apenas porque a marcação foi convertida. Controles/configurações
-da chamada, contextos de áudio, edição/visualização de perfis e galeria, navegação/
+da chamada, edição/visualização de perfis e galeria, navegação/
 gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -858,10 +859,47 @@ Evidências: `artifacts/roster-unit.log`, `roster-regressions.log`, `roster-ui.l
 `roster-sfu.log`, `roster-media.log`, `roster-desktop.log`, `roster-typecheck.log`,
 `roster-format.log` e `roster-build.log`. Sem push ou alteração de infraestrutura.
 
+## Contextos de áudio e avisos em TypeScript — 17/10/2026
+
+- `lib/voice/call-audio.ts` possui o contexto emprestado ao processador/medidores,
+  listener de estado e listeners de gesto/visibilidade. Preserva 48 kHz, margem
+  desktop de 40 ms, desbloqueio no gesto e reutilização do contexto entre chamadas.
+  Retomadas pendentes são deduplicadas; respostas antigas não atualizam outra chamada.
+- `call-alerts.ts` possui contexto separado, volume persistido, cooldown e grafos
+  dos avisos. Conserva notas/envelopes, volume padrão de 85%, silêncio e diferença
+  entre aviso e mensagem. Nós normais/parciais são descartados; saídas de áudio
+  nativas dos avisos são serializadas. Nenhum grafo de recepção ou captura foi movido.
+- `social.js` perdeu contextos, volume/cooldown duplicados e listeners de desbloqueio.
+  Conserva adaptadores de controles e consulta os snapshots. As instâncias vivem
+  por página; sair da chamada não fecha os contextos compartilhados. `dispose`
+  permite desmontagem explícita depois de liberar os consumidores do microfone.
+- `test:voice:audio` cobre 20 regressões e está em `npm test`. `test:desktop:audio`
+  verifica PCM nativo, descarte dos nós e independência dos contextos no Electron.
+
+Passaram tipagem, formatação, build estático, `npm test`, quatro fluxos de interface,
+124 checks de SFU e 15 checks de mídia/controles no navegador. No Electron passaram
+P2P entre janelas/layouts/permissões, relay SFU e o teste novo de avisos: PCM finito
+com sinal, três notas e liberação do contexto dos avisos mantendo o microfone ativo.
+A transmissão de tela e os grafos de captura/processamento não foram alterados.
+Testes sintéticos locais não medem desempenho em jogos ou rotas SFU/TURN externas.
+
+Evidências: `artifacts/call-audio-unit.log`, `call-audio-regressions.log`,
+`call-audio-ui.log`, `call-audio-sfu.log`, `call-audio-media.log`,
+`call-audio-desktop.log`, `call-audio-native.log`, `call-audio-typecheck.log`,
+`call-audio-format.log` e `call-audio-build.log`.
+A rodada isolada de segundo plano (`call-audio-background.log`) passou nos nove
+cenários: nativo a 100%/180% e RNNoise a 100%, com janela coberta, minimizada e
+oculta. As capturas de 240 mil frames levaram entre 4,992 e 5,010 s, com PCM finito,
+zero amostras reconstruídas e captura/peers preservados. A falha anterior de tempo
+não se reproduziu nesta execução; isso não prova sua correção definitiva. O teto
+de 7,5 s e o processamento de áudio não foram alterados.
+Sem push, publicação ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Converter controles/configurações da chamada e contextos de áudio/avisos ainda
-   em `social.js`. O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
+1. Converter controles/configurações da chamada ainda em `social.js`.
+   Contextos, desbloqueio e avisos estão em `call-audio.ts`/`call-alerts.ts`.
+   O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
    Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.
    Seleção, inicialização/fallback e listener do modo da sala estão em `transport.ts`.
    Entrada/saída, fase, geração, promessa e listeners de saída estão em `call-lifecycle.ts`.

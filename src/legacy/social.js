@@ -13,7 +13,6 @@ window.TronoSocial = (() => {
   const watchingStreams = new Set();
   const hiddenCameras = new Set();
   const streamWatchVersions = new Map();
-  let mediaAudioContext = null;
   const foreground = () => !document.hidden && document.hasFocus();
   function updateVoiceBackgroundClass() {
     document.body.classList.toggle(
@@ -28,53 +27,17 @@ window.TronoSocial = (() => {
     (!isScreenKind(pub.kind) || (inChatHub() && watchingStreams.has(pub.ownerId)));
   const streamAudioKey = (id) => `stream:${id}`;
   function ensureMediaAudioContext() {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return null;
-    if (!mediaAudioContext || mediaAudioContext.state === 'closed') {
-      try {
-        mediaAudioContext = new Ctx({
-          latencyHint: window.TronoDesktop ? 0.04 : 'interactive',
-          sampleRate: 48000,
-        });
-      } catch (err) {
-        console.warn('[TronoSocial] Web Audio indisponível; usando áudio direto', err);
-        return null;
-      }
-      if (audioPlayback.getSnapshot().output && mediaAudioContext.setSinkId)
-        void mediaAudioContext.setSinkId(audioPlayback.getSnapshot().output).catch(() => {});
-      mediaAudioContext.onstatechange = () => {
-        void refreshMicPipeline().catch((err) =>
-          console.warn('[TronoSocial] retomar microfone', err),
-        );
-        // A destination produced by a paused context is silent even with healthy RTP.
-        // Switch receivers back to their original track on every context transition.
-        updateAudioRecoveryUI();
-      };
-    }
-    return mediaAudioContext;
+    return callAudio.ensureContext();
   }
   function updateAudioRecoveryUI() {
+    const state = callAudio.getSnapshot().context;
     const blocked =
       audioPlayback.getSnapshot().entries.some((entry) => entry.blocked) ||
-      (voiceCall.getSnapshot().joined &&
-        mediaAudioContext &&
-        mediaAudioContext.state !== 'running');
+      (voiceCall.getSnapshot().joined && state && state !== 'running');
     $('resumeAudioBtn')?.classList.toggle('hidden', !blocked);
   }
   function unlockCallAudio() {
-    // Call resume/play synchronously inside the user's gesture, before permission/network awaits.
-    const ctx = ensureMediaAudioContext();
-    if (ctx && ctx.state !== 'running')
-      void ctx
-        .resume()
-        .then(() => {
-          audioPlayback.refresh();
-          updateAudioRecoveryUI();
-        })
-        .catch(() => updateAudioRecoveryUI());
-    audioPlayback.unlock();
-    if (callSoundContext && callSoundContext.state !== 'running')
-      void callSoundContext.resume().catch(() => {});
+    callAudio.unlock();
   }
   function renderGainValues() {
     for (const [prefix, value] of [
@@ -190,12 +153,6 @@ window.TronoSocial = (() => {
   let shareStreamAudio = storage.getItem('mnShareStreamAudio') !== '0';
   let settingsOpen = false;
   let settingsTab = storage.getItem('tronoVoiceSettingsTab') || 'audio';
-  let callAlertVolume = Math.max(
-    0,
-    Math.min(100, Number(storage.getItem('mnCallAlertVolume') ?? 85) || 0),
-  );
-  let callSoundContext = null;
-  const callSoundCooldown = new Map();
   let chatDrawerOpen = false;
   let chatUnreadCount = 0;
   let localScreenPreviewPaused = false;
@@ -405,6 +362,37 @@ window.TronoSocial = (() => {
         failed ? 'error' : 'warn',
       );
     },
+  });
+
+  const callAlerts = window.TronoVoiceCapture.createCallAlerts({
+    storage,
+    getSettings: () => ({
+      enabled: window.TronoAudio?.sfxEnabled !== false,
+      muted: deafened || storage.getItem('tronoSfxEnabled') === '0',
+      output: audioPlayback.getSnapshot().output,
+    }),
+    createContext: () => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      return Ctx ? new Ctx() : null;
+    },
+  });
+  const callAudio = window.TronoVoiceCapture.createCallAudio({
+    desktop: !!window.TronoDesktop,
+    getSettings: () => ({
+      joined: voiceCall.getSnapshot().joined,
+      generation: voiceCall.getSnapshot().generation,
+      output: audioPlayback.getSnapshot().output,
+      visible: document.visibilityState === 'visible',
+    }),
+    createContext: (options) => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      return Ctx ? new Ctx(options) : null;
+    },
+    playback: audioPlayback,
+    alerts: callAlerts,
+    refreshMicrophone: refreshMicPipeline,
+    documentEvents: document,
+    onChange: updateAudioRecoveryUI,
   });
 
   const voiceTelemetry = window.TronoVoiceCapture.createVoiceTelemetry({
@@ -694,65 +682,10 @@ window.TronoSocial = (() => {
     return localStream;
   }
   function playCallSound(kind = 'join', id = 'local') {
-    if (
-      deafened ||
-      window.TronoAudio?.sfxEnabled === false ||
-      storage.getItem('tronoSfxEnabled') === '0'
-    )
-      return;
-    const key = `${kind}:${id}`,
-      now = Date.now();
-    if ((callSoundCooldown.get(key) || 0) > now - 750) return;
-    callSoundCooldown.set(key, now);
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    try {
-      if (!callSoundContext || callSoundContext.state === 'closed') callSoundContext = new Ctx();
-      if (callSoundContext.state === 'suspended') callSoundContext.resume().catch(() => {});
-      if (kind !== 'message' && callAlertVolume === 0) return;
-      const ctx = callSoundContext,
-        t = ctx.currentTime + 0.01,
-        g = ctx.createGain();
-      g.connect(ctx.destination);
-      const level = kind === 'message' ? 0.11 : (0.52 * callAlertVolume) / 100;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, level), t + 0.025);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'message' ? 0.36 : 0.65));
-      const notes =
-        kind === 'join'
-          ? [784, 1047, 1568]
-          : kind === 'message'
-            ? [1320, 1760]
-            : kind === 'disconnect'
-              ? [740, 554, 370]
-              : [1047, 698];
-      notes.forEach((freq, i) => {
-        const at = t + i * (kind === 'message' ? 0.11 : 0.17),
-          o = ctx.createOscillator();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(freq, at);
-        o.connect(g);
-        o.start(at);
-        o.stop(at + (kind === 'message' ? 0.18 : 0.22));
-        o.onended = () => {
-          o.disconnect();
-          if (i === notes.length - 1) g.disconnect();
-        };
-      });
-    } catch (err) {
-      console.warn('[TronoSocial] aviso sonoro', err);
-    }
+    callAlerts.play(kind, id);
   }
   function primeCallSounds() {
-    if (window.TronoAudio?.sfxEnabled === false) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    try {
-      if (!callSoundContext || callSoundContext.state === 'closed') callSoundContext = new Ctx();
-      if (callSoundContext.state === 'suspended') void callSoundContext.resume().catch(() => {});
-      if (audioPlayback.getSnapshot().output && callSoundContext.setSinkId)
-        void callSoundContext.setSinkId(audioPlayback.getSnapshot().output).catch(() => {});
-    } catch {}
+    callAlerts.prime();
   }
   function callNotice(event) {
     window.TronoCommunity?.voiceNotice?.(event);
@@ -3175,7 +3108,7 @@ window.TronoSocial = (() => {
     );
     set('telemetryPlayback', playback.label);
     set('telemetryVoiceReceivers', `${playback.count} de ${playback.expected}`);
-    set('telemetryAudioContext', mediaAudioContext?.state || 'Áudio direto');
+    set('telemetryAudioContext', callAudio.getSnapshot().context || 'Áudio direto');
     set(
       'telemetryOutput',
       audioPlayback.getSnapshot().outputError ||
@@ -3506,12 +3439,12 @@ window.TronoSocial = (() => {
     $('transmissionQualitySelect')?.addEventListener('change', changeTransmissionQuality);
     $('noiseModeSelect')?.addEventListener('change', (e) => void setNoiseMode(e.target.value));
     $('voiceLightModeBtn')?.addEventListener('click', toggleVoiceLightMode);
-    if ($('callAlertVolume')) $('callAlertVolume').value = callAlertVolume;
-    if ($('callAlertVolumeValue')) $('callAlertVolumeValue').textContent = `${callAlertVolume}%`;
+    if ($('callAlertVolume')) $('callAlertVolume').value = callAlerts.getSnapshot().volume;
+    if ($('callAlertVolumeValue'))
+      $('callAlertVolumeValue').textContent = `${callAlerts.getSnapshot().volume}%`;
     $('callAlertVolume')?.addEventListener('input', (e) => {
-      callAlertVolume = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-      storage.setItem('mnCallAlertVolume', String(callAlertVolume));
-      $('callAlertVolumeValue').textContent = `${callAlertVolume}%`;
+      callAlerts.setVolume(e.target.value);
+      $('callAlertVolumeValue').textContent = `${callAlerts.getSnapshot().volume}%`;
       primeCallSounds();
     });
     $('testCallAlert')?.addEventListener('click', () => {
@@ -3620,13 +3553,7 @@ window.TronoSocial = (() => {
     renderSeatMedia();
     realtime.start();
     voiceTelemetry.start();
-    document.addEventListener('pointerdown', () => {
-      primeCallSounds();
-      if (voiceCall.getSnapshot().joined) unlockCallAudio();
-    });
-    document.addEventListener('keydown', () => {
-      if (voiceCall.getSnapshot().joined) unlockCallAudio();
-    });
+    callAudio.start();
     for (const event of ['focus', 'blur'])
       window.addEventListener(event, () => {
         updateVoiceBackgroundClass();
@@ -3634,10 +3561,6 @@ window.TronoSocial = (() => {
       });
     document.addEventListener('visibilitychange', () => {
       updateVoiceBackgroundClass();
-      if (document.visibilityState === 'visible' && voiceCall.getSnapshot().joined) {
-        audioPlayback.refresh();
-        updateAudioRecoveryUI();
-      }
     });
     window.addEventListener('trono-music-track', updateVoiceMusicUI);
     updateVoiceMusicUI();
@@ -3735,7 +3658,7 @@ window.TronoSocial = (() => {
         meterMode: speakingIndicators.getSnapshot().mode,
         metersRunning: speakingIndicators.getSnapshot().running,
         playbackContext: audioPlayback.getSnapshot().context,
-        microphoneContext: mediaAudioContext?.state || null,
+        microphoneContext: callAudio.getSnapshot().context,
         priority: priority?.status,
       };
     },
