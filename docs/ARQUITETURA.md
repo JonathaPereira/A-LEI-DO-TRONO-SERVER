@@ -48,8 +48,9 @@ snapshot imutável de capacidades e participação em texto/voz/jogo, com
 `getSnapshot()` e `subscribe()`. `protocol.ts` valida os eventos que alteram esse
 estado e as respostas de conta, convidado, nome e preparo da chamada. O consumidor
 P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`; a negociação SFU
-valida respostas e catálogos em `sfu-protocol.ts`. Payloads de jogos, status/ICE
-e controles de consumo SFU ainda serão convertidos com seus consumidores;
+valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valida
+status de consumo e configuração ICE/TURN. Payloads de jogos e os demais
+comandos de consumo SFU ainda serão convertidos com seus consumidores;
 o protocolo inteiro ainda não está tipado.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
@@ -300,8 +301,27 @@ mudanças para pintar cartões/câmeras, sem outro conjunto de participantes fal
 ou loop de medidores. Seus listeners de página restantes cuidam da classe visual
 de segundo plano, recuperação da reprodução e renderização do diagnóstico.
 
-`social.js` conserva coordenação/entrada da chamada, bootstrap ICE/TURN, escolha do
-transporte, status/consumo, regras de qualidade/adaptação,
+`realtime.ts` possui status confirmado, erro de sincronização, configuração ICE/TURN,
+consultas pendentes e o listener/timer de atualização. Compartilha consultas simultâneas;
+um broadcast válido invalida a consulta anterior. Disconnect/stop descartam resultados
+pendentes imediatamente, sem aguardar o socket. O timer conserva 15 s e só consulta
+com página visível e conexão ativa. O transporte mantém seus deadlines de 8 s.
+
+`realtime-protocol.ts` aceita somente políticas completas nos campos de disponibilidade
+consumidos pelo cliente e números finitos para uso/limites. Snapshots são imutáveis;
+credenciais temporárias não entram nos snapshots. ICE aceita URLs WebRTC em string ou
+array, copia arrays/credenciais e conserva as opções P2P locais. Falhas restauram o
+STUN Cloudflare existente. Sair limpa o cache ICE e cancela a espera da chamada;
+resultados anteriores não reinstalam credenciais na chamada nova. Um freio de qualidade
+local invalida consultas antigas e nunca eleva uma restrição que já era Economia.
+
+O callback de política recebe um guard de revisão; o coordenador também confere a
+geração da chamada depois de esperar o encerramento da tela ou ajustes de qualidade.
+A consulta não possui capturas, peers ou outro socket. `social.js` conserva a pintura
+na tela e aplicação da política aos controles, sem cache/listener/timer paralelos.
+
+`social.js` conserva coordenação/entrada da chamada, escolha do
+transporte, aplicação dos limites à mídia, regras de qualidade/adaptação,
 contextos do microfone/avisos e interface. Os módulos notificam esse
 controlador para anexar
 áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.

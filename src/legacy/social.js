@@ -4,9 +4,6 @@ window.TronoSocial = (() => {
   const storage = window.TronoStorage || localStorage;
   const privateVoiceRoster = new Map();
   const profileActivities = new Map();
-  let realtimeStatus = null;
-  let realtimeSyncError = '';
-  let realtimeSyncTimer = null;
   let mediaTransport = 'p2p';
   let lastSfuError = '';
   let roomVoiceMode = null;
@@ -230,15 +227,23 @@ window.TronoSocial = (() => {
   const stability = new window.TronoCallStability.CallStability();
   let adaptiveEnabled = storage.getItem('mnAdaptiveQuality') !== '0';
 
-  const rtcConfig = window.TRONO_RTC_CONFIG || {
-    iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }],
-  };
   const esc = (s) =>
     String(s ?? '').replace(
       /[&<>"']/g,
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
     );
   const meId = () => window.TronoNetwork?.clientId;
+  const realtime = window.TronoVoiceCapture.createRealtimeConfiguration({
+    connected: () => !!window.TronoNetwork?.connected,
+    visible: () => document.visibilityState !== 'hidden',
+    callGeneration: () => voiceGeneration,
+    baseIce: window.TRONO_RTC_CONFIG,
+    requestStatus: () => window.TronoNetwork.getRealtimeStatus(),
+    requestIce: () => window.TronoNetwork.requestSfu('ice-config', {}, 8000),
+    onMessage: (listener) => window.TronoNetwork.onMessage(listener),
+    onChange: updateQualityUI,
+    onStatus: applyRealtimeStatus,
+  });
   const speakingIndicators = window.TronoVoiceCapture.createSpeakingIndicators({
     getSettings: () => ({
       enabled: voiceJoined,
@@ -328,7 +333,7 @@ window.TronoSocial = (() => {
       enabled: voiceJoined && !transportIsSfu() && !transportPending(),
       localId: meId(),
     }),
-    createConnection: () => new RTCPeerConnection(p2pIceConfig()),
+    createConnection: () => new RTCPeerConnection(realtime.configuration('p2p')),
     getTracks: () => ({
       audio: localStream?.getAudioTracks()[0] || null,
       camera: localStream?.getVideoTracks()[0] || null,
@@ -440,13 +445,13 @@ window.TronoSocial = (() => {
   const sfuSession = window.TronoVoiceCapture.createSfuSession({
     getSettings: () => ({
       enabled: voiceJoined && transportIsSfu(),
-      screenAllowed: !!realtimeStatus?.screenAllowed,
+      screenAllowed: !!realtime.getSnapshot().status?.screenAllowed,
       quality: cappedQuality(),
       screenBitrate: effectiveScreenBitrate(),
       videoBitrate: qualityProfile().videoBitrate,
       camera: qualityProfile().camera,
       screen: qualityProfile().screen,
-      ice: sfuIceConfig,
+      ice: realtime.configuration('sfu'),
     }),
     createConnection: (config) => new RTCPeerConnection(config),
     request: (action, payload, timeout) => window.TronoNetwork.requestSfu(action, payload, timeout),
@@ -464,8 +469,7 @@ window.TronoSocial = (() => {
                 .find((t) => t.readyState === 'live'),
     onPublicationRetry: (kind, error, attempt, done) => {
       if (error?.code === 'HIGH_BUDGET_BLOCKED') {
-        realtimeStatus = { ...realtimeStatus, highAllowed: false, maxQuality: 'balanced' };
-        updateQualityUI();
+        realtime.restrictHighQuality();
       }
       const label = {
         audio: 'Microfone',
@@ -551,7 +555,7 @@ window.TronoSocial = (() => {
   };
   const QUALITY_ORDER = ['economy', 'balanced', 'high'];
   function cappedQuality() {
-    const max = realtimeStatus?.maxQuality;
+    const max = realtime.getSnapshot().status?.maxQuality;
     if (
       mediaTransport === 'sfu' &&
       max &&
@@ -564,7 +568,7 @@ window.TronoSocial = (() => {
   const effectiveScreenBitrate = () =>
     Math.min(
       screenBitrateMbps,
-      realtimeStatus?.highAllowed === false && transportIsSfu() ? 6 : 15,
+      realtime.getSnapshot().status?.highAllowed === false && transportIsSfu() ? 6 : 15,
     ) * 1000000;
   const qualityProfile = () =>
     stability.profile({
@@ -582,16 +586,6 @@ window.TronoSocial = (() => {
       : transportPending()
         ? 'sfu-pending'
         : 'p2p';
-  const p2pIceConfig = () => ({
-    ...rtcConfig,
-    iceServers: [...(rtcConfig.iceServers || []), ...(sfuIceConfig.iceServers || [])],
-  });
-  let sfuIceConfig = {
-    iceServers: [{ urls: ['stun:stun.cloudflare.com:3478'] }],
-    iceTransportPolicy: 'all',
-  };
-  let sfuTurnActive = false;
-
   function setStatus(text, kind = '') {
     const el = $('voiceStatus');
     if (el) {
@@ -800,7 +794,7 @@ window.TronoSocial = (() => {
       hint = $('qualityHint');
     if (select) {
       select.value = transmissionQuality;
-      const p = realtimeStatus;
+      const p = realtime.getSnapshot().status;
       for (const opt of select.options) {
         if (mediaTransport !== 'sfu' || !p) {
           opt.disabled = false;
@@ -823,7 +817,9 @@ window.TronoSocial = (() => {
       $('screenBitrateSelect').value = String(screenBitrateMbps);
       for (const o of $('screenBitrateSelect').options)
         o.disabled =
-          transportIsSfu() && realtimeStatus?.highAllowed === false && Number(o.value) > 6;
+          transportIsSfu() &&
+          realtime.getSnapshot().status?.highAllowed === false &&
+          Number(o.value) > 6;
     }
     if ($('screenContentSelect')) $('screenContentSelect').value = screenContent;
     if ($('screenFormatSelect')) $('screenFormatSelect').value = screenFormat;
@@ -837,7 +833,7 @@ window.TronoSocial = (() => {
       bar = $('realtimeUsageBar'),
       policy = $('realtimePolicyLabel');
     if (!card) return;
-    const r = realtimeStatus;
+    const r = realtime.getSnapshot().status;
     const modeState = voiceJoined ? announcedTransport() : mediaTransport;
     card.classList.toggle('realtime-live', modeState === 'sfu');
     card.classList.toggle('realtime-warning', !!r?.softWarning);
@@ -853,7 +849,7 @@ window.TronoSocial = (() => {
     if (usage)
       usage.textContent = r
         ? `${Number(r.estimatedGb || 0).toFixed(2)} / ${Number(r.thresholds?.hard || 950).toFixed(0)} GB estimados • margem ${Number(r.estimateSafetyFactor || 1).toFixed(1)}×`
-        : realtimeSyncError || 'Aguardando dados do backend';
+        : realtime.getSnapshot().error || 'Aguardando dados do backend';
     if (bar) {
       const hard = Number(r?.thresholds?.hard || 950),
         v = Math.min(100, Math.max(0, (Number(r?.estimatedGb || 0) / hard) * 100));
@@ -862,7 +858,7 @@ window.TronoSocial = (() => {
     }
     if (policy) {
       if (!r)
-        policy.textContent = realtimeSyncError
+        policy.textContent = realtime.getSnapshot().error
           ? 'Não foi possível sincronizar o freio de consumo. O SFU não será assumido como disponível até nova confirmação.'
           : 'Freio de consumo aguardando sincronização.';
       else if (!r.configured) policy.textContent = 'SFU não configurado no backend.';
@@ -875,37 +871,6 @@ window.TronoSocial = (() => {
     }
     updateTelemetryHeader();
   }
-  async function syncRealtimeStatus({ quiet = true } = {}) {
-    if (!window.TronoNetwork?.connected) {
-      updateRealtimeUI();
-      return null;
-    }
-    try {
-      const status = await window.TronoNetwork.getRealtimeStatus();
-      realtimeSyncError = '';
-      await applyRealtimeStatus(status);
-      return status;
-    } catch (err) {
-      console.warn('[TronoSocial] status Realtime', err?.code || err);
-      realtimeSyncError = 'Falha ao sincronizar com o backend';
-      updateRealtimeUI();
-      if (!quiet)
-        setStatus(
-          'Não foi possível conferir o servidor de mídia. Tentando sincronizar novamente.',
-          'warn',
-        );
-      return null;
-    }
-  }
-  function startRealtimeStatusSync() {
-    if (realtimeSyncTimer) clearInterval(realtimeSyncTimer);
-    void syncRealtimeStatus({ quiet: true });
-    realtimeSyncTimer = setInterval(() => {
-      if (document.visibilityState !== 'hidden' && window.TronoNetwork?.connected)
-        void syncRealtimeStatus({ quiet: true });
-    }, 15000);
-  }
-
   function cameraErrorMessage(err) {
     if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError')
       return 'Permita o acesso à câmera nas configurações deste site no navegador.';
@@ -916,26 +881,6 @@ window.TronoSocial = (() => {
     if (err?.name === 'OverconstrainedError')
       return 'Esta câmera não aceitou a captura. Escolha outra entrada em Configurações → Vídeo.';
     return err?.message || 'Não foi possível abrir a câmera.';
-  }
-  async function refreshSfuIceConfig() {
-    const generation = voiceGeneration;
-    try {
-      const r = await window.TronoNetwork?.requestSfu('ice-config', {}, 8000);
-      if (generation !== voiceGeneration) return;
-      if (Array.isArray(r?.iceServers) && r.iceServers.length) {
-        sfuIceConfig = { iceServers: r.iceServers, iceTransportPolicy: 'all' };
-        sfuTurnActive = !!r.turn;
-        return;
-      }
-    } catch (err) {
-      if (generation !== voiceGeneration) return;
-      console.warn('[TronoSocial] ICE/TURN', err?.code || err);
-    }
-    sfuIceConfig = {
-      iceServers: [{ urls: ['stun:stun.cloudflare.com:3478'] }],
-      iceTransportPolicy: 'all',
-    };
-    sfuTurnActive = false;
   }
   function applySenderQuality(sender, kind) {
     if (!sender) return Promise.resolve();
@@ -1026,10 +971,11 @@ window.TronoSocial = (() => {
     if (!QUALITY_PROFILES[requested]) requested = 'balanced';
     if (
       mediaTransport === 'sfu' &&
-      realtimeStatus?.maxQuality &&
-      QUALITY_ORDER.indexOf(requested) > QUALITY_ORDER.indexOf(realtimeStatus.maxQuality)
+      realtime.getSnapshot().status?.maxQuality &&
+      QUALITY_ORDER.indexOf(requested) >
+        QUALITY_ORDER.indexOf(realtime.getSnapshot().status.maxQuality)
     ) {
-      requested = realtimeStatus.maxQuality;
+      requested = realtime.getSnapshot().status.maxQuality;
       setStatus(
         `Freio de consumo: qualidade limitada a ${QUALITY_PROFILES[requested].label}.`,
         'warn',
@@ -1595,7 +1541,11 @@ window.TronoSocial = (() => {
       return false;
     }
     if (!voiceJoined && !(await joinVoice())) return false;
-    if (transportIsSfu() && realtimeStatus && !realtimeStatus.screenAllowed) {
+    if (
+      transportIsSfu() &&
+      realtime.getSnapshot().status &&
+      !realtime.getSnapshot().status.screenAllowed
+    ) {
       setStatus('Compartilhamento bloqueado pelo freio mensal de consumo.', 'warn');
       return false;
     }
@@ -1656,7 +1606,7 @@ window.TronoSocial = (() => {
     $('shareResolution').value = String(setting.height);
     $('shareFps').value = String(setting.fps);
     $('shareAudio').checked = shareStreamAudio;
-    const limited = transportIsSfu() && realtimeStatus?.highAllowed === false;
+    const limited = transportIsSfu() && realtime.getSnapshot().status?.highAllowed === false;
     $('shareResolution').querySelector('[value="1080"]').disabled = limited;
     $('shareFps').querySelector('[value="60"]').disabled = limited;
     if (limited) {
@@ -1765,7 +1715,7 @@ window.TronoSocial = (() => {
       : `${label} SFU reconectando… (${code}).`;
     if (
       !stale &&
-      !sfuTurnActive &&
+      !realtime.getSnapshot().turn &&
       ['SFU_CONNECT_TIMEOUT', 'NETWORK_CLOSED', 'NETWORK_OFFLINE'].includes(code)
     )
       message += ' A rota ICE falhou; TURN pode ajudar em redes móveis/CGNAT.';
@@ -1808,17 +1758,16 @@ window.TronoSocial = (() => {
     mediaTransport = 'sfu-pending';
     updateRealtimeUI();
     try {
-      await refreshSfuIceConfig();
+      await realtime.refreshIce();
       ensureCurrent();
-      let status = await syncRealtimeStatus({ quiet: true });
+      let status = await realtime.sync();
       ensureCurrent();
       if (!status) {
         setStatus('Conferindo o servidor de mídia novamente…', 'warn');
         await new Promise((resolve) => setTimeout(resolve, 500));
         ensureCurrent();
-        status = await syncRealtimeStatus({ quiet: true });
+        status = await realtime.sync();
       }
-      realtimeStatus = status || realtimeStatus;
       updateQualityUI();
       ensureCurrent();
       if (
@@ -1910,10 +1859,10 @@ window.TronoSocial = (() => {
     setStatus(reason, 'warn');
     syncPeers();
   }
-  async function applyRealtimeStatus(status) {
-    if (!status) return;
-    realtimeStatus = status;
-    updateQualityUI();
+  async function applyRealtimeStatus(status, isCurrent) {
+    const call = voiceGeneration;
+    const current = () => isCurrent() && call === voiceGeneration;
+    if (!current()) return;
     if (transportIsSfu() && (!status.enabled || status.hardBlocked)) {
       await fallbackToP2p(
         status.hardBlocked
@@ -1923,6 +1872,7 @@ window.TronoSocial = (() => {
       return;
     }
     if (transportIsSfu() && !status.screenAllowed && screenSharing()) await stopScreenShare(true);
+    if (!current()) return;
     if (
       transportIsSfu() &&
       status.maxQuality &&
@@ -1932,6 +1882,7 @@ window.TronoSocial = (() => {
       storage.setItem('tronoTransmissionQuality', transmissionQuality);
       updateQualityUI();
       await applyQualityToLiveMedia();
+      if (!current()) return;
       setStatus(`Freio de consumo reduziu a transmissão para ${qualityProfile().label}.`, 'warn');
     }
   }
@@ -1976,7 +1927,7 @@ window.TronoSocial = (() => {
       );
     if (status === 'connection-timeout')
       setStatus(
-        sfuTurnActive
+        realtime.getSnapshot().turn
           ? 'Não foi possível conectar o áudio com este participante. Saia e entre na voz para tentar novamente.'
           : 'P2P sem rota de áudio. Verifique TURN em Configurações → Conexão.',
         'error',
@@ -2757,6 +2708,7 @@ window.TronoSocial = (() => {
     // Cancel pending permission/SFU work before releasing the current devices.
     const wasInVoice = voiceJoined;
     voiceGeneration++;
+    realtime.cancelIce();
     microphone.stop();
     voiceJoinPromise = null;
     voiceJoined = false;
@@ -3562,7 +3514,7 @@ window.TronoSocial = (() => {
     set('telemetryLimiter', limiterLabel(t.limiter));
     set('telemetryPcState', t.pcState || '—');
     set('telemetryIceRoute', t.iceRoute || '—');
-    set('telemetryTurn', sfuTurnActive ? 'TURN disponível' : 'STUN direto');
+    set('telemetryTurn', realtime.getSnapshot().turn ? 'TURN disponível' : 'STUN direto');
     set('telemetrySfuError', lastSfuError || 'Nenhum');
     set('telemetryHeroLabel', health.label);
     set('telemetryRecommendation', health.recommendation);
@@ -3892,9 +3844,7 @@ window.TronoSocial = (() => {
       }
       if (msg.type === 'welcome') {
         voiceEventsSupported = !!msg.features?.voiceEvents;
-        void syncRealtimeStatus({ quiet: true });
       }
-      if (msg.type === 'connection' && msg.connected) void syncRealtimeStatus({ quiet: true });
       if (msg.type === 'joined-game-room') {
         gameRoomState = msg.room;
         if (msg.primaryRoomId === msg.room.id) consumeRoom(msg.room);
@@ -3917,7 +3867,6 @@ window.TronoSocial = (() => {
       if (msg.type === 'joined-room') {
         if (msg.room?.kind === 'game') gameRoomState = msg.room;
         consumeRoom(msg.room);
-        void syncRealtimeStatus({ quiet: true });
       }
       if (msg.type === 'joined-text-channel') consumeChatRoom(msg.room);
       if (msg.type === 'room-state') {
@@ -3944,7 +3893,6 @@ window.TronoSocial = (() => {
           msg.playerId,
         );
       }
-      if (msg.type === 'realtime-status') void applyRealtimeStatus(msg);
       if (msg.type === 'sfu-publications' && msg.roomId === roomState?.id) {
         sfuSession.setPublications(msg.publications);
         if (transportIsSfu()) void syncSfuSubscriptions();
@@ -4009,8 +3957,6 @@ window.TronoSocial = (() => {
       if (msg.type === 'connection' && !msg.connected) {
         profileActivities.clear();
         renderProfileActivities();
-        realtimeSyncError = 'Servidor desconectado';
-        realtimeStatus = null;
         void leaveVoice('disconnect');
         setStatus(
           'Servidor desconectado. Recarregue a página para entrar na voz novamente.',
@@ -4060,7 +4006,7 @@ window.TronoSocial = (() => {
     renderVideoGrid();
     renderScreenGrid();
     renderSeatMedia();
-    startRealtimeStatusSync();
+    realtime.start();
     voiceTelemetry.start();
     document.addEventListener('pointerdown', () => {
       primeCallSounds();
@@ -4163,7 +4109,7 @@ window.TronoSocial = (() => {
       return mediaTransport;
     },
     get realtimeStatus() {
-      return realtimeStatus ? { ...realtimeStatus } : null;
+      return realtime.getSnapshot().status;
     },
     get telemetry() {
       return voiceTelemetry.getSnapshot().telemetry;

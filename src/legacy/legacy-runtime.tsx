@@ -17,6 +17,7 @@ import { createRemoteMedia } from '../lib/voice/remote-media';
 import { createSpeakingIndicators } from '../lib/voice/speaking-indicators';
 import { createVoiceTelemetry } from '../lib/voice/telemetry';
 import { createAudioPlayback } from '../lib/voice/audio-playback';
+import { createRealtimeConfiguration } from '../lib/voice/realtime';
 import { createSfuSession } from '../lib/voice/sfu-session';
 
 let startup: Promise<void> | undefined;
@@ -52,6 +53,7 @@ export function LegacyRuntime() {
           createP2pPeers,
           createRemoteMedia,
           createSfuSession,
+          createRealtimeConfiguration,
           createAudioPlayback,
           createVoiceTelemetry,
           createSpeakingIndicators,

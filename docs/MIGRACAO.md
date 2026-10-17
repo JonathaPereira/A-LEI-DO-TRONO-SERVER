@@ -30,6 +30,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Players, ganhos de reprodução, autoplay e roteamento da saída em TypeScript.
 - Coleta de diagnóstico, métricas/proteção de recepção e prioridade nativa em TypeScript.
 - Indicadores visuais de fala, nós de análise, listeners e timers em TypeScript.
+- Status/consumo e configuração ICE/TURN do cliente, consultas e atualização em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -56,7 +57,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Coordenação da chamada e status/ICE,
+React ou TypeScript apenas porque a marcação foi convertida. Coordenação da chamada e aplicação dos limites à mídia,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -65,8 +66,8 @@ Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham com
 React, com adaptadores para os chamadores legados ainda ativos.
 Transporte, comandos e estado de participação agora pertencem a `lib/socket/`.
 Os sinais P2P e a negociação SFU são validados em `lib/voice/peer-protocol.ts` e
-`sfu-protocol.ts`. Payloads de jogos, status/ICE e controles de consumo ainda
-não têm validação completa.
+`sfu-protocol.ts`. Status de consumo e ICE/TURN são validados em `realtime-protocol.ts`.
+Payloads de jogos e os demais comandos de consumo ainda não têm validação completa.
 `server/runtime.cjs` ainda reúne regras de A Lei do Trono e coordenação de canais.
 Módulos JS existentes ainda não recebem a verificação estrita dos módulos TS.
 
@@ -661,6 +662,40 @@ Fontes sintéticas e serviços locais; não houve medição de jogos a 60 FPS, r
 SFU/TURN externas, publicação ou alteração de serviços remotos. O teste manual
 do usuário continua reservado para o fim da migração.
 
+## Status e configuração ICE/TURN do cliente — 16/10/2026
+
+- `lib/voice/realtime.ts` possui cache de política, erro, ICE/TURN, consultas pendentes,
+  timer de 15 s e listener de rede. `social.js` perdeu esse estado e os listeners
+  correspondentes; continua desenhando status e aplicando limites à mídia.
+- `realtime-protocol.ts` valida política e ICE antes de substituir o estado.
+  `types/realtime.ts` descreve snapshots imutáveis sem credenciais de infraestrutura.
+  ICE temporário só é entregue por cópias à criação dos peers existentes.
+- Consultas simultâneas são deduplicadas. Broadcast, desconexão, parada e troca
+  de chamada invalidam respostas antigas; o descarte não espera o transporte.
+  Sair limpa credenciais temporárias. Conservados STUN padrão, opções P2P,
+  deadlines de rede e a atualização apenas com página visível e conexão ativa.
+- A aplicação assíncrona da política confere revisão e geração da chamada antes
+  de continuar. Rejeição de orçamento Alta não eleva uma restrição Economia.
+- `test:voice:configuration` tem 16 regressões, incluídas em `npm test` e `test:sfu`.
+  Cobrem validação, consultas concorrentes, broadcasts, políticas antigas, timer,
+  desconexão/reinício, cópias, descarte e respostas ICE de chamadas anteriores.
+
+Passaram typecheck, formatação, build estático, `npm test`, quatro fluxos de
+interface, 15 checks de mídia/controles e três testes no Electron real. A suíte
+SFU final passou com 49 checks, incluindo as 16 regressões da configuração.
+O Electron conservou P2P entre janelas/layouts, relay SFU com áudio/vídeo nativos
+e PCM contínuo nos nove cenários de segundo plano. Após a revisão final dos
+guards de política, foram repetidos build, suíte SFU e relay real no Electron.
+
+Captura, codecs, constraints, processamento de quadros, senders e transportes
+mantêm seus módulos existentes. Evidências locais: `artifacts/realtime-unit.log`,
+`realtime-regressions.log`, `realtime-ui.log`, `realtime-media.log`,
+`realtime-desktop.log`, `realtime-desktop-final.log`, `realtime-sfu.log`,
+`realtime-typecheck.log`, `realtime-format.log` e `realtime-build.log`.
+Fontes sintéticas e serviços locais não medem jogos a 60 FPS nem rotas TURN/SFU
+externas. O teste manual permanece reservado ao fim da migração.
+Não houve push, publicação ou mudança de infraestrutura.
+
 ## Próximas alterações, em ordem
 
 1. Extrair coordenação/entrada da chamada para `lib/voice/`.
@@ -672,7 +707,8 @@ do usuário continua reservado para o fim da migração.
    Coleta, métricas, proteção de recepção e prioridade estão em `telemetry.ts`/`reception-policy.ts`.
    Indicadores visuais, listeners e timers estão em `speaking-indicators.ts`.
    Adaptação de qualidade e exportação anônima ainda usam `legacy/call-stability.js`.
-   Bootstrap ICE/TURN e status/consumo ainda pertencem ao coordenador legado.
+   Bootstrap ICE/TURN e status/consumo estão em `realtime.ts`, com validação em
+   `realtime-protocol.ts`; não restaurar seus caches/listeners no coordenador.
    A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
    câmera, tela, áudio de aplicativo e fallback SFU/P2P.
 2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
