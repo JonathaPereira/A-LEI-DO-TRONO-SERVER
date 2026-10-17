@@ -336,11 +336,29 @@ O mesmo módulo possui o listener de desconexão e de saída/exclusão da sala a
 Mensagens de outra sala não encerram a chamada. `social.js` instala esse listener
 antes de seus listeners de apresentação, para que eles já vejam participação
 encerrada. O controlador conserva somente ganchos de interface, composição da
-lista de descarte dos donos existentes e conexão SFU/P2P. Não há outro socket ou
+lista de descarte dos donos existentes; a conexão SFU/P2P pertence a `transport.ts`. Não há outro socket ou
 captura, nem cópias de fase, geração ou promessa no controlador.
 
-`social.js` conserva escolha e fallback do
-transporte, aplicação dos limites à mídia, regras de qualidade/adaptação,
+`transport.ts` possui modo local, modo da sala, inicialização SFU, publicação
+inicial e fallback P2P. Prepara ICE/status pelos módulos existentes; uma consulta
+inicial sem confirmação tem uma segunda tentativa após 500 ms. Sem configuração,
+disponibilidade ou orçamento, pede P2P ao backend. Voz publica primeiro; câmera,
+tela e áudio da tela iniciam independentemente, com a recuperação de cada tipo
+no dono SFU. O anúncio permanece pendente até o microfone estar pronto.
+
+O listener de `voice-mode` valida modo e sala antes de aplicar a decisão do
+backend. Não há fallback baseado no roster nem retorno automático a SFU durante
+uma chamada. Pedidos concorrentes de fallback são reunidos por geração: pedem
+mudança ao backend uma vez, limpam SFU/recepção localmente e anunciam P2P.
+A limpeza não aguarda o provedor e não para trilhas de captura emprestadas.
+
+Sair/trocar a sala real invalida a inicialização e suas esperas. Respostas antigas
+não anunciam conexão, recuperam publicações ou sobrescrevem a chamada seguinte.
+O módulo usa os donos existentes de sessão, configuração, peers e mídia recebida,
+sem mapas de transporte duplicados. `social.js` monta as dependências e mantém a
+sincronização do roster P2P e a apresentação dos erros de diagnóstico.
+
+`social.js` conserva aplicação dos limites à mídia, regras de qualidade/adaptação,
 contextos do microfone/avisos e interface. Os módulos notificam esse
 controlador para anexar
 áudio, registrar/remover proteção do receiver, pedir fallback ou renderizar.

@@ -4,9 +4,7 @@ window.TronoSocial = (() => {
   const storage = window.TronoStorage || localStorage;
   const privateVoiceRoster = new Map();
   const profileActivities = new Map();
-  let mediaTransport = 'p2p';
   let lastSfuError = '';
-  let roomVoiceMode = null;
   const senderQualityQueues = new WeakMap(),
     profileMedia = new Map();
   let mutedBeforeDeafen = false;
@@ -416,7 +414,7 @@ window.TronoSocial = (() => {
     protection: storage.getItem('mnVoiceProtection') !== '0',
     getSettings: () => ({
       joined: voiceCall.getSnapshot().joined,
-      transport: mediaTransport,
+      transport: voiceTransport.getSnapshot().mode,
       detailsOpen: telemetryOpen,
       foreground: foreground(),
       visible: document.visibilityState !== 'hidden',
@@ -523,6 +521,56 @@ window.TronoSocial = (() => {
     clearRetry: clearSfuRetry,
   } = sfuSession;
 
+  const voiceTransport = window.TronoVoiceCapture.createVoiceTransport({
+    call: () => voiceCall.getSnapshot(),
+    community: () => communityVoice(),
+    realtime,
+    sfu: sfuSession,
+    tracks: () => ({
+      audio: localStream?.getAudioTracks()[0],
+      camera: cameraCapture.getSnapshot().capture?.track,
+      screen: screenCapture.getCapture()?.outgoing.getVideoTracks()[0],
+      'screen-audio': screenCapture
+        .getCapture()
+        ?.outgoing.getAudioTracks()
+        .find((track) => track.readyState === 'live'),
+    }),
+    closePeers: closeAllPeers,
+    clearReceived: () => {
+      for (const { key: id } of audioPlayback.getSnapshot().entries) {
+        removeRemoteAudio(id);
+        if (id !== meId()) speakingIndicators.remove(id);
+      }
+      remoteMedia.reset();
+    },
+    syncPeers,
+    announce: (mode) =>
+      window.TronoNetwork?.setVoiceState(
+        true,
+        micMuted,
+        cameraOn(),
+        screenSharing(),
+        transmissionQuality,
+        mode,
+      ),
+    fallbackRoom: () => window.TronoNetwork?.fallbackVoice?.(),
+    onMessage: (listener) => window.TronoNetwork.onMessage(listener),
+    onChange: () => {
+      updateQualityUI();
+      renderVoiceRoster();
+      renderVideoGrid();
+      renderScreenGrid();
+      renderSeatMedia();
+    },
+    onStatus: setStatus,
+    onError: (error) => {
+      lastSfuError = error
+        ? `Áudio: ${error.code || error.name || 'SFU_ERROR'} — ${error.message || 'falha ao conectar'}`
+        : '';
+    },
+  });
+  const { fallback: fallbackToP2p } = voiceTransport;
+
   const voiceCall = window.TronoVoiceCapture.createVoiceCall({
     prepare: () => window.TronoNetwork.prepareVoice(),
     microphone,
@@ -530,11 +578,11 @@ window.TronoSocial = (() => {
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
     onPreparing: prepareCallUi,
     onPrepared: (choice) => {
-      roomVoiceMode = choice.mode;
+      voiceTransport.prepare(choice.mode);
       setStatus('Solicitando acesso ao microfone…');
     },
     onJoined: showJoinedCall,
-    connect: connectCall,
+    connect: voiceTransport.connect,
     onLeaving: prepareLeaveUi,
     release: [
       realtime.cancelIce,
@@ -542,8 +590,7 @@ window.TronoSocial = (() => {
       voiceTelemetry.reset,
       cameraCapture.stop,
       closeAllPeers,
-      remoteMedia.reset,
-      sfuSession.reset,
+      voiceTransport.reset,
       audioPlayback.reset,
       () => {
         localStream?.getTracks().forEach((track) => track.stop());
@@ -596,7 +643,7 @@ window.TronoSocial = (() => {
   function cappedQuality() {
     const max = realtime.getSnapshot().status?.maxQuality;
     if (
-      mediaTransport === 'sfu' &&
+      voiceTransport.getSnapshot().mode === 'sfu' &&
       max &&
       QUALITY_ORDER.includes(max) &&
       QUALITY_ORDER.indexOf(transmissionQuality) > QUALITY_ORDER.indexOf(max)
@@ -615,16 +662,11 @@ window.TronoSocial = (() => {
       screen: SCREEN_FORMATS[screenFormat],
       screenBitrate: effectiveScreenBitrate(),
     });
-  const transportIsSfu = () => mediaTransport === 'sfu';
-  const transportPending = () => mediaTransport === 'sfu-pending' || mediaTransport === 'stopping';
-  const announcedTransport = () =>
-    mediaTransport === 'sfu'
-      ? sfuLocalPublications.get('audio')?.ready
-        ? 'sfu'
-        : 'sfu-pending'
-      : transportPending()
-        ? 'sfu-pending'
-        : 'p2p';
+  const transportIsSfu = () => voiceTransport.getSnapshot().mode === 'sfu';
+  const transportPending = () =>
+    voiceTransport.getSnapshot().mode === 'sfu-pending' ||
+    voiceTransport.getSnapshot().mode === 'stopping';
+  const announcedTransport = voiceTransport.announced;
   function setStatus(text, kind = '') {
     const el = $('voiceStatus');
     if (el) {
@@ -835,7 +877,7 @@ window.TronoSocial = (() => {
       select.value = transmissionQuality;
       const p = realtime.getSnapshot().status;
       for (const opt of select.options) {
-        if (mediaTransport !== 'sfu' || !p) {
+        if (voiceTransport.getSnapshot().mode !== 'sfu' || !p) {
           opt.disabled = false;
           continue;
         }
@@ -873,7 +915,9 @@ window.TronoSocial = (() => {
       policy = $('realtimePolicyLabel');
     if (!card) return;
     const r = realtime.getSnapshot().status;
-    const modeState = voiceCall.getSnapshot().joined ? announcedTransport() : mediaTransport;
+    const modeState = voiceCall.getSnapshot().joined
+      ? announcedTransport()
+      : voiceTransport.getSnapshot().mode;
     card.classList.toggle('realtime-live', modeState === 'sfu');
     card.classList.toggle('realtime-warning', !!r?.softWarning);
     card.classList.toggle('realtime-blocked', !!r?.hardBlocked);
@@ -1009,7 +1053,7 @@ window.TronoSocial = (() => {
     let requested = e?.target?.value || transmissionQuality;
     if (!QUALITY_PROFILES[requested]) requested = 'balanced';
     if (
-      mediaTransport === 'sfu' &&
+      voiceTransport.getSnapshot().mode === 'sfu' &&
       realtime.getSnapshot().status?.maxQuality &&
       QUALITY_ORDER.indexOf(requested) >
         QUALITY_ORDER.indexOf(realtime.getSnapshot().status.maxQuality)
@@ -1768,137 +1812,6 @@ window.TronoSocial = (() => {
         .filter((sub) => ['camera', 'screen'].includes(sub.kind))
         .map((sub) => sfuSession.setLayer(sub.key, preferredRidForMedia(sub.kind, false))),
     );
-  }
-  async function stopSfuTransport({ toP2p = true } = {}) {
-    mediaTransport = 'stopping';
-    sfuSession.reset();
-    for (const { key: id } of audioPlayback.getSnapshot().entries) {
-      removeRemoteAudio(id);
-      if (id !== meId()) speakingIndicators.remove(id);
-    }
-    remoteMedia.reset();
-    mediaTransport = toP2p ? 'p2p' : 'none';
-    updateRealtimeUI();
-    renderVideoGrid();
-    renderScreenGrid();
-    renderSeatMedia();
-  }
-  async function startSfuTransport({ callGeneration = voiceCall.getSnapshot().generation } = {}) {
-    if (!voiceCall.getSnapshot().joined || !communityVoice()) return false;
-    const generation = sfuSession.getGeneration(),
-      ensureCurrent = () => {
-        if (
-          !voiceCall.getSnapshot().joined ||
-          callGeneration !== voiceCall.getSnapshot().generation ||
-          generation !== sfuSession.getGeneration() ||
-          roomVoiceMode === 'p2p'
-        )
-          throw Object.assign(new Error('Entrada SFU cancelada.'), { code: 'SFU_CANCELLED' });
-      };
-    mediaTransport = 'sfu-pending';
-    updateRealtimeUI();
-    try {
-      await realtime.refreshIce();
-      ensureCurrent();
-      let status = await realtime.sync();
-      ensureCurrent();
-      if (!status) {
-        setStatus('Conferindo o servidor de mídia novamente…', 'warn');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        ensureCurrent();
-        status = await realtime.sync();
-      }
-      updateQualityUI();
-      ensureCurrent();
-      if (
-        roomVoiceMode === 'p2p' ||
-        !status?.enabled ||
-        !status?.configured ||
-        status?.hardBlocked
-      ) {
-        mediaTransport = 'p2p';
-        updateRealtimeUI();
-        return false;
-      }
-      mediaTransport = 'sfu';
-      lastSfuError = '';
-      closeAllPeers();
-      updateRealtimeUI();
-      const audio = localStream?.getAudioTracks?.()[0];
-      if (audio) {
-        try {
-          await publishSfuTrack('audio', audio);
-        } catch (error) {
-          if (!(await sfuSession.recoverPublication('audio', error))) {
-            ensureCurrent();
-            return false;
-          }
-        }
-      }
-      const camera = localStream?.getVideoTracks?.()[0];
-      if (cameraOn() && camera)
-        void publishSfuTrack('camera', camera).catch((error) =>
-          sfuSession.recoverPublication('camera', error),
-        );
-      const screen = screenCapture.getCapture()?.outgoing?.getVideoTracks?.()[0];
-      if (screenSharing() && screen && status.screenAllowed)
-        void publishSfuTrack('screen', screen).catch((error) =>
-          sfuSession.recoverPublication('screen', error),
-        );
-      const screenAudio = screenCapture.getCapture()?.outgoing?.getAudioTracks?.()[0];
-      if (screenSharing() && screenAudio && status.screenAllowed)
-        void publishSfuTrack('screen-audio', screenAudio).catch((error) =>
-          sfuSession.recoverPublication('screen-audio', error),
-        );
-      window.TronoNetwork?.setVoiceState(
-        true,
-        micMuted,
-        cameraOn(),
-        screenSharing(),
-        transmissionQuality,
-        'sfu',
-      );
-      await syncSfuSubscriptions();
-      ensureCurrent();
-      syncPeers();
-      setStatus('Voz conectada pelo Cloudflare SFU.', 'ok');
-      return true;
-    } catch (err) {
-      if (
-        err?.code === 'SFU_CANCELLED' ||
-        callGeneration !== voiceCall.getSnapshot().generation ||
-        generation !== sfuSession.getGeneration()
-      )
-        return false;
-      console.warn('[TronoSocial] inicialização SFU', err);
-      lastSfuError = `Áudio: ${err.code || err.name || 'SFU_ERROR'} — ${err.message || 'falha ao conectar'}`;
-      await stopSfuTransport({ toP2p: true });
-      setStatus(
-        `SFU não conectou (${err.code || err.name || 'SFU_ERROR'}). Tentando áudio por P2P…`,
-        'warn',
-      );
-      return false;
-    }
-  }
-  async function fallbackToP2p(reason = 'SFU indisponível; retornando ao P2P.') {
-    if (!voiceCall.getSnapshot().joined) return;
-    window.TronoNetwork?.fallbackVoice?.();
-    roomVoiceMode = 'p2p';
-    if (mediaTransport === 'p2p') return;
-    const generation = voiceCall.getSnapshot().generation;
-    await stopSfuTransport({ toP2p: true });
-    if (!voiceCall.getSnapshot().joined || generation !== voiceCall.getSnapshot().generation)
-      return;
-    window.TronoNetwork?.setVoiceState(
-      true,
-      micMuted,
-      cameraOn(),
-      screenSharing(),
-      transmissionQuality,
-      'p2p',
-    );
-    setStatus(reason, 'warn');
-    syncPeers();
   }
   async function applyRealtimeStatus(status, isCurrent) {
     const call = voiceCall.getSnapshot().generation;
@@ -2665,7 +2578,7 @@ window.TronoSocial = (() => {
     voiceTelemetry.start();
     privateVoiceRoster.clear();
     voiceRosterInitialized = false;
-    mediaTransport = communityVoice() && roomVoiceMode === 'sfu' ? 'sfu-pending' : 'p2p';
+    voiceTransport.begin();
     window.TronoNetwork?.setVoiceState(
       true,
       false,
@@ -2689,26 +2602,6 @@ window.TronoSocial = (() => {
     renderSeatMedia();
     await speakingIndicators.watch(meId(), localStream);
   }
-  async function connectCall(operation) {
-    if (communityVoice() && roomVoiceMode === 'sfu') {
-      const sfuOk = await startSfuTransport({ callGeneration: operation.generation });
-      if (!operation.isCurrent()) return;
-      if (!sfuOk && voiceCall.getSnapshot().joined) {
-        window.TronoNetwork?.fallbackVoice?.();
-        roomVoiceMode = 'p2p';
-        mediaTransport = 'p2p';
-        window.TronoNetwork?.setVoiceState(
-          true,
-          micMuted,
-          cameraOn(),
-          screenSharing(),
-          transmissionQuality,
-          'p2p',
-        );
-        syncPeers();
-      }
-    } else syncPeers();
-  }
   function prepareLeaveUi() {
     stability.reset();
     if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
@@ -2720,7 +2613,6 @@ window.TronoSocial = (() => {
     watchingStreams.clear();
     hiddenCameras.clear();
     privateVoiceRoster.clear();
-    mediaTransport = 'p2p';
     updateVoiceBackgroundClass();
     void voiceTelemetry.syncPriority();
     updateAudioRecoveryUI();
@@ -3178,13 +3070,13 @@ window.TronoSocial = (() => {
     updateButtons();
   }
   function consumeRoom(room) {
-    if (room?.id !== roomState?.id) roomVoiceMode = null;
     roomState = room || null;
+    voiceTransport.setRoom(roomState?.id ?? null);
     if (roomState) showForRoom(true);
     else if (!voiceCall.getSnapshot().joined) {
       privateVoiceRoster.clear();
       closeAllPeers();
-      if (transportIsSfu() || transportPending()) void stopSfuTransport({ toP2p: true });
+      if (transportIsSfu() || transportPending()) voiceTransport.reset();
     }
     if (!room || room.id === window.TronoNetwork.currentRoom) consumeChatRoom(room);
     updateButtons();
@@ -3359,7 +3251,7 @@ window.TronoSocial = (() => {
               : 'FPS/latência fora do ideal. Teste uma qualidade menor e confira CPU/rede.',
       };
     }
-    if (lastSfuError && mediaTransport === 'sfu')
+    if (lastSfuError && voiceTransport.getSnapshot().mode === 'sfu')
       return {
         level: 'warn',
         label: 'SFU reconectando',
@@ -3408,7 +3300,7 @@ window.TronoSocial = (() => {
       enabled: voiceProtection,
     } = voiceTelemetry.getSnapshot();
     const t = telemetrySnapshot || {
-      transport: mediaTransport,
+      transport: voiceTransport.getSnapshot().mode,
       rttMs: 0,
       uploadBps: 0,
       downloadBps: 0,
@@ -3423,7 +3315,9 @@ window.TronoSocial = (() => {
       limiter: 'none',
     };
     const health = assessTelemetry(t),
-      modeState = voiceCall.getSnapshot().joined ? announcedTransport() : mediaTransport;
+      modeState = voiceCall.getSnapshot().joined
+        ? announcedTransport()
+        : voiceTransport.getSnapshot().mode;
     const set = (id, v) => {
       const el = $(id);
       if (el && el.textContent !== v) el.textContent = v;
@@ -3694,6 +3588,7 @@ window.TronoSocial = (() => {
 
   function bind() {
     voiceCall.start();
+    voiceTransport.start();
     $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
       const enabled = e.target.checked;
@@ -3874,15 +3769,6 @@ window.TronoSocial = (() => {
       if (msg.type === 'channel-deleted' && msg.roomId === roomState?.id) {
         roomState = null;
         updateButtons();
-      }
-      if (msg.type === 'voice-mode' && msg.roomId === roomState?.id) {
-        roomVoiceMode = msg.mode;
-        if (
-          voiceCall.getSnapshot().joined &&
-          msg.mode === 'p2p' &&
-          (transportIsSfu() || transportPending())
-        )
-          void fallbackToP2p(msg.reason || 'Chamada sincronizada em P2P.');
       }
       if (msg.type === 'voice-roster' && msg.roomId === roomState?.id)
         consumeVoiceRoster(msg.players || []);
@@ -4105,7 +3991,7 @@ window.TronoSocial = (() => {
       return panelMode;
     },
     get mediaTransport() {
-      return mediaTransport;
+      return voiceTransport.getSnapshot().mode;
     },
     get realtimeStatus() {
       return realtime.getSnapshot().status;

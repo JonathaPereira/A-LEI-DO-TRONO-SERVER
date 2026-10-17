@@ -32,6 +32,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Indicadores visuais de fala, nós de análise, listeners e timers em TypeScript.
 - Status/consumo e configuração ICE/TURN do cliente, consultas e atualização em TypeScript.
 - Entrada/saída da chamada, fase, geração, cancelamento e listeners de saída em TypeScript.
+- Seleção, inicialização e fallback SFU/P2P, com modo da sala e listener, em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -58,7 +59,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Seleção/fallback do transporte e aplicação dos limites à mídia,
+React ou TypeScript apenas porque a marcação foi convertida. Aplicação dos limites à mídia, qualidade/adaptação e sincronização do roster P2P,
 edição/visualização de perfis e galeria, navegação/gerenciamento de canais, notificações e jogos
 permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
@@ -733,9 +734,56 @@ Fontes sintéticas e serviços locais não medem jogos a 60 FPS nem rotas SFU/TU
 externas. O teste manual do usuário continua reservado ao fim da migração.
 Não houve push, publicação ou alteração de infraestrutura.
 
+## Escolha e recuperação do transporte — 17/10/2026
+
+- `lib/voice/transport.ts` possui modo da sala/local, anúncio de prontidão,
+  inicialização SFU e fallback P2P. `types/voice-transport.ts` descreve o snapshot.
+  Removidos `mediaTransport`, `roomVoiceMode`, início/parada SFU, coordenação do
+  fallback, conexão da chamada e listener `voice-mode` do controlador antigo.
+- ICE/status, sessão SFU e capturas continuam nos donos anteriores. Voz publica
+  primeiro; publicações opcionais e suas recuperações não seguram a recepção de
+  voz. O anúncio SFU aguarda a prontidão do microfone. Mantida a segunda consulta
+  de status após 500 ms, sem presumir disponibilidade do servidor.
+- Pedidos concorrentes de fallback notificam o backend e descartam SFU/recepção
+  uma vez por geração. Capturas e processamento de quadros não são recriados.
+  Um roster atrasado não decide fallback; mensagens da sala são validadas pelo
+  listener novo. Não há retorno automático de P2P para SFU numa chamada ativa.
+- Cancelar/trocar a sala real invalida esperas pendentes imediatamente. Respostas
+  antigas não anunciam conexão nem recuperam câmera/tela na chamada seguinte.
+- `test:voice:transport` cobre 21 regressões, incluídas em `npm test` e `test:sfu`:
+  prioridade da voz, mídia independente, orçamento, consulta transitória,
+  cancelamento por fase, fallback único/reentrante, validação de modo/sala,
+  preservação das capturas, troca de sala, respostas antigas e descarte.
+
+Passaram typecheck, formatação, build estático, `npm test`, quatro fluxos de
+interface, 15 checks de mídia/controles e os 86 checks de `test:sfu`.
+No Electron real passaram a chamada P2P entre janelas/layouts/permissões e o
+relay SFU com áudio/vídeo nativos, sem recaptura ao trocar a apresentação.
+
+O teste Windows de segundo plano não passou: na etapa nativa com ganho 180%,
+a captura de 240 mil frames levou 7,67 s na rodada concorrente e 7,66 s isolada,
+acima do teto de 7,5 s. O mesmo teste, com as mesmas dependências, também falhou
+num build isolado do commit anterior `18f2def`: 7,71 s. Nas três medições havia
+PCM finito, pacotes contínuos e zero amostras reconstruídas. A comparação não
+indica regressão desta extração; o limite e o processamento de áudio não foram
+alterados. Essa limitação de tempo no ambiente permanece aberta, sem declarar
+validação completa dos nove cenários nesta etapa. A cópia temporária foi removida;
+os logs da comparação foram preservados.
+
+Evidências locais: `artifacts/voice-transport-unit.log`, `voice-transport-regressions.log`,
+`voice-transport-ui.log`, `voice-transport-media.log`, `voice-transport-sfu.log`,
+`voice-transport-desktop.log`, `voice-transport-background-isolated.log`,
+`voice-transport-baseline-background.log`, `voice-transport-baseline-build.log`,
+`voice-transport-typecheck.log`, `voice-transport-format.log` e `voice-transport-build.log`.
+Testes locais usam fontes sintéticas; não medem jogos a 60 FPS nem rotas SFU/TURN
+externas. Qualidade/adaptação, interface e sincronização do roster P2P continuam
+no controlador. O teste manual segue reservado ao fim da migração.
+Não houve push, publicação ou mudança de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair seleção/fallback do transporte e regras de qualidade da chamada para `lib/voice/`.
+1. Extrair regras de qualidade/adaptação e sincronização do roster P2P para `lib/voice/`.
+   Seleção, inicialização/fallback e listener do modo da sala estão em `transport.ts`.
    Entrada/saída, fase, geração, promessa e listeners de saída estão em `call-lifecycle.ts`.
    Não recriar flags de participação ou entrada nos controladores DOM.
    Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
