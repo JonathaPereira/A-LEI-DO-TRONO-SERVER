@@ -432,12 +432,6 @@ async function bindingSetup(t, overrides = {}) {
     ['muteMicBtn', 'click', 'toggleMute'],
     ['deafenVoiceBtn', 'click', 'toggleDeafen'],
     ['cameraBtn', 'click', 'toggleCamera'],
-    ['noiseSuppressionBtn', 'click', 'toggleNoiseSuppression'],
-    ['voiceLightModeBtn', 'click', 'toggleVoiceLightMode'],
-    ['voiceInputSelect', 'change', 'selectInput'],
-    ['cameraInputSelect', 'change', 'selectCamera'],
-    ['noiseModeSelect', 'change', 'setNoiseMode'],
-    ['micGainSlider', 'input', 'setMicrophoneGain'],
   ];
   const elements = new Map(),
     calls = [],
@@ -466,7 +460,7 @@ test('typed DOM bindings install once and invoke every control synchronously wit
     h.elements.get(id).dispatchEvent(new Event(event));
     assert.deepEqual(h.calls.at(-1), event === 'click' ? [action] : [action, id]);
   }
-  assert.equal(h.calls.length, 9);
+  assert.equal(h.calls.length, 3);
 });
 test('moving control nodes preserves handlers and disposal removes them from those same nodes', async (t) => {
   const h = await bindingSetup(t);

@@ -23,6 +23,7 @@ window.TronoSocial = (() => {
     return callAudio.ensureContext();
   }
   function updateAudioRecoveryUI() {
+    voiceSettings.refresh();
     const state = callAudio.getSnapshot().context;
     const blocked =
       audioPlayback.getSnapshot().entries.some((entry) => entry.blocked) ||
@@ -31,17 +32,6 @@ window.TronoSocial = (() => {
   }
   function unlockCallAudio() {
     callAudio.unlock();
-  }
-  function renderGainValues() {
-    for (const [prefix, value] of [
-      ['mic', controlState().microphoneVolume],
-      ['output', audioPlayback.getSnapshot().volume],
-    ]) {
-      const slider = $(`${prefix}GainSlider`),
-        label = $(`${prefix}GainValue`);
-      if (slider) slider.value = String(value);
-      if (label) label.textContent = `${value}%`;
-    }
   }
   function attachRemoteAudio(key) {
     const screen = key.startsWith('stream:'),
@@ -68,12 +58,6 @@ window.TronoSocial = (() => {
     if (label) label.textContent = `${audioPlayback.getGain(streamAudioKey(id))}%`;
   }
   const toggleWatchStream = (id) => mediaInterest.toggleScreen(id);
-  function setOutputGain(value) {
-    unlockCallAudio();
-    audioPlayback.setVolume(value);
-    storage.setItem('mnOutputGain', String(audioPlayback.getSnapshot().volume));
-    renderGainValues();
-  }
   function setPeerGain(id, value) {
     if (!privateVoiceRoster.has(id) || id === meId()) return;
     unlockCallAudio();
@@ -94,7 +78,7 @@ window.TronoSocial = (() => {
   let chatHubMode = false;
   const panelMode = 'floating';
   let chatMuted = storage.getItem('tronoChatMuted') === '1';
-  const { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } = window.TronoVoiceCapture;
+  const { QUALITY_ORDER, SCREEN_FORMATS } = window.TronoVoiceCapture;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
   let chatDrawerOpen = false;
   let chatUnreadCount = 0;
@@ -294,7 +278,7 @@ window.TronoSocial = (() => {
     onBlocked: () => setStatus('Áudio recebido. Toque em Liberar áudio para ouvir.', 'warn'),
     onOutputFallback: (failed) => {
       storage.setItem('tronoVoiceOutput', audioPlayback.getSnapshot().output);
-      if ($('voiceOutputSelect')) $('voiceOutputSelect').value = audioPlayback.getSnapshot().output;
+      voiceSettings.refresh();
       setStatus(
         failed
           ? 'Não foi possível abrir a saída de áudio. Escolha outra saída em Configurações.'
@@ -550,8 +534,8 @@ window.TronoSocial = (() => {
     isSfu: () => transportIsSfu(),
     onStatus: setStatus,
     onChange: (change) => {
+      voiceSettings.refresh();
       if (change === 'processing' || change === 'gain') updateNoiseButton();
-      if (change === 'gain') renderGainValues();
       if (change === 'mute') {
         updateButtons();
         renderVoiceRoster();
@@ -662,7 +646,6 @@ window.TronoSocial = (() => {
     call: () => voiceCall.getSnapshot(),
     localId: meId,
     replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
-    onStatus: setStatus,
     onRender: renderScreenGrid,
   });
 
@@ -848,42 +831,7 @@ window.TronoSocial = (() => {
     if ($('voiceMusicVolumeValue')) $('voiceMusicVolumeValue').textContent = `${volume}%`;
   }
   function updateQualityUI() {
-    const select = $('transmissionQualitySelect'),
-      hint = $('qualityHint');
-    if (select) {
-      select.value = qualityPreferences().transmissionQuality;
-      const p = realtime.getSnapshot().status;
-      for (const opt of select.options) {
-        if (voiceTransport.getSnapshot().mode !== 'sfu' || !p) {
-          opt.disabled = false;
-          continue;
-        }
-        if (opt.value === 'high') opt.disabled = !p.highAllowed;
-        else opt.disabled = false;
-      }
-    }
-    if (hint) {
-      const q = qualityProfile(),
-        cap = cappedQuality();
-      const why =
-        cap !== qualityPreferences().transmissionQuality
-          ? ' • Freio de uso ativo: qualidade reduzida automaticamente.'
-          : '';
-      hint.textContent = `${q.screen.height}p / ${q.screen.fps} FPS · Bitrate máximo: ${q.screenBitrate / 1000000} Mbps.${why} A taxa real depende da rede e do conteúdo.`;
-    }
-    if ($('screenBitrateSelect')) {
-      $('screenBitrateSelect').value = String(qualityPreferences().screenBitrateMbps);
-      for (const o of $('screenBitrateSelect').options)
-        o.disabled =
-          transportIsSfu() &&
-          realtime.getSnapshot().status?.highAllowed === false &&
-          Number(o.value) > 6;
-    }
-    if ($('screenContentSelect'))
-      $('screenContentSelect').value = qualityPreferences().screenContent;
-    if ($('screenFormatSelect')) $('screenFormatSelect').value = qualityPreferences().screenFormat;
-    if ($('shareStreamAudio'))
-      $('shareStreamAudio').checked = screenSharingControls.getSnapshot().audio;
+    voiceSettings.refresh();
     updateRealtimeUI();
   }
   function updateRealtimeUI() {
@@ -937,24 +885,7 @@ window.TronoSocial = (() => {
     return callQuality.applySender(sender, kind);
   }
   function applyQualityToLiveMedia() {
-    return callQuality.applyAll();
-  }
-  async function changeTransmissionQuality(e) {
-    const generation = voiceCall.getSnapshot().generation;
-    if (callQuality.selectQuality(e?.target?.value || qualityPreferences().transmissionQuality))
-      setStatus(`Freio de consumo: qualidade limitada a ${qualityProfile().label}.`, 'warn');
-    updateQualityUI();
-    await applyQualityToLiveMedia();
-    if (generation !== voiceCall.getSnapshot().generation) return;
-    window.TronoNetwork?.setVoiceState(
-      voiceCall.getSnapshot().joined,
-      controlState().micMuted,
-      cameraOn(),
-      screenSharing(),
-      qualityPreferences().transmissionQuality,
-      announcedTransport(),
-    );
-    setStatus(`Qualidade ${qualityProfile().label.toLowerCase()} aplicada.`, 'ok');
+    return callQuality.applyAll().finally(() => voiceSettings.refresh());
   }
   function preferredRidForMedia(kind, maximized = false) {
     return callQuality.preferredRid(kind, maximized);
@@ -1193,62 +1124,8 @@ window.TronoSocial = (() => {
   }
   const toggleWatchCamera = (id) => mediaInterest.toggleCamera(id);
 
-  async function enumerateDevices() {
-    const input = $('voiceInputSelect'),
-      output = $('voiceOutputSelect'),
-      camera = $('cameraInputSelect');
-    if (!input || !output || !camera) return;
-    const observed = controlState();
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const ins = devices.filter((d) => d.kind === 'audioinput'),
-        outs = devices.filter((d) => d.kind === 'audiooutput'),
-        cams = devices.filter((d) => d.kind === 'videoinput');
-      input.innerHTML =
-        '<option value="">Microfone padrão</option>' +
-        ins
-          .filter((d) => d.deviceId)
-          .map(
-            (d, i) =>
-              `<option value="${esc(d.deviceId)}">${esc(d.label || `Microfone ${i + 1}`)}</option>`,
-          )
-          .join('');
-      output.innerHTML =
-        '<option value="">Saída padrão</option>' +
-        outs
-          .filter((d) => d.deviceId)
-          .map(
-            (d, i) =>
-              `<option value="${esc(d.deviceId)}">${esc(d.label || `Saída ${i + 1}`)}</option>`,
-          )
-          .join('');
-      camera.innerHTML =
-        '<option value="">Câmera padrão</option>' +
-        cams
-          .filter((d) => d.deviceId)
-          .map(
-            (d, i) =>
-              `<option value="${esc(d.deviceId)}">${esc(d.label || `Câmera ${i + 1}`)}</option>`,
-          )
-          .join('');
-      callControls.reconcileDevices(
-        ins.map((d) => d.deviceId),
-        cams.map((d) => d.deviceId),
-        observed,
-      );
-      input.value = controlState().selectedInput;
-      camera.value = controlState().selectedCamera;
-      if (outs.some((d) => d.deviceId === audioPlayback.getSnapshot().output))
-        output.value = audioPlayback.getSnapshot().output;
-      else if (audioPlayback.getSnapshot().output) void audioPlayback.setOutput(output.value || '');
-      if (!('setSinkId' in HTMLMediaElement.prototype)) {
-        output.disabled = true;
-        output.title = 'Este navegador não permite escolher a saída de áudio pelo site.';
-      }
-      updateNoiseButton();
-    } catch (err) {
-      console.warn('[TronoSocial] dispositivos', err);
-    }
+  function enumerateDevices() {
+    return voiceSettings.enumerate();
   }
 
   function acquireMic(options) {
@@ -2115,59 +1992,10 @@ window.TronoSocial = (() => {
   }
   function updateNoiseButton() {
     updateVoiceLightMode();
-    const select = $('noiseModeSelect');
-    if (select) {
-      select.value = controlState().noiseSuppression ? controlState().noiseEngine : 'off';
-      select.disabled = microphone.getSnapshot().loading;
-    }
-    const b = $('noiseSuppressionBtn');
-    if (!b) return;
-    const { mode } = noiseState();
-    const labels = {
-      off: ['Desligado', 'Supressão desligada. O controle de volume continua ativo.'],
-      idle: [
-        'Preparado',
-        controlState().voiceLightMode
-          ? 'Modo leve: a redução nativa será solicitada ao entrar na voz.'
-          : 'O RNNoise será ativado no seu microfone ao entrar na voz.',
-      ],
-      loading: ['Iniciando…', 'Carregando o processamento do microfone…'],
-      rnnoise: [
-        'RNNoise',
-        'RNNoise ativo no seu microfone. Processamento local, antes de enviar a voz.',
-      ],
-      native: ['Navegador', 'Redução nativa ativa no microfone.'],
-      paused: ['Pausado', 'Processamento pausado. Use Liberar áudio para retomá-lo.'],
-      unavailable: [
-        'Indisponível',
-        'Não foi possível ativar a supressão. O microfone continua transmitindo.',
-      ],
-    };
-    if (
-      mode === 'idle' &&
-      (controlState().voiceLightMode || controlState().noiseEngine === 'native')
-    )
-      labels.idle = ['Preparado', 'A redução nativa será solicitada ao entrar na voz.'];
-    const [label, detail] = labels[mode];
-    b.disabled = microphone.getSnapshot().loading;
-    b.classList.toggle('noise-active', controlState().noiseSuppression);
-    b.classList.toggle('danger-active', !controlState().noiseSuppression);
-    b.textContent = 'Supressor: ' + label;
-    b.title = detail;
-    b.dataset.engine = mode;
-    b.setAttribute('aria-pressed', String(controlState().noiseSuppression));
-    if ($('noiseSuppressionStatus')) $('noiseSuppressionStatus').textContent = detail;
+    voiceSettings.refresh();
   }
   function updateVoiceLightMode() {
     speakingIndicators.refresh();
-    const button = $('voiceLightModeBtn');
-    if (button) {
-      button.disabled = microphone.getSnapshot().loading;
-      button.textContent =
-        'Modo leve para jogar: ' + (controlState().voiceLightMode ? 'Ligado' : 'Desligado');
-      button.setAttribute('aria-pressed', String(controlState().voiceLightMode));
-      button.classList.toggle('noise-active', controlState().voiceLightMode);
-    }
     document.body.classList.toggle('voice-light-mode', controlState().voiceLightMode);
   }
 
@@ -2233,9 +2061,6 @@ window.TronoSocial = (() => {
       [s, screenSharing()],
     ])
       button?.setAttribute('aria-pressed', String(on));
-    if ($('cameraInputSelect'))
-      $('cameraInputSelect').disabled =
-        controlState().cameraTogglePending || !!cameraCapture.getSnapshot().loading;
     window.dispatchEvent(
       new CustomEvent('trono-call-change', {
         detail: {
@@ -2247,18 +2072,6 @@ window.TronoSocial = (() => {
       }),
     );
   }
-  async function changeOutput(e) {
-    const request = audioPlayback.setOutput(e.target.value || '');
-    storage.setItem('tronoVoiceOutput', audioPlayback.getSnapshot().output);
-    if (await request) {
-      setStatus(
-        audioPlayback.getSnapshot().output ? 'Saída de áudio alterada.' : 'Usando saída padrão.',
-        'ok',
-      );
-    }
-    renderTelemetry();
-  }
-
   function consumeChatRoom(room) {
     if (room?.id !== chatRoomState?.id) chatDrawerOpen = room?.channelType === 'text';
     chatRoomState = room || null;
@@ -2842,11 +2655,9 @@ window.TronoSocial = (() => {
     $('joinVoiceBtn')?.addEventListener('click', joinVoice);
     $('voiceSfxBtn')?.addEventListener('click', toggleVoiceSfx);
     $('voiceMusicBtn')?.addEventListener('click', toggleVoiceMusic);
-    $('refreshDevicesBtn')?.addEventListener('click', enumerateDevices);
     $('telemetryStatusPill')?.addEventListener('click', () => toggleTelemetry());
     $('telemetryOpenBtn')?.addEventListener('click', () => toggleTelemetry());
     $('telemetryCloseBtn')?.addEventListener('click', () => toggleTelemetry(false));
-    $('outputGainSlider')?.addEventListener('input', (e) => setOutputGain(e.target.value));
     $('resumeAudioBtn')?.addEventListener('click', () => {
       unlockCallAudio();
       if (voiceCall.getSnapshot().joined && !microphone.getSnapshot().capture?.processor)
@@ -2861,36 +2672,12 @@ window.TronoSocial = (() => {
       window.TronoAudio?.setMusicVolume(e.target.value);
       updateVoiceMusicUI();
     });
-    $('screenFormatSelect')?.addEventListener('change', async (e) => {
-      if (!Object.hasOwn(SCREEN_FORMATS, e.target.value)) return;
-      callQuality.configure({ screenFormat: e.target.value });
-      updateQualityUI();
-      await applyQualityToLiveMedia();
-    });
     window.addEventListener('resize', repositionProfileControls);
     $('voiceRoster')?.addEventListener('scroll', repositionProfileControls, { passive: true });
     $('voiceRoster')?.addEventListener('input', (e) => {
       if (e.target.matches('[data-peer-volume]'))
         setPeerGain(e.target.dataset.peerVolume, e.target.value);
     });
-    $('screenBitrateSelect')?.addEventListener('change', async (e) => {
-      const value = Number(e.target.value);
-      if (!SCREEN_BITRATES.includes(value)) return;
-      callQuality.configure({ screenBitrateMbps: value });
-      updateQualityUI();
-      await applyQualityToLiveMedia();
-      if (transportIsSfu())
-        await window.TronoNetwork.requestSfu('set-screen-bitrate', {
-          screenBitrate: effectiveScreenBitrate(),
-        }).catch((err) => setStatus(err.message, 'warn'));
-      setStatus(`Tela configurada para até ${value} Mbps.`, 'ok');
-    });
-    $('screenContentSelect')?.addEventListener('change', async (e) => {
-      callQuality.configure({ screenContent: e.target.value === 'motion' ? 'motion' : 'detail' });
-      await applyQualityToLiveMedia();
-    });
-    $('voiceOutputSelect')?.addEventListener('change', changeOutput);
-    $('transmissionQualitySelect')?.addEventListener('change', changeTransmissionQuality);
     if ($('callAlertVolume')) $('callAlertVolume').value = callAlerts.getSnapshot().volume;
     if ($('callAlertVolumeValue'))
       $('callAlertVolumeValue').textContent = `${callAlerts.getSnapshot().volume}%`;
@@ -2962,7 +2749,6 @@ window.TronoSocial = (() => {
       }
       if (msg.type === 'game-started' || msg.type === 'game-state') setTimeout(renderSeatMedia, 0);
     });
-    navigator.mediaDevices?.addEventListener?.('devicechange', enumerateDevices);
     window.addEventListener('resize', () => {
       restoreFloatingRect();
       renderSeatMedia();
@@ -2991,10 +2777,10 @@ window.TronoSocial = (() => {
     bindFloatingDrag();
     bindFloatingResize();
     applyPanelMode();
-    renderGainValues();
+    voiceSettings.refresh();
     updateChatDrawerUI();
     updateAudioPreferenceButtons();
-    enumerateDevices();
+    voiceSettings.start();
     updateQualityUI();
     updateButtons();
     updatePublicPresence();
@@ -3023,6 +2809,38 @@ window.TronoSocial = (() => {
       previousWide = wide;
     });
   }
+  const voiceSettings = window.TronoVoiceCapture.createVoiceSettings({
+    controls: callControls,
+    microphone,
+    camera: cameraCapture,
+    playback: audioPlayback,
+    quality: callQuality,
+    sharing: screenSharingControls,
+    storage,
+    mediaDevices: navigator.mediaDevices,
+    outputSupported: 'setSinkId' in HTMLMediaElement.prototype,
+    call: () => voiceCall.getSnapshot(),
+    policy: () => ({
+      sfu: transportIsSfu(),
+      highAllowed: realtime.getSnapshot().status?.highAllowed,
+    }),
+    unlockAudio: unlockCallAudio,
+    announce: () =>
+      window.TronoNetwork?.setVoiceState(
+        voiceCall.getSnapshot().joined,
+        controlState().micMuted,
+        cameraOn(),
+        screenSharing(),
+        qualityPreferences().transmissionQuality,
+        announcedTransport(),
+      ),
+    onOutputChanged: renderTelemetry,
+    setScreenBitrate: (screenBitrate) =>
+      window.TronoNetwork.requestSfu('set-screen-bitrate', { screenBitrate }),
+    onStatus: setStatus,
+  });
+  window.TronoVoiceSettings = voiceSettings;
+
   window.addEventListener('trono-layout-change', updateButtons);
   window.addEventListener('trono:ready', bind);
 

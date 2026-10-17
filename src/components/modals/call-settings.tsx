@@ -5,6 +5,11 @@ import { SETTINGS_TOPICS } from '../../lib/settings/controller';
 import type { SettingsController } from '../../lib/settings/controller';
 
 import type { SettingsRuntime, Contents } from '../../lib/settings/runtime';
+import {
+  VoiceAudioSettings,
+  VoiceVideoSettings,
+  VoiceCaptureSettings,
+} from '../voice/settings-fields';
 import { SettingsActivityFields } from './settings-activity-fields';
 
 /** These empty slots explicitly lend their children to controllers not converted yet. */
@@ -340,6 +345,14 @@ export function CallSettings({
                   {permissionMessage}
                 </p>
               </>
+            ) : topic === 'audio' ? (
+              <VoiceAudioSettings client={runtime.TronoVoiceSettings} desktop={!!dialog}>
+                <ContentSlot content={contents.audio} />
+              </VoiceAudioSettings>
+            ) : topic === 'video' ? (
+              <VoiceVideoSettings client={runtime.TronoVoiceSettings} desktop={!!dialog} />
+            ) : topic === 'capture' ? (
+              <VoiceCaptureSettings client={runtime.TronoVoiceSettings} desktop />
             ) : topic === 'activity' ? (
               <SettingsActivityFields />
             ) : (

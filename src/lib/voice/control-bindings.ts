@@ -3,15 +3,7 @@ import type { createCallControls } from './controls';
 interface BindingOptions {
   controls: Pick<
     ReturnType<typeof createCallControls>,
-    | 'toggleMute'
-    | 'toggleDeafen'
-    | 'toggleCamera'
-    | 'toggleNoiseSuppression'
-    | 'toggleVoiceLightMode'
-    | 'selectInput'
-    | 'selectCamera'
-    | 'setNoiseMode'
-    | 'setMicrophoneGain'
+    'toggleMute' | 'toggleDeafen' | 'toggleCamera'
   >;
   root: Pick<Document, 'getElementById'>;
   warn?(error: unknown): void;
@@ -49,19 +41,8 @@ export function createCallControlBindings({
         ['muteMicBtn', controls.toggleMute],
         ['deafenVoiceBtn', controls.toggleDeafen],
         ['cameraBtn', controls.toggleCamera],
-        ['noiseSuppressionBtn', controls.toggleNoiseSuppression],
-        ['voiceLightModeBtn', controls.toggleVoiceLightMode],
       ] as const)
         bind(id, 'click', () => action());
-      for (const [id, action] of [
-        ['voiceInputSelect', controls.selectInput],
-        ['cameraInputSelect', controls.selectCamera],
-        ['noiseModeSelect', controls.setNoiseMode],
-      ] as const)
-        bind(id, 'change', (element) => action((element as HTMLSelectElement).value));
-      bind('micGainSlider', 'input', (element) =>
-        controls.setMicrophoneGain((element as HTMLInputElement).value),
-      );
     },
     dispose() {
       if (disposed) return;

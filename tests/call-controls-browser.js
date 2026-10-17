@@ -112,6 +112,18 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await expect(owner.locator('[data-settings-tab]')).toHaveCount(4);
       await owner.locator('[data-settings-tab="video"]').click();
       await expect(owner.locator('[data-settings-panel="video"]')).toBeVisible();
+      await owner.locator('#screenFormatSelect').selectOption('1080-60');
+      await owner.locator('#screenBitrateSelect').selectOption('10');
+      await owner.locator('#screenContentSelect').selectOption('motion');
+      await owner.locator('#shareStreamAudio').uncheck();
+      await expect.poll(()=>owner.evaluate(()=>window.TronoSocial.screenSettings.audio)).toBe(false);
+      await owner.locator('#shareStreamAudio').check();
+      assert.deepEqual(await owner.evaluate(()=>({fps:window.TronoSocial.screenSettings.fps,bitrate:window.TronoSocial.screenSettings.bitrate})),{fps:60,bitrate:10000000});
+      await owner.locator('[data-settings-tab="audio"]').click();
+      await owner.locator('#outputGainSlider').fill('150');
+      await expect(owner.locator('#outputGainValue')).toHaveText('150%');
+      await owner.locator('#outputGainSlider').fill('100');
+      await owner.locator('[data-settings-tab="video"]').click();
       await owner.locator('#voiceSettingsClose').click();
       await owner.locator('#voiceSettingsBtn').click();
       await expect(owner.locator('[data-settings-tab="video"]')).toHaveAttribute('aria-selected','true');

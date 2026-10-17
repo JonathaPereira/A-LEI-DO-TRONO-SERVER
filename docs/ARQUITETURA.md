@@ -441,12 +441,12 @@ quando a supressão está ativa. A intenção da câmera pode iniciar a entrada 
 mas é invalidada ao sair. Enumeração atrasada não limpa uma seleção mais recente;
 lista vazia de câmeras conserva a preferência até existir uma alternativa confirmada.
 
-`control-bindings.ts` possui os nove listeners desses botões/seletores/sliders.
-O registro é único; mover os nós entre layouts conserva os handlers e descartar
-remove os mesmos listeners. A ação começa dentro do evento original, preservando
-ativação de mídia. `social.js` consulta snapshots e pinta os nós existentes; sua
-renderização e os painéis de configuração ainda precisam de conversão React.
-Não criar outro estado de mute, preferências ou intenção de câmera nessa conversão.
+`control-bindings.ts` conserva somente os três listeners da barra de chamada:
+mute, silenciamento e câmera. Mover os nós entre layouts conserva os handlers;
+o descarte remove os mesmos listeners. Os seis listeners de configurações foram
+retirados; seus campos e eventos agora pertencem aos componentes React. A ação
+começa no evento original, preservando ativação de mídia. A barra ainda recebe
+pintura de `social.js`; não criar outro estado de mute ou intenção de câmera.
 
 `media-interest.ts` possui a seleção de telas assistidas, câmeras ocultas e versões
 por participante. O filtro de publicações SFU e os consumidores P2P/recepção consultam
@@ -468,7 +468,8 @@ interrompe a transmissão. Parar fecha apenas publicações/senders de tela e se
 preservando voz e câmera. O dono da captura continua em `screen-capture.ts`.
 
 `screen-sharing-bindings.ts` possui o diálogo de qualidade, confirmação/cancelamento,
-preferência de áudio e cliques de prévia/troca/colapso. O picker é solicitado no mesmo
+cliques de prévia/troca/colapso. O checkbox de preferência de áudio pertence ao
+React e a `settings.ts`, que usa o mesmo dono `screen-sharing.ts`. O picker é solicitado no mesmo
 evento de confirmação quando a chamada já está ativa. Os presets de 1080p/60 e
 bitrate foram preservados; limites SFU afetam as opções sem sobrescrever a
 preferência ao abrir o diálogo. Eventos delegados acompanham os mesmos nós entre
@@ -496,10 +497,11 @@ a reconciliação. Parar anuncia a câmera desligada e cancela a intenção pend
 aguardar a retirada do transporte. Não há estado, mapa de peers, timers ou captura
 paralelos no adaptador. `CameraCaptureChange` descreve seu evento em `types/voice.ts`.
 
-`social.js` conserva composição, apresentação e navegação, incluindo enumeração e
-pintura dos seletores de dispositivo. Os callbacks de publicação de microfone/câmera
-foram removidos; tela permanece em `screen-publication.ts`. A lista, os controles internos e os painéis de mídia/diagnóstico ainda precisam de
-conversão para React; a estrutura das configurações é descrita abaixo.
+`social.js` conserva composição, apresentação da barra/lista e navegação. Enumeração,
+estado de apresentação e ações dos seletores agora estão em `settings.ts`. Os
+callbacks de publicação de microfone/câmera foram removidos; tela permanece em
+`screen-publication.ts`. Lista e painéis de mídia/diagnóstico ainda precisam de
+conversão para React; os campos convertidos das configurações são descritos abaixo.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
@@ -533,12 +535,31 @@ registra essa montagem depois do shell desktop e antes de atividade/notificaçõ
 ela executa nessa ordem em `trono:ready`. Não antecipar a transferência de perfil
 para antes da preparação de `profile-files.js` ao alterar essa sequência.
 
-Os corpos de áudio/vídeo/conexão, perfil, aparência, arquivos e jogo entram por
-slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
-possui o contêiner/visibilidade; o controlador anterior conserva somente seus filhos.
-Notificações preenche seu slot, sem criar abas/painéis paralelos. Isso não converteu
-os formulários e controles internos em React: seletores, qualidade, avisos, volume,
-atividade, perfil, jogos e notificações ainda serão convertidos por domínio.
+`components/voice/settings-fields.tsx` renderiza os campos de microfone, câmera,
+saída, ganhos de voz, supressão/modo leve, perfil, formato/bitrate/conteúdo da tela
+e áudio compartilhado. Esses campos têm valores, disponibilidade e eventos React;
+não recebem mais listeners ou pintura dos controladores DOM. IDs e classes usadas
+pelos layouts/testes foram preservados. Captura e encoders continuam nos seus donos.
+
+`lib/voice/settings.ts` projeta snapshots dos donos de controles, captura, reprodução,
+qualidade e compartilhamento para `useSyncExternalStore`. Preferências permanecem
+nesses donos; a projeção não abre dispositivos ou sockets. O módulo possui somente
+catálogo de dispositivos e assinaturas da interface, com uma escuta `devicechange`.
+Resultados antigos de enumeração são descartados; reconciliação recebe as escolhas
+observadas no começo do pedido. Uma saída escolhida depois do pedido não é substituída
+pelo fallback daquele resultado. Falha de enumeração conserva o catálogo confirmado.
+
+Ações começam no evento original e atualizam a projeção antes de esperas. Ganhos
+iguais são deduplicados para os eventos input/change nativos. Pedidos de qualidade
+aplicam os encoders existentes, com revisão/geração para não anunciar a chamada
+anterior; bitrate enviado ao SFU respeita o teto do dono de qualidade. O descarte
+remove a escuta e invalida continuações sem encerrar mídia emprestada.
+
+Conexão, avisos/música/proteção recebida, perfil, aparência, arquivos e jogo continuam
+em slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
+possui contêiner/visibilidade; cada controlador conserva somente seus filhos.
+Notificações preenche seu slot, sem criar abas/painéis paralelos. Esses conteúdos,
+incluindo atividade, ainda serão convertidos por domínio.
 
 `legacy/desktop-settings.js` foi removido do manifesto e do fonte. `social.js` não
 possui mais flags, seleção ou pintura das abas, nem os listeners de abrir/fechar.

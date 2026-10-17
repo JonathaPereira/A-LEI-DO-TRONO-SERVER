@@ -49,27 +49,6 @@ export function initializeCallSettings(target: Window): void {
       get('storageUsage'),
       get('profileFiles'),
     );
-    const capture = fragment('capture');
-    const captureHeading = document.createElement('h2');
-    captureHeading.textContent = 'Captura de tela';
-    const help = document.createElement('p');
-    help.className = 'appearance-help';
-    help.textContent =
-      'Qualidade e áudio da transmissão. Você escolhe a tela ou janela ao compartilhar, e pode trocar sem interromper a anterior.';
-    const devices = document.createElement('div');
-    devices.className = 'voice-devices voice-devices-vertical';
-    for (const id of ['screenFormatSelect', 'screenBitrateSelect', 'screenContentSelect'])
-      devices.append(contents.video!.querySelector('#' + id)!.closest('label')!);
-    const audio = contents.video!.querySelector('#shareStreamAudio')!.closest('label')!,
-      note = contents.video!.querySelector('.settings-context-help')!;
-    note.textContent =
-      'Para áudio isolado, escolha o aplicativo/jogo no seletor. O áudio do computador inteiro pode incluir as vozes da chamada.';
-    capture.append(captureHeading, help, devices, audio, note);
-    contents.video!.querySelector('.settings-section-heading strong')!.textContent = 'Câmera';
-    contents.video!.querySelector('.settings-section-heading small')!.textContent =
-      'VÍDEO DA CHAMADA';
-    (contents.audio!.querySelector('#noiseModeLabel') as HTMLElement).hidden = false;
-    (contents.audio!.querySelector('#noiseSuppressionBtn') as HTMLElement).hidden = true;
     const game = fragment('game');
     const gameHeading = document.createElement('h2');
     gameHeading.textContent = 'Jogo';

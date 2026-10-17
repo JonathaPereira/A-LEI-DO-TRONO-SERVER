@@ -47,6 +47,11 @@ test('desktop settings fill their dialog across portrait and short monitors',{ti
           assert(layout.content.right>=layout.panel.right-2,'portrait content must fill the right edge: '+detail);
         }
       }
+      if(size.width===480){
+        await page.evaluate(()=>window.TronoDesktopSettings.open('audio'));
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        await page.screenshot({path:path.resolve(__dirname,'../artifacts/settings/audio-480x520.png')});
+      }
       await page.evaluate(()=>window.TronoDesktopSettings.open('game'));
       await page.screenshot({path:path.resolve(__dirname,`../artifacts/settings/game-${size.width}x${size.height}.png`)});
     }

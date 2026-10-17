@@ -1,6 +1,8 @@
+import type { VoiceSettings } from '../voice/settings';
 import type { SettingsController, SettingsTopic } from './controller';
 
 export interface SettingsRuntime {
+  TronoVoiceSettings: VoiceSettings;
   TronoStorage?: Storage;
   TronoDesktop?: {
     getMediaPermissions(): Promise<string[]>;

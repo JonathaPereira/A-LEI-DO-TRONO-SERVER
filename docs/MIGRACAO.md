@@ -42,6 +42,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Coordenação da publicação da tela e fim do áudio compartilhado em TypeScript.
 - Publicação/retomada do microfone e publicação/parada da câmera em TypeScript.
 - Estrutura das configurações web/desktop, navegação, conta e permissões em React.
+- Campos de dispositivos, ganhos, supressão/modo leve e transmissão em React.
 
 ## Integração da main: desktop 0.2.10
 
@@ -1104,20 +1105,60 @@ cenários passaram na etapa anterior).
 Evidências: `artifacts/settings-react-{tests,typecheck,format,build,ui,sfu,layouts,desktop}.log`
 e `artifacts/settings/`. Não houve push ou mudança de infraestrutura.
 
+## Campos de áudio, dispositivos e transmissão em React — 17/10/2026
+
+- `components/voice/settings-fields.tsx` possui valores, disponibilidade e eventos
+  dos seletores de microfone/câmera/saída, ganhos de voz, supressão/modo leve,
+  perfil, formato/FPS/bitrate/conteúdo e preferência de áudio compartilhado.
+- `lib/voice/settings.ts` projeta os donos existentes para a interface; não duplica
+  preferências, participação, capturas ou conexões. Possui catálogo/enumeração e
+  uma escuta de devicechange. Respostas antigas não substituem catálogos nem uma
+  saída escolhida depois; a reconciliação dos dispositivos conserva as revisões
+  dos donos. Descartar o módulo não fecha mídia emprestada.
+- Removidas montagem manual de options, pintura dos campos e handlers substituídos
+  em `social.js`. `control-bindings.ts` conserva três cliques da barra; os seis
+  handlers de configurações saíram. `screen-sharing-bindings.ts` deixou de escutar
+  o checkbox de áudio. Não há listeners DOM paralelos para os campos React.
+- A montagem de captura nas configurações deixou de transferir labels manualmente;
+  React renderiza os campos no local apropriado para web/desktop. A marcação
+  substituída em `VoicePanel` foi removida. Avisos, música e proteção recebida
+  continuam no slot legado, conservando suas ações e identidade.
+- Ganhos iguais são deduplicados em input/change; ações começam no evento original.
+  Qualidade usa os encoders existentes, com revisão/geração antes de anunciar e
+  também após respostas de bitrate. Captura/replay/processamento/encoders não mudaram.
+- `test:settings` inclui 11 regressões novas da projeção/enumeração/ações, além de
+  três do contêiner. Cobrem resposta atrasada, troca durante enumeração, descarte,
+  ganho único, formatos, teto SFU e status da chamada anterior.
+- A regressão web altera formato 1080p/60, bitrate, conteúdo, áudio compartilhado e
+  ganho da saída enquanto a chamada está ativa; preserva as fontes e os controles.
+  O teste de microfone usa os novos sliders para conferir PCM baixo e ganho.
+
+Validação: typecheck, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 11 de layouts/configurações, seis de microfone/recepção no
+navegador e dois testes no Electron real passaram. Os nove cenários Windows de
+áudio coberto/minimizado/oculto também passaram: nativo em 100%/180% e RNNoise em
+100%, com PCM contínuo, sem recaptura/reconexão nem amostras ocultadas. A captura
+da configuração de áudio em janela curta foi conferida visualmente.
+Fontes sintéticas não medem jogos, dispositivos físicos ou rotas externas.
+Evidências: `artifacts/voice-fields-{tests,checks,build,ui,sfu,layouts,media,desktop,background}.log`
+e `artifacts/settings/audio-480x520.png`. Sem push ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Converter os controles internos/seletores de áudio, vídeo e qualidade e a
-   apresentação da lista/painéis da chamada para React, com um dono por subárvore.
-   A estrutura de configurações (abas/abertura/conta/permissões) já está em React;
-   seus slots preservam os conteúdos ainda legados, sem tornar seus campos React.
+1. Converter avisos/música/proteção recebida e conexão/diagnóstico, barra,
+   lista de participantes e painéis de câmera/tela para React, com um dono por
+   subárvore. Dispositivos, ganhos, supressão/modo leve e opções de transmissão
+   já são campos React em `settings-fields.tsx`, usando `lib/voice/settings.ts`.
+   A estrutura de configurações (abas/abertura/conta/permissões) também é React;
+   seus slots conservam somente os conteúdos ainda legados.
    Publicação de microfone/câmera está em `device-publication.ts`; publicação da
    tela e o fim de seu áudio estão em `screen-publication.ts`. Não restaurar esses
    callbacks no controlador nem duplicar os donos de captura/sessão.
    Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
    `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
    `media-interest.ts`/`media-interest-bindings.ts`.
-   Estado/ações e os nove listeners de áudio/
-   câmera estão em `controls.ts`/`control-bindings.ts`; não restaurar flags locais.
+   Estado/ações estão em `controls.ts`; `control-bindings.ts` conserva somente
+   três cliques da barra. Não restaurar flags ou handlers dos campos convertidos.
    Contextos, desbloqueio e avisos estão em `call-audio.ts`/`call-alerts.ts`.
    O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
    Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.

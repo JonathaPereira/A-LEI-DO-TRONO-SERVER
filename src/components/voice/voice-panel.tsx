@@ -106,57 +106,6 @@ export function VoicePanel() {
               data-settings-panel={'audio'}
               role={'tabpanel'}
             >
-              <div className={'settings-section-heading'}>
-                <div>
-                  <small>ENTRADA &amp; SAÍDA</small>
-                  <strong>Áudio da chamada</strong>
-                </div>
-                <span>Dispositivos e processamento</span>
-              </div>
-              <div className={'voice-devices voice-devices-vertical'}>
-                <label>
-                  <span>Microfone</span>
-                  <select id={'voiceInputSelect'}>
-                    <option value={''}>Microfone padrão</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Saída de áudio</span>
-                  <select id={'voiceOutputSelect'}>
-                    <option value={''}>Saída padrão</option>
-                  </select>
-                </label>
-              </div>
-              <div className={'mn-gain-controls'} aria-label={'Controles de ganho de áudio'}>
-                <label className={'mn-gain-label'}>
-                  <span>Meu microfone</span>
-                  <output id={'micGainValue'}>100%</output>
-                  <input
-                    id={'micGainSlider'}
-                    type={'range'}
-                    min={'0'}
-                    max={'300'}
-                    step={'5'}
-                    defaultValue={'100'}
-                  />
-                </label>
-                <label className={'mn-gain-label'}>
-                  <span>Áudio de saída</span>
-                  <output id={'outputGainValue'}>100%</output>
-                  <input
-                    id={'outputGainSlider'}
-                    type={'range'}
-                    min={'0'}
-                    max={'300'}
-                    step={'5'}
-                    defaultValue={'100'}
-                  />
-                </label>
-                <p>
-                  Volumes individuais de outros usuários aparecem nos participantes quando você
-                  entra na chamada.
-                </p>
-              </div>
               <label className={'mn-gain-label call-alert-volume'}>
                 <span>Avisos de entrada e saída</span>
                 <output id={'callAlertVolumeValue'}>85%</output>
@@ -180,15 +129,6 @@ export function VoicePanel() {
               </button>
               <div className={'settings-action-grid'}>
                 <button
-                  id={'noiseSuppressionBtn'}
-                  className={'royal-btn noise-active settings-secondary'}
-                  type={'button'}
-                  aria-pressed={'true'}
-                  title={'Redução de ruído do seu microfone'}
-                >
-                  Supressor: Preparado
-                </button>
-                <button
                   id={'voiceSfxBtn'}
                   className={'royal-btn settings-secondary audio-pref-btn'}
                   type={'button'}
@@ -205,33 +145,6 @@ export function VoicePanel() {
                   ♫ Música: Ligada
                 </button>
               </div>
-              <label id={'noiseModeLabel'} className={'desktop-noise-mode'} hidden>
-                Redução de ruído
-                <select id={'noiseModeSelect'}>
-                  <option value={'native'}>Nativa · padrão</option>
-                  <option value={'rnnoise'}>RNNoise · redução mais forte</option>
-                  <option value={'off'}>Desligada</option>
-                </select>
-              </label>
-              <small
-                id={'noiseSuppressionStatus'}
-                className={'noise-suppression-status'}
-                role={'status'}
-                aria-live={'polite'}
-              ></small>
-              <button
-                id={'voiceLightModeBtn'}
-                className={'royal-btn settings-secondary'}
-                type={'button'}
-                aria-pressed={'false'}
-                aria-describedby={'voiceLightModeHelp'}
-              >
-                Modo leve para jogar: Desligado
-              </button>
-              <small id={'voiceLightModeHelp'} className={'noise-suppression-status'}>
-                Usa a redução nativa e reduz animações e medições. Pode ajudar em jogos pesados; não
-                reserva recursos nem garante áudio sem cortes. Vale apenas neste aparelho.
-              </small>
               <label className={'auth-check'}>
                 <input id={'voiceProtection'} type={'checkbox'} defaultChecked /> Proteger a voz
                 recebida durante jogos
@@ -280,77 +193,7 @@ export function VoicePanel() {
               data-settings-panel={'video'}
               role={'tabpanel'}
               hidden
-            >
-              <div className={'settings-section-heading'}>
-                <div>
-                  <small>CÂMERA &amp; TRANSMISSÃO</small>
-                  <strong>Vídeo</strong>
-                </div>
-                <span>Qualidade adaptativa</span>
-              </div>
-              <div className={'voice-devices voice-devices-vertical'}>
-                <label className={'camera-device-label'}>
-                  <span>Câmera</span>
-                  <select id={'cameraInputSelect'}>
-                    <option value={''}>Câmera padrão</option>
-                  </select>
-                </label>
-                <label className={'quality-device-label'}>
-                  <span>Perfil de câmera e áudio</span>
-                  <select id={'transmissionQualitySelect'}>
-                    <option value={'economy'}>Economia • 720p / 30 FPS</option>
-                    <option value={'balanced'}>Equilibrada • 720p / 30 FPS</option>
-                    <option value={'high'}>Alta • 720p / 30 FPS</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Qualidade da stream</span>
-                  <select id={'screenFormatSelect'}>
-                    <option value={'720-15'}>720p / 15 FPS</option>
-                    <option value={'720-30'}>720p / 30 FPS</option>
-                    <option value={'720-60'}>720p / 60 FPS</option>
-                    <option value={'1080-15'}>1080p / 15 FPS</option>
-                    <option value={'1080-30'}>1080p / 30 FPS</option>
-                    <option value={'1080-60'}>1080p / 60 FPS</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Bitrate da tela</span>
-                  <select id={'screenBitrateSelect'} defaultValue="8">
-                    <option value={'4'}>4 Mbps</option>
-                    <option value={'6'}>6 Mbps</option>
-                    <option value={'8'}>8 Mbps • recomendado</option>
-                    <option value={'10'}>10 Mbps</option>
-                    <option value={'12'}>12 Mbps</option>
-                    <option value={'15'}>15 Mbps</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Conteúdo compartilhado</span>
-                  <select id={'screenContentSelect'}>
-                    <option value={'detail'}>Nitidez • jogos, textos e detalhes</option>
-                    <option value={'motion'}>Movimento • vídeo e animações</option>
-                  </select>
-                </label>
-              </div>
-              <label className={'mn-share-audio'}>
-                <input id={'shareStreamAudio'} type={'checkbox'} defaultChecked />
-                <span>Compartilhar áudio da stream</span>
-              </label>
-              <small className={'settings-context-help'}>
-                No seletor do navegador, marque Compartilhar áudio. Para enviar o som de um vídeo,
-                prefira compartilhar a aba que o reproduz. Esta opção vale para a próxima
-                transmissão.
-              </small>
-              <div className={'settings-action-grid'}>
-                <button id={'refreshDevicesBtn'} className={'small-btn settings-secondary'}>
-                  ↻ Atualizar dispositivos
-                </button>
-              </div>
-              <small id={'qualityHint'} className={'quality-hint'}>
-                720p / 30 FPS • qualidade visual e estabilidade em primeiro lugar.
-              </small>
-            </section>
+            ></section>
             <section
               className={'voice-settings-pane'}
               data-settings-panel={'connection'}

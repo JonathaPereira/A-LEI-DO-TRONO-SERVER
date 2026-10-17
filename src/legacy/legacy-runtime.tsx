@@ -12,6 +12,7 @@ import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
 import { installLegacyAvatars } from '../lib/profiles/avatar';
+import { createVoiceSettings } from '../lib/voice/settings';
 import { createCallQuality } from '../lib/voice/quality';
 import { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } from '../lib/voice/quality-policy';
 import { diagnosticReport } from '../lib/voice/diagnostic-report';
@@ -67,6 +68,7 @@ export function LegacyRuntime() {
       Object.assign(window, {
         TronoVoiceCapture: {
           createCallQuality,
+          createVoiceSettings,
           QUALITY_ORDER,
           SCREEN_FORMATS,
           SCREEN_BITRATES,

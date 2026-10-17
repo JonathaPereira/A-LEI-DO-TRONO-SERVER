@@ -5,7 +5,6 @@ interface BindingOptions {
   call(): { joined: boolean; generation: number };
   localId(): string | null | undefined;
   replayEnabled(): boolean;
-  onStatus(text: string, kind: 'ok'): void;
   onRender(): void;
   warn?(error: unknown): void;
 }
@@ -109,10 +108,6 @@ export function createScreenSharingBindings(options: BindingOptions) {
         void sharing.start(); // Do not await before the native picker.
       });
       bind(get('screenOptionsCancel'), 'click', close);
-      bind(get('shareStreamAudio'), 'change', () => {
-        sharing.setAudio(get<HTMLInputElement>('shareStreamAudio').checked);
-        options.onStatus('Preferência de áudio aplicada ao próximo compartilhamento.', 'ok');
-      });
       bind(document, 'click', click);
     },
     dispose() {
