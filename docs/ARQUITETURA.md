@@ -355,8 +355,8 @@ A limpeza não aguarda o provedor e não para trilhas de captura emprestadas.
 Sair/trocar a sala real invalida a inicialização e suas esperas. Respostas antigas
 não anunciam conexão, recuperam publicações ou sobrescrevem a chamada seguinte.
 O módulo usa os donos existentes de sessão, configuração, peers e mídia recebida,
-sem mapas de transporte duplicados. `social.js` monta as dependências e mantém a
-sincronização do roster P2P e a apresentação dos erros de diagnóstico.
+sem mapas de transporte duplicados. `social.js` monta as dependências e mantém
+a apresentação dos erros de diagnóstico.
 
 `quality.ts` possui preferências de transmissão, formato/bitrate/conteúdo da tela,
 ativação da adaptação e filas por sender para `getParameters`/`setParameters`.
@@ -380,8 +380,31 @@ linhas de recepção e 12 amostras recentes. Não inclui nomes, IDs, IPs, creden
 mensagens ou timestamps internos de participantes. `legacy/call-stability.js` e sua
 entrada no manifesto foram removidos.
 
-`social.js` conserva sincronização do roster P2P, contextos do microfone/avisos e
-interface. Os módulos notificam esse controlador para anexar áudio, registrar/remover
+`roster.ts` possui a lista privada de participantes, a inicialização silenciosa,
+a capacidade de eventos do servidor e os listeners de lista, estado legado, avisos,
+sinalização, saída e publicações SFU. O snapshot ordenado e os participantes são
+imutáveis; `members` é uma visão somente para leitura. `roster-protocol.ts` valida
+listas completas antes de substituir o estado: uma lista malformada ou com IDs
+repetidos não remove participantes nem fecha conexões saudáveis.
+
+A malha P2P só é iniciada para outro participante que anunciou `p2p`; SFU e seus
+estados pendentes não abrem peers P2P. Peers com falha conservam o reinício ICE.
+Sair fecha os peers pelo dono existente; a retirada SFU fecha as quatro mídias e
+remove apenas as publicações daquele participante. Sons usam eventos explícitos
+quando disponíveis e diferenças de lista/estado no protocolo antigo, sem duplicar
+avisos. Preferências de volume são restauradas por conta quando necessário.
+
+Navegação informa a sala ao módulo; trocar a sala descarta a lista e os peers
+anteriores. Reiniciar a chamada limpa a lista sem esquecer a capacidade do servidor;
+desconectar também limpa essa capacidade. Listas/avisos exigem sala correspondente.
+Os envelopes atuais de sinalização e os antigos de estado podem omitir `roomId`;
+quando presente, uma sala diferente é rejeitada. O módulo não inventa uma geração
+remota ausente no protocolo. Sinalização, filas e respostas assíncronas continuam
+com as proteções dos donos de peers/sessões. Não há segundo socket ou captura.
+`social.js` não mantém outro mapa, flags ou listeners desses eventos; conserva os
+adaptadores de navegação, ganho, sons e renderização.
+
+`social.js` conserva contextos do microfone/avisos e interface. Os módulos notificam esse controlador para anexar áudio, registrar/remover
 proteção do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
 O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.

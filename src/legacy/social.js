@@ -2,7 +2,6 @@
 window.TronoSocial = (() => {
   const $ = (id) => document.getElementById(id);
   const storage = window.TronoStorage || localStorage;
-  const privateVoiceRoster = new Map();
   const profileActivities = new Map();
   let lastSfuError = '';
   const profileMedia = new Map();
@@ -191,8 +190,6 @@ window.TronoSocial = (() => {
   let shareStreamAudio = storage.getItem('mnShareStreamAudio') !== '0';
   let settingsOpen = false;
   let settingsTab = storage.getItem('tronoVoiceSettingsTab') || 'audio';
-  let voiceRosterInitialized = false;
-  let voiceEventsSupported = false;
   let callAlertVolume = Math.max(
     0,
     Math.min(100, Number(storage.getItem('mnCallAlertVolume') ?? 85) || 0),
@@ -603,10 +600,28 @@ window.TronoSocial = (() => {
     onChange: updateButtons,
   });
   const { toggle: joinVoice, leave: leaveVoice } = voiceCall;
+  const voiceRoster = window.TronoVoiceCapture.createVoiceRoster({
+    localId: meId,
+    call: () => voiceCall.getSnapshot(),
+    transport: () => voiceTransport.getSnapshot().mode,
+    peers: p2pPeers,
+    closePeer,
+    sfu: sfuSession,
+    hasGain: (id) => audioPlayback.hasGain(id),
+    restoreGain: (id, accountId) =>
+      audioPlayback.setGain(
+        id,
+        clampGain(window.TronoPersonal?.get('volume:' + accountId, 100) ?? 100),
+      ),
+    onSound: playCallSound,
+    onNotice: callNotice,
+    onChange: renderCallMedia,
+    onMessage: (listener) => window.TronoNetwork.onMessage(listener),
+  });
+  const privateVoiceRoster = voiceRoster.members;
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
-  const detailedPlayers = () =>
-    [...privateVoiceRoster.values()].sort((a, b) => (a.seat ?? 999) - (b.seat ?? 999));
+  const detailedPlayers = () => voiceRoster.getSnapshot().participants;
   const inGame = () => !$('gameScreen')?.classList.contains('hidden');
   const communityVoice = () => roomState?.kind === 'chat';
   const inChatHub = () => chatHubMode || !$('chatOnlyScreen')?.classList.contains('hidden');
@@ -1742,43 +1757,9 @@ window.TronoSocial = (() => {
   }
 
   function syncPeers() {
-    if (!voiceCall.getSnapshot().joined) {
-      closeAllPeers();
-      renderVoiceRoster();
-      renderVideoGrid();
-      renderScreenGrid();
-      renderSeatMedia();
-      return;
-    }
-    if (transportPending()) {
-      closeAllPeers();
-      renderVoiceRoster();
-      renderVideoGrid();
-      renderScreenGrid();
-      renderSeatMedia();
-      return;
-    }
-    if (transportIsSfu()) {
-      closeAllPeers();
-      void syncSfuSubscriptions();
-      renderVoiceRoster();
-      renderVideoGrid();
-      renderScreenGrid();
-      renderSeatMedia();
-      return;
-    }
-    // Wait until both endpoints have announced P2P readiness before sending SDP.
-    const me = meId(),
-      active = new Set(
-        detailedPlayers()
-          .filter((p) => p.id !== me && p.joined && p.transport === 'p2p')
-          .map((p) => p.id),
-      );
-    for (const id of active) {
-      const pc = p2pPeers.ensure(id);
-      if (pc?.connectionState === 'failed') p2pPeers.negotiate(id, true, true);
-    }
-    for (const id of [...peers.keys()]) if (!active.has(id)) closePeer(id);
+    voiceRoster.sync();
+  }
+  function renderCallMedia() {
     renderVoiceRoster();
     renderVideoGrid();
     renderScreenGrid();
@@ -2429,8 +2410,7 @@ window.TronoSocial = (() => {
     updateVoiceBackgroundClass();
     void voiceTelemetry.syncPriority();
     voiceTelemetry.start();
-    privateVoiceRoster.clear();
-    voiceRosterInitialized = false;
+    voiceRoster.reset();
     voiceTransport.begin();
     window.TronoNetwork?.setVoiceState(
       true,
@@ -2472,7 +2452,7 @@ window.TronoSocial = (() => {
     cameraTogglePending = null;
     watchingStreams.clear();
     hiddenCameras.clear();
-    privateVoiceRoster.clear();
+    voiceRoster.reset();
     updateVoiceBackgroundClass();
     void voiceTelemetry.syncPriority();
     updateAudioRecoveryUI();
@@ -2487,7 +2467,6 @@ window.TronoSocial = (() => {
           reason === 'disconnect' ? 'Você foi desconectado da chamada.' : 'Você saiu da chamada.',
       });
     }
-    voiceRosterInitialized = false;
     $('muteMicBtn').disabled = true;
     $('deafenVoiceBtn').disabled = true;
     $('cameraBtn').disabled = false;
@@ -2874,45 +2853,6 @@ window.TronoSocial = (() => {
     }
   }
 
-  function consumeVoiceRoster(list = []) {
-    if (!voiceCall.getSnapshot().joined) return;
-    const before = new Set(privateVoiceRoster.keys()),
-      next = new Map();
-    for (const p of list)
-      if (p?.id)
-        next.set(p.id, {
-          id: p.id,
-          accountId: p.accountId || null,
-          name: p.name,
-          avatar_preset: p.avatar_preset || 'crown',
-          avatar_file_id: p.avatar_file_id || null,
-          seat: p.seat,
-          joined: true,
-          muted: !!p.muted,
-          deafened: !!p.deafened,
-          camera: !!p.camera,
-          screen: !!p.screen,
-          transport: p.transport || 'p2p',
-          quality: p.quality || 'balanced',
-        });
-    if (voiceRosterInitialized && !voiceEventsSupported) {
-      for (const id of next.keys()) if (id !== meId() && !before.has(id)) playCallSound('join', id);
-      for (const id of before) if (id !== meId() && !next.has(id)) playCallSound('leave', id);
-    } else voiceRosterInitialized = true;
-    for (const [id, p] of next) {
-      if (
-        p.accountId &&
-        (privateVoiceRoster.get(id)?.accountId !== p.accountId || !audioPlayback.hasGain(id))
-      )
-        audioPlayback.setGain(
-          id,
-          clampGain(window.TronoPersonal?.get('volume:' + p.accountId, 100) ?? 100),
-        );
-    }
-    privateVoiceRoster.clear();
-    for (const [id, p] of next) privateVoiceRoster.set(id, p);
-    syncPeers();
-  }
   function consumeChatRoom(room) {
     if (room?.id !== chatRoomState?.id) chatDrawerOpen = room?.channelType === 'text';
     chatRoomState = room || null;
@@ -2932,9 +2872,10 @@ window.TronoSocial = (() => {
   function consumeRoom(room) {
     roomState = room || null;
     voiceTransport.setRoom(roomState?.id ?? null);
+    voiceRoster.setRoom(roomState?.id ?? null);
     if (roomState) showForRoom(true);
     else if (!voiceCall.getSnapshot().joined) {
-      privateVoiceRoster.clear();
+      voiceRoster.reset();
       closeAllPeers();
       if (transportIsSfu() || transportPending()) voiceTransport.reset();
     }
@@ -3451,6 +3392,7 @@ window.TronoSocial = (() => {
   function bind() {
     voiceCall.start();
     voiceTransport.start();
+    voiceRoster.start();
     $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
       const enabled = e.target.checked;
@@ -3593,9 +3535,6 @@ window.TronoSocial = (() => {
               profileActivities.set(person.id, person.activity);
         renderProfileActivities();
       }
-      if (msg.type === 'welcome') {
-        voiceEventsSupported = !!msg.features?.voiceEvents;
-      }
       if (msg.type === 'joined-game-room') {
         gameRoomState = msg.room;
         if (msg.primaryRoomId === msg.room.id) consumeRoom(msg.room);
@@ -3625,77 +3564,8 @@ window.TronoSocial = (() => {
       }
       if (msg.type === 'channel-deleted' && msg.roomId === roomState?.id) {
         roomState = null;
+        voiceRoster.setRoom(null);
         updateButtons();
-      }
-      if (msg.type === 'voice-roster' && msg.roomId === roomState?.id)
-        consumeVoiceRoster(msg.players || []);
-      if (msg.type === 'voice-event' && msg.roomId === roomState?.id && msg.playerId !== meId()) {
-        callNotice(msg);
-        playCallSound(
-          msg.kind === 'joined' ? 'join' : msg.kind === 'disconnected' ? 'disconnect' : 'leave',
-          msg.playerId,
-        );
-      }
-      if (msg.type === 'sfu-publications' && msg.roomId === roomState?.id) {
-        sfuSession.setPublications(msg.publications);
-        if (transportIsSfu()) void syncSfuSubscriptions();
-      }
-      if (msg.type === 'voice-state' && voiceCall.getSnapshot().joined) {
-        const was = privateVoiceRoster.has(msg.playerId),
-          old = privateVoiceRoster.get(msg.playerId) || {
-            id: msg.playerId,
-            name: msg.name,
-            seat: msg.seat,
-          };
-        if (msg.joined)
-          privateVoiceRoster.set(msg.playerId, {
-            ...old,
-            joined: true,
-            muted: !!msg.muted,
-            deafened: !!msg.deafened,
-            camera: !!msg.camera,
-            screen: !!msg.screen,
-            transport: msg.transport || old.transport || 'p2p',
-            quality: msg.quality || old.quality || 'balanced',
-          });
-        else privateVoiceRoster.delete(msg.playerId);
-        if (
-          !voiceEventsSupported &&
-          voiceRosterInitialized &&
-          msg.playerId !== meId() &&
-          was !== !!msg.joined
-        )
-          playCallSound(msg.joined ? 'join' : 'leave', msg.playerId);
-        syncPeers();
-      }
-      if (msg.type === 'voice-signal' && !transportIsSfu() && !transportPending())
-        void p2pPeers.handleSignal(msg);
-      if (msg.type === 'player-left' && msg.roomId === roomState?.id) {
-        const wasInCall = privateVoiceRoster.has(msg.playerId);
-        privateVoiceRoster.delete(msg.playerId);
-        if (
-          !voiceEventsSupported &&
-          voiceCall.getSnapshot().joined &&
-          voiceRosterInitialized &&
-          wasInCall &&
-          msg.playerId !== meId()
-        )
-          playCallSound('leave', msg.playerId);
-        closePeer(msg.playerId);
-        if (transportIsSfu()) {
-          for (const kind of ['audio', 'camera', 'screen', 'screen-audio']) {
-            const key = sfuKey(msg.playerId, kind);
-            if (sfuSubscriptions.has(key)) void closeSfuSubscription(key);
-          }
-          sfuSession.setPublications(
-            sfuSession.getPublications().filter((p) => p.ownerId !== msg.playerId),
-          );
-          void syncSfuSubscriptions();
-        }
-        renderVoiceRoster();
-        renderVideoGrid();
-        renderScreenGrid();
-        renderSeatMedia();
       }
       if (msg.type === 'connection' && !msg.connected) {
         profileActivities.clear();

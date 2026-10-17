@@ -34,6 +34,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Entrada/saída da chamada, fase, geração, cancelamento e listeners de saída em TypeScript.
 - Seleção, inicialização e fallback SFU/P2P, com modo da sala e listener, em TypeScript.
 - Preferências/qualidade/adaptação, filas dos encoders e exportação anônima em TypeScript.
+- Lista privada de voz, eventos e sincronização de participantes P2P/SFU em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -60,10 +61,9 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Sincronização do roster
-P2P, edição/visualização de perfis e galeria, navegação/gerenciamento de canais,
-notificações e jogos
-permanecem nesses controladores. As listas de canais já são renderizadas em React;
+React ou TypeScript apenas porque a marcação foi convertida. Controles/configurações
+da chamada, contextos de áudio, edição/visualização de perfis e galeria, navegação/
+gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
 Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham componentes
@@ -827,9 +827,41 @@ falha; os nove cenários não estão todos validados nesta etapa. O teto e o
 processamento de áudio não foram alterados.
 Sem push, publicação ou mudança de infraestrutura.
 
+## Participantes e sincronização P2P/SFU em TypeScript — 17/10/2026
+
+- `lib/voice/roster.ts` possui o mapa privado, flags de inicialização/capacidade e
+  listeners de `voice-roster`, `voice-state`, `voice-event`, `voice-signal`,
+  `player-left` e `sfu-publications`. `social.js` perdeu o mapa mutável, as flags e
+  esses ramos do listener; conserva a visão somente para leitura e os adaptadores.
+- `roster-protocol.ts` valida listas inteiras, estados legados e avisos. Snapshots
+  são ordenados/imutáveis; dados inválidos ou IDs duplicados não fecham peers.
+  Listas/avisos de outra sala são ignorados. Estado/sinalização sem `roomId` mantêm
+  compatibilidade com o protocolo existente; sala explícita diferente é rejeitada.
+- P2P espera a outra ponta anunciar prontidão, conserva recuperação ICE e não cria
+  malha paralela em SFU/pendência. Saída SFU retira somente as quatro mídias e as
+  publicações do participante. Peers, filas e catálogo continuam nos donos atuais.
+- Primeira lista permanece silenciosa; servidores modernos usam os eventos de
+  aviso e antigos usam as diferenças de estado/lista. Ganho por conta é restaurado
+  sem sobrescrever ajustes durante atualizações normais. Trocar sala, reiniciar e
+  desconectar descartam o estado privado; desconexão também limpa as capacidades.
+- `test:voice:roster` acrescenta 23 regressões, incluídas em `npm test` e `test:sfu`.
+
+Passaram typecheck, formatação, build estático, `npm test`, quatro fluxos de
+interface, os 124 checks de `test:sfu` e 15 checks de controles/mídia no navegador.
+No Electron real passaram P2P entre janelas com layouts/navegação, saída e reentrada,
+permissões atrasadas e SFU com relay local, incluindo adaptação sem recaptura.
+Não foram alterados os encoders ou a captura nativa. A falha de tempo já documentada
+no segundo plano continua pendente; esse teste não foi repetido nesta etapa.
+Mídia sintética local não mede jogos a 60 FPS ou rotas SFU/TURN externas.
+
+Evidências: `artifacts/roster-unit.log`, `roster-regressions.log`, `roster-ui.log`,
+`roster-sfu.log`, `roster-media.log`, `roster-desktop.log`, `roster-typecheck.log`,
+`roster-format.log` e `roster-build.log`. Sem push ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair sincronização do roster P2P para `lib/voice/`.
+1. Converter controles/configurações da chamada e contextos de áudio/avisos ainda
+   em `social.js`. O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
    Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.
    Seleção, inicialização/fallback e listener do modo da sala estão em `transport.ts`.
    Entrada/saída, fase, geração, promessa e listeners de saída estão em `call-lifecycle.ts`.

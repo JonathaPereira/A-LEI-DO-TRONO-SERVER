@@ -22,6 +22,7 @@ import { createVoiceTelemetry } from '../lib/voice/telemetry';
 import { createAudioPlayback } from '../lib/voice/audio-playback';
 import { createRealtimeConfiguration } from '../lib/voice/realtime';
 import { createVoiceCall } from '../lib/voice/call-lifecycle';
+import { createVoiceRoster } from '../lib/voice/roster';
 import { createVoiceTransport } from '../lib/voice/transport';
 import { createSfuSession } from '../lib/voice/sfu-session';
 
@@ -64,6 +65,7 @@ export function LegacyRuntime() {
           createRemoteMedia,
           createSfuSession,
           createVoiceTransport,
+          createVoiceRoster,
           createVoiceCall,
           createRealtimeConfiguration,
           createAudioPlayback,
