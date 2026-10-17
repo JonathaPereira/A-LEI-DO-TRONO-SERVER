@@ -13,6 +13,8 @@ import { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } from '../lib/voice/qua
 import { diagnosticReport } from '../lib/voice/diagnostic-report';
 import { createMicrophone } from '../lib/voice/microphone';
 import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
+import { createScreenSharing } from '../lib/voice/screen-sharing';
+import { createScreenSharingBindings } from '../lib/voice/screen-sharing-bindings';
 import { createScreenCapture } from '../lib/voice/screen-capture';
 import { createCamera } from '../lib/voice/camera';
 import { createP2pPeers } from '../lib/voice/p2p-peers';
@@ -66,6 +68,8 @@ export function LegacyRuntime() {
           createMicrophone,
           createMicrophoneProcessor,
           createScreenCapture,
+          createScreenSharing,
+          createScreenSharingBindings,
           createCamera,
           createP2pPeers,
           createRemoteMedia,

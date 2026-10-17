@@ -151,13 +151,36 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#cameraBtn').click();
     await expect(page.locator('#cameraBtn')).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-    await page.evaluate(() => window.TronoSocial.startScreenShare());
+    await page.locator('#screenShareBtn').click();
+    await page.locator('#shareResolution').selectOption('1080');
+    await page.locator('#shareFps').selectOption('60');
+    await page.locator('#screenOptionsCancel').click();
+    assert.equal(await page.evaluate(() => window.__displayRequests.length), 0);
+    assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
+    await page.locator('#screenShareBtn').click();
+    await page.locator('#shareResolution').selectOption('1080');
+    await page.locator('#shareFps').selectOption('60');
+    await page.locator('#screenOptionsConfirm').click();
     await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
+    assert.deepEqual(await page.evaluate(() => ({width: window.TronoSocial.screenSettings.width, fps: window.TronoSocial.screenSettings.fps})), {width: 1920, fps: 60});
     const senderId = await page.evaluate(() => window.TronoNetwork.clientId);
     await expect(receiver.locator('#screenShareGrid .mn-watch-stream')).toBeVisible();
     await receiver.evaluate(id => window.TronoSocial.toggleWatchStream(id), senderId);
     const remoteScreen = receiver.locator('#screenShareGrid .screen-share-tile[data-peer="' + senderId + '"] video');
     await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(0);
+    // The local preview may pause without replacing capture or interrupting received frames.
+    const localScreen = page.locator('.screen-share-tile[data-peer="' + senderId + '"]');
+    await page.evaluate(() => { window.__previewSource = window.TronoSocial.getLocalDisplayStream(); });
+    const framesBeforePause = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
+    await localScreen.locator('.screen-resource-btn').click();
+    await expect(localScreen).toHaveClass(/local-preview-paused/);
+    assert.equal(await localScreen.locator('video').evaluate(video => video.srcObject), null);
+    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforePause);
+    await localScreen.locator('.screen-resource-btn').click();
+    await expect(localScreen).not.toHaveClass(/local-preview-paused/);
+    await localScreen.locator('.screen-collapse-btn').click();
+    await expect(localScreen).not.toHaveClass(/share-collapsed/);
+    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
     await page.evaluate(() => window.TronoNetwork.joinRoom('sala-cetro'));
     await expect.poll(() => page.evaluate(() => window.TronoNetwork.gameRoom)).toBe('sala-cetro');
     await page.evaluate(() => window.TronoAppLayout.navigate('community'));
@@ -331,7 +354,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
 
     // Canceling a source change must leave the original capture and call intact.
     await page.evaluate(() => { window.__denyDisplay = true; });
-    assert.equal(await page.evaluate(() => window.TronoSocial.startScreenShare({replace: true})), false);
+    await localScreen.locator('.screen-switch-btn').click();
+    await expect(localScreen.locator('.screen-switch-btn')).toBeEnabled();
     await expect(page.locator('#voiceStatus')).toContainText('anterior continua');
     await preserved();
     await page.evaluate(() => { window.__denyDisplay = false; });
@@ -342,7 +366,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
 
     // A successful source change releases the old source and keeps the peers/socket.
     const framesBeforeSwitch = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
-    assert.equal(await page.evaluate(() => window.TronoSocial.startScreenShare({replace: true})), true);
+    await localScreen.locator('.screen-switch-btn').click();
+    await expect(localScreen.locator('.screen-switch-btn')).toBeEnabled();
     await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforeSwitch);
     assert.equal(await page.evaluate(() => window.__layoutBaseline.screen.readyState), 'ended');
     await page.evaluate(() => {

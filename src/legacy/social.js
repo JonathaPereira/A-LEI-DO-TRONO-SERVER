@@ -96,13 +96,10 @@ window.TronoSocial = (() => {
   let chatMuted = storage.getItem('tronoChatMuted') === '1';
   const { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } = window.TronoVoiceCapture;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
-  let shareStreamAudio = storage.getItem('mnShareStreamAudio') !== '0';
   let settingsOpen = false;
   let settingsTab = storage.getItem('tronoVoiceSettingsTab') || 'audio';
   let chatDrawerOpen = false;
   let chatUnreadCount = 0;
-  let localScreenPreviewPaused = false;
-  let localScreenCollapsed = false;
   let telemetryOpen = false;
   const callQuality = window.TronoVoiceCapture.createCallQuality({
     storage,
@@ -201,7 +198,7 @@ window.TronoSocial = (() => {
       joined: voiceCall.getSnapshot().joined,
       format: qualityProfile().screen,
       replay: window.TronoClips?.captureProfile?.(),
-      audio: shareStreamAudio,
+      audio: screenSharingControls.getSnapshot().audio,
       contentHint: qualityPreferences().screenContent,
     }),
     onStarted: publishScreen,
@@ -627,6 +624,51 @@ window.TronoSocial = (() => {
     toggleCamera: (id) => toggleWatchCamera(id),
   });
 
+  const screenSharingControls = window.TronoVoiceCapture.createScreenSharing({
+    storage,
+    call: () => voiceCall.getSnapshot(),
+    community: () => communityVoice(),
+    supported: () => !!navigator.mediaDevices?.getDisplayMedia,
+    join: joinVoice,
+    policy: () => ({
+      sfu: transportIsSfu(),
+      screenAllowed: realtime.getSnapshot().status?.screenAllowed,
+      highAllowed: realtime.getSnapshot().status?.highAllowed,
+    }),
+    capture: screenCapture,
+    quality: callQuality,
+    peers,
+    stopWatching: p2pPeers.stopWatching,
+    closePublication: closeSfuPublication,
+    announceStopped: () =>
+      window.TronoNetwork?.setVoiceState(
+        voiceCall.getSnapshot().joined,
+        controlState().micMuted,
+        cameraOn(),
+        false,
+        qualityPreferences().transmissionQuality,
+        announcedTransport(),
+      ),
+    onChange: (kind) => {
+      if (kind === 'settings') updateQualityUI();
+      else {
+        if (kind === 'stopped') updateButtons();
+        renderScreenGrid();
+        renderVoiceRoster();
+      }
+    },
+    onStatus: setStatus,
+  });
+  const screenSharingBindings = window.TronoVoiceCapture.createScreenSharingBindings({
+    document,
+    sharing: screenSharingControls,
+    call: () => voiceCall.getSnapshot(),
+    localId: meId,
+    replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
+    onStatus: setStatus,
+    onRender: renderScreenGrid,
+  });
+
   const publicVoiceActive = () => !!roomState?.voiceActive;
   const detailedPlayers = () => voiceRoster.getSnapshot().participants;
   const inGame = () => !$('gameScreen')?.classList.contains('hidden');
@@ -823,7 +865,8 @@ window.TronoSocial = (() => {
     if ($('screenContentSelect'))
       $('screenContentSelect').value = qualityPreferences().screenContent;
     if ($('screenFormatSelect')) $('screenFormatSelect').value = qualityPreferences().screenFormat;
-    if ($('shareStreamAudio')) $('shareStreamAudio').checked = shareStreamAudio;
+    if ($('shareStreamAudio'))
+      $('shareStreamAudio').checked = screenSharingControls.getSnapshot().audio;
     updateRealtimeUI();
   }
   function updateRealtimeUI() {
@@ -925,8 +968,7 @@ window.TronoSocial = (() => {
     window.TronoMosaic?.close();
     if (!wasMax && tile.classList.contains('screen-share-tile')) {
       if (tile.dataset.peer === meId()) {
-        localScreenCollapsed = false;
-        localScreenPreviewPaused = false;
+        screenSharingControls.resetPreview();
       } else tile.dataset.collapsed = '0';
       renderScreenGrid();
     }
@@ -1325,8 +1367,7 @@ window.TronoSocial = (() => {
   async function publishScreen({ capture, replace, isCurrent }) {
     const stream = capture.outgoing,
       track = stream.getVideoTracks()[0];
-    localScreenPreviewPaused = false;
-    localScreenCollapsed = false;
+    screenSharingControls.resetPreview();
     window.TronoNetwork?.setVoiceState(
       true,
       controlState().micMuted,
@@ -1388,7 +1429,7 @@ window.TronoSocial = (() => {
     setStatus(
       sound
         ? 'Compartilhando tela e áudio.'
-        : shareStreamAudio
+        : screenSharingControls.getSnapshot().audio
           ? 'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.'
           : 'Compartilhando tela sem áudio.',
       sound ? 'ok' : 'warn',
@@ -1404,132 +1445,17 @@ window.TronoSocial = (() => {
       }
     if (isCurrent()) renderScreenGrid();
   }
-  async function startScreenShare({ replace = false } = {}) {
-    if (!communityVoice()) return false;
-    if (screenSharing() && !replace) return true;
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      setStatus('Compartilhamento de tela não é suportado neste navegador.', 'error');
-      return false;
-    }
-    if (!voiceCall.getSnapshot().joined && !(await joinVoice())) return false;
-    if (
-      transportIsSfu() &&
-      realtime.getSnapshot().status &&
-      !realtime.getSnapshot().status.screenAllowed
-    ) {
-      setStatus('Compartilhamento bloqueado pelo freio mensal de consumo.', 'warn');
-      return false;
-    }
-    try {
-      return await screenCapture.start({ replace });
-    } catch (err) {
-      setStatus(
-        ['NotAllowedError', 'AbortError'].includes(err?.name)
-          ? replace && screenSharing()
-            ? 'Troca cancelada. A tela anterior continua sendo compartilhada.'
-            : 'Compartilhamento de tela cancelado.'
-          : err.message || 'Não foi possível compartilhar a tela.',
-        'error',
-      );
-      return false;
-    }
+  function startScreenShare(options) {
+    return screenSharingControls.start(options);
   }
-  async function switchScreenShare() {
-    if (screenSharing()) return startScreenShare({ replace: true });
-    return false;
+  function switchScreenShare() {
+    return screenSharingControls.switchSource();
   }
-  async function stopScreenShare(sendState = true) {
-    if (!screenCapture.stop()) return;
-    localScreenPreviewPaused = false;
-    localScreenCollapsed = false;
-    if (sendState)
-      window.TronoNetwork?.setVoiceState(
-        voiceCall.getSnapshot().joined,
-        controlState().micMuted,
-        cameraOn(),
-        false,
-        qualityPreferences().transmissionQuality,
-        announcedTransport(),
-      );
-    updateButtons();
-    renderScreenGrid();
-    renderVoiceRoster();
-    if (transportIsSfu()) {
-      void closeSfuPublication('screen-audio');
-      void closeSfuPublication('screen');
-    } else
-      void Promise.allSettled(
-        [...peers.values()].flatMap((pc) => {
-          p2pPeers.stopWatching(pc);
-          return [pc._tronoScreenSender, pc._tronoScreenAudioSender]
-            .filter(Boolean)
-            .map(async (sender) => sender.replaceTrack(null));
-        }),
-      );
-  }
-  async function toggleScreenShare() {
-    if (screenSharing()) await stopScreenShare(true);
-    else openScreenOptions();
+  function stopScreenShare(sendState = true) {
+    return screenSharingControls.stop(sendState);
   }
   function openScreenOptions() {
-    if (!voiceCall.getSnapshot().joined) return;
-    const setting = SCREEN_FORMATS[qualityPreferences().screenFormat];
-    $('shareResolution').value = String(setting.height);
-    $('shareFps').value = String(setting.fps);
-    $('shareAudio').checked = shareStreamAudio;
-    const limited = transportIsSfu() && realtime.getSnapshot().status?.highAllowed === false;
-    $('shareResolution').querySelector('[value="1080"]').disabled = limited;
-    $('shareFps').querySelector('[value="60"]').disabled = limited;
-    if (limited) {
-      $('shareResolution').value = '720';
-      if (setting.fps === 60) $('shareFps').value = '30';
-    }
-    $('shareOptionsNote').textContent = limited
-      ? 'O limite de consumo atual permite até 720p / 30 FPS.'
-      : 'Escolha a qualidade; em seguida, o navegador perguntará qual tela ou aba compartilhar.';
-    $('shareReplayHelp').textContent = window.TronoClips?.captureProfile?.()
-      ? 'O replay será preparado automaticamente para clipar pelo botão ✂ na barra da chamada, com o áudio da tela quando disponível.'
-      : 'Replay desligado. Ative em Meus clipes → Preferências para preparar clipes ao compartilhar.';
-    $('screenOptionsDialog').showModal();
-  }
-  function confirmScreenOptions(e) {
-    e.preventDefault();
-    if (!voiceCall.getSnapshot().joined) {
-      $('screenOptionsDialog').close();
-      return;
-    }
-    const format = $('shareResolution').value + '-' + $('shareFps').value;
-    if (!Object.hasOwn(SCREEN_FORMATS, format)) return;
-    callQuality.configure({
-      screenFormat: format,
-      transmissionQuality: $('shareResolution').value === '1080' ? 'high' : 'balanced',
-      screenBitrateMbps:
-        $('shareResolution').value === '1080'
-          ? $('shareFps').value === '60'
-            ? 10
-            : 8
-          : $('shareFps').value === '15'
-            ? 4
-            : 6,
-    });
-    shareStreamAudio = $('shareAudio').checked;
-    storage.setItem('mnShareStreamAudio', shareStreamAudio ? '1' : '0');
-    updateQualityUI();
-    $('screenOptionsDialog').close();
-    // Call capture directly from this click, retaining the browser's user activation.
-    void startScreenShare();
-  }
-  function toggleLocalScreenPreview() {
-    if (!screenSharing()) return;
-    localScreenPreviewPaused = !localScreenPreviewPaused;
-    if (localScreenPreviewPaused) localScreenCollapsed = true;
-    renderScreenGrid();
-    setStatus(
-      localScreenPreviewPaused
-        ? 'Prévia local pausada. A transmissão continua normalmente.'
-        : 'Prévia local restaurada.',
-      'ok',
-    );
+    screenSharingBindings.open();
   }
 
   function closePeer(id) {
@@ -2170,29 +2096,6 @@ window.TronoSocial = (() => {
         tile
           .querySelector('.mn-stream-volume input')
           .addEventListener('input', (e) => setStreamGain(p.id, e.target.value));
-        tile.querySelector('.screen-resource-btn').addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          toggleLocalScreenPreview();
-        });
-        tile.querySelector('.screen-switch-btn').addEventListener('click', async (ev) => {
-          ev.stopPropagation();
-          const button = ev.currentTarget;
-          button.disabled = true;
-          try {
-            await switchScreenShare();
-          } finally {
-            button.disabled = false;
-          }
-        });
-        tile.querySelector('.screen-collapse-btn').addEventListener('click', async (ev) => {
-          ev.stopPropagation();
-          if (document.fullscreenElement === tile) await document.exitFullscreen().catch(() => {});
-          tile.classList.remove('media-maximized');
-          document.body.classList.remove('media-focus-open');
-          if (self) localScreenCollapsed = !localScreenCollapsed;
-          else tile.dataset.collapsed = tile.dataset.collapsed === '1' ? '0' : '1';
-          renderScreenGrid();
-        });
       }
       if (
         tile.parentElement !== target &&
@@ -2212,7 +2115,7 @@ window.TronoSocial = (() => {
         tile.querySelector(selector).hidden = !watching;
       const resource = tile.querySelector('.screen-resource-btn');
       resource.classList.toggle('hidden', !self);
-      resource.textContent = localScreenPreviewPaused
+      resource.textContent = screenSharingControls.getSnapshot().previewPaused
         ? '👁 Mostrar prévia'
         : '⚡ Economizar recursos';
       const stream = screenStreamForPerson(p),
@@ -2236,8 +2139,13 @@ window.TronoSocial = (() => {
         ? 'Áudio da stream disponível'
         : 'Transmissão sem áudio compartilhado';
       tile.classList.toggle('has-video', live);
-      tile.classList.toggle('local-preview-paused', self && localScreenPreviewPaused);
-      const collapsed = watching && (self ? localScreenCollapsed : tile.dataset.collapsed === '1');
+      tile.classList.toggle(
+        'local-preview-paused',
+        self && screenSharingControls.getSnapshot().previewPaused,
+      );
+      const collapsed =
+        watching &&
+        (self ? screenSharingControls.getSnapshot().collapsed : tile.dataset.collapsed === '1');
       tile.classList.toggle('share-collapsed', collapsed);
       const collapse = tile.querySelector('.screen-collapse-btn');
       collapse.textContent = collapsed ? '▣' : '—';
@@ -2246,7 +2154,7 @@ window.TronoSocial = (() => {
       if (!watching) {
         video.pause();
         video.srcObject = null;
-      } else if (self && localScreenPreviewPaused) {
+      } else if (self && screenSharingControls.getSnapshot().previewPaused) {
         video.pause();
         video.srcObject = null;
         placeholder.innerHTML =
@@ -2259,7 +2167,7 @@ window.TronoSocial = (() => {
       tile.setAttribute('aria-label', 'Transmissão de ' + p.name);
       window.TronoStreamControls?.update(
         tile,
-        live && !collapsed && !(self && localScreenPreviewPaused),
+        live && !collapsed && !(self && screenSharingControls.getSnapshot().previewPaused),
       );
     }
     if (!host.querySelector('.screen-share-tile'))
@@ -2356,8 +2264,7 @@ window.TronoSocial = (() => {
     updateVoiceBackgroundClass();
     void voiceTelemetry.syncPriority();
     updateAudioRecoveryUI();
-    localScreenPreviewPaused = false;
-    localScreenCollapsed = false;
+    screenSharingControls.resetPreview();
     if (wasInVoice) {
       playCallSound(reason === 'disconnect' ? 'disconnect' : 'leave', 'local');
       callNotice({
@@ -3071,6 +2978,7 @@ window.TronoSocial = (() => {
     voiceRoster.start();
     controlBindings.start();
     mediaInterestBindings.start();
+    screenSharingBindings.start();
     $('voiceProtection').checked = voiceTelemetry.getSnapshot().enabled;
     $('voiceProtection').onchange = (e) => {
       const enabled = e.target.checked;
@@ -3109,7 +3017,6 @@ window.TronoSocial = (() => {
     }
 
     $('joinVoiceBtn')?.addEventListener('click', joinVoice);
-    $('screenShareBtn')?.addEventListener('click', toggleScreenShare);
     $('voiceSettingsBtn')?.addEventListener('click', () => toggleVoiceSettings());
     $('voiceSettingsClose')?.addEventListener('click', () => toggleVoiceSettings(false));
     $('voiceSfxBtn')?.addEventListener('click', toggleVoiceSfx);
@@ -3143,13 +3050,6 @@ window.TronoSocial = (() => {
       callQuality.configure({ screenFormat: e.target.value });
       updateQualityUI();
       await applyQualityToLiveMedia();
-    });
-    $('screenOptionsForm').addEventListener('submit', confirmScreenOptions);
-    $('screenOptionsCancel').onclick = () => $('screenOptionsDialog').close();
-    $('shareStreamAudio')?.addEventListener('change', (e) => {
-      shareStreamAudio = !!e.target.checked;
-      storage.setItem('mnShareStreamAudio', shareStreamAudio ? '1' : '0');
-      setStatus('Preferência de áudio aplicada ao próximo compartilhamento.', 'ok');
     });
     window.addEventListener('resize', repositionProfileControls);
     $('voiceRoster')?.addEventListener('scroll', repositionProfileControls, { passive: true });
@@ -3408,7 +3308,7 @@ window.TronoSocial = (() => {
       return {
         ...SCREEN_FORMATS[qualityPreferences().screenFormat],
         bitrate: effectiveScreenBitrate(),
-        audio: shareStreamAudio,
+        audio: screenSharingControls.getSnapshot().audio,
       };
     },
     get deafened() {

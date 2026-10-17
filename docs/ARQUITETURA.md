@@ -460,8 +460,22 @@ por tile. Também limpa players/maximização e sai da tela cheia. `social.js` c
 a pintura e adaptadores públicos, sem conjuntos, versões ou handlers paralelos para
 assistir/ocultar mídia. Capturas, peers, players e assinaturas continuam emprestados.
 
-`social.js` conserva apresentação, navegação e controles de compartilhamento ainda
-não convertidos.
+`screen-sharing.ts` possui comandos de iniciar/parar/trocar a tela, preferência de
+áudio e estado da prévia local. Consulta participação, qualidade, política SFU e
+captura existentes; não cria outra trilha ou conexão. Pausar/colapsar a prévia não
+interrompe a transmissão. Parar fecha apenas publicações/senders de tela e seu áudio,
+preservando voz e câmera. O dono da captura continua em `screen-capture.ts`.
+
+`screen-sharing-bindings.ts` possui o diálogo de qualidade, confirmação/cancelamento,
+preferência de áudio e cliques de prévia/troca/colapso. O picker é solicitado no mesmo
+evento de confirmação quando a chamada já está ativa. Os presets de 1080p/60 e
+bitrate foram preservados; limites SFU afetam as opções sem sobrescrever a
+preferência ao abrir o diálogo. Eventos delegados acompanham os mesmos nós entre
+layouts; o descarte remove todos os listeners registrados.
+
+`social.js` conserva apresentação, navegação e adaptação da publicação da tela
+(`publishScreen`/`detachScreenAudio`), ainda não convertidas. Ele consulta o estado
+de compartilhamento tipado, sem flags ou handlers paralelos para essas opções.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.

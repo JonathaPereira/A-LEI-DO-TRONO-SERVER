@@ -38,6 +38,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Contexto compartilhado do microfone, desbloqueio de áudio e avisos em TypeScript.
 - Estado, ações e listeners dos controles de áudio/câmera em TypeScript.
 - Intenções de assistir/ocultar mídias e seus cliques em TypeScript.
+- Comandos/opções de compartilhar tela, diálogo e controles de prévia em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -961,12 +962,46 @@ Evidências: `artifacts/interest-unit.log`, `interest-regressions.log`, `interes
 `interest-sfu.log`, `interest-media.log`, `interest-desktop.log`, `interest-typecheck.log`,
 `interest-format.log` e `interest-build.log`. Sem push ou alteração de infraestrutura.
 
+## Opções e comandos de compartilhar tela — 17/10/2026
+
+- `lib/voice/screen-sharing.ts` concentra iniciar/parar/trocar a fonte, preferência
+  de áudio e prévia local. `screen-sharing-bindings.ts` possui o diálogo, seus
+  listeners e os cliques de troca, pausa/restauração e colapso. Flags, handlers
+  por tile e implementações substituídas foram removidos de `social.js`.
+- Captura/replay, encoders, conexão e socket continuam nos seus donos existentes.
+  Pausar a prévia não para/recaptura a tela; cancelar uma troca mantém a fonte
+  atual. Parar remove apenas tela/áudio da tela, conservando câmera e microfone.
+- Preservados presets, 1080p/60, bitrates e solicitação do picker no evento de
+  confirmação. Abrir o diálogo sob limite SFU não sobrescreve a preferência.
+  Erros de pickers de chamadas antigas não alteram o status da nova chamada.
+- `test:voice:sharing` cobre 13 regressões e está em `npm test`. O teste Electron
+  agora usa os botões reais para abrir/cancelar/confirmar em 1080p/60, trocar a
+  fonte e pausar/restaurar/expandir a prévia, conferindo quadros recebidos,
+  identidade das trilhas/peers/socket e liberação da fonte anterior.
+
+Passaram typecheck, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU e 15 de controles/recepção/microfone nativo no navegador.
+Os dois testes no Electron real passaram (P2P/layouts e relay SFU); o P2P também
+passou com a cobertura adicional dos botões de compartilhamento. Não houve alteração
+da captura/processamento ou dos encoders. A suíte isolada de segundo plano não foi
+repetida nesta etapa; os nove cenários passaram na etapa dos controles de chamada.
+Fontes de teste sintéticas não medem desempenho em jogos ou rotas externas.
+
+A chamada ainda não está integralmente em React: faltam apresentação/lista/painéis,
+configurações e a adaptação de publicação da tela em `social.js`. Captura, transporte,
+negociação e os comandos extraídos não precisam de reimplementação nessa conversão.
+Evidências em `artifacts/sharing-{tests,ui,sfu,browser,desktop,desktop-controls,typecheck,format,build}.log`.
+Sem push, publicação ou mudança de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Extrair opções restantes de compartilhamento; intenções de assistir/ocultar
-   mídias e seus cliques estão em `media-interest.ts`/`media-interest-bindings.ts`.
-   converter apresentação dos controles/painéis em `social.js` para React quando
-   cada subárvore tiver um único dono. Estado/ações e os nove listeners de áudio/
+1. Converter apresentação dos controles/lista/painéis em `social.js` para React
+   quando cada subárvore tiver um único dono; extrair a adaptação de publicação
+   da tela (`publishScreen`/`detachScreenAudio`) sem duplicar o dono das sessões.
+   Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
+   `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
+   `media-interest.ts`/`media-interest-bindings.ts`.
+   Estado/ações e os nove listeners de áudio/
    câmera estão em `controls.ts`/`control-bindings.ts`; não restaurar flags locais.
    Contextos, desbloqueio e avisos estão em `call-audio.ts`/`call-alerts.ts`.
    O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
