@@ -498,8 +498,8 @@ paralelos no adaptador. `CameraCaptureChange` descreve seu evento em `types/voic
 
 `social.js` conserva composição, apresentação e navegação, incluindo enumeração e
 pintura dos seletores de dispositivo. Os callbacks de publicação de microfone/câmera
-foram removidos; tela permanece em `screen-publication.ts`. A interface da chamada
-e seus painéis ainda precisam de conversão para React.
+foram removidos; tela permanece em `screen-publication.ts`. A lista, os controles internos e os painéis de mídia/diagnóstico ainda precisam de
+conversão para React; a estrutura das configurações é descrita abaixo.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
@@ -512,6 +512,39 @@ a imagem aberta; URLs atrasadas não reabrem seleções anteriores.
 O catálogo de GIFs usa GIPHY com configuração autenticada pelo backend e importação
 por link quando a chave pública do cliente está ausente. A validação de créditos
 continua aceitando Wikimedia para conservar os perfis existentes.
+
+## Configurações compartilhadas
+
+`lib/settings/controller.ts` possui um único snapshot de abertura/aba, valida os
+assuntos disponíveis por plataforma e persiste a seleção. `TronoCallSettings` é
+seu adaptador de navegação; `TronoDesktopSettings` conserva a API dos chamadores
+anteriores. Nenhum deles mantém outro estado ou captura mídia.
+
+`components/modals/call-settings.tsx` renderiza cabeçalho, abas, painéis, conta e
+permissões em React, usando `useSyncExternalStore`. Possui abertura/fechamento,
+teclado, foco das abas, eventos do diálogo e observers de dimensionamento, com
+limpeza dos listeners/observers. O diálogo nativo preserva backdrop e Escape.
+`settings-activity-fields.tsx` fornece os campos estáveis ainda usados pelo
+controlador de atividade; suas ações continuam naquele domínio.
+
+`call-settings-runtime.tsx` monta uma raiz React no painel existente. Antes dela,
+os controladores de perfil/jogos preparam os corpos que ainda possuem. O bootstrap
+registra essa montagem depois do shell desktop e antes de atividade/notificações;
+ela executa nessa ordem em `trono:ready`. Não antecipar a transferência de perfil
+para antes da preparação de `profile-files.js` ao alterar essa sequência.
+
+Os corpos de áudio/vídeo/conexão, perfil, aparência, arquivos e jogo entram por
+slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
+possui o contêiner/visibilidade; o controlador anterior conserva somente seus filhos.
+Notificações preenche seu slot, sem criar abas/painéis paralelos. Isso não converteu
+os formulários e controles internos em React: seletores, qualidade, avisos, volume,
+atividade, perfil, jogos e notificações ainda serão convertidos por domínio.
+
+`legacy/desktop-settings.js` foi removido do manifesto e do fonte. `social.js` não
+possui mais flags, seleção ou pintura das abas, nem os listeners de abrir/fechar.
+Seus métodos públicos delegam ao dono tipado; a prioridade global do Escape ainda
+fecha mídia/chat/diagnóstico antes das configurações web. A aba Meus arquivos agora
+é aceita pelo validador, sem cair silenciosamente em Áudio.
 
 ## Backend
 

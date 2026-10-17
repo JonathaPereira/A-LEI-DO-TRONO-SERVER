@@ -41,6 +41,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Comandos/opções de compartilhar tela, diálogo e controles de prévia em TypeScript.
 - Coordenação da publicação da tela e fim do áudio compartilhado em TypeScript.
 - Publicação/retomada do microfone e publicação/parada da câmera em TypeScript.
+- Estrutura das configurações web/desktop, navegação, conta e permissões em React.
 
 ## Integração da main: desktop 0.2.10
 
@@ -1065,10 +1066,50 @@ Os adaptadores de publicação desta etapa estão concluídos. A próxima frente
 um dono por subárvore e preservar os nós de mídia durante navegação/troca de layout.
 Não houve push, publicação ou alteração de infraestrutura.
 
+## Estrutura das configurações em React — 17/10/2026
+
+- `lib/settings/controller.ts` possui abertura/aba e seleção válida por plataforma,
+  consumida pelo React e pelos adaptadores públicos existentes. Removidos flags,
+  listeners e pintura de abas/configurações de `social.js`.
+- `components/modals/call-settings.tsx` possui cabeçalho, abas, painéis, conta,
+  permissões, teclado e dimensionamento. O diálogo preserva fechamento explícito,
+  Escape, backdrop e o estado do botão de entrada. Os observers têm descarte.
+- `call-settings-runtime.tsx` preserva os elementos de entrada/saída, perfil, jogos,
+  arquivos e captura em slots de compatibilidade, sem cloná-los ou refazer listeners.
+  Esses conteúdos ainda pertencem aos seus domínios legados. A ordem de montagem
+  foi ajustada após os testes detectarem que o perfil precisa preparar seus
+  formulários antes de transferi-los para as configurações.
+- `legacy/desktop-settings.js` foi excluído, assim como sua entrada no manifesto;
+  as cópias geradas não entram mais em `public/` e `out/`. Notificações usa o slot
+  React e deixou de criar outra aba/painel. A marcação antiga de cabeçalho/abas
+  também foi retirada de `VoicePanel`. Atividade ganhou marcação TSX estável,
+  mantendo seu controlador de detecção/publicação atual.
+- Corrigida a seleção da aba Meus arquivos: ela existia, mas o validador anterior
+  a rejeitava e selecionava Áudio. O catálogo tipado agora inclui essa aba.
+- Os testes de configurações cobrem catálogo por plataforma, snapshot/assinatura,
+  persistência, teclado, Escape, reset de permissões e identidade dos formulários.
+  A suíte de retrato percorre todas as abas em cinco tamanhos, incluindo janela
+  curta e retrato; as capturas locais foram conferidas visualmente.
+
+Validação: typecheck, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 11 de configurações/controles no navegador e dois testes no
+Electron real passaram. A configuração web preservou os mesmos nós e trilhas durante
+abertura, seleção, fechamento e reabertura. O teste de conta confere ligar/desligar
+Lembre de mim; a tela lê a preferência imediata do dono de autenticação e recebe
+separadamente o resultado da gravação, evitando reverter o checkbox durante a espera.
+As fontes de mídia dos testes são sintéticas. Captura, processamento e encoders não
+mudaram; a suíte isolada de segundo plano não foi repetida nesta etapa (os nove
+cenários passaram na etapa anterior).
+
+Evidências: `artifacts/settings-react-{tests,typecheck,format,build,ui,sfu,layouts,desktop}.log`
+e `artifacts/settings/`. Não houve push ou mudança de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Converter apresentação dos controles/lista/painéis e seletores/configurações
-   em `social.js` para React quando cada subárvore tiver um único dono.
+1. Converter os controles internos/seletores de áudio, vídeo e qualidade e a
+   apresentação da lista/painéis da chamada para React, com um dono por subárvore.
+   A estrutura de configurações (abas/abertura/conta/permissões) já está em React;
+   seus slots preservam os conteúdos ainda legados, sem tornar seus campos React.
    Publicação de microfone/câmera está em `device-publication.ts`; publicação da
    tela e o fim de seu áudio estão em `screen-publication.ts`. Não restaurar esses
    callbacks no controlador nem duplicar os donos de captura/sessão.

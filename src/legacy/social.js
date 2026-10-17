@@ -96,8 +96,6 @@ window.TronoSocial = (() => {
   let chatMuted = storage.getItem('tronoChatMuted') === '1';
   const { QUALITY_ORDER, SCREEN_FORMATS, SCREEN_BITRATES } = window.TronoVoiceCapture;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
-  let settingsOpen = false;
-  let settingsTab = storage.getItem('tronoVoiceSettingsTab') || 'audio';
   let chatDrawerOpen = false;
   let chatUnreadCount = 0;
   let telemetryOpen = false;
@@ -800,39 +798,10 @@ window.TronoSocial = (() => {
     window.TronoCommunity?.voiceNotice?.(event);
   }
   function toggleVoiceSettings(force) {
-    if (window.TronoDesktopSettings) return window.TronoDesktopSettings.toggle(force);
-    settingsOpen = typeof force === 'boolean' ? force : !settingsOpen;
-    const panel = $('voiceSettingsPanel'),
-      btn = $('voiceSettingsBtn');
-    panel?.classList.toggle('hidden', !settingsOpen);
-    btn?.classList.toggle('settings-active', settingsOpen);
-    btn?.setAttribute('aria-expanded', settingsOpen ? 'true' : 'false');
+    window.TronoCallSettings.toggle(force);
   }
   function setSettingsTab(tab = 'audio') {
-    if (
-      ![
-        'audio',
-        'video',
-        'connection',
-        'notifications',
-        ...(window.TronoDesktop
-          ? ['capture', 'account', 'appearance', 'game', 'activity', 'privacy']
-          : []),
-      ].includes(tab)
-    )
-      tab = 'audio';
-    settingsTab = tab;
-    storage.setItem('tronoVoiceSettingsTab', tab);
-    document.querySelectorAll('[data-settings-tab]').forEach((btn) => {
-      const on = btn.dataset.settingsTab === tab;
-      btn.classList.toggle('active', on);
-      btn.setAttribute('aria-selected', on ? 'true' : 'false');
-    });
-    document.querySelectorAll('[data-settings-panel]').forEach((panel) => {
-      const on = panel.dataset.settingsPanel === tab;
-      panel.classList.toggle('active', on);
-      panel.hidden = !on;
-    });
+    window.TronoCallSettings.select(tab);
   }
   function updateAudioPreferenceButtons() {
     const sfx = window.TronoAudio?.sfxEnabled ?? storage.getItem('tronoSfxEnabled') !== '0',
@@ -2871,19 +2840,12 @@ window.TronoSocial = (() => {
     }
 
     $('joinVoiceBtn')?.addEventListener('click', joinVoice);
-    $('voiceSettingsBtn')?.addEventListener('click', () => toggleVoiceSettings());
-    $('voiceSettingsClose')?.addEventListener('click', () => toggleVoiceSettings(false));
     $('voiceSfxBtn')?.addEventListener('click', toggleVoiceSfx);
     $('voiceMusicBtn')?.addEventListener('click', toggleVoiceMusic);
     $('refreshDevicesBtn')?.addEventListener('click', enumerateDevices);
     $('telemetryStatusPill')?.addEventListener('click', () => toggleTelemetry());
     $('telemetryOpenBtn')?.addEventListener('click', () => toggleTelemetry());
     $('telemetryCloseBtn')?.addEventListener('click', () => toggleTelemetry(false));
-    document
-      .querySelectorAll('[data-settings-tab]')
-      .forEach((btn) =>
-        btn.addEventListener('click', () => setSettingsTab(btn.dataset.settingsTab)),
-      );
     $('outputGainSlider')?.addEventListener('input', (e) => setOutputGain(e.target.value));
     $('resumeAudioBtn')?.addEventListener('click', () => {
       unlockCallAudio();
@@ -3015,7 +2977,7 @@ window.TronoSocial = (() => {
           void setSfuTileLayer(maximized, false);
         } else if (telemetryOpen) toggleTelemetry(false);
         else if (inChatHub() && chatDrawerOpen) toggleTextChat(false);
-        else if (settingsOpen) toggleVoiceSettings(false);
+        else if (window.TronoCallSettings.getSnapshot().open) toggleVoiceSettings(false);
       }
     });
     document.addEventListener('fullscreenchange', () => {
@@ -3031,7 +2993,6 @@ window.TronoSocial = (() => {
     applyPanelMode();
     renderGainValues();
     updateChatDrawerUI();
-    setSettingsTab(settingsTab);
     updateAudioPreferenceButtons();
     enumerateDevices();
     updateQualityUI();

@@ -41,7 +41,6 @@
     "panel-layout.js",
     "call-controls-layout.js",
     "desktop-shell.js",
-    "desktop-settings.js",
     "app-layout.js",
     "media-layout.js",
     "desktop-activity.js",

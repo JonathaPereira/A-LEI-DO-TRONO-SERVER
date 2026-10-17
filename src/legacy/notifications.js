@@ -98,27 +98,9 @@ window.TronoNotifications = (() => {
     }
   }
   function installSettings() {
-    const tabs = document.querySelector('.voice-settings-tabs'),
-      host = document.querySelector('.voice-settings-content');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'voice-settings-tab';
-    button.dataset.settingsTab = 'notifications';
-    button.setAttribute('role', 'tab');
-    button.setAttribute('aria-selected', 'false');
-    button.textContent = 'Notificações';
-    button.onclick = () => window.TronoSocial.setSettingsTab('notifications');
-    const pane = document.createElement('section');
-    pane.className = 'voice-settings-pane';
-    pane.dataset.settingsPanel = 'notifications';
-    pane.hidden = true;
-    pane.id = 'notificationSettings';
-    button.setAttribute('aria-controls', pane.id);
-    pane.setAttribute('role', 'tabpanel');
+    const pane = document.getElementById('notificationSettings');
     pane.innerHTML =
       '<h2>Notificações</h2><label class="social-setting">Avisos de mensagens<select id="notificationMode"><option value="mentions">Menções, amigos e mensagens privadas</option><option value="all">Todas as mensagens</option><option value="off">Desligados</option></select></label><p class="appearance-help">Mensagens privadas também aparecem em avisos compactos com o ícone de quem enviou. Em segundo plano, você recebe avisos do sistema. Use @apelido para mencionar alguém. Os contadores continuam funcionando com avisos desligados.</p><label class="social-setting">Silenciar um canal<select id="notificationChannel"></select></label><label class="auth-check"><input id="notificationChannelMute" type="checkbox"> Não receber avisos deste canal</label><button id="notificationPermission" class="secondary-button" type="button">Ativar avisos neste navegador</button><p id="notificationPermissionStatus" role="status" class="appearance-help"></p>';
-    tabs.append(button);
-    host.append(pane);
     document.getElementById('notificationMode').onchange = (e) =>
       prefs().set('notifications', e.target.value);
     document.getElementById('notificationChannel').onchange = (e) =>

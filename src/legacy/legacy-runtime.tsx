@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
+import {
+  initializeCallSettings,
+  prepareCallSettings,
+} from '../components/modals/call-settings-runtime';
 import { initializeNetwork } from '../lib/socket/browser';
 import { initializeChatComposer, initializeChatMessages } from '../lib/chat/browser';
 import { initializeChannels } from '../lib/channels/browser';
@@ -102,7 +106,14 @@ export function LegacyRuntime() {
       initializeChannels(window);
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
+        // Profile/game controllers prepare borrowed bodies before the React shell mounts;
+        // activity/notifications then bind to the mounted slots, matching their boot order.
+        if (filename === 'desktop-shell.js')
+          window.addEventListener('trono:ready', () => initializeCallSettings(window), {
+            once: true,
+          });
       }
+      prepareCallSettings(window);
       window.dispatchEvent(new Event('trono:ready'));
     })();
     void startup.catch((cause: unknown) => {

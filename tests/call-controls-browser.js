@@ -105,6 +105,24 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
     await expect.poll(() => owner.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
     const invitation = viewer.locator('.screen-share-tile.stream-invitation');
 
+    await t.test('web settings keep one pane and preserve live media while selecting and reopening', async () => {
+      await owner.evaluate(()=>{window.__settingsMedia={mic:window.TronoSocial.getLocalAudioTrack(),screen:window.TronoSocial.getLocalDisplayStream(),input:document.getElementById('voiceInputSelect')};window.TronoSocial.toggleTextChat(false);window.TronoSocial.toggleTelemetry(false);});
+      await owner.locator('#voiceSettingsBtn').click();
+      await expect(owner.locator('#voiceSettingsPanel')).toBeVisible();
+      await expect(owner.locator('[data-settings-tab]')).toHaveCount(4);
+      await owner.locator('[data-settings-tab="video"]').click();
+      await expect(owner.locator('[data-settings-panel="video"]')).toBeVisible();
+      await owner.locator('#voiceSettingsClose').click();
+      await owner.locator('#voiceSettingsBtn').click();
+      await expect(owner.locator('[data-settings-tab="video"]')).toHaveAttribute('aria-selected','true');
+      await owner.locator('[data-settings-tab="video"]').focus();await owner.keyboard.press('End');
+      await expect(owner.locator('[data-settings-panel="notifications"]')).toBeVisible();
+      await owner.keyboard.press('Escape');
+      await expect(owner.locator('#voiceSettingsPanel')).toBeHidden();
+      await expect(owner.locator('#voiceSettingsBtn')).toHaveAttribute('aria-expanded','false');
+      assert.equal(await owner.evaluate(()=>window.__settingsMedia.mic===window.TronoSocial.getLocalAudioTrack()&&window.__settingsMedia.screen===window.TronoSocial.getLocalDisplayStream()&&window.__settingsMedia.input===document.getElementById('voiceInputSelect')&&window.__settingsMedia.mic.readyState==='live'),true);
+    });
+
     await t.test('room rows keep text closed and the small chat button opens text without moving voice',async()=>{
       for(const layout of ['original','discord']){
         await viewer.evaluate(layout=>window.TronoAppLayout.apply(layout),layout);

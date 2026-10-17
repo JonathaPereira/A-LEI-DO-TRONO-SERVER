@@ -100,52 +100,6 @@ export function VoicePanel() {
           className={'voice-settings-panel hidden'}
           aria-label={'Configurações da chamada'}
         >
-          <div className={'voice-settings-head'}>
-            <div>
-              <small>CENTRAL DE CONTROLE</small>
-              <strong>Configurações da chamada</strong>
-            </div>
-            <button
-              id={'voiceSettingsClose'}
-              className={'settings-close'}
-              title={'Fechar configurações'}
-            >
-              ×
-            </button>
-          </div>
-          <div
-            className={'voice-settings-tabs'}
-            role={'tablist'}
-            aria-label={'Categorias das configurações'}
-          >
-            <button
-              className={'voice-settings-tab active'}
-              type={'button'}
-              role={'tab'}
-              aria-selected={'true'}
-              data-settings-tab={'audio'}
-            >
-              🎙 Áudio
-            </button>
-            <button
-              className={'voice-settings-tab'}
-              type={'button'}
-              role={'tab'}
-              aria-selected={'false'}
-              data-settings-tab={'video'}
-            >
-              ▣ Vídeo
-            </button>
-            <button
-              className={'voice-settings-tab'}
-              type={'button'}
-              role={'tab'}
-              aria-selected={'false'}
-              data-settings-tab={'connection'}
-            >
-              ⌁ Conexão
-            </button>
-          </div>
           <div className={'voice-settings-content'}>
             <section
               className={'voice-settings-pane active'}
