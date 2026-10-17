@@ -287,9 +287,29 @@ test(
           documentEvents: document,
           onChange() {},
         });
+        const screenPublication = window.TronoVoiceCapture.createScreenPublication({
+          isSfu: () => true,
+          sfu: session,
+          p2p: {
+            connections: new Map(),
+            syncTracks: async () => {
+              throw new Error('Unexpected P2P sync');
+            },
+          },
+          quality,
+          sharing: { resetPreview() {}, getSnapshot: () => ({ audio: false }) },
+          announce() {},
+          onAudioDetached() {},
+          onStatus() {},
+        });
         async function connect() {
-          const audioPub = await session.publish('audio', audio),
-            screenPub = await session.publish('screen', video);
+          const audioPub = await session.publish('audio', audio);
+          await screenPublication.publish({
+            capture: { source, outgoing: source },
+            replace: false,
+            isCurrent: () => settings.enabled,
+          });
+          const screenPub = session.publications.get('screen');
           session.setPublications(
             [audioPub, screenPub].map((pub) => ({
               ownerId: 'relay-peer',
@@ -313,6 +333,7 @@ test(
         }
         window.__sfuFixture = {
           session,
+          screenPublication,
           quality,
           remote,
           relay,
@@ -335,6 +356,7 @@ test(
             for (const pc of peers) pc.close();
             clearInterval(timer);
             source.getTracks().forEach((t) => t.stop());
+            window.__sfuFixture.screenReplacement?.stop();
             destination.stream.getTracks().forEach((t) => t.stop());
             tone.stop();
             await ctx.close();
@@ -383,6 +405,53 @@ test(
         };
       });
       assert.deepEqual(first, { ready: true, fps: 60, bitrate: 8000000, captureFps: 60 });
+      const framesBeforeReplacement = await page.evaluate(
+        () =>
+          document.getElementById('sfu-fixture-video').getVideoPlaybackQuality().totalVideoFrames,
+      );
+      assert.equal(
+        await page.evaluate(async () => {
+          const h = window.__sfuFixture;
+          const publication = h.session.publications.get('screen');
+          const subscription = h.session.subscriptions.get('relay-peer:screen');
+          const voice = h.session.publications.get('audio');
+          const peers = [...h.peers];
+          h.screenReplacement = h.video.clone();
+          const stream = new MediaStream([h.screenReplacement]);
+          await h.screenPublication.publish({
+            capture: { source: stream, outgoing: stream },
+            replace: true,
+            isCurrent: () => true,
+          });
+          const current = h.session.publications.get('screen');
+          const encoding = current.sender.getParameters().encodings[0];
+          return (
+            current === publication &&
+            current.sender.track === h.screenReplacement &&
+            h.session.subscriptions.get('relay-peer:screen') === subscription &&
+            h.session.publications.get('audio') === voice &&
+            voice.sender.track === h.audio &&
+            h.peers.length === peers.length &&
+            peers.every((pc) => pc.connectionState === 'connected') &&
+            h.video.readyState === 'live' &&
+            h.audio.readyState === 'live' &&
+            encoding.maxFramerate === 60 &&
+            encoding.maxBitrate === 8000000
+          );
+        }),
+        true,
+      );
+      await expect
+        .poll(
+          () =>
+            page.evaluate(
+              () =>
+                document.getElementById('sfu-fixture-video').getVideoPlaybackQuality()
+                  .totalVideoFrames,
+            ),
+          { timeout: 15000 },
+        )
+        .toBeGreaterThan(framesBeforeReplacement);
       const adaptation = await page.evaluate(async () => {
         const h = window.__sfuFixture,
           original = h.session.publications.get('screen').sender.track;

@@ -1,16 +1,10 @@
-import type { ScreenCapture, ScreenCaptureSettings } from '../../types/voice';
-
-interface ScreenChange {
-  readonly capture: ScreenCapture;
-  readonly replace: boolean;
-  isCurrent(): boolean;
-}
+import type { ScreenCapture, ScreenCaptureChange, ScreenCaptureSettings } from '../../types/voice';
 interface ScreenCaptureOptions {
   mediaDevices: Pick<MediaDevices, 'getDisplayMedia'> | undefined;
   getSettings(): ScreenCaptureSettings;
-  onStarted(change: ScreenChange): Promise<void>;
+  onStarted(change: ScreenCaptureChange): Promise<void>;
   onEnded(): Promise<void>;
-  onAudioEnded(change: ScreenChange): Promise<void>;
+  onAudioEnded(change: ScreenCaptureChange): Promise<void>;
   onSourceStarted(source: MediaStream): void;
   onSourceStopped(source: MediaStream): void;
   warn?: (error: unknown) => void;
@@ -133,7 +127,7 @@ export function createScreenCapture({
       )
         throw new Error('Nenhuma tela foi selecionada.');
       const capture = Object.freeze({ source, outgoing });
-      const change: ScreenChange = {
+      const change: ScreenCaptureChange = {
         capture,
         replace,
         isCurrent: () => current() && active === resource,

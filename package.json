@@ -59,7 +59,7 @@
     "test:voice:audio": "node --test tests/call-audio.cjs",
     "test:voice:controls": "node --test tests/voice-controls.cjs",
     "test:voice:interest": "node --test tests/media-interest.cjs",
-    "test:voice:sharing": "node --test tests/screen-sharing.cjs"
+    "test:voice:sharing": "node --test tests/screen-sharing.cjs tests/screen-publication.cjs"
   },
   "engines": {
     "node": ">=24.12.0"

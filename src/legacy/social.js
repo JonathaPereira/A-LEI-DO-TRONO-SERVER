@@ -201,9 +201,9 @@ window.TronoSocial = (() => {
       audio: screenSharingControls.getSnapshot().audio,
       contentHint: qualityPreferences().screenContent,
     }),
-    onStarted: publishScreen,
+    onStarted: (change) => screenPublication.publish(change),
     onEnded: () => stopScreenShare(true),
-    onAudioEnded: detachScreenAudio,
+    onAudioEnded: (change) => screenPublication.detachAudio(change),
     onSourceStarted: (source) => {
       void window.TronoClips?.sharedStarted?.(source);
     },
@@ -667,6 +667,29 @@ window.TronoSocial = (() => {
     replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
     onStatus: setStatus,
     onRender: renderScreenGrid,
+  });
+
+  const screenPublication = window.TronoVoiceCapture.createScreenPublication({
+    isSfu: () => transportIsSfu(),
+    sfu: sfuSession,
+    p2p: p2pPeers,
+    quality: callQuality,
+    sharing: screenSharingControls,
+    announce: () => {
+      window.TronoNetwork?.setVoiceState(
+        true,
+        controlState().micMuted,
+        cameraOn(),
+        true,
+        qualityPreferences().transmissionQuality,
+        announcedTransport(),
+      );
+      updateButtons();
+      renderScreenGrid();
+      renderVoiceRoster();
+    },
+    onAudioDetached: renderScreenGrid,
+    onStatus: setStatus,
   });
 
   const publicVoiceActive = () => !!roomState?.voiceActive;
@@ -1364,87 +1387,6 @@ window.TronoSocial = (() => {
       );
   }
 
-  async function publishScreen({ capture, replace, isCurrent }) {
-    const stream = capture.outgoing,
-      track = stream.getVideoTracks()[0];
-    screenSharingControls.resetPreview();
-    window.TronoNetwork?.setVoiceState(
-      true,
-      controlState().micMuted,
-      cameraOn(),
-      true,
-      qualityPreferences().transmissionQuality,
-      announcedTransport(),
-    );
-    updateButtons();
-    renderScreenGrid();
-    renderVoiceRoster();
-    if (transportIsSfu()) {
-      try {
-        // Reuse publications and subscriptions when changing an active source.
-        await Promise.all(
-          [
-            ['screen', track],
-            ['screen-audio', stream.getAudioTracks()[0]],
-          ].map(async ([kind, next]) => {
-            try {
-              if (!isCurrent()) return;
-              const publication = replace ? sfuLocalPublications.get(kind) : null;
-              if (next && publication?.sender) {
-                await publication.sender.replaceTrack(next);
-                if (!isCurrent()) return;
-                await applySenderQuality(publication.sender, kind);
-              } else if (next) await publishSfuTrack(kind, next);
-              else if (publication) await closeSfuPublication(kind);
-            } catch (error) {
-              if (isCurrent()) void sfuSession.recoverPublication(kind, error);
-            }
-          }),
-        );
-      } catch (err) {
-        if (!isCurrent()) return;
-        console.warn('[TronoSocial] recuperar tela SFU', err?.code || err);
-        void sfuSession.recoverPublication('screen', err);
-      }
-    }
-    if (!transportIsSfu())
-      await Promise.all(
-        [...peers.values()].map(async (pc) => {
-          if (isCurrent()) await p2pPeers.syncTracks(pc);
-        }),
-      );
-    if (!isCurrent()) return;
-    const sound = stream.getAudioTracks()[0];
-    window.TronoNetwork?.setVoiceState(
-      true,
-      controlState().micMuted,
-      cameraOn(),
-      true,
-      qualityPreferences().transmissionQuality,
-      announcedTransport(),
-    );
-    updateButtons();
-    renderScreenGrid();
-    renderVoiceRoster();
-    setStatus(
-      sound
-        ? 'Compartilhando tela e áudio.'
-        : screenSharingControls.getSnapshot().audio
-          ? 'Tela compartilhada sem áudio. Marque Compartilhar áudio no seletor do navegador quando disponível.'
-          : 'Compartilhando tela sem áudio.',
-      sound ? 'ok' : 'warn',
-    );
-  }
-  async function detachScreenAudio({ isCurrent }) {
-    if (!isCurrent()) return;
-    if (transportIsSfu()) await closeSfuPublication('screen-audio');
-    else
-      for (const pc of peers.values()) {
-        if (!isCurrent()) return;
-        await pc._tronoScreenAudioSender?.replaceTrack(null);
-      }
-    if (isCurrent()) renderScreenGrid();
-  }
   function startScreenShare(options) {
     return screenSharingControls.start(options);
   }

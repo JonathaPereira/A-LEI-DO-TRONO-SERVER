@@ -16,6 +16,7 @@ import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
 import { createScreenSharing } from '../lib/voice/screen-sharing';
 import { createScreenSharingBindings } from '../lib/voice/screen-sharing-bindings';
 import { createScreenCapture } from '../lib/voice/screen-capture';
+import { createScreenPublication } from '../lib/voice/screen-publication';
 import { createCamera } from '../lib/voice/camera';
 import { createP2pPeers } from '../lib/voice/p2p-peers';
 import { createRemoteMedia } from '../lib/voice/remote-media';
@@ -68,6 +69,7 @@ export function LegacyRuntime() {
           createMicrophone,
           createMicrophoneProcessor,
           createScreenCapture,
+          createScreenPublication,
           createScreenSharing,
           createScreenSharingBindings,
           createCamera,

@@ -39,6 +39,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Estado, ações e listeners dos controles de áudio/câmera em TypeScript.
 - Intenções de assistir/ocultar mídias e seus cliques em TypeScript.
 - Comandos/opções de compartilhar tela, diálogo e controles de prévia em TypeScript.
+- Coordenação da publicação da tela e fim do áudio compartilhado em TypeScript.
 
 ## Integração da main: desktop 0.2.10
 
@@ -993,11 +994,48 @@ negociação e os comandos extraídos não precisam de reimplementação nessa c
 Evidências em `artifacts/sharing-{tests,ui,sfu,browser,desktop,desktop-controls,typecheck,format,build}.log`.
 Sem push, publicação ou mudança de infraestrutura.
 
+## Coordenação da publicação da tela — 17/10/2026
+
+- `lib/voice/screen-publication.ts` recebe os eventos tipados da captura e publica
+  vídeo/áudio pelos donos P2P/SFU existentes. `publishScreen` e `detachScreenAudio`
+  foram removidos de `social.js`; ficaram apenas composição e callbacks de apresentação.
+- Trocar a fonte reutiliza senders/assinaturas, reaplica a qualidade existente e
+  fecha só o áudio da tela quando a nova fonte não o fornece. A disponibilidade
+  continua anunciada antes da espera pelo transporte. Falhas recuperam vídeo e
+  áudio independentemente, sem outra conexão, fila ou captura.
+- Capturas obsoletas não aplicam qualidade, acionam recuperação ou anunciam conclusão
+  na chamada nova. O transporte é reconsultado após a publicação, preservando o
+  fallback SFU/P2P. Fonte do replay, constraints e parâmetros dos encoders não mudaram.
+- `ScreenCaptureChange` agora está em `types/voice.ts`; o comportamento da captura
+  permaneceu igual. `test:voice:sharing` inclui 13 regressões da publicação, além
+  das 13 dos comandos. Cobrem reuso, isolamento de falhas, fallback, anúncio imediato,
+  erros/resultados atrasados e retirada exclusiva do áudio da tela.
+- O teste de relay SFU no Electron usa o novo módulo para publicar, trocar uma
+  trilha real e republicar após reset. Confere mesmos peers/publicação/assinatura,
+  continuidade dos quadros, voz preservada e parâmetros de 60 FPS/8 Mbps.
+
+Validação desta etapa: tipagem, formatação, build estático, `npm test`, quatro
+fluxos de UI, 124 verificações SFU e os dois testes no Electron real passaram.
+Também passaram 15 verificações de controles/recepção/microfone nativo no navegador.
+A suíte isolada de segundo plano não foi repetida: captura/processamento de áudio
+não foram alterados e seus nove cenários passaram na etapa dos controles.
+As fontes são sintéticas; os testes não medem desempenho em jogos ou rotas externas.
+Evidências em `artifacts/publication-{tests,checks,build,ui,sfu,browser,desktop}.log`.
+Nenhum push, publicação ou alteração de infraestrutura.
+
+Pendência explícita da chamada: apresentação/configurações em React e os callbacks
+legados de publicação do microfone/câmera (`publishMicrophone`, `publishCamera`,
+`syncCameraSender`, `cameraStopped`). A captura e negociação desses dispositivos já
+estão nos módulos tipados; faltam os adaptadores de publicação, sem refazer os donos.
+
 ## Próximas alterações, em ordem
 
-1. Converter apresentação dos controles/lista/painéis em `social.js` para React
-   quando cada subárvore tiver um único dono; extrair a adaptação de publicação
-   da tela (`publishScreen`/`detachScreenAudio`) sem duplicar o dono das sessões.
+1. Extrair os adaptadores restantes de publicação do microfone/câmera
+   (`publishMicrophone`, `publishCamera`, `syncCameraSender`, `cameraStopped`),
+   preservando reconciliação de trilhas e donos de captura/sessão. A publicação
+   da tela e o fim de seu áudio já estão em `screen-publication.ts`.
+   Converter apresentação dos controles/lista/painéis em `social.js` para React
+   quando cada subárvore tiver um único dono.
    Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
    `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
    `media-interest.ts`/`media-interest-bindings.ts`.

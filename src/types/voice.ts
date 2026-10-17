@@ -81,3 +81,8 @@ export interface ScreenCapture {
   readonly source: MediaStream;
   readonly outgoing: MediaStream;
 }
+export interface ScreenCaptureChange {
+  readonly capture: ScreenCapture;
+  readonly replace: boolean;
+  isCurrent(): boolean;
+}

@@ -137,8 +137,8 @@ aguarda a publicação, mas sair da chamada descarta também as fontes em retira
 O acesso ao par fonte/saída é emprestado; consumidores não devem encerrar suas trilhas.
 
 `social.js` deriva o estado de compartilhamento desse módulo, sem outra cópia de
-streams, geração ou listeners. Continua publicando as trilhas em P2P/SFU e avisando
-o controlador de clipes sobre a fonte original.
+streams, geração ou listeners. Delega publicação e fim do áudio a `screen-publication.ts`
+e avisa o controlador de clipes sobre a fonte original.
 
 `camera.ts` possui captura, qualidade do dispositivo, listener de encerramento,
 pedido pendente e descarte da câmera. O snapshot imutável contém uma referência
@@ -473,9 +473,20 @@ bitrate foram preservados; limites SFU afetam as opções sem sobrescrever a
 preferência ao abrir o diálogo. Eventos delegados acompanham os mesmos nós entre
 layouts; o descarte remove todos os listeners registrados.
 
-`social.js` conserva apresentação, navegação e adaptação da publicação da tela
-(`publishScreen`/`detachScreenAudio`), ainda não convertidas. Ele consulta o estado
-de compartilhamento tipado, sem flags ou handlers paralelos para essas opções.
+`screen-publication.ts` recebe `ScreenCaptureChange` do dono da captura e coordena
+sua publicação em P2P/SFU. Anuncia disponibilidade antes de aguardar transporte,
+publica vídeo/áudio separadamente e reutiliza senders/assinaturas ao trocar de fonte.
+Reaplica qualidade pelo dono existente; falhas recuperam somente o tipo afetado.
+O fim do áudio retira apenas áudio da tela. Geração/validade vêm da captura;
+continuações antigas não aplicam qualidade, recuperam ou anunciam uma captura nova.
+Não há mapas, trilhas, filas, timers ou conexões próprios nesse adaptador. O fallback
+SFU/P2P continua no dono do transporte; ele é reconsultado após a publicação.
+
+`social.js` conserva apresentação, navegação e adaptação de publicação do microfone
+(`publishMicrophone`) e câmera (`publishCamera`/`syncCameraSender`/`cameraStopped`).
+Esses callbacks também precisam sair do controlador; captura e negociação dos
+dispositivos já pertencem aos módulos tipados. A publicação da tela já está em
+`screen-publication.ts`, sem implementação paralela no legado.
 Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou renderizar.
 A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
