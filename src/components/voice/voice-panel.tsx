@@ -1,12 +1,11 @@
+import { CallNavigationHost } from '@/components/navigation/call-navigation';
 export function VoicePanel() {
   return (
     <>
       <section className={'voice-section'}>
         <div className={'text-voice-connection'}>
           <span id={'textVoiceRoomName'}></span>
-          <button id={'returnToVoiceRoom'} type={'button'}>
-            Voltar à sala de voz
-          </button>
+          <CallNavigationHost id="returnToVoiceRoom" />
         </div>
         <div className={'voice-title'}>
           <div>

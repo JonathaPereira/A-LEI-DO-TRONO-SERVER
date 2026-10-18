@@ -49,6 +49,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Participantes e painéis base de câmera/tela em React, conservando players ao encaixar nos perfis.
 - Mosaico ampliado e opções de compartilhamento em React; controladores substituídos removidos.
 - Tela cheia/fallback e geometria do painel flutuante em TypeScript, com listeners próprios.
+- Navegação do painel/drawer e metadados de voz/texto em TypeScript; nove botões React.
 
 ## Integração da main: desktop 0.2.10
 
@@ -75,9 +76,10 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Coordenação visual/navegação,
-edição/visualização de perfis e galeria, gerenciamento
-de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
+React ou TypeScript apenas porque a marcação foi convertida. Composição da chamada,
+layouts, navegação entre áreas, edição/visualização de perfis e galeria, gerenciamento
+de canais, notificações e jogos permanecem nesses controladores. As listas de canais
+já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
 Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham componentes
@@ -1387,10 +1389,38 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Os limites da suíte antiga de clipes descritos no bloco anterior permanecem;
   esta etapa não alterou o encoder, a captura ou a infraestrutura de produção.
 
+## Navegação da chamada e indicadores em React — 18/10/2026
+
+- `navigation.ts` possui painel, drawer, não lidas, silenciamento e metadados
+  validados de voz/texto. Socket e participação continuam em `lib/socket/`;
+  transportes, roster e capturas conservam seus donos. Sair da voz não apaga
+  os metadados de um canal de texto independente; eventos de outra sala são ignorados.
+- Nove controles e seus indicadores são React em `components/navigation/`.
+  Hosts estáveis acompanham layouts e configurações. A ponte `navigation-view.ts`
+  controla containers ainda movidos por layouts legados, Escape, breakpoint e
+  foco adiado, cancelado ao fechar/trocar de sala ou descartar.
+- Removidos estado, renderizadores e listeners correspondentes de `social.js`,
+  handlers paralelos do shell/workspace, a cópia sem leitores de `gameRoomState`,
+  `inGame` sem chamadas e o timer de limpeza sem conteúdo nos eventos de jogo.
+- Navegação entre áreas, seleção/troca de canais em `game.js`, composição restante
+  de `social.js` e posicionadores legados continuam pendentes. A etapa não converteu
+  esses módulos completos nem mudou regras de jogos.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; configurações/
+  estado têm 75 casos, incluindo oito de navegação. Passaram quatro testes gerais
+  de interface, 14 de controles/painel/configurações e três no Electron real.
+  As regressões verificaram salas independentes, validação, leitura/mute, foco
+  cancelado, identidade dos botões entre layouts e Comunicação nas configurações,
+  mantendo microfone, câmera, tela, replay, peers e socket. Evidências locais:
+  `artifacts/navigation-*`. As limitações antigas de clipes permanecem registradas.
+  Sem push ou mudança na main.
+
 ## Próximas alterações, em ordem
 
-1. Converter a navegação, abertura/visibilidade do painel e drawer de texto
-   restantes em `social.js`, incluindo a integração de salas de texto/voz/jogo.
+1. Concluir a composição tipada da chamada e converter seus posicionadores/layouts
+   restantes (`social.js`, `call-workspace.js` e demais controladores de layout).
+   Navegação do painel/drawer, salas de voz/texto, não lidas e silenciamento já
+   pertencem a `navigation.ts`, com nove botões React e ponte em `navigation-view.ts`.
+   Não restaurar cópias de estado, listeners de sala ou handlers desses botões.
    Fullscreen/fallback e geometria já pertencem a `media-focus.ts` e
    `floating-panel.ts`; não restaurar seus listeners ou escritores de classes.
    Mosaico e opções de compartilhamento já são React,

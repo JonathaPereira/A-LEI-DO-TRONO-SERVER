@@ -60,17 +60,10 @@ window.TronoSocial = (() => {
     callStage.refresh();
   }
 
-  let roomState = null,
-    chatRoomState = null,
-    gameRoomState = null;
   let localStream = null;
-  let panelOpen = false;
-  let chatHubMode = false;
-  let chatMuted = storage.getItem('tronoChatMuted') === '1';
   const { QUALITY_ORDER, SCREEN_FORMATS } = window.TronoVoiceCapture;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
-  let chatDrawerOpen = false;
-  let chatUnreadCount = 0;
+  const currentVoiceRoom = () => navigation.getSnapshot().voiceRoom;
   const callQuality = window.TronoVoiceCapture.createCallQuality({
     storage,
     policy: () => ({
@@ -94,11 +87,6 @@ window.TronoSocial = (() => {
     setLayer: (key, rid) => sfuSession.setLayer(key, rid),
   });
 
-  const esc = (s) =>
-    String(s ?? '').replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
   const meId = () => window.TronoNetwork?.clientId;
   const realtime = window.TronoVoiceCapture.createRealtimeConfiguration({
     connected: () => !!window.TronoNetwork?.connected,
@@ -470,7 +458,7 @@ window.TronoSocial = (() => {
   const voiceCall = window.TronoVoiceCapture.createVoiceCall({
     prepare: () => window.TronoNetwork.prepareVoice(),
     microphone,
-    roomId: () => roomState?.id,
+    roomId: () => currentVoiceRoom()?.id,
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
     onPreparing: prepareCallUi,
     onPrepared: (choice) => {
@@ -682,11 +670,10 @@ window.TronoSocial = (() => {
     onDevicesChanged: enumerateDevices,
   });
 
-  const publicVoiceActive = () => !!roomState?.voiceActive;
+  const publicVoiceActive = () => !!currentVoiceRoom()?.voiceActive;
   const detailedPlayers = () => voiceRoster.getSnapshot().participants;
-  const inGame = () => !$('gameScreen')?.classList.contains('hidden');
-  const communityVoice = () => roomState?.kind === 'chat';
-  const inChatHub = () => chatHubMode || !$('chatOnlyScreen')?.classList.contains('hidden');
+  const communityVoice = () => currentVoiceRoom()?.kind === 'chat';
+  const inChatHub = () => navigation.getSnapshot().hub;
   const cappedQuality = () => callQuality.getSnapshot().effectiveQuality;
   const effectiveScreenBitrate = () => callQuality.getSnapshot().screenBitrate;
   const qualityProfile = () => callQuality.getSnapshot().profile;
@@ -698,44 +685,8 @@ window.TronoSocial = (() => {
   function setStatus(text, kind = '') {
     callToolbar.setStatus(text, kind);
   }
-  function setUnreadCount(value) {
-    chatUnreadCount = Math.max(0, Number(value) || 0);
-    for (const id of ['chatUnread', 'chatOnlyUnread']) {
-      const el = $(id);
-      if (!el) continue;
-      el.textContent = String(chatUnreadCount);
-      el.classList.toggle('hidden', chatUnreadCount === 0);
-    }
-    $('chatOnlyTextBtn')?.classList.toggle('has-unread', chatUnreadCount > 0);
-  }
-  function updateChatDrawerUI() {
-    const hub = inChatHub(),
-      panel = $('socialPanel');
-    if (hub && chatRoomState?.channelType === 'text') chatDrawerOpen = true;
-    if (hub && chatRoomState?.channelType === 'voice') chatDrawerOpen = false;
-    panel?.classList.toggle('chat-drawer-open', hub && chatDrawerOpen);
-    const chat = panel?.querySelector('.court-chat-section');
-    if (chat) {
-      chat.hidden = hub && !chatDrawerOpen;
-      chat.setAttribute('aria-hidden', String(hub && !chatDrawerOpen));
-    }
-    for (const id of ['chatOnlyTextBtn', 'mnSidebarTextBtn'])
-      $(id)?.setAttribute('aria-expanded', String(hub && chatDrawerOpen));
-    $('chatOnlyTextBtn')?.classList.toggle('active', hub && chatDrawerOpen);
-    $('chatDrawerCloseBtn')?.classList.toggle('hidden', !hub);
-    if (hub && chatDrawerOpen) setUnreadCount(0);
-  }
   function toggleTextChat(force) {
-    if (!inChatHub()) {
-      showPanel(typeof force === 'boolean' ? force : !panelOpen);
-      return;
-    }
-    chatDrawerOpen = typeof force === 'boolean' ? force : !chatDrawerOpen;
-    updateChatDrawerUI();
-    if (chatDrawerOpen) {
-      setUnreadCount(0);
-      setTimeout(() => $('courtChatInput')?.focus(), 80);
-    }
+    navigation.toggleTextChat(force);
   }
   function toggleTelemetry(force) {
     connectionDiagnostics.toggle(force);
@@ -796,95 +747,21 @@ window.TronoSocial = (() => {
     const tile = [...tiles].find((t) => t.dataset.peer === peerId);
     if (tile) return callStage.fullscreen(tile);
   }
-  function applyPanelMode() {
-    floatingPanel.apply();
-  }
   function clearChannelChat() {
     window.TronoChatMessages.clear();
-    setUnreadCount(0);
-    toggleTextChat(false);
+    navigation.clearText();
   }
   function setChatHubMode(active) {
-    chatHubMode = !!active;
-    if (!chatHubMode) document.body.classList.remove('channel-text-active', 'channel-voice-active');
-    document.body.classList.toggle('chat-only-active', chatHubMode);
-    if (chatHubMode) chatDrawerOpen = chatRoomState?.channelType === 'text';
-    applyPanelMode();
-    updateChatDrawerUI();
-    refreshCallControls();
-    refreshDiagnostics();
-    if (chatHubMode) showPanel(true);
-  }
-  function togglePanelMode() {
-    if (inChatHub()) return;
-    window.TronoMosaic?.open();
+    navigation.setHub(!!active);
   }
   function showPanel(show = true) {
-    panelOpen = !!show;
-    const panel = $('socialPanel');
-    panel?.classList.toggle('social-hidden', !panelOpen);
-    $('socialBtn')?.classList.toggle('music-active', panelOpen);
-    $('roomSocialBtn')?.classList.toggle('ready-active', panelOpen);
-    $('chatOnlyOpenSocialBtn')?.classList.toggle('hidden', panelOpen);
-    const canDock = !panelOpen && !inChatHub() && panel && !panel.classList.contains('hidden');
-    $('socialMiniDock')?.classList.toggle('hidden', !canDock);
-    if (panelOpen && !inChatHub()) markRead();
-    renderSeatMedia();
+    navigation.showPanel(show);
   }
   function showForRoom(show = true) {
-    $('socialPanel')?.classList.toggle('hidden', !show);
-    if (show) showPanel(true);
-    else {
-      showPanel(false);
-      toggleVoiceSettings(false);
-    }
+    navigation.showForRoom(show);
   }
-
-  function markRead() {
-    setUnreadCount(0);
-  }
-  function bumpUnread() {
-    const visible = inChatHub() ? chatDrawerOpen : panelOpen;
-    if (visible || chatMuted) return;
-    setUnreadCount(chatUnreadCount + 1);
-  }
-  function updatePublicPresence() {
-    const active = publicVoiceActive(),
-      roomBtn = $('roomSocialBtn'),
-      topBtn = $('socialBtn');
-    if (roomBtn)
-      roomBtn.innerHTML = active
-        ? '💬 Comunicação <span class="call-presence">🎙 Em call</span>'
-        : '💬 Comunicação';
-    if (topBtn) {
-      const unread = chatUnreadCount;
-      topBtn.innerHTML = `💬 Chat${active ? ' <span class="call-presence">🎙 Em call</span>' : ''} <span id="chatUnread" class="chat-unread ${unread ? '' : 'hidden'}">${esc(unread)}</span>`;
-    }
-  }
-
   function onChatActivity(activity) {
-    if (activity.type === 'read') {
-      markRead();
-      return;
-    }
-    const message = activity.message;
-    const mine = message.accountId
-      ? message.accountId === window.TronoAuth?.user?.id
-      : message.senderId === meId();
-    if (!mine) {
-      bumpUnread();
-      if (!chatMuted) playCallSound('message', 'text');
-    }
-  }
-  function toggleTextMute() {
-    chatMuted = !chatMuted;
-    storage.setItem('tronoChatMuted', chatMuted ? '1' : '0');
-    const b = $('muteTextBtn');
-    if (b) {
-      b.textContent = chatMuted ? 'Ativar chat' : 'Silenciar chat';
-      b.classList.toggle('danger-active', chatMuted);
-    }
-    if (chatMuted) markRead();
+    navigation.onChatActivity(activity);
   }
   const toggleWatchCamera = (id) => mediaInterest.toggleCamera(id);
 
@@ -1205,44 +1082,16 @@ window.TronoSocial = (() => {
           joined: voiceCall.getSnapshot().joined,
           joining,
           deafened: controlState().deafened,
-          roomId: roomState?.id,
+          roomId: currentVoiceRoom()?.id,
         },
       }),
     );
   }
   function consumeChatRoom(room) {
-    if (room?.id !== chatRoomState?.id) chatDrawerOpen = room?.channelType === 'text';
-    chatRoomState = room || null;
-    document.body.classList.toggle(
-      'channel-text-active',
-      inChatHub() && room?.channelType === 'text',
-    );
-    document.body.classList.toggle(
-      'channel-voice-active',
-      inChatHub() && room?.channelType === 'voice',
-    );
-    if (room || voiceCall.getSnapshot().joined) showForRoom(true);
-    if (inChatHub() && room?.channelType === 'text') toggleTextChat(true);
-    updateChatDrawerUI();
-    refreshCallControls();
+    navigation.consumeTextRoom(room);
   }
   function consumeRoom(room) {
-    roomState = room || null;
-    voiceTransport.setRoom(roomState?.id ?? null);
-    voiceRoster.setRoom(roomState?.id ?? null);
-    if (roomState) showForRoom(true);
-    else if (!voiceCall.getSnapshot().joined) {
-      voiceRoster.reset();
-      closeAllPeers();
-      if (transportIsSfu() || transportPending()) voiceTransport.reset();
-    }
-    if (!room || room.id === window.TronoNetwork.currentRoom) consumeChatRoom(room);
-    refreshCallControls();
-    updatePublicPresence();
-    renderVoiceRoster();
-    renderVideoGrid();
-    renderScreenGrid();
-    renderSeatMedia();
+    navigation.consumeVoiceRoom(room);
   }
 
   function allTelemetryPeerConnections() {
@@ -1308,90 +1157,18 @@ window.TronoSocial = (() => {
     voiceTransport.start();
     voiceRoster.start();
     audioPreferences.start();
-    $('socialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
-    $('roomSocialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
-    $('chatOnlyOpenSocialBtn')?.addEventListener('click', () => showPanel(true));
-    $('socialCloseBtn')?.addEventListener('click', () => showPanel(false));
-    $('socialModeBtn')?.addEventListener('click', togglePanelMode);
-    $('socialMiniDock')?.addEventListener('click', () => showPanel(true));
-    $('chatOnlyTextBtn')?.addEventListener('click', () => toggleTextChat());
-    $('mnSidebarTextBtn')?.addEventListener('click', () => toggleTextChat(true));
-    $('chatDrawerCloseBtn')?.addEventListener('click', () => toggleTextChat(false));
-    $('returnToVoiceRoom')?.addEventListener('click', () => {
-      const id = window.TronoNetwork.primaryRoom;
-      for (const button of document.querySelectorAll('[data-chat-channel]'))
-        if (button.dataset.chatChannel === id) {
-          button.click();
-          break;
-        }
-    });
-    $('muteTextBtn')?.addEventListener('click', toggleTextMute);
-    if ($('muteTextBtn')) {
-      $('muteTextBtn').textContent = chatMuted ? 'Ativar chat' : 'Silenciar chat';
-      $('muteTextBtn').classList.toggle('danger-active', chatMuted);
-    }
-
+    navigation.start();
+    navigationView.start();
     window.addEventListener('trono-auth-change', () => {
       if (volumeOwner !== window.TronoAuth.user?.id) {
         volumeOwner = window.TronoAuth.user?.id || null;
         audioPlayback.clearVoiceGains();
       }
     });
-    window.TronoNetwork?.onMessage((msg) => {
-      if (msg.type === 'joined-game-room') {
-        gameRoomState = msg.room;
-        if (msg.primaryRoomId === msg.room.id) consumeRoom(msg.room);
-        renderSeatMedia();
-      }
-      if (msg.type === 'left-game-room') {
-        gameRoomState = null;
-        if (roomState?.id === msg.roomId) {
-          consumeRoom(null);
-        }
-      }
-      if (msg.type === 'left-voice-room') {
-        if (roomState?.id === msg.roomId) {
-          consumeRoom(null);
-        }
-      }
-      if (msg.type === 'voice-room-attached') consumeRoom(msg.room);
-      if (msg.type === 'joined-room') {
-        if (msg.room?.kind === 'game') gameRoomState = msg.room;
-        consumeRoom(msg.room);
-      }
-      if (msg.type === 'joined-text-channel') consumeChatRoom(msg.room);
-      if (msg.type === 'room-state') {
-        if (msg.room?.id === window.TronoNetwork.gameRoom) gameRoomState = msg.room;
-        if (msg.room?.id === window.TronoNetwork.primaryRoom) consumeRoom(msg.room);
-        else if (msg.room?.id === window.TronoNetwork.currentRoom) consumeChatRoom(msg.room);
-      }
-      if (msg.type === 'channel-deleted' && msg.roomId === roomState?.id) {
-        roomState = null;
-        voiceRoster.setRoom(null);
-        refreshCallControls();
-      }
-      if (msg.type === 'connection' && !msg.connected) {
-        setStatus(
-          'Servidor desconectado. Recarregue a página para entrar na voz novamente.',
-          'error',
-        );
-      }
-      if (msg.type === 'game-started' || msg.type === 'game-state') setTimeout(renderSeatMedia, 0);
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) {
-        if (connectionDiagnostics.getSnapshot().open) toggleTelemetry(false);
-        else if (inChatHub() && chatDrawerOpen) toggleTextChat(false);
-        else if (window.TronoCallSettings.getSnapshot().open) toggleVoiceSettings(false);
-      }
-    });
-    applyPanelMode();
     voiceSettings.refresh();
-    updateChatDrawerUI();
     voiceSettings.start();
     updateQualityUI();
     refreshCallControls();
-    updatePublicPresence();
     renderVoiceRoster();
     renderVideoGrid();
     renderScreenGrid();
@@ -1406,13 +1183,6 @@ window.TronoSocial = (() => {
       });
     document.addEventListener('visibilitychange', () => {
       updateVoiceBackgroundClass();
-    });
-    let previousWide = innerWidth > 1000;
-    window.addEventListener('resize', () => {
-      const wide = innerWidth > 1000;
-      if (inChatHub() && previousWide && !wide && chatRoomState?.channelType !== 'text')
-        toggleTextChat(false);
-      previousWide = wide;
     });
   }
   const voiceSettings = window.TronoVoiceCapture.createVoiceSettings({
@@ -1505,12 +1275,16 @@ window.TronoSocial = (() => {
       const call = voiceCall.getSnapshot(),
         controls = controlState(),
         context = callAudio.getSnapshot().context;
-      const eligible = !!roomState && roomState.channelType !== 'text';
+      const eligible = !!currentVoiceRoom() && currentVoiceRoom().channelType !== 'text';
       return {
         joined: call.joined,
         joining: !!call.joining,
         eligible,
-        textOnly: inChatHub() && chatRoomState?.channelType === 'text' && !call.joined && !eligible,
+        textOnly:
+          inChatHub() &&
+          navigation.getSnapshot().textRoom?.channelType === 'text' &&
+          !call.joined &&
+          !eligible,
         communityVoice: communityVoice(),
         discord: document.body.dataset.appLayout === 'discord',
         desktop: !!window.TronoDesktop,
@@ -1556,7 +1330,7 @@ window.TronoSocial = (() => {
         community: communityVoice(),
         hub: inChatHub(),
         publicActive: !!publicVoiceActive(),
-        roomName: roomState?.name || (inChatHub() ? 'Geral' : 'Voz da mesa'),
+        roomName: currentVoiceRoom()?.name || (inChatHub() ? 'Geral' : 'Voz da mesa'),
         previewPaused: preview.previewPaused,
         previewCollapsed: preview.collapsed,
         participants: call.joined
@@ -1634,6 +1408,50 @@ window.TronoSocial = (() => {
     },
   });
 
+  const navigation = window.TronoVoiceCapture.createCallNavigation({
+    network: window.TronoNetwork,
+    storage,
+    joined: () => voiceCall.getSnapshot().joined,
+    accountId: () => window.TronoAuth?.user?.id || null,
+    onVoiceRoom: (room) => {
+      voiceTransport.setRoom(room?.id ?? null);
+      voiceRoster.setRoom(room?.id ?? null);
+      if (!room && !voiceCall.getSnapshot().joined) {
+        voiceRoster.reset();
+        closeAllPeers();
+        if (transportIsSfu() || transportPending()) voiceTransport.reset();
+      }
+      callStage.refresh();
+    },
+    onChange: () => {
+      refreshCallControls();
+      refreshDiagnostics();
+      callStage.refresh();
+    },
+    closeSettings: () => toggleVoiceSettings(false),
+    focusComposer: () => navigationView.focusComposer(),
+    playTextSound: () => playCallSound('message', 'text'),
+    onDisconnected: () =>
+      setStatus(
+        'Servidor desconectado. Recarregue a página para entrar na voz novamente.',
+        'error',
+      ),
+  });
+  window.TronoCallNavigation = navigation;
+  const navigationView = window.TronoVoiceCapture.createCallNavigationView({
+    document,
+    window,
+    navigation,
+    applyGeometry: () => floatingPanel.apply(),
+    closeDiagnostics: () => {
+      if (!connectionDiagnostics.getSnapshot().open) return false;
+      toggleTelemetry(false);
+      return true;
+    },
+    closeSettings: () => toggleVoiceSettings(false),
+    openMosaic: () => window.TronoMosaic?.open(),
+  });
+
   window.addEventListener('trono-layout-change', refreshCallControls);
   window.addEventListener('trono:ready', bind);
 
@@ -1645,7 +1463,7 @@ window.TronoSocial = (() => {
     consumeRoom,
     consumeChatRoom,
     get chatRoomState() {
-      return chatRoomState;
+      return navigation.getSnapshot().textRoom;
     },
     joinVoice,
     leaveVoice,
@@ -1669,12 +1487,12 @@ window.TronoSocial = (() => {
       return !!voiceCall.getSnapshot().joining;
     },
     get voiceRoom() {
-      return roomState
+      return currentVoiceRoom()
         ? {
-            id: roomState.id,
-            name: roomState.name,
-            kind: roomState.kind,
-            channelType: roomState.channelType,
+            id: currentVoiceRoom().id,
+            name: currentVoiceRoom().name,
+            kind: currentVoiceRoom().kind,
+            channelType: currentVoiceRoom().channelType,
           }
         : null;
     },

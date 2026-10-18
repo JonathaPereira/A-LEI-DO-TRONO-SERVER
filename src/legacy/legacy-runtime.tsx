@@ -39,6 +39,9 @@ import { createMediaInterest } from '../lib/voice/media-interest';
 import { createMediaVisibility } from '../lib/voice/media-visibility';
 import { createMediaFocus } from '../lib/voice/media-focus';
 import { createFloatingPanel } from '../lib/voice/floating-panel';
+import { createCallNavigation } from '../lib/voice/navigation';
+import { createCallNavigationView } from '../lib/voice/navigation-view';
+import { initializeCallNavigation } from '../components/navigation/call-navigation-runtime';
 import { createCallStage } from '../lib/voice/stage';
 import { initializeCallStage } from '../components/voice/call-stage-runtime';
 import { createCallControls } from '../lib/voice/controls';
@@ -109,6 +112,8 @@ export function LegacyRuntime() {
           createMediaVisibility,
           createMediaFocus,
           createFloatingPanel,
+          createCallNavigation,
+          createCallNavigationView,
           createCallStage,
           createCallToolbar,
           createCallAlerts,
@@ -138,6 +143,7 @@ export function LegacyRuntime() {
       }
       prepareCallSettings(window);
       initializeCallToolbar(window);
+      initializeCallNavigation(window);
       window.dispatchEvent(new Event('trono:ready'));
       initializeCallStage(window);
       initializeMediaDialogs(window);

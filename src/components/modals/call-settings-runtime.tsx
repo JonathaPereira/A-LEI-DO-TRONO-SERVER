@@ -71,7 +71,9 @@ export function initializeCallSettings(target: Window): void {
       const actions = document.createElement('div');
       actions.className = 'game-settings-actions';
       actions.dataset.gameGroup = key;
-      actions.append(...ids.map(get));
+      actions.append(
+        ...ids.map((id) => (id === 'socialBtn' ? get('call-nav-socialBtn') : get(id))),
+      );
       group.append(summary, actions);
       game.append(group);
     }

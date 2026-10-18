@@ -1,3 +1,4 @@
+import { CallNavigationHost } from '@/components/navigation/call-navigation';
 export function RoomScreen() {
   return (
     <>
@@ -15,9 +16,7 @@ export function RoomScreen() {
           </p>
           <div id={'roomSeats'} className={'room-seats'}></div>
           <div className={'online-room-actions'}>
-            <button id={'roomSocialBtn'} className={'royal-btn'}>
-              💬 Comunicação
-            </button>
+            <CallNavigationHost id="roomSocialBtn" />
             <button id={'readyOnlineBtn'} className={'royal-btn online-ready-btn'}>
               ✓ Marcar Pronto
             </button>

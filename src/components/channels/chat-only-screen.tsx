@@ -1,3 +1,4 @@
+import { CallNavigationHost } from '@/components/navigation/call-navigation';
 import { ChannelList } from './channel-list';
 
 export function ChatOnlyScreen() {
@@ -53,20 +54,8 @@ export function ChatOnlyScreen() {
               </span>
               <b>Perfil</b>
             </button>
-            <button
-              id={'chatOnlyTextBtn'}
-              className={'chat-header-action'}
-              title={'Abrir mensagens de texto'}
-            >
-              <span>💬</span>
-              <b>Chat</b>
-              <em id={'chatOnlyUnread'} className={'chat-header-unread hidden'}>
-                0
-              </em>
-            </button>
-            <button id={'chatOnlyOpenSocialBtn'} className={'royal-btn hidden'}>
-              Abrir comunicação
-            </button>
+            <CallNavigationHost id="chatOnlyTextBtn" />
+            <CallNavigationHost id="chatOnlyOpenSocialBtn" />
             <button
               id={'backFromChatOnlyBtn'}
               className={'chat-header-action back-action'}

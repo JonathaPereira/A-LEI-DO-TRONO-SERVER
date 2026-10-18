@@ -212,7 +212,6 @@ window.addEventListener('trono:ready', () => {
       window.TronoMessenger.close();
     }
   });
-  $('chatOnlyTextBtn').addEventListener('click', () => window.TronoMessenger.close(), true);
   window.addEventListener('trono-direct-change', (e) => {
     const host = $('workspaceDirectList');
     host.replaceChildren();

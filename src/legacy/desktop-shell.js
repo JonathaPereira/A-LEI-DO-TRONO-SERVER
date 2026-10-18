@@ -174,13 +174,6 @@ if (window.TronoDesktop)
     dock.append(info);
     body.append(dock);
     window.TronoCallControlsLayout.refresh();
-    $('socialBtn').addEventListener('click', () => {
-      body.classList.add('game-communication-open');
-      window.TronoSocial.showPanel(true);
-    });
-    $('socialCloseBtn').addEventListener('click', () =>
-      body.classList.remove('game-communication-open'),
-    );
     const primary = [
       'portalScreen',
       'setupScreen',

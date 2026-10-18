@@ -248,6 +248,30 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       }
     });
 
+    await t.test('React text controls share unread/mute state and cancel delayed focus on close', async () => {
+      await viewer.setViewportSize({width:1280,height:720});
+      await viewer.evaluate(()=>window.TronoSocial.toggleTextChat(false));
+      await owner.evaluate(()=>window.TronoNetwork.sendChat('Navigation unread regression'));
+      await expect(viewer.locator('#chatOnlyUnread')).toHaveText('1');
+      await expect(viewer.locator('#chatOnlyUnread')).toBeVisible();
+      await viewer.locator('#chatOnlyTextBtn').click();
+      await expect(viewer.locator('#chatOnlyTextBtn')).toHaveAttribute('aria-expanded','true');
+      await expect(viewer.locator('#chatOnlyUnread')).toBeHidden();
+      await viewer.locator('#chatDrawerCloseBtn').click();
+      await viewer.waitForTimeout(110);
+      assert.equal(await viewer.evaluate(()=>document.activeElement?.id==='courtChatInput'),false);
+      await viewer.locator('#chatOnlyTextBtn').click();
+      await viewer.locator('#muteTextBtn').click();
+      await expect(viewer.locator('#muteTextBtn')).toHaveText('Ativar chat');
+      await viewer.locator('#chatDrawerCloseBtn').click();
+      await owner.waitForTimeout(500); // Respect the backend's 450 ms chat rate limit.
+      await owner.evaluate(()=>window.TronoNetwork.sendChat('Navigation muted regression'));
+      await expect(viewer.locator('#courtChatMessages')).toContainText('Navigation muted regression');
+      await expect(viewer.locator('#chatOnlyUnread')).toBeHidden();
+      await viewer.locator('#chatOnlyTextBtn').click();await viewer.locator('#muteTextBtn').click();
+      await expect(viewer.locator('#muteTextBtn')).toHaveText('Silenciar chat');
+      await viewer.locator('#chatDrawerCloseBtn').click();
+    });
     await t.test('watch button is reachable without maximizing, in both layouts and small windows', async () => {
       for (const mode of ['original', 'discord']) {
         await viewer.evaluate(mode => window.TronoAppLayout.apply(mode), mode);

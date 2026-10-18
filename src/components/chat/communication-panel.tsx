@@ -1,3 +1,4 @@
+import { CallNavigationHost } from '@/components/navigation/call-navigation';
 import { ChatPanel } from '@/components/chat/chat-panel';
 import { VoicePanel } from '@/components/voice/voice-panel';
 
@@ -18,9 +19,7 @@ export function CommunicationPanel() {
             <button id={'socialModeBtn'} title={'Ampliar câmeras e telas da chamada'}>
               Ampliar
             </button>
-            <button id={'socialCloseBtn'} title={'Minimizar'}>
-              —
-            </button>
+            <CallNavigationHost id="socialCloseBtn" />
           </div>
         </div>
         <ChatPanel />

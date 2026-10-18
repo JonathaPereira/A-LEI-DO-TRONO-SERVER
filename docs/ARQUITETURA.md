@@ -32,9 +32,10 @@ As permissões da interface não substituem a autorização do servidor.
 posição de leitura ao inserir mensagens anteriores. Avatares e anexos usam
 componentes React compartilhados em `components/profiles/` e `components/files/`,
 sem mutar o DTO. URLs, erros e previews pertencem ao arquivo e à geração da conta;
-respostas antigas não reaparecem em uma linha reutilizada. A contagem
-de não lidas e os sons continuam em `legacy/social.js`, pelo evento `onChatActivity`.
-Esse controlador não escreve mais na lista, no compositor ou no diálogo de moderação.
+respostas antigas não reaparecem em uma linha reutilizada. A atividade do chat
+alimenta `lib/voice/navigation.ts`, que possui a contagem atual de não lidas e o
+silenciamento do texto, e delega sons a `call-alerts.ts`. O adaptador público
+`social.js.onChatActivity` não guarda estado nem escreve nos componentes.
 O adaptador `lib/socket/chat-actions.ts` foi excluído.
 
 `lib/socket/transport.ts` possui a conexão WebSocket, correlação de respostas,
@@ -76,9 +77,10 @@ as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.
 O componente React usa o mesmo catálogo e cliente de arquivos, sem hosts de
 renderização imperativa no chat ou nos canais. `legacy/avatar-icons.js` foi removido.
 
-A navegação do hub e a troca de chamada continuam em `legacy/game.js` e
-`legacy/social.js`. Os cliques React delegam a esse fluxo, que consulta o catálogo
-tipado; ele não conserva outra lista nem listeners DOM de seleção de canais.
+A navegação entre áreas e a seleção/troca de canais continuam em `legacy/game.js`,
+`app-layout.js` e `desktop-shell.js`. Os cliques React delegam a esse fluxo, que
+consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
+consulta `lib/voice/navigation.ts`; os métodos públicos de `social.js` são adaptadores.
 O gerenciamento de canais e seus diálogos permanecem em `legacy/community-admin.js`.
 
 ## Compatibilidade durante a conversão
@@ -433,8 +435,27 @@ conserva armazenamento/limites do tamanho. Arraste só ocorre fora do hub em jan
 `call-stage-runtime.tsx` monta após todos os listeners de `trono:ready`, conservando
 os nós observados pelos layouts. Os portais escrevem em containers estáveis;
 slots de câmera/tela são vazios para o React, e a movimentação do host é explícita.
-`social.js` compõe as fontes/ações e conserva adaptadores públicos, navegação e
-seleção de camadas SFU. Não monta cards, tiles, options, gains ou listeners substituídos.
+`social.js` compõe as fontes/ações e conserva adaptadores públicos e seleção de
+camadas SFU. Não possui mais estado de painel/drawer/salas, contadores ou listeners
+substituídos. Sua composição restante e os donos dos layouts ainda serão convertidos.
+
+`lib/voice/navigation.ts` possui abertura/visibilidade do painel, hub, drawer de
+texto, silenciamento e não lidas. Conserva somente metadados de voz/texto validados
+por `navigation-protocol.ts`; IDs de participação vêm do cliente de rede existente.
+Não entra/sai da voz, cria outra lista de mensagens ou toca nas capturas. Atualiza
+os donos de sala/roster antes de notificar a apresentação. Texto independente é
+preservado ao sair da voz/jogo; eventos de outras salas não substituem seu contexto.
+O mapa sem leitores de `gameRoomState` e o timer antigo de limpeza da mesa foram removidos.
+
+`components/navigation/call-navigation.tsx` possui nove botões React: abrir,
+minimizar/restaurar, texto, silenciamento, retorno à voz e indicadores. O runtime
+monta antes dos layouts; cada botão fica em um host estável com `display: contents`.
+As configurações movem o host de Comunicação, conservando seu botão e eventos React.
+Os handlers paralelos de `desktop-shell.js` e `call-workspace.js` foram removidos.
+`navigation-view.ts` é a ponte para classes/visibilidade dos containers que os layouts
+legados ainda movem; assina o mesmo estado e possui Escape, breakpoint e foco adiado
+do compositor. Fechar, trocar de sala ou descartar cancela o foco. Apenas Ampliar
+continua com um botão legado, integrado ao mesmo controlador de mosaico.
 
 `lib/voice/media-focus.ts` possui a tela cheia nativa, o fallback por maximização,
 Escape, listeners de fullscreen e a operação visual pendente. Fecha o mosaico e

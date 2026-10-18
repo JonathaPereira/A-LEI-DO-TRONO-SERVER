@@ -192,6 +192,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.evaluate(ids => {
       window.__layoutBaseline = {
         controls: ids.map(id => document.getElementById(id)),
+        navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
         camera: window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0],
         screen: window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0],
@@ -206,6 +207,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         const before = window.__layoutBaseline, call = window.TronoSocial;
         return {
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
+          navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
           camera: call.getMediaSources().find(source => source.self)?.camera?.getVideoTracks()[0] === before.camera && before.camera.readyState === 'live',
           screen: call.getLocalDisplayStream()?.getVideoTracks()[0] === before.screen && before.screen.readyState === 'live',
@@ -389,6 +391,11 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled), true);
     await page.locator('#voiceSettingsBtn').click();
     await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+    await page.locator('[data-settings-tab="game"]').click();
+    await page.getByText('Comunicação e gravação manual',{exact:true}).click();
+    await page.locator('#socialBtn').click();
+    await expect.poll(()=>page.evaluate(()=>window.TronoCallNavigation.getSnapshot().gameCommunicationOpen)).toBe(true);
+    await expect(page.locator('#socialBtn')).toHaveClass(/music-active/);
     await page.locator('#voiceSettingsClose').click();
     await preserved();
 

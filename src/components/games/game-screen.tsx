@@ -1,3 +1,4 @@
+import { CallNavigationHost } from '@/components/navigation/call-navigation';
 export function GameScreen() {
   return (
     <>
@@ -87,16 +88,7 @@ export function GameScreen() {
             >
               ☷ Log
             </button>
-            <button
-              id={'socialBtn'}
-              className={'icon-btn social-top-btn'}
-              title={'Chat de texto, voz e câmera'}
-            >
-              💬 Chat{' '}
-              <span id={'chatUnread'} className={'chat-unread hidden'}>
-                0
-              </span>
-            </button>
+            <CallNavigationHost id="socialBtn" />
             <button id={'speedBtn'} className={'icon-btn'} title={'Alternar velocidade'}>
               ⏱ Normal
             </button>

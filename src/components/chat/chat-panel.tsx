@@ -1,3 +1,4 @@
+import { CallNavigationHost } from '@/components/navigation/call-navigation';
 import { ChatComposer } from './chat-composer';
 import { ChatClearButton, ChatMessages, ChatModerationDialog } from './chat-messages';
 
@@ -20,12 +21,8 @@ export function ChatPanel() {
             >
               Anexos
             </button>
-            <button id={'muteTextBtn'} className={'small-btn'}>
-              Silenciar chat
-            </button>
-            <button id={'chatDrawerCloseBtn'} className={'chat-drawer-close'} title={'Fechar chat'}>
-              ×
-            </button>
+            <CallNavigationHost id="muteTextBtn" />
+            <CallNavigationHost id="chatDrawerCloseBtn" />
           </div>
         </div>
         <ChatMessages />
