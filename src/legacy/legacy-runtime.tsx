@@ -22,7 +22,9 @@ import { diagnosticReport } from '../lib/voice/diagnostic-report';
 import { createMicrophone } from '../lib/voice/microphone';
 import { createMicrophoneProcessor } from '../lib/voice/microphone-processor';
 import { createScreenSharing } from '../lib/voice/screen-sharing';
-import { createScreenSharingBindings } from '../lib/voice/screen-sharing-bindings';
+import { createScreenOptions } from '../lib/voice/screen-options';
+import { getMosaicSources } from '../lib/voice/mosaic';
+import { initializeMediaDialogs } from '../components/modals/media-dialogs-runtime';
 import { createScreenCapture } from '../lib/voice/screen-capture';
 import { createScreenPublication } from '../lib/voice/screen-publication';
 import { createCamera } from '../lib/voice/camera';
@@ -86,7 +88,8 @@ export function LegacyRuntime() {
           createScreenCapture,
           createScreenPublication,
           createScreenSharing,
-          createScreenSharingBindings,
+          createScreenOptions,
+          getMosaicSources,
           createCamera,
           createDevicePublication,
           createP2pPeers,
@@ -133,6 +136,7 @@ export function LegacyRuntime() {
       initializeCallToolbar(window);
       window.dispatchEvent(new Event('trono:ready'));
       initializeCallStage(window);
+      initializeMediaDialogs(window);
     })();
     void startup.catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : 'Falha ao iniciar a interface.');

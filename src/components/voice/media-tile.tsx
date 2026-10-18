@@ -1,7 +1,8 @@
 'use client';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CallStage, ParticipantView, StageSnapshot } from '../../lib/voice/stage';
+import { BorrowedVideo } from './borrowed-video';
 import { bindMediaResize } from '../../lib/voice/media-resize';
 
 export interface StageRuntime {
@@ -17,32 +18,6 @@ export interface StageRuntime {
     dispose(tile: HTMLElement): void;
   };
 }
-function BorrowedVideo({
-  stream,
-  active,
-  onDoubleClick,
-}: {
-  stream: MediaStream | null;
-  active: boolean;
-  onDoubleClick(): void;
-}) {
-  const ref = useRef<HTMLVideoElement>(null);
-  useLayoutEffect(() => {
-    const video = ref.current!;
-    if (!active) video.pause();
-    if (video.srcObject !== (active ? stream : null)) video.srcObject = active ? stream : null;
-    if (active && stream) void video.play().catch(() => {});
-  }, [stream, active]);
-  useLayoutEffect(() => {
-    const video = ref.current!;
-    return () => {
-      video.pause();
-      video.srcObject = null;
-    };
-  }, []);
-  return <video ref={ref} autoPlay playsInline muted onDoubleClick={onDoubleClick} />;
-}
-
 /** The portal target stays stable when docking. Reparenting never recreates the video. */
 export function MediaTile({
   person: p,
@@ -65,6 +40,9 @@ export function MediaTile({
   const host = screen ? 'screenShareGrid' : 'cameraGrid';
   useLayoutEffect(() => {
     tile.dataset.peer = p.id;
+    tile.style.order = String(
+      snapshot.participants.findIndex((person) => person.id === p.id) * 2 + (screen ? 0 : 1),
+    );
     tile.classList.add(screen ? 'screen-share-tile' : 'camera-tile');
     if (!screen) tile.classList.add('camera-live');
     for (const [name, on] of Object.entries({

@@ -36,7 +36,6 @@
     "community.js",
     "community-admin.js",
     "soundboard-client.js",
-    "media-mosaic.js",
     "appearance.js",
     "panel-layout.js",
     "call-controls-layout.js",

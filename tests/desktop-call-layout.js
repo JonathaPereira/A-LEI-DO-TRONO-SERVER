@@ -104,6 +104,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         window.__displayRequests = [];
         navigator.mediaDevices.getDisplayMedia = async options => {
           window.__displayRequests.push(options);
+          window.__displayGesture = {active: navigator.userActivation.isActive, dialogClosed: !document.getElementById('screenOptionsDialog').open};
           if (window.__denyDisplay) throw new DOMException('Canceled', 'NotAllowedError');
           const source = canvasStream(options.video.frameRate.ideal);
           if (window.__delayDisplay) await new Promise(resolve => {
@@ -154,6 +155,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#screenShareBtn').click();
     await page.locator('#shareResolution').selectOption('1080');
     await page.locator('#shareFps').selectOption('60');
+    await page.screenshot({path: path.join(root, 'artifacts/mosaic-react-share-options.png')});
     await page.locator('#screenOptionsCancel').click();
     assert.equal(await page.evaluate(() => window.__displayRequests.length), 0);
     assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
@@ -162,6 +164,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#shareFps').selectOption('60');
     await page.locator('#screenOptionsConfirm').click();
     await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
+    assert.deepEqual(await page.evaluate(() => window.__displayGesture), {active: true, dialogClosed: true});
     assert.deepEqual(await page.evaluate(() => ({width: window.TronoSocial.screenSettings.width, fps: window.TronoSocial.screenSettings.fps})), {width: 1920, fps: 60});
     const senderId = await page.evaluate(() => window.TronoNetwork.clientId);
     await expect(receiver.locator('#screenShareGrid .mn-watch-stream')).toBeVisible();
@@ -231,6 +234,27 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await preserved();
     }
     await selfCard.locator('.participant-expand').click();
+    // Secondary mosaic players borrow the same streams; closing/Escape must detach, never stop them.
+    await page.bringToFront();
+    await page.locator('#expandMosaicBtn').click();
+    await expect(page.locator('#mediaFocusDialog')).toBeVisible();
+    await expect(page.locator('#mediaFocusGrid .focus-person')).toHaveCount(1);
+    await page.waitForFunction(() => [...document.querySelectorAll('#mediaFocusGrid video')].every(video => video.srcObject && video.getVideoPlaybackQuality().totalVideoFrames > 0));
+    await page.evaluate(() => {window.__mosaicPlayers = [...document.querySelectorAll('#mediaFocusGrid video')];});
+    await page.screenshot({path: path.join(root, 'artifacts/mosaic-react-desktop.png')});
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#mediaFocusDialog')).toBeHidden();
+    await expect(page.locator('#mediaFocusGrid video')).toHaveCount(0);
+    assert.equal(await page.evaluate(() => window.__mosaicPlayers.every(video => !video.srcObject && !video.isConnected) && window.__dockPlayers.every(({tile,video,stream}) => tile.querySelector('video') === video && video.srcObject === stream && stream.getTracks().every(track => track.readyState === 'live'))), true);
+    await preserved();
+    // Closing the top layer happens before fullscreen, on the original stable tile.
+    await page.locator('#expandMosaicBtn').click();
+    await page.locator('#mediaFocusFullscreen').click();
+    await expect(page.locator('#mediaFocusDialog')).toBeHidden();
+    await expect(page.locator('#mediaFocusGrid video')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement?.classList.contains('screen-share-tile') || !!document.querySelector('.screen-share-tile.media-maximized'))).toBe(true);
+    await page.evaluate(async () => {if(document.fullscreenElement) await document.exitFullscreen(); else await window.TronoSocial.fullscreenMedia(window.TronoNetwork.clientId, 'screen');});
+    await preserved();
     // React diagnostics share their state with the desktop launcher and preserve every live source.
     await page.bringToFront();
     await page.evaluate(() => window.TronoSocial.toggleTelemetry(true));

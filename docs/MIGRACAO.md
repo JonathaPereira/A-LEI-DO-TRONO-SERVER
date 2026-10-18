@@ -47,6 +47,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Aba Conexão, indicador, painel e ações de diagnóstico em React, com projeção tipada.
 - Controles principais da barra, status e recuperação de áudio em React; adaptador de cliques removido.
 - Participantes e painéis base de câmera/tela em React, conservando players ao encaixar nos perfis.
+- Mosaico ampliado e opções de compartilhamento em React; controladores substituídos removidos.
 
 ## Integração da main: desktop 0.2.10
 
@@ -73,8 +74,8 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Ampliação de mídias,
-coordenação visual/navegação, edição/visualização de perfis e galeria, gerenciamento
+React ou TypeScript apenas porque a marcação foi convertida. Coordenação visual/navegação,
+edição/visualização de perfis e galeria, gerenciamento
 de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -1330,11 +1331,43 @@ Evidências: `artifacts/stage-react-{checks,build,tests,settings,ui,sfu,layouts,
 `artifacts/profile-media/`, `artifacts/call-layout/` e `artifacts/floating-call/`.
 Sem push ou alteração de infraestrutura.
 
+## Mosaico e opções de compartilhar em React — 18/10/2026
+
+- `mosaic.ts` possui seleção de até seis pessoas e assinatura do palco; o diálogo
+  React conserva nomes, mídia, assistir/ocultar e tela cheia. A seleção acompanha
+  saídas e é descartada ao sair ou trocar a geração da chamada.
+- Prévias e tiles compartilham `borrowed-video.tsx`. Fechar/Escape separa as
+  referências de mídia e desmonta as prévias, sem encerrar as trilhas ou os
+  players base. Tela cheia usa o tile original, fechando o diálogo antes do pedido.
+- `screen-options.ts` possui apenas o rascunho do formulário React. Cancelar não
+  grava preferências nem abre captura. Confirmar revalida geração e limites,
+  aplica a configuração existente e inicia o picker no mesmo evento.
+- Removidos `legacy/media-mosaic.js` e `screen-sharing-bindings.ts`, com sua
+  entrada no manifesto e handlers antigos. Ordenação dos tiles é React; a regra
+  de ocultar o aviso de replay no desktop saiu do shell e virou propriedade React.
+- O restante de navegação/posicionamento/tela cheia em `social.js` continua
+  pendente. Não declarar a chamada inteira concluída nem recriar seus donos de mídia.
+
+Validação: typecheck, formatação, build estático e `npm test` passaram; a suíte
+configurações/estado agora tem 58 testes, incluindo dez dos diálogos. Passaram
+quatro testes gerais de interface, 12 de controles/mosaico/painel flutuante e três
+no Electron real (áudio, layouts P2P e relay SFU). O Electron conferiu ativação do
+usuário e diálogo fechado no instante do picker; Escape/tela cheia preservaram
+players base, streams, microfone e peers. Replay web permaneceu ativo sem segundo
+picker ao abrir/fechar a grade. Evidências locais: `artifacts/mosaic-react-*`.
+
+Limites: `tests/clips-browser.js` falha primeiro ao esperar visível
+`.call-toolbar #clipToolbarNow`. Essa condição já foi reproduzida numa cópia
+isolada de `4c7e9be`, antes deste bloco; a suíte não foi silenciada. O teste de
+remux em `clips-buffer.js` não executou por ausência de `ffmpeg` no PATH (`ENOENT`).
+Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na main.
+
 ## Próximas alterações, em ordem
 
-1. Converter o diálogo ampliado/mosaico (`legacy/media-mosaic.js`), o diálogo
-   de opções de compartilhamento e os trechos de coordenação visual/navegação
-   restantes em `social.js`. A lista e os painéis base já são React, em
+1. Converter os trechos de coordenação visual/navegação e os comandos de tela cheia
+   restantes em `social.js`. Mosaico e opções de compartilhamento já são React,
+   com projeções em `mosaic.ts` e `screen-options.ts`; seus controladores antigos
+   foram removidos. A lista e os painéis base já são React, em
    `call-stage.tsx`, `participant-card.tsx` e `media-tile.tsx`, com projeção em
    `lib/voice/stage.ts`. Não restaurar seus escritores ou handlers DOM.
    Dispositivos, ganhos, supressão/modo leve e opções de transmissão

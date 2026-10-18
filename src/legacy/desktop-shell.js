@@ -306,7 +306,6 @@ if (window.TronoDesktop)
       },
       true,
     );
-    $('shareReplayHelp').hidden = true;
     $('clipsDialog').hidden = true;
     document.querySelector('.call-control-clips').hidden = true;
     $('clipClose').onclick = () => {

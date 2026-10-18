@@ -47,7 +47,13 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
         localStorage.setItem('tronoMusicEnabled', '0');
         localStorage.setItem('tronoSfxEnabled', '0');
         localStorage.setItem('tronoNoiseSuppression', '0');
-        navigator.mediaDevices.getDisplayMedia = async () => {
+        window.__displayRequests = [];
+        const NativeRecorder = window.MediaRecorder;
+        window.MediaRecorder = class extends NativeRecorder {
+          constructor(stream, options) {super(stream, options); window.__replaySource = stream;}
+        };
+        navigator.mediaDevices.getDisplayMedia = async options => {
+          window.__displayRequests.push(options);
           const canvas = document.createElement('canvas');
           canvas.width = 1280; canvas.height = 720;
           canvas.getContext('2d').fillRect(0, 0, 1280, 720);
@@ -105,6 +111,32 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
     await expect.poll(() => owner.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
     const invitation = viewer.locator('.screen-share-tile.stream-invitation');
 
+    await expect.poll(() => owner.evaluate(() => window.TronoClips.active)).toBe(true);
+    assert.equal(await owner.evaluate(() => window.__displayRequests.length), 1, 'Replay reuses the shared picker');
+    assert.equal(await owner.evaluate(() => window.__displayRequests[0].video.frameRate.ideal), 60);
+    await t.test('React mosaic selects six people and detaches borrowed previews', async () => {
+      await owner.evaluate(() => {
+        window.__originalMosaicSources = window.TronoSocial.getMediaSources;
+        const stream = window.TronoSocial.getLocalDisplayStream();
+        window.__mosaicStream = stream;
+        window.TronoSocial.getMediaSources = () => Array.from({length:7}, (_, i) => ({
+          id:'demo-'+i, name:['Ana','Bruno','Clara','Diego','Eva','Felipe','Gabi'][i],
+          camera: stream, screen: i===0 ? stream : null, self:i===0, cameraOffered:true, screenOffered:i===0, watching:true, cameraHidden:false
+        }));
+      });
+      await owner.locator('#expandMosaicBtn').click();
+      await expect(owner.locator('#mediaFocusGrid .focus-person')).toHaveCount(6);
+      await expect(owner.getByRole('checkbox', {name:'Incluir Gabi no mosaico'})).toBeDisabled();
+      await owner.getByRole('checkbox', {name:'Incluir Ana no mosaico'}).uncheck();
+      await owner.getByRole('checkbox', {name:'Incluir Gabi no mosaico'}).check();
+      await expect(owner.locator('#mediaFocusCount')).toHaveText('6 de 6 pessoas');
+      await owner.evaluate(() => {window.__mosaicNodes = [...document.querySelectorAll('#mediaFocusGrid video')];});
+      await owner.locator('#mediaFocusClose').click();
+      await expect(owner.locator('#mediaFocusGrid video')).toHaveCount(0);
+      assert.equal(await owner.evaluate(() => window.__mosaicNodes.every(video => !video.srcObject) && window.__mosaicStream.getTracks().every(track => track.readyState === 'live')), true);
+      assert.equal(await owner.evaluate(() => window.TronoClips.active && window.__replaySource.getTracks().every(track => track.readyState === 'live') && window.TronoSocial.getLocalAudioTrack().readyState === 'live' && window.__displayRequests.length === 1), true);
+      await owner.evaluate(() => {window.TronoSocial.getMediaSources = window.__originalMosaicSources;});
+    });
     await t.test('web settings keep one pane and preserve live media while selecting and reopening', async () => {
       await owner.evaluate(()=>{window.__settingsMedia={mic:window.TronoSocial.getLocalAudioTrack(),screen:window.TronoSocial.getLocalDisplayStream(),input:document.getElementById('voiceInputSelect')};window.TronoSocial.toggleTextChat(false);window.TronoSocial.toggleTelemetry(false);});
       await owner.locator('#voiceSettingsBtn').click();

@@ -105,9 +105,7 @@ export function VoicePanel() {
               <span className={'section-eyebrow'}>AO VIVO</span>
               <strong>Câmeras &amp; telas</strong>
             </div>
-            <button id={'expandMosaicBtn'} className={'small-btn'} type={'button'} disabled>
-              ▦ Grade · até 6
-            </button>
+            <span id="expandMosaicHost" style={{ display: 'contents' }} />
           </div>
           <div id={'mediaMosaic'} className={'media-mosaic'}>
             <div

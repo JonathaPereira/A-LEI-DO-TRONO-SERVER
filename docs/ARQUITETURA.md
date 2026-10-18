@@ -431,12 +431,26 @@ a trilha emprestada. Prévia, captura, recuperação e idle continuam em seus do
 conserva armazenamento/limites do tamanho. Arraste só ocorre fora do hub em janela larga.
 
 `call-stage-runtime.tsx` monta após todos os listeners de `trono:ready`, conservando
-os nós observados pelos layouts/mosaico. Os portais escrevem em containers estáveis;
+os nós observados pelos layouts. Os portais escrevem em containers estáveis;
 slots de câmera/tela são vazios para o React, e a movimentação do host é explícita.
 `social.js` compõe as fontes/ações e conserva adaptadores públicos, navegação e os
 comandos nativos de tela cheia. Não monta cards, tiles, options, gains ou listeners
-substituídos. O diálogo ampliado de `legacy/media-mosaic.js` e o diálogo de opções
-de compartilhamento ainda precisam de conversão própria.
+substituídos.
+
+`components/modals/media-focus-dialog.tsx` possui a grade ampliada em React;
+`lib/voice/mosaic.ts` mantém somente abertura e seleção de até seis pessoas.
+Assina a projeção de `stage.ts`, sem observer do DOM, listeners de socket ou
+novas capturas. Participantes removidos são descartados da seleção; sair ou
+substituir a geração da chamada fecha a grade. `borrowed-video.tsx` é compartilhado
+com os tiles base: abrir cria apenas players de prévia; fechar/Escape desmonta e
+separa `srcObject`, sem parar trilhas. Tela cheia fecha o diálogo nativo no mesmo
+evento antes de delegar ao tile original. A ordenação dos tiles base pertence ao
+próprio componente. `legacy/media-mosaic.js` foi removido.
+
+`media-dialogs-runtime.tsx` monta depois da preparação dos layouts e instala os
+nomes públicos de compatibilidade. O botão Grade é React; o botão Ampliar do
+painel flutuante ainda recebe disponibilidade dessa projeção, enquanto sua
+navegação permanece no coordenador legado.
 
 `call-audio.ts` possui o contexto compartilhado do microfone, seu listener de estado
 e os listeners de gesto/visibilidade que desbloqueiam o áudio. A criação é tardia:
@@ -491,8 +505,7 @@ apenas a decoração do botão legado de soundboard. O CSS do dock usa descenden
 para atravessar os hosts sem criar caixas ou alterar medidas dos botões.
 
 `control-bindings.ts` foi removido. O diálogo de configurações não instala outro
-listener no seu botão. `screen-sharing-bindings.ts` conserva somente o diálogo
-de opções/confirmação, sem escutar botões da barra ou dos tiles. `social.js`
+listener no seu botão. O diálogo de opções/confirmação também é React. `social.js`
 compõe comandos/snapshots, coordena a classe de participação e publica o evento de
 chamada para os layouts, sem pintar os controles. Clipes e soundboard conservam
 seus próprios controles/donos; não criar outro estado de mute ou câmera na interface.
@@ -517,13 +530,15 @@ captura existentes; não cria outra trilha ou conexão. Pausar/colapsar a prévi
 interrompe a transmissão. Parar fecha apenas publicações/senders de tela e seu áudio,
 preservando voz e câmera. O dono da captura continua em `screen-capture.ts`.
 
-`screen-sharing-bindings.ts` possui somente o diálogo de qualidade e sua
-confirmação/cancelamento. Prévia/troca/colapso pertencem aos componentes React. O checkbox de preferência de áudio pertence ao
-React e a `settings.ts`, que usa o mesmo dono `screen-sharing.ts`. O picker é solicitado no mesmo
-evento de confirmação quando a chamada já está ativa. Os presets de 1080p/60 e
-bitrate foram preservados; limites SFU afetam as opções sem sobrescrever a
-preferência ao abrir o diálogo. O descarte remove os listeners do formulário e
-do botão Cancelar. Os tiles React possuem os demais eventos da apresentação.
+`components/modals/screen-options-dialog.tsx` possui formulário e confirmação
+em React, com rascunho em `lib/voice/screen-options.ts`. Abrir/cancelar não persiste
+qualidade nem abre capturas; reabrir consulta as preferências do dono. Confirmar
+revalida participação, geração e limites SFU, aplica o preset existente, fecha o
+diálogo nativo e solicita o picker no mesmo evento, sem espera intermediária.
+O aviso de replay fica oculto no desktop por propriedade React; o shell não
+escreve no componente. `screen-sharing-bindings.ts` foi removido.
+O checkbox das configurações também usa o mesmo dono `screen-sharing.ts`, por
+`settings.ts`. Nenhum diálogo cria outro estado persistente de captura ou áudio.
 
 `screen-publication.ts` recebe `ScreenCaptureChange` do dono da captura e coordena
 sua publicação em P2P/SFU. Anuncia disponibilidade antes de aguardar transporte,

@@ -621,12 +621,15 @@ window.TronoSocial = (() => {
     },
     onStatus: setStatus,
   });
-  const screenSharingBindings = window.TronoVoiceCapture.createScreenSharingBindings({
-    document,
+  const screenOptions = window.TronoVoiceCapture.createScreenOptions({
+    closeDialog: () => {
+      if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
+    },
     sharing: screenSharingControls,
     call: () => voiceCall.getSnapshot(),
     replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
   });
+  window.TronoScreenOptions = screenOptions;
 
   const screenPublication = window.TronoVoiceCapture.createScreenPublication({
     isSfu: () => transportIsSfu(),
@@ -752,6 +755,7 @@ window.TronoSocial = (() => {
     window.TronoCallSettings.select(tab);
   }
   function updateQualityUI() {
+    screenOptions.refresh();
     voiceSettings.refresh();
     refreshDiagnostics();
   }
@@ -1020,7 +1024,7 @@ window.TronoSocial = (() => {
     return screenSharingControls.stop(sendState);
   }
   function openScreenOptions() {
-    screenSharingBindings.open();
+    screenOptions.open();
   }
 
   function closePeer(id) {
@@ -1244,7 +1248,7 @@ window.TronoSocial = (() => {
   }
   function prepareLeaveUi() {
     callQuality.reset();
-    if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
+    screenOptions.close();
     window.TronoMosaic?.close();
     window.TronoNetwork?.setVoiceState(
       false,
@@ -1294,6 +1298,7 @@ window.TronoSocial = (() => {
   }
 
   function refreshCallControls() {
+    screenOptions.refresh();
     callToolbar.refresh();
     updateNoiseButton();
     document.body.classList.toggle('call-connected', voiceCall.getSnapshot().joined);
@@ -1471,7 +1476,6 @@ window.TronoSocial = (() => {
     voiceCall.start();
     voiceTransport.start();
     voiceRoster.start();
-    screenSharingBindings.start();
     audioPreferences.start();
     $('socialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
     $('roomSocialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
@@ -1720,9 +1724,7 @@ window.TronoSocial = (() => {
       deafenVoiceBtn: callControls.toggleDeafen,
       cameraBtn: callControls.toggleCamera,
       screenShareBtn: () =>
-        screenSharingControls.isActive()
-          ? screenSharingControls.stop()
-          : screenSharingBindings.open(),
+        screenSharingControls.isActive() ? screenSharingControls.stop() : screenOptions.open(),
     },
     resume: () => {
       unlockCallAudio();
@@ -1912,29 +1914,7 @@ window.TronoSocial = (() => {
     toggleWatchCamera,
     fullscreenMedia,
     getMediaSources() {
-      return voiceCall.getSnapshot().joined
-        ? detailedPlayers()
-            .filter(
-              (p) => p.camera || p.screen || (p.id === meId() && (cameraOn() || screenSharing())),
-            )
-            .map((p) => ({
-              id: p.id,
-              name: p.name,
-              self: p.id === meId(),
-              camera: (
-                p.id === meId() ? cameraOn() : p.camera && !mediaInterest.isCameraHidden(p.id)
-              )
-                ? cameraStreamForPerson(p)
-                : null,
-              cameraOffered: p.id === meId() ? cameraOn() : !!p.camera,
-              cameraHidden: mediaInterest.isCameraHidden(p.id),
-              screen: (p.id === meId() ? screenSharing() : mediaInterest.isWatching(p.id))
-                ? screenStreamForPerson(p)
-                : null,
-              screenOffered: p.screen,
-              watching: p.id === meId() || mediaInterest.isWatching(p.id),
-            }))
-        : [];
+      return window.TronoVoiceCapture.getMosaicSources(callStage.getSnapshot());
     },
   };
 })();
