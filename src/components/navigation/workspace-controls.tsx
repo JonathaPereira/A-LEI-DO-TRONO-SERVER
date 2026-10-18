@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import type { CallWorkspace } from '../../lib/voice/workspace';
 import { Avatar } from '../profiles/avatar';
+import { DirectProfileBanner } from '../profiles/decorations';
 
 export const WORKSPACE_CONTROLS = [
   'header',
@@ -35,17 +36,11 @@ export function WorkspaceIcon({ children }: { children: ReactNode }) {
 export function WorkspaceControlView({
   id,
   client,
-  directBanners,
 }: {
   id: WorkspaceControl;
   client: CallWorkspace;
-  directBanners(host: HTMLElement): void;
 }) {
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
-  const direct = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (direct.current) directBanners(direct.current);
-  }, [state.people, directBanners]);
   switch (id) {
     case 'title':
       return state.layout === 'discord' ? state.roomName.trim() || 'Comunidade M&N' : 'M&N';
@@ -137,7 +132,7 @@ export function WorkspaceControlView({
               {state.unread}
             </b>
           </button>
-          <div id="workspaceDirectList" ref={direct}>
+          <div id="workspaceDirectList">
             {state.people.map((person) => (
               <button
                 key={person.id}
@@ -146,11 +141,7 @@ export function WorkspaceControlView({
                 data-direct-profile={person.id}
                 onClick={() => client.openDirect(person.id)}
               >
-                <span
-                  data-direct-banner-slot=""
-                  className="direct-profile-banner"
-                  aria-hidden="true"
-                />
+                <DirectProfileBanner accountId={person.id} />
                 <Avatar className="community-avatar" person={person} />
                 <span className="workspace-direct-name">{person.name}</span>
                 {!!person.unread && <b>{person.unread}</b>}

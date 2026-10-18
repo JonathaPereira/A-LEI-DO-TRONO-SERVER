@@ -11,7 +11,6 @@ export interface StageRuntime {
   TronoDesktop?: object;
   TronoProfile: {
     openMini(id: string): Promise<unknown>;
-    callBackgrounds(host: HTMLElement): void;
   };
   TronoStreamControls: {
     update(tile: HTMLElement, active: boolean): void;

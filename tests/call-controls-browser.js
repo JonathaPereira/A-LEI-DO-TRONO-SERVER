@@ -403,6 +403,47 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await owner.screenshot({path: path.resolve(__dirname, '../artifacts/call-controls/original-direct.png')});
     });
 
+    await t.test('live profile changes remove and restore both decorations through one shared read without replacing players', async () => {
+      const id = accounts[1].user.id;
+      const room = await owner.evaluate(() => window.TronoNetwork.primaryRoom);
+      await viewer.evaluate(room => window.TronoChatHub.enter({channelId: room}), room);
+      if (!await viewer.evaluate(() => window.TronoSocial.voiceJoined)) await viewer.locator('#joinVoiceBtn').click();
+      await expect(owner.locator('#voiceRoster .voice-person[data-account-id="' + id + '"]')).toBeVisible();
+      if (!await owner.evaluate(() => window.TronoSocial.screenSharing)) {
+        await owner.locator('#screenShareBtn').click();
+        await owner.locator('#screenOptionsConfirm').click();
+        await expect.poll(() => owner.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
+      }
+      let personalization = {}, reads = 0;
+      await owner.route('**/community/profiles/' + id, route => {
+        reads++;
+        return route.fulfill({json: {profile: {id, nickname: 'Bruno', personalization}}});
+      });
+      await owner.evaluate(() => {
+        window.__decorationPlayers = [...document.querySelectorAll('#cameraGrid video,#screenShareGrid video,#voiceRoster video')].map(video => ({video, stream: video.srcObject}));
+        window.__decorationScreen = window.TronoSocial.getLocalDisplayStream();
+      });
+      const card = owner.locator('#voiceRoster .voice-person[data-account-id="' + id + '"]');
+      const direct = owner.locator('.workspace-direct-person[data-direct-profile="' + id + '"]');
+      async function announce() {
+        const response = await fixture.call('profile', {nickname: 'Bruno', avatar_preset: 'crown', avatar_file_id: null, personalization: {}}, accounts[1].session.access_token);
+        assert.equal(response.status, 200);
+      }
+      await announce();
+      await expect(card.locator('.participant-background img')).toHaveCount(0);
+      await expect(direct.locator('.direct-profile-banner img')).toHaveCount(0);
+      await expect.poll(() => reads).toBe(1);
+      personalization = {background_file_id:'20000000-0000-4000-8000-000000000002', cover_file_id:'20000000-0000-4000-8000-000000000001', darkness:35, blur:4, cover_position:80};
+      await announce();
+      await expect(card.locator('.participant-background img')).toBeVisible();
+      await expect(direct.locator('.direct-profile-banner img')).toBeVisible();
+      await expect.poll(() => reads).toBe(2);
+      assert.equal(await card.locator('.participant-background').evaluate(element => element.style.getPropertyValue('--participant-darkness')), '0.35');
+      assert.equal(await card.locator('.participant-background').evaluate(element => element.style.getPropertyValue('--participant-blur')), '4px');
+      assert.equal(await direct.locator('.direct-profile-banner img').evaluate(image => image.style.objectPosition), 'center 80%');
+      assert.equal(await owner.evaluate(() => window.__decorationPlayers.length > 0 && window.__decorationPlayers.every(({video, stream}) => video.isConnected && video.srcObject === stream) && window.TronoSocial.getLocalDisplayStream() === window.__decorationScreen && window.__decorationScreen.getTracks().every(track => track.readyState === 'live')), true);
+    });
+
     await t.test('desktop update icon survives updater state changes and stays at the bottom left', async () => {
       const desktop = await client(accounts[2], true);
       await desktop.evaluate(() => window.TronoAppLayout.apply('discord'));

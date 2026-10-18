@@ -35,7 +35,6 @@ export function CallStageView({ runtime, hosts }: { runtime: StageRuntime; hosts
     hosts.screens.classList.toggle('hidden', !state.joined || !state.community);
     hosts.screens.classList.toggle('screen-share-empty', !state.screens.length);
     client.recoverVisible();
-    runtime.TronoProfile.callBackgrounds(hosts.roster);
   });
   const roster = state.joined ? (
     state.participants.map((p) => (

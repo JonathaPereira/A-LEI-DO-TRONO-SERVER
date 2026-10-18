@@ -16,7 +16,6 @@ interface WorkspaceRuntime {
     set(key: string, value: boolean): void;
   };
   TronoMessenger: { open(id: string): Promise<void>; openFriends(): Promise<void>; close(): void };
-  TronoProfile: { directBanners(host: HTMLElement): void };
   TronoAppLayout: {
     navigate(area: string): Promise<void>;
     apply(layout: string, options: { save: boolean }): void;
@@ -70,7 +69,6 @@ export function initializeCallWorkspace(target: Window) {
     refreshControls: () => runtime.TronoCallControlsLayout.refresh(),
     closeDirect: () => runtime.TronoMessenger.close(),
   });
-  const directBanners = (host: HTMLElement) => runtime.TronoProfile.directBanners(host);
   client.start();
   flushSync(() => {
     for (const id of WORKSPACE_CONTROLS) {
@@ -81,10 +79,7 @@ export function initializeCallWorkspace(target: Window) {
             ? 'workspaceTitle'
             : 'workspace-control-' + id,
       );
-      if (host)
-        createRoot(host).render(
-          <WorkspaceControlView id={id} client={client} directBanners={directBanners} />,
-        );
+      if (host) createRoot(host).render(<WorkspaceControlView id={id} client={client} />);
     }
   });
   target.addEventListener('trono:ready', () => layout.start(), { once: true });

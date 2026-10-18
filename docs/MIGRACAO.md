@@ -1698,6 +1698,32 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Restam decorações de chamada/conversas, contas do criador e navegação das
   configurações web em `profile-files.js`; esse é o próximo recorte de perfis.
 
+## Fundos da chamada e capas dos contatos em React — 18/10/2026
+
+- `lib/profiles/decorations.ts` possui o cache de apresentação de 60 segundos,
+  compartilhado entre superfícies do mesmo membro. Usa o cliente de perfis existente;
+  não cria socket, transporte HTTP, cache de URL ou assinatura de autenticação paralela.
+  Revisões invalidam somente o membro alterado; épocas de conta/permissão limpam todos.
+- A última desmontagem cancela consultas pendentes. Respostas de uma revisão/conta
+  anterior não substituem resultados novos. Erros opcionais ficam vazios até expirar
+  o cache, e entradas vencidas sem consumidores são limpas no próximo uso.
+- `components/profiles/decorations.tsx` e `use-decoration.ts` renderizam fundos,
+  capas, posição e ajustes de aparência. Continuam usando `useFileUrl` e o dono de
+  arquivos, inclusive para exclusões e troca de conta. Os slots de câmera/tela,
+  players e trilhas não são movidos nem substituídos por atualizações de perfil.
+- Removidos `callBackgrounds`/`directBanners`, cache, varredura DOM e listeners
+  antigos de `profile-files.js`, além dos adaptadores no palco/workspace.
+  O arquivo caiu de 253 para 120 linhas; restam contas do criador e navegação web.
+- Nove regressões novas de cache/cancelamento integram `test:profiles:reader` e
+  `npm test`. No navegador, uma atualização real via backend/WebSocket remove e
+  restaura fundo/capa com uma consulta compartilhada e mantém os mesmos players.
+  No Electron real, adicionar/remover o fundo durante a chamada manteve controles,
+  microfone, câmera, tela, peers e socket com mídia sintética. Passaram também
+  tipagem, formatação, build estático, suíte completa e regressões de perfis/GIFs.
+  Evidências locais: `artifacts/profile-decorations-*`.
+- Próximo recorte: converter contas do criador e navegação das configurações web,
+  permitindo remover `profile-files.js` integralmente. Captura e jogos intactos.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.

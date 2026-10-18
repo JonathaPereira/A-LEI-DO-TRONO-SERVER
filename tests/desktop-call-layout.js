@@ -218,6 +218,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         return {
           runtime: Object.entries(before.runtime).every(([name, owner]) => owner && window[name] === owner),
           factoriesRemoved: typeof window.TronoVoiceCapture === 'undefined',
+          decorationAdaptersRemoved: typeof window.TronoProfile.callBackgrounds === 'undefined' && typeof window.TronoProfile.directBanners === 'undefined',
           notifications: window.TronoNotifications === before.notificationOwner && before.notifications.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           activity: window.TronoDesktopActivity === before.activityOwner && !!before.activityOwner && before.activity.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           library: window.TronoFileLibrary === before.libraryOwner && !!before.libraryOwner && before.library.every(node => node && node.isConnected && document.getElementById(node.id) === node),
@@ -236,6 +237,19 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
+    // Decoration changes affect only the background child while all native sources stay live.
+    const decorationAccount = await page.evaluate(() => window.TronoAuth.user.id);
+    let decoration = {background_file_id: '22000000-0000-4000-8000-000000000001', darkness: 35, blur: 3};
+    await page.route('**/community/profiles/' + decorationAccount, route => route.fulfill({json: {profile: {id: decorationAccount, nickname: 'Layout Principal', personalization: decoration}}}));
+    await page.route('**/files/22000000-0000-4000-8000-000000000001/url', route => route.fulfill({json: {url: origin + '/assets/throne.png', expiresAt: Date.now() + 60000}}));
+    const decorationCard = page.locator('#voiceRoster .voice-person[data-account-id="' + decorationAccount + '"]');
+    await page.evaluate(() => window.dispatchEvent(new Event('trono-profile-change')));
+    await expect(decorationCard.locator('.participant-background img')).toBeVisible();
+    await preserved();
+    decoration = {};
+    await page.evaluate(() => window.dispatchEvent(new Event('trono-profile-change')));
+    await expect(decorationCard.locator('.participant-background img')).toHaveCount(0);
+    await preserved();
     // Moving both portal targets must preserve the native players, streams and senders.
     await page.evaluate(() => {
       const self=window.TronoNetwork.clientId;

@@ -22,7 +22,7 @@
     "test:activity": "node --test tests/desktop-activity-controls.cjs tests/desktop-activity.js tests/activity-presence.js",
     "test:activity:ui": "node --test tests/desktop-activity-browser.cjs",
     "test:profiles": "node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js",
-    "test:profiles:reader": "node --test tests/profile-reader.cjs",
+    "test:profiles:reader": "node --test tests/profile-reader.cjs tests/profile-decorations.cjs",
     "test:profiles:ui": "node --test tests/member-profile-browser.cjs",
     "test:frontend": "node --test tests/frontend-browser.js",
     "test:clips": "node --test tests/clips-buffer.js tests/clips-browser.js",

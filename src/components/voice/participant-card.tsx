@@ -2,6 +2,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { CallStage, ParticipantView } from '../../lib/voice/stage';
 import { Avatar } from '../profiles/avatar';
+import { ParticipantBackground } from '../profiles/decorations';
 
 function VoiceStatus({ person }: { person: ParticipantView }) {
   return (
@@ -125,7 +126,7 @@ export function ParticipantCard({
       data-peer={p.id}
       data-account-id={p.accountId || ''}
     >
-      <div className="participant-background" data-profile-background-slot="" />
+      <ParticipantBackground accountId={p.accountId} />
       <div className="participant-camera-slot" hidden={!cameraDock} />
       <div className="participant-screen-slot" hidden={!screenDock} />
       <span

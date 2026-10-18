@@ -151,8 +151,8 @@ O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados
 `renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
 mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
 existe somente enquanto há raízes ativas. `legacy/profile-files.js` ainda possui
-contas do criador, composição de capas/fundos e navegação das configurações web.
-Editor, biblioteca de arquivos e miniperfis já saíram desse controlador.
+contas do criador e navegação das configurações web. Editor, biblioteca de arquivos,
+miniperfis e decorações já saíram desse controlador.
 
 `lib/profiles/client.ts` possui as consultas autenticadas de perfil e contas do
 criador. Editor e decorações usam esse cliente; o HTTP duplicado foi
@@ -162,7 +162,22 @@ E-mail só aparece no DTO separado de contas, condicionado à permissão de cria
 o servidor continua autorizando cada consulta. Trocar conta, função ou permissões
 invalida pedidos e sua espera pelo token, inclusive numa troca de A para B e A.
 O deadline de 15 segundos inclui autenticação e resposta. O cache de apresentação
-de 60 segundos ainda pertence às decorações legadas; o cliente não cria outro.
+de 60 segundos pertence a `lib/profiles/decorations.ts`; o cliente não cria outro.
+
+`decorations.ts` compartilha consultas entre o fundo da chamada e a capa dos contatos.
+Assina o cliente de perfis, sem outro listener de socket/autenticação. Revisões do
+perfil invalidam somente o alvo; a geração de identidade/permissões limpa todo o
+cache. Superfícies montadas recarregam, enquanto perfis sem consumidores aguardam
+o próximo uso. A última desmontagem cancela uma consulta pendente. Erros opcionais
+ficam vazios pela mesma validade de 60 segundos, evitando repetição contínua.
+Entradas expiradas sem consumidores são descartadas no próximo uso do cache.
+
+`components/profiles/decorations.tsx` possui os fundos/capas e suas variáveis CSS;
+`use-decoration.ts` liga cada membro ao dono compartilhado. URLs, exclusões e
+isolamento de arquivos continuam no cliente de `lib/files/`. Os componentes são
+irmãos dos slots de câmera/tela: alterações no perfil não substituem players,
+trilhas ou cartões. `callBackgrounds`/`directBanners`, a varredura DOM e os listeners
+equivalentes foram removidos do legado.
 
 `lib/profiles/viewer.ts` possui um miniperfil aberto, alvo, expansão, carregamento
 e mensagem. Fechar, trocar alvo ou identidade invalida/cancela resultados antigos.
@@ -187,7 +202,7 @@ seguinte envia somente as mídias restantes. O cliente de arquivos continua úni
 emoji, seleção de mídia e prévia. `editor-runtime.tsx` monta uma raiz no
 `profileEditorHost`; desktop e web movem o host inteiro. Trocar abas conserva o
 rascunho e os nós; fechar as configurações descarta recursos e consultas pendentes.
-`TronoProfile` conserva apenas a fachada e as decorações ainda não convertidas.
+`TronoProfile` conserva apenas a fachada para chamadores ainda não convertidos.
 A resposta de `auth.updateProfile` só atualiza a sessão que iniciou o pedido,
 inclusive após sair e entrar novamente na mesma conta.
 
@@ -221,8 +236,7 @@ uma instância por página no host `profileFilesHost`. Perfil web e configuraç�
 desktop movem esse host inteiro, preservando controles e estado. O editor empresta
 os IDs de avatar/capa/fundo selecionados via `getProtectedFileIds()` e notifica
 mudanças do rascunho; a biblioteca protege esses IDs também na ação de excluir.
-O rascunho continua pertencendo ao editor. A leitura dos IDs e seus eventos podem
-ser substituídos quando o editor for convertido, sem outro transporte ou cache.
+O rascunho continua pertencendo ao editor; a biblioteca não mantém outro estado de perfil.
 
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.
@@ -546,9 +560,9 @@ a recuperação de uma tela assistida ainda ausente.
 `components/voice/call-stage.tsx` renderiza privacidade, lista e estados dos grids.
 `participant-card.tsx` possui popover, controles de ganho/exibição, atividade, status
 e abertura de perfil por mouse/teclado. Avatares usam o componente React/cliente de
-arquivos já compartilhados. O controlador de perfis possui somente a imagem e
-variáveis dentro do slot vazio `data-profile-background-slot`; não remove esse nó
-React. Respostas antigas de perfil/imagem conservam suas validações de conta/identidade.
+arquivos já compartilhados. `ParticipantBackground` renderiza imagem/variáveis dentro
+de `data-profile-background-slot`, sem alterar os slots dos players. Respostas antigas
+de perfil/imagem conservam suas validações de conta/identidade.
 
 `media-tile.tsx` cria um host estável por tipo/participante e usa um portal React
 para seus filhos. Docking move o host para o grid ou para um slot vazio do perfil;
@@ -589,8 +603,8 @@ para até sete conversas. Consome os donos existentes; não consulta a caixa de
 entrada nem duplica mensagens. Eventos do messenger incluem a conta de origem;
 a projeção valida o payload, rejeita dados antigos e limpa contatos ao trocar conta.
 `workspace-controls.tsx` renderiza título, áreas, botões e contatos em hosts estáveis.
-Avatares usam o componente compartilhado; capas ainda usam `profile-files.js`,
-restritas a um slot vazio de cada linha React. `workspace-layout.ts` move os mesmos
+Avatares usam o componente compartilhado; `DirectProfileBanner` renderiza capas
+na linha React do contato. `workspace-layout.ts` move os mesmos
 painéis completos e restaura suas posições ao sair. Só observa a visibilidade
 externa do messenger, que ainda é legado; não observa texto renderizado para derivar estado.
 

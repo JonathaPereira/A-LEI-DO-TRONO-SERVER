@@ -1,8 +1,7 @@
 'use strict';
-// Temporary owners: profile decorations, creator accounts and the web settings shell.
+// Temporary owners: creator accounts and the web settings shell.
 (() => {
   const $ = (id) => document.getElementById(id);
-  const defaults = { darkness: 60, blur: 0, cover_position: 50 };
   let viewEpoch = 0;
   const make = (tag, cls, text) => {
     const element = document.createElement(tag);
@@ -10,137 +9,6 @@
     if (text !== undefined) element.textContent = text;
     return element;
   };
-  const profileCache = new Map();
-  let profileScope = null;
-  function clearCallBackground(card) {
-    const slot = card.querySelector('[data-profile-background-slot]');
-    if (slot) slot.replaceChildren();
-    else card.querySelector('.participant-background')?.remove();
-  }
-  function callBackgrounds(host = $('voiceRoster')) {
-    if (!host) return;
-    const viewer = window.TronoAuth.user?.id;
-    if (!viewer) return;
-    for (const card of host.querySelectorAll('.voice-person[data-account-id]')) {
-      const id = card.dataset.accountId;
-      if (!id) continue;
-      let entry = profileCache.get(id);
-      if (!entry || entry.expires < Date.now()) {
-        entry = { expires: Date.now() + 60000 };
-        entry.promise = window.TronoProfiles.readProfile(id).catch(() => null);
-        profileCache.set(id, entry);
-      }
-      if (card._profileBackground === entry) continue;
-      card._profileBackground = entry;
-      clearCallBackground(card);
-      entry.promise.then(async (person) => {
-        if (
-          !person ||
-          !card.isConnected ||
-          viewer !== window.TronoAuth.user?.id ||
-          card.dataset.accountId !== id ||
-          card._profileBackground !== entry
-        )
-          return;
-        const d = { ...defaults, ...person.personalization };
-        if (!d.background_file_id) return;
-        try {
-          const url = await window.TronoFiles.url(d.background_file_id);
-          if (
-            !card.isConnected ||
-            viewer !== window.TronoAuth.user?.id ||
-            card.dataset.accountId !== id ||
-            card._profileBackground !== entry
-          )
-            return;
-          const slot = card.querySelector('[data-profile-background-slot]'),
-            background = slot || make('div', 'participant-background'),
-            img = make('img');
-          img.alt = '';
-          img.src = url;
-          img.loading = 'lazy';
-          img.onerror = () => {
-            if (img.parentNode === background) {
-              if (slot) background.replaceChildren();
-              else background.remove();
-            }
-          };
-          background.replaceChildren(img);
-          background.style.setProperty('--participant-darkness', d.darkness / 100);
-          background.style.setProperty('--participant-blur', d.blur + 'px');
-          if (!slot) card.prepend(background);
-        } catch {}
-      });
-    }
-  }
-  function directBanners(host = document) {
-    const viewer = window.TronoAuth.user?.id;
-    if (!viewer) return;
-    for (const row of host.querySelectorAll('[data-direct-profile]')) {
-      const id = row.dataset.directProfile;
-      let entry = profileCache.get(id);
-      if (!entry || entry.expires < Date.now()) {
-        entry = { expires: Date.now() + 60000 };
-        entry.promise = window.TronoProfiles.readProfile(id).catch(() => null);
-        profileCache.set(id, entry);
-      }
-      if (row._profileBanner === entry) continue;
-      row._profileBanner = entry;
-      const slot = row.querySelector('[data-direct-banner-slot]');
-      if (slot) slot.replaceChildren();
-      else row.querySelector('.direct-profile-banner')?.remove();
-      const current = () =>
-        row.isConnected &&
-        viewer === window.TronoAuth.user?.id &&
-        row.dataset.directProfile === id &&
-        row._profileBanner === entry;
-      entry.promise.then(async (person) => {
-        const d = { ...defaults, ...person?.personalization };
-        if (!d.cover_file_id || !current()) return;
-        try {
-          const url = await window.TronoFiles.url(d.cover_file_id);
-          if (!current()) return;
-          const banner = slot || make('span', 'direct-profile-banner'),
-            img = make('img');
-          banner.setAttribute('aria-hidden', 'true');
-          img.alt = '';
-          img.src = url;
-          img.loading = 'lazy';
-          img.onerror = () => {
-            if (slot) {
-              if (img.parentNode === slot) slot.replaceChildren();
-            } else banner.remove();
-          };
-          img.style.objectPosition = 'center ' + Math.max(0, Math.min(100, d.cover_position)) + '%';
-          banner.append(img);
-          if (!slot) row.prepend(banner);
-        } catch {}
-      });
-    }
-  }
-  function invalidateProfile(id) {
-    profileCache.delete(id);
-    callBackgrounds();
-    directBanners();
-  }
-  window.addEventListener('trono-profile-change', () =>
-    invalidateProfile(window.TronoAuth.user?.id),
-  );
-  window.addEventListener('trono-auth-change', () => {
-    const id = window.TronoAuth.user?.id;
-    if (id !== profileScope) {
-      profileScope = id;
-      profileCache.clear();
-      for (const card of document.querySelectorAll('.voice-person')) {
-        delete card._profileBackground;
-        clearCallBackground(card);
-      }
-    }
-  });
-  window.TronoNetwork.onMessage((m) => {
-    if (m.type === 'member-profile-updated' && typeof m.accountId === 'string')
-      invalidateProfile(m.accountId);
-  });
   async function accounts(reset = true) {
     if (window.TronoAuth.user?.role !== 'creator') return;
     const dialog = $('creatorAccountsDialog'),
@@ -249,5 +117,4 @@
     },
     { once: true },
   );
-  Object.assign(window.TronoProfile, { callBackgrounds, directBanners });
 })();
