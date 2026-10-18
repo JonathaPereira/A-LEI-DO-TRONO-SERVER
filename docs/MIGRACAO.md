@@ -1577,6 +1577,42 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   controlador é testado diretamente, mantendo um listener e uma leitura inicial.
   A correção do reinício de perfis fica com a conversão desse domínio.
 
+## Biblioteca Meus arquivos em React — 18/10/2026
+
+- `lib/files/library.ts` possui consulta, lista, exclusões e feedback. Reutiliza o
+  cliente de arquivos existente, seu cache e suas exclusões confirmadas. Página
+  inválida ou com IDs duplicados não entra parcialmente; a lista conserva o limite
+  de 200 arquivos e o texto de uso compartilhado de 8 GB.
+- `components/files/library.tsx` e `library-runtime.tsx` renderizam uma única
+  biblioteca. O perfil web e as configurações desktop movem `profileFilesHost`
+  completo; a troca de layout não recria controles. Download e exclusão apresentam
+  erros na própria aba, sem depender da mensagem oculta do editor.
+- Removidos `refreshFiles`, seu botão/listeners e as escritas antigas na lista de
+  `legacy/profile-files.js`. O editor ainda empresta IDs selecionados de avatar,
+  capa e fundo, protegidos também pela ação de excluir, e notifica suas mudanças.
+  Não possui mais o estado da biblioteca nem limpa filhos React ao trocar de conta.
+- Consultas, exclusões e downloads respeitam a conta e a geração. Respostas antigas
+  não restauram dados da conta anterior nem arquivos excluídos. Cliques repetidos
+  compartilham uma abertura pendente; atualizar a lista conserva o download pedido,
+  mas impede que seu erro antigo sobrescreva uma consulta nova.
+- As 26 regressões de `file-library.cjs` entram em `test:files`/`npm test`.
+  `test:files:ui` cobre versões web/desktop, download real/abertura nativa, mídias
+  protegidas, exclusão durante consulta e troca real de conta.
+- O editor completo, miniperfis, personalização/capas e contas do criador continuam
+  em `profile-files.js`; o arquivo ainda não pode ser removido. Seus recursos de
+  upload/GIF e os adaptadores de imagem existentes foram preservados.
+- Tipagem, formatação, build, `npm test`, três casos novos da biblioteca, quatro
+  testes gerais de interface e a geometria das configurações desktop passaram.
+  No Electron real, a biblioteca conservou host/controles e a chamada manteve
+  microfone, câmera, tela, replay, peers e socket ao navegar. Evidências locais:
+  `artifacts/file-library-*`. Sem push ou mudança na main.
+- A verificação adicional `QA_NATIVE=1` de `profile-media-browser.js` falhou após
+  Escape no seletor de GIFs: a navegação global fecha as configurações que estão
+  por trás. A mesma falha, na linha 222, foi reproduzida numa compilação isolada
+  de `783bcdd`, anterior à biblioteca. O cenário não foi silenciado; corrigir a
+  prioridade de Escape entre diálogos fica pendente com o editor de perfis.
+  Evidência: `artifacts/file-library-baseline-native.log`.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.

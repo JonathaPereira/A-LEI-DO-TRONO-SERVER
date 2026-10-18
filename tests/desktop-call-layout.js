@@ -196,6 +196,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         notificationOwner: window.TronoNotifications,
         activity: ['desktopActivityEnabled','desktopActivityApp','desktopActivityName','desktopActivityStatus'].map(id => document.getElementById(id)),
         activityOwner: window.TronoDesktopActivity,
+        libraryOwner: window.TronoFileLibrary,
+        library: ['profileFilesHost','profileFiles','storageUsage','profileFilesMessage'].map(id => document.getElementById(id)),
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -215,6 +217,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           factoriesRemoved: typeof window.TronoVoiceCapture === 'undefined',
           notifications: window.TronoNotifications === before.notificationOwner && before.notifications.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           activity: window.TronoDesktopActivity === before.activityOwner && !!before.activityOwner && before.activity.every(node => node && node.isConnected && document.getElementById(node.id) === node),
+          library: window.TronoFileLibrary === before.libraryOwner && !!before.libraryOwner && before.library.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -369,6 +372,10 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#desktopActivityApp')).toBeDisabled();
     await expect(page.locator('#desktopActivityNameLabel')).toBeHidden();
     await expect(page.locator('#desktopActivityStatus')).not.toBeEmpty();
+    await preserved();
+    await page.locator('[data-settings-tab="files"]').click();
+    await expect(page.locator('#profileFilesHost .profile-files-load')).toBeVisible();
+    await expect(page.locator('#profileFilesHost #profileFiles')).toBeAttached();
     await preserved();
     await page.locator('#voiceSettingsClose').click();
 

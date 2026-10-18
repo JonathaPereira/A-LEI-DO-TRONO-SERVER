@@ -66,9 +66,7 @@ export function ProfileDialog() {
           </p>
           <div id="appearanceFieldsHost" style={{ display: 'contents' }} />
         </section>
-        <h3>Meus arquivos</h3>
-        <p id={'storageUsage'}></p>
-        <div id={'profileFiles'}></div>
+        <div id="profileFilesHost" />
       </dialog>
     </>
   );

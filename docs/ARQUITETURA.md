@@ -151,7 +151,25 @@ O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados
 `renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
 mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
 existe somente enquanto há raízes ativas. `legacy/profile-files.js` ainda possui
-edição/visualização de perfis e galeria, mas perdeu transporte, cache e renderizadores.
+edição/visualização de perfis e composição de capas; a biblioteca de arquivos saiu
+desse controlador.
+
+`lib/files/library.ts` possui lista, consulta de uso, exclusões pendentes e feedback
+de Meus arquivos. Reutiliza transporte, URL assinada e exclusões do cliente tipado.
+Valida a página inteira antes de publicá-la, com até 200 IDs únicos, e filtra os
+arquivos já excluídos, inclusive durante uma consulta pendente. A conta e sua geração
+invalidam resultados antigos; um refresh novo impede mensagens de erro anteriores.
+O download conserva o gesto do clique e tem uma abertura pendente por arquivo.
+Atualizar a lista não cancela uma abertura solicitada; sair da conta ou excluir o
+arquivo invalida seu destino.
+
+`components/files/library.tsx` renderiza a biblioteca; `library-runtime.tsx` monta
+uma instância por página no host `profileFilesHost`. Perfil web e configurações
+desktop movem esse host inteiro, preservando controles e estado. O editor empresta
+os IDs de avatar/capa/fundo selecionados via `getProtectedFileIds()` e notifica
+mudanças do rascunho; a biblioteca protege esses IDs também na ação de excluir.
+O rascunho continua pertencendo ao editor. A leitura dos IDs e seus eventos podem
+ser substituídos quando o editor for convertido, sem outro transporte ou cache.
 
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.
@@ -783,11 +801,11 @@ altere o resultado da chamada seguinte. Nomes das linhas de recepção são some
 texto local do painel e não entram no relatório. `runtime.ts` conserva a composição
 dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnóstico.
 
-Perfil, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando
-identidade e listeners dos nós. Aparência é React dentro de um host estável;
-movê-la entre configurações conserva os rádios de tema/layout. Os campos de
+Perfil e jogo continuam em slots vazios (`ContentSlot`), preservando
+identidade e listeners dos nós. Arquivos e aparência são React em hosts estáveis;
+mover os hosts conserva os controles e os rádios de tema/layout. Os campos de
 notificações e atividade são filhos React das abas compartilhadas. Os conteúdos
-restantes de perfil, arquivos e jogos ainda serão convertidos por domínio.
+restantes de perfil e jogos ainda serão convertidos por domínio.
 
 `lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores
 e feedback compartilhado com a restauração de painéis. `appearance-fields.tsx`

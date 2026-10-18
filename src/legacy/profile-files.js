@@ -366,6 +366,7 @@ window.TronoProfile = (() => {
   }
   function preview(event) {
     if (!loaded) return;
+    window.dispatchEvent(new Event('trono-profile-draft-change'));
     const data = readForm(),
       onlyAppearance = event?.target?.matches(
         '#profile-cover_position,#profile-cover_zoom,#profile-darkness,#profile-blur,#profile-opacity,#profile-accent',
@@ -471,6 +472,7 @@ window.TronoProfile = (() => {
     $('profileNickname').value = u.nickname;
     chosen = u.avatar_preset || 'crown';
     selectedFile = u.avatar_file_id || null;
+    window.dispatchEvent(new Event('trono-profile-draft-change'));
     $('profilePhoto').value = '';
     message('Carregando seu perfil…');
     if (!inline) {
@@ -603,44 +605,15 @@ window.TronoProfile = (() => {
       }
     }
   }
-  async function refreshFiles() {
-    const host = $('profileFiles');
-    host.replaceChildren();
-    $('storageUsage').textContent = 'Consultando…';
-    try {
-      const status = await window.TronoFiles.api('/status'),
-        mine = await window.TronoFiles.api('/mine');
-      $('storageUsage').textContent =
-        'Uso compartilhado: ' + window.TronoFiles.size(status.used) + ' de 8 GB.';
-      for (const file of mine.files) {
-        const row = make('div', 'profile-file-row'),
-          name = make('button', '', file.name + ' · ' + window.TronoFiles.size(file.bytes)),
-          del = make('button', '', 'Excluir');
-        name.type = del.type = 'button';
-        name.onclick = () =>
-          void window.TronoFiles.openFile(
-            () => window.TronoFiles.url(file.id, true),
-            $('profileMessage'),
-          );
-        del.disabled = [selectedFile, draft.cover_file_id, draft.background_file_id].includes(
-          file.id,
-        );
-        del.onclick = async () => {
-          try {
-            await window.TronoFiles.remove(file.id);
-            row.remove();
-          } catch (e) {
-            message(e.message, true);
-          }
-        };
-        row.append(name, del);
-        host.append(row);
-      }
-      if (mine.hasMore)
-        host.append(make('p', '', 'A lista mostra seus 200 arquivos mais recentes.'));
-    } catch (e) {
-      $('storageUsage').textContent = e.message;
-    }
+  // The library reads the editor's selected media; it never takes ownership of the draft.
+  function getProtectedFileIds() {
+    const user = window.TronoAuth.user;
+    if (!user) return [];
+    return (
+      owner === user.id && loaded
+        ? [selectedFile, draft.cover_file_id, draft.background_file_id]
+        : [user.avatar_file_id]
+    ).filter((id) => typeof id === 'string' && id);
   }
   async function openMini(person, { full = false } = {}) {
     const id = typeof person === 'string' ? person : person.accountId || person.id;
@@ -890,10 +863,6 @@ window.TronoProfile = (() => {
     $('profileDialog').addEventListener('cancel', (e) => {
       if (busy) e.preventDefault();
     });
-    const fileButton = make('button', 'profile-files-load', 'Ver meus arquivos');
-    fileButton.type = 'button';
-    fileButton.onclick = () => void refreshFiles();
-    $('profileFiles').before(fileButton);
     // Share the same editor between the website and the installed app's account page.
     const identity = make('section', 'profile-identity'),
       avatarBox = make('div', 'profile-identity-avatar'),
@@ -930,8 +899,7 @@ window.TronoProfile = (() => {
     settingsNav.setAttribute('aria-label', 'Configurações do perfil');
     settingsNav.innerHTML =
       '<strong>M&N</strong><small>CONFIGURAÇÕES</small><button type="button" data-profile-section="profile" class="active">Meu perfil</button><button type="button" data-profile-section="appearance">Aparência</button><button type="button" data-profile-section="files">Meus arquivos</button><button type="button" class="profile-back">← Voltar à call</button>';
-    const filesTitle = profileDialog.querySelector(':scope > h3');
-    filesPane.append(filesTitle, fileButton, $('storageUsage'), $('profileFiles'));
+    filesPane.append($('profileFilesHost'));
     settingsBody.append(form, appearance, filesPane);
     appearance.hidden = filesPane.hidden = true;
     profileDialog.replaceChildren($('profileClose'), settingsNav, settingsBody);
@@ -1000,12 +968,20 @@ window.TronoProfile = (() => {
         window.TronoProfileGifs.close();
         $('profileForm').reset();
         $('profileLivePreview').replaceChildren();
-        $('profileFiles').replaceChildren();
       }
     }
     window.addEventListener('trono-auth-change', auth);
     window.addEventListener('trono-role-change', auth);
     void window.TronoAuth.ready.then(auth);
   });
-  return { open, avatarHtml, hydrate, formatPhoto, openMini, callBackgrounds, directBanners };
+  return {
+    open,
+    avatarHtml,
+    hydrate,
+    formatPhoto,
+    openMini,
+    callBackgrounds,
+    directBanners,
+    getProtectedFileIds,
+  };
 })();

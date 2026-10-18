@@ -41,14 +41,7 @@ export function initializeCallSettings(target: Window): void {
     fragment('appearance').append(document.querySelector<HTMLElement>('.profile-appearance')!);
     (fragment('appearance').firstChild as HTMLElement).hidden = false;
     fragment('account').append(get('profileForm'), get('accountLogoutBtn'));
-    const heading = document.createElement('h2');
-    heading.textContent = 'Meus arquivos';
-    fragment('files').append(
-      heading,
-      document.querySelector('.profile-files-load')!,
-      get('storageUsage'),
-      get('profileFiles'),
-    );
+    fragment('files').append(get('profileFilesHost'));
     const game = fragment('game');
     const gameHeading = document.createElement('h2');
     gameHeading.textContent = 'Jogo';
