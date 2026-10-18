@@ -829,9 +829,6 @@
 #profileDialog .profile-editor[hidden] {
   display: none !important;
 }
-body.chat-only-active[data-call-workspace] .panel-resize-handle {
-  display: none !important;
-}
 @media (min-width: 1200px) {
   .desktop-app #desktopSettingsDialog:has([data-settings-panel='account']:not([hidden])) {
     width: calc(100vw - 32px) !important;

@@ -1442,10 +1442,37 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   numa cópia isolada de `ed76477`; não foi silenciada. As cartas convertidas foram
   verificadas diretamente no Electron; atualizar o restante dessa suíte é pendente.
 
+## Layout, aparência e retirada do resizer inativo — 18/10/2026
+
+- Trabalho dividido em implementação de layout, auditoria de resize e regressões
+  de aparência, com integração e validação centralizadas, sem builds concorrentes.
+- `lib/navigation/app-layout.ts` possui layout, projeção de identidade/conexão,
+  preferência e navegação; React renderiza painel/perfil, rail web e seletor.
+  Slots conservam botões da chamada. Status vem do toolbar tipado; apenas a
+  visibilidade das telas ainda legadas usa observer. Retorno adiado ao canal de
+  voz valida revisão, conta e geração. O avatar compartilhado conserva um único nó.
+- `lib/profiles/appearance.ts` e `appearance-fields.tsx` possuem as dez cores,
+  preferência por conta/convidado, reset e mensagem. As configurações movem hosts,
+  mantendo identidade dos rádios. Reset limpa apenas as oito dimensões inline
+  antigas e `mnPanelLayout:<conta atual ou guest>`; não altera tema nem disposição.
+- Excluídos `legacy/app-layout.js`, `legacy/appearance.js`, `legacy/panel-layout.js`
+  e suas entradas no manifesto. Os dez handles antigos estavam ocultos fora do
+  hub por `appearance.css` e dentro dele por `member-profile.css`; foram removidos
+  com estado/listeners/CSS exclusivos e a instrução de arrastar sem efeito.
+  Valores antigos não são reaplicados. Resize flutuante/de players permanece.
+- Tipagem, formatação, build e `npm test` passaram; configurações/apresentação
+  possuem 101 casos (17 novos). Passaram 26 regressões focadas no navegador,
+  quatro gerais de interface e três no Electron real, com temas/reset durante
+  chamada, identidade dos controles e preservação de mic/câmera/tela/peers/socket,
+  áudio e SFU. Evidências: `artifacts/layout-parallel-*`. Sem push ou mudança na main.
+- A suíte antiga `frontend-browser.js` ainda contém expectativas de handles
+  visíveis e geometria substituída. A cobertura atual de tema/reset por conta está
+  em `appearance-preferences-browser.cjs`; o restante da suíte antiga segue pendente.
+
 ## Próximas alterações, em ordem
 
 1. Concluir a composição tipada da chamada e converter seus posicionadores/layouts
-   restantes (`social.js`, `panel-layout.js`, `app-layout.js` e `desktop-shell.js`).
+   restantes (`social.js` e `desktop-shell.js`).
    Navegação do painel/drawer, salas de voz/texto, não lidas e silenciamento já
    pertencem a `navigation.ts`, com nove botões React e ponte em `navigation-view.ts`.
    Não restaurar cópias de estado, listeners de sala ou handlers desses botões.

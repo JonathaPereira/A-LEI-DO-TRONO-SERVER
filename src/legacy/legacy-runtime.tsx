@@ -1,5 +1,7 @@
 'use client';
 
+import { initializeAppLayout } from '../components/navigation/app-layout-runtime';
+import { initializeAppearance } from '../components/profiles/appearance-runtime';
 import { initializeCallWorkspace } from '../components/navigation/workspace-runtime';
 import { initializeMediaLayout } from '../lib/voice/media-layout';
 import { initializeHandLayout } from '../lib/games/hand-layout';
@@ -133,9 +135,10 @@ export function LegacyRuntime() {
       initializeChannels(window);
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
+        if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile/game controllers prepare borrowed bodies before the React shell mounts;
         // activity/notifications then bind to the mounted slots, matching their boot order.
-        if (filename === 'desktop-shell.js')
+        if (filename === 'desktop-shell.js') {
           window.addEventListener(
             'trono:ready',
             () => {
@@ -144,6 +147,8 @@ export function LegacyRuntime() {
             },
             { once: true },
           );
+          initializeAppLayout(window);
+        }
       }
       prepareCallSettings(window);
       initializeCallToolbar(window);

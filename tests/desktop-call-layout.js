@@ -192,7 +192,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.evaluate(ids => {
       window.__layoutBaseline = {
         controls: ids.map(id => document.getElementById(id)),
-        navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock'].map(id => document.getElementById(id)),
+        navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
         camera: window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0],
         screen: window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0],
@@ -336,6 +336,17 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await communityControls(layout);
       await preserved();
     }
+
+    await page.locator('#voiceSettingsBtn').click();
+    await page.locator('[data-settings-tab="appearance"]').click();
+    await page.locator('[name="profileTheme"][value="teal"]').check();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'teal');
+    await page.locator('#layoutResetBtn').click();
+    await expect(page.locator('#appearanceMessage')).toHaveText('Layout restaurado ao padrão.');
+    await expect(page.locator('[data-panel-resize]')).toHaveCount(0);
+    await preserved();
+    await page.locator('[name="profileTheme"][value="purple"]').check();
+    await page.locator('#voiceSettingsClose').click();
 
     for (const [width, height] of [[1280, 720], [480, 800], [480, 520]]) {
       await app.evaluate(({BrowserWindow}, {width, height}) => BrowserWindow.getAllWindows()[0].setContentSize(width, height), {width, height});

@@ -153,7 +153,6 @@ test(
             '/game.js',
             '/game-rules.js',
             '/court.css',
-            '/app-layout.js',
             '/app-layout.css',
             '/chat-moderation.css',
             '/manual/index.html',

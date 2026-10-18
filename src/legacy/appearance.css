@@ -446,72 +446,6 @@ body.chat-only-active .community-toggle {
 body.chat-only-active .mn-sidebar-bottom {
   padding-bottom: 78px !important;
 }
-.panel-resize-handle {
-  position: absolute;
-  z-index: 60;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  border: 0;
-  background: transparent;
-  transition: background 0.15s;
-}
-.panel-resize-handle:hover,
-.panel-resize-handle:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 40%, transparent);
-  outline: 1px solid var(--theme-accent);
-  outline-offset: -1px;
-}
-.resize-width {
-  width: 8px;
-  top: 0;
-  bottom: 0;
-  cursor: col-resize;
-}
-.resize-sidebar.resize-width {
-  right: 0;
-}
-.resize-chat.resize-width,
-.resize-people.resize-width {
-  left: 0;
-}
-.resize-height {
-  height: 8px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  cursor: row-resize;
-}
-.resize-both {
-  width: 20px;
-  height: 20px;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    135deg,
-    transparent 0 3px,
-    var(--theme-accent) 3px 4px,
-    transparent 4px 6px
-  );
-  opacity: 0.6;
-}
-.resize-sidebar.resize-both {
-  right: 0;
-  cursor: nwse-resize;
-}
-.resize-chat.resize-both,
-.resize-people.resize-both {
-  left: 0;
-  cursor: nesw-resize;
-}
-body:not(.chat-only-active) .panel-resize-handle,
-body.native-fullscreen-media .panel-resize-handle {
-  display: none;
-}
-body.panel-resizing,
-body.panel-resizing * {
-  user-select: none !important;
-  -webkit-user-select: none !important;
-}
 body.chat-only-active .community-panel {
   height: min(
     var(--layout-people-height, calc(100dvh - var(--header) - 70px)),
@@ -577,10 +511,6 @@ body.chat-only-active #socialPanel .court-chat-section:not([hidden]) {
     width: min(var(--layout-chat-width, 380px), 100%) !important;
   }
 }
-body.channel-text-active .resize-chat.resize-width,
-body.channel-text-active .resize-chat.resize-both {
-  display: none;
-}
 @media (max-width: 640px) {
   :root {
     --channel-strip-height: clamp(76px, var(--layout-strip-height, 92px), 220px);
@@ -605,10 +535,6 @@ body.channel-text-active .resize-chat.resize-both {
       var(--layout-center-height, calc(100dvh - var(--header) - var(--channel-strip-height))),
       calc(100dvh - var(--header) - var(--channel-strip-height))
     ) !important;
-  }
-  .resize-sidebar.resize-width,
-  .resize-sidebar.resize-both {
-    display: none;
   }
   .profile-layout {
     flex-wrap: wrap;

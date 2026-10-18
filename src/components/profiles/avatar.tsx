@@ -10,16 +10,20 @@ export function Avatar({
   person,
   className,
   title,
+  id,
+  online,
 }: {
   person: AvatarAppearance;
   className: string;
   title?: string;
+  id?: string;
+  online?: boolean;
 }) {
   const file = avatarFile(person),
     source = useFileUrl(file);
   const [failed, setFailed] = useState<string | null>(null);
   return source?.url && failed !== source.url ? (
-    <span className={className} title={title} aria-label={title}>
+    <span id={id} className={className} title={title} aria-label={title} data-online={online}>
       <img
         className="profile-avatar-photo"
         src={source.url}
@@ -29,9 +33,11 @@ export function Avatar({
     </span>
   ) : (
     <span
+      id={id}
       className={className}
       title={title}
       aria-label={title}
+      data-online={online}
       dangerouslySetInnerHTML={{ __html: avatarIcon(person.avatar_preset) }}
     />
   );

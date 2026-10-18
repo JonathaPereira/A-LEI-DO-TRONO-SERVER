@@ -77,8 +77,19 @@ as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.
 O componente React usa o mesmo catálogo e cliente de arquivos, sem hosts de
 renderização imperativa no chat ou nos canais. `legacy/avatar-icons.js` foi removido.
 
-A navegação entre áreas e a seleção/troca de canais continuam em `legacy/game.js`,
-`app-layout.js` e `desktop-shell.js`. Os cliques React delegam a esse fluxo, que
+`lib/navigation/app-layout.ts` possui a projeção de layout, destino atual,
+identidade e conexão de voz, preferência e retorno ao canal de voz. Lê os donos
+existentes; não altera participação nem cria catálogos. Uma seleção adiada é
+invalidada por nova navegação, troca de conta/geração ou descarte. O status usa o
+toolbar tipado; não deriva estado do texto no DOM. `app-layout-controls.tsx`
+renderiza conexão/perfil, rail web e seletor em React. Os slots vazios recebem
+os mesmos controles da chamada; o painel inteiro pode mudar de lugar sem recriá-los.
+O bootstrap instala `TronoAppLayout` antes do ready e monta a estrutura antes dos
+posicionadores. A observação da visibilidade das telas ainda legadas permanece na
+ponte; `legacy/app-layout.js` foi excluído.
+
+A seleção/troca de canais e a navegação das telas de jogos ainda passam por
+`legacy/game.js` e `desktop-shell.js`. Os cliques React delegam a esse fluxo, que
 consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
 consulta `lib/voice/navigation.ts`; os métodos públicos de `social.js` são adaptadores.
 O gerenciamento de canais e seus diálogos permanecem em `legacy/community-admin.js`.
@@ -712,10 +723,22 @@ altere o resultado da chamada seguinte. Nomes das linhas de recepção são some
 texto local do painel e não entram no relatório. `social.js` conserva a composição
 dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnóstico.
 
-Perfil, aparência, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
-possui contêiner/visibilidade; cada controlador conserva somente seus filhos.
-Notificações preenche seu slot, sem criar abas/painéis paralelos. Esses conteúdos,
+Perfil, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando
+identidade e listeners dos nós. Aparência é React dentro de um host estável;
+movê-la entre configurações conserva os rádios de tema/layout. Notificações
+preenche seu slot, sem criar abas/painéis paralelos. Os conteúdos restantes,
 incluindo atividade, ainda serão convertidos por domínio.
+
+`lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores
+e feedback compartilhado com a restauração de painéis. `appearance-fields.tsx`
+renderiza rádios, reset e status; não há outro escritor de `appearanceMessage`.
+`lib/layout/panel-preferences.ts` limpa somente as oito dimensões inline do resizer
+retirado e a chave `mnPanelLayout:<conta atual ou guest>`. Outras preferências,
+variáveis e valores das folhas de estilo permanecem. Tamanhos antigos não são
+mais reidratados; não há controles visíveis que permitam ajustá-los no layout atual.
+`legacy/panel-layout.js` e `legacy/appearance.js` foram excluídos, assim como os dez
+handles ocultos, seus listeners de ponteiro/teclado e CSS exclusivo. O resize do
+painel flutuante e dos players é independente e permanece nos donos tipados.
 
 `legacy/desktop-settings.js` foi removido do manifesto e do fonte. `social.js` não
 possui mais flags, seleção ou pintura das abas, nem os listeners de abrir/fechar.
