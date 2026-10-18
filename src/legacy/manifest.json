@@ -14,7 +14,6 @@
     "noise-suppression.js",
     "stream-controls.js",
     "personal-prefs.js",
-    "social.js",
     "recording.js",
     "clip-store.js",
     "clips.js",

@@ -1497,69 +1497,47 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   perfis, notificações, atividade e os demais domínios legados. O shell completo
   não precisa ser restaurado como ponte para esses fluxos.
 
+## Composição da chamada em TypeScript — 18/10/2026
+
+- Excluídos `legacy/social.js` e sua entrada no manifesto. `lib/voice/runtime.ts`
+  compõe os donos existentes por imports diretos; `runtime-ports.ts` descreve as
+  entradas legadas e a fachada pública. Há uma instância por janela, inicializada
+  após preferências e iniciada uma única vez no ready, na ordem anterior.
+- `TronoSocial` permanece como fachada para consumidores ainda legados. Não há
+  outro socket, captura ou mapa de peers. A tela continua emprestando a fonte
+  original ao replay e o clone de saída à chamada; nenhuma constraint, resolução,
+  taxa de quadros ou política de publicação foi alterada.
+- Removido o registro global `TronoVoiceCapture`. Testes nativos compilam somente
+  suas fábricas de fixture em Node por `tests/voice-test-modules.cjs`; não publicam
+  arquivos no renderer nem relaxam a política de scripts do Electron.
+- Removidas as declarações sem uso `isScreenKind` e `acquireCamera`. A fachada e
+  os adaptadores ainda chamados por jogos e clipes continuam disponíveis.
+- Tipagem, formatação, build estático e `npm test` passaram, incluindo os 124 casos
+  de configurações/apresentação. Passaram 32 regressões focadas no navegador,
+  quatro gerais de interface e três no Electron real: identidade das fachadas e
+  controles, preservação de trilhas/peers/socket, áudio e envio SFU configurado a
+  60 fps com mídia sintética. O teste adicional no Windows recebeu PCM contínuo
+  em outro cliente com a janela coberta, minimizada e oculta, em nativo (100% e
+  180% de ganho) e RNNoise, sem reabrir o microfone ou reconectar os peers.
+  Evidências: `artifacts/voice-runtime-*` e `artifacts/windows-background-voice.json`.
+  As limitações anteriores de clipes e suítes antigas permanecem registradas.
+  Sem push ou mudança na main.
+
 ## Próximas alterações, em ordem
 
-1. Concluir a composição tipada da chamada em `social.js`. Os posicionadores
-   e shells anteriores foram substituídos.
-   Navegação do painel/drawer, salas de voz/texto, não lidas e silenciamento já
-   pertencem a `navigation.ts`, com nove botões React e ponte em `navigation-view.ts`.
-   Não restaurar cópias de estado, listeners de sala ou handlers desses botões.
-   Fullscreen/fallback e geometria já pertencem a `media-focus.ts` e
-   `floating-panel.ts`; não restaurar seus listeners ou escritores de classes.
-   Mosaico e opções de compartilhamento já são React,
-   com projeções em `mosaic.ts` e `screen-options.ts`; seus controladores antigos
-   foram removidos. A lista e os painéis base já são React, em
-   `call-stage.tsx`, `participant-card.tsx` e `media-tile.tsx`, com projeção em
-   `lib/voice/stage.ts`. Não restaurar seus escritores ou handlers DOM.
-   Dispositivos, ganhos, supressão/modo leve e opções de transmissão
-   já são campos React em `settings-fields.tsx`, usando `lib/voice/settings.ts`.
-   Avisos, música, efeitos e proteção recebida também são React em
-   `audio-preferences.tsx`, usando `lib/voice/audio-preferences.ts`. O player
-   compartilhado com jogos permanece em `legacy/audio.js`; ele não pinta esses campos.
-   Conexão, indicador, painel e ações do diagnóstico também são React, usando
-   `connection-diagnostics.ts` e `diagnostics-presentation.ts`. Não restaurar
-   suas flags, formatação, listeners ou escritores DOM em `social.js`.
-   A estrutura de configurações (abas/abertura/conta/permissões) também é React;
-   seus slots conservam somente os conteúdos ainda legados.
-   Publicação de microfone/câmera está em `device-publication.ts`; publicação da
-   tela e o fim de seu áudio estão em `screen-publication.ts`. Não restaurar esses
-   callbacks no controlador nem duplicar os donos de captura/sessão.
-   Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
-   `screen-options.ts`; intenções de assistir/ocultar estão em
-   `media-interest.ts`; `media-visibility.ts` conserva somente a separação de
-   players/tela cheia ao ocultar. O adaptador de cliques antigo foi removido.
-   Estado/ações estão em `controls.ts`; controles principais/status da barra são
-   React em `call-toolbar.tsx`, com projeção em `toolbar.ts`. `control-bindings.ts`
-   foi removido. O layout move hosts, sem escrever nos botões React. Clipes e
-   soundboard mantêm seus donos. Não restaurar flags/handlers dos controles convertidos.
-   Contextos, desbloqueio e avisos estão em `call-audio.ts`/`call-alerts.ts`.
-   O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
-   Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.
-   Seleção, inicialização/fallback e listener do modo da sala estão em `transport.ts`.
-   Entrada/saída, fase, geração, promessa e listeners de saída estão em `call-lifecycle.ts`.
-   Não recriar flags de participação ou entrada nos controladores DOM.
-   Câmera, captura/processamento do microfone e captura de tela já têm módulos com um único dono.
-   Peers e negociação P2P estão em `p2p-peers.ts`; não recriar seu mapa ou suas filas.
-   Streams, listeners e timers recebidos estão em `remote-media.ts`, compartilhado por P2P e SFU.
-   Publicações/assinaturas, filas, catálogo e retries SFU estão em `sfu-session.ts`.
-   Players/ganhos, autoplay e roteamento de saída estão em `audio-playback.ts`.
-   Coleta, métricas, proteção de recepção e prioridade estão em `telemetry.ts`/`reception-policy.ts`.
-   Indicadores visuais, listeners e timers estão em `speaking-indicators.ts`.
-   Exportação anônima está em `diagnostic-report.ts`; `legacy/call-stability.js` foi removido.
-   Bootstrap ICE/TURN e status/consumo estão em `realtime.ts`, com validação em
-   `realtime-protocol.ts`; não restaurar seus caches/listeners no coordenador.
-   A chamada deve sobreviver à navegação e troca de layout. Validar microfone,
-   câmera, tela, áudio de aplicativo e fallback SFU/P2P.
-2. Converter navegação/gerenciamento de canais, notificações, perfis/configurações
-   e jogos. Cada controlador convertido perde sua entrada no manifesto e seus
-   listeners DOM. Não recriar o catálogo, socket ou estado de participação no processo.
-   Ao retirar `legacy/profile-files.js`, conservar o cliente de `lib/files/` e os
-   componentes já compartilhados; remover os adaptadores quando não houver chamadores.
-3. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
+1. Converter navegação/gerenciamento de canais, notificações, atividade,
+   perfis/configurações e jogos. Cada controlador convertido perde sua entrada
+   no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
+   participação. Ao retirar `legacy/profile-files.js`, conservar o cliente de
+   `lib/files/` e os componentes compartilhados; remover adaptadores sem chamadores.
+   Os donos já convertidos estão descritos em `ARQUITETURA.md`: não restaurar
+   estado/listeners nos adaptadores. A chamada deve sobreviver à navegação e às
+   trocas de layout, preservando microfone, câmera, tela, replay e fallback SFU/P2P.
+2. Extrair regras e coordenação de `server/runtime.cjs`, mantendo a interface
    de `createApplication`. Converter os módulos JS por domínio.
-4. Consolidar estilos por domínio após retirar os controladores. A ordem atual
+3. Consolidar estilos por domínio após retirar os controladores. A ordem atual
    contém sobreposições necessárias para estados de chamada não visíveis no início.
-5. Documentar e validar uma instalação nova do banco, com ordem única para os
+4. Documentar e validar uma instalação nova do banco, com ordem única para os
    SQL legados e as migrações datadas, sem reaplicar mudanças em bases existentes.
 
 ## Critérios por fluxo convertido

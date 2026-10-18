@@ -1,4 +1,5 @@
 'use strict';
+const { installVoiceTestModules } = require('./voice-test-modules.cjs');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -54,7 +55,17 @@ test(
       await page.waitForURL(origin + '/');
       await page.waitForLoadState('domcontentloaded');
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(() => !!window.TronoVoiceCapture?.createSfuSession);
+      await page.waitForFunction(() => !!window.TronoSocial);
+      await installVoiceTestModules(page, [
+        'createSfuSession',
+        'createAudioPlayback',
+        'createRemoteMedia',
+        'createCallQuality',
+        'createVoiceTelemetry',
+        'createSpeakingIndicators',
+        'createScreenPublication',
+        'createDevicePublication',
+      ]);
       await page.mouse.click(600, 400);
       await page.evaluate(async () => {
         console.log('SFU fixture: initializing media');
@@ -164,7 +175,7 @@ test(
           throw new Error('Unexpected local SFU action: ' + action);
         }
         const playbackContexts = [];
-        const playback = window.TronoVoiceCapture.createAudioPlayback({
+        const playback = window.__voiceTestModules.createAudioPlayback({
           volume: 100,
           output: '',
           createAudio() {
@@ -188,7 +199,7 @@ test(
             throw new Error('Unexpected output fallback');
           },
         });
-        const remote = window.TronoVoiceCapture.createRemoteMedia({
+        const remote = window.__voiceTestModules.createRemoteMedia({
           enabled: () => settings.enabled,
           createStream: () => new MediaStream(),
           getPeer: () => undefined,
@@ -205,7 +216,7 @@ test(
           onChange() {},
           onRecover: async () => false,
         });
-        const quality = window.TronoVoiceCapture.createCallQuality({
+        const quality = window.__voiceTestModules.createCallQuality({
           storage: {
             getItem: (key) =>
               ({ mnScreenFormat: '1080-60', mnScreenBitrate: '8', mnAdaptiveQuality: '0' })[key] ??
@@ -223,7 +234,7 @@ test(
             throw error;
           },
         });
-        const session = window.TronoVoiceCapture.createSfuSession({
+        const session = window.__voiceTestModules.createSfuSession({
           getSettings: () => settings,
           createConnection: () => create(),
           request,
@@ -256,7 +267,7 @@ test(
           },
           onChange() {},
         });
-        const diagnostics = window.TronoVoiceCapture.createVoiceTelemetry({
+        const diagnostics = window.__voiceTestModules.createVoiceTelemetry({
           protection: true,
           getSettings: () => ({
             joined: settings.enabled,
@@ -274,7 +285,7 @@ test(
           onSample: async () => {},
           onChange() {},
         });
-        const indicators = window.TronoVoiceCapture.createSpeakingIndicators({
+        const indicators = window.__voiceTestModules.createSpeakingIndicators({
           getSettings: () => ({
             enabled: settings.enabled,
             hidden: document.hidden,
@@ -287,7 +298,7 @@ test(
           documentEvents: document,
           onChange() {},
         });
-        const screenPublication = window.TronoVoiceCapture.createScreenPublication({
+        const screenPublication = window.__voiceTestModules.createScreenPublication({
           isSfu: () => true,
           sfu: session,
           p2p: {
@@ -304,7 +315,7 @@ test(
         });
         const deviceTracks = [],
           deviceEvents = [];
-        const devicePublication = window.TronoVoiceCapture.createDevicePublication({
+        const devicePublication = window.__voiceTestModules.createDevicePublication({
           call: () => ({ joined: settings.enabled }),
           isSfu: () => true,
           sfu: session,

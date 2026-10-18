@@ -1,4 +1,5 @@
 'use strict';
+const { installVoiceTestModules } = require('./voice-test-modules.cjs');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -50,14 +51,19 @@ test(
       }, fixture.base);
       await page.waitForURL(origin + '/');
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(() => !!window.TronoVoiceCapture?.createCallAudio);
+      await page.waitForFunction(() => !!window.TronoSocial);
+      await installVoiceTestModules(page, [
+        'createCallAudio',
+        'createCallAlerts',
+        'createAudioPreferences',
+      ]);
       await page.evaluate(() => {
         const events = new EventTarget(),
           settings = { joined: true, generation: 1, output: '', visible: true };
         let alertsContext, microphoneContext, analyzer;
         const gains = [],
           oscillators = [];
-        const alerts = window.TronoVoiceCapture.createCallAlerts({
+        const alerts = window.__voiceTestModules.createCallAlerts({
           storage: { getItem: () => null, setItem() {} },
           getSettings: () => ({ enabled: true, muted: false, output: '' }),
           createContext() {
@@ -87,7 +93,7 @@ test(
             return ctx;
           },
         });
-        const audio = window.TronoVoiceCapture.createCallAudio({
+        const audio = window.__voiceTestModules.createCallAudio({
           desktop: true,
           getSettings: () => settings,
           createContext: (options) => {
@@ -100,7 +106,7 @@ test(
           documentEvents: events,
           onChange() {},
         });
-        const preferences = window.TronoVoiceCapture.createAudioPreferences({
+        const preferences = window.__voiceTestModules.createAudioPreferences({
           audio: () => ({
             sfxEnabled: true,
             musicEnabled: false,

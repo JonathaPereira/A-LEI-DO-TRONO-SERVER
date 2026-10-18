@@ -35,7 +35,7 @@ sem mutar o DTO. URLs, erros e previews pertencem ao arquivo e à geração da c
 respostas antigas não reaparecem em uma linha reutilizada. A atividade do chat
 alimenta `lib/voice/navigation.ts`, que possui a contagem atual de não lidas e o
 silenciamento do texto, e delega sons a `call-alerts.ts`. O adaptador público
-`social.js.onChatActivity` não guarda estado nem escreve nos componentes.
+`TronoSocial.onChatActivity` não guarda estado nem escreve nos componentes.
 O adaptador `lib/socket/chat-actions.ts` foi excluído.
 
 `lib/socket/transport.ts` possui a conexão WebSocket, correlação de respostas,
@@ -91,7 +91,7 @@ ponte; `legacy/app-layout.js` foi excluído.
 A seleção/troca de canais e a navegação das telas de jogos ainda passam por
 `legacy/game.js`; o shell desktop delega a esses donos por `lib/desktop/shell.ts`. Os cliques React delegam a esse fluxo, que
 consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
-consulta `lib/voice/navigation.ts`; os métodos públicos de `social.js` são adaptadores.
+consulta `lib/voice/navigation.ts`; os métodos públicos de `TronoSocial` são adaptadores.
 O gerenciamento de canais e seus diálogos permanecem em `legacy/community-admin.js`.
 
 `lib/desktop/shell.ts` possui projeção da área, abertura da lista de canais e
@@ -159,9 +159,18 @@ em 100%; outros ganhos e RNNoise usam a trilha processada. `microphone.ts` escol
 a saída, aplica mute/ganho zero a todas as trilhas e invalida publicações antigas
 quando a seleção muda. Não reabre o dispositivo ao alternar o ganho.
 
-`legacy/social.js` cria uma instância pelas fábricas de compatibilidade instaladas
-pelo Next. Conserva a apresentação dos controles; `controls.ts` possui preferências
-e intenção, delegando aquisição, mute, ganho e encerramento físico aos donos de mídia.
+`lib/voice/runtime.ts` compõe os donos da chamada por imports diretos, com uma
+instância por janela. O bootstrap o inicializa após `personal-prefs.js`, na ordem
+anterior; o início dos listeners ocorre uma única vez em `trono:ready`.
+Callbacks adiam a leitura das dependências até sua composição estar completa.
+`runtime-ports.ts` descreve as entradas ainda legadas e a fachada `TronoSocial`,
+preservada para consumidores não convertidos. Não há registro global de fábricas
+`TronoVoiceCapture`; `legacy/social.js` e sua entrada no manifesto foram excluídos.
+As instâncias duram pela página; entrada, saída e descarte de mídia continuam
+nos donos existentes, sem outro socket, peer ou captura.
+
+`controls.ts` possui preferências e intenção, delegando aquisição, mute, ganho e
+encerramento físico aos donos de mídia.
 `device-publication.ts` recebe as trocas de trilha e publica nos peers/SFU,
 verificando a validade da operação entre esperas de transporte.
 
@@ -173,7 +182,7 @@ O cancelamento do seletor conserva a fonte anterior. Sua liberação após uma t
 aguarda a publicação, mas sair da chamada descarta também as fontes em retirada.
 O acesso ao par fonte/saída é emprestado; consumidores não devem encerrar suas trilhas.
 
-`social.js` deriva o estado de compartilhamento desse módulo, sem outra cópia de
+`runtime.ts` deriva o estado de compartilhamento desse módulo, sem outra cópia de
 streams, geração ou listeners. Delega publicação e fim do áudio a `screen-publication.ts`
 e avisa o controlador de clipes sobre a fonte original.
 
@@ -187,7 +196,7 @@ padrão após confirmar que a entrada salva não existe mais.
 
 Parar ou sair invalida a geração do pedido sem aguardar permissão/publicação.
 Uma captura atrasada é encerrada; callbacks antigos não limpam o estado de um
-pedido posterior. `social.js` deriva `cameraOn` do snapshot; preferências e intenção
+pedido posterior. `runtime.ts` deriva `cameraOn` do snapshot; preferências e intenção
 do botão pertencem a `controls.ts`. `device-publication.ts` anuncia disponibilidade
 antes de aguardar publicação e inicia a retirada dos senders imediatamente ao parar.
 No P2P, uma substituição atrasada reconcilia o sender com a trilha atual para que
@@ -284,7 +293,7 @@ para a padrão, preservando o erro no diagnóstico. Reset fecha o contexto e rem
 os elementos sem encerrar capturas ou peers; callbacks antigos não recriam grafos.
 Os snapshots de diagnóstico são imutáveis e não expõem elementos/nós mutáveis.
 
-`social.js` adapta seleção de trilha, preferências persistidas e controles ao
+`runtime.ts` adapta seleção de trilha, preferências persistidas e controles ao
 módulo de reprodução, sem outros mapas de players, ganhos ou bloqueios. O antigo
 `legacy/audio-gain.js` e sua entrada no manifesto foram excluídos. Sons de aviso,
 soundboard e áudio dos jogos mantêm seus controladores próprios.
@@ -333,7 +342,7 @@ essa política anterior foi preservada, sem forçar suspensão do áudio.
 Trocar trilha, retirar participante, encerrar a trilha ou sair invalida pedidos
 e remove os nós/listeners/timers correspondentes. Uma inicialização antiga não
 substitui a atual, mesmo com IDs iguais; callbacks antigos não afetam uma chamada
-nova. Falhar na construção também desconecta os nós parciais. `social.js` recebe
+nova. Falhar na construção também desconecta os nós parciais. `runtime.ts` recebe
 mudanças para pintar cartões/câmeras, sem outro conjunto de participantes falando
 ou loop de medidores. Seus listeners de página restantes cuidam da classe visual
 de segundo plano, recuperação da reprodução e renderização do diagnóstico.
@@ -354,7 +363,7 @@ local invalida consultas antigas e nunca eleva uma restrição que já era Econo
 
 O callback de política recebe um guard de revisão; o coordenador também confere a
 geração da chamada depois de esperar o encerramento da tela ou ajustes de qualidade.
-A consulta não possui capturas, peers ou outro socket. `social.js` coordena a
+A consulta não possui capturas, peers ou outro socket. `runtime.ts` coordena a
 aplicação da política aos donos existentes; as projeções tipadas alimentam os
 controles React, sem cache/listener/timer de consulta paralelos.
 
@@ -371,7 +380,7 @@ recursos nem alteram o indicador de entrada de uma chamada posterior. O sinal da
 operação continua válido após conectar e é abortado ao sair.
 
 O mesmo módulo possui o listener de desconexão e de saída/exclusão da sala atual.
-Mensagens de outra sala não encerram a chamada. `social.js` instala esse listener
+Mensagens de outra sala não encerram a chamada. `runtime.ts` instala esse listener
 antes de seus listeners de apresentação, para que eles já vejam participação
 encerrada. O controlador conserva somente ganchos de interface, composição da
 lista de descarte dos donos existentes; a conexão SFU/P2P pertence a `transport.ts`. Não há outro socket ou
@@ -393,7 +402,7 @@ A limpeza não aguarda o provedor e não para trilhas de captura emprestadas.
 Sair/trocar a sala real invalida a inicialização e suas esperas. Respostas antigas
 não anunciam conexão, recuperam publicações ou sobrescrevem a chamada seguinte.
 O módulo usa os donos existentes de sessão, configuração, peers e mídia recebida,
-sem mapas de transporte duplicados. `social.js` monta as dependências e mantém
+sem mapas de transporte duplicados. `runtime.ts` monta as dependências e mantém
 a apresentação dos erros de diagnóstico.
 
 `quality.ts` possui preferências de transmissão, formato/bitrate/conteúdo da tela,
@@ -410,7 +419,7 @@ ou encerrar trilhas. Atualiza bitrate, FPS e escala do encoder; o caminho nativo
 da tela e a fonte compartilhada com clipes permanecem nos módulos de captura.
 Cada fila lê o perfil/trilha atual ao executar. Sair invalida os ajustes pendentes;
 continuar uma atualização após câmera/IPC antigo não atinge a chamada seguinte.
-`social.js` conserva controles e mensagens da interface, delegando preferências e
+`runtime.ts` conserva controles e mensagens da interface, delegando preferências e
 aplicação da qualidade ao módulo. Não possui cópias dessas preferências ou filas.
 
 `diagnostic-report.ts` exporta somente os campos técnicos permitidos, com até 24
@@ -439,7 +448,7 @@ Os envelopes atuais de sinalização e os antigos de estado podem omitir `roomId
 quando presente, uma sala diferente é rejeitada. O módulo não inventa uma geração
 remota ausente no protocolo. Sinalização, filas e respostas assíncronas continuam
 com as proteções dos donos de peers/sessões. Não há segundo socket ou captura.
-`social.js` não mantém outro mapa, flags ou listeners desses eventos; conserva os
+`runtime.ts` não mantém outro mapa, flags ou listeners desses eventos; conserva os
 adaptadores de navegação, ganho, sons e composição dos snapshots da interface.
 
 `lib/voice/stage.ts` possui apenas preferências de exibição por participante,
@@ -469,9 +478,9 @@ conserva armazenamento/limites do tamanho. Arraste só ocorre fora do hub em jan
 `call-stage-runtime.tsx` monta após todos os listeners de `trono:ready`, conservando
 os nós observados pelos layouts. Os portais escrevem em containers estáveis;
 slots de câmera/tela são vazios para o React, e a movimentação do host é explícita.
-`social.js` compõe as fontes/ações e conserva adaptadores públicos e seleção de
+`runtime.ts` compõe as fontes/ações e conserva adaptadores públicos e seleção de
 camadas SFU. Não possui mais estado de painel/drawer/salas, contadores ou listeners
-substituídos. Sua composição restante e os donos dos layouts ainda serão convertidos.
+substituídos. Os layouts e as projeções React usam os mesmos donos tipados.
 
 `lib/voice/navigation.ts` possui abertura/visibilidade do painel, hub, drawer de
 texto, silenciamento e não lidas. Conserva somente metadados de voz/texto validados
@@ -559,7 +568,7 @@ Ambas as instâncias vivem por página. `dispose` remove listeners, encerra some
 os recursos pertencentes ao módulo e invalida continuações; não deve ser usado
 como saída da chamada. Ao desmontar a aplicação, libere a chamada antes do contexto
 emprestado pelo processador. Reprodução recebida continua em `audio-playback.ts`,
-separada do envio e dos avisos. `social.js` consulta os snapshots e conserva os
+separada do envio e dos avisos. `runtime.ts` consulta os snapshots e conserva os
 adaptadores dos controles, sem contextos, cooldown ou listeners de desbloqueio próprios.
 
 `controls.ts` possui mute/silenciamento, lembrança do mute anterior, ganho,
@@ -593,7 +602,7 @@ apenas a decoração do botão legado de soundboard. O CSS do dock usa descenden
 para atravessar os hosts sem criar caixas ou alterar medidas dos botões.
 
 `control-bindings.ts` foi removido. O diálogo de configurações não instala outro
-listener no seu botão. O diálogo de opções/confirmação também é React. `social.js`
+listener no seu botão. O diálogo de opções/confirmação também é React. `runtime.ts`
 compõe comandos/snapshots, coordena a classe de participação e publica o evento de
 chamada para os layouts, sem pintar os controles. Clipes e soundboard conservam
 seus próprios controles/donos; não criar outro estado de mute ou câmera na interface.
@@ -650,14 +659,13 @@ a reconciliação. Parar anuncia a câmera desligada e cancela a intenção pend
 aguardar a retirada do transporte. Não há estado, mapa de peers, timers ou captura
 paralelos no adaptador. `CameraCaptureChange` descreve seu evento em `types/voice.ts`.
 
-`social.js` conserva composição, apresentação da barra/lista e navegação. Enumeração,
-estado de apresentação e ações dos seletores agora estão em `settings.ts`. Os
-callbacks de publicação de microfone/câmera foram removidos; tela permanece em
-`screen-publication.ts`. Lista e painéis de mídia/diagnóstico ainda precisam de
-conversão para React; os campos convertidos das configurações são descritos abaixo.
-Os módulos notificam esse controlador para anexar áudio, registrar/remover proteção
-do receiver, pedir fallback ou renderizar.
-A voz ainda não foi toda convertida; não há cópias de estado/listeners de negociação.
+`runtime.ts` conecta os donos tipados. Enumeração, estado de apresentação e ações
+dos seletores pertencem a `settings.ts`. Publicação de microfone/câmera pertence
+a `device-publication.ts`; tela permanece em `screen-publication.ts`.
+Lista, barra e painéis de mídia/diagnóstico são React, com projeções próprias.
+Os módulos notificam a composição para anexar áudio, registrar/remover proteção
+do receiver, pedir fallback ou atualizar projeções. Não há cópias de estado ou
+listeners de negociação. Os campos das configurações são descritos abaixo.
 O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.
 
 `components/files/image-viewer.tsx` mantém um único visualizador React para anexos
@@ -720,7 +728,7 @@ status por getter e evento `trono-music-playback`, além de `trono-music-volume`
 `trono-music-track` e `trono-audio-state`. Alterações feitas em outras telas chegam
 à projeção; o player não escreve mais nos campos React. `call-alerts.ts` mantém
 volume, síntese e contexto dos avisos; `telemetry.ts` mantém proteção/prioridade.
-`social.js` somente compõe esses donos e avisa a projeção quando a telemetria muda.
+`runtime.ts` somente compõe esses donos e avisa a projeção quando a telemetria muda.
 
 `components/voice/diagnostics.tsx` renderiza a aba Conexão, o indicador do cabeçalho,
 o botão desktop e o painel de diagnóstico. O estado de abertura/cópia é único em
@@ -743,7 +751,7 @@ amostra antes de chamar o relatório sanitizado, usando IPC desktop ou clipboard
 Cliques durante uma cópia são deduplicados; troca de geração ou descarte invalida
 continuações, impedindo que a chamada anterior copie após uma coleta atrasada ou
 altere o resultado da chamada seguinte. Nomes das linhas de recepção são somente
-texto local do painel e não entram no relatório. `social.js` conserva a composição
+texto local do painel e não entram no relatório. `runtime.ts` conserva a composição
 dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnóstico.
 
 Perfil, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando
@@ -763,7 +771,7 @@ mais reidratados; não há controles visíveis que permitam ajustá-los no layou
 handles ocultos, seus listeners de ponteiro/teclado e CSS exclusivo. O resize do
 painel flutuante e dos players é independente e permanece nos donos tipados.
 
-`legacy/desktop-settings.js` foi removido do manifesto e do fonte. `social.js` não
+`legacy/desktop-settings.js` foi removido do manifesto e do fonte. `runtime.ts` não
 possui mais flags, seleção ou pintura das abas, nem os listeners de abrir/fechar.
 Seus métodos públicos delegam ao dono tipado; a prioridade global do Escape ainda
 fecha mídia/chat/diagnóstico antes das configurações web. A aba Meus arquivos agora
@@ -804,6 +812,12 @@ No Windows, os switches de backgrounding preservam o agendamento do renderer
 quando coberto/minimizado. O contexto de envio solicita uma margem de 40 ms no
 desktop; isso não é uma medição de latência final. O teste de segundo plano mede
 PCM recebido em outro cliente com janelas Windows reais, sem simular visibility.
+
+As regressões nativas importam as fábricas necessárias por
+`tests/voice-test-modules.cjs`, compiladas em Node e instaladas somente na página
+do teste. Esse helper não é publicado no renderer nem altera sua política de
+conteúdo. O teste de layout também verifica a identidade das fachadas da chamada
+e a ausência do registro global antigo.
 
 O modo Next de desenvolvimento é explícito, aceita loopback e não funciona em
 builds empacotados. Permite atualização de componentes ao salvar.

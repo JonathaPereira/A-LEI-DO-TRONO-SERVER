@@ -192,6 +192,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.evaluate(ids => {
       window.__layoutBaseline = {
         controls: ids.map(id => document.getElementById(id)),
+        runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
         camera: window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0],
@@ -206,6 +207,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       const result = await page.evaluate(() => {
         const before = window.__layoutBaseline, call = window.TronoSocial;
         return {
+          runtime: Object.entries(before.runtime).every(([name, owner]) => owner && window[name] === owner),
+          factoriesRemoved: typeof window.TronoVoiceCapture === 'undefined',
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',

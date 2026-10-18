@@ -1,4 +1,5 @@
 'use strict';
+const { installVoiceTestModules } = require('./voice-test-modules.cjs');
 const assert = require('node:assert/strict'),
   os = require('node:os');
 async function exerciseVoiceProtection({ app, page }) {
@@ -45,10 +46,11 @@ async function exerciseVoiceProtection({ app, page }) {
       if (before && before.priority !== null && row.priority !== null)
         assert.equal(row.priority, before.priority, 'Service priority restored after the call');
     }
+    await installVoiceTestModules(page, ['createVoiceTelemetry']);
     const receiver = await page.evaluate(() => {
       const pc = new RTCPeerConnection(),
         r = pc.addTransceiver('audio', { direction: 'recvonly' }).receiver,
-        policy = window.TronoVoiceCapture.createVoiceTelemetry({
+        policy = window.__voiceTestModules.createVoiceTelemetry({
           protection: true,
           getSettings: () => ({ joined: true }),
           getConnections: () => [['p2p:probe', pc]],

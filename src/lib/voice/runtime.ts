@@ -1,12 +1,71 @@
-'use strict';
-window.TronoSocial = (() => {
-  const $ = (id) => document.getElementById(id);
-  const storage = window.TronoStorage || localStorage;
+import { createConnectionDiagnostics } from './connection-diagnostics';
+import { createAudioPreferences } from './audio-preferences';
+import { createVoiceSettings } from './settings';
+import { createCallQuality } from './quality';
+import { diagnosticReport } from './diagnostic-report';
+import { createMicrophone } from './microphone';
+import { createMicrophoneProcessor } from './microphone-processor';
+import { createScreenSharing } from './screen-sharing';
+import { createScreenOptions } from './screen-options';
+import { getMosaicSources } from './mosaic';
+import { createScreenCapture } from './screen-capture';
+import { createScreenPublication } from './screen-publication';
+import { createCamera } from './camera';
+import { createDevicePublication } from './device-publication';
+import { createP2pPeers } from './p2p-peers';
+import { createRemoteMedia } from './remote-media';
+import { createSpeakingIndicators } from './speaking-indicators';
+import { createVoiceTelemetry } from './telemetry';
+import { createCallToolbar } from './toolbar';
+import { createMediaInterest } from './media-interest';
+import { createMediaVisibility } from './media-visibility';
+import { createMediaFocus } from './media-focus';
+import { createFloatingPanel } from './floating-panel';
+import { createCallNavigation } from './navigation';
+import { createCallNavigationView } from './navigation-view';
+import { createCallStage } from './stage';
+import { createCallControls } from './controls';
+import { createCallAudio } from './call-audio';
+import { createCallAlerts } from './call-alerts';
+import { createAudioPlayback, clampAudioGain } from './audio-playback';
+import { createRealtimeConfiguration } from './realtime';
+import { createVoiceCall } from './call-lifecycle';
+import { createVoiceRoster } from './roster';
+import { createVoiceTransport } from './transport';
+import { createSfuSession } from './sfu-session';
+import { QUALITY_ORDER, SCREEN_FORMATS } from './quality-policy';
+import type { SocialFacade, VoiceRuntimeWindow } from './runtime-ports';
+import type { VoiceMediaKind, VoicePeerConnection } from '../../types/voice';
+import type { SfuPublication, SfuSubscription } from '../../types/sfu';
+import type { VoiceParticipant } from '../../types/voice-roster';
+import type { CallSoundKind } from '../../types/voice-audio';
+
+export type VoiceRuntime = SocialFacade;
+const runtimes = new WeakMap<Window, VoiceRuntime>();
+
+function errorField(error: unknown, key: 'code' | 'name' | 'message'): string {
+  if (typeof error !== 'object' || error === null || !(key in error)) return '';
+  const value = Reflect.get(error, key);
+  return typeof value === 'string' ? value : '';
+}
+
+/** Composes the existing single owners; capture and transport stay in their domain modules. */
+export function initializeVoiceRuntime(target: Window): VoiceRuntime {
+  const existing = runtimes.get(target);
+  if (existing) return existing;
+  const window = target as VoiceRuntimeWindow;
+  const document = target.document;
+  const navigator = target.navigator;
+  const desktop = window.TronoDesktop;
+  const getResources = desktop?.getResources;
+  const setVoiceProtection = desktop?.setVoiceProtection;
+  const $ = (id: string) => document.getElementById(id);
+  const storage = window.TronoStorage || window.localStorage;
   let lastSfuError = '';
 
-  const clampGain = window.TronoVoiceCapture.clampAudioGain;
+  const clampGain = clampAudioGain;
   const controlState = () => callControls.getSnapshot();
-  let volumeOwner = null;
+  let volumeOwner: string | null = null;
   const foreground = () => !document.hidden && document.hasFocus();
   function updateVoiceBackgroundClass() {
     document.body.classList.toggle(
@@ -14,9 +73,8 @@ window.TronoSocial = (() => {
       voiceCall.getSnapshot().joined && !foreground(),
     );
   }
-  const isScreenKind = (kind) => kind === 'screen' || kind === 'screen-audio';
-  const wantsSfuPublication = (pub) => mediaInterest.wants(pub);
-  const streamAudioKey = (id) => `stream:${id}`;
+  const wantsSfuPublication = (pub: SfuPublication) => mediaInterest.wants(pub);
+  const streamAudioKey = (id: string) => `stream:${id}`;
   function ensureMediaAudioContext() {
     return callAudio.ensureContext();
   }
@@ -27,7 +85,7 @@ window.TronoSocial = (() => {
   function unlockCallAudio() {
     callAudio.unlock();
   }
-  function attachRemoteAudio(key) {
+  function attachRemoteAudio(key: string) {
     const screen = key.startsWith('stream:'),
       peerId = screen ? key.slice(7) : key;
     if (screen && !mediaInterest.isWatching(peerId)) return;
@@ -42,15 +100,15 @@ window.TronoSocial = (() => {
     const stream = audioPlayback.attach(key, track);
     if (!screen && stream) void speakingIndicators.watch(peerId, stream);
   }
-  const removeRemoteAudio = (key) => audioPlayback.remove(key);
-  function setStreamGain(id, value) {
+  const removeRemoteAudio = (key: string) => audioPlayback.remove(key);
+  function setStreamGain(id: string, value: number) {
     unlockCallAudio();
     audioPlayback.setGain(streamAudioKey(id), value);
     attachRemoteAudio(streamAudioKey(id));
     callStage.refresh();
   }
-  const toggleWatchStream = (id) => mediaInterest.toggleScreen(id);
-  function setPeerGain(id, value) {
+  const toggleWatchStream = (id: string) => mediaInterest.toggleScreen(id);
+  function setPeerGain(id: string, value: number) {
     if (!privateVoiceRoster.has(id) || id === meId()) return;
     unlockCallAudio();
     audioPlayback.setGain(id, value);
@@ -60,11 +118,10 @@ window.TronoSocial = (() => {
     callStage.refresh();
   }
 
-  let localStream = null;
-  const { QUALITY_ORDER, SCREEN_FORMATS } = window.TronoVoiceCapture;
+  let localStream: MediaStream | null = null;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
   const currentVoiceRoom = () => navigation.getSnapshot().voiceRoom;
-  const callQuality = window.TronoVoiceCapture.createCallQuality({
+  const callQuality: ReturnType<typeof createCallQuality> = createCallQuality({
     storage,
     policy: () => ({
       sfu: transportIsSfu(),
@@ -88,7 +145,7 @@ window.TronoSocial = (() => {
   });
 
   const meId = () => window.TronoNetwork?.clientId;
-  const realtime = window.TronoVoiceCapture.createRealtimeConfiguration({
+  const realtime: ReturnType<typeof createRealtimeConfiguration> = createRealtimeConfiguration({
     connected: () => !!window.TronoNetwork?.connected,
     visible: () => document.visibilityState !== 'hidden',
     callGeneration: () => voiceCall.getSnapshot().generation,
@@ -99,7 +156,7 @@ window.TronoSocial = (() => {
     onChange: updateQualityUI,
     onStatus: applyRealtimeStatus,
   });
-  const speakingIndicators = window.TronoVoiceCapture.createSpeakingIndicators({
+  const speakingIndicators: ReturnType<typeof createSpeakingIndicators> = createSpeakingIndicators({
     getSettings: () => ({
       enabled: voiceCall.getSnapshot().joined,
       hidden: document.hidden,
@@ -112,7 +169,7 @@ window.TronoSocial = (() => {
     documentEvents: document,
     onChange: updateMediaIndicators,
   });
-  const microphone = window.TronoVoiceCapture.createMicrophone({
+  const microphone: ReturnType<typeof createMicrophone> = createMicrophone({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
       generation: voiceCall.getSnapshot().generation,
@@ -128,7 +185,7 @@ window.TronoSocial = (() => {
     getStream: ensureLocalStream,
     customSuppressionSupported: () => !!window.TronoNoise?.supported(ensureMediaAudioContext()),
     createProcessor: (stream, options) =>
-      window.TronoVoiceCapture.createMicrophoneProcessor(stream, options, {
+      createMicrophoneProcessor(stream, options, {
         desktop: !!window.TronoDesktop,
         getContext: ensureMediaAudioContext,
         nativeSuppressionSupported: () =>
@@ -141,15 +198,14 @@ window.TronoSocial = (() => {
             microphone.getSnapshot().capture?.processor === processor
           )
             void acquireMic({ nativeOnly: true }).catch((err) => {
-              if (err?.code !== 'VOICE_CANCELLED')
+              if (errorField(err, 'code') !== 'VOICE_CANCELLED')
                 setStatus('Microfone ativo, mas a redução nativa não iniciou.', 'warn');
             });
         },
       }),
     onTrackChanged: (change) => devicePublication.publishMicrophone(change),
   });
-  microphone.subscribe(updateNoiseButton);
-  const screenCapture = window.TronoVoiceCapture.createScreenCapture({
+  const screenCapture: ReturnType<typeof createScreenCapture> = createScreenCapture({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
       generation: voiceCall.getSnapshot().generation,
@@ -170,7 +226,7 @@ window.TronoSocial = (() => {
     },
   });
   const screenSharing = () => screenCapture.getCapture() !== null;
-  const cameraCapture = window.TronoVoiceCapture.createCamera({
+  const cameraCapture: ReturnType<typeof createCamera> = createCamera({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
       generation: voiceCall.getSnapshot().generation,
@@ -184,8 +240,7 @@ window.TronoSocial = (() => {
     onDeviceMissing: (deviceId) => callControls.forgetCamera(deviceId),
   });
   const cameraOn = () => cameraCapture.getSnapshot().capture !== null;
-  cameraCapture.subscribe(renderCameraState);
-  const p2pPeers = window.TronoVoiceCapture.createP2pPeers({
+  const p2pPeers: ReturnType<typeof createP2pPeers> = createP2pPeers({
     getSettings: () => ({
       enabled: voiceCall.getSnapshot().joined && !transportIsSfu() && !transportPending(),
       localId: meId(),
@@ -210,7 +265,7 @@ window.TronoSocial = (() => {
     onStatus: peerStatus,
   });
   const peers = p2pPeers.connections;
-  const remoteMedia = window.TronoVoiceCapture.createRemoteMedia({
+  const remoteMedia: ReturnType<typeof createRemoteMedia> = createRemoteMedia({
     enabled: () => voiceCall.getSnapshot().joined,
     createStream: () => new MediaStream(),
     getPeer: (id) => peers.get(id),
@@ -234,13 +289,13 @@ window.TronoSocial = (() => {
     onRecover: recoverRemoteMedia,
   });
 
-  const audioPlayback = window.TronoVoiceCapture.createAudioPlayback({
+  const audioPlayback: ReturnType<typeof createAudioPlayback> = createAudioPlayback({
     volume: storage.getItem('mnOutputGain') ?? 100,
     output: storage.getItem('tronoVoiceOutput') || '',
     createAudio: (key) => {
       const audio = document.createElement('audio');
       audio.autoplay = true;
-      audio.playsInline = true;
+      audio.setAttribute('playsinline', '');
       audio.dataset.peer = key;
       $('remoteAudioHost')?.appendChild(audio);
       return audio;
@@ -264,7 +319,7 @@ window.TronoSocial = (() => {
     },
   });
 
-  const callAlerts = window.TronoVoiceCapture.createCallAlerts({
+  const callAlerts: ReturnType<typeof createCallAlerts> = createCallAlerts({
     storage,
     getSettings: () => ({
       enabled: window.TronoAudio?.sfxEnabled !== false,
@@ -276,7 +331,7 @@ window.TronoSocial = (() => {
       return Ctx ? new Ctx() : null;
     },
   });
-  const callAudio = window.TronoVoiceCapture.createCallAudio({
+  const callAudio: ReturnType<typeof createCallAudio> = createCallAudio({
     desktop: !!window.TronoDesktop,
     getSettings: () => ({
       joined: voiceCall.getSnapshot().joined,
@@ -295,7 +350,7 @@ window.TronoSocial = (() => {
     onChange: updateAudioRecoveryUI,
   });
 
-  const voiceTelemetry = window.TronoVoiceCapture.createVoiceTelemetry({
+  const voiceTelemetry: ReturnType<typeof createVoiceTelemetry> = createVoiceTelemetry({
     protection: storage.getItem('mnVoiceProtection') !== '0',
     getSettings: () => ({
       joined: voiceCall.getSnapshot().joined,
@@ -310,11 +365,9 @@ window.TronoSocial = (() => {
       screenSharing()
         ? screenCapture.getCapture()?.outgoing.getVideoTracks()[0]
         : localStream?.getVideoTracks()[0],
-    getResources: window.TronoDesktop?.getResources
-      ? () => window.TronoDesktop.getResources()
-      : undefined,
-    setVoiceProtection: window.TronoDesktop?.setVoiceProtection
-      ? (active) => window.TronoDesktop.setVoiceProtection(active)
+    getResources: getResources ? () => getResources.call(desktop) : undefined,
+    setVoiceProtection: setVoiceProtection
+      ? (active) => setVoiceProtection.call(desktop, active)
       : undefined,
     onSample: async (snapshot, isCurrent) => {
       if (!isCurrent() || !callQuality.sample(snapshot, performance.now())) return;
@@ -330,7 +383,7 @@ window.TronoSocial = (() => {
     onChange: refreshDiagnostics,
   });
 
-  const sfuSession = window.TronoVoiceCapture.createSfuSession({
+  const sfuSession: ReturnType<typeof createSfuSession> = createSfuSession({
     getSettings: () => ({
       enabled: voiceCall.getSnapshot().joined && transportIsSfu(),
       screenAllowed: !!realtime.getSnapshot().status?.screenAllowed,
@@ -356,7 +409,7 @@ window.TronoSocial = (() => {
                 ?.outgoing.getAudioTracks()
                 .find((t) => t.readyState === 'live'),
     onPublicationRetry: (kind, error, attempt, done) => {
-      if (error?.code === 'HIGH_BUDGET_BLOCKED') {
+      if (errorField(error, 'code') === 'HIGH_BUDGET_BLOCKED') {
         realtime.restrictHighQuality();
       }
       const label = {
@@ -365,7 +418,7 @@ window.TronoSocial = (() => {
         screen: 'Tela',
         'screen-audio': 'Áudio da tela',
       }[kind];
-      lastSfuError = label + ': ' + (error?.code || 'SFU_ERROR');
+      lastSfuError = label + ': ' + (errorField(error, 'code') || 'SFU_ERROR');
       setStatus(
         done && kind !== 'audio'
           ? label + ' não conectou. A voz continua pelo SFU.'
@@ -405,7 +458,7 @@ window.TronoSocial = (() => {
     clearRetry: clearSfuRetry,
   } = sfuSession;
 
-  const voiceTransport = window.TronoVoiceCapture.createVoiceTransport({
+  const voiceTransport: ReturnType<typeof createVoiceTransport> = createVoiceTransport({
     call: () => voiceCall.getSnapshot(),
     community: () => communityVoice(),
     realtime,
@@ -449,13 +502,13 @@ window.TronoSocial = (() => {
     onStatus: setStatus,
     onError: (error) => {
       lastSfuError = error
-        ? `Áudio: ${error.code || error.name || 'SFU_ERROR'} — ${error.message || 'falha ao conectar'}`
+        ? `Áudio: ${errorField(error, 'code') || errorField(error, 'name') || 'SFU_ERROR'} — ${errorField(error, 'message') || 'falha ao conectar'}`
         : '';
     },
   });
   const { fallback: fallbackToP2p } = voiceTransport;
 
-  const voiceCall = window.TronoVoiceCapture.createVoiceCall({
+  const voiceCall: ReturnType<typeof createVoiceCall> = createVoiceCall({
     prepare: () => window.TronoNetwork.prepareVoice(),
     microphone,
     roomId: () => currentVoiceRoom()?.id,
@@ -483,18 +536,19 @@ window.TronoSocial = (() => {
       screenCapture.stop,
     ],
     onLeft: showLeftCall,
-    onError: (error) => setStatus(error?.message || 'Não foi possível abrir o microfone.', 'error'),
+    onError: (error) =>
+      setStatus(errorField(error, 'message') || 'Não foi possível abrir o microfone.', 'error'),
     onChange: refreshCallControls,
   });
   const { toggle: joinVoice, leave: leaveVoice } = voiceCall;
-  const callControls = window.TronoVoiceCapture.createCallControls({
+  const callControls: ReturnType<typeof createCallControls> = createCallControls({
     desktop: !!window.TronoDesktop,
     storage,
     call: () => voiceCall.getSnapshot(),
     join: joinVoice,
     microphone,
     camera: cameraCapture,
-    watchMicrophone: () => speakingIndicators.watch(meId(), localStream),
+    watchMicrophone: () => watchLocalMicrophone(localStream),
     setDeafened: (value) => audioPlayback.setDeafened(value),
     unlockAudio: unlockCallAudio,
     announce: () =>
@@ -525,7 +579,7 @@ window.TronoSocial = (() => {
     },
   });
 
-  const voiceRoster = window.TronoVoiceCapture.createVoiceRoster({
+  const voiceRoster: ReturnType<typeof createVoiceRoster> = createVoiceRoster({
     localId: meId,
     call: () => voiceCall.getSnapshot(),
     transport: () => voiceTransport.getSnapshot().mode,
@@ -544,7 +598,7 @@ window.TronoSocial = (() => {
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
   });
   const privateVoiceRoster = voiceRoster.members;
-  const mediaInterest = window.TronoVoiceCapture.createMediaInterest({
+  const mediaInterest: ReturnType<typeof createMediaInterest> = createMediaInterest({
     call: () => voiceCall.getSnapshot(),
     localId: meId,
     participant: (id) => privateVoiceRoster.get(id),
@@ -571,12 +625,12 @@ window.TronoSocial = (() => {
       }
     },
   });
-  const mediaVisibility = window.TronoVoiceCapture.createMediaVisibility({
+  const mediaVisibility: ReturnType<typeof createMediaVisibility> = createMediaVisibility({
     document,
     releaseFocus: (tile) => mediaFocus.release(tile),
   });
 
-  const screenSharingControls = window.TronoVoiceCapture.createScreenSharing({
+  const screenSharingControls: ReturnType<typeof createScreenSharing> = createScreenSharing({
     storage,
     call: () => voiceCall.getSnapshot(),
     community: () => communityVoice(),
@@ -611,9 +665,10 @@ window.TronoSocial = (() => {
     },
     onStatus: setStatus,
   });
-  const screenOptions = window.TronoVoiceCapture.createScreenOptions({
+  const screenOptions: ReturnType<typeof createScreenOptions> = createScreenOptions({
     closeDialog: () => {
-      if ($('screenOptionsDialog')?.open) $('screenOptionsDialog').close();
+      const dialog = $('screenOptionsDialog');
+      if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
     },
     sharing: screenSharingControls,
     call: () => voiceCall.getSnapshot(),
@@ -621,7 +676,7 @@ window.TronoSocial = (() => {
   });
   window.TronoScreenOptions = screenOptions;
 
-  const screenPublication = window.TronoVoiceCapture.createScreenPublication({
+  const screenPublication: ReturnType<typeof createScreenPublication> = createScreenPublication({
     isSfu: () => transportIsSfu(),
     sfu: sfuSession,
     p2p: p2pPeers,
@@ -644,7 +699,7 @@ window.TronoSocial = (() => {
     onStatus: setStatus,
   });
 
-  const devicePublication = window.TronoVoiceCapture.createDevicePublication({
+  const devicePublication: ReturnType<typeof createDevicePublication> = createDevicePublication({
     call: () => voiceCall.getSnapshot(),
     isSfu: () => transportIsSfu(),
     sfu: sfuSession,
@@ -665,7 +720,7 @@ window.TronoSocial = (() => {
       renderCameraState();
     },
     onMicrophoneResumed: (stream) => {
-      void speakingIndicators.watch(meId(), stream);
+      void watchLocalMicrophone(stream);
     },
     onDevicesChanged: enumerateDevices,
   });
@@ -682,29 +737,37 @@ window.TronoSocial = (() => {
     voiceTransport.getSnapshot().mode === 'sfu-pending' ||
     voiceTransport.getSnapshot().mode === 'stopping';
   const announcedTransport = voiceTransport.announced;
-  function setStatus(text, kind = '') {
+  function setStatus(text: string, kind: '' | 'ok' | 'warn' | 'error' = '') {
     callToolbar.setStatus(text, kind);
   }
-  function toggleTextChat(force) {
+  function toggleTextChat(force?: boolean) {
     navigation.toggleTextChat(force);
   }
-  function toggleTelemetry(force) {
+  function toggleTelemetry(force?: boolean) {
     connectionDiagnostics.toggle(force);
+  }
+  function watchLocalMicrophone(stream: MediaStream | null) {
+    const id = meId();
+    return id ? speakingIndicators.watch(id, stream) : Promise.resolve();
   }
   function ensureLocalStream() {
     if (!localStream) localStream = new MediaStream();
     return localStream;
   }
-  function playCallSound(kind = 'join', id = 'local') {
+  function playCallSound(kind: CallSoundKind = 'join', id = 'local') {
     callAlerts.play(kind, id);
   }
-  function callNotice(event) {
+  function callNotice(
+    event: Parameters<NonNullable<VoiceRuntimeWindow['TronoCommunity']>['voiceNotice']>[0],
+  ) {
     window.TronoCommunity?.voiceNotice?.(event);
   }
-  function toggleVoiceSettings(force) {
+  function toggleVoiceSettings(force?: boolean) {
     window.TronoCallSettings.toggle(force);
   }
-  function setSettingsTab(tab = 'audio') {
+  function setSettingsTab(
+    tab: Parameters<VoiceRuntimeWindow['TronoCallSettings']['select']>[0] = 'audio',
+  ) {
     window.TronoCallSettings.select(tab);
   }
   function updateQualityUI() {
@@ -712,16 +775,16 @@ window.TronoSocial = (() => {
     voiceSettings.refresh();
     refreshDiagnostics();
   }
-  function applySenderQuality(sender, kind) {
+  function applySenderQuality(sender: RTCRtpSender, kind: VoiceMediaKind) {
     return callQuality.applySender(sender, kind);
   }
   function applyQualityToLiveMedia() {
     return callQuality.applyAll().finally(() => voiceSettings.refresh());
   }
-  function preferredRidForMedia(kind, maximized = false) {
+  function preferredRidForMedia(kind: VoiceMediaKind, maximized = false) {
     return callQuality.preferredRid(kind, maximized);
   }
-  async function setSfuTileLayer(tile, maximized) {
+  async function setSfuTileLayer(tile: HTMLElement, maximized: boolean) {
     if (!transportIsSfu() || !tile) return;
     const kind = tile.classList.contains('screen-share-tile')
       ? 'screen'
@@ -737,11 +800,11 @@ window.TronoSocial = (() => {
     try {
       await sfuSession.setLayer(sub.key, requested);
     } catch (err) {
-      console.warn('[TronoSocial] qualidade ao maximizar', kind, err.code || err);
+      console.warn('[TronoSocial] qualidade ao maximizar', kind, errorField(err, 'code') || err);
     }
   }
-  function fullscreenMedia(peerId, kind = 'screen') {
-    const tiles = document.querySelectorAll(
+  function fullscreenMedia(peerId: string, kind: 'screen' | 'camera' = 'screen') {
+    const tiles = document.querySelectorAll<HTMLElement>(
       kind === 'camera' ? '#socialPanel .camera-tile' : '#socialPanel .screen-share-tile',
     );
     const tile = [...tiles].find((t) => t.dataset.peer === peerId);
@@ -751,7 +814,7 @@ window.TronoSocial = (() => {
     window.TronoChatMessages.clear();
     navigation.clearText();
   }
-  function setChatHubMode(active) {
+  function setChatHubMode(active: boolean) {
     navigation.setHub(!!active);
   }
   function showPanel(show = true) {
@@ -760,16 +823,18 @@ window.TronoSocial = (() => {
   function showForRoom(show = true) {
     navigation.showForRoom(show);
   }
-  function onChatActivity(activity) {
+  function onChatActivity(
+    activity: Parameters<ReturnType<typeof createCallNavigation>['onChatActivity']>[0],
+  ) {
     navigation.onChatActivity(activity);
   }
-  const toggleWatchCamera = (id) => mediaInterest.toggleCamera(id);
+  const toggleWatchCamera = (id: string) => mediaInterest.toggleCamera(id);
 
   function enumerateDevices() {
     return voiceSettings.enumerate();
   }
 
-  function acquireMic(options) {
+  function acquireMic(options?: Parameters<ReturnType<typeof createMicrophone>['acquire']>[0]) {
     return microphone.acquire(options);
   }
   function refreshMicPipeline() {
@@ -777,16 +842,15 @@ window.TronoSocial = (() => {
     return voiceCall.getSnapshot().joined ? microphone.refresh() : Promise.resolve();
   }
 
-  function acquireCamera() {
-    return cameraCapture.acquire();
-  }
   function renderCameraState() {
     refreshCallControls();
     renderVideoGrid();
     renderSeatMedia();
     renderVoiceRoster();
   }
-  function startScreenShare(options) {
+  function startScreenShare(
+    options?: Parameters<ReturnType<typeof createScreenSharing>['start']>[0],
+  ) {
     return screenSharingControls.start(options);
   }
   function switchScreenShare() {
@@ -799,10 +863,10 @@ window.TronoSocial = (() => {
     screenOptions.open();
   }
 
-  function closePeer(id) {
+  function closePeer(id: string) {
     if (!p2pPeers.close(id)) clearPeerMedia(id);
   }
-  function clearPeerMedia(id, pc) {
+  function clearPeerMedia(id: string, pc?: VoicePeerConnection) {
     for (const r of pc?.getReceivers?.() || []) voiceTelemetry.removeReceiver(r);
     speakingIndicators.remove(id);
     removeRemoteAudio(id);
@@ -815,10 +879,16 @@ window.TronoSocial = (() => {
   function closeAllPeers() {
     [...peers.keys()].forEach(closePeer);
   }
-  function sfuKey(ownerId, kind) {
+  function sfuKey(ownerId: string, kind: VoiceMediaKind) {
     return `${ownerId}:${kind}`;
   }
-  function attachSfuRemoteTrack(pub, track, sub, receiver, isCurrent) {
+  function attachSfuRemoteTrack(
+    pub: SfuPublication,
+    track: MediaStreamTrack,
+    sub: SfuSubscription,
+    receiver: RTCRtpReceiver,
+    isCurrent: () => boolean,
+  ) {
     remoteMedia.attachSubscription({
       id: pub.ownerId,
       kind: pub.kind,
@@ -828,7 +898,7 @@ window.TronoSocial = (() => {
       isCurrent,
     });
   }
-  function detachSfuRemoteMedia(sub) {
+  function detachSfuRemoteMedia(sub: SfuSubscription) {
     for (const receiver of sub.pc.getReceivers()) voiceTelemetry.removeReceiver(receiver);
     remoteMedia.detachSubscription(sub);
     if (sub.kind === 'audio') {
@@ -837,7 +907,12 @@ window.TronoSocial = (() => {
     }
     if (sub.kind === 'screen-audio') removeRemoteAudio(streamAudioKey(sub.publisherId));
   }
-  function reportSfuRetry({ publication: pub, code, stale, attempt }) {
+  function reportSfuRetry({
+    publication: pub,
+    code,
+    stale,
+    attempt,
+  }: Parameters<Parameters<typeof createSfuSession>[0]['onRetry']>[0]) {
     const label = pub.kind === 'screen' ? 'Tela' : pub.kind === 'camera' ? 'Câmera' : 'Áudio';
     lastSfuError = `${label}: ${code}`;
     if (pub.kind !== 'audio' && attempt >= 4) {
@@ -860,7 +935,12 @@ window.TronoSocial = (() => {
   function updateAllSfuSubscriptionLayers() {
     return callQuality.applyLayers();
   }
-  async function applyRealtimeStatus(status, isCurrent) {
+  async function applyRealtimeStatus(
+    status: Parameters<
+      NonNullable<Parameters<typeof createRealtimeConfiguration>[0]['onStatus']>
+    >[0],
+    isCurrent: () => boolean,
+  ) {
     const call = voiceCall.getSnapshot().generation;
     const current = () => isCurrent() && call === voiceCall.getSnapshot().generation;
     if (!current()) return;
@@ -888,7 +968,11 @@ window.TronoSocial = (() => {
     }
   }
 
-  async function recoverRemoteMedia(id, missing, isCurrent) {
+  async function recoverRemoteMedia(
+    id: string,
+    missing: { camera: boolean; screen: boolean },
+    isCurrent: () => boolean,
+  ) {
     if (!isCurrent()) return false;
     if (transportIsSfu()) {
       const generation = sfuSession.getGeneration(),
@@ -918,7 +1002,7 @@ window.TronoSocial = (() => {
     return false;
   }
 
-  function peerStatus(status) {
+  function peerStatus(status: Parameters<Parameters<typeof createP2pPeers>[0]['onStatus']>[0]) {
     if (status === 'connected') setStatus('Voz conectada. Malha P2P sincronizada.', 'ok');
     if (status === 'reconnecting') setStatus('Reconectando mídia da chamada...', 'warn');
     if (status === 'offer-timeout')
@@ -948,22 +1032,22 @@ window.TronoSocial = (() => {
   function renderVoiceRoster() {
     callStage.refresh();
   }
-  function cameraStreamForPerson(p) {
+  function cameraStreamForPerson(p: VoiceParticipant) {
     return p.id === meId() ? localStream : remoteMedia.recover(p.id).av;
   }
-  function screenStreamForPerson(p) {
+  function screenStreamForPerson(p: VoiceParticipant) {
     return p.id === meId()
       ? screenCapture.getCapture()?.outgoing
       : remoteMedia.recover(p.id).screen;
   }
-  function personHasLiveCamera(p) {
+  function personHasLiveCamera(p: VoiceParticipant) {
     const stream = cameraStreamForPerson(p);
     if (p.id !== meId() && mediaInterest.isCameraHidden(p.id)) return false;
     return p.id === meId()
       ? cameraOn() && !!stream?.getVideoTracks?.().length
       : remoteMedia.videoUsable(p.id, stream, 'camera');
   }
-  function personHasLiveScreen(p) {
+  function personHasLiveScreen(p: VoiceParticipant) {
     const stream = screenStreamForPerson(p);
     return p.id === meId()
       ? screenSharing() && !!stream?.getVideoTracks?.().length
@@ -1016,7 +1100,7 @@ window.TronoSocial = (() => {
     renderVideoGrid();
     renderScreenGrid();
     renderSeatMedia();
-    await speakingIndicators.watch(meId(), localStream);
+    await watchLocalMicrophone(localStream);
   }
   function prepareLeaveUi() {
     void mediaFocus.reset();
@@ -1032,7 +1116,10 @@ window.TronoSocial = (() => {
       'p2p',
     );
   }
-  function showLeftCall(reason, wasInVoice) {
+  function showLeftCall(
+    reason: Parameters<NonNullable<Parameters<typeof createVoiceCall>[0]['onLeft']>>[0],
+    wasInVoice: boolean,
+  ) {
     callControls.cancelPending();
     mediaInterest.reset();
     voiceRoster.reset();
@@ -1087,15 +1174,15 @@ window.TronoSocial = (() => {
       }),
     );
   }
-  function consumeChatRoom(room) {
+  function consumeChatRoom(room: unknown) {
     navigation.consumeTextRoom(room);
   }
-  function consumeRoom(room) {
+  function consumeRoom(room: unknown) {
     navigation.consumeVoiceRoom(room);
   }
 
   function allTelemetryPeerConnections() {
-    const list = [];
+    const list: [string, VoicePeerConnection][] = [];
     for (const [id, pc] of peers)
       if (pc && pc.connectionState !== 'closed') list.push([`p2p:${id}`, pc]);
     for (const [kind, pub] of sfuLocalPublications)
@@ -1119,7 +1206,7 @@ window.TronoSocial = (() => {
       assessment,
       history: receiveHistory,
     } = voiceTelemetry.getSnapshot();
-    return window.TronoVoiceCapture.diagnosticReport({
+    return diagnosticReport({
       version: window.TronoDesktop?.version || window.TronoNetwork.CLIENT_VERSION,
       platform: window.TronoDesktop ? 'Windows' : 'Navegador',
       call: {
@@ -1131,7 +1218,7 @@ window.TronoSocial = (() => {
         transport: announcedTransport(),
         playback: connectionDiagnostics.playback().label,
       },
-      telemetry: telemetrySnapshot,
+      telemetry: telemetrySnapshot ?? undefined,
       reception: {
         enabled: voiceProtection,
         rows: receptionRows,
@@ -1150,7 +1237,10 @@ window.TronoSocial = (() => {
       resources: nativeResources,
     });
   }
+  let bound = false;
   function bind() {
+    if (bound) return;
+    bound = true;
     mediaFocus.start();
     floatingPanel.start();
     voiceCall.start();
@@ -1185,7 +1275,7 @@ window.TronoSocial = (() => {
       updateVoiceBackgroundClass();
     });
   }
-  const voiceSettings = window.TronoVoiceCapture.createVoiceSettings({
+  const voiceSettings: ReturnType<typeof createVoiceSettings> = createVoiceSettings({
     controls: callControls,
     microphone,
     camera: cameraCapture,
@@ -1216,7 +1306,7 @@ window.TronoSocial = (() => {
     onStatus: setStatus,
   });
   window.TronoVoiceSettings = voiceSettings;
-  const audioPreferences = window.TronoVoiceCapture.createAudioPreferences({
+  const audioPreferences: ReturnType<typeof createAudioPreferences> = createAudioPreferences({
     audio: () => window.TronoAudio,
     tracks: () => window.TRONO_MUSIC_TRACKS,
     alerts: callAlerts,
@@ -1225,57 +1315,60 @@ window.TronoSocial = (() => {
     storage,
   });
   window.TronoAudioPreferences = audioPreferences;
-  const connectionDiagnostics = window.TronoVoiceCapture.createConnectionDiagnostics({
-    read: () => {
-      const call = voiceCall.getSnapshot(),
-        playback = audioPlayback.getSnapshot(),
-        telemetry = voiceTelemetry.getSnapshot(),
-        output = voiceSettings
-          .getSnapshot()
-          .devices.output.find((row) => row.id === playback.output);
-      return {
-        generation: call.generation,
-        joined: call.joined,
-        mode: call.joined ? announcedTransport() : voiceTransport.getSnapshot().mode,
-        hub: inChatHub(),
-        foreground: foreground(),
-        version:
-          window.TronoDesktop?.version || window.TronoNetwork?.CLIENT_VERSION || '0.9.1-alpha',
-        negotiating: [...sfuSubscriptions.values()].some((sub) => sub.negotiating),
-        connectionStates: allTelemetryPeerConnections().map(([, pc]) => pc.connectionState),
-        expectedVoices: detailedPlayers().filter((p) => p.id !== meId() && p.joined).length,
-        deafened: controlState().deafened,
-        desiredFps: screenSharing() ? qualityProfile().screen.fps : qualityProfile().camera.fps,
-        lastSfuError,
-        outputLabel: output?.label || (playback.output ? 'Dispositivo escolhido' : 'Saída padrão'),
-        audioContext: callAudio.getSnapshot().context,
-        playback,
-        telemetry,
-        realtime: realtime.getSnapshot(),
-        quality: callQuality.getSnapshot(),
-        receptionNames: telemetry.owners.map(
-          (id) => privateVoiceRoster.get(id)?.name || 'Participante',
-        ),
-      };
-    },
-    telemetry: voiceTelemetry,
-    quality: callQuality,
-    report: diagnostics,
-    copy: (report) =>
-      window.TronoDesktop?.copyDiagnostics
-        ? window.TronoDesktop.copyDiagnostics(report)
-        : navigator.clipboard.writeText(report),
-    onOpen: (open) =>
-      window.dispatchEvent(new CustomEvent('trono-telemetry-change', { detail: { open } })),
-    onQualityChanged: () => voiceSettings.refresh(),
-  });
+  const connectionDiagnostics: ReturnType<typeof createConnectionDiagnostics> =
+    createConnectionDiagnostics({
+      read: () => {
+        const call = voiceCall.getSnapshot(),
+          playback = audioPlayback.getSnapshot(),
+          telemetry = voiceTelemetry.getSnapshot(),
+          output = voiceSettings
+            .getSnapshot()
+            .devices.output.find((row) => row.id === playback.output);
+        return {
+          generation: call.generation,
+          joined: call.joined,
+          mode: call.joined ? announcedTransport() : voiceTransport.getSnapshot().mode,
+          hub: inChatHub(),
+          foreground: foreground(),
+          version:
+            window.TronoDesktop?.version || window.TronoNetwork?.CLIENT_VERSION || '0.9.1-alpha',
+          negotiating: [...sfuSubscriptions.values()].some((sub) => sub.negotiating),
+          connectionStates: allTelemetryPeerConnections().map(([, pc]) => pc.connectionState),
+          expectedVoices: detailedPlayers().filter((p) => p.id !== meId() && p.joined).length,
+          deafened: controlState().deafened,
+          desiredFps: screenSharing() ? qualityProfile().screen.fps : qualityProfile().camera.fps,
+          lastSfuError,
+          outputLabel:
+            output?.label || (playback.output ? 'Dispositivo escolhido' : 'Saída padrão'),
+          audioContext: callAudio.getSnapshot().context,
+          playback,
+          telemetry,
+          realtime: realtime.getSnapshot(),
+          quality: callQuality.getSnapshot(),
+          receptionNames: telemetry.owners.map(
+            (id) => (id ? privateVoiceRoster.get(id)?.name : undefined) || 'Participante',
+          ),
+        };
+      },
+      telemetry: voiceTelemetry,
+      quality: callQuality,
+      report: diagnostics,
+      copy: (report) =>
+        window.TronoDesktop?.copyDiagnostics
+          ? window.TronoDesktop.copyDiagnostics(report)
+          : navigator.clipboard.writeText(report),
+      onOpen: (open) =>
+        window.dispatchEvent(new CustomEvent('trono-telemetry-change', { detail: { open } })),
+      onQualityChanged: () => voiceSettings.refresh(),
+    });
   window.TronoConnectionDiagnostics = connectionDiagnostics;
-  const callToolbar = window.TronoVoiceCapture.createCallToolbar({
+  const callToolbar: ReturnType<typeof createCallToolbar> = createCallToolbar({
     read: () => {
       const call = voiceCall.getSnapshot(),
         controls = controlState(),
         context = callAudio.getSnapshot().context;
-      const eligible = !!currentVoiceRoom() && currentVoiceRoom().channelType !== 'text';
+      const room = currentVoiceRoom();
+      const eligible = !!room && room.channelType !== 'text';
       return {
         joined: call.joined,
         joining: !!call.joining,
@@ -1315,12 +1408,14 @@ window.TronoSocial = (() => {
       unlockCallAudio();
       if (voiceCall.getSnapshot().joined && !microphone.getSnapshot().capture?.processor)
         return acquireMic()
-          .then(() => speakingIndicators.watch(meId(), localStream))
-          .catch((err) => setStatus(err.message, 'warn'));
+          .then(() => watchLocalMicrophone(localStream))
+          .catch((err) =>
+            setStatus(errorField(err, 'message') || 'Não foi possível abrir o microfone.', 'warn'),
+          );
     },
   });
   window.TronoCallToolbar = callToolbar;
-  const callStage = window.TronoVoiceCapture.createCallStage({
+  const callStage: ReturnType<typeof createCallStage> = createCallStage({
     read: () => {
       const call = voiceCall.getSnapshot(),
         preview = screenSharingControls.getSnapshot();
@@ -1340,7 +1435,7 @@ window.TronoSocial = (() => {
                 screenStream = screenStreamForPerson(p);
               return {
                 ...p,
-                accountId: p.accountId || (self ? window.TronoAuth?.user?.id : null),
+                accountId: p.accountId || (self ? (window.TronoAuth?.user?.id ?? null) : null),
                 self,
                 muted: self ? controlState().micMuted : !!p.muted,
                 deafened: self ? controlState().deafened : !!p.deafened,
@@ -1384,20 +1479,20 @@ window.TronoSocial = (() => {
     releaseFocus: (tile) => mediaFocus.release(tile),
   });
   window.TronoCallStage = callStage;
-  const mediaFocus = window.TronoVoiceCapture.createMediaFocus({
+  const mediaFocus: ReturnType<typeof createMediaFocus> = createMediaFocus({
     document,
     call: () => voiceCall.getSnapshot(),
     closeMosaic: () => window.TronoMosaic?.close(),
     expandScreen: (tile) => {
       if (tile.dataset.peer === meId()) screenSharingControls.resetPreview();
-      else callStage.expandScreen(tile.dataset.peer);
+      else if (tile.dataset.peer) callStage.expandScreen(tile.dataset.peer);
       callStage.refresh();
     },
     setLayer: setSfuTileLayer,
     restoreLayers: updateAllSfuSubscriptionLayers,
     onChange: () => callStage.refresh(),
   });
-  const floatingPanel = window.TronoVoiceCapture.createFloatingPanel({
+  const floatingPanel: ReturnType<typeof createFloatingPanel> = createFloatingPanel({
     document,
     window,
     storage,
@@ -1408,7 +1503,7 @@ window.TronoSocial = (() => {
     },
   });
 
-  const navigation = window.TronoVoiceCapture.createCallNavigation({
+  const navigation: ReturnType<typeof createCallNavigation> = createCallNavigation({
     network: window.TronoNetwork,
     storage,
     joined: () => voiceCall.getSnapshot().joined,
@@ -1438,7 +1533,7 @@ window.TronoSocial = (() => {
       ),
   });
   window.TronoCallNavigation = navigation;
-  const navigationView = window.TronoVoiceCapture.createCallNavigationView({
+  const navigationView: ReturnType<typeof createCallNavigationView> = createCallNavigationView({
     document,
     window,
     navigation,
@@ -1452,10 +1547,7 @@ window.TronoSocial = (() => {
     openMosaic: () => window.TronoMosaic?.open(),
   });
 
-  window.addEventListener('trono-layout-change', refreshCallControls);
-  window.addEventListener('trono:ready', bind);
-
-  return {
+  const facade: SocialFacade = {
     onChatActivity,
     diagnostics,
     showPanel,
@@ -1487,12 +1579,13 @@ window.TronoSocial = (() => {
       return !!voiceCall.getSnapshot().joining;
     },
     get voiceRoom() {
-      return currentVoiceRoom()
+      const room = currentVoiceRoom();
+      return room
         ? {
-            id: currentVoiceRoom().id,
-            name: currentVoiceRoom().name,
-            kind: currentVoiceRoom().kind,
-            channelType: currentVoiceRoom().channelType,
+            id: room.id,
+            name: room.name,
+            kind: room.kind,
+            channelType: room.channelType,
           }
         : null;
     },
@@ -1517,7 +1610,7 @@ window.TronoSocial = (() => {
     get transmissionQuality() {
       return qualityPreferences().transmissionQuality;
     },
-    get panelMode() {
+    get panelMode(): 'floating' {
       return 'floating';
     },
     get mediaTransport() {
@@ -1562,7 +1655,15 @@ window.TronoSocial = (() => {
     toggleWatchCamera,
     fullscreenMedia,
     getMediaSources() {
-      return window.TronoVoiceCapture.getMosaicSources(callStage.getSnapshot());
+      return getMosaicSources(callStage.getSnapshot());
     },
   };
-})();
+  window.TronoSocial = facade;
+  runtimes.set(target, facade);
+  // Subscribe only after every lazy callback can safely reach the complete composition.
+  microphone.subscribe(updateNoiseButton);
+  cameraCapture.subscribe(renderCameraState);
+  window.addEventListener('trono-layout-change', refreshCallControls);
+  window.addEventListener('trono:ready', bind, { once: true });
+  return facade;
+}
