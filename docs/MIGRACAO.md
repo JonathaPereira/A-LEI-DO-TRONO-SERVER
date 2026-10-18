@@ -1414,10 +1414,38 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   `artifacts/navigation-*`. As limitações antigas de clipes permanecem registradas.
   Sem push ou mudança na main.
 
+## Workspace React e geometria por domínio — 18/10/2026
+
+- Estrutura estável em `chat-only-screen.tsx` e controles React em
+  `components/navigation/workspace-controls.tsx`: cabeçalho, canais, troca de layout,
+  áreas e atalhos de conversas. Botões e players conservam a identidade ao navegar.
+- `lib/voice/workspace.ts` possui somente apresentação e preferências do workspace;
+  `workspace-layout.ts` move painéis completos e devolve suas posições ao sair.
+  Mensagens/contatos vêm do messenger existente, com validação e conta de origem;
+  trocas de conta descartam a projeção anterior. Avatares são compartilhados e o
+  adaptador de capas só escreve em slots vazios, sem remover filhos React.
+- Grade de telas em `lib/voice/media-layout.ts`; cartas em `lib/games/hand-layout.ts`.
+  As fórmulas anteriores foram conservadas, com observações agrupadas por frame e
+  cancelamento no descarte. Não altera captura, codecs, FPS, transporte ou replay.
+- Excluídos `legacy/call-workspace.js`, `legacy/media-layout.js` e suas entradas
+  no manifesto; o preparo do renderer também remove os JS gerados obsoletos.
+- Pendentes: composição de `social.js`, demais posicionadores, navegação entre áreas,
+  perfis e o messenger completo. Esta etapa não converte esses donos.
+- Tipagem, formatação, build, nove regressões novas, quatro testes gerais de
+  interface e 23 de controles/mensagens/configurações passaram. Três regressões
+  no Electron real passaram, incluindo preservação dos botões/recursos e, na
+  rodada ampliada de layout, cartas reais em seis combinações de tamanho/layout.
+  `npm test` passou, com 84 casos no conjunto de configurações/apresentação.
+  Evidências locais: `artifacts/workspace-react-*`. Sem push ou mudança na main.
+- O teste antigo `court-browser.js` ainda espera entrada automática na voz e
+  falha antes das verificações da mesa. A falha foi reproduzida no mesmo ponto
+  numa cópia isolada de `ed76477`; não foi silenciada. As cartas convertidas foram
+  verificadas diretamente no Electron; atualizar o restante dessa suíte é pendente.
+
 ## Próximas alterações, em ordem
 
 1. Concluir a composição tipada da chamada e converter seus posicionadores/layouts
-   restantes (`social.js`, `call-workspace.js` e demais controladores de layout).
+   restantes (`social.js`, `panel-layout.js`, `app-layout.js` e `desktop-shell.js`).
    Navegação do painel/drawer, salas de voz/texto, não lidas e silenciamento já
    pertencem a `navigation.ts`, com nove botões React e ponte em `navigation-view.ts`.
    Não restaurar cópias de estado, listeners de sala ou handlers desses botões.

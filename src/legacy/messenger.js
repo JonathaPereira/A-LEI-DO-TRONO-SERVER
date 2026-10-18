@@ -180,7 +180,7 @@ window.TronoMessenger = (() => {
     }
     window.dispatchEvent(
       new CustomEvent('trono-direct-change', {
-        detail: { people: [...peers.values()], unread: total },
+        detail: { accountId: owner, people: [...peers.values()], unread: total },
       }),
     );
     const list = $('messengerList'),

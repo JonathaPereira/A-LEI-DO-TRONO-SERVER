@@ -192,7 +192,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.evaluate(ids => {
       window.__layoutBaseline = {
         controls: ids.map(id => document.getElementById(id)),
-        navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn'].map(id => document.getElementById(id)),
+        navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
         camera: window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0],
         screen: window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0],
@@ -552,6 +552,28 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack()), null);
     assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().readyState), 'live');
+    // The converted desktop hand observer must measure real cards after local play starts.
+    const peerMic = await receiver.evaluate(() => window.TronoSocial.getLocalAudioTrack().id);
+    await receiver.evaluate(() => {
+      window.TronoPortal.showOnly('setupScreen');
+      document.getElementById('startHumanBtn').click();
+    });
+    await expect(receiver.locator('#gameScreen')).toBeVisible();
+    await expect.poll(() => receiver.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
+    for (const [width, height] of [[1280, 720], [480, 800], [480, 520]]) {
+      await apps[1].evaluate(({BrowserWindow}, size) => BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height), {width, height});
+      for (const layout of ['original', 'discord']) {
+        await receiver.evaluate(value => window.TronoAppLayout.apply(value), layout);
+        await expect.poll(() => receiver.evaluate(() => {
+          const hand = document.getElementById('humanHand'), style = getComputedStyle(hand);
+          const height = parseFloat(style.getPropertyValue('--hand-card-height'));
+          const overlap = parseFloat(style.getPropertyValue('--hand-overlap'));
+          const room = Math.max(24, hand.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0));
+          return Number.isFinite(height) && Number.isFinite(overlap) && height >= 24 && height <= Math.min(126, room) + 0.02 && overlap <= 0;
+        })).toBe(true);
+        assert.equal(await receiver.evaluate(() => window.TronoSocial.getLocalAudioTrack().id), peerMic);
+      }
+    }
     assert.deepEqual(errors, []);
   } finally {
     finished = true;

@@ -1,5 +1,9 @@
 'use client';
 
+import { initializeCallWorkspace } from '../components/navigation/workspace-runtime';
+import { initializeMediaLayout } from '../lib/voice/media-layout';
+import { initializeHandLayout } from '../lib/games/hand-layout';
+
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
 import {
@@ -144,9 +148,12 @@ export function LegacyRuntime() {
       prepareCallSettings(window);
       initializeCallToolbar(window);
       initializeCallNavigation(window);
+      initializeCallWorkspace(window);
       window.dispatchEvent(new Event('trono:ready'));
       initializeCallStage(window);
       initializeMediaDialogs(window);
+      initializeMediaLayout(window);
+      if ((window as Window & { TronoDesktop?: object }).TronoDesktop) initializeHandLayout(window);
     })();
     void startup.catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : 'Falha ao iniciar a interface.');

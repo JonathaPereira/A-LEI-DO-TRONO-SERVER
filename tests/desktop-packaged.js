@@ -164,7 +164,6 @@ test(
             '/desktop-shell.js',
             '/desktop-shell.css',
             '/media-layout.css',
-            '/media-layout.js',
             '/desktop-activity.js',
             '/assets/portal_realms.png',
             '/vendor/rnnoise/rnnoise.wasm',

@@ -451,11 +451,28 @@ O mapa sem leitores de `gameRoomState` e o timer antigo de limpeza da mesa foram
 minimizar/restaurar, texto, silenciamento, retorno à voz e indicadores. O runtime
 monta antes dos layouts; cada botão fica em um host estável com `display: contents`.
 As configurações movem o host de Comunicação, conservando seu botão e eventos React.
-Os handlers paralelos de `desktop-shell.js` e `call-workspace.js` foram removidos.
+Os handlers paralelos de `desktop-shell.js` foram removidos; `call-workspace.js` foi excluído.
 `navigation-view.ts` é a ponte para classes/visibilidade dos containers que os layouts
 legados ainda movem; assina o mesmo estado e possui Escape, breakpoint e foco adiado
 do compositor. Fechar, trocar de sala ou descartar cancela o foco. Apenas Ampliar
 continua com um botão legado, integrado ao mesmo controlador de mosaico.
+
+`lib/voice/workspace.ts` projeta navegação, layout, cabeçalho por conta e atalhos
+para até sete conversas. Consome os donos existentes; não consulta a caixa de
+entrada nem duplica mensagens. Eventos do messenger incluem a conta de origem;
+a projeção valida o payload, rejeita dados antigos e limpa contatos ao trocar conta.
+`workspace-controls.tsx` renderiza título, áreas, botões e contatos em hosts estáveis.
+Avatares usam o componente compartilhado; capas ainda usam `profile-files.js`,
+restritas a um slot vazio de cada linha React. `workspace-layout.ts` move os mesmos
+painéis completos e restaura suas posições ao sair. Só observa a visibilidade
+externa do messenger, que ainda é legado; não observa texto renderizado para derivar estado.
+
+`lib/voice/media-layout.ts` ajusta somente as colunas/linhas da grade de telas,
+contando tiles diretamente presentes nela. `lib/games/hand-layout.ts` ajusta altura
+e sobreposição das cartas no desktop. Os dois usam `lib/layout/observe-layout.ts`
+para agrupar medições por frame e liberar observers/frames ao descartar.
+`legacy/media-layout.js` e `legacy/call-workspace.js` saíram do manifesto e dos fontes.
+Capturas, encoders, players e transporte não pertencem a esses posicionadores.
 
 `lib/voice/media-focus.ts` possui a tela cheia nativa, o fallback por maximização,
 Escape, listeners de fullscreen e a operação visual pendente. Fecha o mosaico e

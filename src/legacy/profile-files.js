@@ -131,7 +131,9 @@ window.TronoProfile = (() => {
       }
       if (row._profileBanner === entry) continue;
       row._profileBanner = entry;
-      row.querySelector('.direct-profile-banner')?.remove();
+      const slot = row.querySelector('[data-direct-banner-slot]');
+      if (slot) slot.replaceChildren();
+      else row.querySelector('.direct-profile-banner')?.remove();
       const current = () =>
         row.isConnected &&
         viewer === window.TronoAuth.user?.id &&
@@ -143,16 +145,20 @@ window.TronoProfile = (() => {
         try {
           const url = await window.TronoFiles.url(d.cover_file_id);
           if (!current()) return;
-          const banner = make('span', 'direct-profile-banner'),
+          const banner = slot || make('span', 'direct-profile-banner'),
             img = make('img');
           banner.setAttribute('aria-hidden', 'true');
           img.alt = '';
           img.src = url;
           img.loading = 'lazy';
-          img.onerror = () => banner.remove();
+          img.onerror = () => {
+            if (slot) {
+              if (img.parentNode === slot) slot.replaceChildren();
+            } else banner.remove();
+          };
           img.style.objectPosition = 'center ' + Math.max(0, Math.min(100, d.cover_position)) + '%';
           banner.append(img);
-          row.prepend(banner);
+          if (!slot) row.prepend(banner);
         } catch {}
       });
     }

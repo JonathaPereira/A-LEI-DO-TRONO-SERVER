@@ -127,6 +127,7 @@ export function VoicePanel() {
         <small className={'voice-help'}>
           Escolha Assistir stream para abrir uma tela. Amplie o mosaico com até 6 pessoas.
         </small>
+        <footer id="callFocusDock" aria-label="Controles da chamada" />
       </section>
     </>
   );

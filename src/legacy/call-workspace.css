@@ -2185,6 +2185,9 @@ body[data-app-layout='original'] #callWorkspace .mn-sidebar-heading {
   border-radius: inherit;
   pointer-events: none;
 }
+#callWorkspace [data-direct-banner-slot]:empty {
+  display: none;
+}
 #callWorkspace .direct-profile-banner img {
   width: 100%;
   height: 100%;
