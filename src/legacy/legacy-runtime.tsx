@@ -4,6 +4,7 @@ import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
 import { initializeFileLibrary } from '../components/files/library-runtime';
+import { initializeProfileViewer } from '../components/profiles/viewer-runtime';
 import { initializeDesktopShell } from '../components/desktop/shell-runtime';
 import { initializeAppLayout } from '../components/navigation/app-layout-runtime';
 import { initializeAppearance } from '../components/profiles/appearance-runtime';
@@ -54,6 +55,7 @@ export function LegacyRuntime() {
     startup ??= (async () => {
       initializeNetwork(window);
       initializeFiles(window);
+      initializeProfileViewer(window);
       initializeFileLibrary(window);
       installLegacyAttachments(window);
       installLegacyAvatars(window);

@@ -36,10 +36,11 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       const context = await browser.newContext({viewport: {width: 1280, height: 720}, permissions: ['camera', 'microphone', 'clipboard-read', 'clipboard-write']});
       await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
       await context.route('**/community/profiles/*', route => route.fulfill({json: {profile: {
-        nickname: data.user.nickname, personalization: {cover_file_id: 'test-cover', background_file_id: 'test-background', accent: '#bd6fe8', cover_position: 25}
+        id: new URL(route.request().url()).pathname.split('/').at(-1),
+        nickname: data.user.nickname, personalization: {cover_file_id: '20000000-0000-4000-8000-000000000001', background_file_id: '20000000-0000-4000-8000-000000000002', accent: '#bd6fe8', cover_position: 25}
       }}}));
-      await context.route('**/files/test-cover/url', route => route.fulfill({json: {expiresAt: Date.now() + 60000, url: origin + '/fixture-media.svg?image=' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#723da8"/><circle cx="260" cy="30" r="100" fill="#dd8a68"/></svg>')}}));
-      await context.route('**/files/test-background/url', route => route.fulfill({json: {expiresAt: Date.now() + 60000, url: origin + '/fixture-media.svg?image=' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#185a80"/></svg>')}}));
+      await context.route('**/files/20000000-0000-4000-8000-000000000001/url', route => route.fulfill({json: {expiresAt: Date.now() + 60000, url: origin + '/fixture-media.svg?image=' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#723da8"/><circle cx="260" cy="30" r="100" fill="#dd8a68"/></svg>')}}));
+      await context.route('**/files/20000000-0000-4000-8000-000000000002/url', route => route.fulfill({json: {expiresAt: Date.now() + 60000, url: origin + '/fixture-media.svg?image=' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160"><rect width="320" height="160" fill="#185a80"/></svg>')}}));
       await context.route('**/fixture-media.svg?*', route => route.fulfill({contentType: 'image/svg+xml', body: new URL(route.request().url()).searchParams.get('image')}));
       await context.addInitScript(({base, data, native}) => {
         window.TRONO_BACKEND_URL = base;

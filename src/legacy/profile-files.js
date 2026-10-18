@@ -37,20 +37,6 @@ window.TronoProfile = (() => {
     if (text !== undefined) e.textContent = text;
     return e;
   };
-  async function api(path) {
-    const id = window.TronoAuth.user?.id,
-      token = await window.TronoAuth.getAccessToken();
-    if (!id || id !== window.TronoAuth.user?.id || !token) throw Error('Entre na sua conta.');
-    const res = await fetch(window.TronoNetwork.BACKEND_HTTP + '/community/' + path, {
-        headers: { Authorization: 'Bearer ' + token },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(15000),
-      }),
-      data = await res.json();
-    if (id !== window.TronoAuth.user?.id) throw Error('A conta mudou. Abra novamente.');
-    if (!res.ok) throw Error(data.error?.message || 'Não foi possível carregar o perfil.');
-    return data;
-  }
   const profileCache = new Map();
   let profileScope = null;
   function clearCallBackground(card) {
@@ -68,9 +54,7 @@ window.TronoProfile = (() => {
       let entry = profileCache.get(id);
       if (!entry || entry.expires < Date.now()) {
         entry = { expires: Date.now() + 60000 };
-        entry.promise = api('profiles/' + id)
-          .then((data) => data.profile)
-          .catch(() => null);
+        entry.promise = window.TronoProfiles.readProfile(id).catch(() => null);
         profileCache.set(id, entry);
       }
       if (card._profileBackground === entry) continue;
@@ -124,9 +108,7 @@ window.TronoProfile = (() => {
       let entry = profileCache.get(id);
       if (!entry || entry.expires < Date.now()) {
         entry = { expires: Date.now() + 60000 };
-        entry.promise = api('profiles/' + id)
-          .then((data) => data.profile)
-          .catch(() => null);
+        entry.promise = window.TronoProfiles.readProfile(id).catch(() => null);
         profileCache.set(id, entry);
       }
       if (row._profileBanner === entry) continue;
@@ -480,9 +462,9 @@ window.TronoProfile = (() => {
       $('profileDialog').showModal();
     }
     try {
-      const data = await api('profiles/' + u.id);
+      const person = await window.TronoProfiles.readProfile(u.id);
       if (seq !== epoch) return;
-      populate(data.profile);
+      populate(person);
       message();
     } catch (e) {
       if (seq !== epoch) return;
@@ -615,33 +597,7 @@ window.TronoProfile = (() => {
         : [user.avatar_file_id]
     ).filter((id) => typeof id === 'string' && id);
   }
-  async function openMini(person, { full = false } = {}) {
-    const id = typeof person === 'string' ? person : person.accountId || person.id;
-    if (!id || !window.TronoAuth.user) return;
-    const seq = ++viewEpoch,
-      dialog = $('memberProfileDialog');
-    dialog.classList.toggle('member-full', full);
-    $('memberProfileContent').textContent = 'Carregando perfil…';
-    $('memberProfileExpand').hidden = full;
-    $('memberProfileMessage').hidden = true;
-    $('memberProfileExpand').onclick = () => {
-      dialog.classList.add('member-full');
-      $('memberProfileExpand').hidden = true;
-    };
-    if (!dialog.open) dialog.showModal();
-    try {
-      const data = await api('profiles/' + id);
-      if (seq !== viewEpoch || !dialog.open) return;
-      paint($('memberProfileContent'), data.profile, data.profile.personalization);
-      $('memberProfileMessage').hidden = id === window.TronoAuth.user?.id;
-      $('memberProfileMessage').onclick = () => {
-        dialog.close();
-        void window.TronoMessenger.open(id);
-      };
-    } catch (e) {
-      if (seq === viewEpoch) $('memberProfileContent').textContent = e.message;
-    }
-  }
+  const openMini = (person, options) => window.TronoProfileViewer.open(person, options);
   async function accounts(reset = true) {
     if (window.TronoAuth.user?.role !== 'creator') return;
     const dialog = $('creatorAccountsDialog'),
@@ -655,7 +611,7 @@ window.TronoProfile = (() => {
     $('creatorAccountsStatus').textContent = 'Carregando contas…';
     $('creatorAccountsMore').disabled = true;
     try {
-      const data = await api('registered-accounts?offset=' + offset);
+      const data = await window.TronoProfiles.readAccounts(offset);
       if (seq !== viewEpoch || !dialog.open || window.TronoAuth.user?.role !== 'creator') return;
       for (const account of data.accounts) {
         const row = make('tr');
@@ -913,17 +869,6 @@ window.TronoProfile = (() => {
           item.classList.toggle('active', item === button);
       } else if (e.target.closest('.profile-back') && !busy) profileDialog.close();
     };
-    const view = make('dialog', 'member-profile-dialog');
-    view.id = 'memberProfileDialog';
-    view.setAttribute('aria-label', 'Perfil do participante');
-    view.innerHTML =
-      '<button class="member-close" type="button" aria-label="Fechar perfil">×</button><div id="memberProfileContent"></div><footer><button id="memberProfileMessage" type="button">Mensagem direta</button><button id="memberProfileExpand" type="button">Ver perfil completo</button></footer>';
-    document.body.append(view);
-    view.querySelector('.member-close').onclick = () => view.close();
-    view.addEventListener('close', () => {
-      viewEpoch++;
-      $('memberProfileContent').replaceChildren();
-    });
     const admin = make('dialog', 'creator-accounts-dialog');
     admin.id = 'creatorAccountsDialog';
     admin.setAttribute('aria-labelledby', 'creatorAccountsTitle');
@@ -962,7 +907,6 @@ window.TronoProfile = (() => {
         loaded = false;
         discard();
         $('profileDialog').close();
-        view.close();
         admin.close();
         emojiPicker.hidePopover();
         window.TronoProfileGifs.close();

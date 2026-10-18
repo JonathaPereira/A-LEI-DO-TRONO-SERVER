@@ -151,8 +151,27 @@ O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados
 `renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
 mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
 existe somente enquanto há raízes ativas. `legacy/profile-files.js` ainda possui
-edição/visualização de perfis e composição de capas; a biblioteca de arquivos saiu
-desse controlador.
+edição/prévia do perfil, contas do criador e composição de capas. Biblioteca de
+arquivos e miniperfis já saíram desse controlador.
+
+`lib/profiles/client.ts` possui as consultas autenticadas de perfil e contas do
+criador. Editor e decorações legados usam esse cliente; o HTTP duplicado foi
+removido. `protocol.ts` valida identidade/paginação e projeta somente os campos
+públicos do perfil, com valores padrão, limites e links/créditos permitidos.
+E-mail só aparece no DTO separado de contas, condicionado à permissão de criador;
+o servidor continua autorizando cada consulta. Trocar conta, função ou permissões
+invalida pedidos e sua espera pelo token, inclusive numa troca de A para B e A.
+O deadline de 15 segundos inclui autenticação e resposta. O cache de apresentação
+de 60 segundos ainda pertence às decorações legadas; o cliente não cria outro.
+
+`lib/profiles/viewer.ts` possui um miniperfil aberto, alvo, expansão, carregamento
+e mensagem. Fechar, trocar alvo ou identidade invalida/cancela resultados antigos.
+Uma atualização do perfil recarrega somente o alvo visível; uma resposta não reabre
+um diálogo fechado. `components/profiles/member-profile-dialog.tsx` e
+`member-card.tsx` possuem diálogo, conteúdo, imagens, links e créditos em React,
+usando Avatar e URLs do cliente de arquivos compartilhado. O runtime monta uma
+única instância por página; `TronoProfile.openMini` conserva só a delegação.
+`paint` permanece exclusivamente na prévia do editor ainda legado.
 
 `lib/files/library.ts` possui lista, consulta de uso, exclusões pendentes e feedback
 de Meus arquivos. Reutiliza transporte, URL assinada e exclusões do cliente tipado.
@@ -821,7 +840,9 @@ painel flutuante e dos players é independente e permanece nos donos tipados.
 `legacy/desktop-settings.js` foi removido do manifesto e do fonte. `runtime.ts` não
 possui mais flags, seleção ou pintura das abas, nem os listeners de abrir/fechar.
 Seus métodos públicos delegam ao dono tipado; a prioridade global do Escape ainda
-fecha mídia/chat/diagnóstico antes das configurações web. A aba Meus arquivos agora
+fecha mídia/chat/diagnóstico antes das configurações web. A navegação delega Escape
+a diálogos e popovers em primeiro plano, evitando fechar as configurações atrás
+do seletor de GIFs, emoji ou miniperfil. A aba Meus arquivos agora
 é aceita pelo validador, sem cair silenciosamente em Áudio.
 
 ## Backend

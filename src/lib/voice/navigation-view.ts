@@ -46,6 +46,9 @@ export function createCallNavigationView(options: NavigationViewOptions) {
   }
   function keydown(event: KeyboardEvent) {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
+    // Escape belongs to the foreground dialog/popover, not the settings behind it.
+    if (doc.querySelector('dialog[open]:not(#desktopSettingsDialog), [popover]:popover-open'))
+      return;
     if (options.closeDiagnostics()) return;
     const s = client.getSnapshot();
     if (s.hub && s.drawerOpen) client.toggleTextChat(false);

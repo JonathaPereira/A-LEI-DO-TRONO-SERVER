@@ -110,6 +110,7 @@ test(
         r.fulfill({
           json: {
             profile: {
+              id: new URL(r.request().url()).pathname.split('/').at(-1),
               nickname: 'Jonatha',
               avatar_preset: 'gamepad',
               created_at: '2026-10-01T12:00:00Z',

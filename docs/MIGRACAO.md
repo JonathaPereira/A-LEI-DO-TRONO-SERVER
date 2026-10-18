@@ -1613,6 +1613,36 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   prioridade de Escape entre diálogos fica pendente com o editor de perfis.
   Evidência: `artifacts/file-library-baseline-native.log`.
 
+## Miniperfis e consultas tipadas — 18/10/2026
+
+- `lib/profiles/client.ts` centraliza consultas de perfis e contas do criador;
+  removido o HTTP duplicado de `profile-files.js`. `protocol.ts` e `types/profiles.ts`
+  validam/projetam DTOs públicos, identidade, aparência, links, créditos e paginação.
+  E-mails não entram no perfil público; a consulta de contas exige papel/permissão.
+- `viewer.ts` possui alvo, carregamento, expansão e ações. Cancelamento, geração
+  da identidade e timeout de 15 segundos incluem a espera pelo token. Fechamento,
+  troca de alvo/conta e descarte não deixam respostas antigas reaparecerem.
+- `member-profile-dialog.tsx` e `member-card.tsx` renderizam miniperfil e expansão
+  em React, preservando imagens, aparência, bio, interesses, links, créditos e
+  mensagem direta. Reutilizam Avatar/cliente de arquivos; a fachada `openMini`
+  apenas delega. Removidos estado/listeners e criação do diálogo antigo.
+- Corrigida a prioridade do Escape em `navigation-view.ts`: diálogos e popovers
+  abertos recebem seu fechamento nativo antes dos comandos da navegação de fundo.
+  GIFs, emoji e miniperfis conservam as configurações desktop abertas. A falha
+  registrada na etapa anterior foi resolvida e o cenário `QA_NATIVE=1` passou.
+- Fixtures antigas de layout/controles agora incluem o ID do perfil consultado
+  e UUIDs de arquivos válidos, conforme o protocolo real; validações não foram relaxadas.
+- Tipagem, formatação, build e `npm test` passaram. As 20 regressões de leitura/
+  visualizador e três de Escape fazem parte da suíte. Passaram três casos novos
+  de navegador, 25 de layout/controles/mensagens/arquivos, quatro gerais de interface
+  e o fluxo desktop completo de edição/GIFs. O Electron real manteve os controles,
+  microfone, câmera, tela, replay, peers e socket ao expandir/fechar o miniperfil.
+  Evidências locais: `artifacts/profile-reader-*`. Sem push ou mudança na main.
+- Restam editor/prévia, seletores de mídia/GIF, decorações de chamada/conversas e
+  contas do criador em `profile-files.js`; o arquivo permanece necessário.
+  A inicialização antiga não idempotente do editor ainda deve ser retirada na
+  conversão de sua estrutura. Nenhuma captura ou regra de jogo mudou nesta etapa.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.

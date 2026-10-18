@@ -376,6 +376,14 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('[data-settings-tab="files"]').click();
     await expect(page.locator('#profileFilesHost .profile-files-load')).toBeVisible();
     await expect(page.locator('#profileFilesHost #profileFiles')).toBeAttached();
+    await page.evaluate(() => window.TronoProfile.openMini(window.TronoAuth.user.id));
+    await expect(page.locator('#memberProfileDialog .member-name')).not.toBeEmpty();
+    await expect(page.locator('#memberProfileMessage')).toBeHidden();
+    await page.locator('#memberProfileExpand').click();
+    await expect(page.locator('#memberProfileDialog')).toHaveClass(/member-full/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#memberProfileDialog')).toBeHidden();
+    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
     await preserved();
     await page.locator('#voiceSettingsClose').click();
 
