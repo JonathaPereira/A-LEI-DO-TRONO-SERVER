@@ -13,6 +13,7 @@ import {
 import { ConnectionSettings } from '../voice/diagnostics';
 import { VoiceAudioPreferences } from '../voice/audio-preferences';
 import { SettingsActivityFields } from './settings-activity-fields';
+import { NotificationFields } from './notification-fields';
 
 /** These empty slots explicitly lend their children to controllers not converted yet. */
 const ContentSlot = memo(function ContentSlot({
@@ -352,11 +353,10 @@ export function CallSettings({
               <VoiceCaptureSettings client={runtime.TronoVoiceSettings} desktop />
             ) : topic === 'activity' ? (
               <SettingsActivityFields />
+            ) : topic === 'notifications' ? (
+              <NotificationFields client={runtime.TronoNotifications} />
             ) : (
-              <ContentSlot
-                content={contents[topic]}
-                id={topic === 'notifications' ? 'notificationSettings' : undefined}
-              />
+              <ContentSlot content={contents[topic]} />
             )}
           </section>
         ))}

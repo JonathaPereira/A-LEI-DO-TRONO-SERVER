@@ -1523,9 +1523,33 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   As limitações anteriores de clipes e suítes antigas permanecem registradas.
   Sem push ou mudança na main.
 
+## Notificações e preferências em React — 18/10/2026
+
+- Excluídos `legacy/notifications.js` e sua entrada no manifesto. O domínio está
+  em `lib/notifications/controller.ts`, com DTOs em `types/notifications.ts` e
+  validação dos avisos/destinos em `protocol.ts`. O adaptador `browser.ts` usa o
+  mesmo socket, catálogo, preferências por conta e IPC existentes.
+- `components/modals/notification-fields.tsx` possui os campos React nas duas
+  versões das configurações. A fachada `TronoNotifications` expõe o mesmo dono
+  para o messenger e os canais; não há listeners DOM ou pintura antiga concorrente.
+- Contadores e a deduplicação dos últimos 500 avisos independem de mute ou avisos
+  desligados. Metadados iguais do catálogo não geram um ciclo de notificações.
+  Trocas de conta limpam contadores e invalidam leituras adiadas, respostas de
+  permissão e cliques web antigos; cliques nativos validam a conta de destino.
+  Descarte remove listeners e frames.
+- `test:notifications` integra a suíte principal, com 14 regressões do domínio e
+  a política nativa existente. `test:notifications:ui` exercita campos,
+  preferências por conta, permissões, avisos reais recebidos pelo socket e cliques.
+- Tipagem, formatação, build e `npm test` passaram. Passaram os três casos novos
+  de navegador e 23 regressões existentes de controles, canais, mensagens privadas
+  e configurações, além dos quatro testes gerais de interface. O Electron real
+  preservou controles, microfone, câmera, tela, replay, peers e socket ao alterar
+  notificações e navegar; também verificou a identidade dos novos campos.
+  Evidências locais: `artifacts/notifications-*`. Sem push ou mudança na main.
+
 ## Próximas alterações, em ordem
 
-1. Converter navegação/gerenciamento de canais, notificações, atividade,
+1. Converter navegação/gerenciamento de canais, atividade,
    perfis/configurações e jogos. Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Ao retirar `legacy/profile-files.js`, conservar o cliente de

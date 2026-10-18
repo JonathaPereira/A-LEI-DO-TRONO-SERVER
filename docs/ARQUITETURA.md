@@ -68,9 +68,22 @@ sem contagem/presença preservam os valores recebidos da rede. Trocar de conta
 descarta os participantes privados do catálogo anterior.
 
 `components/channels/channel-list.tsx` renderiza texto e voz, seleção, presença,
-silenciamento e não lidas. `legacy/notifications.js` ainda possui os contadores,
-preferências e avisos; publica mudanças e expõe `getChannelState()` sem escrever
-nos botões React. `legacy/community.js` mantém apenas os ícones das mesas de jogo.
+silenciamento e não lidas. `lib/notifications/controller.ts` possui contadores,
+deduplicação dos últimos 500 avisos, preferências e entrega. Consome o catálogo
+e o socket existentes; publica mudanças sem escrever nos botões dos canais.
+`protocol.ts` valida mensagens e destinos; `browser.ts` adapta visibilidade,
+permissão, avisos web e IPC nativo. O Electron conserva seus limites de envio.
+
+`components/modals/notification-fields.tsx` renderiza modo, canal, silenciamento
+e permissão em React, usando um snapshot imutável. Contadores funcionam com avisos
+desligados ou silenciados. Trocar de conta limpa leitura/deduplicação e invalida
+respostas de permissão, leituras adiadas e cliques web antigos; cliques nativos
+também validam a conta de destino. O início é único no ready e o descarte remove
+assinaturas e frames pendentes. Metadados iguais do catálogo não notificam de volta,
+evitando um ciclo entre contadores e lista. `TronoNotifications` é a fachada de
+compatibilidade do mesmo dono; `legacy/notifications.js` foi excluído.
+
+`legacy/community.js` mantém apenas os ícones das mesas de jogo.
 `lib/profiles/icons.ts` contém os desenhos e o catálogo único de avatares.
 `avatar.ts` conserva `avatarHtml`/`hydrate` para perfis e jogos não convertidos;
 as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.
@@ -756,8 +769,8 @@ dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnósti
 
 Perfil, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando
 identidade e listeners dos nós. Aparência é React dentro de um host estável;
-movê-la entre configurações conserva os rádios de tema/layout. Notificações
-preenche seu slot, sem criar abas/painéis paralelos. Os conteúdos restantes,
+movê-la entre configurações conserva os rádios de tema/layout. Os campos de
+notificações são filhos React da aba compartilhada. Os conteúdos restantes,
 incluindo atividade, ainda serão convertidos por domínio.
 
 `lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores

@@ -2,8 +2,10 @@ import type { ConnectionDiagnostics } from '../voice/connection-diagnostics';
 import type { AudioPreferences } from '../voice/audio-preferences';
 import type { VoiceSettings } from '../voice/settings';
 import type { SettingsController, SettingsTopic } from './controller';
+import type { NotificationsController } from '../notifications/controller';
 
 export interface SettingsRuntime {
+  TronoNotifications: NotificationsController;
   TronoConnectionDiagnostics: ConnectionDiagnostics;
   TronoVoiceSettings: VoiceSettings;
   TronoAudioPreferences: AudioPreferences;

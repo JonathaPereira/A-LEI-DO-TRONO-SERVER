@@ -192,6 +192,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.evaluate(ids => {
       window.__layoutBaseline = {
         controls: ids.map(id => document.getElementById(id)),
+        notifications: ['notificationMode','notificationChannel','notificationChannelMute','notificationPermission'].map(id => document.getElementById(id)),
+        notificationOwner: window.TronoNotifications,
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -209,6 +211,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         return {
           runtime: Object.entries(before.runtime).every(([name, owner]) => owner && window[name] === owner),
           factoriesRemoved: typeof window.TronoVoiceCapture === 'undefined',
+          notifications: window.TronoNotifications === before.notificationOwner && before.notifications.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -349,6 +352,15 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('[data-panel-resize]')).toHaveCount(0);
     await preserved();
     await page.locator('[name="profileTheme"][value="purple"]').check();
+    await page.locator('[data-settings-tab="notifications"]').click();
+    await page.locator('#notificationMode').selectOption('all');
+    await page.locator('#notificationChannel').selectOption('chat-jogos');
+    await page.locator('#notificationChannelMute').check();
+    await expect(page.locator('#notificationPermission')).toBeHidden();
+    assert.equal(await page.evaluate(() => window.TronoNotifications.muted('chat-jogos')), true);
+    await preserved();
+    await page.locator('#notificationChannelMute').uncheck();
+    await page.locator('#notificationMode').selectOption('mentions');
     await page.locator('#voiceSettingsClose').click();
 
     for (const [width, height] of [[1280, 720], [480, 800], [480, 520]]) {

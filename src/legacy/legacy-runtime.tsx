@@ -1,6 +1,7 @@
 'use client';
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
+import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopShell } from '../components/desktop/shell-runtime';
 import { initializeAppLayout } from '../components/navigation/app-layout-runtime';
 import { initializeAppearance } from '../components/profiles/appearance-runtime';
@@ -59,6 +60,7 @@ export function LegacyRuntime() {
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
+        if (filename === 'desktop-activity.js') initializeNotifications(window);
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile/game controllers prepare borrowed bodies before the React shell mounts;
         // activity/notifications then bind to the mounted slots, matching their boot order.
