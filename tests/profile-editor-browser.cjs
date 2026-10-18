@@ -163,6 +163,18 @@ test(
             await page.locator('[data-link-url]').first().fill('https://example.test/has spaces');
             await page.locator('#profile-bio').fill('Texto continua editável');
             await expect(preview).toContainText('Texto continua editável');
+            // Native close events are queued; an event from an earlier close can
+            // arrive after reopening. It must not close or reset the current editor.
+            await page.evaluate((native) => {
+              document
+                .getElementById(native ? 'desktopSettingsDialog' : 'profileDialog')
+                .dispatchEvent(new Event('close'));
+            }, native);
+            await expect(
+              page.locator(native ? '#desktopSettingsDialog' : '#profileDialog'),
+            ).toBeVisible();
+            await expect(page.locator('#profile-bio')).toBeEnabled();
+            await expect(page.locator('#profile-bio')).toHaveValue('Texto continua editável');
             await page.locator('#profileSave').click();
             await expect(page.locator('#profileMessage')).toHaveClass(/auth-error/);
             assert.equal(uploads.length, 0);

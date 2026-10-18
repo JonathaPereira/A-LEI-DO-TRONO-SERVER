@@ -188,9 +188,24 @@ emoji, seleção de mídia e prévia. `editor-runtime.tsx` monta uma raiz no
 `profileEditorHost`; desktop e web movem o host inteiro. Trocar abas conserva o
 rascunho e os nós; fechar as configurações descarta recursos e consultas pendentes.
 `TronoProfile` conserva apenas a fachada e as decorações ainda não convertidas.
-O seletor externo `legacy/profile-gifs.js` permanece necessário. A resposta de
-`auth.updateProfile` só atualiza a sessão que iniciou o pedido, inclusive após
-sair e entrar novamente na mesma conta.
+A resposta de `auth.updateProfile` só atualiza a sessão que iniciou o pedido,
+inclusive após sair e entrar novamente na mesma conta.
+
+`lib/profiles/gif-picker.ts` possui abertura, busca, paginação, seleção e feedback
+do seletor GIPHY. Uma geração por operação/identidade cancela resultados antigos;
+o timeout inclui a espera pelo token. Erros de página permitem repetir a consulta
+sem perder resultados. `giphy.ts` projeta o catálogo externo, normaliza links
+oficiais, valida hosts/créditos e baixa arquivos com limite de 10 MB, assinatura
+GIF e cancelamento do reader. Somente a consulta de configuração ao backend recebe
+o token do aplicativo; catálogo e mídia usam requisições sem credenciais.
+
+`components/profiles/gif-picker-dialog.tsx` possui o diálogo e o retorno de foco;
+`gif-picker-runtime.tsx` monta uma única raiz, usada diretamente pelo editor.
+`legacy/profile-gifs.js` e a fachada global `TronoProfileGifs` foram removidos.
+`profile-data.js` deixou de ser carregado no frontend, mas permanece dependência
+do validador do servidor até a conversão desse domínio. Não apagar o arquivo.
+Eventos de fechamento atrasados dos diálogos de perfil/configurações são ignorados
+se o diálogo já foi reaberto; não podem descartar o novo rascunho.
 
 `lib/files/library.ts` possui lista, consulta de uso, exclusões pendentes e feedback
 de Meus arquivos. Reutiliza transporte, URL assinada e exclusões do cliente tipado.

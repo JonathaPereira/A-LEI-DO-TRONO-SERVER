@@ -64,8 +64,8 @@ export function LegacyRuntime() {
       initializeChatMessages(window);
       initializeChannels(window);
       for (const filename of manifest.scripts) {
+        if (filename === 'profile-files.js') initializeProfileEditor(window);
         if (filename !== 'auth-boot.js') await loadScript(filename);
-        if (filename === 'profile-gifs.js') initializeProfileEditor(window);
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile/game controllers prepare borrowed bodies before the React shell mounts;

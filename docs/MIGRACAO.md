@@ -1670,6 +1670,34 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximo recorte: seletor GIPHY e os donos restantes de decorações/administração
   do perfil, retirando cada trecho substituído. Captura e regras dos jogos intactas.
 
+## Seletor GIPHY em React e TypeScript — 18/10/2026
+
+- `lib/profiles/gif-picker.ts` possui busca, termo submetido, paginação, seleção,
+  feedback e cancelamento por geração/conta. O timeout de busca inclui o token;
+  fechar, reabrir ou trocar de conta invalida resultados e progresso antigos.
+  Paginação pode ser repetida após erro sem duplicar resultados.
+- `giphy.ts` mantém a validação do catálogo, URLs oficiais, limites e créditos.
+  Downloads validam host final, tamanho declarado/recebido e assinatura GIF;
+  cancelamento libera o reader, inclusive quando o sinal já chegou abortado.
+  O token do aplicativo continua restrito à configuração do backend.
+- `gif-picker-dialog.tsx` renderiza uma única instância React com busca, links,
+  prévias, seleção e atribuição. Preservados busca externa/fallback sem chave,
+  paginação pelo termo submetido e prioridade do Escape nas configurações desktop.
+- Removidos `legacy/profile-gifs.js` (384 linhas), sua entrada no manifesto e
+  `TronoProfileGifs`. O editor usa o módulo tipado diretamente. `profile-data.js`
+  também saiu do manifesto frontend, mas permanece necessário ao servidor.
+- Corrigido o fechamento atrasado do perfil/configurações: um evento antigo não
+  descarta o editor que já foi reaberto. Os fluxos de fechar/reabrir e troca de
+  conta do editor passaram novamente com a correção.
+- Treze novas regressões do dono do seletor integram `npm test`; testes anteriores
+  de GIPHY agora usam o módulo TS, com um caso adicional de catálogo malformado e
+  reader abortado. Passaram tipagem, formatação, build e suíte completa, além dos
+  fluxos web/desktop de busca, links, GIFs, créditos e edição. Electron real com
+  mídia sintética preservou diálogo único, trilhas, players, peers e socket ao
+  selecionar um GIF e fechar outra busca por Escape. Evidências: `artifacts/profile-gifs-*`.
+- Restam decorações de chamada/conversas, contas do criador e navegação das
+  configurações web em `profile-files.js`; esse é o próximo recorte de perfis.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.

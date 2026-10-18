@@ -9,9 +9,9 @@ import type { FilesClient } from '../../lib/files/client';
 import type { NetworkAccount } from '../../types/network';
 import type { ProfileUpdate } from '../../types/profile-editor';
 import type { AvatarAppearance } from '../../types/domain';
-import type { ProfileMediaCredit, ProfileMediaKind } from '../../types/profiles';
 import type { SettingsController } from '../../lib/settings/controller';
 import { ProfileEditor } from './editor-fields';
+import { initializeProfileGifs } from './gif-picker-runtime';
 
 interface EditorRuntime extends Window {
   TronoProfileEditor?: EditorController;
@@ -29,19 +29,13 @@ interface EditorRuntime extends Window {
     hydrate(host?: ParentNode): void;
   };
   TronoDesktopSettings?: SettingsController;
-  TronoProfileGifs: {
-    open(options: {
-      target: ProfileMediaKind;
-      onSelect(file: File, credit?: ProfileMediaCredit): Promise<void>;
-    }): void;
-    close(): void;
-  };
 }
 
 /** Mount once; both settings shells move the host, preserving React and draft ownership. */
 export function initializeProfileEditor(target: Window): EditorController {
   const runtime = target as EditorRuntime;
   if (runtime.TronoProfileEditor) return runtime.TronoProfileEditor;
+  const gifs = initializeProfileGifs(target);
   const document = target.document;
   const controller = createProfileEditor({
     getAccount: () => runtime.TronoAuth.user,
@@ -74,7 +68,7 @@ export function initializeProfileEditor(target: Window): EditorController {
       document.querySelector<HTMLButtonElement>('[data-profile-section="profile"]')?.click();
       if (!dialog.open) dialog.showModal();
     }
-    runtime.TronoProfileGifs.close();
+    gifs.close();
     await controller.load();
   };
   Object.assign(runtime, {
@@ -94,7 +88,7 @@ export function initializeProfileEditor(target: Window): EditorController {
         chooseGif={(key) => {
           const state = controller.getSnapshot();
           if (!state.loaded || state.busy) return;
-          runtime.TronoProfileGifs.open({
+          gifs.open({
             target: key,
             onSelect: controller.createMediaPicker(key),
           });
@@ -110,7 +104,7 @@ export function initializeProfileEditor(target: Window): EditorController {
       runtime.TronoDesktopSettings?.subscribe(() => {
         if (!runtime.TronoDesktopSettings?.getSnapshot().open) {
           controller.reset();
-          runtime.TronoProfileGifs.close();
+          gifs.close();
         }
       });
     },
@@ -123,8 +117,9 @@ export function initializeProfileEditor(target: Window): EditorController {
     if (controller.getSnapshot().busy) event.preventDefault();
   });
   dialog.addEventListener('close', () => {
+    if (dialog.open) return;
     controller.reset();
-    runtime.TronoProfileGifs.close();
+    gifs.close();
   });
   let accountId = runtime.TronoAuth.user?.id;
   target.addEventListener('trono-auth-change', () => {
@@ -132,7 +127,7 @@ export function initializeProfileEditor(target: Window): EditorController {
     if (next === accountId) return;
     accountId = next;
     dialog.close();
-    runtime.TronoProfileGifs.close();
+    gifs.close();
   });
   return controller;
 }

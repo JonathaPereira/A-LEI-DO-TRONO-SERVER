@@ -112,10 +112,13 @@ export function CallSettings({
     const backdrop = (event: Event) => {
       if (event.target === dialog) close();
     };
-    dialog?.addEventListener('close', close);
+    const closed = () => {
+      if (!dialog?.open) close();
+    };
+    dialog?.addEventListener('close', closed);
     dialog?.addEventListener('click', backdrop);
     return () => {
-      dialog?.removeEventListener('close', close);
+      dialog?.removeEventListener('close', closed);
       dialog?.removeEventListener('click', backdrop);
     };
   }, [controller, dialog]);

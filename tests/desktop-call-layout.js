@@ -200,6 +200,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         library: ['profileFilesHost','profileFiles','storageUsage','profileFilesMessage'].map(id => document.getElementById(id)),
         profileEditorOwner: window.TronoProfileEditor,
         profileEditor: ['profileEditorHost','profileForm','profileNickname','profile-bio','profile-cover_zoom'].map(id => document.getElementById(id)),
+        gifDialog: document.getElementById('profileGifDialog'),
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -221,6 +222,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           activity: window.TronoDesktopActivity === before.activityOwner && !!before.activityOwner && before.activity.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           library: window.TronoFileLibrary === before.libraryOwner && !!before.libraryOwner && before.library.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           profileEditor: window.TronoProfileEditor === before.profileEditorOwner && !!before.profileEditorOwner && before.profileEditor.every(node => node && node.isConnected && document.getElementById(node.id) === node),
+          gifPicker: !!before.gifDialog && before.gifDialog === document.getElementById('profileGifDialog') && document.querySelectorAll('#profileGifDialog').length === 1 && typeof window.TronoProfileGifs === 'undefined',
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -357,6 +359,20 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#profile-bio')).toBeEnabled();
     await page.locator('#profile-bio').fill('Rascunho durante a chamada');
     await expect(page.locator('#profileLivePreview .member-bio')).toHaveText('Rascunho durante a chamada');
+    await page.route('**/community/gif-provider', route => route.fulfill({json: {provider: 'giphy', configured: false}}));
+    await page.route('https://media.giphy.com/**', route => route.fulfill({contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')}));
+    await page.locator('[data-profile-gif=avatar]').click();
+    await expect(page.locator('.profile-gif-message')).toContainText('cole o link');
+    await page.getByRole('textbox', {name: 'Link do GIF no GIPHY'}).fill('https://giphy.com/gifs/abc123');
+    await page.getByRole('button', {name: 'Pré-visualizar', exact: true}).click();
+    await page.locator('.profile-gif-results article > button').click();
+    await expect(page.locator('#profileGifDialog')).toBeHidden();
+    await expect(page.locator('#profilePreview img')).toHaveAttribute('src', /^blob:/);
+    await page.locator('[data-profile-gif=background]').click();
+    await expect(page.locator('#profileGifDialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#profileGifDialog')).toBeHidden();
+    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
     await preserved();
     await page.locator('[data-settings-tab="appearance"]').click();
     await page.locator('[data-settings-tab="account"]').click();
