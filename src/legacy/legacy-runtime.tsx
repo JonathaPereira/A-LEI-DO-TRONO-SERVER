@@ -34,7 +34,9 @@ import { createVoiceTelemetry } from '../lib/voice/telemetry';
 import { createCallToolbar } from '../lib/voice/toolbar';
 import { initializeCallToolbar } from '../components/voice/call-toolbar-runtime';
 import { createMediaInterest } from '../lib/voice/media-interest';
-import { createMediaInterestBindings } from '../lib/voice/media-interest-bindings';
+import { createMediaVisibility } from '../lib/voice/media-visibility';
+import { createCallStage } from '../lib/voice/stage';
+import { initializeCallStage } from '../components/voice/call-stage-runtime';
 import { createCallControls } from '../lib/voice/controls';
 import { createCallAudio } from '../lib/voice/call-audio';
 import { createCallAlerts } from '../lib/voice/call-alerts';
@@ -99,7 +101,8 @@ export function LegacyRuntime() {
           createCallAudio,
           createCallControls,
           createMediaInterest,
-          createMediaInterestBindings,
+          createMediaVisibility,
+          createCallStage,
           createCallToolbar,
           createCallAlerts,
           createVoiceTelemetry,
@@ -129,6 +132,7 @@ export function LegacyRuntime() {
       prepareCallSettings(window);
       initializeCallToolbar(window);
       window.dispatchEvent(new Event('trono:ready'));
+      initializeCallStage(window);
     })();
     void startup.catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : 'Falha ao iniciar a interface.');

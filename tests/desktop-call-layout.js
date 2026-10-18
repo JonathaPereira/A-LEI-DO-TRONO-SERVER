@@ -214,6 +214,23 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
+    // Moving both portal targets must preserve the native players, streams and senders.
+    await page.evaluate(() => {
+      const self=window.TronoNetwork.clientId;
+      const tiles=[...document.querySelectorAll('#socialPanel [data-peer]')].filter(tile=>tile.dataset.peer===self);
+      window.__dockPlayers=tiles.filter(tile=>tile.matches('.camera-tile,.screen-share-tile')).map(tile=>({tile,video:tile.querySelector('video'),stream:tile.querySelector('video').srcObject}));
+    });
+    const selfCard=page.locator('#voiceRoster .voice-person[data-peer="'+senderId+'"]');
+    await selfCard.locator('.participant-expand').click();
+    for(const mode of ['stage','screen','camera','auto']){
+      await selfCard.locator('.participant-media-layout select').selectOption(mode);
+      await expect.poll(()=>page.evaluate(mode=>{
+        const rows=window.__dockPlayers;
+        return rows.length===2 && rows.every(({tile,video,stream})=>tile.querySelector('video')===video && video.srcObject===stream && stream.getVideoTracks().every(track=>track.readyState==='live') && tile.parentElement.classList.contains(tile.matches('.camera-tile') ? (mode==='auto'||mode==='camera'?'participant-camera-slot':'camera-grid') : mode==='screen'?'participant-screen-slot':'screen-share-grid'));
+      },mode)).toBe(true);
+      await preserved();
+    }
+    await selfCard.locator('.participant-expand').click();
     // React diagnostics share their state with the desktop launcher and preserve every live source.
     await page.bringToFront();
     await page.evaluate(() => window.TronoSocial.toggleTelemetry(true));

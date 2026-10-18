@@ -318,8 +318,9 @@ local invalida consultas antigas e nunca eleva uma restrição que já era Econo
 
 O callback de política recebe um guard de revisão; o coordenador também confere a
 geração da chamada depois de esperar o encerramento da tela ou ajustes de qualidade.
-A consulta não possui capturas, peers ou outro socket. `social.js` conserva a pintura
-na tela e aplicação da política aos controles, sem cache/listener/timer paralelos.
+A consulta não possui capturas, peers ou outro socket. `social.js` coordena a
+aplicação da política aos donos existentes; as projeções tipadas alimentam os
+controles React, sem cache/listener/timer de consulta paralelos.
 
 `call-lifecycle.ts` possui fase, geração, participação local e promessa de entrada.
 A interface é `toggle()`, `leave()`, snapshot e instalação/descarte do listener de
@@ -403,7 +404,39 @@ quando presente, uma sala diferente é rejeitada. O módulo não inventa uma ger
 remota ausente no protocolo. Sinalização, filas e respostas assíncronas continuam
 com as proteções dos donos de peers/sessões. Não há segundo socket ou captura.
 `social.js` não mantém outro mapa, flags ou listeners desses eventos; conserva os
-adaptadores de navegação, ganho, sons e renderização.
+adaptadores de navegação, ganho, sons e composição dos snapshots da interface.
+
+`lib/voice/stage.ts` possui apenas preferências de exibição por participante,
+colapso de telas remotas, atividade recebida e assinaturas da apresentação. Projeta
+os snapshots existentes em participantes, câmeras e telas imutáveis; não cria
+streams, tracks, conexões ou capturas. Troca de geração limpa preferências e
+operações visuais pendentes. Ganhos usam os donos existentes e deduplicam input/change.
+A recuperação considera câmera e tela juntas, para uma câmera saudável não cancelar
+a recuperação de uma tela assistida ainda ausente.
+
+`components/voice/call-stage.tsx` renderiza privacidade, lista e estados dos grids.
+`participant-card.tsx` possui popover, controles de ganho/exibição, atividade, status
+e abertura de perfil por mouse/teclado. Avatares usam o componente React/cliente de
+arquivos já compartilhados. O controlador de perfis possui somente a imagem e
+variáveis dentro do slot vazio `data-profile-background-slot`; não remove esse nó
+React. Respostas antigas de perfil/imagem conservam suas validações de conta/identidade.
+
+`media-tile.tsx` cria um host estável por tipo/participante e usa um portal React
+para seus filhos. Docking move o host para o grid ou para um slot vazio do perfil;
+o mesmo elemento de vídeo conserva seu srcObject. Tela cheia/maximização impede
+movimentação até a saída. Desmontagem pausa/solta a referência do player, sem parar
+a trilha emprestada. Prévia, captura, recuperação e idle continuam em seus donos;
+`TronoStreamControls` é atualizado e descartado por superfície, sem relógio paralelo.
+`media-resize.ts` possui listeners de arraste com descarte por AbortController e
+conserva armazenamento/limites do tamanho. Arraste só ocorre fora do hub em janela larga.
+
+`call-stage-runtime.tsx` monta após todos os listeners de `trono:ready`, conservando
+os nós observados pelos layouts/mosaico. Os portais escrevem em containers estáveis;
+slots de câmera/tela são vazios para o React, e a movimentação do host é explícita.
+`social.js` compõe as fontes/ações e conserva adaptadores públicos, navegação e os
+comandos nativos de tela cheia. Não monta cards, tiles, options, gains ou listeners
+substituídos. O diálogo ampliado de `legacy/media-mosaic.js` e o diálogo de opções
+de compartilhamento ainda precisam de conversão própria.
 
 `call-audio.ts` possui o contexto compartilhado do microfone, seu listener de estado
 e os listeners de gesto/visibilidade que desbloqueiam o áudio. A criação é tardia:
@@ -458,8 +491,8 @@ apenas a decoração do botão legado de soundboard. O CSS do dock usa descenden
 para atravessar os hosts sem criar caixas ou alterar medidas dos botões.
 
 `control-bindings.ts` foi removido. O diálogo de configurações não instala outro
-listener no seu botão. `screen-sharing-bindings.ts` conserva opções/confirmação e
-cliques delegados das prévias, sem escutar o botão principal da tela. `social.js`
+listener no seu botão. `screen-sharing-bindings.ts` conserva somente o diálogo
+de opções/confirmação, sem escutar botões da barra ou dos tiles. `social.js`
 compõe comandos/snapshots, coordena a classe de participação e publica o evento de
 chamada para os layouts, sem pintar os controles. Clipes e soundboard conservam
 seus próprios controles/donos; não criar outro estado de mute ou câmera na interface.
@@ -472,10 +505,11 @@ Ações pendentes após tela cheia são invalidadas por revisão, geração e in
 Reset mantém versões monotônicas entre chamadas; desaparecimento da tela limpa a
 seleção e invalida assinaturas pendentes, sem tocar na voz.
 
-`media-interest-bindings.ts` delega os cliques dos controles dinâmicos, sem listeners
-por tile. Também limpa players/maximização e sai da tela cheia. `social.js` conserva
-a pintura e adaptadores públicos, sem conjuntos, versões ou handlers paralelos para
-assistir/ocultar mídia. Capturas, peers, players e assinaturas continuam emprestados.
+`media-interest-bindings.ts` foi removido. Os cliques de assistir/ocultar são React.
+`media-visibility.ts` conserva apenas a separação do player emprestado e a saída da
+tela cheia/maximização antes de ocultar. Procura as telas em todo o painel, incluindo
+as encaixadas em perfis, e não para trilhas. Capturas, peers, players de áudio e
+assinaturas continuam com seus donos.
 
 `screen-sharing.ts` possui comandos de iniciar/parar/trocar a tela, preferência de
 áudio e estado da prévia local. Consulta participação, qualidade, política SFU e
@@ -483,13 +517,13 @@ captura existentes; não cria outra trilha ou conexão. Pausar/colapsar a prévi
 interrompe a transmissão. Parar fecha apenas publicações/senders de tela e seu áudio,
 preservando voz e câmera. O dono da captura continua em `screen-capture.ts`.
 
-`screen-sharing-bindings.ts` possui o diálogo de qualidade, confirmação/cancelamento,
-cliques de prévia/troca/colapso. O checkbox de preferência de áudio pertence ao
+`screen-sharing-bindings.ts` possui somente o diálogo de qualidade e sua
+confirmação/cancelamento. Prévia/troca/colapso pertencem aos componentes React. O checkbox de preferência de áudio pertence ao
 React e a `settings.ts`, que usa o mesmo dono `screen-sharing.ts`. O picker é solicitado no mesmo
 evento de confirmação quando a chamada já está ativa. Os presets de 1080p/60 e
 bitrate foram preservados; limites SFU afetam as opções sem sobrescrever a
-preferência ao abrir o diálogo. Eventos delegados acompanham os mesmos nós entre
-layouts; o descarte remove todos os listeners registrados.
+preferência ao abrir o diálogo. O descarte remove os listeners do formulário e
+do botão Cancelar. Os tiles React possuem os demais eventos da apresentação.
 
 `screen-publication.ts` recebe `ScreenCaptureChange` do dono da captura e coordena
 sua publicação em P2P/SFU. Anuncia disponibilidade antes de aguardar transporte,

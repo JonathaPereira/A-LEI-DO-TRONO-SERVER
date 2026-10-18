@@ -53,6 +53,11 @@ window.TronoProfile = (() => {
   }
   const profileCache = new Map();
   let profileScope = null;
+  function clearCallBackground(card) {
+    const slot = card.querySelector('[data-profile-background-slot]');
+    if (slot) slot.replaceChildren();
+    else card.querySelector('.participant-background')?.remove();
+  }
   function callBackgrounds(host = $('voiceRoster')) {
     if (!host) return;
     const viewer = window.TronoAuth.user?.id;
@@ -70,7 +75,7 @@ window.TronoProfile = (() => {
       }
       if (card._profileBackground === entry) continue;
       card._profileBackground = entry;
-      card.querySelector('.participant-background')?.remove();
+      clearCallBackground(card);
       entry.promise.then(async (person) => {
         if (
           !person ||
@@ -91,16 +96,22 @@ window.TronoProfile = (() => {
             card._profileBackground !== entry
           )
             return;
-          const background = make('div', 'participant-background'),
+          const slot = card.querySelector('[data-profile-background-slot]'),
+            background = slot || make('div', 'participant-background'),
             img = make('img');
           img.alt = '';
           img.src = url;
           img.loading = 'lazy';
-          img.onerror = () => background.remove();
-          background.append(img);
+          img.onerror = () => {
+            if (img.parentNode === background) {
+              if (slot) background.replaceChildren();
+              else background.remove();
+            }
+          };
+          background.replaceChildren(img);
           background.style.setProperty('--participant-darkness', d.darkness / 100);
           background.style.setProperty('--participant-blur', d.blur + 'px');
-          card.prepend(background);
+          if (!slot) card.prepend(background);
         } catch {}
       });
     }
@@ -161,7 +172,7 @@ window.TronoProfile = (() => {
       profileCache.clear();
       for (const card of document.querySelectorAll('.voice-person')) {
         delete card._profileBackground;
-        card.querySelector('.participant-background')?.remove();
+        clearCallBackground(card);
       }
     }
   });

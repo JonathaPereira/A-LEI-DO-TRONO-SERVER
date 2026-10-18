@@ -211,33 +211,8 @@ window.addEventListener('trono:ready', () => {
       showChannels(false);
       window.TronoMessenger.close();
     }
-    const avatar = e.target.closest('#voiceRoster .mn-person-avatar');
-    if (avatar) {
-      const id = avatar.closest('[data-account-id]')?.dataset.accountId;
-      if (id) void window.TronoProfile.openMini(id);
-    }
   });
   $('chatOnlyTextBtn').addEventListener('click', () => window.TronoMessenger.close(), true);
-  const roster = $('voiceRoster');
-  new MutationObserver(() => {
-    for (const avatar of roster.querySelectorAll('.mn-person-avatar'))
-      if (avatar.closest('[data-account-id]')?.dataset.accountId) {
-        avatar.tabIndex = 0;
-        avatar.setAttribute('role', 'button');
-        avatar.setAttribute(
-          'aria-label',
-          'Ver perfil de ' +
-            (avatar.closest('.voice-person').querySelector(':scope > strong')?.textContent ||
-              'participante'),
-        );
-      }
-  }).observe(roster, { childList: true, subtree: true });
-  roster.addEventListener('keydown', (e) => {
-    if (e.target.matches('.mn-person-avatar') && ['Enter', ' '].includes(e.key)) {
-      e.preventDefault();
-      e.target.click();
-    }
-  });
   window.addEventListener('trono-direct-change', (e) => {
     const host = $('workspaceDirectList');
     host.replaceChildren();

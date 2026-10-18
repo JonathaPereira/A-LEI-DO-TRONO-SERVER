@@ -2,20 +2,16 @@ import type { createScreenSharing } from './screen-sharing';
 interface BindingOptions {
   document: Document;
   sharing: ReturnType<typeof createScreenSharing>;
-  call(): { joined: boolean; generation: number };
-  localId(): string | null | undefined;
+  call(): { joined: boolean };
   replayEnabled(): boolean;
-  onRender(): void;
-  warn?(error: unknown): void;
 }
-/** Owns screen options and delegated tile actions; the toolbar button is React. */
+/** Owns the screen options dialog; toolbar and tile actions are React. */
 export function createScreenSharingBindings(options: BindingOptions) {
   const document = options.document,
     sharing = options.sharing;
   const cleanup: (() => void)[] = [];
   let started = false,
     disposed = false;
-  const warn = options.warn ?? ((error: unknown) => console.warn('[ScreenSharingBindings]', error));
   const get = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const close = () => get<HTMLDialogElement>('screenOptionsDialog')?.close();
   function bind(target: EventTarget | null, event: string, listener: EventListener) {
@@ -42,44 +38,6 @@ export function createScreenSharingBindings(options: BindingOptions) {
       : 'Replay desligado. Ative em Meus clipes → Preferências para preparar clipes ao compartilhar.';
     get<HTMLDialogElement>('screenOptionsDialog').showModal();
   }
-  const click: EventListener = (event) => {
-    if (disposed || !(event.target instanceof Element)) return;
-    const button = event.target.closest<HTMLButtonElement>(
-      '.screen-resource-btn, .screen-switch-btn, .screen-collapse-btn',
-    );
-    const tile = button?.closest<HTMLElement>('.screen-share-tile');
-    if (!button || !tile) return;
-    event.stopPropagation();
-    const self = tile.dataset.peer === options.localId();
-    if (button.classList.contains('screen-resource-btn')) {
-      if (self) sharing.togglePreview();
-      return;
-    }
-    if (button.classList.contains('screen-switch-btn')) {
-      if (!self) return;
-      button.disabled = true;
-      void sharing
-        .switchSource()
-        .catch(warn)
-        .finally(() => {
-          button.disabled = false;
-        });
-      return;
-    }
-    const generation = options.call().generation;
-    const collapse = async () => {
-      if (document.fullscreenElement === tile) await document.exitFullscreen().catch(() => {});
-      if (disposed || generation !== options.call().generation) return;
-      tile.classList.remove('media-maximized');
-      document.body.classList.remove('media-focus-open');
-      if (self) sharing.toggleCollapsed();
-      else {
-        tile.dataset.collapsed = tile.dataset.collapsed === '1' ? '0' : '1';
-        options.onRender();
-      }
-    };
-    void collapse().catch(warn);
-  };
   return {
     open,
     close,
@@ -104,7 +62,6 @@ export function createScreenSharingBindings(options: BindingOptions) {
         void sharing.start(); // Do not await before the native picker.
       });
       bind(get('screenOptionsCancel'), 'click', close);
-      bind(document, 'click', click);
     },
     dispose() {
       if (!disposed) {

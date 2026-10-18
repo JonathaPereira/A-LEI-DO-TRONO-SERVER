@@ -458,3 +458,11 @@ body
     align-self: end;
   }
 }
+
+/* React owns the empty background slot; the profile controller owns its image. */
+#voiceRoster .participant-background[data-profile-background-slot]:empty {
+  display: none;
+}
+.participant-avatar-image {
+  display: contents;
+}

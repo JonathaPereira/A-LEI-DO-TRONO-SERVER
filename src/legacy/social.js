@@ -2,9 +2,7 @@
 window.TronoSocial = (() => {
   const $ = (id) => document.getElementById(id);
   const storage = window.TronoStorage || localStorage;
-  const profileActivities = new Map();
   let lastSfuError = '';
-  const profileMedia = new Map();
 
   const clampGain = window.TronoVoiceCapture.clampAudioGain;
   const controlState = () => callControls.getSnapshot();
@@ -49,9 +47,7 @@ window.TronoSocial = (() => {
     unlockCallAudio();
     audioPlayback.setGain(streamAudioKey(id), value);
     attachRemoteAudio(streamAudioKey(id));
-    const tile = findPeerTile($('screenShareGrid'), id, '.screen-share-tile');
-    const label = tile?.querySelector('.mn-stream-volume output');
-    if (label) label.textContent = `${audioPlayback.getGain(streamAudioKey(id))}%`;
+    callStage.refresh();
   }
   const toggleWatchStream = (id) => mediaInterest.toggleScreen(id);
   function setPeerGain(id, value) {
@@ -61,9 +57,7 @@ window.TronoSocial = (() => {
     attachRemoteAudio(id);
     const account = privateVoiceRoster.get(id)?.accountId;
     if (account) window.TronoPersonal?.set('volume:' + account, audioPlayback.getGain(id));
-    const slider = document.querySelector(`[data-peer-volume="${CSS.escape(id)}"]`);
-    const label = slider?.closest('.mn-peer-gain')?.querySelector('output');
-    if (label) label.textContent = `${audioPlayback.getGain(id)}%`;
+    callStage.refresh();
   }
 
   let roomState = null,
@@ -579,7 +573,7 @@ window.TronoSocial = (() => {
     syncSubscriptions: syncSfuSubscriptions,
     sendWatch: (id, watching) =>
       window.TronoNetwork?.sendVoiceSignal(id, 'stream-watch', { watching }),
-    hide: (id, kind) => mediaInterestBindings.hide(id, kind),
+    hide: (id, kind) => mediaVisibility.hide(id, kind),
     onChange: (kind) => {
       renderVoiceRoster();
       if (kind === 'screen') renderScreenGrid();
@@ -590,11 +584,7 @@ window.TronoSocial = (() => {
       }
     },
   });
-  const mediaInterestBindings = window.TronoVoiceCapture.createMediaInterestBindings({
-    document,
-    toggleScreen: (id) => toggleWatchStream(id),
-    toggleCamera: (id) => toggleWatchCamera(id),
-  });
+  const mediaVisibility = window.TronoVoiceCapture.createMediaVisibility({ document });
 
   const screenSharingControls = window.TronoVoiceCapture.createScreenSharing({
     storage,
@@ -635,9 +625,7 @@ window.TronoSocial = (() => {
     document,
     sharing: screenSharingControls,
     call: () => voiceCall.getSnapshot(),
-    localId: meId,
     replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
-    onRender: renderScreenGrid,
   });
 
   const screenPublication = window.TronoVoiceCapture.createScreenPublication({
@@ -803,7 +791,7 @@ window.TronoSocial = (() => {
     if (!wasMax && tile.classList.contains('screen-share-tile')) {
       if (tile.dataset.peer === meId()) {
         screenSharingControls.resetPreview();
-      } else tile.dataset.collapsed = '0';
+      } else callStage.expandScreen(tile.dataset.peer);
       renderScreenGrid();
     }
     if (wasMax && !document.fullscreenElement) {
@@ -843,19 +831,10 @@ window.TronoSocial = (() => {
   }
   function fullscreenMedia(peerId, kind = 'screen') {
     const tiles = document.querySelectorAll(
-      kind === 'camera' ? '#socialPanel .camera-tile' : '#screenShareGrid .screen-share-tile',
+      kind === 'camera' ? '#socialPanel .camera-tile' : '#socialPanel .screen-share-tile',
     );
     const tile = [...tiles].find((t) => t.dataset.peer === peerId);
-    if (tile) return toggleMediaFullscreen(tile);
-  }
-  function bindMediaFullscreen(tile) {
-    if (!tile || tile.dataset.fullscreenBound) return;
-    tile.dataset.fullscreenBound = '1';
-    tile.querySelector('.media-fullscreen-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleMediaFullscreen(tile);
-    });
-    tile.querySelector('video')?.addEventListener('dblclick', () => toggleMediaFullscreen(tile));
+    if (tile) return callStage.fullscreen(tile);
   }
   const FLOATING_RECT_KEY = 'tronoSocialFloatingRectV3';
   function readFloatingRect() {
@@ -1190,286 +1169,8 @@ window.TronoSocial = (() => {
     renderSeatMedia();
   }
 
-  function voiceStatusIcons(muted, silenced) {
-    const icon = (label, path) =>
-      `<span class="participant-status-icon" role="img" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}<path d="M3 3l18 18"/></svg></span>`;
-    return (
-      (muted
-        ? icon(
-            'Microfone mutado',
-            '<path d="M9 9v3a3 3 0 005 2M15 9V5a3 3 0 00-6 0M5 10v2a7 7 0 0012 5M19 12v-2M12 19v3M8 22h8"/>',
-          )
-        : '') +
-      (silenced
-        ? icon(
-            'Áudio da chamada silenciado',
-            '<path d="M4 13v-1a8 8 0 0113-6M20 12v5M4 13H2v7h5v-7H4M20 13h2v7h-5v-3"/>',
-          )
-        : '')
-    );
-  }
-  function renderVoiceStatus(host, muted, silenced) {
-    if (!host) return;
-    const html = voiceStatusIcons(muted, silenced);
-    if (host.innerHTML !== html) host.innerHTML = html;
-    host.hidden = !html;
-  }
-  function personVoiceSummary(p) {
-    const self = p.id === meId(),
-      muted = self ? controlState().micMuted : !!p.muted,
-      cam = self ? cameraOn() : !!p.camera,
-      screen = self ? screenSharing() : !!p.screen,
-      transport = self ? announcedTransport() : p.transport || 'p2p';
-    return (
-      (muted ? 'microfone mutado' : speakingIndicators.isSpeaking(p.id) ? 'falando…' : 'na voz') +
-      ((self ? controlState().deafened : p.deafened) ? ' • áudio silenciado' : '') +
-      (cam ? (mediaInterest.isCameraHidden(p.id) ? ' • câmera oculta' : ' • 📷 câmera') : '') +
-      (screen ? ' • 🖥 tela' : '') +
-      (transport === 'sfu' ? ' • ☁ SFU' : transport === 'sfu-pending' ? ' • conectando…' : '')
-    );
-  }
-  function cameraInProfile(id) {
-    const mode = profileMedia.get(id) || 'auto';
-    return mode === 'camera' || mode === 'auto';
-  }
-  function screenInProfile(id) {
-    return profileMedia.get(id) === 'screen';
-  }
-  function setProfileMedia(id, value) {
-    if (!['auto', 'camera', 'screen', 'stage'].includes(value)) return;
-    profileMedia.set(id, value);
-    renderVoiceRoster();
-    renderScreenGrid();
-  }
-  function camerasInProfiles() {
-    return (
-      inChatHub() &&
-      voiceCall.getSnapshot().joined &&
-      detailedPlayers().some((p) => (p.id === meId() ? screenSharing() : p.screen))
-    );
-  }
   function renderVoiceRoster() {
-    const host = $('voiceRoster');
-    if (!host) return;
-    const stage = host.closest('.mn-media-stage');
-    stage?.classList.toggle(
-      'has-screen',
-      voiceCall.getSnapshot().joined &&
-        detailedPlayers().some(
-          (p) =>
-            !screenInProfile(p.id) &&
-            (p.id === meId() ? screenSharing() : p.screen && mediaInterest.isWatching(p.id)),
-        ),
-    );
-    stage?.classList.toggle(
-      'has-camera',
-      voiceCall.getSnapshot().joined &&
-        detailedPlayers().some((p) =>
-          p.id === meId() ? cameraOn() : p.camera && !mediaInterest.isCameraHidden(p.id),
-        ),
-    );
-    stage?.classList.toggle('screens-layout', camerasInProfiles());
-    stage?.classList.toggle(
-      'room-idle',
-      voiceCall.getSnapshot().joined &&
-        !detailedPlayers().some((p) =>
-          p.id === meId()
-            ? cameraOn() || screenSharing()
-            : (p.camera && !mediaInterest.isCameraHidden(p.id)) || p.screen,
-        ),
-    );
-    const title = stage?.querySelector('.mosaic-toolbar strong');
-    if (title)
-      title.textContent = stage.classList.contains('room-idle') ? 'Na chamada' : 'Câmeras & telas';
-    const roomName = roomState?.name || (inChatHub() ? 'Geral' : 'Voz da mesa');
-    if ($('mnStageRoomName')) $('mnStageRoomName').textContent = roomName;
-    if ($('textVoiceRoomName')) $('textVoiceRoomName').textContent = 'Voz conectada · ' + roomName;
-    if (!voiceCall.getSnapshot().joined) {
-      const active = publicVoiceActive();
-      host.classList.add('voice-roster-private');
-      for (const video of host.querySelectorAll('video')) video.srcObject = null;
-      host.innerHTML = active
-        ? '<div class="voice-privacy-note"><span>🎙️</span><strong>Há alguém na chamada</strong><small>Entre na voz para ver participantes, câmeras e microfones.</small></div>'
-        : '<div class="voice-privacy-note"><span>○</span><strong>Ninguém na chamada</strong><small>Entre na voz quando quiser conversar.</small></div>';
-      return;
-    }
-    host.classList.remove('voice-roster-private');
-    host.querySelector('.voice-privacy-note')?.remove();
-    const me = meId(),
-      players = detailedPlayers(),
-      desired = new Set(players.map((p) => p.id));
-    for (const old of [...host.querySelectorAll('.voice-person')])
-      if (!desired.has(old.dataset.peer)) {
-        for (const video of old.querySelectorAll('video')) video.srcObject = null;
-        old.remove();
-      }
-    for (const p of players) {
-      const self = p.id === me,
-        muted = self ? controlState().micMuted : !!p.muted,
-        silenced = self ? controlState().deafened : !!p.deafened,
-        cam = self ? cameraOn() : !!p.camera,
-        screen = self ? screenSharing() : !!p.screen,
-        speaking = !muted && speakingIndicators.isSpeaking(p.id),
-        transport = self ? announcedTransport() : p.transport || 'p2p',
-        hidden = mediaInterest.isCameraHidden(p.id);
-      let card = findPeerTile(host, p.id, '.voice-person');
-      if (!card) {
-        card = document.createElement('div');
-        card.className = 'voice-person joined';
-        card.dataset.peer = p.id;
-        card.innerHTML =
-          '<div class="participant-camera-slot" hidden></div><div class="participant-screen-slot" hidden></div><span class="mn-person-avatar"></span><strong></strong><div class="participant-meta"><small class="participant-caption"></small><small class="participant-activity" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 8h10a3 3 0 013 2l2 8a2 2 0 01-3 2l-4-3H9l-4 3a2 2 0 01-3-2l2-8a3 3 0 013-2Z"/><path d="M6 12h4m-2-2v4M16 11h.01M18 14h.01"/></svg><span></span></small><span class="participant-voice-status" hidden></span></div><small class="participant-summary"></small><button class="participant-camera-toggle" type="button" hidden></button><label class="participant-media-layout" hidden><span>Exibição</span><select aria-label="Exibição da mídia"><option value="auto">Automática</option><option value="camera">Câmera no perfil</option><option value="screen">Tela no perfil</option><option value="stage">Mídia ampliada</option></select></label>';
-        const details = document.createElement('div');
-        details.className = 'participant-details';
-        details.hidden = true;
-        details.id = 'participant-details-' + p.id;
-        if (typeof details.showPopover === 'function') details.setAttribute('popover', 'auto');
-        const heading = document.createElement('strong');
-        heading.className = 'participant-popup-name';
-        heading.textContent = p.name;
-        details.append(heading);
-        for (const selector of [
-          '.participant-summary',
-          '.participant-camera-toggle',
-          '.participant-media-layout',
-        ])
-          details.append(card.querySelector(selector));
-        card.append(details);
-        const expand = document.createElement('button');
-        expand.type = 'button';
-        expand.className = 'participant-expand';
-        expand.innerHTML =
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-        expand.setAttribute('aria-expanded', 'false');
-        expand.setAttribute('aria-controls', details.id);
-        expand.onclick = () => {
-          const on = !card.classList.contains('participant-expanded');
-          card.classList.toggle('participant-expanded', on);
-          expand.setAttribute('aria-expanded', String(on));
-          if (on) {
-            details.hidden = false;
-            if (details.showPopover) {
-              details.showPopover();
-              positionProfileControls(card, details);
-            }
-          } else if (details.hidePopover) details.hidePopover();
-          else details.hidden = true;
-        };
-        details.addEventListener('toggle', (event) => {
-          if (event.newState === 'closed') {
-            details.hidden = true;
-            card.classList.remove('participant-expanded');
-            expand.setAttribute('aria-expanded', 'false');
-          }
-        });
-        card.append(expand);
-        card.querySelector('.participant-media-layout select').onchange = (event) =>
-          setProfileMedia(p.id, event.target.value);
-        if (!self) {
-          const label = document.createElement('label');
-          label.className = 'mn-peer-gain';
-          label.innerHTML =
-            '<span>Volume</span><input type="range" min="0" max="300" step="5"><output></output>';
-          label.querySelector('input').dataset.peerVolume = p.id;
-          label.querySelector('input').setAttribute('aria-label', 'Volume de ' + p.name);
-          details.appendChild(label);
-        }
-        host.appendChild(card);
-      }
-      card.classList.toggle('speaking', speaking);
-      const dock = cameraInProfile(p.id) && cam && !hidden,
-        screenDock = screenInProfile(p.id) && screen && (self || mediaInterest.isWatching(p.id));
-      card.classList.toggle('camera-in-profile', dock);
-      card.querySelector('.participant-camera-slot').hidden = !dock;
-      card.querySelector('.participant-screen-slot').hidden = !screenDock;
-      card.classList.toggle('media-in-profile', dock || screenDock);
-      const layout = card.querySelector('.participant-media-layout');
-      layout.hidden = !cam && !screen;
-      const select = layout.querySelector('select');
-      select.value = profileMedia.get(p.id) || 'auto';
-      select.setAttribute('aria-label', 'Exibição da mídia de ' + p.name);
-      select.querySelector('[value=camera]').disabled = !cam;
-      select.querySelector('[value=screen]').disabled = !screen;
-      card.dataset.accountId =
-        p.accountId || (p.id === meId() ? window.TronoAuth.user?.id : '') || '';
-      const avatar = card.querySelector('.mn-person-avatar'),
-        signature = JSON.stringify([p.name, p.avatar_preset, p.avatar_file_id]);
-      if (avatar.dataset.signature !== signature) {
-        avatar.dataset.signature = signature;
-        avatar.dataset.color = String(
-          [...String(p.id)].reduce((v, c) => v + c.charCodeAt(0), 0) % 4,
-        );
-        avatar.innerHTML =
-          (window.TronoProfile?.avatarHtml(p) ||
-            esc(
-              String(p.name || 'M')
-                .slice(0, 2)
-                .toUpperCase(),
-            )) + '<i class="participant-online-dot" aria-label="Online" title="Online"></i>';
-      }
-      card.querySelector('.participant-popup-name').textContent = p.name;
-      const expand = card.querySelector('.participant-expand');
-      expand.title =
-        (card.classList.contains('participant-expanded') ? 'Recolher' : 'Expandir') +
-        ' perfil de ' +
-        p.name;
-      expand.setAttribute('aria-label', expand.title);
-      renderVoiceStatus(card.querySelector('.participant-voice-status'), muted, silenced);
-      card.querySelector(':scope > strong').textContent = p.name;
-      card.querySelector(':scope > strong').title = p.name + (self ? ' (você)' : '');
-      card.querySelector('.participant-caption').textContent =
-        (self ? 'Você · ' : '') + (silenced ? 'Áudio silenciado' : muted ? 'Mic mutado' : 'Na voz');
-      card.querySelector('.participant-summary').textContent = personVoiceSummary(p);
-      const toggle = card.querySelector('.participant-camera-toggle');
-      toggle.hidden = self || !cam;
-      toggle.textContent = hidden ? 'Mostrar câmera' : 'Ocultar câmera';
-      toggle.setAttribute('aria-label', (hidden ? 'Mostrar' : 'Ocultar') + ' câmera de ' + p.name);
-      toggle.setAttribute('aria-pressed', String(hidden));
-      toggle.title = 'Esta preferência muda apenas o que você vê.';
-      if (!self) {
-        card.querySelector('[data-peer-volume]').value = String(audioPlayback.getGain(p.id));
-        card.querySelector('output').textContent = audioPlayback.getGain(p.id) + '%';
-      }
-    }
-    renderProfileActivities();
-    window.TronoProfile?.hydrate(host);
-    window.TronoProfile?.callBackgrounds(host);
-    renderVideoGrid();
-  }
-
-  function positionProfileControls(card, details) {
-    const anchor = card.querySelector('.participant-expand').getBoundingClientRect(),
-      top = window.TronoDesktop
-        ? ($('desktopTopBar')?.getBoundingClientRect().bottom || 0) + 12
-        : 12,
-      bottom = window.TronoDesktop
-        ? ($('desktopCallDock')?.getBoundingClientRect().top || innerHeight) - 12
-        : innerHeight - 12;
-    details.style.maxHeight = Math.max(100, bottom - top) + 'px';
-    const popup = details.getBoundingClientRect();
-    details.style.left =
-      Math.max(12, Math.min(anchor.right - popup.width, innerWidth - popup.width - 12)) + 'px';
-    details.style.top =
-      Math.max(top, Math.min(anchor.top - popup.height - 8, bottom - popup.height)) + 'px';
-  }
-  function repositionProfileControls() {
-    for (const details of $('voiceRoster')?.querySelectorAll(
-      '.voice-person.participant-expanded .participant-details[popover]',
-    ) || [])
-      positionProfileControls(details.closest('.voice-person'), details);
-  }
-  function renderProfileActivities() {
-    for (const card of $('voiceRoster')?.querySelectorAll('.voice-person') || []) {
-      const p = privateVoiceRoster.get(card.dataset.peer),
-        accountId = p?.accountId || (p?.id === meId() ? window.TronoAuth?.user?.id : null),
-        activity = profileActivities.get(accountId),
-        row = card.querySelector('.participant-activity');
-      row.hidden = !activity;
-      row.querySelector('span').textContent = activity?.name || '';
-      row.title = activity ? 'Atividade: ' + activity.name : '';
-      card.querySelector('.participant-caption').hidden = !!activity;
-      card.classList.toggle('has-activity', !!activity);
-    }
+    callStage.refresh();
   }
   function cameraStreamForPerson(p) {
     return p.id === meId() ? localStream : remoteMedia.recover(p.id).av;
@@ -1493,276 +1194,12 @@ window.TronoSocial = (() => {
       : remoteMedia.videoUsable(p.id, stream, 'screen');
   }
 
-  function findPeerTile(host, id, selector) {
-    return [...host.querySelectorAll(selector)].find((el) => el.dataset.peer === id) || null;
-  }
-  function updateVideoElement(video, stream) {
-    if (!video) return;
-    if (video.srcObject !== stream) video.srcObject = stream || null;
-    if (stream) video.play().catch(() => {});
-  }
-  function mediaSizeKey(kind) {
-    return `tronoMediaTileSize:${kind}`;
-  }
-  function bindMediaResize(tile, kind) {
-    if (!tile || tile.dataset.mediaResizeBound) return;
-    if (inChatHub()) return;
-    tile.dataset.mediaResizeBound = '1';
-    let grip = tile.querySelector('.media-resize-grip');
-    if (!grip) {
-      grip = document.createElement('button');
-      grip.type = 'button';
-      grip.className = 'media-resize-grip';
-      grip.title = 'Redimensionar';
-      grip.setAttribute('aria-label', 'Redimensionar janela');
-      grip.textContent = '↘';
-      tile.appendChild(grip);
-    }
-    try {
-      const saved = JSON.parse(storage.getItem(mediaSizeKey(kind)) || 'null');
-      if (saved?.w && saved?.h && innerWidth > 760) {
-        tile.style.width = `${Math.min(saved.w, innerWidth - 80)}px`;
-        tile.style.height = `${Math.min(saved.h, innerHeight - 130)}px`;
-        tile.style.aspectRatio = 'auto';
-        tile.style.justifySelf = 'start';
-      }
-    } catch {}
-    let resize = null;
-    grip.addEventListener('pointerdown', (e) => {
-      if (!inChatHub() || innerWidth <= 760) return;
-      e.stopPropagation();
-      const r = tile.getBoundingClientRect();
-      resize = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
-      grip.setPointerCapture?.(e.pointerId);
-      tile.classList.add('media-resizing');
-      e.preventDefault();
-    });
-    grip.addEventListener('pointermove', (e) => {
-      if (!resize) return;
-      const maxW = Math.max(280, Math.min(innerWidth - 80, 1000)),
-        maxH = Math.max(170, Math.min(innerHeight - 130, 680));
-      const w = Math.max(240, Math.min(maxW, resize.w + (e.clientX - resize.x))),
-        h = Math.max(135, Math.min(maxH, resize.h + (e.clientY - resize.y)));
-      tile.style.width = `${w}px`;
-      tile.style.height = `${h}px`;
-      tile.style.aspectRatio = 'auto';
-      tile.style.justifySelf = 'start';
-    });
-    const stop = () => {
-      if (!resize) return;
-      resize = null;
-      tile.classList.remove('media-resizing');
-      const r = tile.getBoundingClientRect();
-      storage.setItem(
-        mediaSizeKey(kind),
-        JSON.stringify({ w: Math.round(r.width), h: Math.round(r.height) }),
-      );
-    };
-    grip.addEventListener('pointerup', stop);
-    grip.addEventListener('pointercancel', stop);
-    grip.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      storage.removeItem(mediaSizeKey(kind));
-      tile.style.width = '';
-      tile.style.height = '';
-      tile.style.aspectRatio = '';
-      tile.style.justifySelf = '';
-    });
-  }
-
   function renderVideoGrid() {
-    const host = $('cameraGrid');
-    if (!host) return;
-    if (!voiceCall.getSnapshot().joined) {
-      host.className = 'camera-grid camera-grid-empty camera-grid-private';
-      host.innerHTML =
-        '<div class="camera-grid-note">Entre na voz para acessar as câmeras da chamada.</div>';
-      return;
-    }
-    const me = meId(),
-      players = detailedPlayers(),
-      visible = players.filter((p) =>
-        p.id === me ? cameraOn() : p.camera && !mediaInterest.isCameraHidden(p.id),
-      ),
-      desired = new Set(visible.map((p) => p.id)),
-      dock = visible.length ? visible.every((p) => cameraInProfile(p.id)) : camerasInProfiles();
-    host.className = `camera-grid ${dock ? 'camera-grid-docked' : visible.length ? '' : 'camera-grid-empty'} ${visible.length === 1 ? 'one-camera' : ''}`;
-    host.querySelector('.camera-grid-note')?.remove();
-    for (const old of [...$('socialPanel').querySelectorAll('.camera-tile')])
-      if (!desired.has(old.dataset.peer)) {
-        old.querySelector('video').srcObject = null;
-        old.remove();
-      }
-    for (const p of visible) {
-      let tile = findPeerTile($('socialPanel'), p.id, '.camera-tile');
-      const card = findPeerTile($('voiceRoster'), p.id, '.voice-person'),
-        target =
-          cameraInProfile(p.id) && card ? card.querySelector('.participant-camera-slot') : host;
-      if (!tile) {
-        tile = document.createElement('div');
-        tile.className = 'camera-tile camera-live';
-        tile.dataset.peer = p.id;
-        tile.innerHTML =
-          '<video autoplay playsinline muted></video><div class="camera-placeholder">Conectando vídeo…</div><button type="button" class="media-dock-btn" aria-label="Minimizar câmera no perfil">↙</button><button class="media-fullscreen-btn" title="Maximizar câmera" aria-label="Maximizar câmera">⛶</button><span></span>';
-        target.appendChild(tile);
-        bindMediaFullscreen(tile);
-        bindMediaResize(tile, 'camera');
-        tile.querySelector('.media-dock-btn').onclick = () =>
-          setProfileMedia(p.id, cameraInProfile(p.id) ? 'stage' : 'camera');
-      }
-      // Keep the same video/track when a screen starts or the roster updates.
-      if (
-        tile.parentElement !== target &&
-        document.fullscreenElement !== tile &&
-        !tile.classList.contains('media-maximized')
-      )
-        target.appendChild(tile);
-      const minimize = tile.querySelector('.media-dock-btn');
-      minimize.textContent = cameraInProfile(p.id) ? '↗' : '↙';
-      minimize.title = cameraInProfile(p.id) ? 'Ampliar câmera' : 'Minimizar câmera no perfil';
-      minimize.setAttribute('aria-label', minimize.title);
-      bindMediaFullscreen(tile);
-      bindMediaResize(tile, 'camera');
-      tile.querySelector('span').textContent = p.name + (p.id === me ? ' • você' : '');
-      const stream = cameraStreamForPerson(p),
-        live = personHasLiveCamera(p),
-        video = tile.querySelector('video');
-      tile.classList.toggle('has-video', live);
-      tile.classList.toggle('speaking', speakingIndicators.isSpeaking(p.id));
-      if (live) {
-        remoteMedia.cancelRecovery(p.id);
-        updateVideoElement(video, stream);
-      } else if (p.id !== me) remoteMedia.scheduleRecovery(p.id);
-    }
-    if (!visible.length && !dock)
-      host.innerHTML = '<div class="camera-grid-note">Nenhuma câmera visível nesta chamada.</div>';
+    callStage.refresh();
   }
-
   function renderScreenGrid() {
-    const host = $('screenShareGrid');
-    if (!host) return;
-    mediaInterest.prune();
-    if (!voiceCall.getSnapshot().joined || !communityVoice()) {
-      for (const tile of host.querySelectorAll('.screen-share-tile'))
-        window.TronoStreamControls?.dispose(tile);
-      host.className = 'screen-share-grid hidden';
-      host.innerHTML = '';
-      return;
-    }
-    const me = meId(),
-      visible = detailedPlayers().filter((p) => (p.id === me ? screenSharing() : !!p.screen)),
-      desired = new Set(visible.map((p) => p.id));
-    host.className = `screen-share-grid ${visible.length ? '' : 'screen-share-empty'}`;
-    host.querySelector('.screen-share-note')?.remove();
-    for (const old of [...$('socialPanel').querySelectorAll('.screen-share-tile')])
-      if (!desired.has(old.dataset.peer)) {
-        window.TronoStreamControls?.dispose(old);
-        const video = old.querySelector('video');
-        if (video) video.srcObject = null;
-        old.remove();
-      }
-    for (const p of visible) {
-      const self = p.id === me,
-        watching = self || mediaInterest.isWatching(p.id);
-      const card = findPeerTile($('voiceRoster'), p.id, '.voice-person'),
-        target =
-          screenInProfile(p.id) && watching && card
-            ? card.querySelector('.participant-screen-slot')
-            : host;
-      let tile = findPeerTile($('socialPanel'), p.id, '.screen-share-tile');
-      if (!tile) {
-        tile = document.createElement('div');
-        tile.className = 'screen-share-tile';
-        tile.dataset.peer = p.id;
-        tile.innerHTML =
-          '<video autoplay playsinline muted></video><div class="screen-share-placeholder">Conectando compartilhamento…</div><div class="mn-stream-invite"><strong></strong><small>Escolha quando abrir a transmissão.</small></div><button class="mn-watch-stream" type="button">Assistir stream</button><button class="media-fullscreen-btn" title="Maximizar compartilhamento" aria-label="Maximizar compartilhamento">⛶</button><button class="screen-collapse-btn" title="Minimizar prévia" aria-label="Minimizar prévia">—</button><button class="screen-resource-btn hidden" title="Ocultar apenas a prévia local sem interromper a transmissão">⚡ Economizar recursos</button><button class="screen-switch-btn" type="button" hidden title="Escolher outra tela ou janela sem encerrar o compartilhamento">⇄ Trocar tela</button><label class="mn-stream-volume"><span>Áudio da stream</span><input type="range" min="0" max="300" step="5" value="100"><output>100%</output></label><small class="mn-stream-audio-state"></small><span class="mn-stream-name"></span>';
-        host.appendChild(tile);
-        bindMediaFullscreen(tile);
-        bindMediaResize(tile, 'screen');
-        tile
-          .querySelector('.mn-stream-volume input')
-          .addEventListener('input', (e) => setStreamGain(p.id, e.target.value));
-      }
-      if (
-        tile.parentElement !== target &&
-        document.fullscreenElement !== tile &&
-        !tile.classList.contains('media-maximized')
-      )
-        target.appendChild(tile);
-      tile.classList.toggle('stream-invitation', !watching);
-      tile.querySelector('.mn-stream-invite strong').textContent = `${p.name} está transmitindo`;
-      const watch = tile.querySelector('.mn-watch-stream');
-      watch.hidden = self;
-      watch.textContent = watching ? 'Parar de assistir' : 'Assistir stream';
-      tile.querySelector('.screen-switch-btn').hidden = !self;
-      tile.querySelector('.mn-stream-name').textContent =
-        `🖥 ${p.name}${self ? ' • você • transmitindo' : ''}`;
-      for (const selector of ['.media-fullscreen-btn', '.screen-collapse-btn'])
-        tile.querySelector(selector).hidden = !watching;
-      const resource = tile.querySelector('.screen-resource-btn');
-      resource.classList.toggle('hidden', !self);
-      resource.textContent = screenSharingControls.getSnapshot().previewPaused
-        ? '👁 Mostrar prévia'
-        : '⚡ Economizar recursos';
-      const stream = screenStreamForPerson(p),
-        live = watching && personHasLiveScreen(p),
-        video = tile.querySelector('video');
-      const hasAudio =
-        stream?.getAudioTracks().some((t) => t.readyState === 'live' && !t.muted) ||
-        (!self &&
-          sfuSession
-            .getPublications()
-            .some((pub) => pub.ownerId === p.id && pub.kind === 'screen-audio'));
-      const volume = tile.querySelector('.mn-stream-volume');
-      volume.hidden = self || !watching;
-      volume.querySelector('input').value = String(audioPlayback.getGain(streamAudioKey(p.id)));
-      volume.querySelector('input').disabled = !hasAudio;
-      volume.querySelector('output').textContent =
-        `${audioPlayback.getGain(streamAudioKey(p.id))}%`;
-      const soundState = tile.querySelector('.mn-stream-audio-state');
-      soundState.hidden = !watching;
-      soundState.textContent = hasAudio
-        ? 'Áudio da stream disponível'
-        : 'Transmissão sem áudio compartilhado';
-      tile.classList.toggle('has-video', live);
-      tile.classList.toggle(
-        'local-preview-paused',
-        self && screenSharingControls.getSnapshot().previewPaused,
-      );
-      const collapsed =
-        watching &&
-        (self ? screenSharingControls.getSnapshot().collapsed : tile.dataset.collapsed === '1');
-      tile.classList.toggle('share-collapsed', collapsed);
-      const collapse = tile.querySelector('.screen-collapse-btn');
-      collapse.textContent = collapsed ? '▣' : '—';
-      collapse.title = collapsed ? 'Restaurar compartilhamento' : 'Minimizar compartilhamento';
-      const placeholder = tile.querySelector('.screen-share-placeholder');
-      if (!watching) {
-        video.pause();
-        video.srcObject = null;
-      } else if (self && screenSharingControls.getSnapshot().previewPaused) {
-        video.pause();
-        video.srcObject = null;
-        placeholder.innerHTML =
-          '<strong>⚡ Economia local ativa</strong><small>Sua tela continua sendo transmitida.</small>';
-        tile.classList.add('has-video');
-      } else if (live) {
-        placeholder.textContent = 'Conectando compartilhamento…';
-        updateVideoElement(video, stream);
-      } else if (!self) remoteMedia.scheduleRecovery(p.id);
-      tile.setAttribute('aria-label', 'Transmissão de ' + p.name);
-      window.TronoStreamControls?.update(
-        tile,
-        live && !collapsed && !(self && screenSharingControls.getSnapshot().previewPaused),
-      );
-    }
-    if (!host.querySelector('.screen-share-tile'))
-      host.innerHTML =
-        '<div class="screen-share-note">' +
-        (visible.length ? 'Transmissões exibidas nos perfis.' : 'Nenhuma tela compartilhada.') +
-        '</div>';
+    callStage.refresh();
   }
-
   function renderSeatMedia() {
     const host = $('seatMediaLayer');
     if (!host) return;
@@ -1771,35 +1208,14 @@ window.TronoSocial = (() => {
     host.replaceChildren();
   }
   function updateMediaIndicators() {
-    const me = meId();
-    for (const card of document.querySelectorAll('#voiceRoster .voice-person')) {
-      const p = privateVoiceRoster.get(card.dataset.peer);
-      if (!p) continue;
-      const speaking =
-        !(p.id === me ? controlState().micMuted : p.muted) && speakingIndicators.isSpeaking(p.id);
-      card.classList.toggle('speaking', speaking);
-      const summary = card.querySelector('.participant-summary');
-      if (summary) summary.textContent = personVoiceSummary(p);
-    }
-    for (const tile of document.querySelectorAll('.seat-camera-tile,.camera-tile')) {
-      const p = privateVoiceRoster.get(tile.dataset.peer);
-      if (!p) continue;
-      const muted = p.id === me ? controlState().micMuted : !!p.muted,
-        speaking = !muted && speakingIndicators.isSpeaking(p.id);
-      tile.classList.toggle('speaking', speaking);
-      renderVoiceStatus(
-        tile.querySelector('.seat-camera-mic'),
-        muted,
-        p.id === me ? controlState().deafened : !!p.deafened,
-      );
-    }
+    callStage.refresh();
   }
 
   function prepareCallUi() {
     unlockCallAudio();
     callControls.resetParticipation();
     mediaInterest.reset();
-    profileMedia.clear();
+    callStage.resetLayouts();
   }
   async function showJoinedCall() {
     updateVoiceBackgroundClass();
@@ -2055,7 +1471,6 @@ window.TronoSocial = (() => {
     voiceCall.start();
     voiceTransport.start();
     voiceRoster.start();
-    mediaInterestBindings.start();
     screenSharingBindings.start();
     audioPreferences.start();
     $('socialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
@@ -2081,29 +1496,13 @@ window.TronoSocial = (() => {
       $('muteTextBtn').classList.toggle('danger-active', chatMuted);
     }
 
-    window.addEventListener('resize', repositionProfileControls);
-    $('voiceRoster')?.addEventListener('scroll', repositionProfileControls, { passive: true });
-    $('voiceRoster')?.addEventListener('input', (e) => {
-      if (e.target.matches('[data-peer-volume]'))
-        setPeerGain(e.target.dataset.peerVolume, e.target.value);
-    });
     window.addEventListener('trono-auth-change', () => {
-      profileActivities.clear();
       if (volumeOwner !== window.TronoAuth.user?.id) {
         volumeOwner = window.TronoAuth.user?.id || null;
         audioPlayback.clearVoiceGains();
       }
-      renderProfileActivities();
     });
     window.TronoNetwork?.onMessage((msg) => {
-      if (msg.type === 'presence') {
-        profileActivities.clear();
-        if (msg.scope === 'community')
-          for (const person of msg.members || [])
-            if (person.online && person.activity?.name)
-              profileActivities.set(person.id, person.activity);
-        renderProfileActivities();
-      }
       if (msg.type === 'joined-game-room') {
         gameRoomState = msg.room;
         if (msg.primaryRoomId === msg.room.id) consumeRoom(msg.room);
@@ -2137,8 +1536,6 @@ window.TronoSocial = (() => {
         refreshCallControls();
       }
       if (msg.type === 'connection' && !msg.connected) {
-        profileActivities.clear();
-        renderProfileActivities();
         setStatus(
           'Servidor desconectado. Recarregue a página para entrar na voz novamente.',
           'error',
@@ -2157,6 +1554,7 @@ window.TronoSocial = (() => {
           maximized.classList.remove('media-maximized');
           document.body.classList.remove('media-focus-open');
           void setSfuTileLayer(maximized, false);
+          callStage.refresh();
         } else if (connectionDiagnostics.getSnapshot().open) toggleTelemetry(false);
         else if (inChatHub() && chatDrawerOpen) toggleTextChat(false);
         else if (window.TronoCallSettings.getSnapshot().open) toggleVoiceSettings(false);
@@ -2335,6 +1733,74 @@ window.TronoSocial = (() => {
     },
   });
   window.TronoCallToolbar = callToolbar;
+  const callStage = window.TronoVoiceCapture.createCallStage({
+    read: () => {
+      const call = voiceCall.getSnapshot(),
+        preview = screenSharingControls.getSnapshot();
+      return {
+        generation: call.generation,
+        joined: call.joined,
+        community: communityVoice(),
+        hub: inChatHub(),
+        publicActive: !!publicVoiceActive(),
+        roomName: roomState?.name || (inChatHub() ? 'Geral' : 'Voz da mesa'),
+        previewPaused: preview.previewPaused,
+        previewCollapsed: preview.collapsed,
+        participants: call.joined
+          ? detailedPlayers().map((p) => {
+              const self = p.id === meId(),
+                cameraStream = cameraStreamForPerson(p),
+                screenStream = screenStreamForPerson(p);
+              return {
+                ...p,
+                accountId: p.accountId || (self ? window.TronoAuth?.user?.id : null),
+                self,
+                muted: self ? controlState().micMuted : !!p.muted,
+                deafened: self ? controlState().deafened : !!p.deafened,
+                camera: self ? cameraOn() : !!p.camera,
+                screen: self ? screenSharing() : !!p.screen,
+                transport: self ? announcedTransport() : p.transport || 'p2p',
+                hiddenCamera: mediaInterest.isCameraHidden(p.id),
+                watching: self || mediaInterest.isWatching(p.id),
+                speaking: speakingIndicators.isSpeaking(p.id),
+                volume: audioPlayback.getGain(p.id),
+                screenVolume: audioPlayback.getGain(streamAudioKey(p.id)),
+                cameraStream: cameraStream || null,
+                screenStream: screenStream || null,
+                cameraLive: personHasLiveCamera(p),
+                screenLive: personHasLiveScreen(p),
+                hasScreenAudio: !!(
+                  screenStream?.getAudioTracks().some((t) => t.readyState === 'live' && !t.muted) ||
+                  (!self &&
+                    sfuSession
+                      .getPublications()
+                      .some((pub) => pub.ownerId === p.id && pub.kind === 'screen-audio'))
+                ),
+              };
+            })
+          : [],
+      };
+    },
+    onMessage: (listener) => window.TronoNetwork.onMessage(listener),
+    authEvents: window,
+    toggleScreen: toggleWatchStream,
+    toggleCamera: toggleWatchCamera,
+    setVolume: setPeerGain,
+    setScreenVolume: setStreamGain,
+    togglePreview: screenSharingControls.togglePreview,
+    toggleCollapsed: screenSharingControls.toggleCollapsed,
+    switchSource: screenSharingControls.switchSource,
+    prune: mediaInterest.prune,
+    recover: (id, live) =>
+      live ? remoteMedia.cancelRecovery(id) : remoteMedia.scheduleRecovery(id),
+    fullscreen: toggleMediaFullscreen,
+    beforeCollapse: async (tile) => {
+      if (document.fullscreenElement === tile) await document.exitFullscreen().catch(() => {});
+      tile.classList.remove('media-maximized');
+      document.body.classList.remove('media-focus-open');
+    },
+  });
+  window.TronoCallStage = callStage;
 
   window.addEventListener('trono-layout-change', refreshCallControls);
   window.addEventListener('trono:ready', bind);

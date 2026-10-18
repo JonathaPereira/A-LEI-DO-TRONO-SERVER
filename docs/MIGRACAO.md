@@ -46,6 +46,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Aba Áudio integralmente React, incluindo avisos, música, efeitos e proteção de recepção.
 - Aba Conexão, indicador, painel e ações de diagnóstico em React, com projeção tipada.
 - Controles principais da barra, status e recuperação de áudio em React; adaptador de cliques removido.
+- Participantes e painéis base de câmera/tela em React, conservando players ao encaixar nos perfis.
 
 ## Integração da main: desktop 0.2.10
 
@@ -72,9 +73,9 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 ## Conversão ainda necessária
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
-React ou TypeScript apenas porque a marcação foi convertida. Apresentação de participantes/
-mídias, edição/visualização de perfis e galeria, navegação/
-gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
+React ou TypeScript apenas porque a marcação foi convertida. Ampliação de mídias,
+coordenação visual/navegação, edição/visualização de perfis e galeria, gerenciamento
+de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
 Transporte de arquivos está em `lib/files/`; anexos e avatares compartilham componentes
@@ -1279,10 +1280,64 @@ O dock compacto foi conferido visualmente.
 Evidências: `artifacts/toolbar-react-{checks,format,build,tests,ui,sfu,layouts,desktop}.log`,
 `artifacts/call-controls/` e `artifacts/call-layout/`. Sem push ou infraestrutura alterada.
 
+## Participantes e painéis base de mídia em React — 18/10/2026
+
+- `components/voice/call-stage.tsx`, `participant-card.tsx` e `media-tile.tsx` possuem
+  privacidade, cards, atividade/status, popovers, ganho por participante/stream,
+  seleção da exibição e controles de câmera/tela. Avatares reutilizam o componente
+  e cliente tipados. O workspace deixou de observar/decorar avatares e instalar
+  outra ação de perfil por clique/teclado.
+- `lib/voice/stage.ts` possui preferências de exibição/colapso remoto, atividades e
+  assinaturas da interface. Projeta os donos existentes, sem capturas, streams,
+  sockets ou recursos de transporte próprios. Troca de geração limpa preferências;
+  ações pendentes de trocar fonte/colapsar não alteram a apresentação da próxima chamada.
+- Cada superfície usa um portal para um host estável. Docking move esse host entre
+  grid/perfil, sem desmontar o vídeo ou mudar a referência do stream. A desmontagem
+  solta srcObject e descarta idle/listeners, sem parar trilhas emprestadas. A prévia
+  local e os relógios de inatividade conservam seus donos atuais.
+- O bootstrap monta após todos os listeners de `trono:ready`, preservando os grids
+  observados pelos layouts/mosaico. O fundo personalizado ocupa um slot vazio:
+  `profile-files.js` possui só a imagem/variáveis desse slot e não remove o nó React.
+  Erro de uma imagem antiga não limpa uma imagem nova já colocada no mesmo slot.
+- Removidas montagem/pintura/handlers de cards/tiles, mapas de atividade/exibição e
+  listeners substituídos em `social.js`. Métodos públicos de render delegam à projeção;
+  o coordenador ainda possui navegação/comandos nativos de ampliação e dados emprestados.
+- Removido `media-interest-bindings.ts`; `media-visibility.ts` preserva apenas separar
+  players e sair da tela cheia/maximização ao ocultar, incluindo telas em perfis.
+  O helper de opções de compartilhamento deixou de escutar controles de tiles.
+- Recuperação considera as duas mídias: câmera saudável não cancela a recuperação
+  de tela assistida ausente. Ganhos idênticos são aplicados uma vez em input/change.
+  `media-resize.ts` tem descarte explícito dos listeners. Corrigida sua condição de
+  arraste invertida, que impedia redimensionar no modo flutuante em que era instalado.
+- Dez regressões novas cobrem privacidade/identidade dos streams, docking/intenção,
+  presença/auth, ganhos, recuperação combinada, troca/colapso atrasados, descarte,
+  arraste/persistência e ocultação de uma tela maximizada encaixada no perfil.
+  `test:settings` tem 48 casos.
+- O Electron alterna a exibição entre stage/screen/camera/auto e confirma identidade
+  dos dois vídeos, srcObject e trilhas vivas, além de socket/peers/fontes preservados.
+  O mosaico ampliado continua com seu próprio controlador e não foi declarado convertido.
+
+Validação: tipagem, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 12 de controles/perfis/chamada flutuante, 17 de layouts/
+configurações/microfone/recepção e três no Electron real passaram. Após incluir o
+último caso de ocultação, `test:settings` foi repetido com 48 aprovações. O Electron
+Windows coberto/minimizado/oculto passou nos nove cenários de voz nativa em 100%/180%
+e RNNoise em 100%, com PCM contínuo e sem amostras ocultadas. Encoders e captura
+nativa de tela não foram alterados. As fontes dos testes são sintéticas.
+Cards e players nos layouts Original/Discord foram conferidos visualmente.
+
+Evidências: `artifacts/stage-react-{checks,build,tests,settings,ui,sfu,layouts,media,desktop,background}.log`,
+`artifacts/profile-media/`, `artifacts/call-layout/` e `artifacts/floating-call/`.
+Sem push ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Converter lista de participantes e painéis de câmera/tela para React, com um dono por
-   subárvore. Dispositivos, ganhos, supressão/modo leve e opções de transmissão
+1. Converter o diálogo ampliado/mosaico (`legacy/media-mosaic.js`), o diálogo
+   de opções de compartilhamento e os trechos de coordenação visual/navegação
+   restantes em `social.js`. A lista e os painéis base já são React, em
+   `call-stage.tsx`, `participant-card.tsx` e `media-tile.tsx`, com projeção em
+   `lib/voice/stage.ts`. Não restaurar seus escritores ou handlers DOM.
+   Dispositivos, ganhos, supressão/modo leve e opções de transmissão
    já são campos React em `settings-fields.tsx`, usando `lib/voice/settings.ts`.
    Avisos, música, efeitos e proteção recebida também são React em
    `audio-preferences.tsx`, usando `lib/voice/audio-preferences.ts`. O player
@@ -1297,7 +1352,8 @@ Evidências: `artifacts/toolbar-react-{checks,format,build,tests,ui,sfu,layouts,
    callbacks no controlador nem duplicar os donos de captura/sessão.
    Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
    `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
-   `media-interest.ts`/`media-interest-bindings.ts`.
+   `media-interest.ts`; `media-visibility.ts` conserva somente a separação de
+   players/tela cheia ao ocultar. O adaptador de cliques antigo foi removido.
    Estado/ações estão em `controls.ts`; controles principais/status da barra são
    React em `call-toolbar.tsx`, com projeção em `toolbar.ts`. `control-bindings.ts`
    foi removido. O layout move hosts, sem escrever nos botões React. Clipes e
