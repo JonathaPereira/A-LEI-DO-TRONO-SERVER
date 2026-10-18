@@ -41,9 +41,3 @@ export interface ChatMessage {
   avatar_file_id?: string | null;
   attachment?: ChatAttachment | null;
 }
-
-export interface VoiceControlState {
-  readonly voiceJoined: boolean;
-  readonly cameraOn: boolean;
-  readonly screenSharing: boolean;
-}

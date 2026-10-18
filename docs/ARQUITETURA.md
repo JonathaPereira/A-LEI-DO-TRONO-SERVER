@@ -441,12 +441,28 @@ quando a supressão está ativa. A intenção da câmera pode iniciar a entrada 
 mas é invalidada ao sair. Enumeração atrasada não limpa uma seleção mais recente;
 lista vazia de câmeras conserva a preferência até existir uma alternativa confirmada.
 
-`control-bindings.ts` conserva somente os três listeners da barra de chamada:
-mute, silenciamento e câmera. Mover os nós entre layouts conserva os handlers;
-o descarte remove os mesmos listeners. Os seis listeners de configurações foram
-retirados; seus campos e eventos agora pertencem aos componentes React. A ação
-começa no evento original, preservando ativação de mídia. A barra ainda recebe
-pintura de `social.js`; não criar outro estado de mute ou intenção de câmera.
+`components/voice/call-toolbar.tsx` possui os seis controles principais (entrada/saída,
+mute, silenciamento, câmera, tela e configurações), seus ícones/textos e o status/
+botão de recuperar áudio. `lib/voice/toolbar.ts` projeta participação, intenção,
+captura, reprodução e contexto de navegação; possui apenas status visual e assinaturas.
+Ações reconsultam a disponibilidade e começam no evento original, preservando a
+ativação de mídia. Participação, capturas e preferências não são copiadas para o React.
+Abertura/fechamento das configurações vêm do controlador compartilhado, por uma assinatura.
+
+`call-toolbar-runtime.tsx` monta antes de `trono:ready`, quando os posicionadores
+registram os locais originais. Cada botão pertence a uma raiz em host estável com
+`display: contents`; `control-layout.ts` move esse host entre barra/dock/sidebar,
+preservando botão, filhos React e propagação dos eventos. O posicionador não escreve
+nos controles convertidos nem os observa para refazer seus ícones. Ele conserva
+apenas a decoração do botão legado de soundboard. O CSS do dock usa descendentes
+para atravessar os hosts sem criar caixas ou alterar medidas dos botões.
+
+`control-bindings.ts` foi removido. O diálogo de configurações não instala outro
+listener no seu botão. `screen-sharing-bindings.ts` conserva opções/confirmação e
+cliques delegados das prévias, sem escutar o botão principal da tela. `social.js`
+compõe comandos/snapshots, coordena a classe de participação e publica o evento de
+chamada para os layouts, sem pintar os controles. Clipes e soundboard conservam
+seus próprios controles/donos; não criar outro estado de mute ou câmera na interface.
 
 `media-interest.ts` possui a seleção de telas assistidas, câmeras ocultas e versões
 por participante. O filtro de publicações SFU e os consumidores P2P/recepção consultam

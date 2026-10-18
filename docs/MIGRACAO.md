@@ -45,6 +45,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Campos de dispositivos, ganhos, supressão/modo leve e transmissão em React.
 - Aba Áudio integralmente React, incluindo avisos, música, efeitos e proteção de recepção.
 - Aba Conexão, indicador, painel e ações de diagnóstico em React, com projeção tipada.
+- Controles principais da barra, status e recuperação de áudio em React; adaptador de cliques removido.
 
 ## Integração da main: desktop 0.2.10
 
@@ -1234,9 +1235,53 @@ Evidências: `artifacts/connection-diagnostics-{checks,build,tests,ui,sfu,layout
 O log desktop conserva a primeira falha de controles inativos; a repetição corrigida
 está em `desktop-layout`. Sem push ou alteração de infraestrutura.
 
+## Controles principais da chamada em React — 17/10/2026
+
+- `components/voice/call-toolbar.tsx` renderiza e possui os eventos dos botões de
+  entrada/saída, mute, silenciamento, câmera, tela e configurações. Também possui
+  status da chamada e botão de recuperar áudio. A marcação estática substituída
+  saiu de `VoicePanel`; não há outro escritor ou listener nesses botões.
+- `lib/voice/toolbar.ts` projeta os donos existentes e mantém somente status visual
+  e assinaturas. Reconsulta disponibilidade antes das ações, preserva o início
+  síncrono para câmera/picker/áudio e ignora atualizações após descarte. As regras
+  de entrada pendente, canal de texto, câmera no Original/Discord e silenciamento
+  foram preservadas. Configurações usa uma assinatura do controlador compartilhado.
+- `call-toolbar-runtime.tsx` monta antes de `trono:ready`. O posicionador registra
+  e move hosts estáveis com display: contents, mantendo a identidade dos botões e
+  a propagação dos eventos React. Os seletores do dock e das cores de ação
+  atravessam esses hosts, conservando verde/vermelho e hover no Original/Discord.
+  `control-layout.ts` deixou de escrever ícones/atributos ou observar os botões
+  convertidos; a decoração legada restante pertence somente ao soundboard.
+- Removido `lib/voice/control-bindings.ts` e sua exposição no bootstrap. Saíram os
+  cliques paralelos da barra em `social.js`, em `screen-sharing-bindings.ts` e no
+  diálogo de configurações. Também saíram a pintura e os disabled manuais da barra
+  em `social.js`; o coordenador conserva efeitos de participação/eventos de layout.
+  O tipo de compatibilidade sem consumidores foi retirado de `types/domain.ts`.
+- Sete regressões da projeção substituem os três testes do adaptador removido:
+  regras de disponibilidade, comandos no gesto, duplicação durante câmera pendente,
+  settings compartilhado, contexto visual, status/recuperação, erros e descarte.
+  As 22 regressões do dono de controles foram preservadas. `test:settings` tem 38 casos.
+- Clipes e soundboard continuam com seus próprios donos e controles. A lista de
+  participantes e os slots de mídia dos perfis serão convertidos em conjunto com
+  os painéis de câmera/tela; não retirar esses slots antes de transferir seus players.
+
+Validação: tipagem, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 17 testes de layouts/configurações/microfone/recepção e três
+no Electron real passaram. As mudanças de layout, navegação e tamanho preservaram
+os mesmos botões, socket, peers e fontes de mídia. Ações de mute/silenciamento,
+câmera, compartilhar/trocar tela e configurações passaram pelos botões React.
+O microfone conservou PCM silencioso baixo sem camadas adicionais; a recepção
+manteve PCM contínuo durante tarefas longas. Nenhum encoder/processador/captura
+foi alterado. A suíte isolada de nove cenários Windows de segundo plano não foi
+repetida; mídia é sintética, não medição de jogos físicos ou rede externa.
+O dock compacto foi conferido visualmente.
+
+Evidências: `artifacts/toolbar-react-{checks,format,build,tests,ui,sfu,layouts,desktop}.log`,
+`artifacts/call-controls/` e `artifacts/call-layout/`. Sem push ou infraestrutura alterada.
+
 ## Próximas alterações, em ordem
 
-1. Converter barra, lista de participantes e painéis de câmera/tela para React, com um dono por
+1. Converter lista de participantes e painéis de câmera/tela para React, com um dono por
    subárvore. Dispositivos, ganhos, supressão/modo leve e opções de transmissão
    já são campos React em `settings-fields.tsx`, usando `lib/voice/settings.ts`.
    Avisos, música, efeitos e proteção recebida também são React em
@@ -1253,8 +1298,10 @@ está em `desktop-layout`. Sem push ou alteração de infraestrutura.
    Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
    `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
    `media-interest.ts`/`media-interest-bindings.ts`.
-   Estado/ações estão em `controls.ts`; `control-bindings.ts` conserva somente
-   três cliques da barra. Não restaurar flags ou handlers dos campos convertidos.
+   Estado/ações estão em `controls.ts`; controles principais/status da barra são
+   React em `call-toolbar.tsx`, com projeção em `toolbar.ts`. `control-bindings.ts`
+   foi removido. O layout move hosts, sem escrever nos botões React. Clipes e
+   soundboard mantêm seus donos. Não restaurar flags/handlers dos controles convertidos.
    Contextos, desbloqueio e avisos estão em `call-audio.ts`/`call-alerts.ts`.
    O roster e seus eventos estão em `roster.ts`/`roster-protocol.ts`.
    Qualidade/preferências/adaptação e filas de encoders estão em `quality.ts`/`quality-policy.ts`.

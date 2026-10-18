@@ -24,11 +24,7 @@ window.TronoSocial = (() => {
   }
   function updateAudioRecoveryUI() {
     voiceSettings.refresh();
-    const state = callAudio.getSnapshot().context;
-    const blocked =
-      audioPlayback.getSnapshot().entries.some((entry) => entry.blocked) ||
-      (voiceCall.getSnapshot().joined && state && state !== 'running');
-    $('resumeAudioBtn')?.classList.toggle('hidden', !blocked);
+    callToolbar.refresh();
   }
   function unlockCallAudio() {
     callAudio.unlock();
@@ -507,7 +503,7 @@ window.TronoSocial = (() => {
     ],
     onLeft: showLeftCall,
     onError: (error) => setStatus(error?.message || 'Não foi possível abrir o microfone.', 'error'),
-    onChange: updateButtons,
+    onChange: refreshCallControls,
   });
   const { toggle: joinVoice, leave: leaveVoice } = voiceCall;
   const callControls = window.TronoVoiceCapture.createCallControls({
@@ -536,22 +532,18 @@ window.TronoSocial = (() => {
       voiceSettings.refresh();
       if (change === 'processing' || change === 'gain') updateNoiseButton();
       if (change === 'mute') {
-        updateButtons();
+        refreshCallControls();
         renderVoiceRoster();
         updateMediaIndicators();
       }
       if (change === 'camera') {
-        updateButtons();
+        refreshCallControls();
         renderVideoGrid();
         renderSeatMedia();
       }
     },
   });
 
-  const controlBindings = window.TronoVoiceCapture.createCallControlBindings({
-    controls: callControls,
-    root: document,
-  });
   const voiceRoster = window.TronoVoiceCapture.createVoiceRoster({
     localId: meId,
     call: () => voiceCall.getSnapshot(),
@@ -632,7 +624,7 @@ window.TronoSocial = (() => {
     onChange: (kind) => {
       if (kind === 'settings') updateQualityUI();
       else {
-        if (kind === 'stopped') updateButtons();
+        if (kind === 'stopped') refreshCallControls();
         renderScreenGrid();
         renderVoiceRoster();
       }
@@ -663,7 +655,7 @@ window.TronoSocial = (() => {
         qualityPreferences().transmissionQuality,
         announcedTransport(),
       );
-      updateButtons();
+      refreshCallControls();
       renderScreenGrid();
       renderVoiceRoster();
     },
@@ -711,11 +703,7 @@ window.TronoSocial = (() => {
     voiceTransport.getSnapshot().mode === 'stopping';
   const announcedTransport = voiceTransport.announced;
   function setStatus(text, kind = '') {
-    const el = $('voiceStatus');
-    if (el) {
-      el.textContent = text;
-      el.dataset.kind = kind;
-    }
+    callToolbar.setStatus(text, kind);
   }
   function setUnreadCount(value) {
     chatUnreadCount = Math.max(0, Number(value) || 0);
@@ -945,7 +933,7 @@ window.TronoSocial = (() => {
     if (chatHubMode) chatDrawerOpen = chatRoomState?.channelType === 'text';
     applyPanelMode();
     updateChatDrawerUI();
-    updateButtons();
+    refreshCallControls();
     refreshDiagnostics();
     if (chatHubMode) showPanel(true);
   }
@@ -1038,7 +1026,7 @@ window.TronoSocial = (() => {
     return cameraCapture.acquire();
   }
   function renderCameraState() {
-    updateButtons();
+    refreshCallControls();
     renderVideoGrid();
     renderSeatMedia();
     renderVoiceRoster();
@@ -1829,11 +1817,7 @@ window.TronoSocial = (() => {
     );
     playCallSound('join', 'local');
     callNotice({ kind: 'joined', name: 'Você' });
-    $('muteMicBtn').disabled = false;
-    $('deafenVoiceBtn').disabled = false;
-    $('cameraBtn').disabled = false;
-    if ($('screenShareBtn')) $('screenShareBtn').disabled = !communityVoice();
-    updateButtons();
+    refreshCallControls();
     refreshDiagnostics();
     setStatus('Conectando o áudio da chamada…', 'warn');
     renderVoiceRoster();
@@ -1872,12 +1856,8 @@ window.TronoSocial = (() => {
           reason === 'disconnect' ? 'Você foi desconectado da chamada.' : 'Você saiu da chamada.',
       });
     }
-    $('muteMicBtn').disabled = true;
-    $('deafenVoiceBtn').disabled = true;
-    $('cameraBtn').disabled = false;
-    if ($('screenShareBtn')) $('screenShareBtn').disabled = true;
     callControls.resetParticipation();
-    updateButtons();
+    refreshCallControls();
     refreshDiagnostics();
     setStatus('Fora do chat de voz.');
     renderVoiceRoster();
@@ -1897,68 +1877,11 @@ window.TronoSocial = (() => {
     document.body.classList.toggle('voice-light-mode', controlState().voiceLightMode);
   }
 
-  function updateButtons() {
-    const m = $('muteMicBtn'),
-      d = $('deafenVoiceBtn'),
-      c = $('cameraBtn'),
-      s = $('screenShareBtn');
-    if (m)
-      m.innerHTML = `<span class="call-icon">${controlState().micMuted ? '🔇' : '🎙'}</span><span>${controlState().micMuted ? 'Ativar microfone' : 'Mutar microfone'}</span>`;
-    if (d)
-      d.innerHTML = `<span class="call-icon">${controlState().deafened ? '🔈' : '🔊'}</span><span>${controlState().deafened ? 'Ouvir voz' : 'Silenciar voz'}</span>`;
-    if (c)
-      c.innerHTML = `<span class="call-icon">${cameraOn() ? '▧' : '▣'}</span><span>${cameraOn() ? 'Desligar câmera' : 'Ligar câmera'}</span>`;
-    if (s) {
-      s.innerHTML = `<span class="call-icon">${screenSharing() ? '■' : '▤'}</span><span>${screenSharing() ? (window.TronoDesktop ? 'Parar tela' : 'Parar compartilhamento') : 'Compartilhar tela'}</span>`;
-      s.title = screenSharing() ? 'Parar compartilhamento' : 'Compartilhar tela';
-      s.setAttribute('aria-label', s.title);
-      s.disabled = !voiceCall.getSnapshot().joined || !communityVoice();
-    }
-    $('joinVoiceBtn')?.classList.toggle('call-active', voiceCall.getSnapshot().joined);
-    if (m) {
-      m.disabled = !voiceCall.getSnapshot().joined || controlState().deafened;
-      m.title = controlState().deafened ? 'Ative o áudio da chamada para liberar o microfone.' : '';
-    }
-    m?.classList.toggle('danger-active', controlState().micMuted);
-    d?.classList.toggle('danger-active', controlState().deafened);
-    c?.classList.toggle('camera-active', cameraOn());
-    s?.classList.toggle('screen-active', screenSharing());
+  function refreshCallControls() {
+    callToolbar.refresh();
     updateNoiseButton();
     document.body.classList.toggle('call-connected', voiceCall.getSnapshot().joined);
-    const eligible = !!roomState && roomState.channelType !== 'text',
-      joining = !!voiceCall.getSnapshot().joining && !voiceCall.getSnapshot().joined,
-      textOnly =
-        inChatHub() &&
-        chatRoomState?.channelType === 'text' &&
-        !voiceCall.getSnapshot().joined &&
-        !eligible,
-      j = $('joinVoiceBtn');
-    if (j) {
-      j.disabled = !eligible || joining;
-      const label = joining
-        ? 'Conectando…'
-        : voiceCall.getSnapshot().joined
-          ? 'Sair da voz'
-          : 'Entrar na voz';
-      if (j.lastElementChild?.textContent !== label)
-        j.innerHTML = '<span class="call-icon">☎</span><span>' + label + '</span>';
-      j.classList.toggle('call-joining', joining);
-    }
-    if (d) d.disabled = !voiceCall.getSnapshot().joined;
-    if (c)
-      c.disabled =
-        textOnly ||
-        joining ||
-        (!cameraOn() &&
-          (controlState().cameraTogglePending || !!cameraCapture.getSnapshot().loading)) ||
-        (document.body.dataset.appLayout === 'discord' && !voiceCall.getSnapshot().joined);
-    for (const [button, on] of [
-      [m, controlState().micMuted],
-      [d, controlState().deafened],
-      [c, cameraOn()],
-      [s, screenSharing()],
-    ])
-      button?.setAttribute('aria-pressed', String(on));
+    const joining = !!voiceCall.getSnapshot().joining && !voiceCall.getSnapshot().joined;
     window.dispatchEvent(
       new CustomEvent('trono-call-change', {
         detail: {
@@ -1984,7 +1907,7 @@ window.TronoSocial = (() => {
     if (room || voiceCall.getSnapshot().joined) showForRoom(true);
     if (inChatHub() && room?.channelType === 'text') toggleTextChat(true);
     updateChatDrawerUI();
-    updateButtons();
+    refreshCallControls();
   }
   function consumeRoom(room) {
     roomState = room || null;
@@ -1997,7 +1920,7 @@ window.TronoSocial = (() => {
       if (transportIsSfu() || transportPending()) voiceTransport.reset();
     }
     if (!room || room.id === window.TronoNetwork.currentRoom) consumeChatRoom(room);
-    updateButtons();
+    refreshCallControls();
     updatePublicPresence();
     renderVoiceRoster();
     renderVideoGrid();
@@ -2132,7 +2055,6 @@ window.TronoSocial = (() => {
     voiceCall.start();
     voiceTransport.start();
     voiceRoster.start();
-    controlBindings.start();
     mediaInterestBindings.start();
     screenSharingBindings.start();
     audioPreferences.start();
@@ -2159,14 +2081,6 @@ window.TronoSocial = (() => {
       $('muteTextBtn').classList.toggle('danger-active', chatMuted);
     }
 
-    $('joinVoiceBtn')?.addEventListener('click', joinVoice);
-    $('resumeAudioBtn')?.addEventListener('click', () => {
-      unlockCallAudio();
-      if (voiceCall.getSnapshot().joined && !microphone.getSnapshot().capture?.processor)
-        void acquireMic()
-          .then(() => speakingIndicators.watch(meId(), localStream))
-          .catch((err) => setStatus(err.message, 'warn'));
-    });
     window.addEventListener('resize', repositionProfileControls);
     $('voiceRoster')?.addEventListener('scroll', repositionProfileControls, { passive: true });
     $('voiceRoster')?.addEventListener('input', (e) => {
@@ -2220,7 +2134,7 @@ window.TronoSocial = (() => {
       if (msg.type === 'channel-deleted' && msg.roomId === roomState?.id) {
         roomState = null;
         voiceRoster.setRoom(null);
-        updateButtons();
+        refreshCallControls();
       }
       if (msg.type === 'connection' && !msg.connected) {
         profileActivities.clear();
@@ -2263,7 +2177,7 @@ window.TronoSocial = (() => {
     updateChatDrawerUI();
     voiceSettings.start();
     updateQualityUI();
-    updateButtons();
+    refreshCallControls();
     updatePublicPresence();
     renderVoiceRoster();
     renderVideoGrid();
@@ -2373,8 +2287,56 @@ window.TronoSocial = (() => {
     onQualityChanged: () => voiceSettings.refresh(),
   });
   window.TronoConnectionDiagnostics = connectionDiagnostics;
+  const callToolbar = window.TronoVoiceCapture.createCallToolbar({
+    read: () => {
+      const call = voiceCall.getSnapshot(),
+        controls = controlState(),
+        context = callAudio.getSnapshot().context;
+      const eligible = !!roomState && roomState.channelType !== 'text';
+      return {
+        joined: call.joined,
+        joining: !!call.joining,
+        eligible,
+        textOnly: inChatHub() && chatRoomState?.channelType === 'text' && !call.joined && !eligible,
+        communityVoice: communityVoice(),
+        discord: document.body.dataset.appLayout === 'discord',
+        desktop: !!window.TronoDesktop,
+        micMuted: controls.micMuted,
+        deafened: controls.deafened,
+        camera: cameraOn(),
+        cameraPending: controls.cameraTogglePending,
+        cameraLoading: !!cameraCapture.getSnapshot().loading,
+        screen: screenSharing(),
+        blocked:
+          audioPlayback.getSnapshot().entries.some((entry) => entry.blocked) ||
+          !!(call.joined && context && context !== 'running'),
+      };
+    },
+    workspace: (id) =>
+      document.body.classList.contains('chat-only-active') &&
+      !!document.getElementById(id)?.closest('#callWorkspace'),
+    settings: () => window.TronoCallSettings,
+    actions: {
+      joinVoiceBtn: joinVoice,
+      muteMicBtn: callControls.toggleMute,
+      deafenVoiceBtn: callControls.toggleDeafen,
+      cameraBtn: callControls.toggleCamera,
+      screenShareBtn: () =>
+        screenSharingControls.isActive()
+          ? screenSharingControls.stop()
+          : screenSharingBindings.open(),
+    },
+    resume: () => {
+      unlockCallAudio();
+      if (voiceCall.getSnapshot().joined && !microphone.getSnapshot().capture?.processor)
+        return acquireMic()
+          .then(() => speakingIndicators.watch(meId(), localStream))
+          .catch((err) => setStatus(err.message, 'warn'));
+    },
+  });
+  window.TronoCallToolbar = callToolbar;
 
-  window.addEventListener('trono-layout-change', updateButtons);
+  window.addEventListener('trono-layout-change', refreshCallControls);
   window.addEventListener('trono:ready', bind);
 
   return {

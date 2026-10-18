@@ -31,7 +31,8 @@ import { createP2pPeers } from '../lib/voice/p2p-peers';
 import { createRemoteMedia } from '../lib/voice/remote-media';
 import { createSpeakingIndicators } from '../lib/voice/speaking-indicators';
 import { createVoiceTelemetry } from '../lib/voice/telemetry';
-import { createCallControlBindings } from '../lib/voice/control-bindings';
+import { createCallToolbar } from '../lib/voice/toolbar';
+import { initializeCallToolbar } from '../components/voice/call-toolbar-runtime';
 import { createMediaInterest } from '../lib/voice/media-interest';
 import { createMediaInterestBindings } from '../lib/voice/media-interest-bindings';
 import { createCallControls } from '../lib/voice/controls';
@@ -99,7 +100,7 @@ export function LegacyRuntime() {
           createCallControls,
           createMediaInterest,
           createMediaInterestBindings,
-          createCallControlBindings,
+          createCallToolbar,
           createCallAlerts,
           createVoiceTelemetry,
           createSpeakingIndicators,
@@ -126,6 +127,7 @@ export function LegacyRuntime() {
           );
       }
       prepareCallSettings(window);
+      initializeCallToolbar(window);
       window.dispatchEvent(new Event('trono:ready'));
     })();
     void startup.catch((cause: unknown) => {

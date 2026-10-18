@@ -13,12 +13,7 @@ export function VoicePanel() {
             <strong>O papo acontece aqui.</strong>
             <small className={'voice-subtitle'}>Microfone, câmera ou tela. Do seu jeito.</small>
           </div>
-          <span id={'voiceStatus'} role={'status'} aria-live={'polite'}>
-            Fora do chat de voz.
-          </span>
-          <button id={'resumeAudioBtn'} className={'royal-btn hidden'} type={'button'}>
-            🔊 Liberar áudio
-          </button>
+          <span id="call-status-host" style={{ display: 'contents' }} />
         </div>
         <div
           className={'voice-actions call-toolbar call-control-columns'}
@@ -26,36 +21,37 @@ export function VoicePanel() {
         >
           <div className={'call-control-group call-control-primary'}>
             <small>CHAMADA</small>
-            <button id={'joinVoiceBtn'} className={'royal-btn primary call-action'}>
-              <span className={'call-icon'}>☎</span>
-              <span>Entrar na voz</span>
-            </button>
+            <span
+              id="call-control-joinVoiceBtn"
+              data-call-control-host="joinVoiceBtn"
+              style={{ display: 'contents' }}
+            />
           </div>
           <div className={'call-control-group'}>
             <small>ÁUDIO</small>
-            <button id={'muteMicBtn'} className={'royal-btn call-action'} disabled>
-              <span className={'call-icon'}>🎙</span>
-              <span>Mutar microfone</span>
-            </button>
-            <button id={'deafenVoiceBtn'} className={'royal-btn call-action'} disabled>
-              <span className={'call-icon'}>🔊</span>
-              <span>Silenciar voz</span>
-            </button>
+            <span
+              id="call-control-muteMicBtn"
+              data-call-control-host="muteMicBtn"
+              style={{ display: 'contents' }}
+            />
+            <span
+              id="call-control-deafenVoiceBtn"
+              data-call-control-host="deafenVoiceBtn"
+              style={{ display: 'contents' }}
+            />
           </div>
           <div className={'call-control-group'}>
             <small>VÍDEO &amp; TELA</small>
-            <button id={'cameraBtn'} className={'royal-btn call-action'}>
-              <span className={'call-icon'}>▣</span>
-              <span>Ligar câmera</span>
-            </button>
-            <button
-              id={'screenShareBtn'}
-              className={'royal-btn screen-share-btn call-action'}
-              disabled
-            >
-              <span className={'call-icon'}>▤</span>
-              <span>Compartilhar tela</span>
-            </button>
+            <span
+              id="call-control-cameraBtn"
+              data-call-control-host="cameraBtn"
+              style={{ display: 'contents' }}
+            />
+            <span
+              id="call-control-screenShareBtn"
+              data-call-control-host="screenShareBtn"
+              style={{ display: 'contents' }}
+            />
           </div>
           <div className={'call-control-group call-control-clips'}>
             <small>REPLAY</small>
@@ -85,14 +81,11 @@ export function VoicePanel() {
           </div>
           <div className={'call-control-group call-control-system'}>
             <small>SISTEMA</small>
-            <button
-              id={'voiceSettingsBtn'}
-              className={'royal-btn call-action settings-btn'}
-              aria-expanded={'false'}
-            >
-              <span className={'call-icon'}>⚙</span>
-              <span>Configurações</span>
-            </button>
+            <span
+              id="call-control-voiceSettingsBtn"
+              data-call-control-host="voiceSettingsBtn"
+              style={{ display: 'contents' }}
+            />
           </div>
         </div>
         <div

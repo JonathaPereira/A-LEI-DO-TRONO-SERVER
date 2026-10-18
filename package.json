@@ -61,7 +61,7 @@
     "test:voice:interest": "node --test tests/media-interest.cjs",
     "test:voice:sharing": "node --test tests/screen-sharing.cjs tests/screen-publication.cjs",
     "test:voice:publication": "node --test tests/device-publication.cjs",
-    "test:settings": "node --test tests/settings.cjs tests/voice-settings.cjs tests/audio-preferences.cjs tests/connection-diagnostics.cjs"
+    "test:settings": "node --test tests/settings.cjs tests/voice-settings.cjs tests/audio-preferences.cjs tests/connection-diagnostics.cjs tests/call-toolbar.cjs"
   },
   "engines": {
     "node": ">=24.12.0"

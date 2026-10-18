@@ -101,26 +101,19 @@ export function CallSettings({
   }, [runtime]);
   useLayoutEffect(() => {
     panel.classList.toggle('hidden', !state.open);
-    const button = document.getElementById('voiceSettingsBtn');
-    button?.classList.toggle('settings-active', state.open);
-    button?.setAttribute('aria-expanded', String(state.open));
     if (dialog) {
       if (state.open && !dialog.open) dialog.showModal();
       else if (!state.open && dialog.open) dialog.close();
     }
   }, [state.open, panel, dialog]);
   useEffect(() => {
-    const button = document.getElementById('voiceSettingsBtn');
-    const toggle = () => controller.toggle(),
-      close = () => controller.close();
+    const close = () => controller.close();
     const backdrop = (event: Event) => {
       if (event.target === dialog) close();
     };
-    button?.addEventListener('click', toggle);
     dialog?.addEventListener('close', close);
     dialog?.addEventListener('click', backdrop);
     return () => {
-      button?.removeEventListener('click', toggle);
       dialog?.removeEventListener('close', close);
       dialog?.removeEventListener('click', backdrop);
     };

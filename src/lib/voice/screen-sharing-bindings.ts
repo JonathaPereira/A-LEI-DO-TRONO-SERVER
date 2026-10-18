@@ -8,7 +8,7 @@ interface BindingOptions {
   onRender(): void;
   warn?(error: unknown): void;
 }
-/** Owns sharing dialog/events while legacy presentation still moves the same nodes. */
+/** Owns screen options and delegated tile actions; the toolbar button is React. */
 export function createScreenSharingBindings(options: BindingOptions) {
   const document = options.document,
     sharing = options.sharing;
@@ -86,10 +86,6 @@ export function createScreenSharingBindings(options: BindingOptions) {
     start() {
       if (started || disposed) return;
       started = true;
-      bind(get('screenShareBtn'), 'click', () => {
-        if (sharing.isActive()) void sharing.stop();
-        else open();
-      });
       bind(get('screenOptionsForm'), 'submit', (event) => {
         event.preventDefault();
         if (!options.call().joined) {

@@ -320,7 +320,7 @@
 }
 body
   :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start'] {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start'] {
   background: #18543e !important;
   border-color: #2b9c70 !important;
   color: #d9ffed !important;
@@ -328,7 +328,7 @@ body
 }
 body
   :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop'] {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop'] {
   background: #7b2936 !important;
   border-color: #d85165 !important;
   color: #fff0f2 !important;
@@ -336,17 +336,17 @@ body
 }
 body
   :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start']:hover:enabled {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start']:hover:enabled {
   background: #216e51 !important;
 }
 body
   :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop']:hover:enabled {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop']:hover:enabled {
   background: #963447 !important;
 }
 body
   :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action]:disabled {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action]:disabled {
   opacity: 0.45 !important;
   cursor: not-allowed !important;
 }
@@ -354,7 +354,7 @@ body
   #callWorkspace
   #socialPanel
   #callFocusDock
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start'] {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start'] {
   background: #18543e !important;
   border-color: #2b9c70 !important;
   color: #d9ffed !important;
@@ -364,7 +364,7 @@ body
   #callWorkspace
   #socialPanel
   #callFocusDock
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop'] {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop'] {
   background: #7b2936 !important;
   border-color: #d85165 !important;
   color: #fff0f2 !important;
@@ -374,21 +374,21 @@ body
   #callWorkspace
   #socialPanel
   #callFocusDock
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start']:hover:enabled {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start']:hover:enabled {
   background: #216e51 !important;
 }
 body
   #callWorkspace
   #socialPanel
   #callFocusDock
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop']:hover:enabled {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop']:hover:enabled {
   background: #963447 !important;
 }
 body
   #callWorkspace
   #socialPanel
   #callFocusDock
-  > :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action]:disabled {
+  :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action]:disabled {
   opacity: 0.45 !important;
   cursor: not-allowed !important;
 }

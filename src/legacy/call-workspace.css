@@ -1198,7 +1198,7 @@ body.chat-only-active #callWorkspace {
   z-index: 5 !important;
   overflow: visible !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button {
+#callWorkspace #socialPanel #callFocusDock button {
   position: relative !important;
   inset: auto !important;
   display: flex !important;
@@ -1222,10 +1222,10 @@ body.chat-only-active #callWorkspace {
   box-shadow: none !important;
   transform: none !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button > * {
+#callWorkspace #socialPanel #callFocusDock button > * {
   display: none !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button > .workspace-control-icon {
+#callWorkspace #socialPanel #callFocusDock button > .workspace-control-icon {
   display: block !important;
   width: 20px !important;
   height: 20px !important;
@@ -1236,10 +1236,10 @@ body.chat-only-active #callWorkspace {
   width: 20px;
   height: 20px;
 }
-#callWorkspace #socialPanel #callFocusDock > button:before {
+#callWorkspace #socialPanel #callFocusDock button:before {
   display: none !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button:after {
+#callWorkspace #socialPanel #callFocusDock button:after {
   position: static !important;
   display: block !important;
   content: attr(data-workspace-label) !important;
@@ -1253,38 +1253,38 @@ body.chat-only-active #callWorkspace {
   white-space: nowrap !important;
   transform: none !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button:disabled {
+#callWorkspace #socialPanel #callFocusDock button:disabled {
   opacity: 0.36 !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button:not(:disabled):hover {
+#callWorkspace #socialPanel #callFocusDock button:not(:disabled):hover {
   background: #344057 !important;
   border-color: #9c90ff66 !important;
 }
-#callWorkspace #socialPanel #callFocusDock > button:is(.active, .call-active) {
+#callWorkspace #socialPanel #callFocusDock button:is(.active, .call-active) {
   background: #6557dd33 !important;
   color: #c4baff !important;
   border-color: #8f80f466 !important;
 }
-#callWorkspace #socialPanel #callFocusDock > .danger-active {
+#callWorkspace #socialPanel #callFocusDock .danger-active {
   color: #ff8da1 !important;
 }
-#callWorkspace #socialPanel #callFocusDock > #joinVoiceBtn {
+#callWorkspace #socialPanel #callFocusDock #joinVoiceBtn {
   margin-left: 8px !important;
   background: #6856ea !important;
   color: white !important;
 }
-#callWorkspace #socialPanel #callFocusDock > #joinVoiceBtn.call-active {
+#callWorkspace #socialPanel #callFocusDock #joinVoiceBtn.call-active {
   background: #e34762 !important;
   color: white !important;
   border-color: transparent !important;
 }
-body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock > button {
+body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock button {
   width: 46px !important;
   height: 46px !important;
   border-radius: 13px !important;
   padding: 12px !important;
 }
-body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock > button:after {
+body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock button:after {
   display: none !important;
 }
 #callWorkspace #socialPanel #voiceSettingsPanel {
@@ -1567,7 +1567,7 @@ body[data-app-layout='original'] #callWorkspace #workspaceTools {
   #callWorkspace #socialPanel .mn-media-stage {
     padding: 10px 14px 16px !important;
   }
-  #callWorkspace #socialPanel #callFocusDock > button {
+  #callWorkspace #socialPanel #callFocusDock button {
     width: 62px !important;
   }
   #callWorkspace #socialPanel #voiceRoster {
@@ -1675,21 +1675,21 @@ body[data-app-layout='original'] #callWorkspace #workspaceTools {
     padding: 10px 6px !important;
     min-height: 68px !important;
   }
-  #callWorkspace #socialPanel #callFocusDock > button {
+  #callWorkspace #socialPanel #callFocusDock button {
     width: 40px !important;
     height: 46px !important;
     min-width: 38px !important;
     padding: 6px 2px !important;
     gap: 4px !important;
   }
-  #callWorkspace #socialPanel #callFocusDock > button:after {
+  #callWorkspace #socialPanel #callFocusDock button:after {
     max-width: 38px !important;
     font-size: 7px !important;
   }
-  #callWorkspace #socialPanel #callFocusDock > #joinVoiceBtn {
+  #callWorkspace #socialPanel #callFocusDock #joinVoiceBtn {
     margin-left: 2px !important;
   }
-  body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock > button {
+  body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock button {
     width: 40px !important;
     height: 42px !important;
     min-width: 38px !important;
@@ -1710,7 +1710,7 @@ body[data-app-layout='original'] #callWorkspace #workspaceTools {
     padding: 7px !important;
     min-height: 58px !important;
   }
-  #callWorkspace #socialPanel #callFocusDock > button {
+  #callWorkspace #socialPanel #callFocusDock button {
     height: 42px !important;
   }
   #callWorkspace #socialPanel .mn-media-stage {
