@@ -16,18 +16,7 @@ export function ChatOnlyScreen() {
             </div>
           </div>
           <div className={'chat-app-statusbar'} aria-label={'Estado da comunicação'}>
-            <button
-              id={'telemetryStatusPill'}
-              className={'connection-health neutral'}
-              title={'Abrir diagnóstico da conexão'}
-            >
-              <i></i>
-              <span id={'telemetryHealthLabel'}>Conexão</span>
-              <small id={'telemetryHealthDetail'}>aguardando</small>
-            </button>
-            <span id={'chatOnlyTransport'} className={'transport-pill'}>
-              P2P
-            </span>
+            <span id="voiceConnectionIndicator" style={{ display: 'contents' }} />
             <span id={'chatOnlyCount'} className={'participant-pill'}>
               0 pessoas conectadas
             </span>

@@ -154,7 +154,7 @@ callControlWindow.TronoCallControlsLayout = (() => {
 
     const people = $('communityToggle');
     if (community) place(people, document.querySelector('.chat-only-top-actions'));
-    else if (desktop) place(people, $('desktopTopBar'), $('telemetryOpenBtn'));
+    else if (desktop) place(people, $('desktopTopBar'), $('voiceDiagnosticsLauncher'));
     else restore(people);
   }
 

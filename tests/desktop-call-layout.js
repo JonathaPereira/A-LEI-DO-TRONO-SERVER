@@ -214,6 +214,22 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
+    // React diagnostics share their state with the desktop launcher and preserve every live source.
+    await page.bringToFront();
+    await page.evaluate(() => window.TronoSocial.toggleTelemetry(true));
+    await expect(page.locator('#telemetryPanel')).toBeVisible();
+    await expect(page.locator('#telemetryOpenBtn')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#telemetryPlayback')).toContainText('Reproduzindo');
+    await page.locator('#copyDiagnostics').click();
+    await expect(page.locator('#copyDiagnosticsStatus')).toContainText('Copiado');
+    const report = await app.evaluate(({clipboard}) => clipboard.readText());
+    assert.equal(JSON.parse(report).app, 'M&N');
+    assert(!report.includes('Layout Principal'));
+    assert(!report.includes('Layout Amigo'));
+    await page.locator('#telemetryCloseBtn').click();
+    await expect(page.locator('#telemetryPanel')).toBeHidden();
+    await expect(page.locator('#telemetryOpenBtn')).toHaveAttribute('aria-expanded', 'false');
+    await preserved();
     const artifacts = path.join(root, 'artifacts/call-layout');
     // Exercise real ICE restart/offer/answer while camera, screen and audio are live.
     const receiverId = await receiver.evaluate(() => window.TronoNetwork.clientId);
@@ -354,6 +370,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
 
     // Canceling a source change must leave the original capture and call intact.
     await page.evaluate(() => { window.__denyDisplay = true; });
+    await localScreen.hover();
     await localScreen.locator('.screen-switch-btn').click();
     await expect(localScreen.locator('.screen-switch-btn')).toBeEnabled();
     await expect(page.locator('#voiceStatus')).toContainText('anterior continua');
@@ -366,6 +383,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
 
     // A successful source change releases the old source and keeps the peers/socket.
     const framesBeforeSwitch = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
+    await localScreen.hover();
     await localScreen.locator('.screen-switch-btn').click();
     await expect(localScreen.locator('.screen-switch-btn')).toBeEnabled();
     await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforeSwitch);

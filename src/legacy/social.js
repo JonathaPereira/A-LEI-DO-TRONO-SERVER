@@ -82,7 +82,6 @@ window.TronoSocial = (() => {
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
   let chatDrawerOpen = false;
   let chatUnreadCount = 0;
-  let telemetryOpen = false;
   const callQuality = window.TronoVoiceCapture.createCallQuality({
     storage,
     policy: () => ({
@@ -324,7 +323,7 @@ window.TronoSocial = (() => {
     getSettings: () => ({
       joined: voiceCall.getSnapshot().joined,
       transport: voiceTransport.getSnapshot().mode,
-      detailsOpen: telemetryOpen,
+      detailsOpen: connectionDiagnostics.getSnapshot().open,
       foreground: foreground(),
       visible: document.visibilityState !== 'hidden',
       desktop: !!window.TronoDesktop,
@@ -351,7 +350,7 @@ window.TronoSocial = (() => {
           'ok',
         );
     },
-    onChange: renderTelemetry,
+    onChange: refreshDiagnostics,
   });
 
   const sfuSession = window.TronoVoiceCapture.createSfuSession({
@@ -758,14 +757,7 @@ window.TronoSocial = (() => {
     }
   }
   function toggleTelemetry(force) {
-    telemetryOpen = typeof force === 'boolean' ? force : !telemetryOpen;
-    $('telemetryPanel')?.classList.toggle('hidden', !telemetryOpen);
-    $('telemetryOpenBtn')?.setAttribute('aria-expanded', String(telemetryOpen));
-    window.dispatchEvent(
-      new CustomEvent('trono-telemetry-change', { detail: { open: telemetryOpen } }),
-    );
-    renderTelemetry();
-    voiceTelemetry.start();
+    connectionDiagnostics.toggle(force);
   }
   function ensureLocalStream() {
     if (!localStream) localStream = new MediaStream();
@@ -785,54 +777,7 @@ window.TronoSocial = (() => {
   }
   function updateQualityUI() {
     voiceSettings.refresh();
-    updateRealtimeUI();
-  }
-  function updateRealtimeUI() {
-    const card = $('realtimeInfraCard'),
-      mode = $('realtimeModeLabel'),
-      usage = $('realtimeUsageLabel'),
-      bar = $('realtimeUsageBar'),
-      policy = $('realtimePolicyLabel');
-    if (!card) return;
-    const r = realtime.getSnapshot().status;
-    const modeState = voiceCall.getSnapshot().joined
-      ? announcedTransport()
-      : voiceTransport.getSnapshot().mode;
-    card.classList.toggle('realtime-live', modeState === 'sfu');
-    card.classList.toggle('realtime-warning', !!r?.softWarning);
-    card.classList.toggle('realtime-blocked', !!r?.hardBlocked);
-    if (mode) {
-      if (!inChatHub()) mode.textContent = 'WebRTC P2P (partida)';
-      else if (modeState === 'sfu') mode.textContent = 'Cloudflare SFU';
-      else if (modeState === 'sfu-pending') mode.textContent = 'Conectando ao SFU…';
-      else if (!voiceCall.getSnapshot().joined && r?.enabled && r?.configured && !r?.hardBlocked)
-        mode.textContent = 'Cloudflare SFU pronto';
-      else mode.textContent = 'WebRTC P2P (fallback)';
-    }
-    if (usage)
-      usage.textContent = r
-        ? `${Number(r.estimatedGb || 0).toFixed(2)} / ${Number(r.thresholds?.hard || 950).toFixed(0)} GB estimados • margem ${Number(r.estimateSafetyFactor || 1).toFixed(1)}×`
-        : realtime.getSnapshot().error || 'Aguardando dados do backend';
-    if (bar) {
-      const hard = Number(r?.thresholds?.hard || 950),
-        v = Math.min(100, Math.max(0, (Number(r?.estimatedGb || 0) / hard) * 100));
-      bar.style.setProperty('--realtime-progress', `${v}%`);
-      bar.setAttribute('aria-valuenow', String(Math.round(v)));
-    }
-    if (policy) {
-      if (!r)
-        policy.textContent = realtime.getSnapshot().error
-          ? 'Não foi possível sincronizar o freio de consumo. O SFU não será assumido como disponível até nova confirmação.'
-          : 'Freio de consumo aguardando sincronização.';
-      else if (!r.configured) policy.textContent = 'SFU não configurado no backend.';
-      else if (!r.enabled) policy.textContent = 'Kill switch desligado: mídia permanece em P2P.';
-      else if (r.hardBlocked) policy.textContent = 'Limite de segurança atingido: SFU bloqueado.';
-      else if (!r.screenAllowed)
-        policy.textContent = 'Economia crítica: compartilhamento de tela bloqueado.';
-      else if (!r.highAllowed) policy.textContent = 'Economia automática: máximo Equilibrada.';
-      else policy.textContent = 'Proteção ativa • tela até 1080p/60 permitida.';
-    }
-    updateTelemetryHeader();
+    refreshDiagnostics();
   }
   function applySenderQuality(sender, kind) {
     return callQuality.applySender(sender, kind);
@@ -1001,7 +946,7 @@ window.TronoSocial = (() => {
     applyPanelMode();
     updateChatDrawerUI();
     updateButtons();
-    updateTelemetryHeader();
+    refreshDiagnostics();
     if (chatHubMode) showPanel(true);
   }
   function togglePanelMode() {
@@ -1154,7 +1099,7 @@ window.TronoSocial = (() => {
     lastSfuError = `${label}: ${code}`;
     if (pub.kind !== 'audio' && attempt >= 4) {
       setStatus(`${label} não conectou. A voz continua pelo SFU.`, 'warn');
-      renderTelemetry();
+      refreshDiagnostics();
       return;
     }
     let message = stale
@@ -1167,7 +1112,7 @@ window.TronoSocial = (() => {
     )
       message += ' A rota ICE falhou; TURN pode ajudar em redes móveis/CGNAT.';
     setStatus(message, 'warn');
-    renderTelemetry();
+    refreshDiagnostics();
   }
   function updateAllSfuSubscriptionLayers() {
     return callQuality.applyLayers();
@@ -1889,7 +1834,7 @@ window.TronoSocial = (() => {
     $('cameraBtn').disabled = false;
     if ($('screenShareBtn')) $('screenShareBtn').disabled = !communityVoice();
     updateButtons();
-    updateRealtimeUI();
+    refreshDiagnostics();
     setStatus('Conectando o áudio da chamada…', 'warn');
     renderVoiceRoster();
     renderVideoGrid();
@@ -1933,7 +1878,7 @@ window.TronoSocial = (() => {
     if ($('screenShareBtn')) $('screenShareBtn').disabled = true;
     callControls.resetParticipation();
     updateButtons();
-    updateRealtimeUI();
+    refreshDiagnostics();
     setStatus('Fora do chat de voz.');
     renderVoiceRoster();
     renderVideoGrid();
@@ -2070,368 +2015,9 @@ window.TronoSocial = (() => {
       if (sub?.pc && sub.pc.connectionState !== 'closed') list.push([`sfu-sub:${key}`, sub.pc]);
     return list;
   }
-  function formatRate(v) {
-    if (!Number.isFinite(v) || v <= 0) return '—';
-    if (v >= 1e6) return `${(v / 1e6).toFixed(v >= 1e7 ? 1 : 2)} Mbps`;
-    return `${Math.round(v / 1000)} Kbps`;
-  }
-  function formatResolution(w, h) {
-    return w && h ? `${w}×${h}` : '—';
-  }
-  function limiterLabel(reason) {
-    return (
-      {
-        cpu: 'CPU / codificação',
-        bandwidth: 'Banda / congestionamento',
-        other: 'Outro fator',
-        none: 'Nenhum',
-      }[reason] || 'Não informado'
-    );
-  }
-  function audioPlaybackInfo() {
-    const snapshot = audioPlayback.getSnapshot();
-    const received = snapshot.entries.filter(({ key }) => !key.startsWith('stream:'));
-    const expected = detailedPlayers().filter((p) => p.id !== meId() && p.joined).length;
-    if (!voiceCall.getSnapshot().joined) return { label: 'Fora da chamada', expected, count: 0 };
-    if (controlState().deafened)
-      return {
-        label: 'Voz silenciada neste aparelho',
-        expected,
-        count: received.length,
-        problem: true,
-      };
-    if (snapshot.volume === 0)
-      return { label: 'Volume de saída em 0%', expected, count: received.length, problem: true };
-    if (received.some((entry) => entry.blocked))
-      return {
-        label: 'Reprodução bloqueada pelo navegador',
-        expected,
-        count: received.length,
-        problem: true,
-      };
-    if (received.some((entry) => entry.route !== 'gain' && entry.paused))
-      return { label: 'Reprodução pausada', expected, count: received.length, problem: true };
-    if (received.length && received.every((entry) => entry.gain === 0))
-      return {
-        label: 'Volume dos participantes em 0%',
-        expected,
-        count: received.length,
-        problem: true,
-      };
-    if (!received.length)
-      return {
-        label: expected ? 'Aguardando áudio dos participantes' : 'Aguardando outro participante',
-        expected,
-        count: 0,
-      };
-    const boosted = received.some((entry) => entry.route === 'gain');
-    return {
-      label: boosted ? 'Reproduzindo com amplificação' : 'Reproduzindo áudio direto',
-      expected,
-      count: received.length,
-    };
-  }
-  function assessTelemetry(t) {
-    const playback = audioPlaybackInfo();
-    if (playback.problem || audioPlayback.getSnapshot().outputError)
-      return {
-        level: 'warn',
-        label: 'Confira a reprodução de áudio',
-        detail: 'saída local',
-        recommendation: audioPlayback.getSnapshot().outputError
-          ? `Saída de áudio: ${audioPlayback.getSnapshot().outputError}. Confira o dispositivo em Configurações → Áudio.`
-          : `${playback.label}. Confira o volume e use Liberar áudio se o navegador bloqueou a reprodução.`,
-      };
-    if (voiceCall.getSnapshot().joined && announcedTransport() === 'sfu-pending')
-      return {
-        level: 'neutral',
-        label: 'Conectando áudio',
-        detail: 'negociando',
-        recommendation:
-          'Aguardando a conexão de voz. O microfone já foi aberto, mas a rota de mídia ainda está sendo negociada.',
-      };
-    if (
-      voiceCall.getSnapshot().joined &&
-      transportIsSfu() &&
-      [...sfuSubscriptions.values()].some((sub) => sub.negotiating)
-    )
-      return {
-        level: 'warn',
-        label: 'Mídia conectando',
-        detail: 'negociando receptor',
-        recommendation:
-          'A conexão de rede já pode estar pronta enquanto o receptor termina a negociação. Aguarde a reprodução iniciar.',
-      };
-    if (
-      voiceCall.getSnapshot().joined &&
-      allTelemetryPeerConnections().some(([, pc]) =>
-        ['new', 'connecting'].includes(pc.connectionState),
-      )
-    )
-      return {
-        level: 'warn',
-        label: 'Áudio conectando',
-        detail: 'aguardando rota',
-        recommendation:
-          'Ainda há uma ponta conectando. Se persistir, confira o último erro SFU e a disponibilidade de TURN.',
-      };
-    if (!voiceCall.getSnapshot().joined || !allTelemetryPeerConnections().length)
-      return {
-        level: 'neutral',
-        label: 'Aguardando mídia',
-        detail: 'sem fluxo',
-        recommendation: 'Entre na chamada e ative câmera ou compartilhamento para medir a conexão.',
-      };
-    if (['failed', 'disconnected'].includes(t.pcState))
-      return {
-        level: 'poor',
-        label: 'Mídia desconectada',
-        detail: t.pcState,
-        recommendation: lastSfuError
-          ? `Falha SFU: ${lastSfuError}. Em redes móveis/restritivas, habilite o TURN da Cloudflare.`
-          : 'A rota WebRTC caiu. Tente reconectar; em redes móveis/restritivas, habilite TURN.',
-      };
-    if (t.eventLoopLagMs >= 180)
-      return {
-        level: 'warn',
-        label: 'Sobrecarga local detectada',
-        detail: 'processamento',
-        recommendation:
-          'A interface demorou a responder. Veja Recepção de voz para comparar com perda, jitter e reconstrução; atraso de interface sozinho não confirma falha na reprodução.',
-      };
-    if (t.audioLossPct >= 5 || t.audioJitterMs >= 70 || t.concealedPct >= 8)
-      return {
-        level: 'poor',
-        label: 'Voz recebida instável',
-        detail: 'perda ou atraso',
-        recommendation:
-          'O receptor precisou recuperar áudio. Confira a rede e a carga do computador de quem está falando. A leitura local não mede a CPU do outro participante.',
-      };
-    const desired = screenSharing() ? qualityProfile().screen.fps : qualityProfile().camera.fps;
-    const lowFps = desired >= 30 && t.outFps > 0 && t.outFps < desired * 0.58;
-    if (t.lossPct >= 8 || t.rttMs >= 450 || t.jitterMs >= 100 || lowFps) {
-      const captureIssue = lowFps && t.limiter === 'none' && t.lossPct < 3 && t.rttMs < 180;
-      return {
-        level: 'poor',
-        label: 'Conexão crítica',
-        detail: t.rttMs ? `${Math.round(t.rttMs)} ms` : 'instável',
-        recommendation: captureIssue
-          ? 'A rede está saudável, mas a origem está codificando poucos quadros. Reduza resolução ou feche aplicações pesadas.'
-          : t.limiter === 'cpu'
-            ? 'A CPU está limitando a codificação. Reduza resolução/FPS ou feche aplicações pesadas.'
-            : t.limiter === 'bandwidth' || t.lossPct >= 8
-              ? 'A rede está limitando a mídia. Reduza a qualidade ou teste outra conexão.'
-              : 'FPS/latência fora do ideal. Teste uma qualidade menor e confira CPU/rede.',
-      };
-    }
-    if (lastSfuError && voiceTransport.getSnapshot().mode === 'sfu')
-      return {
-        level: 'warn',
-        label: 'SFU reconectando',
-        detail: t.rttMs ? `${Math.round(t.rttMs)} ms` : 'tentando rota',
-        recommendation: `${lastSfuError}. A publicação local pode estar saudável mesmo quando um receptor ainda não conseguiu assinar a mídia.`,
-      };
-    if (playback.expected && playback.count < playback.expected)
-      return {
-        level: 'warn',
-        label: 'Aguardando áudio remoto',
-        detail: `${playback.count}/${playback.expected} receptores`,
-        recommendation:
-          'Ainda falta abrir o áudio de um participante. Uma publicação local conectada não confirma a recepção nos dois sentidos.',
-      };
-    if (
-      t.lossPct >= 3 ||
-      t.rttMs >= 220 ||
-      t.jitterMs >= 50 ||
-      t.limiter === 'cpu' ||
-      t.limiter === 'bandwidth'
-    )
-      return {
-        level: 'warn',
-        label: 'Conexão sob atenção',
-        detail: t.rttMs ? `${Math.round(t.rttMs)} ms` : 'oscilando',
-        recommendation:
-          t.limiter === 'cpu'
-            ? 'Codificação limitada por CPU; considere baixar a qualidade.'
-            : t.limiter === 'bandwidth'
-              ? 'WebRTC detectou limitação de banda; a qualidade pode oscilar.'
-              : 'Há perda/jitter acima do ideal; acompanhe antes de aumentar a qualidade.',
-      };
-    return {
-      level: 'good',
-      label: 'Rede saudável',
-      detail: t.rttMs ? `${Math.round(t.rttMs)} ms` : 'estável',
-      recommendation:
-        'Sem gargalo de rede detectado. Confira também Reprodução de voz e Saída de áudio: tráfego recebido não confirma som audível no dispositivo.',
-    };
-  }
-  function renderTelemetry() {
+  function refreshDiagnostics() {
     audioPreferences.refresh();
-    const {
-      telemetry: telemetrySnapshot,
-      resources: nativeResources,
-      lagMs: eventLoopLagMs,
-    } = voiceTelemetry.getSnapshot();
-    const t = telemetrySnapshot || {
-      transport: voiceTransport.getSnapshot().mode,
-      rttMs: 0,
-      uploadBps: 0,
-      downloadBps: 0,
-      outFps: 0,
-      inFps: 0,
-      outW: 0,
-      outH: 0,
-      inW: 0,
-      inH: 0,
-      lossPct: 0,
-      jitterMs: 0,
-      limiter: 'none',
-    };
-    const health = assessTelemetry(t),
-      modeState = voiceCall.getSnapshot().joined
-        ? announcedTransport()
-        : voiceTransport.getSnapshot().mode;
-    const set = (id, v) => {
-      const el = $(id);
-      if (el && el.textContent !== v) el.textContent = v;
-    };
-    set('telemetryHealthLabel', health.label.replace('Conexão ', ''));
-    set('telemetryHealthDetail', health.detail);
-    set(
-      'adaptiveQualityStatus',
-      callQuality.getSnapshot().adaptation.level
-        ? `Vídeo reduzido temporariamente: ${callQuality.getSnapshot().adaptation.reason}. Retorno gradual após 60 segundos estáveis.`
-        : 'Qualidade escolhida preservada; reduções temporárias quando necessário.',
-    );
-    const statusPill = $('telemetryStatusPill');
-    if (statusPill) statusPill.className = `connection-health ${health.level}`;
-    const modePill = $('chatOnlyTransport');
-    if (modePill) {
-      const label =
-        modeState === 'sfu-pending' ? '⌁ Conectando…' : modeState === 'sfu' ? '☁ SFU' : '↔ P2P';
-      if (modePill.textContent !== label) modePill.textContent = label;
-      modePill.classList.toggle('sfu', modeState === 'sfu');
-    }
-    if (!telemetryOpen || !foreground()) return;
-    const playback = audioPlaybackInfo(),
-      output = $('voiceOutputSelect');
-    renderReceptionTelemetry();
-    set(
-      'telemetryAppVersion',
-      window.TronoDesktop?.version || window.TronoNetwork?.CLIENT_VERSION || '0.9.1-alpha',
-    );
-    set('telemetryAudioLoss', t.audioLossPct === undefined ? '—' : t.audioLossPct.toFixed(1) + '%');
-    set(
-      'telemetryAudioJitter',
-      t.audioJitterMs === undefined ? '—' : Math.round(t.audioJitterMs) + ' ms',
-    );
-    set('telemetryConcealed', t.concealedPct === undefined ? '—' : t.concealedPct.toFixed(1) + '%');
-    set('telemetryLocalLag', Math.round(eventLoopLagMs) + ' ms');
-    set(
-      'telemetryResources',
-      nativeResources
-        ? `${nativeResources.appCpuPercent}% CPU · ${nativeResources.appMemoryMB} MB · ${nativeResources.freeMemoryMB} MB livres`
-        : 'Abra este painel no app Windows para medir recursos.',
-    );
-    set(
-      'adaptiveQualityStatus',
-      callQuality.getSnapshot().adaptation.level
-        ? `Vídeo reduzido temporariamente: ${callQuality.getSnapshot().adaptation.reason}. Retorno gradual após 60 segundos estáveis.`
-        : 'Qualidade escolhida preservada; reduções temporárias quando necessário.',
-    );
-    set('telemetryPlayback', playback.label);
-    set('telemetryVoiceReceivers', `${playback.count} de ${playback.expected}`);
-    set('telemetryAudioContext', callAudio.getSnapshot().context || 'Áudio direto');
-    set(
-      'telemetryOutput',
-      audioPlayback.getSnapshot().outputError ||
-        (output?.options &&
-          [...output.options].find((o) => o.value === audioPlayback.getSnapshot().output)
-            ?.textContent) ||
-        (audioPlayback.getSnapshot().output ? 'Dispositivo escolhido' : 'Saída padrão'),
-    );
-    set(
-      'telemetryTransport',
-      modeState === 'sfu-pending'
-        ? 'Conectando áudio…'
-        : modeState === 'sfu'
-          ? 'Cloudflare SFU'
-          : 'WebRTC P2P',
-    );
-    set('telemetryRtt', t.rttMs ? `${Math.round(t.rttMs)} ms` : '—');
-    set('telemetryUpload', formatRate(t.uploadBps));
-    set('telemetryDownload', formatRate(t.downloadBps));
-    set('telemetryOutFps', t.outFps ? `${Math.round(t.outFps)} FPS` : '—');
-    set('telemetryInFps', t.inFps ? `${Math.round(t.inFps)} FPS` : '—');
-    set('telemetryOutResolution', formatResolution(t.outW, t.outH));
-    set('telemetryInResolution', formatResolution(t.inW, t.inH));
-    set(
-      'telemetryLoss',
-      Number.isFinite(t.lossPct) ? `${t.lossPct.toFixed(t.lossPct >= 10 ? 1 : 2)}%` : '—',
-    );
-    set('telemetryJitter', t.jitterMs ? `${Math.round(t.jitterMs)} ms` : '—');
-    set('telemetryLimiter', limiterLabel(t.limiter));
-    set('telemetryPcState', t.pcState || '—');
-    set('telemetryIceRoute', t.iceRoute || '—');
-    set('telemetryTurn', realtime.getSnapshot().turn ? 'TURN disponível' : 'STUN direto');
-    set('telemetrySfuError', lastSfuError || 'Nenhum');
-    set('telemetryHeroLabel', health.label);
-    set('telemetryRecommendation', health.recommendation);
-    set('telemetryHealthLabel', health.label.replace('Conexão ', ''));
-    set('telemetryHealthDetail', health.detail);
-    for (const id of ['telemetryHeroDot']) {
-      const el = $(id);
-      if (el) el.className = `telemetry-dot ${health.level}`;
-    }
-    const pill = $('telemetryStatusPill');
-    if (pill) pill.className = `connection-health ${health.level}`;
-    const transport = $('chatOnlyTransport');
-    if (transport) {
-      transport.textContent =
-        modeState === 'sfu-pending' ? '⌁ Conectando…' : modeState === 'sfu' ? '☁ SFU' : '↔ P2P';
-      transport.classList.toggle('sfu', modeState === 'sfu');
-    }
-  }
-  function renderReceptionTelemetry() {
-    const {
-      rows: receptionRows,
-      playout: playoutSnapshot,
-      priority: voicePriorityState,
-      assessment,
-      owners,
-    } = voiceTelemetry.getSnapshot();
-    const set = (id, text) => {
-      const n = $(id);
-      if (n && n.textContent !== text) n.textContent = text;
-    };
-    set('telemetryVoiceAssessment', assessment.text);
-    set(
-      'telemetryVoicePriority',
-      {
-        managed: 'Acima do normal · somente serviço de áudio',
-        system: 'Prioridade gerenciada pelo sistema',
-        waiting: 'Aguardando serviço de áudio',
-        idle: 'Proteção nativa inativa',
-        unavailable: 'Windows manteve a prioridade padrão',
-      }[voicePriorityState?.status] || 'Gerenciada pelo sistema',
-    );
-    set(
-      'telemetryOutputGaps',
-      playoutSnapshot
-        ? `${playoutSnapshot.gapEvents} eventos · ${Math.round(playoutSnapshot.gapMs)} ms`
-        : 'Métrica não fornecida por este motor de áudio',
-    );
-    const host = $('telemetryVoiceRows');
-    if (!host) return;
-    const lines = receptionRows.map((r) => {
-      const fmt = (n, suffix) => (Number.isFinite(n) ? n.toFixed(1) + suffix : '—');
-      return `${privateVoiceRoster.get(owners[r.voice - 1])?.name || 'Participante'} · Voz ${r.voice} · perda ${fmt(r.lossPct, '%')} · jitter ${fmt(r.jitterMs, ' ms')} · reconstruída ${fmt(r.concealedPct, '%')} · buffer medido ${fmt(r.bufferMs, ' ms')} · margem solicitada ${r.targetMs === null ? 'automática' : r.targetMs + ' ms'}`;
-    });
-    const text = lines.length ? lines.join('\n') : 'Aguardando intervalos de voz recebida.';
-    if (host.textContent !== text) host.textContent = text;
-  }
-  function updateTelemetryHeader() {
-    renderTelemetry();
+    connectionDiagnostics.refresh();
   }
   function diagnostics() {
     const {
@@ -2454,7 +2040,7 @@ window.TronoSocial = (() => {
         camera: cameraOn(),
         screen: screenSharing(),
         transport: announcedTransport(),
-        playback: audioPlaybackInfo().label,
+        playback: connectionDiagnostics.playback().label,
       },
       telemetry: telemetrySnapshot,
       reception: {
@@ -2475,19 +2061,6 @@ window.TronoSocial = (() => {
       resources: nativeResources,
     });
   }
-  async function copyDiagnostics() {
-    const label = $('copyDiagnosticsStatus');
-    try {
-      await voiceTelemetry.collect();
-      const report = diagnostics();
-      if (window.TronoDesktop?.copyDiagnostics) await window.TronoDesktop.copyDiagnostics(report);
-      else await navigator.clipboard.writeText(report);
-      label.textContent = 'Copiado. Não contém nomes, mensagens, IPs ou credenciais.';
-    } catch {
-      label.textContent = 'Não foi possível copiar. Permita o acesso à área de transferência.';
-    }
-  }
-
   function bindFloatingDrag() {
     const panel = $('socialPanel'),
       handle = $('socialDragHandle');
@@ -2563,13 +2136,6 @@ window.TronoSocial = (() => {
     mediaInterestBindings.start();
     screenSharingBindings.start();
     audioPreferences.start();
-    $('adaptiveQuality').checked = qualityPreferences().adaptiveEnabled;
-    $('adaptiveQuality').onchange = async (e) => {
-      callQuality.configure({ adaptiveEnabled: !!e.target.checked });
-      await applyQualityToLiveMedia();
-      renderTelemetry();
-    };
-    $('copyDiagnostics').onclick = copyDiagnostics;
     $('socialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
     $('roomSocialBtn')?.addEventListener('click', () => showPanel(!panelOpen));
     $('chatOnlyOpenSocialBtn')?.addEventListener('click', () => showPanel(true));
@@ -2594,9 +2160,6 @@ window.TronoSocial = (() => {
     }
 
     $('joinVoiceBtn')?.addEventListener('click', joinVoice);
-    $('telemetryStatusPill')?.addEventListener('click', () => toggleTelemetry());
-    $('telemetryOpenBtn')?.addEventListener('click', () => toggleTelemetry());
-    $('telemetryCloseBtn')?.addEventListener('click', () => toggleTelemetry(false));
     $('resumeAudioBtn')?.addEventListener('click', () => {
       unlockCallAudio();
       if (voiceCall.getSnapshot().joined && !microphone.getSnapshot().capture?.processor)
@@ -2680,7 +2243,7 @@ window.TronoSocial = (() => {
           maximized.classList.remove('media-maximized');
           document.body.classList.remove('media-focus-open');
           void setSfuTileLayer(maximized, false);
-        } else if (telemetryOpen) toggleTelemetry(false);
+        } else if (connectionDiagnostics.getSnapshot().open) toggleTelemetry(false);
         else if (inChatHub() && chatDrawerOpen) toggleTextChat(false);
         else if (window.TronoCallSettings.getSnapshot().open) toggleVoiceSettings(false);
       }
@@ -2712,7 +2275,7 @@ window.TronoSocial = (() => {
     for (const event of ['focus', 'blur'])
       window.addEventListener(event, () => {
         updateVoiceBackgroundClass();
-        renderTelemetry();
+        refreshDiagnostics();
       });
     document.addEventListener('visibilitychange', () => {
       updateVoiceBackgroundClass();
@@ -2750,7 +2313,7 @@ window.TronoSocial = (() => {
         qualityPreferences().transmissionQuality,
         announcedTransport(),
       ),
-    onOutputChanged: renderTelemetry,
+    onOutputChanged: refreshDiagnostics,
     setScreenBitrate: (screenBitrate) =>
       window.TronoNetwork.requestSfu('set-screen-bitrate', { screenBitrate }),
     onStatus: setStatus,
@@ -2765,6 +2328,51 @@ window.TronoSocial = (() => {
     storage,
   });
   window.TronoAudioPreferences = audioPreferences;
+  const connectionDiagnostics = window.TronoVoiceCapture.createConnectionDiagnostics({
+    read: () => {
+      const call = voiceCall.getSnapshot(),
+        playback = audioPlayback.getSnapshot(),
+        telemetry = voiceTelemetry.getSnapshot(),
+        output = voiceSettings
+          .getSnapshot()
+          .devices.output.find((row) => row.id === playback.output);
+      return {
+        generation: call.generation,
+        joined: call.joined,
+        mode: call.joined ? announcedTransport() : voiceTransport.getSnapshot().mode,
+        hub: inChatHub(),
+        foreground: foreground(),
+        version:
+          window.TronoDesktop?.version || window.TronoNetwork?.CLIENT_VERSION || '0.9.1-alpha',
+        negotiating: [...sfuSubscriptions.values()].some((sub) => sub.negotiating),
+        connectionStates: allTelemetryPeerConnections().map(([, pc]) => pc.connectionState),
+        expectedVoices: detailedPlayers().filter((p) => p.id !== meId() && p.joined).length,
+        deafened: controlState().deafened,
+        desiredFps: screenSharing() ? qualityProfile().screen.fps : qualityProfile().camera.fps,
+        lastSfuError,
+        outputLabel: output?.label || (playback.output ? 'Dispositivo escolhido' : 'Saída padrão'),
+        audioContext: callAudio.getSnapshot().context,
+        playback,
+        telemetry,
+        realtime: realtime.getSnapshot(),
+        quality: callQuality.getSnapshot(),
+        receptionNames: telemetry.owners.map(
+          (id) => privateVoiceRoster.get(id)?.name || 'Participante',
+        ),
+      };
+    },
+    telemetry: voiceTelemetry,
+    quality: callQuality,
+    report: diagnostics,
+    copy: (report) =>
+      window.TronoDesktop?.copyDiagnostics
+        ? window.TronoDesktop.copyDiagnostics(report)
+        : navigator.clipboard.writeText(report),
+    onOpen: (open) =>
+      window.dispatchEvent(new CustomEvent('trono-telemetry-change', { detail: { open } })),
+    onQualityChanged: () => voiceSettings.refresh(),
+  });
+  window.TronoConnectionDiagnostics = connectionDiagnostics;
 
   window.addEventListener('trono-layout-change', updateButtons);
   window.addEventListener('trono:ready', bind);

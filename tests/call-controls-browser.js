@@ -33,7 +33,7 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       '--autoplay-policy=no-user-gesture-required', '--mute-audio'
     ]});
     async function client(data, native = false) {
-      const context = await browser.newContext({viewport: {width: 1280, height: 720}, permissions: ['camera', 'microphone']});
+      const context = await browser.newContext({viewport: {width: 1280, height: 720}, permissions: ['camera', 'microphone', 'clipboard-read', 'clipboard-write']});
       await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
       await context.route('**/community/profiles/*', route => route.fulfill({json: {profile: {
         nickname: data.user.nickname, personalization: {cover_file_id: 'test-cover', background_file_id: 'test-background', accent: '#bd6fe8', cover_position: 25}
@@ -162,6 +162,28 @@ test('stream invitations, prompt media shutdown and compact call layouts', {time
       await expect(owner.locator('#voiceProtectionStatus')).toContainText('Ativa');
       assert.equal(await owner.evaluate(()=>localStorage.getItem('mnVoiceProtection')),'1');
 
+      await owner.locator('[data-settings-tab="connection"]').click();
+      await expect(owner.locator('#realtimeInfraCard')).toBeVisible();
+      await owner.locator('#adaptiveQuality').uncheck();
+      assert.equal(await owner.evaluate(()=>localStorage.getItem('mnAdaptiveQuality')),'0');
+      await owner.locator('#adaptiveQuality').check();
+      assert.equal(await owner.evaluate(()=>localStorage.getItem('mnAdaptiveQuality')),'1');
+      await owner.bringToFront();
+      await owner.locator('#telemetryOpenBtn').click();
+      await expect(owner.locator('#telemetryPanel')).toBeVisible();
+      await expect(owner.locator('#telemetryOpenBtn')).toHaveAttribute('aria-expanded','true');
+      await expect(owner.locator('#telemetryStatusPill')).toHaveAttribute('aria-expanded','true');
+      await owner.locator('#copyDiagnostics').click();
+      await expect(owner.locator('#copyDiagnosticsStatus')).toContainText('Copiado');
+      const copied=await owner.evaluate(()=>navigator.clipboard.readText());
+      assert.equal(JSON.parse(copied).app,'M&N');
+      assert(!copied.includes(accounts[0].session.access_token));
+      assert(!copied.includes(accounts[0].user.email));
+      assert(!copied.includes('Ana'));
+      await owner.keyboard.press('Escape');
+      await expect(owner.locator('#telemetryPanel')).toBeHidden();
+      await expect(owner.locator('#telemetryStatusPill')).toHaveAttribute('aria-expanded','false');
+      await expect(owner.locator('#voiceSettingsPanel')).toBeVisible();
       await owner.locator('[data-settings-tab="video"]').click();
       await owner.locator('#voiceSettingsClose').click();
       await owner.locator('#voiceSettingsBtn').click();

@@ -569,8 +569,31 @@ status por getter e evento `trono-music-playback`, além de `trono-music-volume`
 volume, síntese e contexto dos avisos; `telemetry.ts` mantém proteção/prioridade.
 `social.js` somente compõe esses donos e avisa a projeção quando a telemetria muda.
 
-Conexão, perfil, aparência, arquivos e jogo continuam
-em slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
+`components/voice/diagnostics.tsx` renderiza a aba Conexão, o indicador do cabeçalho,
+o botão desktop e o painel de diagnóstico. O estado de abertura/cópia é único em
+`lib/voice/connection-diagnostics.ts`; avaliação de saúde, reprodução, consumo e
+formatação estão em `diagnostics-presentation.ts`. São projeções dos donos de
+telemetria, qualidade, reprodução, transporte e configuração Realtime, sem coleta,
+sockets ou contextos adicionais. Os detalhes visuais permanecem estáveis quando o
+painel está fechado ou sem foco; o coletor mantém seus intervalos atuais.
+
+`diagnostics-runtime.tsx` monta as raízes depois que o shell desktop move os hosts
+vazios. O shell move o host `voiceDiagnosticsLauncher`, sem escrever no botão React;
+`control-layout.ts` usa esse mesmo host como referência para posicionar Pessoas.
+Não usar o botão interno como referência de inserção no pai externo. O evento
+`trono-telemetry-change` e `TronoSocial.toggleTelemetry` continuam delegando ao dono
+compartilhado para os consumidores legados. Escape conserva a prioridade de mídia,
+diagnóstico, chat e configurações no coordenador.
+
+Adaptar vídeo configura/aplica o dono de qualidade existente. A cópia coleta uma
+amostra antes de chamar o relatório sanitizado, usando IPC desktop ou clipboard web.
+Cliques durante uma cópia são deduplicados; troca de geração ou descarte invalida
+continuações, impedindo que a chamada anterior copie após uma coleta atrasada ou
+altere o resultado da chamada seguinte. Nomes das linhas de recepção são somente
+texto local do painel e não entram no relatório. `social.js` conserva a composição
+dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnóstico.
+
+Perfil, aparência, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando identidade e listeners dos nós. O React
 possui contêiner/visibilidade; cada controlador conserva somente seus filhos.
 Notificações preenche seu slot, sem criar abas/painéis paralelos. Esses conteúdos,
 incluindo atividade, ainda serão convertidos por domínio.

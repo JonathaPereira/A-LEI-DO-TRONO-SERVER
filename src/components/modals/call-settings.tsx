@@ -10,6 +10,7 @@ import {
   VoiceVideoSettings,
   VoiceCaptureSettings,
 } from '../voice/settings-fields';
+import { ConnectionSettings } from '../voice/diagnostics';
 import { VoiceAudioPreferences } from '../voice/audio-preferences';
 import { SettingsActivityFields } from './settings-activity-fields';
 
@@ -346,6 +347,8 @@ export function CallSettings({
                   {permissionMessage}
                 </p>
               </>
+            ) : topic === 'connection' ? (
+              <ConnectionSettings client={runtime.TronoConnectionDiagnostics} desktop={!!dialog} />
             ) : topic === 'audio' ? (
               <VoiceAudioSettings client={runtime.TronoVoiceSettings} desktop={!!dialog}>
                 <VoiceAudioPreferences client={runtime.TronoAudioPreferences} />

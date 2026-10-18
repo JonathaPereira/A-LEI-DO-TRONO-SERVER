@@ -44,6 +44,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Estrutura das configurações web/desktop, navegação, conta e permissões em React.
 - Campos de dispositivos, ganhos, supressão/modo leve e transmissão em React.
 - Aba Áudio integralmente React, incluindo avisos, música, efeitos e proteção de recepção.
+- Aba Conexão, indicador, painel e ações de diagnóstico em React, com projeção tipada.
 
 ## Integração da main: desktop 0.2.10
 
@@ -71,7 +72,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 
 Os controladores em `src/legacy/` continuam em JavaScript. Eles não se tornaram
 React ou TypeScript apenas porque a marcação foi convertida. Apresentação de participantes/
-mídias, conexão/diagnóstico, edição/visualização de perfis e galeria, navegação/
+mídias, edição/visualização de perfis e galeria, navegação/
 gerenciamento de canais, notificações e jogos permanecem nesses controladores. As listas de canais já são renderizadas em React;
 o catálogo está em `lib/channels/`, sem cópia de estado em `game.js`.
 Lista, histórico, revisões e moderação agora pertencem a `lib/chat/` e componentes React.
@@ -1181,15 +1182,69 @@ Fontes sintéticas não substituem testes com jogos, dispositivos físicos ou re
 Evidências: `artifacts/audio-preferences-{checks,build,tests,ui,sfu,layouts,media,desktop,background}.log`
 e `artifacts/settings/audio-480x520.png`. Commit local; sem push ou infraestrutura alterada.
 
+## Conexão e diagnóstico em React — 17/10/2026
+
+- `components/voice/diagnostics.tsx` possui valores, visibilidade e eventos da aba
+  Conexão, do indicador no cabeçalho, do botão desktop e do painel de métricas.
+  A marcação antiga foi removida de `VoicePanel`/`ChatOnlyScreen`; Conexão deixou
+  de usar slot legado nas configurações.
+- `lib/voice/connection-diagnostics.ts` possui abertura, cópia/resultado e assinaturas
+  da interface. `diagnostics-presentation.ts` conserva os critérios de avaliação de
+  saúde, estados de reprodução, consumo/limites SFU e formatação de métricas/recepção.
+  Não há outro coletor, timer de coleta, socket, contexto ou captura. Os donos de
+  telemetria/qualidade/reprodução/transporte/Realtime continuam os mesmos.
+- Removidas mais de 400 linhas de pintura/formatação/handlers de `social.js`, incluindo
+  a flag de abertura. O coordenador compõe os snapshots e mantém a composição do
+  relatório sanitizado. Escape e a API pública delegam ao dono compartilhado;
+  o evento de abertura continua fechando o mensageiro quando necessário.
+- `diagnostics-runtime.tsx` monta depois da movimentação dos hosts pelo shell desktop.
+  O shell não escreve no botão React. O posicionador dos controles usa o host externo
+  do botão como referência para mover Pessoas, evitando insertBefore com pais distintos.
+- Detalhes visuais ficam estáveis sem foco ou com painel fechado; indicador/política
+  continuam atualizáveis. Troca de chamada limpa detalhes/resultado da chamada anterior.
+  A cópia coleta antes do relatório, deduplica cliques e invalida continuações por
+  geração/descarte. Falha de clipboard permite nova tentativa. Nomes de recepção são
+  texto local React; o relatório continua excluindo nomes, mensagens e credenciais.
+- Dez regressões novas cobrem apresentação, limites/fallback, saída local versus
+  tráfego saudável, negociação pendente, métricas ausentes, foco/abertura, adaptação,
+  cópia concorrente/atrasada/recuperável e descarte sem parar donos emprestados.
+  `test:settings` possui 31 casos. O teste web usa o checkbox, abre/fecha por Escape
+  e copia via clipboard; o Electron copia por IPC com microfone/câmera/tela ativos.
+- O teste desktop revela os controles da tela por hover antes de trocar a fonte,
+  respeitando o estado `screen-controls-idle` em vez de depender do movimento anterior.
+
+Validação: tipagem, formatação, build estático, `npm test`, quatro fluxos de UI,
+124 verificações SFU, 16 testes de configurações/recepção e os testes Electron de
+avisos, relay SFU e chamada/layout passaram. No Electron, a nova cópia preservou
+fontes, peers e socket; as trocas posteriores de câmera/tela e negociação passaram.
+Os testes de recepção mantiveram PCM contínuo durante tarefas longas e mudanças de
+proteção/ganho. Captura, processamento, encoders e cadência do coletor não mudaram;
+a suíte isolada de nove cenários de segundo plano não foi repetida nesta etapa.
+O painel em janela estreita foi conferido visualmente. Fontes de mídia são sintéticas.
+
+A suíte `tests/social-browser.js` também foi tentada, mas usa controles antigos de
+mensageiro ocultos pelo workspace e produz falhas em cascata. A mesma falha foi
+reproduzida em cópia isolada do commit anterior `f1823e9` (build próprio), portanto
+não é apresentada como validação aprovada desta etapa. Sua atualização para o
+workspace atual permanece pendente; cópia/anônimização foram verificadas nos novos
+fluxos web/Electron e nos testes do relatório já existentes.
+
+Evidências: `artifacts/connection-diagnostics-{checks,build,tests,ui,sfu,layouts,desktop,desktop-layout}.log`,
+`artifacts/connection-diagnostics-baseline-social.log` e `artifacts/voice021/`.
+O log desktop conserva a primeira falha de controles inativos; a repetição corrigida
+está em `desktop-layout`. Sem push ou alteração de infraestrutura.
+
 ## Próximas alterações, em ordem
 
-1. Converter conexão/diagnóstico, barra,
-   lista de participantes e painéis de câmera/tela para React, com um dono por
+1. Converter barra, lista de participantes e painéis de câmera/tela para React, com um dono por
    subárvore. Dispositivos, ganhos, supressão/modo leve e opções de transmissão
    já são campos React em `settings-fields.tsx`, usando `lib/voice/settings.ts`.
    Avisos, música, efeitos e proteção recebida também são React em
    `audio-preferences.tsx`, usando `lib/voice/audio-preferences.ts`. O player
    compartilhado com jogos permanece em `legacy/audio.js`; ele não pinta esses campos.
+   Conexão, indicador, painel e ações do diagnóstico também são React, usando
+   `connection-diagnostics.ts` e `diagnostics-presentation.ts`. Não restaurar
+   suas flags, formatação, listeners ou escritores DOM em `social.js`.
    A estrutura de configurações (abas/abertura/conta/permissões) também é React;
    seus slots conservam somente os conteúdos ainda legados.
    Publicação de microfone/câmera está em `device-publication.ts`; publicação da

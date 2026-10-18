@@ -135,18 +135,12 @@ if (window.TronoDesktop)
       if (event.key === 'Escape') channels(false);
     });
     const people = $('communityToggle'),
-      telemetry = $('telemetryOpenBtn'),
+      telemetry = $('voiceDiagnosticsLauncher'),
       diagnostics = $('telemetryPanel');
     people.title = 'Ver pessoas online ou minimizar a lista';
     people.setAttribute('aria-controls', 'communityPanel');
-    telemetry.textContent = 'Telemetria';
-    telemetry.setAttribute('aria-controls', 'telemetryPanel');
-    telemetry.setAttribute('aria-expanded', 'false');
     topbar.append(heading, channelToggle, telemetry);
     body.append(topbar, diagnostics);
-    window.addEventListener('trono-telemetry-change', (event) =>
-      telemetry.setAttribute('aria-expanded', String(event.detail.open)),
-    );
     function updateWindowState(state) {
       const on = state.fullscreen === true;
       fullscreenButton.setAttribute('aria-pressed', String(on));

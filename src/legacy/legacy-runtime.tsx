@@ -12,6 +12,8 @@ import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
 import { installLegacyAvatars } from '../lib/profiles/avatar';
+import { initializeConnectionDiagnostics } from '../components/voice/diagnostics-runtime';
+import { createConnectionDiagnostics } from '../lib/voice/connection-diagnostics';
 import { createAudioPreferences } from '../lib/voice/audio-preferences';
 import { createVoiceSettings } from '../lib/voice/settings';
 import { createCallQuality } from '../lib/voice/quality';
@@ -71,6 +73,7 @@ export function LegacyRuntime() {
           createCallQuality,
           createVoiceSettings,
           createAudioPreferences,
+          createConnectionDiagnostics,
           QUALITY_ORDER,
           SCREEN_FORMATS,
           SCREEN_BITRATES,
@@ -113,9 +116,14 @@ export function LegacyRuntime() {
         // Profile/game controllers prepare borrowed bodies before the React shell mounts;
         // activity/notifications then bind to the mounted slots, matching their boot order.
         if (filename === 'desktop-shell.js')
-          window.addEventListener('trono:ready', () => initializeCallSettings(window), {
-            once: true,
-          });
+          window.addEventListener(
+            'trono:ready',
+            () => {
+              initializeCallSettings(window);
+              initializeConnectionDiagnostics(window);
+            },
+            { once: true },
+          );
       }
       prepareCallSettings(window);
       window.dispatchEvent(new Event('trono:ready'));
