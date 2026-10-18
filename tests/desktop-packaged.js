@@ -162,7 +162,6 @@ test(
             '/assets/laws/ordem.svg',
             '/desktop-shell.css',
             '/media-layout.css',
-            '/desktop-activity.js',
             '/assets/portal_realms.png',
             '/vendor/rnnoise/rnnoise.wasm',
             '/application-audio-worklet.js',

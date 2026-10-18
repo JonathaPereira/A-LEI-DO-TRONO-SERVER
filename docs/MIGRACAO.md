@@ -1547,10 +1547,40 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   notificações e navegar; também verificou a identidade dos novos campos.
   Evidências locais: `artifacts/notifications-*`. Sem push ou mudança na main.
 
+## Atividade do desktop em TypeScript e React — 18/10/2026
+
+- Excluídos `legacy/desktop-activity.js` e sua entrada no manifesto. Estado,
+  preferências por aparelho e publicação pertencem a `lib/desktop/activity.ts`;
+  `activity-runtime.ts` adapta IPC, identidade e visibilidade do jogo. A ordem
+  de início das configurações, atividade e notificações foi preservada.
+- `settings-activity-fields.tsx` possui os valores e eventos React. A lista
+  aberta conserva suas opções; o nome é confirmado ao perder foco ou pressionar
+  Enter. Eventos de detecção não apagam o rascunho. Opt-in e chaves locais antigas
+  foram mantidos, assim como o fallback de A Lei do Trono e o aplicativo fechado.
+- DTOs nativos são validados e não transportam caminhos ou PIDs. O socket existente
+  publica somente o nome após autenticação e suporte do servidor. Eventos da
+  detecção continuam renovando a presença; não há novo timer ou processo auxiliar.
+- Configurações são serializadas e a intenção pendente mais recente prevalece.
+  Respostas/falhas antigas não apagam um evento nativo novo. Troca de conta
+  invalida autenticação anterior; logout limpa a presença e desliga a detecção.
+  Descarte remove assinaturas/observer e desliga após um pedido em andamento.
+- `test:activity` integra a suíte principal: 14 casos do controlador, três do
+  helper nativo e três de presença. `test:activity:ui` verifica presença real entre
+  dois clientes com IPC simulado, edição, opt-in, logout e identidade entre layouts.
+- Tipagem, formatação, build, `npm test`, cinco casos novos de navegador, dez de
+  shell/notificações/configurações e quatro gerais de interface passaram.
+  O Electron real preservou campos de atividade,
+  controles, microfone, câmera, tela, replay, peers e socket ao navegar.
+  Evidências: `artifacts/activity-*`. Sem push ou mudança na main.
+- O cenário que redisparava `trono:ready` da aplicação inteira reproduziu um
+  reinício não idempotente em `profile-files.js:719`. O início repetido do novo
+  controlador é testado diretamente, mantendo um listener e uma leitura inicial.
+  A correção do reinício de perfis fica com a conversão desse domínio.
+
 ## Próximas alterações, em ordem
 
-1. Converter navegação/gerenciamento de canais, atividade,
-   perfis/configurações e jogos. Cada controlador convertido perde sua entrada
+1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.
+   Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Ao retirar `legacy/profile-files.js`, conservar o cliente de
    `lib/files/` e os componentes compartilhados; remover adaptadores sem chamadores.

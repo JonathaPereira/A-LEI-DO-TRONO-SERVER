@@ -700,8 +700,24 @@ anteriores. Nenhum deles mantém outro estado ou captura mídia.
 permissões em React, usando `useSyncExternalStore`. Possui abertura/fechamento,
 teclado, foco das abas, eventos do diálogo e observers de dimensionamento, com
 limpeza dos listeners/observers. O diálogo nativo preserva backdrop e Escape.
-`settings-activity-fields.tsx` fornece os campos estáveis ainda usados pelo
-controlador de atividade; suas ações continuam naquele domínio.
+`settings-activity-fields.tsx` renderiza opt-in, aplicativo e nome de atividade
+usando `lib/desktop/activity.ts`. O rascunho do nome é confirmado ao sair do campo;
+eventos nativos não o substituem durante a edição. A lista aberta conserva suas
+opções até perder o foco. IDs e preferência por aparelho foram preservados.
+
+`activity.ts` possui configuração, projeção e publicação de nomes; snapshots nativos
+são validados e descartam caminhos, PIDs e campos extras. O envio usa o socket
+existente após autenticação e suporte anunciado. Eventos periódicos continuam
+renovando a presença; não há um temporizador paralelo. O fallback local de A Lei
+do Trono depende do estado e da tela visível e não substitui uma seleção manual.
+`activity-runtime.ts` adapta IPC, identidade e observação da tela do jogo.
+
+Configurações nativas são serializadas e mudanças pendentes usam a intenção mais
+recente. Eventos novos vencem leitura/respostas antigas; troca de conta invalida
+autenticação e trabalho anterior. Sair limpa a presença e configura a detecção
+desligada. O descarte remove assinaturas/observer e agenda o opt-out após um
+pedido já em andamento. Detecção e processo auxiliar continuam em
+`electron/activity.cjs`; `legacy/desktop-activity.js` foi removido.
 
 `call-settings-runtime.tsx` monta uma raiz React no painel existente. Antes dela,
 os controladores de perfil/jogos preparam os corpos que ainda possuem. O bootstrap
@@ -770,8 +786,8 @@ dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnósti
 Perfil, arquivos e jogo continuam em slots vazios (`ContentSlot`), preservando
 identidade e listeners dos nós. Aparência é React dentro de um host estável;
 movê-la entre configurações conserva os rádios de tema/layout. Os campos de
-notificações são filhos React da aba compartilhada. Os conteúdos restantes,
-incluindo atividade, ainda serão convertidos por domínio.
+notificações e atividade são filhos React das abas compartilhadas. Os conteúdos
+restantes de perfil, arquivos e jogos ainda serão convertidos por domínio.
 
 `lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores
 e feedback compartilhado com a restauração de painéis. `appearance-fields.tsx`

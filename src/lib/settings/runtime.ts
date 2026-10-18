@@ -3,9 +3,11 @@ import type { AudioPreferences } from '../voice/audio-preferences';
 import type { VoiceSettings } from '../voice/settings';
 import type { SettingsController, SettingsTopic } from './controller';
 import type { NotificationsController } from '../notifications/controller';
+import type { DesktopActivityController } from '../desktop/activity';
 
 export interface SettingsRuntime {
   TronoNotifications: NotificationsController;
+  TronoDesktopActivity?: DesktopActivityController;
   TronoConnectionDiagnostics: ConnectionDiagnostics;
   TronoVoiceSettings: VoiceSettings;
   TronoAudioPreferences: AudioPreferences;

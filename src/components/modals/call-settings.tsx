@@ -352,7 +352,9 @@ export function CallSettings({
             ) : topic === 'capture' ? (
               <VoiceCaptureSettings client={runtime.TronoVoiceSettings} desktop />
             ) : topic === 'activity' ? (
-              <SettingsActivityFields />
+              runtime.TronoDesktopActivity ? (
+                <SettingsActivityFields client={runtime.TronoDesktopActivity} />
+              ) : null
             ) : topic === 'notifications' ? (
               <NotificationFields client={runtime.TronoNotifications} />
             ) : (
