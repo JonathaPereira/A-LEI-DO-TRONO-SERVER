@@ -64,8 +64,8 @@ export function createWorkspaceLayout(options: WorkspaceLayoutOptions) {
             : header.querySelector('.chat-app-brand');
       if (tabs && anchor && tabs.previousElementSibling !== anchor) anchor.after(tabs);
       const compact = mounted && state.layout === 'discord' && state.width < 760;
-      get('desktopUpdateCheck')?.classList.toggle('workspace-update-compact', compact);
-      if (mounted) move('desktopUpdateCheck', compact ? shell : get('desktopRail'));
+      get('desktopUpdateCheckHost')?.classList.toggle('workspace-update-compact', compact);
+      if (mounted) move('desktopUpdateCheckHost', compact ? shell : get('desktopRail'));
       options.refreshControls();
     } finally {
       arranging = false;

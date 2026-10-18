@@ -160,7 +160,6 @@ test(
             '/manual/throne.svg',
             '/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf',
             '/assets/laws/ordem.svg',
-            '/desktop-shell.js',
             '/desktop-shell.css',
             '/media-layout.css',
             '/desktop-activity.js',

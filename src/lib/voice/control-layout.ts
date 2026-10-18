@@ -53,6 +53,7 @@ callControlWindow.TronoCallControlsLayout = (() => {
   // Soundboard still owns a legacy button; never decorate React-owned controls.
   function decorate(node: HTMLElement | null) {
     if (!node || node.id !== 'soundboardToggle') return;
+    if (node.dataset.desktopContent === 'react') return;
     const workspace =
       document.body.classList.contains('chat-only-active') && node.closest('#callWorkspace');
     if (!workspace) node.querySelector('.workspace-control-icon')?.remove();

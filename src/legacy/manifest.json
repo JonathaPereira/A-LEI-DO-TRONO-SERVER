@@ -37,11 +37,9 @@
     "community-admin.js",
     "soundboard-client.js",
     "call-controls-layout.js",
-    "desktop-shell.js",
     "desktop-activity.js",
     "notifications.js",
-    "messenger.js",
-    "desktop-updates.js"
+    "messenger.js"
   ],
   "styles": [
     "style.css",

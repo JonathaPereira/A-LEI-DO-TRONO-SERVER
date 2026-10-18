@@ -1,5 +1,6 @@
 'use client';
 
+import { initializeDesktopShell } from '../components/desktop/shell-runtime';
 import { initializeAppLayout } from '../components/navigation/app-layout-runtime';
 import { initializeAppearance } from '../components/profiles/appearance-runtime';
 import { initializeCallWorkspace } from '../components/navigation/workspace-runtime';
@@ -138,7 +139,8 @@ export function LegacyRuntime() {
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile/game controllers prepare borrowed bodies before the React shell mounts;
         // activity/notifications then bind to the mounted slots, matching their boot order.
-        if (filename === 'desktop-shell.js') {
+        if (filename === 'call-controls-layout.js') {
+          initializeDesktopShell(window);
           window.addEventListener(
             'trono:ready',
             () => {

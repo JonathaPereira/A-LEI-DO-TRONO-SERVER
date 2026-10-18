@@ -61,7 +61,7 @@
     "test:voice:interest": "node --test tests/media-interest.cjs",
     "test:voice:sharing": "node --test tests/screen-sharing.cjs tests/screen-publication.cjs",
     "test:voice:publication": "node --test tests/device-publication.cjs",
-    "test:settings": "node --test tests/settings.cjs tests/voice-settings.cjs tests/audio-preferences.cjs tests/connection-diagnostics.cjs tests/call-toolbar.cjs tests/call-stage.cjs tests/media-dialogs.cjs tests/media-focus.cjs tests/call-navigation.cjs tests/call-workspace.cjs tests/responsive-layout.cjs tests/app-layout.cjs tests/appearance-preferences.cjs"
+    "test:settings": "node --test tests/settings.cjs tests/voice-settings.cjs tests/audio-preferences.cjs tests/connection-diagnostics.cjs tests/call-toolbar.cjs tests/call-stage.cjs tests/media-dialogs.cjs tests/media-focus.cjs tests/call-navigation.cjs tests/call-workspace.cjs tests/responsive-layout.cjs tests/app-layout.cjs tests/appearance-preferences.cjs tests/desktop-shell.cjs tests/desktop-update-controls.cjs"
   },
   "engines": {
     "node": ">=24.12.0"

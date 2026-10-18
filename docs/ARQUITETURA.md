@@ -89,10 +89,33 @@ posicionadores. A observação da visibilidade das telas ainda legadas permanece
 ponte; `legacy/app-layout.js` foi excluído.
 
 A seleção/troca de canais e a navegação das telas de jogos ainda passam por
-`legacy/game.js` e `desktop-shell.js`. Os cliques React delegam a esse fluxo, que
+`legacy/game.js`; o shell desktop delega a esses donos por `lib/desktop/shell.ts`. Os cliques React delegam a esse fluxo, que
 consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
 consulta `lib/voice/navigation.ts`; os métodos públicos de `social.js` são adaptadores.
 O gerenciamento de canais e seus diálogos permanecem em `legacy/community-admin.js`.
+
+`lib/desktop/shell.ts` possui projeção da área, abertura da lista de canais e
+estado visual da janela. Navegação reutiliza portal, jogos e catálogo existentes;
+perfil/configurações não trocam a área e clipes conservam o bloqueio atual. O IPC
+continua no preload: a leitura inicial da janela e respostas de toggle não podem
+sobrescrever um evento nativo posterior. Assinaturas, observação das telas ainda
+legadas e raízes React são liberadas pelo runtime do shell.
+
+`components/desktop/shell-controls.tsx` renderiza rail, topo, sombra e informação
+da chamada, usando o status do toolbar tipado. O runtime monta antes das
+configurações e de app-layout; move os mesmos hosts de diagnóstico e controles.
+O botão de soundboard conserva sua ação legada; apenas seu conteúdo é React,
+marcado para o posicionador não recriar seus ícones. `effects-layout.ts` observa
+visibilidade/tamanho e limita o menu à região disponível, agrupando medições por frame.
+
+`lib/desktop/updates.ts` valida estados nativos e possui somente apresentação,
+banner manual/automático, pedidos pendentes e ações. Eventos mais novos vencem
+respostas IPC antigas; cliques simultâneos são deduplicados e descarte invalida
+continuações. O consentimento e a instalação continuam em `electron/updates.cjs`.
+Botão e banner são React; o workspace move `desktopUpdateCheckHost` completo,
+conservando o botão e o handler em modo compacto. `desktop-shell.js` e
+`desktop-updates.js` saíram dos fontes/manifesto. Estado e handlers de clipes que
+nunca eram ativados pelo shell foram retirados, sem habilitar a função.
 
 ## Compatibilidade durante a conversão
 
@@ -462,7 +485,7 @@ O mapa sem leitores de `gameRoomState` e o timer antigo de limpeza da mesa foram
 minimizar/restaurar, texto, silenciamento, retorno à voz e indicadores. O runtime
 monta antes dos layouts; cada botão fica em um host estável com `display: contents`.
 As configurações movem o host de Comunicação, conservando seu botão e eventos React.
-Os handlers paralelos de `desktop-shell.js` foram removidos; `call-workspace.js` foi excluído.
+Os controladores `desktop-shell.js` e `call-workspace.js` foram excluídos; seus handlers não devem ser restaurados.
 `navigation-view.ts` é a ponte para classes/visibilidade dos containers que os layouts
 legados ainda movem; assina o mesmo estado e possui Escape, breakpoint e foco adiado
 do compositor. Fechar, trocar de sala ou descartar cancela o foco. Apenas Ampliar

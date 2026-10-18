@@ -1469,10 +1469,38 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   visíveis e geometria substituída. A cobertura atual de tema/reset por conta está
   em `appearance-preferences-browser.cjs`; o restante da suíte antiga segue pendente.
 
+## Shell desktop e atualizador em React — 18/10/2026
+
+- Frentes paralelas para estado/navegação, atualizador e regressões; runtime,
+  posicionamento e validação integrados por um único responsável.
+- `lib/desktop/shell.ts` possui área, lista de canais e projeção da janela.
+  Navegação delega aos donos existentes, sem outra entrada/catálogo/socket.
+  Eventos nativos mais novos vencem leitura inicial e respostas antigas de tela
+  cheia. React possui rail, topo, sombra e status; slots conservam os controles.
+- `lib/desktop/updates.ts` valida estados e possui banner/pedidos/ações. Botão e
+  banner React usam IPC existente; consentimento de instalação continua no Electron.
+  O workspace move o host do atualizador, sem soltar o botão da raiz React.
+- A ação legada do soundboard foi preservada; seu conteúdo no botão é React e
+  `effects-layout.ts` possui observadores/frames da geometria do menu. O placer
+  não insere/remove filhos desse conteúdo. Ícones e posicionamento foram testados.
+- Excluídos `legacy/desktop-shell.js` e `legacy/desktop-updates.js`, suas entradas
+  no manifesto e a expectativa do JS antigo no teste do pacote. Removidos estado
+  e handlers de clipes que nunca eram ativados, ícones sem leitores e a escrita
+  genérica de ajuda sobre conteúdo agora React. Clipes mantêm o bloqueio existente.
+- Tipagem, formatação, build e `npm test` passaram; configurações/apresentação
+  possuem 124 casos (23 novos). Passaram 27 testes de apoio desktop e 32 regressões
+  focadas no navegador (incluindo seis do shell/soundboard), quatro gerais de
+  interface e três no Electron real, conservando controles, mic/câmera/tela,
+  peers/socket, áudio e SFU. Evidências: `artifacts/desktop-shell-*`.
+  Sem push ou mudança na main.
+- Restam composição de `social.js`, navegação/controles dos jogos em `game.js`,
+  perfis, notificações, atividade e os demais domínios legados. O shell completo
+  não precisa ser restaurado como ponte para esses fluxos.
+
 ## Próximas alterações, em ordem
 
-1. Concluir a composição tipada da chamada e converter seus posicionadores/layouts
-   restantes (`social.js` e `desktop-shell.js`).
+1. Concluir a composição tipada da chamada em `social.js`. Os posicionadores
+   e shells anteriores foram substituídos.
    Navegação do painel/drawer, salas de voz/texto, não lidas e silenciamento já
    pertencem a `navigation.ts`, com nove botões React e ponte em `navigation-view.ts`.
    Não restaurar cópias de estado, listeners de sala ou handlers desses botões.

@@ -175,7 +175,8 @@ body.chat-only-active #callWorkspace {
   overflow: auto !important;
   z-index: 5 !important;
 }
-#callWorkspace :is(#desktopRail, #webLayoutRail) > button {
+#callWorkspace :is(#desktopRail, #webLayoutRail) > button,
+#callWorkspace #desktopUpdateCheckHost > button {
   display: grid !important;
   place-items: center !important;
   position: relative !important;
@@ -198,11 +199,13 @@ body.chat-only-active #callWorkspace {
   color: #e2ddff !important;
   background: #4f459a !important;
 }
-#callWorkspace :is(#desktopRail, #webLayoutRail) > button svg {
+#callWorkspace :is(#desktopRail, #webLayoutRail) > button svg,
+#callWorkspace #desktopUpdateCheckHost > button svg {
   width: 22px !important;
   height: 22px !important;
 }
-#callWorkspace :is(#desktopRail, #webLayoutRail) > button > span {
+#callWorkspace :is(#desktopRail, #webLayoutRail) > button > span,
+#callWorkspace #desktopUpdateCheckHost > button > span {
   display: none !important;
 }
 #callWorkspace :is(#desktopHome, .layout-web-home) {
@@ -2069,7 +2072,7 @@ body[data-app-layout='original'] #callWorkspace .mn-sidebar-heading {
   }
 }
 
-#callWorkspace > #desktopUpdateCheck.workspace-update-compact {
+#callWorkspace > #desktopUpdateCheckHost.workspace-update-compact > #desktopUpdateCheck {
   position: absolute !important;
   left: 8px !important;
   bottom: 78px !important;
@@ -2088,11 +2091,11 @@ body[data-app-layout='original'] #callWorkspace .mn-sidebar-heading {
   background: #222938 !important;
   color: #d7deef !important;
 }
-#callWorkspace > #desktopUpdateCheck.workspace-update-compact svg {
+#callWorkspace > #desktopUpdateCheckHost.workspace-update-compact > #desktopUpdateCheck svg {
   width: 20px;
   height: 20px;
 }
-#callWorkspace > #desktopUpdateCheck.workspace-update-compact > span {
+#callWorkspace > #desktopUpdateCheckHost.workspace-update-compact > #desktopUpdateCheck > span {
   display: none;
 }
 
