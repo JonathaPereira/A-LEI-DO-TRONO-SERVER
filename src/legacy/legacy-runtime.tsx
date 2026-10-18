@@ -5,6 +5,7 @@ import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
 import { initializeFileLibrary } from '../components/files/library-runtime';
 import { initializeProfileViewer } from '../components/profiles/viewer-runtime';
+import { initializeProfileEditor } from '../components/profiles/editor-runtime';
 import { initializeDesktopShell } from '../components/desktop/shell-runtime';
 import { initializeAppLayout } from '../components/navigation/app-layout-runtime';
 import { initializeAppearance } from '../components/profiles/appearance-runtime';
@@ -64,6 +65,7 @@ export function LegacyRuntime() {
       initializeChannels(window);
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
+        if (filename === 'profile-gifs.js') initializeProfileEditor(window);
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile/game controllers prepare borrowed bodies before the React shell mounts;

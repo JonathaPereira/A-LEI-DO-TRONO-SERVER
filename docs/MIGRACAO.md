@@ -1643,6 +1643,33 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   A inicialização antiga não idempotente do editor ainda deve ser retirada na
   conversão de sua estrutura. Nenhuma captura ou regra de jogo mudou nesta etapa.
 
+## Editor de perfil em React e TypeScript — 18/10/2026
+
+- `lib/profiles/editor.ts` possui rascunho, mídias pendentes, URLs locais,
+  carregamento e salvamento. Validação e preparação de imagens têm módulos próprios.
+  Mantidos GIFs animados, recorte dos avatares estáticos, links, emoji, interesses,
+  créditos, posição/zoom da capa e demais ajustes de aparência.
+- `editor-fields.tsx` e `editor-preview.tsx` substituem a criação/pintura DOM do
+  formulário. Uma única raiz em `profileEditorHost` é compartilhada entre web e
+  desktop; abas e layouts conservam os controles e o rascunho. O fechamento descarta
+  consultas, seleções e URLs locais. O arraste da capa e os sliders preservam a imagem.
+- Removidos estado, listeners, upload e prévia antigos de `profile-files.js`.
+  A inicialização restante usa `once`; foi retirada a reconstrução antiga do editor.
+  O arquivo caiu de 931 para 253 linhas. Ainda necessário para decorações de chamada/
+  conversas, contas do criador e navegação das configurações web. O seletor GIPHY
+  continua em `profile-gifs.js`; não foi declarado convertido nesta etapa.
+- Uploads concluídos são reutilizados após falhas parciais. Respostas, progresso e
+  seletores antigos não afetam outra abertura/conta; `auth.updateProfile` também
+  protege a sessão contra resultados de logins anteriores, inclusive A → B → A.
+- Os 20 testes novos do editor integram `npm test`. Passaram a suíte completa,
+  tipagem, formatação e build estático, três casos do novo editor no navegador,
+  20 de perfis/arquivos/layouts e os fluxos completos de mídia web/desktop.
+  No Electron real, editar o perfil e alternar abas/layouts manteve controles,
+  microfone, câmera, tela, players, peers e socket com mídia sintética.
+  Evidências locais: `artifacts/profile-editor-*`.
+- Próximo recorte: seletor GIPHY e os donos restantes de decorações/administração
+  do perfil, retirando cada trecho substituído. Captura e regras dos jogos intactas.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.

@@ -12,24 +12,22 @@ export function Avatar({
   title,
   id,
   online,
+  localUrl,
 }: {
   person: AvatarAppearance;
   className: string;
   title?: string;
   id?: string;
   online?: boolean;
+  localUrl?: string;
 }) {
   const file = avatarFile(person),
-    source = useFileUrl(file);
+    source = useFileUrl(file, !localUrl);
+  const url = localUrl || source?.url;
   const [failed, setFailed] = useState<string | null>(null);
-  return source?.url && failed !== source.url ? (
+  return url && failed !== url ? (
     <span id={id} className={className} title={title} aria-label={title} data-online={online}>
-      <img
-        className="profile-avatar-photo"
-        src={source.url}
-        alt="Avatar"
-        onError={() => setFailed(source.url!)}
-      />
+      <img className="profile-avatar-photo" src={url} alt="Avatar" onError={() => setFailed(url)} />
     </span>
   ) : (
     <span

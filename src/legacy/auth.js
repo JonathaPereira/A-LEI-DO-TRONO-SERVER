@@ -39,6 +39,7 @@ window.TronoAuth = (() => {
   }
   let session = null,
     user = null,
+    identityEpoch = 0,
     guest = null,
     mode = 'login',
     recoveryToken = null,
@@ -136,6 +137,7 @@ window.TronoAuth = (() => {
     refreshTimer = setTimeout(() => void refresh().catch(() => {}), Math.min(delay, 2147483647));
   }
   function setSession(data) {
+    if (user?.id !== data.user?.id) identityEpoch++;
     session = data.session;
     user = data.user;
     guest = null;
@@ -149,6 +151,7 @@ window.TronoAuth = (() => {
     void persistSession();
   }
   function clearSession() {
+    identityEpoch++;
     session = null;
     user = null;
     clearTimeout(refreshTimer);
@@ -514,9 +517,14 @@ window.TronoAuth = (() => {
       void refresh().catch(() => {});
   });
   async function updateProfile(profile) {
+    const accountId = user?.id,
+      operation = identityEpoch;
     const token = await getAccessToken();
-    if (!token) throw new Error('Entre na sua conta.');
+    if (!token || !accountId || user?.id !== accountId || identityEpoch !== operation)
+      throw new Error('Entre na sua conta novamente.');
     const data = await api('profile', profile, token);
+    if (user?.id !== accountId || identityEpoch !== operation)
+      throw new Error('A conta foi alterada durante o salvamento.');
     setSession({ session, user: data.user });
     return data.user;
   }

@@ -304,3 +304,9 @@ body.chat-only-active .court-chat-compose #attachFileBtn {
   display: grid;
   place-items: center;
 }
+.profile-editor-host {
+  display: contents;
+}
+.profile-editor-host[hidden] {
+  display: none;
+}

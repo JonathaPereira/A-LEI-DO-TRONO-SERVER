@@ -40,7 +40,7 @@ export function initializeCallSettings(target: Window): void {
     const get = (id: string) => document.getElementById(id)!;
     fragment('appearance').append(document.querySelector<HTMLElement>('.profile-appearance')!);
     (fragment('appearance').firstChild as HTMLElement).hidden = false;
-    fragment('account').append(get('profileForm'), get('accountLogoutBtn'));
+    fragment('account').append(get('profileEditorHost'), get('accountLogoutBtn'));
     fragment('files').append(get('profileFilesHost'));
     const game = fragment('game');
     const gameHeading = document.createElement('h2');

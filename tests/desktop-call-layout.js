@@ -198,6 +198,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         activityOwner: window.TronoDesktopActivity,
         libraryOwner: window.TronoFileLibrary,
         library: ['profileFilesHost','profileFiles','storageUsage','profileFilesMessage'].map(id => document.getElementById(id)),
+        profileEditorOwner: window.TronoProfileEditor,
+        profileEditor: ['profileEditorHost','profileForm','profileNickname','profile-bio','profile-cover_zoom'].map(id => document.getElementById(id)),
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -218,6 +220,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           notifications: window.TronoNotifications === before.notificationOwner && before.notifications.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           activity: window.TronoDesktopActivity === before.activityOwner && !!before.activityOwner && before.activity.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           library: window.TronoFileLibrary === before.libraryOwner && !!before.libraryOwner && before.library.every(node => node && node.isConnected && document.getElementById(node.id) === node),
+          profileEditor: window.TronoProfileEditor === before.profileEditorOwner && !!before.profileEditorOwner && before.profileEditor.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -350,6 +353,14 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     }
 
     await page.locator('#voiceSettingsBtn').click();
+    await page.locator('[data-settings-tab="account"]').click();
+    await expect(page.locator('#profile-bio')).toBeEnabled();
+    await page.locator('#profile-bio').fill('Rascunho durante a chamada');
+    await expect(page.locator('#profileLivePreview .member-bio')).toHaveText('Rascunho durante a chamada');
+    await preserved();
+    await page.locator('[data-settings-tab="appearance"]').click();
+    await page.locator('[data-settings-tab="account"]').click();
+    await expect(page.locator('#profile-bio')).toHaveValue('Rascunho durante a chamada');
     await page.locator('[data-settings-tab="appearance"]').click();
     await page.locator('[name="profileTheme"][value="teal"]').check();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'teal');

@@ -19,7 +19,7 @@ interface ProfileRuntime extends Window {
   TronoMessenger?: { open(id: string): Promise<unknown> };
 }
 
-/** Queries and the reader are independent from the editor still being converted. */
+/** Queries and the reader share the account-scoped client with the editor. */
 export function initializeProfileViewer(target: Window): ProfileViewer {
   const runtime = target as ProfileRuntime;
   if (runtime.TronoProfileViewer) return runtime.TronoProfileViewer;

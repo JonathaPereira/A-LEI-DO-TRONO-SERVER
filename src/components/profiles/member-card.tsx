@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { MemberProfile } from '../../types/profiles';
+import type { MemberProfile, ProfileMediaKind } from '../../types/profiles';
 import { useFileUrl } from '../files/use-files';
 import { Avatar } from './avatar';
 
@@ -27,15 +27,27 @@ function httpsUrl(value: string, normalize = false) {
 }
 
 /** The files client retains ownership of signed URLs and account epochs. */
-function ProfileImage({ fileId }: { fileId: string | null }) {
-  const source = useFileUrl(fileId);
+function ProfileImage({ fileId, localUrl }: { fileId: string | null; localUrl?: string }) {
+  const source = useFileUrl(fileId, !localUrl);
   const [failed, setFailed] = useState<string | null>(null);
-  const key = source?.url ? `${source.key}:${source.url}` : null;
-  if (!source?.url || !key || failed === key) return null;
-  return <img src={source.url} alt="" loading="lazy" onError={() => setFailed(key)} />;
+  const url = localUrl || source?.url;
+  const key = localUrl || (source?.url ? `${source.key}:${source.url}` : null);
+  if (!url || !key || failed === key) return null;
+  return <img src={url} alt="" loading="lazy" onError={() => setFailed(key)} />;
 }
 
-export function MemberCard({ profile }: { profile: MemberProfile }) {
+export function MemberCard({
+  profile,
+  localUrls,
+  onCoverPositionChange,
+}: {
+  profile: MemberProfile;
+  localUrls?: Partial<Record<ProfileMediaKind, string>>;
+  onCoverPositionChange?: (position: number) => void;
+}) {
+  const drag = useRef<{ pointer: number; y: number; position: number; height: number } | null>(
+    null,
+  );
   const data = profile.personalization;
   const style: CSSProperties & Record<`--member-${string}`, string | number> = {
     '--member-accent': /^#[0-9a-f]{6}$/i.test(data.accent) ? data.accent : '#7865ff',
@@ -66,14 +78,50 @@ export function MemberCard({ profile }: { profile: MemberProfile }) {
   return (
     <article className="member-card" style={style}>
       <div className="member-background">
-        <ProfileImage fileId={data.background_file_id} />
+        <ProfileImage fileId={data.background_file_id} localUrl={localUrls?.background} />
       </div>
       <div className="member-shade" />
       <div className="member-content">
-        <div className="member-cover">
-          <ProfileImage fileId={data.cover_file_id} />
+        <div
+          className="member-cover"
+          onPointerDown={(event) => {
+            if (!onCoverPositionChange) return;
+            event.preventDefault();
+            drag.current = {
+              pointer: event.pointerId,
+              y: event.clientY,
+              position: data.cover_position,
+              height: Math.max(100, event.currentTarget.clientHeight),
+            };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            const start = drag.current;
+            if (!start || start.pointer !== event.pointerId || !onCoverPositionChange) return;
+            onCoverPositionChange(
+              Math.round(
+                clamp(
+                  start.position - ((event.clientY - start.y) / start.height) * 100,
+                  0,
+                  100,
+                  50,
+                ),
+              ),
+            );
+          }}
+          onPointerUp={() => {
+            drag.current = null;
+          }}
+          onPointerCancel={() => {
+            drag.current = null;
+          }}
+          onLostPointerCapture={() => {
+            drag.current = null;
+          }}
+        >
+          <ProfileImage fileId={data.cover_file_id} localUrl={localUrls?.cover} />
         </div>
-        <Avatar person={profile} className="member-avatar" />
+        <Avatar person={profile} className="member-avatar" localUrl={localUrls?.avatar} />
         <h2 className="member-name">{profile.nickname || 'Seu nome'}</h2>
         {data.handle && <p className="member-handle">@{data.handle.replace(/^@/, '')}</p>}
         {(data.status || data.emoji) && (

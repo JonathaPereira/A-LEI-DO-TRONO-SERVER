@@ -151,11 +151,11 @@ O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados
 `renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
 mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
 existe somente enquanto há raízes ativas. `legacy/profile-files.js` ainda possui
-edição/prévia do perfil, contas do criador e composição de capas. Biblioteca de
-arquivos e miniperfis já saíram desse controlador.
+contas do criador, composição de capas/fundos e navegação das configurações web.
+Editor, biblioteca de arquivos e miniperfis já saíram desse controlador.
 
 `lib/profiles/client.ts` possui as consultas autenticadas de perfil e contas do
-criador. Editor e decorações legados usam esse cliente; o HTTP duplicado foi
+criador. Editor e decorações usam esse cliente; o HTTP duplicado foi
 removido. `protocol.ts` valida identidade/paginação e projeta somente os campos
 públicos do perfil, com valores padrão, limites e links/créditos permitidos.
 E-mail só aparece no DTO separado de contas, condicionado à permissão de criador;
@@ -171,7 +171,26 @@ um diálogo fechado. `components/profiles/member-profile-dialog.tsx` e
 `member-card.tsx` possuem diálogo, conteúdo, imagens, links e créditos em React,
 usando Avatar e URLs do cliente de arquivos compartilhado. O runtime monta uma
 única instância por página; `TronoProfile.openMini` conserva só a delegação.
-`paint` permanece exclusivamente na prévia do editor ainda legado.
+O mesmo cartão renderiza a prévia do editor, aceitando URLs locais e ajuste da capa.
+
+`lib/profiles/editor.ts` possui o rascunho por conta, mídia pendente, progresso e
+salvamento. Links crus ficam editáveis enquanto a prévia descarta entradas inválidas;
+`editor-validation.ts` exige links, emoji e interesses válidos antes de enviar.
+`media.ts` valida imagens e recorta somente avatares estáticos: GIFs, capas e fundos
+conservam seus bytes, e o bitmap é fechado em todos os caminhos. O editor revoga
+URLs locais ao substituir, remover ou descartar uma seleção. Uma geração por
+abertura/identidade e uma sequência por mídia invalidam conversões e seletores GIF
+antigos. Em falha parcial, os IDs já enviados permanecem protegidos e a tentativa
+seguinte envia somente as mídias restantes. O cliente de arquivos continua único.
+
+`components/profiles/editor-fields.tsx` e `editor-preview.tsx` possuem formulário,
+emoji, seleção de mídia e prévia. `editor-runtime.tsx` monta uma raiz no
+`profileEditorHost`; desktop e web movem o host inteiro. Trocar abas conserva o
+rascunho e os nós; fechar as configurações descarta recursos e consultas pendentes.
+`TronoProfile` conserva apenas a fachada e as decorações ainda não convertidas.
+O seletor externo `legacy/profile-gifs.js` permanece necessário. A resposta de
+`auth.updateProfile` só atualiza a sessão que iniciou o pedido, inclusive após
+sair e entrar novamente na mesma conta.
 
 `lib/files/library.ts` possui lista, consulta de uso, exclusões pendentes e feedback
 de Meus arquivos. Reutiliza transporte, URL assinada e exclusões do cliente tipado.
@@ -821,10 +840,10 @@ texto local do painel e não entram no relatório. `runtime.ts` conserva a compo
 dos dados do relatório, sem pintura, flags ou listeners paralelos do diagnóstico.
 
 Perfil e jogo continuam em slots vazios (`ContentSlot`), preservando
-identidade e listeners dos nós. Arquivos e aparência são React em hosts estáveis;
+identidade e listeners dos nós. Editor, arquivos e aparência são React em hosts estáveis;
 mover os hosts conserva os controles e os rádios de tema/layout. Os campos de
 notificações e atividade são filhos React das abas compartilhadas. Os conteúdos
-restantes de perfil e jogos ainda serão convertidos por domínio.
+administrativos/decorativos de perfil e os jogos ainda serão convertidos por domínio.
 
 `lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores
 e feedback compartilhado com a restauração de painéis. `appearance-fields.tsx`

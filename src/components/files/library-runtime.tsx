@@ -12,7 +12,7 @@ interface LibraryRuntime extends Window {
   TronoProfile?: { getProtectedFileIds(): readonly string[] };
 }
 
-/** The legacy editor lends selected IDs; account/file state remains in the shared client. */
+/** The profile editor lends selected IDs; account/file state remains in the shared client. */
 export function initializeFileLibrary(target: Window): FileLibrary {
   const runtime = target as LibraryRuntime;
   if (runtime.TronoFileLibrary) return runtime.TronoFileLibrary;
