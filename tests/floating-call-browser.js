@@ -208,6 +208,67 @@ test(
         e.dataset.retained = 'yes';
         return e.srcObject.getVideoTracks()[0].id;
       });
+      // Drag/resize ownership moves with the layout, without replacing the camera or microphone.
+      const panel = page.locator('#socialPanel');
+      const handle = await page.locator('#socialDragHandle').boundingBox();
+      await page.mouse.move(handle.x + 16, handle.y + 14);
+      await page.mouse.down();
+      await page.mouse.move(80, 90, { steps: 4 });
+      await page.mouse.up();
+      const savedRect = await page.evaluate(() =>
+        JSON.parse(window.TronoStorage.getItem('tronoSocialFloatingRectV3')),
+      );
+      const dragged = await panel.boundingBox();
+      assert(Math.abs(savedRect.left - dragged.x) <= 1 && Math.abs(savedRect.top - dragged.y) <= 1);
+      const grip = await page.locator('#socialResizeGrip').boundingBox();
+      await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+      await page.mouse.down();
+      await expect(panel).toHaveClass(/resizing/);
+      await page.mouse.move(grip.x + 65, grip.y + 55, { steps: 4 });
+      await page.mouse.up();
+      await expect(panel).not.toHaveClass(/resizing/);
+      const size = await page.evaluate(() =>
+        JSON.parse(window.TronoStorage.getItem('tronoSocialFloatingRectV3')),
+      );
+      assert(size.width >= savedRect.width && size.height >= savedRect.height);
+      // A breakpoint change cancels a held gesture and removes the desktop's inline geometry.
+      const dragging = await page.locator('#socialDragHandle').boundingBox();
+      await page.mouse.move(dragging.x + 16, dragging.y + 14);
+      await page.mouse.down();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.mouse.move(100, 120);
+      await page.mouse.up();
+      assert.equal(
+        await panel.evaluate((el) =>
+          ['left', 'top', 'width', 'height'].every((key) => !el.style[key]),
+        ),
+        true,
+      );
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await expect.poll(() => panel.evaluate((el) => !!el.style.width)).toBe(true);
+      // Entering the hub during resize cancels the gesture and does not persist hub dimensions.
+      const nextGrip = await page.locator('#socialResizeGrip').boundingBox();
+      await page.mouse.move(nextGrip.x + 10, nextGrip.y + 10);
+      await page.mouse.down();
+      await expect(panel).toHaveClass(/resizing/);
+      const savedBeforeHub = await page.evaluate(() =>
+        window.TronoStorage.getItem('tronoSocialFloatingRectV3'),
+      );
+      await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+      await page.mouse.move(200, 200);
+      await page.mouse.up();
+      await expect(panel).not.toHaveClass(/resizing/);
+      assert.equal(
+        await page.evaluate(() => window.TronoStorage.getItem('tronoSocialFloatingRectV3')),
+        savedBeforeHub,
+      );
+      await page.evaluate(() => window.TronoAppLayout.navigate('throne'));
+      await page.locator('#socialResizeGrip').dblclick();
+      assert.equal(
+        await page.evaluate(() => window.TronoStorage.getItem('tronoSocialFloatingRectV3')),
+        null,
+      );
+      assert.deepEqual(await snapshot(), before);
       await page.locator('#socialModeBtn').click();
       await expect(page.locator('#mediaFocusDialog')).toBeVisible();
       await page.locator('#mediaFocusClose').click();

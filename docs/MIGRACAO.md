@@ -48,6 +48,7 @@ Atualize este arquivo para permitir continuidade sem o histórico do chat.
 - Controles principais da barra, status e recuperação de áudio em React; adaptador de cliques removido.
 - Participantes e painéis base de câmera/tela em React, conservando players ao encaixar nos perfis.
 - Mosaico ampliado e opções de compartilhamento em React; controladores substituídos removidos.
+- Tela cheia/fallback e geometria do painel flutuante em TypeScript, com listeners próprios.
 
 ## Integração da main: desktop 0.2.10
 
@@ -1362,10 +1363,37 @@ isolada de `4c7e9be`, antes deste bloco; a suíte não foi silenciada. O teste d
 remux em `clips-buffer.js` não executou por ausência de `ffmpeg` no PATH (`ENOENT`).
 Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na main.
 
+## Tela cheia e painel flutuante em TypeScript — 18/10/2026
+
+- `lib/voice/media-focus.ts` passou a possuir fullscreen nativo, fallback, Escape,
+  camada visual e listeners. A liberação ao ocultar/colapsar/desmontar e ao sair
+  da chamada usa o mesmo dono. O pedido nativo permanece no gesto original;
+  revisão/geração impedem fallback tardio ou promoção de mídia de outra chamada.
+- `lib/voice/floating-panel.ts` possui geometria, preferências e ciclo do ponteiro.
+  Entrar no hub ou mudar o viewport cancela o gesto, sem salvar dimensões do hub.
+  Preferências inválidas não geram coordenadas inválidas; em janela estreita os
+  estilos inline de desktop são removidos. Duplo clique restaura o tamanho padrão.
+- Retirados os blocos correspondentes e seus listeners de `legacy/social.js`.
+  React conserva os mesmos players e delega descarte de foco ao módulo tipado.
+  Navegação, abertura/visibilidade do painel, drawer de texto e integração entre
+  salas de texto/voz/jogo ainda permanecem no coordenador legado.
+- Validação: tipagem, formatação e build passaram; `npm test` passou. A projeção
+  e configurações têm 67 testes após nove regressões de foco. Passaram 12 testes
+  de controles/painel flutuante, quatro de interface e três no Electron real.
+  As regressões conferiram fullscreen nativo/rejeitado/Escape, geração antiga,
+  seleção de camada, arraste, resize, mudança de breakpoint e entrada no hub
+  durante um gesto, preservando players, trilhas, replay, socket e peers.
+  Evidências locais: `artifacts/media-focus-*`. Nenhum push ou mudança na main.
+- Os limites da suíte antiga de clipes descritos no bloco anterior permanecem;
+  esta etapa não alterou o encoder, a captura ou a infraestrutura de produção.
+
 ## Próximas alterações, em ordem
 
-1. Converter os trechos de coordenação visual/navegação e os comandos de tela cheia
-   restantes em `social.js`. Mosaico e opções de compartilhamento já são React,
+1. Converter a navegação, abertura/visibilidade do painel e drawer de texto
+   restantes em `social.js`, incluindo a integração de salas de texto/voz/jogo.
+   Fullscreen/fallback e geometria já pertencem a `media-focus.ts` e
+   `floating-panel.ts`; não restaurar seus listeners ou escritores de classes.
+   Mosaico e opções de compartilhamento já são React,
    com projeções em `mosaic.ts` e `screen-options.ts`; seus controladores antigos
    foram removidos. A lista e os painéis base já são React, em
    `call-stage.tsx`, `participant-card.tsx` e `media-tile.tsx`, com projeção em
@@ -1384,7 +1412,7 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
    tela e o fim de seu áudio estão em `screen-publication.ts`. Não restaurar esses
    callbacks no controlador nem duplicar os donos de captura/sessão.
    Comandos/opções de compartilhar e prévia já estão em `screen-sharing.ts` e
-   `screen-sharing-bindings.ts`; intenções de assistir/ocultar estão em
+   `screen-options.ts`; intenções de assistir/ocultar estão em
    `media-interest.ts`; `media-visibility.ts` conserva somente a separação de
    players/tela cheia ao ocultar. O adaptador de cliques antigo foi removido.
    Estado/ações estão em `controls.ts`; controles principais/status da barra são

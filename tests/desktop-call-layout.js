@@ -255,6 +255,20 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect.poll(() => page.evaluate(() => document.fullscreenElement?.classList.contains('screen-share-tile') || !!document.querySelector('.screen-share-tile.media-maximized'))).toBe(true);
     await page.evaluate(async () => {if(document.fullscreenElement) await document.exitFullscreen(); else await window.TronoSocial.fullscreenMedia(window.TronoNetwork.clientId, 'screen');});
     await preserved();
+    // Denied native fullscreen uses the same player; Escape restores its original docking.
+    await page.evaluate(() => {
+      const tile=window.__dockPlayers.find(row=>row.tile.matches('.screen-share-tile')).tile;
+      window.__nativeTileRequest=tile.requestFullscreen;
+      tile.requestFullscreen=()=>Promise.reject(new DOMException('Denied for fallback regression','NotAllowedError'));
+    });
+    await page.locator('#expandMosaicBtn').click();await page.locator('#mediaFocusFullscreen').click();
+    await expect(page.locator('.screen-share-tile.media-maximized')).toBeVisible();
+    assert.equal(await page.evaluate(()=>window.__dockPlayers.every(({tile,video,stream})=>tile.querySelector('video')===video && video.srcObject===stream)),true);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.media-maximized')).toHaveCount(0);
+    await expect(page.locator('body')).not.toHaveClass(/media-focus-open/);
+    await page.evaluate(()=>{const tile=window.__dockPlayers.find(row=>row.tile.matches('.screen-share-tile')).tile;tile.requestFullscreen=window.__nativeTileRequest;});
+    await preserved();
     // React diagnostics share their state with the desktop launcher and preserve every live source.
     await page.bringToFront();
     await page.evaluate(() => window.TronoSocial.toggleTelemetry(true));

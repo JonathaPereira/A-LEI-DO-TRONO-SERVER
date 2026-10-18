@@ -40,7 +40,7 @@ interface StageOptions {
   prune(): void;
   recover(id: string, live: boolean): void;
   fullscreen(tile: HTMLElement): Promise<void>;
-  beforeCollapse(tile: HTMLElement): Promise<void>;
+  releaseFocus(tile: HTMLElement): Promise<void>;
   warn?(error: unknown): void;
 }
 const isMode = (value: string): value is ProfileMedia =>
@@ -196,10 +196,11 @@ export function createCallStage(options: StageOptions) {
       refresh();
     },
     fullscreen: (tile: HTMLElement) => run(() => options.fullscreen(tile)),
+    releaseFocus: (tile: HTMLElement) => options.releaseFocus(tile),
     collapse(id: string, tile: HTMLElement) {
       return run(async () => {
         const call = options.read().generation;
-        await options.beforeCollapse(tile);
+        await options.releaseFocus(tile);
         if (disposed || options.read().generation !== call) return;
         const person = getSnapshot().screens.find((p) => p.id === id);
         if (!person?.watching) return;

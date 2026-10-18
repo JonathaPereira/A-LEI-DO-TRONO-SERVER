@@ -433,9 +433,25 @@ conserva armazenamento/limites do tamanho. Arraste só ocorre fora do hub em jan
 `call-stage-runtime.tsx` monta após todos os listeners de `trono:ready`, conservando
 os nós observados pelos layouts. Os portais escrevem em containers estáveis;
 slots de câmera/tela são vazios para o React, e a movimentação do host é explícita.
-`social.js` compõe as fontes/ações e conserva adaptadores públicos, navegação e os
-comandos nativos de tela cheia. Não monta cards, tiles, options, gains ou listeners
-substituídos.
+`social.js` compõe as fontes/ações e conserva adaptadores públicos, navegação e
+seleção de camadas SFU. Não monta cards, tiles, options, gains ou listeners substituídos.
+
+`lib/voice/media-focus.ts` possui a tela cheia nativa, o fallback por maximização,
+Escape, listeners de fullscreen e a operação visual pendente. Fecha o mosaico e
+solicita fullscreen no gesto original; só então pede a camada SFU ao dono existente.
+Geração/revisão e presença do tile invalidam conclusões antigas: ocultar, remover
+ou sair da chamada não pode reabrir o fallback ou promover uma mídia antiga.
+A saída devolve a camada e permite ao React restaurar o encaixe do mesmo player.
+`stage.ts`, a desmontagem dos tiles e `media-visibility.ts` delegam a liberação
+para esse dono; não escrevem outras cópias das classes de foco. O fallback de vídeo
+WebKit também remove seu listener de término. Nenhum desses comandos para trilhas.
+
+`lib/voice/floating-panel.ts` possui posição/tamanho persistidos e os listeners de
+arraste/redimensionamento do painel flutuante, sem escrever nos seus filhos React.
+Consulta a navegação existente; entrar no hub, trocar o breakpoint ou descartar o
+controlador cancela o gesto e libera a captura do ponteiro. Valores salvos são
+validados e limitados à janela; telas estreitas voltam à geometria do CSS. O botão
+Ampliar e a visibilidade do painel ainda se integram à navegação legada.
 
 `components/modals/media-focus-dialog.tsx` possui a grade ampliada em React;
 `lib/voice/mosaic.ts` mantém somente abertura e seleção de até seis pessoas.

@@ -66,7 +66,6 @@ window.TronoSocial = (() => {
   let localStream = null;
   let panelOpen = false;
   let chatHubMode = false;
-  const panelMode = 'floating';
   let chatMuted = storage.getItem('tronoChatMuted') === '1';
   const { QUALITY_ORDER, SCREEN_FORMATS } = window.TronoVoiceCapture;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
@@ -584,7 +583,10 @@ window.TronoSocial = (() => {
       }
     },
   });
-  const mediaVisibility = window.TronoVoiceCapture.createMediaVisibility({ document });
+  const mediaVisibility = window.TronoVoiceCapture.createMediaVisibility({
+    document,
+    releaseFocus: (tile) => mediaFocus.release(tile),
+  });
 
   const screenSharingControls = window.TronoVoiceCapture.createScreenSharing({
     storage,
@@ -787,52 +789,6 @@ window.TronoSocial = (() => {
       console.warn('[TronoSocial] qualidade ao maximizar', kind, err.code || err);
     }
   }
-  async function toggleMediaFullscreen(tile) {
-    if (!tile) return;
-    const video = tile.querySelector('video'),
-      wasMax = tile.classList.contains('media-maximized') || document.fullscreenElement === tile;
-    window.TronoMosaic?.close();
-    if (!wasMax && tile.classList.contains('screen-share-tile')) {
-      if (tile.dataset.peer === meId()) {
-        screenSharingControls.resetPreview();
-      } else callStage.expandScreen(tile.dataset.peer);
-      renderScreenGrid();
-    }
-    if (wasMax && !document.fullscreenElement) {
-      tile.classList.remove('media-maximized');
-      document.body.classList.remove('media-focus-open');
-      await setSfuTileLayer(tile, false);
-      return;
-    }
-    const old = document.querySelector('.media-maximized');
-    if (old) {
-      old.classList.remove('media-maximized');
-      document.body.classList.remove('media-focus-open');
-      void setSfuTileLayer(old, false);
-    }
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-        await setSfuTileLayer(tile, false);
-        return;
-      }
-      if (tile.requestFullscreen) {
-        await tile.requestFullscreen();
-        await setSfuTileLayer(tile, true);
-        return;
-      }
-      if (video?.webkitEnterFullscreen) {
-        video.webkitEnterFullscreen();
-        await setSfuTileLayer(tile, true);
-        return;
-      }
-    } catch (err) {
-      console.warn('[TronoSocial] tela cheia', err);
-    }
-    tile.classList.add('media-maximized');
-    document.body.classList.add('media-focus-open');
-    await setSfuTileLayer(tile, true);
-  }
   function fullscreenMedia(peerId, kind = 'screen') {
     const tiles = document.querySelectorAll(
       kind === 'camera' ? '#socialPanel .camera-tile' : '#socialPanel .screen-share-tile',
@@ -840,69 +796,8 @@ window.TronoSocial = (() => {
     const tile = [...tiles].find((t) => t.dataset.peer === peerId);
     if (tile) return callStage.fullscreen(tile);
   }
-  const FLOATING_RECT_KEY = 'tronoSocialFloatingRectV3';
-  function readFloatingRect() {
-    try {
-      return JSON.parse(storage.getItem(FLOATING_RECT_KEY) || 'null');
-    } catch {
-      return null;
-    }
-  }
-  function persistFloatingRect() {
-    const panel = $('socialPanel');
-    if (!panel || panelMode !== 'floating' || inChatHub()) return;
-    const r = panel.getBoundingClientRect();
-    storage.setItem(
-      FLOATING_RECT_KEY,
-      JSON.stringify({
-        left: Math.round(r.left),
-        top: Math.round(r.top),
-        width: Math.round(r.width),
-        height: Math.round(r.height),
-      }),
-    );
-  }
-  function clearFloatingInlineStyles() {
-    const panel = $('socialPanel');
-    if (!panel) return;
-    for (const k of ['left', 'top', 'right', 'bottom', 'width', 'height']) panel.style[k] = '';
-  }
-  function restoreFloatingRect() {
-    const panel = $('socialPanel');
-    if (!panel || panelMode !== 'floating' || inChatHub() || innerWidth <= 760) return;
-    const saved = readFloatingRect();
-    if (!saved) return;
-    const width = Math.max(280, Math.min(Number(saved.width) || 360, 460, innerWidth - 16)),
-      height = Math.max(220, Math.min(Number(saved.height) || 360, 560, innerHeight - 16));
-    const left = Math.max(0, Math.min(Number(saved.left) || 0, innerWidth - width)),
-      top = Math.max(0, Math.min(Number(saved.top) || 0, innerHeight - height));
-    panel.style.width = `${width}px`;
-    panel.style.height = `${height}px`;
-    panel.style.left = `${left}px`;
-    panel.style.top = `${top}px`;
-    panel.style.right = 'auto';
-    panel.style.bottom = 'auto';
-  }
-
   function applyPanelMode() {
-    const panel = $('socialPanel'),
-      modeBtn = $('socialModeBtn');
-    if (!panel) return;
-    const hub = inChatHub();
-    panel.classList.toggle('social-chat-hub', hub);
-    panel.classList.remove('social-full');
-    panel.classList.toggle('social-floating', !hub && panelMode === 'floating');
-    if (modeBtn) {
-      modeBtn.classList.toggle('hidden', hub);
-      modeBtn.textContent = 'Ampliar';
-      modeBtn.title = 'Ampliar câmeras e telas da chamada';
-    }
-    clearFloatingInlineStyles();
-    if (!hub && panelMode === 'floating') restoreFloatingRect();
-    storage.setItem('tronoSocialMode', panelMode);
-    renderVideoGrid();
-    renderScreenGrid();
-    renderSeatMedia();
+    floatingPanel.apply();
   }
   function clearChannelChat() {
     window.TronoChatMessages.clear();
@@ -1247,6 +1142,7 @@ window.TronoSocial = (() => {
     await speakingIndicators.watch(meId(), localStream);
   }
   function prepareLeaveUi() {
+    void mediaFocus.reset();
     callQuality.reset();
     screenOptions.close();
     window.TronoMosaic?.close();
@@ -1405,74 +1301,9 @@ window.TronoSocial = (() => {
       resources: nativeResources,
     });
   }
-  function bindFloatingDrag() {
-    const panel = $('socialPanel'),
-      handle = $('socialDragHandle');
-    if (!panel || !handle) return;
-    let drag = null;
-    handle.addEventListener('pointerdown', (e) => {
-      if (panelMode !== 'floating' || inChatHub() || e.target.closest('button')) return;
-      const r = panel.getBoundingClientRect();
-      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
-      handle.setPointerCapture?.(e.pointerId);
-      e.preventDefault();
-    });
-    handle.addEventListener('pointermove', (e) => {
-      if (!drag || panelMode !== 'floating' || inChatHub()) return;
-      const maxX = Math.max(0, innerWidth - panel.offsetWidth),
-        maxY = Math.max(0, innerHeight - panel.offsetHeight);
-      panel.style.left = `${Math.max(0, Math.min(maxX, e.clientX - drag.dx))}px`;
-      panel.style.top = `${Math.max(0, Math.min(maxY, e.clientY - drag.dy))}px`;
-      panel.style.right = 'auto';
-      panel.style.bottom = 'auto';
-    });
-    const stop = () => {
-      if (!drag) return;
-      drag = null;
-      persistFloatingRect();
-    };
-    handle.addEventListener('pointerup', stop);
-    handle.addEventListener('pointercancel', stop);
-  }
-  function bindFloatingResize() {
-    const panel = $('socialPanel'),
-      grip = $('socialResizeGrip');
-    if (!panel || !grip) return;
-    let resize = null;
-    grip.addEventListener('pointerdown', (e) => {
-      if (panelMode !== 'floating' || inChatHub() || innerWidth <= 760) return;
-      const r = panel.getBoundingClientRect();
-      resize = { x: e.clientX, y: e.clientY, w: r.width, h: r.height, left: r.left, top: r.top };
-      grip.setPointerCapture?.(e.pointerId);
-      panel.classList.add('resizing');
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    grip.addEventListener('pointermove', (e) => {
-      if (!resize) return;
-      const maxW = Math.max(330, innerWidth - resize.left - 4),
-        maxH = Math.max(330, innerHeight - resize.top - 4);
-      panel.style.width = `${Math.max(330, Math.min(maxW, resize.w + (e.clientX - resize.x)))}px`;
-      panel.style.height = `${Math.max(330, Math.min(maxH, resize.h + (e.clientY - resize.y)))}px`;
-      panel.style.right = 'auto';
-      panel.style.bottom = 'auto';
-    });
-    const stop = () => {
-      if (!resize) return;
-      resize = null;
-      panel.classList.remove('resizing');
-      persistFloatingRect();
-    };
-    grip.addEventListener('pointerup', stop);
-    grip.addEventListener('pointercancel', stop);
-    grip.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      storage.removeItem(FLOATING_RECT_KEY);
-      clearFloatingInlineStyles();
-    });
-  }
-
   function bind() {
+    mediaFocus.start();
+    floatingPanel.start();
     voiceCall.start();
     voiceTransport.start();
     voiceRoster.start();
@@ -1547,33 +1378,13 @@ window.TronoSocial = (() => {
       }
       if (msg.type === 'game-started' || msg.type === 'game-state') setTimeout(renderSeatMedia, 0);
     });
-    window.addEventListener('resize', () => {
-      restoreFloatingRect();
-      renderSeatMedia();
-    });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const maximized = document.querySelector('.media-maximized');
-        if (maximized) {
-          maximized.classList.remove('media-maximized');
-          document.body.classList.remove('media-focus-open');
-          void setSfuTileLayer(maximized, false);
-          callStage.refresh();
-        } else if (connectionDiagnostics.getSnapshot().open) toggleTelemetry(false);
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        if (connectionDiagnostics.getSnapshot().open) toggleTelemetry(false);
         else if (inChatHub() && chatDrawerOpen) toggleTextChat(false);
         else if (window.TronoCallSettings.getSnapshot().open) toggleVoiceSettings(false);
       }
     });
-    document.addEventListener('fullscreenchange', () => {
-      document.body.classList.toggle('native-fullscreen-media', !!document.fullscreenElement);
-      if (!document.fullscreenElement) {
-        renderVideoGrid();
-        renderScreenGrid();
-      }
-      if (transportIsSfu() && !document.fullscreenElement) void updateAllSfuSubscriptionLayers();
-    });
-    bindFloatingDrag();
-    bindFloatingResize();
     applyPanelMode();
     voiceSettings.refresh();
     updateChatDrawerUI();
@@ -1795,14 +1606,33 @@ window.TronoSocial = (() => {
     prune: mediaInterest.prune,
     recover: (id, live) =>
       live ? remoteMedia.cancelRecovery(id) : remoteMedia.scheduleRecovery(id),
-    fullscreen: toggleMediaFullscreen,
-    beforeCollapse: async (tile) => {
-      if (document.fullscreenElement === tile) await document.exitFullscreen().catch(() => {});
-      tile.classList.remove('media-maximized');
-      document.body.classList.remove('media-focus-open');
-    },
+    fullscreen: (tile) => mediaFocus.toggle(tile),
+    releaseFocus: (tile) => mediaFocus.release(tile),
   });
   window.TronoCallStage = callStage;
+  const mediaFocus = window.TronoVoiceCapture.createMediaFocus({
+    document,
+    call: () => voiceCall.getSnapshot(),
+    closeMosaic: () => window.TronoMosaic?.close(),
+    expandScreen: (tile) => {
+      if (tile.dataset.peer === meId()) screenSharingControls.resetPreview();
+      else callStage.expandScreen(tile.dataset.peer);
+      callStage.refresh();
+    },
+    setLayer: setSfuTileLayer,
+    restoreLayers: updateAllSfuSubscriptionLayers,
+    onChange: () => callStage.refresh(),
+  });
+  const floatingPanel = window.TronoVoiceCapture.createFloatingPanel({
+    document,
+    window,
+    storage,
+    inChatHub,
+    onChange: () => {
+      callStage.refresh();
+      renderSeatMedia();
+    },
+  });
 
   window.addEventListener('trono-layout-change', refreshCallControls);
   window.addEventListener('trono:ready', bind);
@@ -1870,7 +1700,7 @@ window.TronoSocial = (() => {
       return qualityPreferences().transmissionQuality;
     },
     get panelMode() {
-      return panelMode;
+      return 'floating';
     },
     get mediaTransport() {
       return voiceTransport.getSnapshot().mode;

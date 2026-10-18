@@ -83,7 +83,7 @@ async function setup(t) {
     prune() {},
     recover: (...args) => calls.push(['recover', ...args]),
     fullscreen: async (tile) => calls.push(['full', tile]),
-    beforeCollapse: async () => {},
+    releaseFocus: async () => {},
     warn: (error) => warnings.push(error),
   };
   const client = createCallStage(options);
@@ -239,7 +239,7 @@ test('switch source starts within the gesture, deduplicates pending clicks and c
 test('a delayed native fullscreen exit cannot collapse a replacement call; self preview uses the original owner', async (t) => {
   const { client, state, person, options, calls } = await setup(t),
     exit = gate();
-  options.beforeCollapse = () => exit.promise;
+  options.releaseFocus = () => exit.promise;
   const pending = client.collapse('peer', {});
   state.generation++;
   client.refresh();
@@ -247,7 +247,7 @@ test('a delayed native fullscreen exit cannot collapse a replacement call; self 
   await pending;
   assert.equal(client.getSnapshot().screens[0].collapsed, false);
   person.self = true;
-  options.beforeCollapse = async () => {};
+  options.releaseFocus = async () => {};
   client.refresh();
   await client.collapse('peer', {});
   assert.equal(client.getSnapshot().screens[0].collapsed, true);
@@ -323,36 +323,34 @@ test('floating resize uses its original saved bounds and cleans its pointer list
   assert.equal(tile.dataset.mediaResizeBound, undefined);
 });
 
-test('hiding a docked screen detaches its player and exits fallback maximization without stopping the borrowed track', async () => {
+test('hiding a docked screen delegates focus release before detaching its borrowed player', async () => {
   const { createMediaVisibility } = await import('../src/lib/voice/media-visibility.ts');
-  const classes = new Set(['media-maximized']),
-    bodyClasses = new Set(['media-focus-open']);
-  const track = { stop: () => assert.fail('borrowed track stopped') };
+  const track = { stop: () => assert.fail('borrowed track stopped') },
+    calls = [];
+  const stream = { getTracks: () => [track] };
   const video = {
-    srcObject: { getTracks: () => [track] },
+    srcObject: stream,
     pause() {
-      this.paused = true;
+      calls.push('pause');
     },
   };
-  const tile = {
-    dataset: { peer: 'peer' },
-    classList: { contains: (key) => classes.has(key), remove: (key) => classes.delete(key) },
-    querySelector: () => video,
-  };
+  const tile = { dataset: { peer: 'peer' }, querySelector: () => video };
   let selector = '';
   const document = {
-    fullscreenElement: null,
     querySelectorAll(value) {
       selector = value;
       return [tile];
     },
-    querySelector: () => (classes.has('media-maximized') ? tile : null),
-    body: { classList: { remove: (key) => bodyClasses.delete(key) } },
   };
-  await createMediaVisibility({ document }).hide('peer', 'screen');
+  await createMediaVisibility({
+    document,
+    releaseFocus: async (value) => {
+      assert.equal(value, tile);
+      assert.equal(video.srcObject, stream);
+      calls.push('release');
+    },
+  }).hide('peer', 'screen');
   assert.equal(selector, '#socialPanel .screen-share-tile');
   assert.equal(video.srcObject, null);
-  assert.equal(video.paused, true);
-  assert.equal(classes.size, 0);
-  assert.equal(bodyClasses.size, 0);
+  assert.deepEqual(calls, ['release', 'pause']);
 });

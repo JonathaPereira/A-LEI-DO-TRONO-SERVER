@@ -77,12 +77,11 @@ export function MediaTile({
   );
   useLayoutEffect(
     () => () => {
+      void client.releaseFocus(tile);
       runtime.TronoStreamControls.dispose(tile);
       tile.remove();
-      if (!document.querySelector('.media-maximized'))
-        document.body.classList.remove('media-focus-open');
     },
-    [tile, runtime],
+    [tile, runtime, client],
   );
   const fullscreen = () => void client.fullscreen(tile);
   const volume = (value: string) => void client.setScreenVolume(p.id, value);

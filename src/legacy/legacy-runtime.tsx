@@ -37,6 +37,8 @@ import { createCallToolbar } from '../lib/voice/toolbar';
 import { initializeCallToolbar } from '../components/voice/call-toolbar-runtime';
 import { createMediaInterest } from '../lib/voice/media-interest';
 import { createMediaVisibility } from '../lib/voice/media-visibility';
+import { createMediaFocus } from '../lib/voice/media-focus';
+import { createFloatingPanel } from '../lib/voice/floating-panel';
 import { createCallStage } from '../lib/voice/stage';
 import { initializeCallStage } from '../components/voice/call-stage-runtime';
 import { createCallControls } from '../lib/voice/controls';
@@ -105,6 +107,8 @@ export function LegacyRuntime() {
           createCallControls,
           createMediaInterest,
           createMediaVisibility,
+          createMediaFocus,
+          createFloatingPanel,
           createCallStage,
           createCallToolbar,
           createCallAlerts,
