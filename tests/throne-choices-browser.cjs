@@ -18,7 +18,8 @@ test(
       .listen(10944, '127.0.0.1');
     let browser;
     const errors = [],
-      warnings = [];
+      warnings = [],
+      influenceUsed = new Set();
     try {
       browser = await chromium.launch({
         executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
@@ -96,7 +97,7 @@ test(
             const page = await context.newPage();
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
-              if (message.text().includes('[ThroneChoices]')) warnings.push(message.text());
+              if (/\[Throne(?:Choices|Hand)\]/.test(message.text())) warnings.push(message.text());
             });
             page.on('dialog', (dialog) => dialog.accept());
             await page.goto(origin);
@@ -260,19 +261,84 @@ test(
                 const s = snapshot.packet,
                   key = s?.round + ':' + s?.trick;
                 if (s?.phase === 'await-play' && s.turn === s.youSeat && !played.has(key)) {
-                  const clicked = await page.evaluate((id) => {
-                    const node = document.querySelector(
-                      '#humanHand .hand-card[data-card="' + id + '"]',
+                  const hand = await page.evaluate(
+                    () => window.TronoThroneHand.getSnapshot().context,
+                  );
+                  if (!hand || hand.turn !== hand.you || hand.automaticReserve) continue;
+                  if (decree === 'reserva' && !seen.has('hand-responsive')) {
+                    await expect(page.locator('#throneLocalHand')).toBeHidden();
+                    await expect(page.locator('#throneOnlineHandCards .hand-card')).toHaveCount(
+                      hand.hand.length,
                     );
-                    if (
-                      !node ||
-                      node.classList.contains('illegal') ||
-                      node.classList.contains('locked')
-                    )
-                      return false;
+                    await page.locator('#throneHandSort').click();
+                    for (const layout of ['original', 'discord']) {
+                      await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+                      for (const [width, height] of [
+                        [480, 800],
+                        [1080, 1920],
+                      ]) {
+                        await page.setViewportSize({ width, height });
+                        await expect(page.locator('#throneOnlineHand')).toBeVisible();
+                        const geometry = await page
+                          .locator('#throneOnlineHandCards')
+                          .evaluate((node) => ({
+                            width: node.clientWidth,
+                            height: node.clientHeight,
+                            count: node.children.length,
+                          }));
+                        assert(
+                          geometry.width > 0 &&
+                            geometry.height > 0 &&
+                            geometry.count === hand.hand.length,
+                        );
+                        await page.screenshot({
+                          path: path.resolve(
+                            __dirname,
+                            `../artifacts/throne-hand-${layout}-${width}.png`,
+                          ),
+                        });
+                      }
+                    }
+                    await page.setViewportSize({ width: 1440, height: 960 });
+                    await page.evaluate(() => window.TronoAppLayout.apply('original'));
+                    seen.add('hand-responsive');
+                  }
+                  if (
+                    hand.canUseInfluence &&
+                    (!influenceUsed.has('sigilo') || hand.canUseManeuver)
+                  ) {
+                    await page.locator('#throneHandInfluenceWrap').click();
+                    await expect(page.locator('#throneHandDialog')).toBeVisible();
+                    const action =
+                      hand.canUseManeuver && !influenceUsed.has('plus')
+                        ? 'plus'
+                        : hand.canUseManeuver && !influenceUsed.has('minus')
+                          ? 'minus'
+                          : 'sigilo';
+                    await page.locator(`#throneHandDialog [data-influence="${action}"]`).click();
+                    if (hand.opening) {
+                      await expect(
+                        page.locator('#throneHandDialog [data-suit]').first(),
+                      ).toBeVisible();
+                      // Hiding the table retains this private choice and invalidates background clicks.
+                      await page.evaluate(() => window.TronoPortal.showOnly('portalScreen'));
+                      await expect(page.locator('#throneHandDialog')).toBeHidden();
+                      await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
+                      await expect(page.locator('#throneHandDialog')).toBeVisible();
+                      await page.locator('#throneHandDialog [data-suit]').first().click();
+                      seen.add('opening-influence');
+                    }
+                    await expect(page.locator('#throneHandDialog')).toBeHidden();
+                    influenceUsed.add(action);
+                  }
+                  const clicked = await page.evaluate(() => {
+                    const node = document.querySelector(
+                      '#throneOnlineHandCards .hand-card:not(:disabled)',
+                    );
+                    if (!node) return false;
                     node.click();
                     return true;
-                  }, s.legalCardIds[0]);
+                  });
                   if (clicked) played.add(key);
                 }
               }
@@ -305,12 +371,19 @@ test(
               await page.evaluate(() => window.TronoThroneChoices.getSnapshot().context),
               null,
             );
+            assert.equal(
+              await page.evaluate(() => window.TronoThroneHand.getSnapshot().context),
+              null,
+            );
           } finally {
             peers.forEach((peer) => peer.terminate());
             await context?.close();
             await fixture.stop();
           }
         });
+      assert(influenceUsed.has('sigilo'), 'Sigilo was exercised through React');
+      assert(influenceUsed.has('plus'), 'Manobra +3 was exercised through React');
+      assert(influenceUsed.has('minus'), 'Manobra -3 was exercised through React');
       assert.deepEqual(errors, []);
       assert.deepEqual(warnings, []);
     } finally {

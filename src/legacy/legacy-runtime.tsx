@@ -33,6 +33,7 @@ import { initializeChatComposer, initializeChatMessages } from '../lib/chat/brow
 import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
+import { initializeThroneHand } from '../components/games/throne-hand-runtime';
 import { initializeThroneChoices } from '../components/games/throne-choices-runtime';
 import { initializeThroneLobby } from '../components/games/throne-lobby-runtime';
 import { initializeConnectionDiagnostics } from '../components/voice/diagnostics-runtime';
@@ -80,6 +81,7 @@ export function LegacyRuntime() {
         if (filename === 'game.js') {
           initializeThroneLobby(window);
           initializeThroneChoices(window);
+          initializeThroneHand(window);
         }
         if (filename !== 'auth-boot.js') await loadScript(filename);
         if (filename === 'auth.js') {

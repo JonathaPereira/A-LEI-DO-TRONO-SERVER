@@ -365,10 +365,10 @@ body.chat-only-active #socialPanel .mn-media-stage.has-screen #voiceRoster {
   min-height: 32px;
   flex-wrap: nowrap;
 }
-.desktop-app #gameScreen #instructionText {
+.desktop-app #gameScreen :is(#instructionText, #throneHandInstruction) {
   font-size: 10px;
 }
-.desktop-app #humanHand {
+.desktop-app :is(#humanHand, #throneOnlineHandCards) {
   height: 100% !important;
   min-height: 0;
   align-items: center;
@@ -378,7 +378,7 @@ body.chat-only-active #socialPanel .mn-media-stage.has-screen #voiceRoster {
   overflow-x: auto;
   overflow-y: hidden;
 }
-.desktop-app #humanHand .hand-card {
+.desktop-app :is(#humanHand, #throneOnlineHandCards) .hand-card {
   height: var(--hand-card-height, min(clamp(65px, calc(24dvh - 70px), 136px), 100%)) !important;
   width: auto !important;
   aspect-ratio: 5/7;
@@ -389,7 +389,7 @@ body.chat-only-active #socialPanel .mn-media-stage.has-screen #voiceRoster {
     box-shadow 0.2s,
     border-color 0.2s;
 }
-.desktop-app #humanHand .hand-card img {
+.desktop-app :is(#humanHand, #throneOnlineHandCards) .hand-card img {
   object-fit: contain;
   background: #0b0c12;
 }
@@ -545,7 +545,7 @@ body.chat-only-active #socialPanel .mn-media-stage.has-screen #voiceRoster {
   .desktop-app #gameScreen .royal-table {
     width: 100% !important;
   }
-  .desktop-app #humanHand .hand-card {
+  .desktop-app :is(#humanHand, #throneOnlineHandCards) .hand-card {
     height: var(--hand-card-height, min(88px, 100%)) !important;
   }
   .desktop-app #gameScreen .hand-actions {

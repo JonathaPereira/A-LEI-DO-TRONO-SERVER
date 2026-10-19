@@ -179,7 +179,8 @@ export function GameScreen() {
           </aside>
         </main>
 
-        <section className={'hand-zone'}>
+        <section id="throneOnlineHand" className="hand-zone hidden"></section>
+        <section id="throneLocalHand" className={'hand-zone'}>
           <div className={'hand-toolbar'}>
             <div>
               <strong id={'handTitle'}>Sua mão</strong>

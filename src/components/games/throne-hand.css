@@ -1,0 +1,24 @@
+#throneOnlineHandCards > button.hand-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+#throneOnlineHandCards > button.hand-card:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+#throneHandInfluenceWrap:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+#throneHandDialog .choice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#throneHandDialog .choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}

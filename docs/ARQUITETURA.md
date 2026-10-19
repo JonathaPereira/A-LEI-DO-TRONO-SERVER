@@ -177,7 +177,8 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 partidas; não possui o estado do salão.
 
 O jogo ainda possui simulação local, aplicação do estado online, informações
-privadas de Espionagem/Usurpação, Influência e animações em `legacy/game.js`.
+privadas de Espionagem/Usurpação, regras locais de Influência e animações em
+`legacy/game.js`.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
@@ -204,9 +205,33 @@ para evitar dois diálogos simultâneos. Ao descartar, remove raiz, observadores
 assinaturas. `showOnlinePrompt` e `onlineLastPromptId` foram removidos de
 `legacy/game.js`; modos locais continuam usando os modais anteriores.
 
-Esse contexto é exclusivo das escolhas: a aplicação completa de `game-state`,
-mão jogável, Influência, relógios e cinematics continuam no controlador antigo.
-Não tratar o protocolo online inteiro como convertido ou validado por esse parser.
+Esse contexto é exclusivo das escolhas; não valida o protocolo online inteiro.
+
+`lib/games/throne-hand.ts` possui a mão jogável online, a seleção de Sigilo/Manobra,
+o anúncio de naipe e o envio pendente. `throne-hand-protocol.ts` copia e valida a
+própria mão/Reserva, as cartas autorizadas e as capacidades recebidas do servidor.
+Não recalcula as regras. O contexto só retém fatos necessários aos controles;
+a projeção de consulta do diálogo de Lei continua pertencendo às escolhas.
+
+Cada ação exige o mesmo contexto oferecido pela interface. Broadcasts iguais
+preservam sua identidade, a escolha e a pendência; mudar fase, turno ou cartas
+invalida cliques anteriores. Uma nova partida invalida até coordenadas repetidas.
+Conta/ABA, salão/assento, desconexão e descarte limpam os dados privados. Ocultar a
+mesa conserva a escolha e impede ações ao fundo. Falhas permitem tentativa explícita,
+sem reenvio automático. Ordenar altera somente a apresentação React.
+
+`components/games/throne-hand.tsx` renderiza cartas como botões acessíveis e usa
+`GameDialog` para Influência e naipe. O runtime monta hosts estáveis distintos do
+modo local; após desconectar mantém a área online vazia, sem exibir uma mão local
+antiga. O observador de geometria mede as duas áreas com o mesmo cálculo e libera
+os observadores no descarte. Não há socket, captura ou player adicional.
+
+`renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
+e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
+online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
+A aplicação restante de `game-state`, relógios, informações privadas de Espionagem/
+Usurpação e cinematics ainda estão no controlador antigo. O motor local e seus
+controles continuam isolados até a conversão correspondente.
 
 `lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
 visível, sem duplicar participação, partidas ou recursos de mídia. Botões do

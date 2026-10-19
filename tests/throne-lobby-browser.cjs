@@ -192,7 +192,9 @@ test(
       });
       await page.locator('#startOnlineBtn').click();
       await expect(page.locator('#gameScreen')).toBeVisible();
-      await expect.poll(() => page.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
+      await expect
+        .poll(() => page.locator('#throneOnlineHandCards .hand-card').count())
+        .toBeGreaterThan(0);
       await preserved();
       // Match cancellation releases only the game; the M&N call keeps all its tracks.
       await page.evaluate(() => document.getElementById('restartBtn').click());

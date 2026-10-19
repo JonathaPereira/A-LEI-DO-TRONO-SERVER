@@ -25,30 +25,34 @@ export function handGeometry(space: HandSpace) {
 const installed = new WeakMap<Window, () => void>();
 export function initializeHandLayout(target: Window) {
   if (installed.has(target)) return installed.get(target)!;
-  const hand = target.document.getElementById('humanHand');
-  if (!hand) return () => {};
-  const stop = observeLayout(target, hand, () => {
-    const style = target.getComputedStyle(hand),
-      px = (value: string) => parseFloat(value) || 0;
-    const size = handGeometry({
-      count: hand.querySelectorAll('.hand-card').length,
-      width: hand.clientWidth,
-      height: hand.clientHeight,
-      paddingX: px(style.paddingLeft) + px(style.paddingRight),
-      paddingY: px(style.paddingTop) + px(style.paddingBottom),
-      gap: px(style.columnGap),
-    });
-    if (!size) return;
-    for (const [key, value] of [
-      ['--hand-card-height', size.height],
-      ['--hand-overlap', size.overlap],
-    ] as const) {
-      const pixels = value.toFixed(2) + 'px';
-      if (hand.style.getPropertyValue(key) !== pixels) hand.style.setProperty(key, pixels);
-    }
+  const stops = ['humanHand', 'throneOnlineHandCards'].flatMap((id) => {
+    const hand = target.document.getElementById(id);
+    if (!hand) return [];
+    return [
+      observeLayout(target, hand, () => {
+        const style = target.getComputedStyle(hand),
+          px = (value: string) => parseFloat(value) || 0;
+        const size = handGeometry({
+          count: hand.querySelectorAll('.hand-card').length,
+          width: hand.clientWidth,
+          height: hand.clientHeight,
+          paddingX: px(style.paddingLeft) + px(style.paddingRight),
+          paddingY: px(style.paddingTop) + px(style.paddingBottom),
+          gap: px(style.columnGap),
+        });
+        if (!size) return;
+        for (const [key, value] of [
+          ['--hand-card-height', size.height],
+          ['--hand-overlap', size.overlap],
+        ] as const) {
+          const pixels = value.toFixed(2) + 'px';
+          if (hand.style.getPropertyValue(key) !== pixels) hand.style.setProperty(key, pixels);
+        }
+      }),
+    ];
   });
   const dispose = () => {
-    stop();
+    stops.forEach((stop) => stop());
     installed.delete(target);
   };
   installed.set(target, dispose);

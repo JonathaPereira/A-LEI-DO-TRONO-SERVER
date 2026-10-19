@@ -2125,6 +2125,47 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   `legacy/game.js`; não foram substituídos pelo contexto mínimo de escolhas.
   Próximo recorte: esses dados e controles da mão online, sem alterar o motor local.
 
+## Mão online e Influência de A Lei do Trono — 19/10/2026
+
+- `lib/games/throne-hand.ts` possui a mão online, seleção de Sigilo/Manobras,
+  anúncio de naipe, ordenação visual e envio pendente. Tipos e parser ficam em
+  `types/throne-hand.ts`/`throne-hand-protocol.ts`; copiam/congelam somente os dados
+  próprios e as capacidades autorizadas pelo servidor, sem reter mãos adversárias.
+- Removidos `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`,
+  `onlineControl`, `onlineDeclaredSuit` e `onlineInfluenceAction` de `legacy/game.js`.
+  A projeção antiga dos assentos online conserva contagens e cartas públicas,
+  deixando de reter a própria mão e Reserva. O controlador local conserva suas
+  regras e controles até sua conversão.
+- `components/games/throne-hand.tsx` renderiza cartas como botões, status e
+  Influência em React. Os diálogos nativos de Influência/naipe conservam a escolha
+  ao ocultar a mesa; Escape/cancelamento desfaz a seleção. Mudar fase/turno/cartas,
+  conta/ABA, salão/assento ou desconectar invalida ações antigas e limpa dados
+  privados. A área online vazia não revela uma mão local anterior.
+- Contextos iguais de presença conservam a identidade da oferta, a escolha e a
+  pendência. Cliques repetidos não enviam novamente; falhas de transporte e os
+  códigos de recusa de jogada permitem nova tentativa explícita. Ordenar não
+  altera as cartas autoritativas. O servidor continua validando todas as regras.
+- A Reserva da décima vaza permanece automática: o parser aceita sua autorização
+  transitória e os controles não oferecem jogada manual ou gasto de Influência.
+  O observador de geometria usa o mesmo cálculo para as áreas online e local.
+- Quatorze regressões novas cobrem privacidade, cartas/capacidades inválidas,
+  contexto antigo, envios duplicados, naipe real, Corte protegida, Reserva automática,
+  recusas, visibilidade, identidade, desconexão e descarte. `npm test` passou com
+  79 testes de modelos de jogos; tipagem, formatação e build estático passaram.
+- Cinco rodadas de servidor passaram pelos controles React: Reserva, Conselho,
+  Corte, Rotação e Desafio, incluindo Sigilo e Manobras +3/-3, anúncio de naipe e
+  escolhas de Lei/Usurpação quando oferecidas. Diálogos foram conferidos em 480×800
+  e 1080×1920, layouts Original/Discord; a mão usa a geometria compartilhada.
+  A regressão dos salões confirmou a alternância entre mão online e modo local.
+- Dois Electron reais escolheram Reserva e jogaram a primeira vaza pelos botões
+  React. O restante da regressão nativa conservou os mesmos donos/hosts, microfone,
+  câmera, tela, peers e socket. Mídia sintética; não mede transmissão de jogos a
+  60 fps nem conectividade TURN externa. Evidências: `artifacts/throne-hand-*`.
+- Permanecem em `legacy/game.js`: aplicação pública restante do estado online,
+  relógios, informações privadas de Espionagem/Usurpação, animações e simulação
+  local. Próximo recorte: estado público/relógios e informações privadas da partida,
+  preservando o motor compartilhado e os recursos de comunicação existentes.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

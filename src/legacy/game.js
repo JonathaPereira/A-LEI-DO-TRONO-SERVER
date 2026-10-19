@@ -31,17 +31,9 @@ let modalResolver = null,
   leavingGame = false;
 const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
+const throneHand = window.TronoThroneHand;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
-let onlineControl = {
-  legalCardIds: [],
-  influenceLegalCardIds: [],
-  canUseInfluence: false,
-  canUseManeuver: false,
-  influenceBlocked: false,
-};
-let onlineDeclaredSuit = null;
-let onlineInfluenceAction = 'none';
 let onlineExchangeBusy = false;
 let exchangeSequence = 0;
 let onlineQueuedPrivateUsurpation = null;
@@ -310,6 +302,7 @@ function resetRoundStats() {
 
 async function startGame(allAI = false) {
   throneChoices.clear();
+  throneHand.clear();
   leavingGame = false;
   await ensureAudio();
   const names = [0, 1, 2, 3].map((i) => $(`p${i}Name`).value);
@@ -771,9 +764,7 @@ async function performUsurpacao() {
 }
 
 function isInfluenceBlocked(p = game?.players[game?.localPlayerId]) {
-  return game?.online && p?.id === game.localPlayerId
-    ? onlineControl.influenceBlocked
-    : window.TronoRules.influenceBlocked(game, p);
+  return window.TronoRules.influenceBlocked(game, p);
 }
 function getLeadSuit() {
   return game.declaredLeadSuit || game.plays?.[0]?.card?.suit || null;
@@ -905,7 +896,6 @@ function waitHumanPlay(legal, p) {
       localTurnTimer = null;
       game.turnDeadline = null;
       if ($('influenceToggle')) $('influenceToggle').checked = false;
-      onlineInfluenceAction = 'none';
       logEvent(`<strong>Tempo esgotado:</strong> ${p.name} recebeu uma jogada automática.`);
       toast('⌛ Tempo esgotado — carta aleatória jogada.', 1800);
       renderHand();
@@ -1520,7 +1510,7 @@ function clearTableHighlights() {
 }
 
 function renderHand() {
-  if (onlineGameMode) return renderOnlineHand();
+  if (onlineGameMode) return;
   return renderHandLocal();
 }
 function selectedInfluenceCost(action) {
@@ -1566,144 +1556,6 @@ async function chooseInfluenceAction(balance, canManeuver) {
     text: 'Escolha como usar sua Influência. A carta continua oculta, mas o uso de Influência e a escolha +3 ou -3 serão anunciados para todos imediatamente.',
     options: opts,
   });
-}
-function renderOnlineHand() {
-  if (!game) return;
-  const p = game.players[game.localPlayerId],
-    hand = $('humanHand');
-  if (!p) {
-    hand.innerHTML = '';
-    return;
-  }
-  $('handTitle').textContent = `Sua mão • ${p.hand.length}${p.reserve ? ' + Reserva' : ''}`;
-  const awaiting = game.phase === 'await-play' && game.turn === game.localPlayerId,
-    baseLegal = new Set(onlineControl.legalCardIds || []),
-    hiddenLegal = new Set(onlineControl.influenceLegalCardIds || []);
-  const useHidden =
-    awaiting &&
-    $('influenceToggle')?.checked &&
-    onlineInfluenceAction !== 'none' &&
-    onlineControl.canUseInfluence;
-  const opening = awaiting && game.plays.length === 0 && game.leader === game.localPlayerId;
-  const legalIds = useHidden
-    ? opening && onlineDeclaredSuit
-      ? new Set(
-          p.hand
-            .filter((c) => hiddenLegal.has(c.id) && c.suit === onlineDeclaredSuit)
-            .map((c) => c.id),
-        )
-      : hiddenLegal
-    : baseLegal;
-  hand.innerHTML = p.hand
-    .map(
-      (c) =>
-        `<div class="hand-card ${c.public ? 'public' : ''} ${c.publicReason === 'Corte Aberta' ? 'corte-open-hand' : ''} ${c.publicReason === 'Desafio' ? 'desafio-open-hand' : ''} ${awaiting && !legalIds.has(c.id) ? 'illegal' : ''} ${!awaiting ? 'locked' : ''}" data-card="${c.id}"><img src="${cardAsset(c)}" alt="${SUITS[c.suit].name} ${c.value}"></div>`,
-    )
-    .join('');
-  const wrap = $('influenceToggleWrap'),
-    available = p.influence >= 1 && !onlineControl.influenceBlocked,
-    usable = awaiting && onlineControl.canUseInfluence;
-  wrap.classList.toggle('ready', available);
-  wrap.classList.toggle('opening-ready', usable && opening);
-  wrap.classList.toggle('disabled', !usable);
-  $('influenceToggle').disabled = !usable;
-  if (!usable) {
-    $('influenceToggle').checked = false;
-    onlineDeclaredSuit = null;
-    onlineInfluenceAction = 'none';
-  }
-  const status = $('influenceStatusText');
-  if (status) {
-    if (onlineControl.influenceBlocked)
-      status.textContent = `${p.influence}/2 • ${game.decree?.name || 'Decreto'} bloqueia o uso`;
-    else if (!p.influence) status.textContent = '0/2 • ganhe 1 ao ficar sem Coroa/Sombra';
-    else if (useHidden)
-      status.textContent = `${p.influence}/2 • ${influenceActionName(onlineInfluenceAction)} selecionado`;
-    else if (p.influence === 1) status.textContent = '1/2 • Sigilo disponível';
-    else status.textContent = '2/2 • Sigilo ou Manobra disponíveis';
-  }
-  if (awaiting)
-    $('instructionText').textContent =
-      useHidden && opening
-        ? onlineDeclaredSuit
-          ? `${influenceActionName(onlineInfluenceAction)}: escolha uma carta de ${SUITS[onlineDeclaredSuit].name}.`
-          : 'Influência ativa: anuncie primeiro o naipe.'
-        : 'Sua vez: escolha uma carta válida.';
-  else
-    $('instructionText').textContent =
-      game.phase === 'game-over' ? 'Partida encerrada.' : 'Aguarde sua vez.';
-  hand
-    .querySelectorAll('.hand-card')
-    .forEach((el) => el.addEventListener('click', () => onOnlineCardClick(el)));
-}
-async function onOnlineCardClick(el) {
-  if (!onlineGameMode || game.phase !== 'await-play' || game.turn !== game.localPlayerId) return;
-  const id = el.dataset.card,
-    p = game.players[game.localPlayerId],
-    card = p.hand.find((c) => c.id === id),
-    baseLegal = new Set(onlineControl.legalCardIds || []),
-    hiddenLegal = new Set(onlineControl.influenceLegalCardIds || []);
-  const action = $('influenceToggle').checked ? onlineInfluenceAction : 'none',
-    hidden = action !== 'none',
-    opening = game.plays.length === 0 && game.leader === game.localPlayerId;
-  if (!baseLegal.has(id)) {
-    toast('Esta carta não pode ser jogada agora.', 1200);
-    return;
-  }
-  if (hidden && !hiddenLegal.has(id)) {
-    toast('A carta da Corte Aberta não pode usar Influência.', 1500);
-    return;
-  }
-  if (hidden && opening) {
-    if (!onlineDeclaredSuit) {
-      await chooseOnlineOpeningSuit();
-      return;
-    }
-    if (card.suit !== onlineDeclaredSuit) {
-      toast('A carta oculta de abertura deve ser do naipe anunciado.', 1400);
-      return;
-    }
-  }
-  $('instructionText').textContent = 'Enviando jogada ao servidor...';
-  window.TronoNetwork?.gameAction('play-card', {
-    cardId: id,
-    influenceAction: action,
-    declaredSuit: hidden && opening ? onlineDeclaredSuit : null,
-  });
-  $('influenceToggle').checked = false;
-  onlineDeclaredSuit = null;
-  onlineInfluenceAction = 'none';
-}
-async function chooseOnlineOpeningSuit() {
-  if (
-    !onlineGameMode ||
-    !onlineControl.canUseInfluence ||
-    game.plays.length !== 0 ||
-    game.leader !== game.localPlayerId
-  )
-    return;
-  const p = game.players[game.localPlayerId],
-    legal = new Set(onlineControl.influenceLegalCardIds || []),
-    suits = [...new Set(p.hand.filter((c) => legal.has(c.id)).map((c) => c.suit))];
-  if (!suits.length) {
-    $('influenceToggle').checked = false;
-    onlineInfluenceAction = 'none';
-    return;
-  }
-  const suit = await choiceModal({
-    icon: '✦',
-    title: 'Anuncie o naipe',
-    text: 'Ao abrir a vaza com Influência, anuncie o naipe real da carta antes de jogá-la. Esse será o naipe inicial quando a Lei exigir seguimento.',
-    options: suits.map((s) => ({
-      value: s,
-      type: 'suit',
-      title: SUITS[s].name,
-      icon: SUITS[s].glyph,
-      color: SUITS[s].color,
-    })),
-  });
-  onlineDeclaredSuit = suit;
-  renderHand();
 }
 function renderHandLocal() {
   if (!game) return;
@@ -2047,13 +1899,12 @@ function applyOnlineState(state) {
   if (!onlineGameMode) enterOnlineBoard();
   const you = state.youSeat;
   const players = state.players.map((sp) => {
-    const hand = sp.id === you ? sp.hand || [] : [];
     return {
       id: sp.id,
       name: sp.name,
       ai: !!sp.ai,
-      hand,
-      reserve: sp.id === you ? sp.reserve || null : null,
+      hand: [],
+      reserve: null,
       handCount: sp.handCount || 0,
       reservePresent: !!sp.reservePresent,
       publicCards: sp.publicCards || [],
@@ -2099,22 +1950,10 @@ function applyOnlineState(state) {
   // Keep its identity so exchange/reveal continuations survive the next packet.
   if (game?.online) Object.assign(game, next);
   else game = next;
-  onlineControl = {
-    legalCardIds: state.legalCardIds || [],
-    influenceLegalCardIds: state.influenceLegalCardIds || [],
-    canUseInfluence: !!state.canUseInfluence,
-    canUseManeuver: !!state.canUseManeuver,
-    influenceBlocked: !!state.influenceBlocked,
-  };
   if (state.phase === 'await-play' && state.turn === you && lastOnlineTurnSeat !== you) {
     showYourTurnNotice();
   }
   lastOnlineTurnSeat = state.phase === 'await-play' ? state.turn : null;
-  if (game.turn !== game.localPlayerId) {
-    onlineDeclaredSuit = null;
-    onlineInfluenceAction = 'none';
-    if ($('influenceToggle')) $('influenceToggle').checked = false;
-  }
   renderAll();
 }
 async function showIntelligence(clue) {
@@ -2473,6 +2312,7 @@ async function leaveChatOnly() {
 }
 function backToLobby() {
   throneChoices.clear();
+  throneHand.clear();
   leavingGame = true;
   clearLocalTurnTimer();
   exchangeSequence++;
@@ -2616,29 +2456,7 @@ window.addEventListener('trono:ready', async () => {
 
 $('influenceToggle').addEventListener('change', async () => {
   const checked = $('influenceToggle').checked;
-  if (onlineGameMode) {
-    if (!checked) {
-      onlineDeclaredSuit = null;
-      onlineInfluenceAction = 'none';
-      renderHand();
-      return;
-    }
-    const p = game?.players?.[game.localPlayerId];
-    if (!p) {
-      $('influenceToggle').checked = false;
-      return;
-    }
-    onlineInfluenceAction = await chooseInfluenceAction(p.influence, onlineControl.canUseManeuver);
-    if (!onlineInfluenceAction) {
-      $('influenceToggle').checked = false;
-      onlineInfluenceAction = 'none';
-      return;
-    }
-    if (game && game.plays.length === 0 && game.leader === game.localPlayerId)
-      await chooseOnlineOpeningSuit();
-    else renderHand();
-    return;
-  }
+  if (onlineGameMode) return;
   if (!checked) {
     if (humanPlayResolver) {
       humanPlayResolver.declaredSuit = null;
@@ -2692,8 +2510,8 @@ $('logHideBtn').onclick = () => toggleFloatingLog(false);
 $('logResetBtn').onclick = () => resetFloatingLog();
 initFloatingLog();
 $('sortHandBtn').onclick = () => {
-  if (!game) return;
-  const p = onlineGameMode ? game.players[game.localPlayerId] : game.players[0];
+  if (!game || onlineGameMode) return;
+  const p = game.players[0];
   if (p && !p.ai) {
     sortHand(p);
     renderHand();

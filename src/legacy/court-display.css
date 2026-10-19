@@ -177,7 +177,7 @@ body #gameScreen.game-screen .hand-toolbar {
   flex-wrap: wrap;
   margin-bottom: 5px;
 }
-body #gameScreen.game-screen #instructionText {
+body #gameScreen.game-screen :is(#instructionText, #throneHandInstruction) {
   font-size: 11px;
   line-height: 1.45;
 }
@@ -312,7 +312,7 @@ body.court-fullscreen
 body.desktop-app #gameScreen.game-screen .top-actions {
   display: flex !important;
 }
-body #gameScreen.game-screen #humanHand {
+body #gameScreen.game-screen :is(#humanHand, #throneOnlineHandCards) {
   height: clamp(94px, 17dvh, 136px) !important;
   min-height: 94px !important;
   max-height: 136px;
@@ -323,7 +323,7 @@ body #gameScreen.game-screen #humanHand {
   justify-content: safe center;
   gap: 8px;
 }
-body #gameScreen.game-screen #humanHand .hand-card {
+body #gameScreen.game-screen :is(#humanHand, #throneOnlineHandCards) .hand-card {
   height: clamp(70px, var(--hand-card-height, 108px), 126px) !important;
   width: auto !important;
   aspect-ratio: 5/7;
@@ -357,7 +357,7 @@ body.desktop-app #gameScreen.game-screen .hand-zone {
   overflow: hidden;
   padding: 7px 12px !important;
 }
-body.desktop-app #gameScreen.game-screen #humanHand {
+body.desktop-app #gameScreen.game-screen :is(#humanHand, #throneOnlineHandCards) {
   height: 100% !important;
   min-height: 0 !important;
   max-height: none !important;
@@ -432,10 +432,14 @@ body.desktop-app #gameScreen.game-screen .center-info {
   }
 }
 
-body.desktop-app #gameScreen.game-screen #humanHand .hand-card {
+body.desktop-app #gameScreen.game-screen :is(#humanHand, #throneOnlineHandCards) .hand-card {
   height: var(--hand-card-height, 100px) !important;
 }
-body.desktop-app #gameScreen.game-screen #humanHand .hand-card + .hand-card {
+body.desktop-app
+  #gameScreen.game-screen
+  :is(#humanHand, #throneOnlineHandCards)
+  .hand-card
+  + .hand-card {
   margin-left: var(--hand-overlap, 0px);
 }
 
@@ -739,7 +743,7 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)) {
     flex-wrap: nowrap;
     gap: 5px;
   }
-  body.desktop-app #gameScreen.game-screen #instructionText {
+  body.desktop-app #gameScreen.game-screen :is(#instructionText, #throneHandInstruction) {
     font-size: 8px;
     line-height: 1.3;
   }
@@ -747,7 +751,7 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)) {
     padding: 6px;
     font-size: 8px;
   }
-  body.desktop-app #gameScreen.game-screen #influenceToggleWrap {
+  body.desktop-app #gameScreen.game-screen :is(#influenceToggleWrap, #throneHandInfluenceWrap) {
     min-width: 0;
     width: auto;
     padding: 4px !important;
