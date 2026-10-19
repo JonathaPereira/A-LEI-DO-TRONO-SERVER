@@ -76,7 +76,8 @@
     "test:community": "node --test tests/community-controller.cjs",
     "test:community:ui": "node --test tests/community-browser.cjs",
     "test:channels:ui": "node --test tests/channels-browser.cjs tests/channel-files-browser.cjs",
-    "test:games:models": "node --test tests/game-library.cjs tests/roguelite-host.cjs tests/azul-controller.cjs tests/splendor-controller.cjs tests/love-letter-controller.cjs",
+    "test:games:models": "node --test tests/throne-lobby.cjs tests/game-library.cjs tests/roguelite-host.cjs tests/azul-controller.cjs tests/splendor-controller.cjs tests/love-letter-controller.cjs",
+    "test:throne:lobby:ui": "node --test tests/throne-lobby-browser.cjs",
     "test:games:ui": "node --test --test-concurrency=1 tests/azul-browser.js tests/roguelite-browser.js tests/splendor-browser.js tests/love-letter-browser.js",
     "test:messenger": "node --test tests/messenger.cjs",
     "test:messenger:ui": "node --test tests/social-browser.js tests/messenger-enhancements-browser.js"

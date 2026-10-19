@@ -29,14 +29,9 @@ let humanPlayResolver = null;
 let modalResolver = null,
   modalReject = null,
   leavingGame = false;
-let selectedRoom = null;
-let roomPlayers = [];
-let onlineRoomState = null;
-let onlineMe = null;
+const throneLobby = window.TronoThroneLobby;
 let onlineGameMode = false;
-let chatOnlyMode = false;
-let chatOnlyRoomState = null,
-  joiningGame = null;
+let chatOnlyRoomState = null;
 let onlineControl = {
   legalCardIds: [],
   influenceLegalCardIds: [],
@@ -54,12 +49,6 @@ let localTurnTimer = null;
 let turnTicker = null;
 let lastOnlineTurnSeat = null;
 let clientLogHistory = [];
-const ROOM_DEFS = [
-  { id: 'sala-cetro', name: 'Sala do Cetro' },
-  { id: 'sala-chave', name: 'Sala da Chave' },
-  { id: 'sala-mascara', name: 'Sala da Máscara' },
-];
-
 // Audio controls initialize independently of the game/room interface.
 const storage = window.TronoStorage || localStorage;
 const ensureAudio = (...args) => window.TronoAudio?.ensureAudio(...args) || Promise.resolve(false);
@@ -345,7 +334,7 @@ async function startGame(allAI = false) {
     sortMode: 'suit',
     gameOver: false,
     declaredLeadSuit: null,
-    room: selectedRoom,
+    room: throneLobby.getSnapshot().selected,
     // No protótipo local, o jogador humano ocupa o assento 0. Quando a partida online
     // for sincronizada, este campo será preenchido com o assento pertencente a este cliente.
     localPlayerId: allAI ? null : 0,
@@ -356,7 +345,7 @@ async function startGame(allAI = false) {
   $('gameScreen').classList.remove('hidden');
   clearLog();
   logEvent(
-    `<strong>Partida iniciada${selectedRoom ? ` em ${selectedRoom.name}` : ''}.</strong> O sorteio definiu ${playerLabel(game.leader)} como primeiro líder.`,
+    `<strong>Partida iniciada${throneLobby.getSnapshot().selected ? ` em ${throneLobby.getSnapshot().selected.name}` : ''}.</strong> O sorteio definiu ${playerLabel(game.leader)} como primeiro líder.`,
   );
   renderAll();
   await startRound();
@@ -2048,7 +2037,6 @@ function enterOnlineBoard() {
     $('speedBtn').disabled = true;
   }
   window.TronoPortal?.showOnly?.('gameScreen');
-  chatOnlyMode = false;
   $('versionLabel').textContent =
     'Protótipo digital v' + window.TronoNetwork.CLIENT_VERSION + ' • Multiplayer';
   clearLog();
@@ -2393,114 +2381,6 @@ async function handleOnlineGameEvent(msg) {
     return;
   }
 }
-function roomDef(id) {
-  return ROOM_DEFS.find((r) => r.id === id);
-}
-function onlinePlayerById(id) {
-  return onlineRoomState?.players?.find((p) => p.id === id) || null;
-}
-function renderRoomSeats(players = []) {
-  const bySeat = new Map(players.map((p) => [p.seat, p]));
-  roomPlayers = players;
-  $('roomSeats').innerHTML = [0, 1, 2, 3]
-    .map((i) => {
-      const p = bySeat.get(i);
-      if (!p)
-        return `<div class="room-seat empty"><span class="seat-num">${i + 1}</span><div><strong>Vaga livre</strong><small>Aguardando jogador</small></div></div>`;
-      const isMe = p.id === window.TronoNetwork?.clientId;
-      return `<div class="room-seat ${isMe ? 'is-me' : ''} ${p.ready ? 'is-ready' : ''}">
-      <span class="seat-num" aria-label="Assento ${i + 1}">${window.TronoProfile?.avatarHtml?.(p) || i + 1}</span>
-      <div class="seat-copy"><strong>${escAttr(p.name)}${isMe ? ' <em>VOCÊ</em>' : ''}${p.guest ? ' <em>CONVIDADO</em>' : ''}</strong><small>${p.host ? '♛ Anfitrião' : 'Casa convidada'}</small></div>
-      <div class="seat-status ${p.ready ? 'ready' : 'waiting'}">${p.ready ? '✓ PRONTO' : 'AGUARDANDO'}</div>
-    </div>`;
-    })
-    .join('');
-  window.TronoProfile?.hydrate?.($('roomSeats'));
-}
-function applyRoomCounts(rooms) {
-  ROOM_DEFS.forEach((r, i) => {
-    const found = rooms?.find((x) => x.id === r.id);
-    const el = $(`roomCount${i}`);
-    if (el) el.textContent = `${found?.count ?? 0} / 4`;
-  });
-}
-function updateOnlineRoomControls() {
-  if (!$('readyOnlineBtn') || !$('startOnlineBtn')) return;
-  const me = onlineMe || onlinePlayerById(window.TronoNetwork?.clientId);
-  const players = onlineRoomState?.players || [];
-  const allReady = players.length >= 2 && players.every((p) => p.ready);
-  const isHost = !!me?.host;
-  $('readyOnlineBtn').disabled = !window.TronoNetwork?.connected || !me;
-  $('readyOnlineBtn').textContent = me?.ready ? '↺ Retirar Pronto' : '✓ Marcar Pronto';
-  $('readyOnlineBtn').classList.toggle('ready-active', !!me?.ready);
-  $('startOnlineBtn').disabled = !(window.TronoNetwork?.connected && isHost && allReady);
-  $('startOnlineBtn').classList.toggle('hidden', !isHost);
-  const status = $('roomOnlineStatus');
-  if (!window.TronoNetwork?.connected)
-    status.textContent = 'Servidor desconectado. Aguarde alguns segundos e tente novamente.';
-  else if (!me) status.textContent = 'Entrando no salão...';
-  else if (players.length < 2)
-    status.textContent =
-      'Você está online. Aguarde pelo menos mais 1 jogador; vagas restantes serão preenchidas por IAs.';
-  else if (!allReady)
-    status.textContent = isHost
-      ? 'Aguardando todos marcarem Pronto.'
-      : 'Marque Pronto quando estiver preparado.';
-  else
-    status.textContent = isHost
-      ? 'Todos estão prontos. Você pode iniciar a partida online.'
-      : 'Todos estão prontos. Aguarde o anfitrião iniciar a partida.';
-}
-function consumeOnlineRoom(room) {
-  onlineRoomState = room;
-  selectedRoom = roomDef(room.id) || selectedRoom;
-  onlineMe = room.players?.find((p) => p.id === window.TronoNetwork?.clientId) || null;
-  renderRoomSeats(room.players || []);
-  updateOnlineRoomControls();
-}
-async function enterRoom(roomId) {
-  leavingGame = false;
-  const validation = await window.TronoPortal?.validateIdentity?.({ game: true });
-  if (validation && !validation.ok) {
-    toast(validation.message || 'Escolha um nome disponível.', 1800);
-    $('playerIdentity')?.focus();
-    return;
-  }
-  const name = validation?.name || $('playerIdentity').value.trim();
-  if (!name) {
-    toast('Digite um nome para entrar.', 1600);
-    $('playerIdentity')?.focus();
-    return;
-  }
-  joiningGame = {
-    room: selectedRoom,
-    state: onlineRoomState,
-    me: onlineMe,
-    screen: game?.online ? 'gameScreen' : onlineRoomState ? 'roomScreen' : 'setupScreen',
-  };
-  chatOnlyMode = false;
-  window.TronoSocial?.setChatHubMode?.(false);
-  selectedRoom = roomDef(roomId);
-  if (!selectedRoom) return;
-  storage.setItem('tronoPlayerName', name);
-  $('p0Name').value = name;
-  $('p1Name').value = 'Epaminondas';
-  $('p2Name').value = 'Bonifácio';
-  $('p3Name').value = 'Cícero';
-  $('selectedRoomName').textContent = selectedRoom.name;
-  onlineRoomState = null;
-  onlineMe = null;
-  renderRoomSeats([]);
-  window.TronoPortal?.showOnly?.('roomScreen');
-  $('roomOnlineStatus').textContent = 'Conectando ao salão online...';
-  await ensureAudio();
-  const online = await window.TronoNetwork?.joinRoom(roomId, name);
-  if ($('networkStatus'))
-    $('networkStatus').textContent = online
-      ? 'Servidor online. Entrando no salão...'
-      : 'Não foi possível conectar ao servidor agora.';
-  updateOnlineRoomControls();
-}
 function consumeChatOnlyRoom(room) {
   chatOnlyRoomState = room;
   if (room?.id)
@@ -2572,12 +2452,9 @@ async function enterChatOnly({
           ? window.TronoChannels.getSnapshot().channels.find((c) => c.type !== 'text')?.id
           : null) || window.TronoChannels.getSnapshot().channels[0]?.id;
   if (!window.TronoNetwork.gameRoom) {
-    selectedRoom = null;
-    onlineRoomState = null;
-    onlineMe = null;
+    throneLobby.clear();
     onlineGameMode = false;
   }
-  chatOnlyMode = true;
   chatOnlyRoomState = null;
   try {
     window.TronoSocial.setChatHubMode?.(true);
@@ -2596,7 +2473,7 @@ async function enterChatOnly({
     document.body.classList.remove('portal-active');
     document.body.classList.add('chat-only-active');
   } catch (err) {
-    chatOnlyMode = false;
+    window.TronoSocial.setChatHubMode(false);
     throw err;
   }
   if (restoreCurrent) {
@@ -2626,13 +2503,13 @@ async function enterChatOnly({
       : window.TronoNetwork.joinChatChannel(channelId, name));
     if (!isCurrent()) return false;
     window.TronoNetwork.requestChatChannels?.();
-    if (chatOnlyMode && !online)
+    if (window.TronoCallNavigation.getSnapshot().hub && !online)
       $('chatOnlyStatus').textContent =
         'Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
   } catch (err) {
     if (!isCurrent()) return false;
     console.warn('Conexão ao chat:', err);
-    if (chatOnlyMode)
+    if (window.TronoCallNavigation.getSnapshot().hub)
       $('chatOnlyStatus').textContent =
         'Conexão interrompida. Aguarde a reconexão ou volte ao início para tentar novamente.';
   }
@@ -2641,7 +2518,12 @@ async function enterChatOnly({
 let chatChannelSwitching = false;
 let chatChannelResumeVoice = null;
 async function switchChatChannel(channelId, { connectVoice = false } = {}) {
-  if (!chatOnlyMode || chatChannelSwitching || !window.TronoChannels.get(channelId)) return;
+  if (
+    !window.TronoCallNavigation.getSnapshot().hub ||
+    chatChannelSwitching ||
+    !window.TronoChannels.get(channelId)
+  )
+    return;
   if (
     window.TronoNetwork?.currentRoom === channelId &&
     (window.TronoChannels.get(channelId)?.type === 'text' ||
@@ -2700,7 +2582,6 @@ async function leaveChatOnly() {
   window.TronoSocial?.showForRoom?.(false);
   window.TronoSocial?.setChatHubMode?.(false);
   window.TronoNetwork?.leaveVoiceRoom();
-  chatOnlyMode = false;
   chatOnlyRoomState = null;
   document.body.classList.remove('chat-only-active');
   $('chatOnlyScreen').classList.add('hidden');
@@ -2731,12 +2612,9 @@ function backToLobby() {
   )
     void window.TronoSocial?.leaveVoice?.();
   window.TronoNetwork?.leaveGameRoom();
-  selectedRoom = null;
-  onlineRoomState = null;
-  onlineMe = null;
+  throneLobby.clear();
   onlineGameMode = false;
   game = null;
-  chatOnlyMode = false;
   window.TronoSocial?.setChatHubMode?.(false);
   document.body.classList.remove('chat-only-active');
   window.TronoPortal?.showOnly?.('setupScreen');
@@ -2744,13 +2622,6 @@ function backToLobby() {
   setTimeout(() => window.TronoNetwork?.requestRooms(), 120);
 }
 
-$('readyOnlineBtn').onclick = () => {
-  const me = onlineMe || onlinePlayerById(window.TronoNetwork?.clientId);
-  if (!me) return toast('Ainda entrando na sala...', 1200);
-  window.TronoNetwork?.setReady(!me.ready);
-};
-$('startOnlineBtn').onclick = () => window.TronoNetwork?.startRoom();
-$('backToLobbyBtn').onclick = backToLobby;
 $('chatOnlyBtn')?.addEventListener('click', () =>
   enterChatOnly().catch((err) => {
     window.TronoPortal?.showPortal?.();
@@ -2759,40 +2630,28 @@ $('chatOnlyBtn')?.addEventListener('click', () =>
   }),
 );
 $('backFromChatOnlyBtn')?.addEventListener('click', () => leaveChatOnly().catch(fatalError));
-document
-  .querySelectorAll('.room-enter')
-  .forEach((btn) => (btn.onclick = () => enterRoom(btn.dataset.room)));
 window.TronoNetwork?.onMessage((msg) => {
   if (msg.type === 'connection') {
-    const dot = document.querySelector('.status-dot');
-    dot?.classList.toggle('online', !!msg.connected);
-    if ($('networkStatus'))
-      $('networkStatus').textContent = msg.connected
-        ? 'Servidor multiplayer conectado.'
-        : 'Servidor offline ou reconectando...';
-    if (!msg.connected && (onlineRoomState || onlineGameMode || chatOnlyMode))
+    if (
+      !msg.connected &&
+      (throneLobby.getSnapshot().room ||
+        onlineGameMode ||
+        window.TronoCallNavigation.getSnapshot().hub)
+    )
       showConnectionNotice('Você', null, 'self-disconnect');
-    if (chatOnlyMode && $('chatOnlyStatus'))
+    if (window.TronoCallNavigation.getSnapshot().hub && $('chatOnlyStatus'))
       $('chatOnlyStatus').textContent = msg.connected
         ? 'Servidor reconectado.'
         : 'Conexão interrompida; tentando reconectar...';
-    updateOnlineRoomControls();
   }
-  if (msg.type === 'rooms') applyRoomCounts(msg.rooms);
   if (msg.type === 'version-mismatch') {
-    if ($('networkStatus'))
-      $('networkStatus').textContent =
-        `Versões diferentes: site ${msg.clientVersion} • servidor ${msg.serverVersion}. Atualize o deploy para evitar incompatibilidades.`;
     toast('⚠ Frontend e backend estão em versões diferentes.', 3200);
   }
-  if (msg.type === 'welcome') {
-    applyRoomCounts(msg.rooms);
-    const dot = document.querySelector('.status-dot');
-    dot?.classList.add('online');
-    $('networkStatus').textContent =
-      `Servidor multiplayer conectado • ${msg.serverVersion || 'online'}.`;
-  }
-  if (msg.type === 'channel-deleted' && chatOnlyMode && msg.roomId === chatOnlyRoomState?.id) {
+  if (
+    msg.type === 'channel-deleted' &&
+    window.TronoCallNavigation.getSnapshot().hub &&
+    msg.roomId === chatOnlyRoomState?.id
+  ) {
     chatOnlyRoomState = null;
     chatChannelResumeVoice = false;
     try {
@@ -2804,33 +2663,24 @@ window.TronoNetwork?.onMessage((msg) => {
     window.TronoSocial.clearChannelChat();
     window.TronoNetwork.requestChatChannels();
   }
-  if (msg.type === 'joined-text-channel' && chatOnlyMode) consumeChatOnlyRoom(msg.room);
-  if (msg.type === 'joined-game-room') {
-    joiningGame = null;
-    consumeOnlineRoom(msg.room);
-  }
+  if (msg.type === 'joined-text-channel' && window.TronoCallNavigation.getSnapshot().hub)
+    consumeChatOnlyRoom(msg.room);
   if (msg.type === 'joined-room') {
     if (msg.room?.kind === 'chat') {
-      chatOnlyMode = true;
       window.TronoSocial?.setChatHubMode?.(true);
       consumeChatOnlyRoom(msg.room);
       if (chatChannelResumeVoice === msg.room.id) {
         chatChannelResumeVoice = null;
         void window.TronoSocial?.joinVoice?.();
       }
-    } else consumeOnlineRoom(msg.room);
+    }
   }
   if (msg.type === 'room-state') {
     if (msg.room?.kind === 'chat' && msg.room.id === window.TronoNetwork.currentRoom)
       consumeChatOnlyRoom(msg.room);
-    else if (
-      msg.room?.kind === 'game' &&
-      msg.room.id === (window.TronoNetwork.gameRoom || selectedRoom?.id)
-    )
-      consumeOnlineRoom(msg.room);
   }
   if (msg.type === 'player-left' && !onlineGameMode) {
-    if (chatOnlyMode) {
+    if (window.TronoCallNavigation.getSnapshot().hub) {
       toast(`${msg.name || 'Uma pessoa'} saiu do canal.`, 1500);
     } else if (msg.reason === 'disconnect') showConnectionNotice(msg.name, null, 'disconnect');
     else toast(`${msg.name || 'Um jogador'} deixou o salão.`, 1600);
@@ -2853,19 +2703,6 @@ window.TronoNetwork?.onMessage((msg) => {
   }
   if (msg.type === 'game-event' && !leavingGame) handleOnlineGameEvent(msg).catch(fatalError);
   if (msg.type === 'error') {
-    if (
-      joiningGame &&
-      ['GAME_IN_PROGRESS', 'ROOM_FULL', 'ROOM_NOT_FOUND', 'NO_SEAT'].includes(msg.code)
-    ) {
-      const previous = joiningGame;
-      joiningGame = null;
-      selectedRoom = previous.room;
-      onlineRoomState = previous.state;
-      onlineMe = previous.me;
-      window.TronoPortal.showOnly(previous.screen);
-      if (previous.state) consumeOnlineRoom(previous.state);
-      if (previous.screen === 'gameScreen') window.TronoNetwork.requestState();
-    }
     if (msg.code === 'NAME_TAKEN' || msg.code === 'NAME_REQUIRED') {
       window.TronoPortal?.setNameFeedback?.({
         available: false,
@@ -2873,9 +2710,9 @@ window.TronoNetwork?.onMessage((msg) => {
         message: msg.message || 'Nome indisponível.',
       });
       toast(msg.message || 'Escolha outro nome.', 2800);
-      if (chatOnlyMode) {
+      if (window.TronoCallNavigation.getSnapshot().hub) {
         leaveChatOnly().catch(() => window.TronoPortal?.showPortal?.());
-      } else if (selectedRoom && !onlineGameMode) {
+      } else if (throneLobby.getSnapshot().selected && !onlineGameMode) {
         backToLobby();
       }
     } else toast(msg.message || 'Erro de sala', 2400);
@@ -2892,12 +2729,8 @@ window.addEventListener('trono:ready', async () => {
   }
   const savedName = storage.getItem('tronoPlayerName');
   if (savedName !== null) $('playerIdentity').value = savedName;
-  $('networkStatus').textContent = 'Conectando ao servidor multiplayer...';
   const online = await window.TronoNetwork?.connect();
   if (online) window.TronoNetwork.requestRooms();
-  else
-    $('networkStatus').textContent =
-      'Servidor demorou para responder. No plano gratuito, aguarde alguns segundos e recarregue.';
 });
 
 $('influenceToggle').addEventListener('change', async () => {
@@ -3197,4 +3030,22 @@ window.__LeiDoTrono = {
     privateReveal:
       'A identidade das duas cartas só é exibida no cliente local quando ele é a Sombra ou a Casa escolhida.',
   }),
+};
+
+// Temporary board bridge: lobby owns selection/rosters; this controller still owns match cancellation.
+window.TronoThroneBoard = {
+  notify: toast,
+  get online() {
+    return !!game?.online;
+  },
+  prepareRoom(name) {
+    leavingGame = false;
+    window.TronoSocial?.setChatHubMode?.(false);
+    storage.setItem('tronoPlayerName', name);
+    $('p0Name').value = name;
+    $('p1Name').value = 'Epaminondas';
+    $('p2Name').value = 'Bonifácio';
+    $('p3Name').value = 'Cícero';
+  },
+  backToLobby,
 };

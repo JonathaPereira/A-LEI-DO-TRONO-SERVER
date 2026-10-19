@@ -7,7 +7,6 @@ import type { ProfileViewer } from '../../lib/profiles/viewer';
 import type { FilesClient } from '../../lib/files/client';
 import type { NetworkAccount } from '../../types/network';
 import type { ProfileUpdate } from '../../types/profile-editor';
-import type { AvatarAppearance } from '../../types/domain';
 import type { SettingsController } from '../../lib/settings/controller';
 import { ProfileEditor } from './editor-fields';
 import { initializeProfileGifs } from './gif-picker-runtime';
@@ -23,10 +22,6 @@ interface EditorRuntime extends Window {
     readonly ready: Promise<unknown>;
     open(mode: 'login'): void;
     updateProfile(profile: ProfileUpdate): Promise<unknown>;
-  };
-  TronoAvatars: {
-    avatarHtml(person?: AvatarAppearance): string;
-    hydrate(host?: ParentNode): void;
   };
   TronoDesktopSettings?: SettingsController;
 }
@@ -75,8 +70,6 @@ export function initializeProfileEditor(target: Window): EditorController {
   Object.assign(runtime, {
     TronoProfile: {
       open,
-      avatarHtml: runtime.TronoAvatars.avatarHtml,
-      hydrate: runtime.TronoAvatars.hydrate,
       openMini: runtime.TronoProfileViewer.open,
       getProtectedFileIds: controller.getProtectedFileIds,
     },

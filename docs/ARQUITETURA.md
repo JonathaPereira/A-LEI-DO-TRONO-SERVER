@@ -103,10 +103,12 @@ avatares. `TronoCommunity` aponta para esse mesmo controlador, usado pela chamad
 para publicar avisos. `legacy/community.js` e sua entrada no manifesto foram removidos.
 
 `lib/profiles/icons.ts` contém os desenhos e o catálogo único de avatares.
-`avatar.ts` conserva `avatarHtml`/`hydrate` para os jogos não convertidos;
-as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.
-O componente React usa o mesmo catálogo e cliente de arquivos, sem hosts de
-renderização imperativa no chat ou nos canais. `legacy/avatar-icons.js` foi removido.
+`avatar.ts` valida somente o ID do arquivo de avatar. O componente React usa o
+catálogo e o cliente de arquivos compartilhados; conta, exclusão e URL são
+tratadas no hook de arquivos. `avatarHtml`/`hydrate`, a instalação de
+`TronoAvatars`/`TronoAvatarIcons` e sua exposição em `TronoProfile` foram removidos
+após converter o último consumidor nos assentos de A Lei do Trono.
+`legacy/avatar-icons.js` já havia sido removido.
 
 `lib/navigation/app-layout.ts` possui a projeção de layout, destino atual,
 identidade e conexão de voz, preferência e retorno ao canal de voz. Lê os donos
@@ -150,6 +152,34 @@ escritos somente quando a identidade muda, preservando nomes locais editados.
 nos mesmos campos. A entrada de comunidade ainda está em `legacy/game.js` e recebe
 guardas de validade antes de continuar após esperas; o portal não assume sua
 participação. `legacy/portal.js` e sua entrada no manifesto foram excluídos.
+
+`lib/games/throne-lobby.ts` possui seleção de salão, roster, participante local e
+intenções de entrada, Pronto e início. `types/throne-lobby.ts` define somente o
+contrato público do salão; `throne-lobby-protocol.ts` valida mesas conhecidas,
+assentos/IDs únicos, anfitrião, contagem e flags, copiando e congelando os campos
+conhecidos. Mãos, prompts e outros dados privados não são retidos no roster.
+
+Entradas são serializadas até a confirmação do servidor. Conta/ABA, navegação
+durante validação/áudio, desconexão e descarte invalidam continuações. O cliente
+de rede recebe uma guarda opcional e a confere depois da autenticação/conexão,
+antes de enviar a entrada. Uma recusa restaura a seleção/roster anterior e só
+restaura a tela se o usuário ainda estiver no salão. Pronto e início aguardam
+confirmação; atualizações de presença não liberam a intenção prematuramente.
+Timeouts têm identidade própria para não liberar tentativas posteriores.
+
+`components/games/throne-lobby-controls.tsx` renderiza catálogo, assentos, avatares,
+status e controles em React, com portais nos hosts estáveis de setup/sala. O runtime
+monta antes de `game.js`, recebe eventos do socket existente e libera observador,
+assinaturas, raiz e timers ao descartar. O botão de comunicação conserva seu host.
+`TronoThroneLobby` é o dono consultado pelo controlador antigo: não há outra cópia
+de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
+`TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
+partidas; não possui o estado do salão.
+
+O jogo ainda possui simulação local, aplicação do estado online, prompts e
+animações em `legacy/game.js`. A flag duplicada de comunidade foi removida: os
+guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
+modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
 
 `lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
 visível, sem duplicar participação, partidas ou recursos de mídia. Botões do

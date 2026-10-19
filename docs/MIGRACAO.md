@@ -2047,6 +2047,46 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   Próximo recorte: separar estado e apresentação de A Lei do Trono, preservando
   o motor compartilhado e os modos local/online.
 
+## Salões de A Lei do Trono — 19/10/2026
+
+- `lib/games/throne-lobby.ts` passou a possuir seleção, roster, participante local,
+  entrada pendente, Pronto e início. Foram removidas de `legacy/game.js` as cópias
+  de `selectedRoom`, `roomPlayers`, `onlineRoomState`, `onlineMe` e `joiningGame`,
+  a renderização HTML dos assentos e os listeners dos controles convertidos.
+- `types/throne-lobby.ts`/`throne-lobby-protocol.ts` validam o contrato público;
+  IDs/assentos são únicos, contagem e anfitrião são coerentes. O parser não retém
+  mãos ou outros campos privados e não congela/muta o payload recebido.
+- Catálogo, status, título, assentos, avatares, Pronto, início e retorno estão em
+  `components/games/throne-lobby-controls.tsx`. Uma raiz React usa portais nos
+  hosts estáveis existentes. O runtime monta antes do controlador da partida,
+  reutilizando socket e botão de comunicação; não captura mídia.
+- Conta/ABA, navegação anterior ao envio, desconexão e descarte invalidam esperas.
+  A guarda de entrada também é conferida pelo transporte após autenticar/conectar.
+  Entradas, Pronto e início são deduplicados enquanto aguardam confirmação.
+  Erros de transferência restauram o roster anterior sem reabrir uma tela que
+  o usuário já deixou; timers antigos não liberam uma tentativa mais recente.
+- Removidos os últimos chamadores de `TronoProfile.avatarHtml`/`hydrate` e a
+  instalação de `TronoAvatars`/`TronoAvatarIcons`. `lib/profiles/avatar.ts` mantém
+  somente a validação de arquivo; avatares dos salões usam o componente/cliente
+  compartilhados, inclusive o fallback por preset.
+- A flag local `chatOnlyMode` foi removida. A troca de canais consulta o dono
+  existente de navegação da chamada, corrigindo o retorno da mesa à comunidade
+  sem recriar dispositivo, socket ou participação na voz.
+- Doze regressões do salão e uma do transporte cobrem parser, identidade/ABA,
+  espera de áudio/conexão, navegação, recusa de transferência, anfitrião, Pronto,
+  início, timeout e descarte. A suíte completa passou com 51 modelos de jogos;
+  tipagem, formatação e build também passaram.
+- A interface confirmou conta/convidado, quatro assentos, layouts, mesa cheia,
+  início online, abertura/cancelamento local e validação atrasada. Portal e leitor
+  de perfis passaram na web/desktop. Dois Electron reais confirmaram os mesmos
+  donos/hosts, Pronto, retorno ao salão, troca de canal e recursos da chamada
+  preservados. Mídia sintética; a câmera do teste web usa a fonte canvas estável
+  já utilizada pelas demais regressões no Windows. Evidências: `artifacts/throne-lobby-*`.
+- `legacy/game.js` continua necessário para estado/apresentação da partida,
+  regras locais, prompts, relógios e animações. `TronoThroneBoard` delega apenas
+  preparação/cancelamento ao controlador antigo. Próximo recorte: estado privado
+  online e escolhas da partida, preservando o motor compartilhado e o modo local.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

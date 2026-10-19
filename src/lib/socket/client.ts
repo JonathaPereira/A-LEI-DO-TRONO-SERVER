@@ -225,10 +225,13 @@ export function createNetworkClient({
     );
     return readNameAvailability(msg);
   }
-  async function joinRoom(roomId: string, name?: string) {
+  async function joinRoom(roomId: string, name?: string, current: () => boolean = () => true) {
+    if (!current()) return false;
     if (!(await (roomId.startsWith('sala-') ? ensureGameIdentity(name) : ensureAuthenticated())))
       return false;
+    if (!current()) return false;
     if (!transport.connected) await connect();
+    if (!current()) return false;
     if (transport.connected)
       send(
         roomId.startsWith('sala-') && state.getSnapshot().features.independentGameVoice

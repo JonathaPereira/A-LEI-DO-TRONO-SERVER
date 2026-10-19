@@ -46,6 +46,52 @@ async function setup(options = {}) {
 }
 
 const room = (id, kind = 'chat') => ({ id, kind });
+test('cancelled room intent cannot send after identity preparation or connection completes', async () => {
+  let releaseToken,
+    valid = true;
+  const h = await setup({
+    getIdentity: () => ({
+      user: { id: 'a' },
+      getAccessToken: () =>
+        new Promise((resolve) => {
+          releaseToken = resolve;
+        }),
+    }),
+  });
+  h.transport.request = async () => ({
+    type: 'auth-result',
+    ok: true,
+    user: { id: 'a', nickname: 'Alice', role: 'member', permissions: {} },
+  });
+  const joining = h.client.joinRoom('sala-cetro', 'Alice', () => valid);
+  await new Promise((resolve) => setImmediate(resolve));
+  valid = false;
+  releaseToken('token');
+  assert.equal(await joining, false);
+  assert.deepEqual(h.sent, []);
+  const second = await setup();
+  const [{ createNetworkClient }] = await modules;
+  let releaseConnection;
+  valid = true;
+  const transport = {
+    ...second.transport,
+    connected: false,
+    connect: () =>
+      new Promise((resolve) => {
+        releaseConnection = () => {
+          transport.connected = true;
+          resolve(true);
+        };
+      }),
+  };
+  const client = createNetworkClient({ backendHttp: 'https://fixture.example', transport });
+  const reconnecting = client.joinRoom('sala-cetro', 'Alice', () => valid);
+  await new Promise((resolve) => setImmediate(resolve));
+  valid = false;
+  releaseConnection();
+  assert.equal(await reconnecting, false);
+  assert.deepEqual(second.sent, []);
+});
 const membership = (client) => {
   const { currentRoom, primaryRoom, gameRoom } = client.getSnapshot();
   return { currentRoom, primaryRoom, gameRoom };

@@ -118,6 +118,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       page.setDefaultTimeout(10000);
       await page.waitForURL(origin + '/');
       await page.waitForLoadState('load');
+      await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       page.on('pageerror', error => errors.push(error.message));
       await page.reload();await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
@@ -184,7 +185,11 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await localScreen.locator('.screen-collapse-btn').click();
     await expect(localScreen).not.toHaveClass(/share-collapsed/);
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
-    await page.evaluate(() => window.TronoNetwork.joinRoom('sala-cetro'));
+    await page.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
+    await expect(page.locator('#roomSeats')).toContainText('Layout Principal');
+    await expect(page.locator('#roomSeats .room-seat')).toHaveCount(4);
+    await page.locator('#readyOnlineBtn').click();
+    await expect(page.locator('#readyOnlineBtn')).toContainText('Retirar Pronto');
     await expect.poll(() => page.evaluate(() => window.TronoNetwork.gameRoom)).toBe('sala-cetro');
     await page.evaluate(() => window.TronoAppLayout.navigate('community'));
     await expect(page.locator('#callFocusDock #joinVoiceBtn')).toBeVisible();
@@ -210,6 +215,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
         messengerOwner: window.TronoDirectMessages,
         games: ['gamesSideNav','rogueliteScreen','rogueliteBack','rogueliteFullscreen','azulBack','azulFullscreen','azulRulesDialog','azulContent','azulRanking'].map(id => document.getElementById(id)),
+        throneOwner: window.TronoThroneLobby,
+        throne: ['roomGrid','roomSeats','readyOnlineBtn','startOnlineBtn','backToLobbyBtn','roomSocialBtn','throneLobbyHost'].map(id => document.getElementById(id)),
         portalOwner: window.TronoPortal,
         portal: ['portalScreen','portalIdentity','portalMusicBtn','portalMusicVolume','portalCreditsDialog'].map(id => document.getElementById(id)),
         gameOwners: [window.TronoGameLibrary, window.TronoRogueliteHost, window.TronoAzul, window.TronoSplendor, window.TronoLoveLetter],
@@ -243,6 +250,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
+          throne: window.TronoThroneLobby === before.throneOwner && before.throne.every(node => node && node.isConnected && document.getElementById(node.id) === node) && !window.TronoAvatars && !window.TronoAvatarIcons && !window.TronoProfile.avatarHtml && !window.TronoProfile.hydrate,
           portal: window.TronoPortal === before.portalOwner && before.portal.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           games: window.TronoGameLibrary === before.gameOwners[0] && window.TronoRogueliteHost === before.gameOwners[1] && window.TronoAzul === before.gameOwners[2] && before.games.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           splendor: window.TronoSplendor === before.gameOwners[3] && before.splendor.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
@@ -542,7 +550,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       }
       await preserved();
       await page.evaluate(() => window.TronoAppLayout.navigate('throne'));
-      await expect(page.locator('#setupScreen')).toBeVisible();
+      await expect(page.locator('#roomScreen')).toBeVisible();
       await preserved();
       await page.evaluate(() => window.TronoAppLayout.navigate('community'));
       await communityControls(layout);

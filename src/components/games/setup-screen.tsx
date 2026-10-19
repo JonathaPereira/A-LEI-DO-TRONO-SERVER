@@ -34,50 +34,7 @@ export function SetupScreen() {
             </button>
           </div>
 
-          <div className={'room-grid'} id={'roomGrid'}>
-            <article className={'room-card'} data-room={'sala-cetro'}>
-              <div className={'room-glyph cetro'}>♜</div>
-              <div>
-                <small>SALÃO I</small>
-                <h3>Sala do Cetro</h3>
-                <p>Uma mesa aberta para até quatro Casas.</p>
-              </div>
-              <div className={'room-footer'}>
-                <span id={'roomCount0'}>0 / 4</span>
-                <button className={'royal-btn room-enter'} data-room={'sala-cetro'}>
-                  Entrar
-                </button>
-              </div>
-            </article>
-            <article className={'room-card'} data-room={'sala-chave'}>
-              <div className={'room-glyph chave'}>⚿</div>
-              <div>
-                <small>SALÃO II</small>
-                <h3>Sala da Chave</h3>
-                <p>Uma mesa aberta para até quatro Casas.</p>
-              </div>
-              <div className={'room-footer'}>
-                <span id={'roomCount1'}>0 / 4</span>
-                <button className={'royal-btn room-enter'} data-room={'sala-chave'}>
-                  Entrar
-                </button>
-              </div>
-            </article>
-            <article className={'room-card'} data-room={'sala-mascara'}>
-              <div className={'room-glyph mascara'}>◉</div>
-              <div>
-                <small>SALÃO III</small>
-                <h3>Sala da Máscara</h3>
-                <p>Uma mesa aberta para até quatro Casas.</p>
-              </div>
-              <div className={'room-footer'}>
-                <span id={'roomCount2'}>0 / 4</span>
-                <button className={'royal-btn room-enter'} data-room={'sala-mascara'}>
-                  Entrar
-                </button>
-              </div>
-            </article>
-          </div>
+          <div className="room-grid" id="roomGrid" />
           <article className={'chat-only-entry'}>
             <div className={'chat-only-glyph'}>◫</div>
             <div className={'chat-only-copy'}>
@@ -92,10 +49,7 @@ export function SetupScreen() {
               Entrar no Salão Livre
             </button>
           </article>
-          <div className={'lobby-status'}>
-            <span className={'status-dot'}></span>
-            <span id={'networkStatus'}>Conectando ao servidor da Corte...</span>
-          </div>
+          <div className="lobby-status" id="throneNetworkStatus" />
           <div className={'lobby-audio-panel'} aria-label={'Controles de áudio do lobby'}>
             <button id={'lobbyMusicBtn'} className={'royal-btn lobby-music-toggle'}>
               ♫ Música ligada
