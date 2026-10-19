@@ -34,6 +34,7 @@ const throneChoices = window.TronoThroneChoices;
 const throneHand = window.TronoThroneHand;
 const throneMatch = window.TronoThroneMatch;
 const throneSeats = window.TronoThroneSeats;
+const throneTable = window.TronoThroneTable;
 const thronePrivate = window.TronoThronePrivate;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
@@ -89,54 +90,6 @@ function escAttr(text = '') {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
-function lawTooltip(id) {
-  const law = LAWS[id];
-  if (!law) return '';
-  const used = game?.lawUsage?.[id] ?? 0;
-  let extra = game ? ` Usos consumidos nesta rodada: ${used}/2.` : '';
-  if (game?.currentLaw === id) {
-    extra += ` Esta é a Lei ativa da vaza ${game.trick}.`;
-    if (id === 'estandarte')
-      extra += game.trump
-        ? ` Trunfo atual: ${SUITS[game.trump].name}.`
-        : ' O Trunfo será declarado antes da abertura.';
-  }
-  return `${law.name}: ${law.description}${extra}`;
-}
-function decreeTooltip(d = game?.decree) {
-  if (!d) return 'O Decreto altera a estrutura estratégica da rodada inteira.';
-  if (!game) return `${d.name}: ${d.text}`;
-  let moment = '';
-  if (d.id === 'reserva')
-    moment =
-      game.trick < 10
-        ? ` Momento atual: a Reserva continua protegida e será obrigatória na 10ª vaza.`
-        : ` Momento atual: a carta de Reserva deve ser jogada nesta 10ª vaza.`;
-  if (d.id === 'rotacao')
-    moment =
-      game.trick < 7
-        ? ` Momento atual: a Rotação ainda não começou; haverá trocas após as vazas 7, 8 e 9.`
-        : game.trick <= 9
-          ? ` Momento atual: ao fim desta vaza haverá uma troca simultânea para a esquerda.`
-          : ` Momento atual: as rotações desta rodada já terminaram.`;
-  if (d.id === 'corte')
-    moment =
-      ' Momento atual: as cartas escolhidas pela Corte Aberta permanecem expostas até serem utilizadas.';
-  if (d.id === 'desafio')
-    moment =
-      ' Momento atual: uma primeira Coroa, ou uma nova Coroa consecutiva, pode obrigar o vencedor a revelar uma carta.';
-  if (d.id === 'silencio')
-    moment =
-      game.trick <= 3
-        ? ` Momento atual: gastar Influência está BLOQUEADO nesta vaza (${game.trick}/3).`
-        : ' Momento atual: o período de Silêncio terminou; Influência pode ser usada normalmente.';
-  if (d.id === 'sucessao')
-    moment = game.previousWinningSuit
-      ? ` Momento atual: o próximo líder não poderá abrir com ${SUITS[game.previousWinningSuit].name}, salvo se não possuir outro naipe.`
-      : ' Momento atual: ainda não existe um naipe vencedor anterior a restringir.';
-  return `${d.name}: ${d.text}${moment}`;
-}
-
 function logEvent(html) {
   const el = document.createElement('div');
   el.className = 'event-item';
@@ -917,7 +870,7 @@ async function commitPlay(
 }
 
 async function animateCardToTable(play, sourceInfo) {
-  renderTableCards();
+  syncLocalTable();
   const slot = $(`tableCard${play.playerId}`);
   slot.classList.add('active-drop', 'receiving-card');
   playSfx('card');
@@ -964,15 +917,9 @@ function evaluateTrick() {
 
 async function resolveTrick() {
   game.phase = 'resolve';
-  for (const play of game.plays) {
-    if (play.hidden) {
-      play.hidden = false;
-      play.revealing = true;
-    }
-  }
-  renderTableCards(true);
+  for (const play of game.plays) play.hidden = false;
+  syncLocalTable();
   await delay(450);
-  for (const play of game.plays) play.revealing = false;
   const { crown, shadow } = evaluateTrick();
   const crownP = game.players[crown.playerId],
     shadowP = game.players[shadow.playerId];
@@ -995,7 +942,7 @@ async function resolveTrick() {
     crownP.crownStreak = 1;
   }
 
-  markWinners(crown.playerId, shadow.playerId);
+  syncLocalTable({ crown: crown.playerId, shadow: shadow.playerId });
   const crownShown = crown.modifier
     ? `${crown.card.value} ${crown.modifier > 0 ? '+3' : '-3'} → ${playValue(crown)}`
     : `${crown.card.value}`;
@@ -1035,7 +982,7 @@ async function resolveTrick() {
   const nextLaw = await chooseNextLaw(shadowP);
   game.currentLaw = nextLaw;
   game.trick++;
-  clearTableHighlights();
+  syncLocalTable(null);
   await delay(350);
   await beginTrick();
 }
@@ -1256,8 +1203,7 @@ async function endRound() {
   logEvent(
     `${playerLabel(game.leader)} iniciará a nova rodada por estar à esquerda do vencedor da 10ª vaza.`,
   );
-  clearTableHighlights();
-  renderTableCards(true, true);
+  syncLocalTable(null);
   await startRound();
 }
 
@@ -1307,63 +1253,40 @@ function sortHand(p) {
   );
 }
 
-function animateCourtArrival() {
-  for (const [node, kind, value, key] of [
-    [
-      document.querySelector('.law-mini'),
-      'law',
-      game.currentLaw,
-      `${game.round}:${game.trick}:${game.currentLaw}`,
-    ],
-    [$('decreeBadge'), 'decree', game.decree?.id, `${game.round}:${game.decree?.id}`],
-  ]) {
-    if (!node || !value || node.dataset.arrivalKey === key) continue;
-    node.dataset.arrivalKey = key;
-    node.dataset[kind] = value;
-    node.classList.remove('court-arrival');
-    if (
-      !$('gameScreen').classList.contains('hidden') &&
-      !matchMedia('(prefers-reduced-motion: reduce)').matches &&
-      !document.body.classList.contains('voice-light-mode')
-    ) {
-      void node.offsetWidth;
-      node.classList.add('court-arrival');
-    }
-  }
-}
 function renderAll(includeHand = true) {
   if (!game) return;
   syncLocalStatus();
-  $('currentLawName').textContent = LAWS[game.currentLaw].name.toUpperCase();
-  $('currentLawImg').src = LAWS[game.currentLaw].img;
-  $('lawUsesText').textContent = `Uso ${Math.min(2, game.lawUsage[game.currentLaw] || 1)} de 2`;
-  const lawMini = document.querySelector('.law-mini');
-  if (lawMini) lawMini.dataset.tooltip = lawTooltip(game.currentLaw);
-  const decree = game.decree;
-  $('decreeBadge').innerHTML = decree
-    ? `<small>DECRETO</small><strong>${decree.icon} ${decree.name}</strong>`
-    : `<small>DECRETO</small><strong>Escolhendo...</strong>`;
-  $('decreeBadge').dataset.tooltip = decreeTooltip(decree);
-  $('decreeBadge').tabIndex = decree?.id === 'espionagem' ? 0 : -1;
-  if (decree?.id === 'espionagem') {
-    $('decreeBadge').setAttribute('role', 'button');
-    $('decreeBadge').setAttribute('aria-label', 'Espionagem: consultar sua informação privada');
-  } else {
-    $('decreeBadge').removeAttribute('role');
-    $('decreeBadge').removeAttribute('aria-label');
-  }
-  $('trumpInfo').classList.toggle('hidden', !game.trump);
-  $('trumpSuitText').innerHTML = game.trump
-    ? `<span class="trump-glyph" style="color:${SUITS[game.trump].color}">${SUITS[game.trump].glyph}</span>`
-    : '—';
-  const announced = game.declaredLeadSuit;
-  $('leadSuitInfo').classList.toggle('hidden', !announced);
-  $('leadSuitText').textContent = announced ? SUITS[announced].name : '—';
-  animateCourtArrival();
   syncLocalSeats();
-  renderLawTracker();
-  renderTableCards();
+  syncLocalTable();
   if (includeHand) renderHand();
+}
+// Project only visible plays; hidden opponents stay inside the local engine.
+function syncLocalTable(winners) {
+  if (!game || onlineGameMode) return;
+  throneTable.setLocal(
+    {
+      round: game.round,
+      trick: game.trick,
+      phase: game.phase,
+      currentLaw: game.currentLaw,
+      lawUsage: game.lawUsage,
+      trump: game.trump,
+      declaredLeadSuit: game.declaredLeadSuit,
+      decree: game.decree ? { id: game.decree.id } : null,
+      previousWinningSuit: game.previousWinningSuit,
+      localSeat: game.localPlayerId,
+      names: game.players.map((p) => p.name),
+      plays: game.plays.map((p) => ({
+        playerId: p.playerId,
+        order: p.order,
+        hidden: p.hidden,
+        card: !p.hidden || p.playerId === game.localPlayerId ? p.card : null,
+        modifier: p.modifier || 0,
+        influenceAction: p.influenceAction || 'none',
+      })),
+    },
+    winners,
+  );
 }
 // The local engine keeps its private cards. React receives only the public view.
 function syncLocalSeats() {
@@ -1388,60 +1311,6 @@ function syncLocalSeats() {
       pairs: totalPairs(p),
     })),
   });
-}
-
-function renderLawTracker() {
-  $('lawTrackerList').innerHTML = LAW_ORDER.map(
-    (l) =>
-      `<div class="law-track-row ${l === game.currentLaw ? 'current' : ''}" data-tooltip="${escAttr(lawTooltip(l))}"><span>${LAWS[l].name}</span><span class="law-pips">${[0, 1].map((i) => `<i class="law-pip ${i < game.lawUsage[l] ? 'used' : ''}"></i>`).join('')}</span></div>`,
-  ).join('');
-}
-function renderTableCards(revealHidden = false, clear = false) {
-  for (let id = 0; id < 4; id++) {
-    const slot = $(`tableCard${id}`);
-    slot.classList.remove('winner-crown', 'winner-shadow');
-    if (clear) {
-      slot.innerHTML = `<span>J${id + 1}</span>`;
-      continue;
-    }
-    const play = game.plays.find((p) => p.playerId === id);
-    if (!play) {
-      slot.innerHTML = `<span>${escAttr(game.players[id]?.name || `J${id + 1}`)}</span>`;
-      continue;
-    }
-    if (play.hidden && !revealHidden) {
-      const mine = onlineGameMode ? play.playerId === game.localPlayerId : play.playerId === 0;
-      const canPeek = mine && play.card,
-        action = play.influenceAction || 'none';
-      const publicBadge =
-        action === 'sigilo'
-          ? '<b class="public-influence-badge">✦ SIGILO</b>'
-          : action === 'plus'
-            ? '<b class="public-influence-badge plus">✦✦ +3</b>'
-            : action === 'minus'
-              ? '<b class="public-influence-badge minus">✦✦ -3</b>'
-              : '';
-      slot.innerHTML = canPeek
-        ? `<div class="card-back private-hidden-card" tabindex="0"><span>♛</span><img class="private-hidden-peek" src="${cardAsset(play.card)}" alt="Sua carta oculta"><em>${play.modifier ? `${play.modifier > 0 ? '+3' : '-3'} → ${playValue(play)}` : 'passe o mouse'}</em>${publicBadge}</div>`
-        : `<div class="card-back"><span>♛</span>${publicBadge}</div>`;
-      slot
-        .querySelector('.private-hidden-card')
-        ?.addEventListener('click', (e) => e.currentTarget.classList.toggle('peek'));
-    } else {
-      const eff = playValue(play);
-      const mod = play.modifier
-        ? `<span class="maneuver-badge ${play.modifier > 0 ? 'plus' : 'minus'}">${play.modifier > 0 ? '+3' : '-3'} → ${eff}</span>`
-        : '';
-      slot.innerHTML = `<div class="revealed-card-wrap"><img class="card-face ${play.revealing ? 'flip-reveal' : ''}" src="${cardAsset(play.card)}" alt="${SUITS[play.card.suit].name} ${play.card.value}">${mod}</div>`;
-    }
-  }
-}
-function markWinners(crownId, shadowId) {
-  $(`tableCard${crownId}`).classList.add('winner-crown');
-  $(`tableCard${shadowId}`).classList.add('winner-shadow');
-}
-function clearTableHighlights() {
-  for (let i = 0; i < 4; i++) $(`tableCard${i}`).classList.remove('winner-crown', 'winner-shadow');
 }
 
 function renderHand() {
@@ -1650,7 +1519,7 @@ function chooseLawModal(player, valid) {
       $('modalChoices').innerHTML = valid
         .map(
           (l, i) =>
-            `<button class="choice-card" data-law="${l}" data-tooltip="${escAttr(lawTooltip(l))}"><img src="${LAWS[l].img}"><strong>${LAWS[l].name}</strong><small>Restam ${2 - game.lawUsage[l]} uso(s) antes desta escolha.</small></button>`,
+            `<button class="choice-card" data-law="${l}" data-tooltip="${escAttr(throneTable.lawTooltip(l))}"><img src="${LAWS[l].img}"><strong>${LAWS[l].name}</strong><small>Restam ${2 - game.lawUsage[l]} uso(s) antes desta escolha.</small></button>`,
         )
         .join('');
       $('modalFooter').innerHTML =
@@ -1889,16 +1758,7 @@ async function handleOnlineGameEvent(msg) {
       fatalError(new Error('O servidor tentou atribuir Coroa e Sombra ao mesmo jogador.'));
       return;
     }
-    if (game) {
-      game.plays = (msg.revealedPlays || []).map((pl) => ({
-        ...pl,
-        hidden: false,
-        modifier: pl.modifier || 0,
-        influenceAction: pl.influenceAction || 'none',
-      }));
-      renderTableCards(true);
-      markWinners(msg.crownId, msg.shadowId);
-    }
+    // Cards and winner highlights come from the validated public match snapshot.
     const crown = game?.players[msg.crownId],
       shadow = game?.players[msg.shadowId];
     if (crown && shadow) await showTrickOutcome(crown, shadow);

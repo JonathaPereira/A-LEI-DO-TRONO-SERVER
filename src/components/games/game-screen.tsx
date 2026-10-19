@@ -114,38 +114,11 @@ export function GameScreen() {
               className={'table-influence-coins'}
               aria-label={'Influências sobre a mesa'}
             ></div>
-            <div id={'tableCard0'} className={'table-card-slot slot-bottom'}>
-              <span>J1</span>
-            </div>
-            <div id={'tableCard1'} className={'table-card-slot slot-left'}>
-              <span>J2</span>
-            </div>
-            <div id={'tableCard2'} className={'table-card-slot slot-top'}>
-              <span>J3</span>
-            </div>
-            <div id={'tableCard3'} className={'table-card-slot slot-right'}>
-              <span>J4</span>
-            </div>
-            <div className={'center-info'}>
-              <div className={'law-mini'}>
-                <img id={'currentLawImg'} src={'assets/laws/ordem.svg'} alt={'Lei atual'} />
-                <div>
-                  <small>LEI ATUAL</small>
-                  <strong id={'currentLawName'}>ORDEM</strong>
-                  <span id={'lawUsesText'}>Uso 1 de 2</span>
-                </div>
-              </div>
-              <div id={'trumpInfo'} className={'trump-info hidden'}>
-                Trunfo: <strong id={'trumpSuitText'}>—</strong>
-              </div>
-              <div id={'leadSuitInfo'} className={'trump-info lead-suit-info hidden'}>
-                Naipe anunciado: <strong id={'leadSuitText'}>—</strong>
-              </div>
-              <div id={'decreeBadge'} className={'decree-badge'}>
-                <small>DECRETO</small>
-                <strong>—</strong>
-              </div>
-            </div>
+            <div id="tableCard0" className="table-card-slot slot-bottom"></div>
+            <div id="tableCard1" className="table-card-slot slot-left"></div>
+            <div id="tableCard2" className="table-card-slot slot-top"></div>
+            <div id="tableCard3" className="table-card-slot slot-right"></div>
+            <div id="throneCourtHost" className="center-info"></div>
           </section>
           <aside className={'law-tracker'}>
             <h3>Leis da rodada</h3>

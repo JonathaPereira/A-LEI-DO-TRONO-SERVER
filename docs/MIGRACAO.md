@@ -2301,6 +2301,38 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   estado tipado. Ainda restam Crônica/resultados, eventos, animações, simulação
   local e tela cheia em `court-display.js`, antes de excluir `legacy/game.js`.
 
+## Cartas jogadas e regras da mesa em React — 19/10/2026
+
+- `lib/games/throne-table.ts` projeta cartas jogadas, Lei/Decreto, trunfo, naipe
+  anunciado e destaques. Usa `throne-match` online e os parsers compartilhados
+  `readThroneCourt`/`readThronePlays` no modo local. A projeção omite cartas ocultas
+  adversárias; não retém mãos nem congela o motor ou cria outro socket/ticker.
+- A revelação online depende do estado público validado. Removida a cópia bruta
+  de `revealedPlays` do evento legado. Após o resultado, uma carta já revelada
+  permanece visível mesmo se outro snapshot a mascarar; esse conhecimento fica
+  limitado à mesma rodada/vaza e às fases posteriores ao resultado.
+- `components/games/throne-table.tsx` possui cartas, consulta privada, badges,
+  regras e usos das Leis. Slots externos, metadados e badge de Espionagem mantêm
+  seus nós. Clique/Enter/Espaço consultam apenas a própria carta oculta; atualização
+  da mesma jogada conserva a consulta, revelação/nova vaza a encerram. O runtime
+  possui destaques e chegada de Lei/Decreto, respeitando movimento reduzido/modo leve.
+- Excluídos renderizadores de cartas/Leis, helpers antigos de destaques/chegada,
+  tooltips e listener de consulta em `game.js`; removida a flag sem uso `revealing`.
+  `throne-court-copy.ts` conserva o texto contextual das regras e atende também a
+  escolha de Lei local que ainda não foi convertida.
+- Seis regressões novas cobrem privacidade, revelação, conhecimento público,
+  resultados, cópia/imutabilidade, limpeza, descarte e descrições das regras.
+  `npm test` passou, incluindo 112 modelos de jogos. Tipagem, formatação e build
+  estático passaram; 28 verificações focadas de mesa/regras/rodadas também passaram.
+- Passaram seis rodadas completas de navegador, navegação local/online e dois
+  Electron reais com os mesmos microfone/câmera/tela, peers e socket. A interface é
+  comparada ao snapshot a cada atualização. Um cenário adicional pela interface
+  local confere clique/teclado, privacidade, Manobras, nomes escapados e limpeza.
+  Capturas inspecionadas; evidências em `artifacts/throne-table-*`. Mídia sintética.
+- Próximo recorte: Crônica e resultados. Continuam pendentes eventos/efeitos,
+  controles e motor local em `legacy/game.js`, tela cheia em `court-display.js` e,
+  depois, separação das regras/coordenação do backend. Ainda não excluir esses arquivos.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

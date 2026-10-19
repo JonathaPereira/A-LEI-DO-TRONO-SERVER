@@ -8,6 +8,11 @@ const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
 const { installCanvasCamera } = require('./camera-fixture');
 const { assertThroneSeats } = require('./throne-seat-assertions.cjs');
+const {
+  assertThroneTable,
+  watchThroneTable,
+  exerciseThroneTableControls,
+} = require('./throne-table-assertions.cjs');
 
 test(
   'React throne choices complete authoritative rounds and preserve private hands, previews and call tracks',
@@ -99,13 +104,14 @@ test(
             const page = await context.newPage();
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
-              if (/\[Throne(?:Choices|Hand|Match|Private|Seats)\]/.test(message.text()))
+              if (/\[Throne(?:Choices|Hand|Match|Private|Seats|Table)\]/.test(message.text()))
                 warnings.push(message.text());
             });
             page.on('dialog', (dialog) => dialog.accept());
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoAuth?.ready);
             await page.evaluate(() => window.TronoAuth.ready);
+            await watchThroneTable(page);
             await page.evaluate(() => {
               window.__matchHosts = {
                 owner: window.TronoThroneMatch,
@@ -343,6 +349,7 @@ test(
                     () => window.TronoThroneHand.getSnapshot().context,
                   );
                   if (!hand || hand.turn !== hand.you || hand.automaticReserve) continue;
+                  await assertThroneTable(page, !seen.has('public-seats'));
                   await assertThroneSeats(page, !seen.has('public-seats'));
                   seen.add('public-seats');
                   if (!seen.has('match-clock')) {
@@ -373,6 +380,10 @@ test(
                       ),
                     );
                     await assertThroneSeats(page);
+                    await assertThroneTable(page);
+                    await page.screenshot({
+                      path: path.resolve(__dirname, `../artifacts/throne-table-${decree}.png`),
+                    });
                     seen.add('match-clock');
                   }
                   if (decree === 'reserva' && !seen.has('hand-responsive')) {
@@ -480,7 +491,12 @@ test(
               }),
             );
             await assertThroneSeats(page);
+            await assertThroneTable(page);
+            assert.deepEqual(await page.evaluate(() => window.__tableFailures), []);
+            assert(await page.evaluate(() => window.__tableStates.has('result')));
             await page.evaluate(() => window.TronoThroneBoard.backToLobby());
+            await assertThroneTable(page);
+            assert.equal(await page.evaluate(() => window.TronoThroneTable.getSnapshot()), null);
             assert.equal(
               await page.evaluate(() => window.TronoThroneSeats.getSnapshot().players.length),
               0,
@@ -508,6 +524,8 @@ test(
               await page.evaluate(() => window.TronoThroneHand.getSnapshot().context),
               null,
             );
+            if (decree === 'espionagem') await exerciseThroneTableControls(page);
+            assert.deepEqual(await page.evaluate(() => window.__tableFailures), []);
           } finally {
             peers.forEach((peer) => peer.terminate());
             await context?.close();

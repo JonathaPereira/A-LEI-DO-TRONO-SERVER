@@ -1,5 +1,10 @@
 import type { ThroneLaw, ThroneSuit } from '../../types/throne-choices';
-import type { ThroneMatchState, ThronePublicPlayer } from '../../types/throne-match';
+import type {
+  ThroneMatchState,
+  ThronePublicPlayer,
+  ThroneVisiblePlay,
+} from '../../types/throne-match';
+import type { ThroneCourtState } from '../../types/throne-table';
 import { record } from '../files/protocol.ts';
 import { freezeGame } from './freeze.ts';
 import {
@@ -82,12 +87,8 @@ export function readThronePublicPlayers(value: unknown): readonly ThronePublicPl
   return freezeGame(players);
 }
 
-export function readThroneMatch(value: unknown, seat: number): ThroneMatchState {
-  const raw = object(value),
-    you = integer(raw.youSeat, 3);
-  if (seat !== you) throw invalid();
-  const players = readThronePublicPlayers(raw.players);
-  const plays = array(raw.plays, 4).map((value, index) => {
+export function readThronePlays(value: unknown, you: number | null): readonly ThroneVisiblePlay[] {
+  const plays = array(value, 4).map((value, index) => {
     const p = object(value),
       playerId = integer(p.playerId, 3),
       hidden = flag(p.hidden);
@@ -113,16 +114,17 @@ export function readThroneMatch(value: unknown, seat: number): ThroneMatchState 
   });
   unique(plays.map((p) => p.playerId));
   unique(plays.flatMap((p) => (p.card ? [p.card.id] : [])));
+  return freezeGame(plays);
+}
+
+export function readThroneCourt(value: unknown): ThroneCourtState {
+  const raw = object(value);
   const usage = object(raw.lawUsage),
     lawUsage = Object.fromEntries(throneLaws.map((law) => [law, integer(usage[law], 2)])) as Record<
       ThroneLaw,
       number
     >;
   return freezeGame({
-    online: true,
-    localPlayerId: you,
-    players,
-    plays,
     round: integer(raw.round, 3, 1),
     trick: integer(raw.trick, 10, 1),
     phase: member(raw.phase, thronePhases),
@@ -131,9 +133,24 @@ export function readThroneMatch(value: unknown, seat: number): ThroneMatchState 
     trump: suit(raw.trump),
     declaredLeadSuit: suit(raw.declaredLeadSuit),
     decree: raw.decree == null ? null : member(object(raw.decree).id, throneDecrees),
+    previousWinningSuit: suit(raw.previousWinningSuit),
+  });
+}
+
+export function readThroneMatch(value: unknown, seat: number): ThroneMatchState {
+  const raw = object(value),
+    you = integer(raw.youSeat, 3);
+  if (seat !== you) throw invalid();
+  const players = readThronePublicPlayers(raw.players);
+  const plays = readThronePlays(raw.plays, you);
+  return freezeGame({
+    ...readThroneCourt(raw),
+    online: true,
+    localPlayerId: you,
+    players,
+    plays,
     lastCrown: position(raw.lastCrown),
     lastShadow: position(raw.lastShadow),
-    previousWinningSuit: suit(raw.previousWinningSuit),
     leader: position(raw.leader),
     turn: position(raw.turn),
     turnDeadline:

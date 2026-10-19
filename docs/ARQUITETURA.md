@@ -228,8 +228,8 @@ os observadores no descarte. Não há socket, captura ou player adicional.
 `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
 e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
 online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
-A apresentação da mesa e cinematics ainda estão no controlador antigo. O motor local e seus controles continuam
-isolados até a conversão correspondente.
+Crônica, resultados e animações ainda passam pelo controlador antigo. O motor
+local e seus controles continuam isolados até a conversão correspondente.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
@@ -276,7 +276,35 @@ no descarte. A atualização síncrona mantém a geometria disponível para os e
 legados que a consultam imediatamente. Animações temporárias só podem inserir
 filhos nos hosts vazios `playerEffects0..3`; não podem reescrever os filhos React.
 `renderPlayerPanels`, `renderTableInfluenceCoins` e `shownPrestige` foram removidos.
-Cartas jogadas, Leis/Decretos, resultados e efeitos continuam no controlador antigo.
+As cartas jogadas e Leis/Decretos usam o módulo abaixo; resultados e os demais
+efeitos continuam no controlador antigo.
+
+`lib/games/throne-table.ts` possui a apresentação de cartas jogadas, Lei/Decreto,
+trunfo, naipe anunciado e destaques de Coroa/Sombra. Consome o mesmo estado público
+de `throne-match`; não escuta outro socket nem lê as cartas brutas do evento de
+resultado. `readThroneCourt` e `readThronePlays` compartilham a validação com o
+parser da partida. A projeção local omite cartas ocultas dos adversários antes de
+cruzar essa interface, copiando somente os dados visíveis e mantendo o motor mutável.
+
+Uma carta adversária só aparece após a revelação validada. Nas fases posteriores
+ao resultado, snapshots que voltam a mascará-la conservam apenas o conhecimento
+já público da mesma rodada/vaza. Nova vaza, cancelamento ou invalidação limpam
+essas cartas, consultas e destaques. Ticks do relógio não notificam a mesa.
+As descrições contextuais das regras ficam em `throne-court-copy.ts`, reutilizadas
+pela escolha de Lei local que ainda permanece no legado.
+
+`components/games/throne-table.tsx` renderiza cartas, badges de Influência/Manobra,
+metadados e usos de Leis nos hosts estáveis. A consulta da própria carta oculta usa
+React e responde a clique, Enter e Espaço; persiste nas atualizações da mesma
+jogada e termina na revelação/troca de vaza. `throne-table-runtime.tsx` conserva os
+slots externos usados pelos efeitos de chegada, possui destaques/entrada da Lei e
+Decreto e respeita movimento reduzido/modo leve. O listener de Espionagem continua
+com seu dono privado e no mesmo nó. Descartar libera raiz, host e assinatura.
+
+`renderTableCards`, `renderLawTracker`, `markWinners`, `clearTableHighlights`,
+`animateCourtArrival`, tooltips e listeners de consulta legados foram removidos,
+além da cópia de `revealedPlays` recebida pelo evento bruto e da flag `revealing`.
+Animações de deslocamento, resultados, Crônica e simulação local ainda usam a ponte.
 
 `lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
 confirmações, consulta posterior e espera pela animação de troca. O parser copia e

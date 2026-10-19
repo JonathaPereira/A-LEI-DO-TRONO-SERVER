@@ -2,6 +2,7 @@
 const { expect } = require('@playwright/test');
 const assert = require('node:assert/strict');
 const { assertThroneSeats } = require('./throne-seat-assertions.cjs');
+const { assertThroneTable } = require('./throne-table-assertions.cjs');
 async function exerciseThroneChoices({ page, receiver }) {
   await page.evaluate(() => {
     const call = window.TronoSocial;
@@ -47,6 +48,7 @@ async function exerciseThroneChoices({ page, receiver }) {
     );
     await expect(client.locator('#throneChoiceDialog .choice-card')).toHaveCount(10);
     await assertThroneSeats(client, true);
+    await assertThroneTable(client, true);
     assert(
       await client.evaluate(() =>
         Object.isFrozen(window.TronoThroneChoices.getSnapshot().context.hand[0]),
@@ -109,6 +111,8 @@ async function exerciseThroneChoices({ page, receiver }) {
   assert.equal(played.size, 2, 'Both Electron windows played through their React hand');
   await assertThroneSeats(page);
   await assertThroneSeats(receiver);
+  await assertThroneTable(page);
+  await assertThroneTable(receiver);
   for (const client of [page, receiver])
     await client.evaluate(() => window.TronoThroneBoard.backToLobby());
   assert(
