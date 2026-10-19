@@ -1,4 +1,4 @@
-M&N · A Lei do Trono — Windows 0.2.10
+M&N · A Lei do Trono — Windows 0.2.11
 
 1. Instalação nova: instale MN-Trono-0.2.11-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
