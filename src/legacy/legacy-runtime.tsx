@@ -15,6 +15,8 @@ import { initializeHandLayout } from '../lib/games/hand-layout';
 import { initializeCommunity } from '../components/channels/community-runtime';
 import { initializeChannelManagement } from '../components/channels/management-runtime';
 import { initializeMessenger } from '../components/messenger/runtime';
+import { initializeGameLibrary } from '../components/games/library-runtime';
+import { initializeRoguelite } from '../components/games/roguelite-runtime';
 
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
@@ -92,6 +94,8 @@ export function LegacyRuntime() {
           initializeNotifications(window);
         }
       }
+      initializeRoguelite(window);
+      initializeGameLibrary(window);
       initializeMessenger(window);
       prepareCallSettings(window);
       initializeCallToolbar(window);

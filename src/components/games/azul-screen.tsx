@@ -1,3 +1,4 @@
+import { GameAction } from './library-controls';
 export function AzulScreen() {
   return (
     <>
@@ -8,14 +9,15 @@ export function AzulScreen() {
       >
         <header className={'az-heading'}>
           <div className={'az-title'}>
-            <button
+            <GameAction
+              destination="library"
               id={'azulBack'}
               type={'button'}
               className={'az-icon-button'}
               aria-label={'Voltar ao catálogo de jogos'}
             >
               ‹
-            </button>
+            </GameAction>
             <div>
               <span className={'az-eyebrow'}>ATELIÊ M&amp;N</span>
               <h1>

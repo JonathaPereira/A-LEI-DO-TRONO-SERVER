@@ -1,5 +1,5 @@
 'use strict';
-window.TronoGames = (() => {
+window.TronoAzul = (() => {
   const $ = (id) => document.getElementById(id),
     R = window.AzulRules,
     P = window.AzulPresentation;
@@ -40,24 +40,6 @@ window.TronoGames = (() => {
     n.setAttribute('aria-label', color === 5 ? 'Marcador de primeiro jogador' : R.colors[color]);
     return n;
   }
-  function show(id) {
-    if (id !== 'azulScreen') {
-      finishReplay();
-      void exitFullscreen();
-    }
-    window.TronoPortal.showOnly(id);
-    window.TronoSocial.showForRoom(false);
-    document.body.dataset.gamesView = id === 'gamesScreen' ? 'library' : 'azul';
-  }
-  function openLibrary() {
-    show('gamesScreen');
-    if (window.TronoAuth.user) void request('list');
-  }
-  function openThrone() {
-    if (window.TronoDesktopShell) return window.TronoDesktopShell.navigate('throne');
-    if (window.TronoAppLayout) return window.TronoAppLayout.navigate('throne');
-    window.TronoPortal.openGame(true);
-  }
   async function request(action, payload = {}) {
     try {
       if (!(await window.TronoNetwork.ensureAzul())) return false;
@@ -76,7 +58,9 @@ window.TronoGames = (() => {
     void request('ranking', { requestId: rankingRequest });
   }
   function openAzul() {
-    show('azulScreen');
+    window.TronoPortal.showOnly('azulScreen');
+    window.TronoSocial.showForRoom(false);
+    document.body.dataset.gamesView = 'azul';
     render();
     void request('list');
     refreshRanking();
@@ -899,40 +883,6 @@ window.TronoGames = (() => {
     content.append(table);
   }
   function bind() {
-    const side = el('nav');
-    side.id = 'gamesSideNav';
-    side.setAttribute('aria-label', 'Jogos da comunidade');
-    side.append(
-      el('strong', '', 'Sua ludoteca'),
-      button('Todos os jogos', openLibrary),
-      button('♛ A Lei do Trono', openThrone),
-      button('✥ Azul', openAzul),
-      button('✦ Cinzas do Abismo', () => window.TronoRoguelite.open()),
-      button('◇ Splendor', () => window.TronoSplendor.open()),
-      button('✉ Love Letter', () => window.TronoLoveLetter.open()),
-      button('🎙 Comunidade', () => window.TronoAppLayout.navigate('community')),
-      el('small', '', 'Escolha uma mesa e continue na chamada.'),
-    );
-    document.body.append(side);
-    $('gamesHome').onclick = () => window.TronoAppLayout.navigate('home');
-    $('gamesVoice').onclick = () => window.TronoAppLayout.navigate('community');
-    $('playThrone').onclick = openThrone;
-    $('playAzul').onclick = openAzul;
-    $('azulBack').onclick = openLibrary;
-    document.addEventListener(
-      'click',
-      (e) => {
-        const target = e.target.closest(
-          '#openGamePortalBtn,#gamePortalCard,.portal-nav-btn[data-portal-target=game]',
-        );
-        if (target && !e.target.closest('#openGuestGameBtn')) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          openLibrary();
-        }
-      },
-      true,
-    );
     window.TronoNetwork.onMessage((msg) => {
       if (msg.type === 'azul-state') {
         const savedBefore = room?.recordStatus === 'saved';
@@ -1020,9 +970,12 @@ window.TronoGames = (() => {
   }
   window.addEventListener('trono:ready', bind);
   return {
-    openLibrary,
-    openAzul,
-    openThrone,
+    open: openAzul,
+    refreshRooms: () => request('list'),
+    leaveView() {
+      finishReplay();
+      void exitFullscreen();
+    },
     get room() {
       return room;
     },

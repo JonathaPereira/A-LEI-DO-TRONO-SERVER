@@ -1,3 +1,4 @@
+import { GameAction } from './library-controls';
 export function SplendorScreen() {
   return (
     <>
@@ -8,14 +9,15 @@ export function SplendorScreen() {
       >
         <header className={'sp-heading'}>
           <div className={'sp-brand'}>
-            <button
+            <GameAction
+              destination="library"
               id={'splendorBack'}
               type={'button'}
               className={'sp-button'}
               aria-label={'Voltar ao catálogo de jogos'}
             >
               ‹ Jogos
-            </button>
+            </GameAction>
             <h1>
               SPLENDOR<small>GEMAS · COMÉRCIO · PRESTÍGIO</small>
             </h1>

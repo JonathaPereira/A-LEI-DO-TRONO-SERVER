@@ -209,6 +209,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         channelFilesOwner: window.TronoChannelFiles,
         messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
         messengerOwner: window.TronoDirectMessages,
+        games: ['gamesSideNav','rogueliteScreen','rogueliteBack','rogueliteFullscreen'].map(id => document.getElementById(id)),
+        gameOwners: [window.TronoGameLibrary, window.TronoRogueliteHost],
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -236,6 +238,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
+          games: window.TronoGameLibrary === before.gameOwners[0] && window.TronoRogueliteHost === before.gameOwners[1] && before.games.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -249,6 +252,29 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
+    // The game host keeps the same iframe/run and leaves the native call intact.
+    await page.evaluate(() => window.TronoGames.openLibrary());
+    await page.locator('#playRoguelite').click();
+    const embeddedGame = page.frameLocator('#rogueliteFrame');
+    // A cold desktop cache prepares the complete asset manifest before boot.
+    await expect(page.locator('#rogueliteFrame')).toBeAttached({timeout: 65000});
+    await expect(embeddedGame.locator('#startBtn')).toBeVisible({timeout: 20000});
+    await expect.poll(() => page.evaluate(() => window.TronoRogueliteHost.getSnapshot().ready)).toBe(true);
+    await page.locator('#rogueliteFrame').evaluate(frame => { window.__gameFrame = frame; frame.contentWindow.__migrationMarker = 'same-run'; });
+    await preserved();
+    await page.locator('#rogueliteBack').click();
+    await expect(page.locator('#gamesScreen')).toBeVisible();
+    await expect.poll(() => embeddedGame.locator('html').getAttribute('data-host-active')).toBe('false');
+    await preserved();
+    await page.locator('#playRoguelite').click();
+    assert.equal(await page.locator('#rogueliteFrame').evaluate(frame => frame === window.__gameFrame && frame.contentWindow.__migrationMarker === 'same-run'), true);
+    for (const layout of ['discord', 'original']) {
+      await page.evaluate(value => window.TronoAppLayout.apply(value), layout);
+      await preserved();
+    }
+    await page.locator('#rogueliteBack').click();
+    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+    await preserved();
     // Community UI moves independently while all native sources stay live.
     const directPeer = await receiver.evaluate(() => window.TronoAuth.user.id);
     const directOwner = await page.evaluate(() => window.TronoAuth.user.id);

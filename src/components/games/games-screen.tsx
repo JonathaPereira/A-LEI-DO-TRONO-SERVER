@@ -1,3 +1,4 @@
+import { GameAction } from './library-controls';
 export function GamesScreen() {
   return (
     <>
@@ -13,21 +14,32 @@ export function GamesScreen() {
             <p>Sua chamada continua. O próximo jogo é só um convite.</p>
           </div>
           <div className={'games-heading-actions'}>
-            <button id={'gamesVoice'} type={'button'} className={'games-voice-link'}>
+            <GameAction
+              destination="community"
+              id={'gamesVoice'}
+              type={'button'}
+              className={'games-voice-link'}
+            >
               🎙 Voltar à comunidade
-            </button>
-            <button
+            </GameAction>
+            <GameAction
+              destination="home"
               id={'gamesHome'}
               type={'button'}
               className={'az-text-button'}
               aria-label={'M&N · Voltar ao início'}
             >
               M&amp;N
-            </button>
+            </GameAction>
           </div>
         </header>
         <div className={'games-catalog'}>
-          <button id={'playThrone'} className={'games-card games-card-throne'} type={'button'}>
+          <GameAction
+            destination="throne"
+            id={'playThrone'}
+            className={'games-card games-card-throne'}
+            type={'button'}
+          >
             <span className={'games-cover'}>
               <img
                 className={'games-throne-art'}
@@ -62,8 +74,13 @@ export function GamesScreen() {
                 </i>
               </b>
             </span>
-          </button>
-          <button id={'playAzul'} className={'games-card games-card-azul'} type={'button'}>
+          </GameAction>
+          <GameAction
+            destination="azul"
+            id={'playAzul'}
+            className={'games-card games-card-azul'}
+            type={'button'}
+          >
             <span className={'games-cover'}>
               <img
                 className={'games-box-art'}
@@ -96,8 +113,13 @@ export function GamesScreen() {
                 </i>
               </b>
             </span>
-          </button>
-          <button id={'playRoguelite'} className={'games-card games-card-cinzas'} type={'button'}>
+          </GameAction>
+          <GameAction
+            destination="roguelite"
+            id={'playRoguelite'}
+            className={'games-card games-card-cinzas'}
+            type={'button'}
+          >
             <span className={'games-cover'}>
               <img
                 className={'games-cinzas-art'}
@@ -132,8 +154,13 @@ export function GamesScreen() {
                 </i>
               </b>
             </span>
-          </button>
-          <button id={'playSplendor'} className={'games-card games-card-splendor'} type={'button'}>
+          </GameAction>
+          <GameAction
+            destination="splendor"
+            id={'playSplendor'}
+            className={'games-card games-card-splendor'}
+            type={'button'}
+          >
             <span className={'games-cover'}>
               <img
                 src={'assets/games/splendor-cover.webp'}
@@ -165,8 +192,9 @@ export function GamesScreen() {
                 </i>
               </b>
             </span>
-          </button>
-          <button
+          </GameAction>
+          <GameAction
+            destination="love-letter"
             id={'playLoveLetter'}
             className={'games-card games-card-love-letter'}
             type={'button'}
@@ -195,7 +223,7 @@ export function GamesScreen() {
                 </i>
               </b>
             </span>
-          </button>
+          </GameAction>
         </div>
         <p className={'games-footnote'}>
           Partidas online e bots · Controles da chamada sempre disponíveis no aplicativo.

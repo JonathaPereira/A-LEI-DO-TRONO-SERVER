@@ -2,11 +2,11 @@
 
 // Layout tests need a stable live video source across resizes and repeated opens.
 // Chromium's fake camera may disappear on Windows; microphone capture stays native/fake-device.
-function installCanvasCamera() {
+function installCanvasCamera({ display = false } = {}) {
+  if (window.top !== window) return;
   const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   const sources = new Set();
-  navigator.mediaDevices.getUserMedia = async options => {
-    if (!options.video) return capture(options);
+  function videoSource() {
     const canvas = document.createElement('canvas');
     canvas.width = 1280;
     canvas.height = 720;
@@ -21,9 +21,15 @@ function installCanvasCamera() {
     const timer = setInterval(paint, 1000 / 30), stop = video.stop.bind(video);
     sources.add(canvas);
     video.stop = () => { clearInterval(timer); sources.delete(canvas); stop(); };
+    return stream;
+  }
+  navigator.mediaDevices.getUserMedia = async options => {
+    if (!options.video) return capture(options);
+    const stream = videoSource();
     if (options.audio)
       for (const track of (await capture({ audio: options.audio })).getTracks()) stream.addTrack(track);
     return stream;
   };
+  if (display) navigator.mediaDevices.getDisplayMedia = async () => videoSource();
 }
 module.exports = { installCanvasCamera };

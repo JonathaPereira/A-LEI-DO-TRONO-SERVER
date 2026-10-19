@@ -836,8 +836,6 @@ window.TronoLoveLetter = (() => {
     fullscreenState();
   }
   window.addEventListener('trono:ready', () => {
-    $('playLoveLetter').onclick = open;
-    $('loveLetterBack').onclick = () => window.TronoGames.openLibrary();
     $('loveLetterRulesButton').onclick = () => $('loveLetterRulesDialog').showModal();
     for (const id of ['loveLetterPlayDialog', 'loveLetterRulesDialog', 'loveLetterPrivateDialog'])
       $(id).querySelector('[data-close]').onclick = dismiss;

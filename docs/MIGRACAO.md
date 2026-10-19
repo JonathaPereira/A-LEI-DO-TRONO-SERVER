@@ -1858,9 +1858,43 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximo recorte: navegação/telas e controladores dos jogos ainda em `src/legacy/`.
   Depois, extração de backend e consolidação dos estilos conforme a ordem abaixo.
 
+## Catálogo e host de Cinzas — 18/10/2026
+
+- Navegação do catálogo e controles de retorno/lateral passaram a TypeScript e
+  React em `lib/games/library.ts` e `components/games/`. O runtime projeta a tela
+  visível e delega aos donos existentes, sem outro socket ou estado de partida.
+- A navegação saiu do antigo `legacy/games.js`. O controlador do Azul permanece
+  em `legacy/azul.js`, explicitamente separado: mesa, ranking, replay, regras e
+  renderização desse jogo ainda serão convertidos. O rename não é uma conversão
+  completa do Azul. `TronoGames` é uma fachada para os chamadores restantes.
+- O host de Cinzas passou a `lib/games/roguelite.ts` e superfícies React.
+  Removidos `legacy/roguelite-host.js` inteiro (173 linhas), sua entrada no
+  manifesto e listeners antigos de catálogo/retorno em Azul, Splendor e Love Letter.
+  CSS e recursos de jogos utilizados permanecem.
+- Preparação desktop conserva cache, dois downloads e progresso por bytes.
+  Manifestos inválidos, arquivos truncados, respostas canceladas e prontidão
+  atrasada não criam um frame válido. Sair durante a preparação cancela;
+  uma partida pronta conserva o mesmo iframe ao navegar, com pausa por visibilidade.
+  O receptor valida origem e janela do iframe atual. Tela cheia conserva gesto,
+  fallback e Escape, libera a operação após recusa e invalida conclusões antigas.
+- Dez regressões de modelos integram `test:games:models` e `npm test`.
+  `test:games:ui` executa as interfaces dos quatro jogos em sequência. Cinzas
+  reutiliza a política de scripts do Electron, incluindo hashes do bootstrap Next.
+  Azul/Cinzas reutilizam o helper de câmera sintética já usado pelos outros jogos,
+  agora também com tela sintética retida durante a vida da captura.
+- Tipagem, formatação, build e suíte completa passaram, além das dez regressões
+  de modelos e dez casos de interface dos jogos. Electron real abriu Cinzas,
+  conservou o iframe ao voltar/reabrir e alternou os layouts mantendo os mesmos
+  hosts, controles, microfone, câmera, tela, peers e socket, com mídia sintética.
+  Evidências locais: `artifacts/games-*`. Isso não mede desempenho de captura
+  em um jogo real; o caminho de captura/negociação não foi alterado neste recorte.
+- Próximo recorte: controlador do Azul (`legacy/azul.js`), seguido dos demais
+  controladores de jogos. Capturas, transporte e o motor independente de Cinzas
+  continuam com seus donos atuais.
+
 ## Próximas alterações, em ordem
 
-1. Converter navegação de jogos e controladores dos jogos.
+1. Converter os controladores dos jogos, começando pelo Azul.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

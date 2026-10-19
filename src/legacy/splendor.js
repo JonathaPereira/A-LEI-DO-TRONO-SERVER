@@ -1191,8 +1191,6 @@ window.TronoSplendor = (() => {
     fullscreenState();
   }
   window.addEventListener('trono:ready', () => {
-    $('playSplendor').onclick = open;
-    $('splendorBack').onclick = () => window.TronoGames.openLibrary();
     $('splendorRulesButton').onclick = () => $('splendorRulesDialog').showModal();
     for (const id of [
       'splendorCardDialog',

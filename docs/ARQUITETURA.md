@@ -119,10 +119,33 @@ O bootstrap instala `TronoAppLayout` antes do ready e monta a estrutura antes do
 posicionadores. A observação da visibilidade das telas ainda legadas permanece na
 ponte; `legacy/app-layout.js` foi excluído.
 
-A seleção/troca de canais e a navegação das telas de jogos ainda passam por
-`legacy/game.js`; o shell desktop delega a esses donos por `lib/desktop/shell.ts`. Os cliques React delegam a esse fluxo, que
-consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
+A seleção/troca de canais e a navegação de A Lei do Trono ainda passam por
+`legacy/game.js`; o shell desktop delega a esses donos por `lib/desktop/shell.ts`.
+Esse fluxo consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
 consulta `lib/voice/navigation.ts`; os métodos públicos de `TronoSocial` são adaptadores.
+
+`lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
+visível, sem duplicar participação, partidas ou recursos de mídia. Botões do
+catálogo, retornos e navegação lateral são React em `components/games/`.
+`library-runtime.tsx` integra portal, shell e os donos dos jogos; o observador
+acompanha também mudanças externas de tela e é liberado no descarte.
+`TronoGames` conserva os chamadores antigos por delegação. O controlador restante
+do Azul foi separado em `legacy/azul.js`/`TronoAzul`: regras, mesa, replay,
+ranking e pintura desse jogo ainda não foram convertidos. `legacy/games.js` saiu.
+
+`lib/games/roguelite.ts` possui preparação dos recursos de Cinzas, progresso,
+cancelamento, prontidão e tela cheia. Valida caminhos/tamanhos do manifesto e
+mantém dois downloads concorrentes no desktop. A verificação de hashes e a
+persistência do cache continuam no Electron; o host não possui saves ou regras.
+Cada tentativa tem uma geração e uma identidade de iframe. Sair durante o
+carregamento cancela a tentativa; sair depois de pronto conserva o mesmo iframe
+e envia sua visibilidade à partida, que pausa seu próprio renderizador.
+Há prazo total de preparação e de prontidão, repetição após erro e proteção
+contra conclusões de tela cheia após sair. Somente o iframe atual, com origem
+exata, pode confirmar prontidão. `roguelite-contents.tsx` renderiza controles,
+progresso e iframe; `roguelite-runtime.tsx` possui listeners e descarte do host.
+`legacy/roguelite-host.js` e sua entrada no manifesto foram excluídos. O jogo
+embutido em `public/roguelite/` permanece como recurso independente.
 
 `lib/channels/management.ts` possui rascunho e operações de canais, edição de cargos,
 feedback e consultas HTTP da comunidade. A lista administrativa projeta o catálogo

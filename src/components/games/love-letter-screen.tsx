@@ -1,3 +1,4 @@
+import { GameAction } from './library-controls';
 export function LoveLetterScreen() {
   return (
     <>
@@ -8,14 +9,15 @@ export function LoveLetterScreen() {
       >
         <header className={'ll-heading'}>
           <div className={'ll-brand'}>
-            <button
+            <GameAction
+              destination="library"
               id={'loveLetterBack'}
               type={'button'}
               className={'ll-button'}
               aria-label={'Voltar aos jogos'}
             >
               ‹ Jogos
-            </button>
+            </GameAction>
             <h1>
               LOVE LETTER<small>2ª EDIÇÃO · INTRIGA NA CORTE</small>
             </h1>
