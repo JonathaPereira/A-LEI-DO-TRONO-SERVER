@@ -7,6 +7,7 @@ const path = require('node:path'),
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
 const { installCanvasCamera } = require('./camera-fixture');
+const { assertThroneSeats } = require('./throne-seat-assertions.cjs');
 
 test(
   'React throne choices complete authoritative rounds and preserve private hands, previews and call tracks',
@@ -98,7 +99,7 @@ test(
             const page = await context.newPage();
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
-              if (/\[Throne(?:Choices|Hand|Match|Private)\]/.test(message.text()))
+              if (/\[Throne(?:Choices|Hand|Match|Private|Seats)\]/.test(message.text()))
                 warnings.push(message.text());
             });
             page.on('dialog', (dialog) => dialog.accept());
@@ -342,6 +343,8 @@ test(
                     () => window.TronoThroneHand.getSnapshot().context,
                   );
                   if (!hand || hand.turn !== hand.you || hand.automaticReserve) continue;
+                  await assertThroneSeats(page, !seen.has('public-seats'));
+                  seen.add('public-seats');
                   if (!seen.has('match-clock')) {
                     await expect(page.locator('#roundBadge')).toHaveText(`Rodada ${s.round}/3`);
                     await expect(page.locator('#trickBadge')).toHaveText(`Vaza ${s.trick}/10`);
@@ -369,6 +372,7 @@ test(
                           document.getElementById('turnNoticeClock').textContent,
                       ),
                     );
+                    await assertThroneSeats(page);
                     seen.add('match-clock');
                   }
                   if (decree === 'reserva' && !seen.has('hand-responsive')) {
@@ -475,7 +479,12 @@ test(
                 );
               }),
             );
+            await assertThroneSeats(page);
             await page.evaluate(() => window.TronoThroneBoard.backToLobby());
+            assert.equal(
+              await page.evaluate(() => window.TronoThroneSeats.getSnapshot().players.length),
+              0,
+            );
             await expect(page.locator('#throneChoiceDialog')).toBeHidden();
             await expect(page.locator('#thronePrivateDialog')).toBeHidden();
             assert.equal(

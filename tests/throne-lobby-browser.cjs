@@ -7,6 +7,7 @@ const path = require('node:path'),
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
 const { installCanvasCamera } = require('./camera-fixture');
+const { assertThroneSeats } = require('./throne-seat-assertions.cjs');
 test(
   'throne React lobby handles seats, rejected transfers, online/local games and preserves live call resources',
   { timeout: 120000 },
@@ -211,6 +212,14 @@ test(
       await expect(page.locator('#gameScreen')).toBeVisible();
       await expect.poll(() => page.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
       assert(await page.evaluate(() => !window.__LeiDoTrono.getState().online));
+      await assertThroneSeats(page, true);
+      assert(
+        await page.evaluate(() => !Object.isFrozen(window.__LeiDoTrono.getState().players[0].hand)),
+      );
+      for (const layout of ['discord', 'original']) {
+        await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+        await assertThroneSeats(page);
+      }
       await preserved();
       await page.evaluate(() => document.getElementById('restartBtn').click());
       await expect(page.locator('#setupScreen')).toBeVisible();

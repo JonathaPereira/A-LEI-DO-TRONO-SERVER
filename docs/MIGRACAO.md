@@ -2273,6 +2273,34 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   da instalação continuavam com alvo/identidade originais e `Electron.lnk` não
   reapareceu. Nenhum instalador foi executado ou publicado nesta correção.
 
+## Assentos públicos e Influência em React — 19/10/2026
+
+- `lib/games/throne-seats.ts` usa o estado público online já validado. No local,
+  recebe uma projeção limitada pelo parser compartilhado `readThronePublicPlayers`:
+  nomes, contagens, marcadores e cartas públicas. Não retém mãos, Reserva privada
+  ou Espionagem e não congela os objetos do motor local.
+- `components/games/throne-seats.tsx` possui nomes/papéis, placares, Prestígio,
+  pips de Influência, cartas da Corte/Desafio e moedas. Portais preservam os painéis
+  externos, nomes, bancos de moedas e hosts de efeitos entre as jogadas. Efeitos
+  temporários do legado escrevem apenas nos filhos de `playerEffects0..3`.
+- Excluídos `renderPlayerPanels`, `renderTableInfluenceCoins`, `shownPrestige`
+  e as respectivas montagens de HTML. `syncLocalSeats` projeta somente o motor
+  local; o online não passa mais pelo renderer antigo dos assentos. Não há outro
+  socket, ticker ou dono de mídia. Ticks do relógio não notificam os assentos.
+- Quatro regressões novas cobrem privacidade, cópia/imutabilidade, duplicatas,
+  contadores inválidos, demo, cancelamento e descarte. `npm test` passou,
+  incluindo 106 testes de modelos de jogos; tipagem, formatação e build passaram.
+  Os 27 testes básicos do desktop também passaram.
+- Passaram seis rodadas completas no navegador, navegação local/online e a
+  regressão com dois Electron reais. Comparações entre snapshot e DOM conferem
+  placares, Influência, turno, contagens/cartas públicas e identidade dos nós,
+  inclusive um efeito externo preservado durante atualizações React. Microfone,
+  câmera, tela, peers e socket permaneceram ativos. Mídia sintética; evidências
+  em `artifacts/throne-seats-*` e capturas das suítes existentes.
+- Próximo recorte: cartas jogadas e apresentação de Leis/Decretos a partir do
+  estado tipado. Ainda restam Crônica/resultados, eventos, animações, simulação
+  local e tela cheia em `court-display.js`, antes de excluir `legacy/game.js`.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

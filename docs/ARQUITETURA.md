@@ -260,6 +260,24 @@ animação, cujo estado de exibição ainda pode receber revelações dos evento
 Não interpreta pacotes nem possui outro relógio. Os demais eventos online e o
 restante da mesa ainda precisam ser convertidos.
 
+`lib/games/throne-seats.ts` projeta os assentos públicos. No online, reutiliza
+os jogadores do estado validado de `throne-match`, sem outro socket ou parser de
+mensagens. No local, `syncLocalSeats` envia somente contagens, marcadores e cartas
+já públicas; `readThronePublicPlayers` copia/valida esses campos com o mesmo
+contrato online, sem reter mãos/Reserva/Espionagem ou congelar o motor local.
+Atualizações iguais e ticks do relógio não redesenham os assentos; limpar a partida
+ou invalidar o estado online também limpa sua apresentação.
+
+`components/games/throne-seats.tsx` renderiza nomes, papéis, placares, Prestígio,
+Influência, cartas públicas e moedas por portais nos quatro painéis existentes.
+O runtime preserva os painéis externos e os nós das moedas durante a partida,
+atualiza somente as classes de turno/participante local e libera root/assinaturas
+no descarte. A atualização síncrona mantém a geometria disponível para os efeitos
+legados que a consultam imediatamente. Animações temporárias só podem inserir
+filhos nos hosts vazios `playerEffects0..3`; não podem reescrever os filhos React.
+`renderPlayerPanels`, `renderTableInfluenceCoins` e `shownPrestige` foram removidos.
+Cartas jogadas, Leis/Decretos, resultados e efeitos continuam no controlador antigo.
+
 `lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
 confirmações, consulta posterior e espera pela animação de troca. O parser copia e
 valida somente as cartas/nomes revelados. Usa o estado público validado para

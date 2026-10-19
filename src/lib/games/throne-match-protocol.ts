@@ -1,5 +1,5 @@
 import type { ThroneLaw, ThroneSuit } from '../../types/throne-choices';
-import type { ThroneMatchState } from '../../types/throne-match';
+import type { ThroneMatchState, ThronePublicPlayer } from '../../types/throne-match';
 import { record } from '../files/protocol.ts';
 import { freezeGame } from './freeze.ts';
 import {
@@ -46,11 +46,8 @@ function unique(values: readonly unknown[]) {
   if (new Set(values).size !== values.length) throw invalid();
 }
 
-export function readThroneMatch(value: unknown, seat: number): ThroneMatchState {
-  const raw = object(value),
-    you = integer(raw.youSeat, 3);
-  if (seat !== you) throw invalid();
-  const players = array(raw.players, 4)
+export function readThronePublicPlayers(value: unknown): readonly ThronePublicPlayer[] {
+  const players = array(value, 4)
     .map((value) => {
       const p = object(value),
         id = integer(p.id, 3);
@@ -82,6 +79,14 @@ export function readThroneMatch(value: unknown, seat: number): ThroneMatchState 
   if (players.length !== 4) throw invalid();
   unique(players.map((p) => p.id));
   unique(players.flatMap((p) => p.publicCards.map((c) => c.id)));
+  return freezeGame(players);
+}
+
+export function readThroneMatch(value: unknown, seat: number): ThroneMatchState {
+  const raw = object(value),
+    you = integer(raw.youSeat, 3);
+  if (seat !== you) throw invalid();
+  const players = readThronePublicPlayers(raw.players);
   const plays = array(raw.plays, 4).map((value, index) => {
     const p = object(value),
       playerId = integer(p.playerId, 3),

@@ -33,6 +33,7 @@ const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
 const throneHand = window.TronoThroneHand;
 const throneMatch = window.TronoThroneMatch;
+const throneSeats = window.TronoThroneSeats;
 const thronePrivate = window.TronoThronePrivate;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
@@ -68,9 +69,6 @@ function totalPairs(p) {
 }
 function totalPrestige(p) {
   return p.totalCrowns + p.totalShadows + 2 * totalPairs(p);
-}
-function shownPrestige(p) {
-  return totalPrestige(p);
 }
 function rawAccumulated(p) {
   return p.totalCrowns + p.totalShadows;
@@ -908,7 +906,7 @@ async function commitPlay(
       modifier,
       declaredSuit: play.order === 0 ? game.declaredLeadSuit : null,
     });
-  renderPlayerPanels();
+  syncLocalSeats();
   renderHand();
   await animateCardToTable(play, sourceInfo);
   if (session !== game)
@@ -1075,7 +1073,7 @@ function showInfluenceGains(gains) {
   if (!gains?.length) return;
   playSfx('influence');
   for (const gain of gains) {
-    const panel = $(`player${gain.player.id}`);
+    const panel = $(`playerEffects${gain.player.id}`);
     if (!panel) continue;
     const el = document.createElement('div');
     el.className = 'influence-gain-float';
@@ -1094,7 +1092,7 @@ function showInfluenceGains(gains) {
       );
     }
   }
-  renderTableInfluenceCoins();
+  syncLocalSeats();
   for (const gain of gains) {
     const bank = $(`coinBank${gain.player.id}`);
     if (bank) {
@@ -1362,56 +1360,34 @@ function renderAll(includeHand = true) {
   $('leadSuitInfo').classList.toggle('hidden', !announced);
   $('leadSuitText').textContent = announced ? SUITS[announced].name : '—';
   animateCourtArrival();
-  renderPlayerPanels();
-  renderTableInfluenceCoins();
+  syncLocalSeats();
   renderLawTracker();
   renderTableCards();
   if (includeHand) renderHand();
 }
-function renderPlayerPanels() {
-  for (const p of game.players) {
-    const panel = $(`player${p.id}`);
-    panel.classList.toggle('active', game.turn === p.id);
-    const pubs = onlineGameMode ? p.publicCards || [] : p.hand.filter((c) => c.public);
-    const publicHtml = pubs
-      .map((c) => {
-        const corte = c.publicReason === 'Corte Aberta';
-        const desafio = c.publicReason === 'Desafio';
-        return `<div class="public-card-chip ${corte ? 'corte-open' : ''} ${desafio ? 'desafio-open' : ''}" title="${c.publicReason}: ${SUITS[c.suit].name} ${c.value}">
-        ${corte ? '<span class="public-label">CORTE ABERTA</span>' : ''}${desafio ? '<span class="public-label desafio-label">DESAFIO</span>' : ''}
-        <img src="${cardAsset(c)}" alt="${SUITS[c.suit].name} ${c.value}">
-      </div>`;
-      })
-      .join('');
-    const isMe = onlineGameMode ? p.id === game.localPlayerId : !p.ai;
-    panel.classList.toggle('local-player', !!isMe);
-    const role = p.ai ? 'IA' : isMe ? 'VOCÊ' : 'ONLINE';
-    const cardCount = onlineGameMode
-      ? p.handCount + (p.reservePresent ? 1 : 0)
-      : p.hand.length + (p.reserve ? 1 : 0);
-    panel.innerHTML = `<div class="player-name"><span>${escAttr(p.name)}</span><small>${role}</small></div>
-      <div class="score-board">
-        <div class="score-tile crown-score"><span class="score-icon">♛</span><div><small>COROAS</small><strong>${p.totalCrowns}</strong></div></div>
-        <div class="score-tile shadow-score"><span class="score-icon">☾</span><div><small>SOMBRAS</small><strong>${p.totalShadows}</strong></div></div>
-        <div class="prestige-score"><small>PRESTÍGIO ATUAL</small><strong>${shownPrestige(p)}</strong></div>
-      </div>
-      <div class="influence-meter ${p.influence >= 2 ? 'ready' : ''}" data-tooltip="${escAttr(p.influence >= 2 ? 'Influência 2/2: pode usar Sigilo por 1 ou Manobra da Corte por 2 (+3/-3, limitado a 1-12).' : p.influence === 1 ? 'Influência 1/2: já pode usar Sigilo para jogar uma carta oculta.' : `Influência ${p.influence}/2. Quem termina a vaza sem Coroa nem Sombra ganha 1, até o máximo de 2.`)}"><span class="influence-mark">✦</span><span>INFLUÊNCIA</span><span class="influence-pips">${[0, 1].map((i) => `<i class="influence-pip ${i < p.influence ? 'on' : ''}"></i>`).join('')}</span><b>${p.influence}/2</b></div>
-      <div class="player-meta"><span>Rodada: ♛ ${p.roundCrowns} · ☾ ${p.roundShadows}</span><span>🂠 ${cardCount} cartas</span></div>
-      <div class="public-cards">${publicHtml || '<span class="tag">Nenhuma carta revelada</span>'}</div>`;
-  }
-}
-function renderTableInfluenceCoins() {
-  const host = $('tableInfluenceCoins');
-  if (!host || !game?.players) return;
-  host.innerHTML = game.players
-    .map((p) => {
-      const amount = Math.max(0, Math.min(2, Number(p.influence) || 0));
-      const coins = [0, 1]
-        .map((i) => `<span class="influence-coin ${i < amount ? '' : 'empty'}">✦</span>`)
-        .join('');
-      return `<div id="coinBank${p.id}" class="coin-bank coin-seat-${p.id} ${amount ? 'has-influence' : ''} ${amount >= 2 ? 'ready' : ''}" data-tooltip="${escAttr(`${p.name}: ${amount}/2 Influências`)}">${coins}</div>`;
-    })
-    .join('');
+// The local engine keeps its private cards. React receives only the public view.
+function syncLocalSeats() {
+  if (!game || onlineGameMode) return;
+  throneSeats.setLocal({
+    turn: game.turn,
+    localSeat: game.localPlayerId,
+    players: game.players.map((p) => ({
+      id: p.id,
+      seat: p.id,
+      name: p.name,
+      ai: p.ai,
+      handCount: p.hand.length,
+      reservePresent: !!p.reserve,
+      publicCards: p.hand.filter((c) => c.public),
+      totalCrowns: p.totalCrowns,
+      totalShadows: p.totalShadows,
+      roundCrowns: p.roundCrowns,
+      roundShadows: p.roundShadows,
+      influence: p.influence,
+      prestige: totalPrestige(p),
+      pairs: totalPairs(p),
+    })),
+  });
 }
 
 function renderLawTracker() {
@@ -1635,7 +1611,7 @@ function onHumanCardClick(el) {
   $('influenceToggle').checked = false;
   $('instructionText').textContent = 'Carta escolhida.';
   renderHand();
-  renderPlayerPanels();
+  syncLocalSeats();
   res({
     card,
     hidden,

@@ -34,6 +34,7 @@ import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
 import { initializeThronePrivate } from '../components/games/throne-private-runtime';
+import { initializeThroneSeats } from '../components/games/throne-seats-runtime';
 import { initializeThroneMatch } from '../components/games/throne-match-runtime';
 import { initializeThroneHand } from '../components/games/throne-hand-runtime';
 import { initializeThroneChoices } from '../components/games/throne-choices-runtime';
@@ -83,6 +84,7 @@ export function LegacyRuntime() {
         if (filename === 'game.js') {
           initializeThroneLobby(window);
           initializeThroneMatch(window);
+          initializeThroneSeats(window);
           initializeThronePrivate(window);
           initializeThroneChoices(window);
           initializeThroneHand(window);
