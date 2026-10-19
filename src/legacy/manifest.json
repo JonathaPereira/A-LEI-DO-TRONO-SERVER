@@ -29,7 +29,6 @@
     "love-letter-rules.js",
     "love-letter.js",
     "roguelite-host.js",
-    "community.js",
     "community-admin.js",
     "soundboard-client.js",
     "call-controls-layout.js",

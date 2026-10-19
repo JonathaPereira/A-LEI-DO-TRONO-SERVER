@@ -202,6 +202,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         profileEditor: ['profileEditorHost','profileForm','profileNickname','profile-bio','profile-cover_zoom'].map(id => document.getElementById(id)),
         gifDialog: document.getElementById('profileGifDialog'),
         directory: ['creatorAccountsButtonHost','creatorAccountsBtn','creatorAccountsDialog'].map(id => document.getElementById(id)),
+        community: ['communityToggle','communityPanel','communityMembers','communityActivity','callNoticeHost'].map(id => document.getElementById(id)),
+        communityOwner: window.TronoCommunity,
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -226,6 +228,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           profileEditor: window.TronoProfileEditor === before.profileEditorOwner && !!before.profileEditorOwner && before.profileEditor.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           gifPicker: !!before.gifDialog && before.gifDialog === document.getElementById('profileGifDialog') && document.querySelectorAll('#profileGifDialog').length === 1 && typeof window.TronoProfileGifs === 'undefined',
           directory: before.directory.every(node => node && node.isConnected && document.getElementById(node.id) === node),
+          community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -239,6 +242,16 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
+    // Community UI moves independently while all native sources stay live.
+    await page.locator('#communityToggle').click();
+    await expect(page.locator('#communityPanel')).toBeVisible();
+    await expect(page.locator('#communityMembers')).toContainText('Layout Principal');
+    await page.evaluate(() => window.TronoCommunity.voiceNotice({id: 'community-layout-check', kind: 'joined', name: 'Layout Check'}));
+    await expect(page.locator('#communityActivity')).toContainText('Layout Check entrou na chamada.');
+    await preserved();
+    await page.locator('#communityClose').click();
+    await expect(page.locator('#communityPanel')).toBeHidden();
+    await preserved();
     // Decoration changes affect only the background child while all native sources stay live.
     const decorationAccount = await page.evaluate(() => window.TronoAuth.user.id);
     let decoration = {background_file_id: '22000000-0000-4000-8000-000000000001', darkness: 35, blur: 3};

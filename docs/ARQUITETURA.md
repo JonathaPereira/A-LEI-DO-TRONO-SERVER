@@ -83,7 +83,25 @@ assinaturas e frames pendentes. Metadados iguais do catálogo não notificam de 
 evitando um ciclo entre contadores e lista. `TronoNotifications` é a fachada de
 compatibilidade do mesmo dono; `legacy/notifications.js` foi excluído.
 
-`legacy/community.js` mantém apenas os ícones das mesas de jogo.
+`lib/community/controller.ts` possui presença da comunidade, abertura do painel,
+avisos temporários e histórico de voz. Valida snapshots completos em `protocol.ts`,
+usando o parser de participantes já compartilhado com canais. A presença pública
+das mesas não contém detalhes privados da chamada; campos omitidos não viram
+participação em voz. Catálogo de canais e roster da chamada conservam seus donos.
+Trocar de conta/convidado limpa presença e avisos, cancela timers e invalida
+autenticações anteriores. A autenticação usa a fila do cliente de rede existente;
+somente a identidade atual pode solicitar/aceitar presença no seu escopo.
+Desconexão conserva a última lista com aviso e reconexão autentica novamente.
+
+`components/channels/community-contents.tsx` renderiza pessoas, cargos, atividade,
+avisos e avatares das mesas em React. Perfil, mensagens e edição de cargos delegam
+a seus donos atuais; o servidor continua autorizando alterações. `community-runtime.tsx`
+liga eventos de conta, conexão, teclado e viewport. Monta nos hosts estáveis do
+painel/avisos, move junto com os layouts existentes e libera raízes, timers e
+assinaturas no descarte. Nas mesas ainda estáticas, possui apenas os hosts de
+avatares. `TronoCommunity` aponta para esse mesmo controlador, usado pela chamada
+para publicar avisos. `legacy/community.js` e sua entrada no manifesto foram removidos.
+
 `lib/profiles/icons.ts` contém os desenhos e o catálogo único de avatares.
 `avatar.ts` conserva `avatarHtml`/`hydrate` para perfis e jogos não convertidos;
 as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.

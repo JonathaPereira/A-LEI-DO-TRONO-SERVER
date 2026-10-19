@@ -14,7 +14,7 @@ function optionalString(value: unknown): string | undefined {
   if (typeof value !== 'string') throw invalidResponse('Dados do canal inválidos.');
   return value;
 }
-function participant(value: unknown): ChannelParticipant {
+export function readChannelParticipant(value: unknown): ChannelParticipant {
   if (
     !record(value) ||
     typeof value.name !== 'string' ||
@@ -60,7 +60,7 @@ export function readChannels(
       const players =
         row.players === undefined
           ? (previous?.players ?? Object.freeze([]))
-          : Object.freeze(row.players.map(participant));
+          : Object.freeze(row.players.map(readChannelParticipant));
       if (new Set(players.map((player) => player.id)).size !== players.length)
         throw invalidResponse('Participante duplicado no canal.');
       return Object.freeze({

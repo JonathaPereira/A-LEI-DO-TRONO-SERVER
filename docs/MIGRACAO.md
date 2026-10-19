@@ -1753,6 +1753,35 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximos domínios do frontend: gerenciamento/comunidade, mensageiro e jogos ainda
   legados. `profile-data.js` permanece dependência do backend, sem carga no frontend.
 
+## Presença e avisos da comunidade — 18/10/2026
+
+- `lib/community/` possui presença validada, escopo de conta/convidado, abertura,
+  histórico e avisos de voz. Reutiliza a rede e o parser de participantes dos canais;
+  a apresentação pública das mesas continua separada da participação privada em voz.
+- Um único fluxo autentica/solicita presença. Troca de identidade, inclusive sair e
+  voltar à mesma conta, invalida respostas pendentes e limpa a lista/avisos/timers.
+  Permissões atualizam ações sem recriar a lista. Desconexão mantém a última presença
+  com feedback; reconexão solicita uma lista nova após autenticar.
+- Pessoas, ícones das mesas e avisos passaram a React em `components/channels/`.
+  Os mesmos hosts do painel e botão são movidos pelos layouts desktop/workspace.
+  Perfis por teclado, mensagens diretas e edição de cargos preservam seus donos.
+  Atualizações de atividade preservam expansão de offline e rolagem; foi desativada
+  a ancoragem automática que fazia a lista saltar ao inserir uma atividade acima.
+- Removidos `legacy/community.js` inteiro (270 linhas) e sua carga no manifesto.
+  O bootstrap instala a ponte tipada antes do gerenciamento. O CSS ainda utilizado
+  permanece; a fachada `TronoCommunity` aponta para o mesmo dono, sem estado duplicado.
+- Seis regressões determinísticas cobrem validação atômica, autenticação atrasada,
+  troca de conta/ABA, convidados, permissões, reconexão, deduplicação e descarte.
+  `test:community` integra `npm test`; `test:community:ui` cobre os hosts web/desktop,
+  cargos reais, perfis, mensagens, escape de texto, rolagem, atividade, avatares das
+  mesas, desconexão/reconexão, resize, Escape e logout.
+- Tipagem, formatação, build, suíte completa e regressões de interface passaram.
+  Electron real manteve os mesmos hosts, controles, microfone, câmera, tela, peers e
+  socket durante a comunidade e mudanças de layout, com mídia sintética.
+  Evidências locais: `artifacts/community-*`.
+- Próximo recorte: gerenciamento de canais/cargos em `legacy/community-admin.js`;
+  mensageiro e controladores de jogos ainda aguardam conversão.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.
