@@ -32,14 +32,14 @@ let modalResolver = null,
 const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
 const throneHand = window.TronoThroneHand;
+const throneMatch = window.TronoThroneMatch;
+let onlineIntelligence = null;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
 let onlineExchangeBusy = false;
 let exchangeSequence = 0;
 let onlineQueuedPrivateUsurpation = null;
 let localTurnTimer = null;
-let turnTicker = null;
-let lastOnlineTurnSeat = null;
 let clientLogHistory = [];
 // Audio controls initialize independently of the game/room interface.
 const storage = window.TronoStorage || localStorage;
@@ -232,20 +232,12 @@ function isLocalPlayersTurn() {
   if (!game || game.phase !== 'await-play' || game.turn == null) return false;
   return game.turn === (onlineGameMode ? game.localPlayerId : 0);
 }
-function setYourTurnVisual(active) {
-  const screen = $('gameScreen');
-  const badge = $('turnBadge');
-  screen?.classList.toggle('your-turn-active', !!active);
-  badge?.classList.toggle('your-turn-badge', !!active);
-}
 function showYourTurnNotice() {
   const wrap = $('turnNotice');
   if (!wrap || !game) return;
-  const law = $('turnNoticeLaw'),
-    clock = $('turnNoticeClock');
+  const law = $('turnNoticeLaw');
   if (law)
     law.textContent = `${LAWS[game.currentLaw]?.name || 'Lei ativa'} • escolha uma carta válida`;
-  if (clock) clock.textContent = '01:00';
   wrap.classList.remove('hidden', 'play');
   wrap.setAttribute('aria-hidden', 'false');
   void wrap.offsetWidth;
@@ -303,6 +295,9 @@ function resetRoundStats() {
 async function startGame(allAI = false) {
   throneChoices.clear();
   throneHand.clear();
+  throneMatch.clear();
+  onlineIntelligence = null;
+  onlineGameMode = false;
   leavingGame = false;
   await ensureAudio();
   const names = [0, 1, 2, 3].map((i) => $(`p${i}Name`).value);
@@ -874,7 +869,10 @@ function clearLocalTurnTimer() {
     clearTimeout(localTurnTimer);
     localTurnTimer = null;
   }
-  if (game && !onlineGameMode) game.turnDeadline = null;
+  if (game && !onlineGameMode) {
+    game.turnDeadline = null;
+    syncLocalStatus();
+  }
 }
 function waitHumanPlay(legal, p) {
   return new Promise((resolve, reject) => {
@@ -1362,10 +1360,7 @@ function animateCourtArrival() {
 }
 function renderAll(includeHand = true) {
   if (!game) return;
-  $('roundBadge').textContent = `Rodada ${game.round}/3`;
-  $('trickBadge').textContent = `Vaza ${game.trick}/10`;
-  $('turnBadge').textContent = game.turn != null ? `Vez: ${playerLabel(game.turn)}` : phaseLabel();
-  setYourTurnVisual(isLocalPlayersTurn());
+  syncLocalStatus();
   $('currentLawName').textContent = LAWS[game.currentLaw].name.toUpperCase();
   $('currentLawImg').src = LAWS[game.currentLaw].img;
   $('lawUsesText').textContent = `Uso ${Math.min(2, game.lawUsage[game.currentLaw] || 1)} de 2`;
@@ -1396,18 +1391,7 @@ function renderAll(includeHand = true) {
   renderTableInfluenceCoins();
   renderLawTracker();
   renderTableCards();
-  updateTurnTimer();
   if (includeHand) renderHand();
-}
-function phaseLabel() {
-  const map = {
-    'round-start': 'Preparando rodada',
-    'trick-start': 'Iniciando vaza',
-    resolve: 'Resolvendo vaza',
-    'round-end': 'Fim da rodada',
-    setup: 'Preparando',
-  };
-  return map[game.phase] || 'Corte em movimento';
 }
 function renderPlayerPanels() {
   for (const p of game.players) {
@@ -1430,7 +1414,7 @@ function renderPlayerPanels() {
     const cardCount = onlineGameMode
       ? p.handCount + (p.reservePresent ? 1 : 0)
       : p.hand.length + (p.reserve ? 1 : 0);
-    panel.innerHTML = `<div class="player-name"><span>${p.name}</span><small>${role}</small></div>
+    panel.innerHTML = `<div class="player-name"><span>${escAttr(p.name)}</span><small>${role}</small></div>
       <div class="score-board">
         <div class="score-tile crown-score"><span class="score-icon">♛</span><div><small>COROAS</small><strong>${p.totalCrowns}</strong></div></div>
         <div class="score-tile shadow-score"><span class="score-icon">☾</span><div><small>SOMBRAS</small><strong>${p.totalShadows}</strong></div></div>
@@ -1471,7 +1455,7 @@ function renderTableCards(revealHidden = false, clear = false) {
     }
     const play = game.plays.find((p) => p.playerId === id);
     if (!play) {
-      slot.innerHTML = `<span>${game.players[id]?.name || `J${id + 1}`}</span>`;
+      slot.innerHTML = `<span>${escAttr(game.players[id]?.name || `J${id + 1}`)}</span>`;
       continue;
     }
     if (play.hidden && !revealHidden) {
@@ -1894,66 +1878,25 @@ function enterOnlineBoard() {
     'Protótipo digital v' + window.TronoNetwork.CLIENT_VERSION + ' • Multiplayer';
   clearLog();
 }
-function applyOnlineState(state) {
-  if (!state) return;
+// Presentation bridge only. Network parsing and clock state belong to TronoThroneMatch.
+function presentOnlineMatch(state) {
+  if (!state) {
+    if (game?.online) game = null;
+    onlineIntelligence = null;
+    return;
+  }
+  if (leavingGame) return;
   if (!onlineGameMode) enterOnlineBoard();
-  const you = state.youSeat;
-  const players = state.players.map((sp) => {
-    return {
-      id: sp.id,
-      name: sp.name,
-      ai: !!sp.ai,
-      hand: [],
-      reserve: null,
-      handCount: sp.handCount || 0,
-      reservePresent: !!sp.reservePresent,
-      publicCards: sp.publicCards || [],
-      totalCrowns: sp.totalCrowns || 0,
-      totalShadows: sp.totalShadows || 0,
-      roundCrowns: sp.roundCrowns || 0,
-      roundShadows: sp.roundShadows || 0,
-      influence: sp.influence || 0,
-      prestige: sp.prestige || 0,
-      pairs: sp.pairs || 0,
-    };
-  });
+  const previousTurn = isLocalPlayersTurn() ? `${game.round}:${game.trick}` : null;
   const next = {
-    online: true,
-    players,
-    localPlayerId: you,
-    round: state.round,
-    trick: state.trick,
-    phase: state.phase,
-    currentLaw: state.currentLaw,
-    lawUsage: state.lawUsage || Object.fromEntries(LAW_ORDER.map((l) => [l, 0])),
-    trump: state.trump || null,
-    declaredLeadSuit: state.declaredLeadSuit || null,
-    decree: state.decree ? DECREES.find((d) => d.id === state.decree.id) || state.decree : null,
-    intelligence: state.intelligence || null,
-    lastCrown: state.lastCrown,
-    lastShadow: state.lastShadow,
-    previousWinningSuit: state.previousWinningSuit || null,
-    leader: state.leader,
-    turn: state.turn,
-    turnDeadline: state.turnDeadline || null,
-    plays: (state.plays || []).map((pl) => ({
-      playerId: pl.playerId,
-      order: pl.order,
-      hidden: !!pl.hidden,
-      card: pl.card || null,
-      modifier: pl.modifier || 0,
-      influenceAction: pl.influenceAction || 'none',
-    })),
+    ...state,
+    decree: state.decree ? DECREES.find((d) => d.id === state.decree) : null,
     gameOver: state.phase === 'game-over',
   };
-  // State packets update a live match; they do not start a new animation session.
-  // Keep its identity so exchange/reveal continuations survive the next packet.
+  // Preserve the presentation session so pending exchange/reveal effects remain valid.
   if (game?.online) Object.assign(game, next);
   else game = next;
-  if (state.phase === 'await-play' && state.turn === you && lastOnlineTurnSeat !== you) {
-    showYourTurnNotice();
-  }
-  lastOnlineTurnSeat = state.phase === 'await-play' ? state.turn : null;
+  if (isLocalPlayersTurn() && previousTurn !== `${game.round}:${game.trick}`) showYourTurnNotice();
   renderAll();
 }
 async function showIntelligence(clue) {
@@ -1970,7 +1913,7 @@ $('decreeBadge').tabIndex = 0;
 $('decreeBadge').onclick = () => {
   if (game?.decree?.id === 'espionagem')
     void showIntelligence(
-      game.online ? game.intelligence : game.players[game.localPlayerId]?.intelligence,
+      game.online ? onlineIntelligence : game.players[game.localPlayerId]?.intelligence,
     );
 };
 $('decreeBadge').onkeydown = (e) => {
@@ -2338,6 +2281,8 @@ function backToLobby() {
   throneLobby.clear();
   onlineGameMode = false;
   game = null;
+  onlineIntelligence = null;
+  throneMatch.clear();
   window.TronoSocial?.setChatHubMode?.(false);
   document.body.classList.remove('chat-only-active');
   window.TronoPortal?.showOnly?.('setupScreen');
@@ -2413,7 +2358,9 @@ window.TronoNetwork?.onMessage((msg) => {
     toast('♛ Partida online iniciada — o servidor controla a mesa.', 2200);
     window.TronoNetwork?.requestState();
   }
-  if (msg.type === 'game-state' && !leavingGame) applyOnlineState(msg.state);
+  // Private Espionagem cache remains here until its dialog is converted.
+  if (msg.type === 'game-state' && !leavingGame && throneMatch.getSnapshot().match)
+    onlineIntelligence = msg.state?.intelligence || null;
   if (msg.type === 'private-intelligence' && !leavingGame)
     showIntelligence(msg.intelligence)
       .then(() => window.TronoNetwork.gameAction('intelligence-ack'))
@@ -2673,28 +2620,17 @@ function initFloatingLog() {
     }).observe(panel);
   }
 }
-function updateTurnTimer() {
-  const el = $('turnTimer');
-  if (!el) return;
-  const deadline = game?.turnDeadline;
-  if (!deadline || game?.phase !== 'await-play' || game?.turn == null) {
-    el.textContent = '01:00';
-    el.className = 'turn-timer idle';
-    const nc = $('turnNoticeClock');
-    if (nc) nc.textContent = '01:00';
-    return;
-  }
-  const ms = Math.max(0, deadline - Date.now()),
-    sec = Math.ceil(ms / 1000);
-  const m = Math.floor(sec / 60),
-    s = sec % 60;
-  const display = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  el.textContent = display;
-  const nc = $('turnNoticeClock');
-  if (nc) nc.textContent = display;
-  el.className = `turn-timer ${sec <= 10 ? 'danger' : sec <= 20 ? 'warning' : ''}`.trim();
+function syncLocalStatus() {
+  if (!game || onlineGameMode) return;
+  throneMatch.setLocal({
+    round: game.round,
+    trick: game.trick,
+    phase: game.phase,
+    turnName: game.turn == null ? null : playerLabel(game.turn),
+    yourTurn: isLocalPlayersTurn(),
+    deadline: game.turnDeadline || null,
+  });
 }
-if (!turnTicker) turnTicker = setInterval(updateTurnTimer, 250);
 
 function fatalError(err) {
   if (err.name === 'AbortError') return;
@@ -2733,6 +2669,7 @@ window.__LeiDoTrono = {
 
 // Temporary board bridge: lobby owns selection/rosters; this controller still owns match cancellation.
 window.TronoThroneBoard = {
+  presentOnlineMatch,
   notify: toast,
   get online() {
     return !!game?.online;

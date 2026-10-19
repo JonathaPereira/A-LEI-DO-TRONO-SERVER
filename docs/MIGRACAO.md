@@ -2166,6 +2166,49 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   local. Próximo recorte: estado público/relógios e informações privadas da partida,
   preservando o motor compartilhado e os recursos de comunicação existentes.
 
+## Estado público e relógios de A Lei do Trono — 19/10/2026
+
+- `lib/games/throne-match.ts` possui o estado público online e o status/relógio
+  usados nos dois modos. `types/throne-match.ts`/`throne-match-protocol.ts` definem
+  e validam assentos, contagens, pontuações, cartas públicas, jogadas, Leis/Decretos
+  e prazos. Copiam/congelam apenas os campos necessários; não retêm mãos, Reserva,
+  baralho ou Espionagem. Cartas ocultas adversárias não podem trazer identidade;
+  a prévia da própria jogada e as revelações públicas continuam preservadas.
+- `applyOnlineState`, `updateTurnTimer`, `turnTicker`, `lastOnlineTurnSeat`,
+  `phaseLabel` e as escritas no cabeçalho foram retirados de `legacy/game.js`.
+  `presentOnlineMatch` recebe o snapshot validado e adapta somente o Decreto à
+  apresentação existente, conservando a identidade da sessão das animações.
+  Nomes na apresentação HTML antiga passaram a ser escapados.
+- `components/games/throne-match-status.tsx` renderiza rodada, vaza, turno e relógio
+  em React nos mesmos IDs. Um portal atualiza `turnNoticeClock` com a mesma
+  contagem; nenhum controlador antigo escreve nesses nós.
+- O ticker existe somente com mesa visível e prazo ativo. Publicações iguais não
+  recriam snapshot/timer; ao ocultar, encerrar, desconectar online ou descartar,
+  o ticker é liberado. Retornar recalcula pelo prazo original. Limites de aviso
+  em 20/10 segundos e contagem em zero foram preservados. O ticker não executa
+  jogadas: servidor e motor local conservam a autoridade sobre o timeout.
+- O motor local publica apenas rodada/vaza/fase, nome do turno, indicação do
+  participante e prazo. Continua funcionando sem rede; limpar/encerrar a partida
+  não deixa contagem antiga. Conta/ABA, salão/assento, desconexão e dados inválidos
+  invalidam o estado online; cancelamento impede que pacotes atrasados o restaurem.
+- Onze regressões novas cobrem validação, privacidade, cartas ocultas/reveladas,
+  prazo/limites, identidade, presença sem duplicação, cancelamento, visibilidade,
+  modo local e descarte. `npm test` passou com 90 testes de modelos de jogos;
+  tipagem, formatação e build estático passaram.
+- A integração percorreu Reserva, Conselho, Corte, Rotação e Desafio, conferindo
+  relógio real, cabeçalho, ausência de mãos no estado público, estabilidade dos
+  nós e preservação das mesmas trilhas. A regressão dos salões confirmou a
+  alternância online/local e cancelamento.
+- Dois Electron reais mantiveram cabeçalho/aviso de relógio, donos e hosts durante
+  a partida e as trocas de layout/navegação. Microfone, câmera, tela, peers e
+  socket permaneceram os mesmos. Mídia sintética; não mede jogos a 60 fps nem
+  TURN externo. Evidências locais: `artifacts/throne-match-*`.
+- Restam apresentação de assentos/cartas/Leis, eventos e animações, informações
+  privadas de Espionagem/Usurpação e simulação local no legado. O cache privado
+  de Espionagem foi separado do estado público e continua explicitamente legado.
+  Próximo recorte: diálogos privados e apresentação restante da mesa, preservando
+  o motor compartilhado e os donos atuais de mídia e comunicação.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

@@ -176,9 +176,8 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
 partidas; não possui o estado do salão.
 
-O jogo ainda possui simulação local, aplicação do estado online, informações
-privadas de Espionagem/Usurpação, regras locais de Influência e animações em
-`legacy/game.js`.
+O jogo ainda possui simulação local, apresentação da mesa, informações privadas
+de Espionagem/Usurpação, regras locais de Influência e animações em `legacy/game.js`.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
@@ -229,9 +228,39 @@ os observadores no descarte. Não há socket, captura ou player adicional.
 `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
 e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
 online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
-A aplicação restante de `game-state`, relógios, informações privadas de Espionagem/
-Usurpação e cinematics ainda estão no controlador antigo. O motor local e seus
-controles continuam isolados até a conversão correspondente.
+A apresentação da mesa, informações privadas de Espionagem/Usurpação e cinematics
+ainda estão no controlador antigo. O motor local e seus controles continuam
+isolados até a conversão correspondente.
+
+`lib/games/throne-match.ts` possui o estado público online e o status/relógio
+compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
+assentos únicos, contagens, pontuações, cartas públicas, Leis/Decretos, jogadas e
+prazos. Copia/congela apenas campos conhecidos e ordena os assentos pelo ID.
+Não retém mãos, Reserva, baralho ou Espionagem. Uma jogada oculta pode conter a
+própria carta; a identidade de uma carta oculta adversária é rejeitada. Revelações
+públicas recebidas com `hidden: false` continuam visíveis.
+
+Broadcasts iguais conservam a identidade do snapshot, e rodadas/vazas anteriores
+não substituem o estado atual. Conta/ABA, salão/assento, desconexão ou pacote
+inválido limpam o estado e o relógio. Cancelar bloqueia pacotes atrasados até uma
+nova partida/participação. O status local recebe apenas valores primitivos por
+`setLocal`, sem reter ou congelar o motor local e sem depender da conexão.
+
+`components/games/throne-match-status.tsx` renderiza rodada, vaza, turno e relógio
+nos IDs existentes; um portal exibe a mesma contagem em `turnNoticeClock`. Há um
+único ticker, somente com mesa visível, fase de jogada e prazo ainda ativo.
+Ocultar, encerrar, desconectar no modo online ou descartar libera o ticker;
+retornar calcula o tempo restante pelo prazo original. A contagem nunca escolhe
+cartas nem envia comandos: timeout continua no servidor/motor local.
+
+O runtime conserva host, raiz, nós React e socket. `applyOnlineState`,
+`updateTurnTimer`, `turnTicker`, `lastOnlineTurnSeat` e as escritas legadas no
+cabeçalho foram removidos. `TronoThroneBoard.presentOnlineMatch` recebe somente o
+snapshot validado para a apresentação antiga. Conserva a identidade da sessão de
+animação, cujo estado de exibição ainda pode receber revelações dos eventos.
+Não interpreta pacotes nem possui outro relógio. O cache privado de Espionagem
+permanece explicitamente separado no legado até a conversão de seu diálogo.
+Os demais eventos online e o restante da mesa ainda precisam ser convertidos.
 
 `lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
 visível, sem duplicar participação, partidas ou recursos de mídia. Botões do

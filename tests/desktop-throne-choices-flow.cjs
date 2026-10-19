@@ -73,6 +73,17 @@ async function exerciseThroneChoices({ page, receiver }) {
         !played.has(index)
       ) {
         await expect(client.locator('#throneOnlineHand')).toBeVisible();
+        assert(
+          await client.evaluate(() => {
+            const s = window.TronoThroneMatch.getSnapshot();
+            return (
+              s.mode === 'online' &&
+              s.status.yourTurn &&
+              document.getElementById('turnTimer').textContent ===
+                document.getElementById('turnNoticeClock').textContent
+            );
+          }),
+        );
         await expect(client.locator('#throneLocalHand')).toBeHidden();
         await client.locator('#throneHandSort').click();
         const button = client.locator('#throneOnlineHandCards .hand-card:enabled').first();

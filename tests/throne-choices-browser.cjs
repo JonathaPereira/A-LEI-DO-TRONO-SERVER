@@ -97,12 +97,26 @@ test(
             const page = await context.newPage();
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
-              if (/\[Throne(?:Choices|Hand)\]/.test(message.text())) warnings.push(message.text());
+              if (/\[Throne(?:Choices|Hand|Match)\]/.test(message.text()))
+                warnings.push(message.text());
             });
             page.on('dialog', (dialog) => dialog.accept());
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoAuth?.ready);
             await page.evaluate(() => window.TronoAuth.ready);
+            await page.evaluate(() => {
+              window.__matchHosts = {
+                owner: window.TronoThroneMatch,
+                nodes: [
+                  'throneStatusHost',
+                  'roundBadge',
+                  'trickBadge',
+                  'turnBadge',
+                  'turnTimer',
+                  'turnNoticeClock',
+                ].map((id) => document.getElementById(id)),
+              };
+            });
             await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
             await expect
               .poll(() => page.evaluate(() => window.TronoNetwork.primaryRoom))
@@ -265,6 +279,35 @@ test(
                     () => window.TronoThroneHand.getSnapshot().context,
                   );
                   if (!hand || hand.turn !== hand.you || hand.automaticReserve) continue;
+                  if (!seen.has('match-clock')) {
+                    await expect(page.locator('#roundBadge')).toHaveText(`Rodada ${s.round}/3`);
+                    await expect(page.locator('#trickBadge')).toHaveText(`Vaza ${s.trick}/10`);
+                    await expect(page.locator('#turnBadge')).toHaveText('Vez: Casa Humana');
+                    await expect(page.locator('#turnBadge')).toHaveClass(/your-turn-badge/);
+                    assert(
+                      await page.evaluate(() => {
+                        const m = window.TronoThroneMatch.getSnapshot().match;
+                        return (
+                          m &&
+                          Object.isFrozen(m.players[0]) &&
+                          m.players.every((p) => !('hand' in p) && !('reserve' in p)) &&
+                          !('intelligence' in m)
+                        );
+                      }),
+                    );
+                    const beforeClock = await page.locator('#turnTimer').textContent();
+                    await expect
+                      .poll(() => page.locator('#turnTimer').textContent())
+                      .not.toBe(beforeClock);
+                    assert(
+                      await page.evaluate(
+                        () =>
+                          document.getElementById('turnTimer').textContent ===
+                          document.getElementById('turnNoticeClock').textContent,
+                      ),
+                    );
+                    seen.add('match-clock');
+                  }
                   if (decree === 'reserva' && !seen.has('hand-responsive')) {
                     await expect(page.locator('#throneLocalHand')).toBeHidden();
                     await expect(page.locator('#throneOnlineHandCards .hand-card')).toHaveCount(
@@ -361,12 +404,25 @@ test(
                     .find((s) => s.self)
                     .camera.getVideoTracks()[0] === before[1] &&
                   call.getLocalDisplayStream().getVideoTracks()[0] === before[2] &&
-                  before.every((t) => t.readyState === 'live')
+                  before.every((t) => t.readyState === 'live') &&
+                  window.TronoThroneMatch === window.__matchHosts.owner &&
+                  window.__matchHosts.nodes.every(
+                    (node) => node && node.isConnected && document.getElementById(node.id) === node,
+                  )
                 );
               }),
             );
             await page.evaluate(() => window.TronoThroneBoard.backToLobby());
             await expect(page.locator('#throneChoiceDialog')).toBeHidden();
+            assert.equal(
+              await page.evaluate(() => window.TronoThroneMatch.getSnapshot().mode),
+              null,
+            );
+            assert.equal(
+              await page.evaluate(() => window.TronoThroneMatch.getSnapshot().match),
+              null,
+            );
+            await expect(page.locator('#turnTimer')).toHaveClass('turn-timer idle');
             assert.equal(
               await page.evaluate(() => window.TronoThroneChoices.getSnapshot().context),
               null,

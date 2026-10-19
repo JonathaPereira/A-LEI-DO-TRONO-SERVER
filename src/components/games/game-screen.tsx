@@ -11,14 +11,7 @@ export function GameScreen() {
               <small id={'versionLabel'}>Protótipo digital v0.8.0-alpha</small>
             </div>
           </div>
-          <div className={'round-status'}>
-            <span id={'roundBadge'}>Rodada 1/3</span>
-            <span id={'trickBadge'}>Vaza 1/10</span>
-            <span id={'turnBadge'}>Preparando...</span>
-            <span id={'turnTimer'} className={'turn-timer idle'}>
-              01:00
-            </span>
-          </div>
+          <div id="throneStatusHost" className="round-status"></div>
           <div className={'top-actions'}>
             <div className={'music-volume'} title={'Volume da música de fundo'}>
               <span>♫</span>

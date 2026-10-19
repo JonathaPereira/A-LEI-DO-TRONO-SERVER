@@ -18,7 +18,7 @@ export const throneLaws: readonly ThroneLaw[] = [
   'anarquia',
   'usurpacao',
 ];
-const decrees: readonly ThroneDecree[] = [
+export const throneDecrees: readonly ThroneDecree[] = [
   'reserva',
   'rotacao',
   'corte',
@@ -38,7 +38,7 @@ const cardChoices: readonly ThroneCardChoice[] = [
   'challenge',
   'usurp-give',
 ];
-const phases = [
+export const thronePhases = [
   'starting',
   'round-start',
   'choose-decree',
@@ -92,7 +92,7 @@ function cardId(value: unknown) {
   if (!/^c(?:[0-9]|[1-3][0-9]|4[0-7])$/.test(id)) throw invalid();
   return id;
 }
-function card(value: unknown): ThroneCard {
+export function readThroneCard(value: unknown): ThroneCard {
   const raw = object(value),
     suit = member(raw.suit, throneSuits),
     rank = integer(raw.value, 1, 12),
@@ -124,8 +124,8 @@ export function readThroneChoiceContext(value: unknown, seat: number): ThroneCho
   );
   unique(players.map((p) => p.seat));
   const own = object((raw.players as unknown[]).find((value) => object(value).id === you));
-  const hand = array(own.hand, card, 0, 10),
-    reserve = own.reserve == null ? null : card(own.reserve);
+  const hand = array(own.hand, readThroneCard, 0, 10),
+    reserve = own.reserve == null ? null : readThroneCard(own.reserve);
   unique([...hand.map((c) => c.id), ...(reserve ? [reserve.id] : [])]);
   if (own.handCount !== hand.length) throw invalid();
   const usage = object(raw.lawUsage),
@@ -136,7 +136,7 @@ export function readThroneChoiceContext(value: unknown, seat: number): ThroneCho
     you,
     round: integer(raw.round, 1, 3),
     trick: integer(raw.trick, 1, 10),
-    phase: member(raw.phase, phases),
+    phase: member(raw.phase, thronePhases),
     lastCrown: raw.lastCrown == null ? null : integer(raw.lastCrown, 0, 3),
     lastShadow: raw.lastShadow == null ? null : integer(raw.lastShadow, 0, 3),
     name: players.find((p) => p.seat === you)!.name,
@@ -156,7 +156,7 @@ export function readThronePrompt(value: unknown): ThronePrompt {
       return freezeGame({
         ...common,
         kind: raw.kind,
-        options: unique(array(raw.options, (v) => member(v, decrees), 1, 10)),
+        options: unique(array(raw.options, (v) => member(v, throneDecrees), 1, 10)),
       });
     case 'choose-trump':
       return freezeGame({

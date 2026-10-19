@@ -13,7 +13,7 @@ export function TurnNotice() {
           <small>O TRONO O CHAMA</small>
           <strong>SUA VEZ</strong>
           <span id={'turnNoticeLaw'}>Escolha sua carta</span>
-          <b id={'turnNoticeClock'}>01:00</b>
+          <b id={'turnNoticeClock'}></b>
           <em>Você tem 1 minuto para agir.</em>
         </div>
       </div>
