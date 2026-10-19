@@ -23,9 +23,9 @@ const shuffle = (arr) => {
   return a;
 };
 
-let animationScale = 1;
 let game = null;
 let leavingGame = false;
+const throneControls = window.TronoThroneControls;
 const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
 const throneHand = window.TronoThroneHand;
@@ -72,23 +72,16 @@ function playerLabel(id) {
 }
 async function delay(base) {
   const current = game;
-  await sleep(Math.max(30, base * animationScale));
+  await sleep(Math.max(30, base * throneControls.getSnapshot().scale));
   if (current && !current.online && current !== game)
     throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
-}
-function escAttr(text = '') {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 // Rules and public effects emit text; the typed owner handles history and rendering.
 function logEvent(message) {
   throneHistory.appendPublic(message, game?.round || 0, game?.trick || 0);
 }
 function toast(text, ms = 1500) {
-  throneEffects.toast(text, ms, animationScale);
+  throneEffects.toast(text, ms, throneControls.getSnapshot().scale);
 }
 function showConnectionNotice(name, botName = null, reason = 'disconnect') {
   throneEffects.connection(name, botName, reason);
@@ -102,7 +95,11 @@ function isLocalPlayersTurn() {
   return game.turn === (onlineGameMode ? game.localPlayerId : 0);
 }
 function showYourTurnNotice() {
-  if (game) throneEffects.turn(LAWS[game.currentLaw]?.name || 'Lei ativa', animationScale);
+  if (game)
+    throneEffects.turn(
+      LAWS[game.currentLaw]?.name || 'Lei ativa',
+      throneControls.getSnapshot().scale,
+    );
 }
 
 const BOT_NAMES = window.TronoBots.names;
@@ -361,7 +358,7 @@ async function showExchangeAnimation(value) {
   const session = game;
   await throneEffects.exchange(
     { ...value, players: game.players, crown: game.lastCrown, shadow: game.lastShadow },
-    animationScale,
+    throneControls.getSnapshot().scale,
   );
   if (session && !session.online && session !== game)
     throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
@@ -662,7 +659,7 @@ async function animateCardToTable(play, sourceInfo) {
   syncLocalTable();
   await throneEffects.arrival(
     { seat: play.playerId, from: sourceInfo?.rect || null, card: play.card },
-    animationScale,
+    throneControls.getSnapshot().scale,
   );
 }
 function clampEffectiveValue(v) {
@@ -750,13 +747,13 @@ async function resolveTrick() {
 
 async function showTrickOutcome(crown, shadow) {
   const session = game;
-  await throneEffects.outcome({ crown, shadow }, animationScale);
+  await throneEffects.outcome({ crown, shadow }, throneControls.getSnapshot().scale);
   if (session && !session.online && session !== game)
     throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
 }
 function showInfluenceGains(gains) {
   syncLocalSeats();
-  throneEffects.gains(gains, animationScale);
+  throneEffects.gains(gains, throneControls.getSnapshot().scale);
   renderHand();
 }
 
@@ -1119,14 +1116,7 @@ document.addEventListener('pointerout', (e) => {
 
 function enterOnlineBoard() {
   onlineGameMode = true;
-  animationScale = 1;
-  if ($('speedBtn')) {
-    $('speedBtn').textContent = '⏱ Online';
-    $('speedBtn').disabled = true;
-  }
   window.TronoPortal?.showOnly?.('gameScreen');
-  $('versionLabel').textContent =
-    'Protótipo digital v' + window.TronoNetwork.CLIENT_VERSION + ' • Multiplayer';
 }
 // Presentation bridge only. Network parsing and clock state belong to TronoThroneMatch.
 function presentOnlineMatch(state) {
@@ -1474,38 +1464,8 @@ window.addEventListener('trono:ready', async () => {
   if (online) window.TronoNetwork.requestRooms();
 });
 
-function openManual() {
-  if (window.TronoDesktop?.openManual) return window.TronoDesktop.openManual();
-  return window.open('manual/index.html', '_blank', 'noopener');
-}
-$('manualBtn').onclick = openManual;
-$('rulesManualBtn').onclick = openManual;
-$('rulesLaws').innerHTML =
-  '<h3>As cinco Leis</h3>' +
-  LAW_ORDER.map(
-    (id) => `<p><b>${escAttr(LAWS[id].name)}:</b> ${escAttr(LAWS[id].description)}</p>`,
-  ).join('');
-$('rulesDecrees').innerHTML =
-  '<h3>Os dez Decretos</h3>' +
-  DECREES.map((d) => `<p><b>${escAttr(d.name)}:</b> ${escAttr(d.text)}</p>`).join('');
-
 $('startHumanBtn').onclick = () => startGame(false).catch(fatalError);
 $('startDemoBtn').onclick = () => startGame(true).catch(fatalError);
-$('restartBtn').onclick = () => {
-  if (confirm('Sair desta mesa e voltar aos salões? Sua chamada do M&N continua conectada.'))
-    backToLobby();
-};
-$('rulesBtn').onclick = () => $('rulesDrawer').classList.remove('hidden');
-$('rulesClose').onclick = () => $('rulesDrawer').classList.add('hidden');
-$('rulesDrawer').addEventListener('click', (e) => {
-  if (e.target === $('rulesDrawer')) $('rulesDrawer').classList.add('hidden');
-});
-$('speedBtn').onclick = () => {
-  if (onlineGameMode) return;
-  animationScale = animationScale === 1 ? 0.38 : animationScale === 0.38 ? 1.65 : 1;
-  $('speedBtn').textContent =
-    animationScale === 1 ? '⏱ Normal' : animationScale === 0.38 ? '⚡ Rápido' : '🐢 Lento';
-};
 
 function showChallengeReveal(seat, card) {
   throneEffects.challenge({ seat, card });
@@ -1547,7 +1507,7 @@ window.__LeiDoTrono = {
   getState: () => game,
   validateLawPlan: () => (game ? getSafeLawChoices(game.trick + 1) : []),
   setFast: () => {
-    animationScale = 0.05;
+    throneControls.setFast();
   },
   toggleMusic,
   usurpacaoRule: () => ({

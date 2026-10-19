@@ -2526,6 +2526,40 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   ponte de navegação em `legacy/game.js`, `court-display.js` e a separação das
   regras/coordenação do backend. As escolhas locais entre fases não estão mais pendentes.
 
+## Controles gerais e regras da mesa em React
+
+- Velocidade, Início, manual e regras usam `throne-controls.ts` e portais React em
+  hosts estáveis. A versão do cabeçalho vem do cliente de rede. Configurações
+  desktop movem os hosts completos e conservam os mesmos botões/listeners.
+- A escala de animação saiu do legado; o motor consulta o dono tipado. Online
+  mantém tempo normal e ignora mudanças, incluindo o helper de teste. Ao voltar
+  ao modo local, o controle fica habilitado novamente.
+- A confirmação para sair é deduplicada e só se aplica ao contexto oferecido:
+  conta/ABA, mesa, modo, navegação e descarte invalidam respostas atrasadas. Sair
+  delega à ponte existente; chamada e recursos permanecem com seus donos.
+- Regras usam diálogo nativo e texto React do catálogo das cinco Leis/dez Decretos.
+  Escape, botão e clique no fundo fecham o diálogo sem fechar as configurações
+  atrás. O manual continua usando IPC desktop ou abertura web com gesto ativo.
+- Removidos `navigation/rules-drawer.tsx`, HTML/handlers substituídos, `escAttr`,
+  estado duplicado da velocidade e CSS sem consumidores em `style.css`/`court.css`. Estilos
+  do novo diálogo ficam no domínio, em `throne-controls.css`.
+- Regressões cobrem velocidades, retomada local após online, confirmação única,
+  ABA, cancelamento, descarte, manual e notificações de presença sem repintura.
+  O helper de interface confere controles, catálogos, Escape/fundo, manual web,
+  responsividade e identidade dos nós nos dois layouts e no Electron.
+- Validação: tipagem, formatação, build estático e `npm test` passaram. A suíte
+  final de modelos soma 156 testes. Navegador completou três rodadas de simulação,
+  uma rodada humana, manual web e a troca real online → local com velocidade
+  reabilitada. Dois Electron conservaram os controles, mic/câmera/tela, peers e
+  socket durante regras/configurações e navegação.
+- Capturas Original/Discord em 480×800 e 1080×1920 inspecionadas; rolagem alcança
+  o último Decreto e não há excesso horizontal. Evidências locais em
+  `artifacts/throne-controls-*`. Mídia sintética; não mede 60 fps em jogos reais
+  nem conectividade TURN de produção.
+- Próximo recorte: tooltips restantes e extração da simulação/ponte local em
+  `legacy/game.js`; permanecem também `court-display.js` e regras/coordenação do
+  backend. Os gatilhos de iniciar humano/demonstração ainda chamam o motor antigo.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

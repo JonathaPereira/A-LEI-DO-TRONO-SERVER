@@ -52,8 +52,8 @@ export function initializeCallSettings(target: Window): void {
       'As opções da partida ficam aqui. Ordenar cartas e usar Influência continuam ao alcance da sua mão.';
     game.append(gameHelp);
     for (const [key, title, ids] of [
-      ['match', 'Partida e velocidade', ['speedBtn', 'restartBtn']],
-      ['help', 'Regras e histórico', ['rulesBtn', 'logBtn']],
+      ['match', 'Partida e velocidade', ['throneSpeedHost', 'throneRestartHost']],
+      ['help', 'Regras e histórico', ['throneRulesHost', 'logBtn']],
       ['media', 'Comunicação e gravação manual', ['socialBtn', 'recordMatchBtn']],
     ] as const) {
       const group = document.createElement('details');

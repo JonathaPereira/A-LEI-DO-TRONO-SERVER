@@ -8,7 +8,7 @@ export function GameScreen() {
             <span className={'brand-crown'}>♛</span>
             <div>
               <strong>A LEI DO TRONO</strong>
-              <small id={'versionLabel'}>Protótipo digital v0.8.0-alpha</small>
+              <span id="throneVersionHost" style={{ display: 'contents' }} />
             </div>
           </div>
           <div id="throneStatusHost" className="round-status"></div>
@@ -76,15 +76,9 @@ export function GameScreen() {
             </button>
             <span id="throneLogToggleHost" style={{ display: 'contents' }}></span>
             <CallNavigationHost id="socialBtn" />
-            <button id={'speedBtn'} className={'icon-btn'} title={'Alternar velocidade'}>
-              ⏱ Normal
-            </button>
-            <button id={'rulesBtn'} className={'icon-btn'} title={'Resumo de regras'}>
-              📜 Regras
-            </button>
-            <button id={'restartBtn'} className={'icon-btn danger'} title={'Voltar ao início'}>
-              ↻ Início
-            </button>
+            <span id="throneSpeedHost" style={{ display: 'contents' }} />
+            <span id="throneRulesHost" style={{ display: 'contents' }} />
+            <span id="throneRestartHost" style={{ display: 'contents' }} />
           </div>
         </header>
 

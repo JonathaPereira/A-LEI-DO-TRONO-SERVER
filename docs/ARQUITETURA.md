@@ -273,7 +273,31 @@ diálogo; o retorno restaura a escolha. Modais privados/resultados têm precedê
 
 `renderHandLocal`, `onHumanCardClick`, `humanPlayResolver`, os renderizadores de
 Influência/naipe e os listeners locais de cartas/checkbox/ordenação foram removidos.
-Os controles gerais e a simulação permanecem no legado; escolhas entre fases usam React.
+Os controles gerais e as escolhas entre fases usam React. A simulação permanece no legado.
+
+`lib/games/throne-controls.ts` possui velocidade, abertura das regras e confirmação
+para sair. O motor consulta sua escala ao agendar pausas/efeitos; não há outra
+`animationScale`. Normal/Rápido/Lento mantêm 1/0,38/1,65; o helper de simulação usa
+0,05. Online usa sempre 1 e desabilita mudanças; voltar ao modo local reabilita o
+controle. Ticks e presença não repintam esses controles.
+
+Sair confirma uma vez e delega à ponte `backToLobby`; não assume socket nem
+recursos da chamada. Conta/ABA, salão, modo, navegação e descarte invalidam uma
+confirmação atrasada. Falhas do manual são tratadas somente no contexto ainda
+válido. Abrir o manual chama o IPC existente ou `window.open` sincronamente para
+preservar a ativação do usuário.
+
+`components/games/throne-controls.tsx` renderiza botões em hosts estáveis e um
+`GameDialog` nativo para regras. Leis/Decretos usam o catálogo existente como
+texto React. Escape, botão e clique fora fecham somente esse diálogo; o conteúdo
+rola dentro do viewport e não sobrepõe o botão do manual. O cabeçalho da mesa
+usa a versão do cliente de rede. Configurações desktop movem os hosts inteiros,
+conservando os nós React e sua posição no grupo Jogo.
+
+`navigation/rules-drawer.tsx`, HTML de regras, handlers de manual/regras/velocidade/
+Início, `escAttr` e CSS exclusivo do drawer antigo foram removidos. O runtime
+libera raiz, portais, observador e assinaturas. Permanecem no motor os gatilhos de
+início humano/demonstração, a ponte de navegação e os tooltips globais legados.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
@@ -301,8 +325,7 @@ O runtime conserva host, raiz, nós React e socket. `applyOnlineState`,
 cabeçalho foram removidos. `TronoThroneBoard.presentOnlineMatch` recebe somente o
 snapshot validado para a ponte antiga de navegação/controles. Sua cópia pública
 de compatibilidade não alimenta mais o dispatcher de eventos nem recebe cartas
-reveladas por ele. Não interpreta pacotes nem possui outro relógio. A ponte e os
-controles locais continuam pendentes.
+reveladas por ele. Não interpreta pacotes nem possui outro relógio. A ponte e o motor local continuam pendentes.
 
 `lib/games/throne-seats.ts` projeta os assentos públicos. No online, reutiliza
 os jogadores do estado validado de `throne-match`, sem outro socket ou parser de

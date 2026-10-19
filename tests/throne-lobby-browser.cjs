@@ -198,6 +198,8 @@ test(
         .poll(() => page.locator('#throneOnlineHandCards .hand-card').count())
         .toBeGreaterThan(0);
       await preserved();
+      await expect(page.locator('#speedBtn')).toBeDisabled();
+      await expect(page.locator('#speedBtn')).toContainText('Online');
       // Match cancellation releases only the game; the M&N call keeps all its tracks.
       await page.evaluate(() => document.getElementById('restartBtn').click());
       await expect(page.locator('#setupScreen')).toBeVisible();
@@ -213,6 +215,9 @@ test(
       await expect(page.locator('#gameScreen')).toBeVisible();
       await expect.poll(() => page.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
       assert(await page.evaluate(() => !window.__LeiDoTrono.getState().online));
+      await expect(page.locator('#speedBtn')).toBeEnabled();
+      await expect(page.locator('#speedBtn')).toContainText('Rápido');
+      assert.equal(await page.evaluate(() => window.TronoThroneControls.getSnapshot().scale), 0.05);
       await assertThroneSeats(page, true);
       await assertThroneTable(page, true);
       assert(

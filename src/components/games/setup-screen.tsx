@@ -29,9 +29,7 @@ export function SetupScreen() {
                 aria-live={'polite'}
               ></small>
             </label>
-            <button id={'manualBtn'} className={'royal-btn manual-btn'}>
-              📜 Manual temático
-            </button>
+            <span id="throneManualHost" style={{ display: 'contents' }} />
           </div>
 
           <div className="room-grid" id="roomGrid" />

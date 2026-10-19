@@ -336,33 +336,7 @@ body.chat-only-active #socialPanel .voice-privacy-note small {
   line-height: 1.6;
   color: var(--theme-muted) !important;
 }
-.rules-card {
-  max-height: calc(100dvh - 32px);
-  overflow: auto;
-}
-.rules-card h3 {
-  margin-top: 24px;
-}
-.rules-card p {
-  line-height: 1.7;
-}
-.rules-card .rules-manual-link {
-  display: inline-flex;
-  margin: 12px 0;
-  padding: 10px 16px;
-  border: 1px solid #b69a5b;
-  border-radius: 10px;
-  color: #e5c984;
-  text-decoration: none;
-}
 @media (max-width: 680px) {
-  .rules-columns {
-    grid-template-columns: 1fr !important;
-  }
-  .rules-card {
-    width: calc(100vw - 24px);
-    padding: 20px !important;
-  }
   .law-mini {
     max-width: 100%;
     min-width: 0;

@@ -60,13 +60,16 @@ test(
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (message) => {
         if (
-          /\[Throne(?:History|Match|Table|Seats|Effects|Events|Choices|Hand)\]/.test(message.text())
+          /\[Throne(?:History|Match|Table|Seats|Effects|Events|Choices|Hand|Controls)\]/.test(
+            message.text(),
+          )
         )
           warnings.push(message.text());
       });
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
+      await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page);
       await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
       await require('./throne-local-hand-controls.cjs').exerciseLocalHand(page);
       await require('./throne-local-choices-controls.cjs').exerciseLocalChoices(page);

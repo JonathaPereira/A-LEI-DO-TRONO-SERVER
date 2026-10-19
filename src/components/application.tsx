@@ -14,7 +14,6 @@ import { TurnNotice } from '@/components/navigation/turn-notice';
 import { TrickOutcome } from '@/components/navigation/trick-outcome';
 import { Toast } from '@/components/navigation/toast';
 import { HoverTooltip } from '@/components/navigation/hover-tooltip';
-import { RulesDrawer } from '@/components/navigation/rules-drawer';
 import { AuthDialog } from '@/components/modals/auth-dialog';
 import { GuestDialog } from '@/components/modals/guest-dialog';
 import { CommunityToggle } from '@/components/channels/community-toggle';
@@ -57,7 +56,6 @@ export function Application() {
       <TrickOutcome />
       <Toast />
       <HoverTooltip />
-      <RulesDrawer />
       <AuthDialog />
       <GuestDialog />
       <CommunityToggle />
