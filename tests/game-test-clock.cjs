@@ -2,17 +2,28 @@
 // Inject deterministic game dependencies into this child process only.
 const runtime = require('../server/runtime.cjs');
 const createRuntime = runtime.createRuntime;
-const decree = process.env.TRONO_TEST_DECREE;
+const decrees = String(process.env.TRONO_TEST_DECREE || '').split(',');
 if (
-  !['reserva', 'conselho', 'corte', 'rotacao', 'desafio', 'favor', 'espionagem', 'peso'].includes(
-    decree,
+  !decrees.length ||
+  decrees.some(
+    (decree) =>
+      ![
+        'reserva',
+        'conselho',
+        'corte',
+        'rotacao',
+        'desafio',
+        'favor',
+        'espionagem',
+        'peso',
+      ].includes(decree),
   )
-) {
+)
   throw new Error('Invalid test decree');
-}
+let nextDecree = 0;
 runtime.createRuntime = (options = {}) =>
   createRuntime({
     ...options,
     scheduleDelay: (ms) => Math.min(ms, 8),
-    chooseDecrees: () => [decree],
+    chooseDecrees: () => [decrees[nextDecree++ % decrees.length]],
   });

@@ -33,12 +33,10 @@ const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
 const throneHand = window.TronoThroneHand;
 const throneMatch = window.TronoThroneMatch;
-let onlineIntelligence = null;
+const thronePrivate = window.TronoThronePrivate;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
-let onlineExchangeBusy = false;
 let exchangeSequence = 0;
-let onlineQueuedPrivateUsurpation = null;
 let localTurnTimer = null;
 let clientLogHistory = [];
 // Audio controls initialize independently of the game/room interface.
@@ -296,7 +294,7 @@ async function startGame(allAI = false) {
   throneChoices.clear();
   throneHand.clear();
   throneMatch.clear();
-  onlineIntelligence = null;
+  thronePrivate.clear();
   onlineGameMode = false;
   leavingGame = false;
   await ensureAudio();
@@ -460,7 +458,8 @@ async function applyDecreeRoundStart() {
     for (const p of game.players)
       p.intelligence = window.TronoRules.intelligence(game.players, p.id);
     logEvent('Espionagem: cada Casa recebeu uma informação privada sobre o jogador à direita.');
-    await showIntelligence(game.players[game.localPlayerId]?.intelligence);
+    const clue = game.players[game.localPlayerId]?.intelligence;
+    if (clue) await thronePrivate.showLocal({ kind: 'intelligence', clue });
   }
 
   renderAll();
@@ -628,7 +627,7 @@ async function showExchangeAnimation({
 function prepareUsurpacaoExchange(shadow, target, given) {
   return window.TronoRules.reserveExchange(game.players, shadow, target, given?.id, shuffle);
 }
-function finishUsurpacaoExchange(shadow, target, given, index, state) {
+function finishUsurpacaoExchange(shadow, target, index, state) {
   return window.TronoRules.finishExchange(shadow, target, state, index);
 }
 
@@ -648,34 +647,16 @@ async function chooseUsurpacaoReturnIndex(shadow, crown) {
   });
 }
 
-function privateUsurpationHtml(viewer, shadow, crown, given, taken, returnedSameCard) {
-  const isShadow = viewer.id === shadow.id;
-  const outgoing = isShadow ? given : taken;
-  const incoming = isShadow ? taken : given;
-  const role = isShadow ? 'SOMBRA' : 'A CASA ESCOLHIDA';
-  const other = isShadow ? crown : shadow;
-  const special = `<div class="private-exchange-note"><strong>Informação privada</strong><span>Somente você e ${escAttr(other.name)} recebem estas duas cartas. A carta separada nunca pode retornar à Sombra.</span></div>`;
-  return `<div class="private-exchange-reveal">
-    <div class="private-exchange-role">VOCÊ É ${role}</div>
-    <div class="private-exchange-cards">
-      <div class="private-exchange-card outgoing"><small>SAIU DA SUA MÃO</small><img src="${cardAsset(outgoing)}" alt="${SUITS[outgoing.suit].name} ${outgoing.value}"><strong>${SUITS[outgoing.suit].name} ${outgoing.value}</strong></div>
-      <div class="private-exchange-arrow">⇄</div>
-      <div class="private-exchange-card incoming"><small>ENTROU NA SUA MÃO</small><img src="${cardAsset(incoming)}" alt="${SUITS[incoming.suit].name} ${incoming.value}"><strong>${SUITS[incoming.suit].name} ${incoming.value}</strong></div>
-    </div>
-    ${special}
-  </div>`;
-}
-
-async function showPrivateUsurpationResult(shadow, crown, given, taken, returnedSameCard) {
+async function showPrivateUsurpationResult(shadow, crown, given, taken) {
   const localId = game?.localPlayerId;
-  if (localId === null || localId === undefined) return;
-  if (localId !== shadow.id && localId !== crown.id) return; // PRIVACIDADE: nenhum terceiro vê as cartas.
-  const viewer = game.players[localId];
-  await infoModal({
-    icon: localId === shadow.id ? '☾' : '♛',
-    title: 'Usurpação — informação privada',
-    text: privateUsurpationHtml(viewer, shadow, crown, given, taken, returnedSameCard),
-    button: 'Ocultar e continuar',
+  if (localId == null || (localId !== shadow.id && localId !== crown.id)) return;
+  const isShadow = localId === shadow.id;
+  await thronePrivate.showLocal({
+    kind: 'usurpation',
+    role: isShadow ? 'shadow' : 'target',
+    otherName: isShadow ? crown.name : shadow.name,
+    outgoing: isShadow ? given : taken,
+    incoming: isShadow ? taken : given,
   });
 }
 
@@ -720,13 +701,7 @@ async function performUsurpacao() {
   // Se a Sombra for humana, ela escolhe VISUALMENTE uma posição entre cartas fechadas.
   // Nenhum valor ou naipe é mostrado neste momento.
   const pickIndex = await chooseUsurpacaoReturnIndex(shadow, crown);
-  const { taken, returnedSameCard } = finishUsurpacaoExchange(
-    shadow,
-    crown,
-    given,
-    pickIndex,
-    before,
-  );
+  const { taken } = finishUsurpacaoExchange(shadow, crown, pickIndex, before);
 
   await showExchangeAnimation({
     kind: 'usurpacao',
@@ -752,7 +727,7 @@ async function performUsurpacao() {
   renderAll();
 
   // Só o cliente de um dos dois envolvidos recebe a revelação das cartas.
-  await showPrivateUsurpationResult(shadow, crown, given, taken, returnedSameCard);
+  await showPrivateUsurpationResult(shadow, crown, given, taken);
   toast('Usurpação resolvida', 900);
   renderAll();
   await delay(420);
@@ -1882,7 +1857,6 @@ function enterOnlineBoard() {
 function presentOnlineMatch(state) {
   if (!state) {
     if (game?.online) game = null;
-    onlineIntelligence = null;
     return;
   }
   if (leavingGame) return;
@@ -1898,43 +1872,6 @@ function presentOnlineMatch(state) {
   else game = next;
   if (isLocalPlayersTurn() && previousTurn !== `${game.round}:${game.trick}`) showYourTurnNotice();
   renderAll();
-}
-async function showIntelligence(clue) {
-  if (!clue?.card) return;
-  const card = clue.card;
-  await infoModal({
-    icon: '◈',
-    title: 'Espionagem — informação privada',
-    text: `<div class="intelligence-reveal"><small>UMA CARTA DE ${escAttr(clue.name)}</small><img src="${cardAsset(card)}" alt="${SUITS[card.suit].name} ${card.value}"><strong>${SUITS[card.suit].name} ${card.value}</strong><p>A carta permanece na mão do adversário e pode ser jogada ou trocada depois. Somente você vê esta informação.</p><small>Consulte novamente clicando no Decreto Espionagem.</small></div>`,
-    button: 'Ocultar e continuar',
-  });
-}
-$('decreeBadge').tabIndex = 0;
-$('decreeBadge').onclick = () => {
-  if (game?.decree?.id === 'espionagem')
-    void showIntelligence(
-      game.online ? onlineIntelligence : game.players[game.localPlayerId]?.intelligence,
-    );
-};
-$('decreeBadge').onkeydown = (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    $('decreeBadge').click();
-  }
-};
-
-async function showOnlinePrivateUsurpation(msg) {
-  const role = msg.role === 'shadow' ? 'SOMBRA' : 'A CASA ESCOLHIDA';
-  const outgoing = msg.outgoing,
-    incoming = msg.incoming;
-  const note = `<div class="private-exchange-note"><strong>Informação privada</strong><span>Somente você e ${escAttr(msg.otherName || 'o outro envolvido')} recebem estes dados. A carta separada nunca retorna à Sombra.</span></div>`;
-  await infoModal({
-    icon: msg.role === 'shadow' ? '☾' : '♛',
-    title: 'Usurpação — informação privada',
-    text: `<div class="private-exchange-reveal"><div class="private-exchange-role">VOCÊ É ${role}</div><div class="private-exchange-cards"><div class="private-exchange-card outgoing"><small>SAIU DA SUA MÃO</small><img src="${cardAsset(outgoing)}"><strong>${SUITS[outgoing.suit].name} ${outgoing.value}</strong></div><div class="private-exchange-arrow">⇄</div><div class="private-exchange-card incoming"><small>ENTROU NA SUA MÃO</small><img src="${cardAsset(incoming)}"><strong>${SUITS[incoming.suit].name} ${incoming.value}</strong></div></div>${note}</div>`,
-    button: 'Ocultar e continuar',
-  });
-  window.TronoNetwork?.gameAction('usurp-ack', {});
 }
 async function handleOnlineGameEvent(msg) {
   const session = game;
@@ -1955,22 +1892,19 @@ async function handleOnlineGameEvent(msg) {
     return;
   }
   if (ev === 'exchange') {
-    onlineExchangeBusy = true;
-    await showExchangeAnimation({
-      kind: msg.kind,
-      title: msg.title || 'Troca de cartas',
-      subtitle:
-        msg.kind === 'rotation'
-          ? 'Todos passam simultaneamente 1 carta oculta ao jogador à esquerda.'
-          : 'As cartas estão mudando de mãos.',
-      moves: msg.moves || [],
-    });
-    if (game !== session) return;
-    onlineExchangeBusy = false;
-    if (onlineQueuedPrivateUsurpation) {
-      const queued = onlineQueuedPrivateUsurpation;
-      onlineQueuedPrivateUsurpation = null;
-      showOnlinePrivateUsurpation(queued).catch(fatalError);
+    const release = thronePrivate.holdExchange();
+    try {
+      await showExchangeAnimation({
+        kind: msg.kind,
+        title: msg.title || 'Troca de cartas',
+        subtitle:
+          msg.kind === 'rotation'
+            ? 'Todos passam simultaneamente 1 carta oculta ao jogador à esquerda.'
+            : 'As cartas estão mudando de mãos.',
+        moves: msg.moves || [],
+      });
+    } finally {
+      release();
     }
     return;
   }
@@ -2270,8 +2204,6 @@ function backToLobby() {
   modalReject?.(cancelled);
   modalResolver = null;
   closeModal();
-  onlineQueuedPrivateUsurpation = null;
-  onlineExchangeBusy = false;
   if (
     window.TronoNetwork?.gameRoom &&
     window.TronoNetwork?.primaryRoom === window.TronoNetwork?.gameRoom
@@ -2281,7 +2213,7 @@ function backToLobby() {
   throneLobby.clear();
   onlineGameMode = false;
   game = null;
-  onlineIntelligence = null;
+  thronePrivate.clear();
   throneMatch.clear();
   window.TronoSocial?.setChatHubMode?.(false);
   document.body.classList.remove('chat-only-active');
@@ -2357,17 +2289,6 @@ window.TronoNetwork?.onMessage((msg) => {
     enterOnlineBoard();
     toast('♛ Partida online iniciada — o servidor controla a mesa.', 2200);
     window.TronoNetwork?.requestState();
-  }
-  // Private Espionagem cache remains here until its dialog is converted.
-  if (msg.type === 'game-state' && !leavingGame && throneMatch.getSnapshot().match)
-    onlineIntelligence = msg.state?.intelligence || null;
-  if (msg.type === 'private-intelligence' && !leavingGame)
-    showIntelligence(msg.intelligence)
-      .then(() => window.TronoNetwork.gameAction('intelligence-ack'))
-      .catch(fatalError);
-  if (msg.type === 'private-usurpation' && !leavingGame) {
-    if (onlineExchangeBusy) onlineQueuedPrivateUsurpation = msg;
-    else showOnlinePrivateUsurpation(msg).catch(fatalError);
   }
   if (msg.type === 'game-event' && !leavingGame) handleOnlineGameEvent(msg).catch(fatalError);
   if (msg.type === 'error') {

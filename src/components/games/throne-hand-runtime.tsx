@@ -1,3 +1,4 @@
+import type { ThronePrivate } from '../../lib/games/throne-private';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { ThroneLobby } from '../../lib/games/throne-lobby';
@@ -10,6 +11,7 @@ interface Runtime extends Window {
   TronoAuth: { user: { id: string } | null; guest: { id: string } | null };
   TronoNetwork: NetworkClient;
   TronoThroneLobby: ThroneLobby;
+  TronoThronePrivate: ThronePrivate;
   TronoThroneHand?: ThroneHand;
 }
 const installed = new WeakMap<Window, () => void>();
@@ -36,8 +38,12 @@ export function initializeThroneHand(target: Window): () => void {
     },
     connected: () => runtime.TronoNetwork.connected,
     visible: () =>
-      !doc.hidden && !board.classList.contains('hidden') && localModal.classList.contains('hidden'),
+      !doc.hidden &&
+      !board.classList.contains('hidden') &&
+      localModal.classList.contains('hidden') &&
+      !runtime.TronoThronePrivate.getSnapshot().open,
     subscribeSource(fn) {
+      const privateRelease = runtime.TronoThronePrivate.subscribe(fn);
       const release = runtime.TronoThroneLobby.subscribe(fn),
         observer = new MutationObserver(fn);
       observer.observe(board, { attributes: true, attributeFilter: ['class'] });
@@ -46,6 +52,7 @@ export function initializeThroneHand(target: Window): () => void {
       doc.addEventListener('visibilitychange', fn);
       return () => {
         release();
+        privateRelease();
         observer.disconnect();
         target.removeEventListener('trono-auth-change', fn);
         doc.removeEventListener('visibilitychange', fn);

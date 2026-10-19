@@ -23,7 +23,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
   let fixture, finished = false;
   t.signal.addEventListener('abort', () => { if (!finished) apps.forEach(killTestApp); }, {once: true});
   try {
-    fixture = await startFixture({port: 10743, allowedOrigins: [origin], directAttachments: true, gameDecree: 'reserva'});
+    fixture = await startFixture({port: 10743, allowedOrigins: [origin], directAttachments: true, gameDecree: 'reserva,espionagem'});
     async function launch(email, nickname, layout = 'original') {
       await fixture.call('signup', {email, nickname, password: 'LayoutTest12!'});
       await fixture.call('verify', {token_hash: [...fixture.links.keys()].at(-1), type: 'signup'});
@@ -186,6 +186,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(localScreen).not.toHaveClass(/share-collapsed/);
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
     await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({page, receiver});
+    await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver});
     await page.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
     await expect(page.locator('#roomSeats')).toContainText('Layout Principal');
     await expect(page.locator('#roomSeats .room-seat')).toHaveCount(4);
@@ -216,6 +217,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
         messengerOwner: window.TronoDirectMessages,
         games: ['gamesSideNav','rogueliteScreen','rogueliteBack','rogueliteFullscreen','azulBack','azulFullscreen','azulRulesDialog','azulContent','azulRanking'].map(id => document.getElementById(id)),
+        privateOwner: window.TronoThronePrivate,
+        privateHosts: ['thronePrivateHost','thronePrivateDialog'].map(id => document.getElementById(id)),
         matchOwner: window.TronoThroneMatch,
         matchHosts: ['throneStatusHost','roundBadge','trickBadge','turnBadge','turnTimer','turnNoticeClock'].map(id => document.getElementById(id)),
         handOwner: window.TronoThroneHand,
@@ -257,7 +260,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          choices: window.TronoThroneMatch === before.matchOwner && before.matchHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneHand === before.handOwner && before.handHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneChoices === before.choiceOwner && before.choiceHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node),
+          choices: window.TronoThronePrivate === before.privateOwner && before.privateHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneMatch === before.matchOwner && before.matchHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneHand === before.handOwner && before.handHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneChoices === before.choiceOwner && before.choiceHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           throne: window.TronoThroneLobby === before.throneOwner && before.throne.every(node => node && node.isConnected && document.getElementById(node.id) === node) && !window.TronoAvatars && !window.TronoAvatarIcons && !window.TronoProfile.avatarHtml && !window.TronoProfile.hydrate,
           portal: window.TronoPortal === before.portalOwner && before.portal.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           games: window.TronoGameLibrary === before.gameOwners[0] && window.TronoRogueliteHost === before.gameOwners[1] && window.TronoAzul === before.gameOwners[2] && before.games.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),

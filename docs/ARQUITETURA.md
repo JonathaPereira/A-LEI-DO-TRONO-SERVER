@@ -176,8 +176,8 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
 partidas; não possui o estado do salão.
 
-O jogo ainda possui simulação local, apresentação da mesa, informações privadas
-de Espionagem/Usurpação, regras locais de Influência e animações em `legacy/game.js`.
+O jogo ainda possui simulação local, apresentação da mesa, regras locais de
+Influência e animações em `legacy/game.js`.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
@@ -199,8 +199,8 @@ Após enviar, aguarda a próxima fase sem reenviar a escolha em eventos de prese
 
 `components/games/throne-choices.tsx` renderiza o diálogo nativo e a consulta da
 própria mão ao escolher Lei. O runtime monta uma raiz/host por página e observa
-visibilidade e o modal antigo; informações privadas ainda legadas têm precedência
-para evitar dois diálogos simultâneos. Ao descartar, remove raiz, observadores e
+visibilidade, o modal antigo e o dono das revelações privadas; essas informações
+têm precedência para evitar dois diálogos simultâneos. Ao descartar, remove raiz, observadores e
 assinaturas. `showOnlinePrompt` e `onlineLastPromptId` foram removidos de
 `legacy/game.js`; modos locais continuam usando os modais anteriores.
 
@@ -228,8 +228,7 @@ os observadores no descarte. Não há socket, captura ou player adicional.
 `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
 e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
 online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
-A apresentação da mesa, informações privadas de Espionagem/Usurpação e cinematics
-ainda estão no controlador antigo. O motor local e seus controles continuam
+A apresentação da mesa e cinematics ainda estão no controlador antigo. O motor local e seus controles continuam
 isolados até a conversão correspondente.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
@@ -258,9 +257,40 @@ O runtime conserva host, raiz, nós React e socket. `applyOnlineState`,
 cabeçalho foram removidos. `TronoThroneBoard.presentOnlineMatch` recebe somente o
 snapshot validado para a apresentação antiga. Conserva a identidade da sessão de
 animação, cujo estado de exibição ainda pode receber revelações dos eventos.
-Não interpreta pacotes nem possui outro relógio. O cache privado de Espionagem
-permanece explicitamente separado no legado até a conversão de seu diálogo.
-Os demais eventos online e o restante da mesa ainda precisam ser convertidos.
+Não interpreta pacotes nem possui outro relógio. Os demais eventos online e o
+restante da mesa ainda precisam ser convertidos.
+
+`lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
+confirmações, consulta posterior e espera pela animação de troca. O parser copia e
+valida somente as cartas/nomes revelados. Usa o estado público validado para
+conferir Decreto/Lei, fase, destinatário da Espionagem e papel na Usurpação.
+Não consulta nem retém mãos completas. Rejeita trocas com cartas iguais ou da
+Corte Aberta; campos extras não entram no snapshot.
+
+Mensagens anteriores à nova fase aguardam o estado correspondente. A liberação da
+animação usa um token: uma troca antiga não libera uma nova. Cada confirmação
+exige o mesmo objeto apresentado pela interface, só envia uma vez por rodada/fase
+e pode ser repetida explicitamente se o transporte falhar. Consultar novamente
+Espionagem não envia outro ack. Ocultar a mesa conserva a revelação, sem confirmar;
+conta/ABA, salão/assento, desconexão, nova rodada, cancelamento e descarte limpam os
+dados. Um novo estado válido pode reconstruir a consulta da Espionagem.
+
+O modo local usa `showLocal`, que recebe somente a revelação do participante e
+retorna uma Promise. Confirmar libera a continuação do motor; encerrar rejeita com
+`AbortError`. Não envia comandos de rede. O motor local continua gerando a
+Espionagem e resolvendo as trocas com as regras compartilhadas.
+
+`components/games/throne-private-dialog.tsx` renderiza os dois diálogos nativos,
+com texto React, cartas e confirmação. O runtime possui os listeners do Decreto,
+root/host e observadores. Escolhas e mão assinam esse dono para ocultar seus
+diálogos enquanto uma revelação estiver aberta; o modal antigo conserva a
+precedência para escolhas locais e resultados ainda não convertidos.
+
+`onlineIntelligence`, `onlineQueuedPrivateUsurpation`, `onlineExchangeBusy`,
+`showIntelligence`, `showOnlinePrivateUsurpation`, `privateUsurpationHtml` e os
+listeners legados correspondentes foram removidos. A apresentação antiga apenas
+projeta o resultado local para o diálogo tipado e segura/libera a animação online
+com `holdExchange`; não armazena nem renderiza novamente esses dados privados.
 
 `lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
 visível, sem duplicar participação, partidas ou recursos de mídia. Botões do

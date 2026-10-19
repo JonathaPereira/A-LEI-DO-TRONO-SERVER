@@ -2209,6 +2209,56 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   Próximo recorte: diálogos privados e apresentação restante da mesa, preservando
   o motor compartilhado e os donos atuais de mídia e comunicação.
 
+## Revelações privadas de A Lei do Trono — 19/10/2026
+
+- `lib/games/throne-private.ts` possui Espionagem/Usurpação, confirmação, consulta
+  posterior e espera pela animação. Tipos e parser ficam em `types/throne-private.ts`
+  e `throne-private-protocol.ts`; copiam/congelam somente as cartas e os nomes
+  revelados, ignorando campos extras. Não retêm mãos completas. Conferem o
+  destinatário/papel e a fase contra o estado público validado; rejeitam troca de
+  carta por ela mesma e cartas da Corte Aberta.
+- Removidos `onlineIntelligence`, `onlineQueuedPrivateUsurpation`,
+  `onlineExchangeBusy`, `showIntelligence`, `showOnlinePrivateUsurpation`,
+  `privateUsurpationHtml` e os handlers antigos de recebimento/consulta.
+  O resultado local é projetado para `showLocal`; não há outro HTML privado ou
+  cache online no controlador antigo.
+- Mensagens que chegam antes da fase aguardam o estado correspondente. A troca
+  usa uma liberação ligada à própria animação, sem um finalizador antigo liberar
+  a revelação seguinte. Confirmar exige o objeto oferecido, é deduplicado por
+  rodada/fase e permite nova tentativa explícita se o transporte falhar. Consultar
+  Espionagem novamente não envia outra confirmação ao servidor.
+- Ocultar a mesa conserva o diálogo sem responder. Trocar conta/ABA, salão/assento,
+  desconectar, iniciar outra rodada, cancelar ou descartar limpa os dados privados.
+  Um clique antigo não confirma a revelação de outra partida.
+- O mesmo diálogo atende o motor local por Promise: confirmar libera o fluxo;
+  cancelar rejeita com `AbortError`, sem enviar comandos de rede. A geração das
+  informações e as regras locais de troca continuam com o motor existente.
+- `components/games/throne-private-dialog.tsx` renderiza Espionagem e os dois lados
+  da Usurpação em React. O runtime possui os listeners do Decreto Espionagem e
+  libera root/host/observadores ao descartar. Mão e escolhas assinam o mesmo dono,
+  cedendo a apresentação a uma revelação aberta; resultados/escolhas locais ainda
+  legados continuam com precedência para evitar dois diálogos simultâneos.
+- Doze regressões novas cobrem parser, destinatários, papéis, pacote anterior ao
+  estado, animações simultâneas, repetição, reconsulta, falha de envio, privacidade,
+  cancelamento local/online e descarte. A suíte completa passou com 102 testes de
+  modelos de jogos. Tipagem, formatação e build estático passaram; regras e rodadas
+  locais/online foram conferidas após a limpeza dos argumentos antigos.
+- Seis rodadas completas de navegador passaram: Reserva, Conselho, Corte, Rotação,
+  Desafio e Espionagem, com revelações de Usurpação, confirmações e reconsulta.
+  Os diálogos couberam em 480×800 e 1080×1920, layouts Original/Discord, com as
+  mesmas trilhas de microfone/câmera/tela. Capturas foram inspecionadas.
+- Dois Electron reais escolheram Reserva e jogaram pelos controles React; em outra
+  mesa, ambos confirmaram e reconsultaram Espionagem, ocultaram/retomaram o diálogo
+  e encerraram sem conservar a informação. O restante da regressão preservou
+  donos/hosts, microfone, câmera, tela, peers e socket. A fixture alterna somente
+  Decretos válidos e usa mesas distintas para as partidas. A navegação local/online
+  também passou. Evidências: `artifacts/throne-private-*`; mídia sintética, sem
+  medição de jogos a 60 fps ou TURN externo.
+- Restam apresentação de assentos/cartas/Leis, Crônica/resultados, eventos,
+  animações e simulação local em `legacy/game.js`, além do controle de tela cheia
+  ainda em `court-display.js`. Próximo recorte: apresentação da mesa a partir do
+  estado tipado existente, preservando os efeitos e o motor compartilhado.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

@@ -19,7 +19,8 @@ test(
     let browser;
     const errors = [],
       warnings = [],
-      influenceUsed = new Set();
+      influenceUsed = new Set(),
+      privateKinds = new Set();
     try {
       browser = await chromium.launch({
         executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
@@ -31,7 +32,7 @@ test(
           '--mute-audio',
         ],
       });
-      for (const decree of ['reserva', 'conselho', 'corte', 'rotacao', 'desafio'])
+      for (const decree of ['reserva', 'conselho', 'corte', 'rotacao', 'desafio', 'espionagem'])
         await t.test(decree, async (sub) => {
           const fixture = await startFixture({
             port: 10943,
@@ -97,7 +98,7 @@ test(
             const page = await context.newPage();
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
-              if (/\[Throne(?:Choices|Hand|Match)\]/.test(message.text()))
+              if (/\[Throne(?:Choices|Hand|Match|Private)\]/.test(message.text()))
                 warnings.push(message.text());
             });
             page.on('dialog', (dialog) => dialog.accept());
@@ -199,12 +200,74 @@ test(
             ) {
               await page.evaluate(() => window.__LeiDoTrono.setFast());
               const snapshot = await page.evaluate(() => ({
+                private: window.TronoThronePrivate.getSnapshot(),
                 prompt: window.TronoThroneChoices.getSnapshot().prompt,
                 open: window.TronoThroneChoices.getSnapshot().open,
                 pending: window.TronoThroneChoices.getSnapshot().pending,
                 packet: window.__choicePacket?.state,
               }));
-              if (snapshot.open && snapshot.prompt && !snapshot.pending) {
+              if (snapshot.private.open && snapshot.private.dialog) {
+                const disclosure = snapshot.private.dialog.data;
+                if (!privateKinds.has(disclosure.kind)) {
+                  await page.evaluate(() => window.TronoPortal.showOnly('portalScreen'));
+                  await expect(page.locator('#thronePrivateDialog')).toBeHidden();
+                  await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
+                  await expect(page.locator('#thronePrivateDialog')).toBeVisible();
+                  for (const layout of ['original', 'discord']) {
+                    await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+                    for (const [width, height] of [
+                      [480, 800],
+                      [1080, 1920],
+                    ]) {
+                      await page.setViewportSize({ width, height });
+                      const box = await page.locator('#thronePrivateDialog').evaluate((node) => {
+                        const r = node.getBoundingClientRect();
+                        return {
+                          left: r.left,
+                          right: r.right,
+                          top: r.top,
+                          bottom: r.bottom,
+                          width: node.clientWidth,
+                          scroll: node.scrollWidth,
+                          vw: innerWidth,
+                          vh: innerHeight,
+                        };
+                      });
+                      assert(
+                        box.left >= 0 &&
+                          box.right <= box.vw + 1 &&
+                          box.top >= 0 &&
+                          box.bottom <= box.vh + 1 &&
+                          box.scroll <= box.width + 1,
+                        JSON.stringify({ layout, box }),
+                      );
+                      await page.screenshot({
+                        path: path.resolve(
+                          __dirname,
+                          `../artifacts/throne-private-${disclosure.kind}-${layout}-${width}.png`,
+                        ),
+                      });
+                    }
+                  }
+                  await page.setViewportSize({ width: 1440, height: 960 });
+                  await page.evaluate(() => window.TronoAppLayout.apply('original'));
+                }
+                privateKinds.add(disclosure.kind);
+                await expect(page.locator('#throneChoiceDialog')).toBeHidden();
+                await page.locator('#thronePrivateContinue').click();
+                await expect(page.locator('#thronePrivateDialog')).toBeHidden();
+                if (disclosure.kind === 'intelligence' && snapshot.private.dialog.required) {
+                  await page.locator('#decreeBadge').click();
+                  await expect(page.locator('#thronePrivateDialog')).toBeVisible();
+                  assert.equal(
+                    await page.evaluate(
+                      () => window.TronoThronePrivate.getSnapshot().dialog.action,
+                    ),
+                    null,
+                  );
+                  await page.locator('#thronePrivateContinue').click();
+                }
+              } else if (snapshot.open && snapshot.prompt && !snapshot.pending) {
                 const p = snapshot.prompt;
                 if (!seen.has('responsive') && 'cardIds' in p) {
                   for (const layout of ['original', 'discord']) {
@@ -414,6 +477,11 @@ test(
             );
             await page.evaluate(() => window.TronoThroneBoard.backToLobby());
             await expect(page.locator('#throneChoiceDialog')).toBeHidden();
+            await expect(page.locator('#thronePrivateDialog')).toBeHidden();
+            assert.equal(
+              await page.evaluate(() => window.TronoThronePrivate.getSnapshot().intelligence),
+              null,
+            );
             assert.equal(
               await page.evaluate(() => window.TronoThroneMatch.getSnapshot().mode),
               null,
@@ -437,6 +505,8 @@ test(
             await fixture.stop();
           }
         });
+      assert(privateKinds.has('intelligence'), 'Espionagem was confirmed and reviewed in React');
+      assert(privateKinds.has('usurpation'), 'Usurpação private exchange was confirmed in React');
       assert(influenceUsed.has('sigilo'), 'Sigilo was exercised through React');
       assert(influenceUsed.has('plus'), 'Manobra +3 was exercised through React');
       assert(influenceUsed.has('minus'), 'Manobra -3 was exercised through React');
