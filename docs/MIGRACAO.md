@@ -2259,6 +2259,20 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   ainda em `court-display.js`. Próximo recorte: apresentação da mesa a partir do
   estado tipado existente, preservando os efeitos e o motor compartilhado.
 
+## Identidade Windows do desenvolvimento — 19/10/2026
+
+- `electron/main.cjs` usa nome e AppUserModelID próprios quando `app.isPackaged`
+  é falso. A instalação mantém `MN Trono` e `com.jonatha.mn.trono`; o modo local
+  usa `MN Trono Desenvolvimento` e `com.jonatha.mn.trono.development`.
+- A inspeção local encontrou `Electron.lnk` apontando para o Electron do repositório,
+  sem argumentos, com a mesma identidade da instalação. Após validar alvo e ID,
+  foi feito backup em `artifacts/windows-identity-repair/` e removido somente esse
+  atalho conflitante. Executável e atalhos `MN Trono` foram preservados.
+- Passaram os 27 testes básicos do desktop e a regressão com duas janelas Electron
+  reais, que também confere o nome de desenvolvimento. Após a execução, os atalhos
+  da instalação continuavam com alvo/identidade originais e `Electron.lnk` não
+  reapareceu. Nenhum instalador foi executado ou publicado nesta correção.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

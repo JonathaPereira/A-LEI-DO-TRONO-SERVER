@@ -1292,6 +1292,12 @@ O instalador carrega `resources/renderer`; o modo compilado local carrega `out/`
 A política de scripts calcula hashes dos bootstraps do HTML instalado, sem
 liberar scripts inline arbitrários.
 
+A instalação Windows conserva o AppUserModelID `com.jonatha.mn.trono`.
+Execuções não empacotadas usam `com.jonatha.mn.trono.development` e o nome
+`MN Trono Desenvolvimento`, para não disputar a associação de atalhos da versão
+instalada. Scripts de desenvolvimento e testes usam perfis locais separados;
+nenhum desses comandos instala ou atualiza o produto distribuído.
+
 No Windows, os switches de backgrounding preservam o agendamento do renderer
 quando coberto/minimizado. O contexto de envio solicita uma margem de 40 ms no
 desktop; isso não é uma medição de latência final. O teste de segundo plano mede

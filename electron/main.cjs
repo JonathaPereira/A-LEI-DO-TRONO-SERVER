@@ -42,6 +42,8 @@ const devOrigin = developmentOrigin({
   packaged: app.isPackaged,
   value: app.commandLine.getSwitchValue('desktop-dev-url'),
 });
+// Development and native tests must not claim the installed app's Windows identity.
+if (!app.isPackaged) app.setName('MN Trono Desenvolvimento');
 const isTrustedAppURL = (value) => {
   try {
     return isAppURL(value) || (!!devOrigin && new URL(value).origin === devOrigin);
@@ -114,7 +116,9 @@ function clearHotkey() {
   clipActive = false;
 }
 async function start() {
-  app.setAppUserModelId('com.jonatha.mn.trono');
+  app.setAppUserModelId(
+    app.isPackaged ? 'com.jonatha.mn.trono' : 'com.jonatha.mn.trono.development',
+  );
   preferences = new DesktopPreferences(app.getPath('userData'), safeStorage);
   await preferences.load();
   const browserSession = session.fromPartition('persist:mn-trono');

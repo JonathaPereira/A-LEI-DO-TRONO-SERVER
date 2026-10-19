@@ -38,6 +38,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         timeout: 30000
       });
       apps.push(app);
+      assert.deepEqual(await app.evaluate(({app}) => ({packaged: app.isPackaged, name: app.getName()})), {packaged: false, name: 'MN Trono Desenvolvimento'});
       // These dialogs concern synthetic devices in disposable test profiles only.
       await app.evaluate(({dialog}) => { dialog.showMessageBox = async () => ({response: 0}); });
       const page = await app.firstWindow();
