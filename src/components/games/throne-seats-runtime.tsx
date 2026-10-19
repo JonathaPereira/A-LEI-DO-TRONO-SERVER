@@ -33,7 +33,7 @@ export function initializeThroneSeats(target: Window): () => void {
       panel.classList.toggle('active', s.turn === id);
       panel.classList.toggle('local-player', !!s.players[id] && s.localSeat === id);
     });
-    // Legacy effects measure these nodes immediately after projecting the local engine.
+    // Effects measure these nodes immediately after projecting the local engine.
     flushSync(() => root.render(<ThroneSeatContents snapshot={s} panels={panels} coins={coins} />));
   };
   const release = controller.subscribe(render);

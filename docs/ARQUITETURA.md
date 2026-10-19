@@ -176,8 +176,9 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
 partidas; não possui o estado do salão.
 
-O jogo ainda possui simulação local, apresentação da mesa, regras locais de
-Influência e animações em `legacy/game.js`.
+O jogo ainda possui simulação, controles de mão/escolha e regras locais de
+Influência em `legacy/game.js`. As projeções públicas e os efeitos usam os donos
+tipados descritos abaixo.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
@@ -228,8 +229,8 @@ os observadores no descarte. Não há socket, captura ou player adicional.
 `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
 e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
 online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
-Animações e simulação local ainda passam pelo controlador antigo. Seus controles
-de mão/escolha continuam isolados até a conversão correspondente.
+A simulação e os controles locais de mão/escolha continuam no controlador antigo,
+que delega os efeitos ao dono tipado.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
@@ -273,11 +274,11 @@ Influência, cartas públicas e moedas por portais nos quatro painéis existente
 O runtime preserva os painéis externos e os nós das moedas durante a partida,
 atualiza somente as classes de turno/participante local e libera root/assinaturas
 no descarte. A atualização síncrona mantém a geometria disponível para os efeitos
-legados que a consultam imediatamente. Animações temporárias só podem inserir
+que a consultam imediatamente. Animações temporárias só podem inserir
 filhos nos hosts vazios `playerEffects0..3`; não podem reescrever os filhos React.
 `renderPlayerPanels`, `renderTableInfluenceCoins` e `shownPrestige` foram removidos.
 As cartas jogadas, Leis/Decretos, Crônica e resultados usam os módulos abaixo;
-os demais efeitos continuam no controlador antigo.
+os efeitos temporários têm o dono TypeScript descrito após os resultados.
 
 `lib/games/throne-table.ts` possui a apresentação de cartas jogadas, Lei/Decreto,
 trunfo, naipe anunciado e destaques de Coroa/Sombra. Consome o mesmo estado público
@@ -304,13 +305,13 @@ com seu dono privado e no mesmo nó. Descartar libera raiz, host e assinatura.
 `renderTableCards`, `renderLawTracker`, `markWinners`, `clearTableHighlights`,
 `animateCourtArrival`, tooltips e listeners de consulta legados foram removidos,
 além da cópia de `revealedPlays` recebida pelo evento bruto e da flag `revealing`.
-Animações de deslocamento e simulação local ainda usam a ponte.
+O motor local projeta a mesa pela ponte e delega os deslocamentos ao dono de efeitos.
 
 `lib/games/throne-history.ts` possui Crônica pública, fila/validação dos resultados,
 confirmações e estado de abertura. O parser limita a Crônica a 600 registros, copia
 somente os campos conhecidos e valida quatro assentos únicos, totais de marcadores,
 Pares, Prestígio e vencedores. O resultado final usa os desempates existentes.
-Efeitos públicos ainda legados acrescentam texto pelo mesmo dono, com escopo ativo;
+O motor e os efeitos públicos acrescentam texto pelo mesmo dono, com escopo ativo;
 não criam outra lista. Não recebe mãos nem informações privadas. Texto usa React,
 incluindo nomes com caracteres de HTML; não há `innerHTML` para registros/placares.
 
@@ -333,6 +334,33 @@ botão para fora do portal React. Raízes, hosts e assinatura permanecem únicos
 antigos da janela foram removidos de `game.js`. O motor conserva cálculo/continuação
 das rodadas e projeta seus placares para esse módulo. Sua fase inicial `setup` é
 normalizada para `starting` somente na projeção pública da mesa.
+
+`lib/games/throne-effects.ts` possui a apresentação temporária: avisos globais,
+turno, Influência, trocas, chegada de carta, Coroa/Sombra e revelação de Desafio.
+O parser recebe `unknown`, valida assentos, nomes, movimentos, valores/ações de
+Influência e cartas canônicas; copia só o necessário. Trocas não recebem cartas.
+Uma carta de Desafio precisa estar pública e marcada como tal; o deslocamento da
+própria carta gera seu recurso pelo naipe/valor validado, sem aceitar uma URL bruta.
+Nomes e rótulos entram por `textContent`, sem renderização de HTML recebido.
+
+`throne-effect-lifetime.ts` cancela por canal: substituição libera o efeito antigo
+antes de criar o novo; esperas canceladas resolvem `false`. Timers, classes, filhos
+temporários e Web Animations pertencem à mesma tarefa. `throne-effects-runtime.ts`
+assina partida/salão, identidade e visibilidade. Mudar rodada/vaza, sair, invalidar
+a sessão, ocultar ou descartar remove efeitos pendentes. O retorno à tela não os
+reproduz. O resultado registra seus ganhos públicos na Crônica ao recebê-los,
+inclusive com a tela oculta, e só anima os ganhos se sua sequência ainda for atual.
+Não pode acrescentar efeitos atrasados à próxima vaza. O adaptador local confere
+sua sessão após as esperas e interrompe a continuação antiga com `AbortError`.
+
+O renderer de efeitos é DOM/WAAPI tipado, nos hosts vazios estáveis já existentes.
+Não reescreve cartas, assentos ou placares React. O relógio `turnNoticeClock`
+permanece com `throne-match`; o timer de jogada e as esperas de regras locais
+permanecem no motor. Sons delegam ao áudio compartilhado. A ponte não abre socket,
+nem controla captura, players ou peers. Foram retirados de `game.js` os corpos dos
+renderizadores, timers de efeitos e `exchangeSequence`; os adaptadores restantes
+apenas projetam dados/delegam. O dispatcher de eventos e o motor local continuam
+pendentes, assim como a tela cheia de `court-display.js`.
 
 `lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
 confirmações, consulta posterior e espera pela animação de troca. O parser copia e

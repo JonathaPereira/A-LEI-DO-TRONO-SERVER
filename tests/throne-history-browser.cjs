@@ -59,12 +59,13 @@ test(
       const page = await context.newPage();
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (message) => {
-        if (/\[Throne(?:History|Match|Table|Seats)\]/.test(message.text()))
+        if (/\[Throne(?:History|Match|Table|Seats|Effects)\]/.test(message.text()))
           warnings.push(message.text());
       });
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
+      await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
       await page.evaluate(() => window.TronoThroneLobby.enter('sala-chave'));
       await expect(page.locator('#roomScreen')).toBeVisible();
       await page.locator('#roomScreen details').evaluate((node) => {

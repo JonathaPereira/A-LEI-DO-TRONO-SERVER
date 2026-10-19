@@ -2370,6 +2370,43 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   mão, controles e simulação local em `legacy/game.js`, tela cheia em
   `court-display.js` e a separação de regras/coordenação no backend.
 
+## Efeitos temporários e cancelamento — 19/10/2026
+
+- `throne-effects.ts` concentra avisos, turno, Influência, trocas, chegada de carta,
+  Coroa/Sombra e Desafio. O renderer DOM/WAAPI tipado usa hosts vazios estáveis,
+  texto literal e recursos de cartas canônicas. Não substitui os componentes React
+  da mesa, assentos ou relógio, nem abre socket/captura/peers.
+- `throne-effect-protocol.ts` valida entradas `unknown`: nomes/assentos, movimentos,
+  ações/custos/modificadores, ganhos e cartas públicas de Desafio. O resultado
+  valida vencedores distintos e ganhos somente dos outros assentos. Não retém
+  mãos, Espionagem, cartas brutas de resultado ou URLs de imagem recebidas.
+- `throne-effect-lifetime.ts` possui timers, limpezas e esperas por canal. Substituir
+  cancela antes de pintar; sair, trocar rodada/vaza, ocultar, invalidar identidade/
+  sessão ou descartar libera classes, elementos e animações, resolvendo esperas.
+  Continuações antigas não removem o efeito novo nem pintam ganhos na vaza seguinte.
+- Ganhos públicos entram na Crônica ao chegar, mesmo com a mesa oculta. Cancelar
+  sua apresentação não apaga o registro. O adaptador local confere a sessão após
+  trocas/resultados; uma partida encerrada não retoma sua sequência sobre outra.
+  O bloqueio privado de troca continua com o token de `throne-private` em `finally`.
+- Removidos os renderizadores/timers substituídos, helpers HTML de troca,
+  `exchangeSequence`, o recurso bruto de imagem da mão e o adaptador de som sem
+  chamadores de `legacy/game.js`. O motor conserva seu timer de jogada/esperas.
+- Regressões cobrem substituição, timer atrasado, espera cancelada, descarte,
+  projeção/validação e privacidade. O helper de interface verifica WAAPI real,
+  limpeza ao trocar vaza/sair/ocultar, ganho com tela oculta, texto literal,
+  sequência concluída e preservação dos hosts, também no Electron.
+- Validação: tipagem, formatação, build estático e `npm test` passaram. A suíte
+  final de modelos passou com 127 testes, incluindo sete regressões dos efeitos.
+  A simulação local completou três rodadas; o navegador cobriu Reserva em três
+  rodadas e os cenários Conselho/Corte/Rotação/Desafio/Espionagem. Dois Electron
+  reais conservaram controles, mic, câmera, tela, peers e socket. Capturas
+  inspecionadas; evidências em `artifacts/throne-effects-*`. Mídia sintética local,
+  sem medição de jogos reais a 60 fps ou conectividade TURN de produção.
+- Próximo recorte: dispatcher de eventos/controles da mesa e escolhas/mão do modo
+  local. Ainda restam o motor local em `legacy/game.js`, `court-display.js` e a
+  separação das regras/coordenação de `server/runtime.cjs`. Não excluir esses
+  arquivos enquanto conservarem esses consumidores.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

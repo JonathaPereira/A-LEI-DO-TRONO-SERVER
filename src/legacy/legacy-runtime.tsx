@@ -34,6 +34,7 @@ import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
 import { initializeThroneHistory } from '../components/games/throne-history-runtime';
+import { initializeThroneEffects } from '../components/games/throne-effects-runtime';
 import { initializeThronePrivate } from '../components/games/throne-private-runtime';
 import { initializeThroneTable } from '../components/games/throne-table-runtime';
 import { initializeThroneSeats } from '../components/games/throne-seats-runtime';
@@ -90,6 +91,7 @@ export function LegacyRuntime() {
           initializeThroneTable(window);
           initializeThronePrivate(window);
           initializeThroneHistory(window);
+          initializeThroneEffects(window);
           initializeThroneChoices(window);
           initializeThroneHand(window);
         }

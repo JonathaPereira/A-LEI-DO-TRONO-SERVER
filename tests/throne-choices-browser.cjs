@@ -108,7 +108,9 @@ test(
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
               if (
-                /\[Throne(?:Choices|Hand|Match|Private|Seats|Table|History)\]/.test(message.text())
+                /\[Throne(?:Choices|Hand|Match|Private|Seats|Table|History|Effects)\]/.test(
+                  message.text(),
+                )
               )
                 warnings.push(message.text());
             });

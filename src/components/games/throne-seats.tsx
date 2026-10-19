@@ -102,7 +102,7 @@ export function ThroneSeatContents({
         createPortal(
           <>
             {s.players[id] && <PlayerDetails player={s.players[id]} local={id === s.localSeat} />}
-            {/* Legacy animations own only the children of this stable, empty host. */}
+            {/* The effects owner writes only inside this stable, empty host. */}
             <div
               id={`playerEffects${id}`}
               className="throne-player-effects"

@@ -37,14 +37,13 @@ const throneSeats = window.TronoThroneSeats;
 const throneTable = window.TronoThroneTable;
 const thronePrivate = window.TronoThronePrivate;
 const throneHistory = window.TronoThroneHistory;
+const throneEffects = window.TronoThroneEffects;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
-let exchangeSequence = 0;
 let localTurnTimer = null;
 // Audio controls initialize independently of the game/room interface.
 const storage = window.TronoStorage || localStorage;
 const ensureAudio = (...args) => window.TronoAudio?.ensureAudio(...args) || Promise.resolve(false);
-const playSfx = (...args) => window.TronoAudio?.playSfx(...args);
 const toggleMusic = (...args) => window.TronoAudio?.toggleMusic(...args);
 
 function cardAsset(card) {
@@ -95,72 +94,13 @@ function logEvent(message) {
   throneHistory.appendPublic(message, game?.round || 0, game?.trick || 0);
 }
 function toast(text, ms = 1500) {
-  const t = $('toast');
-  t.textContent = text;
-  t.classList.remove('hidden');
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => t.classList.add('hidden'), ms * animationScale + 250);
+  throneEffects.toast(text, ms, animationScale);
 }
-
 function showConnectionNotice(name, botName = null, reason = 'disconnect') {
-  const el = $('connectionNotice');
-  if (!el) return;
-  const disconnected = reason === 'disconnect' || reason === 'self-disconnect';
-  const title =
-    reason === 'self-disconnect'
-      ? 'CONEXÃO COM O SERVIDOR INTERROMPIDA'
-      : disconnected
-        ? `${escAttr(name || 'Um jogador')} SE DESCONECTOU`
-        : `${escAttr(name || 'Um jogador')} SAIU DA SALA`;
-  const detail =
-    reason === 'self-disconnect'
-      ? 'Tentando manter o estado local. Recarregue se a conexão não voltar.'
-      : botName
-        ? `${escAttr(botName)} assumiu o assento e a partida continua.`
-        : 'O assento ficou livre.';
-  el.innerHTML = `<strong>${title}</strong><span>${detail}</span>`;
-  el.classList.remove('hidden', 'show');
-  void el.offsetWidth;
-  el.classList.add('show');
-  clearTimeout(showConnectionNotice._timer);
-  showConnectionNotice._timer = setTimeout(() => {
-    el.classList.remove('show');
-    el.classList.add('hidden');
-  }, 3600);
+  throneEffects.connection(name, botName, reason);
 }
-function showInfluenceUseFeedback({
-  name = 'Jogador',
-  action = 'sigilo',
-  cost = null,
-  modifier = 0,
-  declaredSuit = null,
-} = {}) {
-  const el = $('influencePublicNotice');
-  if (!el || !action || action === 'none' || action === 'hidden') return;
-  const actualCost = cost ?? (action === 'sigilo' ? 1 : 2),
-    label =
-      action === 'sigilo'
-        ? 'SIGILO'
-        : action === 'plus'
-          ? 'MANOBRA DA CORTE +3'
-          : 'MANOBRA DA CORTE -3';
-  const detail =
-    action === 'sigilo'
-      ? 'Carta jogada oculta • valor original mantido'
-      : `Modificador público ${modifier > 0 ? '+3' : '-3'} • valor efetivo limitado entre 1 e 12`;
-  const suit =
-    declaredSuit && SUITS[declaredSuit] ? ` • Naipe anunciado: ${SUITS[declaredSuit].name}` : '';
-  el.className = `influence-public-notice ${action === 'plus' ? 'plus' : action === 'minus' ? 'minus' : ''}`;
-  el.innerHTML = `<div class="influence-coins-public">${Array.from({ length: actualCost }, () => '<i>✦</i>').join('')}</div><strong>${escAttr(name)}</strong><b>${label}</b><span>${detail}${suit}</span>`;
-  el.classList.remove('hidden', 'show');
-  void el.offsetWidth;
-  el.classList.add('show');
-  playSfx('influence');
-  clearTimeout(showInfluenceUseFeedback._timer);
-  showInfluenceUseFeedback._timer = setTimeout(() => {
-    el.classList.remove('show');
-    el.classList.add('hidden');
-  }, 2700);
+function showInfluenceUseFeedback(value) {
+  throneEffects.influence(value);
 }
 
 function isLocalPlayersTurn() {
@@ -168,25 +108,7 @@ function isLocalPlayersTurn() {
   return game.turn === (onlineGameMode ? game.localPlayerId : 0);
 }
 function showYourTurnNotice() {
-  const wrap = $('turnNotice');
-  if (!wrap || !game) return;
-  const law = $('turnNoticeLaw');
-  if (law)
-    law.textContent = `${LAWS[game.currentLaw]?.name || 'Lei ativa'} • escolha uma carta válida`;
-  wrap.classList.remove('hidden', 'play');
-  wrap.setAttribute('aria-hidden', 'false');
-  void wrap.offsetWidth;
-  wrap.classList.add('play');
-  playSfx('turn');
-  clearTimeout(showYourTurnNotice._timer);
-  showYourTurnNotice._timer = setTimeout(
-    () => {
-      wrap.classList.add('hidden');
-      wrap.classList.remove('play');
-      wrap.setAttribute('aria-hidden', 'true');
-    },
-    2400 * Math.max(0.35, animationScale),
-  );
+  if (game) throneEffects.turn(LAWS[game.currentLaw]?.name || 'Lei ativa', animationScale);
 }
 
 const BOT_NAMES = window.TronoBots.names;
@@ -474,91 +396,14 @@ async function declareTrump() {
   renderAll();
 }
 
-function exchangePointForPlayer(id) {
-  // Coordenadas relativas ao palco, espelhando a posição dos quatro jogadores na mesa.
-  return (
-    [
-      { x: '50%', y: '88%' }, // J1 — baixo
-      { x: '10%', y: '50%' }, // J2 — esquerda
-      { x: '50%', y: '12%' }, // J3 — topo
-      { x: '90%', y: '50%' }, // J4 — direita
-    ][id] || { x: '50%', y: '50%' }
+async function showExchangeAnimation(value) {
+  const session = game;
+  await throneEffects.exchange(
+    { ...value, players: game.players, crown: game.lastCrown, shadow: game.lastShadow },
+    animationScale,
   );
-}
-
-function exchangeNodeHtml(p, role = '') {
-  return `<div class="exchange-player-node exchange-node-${p.id}"><span>${SUITS[SUIT_ORDER[p.id % 4]].glyph}</span><div><b>${escAttr(p.name)}</b>${role ? `<div class="node-role">${role}</div>` : ''}</div></div>`;
-}
-
-function exchangeArrowHtml(fromId, toId) {
-  const numeric = {
-    0: { x: 50, y: 88 },
-    1: { x: 10, y: 50 },
-    2: { x: 50, y: 12 },
-    3: { x: 90, y: 50 },
-  };
-  const a = numeric[fromId],
-    b = numeric[toId];
-  const dx = b.x - a.x,
-    dy = b.y - a.y;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  return `<div class="exchange-arrow" style="left:${a.x}%;top:${a.y}%;width:${len}%;transform:rotate(${angle}deg)"></div>`;
-}
-
-async function showExchangeAnimation({
-  kind = 'exchange',
-  title = 'Troca de cartas',
-  subtitle = '',
-  moves = [],
-}) {
-  const wrap = $('exchangeCinematic'),
-    stage = $('exchangeStage');
-  if (!wrap || !stage || !moves.length) return;
-  const sequence = ++exchangeSequence;
-  const duration = matchMedia('(prefers-reduced-motion: reduce)').matches
-    ? 450
-    : Math.max(900, 3000 * animationScale);
-  wrap.style.setProperty('--exchange-duration', `${duration}ms`);
-  $('exchangeIcon').textContent = kind === 'rotation' ? '⟳' : '⇄';
-  $('exchangeKicker').textContent =
-    kind === 'rotation' ? 'DECRETO EM MOVIMENTO' : 'LEI EM MOVIMENTO';
-  $('exchangeTitle').textContent = title;
-  $('exchangeSubtitle').textContent = subtitle || 'Cartas ocultas estão mudando de mãos.';
-
-  const touched = [...new Set(moves.flatMap((m) => [m.from, m.to]))];
-  let html = touched
-    .map((id) => {
-      const p = game.players[id];
-      const roles = [];
-      if (kind === 'usurpacao') {
-        if (id === game.lastShadow) roles.push('Sombra');
-        if (id === game.lastCrown) roles.push('Coroa');
-      }
-      return exchangeNodeHtml(p, roles.join(' • '));
-    })
-    .join('');
-  html += moves.map((m) => exchangeArrowHtml(m.from, m.to)).join('');
-  html += `<div class="exchange-center-seal"><strong>${kind === 'rotation' ? 'ROTAÇÃO' : 'TROCA'}</strong><small>${kind === 'rotation' ? 'À ESQUERDA' : 'CARTAS OCULTAS'}</small></div>`;
-  html += moves
-    .map((m, i) => {
-      const a = exchangePointForPlayer(m.from),
-        b = exchangePointForPlayer(m.to);
-      const cssClass = `exchange-card-token ${kind === 'rotation' ? 'rotation-card' : m.role === 'shadow' ? 'shadow-card' : ''}`;
-      const label = m.label || `${game.players[m.from].name} → ${game.players[m.to].name}`;
-      return `<div class="${cssClass}" style="--sx:${a.x};--sy:${a.y};--tx:${b.x};--ty:${b.y};--delay:${(m.delay || 0) * animationScale}ms;--r0:${i % 2 ? 7 : -7}deg;--rm:${i % 2 ? -7 : 7}deg;--r1:${i % 2 ? -5 : 5}deg"><span class="exchange-card-label">${escAttr(label)}</span></div>`;
-    })
-    .join('');
-  stage.innerHTML = html;
-  wrap.classList.remove('hidden');
-  wrap.setAttribute('aria-hidden', 'false');
-  playSfx('card');
-  const maxDelay = Math.max(0, ...moves.map((m) => (m.delay || 0) * animationScale));
-  await sleep(duration + maxDelay + 80);
-  if (sequence !== exchangeSequence) return;
-  wrap.classList.add('hidden');
-  wrap.setAttribute('aria-hidden', 'true');
-  stage.innerHTML = '';
+  if (session && !session.online && session !== game)
+    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
 }
 
 function prepareUsurpacaoExchange(shadow, target, given) {
@@ -857,38 +702,10 @@ async function commitPlay(
 
 async function animateCardToTable(play, sourceInfo) {
   syncLocalTable();
-  const slot = $(`tableCard${play.playerId}`);
-  slot.classList.add('active-drop', 'receiving-card');
-  playSfx('card');
-  if (sourceInfo) {
-    const from = sourceInfo.rect,
-      to = slot.getBoundingClientRect();
-    const ghost = document.createElement('img');
-    ghost.src = sourceInfo.src;
-    ghost.style.cssText = `position:fixed;z-index:200;left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px;border-radius:8px;box-shadow:0 15px 40px #000;pointer-events:none;will-change:transform,opacity;`;
-    document.body.appendChild(ghost);
-    const anim = ghost.animate(
-      [
-        { transform: 'translate(0,0) scale(1)', opacity: 1 },
-        {
-          transform: `translate(${(to.left - from.left) * 0.58}px,${(to.top - from.top) * 0.58}px) scale(.92)`,
-          opacity: 0.98,
-          offset: 0.64,
-        },
-        {
-          transform: `translate(${to.left - from.left}px,${to.top - from.top}px) scale(${to.width / from.width})`,
-          opacity: 0.96,
-        },
-      ],
-      { duration: 560 * animationScale, easing: 'cubic-bezier(.22,.75,.22,1)', fill: 'forwards' },
-    );
-    await anim.finished.catch(() => {});
-    ghost.remove();
-  } else await delay(420);
-  slot.classList.remove('receiving-card');
-  slot.classList.add('settling-card');
-  await delay(260);
-  slot.classList.remove('settling-card', 'active-drop');
+  await throneEffects.arrival(
+    { seat: play.playerId, from: sourceInfo?.rect || null, card: play.card },
+    animationScale,
+  );
 }
 function clampEffectiveValue(v) {
   return Math.max(1, Math.min(12, Number(v) || 0));
@@ -973,66 +790,15 @@ async function resolveTrick() {
   await beginTrick();
 }
 
-async function showTrickOutcome(crownP, shadowP) {
-  const wrap = $('trickOutcome'),
-    crown = $('crownOutcome'),
-    shadow = $('shadowOutcome');
-  $('crownOutcomeName').textContent = crownP.name;
-  $('shadowOutcomeName').textContent = shadowP.name;
-  wrap.classList.remove('hidden');
-
-  crown.classList.remove('hidden');
-  crown.classList.remove('play');
-  void crown.offsetWidth;
-  crown.classList.add('play');
-  playSfx('crown');
-  await delay(3000);
-  crown.classList.add('hidden');
-  crown.classList.remove('play');
-
-  await delay(220);
-  shadow.classList.remove('hidden');
-  shadow.classList.remove('play');
-  void shadow.offsetWidth;
-  shadow.classList.add('play');
-  playSfx('shadow');
-  await delay(3000);
-  shadow.classList.add('hidden');
-  shadow.classList.remove('play');
-  wrap.classList.add('hidden');
+async function showTrickOutcome(crown, shadow) {
+  const session = game;
+  await throneEffects.outcome({ crown, shadow }, animationScale);
+  if (session && !session.online && session !== game)
+    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
 }
-
 function showInfluenceGains(gains) {
-  if (!gains?.length) return;
-  playSfx('influence');
-  for (const gain of gains) {
-    const panel = $(`playerEffects${gain.player.id}`);
-    if (!panel) continue;
-    const el = document.createElement('div');
-    el.className = 'influence-gain-float';
-    el.textContent = gain.after >= 2 ? '✦ +1 INFLUÊNCIA • PRONTA' : '✦ +1 INFLUÊNCIA';
-    panel.appendChild(el);
-    setTimeout(() => el.remove(), 1900);
-    logEvent(
-      `Influência: ${gain.player.name} não recebeu Coroa nem Sombra e ganhou +1 (${gain.after}/2).`,
-    );
-    if (gain.player.id === (onlineGameMode ? game.localPlayerId : 0)) {
-      toast(
-        gain.after >= 2
-          ? '✦ Influência 2/2 — você pode jogar uma carta oculta!'
-          : '✦ Você recebeu +1 Influência.',
-        1800,
-      );
-    }
-  }
   syncLocalSeats();
-  for (const gain of gains) {
-    const bank = $(`coinBank${gain.player.id}`);
-    if (bank) {
-      bank.classList.add('gain-flash');
-      setTimeout(() => bank.classList.remove('gain-flash'), 950);
-    }
-  }
+  throneEffects.gains(gains, animationScale);
   renderHand();
 }
 
@@ -1437,7 +1203,6 @@ function onHumanCardClick(el) {
   const r = el.getBoundingClientRect(),
     sourceInfo = {
       rect: { left: r.left, top: r.top, width: r.width, height: r.height },
-      src: el.querySelector('img')?.src || cardAsset(card),
     };
   if (hidden) {
     p.influence -= cost;
@@ -1668,17 +1433,13 @@ function presentOnlineMatch(state) {
   renderAll();
 }
 async function handleOnlineGameEvent(msg) {
-  const session = game;
   const ev = msg.event;
   if (ev === 'influence-used') {
     showInfluenceUseFeedback(msg);
     return;
   }
   if (ev === 'card-played') {
-    playSfx('card');
-    const slot = $(`tableCard${msg.playerId}`);
-    slot?.classList.add('receiving-card');
-    setTimeout(() => slot?.classList.remove('receiving-card'), 520 * animationScale);
+    throneEffects.played(msg.playerId, animationScale);
     return;
   }
   if (ev === 'exchange') {
@@ -1699,22 +1460,8 @@ async function handleOnlineGameEvent(msg) {
     return;
   }
   if (ev === 'trick-result') {
-    if (msg.crownId === msg.shadowId) {
-      fatalError(new Error('O servidor tentou atribuir Coroa e Sombra ao mesmo jogador.'));
-      return;
-    }
-    // Cards and winner highlights come from the validated public match snapshot.
-    const crown = game?.players[msg.crownId],
-      shadow = game?.players[msg.shadowId];
-    if (crown && shadow) await showTrickOutcome(crown, shadow);
-    if (game !== session) return;
-    if (msg.influenceGains?.length && game) {
-      const gains = msg.influenceGains.map((x) => ({
-        player: game.players[x.seat],
-        after: x.after,
-      }));
-      showInfluenceGains(gains);
-    }
+    // Only public names and bounded gains enter the transient renderer.
+    await throneEffects.result({ ...msg, players: game?.players }, animationScale);
     return;
   }
   if (ev === 'challenge-reveal') {
@@ -1948,10 +1695,7 @@ function backToLobby() {
   throneHand.clear();
   leavingGame = true;
   clearLocalTurnTimer();
-  exchangeSequence++;
-  $('exchangeCinematic').classList.add('hidden');
-  $('exchangeCinematic').setAttribute('aria-hidden', 'true');
-  $('exchangeStage').replaceChildren();
+  throneEffects.clear();
   const cancelled = Object.assign(new Error('A mesa foi encerrada neste aparelho.'), {
     name: 'AbortError',
   });
@@ -2145,18 +1889,7 @@ $('speedBtn').onclick = () => {
 };
 
 function showChallengeReveal(seat, card) {
-  const panel = $(`player${seat}`);
-  if (!panel || !card) return;
-  const r = panel.getBoundingClientRect();
-  const el = document.createElement('div');
-  el.className = 'challenge-reveal-float';
-  const x = Math.max(12, Math.min(window.innerWidth - 170, r.left + r.width / 2 - 75));
-  const y = Math.max(90, Math.min(window.innerHeight - 240, r.top + r.height / 2 - 95));
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
-  el.innerHTML = `<div class="challenge-bubble">⚔ DESAFIO</div><img src="${cardAsset(card)}" alt="${SUITS[card.suit].name} ${card.value}"><strong>${SUITS[card.suit].name} ${card.value}</strong>`;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  throneEffects.challenge({ seat, card });
 }
 function syncLocalStatus() {
   if (!game || onlineGameMode) return;
