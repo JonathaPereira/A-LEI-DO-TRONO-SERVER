@@ -91,6 +91,7 @@ window.TronoRemotePc=(()=>{
     catch{send(s,'control',{allowed:false});}finally{s.asking=false;}return;
    }
    if(event.type==='pulse'&&channel===s.control){s.lastInput=Date.now();if(s.token)window.TronoDesktop.remoteInput(s.token,{type:'pulse'});return;}
+   if(event.type==='move'){if(!Number.isSafeInteger(event.seq)||event.seq<=(s.lastPointerSequence||0))return;s.lastPointerSequence=event.seq;}
    if(s.token&&event.type==='button'&&event.down&&Number.isFinite(event.x)&&Number.isFinite(event.y))window.TronoDesktop.remoteInput(s.token,{type:'move',x:event.x,y:event.y});
    if(s.token&&(['key','button','wheel','release'].includes(event.type)&&channel===s.control||event.type==='move'&&channel===s.pointer))window.TronoDesktop.remoteInput(s.token,event);
   };
@@ -100,7 +101,7 @@ window.TronoRemotePc=(()=>{
  function inputReady(){return current?.role==='viewer'&&current.controlling&&current.control?.readyState==='open';}
  function bindInput(){
   const v=$('remotePcVideo');let lastMove=0;
-  v.onpointermove=e=>{const s=current;if(!inputReady()||Date.now()-lastMove<15)return;const p=pointer(s,e);if(p&&s.pointer?.readyState==='open'&&s.pointer.bufferedAmount<4096){s.pointer.send(JSON.stringify(p));lastMove=Date.now();}};
+  v.onpointermove=e=>{const s=current;if(!inputReady()||Date.now()-lastMove<15)return;const p=pointer(s,e);if(p)p.seq=s.pointerSequence=(s.pointerSequence||0)+1;if(p&&s.pointer?.readyState==='open'&&s.pointer.bufferedAmount<4096){s.pointer.send(JSON.stringify(p));lastMove=Date.now();}};
   v.onpointerdown=e=>{void v.play().catch(()=>{});if(!inputReady()||e.button>2)return;const s=current,p=pointer(s,e);if(!p)return;v.focus();s.pointer?.send(JSON.stringify(p));send(s,'button',{button:e.button,down:true,x:p.x,y:p.y});v.setPointerCapture(e.pointerId);e.preventDefault();};
   v.onpointerup=e=>{if(inputReady()&&e.button<=2){send(current,'button',{button:e.button,down:false});e.preventDefault();}};
   v.onpointercancel=()=>{if(inputReady())send(current,'release');};v.oncontextmenu=e=>{if(inputReady())e.preventDefault();};

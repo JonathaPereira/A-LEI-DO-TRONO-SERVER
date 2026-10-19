@@ -25,11 +25,23 @@ jobs:
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
-      - name: Verify remote PC beta consent, media and call preservation
+      - name: Build Windows application audio capture
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test --test-concurrency=1 tests/remote-pc.js tests/desktop-remote-input.js tests/remote-pc-browser.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
+          $buildExit = $LASTEXITCODE
+          if ($buildExit -ne 0) {
+            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows native audio::$details"
+            exit $buildExit
+          }
+        working-directory: desktop/app
+      - name: Verify remote PC beta media, consent and real native input
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test --test-concurrency=1 tests/remote-pc.js tests/desktop-remote-input.js tests/remote-pc-browser.js tests/desktop-remote-native.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -128,28 +140,6 @@ jobs:
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-love-letter.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Love Letter validation::$details"
-            exit $testExit
-          }
-      - name: Build Windows application audio capture
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
-          $buildExit = $LASTEXITCODE
-          if ($buildExit -ne 0) {
-            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows native audio::$details"
-            exit $buildExit
-          }
-        working-directory: desktop/app
-      - name: Verify native remote mouse and keyboard with a real Windows window
-        shell: pwsh
-        run: |
-          node --test tests/desktop-remote-native.js 2>&1 | Tee-Object artifacts/windows-remote-native.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-remote-native.log | Select-Object -Last 70) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Remote PC native input::$details"
             exit $testExit
           }
       - name: Test desktop policy and native Windows runtime

@@ -16,7 +16,7 @@ const folders=new Map();
 let remoteInput,remotePermit=null,remoteNotice=null;
 const REMOTE_STOP='Control+Alt+Shift+F12';
 function stopRemote(){
- remotePermit=null;remoteInput?.reset();globalShortcut.unregister(REMOTE_STOP);
+ remotePermit=null;if(capture?.remote)cancelCapture();remoteInput?.reset();globalShortcut.unregister(REMOTE_STOP);
  if(remoteNotice){const old=remoteNotice;remoteNotice=null;old.destroy();}
  if(window&&!window.isDestroyed())window.webContents.send('mn:remote',{type:'ended'});
 }
