@@ -13,6 +13,7 @@ import { initializeCallWorkspace } from '../components/navigation/workspace-runt
 import { initializeMediaLayout } from '../lib/voice/media-layout';
 import { initializeHandLayout } from '../lib/games/hand-layout';
 import { initializeCommunity } from '../components/channels/community-runtime';
+import { initializeChannelManagement } from '../components/channels/management-runtime';
 
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
@@ -65,7 +66,10 @@ export function LegacyRuntime() {
       initializeChatMessages(window);
       initializeChannels(window);
       for (const filename of manifest.scripts) {
-        if (filename === 'community-admin.js') initializeCommunity(window);
+        if (filename === 'soundboard-client.js') {
+          initializeCommunity(window);
+          initializeChannelManagement(window);
+        }
         if (filename !== 'auth-boot.js') await loadScript(filename);
         if (filename === 'auth.js') initializeProfileEditor(window);
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);

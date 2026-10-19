@@ -95,11 +95,17 @@ export function createFiles({
   }
   async function api(
     path: string,
-    { method = 'GET', body }: FilesApiOptions = {},
+    { method = 'GET', body, signal }: FilesApiOptions = {},
   ): Promise<Record<string, unknown>> {
-    const scope = context(),
-      token = await getAccessToken();
+    const scope = context();
+    const requestSignal = AbortSignal.any([
+      AbortSignal.timeout(25000),
+      ...(signal ? [signal] : []),
+    ]);
+    requestSignal.throwIfAborted();
+    const token = await getAccessToken();
     assertCurrent(scope);
+    requestSignal.throwIfAborted();
     if (!token) throw new Error('Entre na sua conta para continuar.');
     let response;
     try {
@@ -108,7 +114,7 @@ export function createFiles({
         headers: { Authorization: `Bearer ${token}` },
         body,
         cache: 'no-store',
-        signal: AbortSignal.timeout(25000),
+        signal: requestSignal,
       });
     } catch (error) {
       assertCurrent(scope);
@@ -116,6 +122,7 @@ export function createFiles({
     }
     const data: unknown = await response.json().catch(() => null);
     assertCurrent(scope);
+    requestSignal.throwIfAborted();
     if (!response.ok) {
       const error = record(data) && record(data.error) ? data.error : null;
       throw Object.assign(

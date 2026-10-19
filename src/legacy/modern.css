@@ -880,6 +880,10 @@ body.channel-voice-active :is(#chatOnlyTextBtn, .court-chat-section) {
   max-height: 210px;
   object-fit: contain;
 }
+.channel-file-card .file-image-open {
+  min-width: 72px;
+  min-height: 72px;
+}
 .channel-file-card button {
   font-size: 12px;
   white-space: normal;

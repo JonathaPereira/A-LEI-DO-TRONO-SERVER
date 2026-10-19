@@ -104,6 +104,18 @@ async function setup(t) {
   };
 }
 
+test('canceling a channel read during token lookup prevents a late HTTP request', async (t) => {
+  const h = await setup(t),
+    held = deferred(),
+    controller = new AbortController();
+  h.token(() => held.promise);
+  const read = h.client.api('/channel/room?offset=0', { signal: controller.signal });
+  controller.abort();
+  held.resolve('token-a');
+  await assert.rejects(read, { name: 'AbortError' });
+  assert.equal(h.requests.length, 0);
+});
+
 test('concurrent preview requests share a signed URL; downloads and expiration are independent', async (t) => {
   const h = await setup(t),
     held = deferred();

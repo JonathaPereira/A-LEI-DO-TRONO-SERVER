@@ -123,7 +123,36 @@ A seleção/troca de canais e a navegação das telas de jogos ainda passam por
 `legacy/game.js`; o shell desktop delega a esses donos por `lib/desktop/shell.ts`. Os cliques React delegam a esse fluxo, que
 consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
 consulta `lib/voice/navigation.ts`; os métodos públicos de `TronoSocial` são adaptadores.
-O gerenciamento de canais e seus diálogos permanecem em `legacy/community-admin.js`.
+
+`lib/channels/management.ts` possui rascunho e operações de canais, edição de cargos,
+feedback e consultas HTTP da comunidade. A lista administrativa projeta o catálogo
+compartilhado, sem um segundo cache de canais. Metadados SQL são normalizados e
+validados em `management-protocol.ts`; versões do catálogo impedem que uma consulta
+antiga desfaça um broadcast ou restaure um canal excluído. Consultar metadados não
+apaga participantes, contagens nem presença recebidos pelo socket.
+
+Cada requisição pertence a uma geração de conta/permissão, com cancelamento e prazo
+de 20 segundos, inclusive na espera pelo token. Troca de conta, perda de permissão,
+fechamento ou troca do alvo invalidam os respectivos resultados e liberam controles.
+O fechamento do gerenciamento conserva o rascunho da mesma conta; uma troca de conta
+o limpa. Uma consulta global do catálogo pode terminar após fechar o diálogo, sem
+reabrir a interface. Exclusões continuam pedindo confirmação e o servidor autoriza
+toda mutação. A fachada `TronoCommunityAdmin` delega a esse dono para a navegação
+ainda legada; não mantém outra lista nem outros listeners.
+
+`lib/channels/files.ts` possui somente a listagem paginada de anexos do canal atual.
+Valida página completa, cursor e canal dos arquivos antes de aceitar os dados.
+Falhas preservam a página anterior e permitem repetir o cursor; páginas sobrepostas
+não duplicam anexos. Fechar, trocar de canal/conta, desconectar ou excluir o canal
+aborta e limpa essa apresentação. URLs, tombstones, preview, download e moderação
+reutilizam `lib/files/` e `AttachmentContent`. O cliente de arquivos aceita um sinal
+de cancelamento e o verifica também após obter o token, antes de iniciar HTTP.
+
+`components/modals/community-management-contents.tsx` possui formulários, listagem e
+modalidade nativa dos três diálogos em React. `channels/management-runtime.tsx` monta
+nos hosts estáveis, conecta os botões existentes e atualiza as permissões/badge;
+os layouts movem esses mesmos controles. O descarte libera raízes, assinaturas e
+requisições. `legacy/community-admin.js` e sua entrada no manifesto foram removidos.
 
 `lib/desktop/shell.ts` possui projeção da área, abertura da lista de canais e
 estado visual da janela. Navegação reutiliza portal, jogos e catálogo existentes;

@@ -204,6 +204,9 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         directory: ['creatorAccountsButtonHost','creatorAccountsBtn','creatorAccountsDialog'].map(id => document.getElementById(id)),
         community: ['communityToggle','communityPanel','communityMembers','communityActivity','callNoticeHost'].map(id => document.getElementById(id)),
         communityOwner: window.TronoCommunity,
+        management: ['channelManagerDialog','roleDialog','channelFilesDialog','channelName','roleSelect','channelFileList'].map(id => document.getElementById(id)),
+        managementOwner: window.TronoChannelManagement,
+        channelFilesOwner: window.TronoChannelFiles,
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -229,6 +232,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           gifPicker: !!before.gifDialog && before.gifDialog === document.getElementById('profileGifDialog') && document.querySelectorAll('#profileGifDialog').length === 1 && typeof window.TronoProfileGifs === 'undefined',
           directory: before.directory.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
+          management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -251,6 +255,32 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await preserved();
     await page.locator('#communityClose').click();
     await expect(page.locator('#communityPanel')).toBeHidden();
+    await preserved();
+    // Fixture UI permissions only: mutation authorization remains enforced by the server.
+    await page.evaluate(() => {
+      const user = window.TronoAuth.user;
+      window.__managementPermissions = user.permissions;
+      user.permissions = {...user.permissions, manageChannels: true, manageRoles: true};
+      window.dispatchEvent(new Event('trono-role-change'));
+    });
+    await page.evaluate(() => window.TronoChannelManagement.openManager());
+    await expect(page.locator('#channelManagerDialog')).toBeVisible();
+    await page.locator('#channelName').fill('Rascunho com chamada ativa');
+    await preserved();
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.TronoChannelManagement.openManager());
+    await expect(page.locator('#channelName')).toHaveValue('Rascunho com chamada ativa');
+    await page.locator('#channelManagerClose').click();
+    await page.evaluate(() => window.TronoChannelManagement.editRole({id: '24000000-0000-4000-8000-000000000002', name: 'Cargo durante chamada', role: 'member', guest: false}));
+    await expect(page.locator('#roleDialog')).toBeVisible();
+    await page.locator('#roleSelect').selectOption('admin');
+    await preserved();
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => { window.TronoAuth.user.permissions = window.__managementPermissions; window.dispatchEvent(new Event('trono-role-change')); });
+    await page.evaluate(() => window.TronoCommunityAdmin.openChannelFiles());
+    await expect(page.locator('#channelFilesDialog')).toBeVisible();
+    await preserved();
+    await page.keyboard.press('Escape');
     await preserved();
     // Decoration changes affect only the background child while all native sources stay live.
     const decorationAccount = await page.evaluate(() => window.TronoAuth.user.id);

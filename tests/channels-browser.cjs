@@ -78,11 +78,21 @@ test(
       }
       const page = await client(owner),
         sender = await client(member);
-      const create = (body) =>
-        page.evaluate(
-          (body) => window.TronoCommunityAdmin.api('/channels', { method: 'POST', body }),
-          body,
+      const create = async (body) => {
+        await page.locator('#createChannelBtn').click();
+        await page.locator('#channelName').fill(body.name);
+        await page.locator('#channelType').selectOption(body.type);
+        await page.locator('#createChannelSubmit').click();
+        await expect(page.locator('#channelManagerMessage')).toHaveText('Canal criado.');
+        const channel = await page.evaluate(
+          (name) =>
+            window.TronoChannels.getSnapshot().channels.find((channel) => channel.name === name),
+          body.name,
         );
+        assert.ok(channel);
+        await page.locator('#channelManagerClose').click();
+        return { channel };
+      };
       const text = (await create({ name: 'Texto React', type: 'text' })).channel;
       const voice = (await create({ name: 'Voz React', type: 'voice' })).channel;
       const row = (id) => page.locator(`[data-chat-channel="${id}"]`);
@@ -129,10 +139,11 @@ test(
       await preserved();
 
       // Deleting the selected text channel must not tear down the independent voice room.
-      await page.evaluate(
-        (id) => window.TronoCommunityAdmin.api('/channels/' + id, { method: 'DELETE' }),
-        text.id,
-      );
+      await page.locator('#createChannelBtn').click();
+      page.once('dialog', (dialog) => dialog.accept());
+      await page.getByRole('button', { name: 'Excluir canal Texto React', exact: true }).click();
+      await expect(page.locator('#channelManagerMessage')).toHaveText('Canal excluído.');
+      await page.locator('#channelManagerClose').click();
       await expect(row(text.id)).toHaveCount(0);
       await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe(null);
       assert.equal(await page.evaluate(() => window.TronoNetwork.primaryRoom), voice.id);
@@ -141,7 +152,7 @@ test(
       await expect(row(voice.id)).toHaveAttribute('aria-current', 'page');
       await preserved();
 
-    // Reading clears the badge while the channel remains muted.
+      // Reading clears the badge while the channel remains muted.
       await row('chat-livre').click();
       await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
       await page.locator('#courtChatInput').click();

@@ -22,4 +22,5 @@ export interface FilesSnapshot {
 export interface FilesApiOptions {
   method?: 'GET' | 'POST' | 'DELETE';
   body?: BodyInit;
+  signal?: AbortSignal;
 }

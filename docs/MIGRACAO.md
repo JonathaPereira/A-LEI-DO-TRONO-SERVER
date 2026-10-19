@@ -1782,9 +1782,47 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximo recorte: gerenciamento de canais/cargos em `legacy/community-admin.js`;
   mensageiro e controladores de jogos ainda aguardam conversão.
 
+## Remoção de community-admin.js — 18/10/2026
+
+- `lib/channels/management.ts` possui operações de canais, rascunho e edição de
+  cargos. A listagem projeta o catálogo já existente; respostas HTTP normalizadas
+  respeitam sua versão e preservam os participantes/contagens recebidos do socket.
+- Consultas e mutações validam conta e permissões antes/depois de aguardar token e
+  HTTP. Há prazo de 20 segundos e cancelamento. Trocas de identidade/ABA, perda de
+  permissão e descarte impedem continuações antigas; fechar/reabrir o formulário ou
+  editar outra pessoa também invalida o resultado da operação anterior.
+- `lib/channels/files.ts` possui paginação dos anexos, com validação completa de
+  arquivos/canal/cursor, deduplicação e repetição após falha. Fecha e limpa ao mudar
+  canal/conta, desconectar ou excluir o canal exibido. Reutiliza o cliente de arquivos
+  e `AttachmentContent`; previews, downloads e moderação continuam com seus donos.
+  `FilesClient.api` aceita cancelamento e evita iniciar HTTP após um token atrasado.
+- Os três diálogos usam React em `components/modals/community-management-contents.tsx`.
+  `management-runtime.tsx` monta nos hosts estáveis e conserva botões movidos pelos
+  layouts. Formulários bloqueiam envios repetidos; falhas liberam controles e
+  conservam rascunhos. Cancelar o gerenciamento conserva o rascunho da mesma conta.
+- Removido `legacy/community-admin.js` inteiro (231 linhas), incluindo listeners e
+  a lista administrativa duplicada, junto com sua entrada no manifesto. A fachada
+  `TronoCommunityAdmin` delega ao dono tipado enquanto a navegação de jogos a utiliza.
+  Estilos ainda consumidos permanecem; não há alteração de captura/negociação.
+- Dez regressões novas de modelos cobrem catálogo/HTTP, permissões, respostas
+  atrasadas, cargos, paginação e descarte; integram `test:channels`/`npm test`.
+  Uma regressão adicional cobre cancelamento de arquivos durante consulta do token.
+  `test:channels:ui` cria/exclui canais pela interface com voz ativa e cobre anexos,
+  previews, moderação, paginação após erro, Escape, troca de canal e revogação.
+  As regressões da comunidade mantêm a edição real de cargos nos hosts web/desktop.
+- A área de abrir imagens nos cartões tem tamanho mínimo; imagens minúsculas não
+  ficam encobertas pelo botão de exclusão. O teste usa uma imagem de 1 pixel e
+  abre o preview com clique normal, sem contornar a interação.
+- Tipagem, formatação, build, suíte completa e testes de interface passaram.
+  Electron real abriu os três diálogos durante chamada com mídia sintética e
+  preservou os mesmos hosts, controles, microfone, câmera, tela, peers e socket
+  nas mudanças de layout. Evidências locais: `artifacts/management-*`.
+- Próximo domínio: mensageiro em `legacy/messenger.js`; depois, controladores de
+  jogos, backend e consolidação de estilos conforme os critérios abaixo.
+
 ## Próximas alterações, em ordem
 
-1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.
+1. Converter mensageiro, navegação de jogos e controladores dos jogos.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

@@ -49,7 +49,7 @@
     "test:voice:capture": "node --test tests/microphone.cjs tests/microphone-processor.cjs tests/screen-capture.cjs tests/camera.cjs",
     "test:files": "node --test tests/files-client.cjs tests/file-library.cjs",
     "test:files:ui": "node --test tests/file-library-browser.cjs",
-    "test:channels": "node --test tests/channels.cjs",
+    "test:channels": "node --test tests/channels.cjs tests/channel-management.cjs tests/channel-files.cjs",
     "test:chat": "node --test tests/chat-composer.cjs tests/chat-messages.cjs",
     "test:socket": "node --test tests/socket-transport.cjs tests/socket-client.cjs tests/socket-network.cjs",
     "test:server:lifecycle": "node --test tests/server-lifecycle.cjs tests/server-modules.cjs",
@@ -73,7 +73,8 @@
     "test:profiles:editor:ui": "node --test tests/profile-editor-browser.cjs",
     "test:portal": "node --test tests/portal-name-check.cjs",
     "test:community": "node --test tests/community-controller.cjs",
-    "test:community:ui": "node --test tests/community-browser.cjs"
+    "test:community:ui": "node --test tests/community-browser.cjs",
+    "test:channels:ui": "node --test tests/channels-browser.cjs tests/channel-files-browser.cjs"
   },
   "engines": {
     "node": ">=24.12.0"
