@@ -16,6 +16,7 @@ import { initializeCommunity } from '../components/channels/community-runtime';
 import { initializeChannelManagement } from '../components/channels/management-runtime';
 import { initializeMessenger } from '../components/messenger/runtime';
 import { initializeGameLibrary } from '../components/games/library-runtime';
+import { initializeAzul } from '../components/games/azul-runtime';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
 
 import { useEffect, useState } from 'react';
@@ -94,6 +95,7 @@ export function LegacyRuntime() {
           initializeNotifications(window);
         }
       }
+      initializeAzul(window);
       initializeRoguelite(window);
       initializeGameLibrary(window);
       initializeMessenger(window);

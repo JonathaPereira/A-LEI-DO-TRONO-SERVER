@@ -1892,9 +1892,42 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   controladores de jogos. Capturas, transporte e o motor independente de Cinzas
   continuam com seus donos atuais.
 
+## Controlador e interface do Azul — 19/10/2026
+
+- Removidos `legacy/azul.js` inteiro (986 linhas) e sua entrada no manifesto.
+  `lib/games/azul.ts` possui mesa, seleção, confirmação/timeout de jogadas, ranking
+  e replay; `azul-protocol.ts` valida os dados recebidos. `types/azul.ts` descreve
+  o domínio. Não há outro socket, estado de participação ou dono de captura.
+- Mesas, tabuleiros, fábricas, chão, resultados, ranking e regras passaram a
+  React em `components/games/azul-*`. O runtime mantém os hosts de retorno,
+  conteúdo, ranking e diálogos. As fachadas `TronoAzul`/`TronoGames` delegam ao
+  mesmo dono e expõem leitura do snapshot congelado, sem setter de estado.
+- Troca de conta/ABA invalida autenticações antigas e limpa dados. A fila de
+  autenticação existente separa os escopos antes de aceitar listas/snapshots.
+  Ranking correlaciona respostas/erros; revisões antigas são ignoradas. Jogadas
+  repetidas não são enviadas enquanto pendentes e seu timeout consulta a mesma mesa.
+- O replay usa cópias do estado, mantém a animação atual quando chega outra jogada
+  ou atualização de presença/salvamento e revela o estado autoritativo ao terminar.
+  Ocultar, navegar, movimento reduzido e descarte liberam fila, timers e efeitos.
+  O adaptador de animação só escreve na camada de efeitos, preservando nós React.
+  Tela cheia tem dono tipado, fallback, Escape e invalidação de operações atrasadas.
+- Nove regressões novas integram `test:games:models`/`npm test`. O teste de interface
+  que simulava um centro cheio agora injeta um evento no socket do ambiente de
+  teste, passando pelo parser real, em vez de mutar o estado interno do jogo.
+- As regras e a construção pura dos passos de apresentação ainda são CommonJS
+  compartilhado com o backend; `azul-rules.js` e `azul-presentation.js` permanecem.
+  Não alterar a autoridade do servidor ao extrair esses módulos posteriormente.
+- Tipagem, formatação, build e suíte completa passaram, incluindo 19 regressões
+  de modelos de jogos e dez casos das interfaces dos quatro jogos. A interface
+  do Azul completou partidas, ranking, bots, replay e cancelamento nos dois layouts.
+  Electron real criou/iniciou/saiu de uma mesa, abriu regras e mudou os layouts
+  conservando os mesmos hosts, controles, microfone, câmera, tela, peers e socket,
+  com mídia sintética. Evidências locais: `artifacts/azul-*`.
+- Próximo controlador: Splendor, depois Love Letter e A Lei do Trono/portal.
+
 ## Próximas alterações, em ordem
 
-1. Converter os controladores dos jogos, começando pelo Azul.
+1. Converter os controladores restantes: Splendor, Love Letter e A Lei do Trono/portal.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

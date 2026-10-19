@@ -129,9 +129,30 @@ visível, sem duplicar participação, partidas ou recursos de mídia. Botões d
 catálogo, retornos e navegação lateral são React em `components/games/`.
 `library-runtime.tsx` integra portal, shell e os donos dos jogos; o observador
 acompanha também mudanças externas de tela e é liberado no descarte.
-`TronoGames` conserva os chamadores antigos por delegação. O controlador restante
-do Azul foi separado em `legacy/azul.js`/`TronoAzul`: regras, mesa, replay,
-ranking e pintura desse jogo ainda não foram convertidos. `legacy/games.js` saiu.
+`TronoGames` conserva os chamadores antigos por delegação. `TronoAzul` delega ao
+dono tipado descrito abaixo; `legacy/games.js` e `legacy/azul.js` foram excluídos.
+
+`lib/games/azul.ts` possui mesa, seleção, jogadas pendentes, ranking e replay.
+`azul-protocol.ts` valida snapshots completos, tabuleiros, listas e recordes;
+os DTOs próprios são congelados, sem reter ou congelar o payload recebido.
+Revisões antigas não restauram jogadas. Presença na mesma revisão conserva a
+seleção. Trocar de conta invalida autenticações pendentes, limpa dados e espera
+a confirmação da fila de autenticação existente antes de aceitar payloads do jogo.
+O ranking correlaciona respostas/erros com o pedido atual. Timeout de jogada pede
+o estado da mesma mesa; respostas antigas não liberam uma tentativa posterior.
+
+O replay mantém cópias próprias de apresentação, sem alterar o estado autoritativo.
+Novas jogadas e salvamentos podem chegar durante a contagem: atualizam a mesa
+atual sem substituir o lance exibido. Sair, ocultar a página, ativar movimento
+reduzido ou descartar cancela fila, espera e efeitos. `azul-board.tsx`,
+`azul-lobby.tsx` e `azul-contents.tsx` renderizam tabuleiro, mesas, ranking e regras
+em React. `azul-animations.ts` somente mede os nós React e escreve numa camada
+vazia de efeitos; libera animações e frames no cancelamento. `lib/games/fullscreen.ts`
+possui o gesto de tela cheia, fallback, Escape e operações atrasadas do Azul.
+Não interfere na tela cheia de outra mídia. O runtime conserva os hosts e remove
+listeners/observadores ao descartar. As regras CommonJS e a construção pura dos
+passos de apresentação continuam compartilhadas em `legacy/azul-rules.js` e
+`legacy/azul-presentation.js`; sua extração será feita junto aos módulos compartilhados.
 
 `lib/games/roguelite.ts` possui preparação dos recursos de Cinzas, progresso,
 cancelamento, prontidão e tela cheia. Valida caminhos/tamanhos do manifesto e
