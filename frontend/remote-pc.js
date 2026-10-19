@@ -137,6 +137,6 @@ window.TronoRemotePc=(()=>{
  });
  window.TronoDesktop?.onRemote?.(event=>{if(current?.role!=='host')return;if(event.type==='ended')void stop();else if(event.type==='stopped'){current.token=null;send(current,'control',{allowed:false});render();}});
  window.addEventListener('trono-call-change',()=>{render();if(current&&!window.TronoSocial.voiceJoined)void stop();});
- window.addEventListener('trono-auth-change',()=>{if(!window.TronoAuth.user)void stop();});window.addEventListener('beforeunload',()=>{if(current)void stop();});
+ window.addEventListener('trono-auth-change',()=>{if(!window.TronoAuth.user)void stop();});window.addEventListener('pagehide',()=>{if(current)void stop();});
  return {open,stop,get active(){return !!current;},get state(){return current?{role:current.role,sessionId:current.id,controlling:!!current.controlling,connected:current.pc?.connectionState}:null;}};
 })();

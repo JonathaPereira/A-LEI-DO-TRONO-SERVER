@@ -152,7 +152,7 @@ async function start(){
     if(response===1)event.preventDefault();else quitting=false;
   });
   window.webContents.on('render-process-gone',()=>{voicePriority.setActive(false);stopRemote();clearHotkey();cancelCapture();applicationAudio.stopAll();activity.dispose();});
-  window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace){voicePriority.setActive(false);cancelCapture();}});
+  window.webContents.on('did-start-navigation',(_,url,isInPlace,isMainFrame)=>{if(isMainFrame&&!isInPlace){voicePriority.setActive(false);stopRemote();cancelCapture();}});
   window.webContents.on('did-navigate',()=>{stopRemote();clearHotkey();applicationAudio.stopAll();});
   window.webContents.on('will-navigate',(event,url)=>{if(!isAppURL(url)){event.preventDefault();if(/^https:\/\//.test(url))void shell.openExternal(url);}});
   window.webContents.on('will-attach-webview',event=>event.preventDefault());
