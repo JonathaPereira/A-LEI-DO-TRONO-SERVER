@@ -83,16 +83,16 @@ window.TronoRemotePc=(()=>{
   channel.onmessage=async e=>{
    if(!active(s)||typeof e.data!=='string'||e.data.length>1024)return;let event;try{event=JSON.parse(e.data);}catch{return;}
    if(s.role==='viewer'){
-    if(channel===s.control&&event.type==='control'){s.controlling=event.allowed===true;render();notify(s,s.controlling?'Controle autorizado. Clique na imagem para controlar.':'Somente visualização.');}return;
+    if(channel===s.control&&event.type==='control'){s.controlling=event.allowed===true;render();notify(s,event.wait?'Aguarde alguns segundos antes de pedir controle novamente.':s.controlling?'Controle autorizado. Clique na imagem para controlar.':'Somente visualização.');}return;
    }
    if(event.type==='request-control'&&channel===s.control&&!s.asking&&!s.token){
-    if(Date.now()-(s.lastAsk||0)<10000)return;s.lastAsk=Date.now();s.asking=true;
+    if(Date.now()-(s.lastAsk||0)<10000){send(s,'control',{allowed:false,wait:true});return;}s.lastAsk=Date.now();s.asking=true;
     try{const result=await window.TronoDesktop.allowRemoteControl();if(!active(s)){await window.TronoDesktop.revokeRemoteControl();return;}s.token=result.allowed?result.token:null;s.lastInput=Date.now();send(s,'control',{allowed:!!s.token});render();}
     catch{send(s,'control',{allowed:false});}finally{s.asking=false;}return;
    }
    if(event.type==='pulse'&&channel===s.control){s.lastInput=Date.now();if(s.token)window.TronoDesktop.remoteInput(s.token,{type:'pulse'});return;}
    if(event.type==='move'){if(!Number.isSafeInteger(event.seq)||event.seq<=(s.lastPointerSequence||0))return;s.lastPointerSequence=event.seq;}
-   if(s.token&&event.type==='button'&&event.down&&Number.isFinite(event.x)&&Number.isFinite(event.y))window.TronoDesktop.remoteInput(s.token,{type:'move',x:event.x,y:event.y});
+   if(s.token&&event.type==='button'&&event.down&&Number.isFinite(event.x)&&Number.isFinite(event.y)){if(Number.isSafeInteger(event.seq))s.lastPointerSequence=Math.max(s.lastPointerSequence||0,event.seq);window.TronoDesktop.remoteInput(s.token,{type:'move',x:event.x,y:event.y});}
    if(s.token&&(['key','button','wheel','release'].includes(event.type)&&channel===s.control||event.type==='move'&&channel===s.pointer))window.TronoDesktop.remoteInput(s.token,event);
   };
  }
@@ -102,7 +102,7 @@ window.TronoRemotePc=(()=>{
  function bindInput(){
   const v=$('remotePcVideo');let lastMove=0;
   v.onpointermove=e=>{const s=current;if(!inputReady()||Date.now()-lastMove<15)return;const p=pointer(s,e);if(p)p.seq=s.pointerSequence=(s.pointerSequence||0)+1;if(p&&s.pointer?.readyState==='open'&&s.pointer.bufferedAmount<4096){s.pointer.send(JSON.stringify(p));lastMove=Date.now();}};
-  v.onpointerdown=e=>{void v.play().catch(()=>{});if(!inputReady()||e.button>2)return;const s=current,p=pointer(s,e);if(!p)return;v.focus();s.pointer?.send(JSON.stringify(p));send(s,'button',{button:e.button,down:true,x:p.x,y:p.y});v.setPointerCapture(e.pointerId);e.preventDefault();};
+  v.onpointerdown=e=>{void v.play().catch(()=>{});if(!inputReady()||e.button>2)return;const s=current,p=pointer(s,e);if(!p)return;p.seq=s.pointerSequence=(s.pointerSequence||0)+1;v.focus();s.pointer?.send(JSON.stringify(p));send(s,'button',{button:e.button,down:true,x:p.x,y:p.y,seq:p.seq});v.setPointerCapture(e.pointerId);e.preventDefault();};
   v.onpointerup=e=>{if(inputReady()&&e.button<=2){send(current,'button',{button:e.button,down:false});e.preventDefault();}};
   v.onpointercancel=()=>{if(inputReady())send(current,'release');};v.oncontextmenu=e=>{if(inputReady())e.preventDefault();};
   v.onwheel=e=>{if(inputReady()){send(current,'wheel',{delta:-Math.sign(e.deltaY)*120});e.preventDefault();}};
