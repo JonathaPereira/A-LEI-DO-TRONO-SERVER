@@ -1965,9 +1965,52 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   e socket, com mídia sintética. Evidências locais: `artifacts/splendor-*`.
 - Próximo controlador: Love Letter, seguido de A Lei do Trono/portal.
 
+## Controlador e interface do Love Letter — 19/10/2026
+
+- Removidos `legacy/love-letter.js` inteiro (933 linhas) e sua entrada no manifesto.
+  `lib/games/love-letter.ts` possui mesa, seleção, alvo, Guarda, Chanceler,
+  confirmação de jogadas, avanço de rodada, leitura privada e efeitos. Os contratos
+  estão em `types/love-letter.ts`; o parser valida todos os dados recebidos.
+- Mãos adversárias conservam somente ocultação; informações do Padre precisam
+  corresponder à jogada do próprio leitor no histórico da rodada. Resultados
+  públicos de rodadas são separados das mãos ocultas. Conteúdos do baralho e da
+  carta removida não são retidos pelo parser. O motor compartilhado continua
+  responsável pela autoridade final das regras e não foi convertido neste recorte.
+- Conta/ABA, autenticação e desconexão invalidam continuações e limpam escolhas.
+  A limpeza de conta publica diretamente o snapshot vazio, sem uma publicação
+  intermediária de cartas da conta antiga. Revisões antigas são ignoradas;
+  atualizações de presença conservam escolha de alvo e ordem do Chanceler.
+  Jogadas e próxima rodada são deduplicadas e seu timeout consulta a mesma mesa.
+- Mesa, cartas, corte, histórico, avatares, alvos, regras, resultados e diálogos
+  passaram a React em `components/games/love-letter-*`. Avatares reutilizam o
+  componente/cliente de arquivos existentes. `GameDialog` foi extraído para
+  `components/games/game-dialog.tsx`, compartilhado com Splendor. Os slots de
+  áudio e a tela cheia continuam com os mesmos donos existentes.
+- Informações privadas abrem uma vez por revisão e são limpas a cada rodada/conta.
+  Ocultar fecha os diálogos e libera o destaque; uma observação recebida enquanto
+  oculto pode abrir ao retornar. Expiração do efeito e atualização de presença
+  conservam os mesmos nós da mesa e o histórico, sem reproduzir o último lance.
+- Dez regressões novas integram `test:games:models`/`npm test`, cobrindo mãos
+  ocultas, leitor do Padre, Condessa obrigatória, Guarda, Príncipe, Chanceler,
+  confirmação/revisão, autenticação/ABA, privacidade de rodada, timeout e descarte.
+- A verificação nativa revelou uma prévia de carta do Splendor aberta durante
+  a animação da revisão anterior. A prévia agora desabilita ações e pede para
+  reabrir a carta quando a revisão mudou. Uma regressão cobre essa transição;
+  o teste nativo aguarda o fim da animação antes de reservar.
+- Tipagem, formatação, build e suíte completa passaram. A suíte de modelos passou
+  novamente com 39 casos. Onze casos de interface/áudio passaram, incluindo os
+  quatro jogos e ganho/silêncio medidos; os quatro casos de Love Letter/Splendor
+  passaram novamente após o ajuste da prévia. Electron real confirmou mesa,
+  mãos ocultas, regras e troca de layouts, preservando controles, tracks, peers
+  e socket com mídia sintética. Evidências locais: `artifacts/love-letter-*`.
+- `legacy/love-letter-rules.js` permanece para extração posterior do motor
+  compartilhado. `TronoProfile.avatarHtml`/`hydrate` ainda atendem `legacy/game.js`;
+  não remover esses adaptadores antes da conversão de A Lei do Trono.
+- Próximo controlador: A Lei do Trono e sua navegação pelo portal.
+
 ## Próximas alterações, em ordem
 
-1. Converter os controladores restantes: Love Letter e A Lei do Trono/portal.
+1. Converter A Lei do Trono e sua navegação pelo portal.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

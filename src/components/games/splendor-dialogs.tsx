@@ -1,5 +1,3 @@
-import { useRef, useLayoutEffect } from 'react';
-import type { ComponentProps } from 'react';
 import {
   Card,
   Costs,
@@ -10,46 +8,6 @@ import {
   blocked,
   type SplendorView,
 } from './splendor-pieces';
-export function GameDialog({
-  visible,
-  onDismiss,
-  ...props
-}: Omit<ComponentProps<'dialog'>, 'open' | 'onClose' | 'onCancel'> & {
-  visible: boolean;
-  onDismiss(): void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useLayoutEffect(() => {
-    const dialog = ref.current!;
-    if (visible && !dialog.open) dialog.showModal();
-    else if (!visible && dialog.open) dialog.close();
-  }, [visible]);
-  return (
-    <dialog
-      {...props}
-      ref={ref}
-      onCancel={(e) => {
-        e.preventDefault();
-        onDismiss();
-      }}
-      onClose={() => {
-        if (visible && !ref.current?.open) onDismiss();
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          const r = e.currentTarget.getBoundingClientRect();
-          if (
-            e.clientX < r.left ||
-            e.clientX > r.right ||
-            e.clientY < r.top ||
-            e.clientY > r.bottom
-          )
-            onDismiss();
-        }
-      }}
-    />
-  );
-}
 export function CardContent(props: SplendorView) {
   const { snapshot: s, controller, rules } = props,
     choice = s.card,
@@ -57,6 +15,7 @@ export function CardContent(props: SplendorView) {
     p = state?.players.find((p) => p.id === s.accountId);
   if (!choice || !state) return null;
   const c = choice.card,
+    stale = choice.revision !== s.room?.state?.revision,
     owned = state.players.some((p) => p.cards.some((v) => v.id === c.id)),
     reserved = p?.reserved.some((v) => !v.hidden && v.id === c.id),
     cost = p ? rules.price(p, c) : [],
@@ -71,6 +30,11 @@ export function CardContent(props: SplendorView) {
           Bônus permanente de {rules.colors[c.bonus]}. Cada bônus reduz em 1 o custo dessa cor nas
           próximas compras.
         </p>
+        {stale && choice.actions && (
+          <p className="sp-unaffordable" role="status">
+            A mesa mudou. Feche e reabra esta carta para escolher uma ação.
+          </p>
+        )}
         {p && (
           <>
             <h3>Custo após seus bônus</h3>
@@ -126,7 +90,7 @@ export function CardContent(props: SplendorView) {
             type="button"
             id="splendorBuy"
             className="sp-button sp-primary"
-            disabled={!choice.actions || owned || !actionTurn(s) || blocked(s) || !pay}
+            disabled={!choice.actions || stale || owned || !actionTurn(s) || blocked(s) || !pay}
             onClick={() => void controller.buy()}
           >
             Comprar carta
@@ -137,7 +101,11 @@ export function CardContent(props: SplendorView) {
               id="splendorReserve"
               className="sp-button"
               disabled={
-                !choice.actions || !actionTurn(s) || blocked(s) || (p?.reserved.length ?? 3) >= 3
+                !choice.actions ||
+                stale ||
+                !actionTurn(s) ||
+                blocked(s) ||
+                (p?.reserved.length ?? 3) >= 3
               }
               onClick={() => void controller.reserve()}
             >

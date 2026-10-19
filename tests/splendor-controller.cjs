@@ -4,6 +4,26 @@ const { test } = require('node:test'),
 const R = require('../src/legacy/splendor-rules');
 const moduleReady = import('../src/lib/games/splendor.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+test('a preview from an older animation cannot reserve until reopened against the current table', async (t) => {
+  const f = await setup(t, { reduced: false }),
+    s = game();
+  f.emit({ type: 'splendor-state', room: room(s) });
+  const next = R.move(s, 'a', { kind: 'take', tokens: [1, 1, 1, 0, 0, 0] }, () => 0);
+  // Make the viewer the next actor, as after a bot's move in the native flow.
+  f.account('b');
+  await f.owner.refreshRooms();
+  f.emit({ type: 'splendor-state', room: room(s, 'mesa', 'b') });
+  f.emit({ type: 'splendor-state', room: room(next, 'mesa', 'b') });
+  const id = s.market[0][0].id;
+  f.owner.openCard(id);
+  assert.equal(f.owner.getSnapshot().card.revision, 0);
+  f.owner.stopAnimations();
+  await f.owner.reserve();
+  assert.equal(f.calls.filter((c) => c.action === 'move').length, 0);
+  f.owner.openCard(id);
+  await f.owner.reserve();
+  assert.equal(f.calls.filter((c) => c.action === 'move').length, 1);
+});
 function deferred() {
   let resolve;
   const promise = new Promise((yes) => {

@@ -180,6 +180,33 @@ atualizações React conservam esses controles e seus listeners. `legacy/splendo
 foi excluído. `splendor-rules.js` e `splendor-data.js` continuam compartilhados
 com o servidor; a autoridade e o conteúdo clássico das regras foram preservados.
 
+`lib/games/love-letter.ts` possui a mesa do jogador atual, carta/alvo/palpite,
+ordem privada do Chanceler, confirmação de jogadas, leitura do Padre e feedback.
+`love-letter-protocol.ts` valida os snapshots completos. Mãos adversárias só
+conservam ocultação; informação privada do Padre precisa corresponder a uma jogada
+do jogador atual no histórico da mesma rodada. Mãos reveladas no resultado da
+rodada são públicas, separadas das mãos ocultas. Baralho e carta removida não
+entram no snapshot com seus conteúdos. As regras permanecem no servidor.
+
+Troca de conta limpa os dados em uma única publicação e invalida tarefas antigas.
+A fila de autenticação existente separa as contas antes de aceitar mensagens.
+Revisões antigas são ignoradas; presença na mesma revisão conserva alvos, palpites
+e a ordem escolhida para o Chanceler. Nova revisão invalida confirmações antigas.
+Jogadas e avanço de rodada são deduplicados; timeout só consulta a mesma mesa.
+Informação privada abre uma vez por revisão e é limpa ao mudar de rodada/conta.
+Ocultar fecha diálogos e libera efeitos; se uma observação chegou enquanto a tela
+estava oculta, ela pode ser apresentada ao retornar. Destaques são estado React
+com timer descartável, sem reconstruir ou mutar a mesa imperativamente.
+
+`components/games/love-letter-*` renderiza mãos, alvos, fichas, corte, histórico,
+regras, resultados e diálogos. Avatares usam `components/profiles/avatar.tsx` e o
+cliente de arquivos existente; não usam HTML/hidratação legados. `game-dialog.tsx`
+é o diálogo controlado compartilhado com Splendor. Cabeçalhos conservam o slot de
+volume e Love Letter reutiliza o dono de tela cheia dos outros jogos. O runtime
+desfaz observers, listeners, timers e montagem React ao descartar.
+`legacy/love-letter.js` foi excluído; `love-letter-rules.js` permanece como motor
+CommonJS compartilhado com o backend para extração posterior.
+
 `lib/games/roguelite.ts` possui preparação dos recursos de Cinzas, progresso,
 cancelamento, prontidão e tela cheia. Valida caminhos/tamanhos do manifesto e
 mantém dois downloads concorrentes no desktop. A verificação de hashes e a

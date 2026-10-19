@@ -1,0 +1,127 @@
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { createLoveLetter } from '../../lib/games/love-letter';
+import { createGameFullscreen } from '../../lib/games/fullscreen';
+import type { LoveLetterRoom, LoveLetterRules } from '../../types/love-letter';
+import type { NetworkClient } from '../../lib/socket/client';
+import { LoveLetterContents } from './love-letter-contents';
+interface Runtime extends Window {
+  LoveLetterRules: LoveLetterRules;
+  TronoAuth: { user: { id: string } | null };
+  TronoNetwork: NetworkClient;
+  TronoPortal: { showOnly(id: string): void };
+  TronoSocial: { showForRoom(v: boolean): void };
+  TronoAudio?: { playSfx(kind: string): void };
+  TronoLoveLetter?: {
+    open(): void;
+    readonly room: LoveLetterRoom | null;
+    readonly animating: boolean;
+  };
+}
+const installed = new WeakMap<Window, () => void>();
+export function initializeLoveLetter(target: Window): () => void {
+  const previous = installed.get(target);
+  if (previous) return previous;
+  const runtime = target as Runtime,
+    doc = target.document,
+    screen = doc.getElementById('loveLetterScreen')!,
+    motion = target.matchMedia('(prefers-reduced-motion: reduce)'),
+    visible = () => !screen.classList.contains('hidden') && !doc.hidden;
+  const controller = createLoveLetter({
+    getAccountId: () => runtime.TronoAuth.user?.id ?? null,
+    connected: () => runtime.TronoNetwork.connected,
+    visible,
+    reduced: () => motion.matches,
+    subscribeIdentity(fn) {
+      target.addEventListener('trono-auth-change', fn);
+      return () => target.removeEventListener('trono-auth-change', fn);
+    },
+    subscribeMessages: (fn) => runtime.TronoNetwork.onMessage(fn),
+    ensureAuthenticated: () => runtime.TronoNetwork.ensureLoveLetter(),
+    send: (action, payload) => runtime.TronoNetwork.loveLetter(action, payload),
+    rules: runtime.LoveLetterRules,
+    sound: (kind) => {
+      if (visible()) runtime.TronoAudio?.playSfx(kind);
+    },
+    warn: (error) => console.warn('[LoveLetter]', error),
+  });
+  const fullscreen = createGameFullscreen({
+    visible,
+    owned: () => doc.fullscreenElement === screen,
+    enter: () => screen.requestFullscreen(),
+    exit: () => doc.exitFullscreen(),
+  });
+  const facade = {
+    open() {
+      runtime.TronoPortal.showOnly('loveLetterScreen');
+      runtime.TronoSocial.showForRoom(false);
+      doc.body.dataset.gamesView = 'love-letter';
+      controller.open();
+    },
+    get room() {
+      return controller.getSnapshot().room;
+    },
+    get animating() {
+      return false;
+    },
+  };
+  runtime.TronoLoveLetter = facade;
+  const root = createRoot(screen);
+  flushSync(() =>
+    root.render(
+      <LoveLetterContents
+        controller={controller}
+        fullscreen={fullscreen}
+        rules={runtime.LoveLetterRules}
+      />,
+    ),
+  );
+  const sync = () => {
+      controller.visibilityChanged();
+      fullscreen.sync();
+    },
+    full = () => fullscreen.sync(),
+    escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fullscreen.escape();
+    };
+  const observer = new MutationObserver(sync);
+  observer.observe(screen, { attributes: true, attributeFilter: ['class'] });
+  doc.addEventListener('visibilitychange', sync);
+  doc.addEventListener('fullscreenchange', full);
+  doc.addEventListener('keydown', escape);
+  motion.addEventListener('change', sync);
+  let account = controller.getSnapshot().accountId,
+    room = controller.getSnapshot().room?.id;
+  const subscriptions = [
+    controller.subscribe(() => {
+      const s = controller.getSnapshot();
+      screen.dataset.playing = String(!!s.room?.state);
+      if (s.accountId !== account || (room && !s.room)) fullscreen.leave();
+      account = s.accountId;
+      room = s.room?.id;
+    }),
+    fullscreen.subscribe(() => {
+      const immersive = fullscreen.getSnapshot().immersive;
+      if (screen.classList.contains('ll-immersive') !== immersive)
+        screen.classList.toggle('ll-immersive', immersive);
+    }),
+  ];
+  controller.start();
+  const dispose = () => {
+    observer.disconnect();
+    doc.removeEventListener('visibilitychange', sync);
+    doc.removeEventListener('fullscreenchange', full);
+    doc.removeEventListener('keydown', escape);
+    motion.removeEventListener('change', sync);
+    subscriptions.forEach((fn) => fn());
+    controller.dispose();
+    fullscreen.dispose();
+    flushSync(() => root.unmount());
+    screen.classList.remove('ll-immersive');
+    delete screen.dataset.playing;
+    if (runtime.TronoLoveLetter === facade) delete runtime.TronoLoveLetter;
+    installed.delete(target);
+  };
+  installed.set(target, dispose);
+  return dispose;
+}

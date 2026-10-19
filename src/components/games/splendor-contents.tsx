@@ -1,8 +1,9 @@
+import { GameDialog } from './game-dialog';
 import { useSyncExternalStore } from 'react';
 import type { GameFullscreen } from '../../lib/games/fullscreen';
 import { SplendorLobby, SplendorRanking } from './splendor-lobby';
 import { SplendorTable } from './splendor-table';
-import { CardContent, ReturnContent, CollectionContent, GameDialog } from './splendor-dialogs';
+import { CardContent, ReturnContent, CollectionContent } from './splendor-dialogs';
 import { shown, type SplendorView } from './splendor-pieces';
 import { GameAction } from './library-controls';
 export function SplendorContents({

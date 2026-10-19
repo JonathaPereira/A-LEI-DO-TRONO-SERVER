@@ -1277,14 +1277,19 @@
     width: min(40cqw, 160px);
   }
 }
-.ll-avatar > svg {
+.ll-profile-avatar {
+  display: contents;
+}
+.ll-avatar > svg,
+.ll-avatar > .ll-profile-avatar > svg {
   display: block;
   width: 70%;
   height: 70%;
   margin: 15%;
   color: #f0d69c;
 }
-.ll-avatar > img {
+.ll-avatar > img,
+.ll-avatar > .ll-profile-avatar > img {
   width: 100%;
   height: 100%;
   object-fit: cover;

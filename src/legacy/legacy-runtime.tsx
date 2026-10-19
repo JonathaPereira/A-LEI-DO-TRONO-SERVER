@@ -18,6 +18,7 @@ import { initializeMessenger } from '../components/messenger/runtime';
 import { initializeGameLibrary } from '../components/games/library-runtime';
 import { initializeAzul } from '../components/games/azul-runtime';
 import { initializeSplendor } from '../components/games/splendor-runtime';
+import { initializeLoveLetter } from '../components/games/love-letter-runtime';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
 
 import { useEffect, useState } from 'react';
@@ -98,6 +99,7 @@ export function LegacyRuntime() {
       }
       initializeAzul(window);
       initializeSplendor(window);
+      initializeLoveLetter(window);
       initializeRoguelite(window);
       initializeGameLibrary(window);
       initializeMessenger(window);
