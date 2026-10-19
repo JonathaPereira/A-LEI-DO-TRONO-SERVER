@@ -134,10 +134,8 @@ export function initializeAzul(target: Window): () => void {
     );
     controller.start();
   }
-  target.addEventListener('trono:ready', bind, { once: true });
   const dispose = () => {
     disposed = true;
-    target.removeEventListener('trono:ready', bind);
     observer?.disconnect();
     doc.removeEventListener('visibilitychange', visibility);
     doc.removeEventListener('fullscreenchange', fullChange);
@@ -154,5 +152,6 @@ export function initializeAzul(target: Window): () => void {
     installed.delete(target);
   };
   installed.set(target, dispose);
+  bind();
   return dispose;
 }

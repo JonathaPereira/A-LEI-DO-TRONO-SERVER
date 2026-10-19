@@ -91,7 +91,10 @@ window.TronoTabletopAudio = (() => {
       ['.sp-heading-actions', 'splendor'],
       ['.ll-heading-actions', 'love-letter'],
     ])
-      document.querySelector(selector)?.append(control(key));
+      (
+        document.querySelector(selector + ' [data-game-audio-slot]') ??
+        document.querySelector(selector)
+      )?.append(control(key));
     document.addEventListener('pointerdown', (e) => {
       for (const n of document.querySelectorAll('.tt-audio[open]'))
         if (!n.contains(e.target)) n.open = false;

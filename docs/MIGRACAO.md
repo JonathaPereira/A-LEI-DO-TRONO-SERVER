@@ -1925,9 +1925,49 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   com mídia sintética. Evidências locais: `artifacts/azul-*`.
 - Próximo controlador: Splendor, depois Love Letter e A Lei do Trono/portal.
 
+## Controlador e interface do Splendor — 19/10/2026
+
+- Removidos `legacy/splendor.js` inteiro (1.302 linhas) e sua entrada no manifesto.
+  `lib/games/splendor.ts` possui mesa, fichas, pagamento, devolução, ranking,
+  diálogos e apresentação de negociações. `types/splendor.ts` descreve o domínio
+  e `splendor-protocol.ts` valida as entradas. `freeze.ts` é compartilhado com Azul
+  apenas para congelar DTOs próprios; os jogos conservam donos de estado distintos.
+- Mercado, jogadores, nobres, cartas, resultados, histórico, ranking, regras e
+  diálogos passaram a React em `components/games/splendor-*`. O runtime integra o
+  socket existente e conserva a fachada `TronoSplendor` de abertura/leitura.
+  Não há outro socket ou dono de captura. As regras/dados CommonJS compartilhados
+  (`splendor-rules.js`/`splendor-data.js`) permanecem para extração posterior.
+- Reservas dos adversários conservam somente nível/ocultação. Snapshots completos
+  são validados e congelados; revisões antigas não restauram mesas ou escolhas.
+  Troca de conta/ABA e desconexão invalidam autenticações e envios pendentes.
+  Ranking correlaciona pedidos; confirmações de pagamento/devolução pertencem à
+  revisão da mesa, e a mesma revisão pode atualizar presença sem apagá-las.
+- Pagamento com ouro conserva limite da carteira e custo exato. Devoluções exigem
+  a quantidade exata do excesso; confirmações antigas não enviam em uma mesa nova.
+  Timeout libera a tentativa e consulta a mesma mesa, sem liberar uma tentativa
+  posterior. O servidor continua responsável pela validade final de cada jogada.
+- A apresentação conserva pagamento, destaque da carta, transferência, devolução
+  e resultado, com cópias do estado e fila limitada. Receber outra jogada não
+  substitui a animação atual. Ocultar, movimento reduzido e descarte liberam
+  timers, frames e efeitos; o adaptador só escreve na camada de efeitos.
+  Tela cheia reutiliza o dono tipado já usado pelo Azul.
+- Cabeçalhos de Azul/Splendor montam antes do ready com slots estáveis de áudio.
+  Isso conserva os controles de volume do adaptador existente durante atualizações
+  React; seu código de áudio não foi convertido neste recorte. O teste nativo
+  verifica os mesmos quatro controles, sem duplicação, durante a navegação.
+- Nove regressões novas integram `test:games:models` e `npm test`, cobrindo ouro,
+  devoluções, privacidade, autenticação/ABA, revisão, timeout, replay e descarte.
+- Tipagem, formatação, build e suíte completa passaram, incluindo 28 regressões
+  de modelos de jogos. Onze casos de interface/áudio passaram: partidas dos quatro
+  jogos, layouts, recordes, animações e ganho/silêncio medidos no áudio sintetizado.
+  Electron real confirmou criação/início da mesa, reserva, diálogos, volumes e
+  mudança de layouts conservando hosts, controles, microfone, câmera, tela, peers
+  e socket, com mídia sintética. Evidências locais: `artifacts/splendor-*`.
+- Próximo controlador: Love Letter, seguido de A Lei do Trono/portal.
+
 ## Próximas alterações, em ordem
 
-1. Converter os controladores restantes: Splendor, Love Letter e A Lei do Trono/portal.
+1. Converter os controladores restantes: Love Letter e A Lei do Trono/portal.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

@@ -92,6 +92,7 @@ export function AzulContents({
           >
             Como jogar
           </button>
+          <span data-game-audio-slot="" style={{ display: 'contents' }} />
         </div>
       </header>
       <p id={'azulNotice'} className={'az-notice'} role={'status'} aria-live={'polite'}>

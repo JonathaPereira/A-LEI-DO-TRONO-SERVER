@@ -234,10 +234,4 @@ export function readAzulRanking(value: unknown): AzulRecord[] {
   return rows;
 }
 /** Freeze owned DTOs; parsing never freezes or retains a caller's wire payload. */
-export function freezeAzul<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    for (const child of Object.values(value)) freezeAzul(child);
-    Object.freeze(value);
-  }
-  return value;
-}
+export { freezeGame as freezeAzul } from './freeze.ts';

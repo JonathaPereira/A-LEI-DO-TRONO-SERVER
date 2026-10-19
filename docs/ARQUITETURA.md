@@ -154,6 +154,32 @@ listeners/observadores ao descartar. As regras CommonJS e a construção pura do
 passos de apresentação continuam compartilhadas em `legacy/azul-rules.js` e
 `legacy/azul-presentation.js`; sua extração será feita junto aos módulos compartilhados.
 
+`lib/games/splendor.ts` possui mesa, seleção de fichas, pagamento com ouro,
+devoluções, ranking, diálogos e apresentação das negociações. `splendor-protocol.ts`
+valida tabuleiros, carteiras, cartas, eventos e recordes antes de publicar snapshots
+congelados. Reservas de adversários só conservam nível/ocultação; uma carta completa
+nessa posição é rejeitada. `freeze.ts` é o congelamento de DTOs próprios compartilhado
+pelos dois jogos, sem compartilhar estado ou regras entre eles.
+
+Escolhas de pagamento/devolução pertencem à revisão da mesa. Uma revisão nova,
+troca de conta ou desconexão fecha escolhas antigas e invalida continuações de envio.
+Presença na mesma revisão conserva a escolha atual. A autenticação usa a fila
+existente e impede que listas/recordes atrasados da conta anterior publiquem dados.
+Jogadas pendentes são deduplicadas; timeout consulta somente a mesma mesa.
+O replay apresenta pagamento, carta, transferência, devolução e resultado em cópias
+do estado, mantendo a mesa autoritativa atual quando chegam novas jogadas.
+A fila é limitada a 12; ocultar, movimento reduzido e descarte liberam espera e efeitos.
+
+`components/games/splendor-*` renderiza mercado, recursos, coleções, diálogos,
+ranking e regras em React. Diálogos nativos acompanham o mesmo estado, com Escape,
+clique externo e fechamento; um evento antigo de fechamento não fecha um diálogo
+já reaberto. Animações só medem a mesa e escrevem na camada vazia de efeitos.
+Splendor reutiliza o dono de tela cheia do Azul. Os cabeçalhos dos dois jogos
+montam antes de `trono:ready`, com slots vazios para os controles de volume existentes;
+atualizações React conservam esses controles e seus listeners. `legacy/splendor.js`
+foi excluído. `splendor-rules.js` e `splendor-data.js` continuam compartilhados
+com o servidor; a autoridade e o conteúdo clássico das regras foram preservados.
+
 `lib/games/roguelite.ts` possui preparação dos recursos de Cinzas, progresso,
 cancelamento, prontidão e tela cheia. Valida caminhos/tamanhos do manifesto e
 mantém dois downloads concorrentes no desktop. A verificação de hashes e a
