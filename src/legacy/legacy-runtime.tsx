@@ -14,6 +14,7 @@ import { initializeMediaLayout } from '../lib/voice/media-layout';
 import { initializeHandLayout } from '../lib/games/hand-layout';
 import { initializeCommunity } from '../components/channels/community-runtime';
 import { initializeChannelManagement } from '../components/channels/management-runtime';
+import { initializeMessenger } from '../components/messenger/runtime';
 
 import { useEffect, useState } from 'react';
 import manifest from './manifest.json';
@@ -91,6 +92,7 @@ export function LegacyRuntime() {
           initializeNotifications(window);
         }
       }
+      initializeMessenger(window);
       prepareCallSettings(window);
       initializeCallToolbar(window);
       initializeCallNavigation(window);

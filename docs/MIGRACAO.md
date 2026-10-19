@@ -1820,9 +1820,47 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximo domínio: mensageiro em `legacy/messenger.js`; depois, controladores de
   jogos, backend e consolidação de estilos conforme os critérios abaixo.
 
+## Remoção do mensageiro legado — 18/10/2026
+
+- `lib/messenger/client.ts` possui transporte HTTP com prazo total, cancelamento e
+  geração de identidade compartilhada com arquivos. `protocol.ts` valida mensagens,
+  snapshots e páginas completos, remetentes e participantes dos anexos privados.
+  A espera cancelável por token foi consolidada em `lib/http/abortable.ts`, também
+  utilizada pelos clientes de perfis e gerenciamento de canais.
+- `controller.ts` possui amigos/pedidos, seleção, histórico e rascunhos por amigo.
+  Reutiliza presença da comunidade, socket, catálogo, arquivos e notificações.
+  Não cria um segundo inbox no workspace nem outro recurso de chamada.
+- Leituras atrasadas preservam mensagens ao vivo, páginas expandidas e cursores.
+  Troca de conta/ABA limpa dados privados e invalida continuações. Upload cancelado
+  na troca de amigo conserva seu rascunho; envio repetido após falha reaproveita
+  arquivo já enviado e chave de idempotência. Texto editado durante o envio não é
+  apagado pela confirmação do texto anterior.
+- Lista, busca, conversas, anexos, convites, formulários e avisos passaram a React em
+  `components/messenger/`. Avatares/anexos usam os módulos compartilhados e URLs de
+  preview são liberadas ao ocultar/trocar o rascunho. Avisos respeitam foco, política,
+  silenciamento, deduplicação, pausa e expiração; controles e painel mantêm seus hosts.
+- A ponte de convites mantém as rotas existentes, valida conta/destino nas tarefas
+  adiadas e libera assinaturas/frames. O shell desktop conserva o botão emprestado
+  ao ser desmontado. A fachada `TronoMessenger` mantém abertura, fechamento e
+  navegação; o método HTTP genérico sem chamadores foi retirado dessa fachada.
+- Removidos `legacy/messenger.js` inteiro (840 linhas) e sua entrada no manifesto.
+  O CSS continua utilizado. `TronoProfile.avatarHtml`/`hydrate` ainda atendem os jogos;
+  não remover esses adaptadores antes da conversão dos chamadores restantes.
+- Sete regressões determinísticas novas integram `test:messenger` e `npm test`.
+  `test:messenger:ui` valida amizades, privacidade, avisos, paginação/atrasos, repetição,
+  upload na troca de amigo, exclusão privada, layout estreito, convites e reinício.
+  O teste social antigo passou a usar o acesso atual pela barra lateral e o host
+  visível do workspace; suas verificações de voz, volumes e privacidade permanecem.
+- Tipagem, formatação, build e suíte completa passaram, além de 15 casos sociais e
+  dez regressões de interfaces relacionadas. Electron real enviou texto/imagem e
+  conservou rascunho, controles, players, câmera, tela, microfone, peers e socket,
+  com mídia sintética, durante as mudanças de layout. Evidências: `artifacts/messenger-*`.
+- Próximo recorte: navegação/telas e controladores dos jogos ainda em `src/legacy/`.
+  Depois, extração de backend e consolidação dos estilos conforme a ordem abaixo.
+
 ## Próximas alterações, em ordem
 
-1. Converter mensageiro, navegação de jogos e controladores dos jogos.
+1. Converter navegação de jogos e controladores dos jogos.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

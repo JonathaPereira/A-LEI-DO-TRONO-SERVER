@@ -239,7 +239,8 @@ export function initializeDesktopShell(target: Window) {
     // The toolbar and People belong to other roots and must outlive this shell.
     for (const host of owned)
       for (const node of [...host.children])
-        if (node.matches('.call-toolbar,#communityToggle,#soundboardToggle')) doc.body.append(node);
+        if (node.matches('.call-toolbar,#communityToggle,#soundboardToggle,#messengerToggle'))
+          doc.body.append(node);
     for (const [node, marker] of homes) {
       if (marker.isConnected) marker.after(node);
       marker.remove();

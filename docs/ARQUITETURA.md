@@ -103,7 +103,7 @@ avatares. `TronoCommunity` aponta para esse mesmo controlador, usado pela chamad
 para publicar avisos. `legacy/community.js` e sua entrada no manifesto foram removidos.
 
 `lib/profiles/icons.ts` contém os desenhos e o catálogo único de avatares.
-`avatar.ts` conserva `avatarHtml`/`hydrate` para perfis e jogos não convertidos;
+`avatar.ts` conserva `avatarHtml`/`hydrate` para os jogos não convertidos;
 as imagens antigas são invalidadas ao trocar de conta ou excluir um arquivo.
 O componente React usa o mesmo catálogo e cliente de arquivos, sem hosts de
 renderização imperativa no chat ou nos canais. `legacy/avatar-icons.js` foi removido.
@@ -153,6 +153,41 @@ modalidade nativa dos três diálogos em React. `channels/management-runtime.tsx
 nos hosts estáveis, conecta os botões existentes e atualiza as permissões/badge;
 os layouts movem esses mesmos controles. O descarte libera raízes, assinaturas e
 requisições. `legacy/community-admin.js` e sua entrada no manifesto foram removidos.
+
+`lib/messenger/client.ts` possui somente o transporte HTTP social. Reutiliza a
+geração de identidade do cliente de arquivos; troca de conta, inclusive sair e
+voltar à mesma conta, cancela requisições e invalida respostas. O prazo de 15 segundos
+inclui a espera pelo token. `protocol.ts` valida snapshots completos, histórico,
+mensagens e anexos privados, incluindo remetente e os dois participantes do arquivo.
+`lib/http/abortable.ts` reúne a espera cancelável compartilhada com perfis e canais;
+ela não cancela a renovação de sessão que pertence à autenticação.
+
+`lib/messenger/controller.ts` possui amizades, conversa selecionada, histórico,
+rascunhos por amigo, envio, paginação e avisos locais. Recebe a presença do dono da
+comunidade, o socket existente e os clientes de arquivos/notificações. Histórico
+atrasado se combina por ID com mensagens ao vivo, preservando páginas anteriores,
+cursor e tombstones. Um snapshot social ultrapassado por eventos solicita uma
+atualização nova. Confirmações de leitura validam conta, conversa e última mensagem.
+
+Upload pertence à operação e ao amigo de origem. Trocar de conversa cancela o upload
+sem apagar seu rascunho; uma confirmação de envio já iniciado só limpa o rascunho
+original correspondente. Falha de envio conserva texto, arquivo enviado e chave de
+idempotência, evitando upload/mensagem duplicados na repetição. Trocar de conta limpa
+histórico, rascunhos, pedidos e timers. Avisos têm limite de três e pausam ao receber
+foco/ponteiro; silenciamento e entrega nativa/web permanecem com notificações.
+
+`components/messenger/messenger-views.tsx` renderiza lista, busca, formulários,
+convites, histórico, anexos e avisos em React. Avatares e `AttachmentContent` são os
+mesmos usados nos demais domínios, com contexto privado para bloquear moderação de
+arquivos alheios. URLs de preview do rascunho são liberadas na troca/fechamento.
+O snapshot anterior à atualização DOM preserva a rolagem ao carregar mensagens antigas.
+
+`components/messenger/runtime.tsx` monta uma vez nos hosts próprios; os layouts movem
+painel e botão inteiros. A ponte de navegação de convites conserva a chamada e
+invalida listeners/frames quando muda conta ou destino. `TronoMessenger` delega ao
+mesmo dono; `trono-direct-change` continua sendo uma projeção para o workspace.
+Descarte remove raízes, listeners, timers, uploads e HTTP, sem fechar socket/mídia.
+`legacy/messenger.js` e sua entrada no manifesto foram removidos.
 
 `lib/desktop/shell.ts` possui projeção da área, abertura da lista de canais e
 estado visual da janela. Navegação reutiliza portal, jogos e catálogo existentes;
@@ -674,7 +709,7 @@ a projeção valida o payload, rejeita dados antigos e limpa contatos ao trocar 
 Avatares usam o componente compartilhado; `DirectProfileBanner` renderiza capas
 na linha React do contato. `workspace-layout.ts` move os mesmos
 painéis completos e restaura suas posições ao sair. Só observa a visibilidade
-externa do messenger, que ainda é legado; não observa texto renderizado para derivar estado.
+externa do painel do mensageiro; não observa texto renderizado para derivar estado.
 
 `lib/voice/media-layout.ts` ajusta somente as colunas/linhas da grade de telas,
 contando tiles diretamente presentes nela. `lib/games/hand-layout.ts` ajusta altura

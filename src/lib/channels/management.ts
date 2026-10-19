@@ -1,3 +1,4 @@
+import { abortable } from '../http/abortable.ts';
 import type {
   ChannelDraft,
   ChannelManagementSnapshot,
@@ -30,26 +31,6 @@ const roleEditor = Object.freeze({
   busy: false,
   message: '',
 });
-function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const abort = () => {
-      signal.removeEventListener('abort', abort);
-      reject(signal.reason);
-    };
-    signal.addEventListener('abort', abort, { once: true });
-    if (signal.aborted) abort();
-    void promise.then(
-      (value) => {
-        signal.removeEventListener('abort', abort);
-        resolve(value);
-      },
-      (error) => {
-        signal.removeEventListener('abort', abort);
-        reject(error);
-      },
-    );
-  });
-}
 const message = (error: unknown) =>
   error instanceof Error ? error.message : 'Não foi possível atualizar a comunidade.';
 

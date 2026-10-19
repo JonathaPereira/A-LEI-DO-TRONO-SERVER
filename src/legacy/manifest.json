@@ -30,8 +30,7 @@
     "love-letter.js",
     "roguelite-host.js",
     "soundboard-client.js",
-    "call-controls-layout.js",
-    "messenger.js"
+    "call-controls-layout.js"
   ],
   "styles": [
     "style.css",

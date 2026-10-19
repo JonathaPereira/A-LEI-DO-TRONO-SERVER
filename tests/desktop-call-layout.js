@@ -207,6 +207,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         management: ['channelManagerDialog','roleDialog','channelFilesDialog','channelName','roleSelect','channelFileList'].map(id => document.getElementById(id)),
         managementOwner: window.TronoChannelManagement,
         channelFilesOwner: window.TronoChannelFiles,
+        messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
+        messengerOwner: window.TronoDirectMessages,
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -233,6 +235,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           directory: before.directory.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
+          messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -247,6 +250,34 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
     }
     // Community UI moves independently while all native sources stay live.
+    const directPeer = await receiver.evaluate(() => window.TronoAuth.user.id);
+    const directOwner = await page.evaluate(() => window.TronoAuth.user.id);
+    async function friendAction(target, peerId, action) {
+      return target.evaluate(async ({peerId,action}) => {
+        const response = await fetch(window.TronoNetwork.BACKEND_HTTP + '/social/friend', {method:'POST',headers:{Authorization:'Bearer '+await window.TronoAuth.getAccessToken(),'Content-Type':'application/json'},body:JSON.stringify({peerId,action})});
+        return response.status;
+      }, {peerId,action});
+    }
+    assert.equal(await friendAction(page, directPeer, 'request'), 200);
+    assert.equal(await friendAction(receiver, directOwner, 'accept'), 200);
+    await page.evaluate(() => window.TronoDirectMessages.refresh());
+    await page.evaluate(id => window.TronoMessenger.open(id), directPeer);
+    await expect(page.locator('#messengerInput')).toBeEnabled();
+    await page.locator('#messengerInput').fill('Mensagem privada com câmera e tela ativas');
+    await page.locator('#messengerSend').click();
+    await expect(page.locator('#messengerMessages')).toContainText('Mensagem privada com câmera e tela ativas');
+    await preserved();
+    await page.locator('#messengerFile').setInputFiles({name:'desktop-direct.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlYQAAAAASUVORK5CYII=','base64')});
+    await expect(page.locator('#messengerAttachmentDraft img')).toBeVisible();
+    await page.locator('#messengerSend').click();
+    await expect(page.locator('#messengerMessages .direct-attachment img')).toBeVisible();
+    await preserved();
+    await page.locator('#messengerInput').fill('Rascunho mantido na navegação');
+    await page.locator('#messengerClose').click();
+    await page.evaluate(id => window.TronoMessenger.open(id), directPeer);
+    await expect(page.locator('#messengerInput')).toHaveValue('Rascunho mantido na navegação');
+    await page.locator('#messengerClose').click();
+    await preserved();
     await page.locator('#communityToggle').click();
     await expect(page.locator('#communityPanel')).toBeVisible();
     await expect(page.locator('#communityMembers')).toContainText('Layout Principal');
