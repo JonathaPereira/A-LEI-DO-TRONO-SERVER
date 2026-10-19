@@ -190,6 +190,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver});
     await require('./throne-history-controls.cjs').exerciseThroneHistory(page, {responsive: false});
     await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
+    await require('./throne-local-hand-controls.cjs').exerciseLocalHand(page, {responsive: false});
     await page.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
     await expect(page.locator('#roomSeats')).toContainText('Layout Principal');
     await expect(page.locator('#roomSeats .room-seat')).toHaveCount(4);

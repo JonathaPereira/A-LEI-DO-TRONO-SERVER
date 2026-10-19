@@ -2448,6 +2448,50 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximo recorte: controles da mesa e escolhas/mão locais, retirando os adaptadores
   e listeners correspondentes conforme cada dono assumir o fluxo completo.
 
+## Mão local compartilhada em React — 19/10/2026
+
+- `throne-hand.ts` agora possui os dois modos. A mão local usa o mesmo componente
+  React de cartas, ordenação, Sigilo, Manobras e naipe; preserva IDs/hosts separados.
+  A área inativa não recebe as cartas do outro modo. O motor continua calculando
+  opções legais e aplicando regras; não foi reimplementado no componente.
+- `throne-local-hand-protocol.ts` copia/congela somente a própria mão/Reserva,
+  contadores, permissões e geometria. Demonstração exige cartas vazias e nenhuma
+  ação; não projeta mãos dos bots nem congela o motor mutável.
+- Sessões opacas e identidade da oferta protegem cliques, timeouts e Promises.
+  A substituição invalida a oferta anterior mesmo com valores iguais. Saída,
+  identidade/ABA, novo início online e descarte rejeitam com `AbortError`.
+  O local funciona offline e não envia comandos pelo socket. Pacotes de estado/
+  erro de uma mesa em segundo plano não substituem sua mão.
+- O motor conserva seu único prazo de 60 segundos e escolhe a carta automática.
+  O timer captura partida/oferta/referência própria, sem encerrar a jogada nova.
+  Antes de aplicar uma escolha, revalida carta legal, saldo, Corte e declaração.
+  O dono da mão resolve IDs/ação/geometria; efeitos continuam com o dono anterior.
+- Removidos `renderHandLocal`, `onHumanCardClick`, `humanPlayResolver`, HTML da mão,
+  escolha de Influência/naipe e listeners locais de cartas/checkbox/ordenação.
+  `game-screen.tsx` deixa os dois hosts vazios para as raízes React. A ordenação
+  não altera mais o baralho mutável do participante; `sortMode`, sem consumidores,
+  também foi retirado do estado antigo.
+- Oito regressões novas cobrem protocolo, offline, resolução única, geometria,
+  Influência, timeout oculto, substituição, identidade/ABA, troca online e descarte.
+  O helper de interface usa clique, Enter/Espaço, limites de Corte, anúncio de
+  naipe, ocultação/retorno, cancelamento e hosts estáveis. O fluxo local também
+  executa uma rodada humana real, além da simulação de três rodadas.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; a suíte
+  final de modelos somou 144 testes. Navegador completou a demonstração em três
+  rodadas e uma rodada humana real, com Enter/Espaço. Sigilo, Manobras e naipe
+  passaram nos layouts Original/Discord em 480×800 e 1080×1920. Dois Electron
+  reais repetiram os controles e conservaram mic/câmera/tela, peers e socket;
+  navegação local/online também passou. Capturas inspecionadas.
+- A primeira execução online parou pelo limite do loop do teste, na 9ª vaza da
+  terceira rodada de Reserva; o placar ainda não existia. A suíte de fluxos agora
+  usa a preferência suportada de movimento reduzido e passou todos os cenários,
+  mantendo as mesmas asserções. O Electron conserva movimento normal. Evidências
+  separadas em `artifacts/throne-local-hand-*`, incluindo a execução inicial.
+  Mídia sintética local; sem medir jogos reais a 60 fps ou TURN de produção.
+- Próximo recorte: escolhas locais entre fases e controles gerais da mesa.
+  Permanecem os modais de Decreto/Lei/cartas, motor local e ponte de navegação,
+  `court-display.js` e separação das regras/coordenação do backend.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

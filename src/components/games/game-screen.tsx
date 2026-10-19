@@ -122,35 +122,7 @@ export function GameScreen() {
         </main>
 
         <section id="throneOnlineHand" className="hand-zone hidden"></section>
-        <section id="throneLocalHand" className={'hand-zone'}>
-          <div className={'hand-toolbar'}>
-            <div>
-              <strong id={'handTitle'}>Sua mão</strong>
-              <span id={'instructionText'}>Aguarde...</span>
-            </div>
-            <div className={'hand-actions'}>
-              <button id={'sortHandBtn'} className={'small-btn'}>
-                Ordenar
-              </button>
-              <label
-                id={'influenceToggleWrap'}
-                className={'influence-toggle disabled'}
-                data-tooltip={
-                  'Influência 2.0: com 1 ficha use Sigilo para jogar uma carta oculta; com 2, use Manobra da Corte (+3 ou -3). O valor efetivo nunca passa de 12 nem fica abaixo de 1. Ao abrir oculta, anuncie o naipe real.'
-                }
-              >
-                <input type={'checkbox'} id={'influenceToggle'} disabled />
-                <span className={'influence-emblem'}>✦</span>
-                <span className={'influence-copy'}>
-                  <strong>INFLUÊNCIA</strong>
-                  <small id={'influenceStatusText'}>0/2 • indisponível</small>
-                </span>
-                <span className={'influence-action'}>USAR</span>
-              </label>
-            </div>
-          </div>
-          <div id={'humanHand'} className={'hand'}></div>
-        </section>
+        <section id="throneLocalHand" className="hand-zone hidden"></section>
       </section>
     </>
   );

@@ -73,6 +73,8 @@ test(
             context = await browser.newContext({
               viewport: { width: 1440, height: 960 },
               permissions: ['microphone', 'camera'],
+              // Exercise the supported accessibility preference; native tests retain normal motion.
+              reducedMotion: 'reduce',
             });
             await context.route('**/*', (route) =>
               new URL(route.request().url()).hostname === '127.0.0.1'

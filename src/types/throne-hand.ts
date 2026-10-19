@@ -1,7 +1,7 @@
 import type { ThroneCard, ThroneSuit } from './throne-choices';
 
 export type ThroneInfluenceAction = 'none' | 'sigilo' | 'plus' | 'minus';
-/** Private hand and server-authorized moves only; no opponent cards or local rules. */
+/** Own hand and authorized moves; rules remain with the server or local engine. */
 export interface ThroneHandContext {
   readonly you: number;
   readonly round: number;
@@ -21,6 +21,8 @@ export interface ThroneHandContext {
   readonly decreeName: string;
 }
 export interface ThroneHandSnapshot {
+  readonly mode: 'local' | 'online' | null;
+  readonly demo: boolean;
   readonly active: boolean;
   readonly context: ThroneHandContext | null;
   readonly action: ThroneInfluenceAction;
@@ -30,4 +32,16 @@ export interface ThroneHandSnapshot {
   readonly visible: boolean;
   readonly sorted: boolean;
   readonly notice: string;
+}
+export interface ThroneHandOrigin {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+export interface ThroneLocalMove {
+  readonly cardId: string;
+  readonly influenceAction: ThroneInfluenceAction;
+  readonly declaredSuit: ThroneSuit | null;
+  readonly origin: ThroneHandOrigin | null;
 }

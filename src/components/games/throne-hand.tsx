@@ -7,22 +7,27 @@ import './throne-hand.css';
 
 const names = { cetro: 'Cetro', chave: 'Chave', lamina: 'Lâmina', mascara: 'Máscara' };
 const actions = { none: 'Nenhuma', sigilo: 'Sigilo', plus: 'Manobra +3', minus: 'Manobra -3' };
-export function ThroneOnlineHand({
+export function ThroneHandContents({
   controller,
   dialogHost,
+  mode,
 }: {
   controller: ThroneHand;
   dialogHost: HTMLElement;
+  mode: 'local' | 'online';
 }) {
   const s = useSyncExternalStore(
       controller.subscribe,
       controller.getSnapshot,
       controller.getSnapshot,
     ),
-    c = s.context;
+    c = s.mode === mode ? s.context : null;
+  const local = mode === 'local',
+    demo = local && s.mode === mode && s.demo,
+    dialogId = local ? 'throneLocalHandDialog' : 'throneHandDialog';
   const awaiting = !!c && !c.automaticReserve && c.phase === 'await-play' && c.turn === c.you,
     usable = awaiting && c.canUseInfluence && !s.pending,
-    hidden = s.action !== 'none';
+    hidden = !!c && s.action !== 'none';
   const legal = c
     ? hidden
       ? c.hiddenLegal.filter(
@@ -46,7 +51,7 @@ export function ThroneOnlineHand({
             : 'Influência ativa: anuncie primeiro o naipe.'
           : 'Sua vez: escolha uma carta válida.'
         : c?.automaticReserve && c.phase === 'await-play' && c.turn === c.you
-          ? 'A Reserva será jogada automaticamente pelo servidor.'
+          ? 'A Reserva será jogada automaticamente.'
           : c?.phase === 'game-over'
             ? 'Partida encerrada.'
             : 'Aguarde sua vez.');
@@ -65,39 +70,55 @@ export function ThroneOnlineHand({
     <>
       <div className="hand-toolbar">
         <div>
-          <strong>
-            Sua mão • {hand.length}
-            {c?.reserve ? ' + Reserva' : ''}
+          <strong id={local ? 'handTitle' : undefined}>
+            {demo
+              ? 'Modo demonstração'
+              : `Sua mão • ${hand.length}${c?.reserve ? ' + Reserva' : ''}`}
           </strong>
-          <span id="throneHandInstruction" role="status">
-            {instruction}
+          <span id={local ? 'instructionText' : 'throneHandInstruction'} role="status">
+            {demo ? 'Acompanhe a Crônica da Corte.' : instruction}
           </span>
         </div>
         <div className="hand-actions">
-          <button className="small-btn" id="throneHandSort" onClick={() => controller.sort()}>
+          <button
+            className="small-btn"
+            id={local ? 'sortHandBtn' : 'throneHandSort'}
+            disabled={!c || demo}
+            onClick={() => controller.sort()}
+          >
             Ordenar
           </button>
           <label
-            id="throneHandInfluenceWrap"
+            id={local ? 'influenceToggleWrap' : 'throneHandInfluenceWrap'}
             className={`influence-toggle ${c && c.influence >= 1 && !c.influenceBlocked ? 'ready' : ''} ${usable && c.opening ? 'opening-ready' : ''} ${!usable ? 'disabled' : ''}`}
           >
             <input
               type="checkbox"
-              id="throneHandInfluence"
+              id={local ? 'influenceToggle' : 'throneHandInfluence'}
               disabled={!usable}
-              checked={hidden || !!s.dialog}
+              checked={!!c && (hidden || !!s.dialog)}
               onChange={(e) => c && controller.toggleInfluence(c, e.target.checked)}
             />
             <span className="influence-emblem">✦</span>
             <span className="influence-copy">
               <strong>INFLUÊNCIA</strong>
-              <small>{status}</small>
+              <small id={local ? 'influenceStatusText' : undefined}>{demo ? '—' : status}</small>
             </span>
             <span className="influence-action">USAR</span>
           </label>
         </div>
       </div>
-      <div id="throneOnlineHandCards" className="hand" aria-label="Sua mão" aria-busy={s.pending}>
+      <div
+        id={local ? 'humanHand' : 'throneOnlineHandCards'}
+        className="hand"
+        aria-label="Sua mão"
+        aria-busy={s.pending}
+      >
+        {demo && (
+          <div className="throne-demo-hand">
+            Modo simulação: quatro casas jogam automaticamente.
+          </div>
+        )}
         {hand.map((card) => {
           const locked = !awaiting || s.pending || !!s.dialog || !s.visible,
             illegal = awaiting && !legal.includes(card.id);
@@ -108,7 +129,16 @@ export function ThroneOnlineHand({
               data-card={card.id}
               disabled={locked || illegal}
               className={`hand-card ${card.public ? 'public' : ''} ${card.publicReason === 'Corte Aberta' ? 'corte-open-hand' : ''} ${card.publicReason === 'Desafio' ? 'desafio-open-hand' : ''} ${illegal ? 'illegal' : ''} ${locked ? 'locked' : ''}`}
-              onClick={() => c && controller.play(c, card.id)}
+              onClick={(event) => {
+                const r = event.currentTarget.getBoundingClientRect();
+                if (c)
+                  controller.play(c, card.id, {
+                    left: r.left,
+                    top: r.top,
+                    width: r.width,
+                    height: r.height,
+                  });
+              }}
             >
               <img
                 src={`assets/cards/${card.suit}_${String(card.value).padStart(2, '0')}.webp`}
@@ -120,14 +150,14 @@ export function ThroneOnlineHand({
       </div>
       {createPortal(
         <GameDialog
-          id="throneHandDialog"
+          id={dialogId}
           className="throne-choice-dialog"
-          aria-labelledby="throneHandDialogTitle"
-          visible={!!s.dialog && s.visible}
+          aria-labelledby={`${dialogId}Title`}
+          visible={!!c && !!s.dialog && s.visible}
           onDismiss={() => controller.dismiss()}
         >
           <div className="modal-card">
-            <h2 id="throneHandDialogTitle">
+            <h2 id={`${dialogId}Title`}>
               {s.dialog === 'suit' ? 'Anuncie o naipe' : 'Influência da Corte'}
             </h2>
             <p>

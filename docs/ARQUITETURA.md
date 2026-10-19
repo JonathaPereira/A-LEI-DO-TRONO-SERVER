@@ -176,8 +176,8 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
 partidas; não possui o estado do salão.
 
-O jogo ainda possui simulação, controles de mão/escolha e regras locais de
-Influência em `legacy/game.js`. As projeções públicas e os efeitos usam os donos
+O jogo ainda possui simulação, escolhas entre fases e aplicação das regras locais
+de Influência em `legacy/game.js`. A mão jogável usa o dono compartilhado abaixo. As projeções públicas e os efeitos usam os donos
 tipados descritos abaixo.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
@@ -203,11 +203,12 @@ própria mão ao escolher Lei. O runtime monta uma raiz/host por página e obser
 visibilidade, o modal antigo e o dono das revelações privadas; essas informações
 têm precedência para evitar dois diálogos simultâneos. Ao descartar, remove raiz, observadores e
 assinaturas. `showOnlinePrompt` e `onlineLastPromptId` foram removidos de
-`legacy/game.js`; modos locais continuam usando os modais anteriores.
+`legacy/game.js`; as escolhas locais de Decreto/Lei/cartas entre fases ainda usam
+os modais anteriores. A mão jogável e sua Influência já usam React.
 
 Esse contexto é exclusivo das escolhas; não valida o protocolo online inteiro.
 
-`lib/games/throne-hand.ts` possui a mão jogável online, a seleção de Sigilo/Manobra,
+`lib/games/throne-hand.ts` possui a mão jogável online/local, a seleção de Sigilo/Manobra,
 o anúncio de naipe e o envio pendente. `throne-hand-protocol.ts` copia e valida a
 própria mão/Reserva, as cartas autorizadas e as capacidades recebidas do servidor.
 Não recalcula as regras. O contexto só retém fatos necessários aos controles;
@@ -229,8 +230,37 @@ os observadores no descarte. Não há socket, captura ou player adicional.
 `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
 e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
 online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
-A simulação e os controles locais de mão/escolha continuam no controlador antigo,
-que delega os efeitos ao dono tipado.
+O motor ainda calcula as opções legais e aplica as regras locais. `renderHand`
+agora projeta só a própria mão/Reserva e capacidades para `throne-local-hand-protocol.ts`.
+O parser copia/congela cartas canônicas, permissões e contadores, sem reter outras
+mãos ou congelar o motor. A demonstração aceita somente mão/Reserva vazias, sem
+ações; as cartas dos quatro bots permanecem exclusivamente no motor.
+
+`beginLocal` cria uma sessão opaca vinculada à identidade. `waitLocal` devolve uma
+Promise resolvida uma única vez com ID, ação, declaração e retângulo da carta.
+Mesmo uma oferta substituída por dados iguais recebe outro objeto de contexto:
+cliques e timeouts antigos não podem consumir a oferta nova. Cancelar, trocar a
+identidade/partida, iniciar o modo online ou descartar rejeita com `AbortError`.
+Tokens antigos não podem reapresentar a mão após A → B → A. O local funciona sem
+conexão e ignora pacotes de estado/erro de uma mesa em segundo plano.
+
+O motor conserva o prazo de 60 segundos e escolhe a carta automática; o timer
+captura a sessão, sua própria referência e a oferta tipada. `timeoutLocal` pode
+resolver uma oferta oculta, sem gastar a seleção de Influência. O dono não cria
+outro timer nem envia comandos de rede no local. Antes de aplicar uma escolha,
+o motor confere novamente cartas legais, saldo, Corte Aberta e declaração.
+Geometria é copiada/validada; a animação continua com seu dono existente.
+
+`ThroneHandContents` renderiza os dois modos em hosts/IDs distintos e estáveis,
+sem duplicar cartas privadas na área do outro modo. Cliques, Enter/Espaço,
+ordenação, Sigilo, Manobras e anúncio de naipe usam o mesmo controlador. Ordenar
+altera só a apresentação. O runtime monta/desmonta as duas raízes e conserva o
+mesmo cálculo de geometria. Ocultar retém seleção, bloqueia cliques e suspende o
+diálogo; o retorno restaura a escolha. Modais privados/resultados têm precedência.
+
+`renderHandLocal`, `onHumanCardClick`, `humanPlayResolver`, os renderizadores de
+Influência/naipe e os listeners locais de cartas/checkbox/ordenação foram removidos.
+Os modais de escolhas entre fases, controles gerais e simulação permanecem no legado.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro

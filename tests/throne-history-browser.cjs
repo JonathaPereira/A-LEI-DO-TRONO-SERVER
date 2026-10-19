@@ -66,6 +66,7 @@ test(
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
+      await require('./throne-local-hand-controls.cjs').exerciseLocalHand(page);
       await page.evaluate(() => window.TronoThroneLobby.enter('sala-chave'));
       await expect(page.locator('#roomScreen')).toBeVisible();
       await page.locator('#roomScreen details').evaluate((node) => {
@@ -110,6 +111,42 @@ test(
       await expect(page.locator('#setupScreen')).toBeVisible();
       assert.equal(await page.evaluate(() => window.__LeiDoTrono.getState()), null);
       assert.equal(await page.evaluate(() => window.TronoThroneHistory.getSnapshot().dialog), null);
+      // Run a real human round through the shared React hand and existing engine choices.
+      await page.evaluate(() => window.TronoThroneLobby.enter('sala-chave'));
+      await expect(page.locator('#roomScreen')).toBeVisible();
+      await page.locator('#roomScreen details').evaluate((node) => {
+        node.open = true;
+      });
+      await page.locator('#startHumanBtn').click();
+      let humanPlays = 0;
+      const humanDeadline = Date.now() + 45000;
+      while (
+        !(await page.locator('#throneResultDialog').isVisible()) &&
+        Date.now() < humanDeadline
+      ) {
+        if (await page.locator('#thronePrivateDialog').isVisible())
+          await page.locator('#thronePrivateContinue').click();
+        else if (await page.locator('#modal').isVisible()) {
+          const choice = page.locator('#modal .choice-card').first();
+          if (await choice.isVisible()) await choice.click();
+        } else {
+          const card = page.locator('#humanHand .hand-card:enabled').first();
+          if (await card.isVisible()) {
+            await card.focus();
+            await page.keyboard.press(humanPlays % 2 ? 'Space' : 'Enter');
+            humanPlays++;
+          }
+        }
+        await page.waitForTimeout(35);
+      }
+      await expect(page.locator('#throneResultDialog')).toBeVisible();
+      assert(humanPlays >= 9, `Human round must play its hand (played ${humanPlays})`);
+      assert.equal(
+        await page.evaluate(() => window.TronoThroneHistory.getSnapshot().dialog.round),
+        1,
+      );
+      await page.screenshot({ path: 'artifacts/throne-local-hand-human-round.png' });
+      await page.evaluate(() => window.TronoThroneBoard.backToLobby());
       assert.deepEqual(errors, []);
       assert.deepEqual(warnings, []);
     } finally {

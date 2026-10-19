@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import type { ThroneLobby } from '../../lib/games/throne-lobby';
 import type { NetworkClient } from '../../lib/socket/client';
 import { createThroneHand, type ThroneHand } from '../../lib/games/throne-hand';
-import { ThroneOnlineHand } from './throne-hand';
+import { ThroneHandContents } from './throne-hand';
 import './throne-choices.css';
 
 interface Runtime extends Window {
@@ -27,6 +27,12 @@ export function initializeThroneHand(target: Window): () => void {
     host = doc.getElementById('throneOnlineHand')!,
     localModal = doc.getElementById('modal')!;
   const controller = createThroneHand({
+    identity: () =>
+      runtime.TronoAuth.user
+        ? `user:${runtime.TronoAuth.user.id}`
+        : runtime.TronoAuth.guest
+          ? `guest:${runtime.TronoAuth.guest.id}`
+          : null,
     scope() {
       const lobby = runtime.TronoThroneLobby.getSnapshot();
       const identity = runtime.TronoAuth.user
@@ -71,14 +77,22 @@ export function initializeThroneHand(target: Window): () => void {
   const dialogHost = doc.createElement('div');
   dialogHost.id = 'throneHandDialogHost';
   doc.body.append(dialogHost);
-  const root = createRoot(host);
+  const root = createRoot(host),
+    localRoot = createRoot(local);
   flushSync(() =>
-    root.render(<ThroneOnlineHand controller={controller} dialogHost={dialogHost} />),
+    root.render(
+      <ThroneHandContents controller={controller} dialogHost={dialogHost} mode="online" />,
+    ),
+  );
+  flushSync(() =>
+    localRoot.render(
+      <ThroneHandContents controller={controller} dialogHost={dialogHost} mode="local" />,
+    ),
   );
   const syncHosts = () => {
-    const active = controller.getSnapshot().active;
-    local.classList.toggle('hidden', active);
-    host.classList.toggle('hidden', !active);
+    const mode = controller.getSnapshot().mode;
+    local.classList.toggle('hidden', mode !== 'local');
+    host.classList.toggle('hidden', mode !== 'online');
   };
   const releaseHosts = controller.subscribe(syncHosts);
   controller.start();
@@ -86,7 +100,10 @@ export function initializeThroneHand(target: Window): () => void {
   const dispose = () => {
     releaseHosts();
     controller.dispose();
-    flushSync(() => root.unmount());
+    flushSync(() => {
+      root.unmount();
+      localRoot.unmount();
+    });
     dialogHost.remove();
     host.classList.add('hidden');
     local.classList.remove('hidden');

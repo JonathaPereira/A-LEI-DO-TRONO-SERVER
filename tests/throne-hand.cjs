@@ -305,6 +305,7 @@ test('invalid state clears private controls without exposing a previous local ha
   f.context(table({ legalCardIds: ['c47'] }));
   assert.equal(f.controller.getSnapshot().context, null);
   assert.equal(f.controller.getSnapshot().active, true);
+  assert.equal(f.controller.getSnapshot().mode, 'online');
   assert(!f.controller.play(c, 'c0'));
   assert.equal(f.warnings.length, 1);
   f.controller.clear();
