@@ -1,3 +1,4 @@
+import type { ThroneHistory } from '../../lib/games/throne-history';
 import type { ThronePrivate } from '../../lib/games/throne-private';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -12,6 +13,7 @@ interface Runtime extends Window {
   TronoNetwork: NetworkClient;
   TronoThroneLobby: ThroneLobby;
   TronoThronePrivate: ThronePrivate;
+  TronoThroneHistory: ThroneHistory;
   TronoRules: ThroneChoiceRules;
   TronoThroneChoices?: ThroneChoices;
 }
@@ -40,9 +42,11 @@ export function initializeThroneChoices(target: Window): () => void {
       !doc.hidden &&
       !board.classList.contains('hidden') &&
       localModal.classList.contains('hidden') &&
-      !runtime.TronoThronePrivate.getSnapshot().open,
+      !runtime.TronoThronePrivate.getSnapshot().open &&
+      !runtime.TronoThroneHistory.getSnapshot().resultOpen,
     subscribeSource(fn) {
       const privateRelease = runtime.TronoThronePrivate.subscribe(fn);
+      const historyRelease = runtime.TronoThroneHistory.subscribe(fn);
       const release = runtime.TronoThroneLobby.subscribe(fn),
         observer = new MutationObserver(fn);
       observer.observe(board, { attributes: true, attributeFilter: ['class'] });
@@ -52,6 +56,7 @@ export function initializeThroneChoices(target: Window): () => void {
       return () => {
         release();
         privateRelease();
+        historyRelease();
         observer.disconnect();
         target.removeEventListener('trono-auth-change', fn);
         doc.removeEventListener('visibilitychange', fn);

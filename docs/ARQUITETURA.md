@@ -228,8 +228,8 @@ os observadores no descarte. Não há socket, captura ou player adicional.
 `renderOnlineHand`, `onOnlineCardClick`, `chooseOnlineOpeningSuit`, `onlineControl`
 e as seleções online foram removidos de `legacy/game.js`. Sua projeção pública
 online deixou de reter a própria mão/Reserva; conserva contagens para os assentos.
-Crônica, resultados e animações ainda passam pelo controlador antigo. O motor
-local e seus controles continuam isolados até a conversão correspondente.
+Animações e simulação local ainda passam pelo controlador antigo. Seus controles
+de mão/escolha continuam isolados até a conversão correspondente.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
@@ -276,8 +276,8 @@ no descarte. A atualização síncrona mantém a geometria disponível para os e
 legados que a consultam imediatamente. Animações temporárias só podem inserir
 filhos nos hosts vazios `playerEffects0..3`; não podem reescrever os filhos React.
 `renderPlayerPanels`, `renderTableInfluenceCoins` e `shownPrestige` foram removidos.
-As cartas jogadas e Leis/Decretos usam o módulo abaixo; resultados e os demais
-efeitos continuam no controlador antigo.
+As cartas jogadas, Leis/Decretos, Crônica e resultados usam os módulos abaixo;
+os demais efeitos continuam no controlador antigo.
 
 `lib/games/throne-table.ts` possui a apresentação de cartas jogadas, Lei/Decreto,
 trunfo, naipe anunciado e destaques de Coroa/Sombra. Consome o mesmo estado público
@@ -304,7 +304,35 @@ com seu dono privado e no mesmo nó. Descartar libera raiz, host e assinatura.
 `renderTableCards`, `renderLawTracker`, `markWinners`, `clearTableHighlights`,
 `animateCourtArrival`, tooltips e listeners de consulta legados foram removidos,
 além da cópia de `revealedPlays` recebida pelo evento bruto e da flag `revealing`.
-Animações de deslocamento, resultados, Crônica e simulação local ainda usam a ponte.
+Animações de deslocamento e simulação local ainda usam a ponte.
+
+`lib/games/throne-history.ts` possui Crônica pública, fila/validação dos resultados,
+confirmações e estado de abertura. O parser limita a Crônica a 600 registros, copia
+somente os campos conhecidos e valida quatro assentos únicos, totais de marcadores,
+Pares, Prestígio e vencedores. O resultado final usa os desempates existentes.
+Efeitos públicos ainda legados acrescentam texto pelo mesmo dono, com escopo ativo;
+não criam outra lista. Não recebe mãos nem informações privadas. Texto usa React,
+incluindo nomes com caracteres de HTML; não há `innerHTML` para registros/placares.
+
+Eventos online de resultado aguardam a rodada/fase e os totais do estado público
+validado. Duplicatas não repetem avisos ou abrem outro resultado. O encerramento
+de rodada online continua sem bloqueio; somente o servidor avança. A confirmação
+final delega a saída ao dono existente. `showLocal` recebe placares públicos e
+retorna uma Promise: confirmar resolve apenas a oferta atual; cancelar, mudar de
+identidade ou descartar rejeita com `AbortError`. Desconexão/escopo inválido limpam
+histórico e resultados online. Ocultar a mesa conserva a confirmação pendente.
+
+`components/games/throne-history.tsx` renderiza janela, controles e resultado com
+`GameDialog`. `throne-log-layout.ts` possui ponteiros, captura, limites de geometria,
+restauração/persistência e observador de tamanho, liberados no descarte. Em viewport
+estreito, a geometria inline cede ao CSS responsivo. O desktop move o host inteiro
+`throneLogToggleHost` para Configurações → Jogo → Regras e histórico; não move o
+botão para fora do portal React. Raízes, hosts e assinatura permanecem únicos.
+
+`clientLogHistory`, `clearLog`, `infoModal`, `renderFinalLogHtml` e controladores
+antigos da janela foram removidos de `game.js`. O motor conserva cálculo/continuação
+das rodadas e projeta seus placares para esse módulo. Sua fase inicial `setup` é
+normalizada para `starting` somente na projeção pública da mesa.
 
 `lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
 confirmações, consulta posterior e espera pela animação de troca. O parser copia e
@@ -330,7 +358,8 @@ Espionagem e resolvendo as trocas com as regras compartilhadas.
 com texto React, cartas e confirmação. O runtime possui os listeners do Decreto,
 root/host e observadores. Escolhas e mão assinam esse dono para ocultar seus
 diálogos enquanto uma revelação estiver aberta; o modal antigo conserva a
-precedência para escolhas locais e resultados ainda não convertidos.
+precedência para escolhas locais ainda não convertidas. Os resultados abaixo
+também suspendem as escolhas e a mão online enquanto abertos.
 
 `onlineIntelligence`, `onlineQueuedPrivateUsurpation`, `onlineExchangeBusy`,
 `showIntelligence`, `showOnlinePrivateUsurpation`, `privateUsurpationHtml` e os

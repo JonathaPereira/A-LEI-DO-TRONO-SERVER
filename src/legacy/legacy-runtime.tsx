@@ -33,6 +33,7 @@ import { initializeChatComposer, initializeChatMessages } from '../lib/chat/brow
 import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
 import { installLegacyAttachments } from '../components/files/legacy-attachments';
+import { initializeThroneHistory } from '../components/games/throne-history-runtime';
 import { initializeThronePrivate } from '../components/games/throne-private-runtime';
 import { initializeThroneTable } from '../components/games/throne-table-runtime';
 import { initializeThroneSeats } from '../components/games/throne-seats-runtime';
@@ -88,6 +89,7 @@ export function LegacyRuntime() {
           initializeThroneSeats(window);
           initializeThroneTable(window);
           initializeThronePrivate(window);
+          initializeThroneHistory(window);
           initializeThroneChoices(window);
           initializeThroneHand(window);
         }

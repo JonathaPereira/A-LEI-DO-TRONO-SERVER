@@ -36,11 +36,11 @@ const throneMatch = window.TronoThroneMatch;
 const throneSeats = window.TronoThroneSeats;
 const throneTable = window.TronoThroneTable;
 const thronePrivate = window.TronoThronePrivate;
+const throneHistory = window.TronoThroneHistory;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
 let exchangeSequence = 0;
 let localTurnTimer = null;
-let clientLogHistory = [];
 // Audio controls initialize independently of the game/room interface.
 const storage = window.TronoStorage || localStorage;
 const ensureAudio = (...args) => window.TronoAudio?.ensureAudio(...args) || Promise.resolve(false);
@@ -90,23 +90,9 @@ function escAttr(text = '') {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
-function logEvent(html) {
-  const el = document.createElement('div');
-  el.className = 'event-item';
-  el.innerHTML = html;
-  $('eventLog').prepend(el);
-  const plain = el.textContent || '';
-  clientLogHistory.push({
-    ts: Date.now(),
-    round: game?.round || 0,
-    trick: game?.trick || 0,
-    message: plain,
-  });
-  if (clientLogHistory.length > 600) clientLogHistory.splice(0, clientLogHistory.length - 600);
-}
-function clearLog() {
-  $('eventLog').innerHTML = '';
-  clientLogHistory = [];
+// Rules and public effects emit text; the typed owner handles history and rendering.
+function logEvent(message) {
+  throneHistory.appendPublic(message, game?.round || 0, game?.trick || 0);
 }
 function toast(text, ms = 1500) {
   const t = $('toast');
@@ -246,6 +232,7 @@ async function startGame(allAI = false) {
   throneHand.clear();
   throneMatch.clear();
   thronePrivate.clear();
+  throneHistory.clear();
   onlineGameMode = false;
   leavingGame = false;
   await ensureAudio();
@@ -278,12 +265,13 @@ async function startGame(allAI = false) {
     localPlayerId: allAI ? null : 0,
   };
   game.leader = game.firstRoundStarter;
+  syncLocalStatus();
   $('setupScreen').classList.add('hidden');
   $('roomScreen').classList.add('hidden');
   $('gameScreen').classList.remove('hidden');
-  clearLog();
+  throneHistory.clearEntries();
   logEvent(
-    `<strong>Partida iniciada${throneLobby.getSnapshot().selected ? ` em ${throneLobby.getSnapshot().selected.name}` : ''}.</strong> O sorteio definiu ${playerLabel(game.leader)} como primeiro líder.`,
+    `Partida iniciada${throneLobby.getSnapshot().selected ? ` em ${throneLobby.getSnapshot().selected.name}` : ''}. O sorteio definiu ${playerLabel(game.leader)} como primeiro líder.`,
   );
   renderAll();
   await startRound();
@@ -309,7 +297,7 @@ async function startRound() {
   toast(`Rodada ${game.round} — a corte se reúne`, 1800);
   await delay(800);
   game.decree = await chooseDecree();
-  logEvent(`<strong>Decreto:</strong> ${game.decree.name} vigorará durante toda a rodada.`);
+  logEvent(`Decreto: ${game.decree.name} vigorará durante toda a rodada.`);
   renderAll();
   await applyDecreeRoundStart();
   await beginTrick();
@@ -358,7 +346,7 @@ async function applyDecreeRoundStart() {
         );
       p.reserve = card;
       p.hand = p.hand.filter((c) => c.id !== card.id);
-      logEvent(`${p.name} separou uma carta na <strong>Reserva</strong>.`);
+      logEvent(`${p.name} separou uma carta na Reserva.`);
     }
   }
   if (game.decree.id === 'corte') {
@@ -373,9 +361,7 @@ async function applyDecreeRoundStart() {
           );
       card.public = true;
       card.publicReason = 'Corte Aberta';
-      logEvent(
-        `${p.name} revelou ${SUITS[card.suit].name} ${card.value} pela <strong>Corte Aberta</strong>.`,
-      );
+      logEvent(`${p.name} revelou ${SUITS[card.suit].name} ${card.value} pela Corte Aberta.`);
     }
   }
   if (game.decree.id === 'favor') for (const p of game.players) p.influence = 1;
@@ -430,7 +416,7 @@ async function beginTrick() {
   game.declaredLeadSuit = null;
   game.lawUsage[game.currentLaw]++;
   renderAll();
-  logEvent(`<strong>Vaza ${game.trick}:</strong> ${LAWS[game.currentLaw].name}.`);
+  logEvent(`Vaza ${game.trick}: ${LAWS[game.currentLaw].name}.`);
   toast(`Vaza ${game.trick} • ${LAWS[game.currentLaw].name}`, 900);
 
   if (game.currentLaw === 'estandarte') await declareTrump();
@@ -484,7 +470,7 @@ async function declareTrump() {
       })),
     });
   }
-  logEvent(`${chooser.name} declarou <strong>${SUITS[game.trump].name}</strong> como Trunfo.`);
+  logEvent(`${chooser.name} declarou ${SUITS[game.trump].name} como Trunfo.`);
   renderAll();
 }
 
@@ -673,7 +659,7 @@ async function performUsurpacao() {
   sortHand(shadow);
   sortHand(crown);
   logEvent(
-    `<strong>Usurpação:</strong> ${shadow.name} entregou 1 carta oculta a ${crown.name}; uma carta elegível da Casa escolhida passou à Sombra antes da entrega. A Corte Aberta permaneceu protegida.`,
+    `Usurpação: ${shadow.name} entregou 1 carta oculta a ${crown.name}; uma carta elegível da Casa escolhida passou à Sombra antes da entrega. A Corte Aberta permaneceu protegida.`,
   );
   renderAll();
 
@@ -710,7 +696,7 @@ function influenceOpeningSuits(p) {
 function announceHiddenLead(p, suit) {
   game.declaredLeadSuit = suit;
   logEvent(
-    `<strong>Influência:</strong> ${p.name}, como Coroa, anunciou <strong>${SUITS[suit].name}</strong> antes de abrir a vaza com uma carta oculta.`,
+    `Influência: ${p.name}, como Coroa, anunciou ${SUITS[suit].name} antes de abrir a vaza com uma carta oculta.`,
   );
   toast(`✦ ${p.name} anuncia ${SUITS[suit].name} e abre com carta oculta`, 1800);
   renderAll();
@@ -820,7 +806,7 @@ function waitHumanPlay(legal, p) {
       localTurnTimer = null;
       game.turnDeadline = null;
       if ($('influenceToggle')) $('influenceToggle').checked = false;
-      logEvent(`<strong>Tempo esgotado:</strong> ${p.name} recebeu uma jogada automática.`);
+      logEvent(`Tempo esgotado: ${p.name} recebeu uma jogada automática.`);
       toast('⌛ Tempo esgotado — carta aleatória jogada.', 1800);
       renderHand();
       r({ card, hidden: false, sourceInfo: null, influenceAction: 'none', modifier: 0 });
@@ -865,7 +851,7 @@ async function commitPlay(
   if (session !== game)
     throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
   logEvent(
-    `${p.name} jogou ${hidden ? `<strong>uma carta oculta</strong>${play.order === 0 && game.declaredLeadSuit ? ` após anunciar <strong>${SUITS[game.declaredLeadSuit].name}</strong>` : ''}` : `${SUITS[card.suit].name} ${card.value}`}${isReserve ? ' da Reserva' : ''}.`,
+    `${p.name} jogou ${hidden ? `uma carta oculta${play.order === 0 && game.declaredLeadSuit ? ` após anunciar ${SUITS[game.declaredLeadSuit].name}` : ''}` : `${SUITS[card.suit].name} ${card.value}`}${isReserve ? ' da Reserva' : ''}.`,
   );
 }
 
@@ -950,7 +936,7 @@ async function resolveTrick() {
     ? `${shadow.card.value} ${shadow.modifier > 0 ? '+3' : '-3'} → ${playValue(shadow)}`
     : `${shadow.card.value}`;
   logEvent(
-    `<strong>${LAWS[game.currentLaw].name}</strong> — <strong>Coroa:</strong> ${crownP.name} (${SUITS[crown.card.suit].name} ${crownShown}). <strong>Sombra:</strong> ${shadowP.name} (${SUITS[shadow.card.suit].name} ${shadowShown})${game.currentLaw === 'estandarte' && game.trump ? ` • Trunfo: ${SUITS[game.trump].glyph} ${SUITS[game.trump].name}` : ''}.`,
+    `${LAWS[game.currentLaw].name} — Coroa: ${crownP.name} (${SUITS[crown.card.suit].name} ${crownShown}). Sombra: ${shadowP.name} (${SUITS[shadow.card.suit].name} ${shadowShown})${game.currentLaw === 'estandarte' && game.trump ? ` • Trunfo: ${SUITS[game.trump].glyph} ${SUITS[game.trump].name}` : ''}.`,
   );
   await showTrickOutcome(crownP, shadowP);
   toast(`♛ ${crownP.name} • Sombra: ${shadowP.name}`, 1400);
@@ -1028,7 +1014,7 @@ function showInfluenceGains(gains) {
     panel.appendChild(el);
     setTimeout(() => el.remove(), 1900);
     logEvent(
-      `<strong>Influência:</strong> ${gain.player.name} não recebeu Coroa nem Sombra e ganhou +1 (${gain.after}/2).`,
+      `Influência: ${gain.player.name} não recebeu Coroa nem Sombra e ganhou +1 (${gain.after}/2).`,
     );
     if (gain.player.id === (onlineGameMode ? game.localPlayerId : 0)) {
       toast(
@@ -1063,7 +1049,7 @@ async function revealForChallenge(p) {
       );
   card.public = true;
   card.publicReason = 'Desafio';
-  logEvent(`<strong>Desafio:</strong> ${p.name} revelou ${SUITS[card.suit].name} ${card.value}.`);
+  logEvent(`Desafio: ${p.name} revelou ${SUITS[card.suit].name} ${card.value}.`);
   renderAll();
   showChallengeReveal(p.id, card);
   await delay(2100);
@@ -1104,9 +1090,7 @@ async function performRotation() {
     p.hand.push(incoming[p.id]);
     sortHand(p);
   }
-  logEvent(
-    `<strong>Rotação:</strong> quatro cartas ocultas foram passadas simultaneamente para a esquerda.`,
-  );
+  logEvent(`Rotação: quatro cartas ocultas foram passadas simultaneamente para a esquerda.`);
   renderAll();
   await delay(420);
 }
@@ -1121,11 +1105,11 @@ async function chooseNextLaw(shadowP) {
   if (shadowP.ai) {
     await delay(500);
     const choice = valid[rand(valid.length)];
-    logEvent(`${shadowP.name}, como Sombra, escolheu <strong>${LAWS[choice].name}</strong>.`);
+    logEvent(`${shadowP.name}, como Sombra, escolheu ${LAWS[choice].name}.`);
     return choice;
   }
   const choice = await chooseLawModal(shadowP, valid);
-  logEvent(`${shadowP.name}, como Sombra, escolheu <strong>${LAWS[choice].name}</strong>.`);
+  logEvent(`${shadowP.name}, como Sombra, escolheu ${LAWS[choice].name}.`);
   return choice;
 }
 
@@ -1181,19 +1165,21 @@ async function endRound() {
     return { p, pairs, score, cumulativePairs, cumulativePrestige };
   });
   const nextStarter = (game.lastCrown + 1) % 4;
-  const html = rows
-    .map(
-      ({ p, pairs, score, cumulativePrestige }) =>
-        `<div class="score-row"><strong>${p.name}</strong><span>♛ ${p.roundCrowns}</span><span>☾ ${p.roundShadows}</span><span>Pares da rodada ${pairs}</span><b>+${score} · Total ${cumulativePrestige}</b></div>`,
-    )
-    .join('');
-  await infoModal({
-    icon: '♛',
-    title: `Fim da Rodada ${game.round}`,
-    text: `${html}<p class="score-note">Influências não usadas foram perdidas.</p>`,
-    button: game.round === 3 ? 'Ver resultado final' : 'Iniciar próxima rodada',
+  syncLocalStatus();
+  await throneHistory.showLocal({
+    kind: 'round',
+    round: game.round,
+    scores: rows.map(({ p, pairs, score, cumulativePrestige }) => ({
+      seat: p.id,
+      name: p.name,
+      crowns: p.totalCrowns,
+      shadows: p.totalShadows,
+      pairs: p.totalPairs,
+      prestige: cumulativePrestige,
+      roundScore: { crowns: p.roundCrowns, shadows: p.roundShadows, pairs, gained: score },
+    })),
   });
-  logEvent(`<strong>Rodada ${game.round} encerrada.</strong>`);
+  logEvent(`Rodada ${game.round} encerrada.`);
   if (game.round >= 3) {
     await endGame();
     return;
@@ -1213,36 +1199,19 @@ async function endGame() {
     p.totalPairs = totalPairs(p);
     p.prestige = totalPrestige(p);
   }
-  const sorted = [...game.players].sort(
-    (a, b) =>
-      b.prestige - a.prestige ||
-      b.totalPairs - a.totalPairs ||
-      b.totalCrowns - a.totalCrowns ||
-      b.totalShadows - a.totalShadows,
-  );
-  const top = sorted[0];
-  const tied = sorted.filter(
-    (p) =>
-      p.prestige === top.prestige &&
-      p.totalPairs === top.totalPairs &&
-      p.totalCrowns === top.totalCrowns &&
-      p.totalShadows === top.totalShadows,
-  );
-  const winnerText =
-    tied.length > 1
-      ? `Vitória compartilhada: ${tied.map((p) => p.name).join(' e ')}`
-      : `${top.name} ocupa o Trono.`;
-  const html = sorted
-    .map(
-      (p, i) =>
-        `<div class="score-row final"><strong>${i + 1}º ${p.name}</strong><span>Pares ${p.totalPairs}</span><span>♛ ${p.totalCrowns}</span><span>☾ ${p.totalShadows}</span><b>${p.prestige} Prestígio</b></div>`,
-    )
-    .join('');
-  await infoModal({
-    icon: '♛',
-    title: 'Fim da Partida',
-    text: `<h3 class="winner-title">${winnerText}</h3>${html}${renderFinalLogHtml(clientLogHistory)}`,
-    button: 'Jogar novamente',
+  game.phase = 'game-over';
+  syncLocalStatus();
+  await throneHistory.showLocal({
+    kind: 'final',
+    round: game.round,
+    scores: game.players.map((p) => ({
+      seat: p.id,
+      name: p.name,
+      crowns: p.totalCrowns,
+      shadows: p.totalShadows,
+      pairs: p.totalPairs,
+      prestige: p.prestige,
+    })),
   });
   backToLobby();
 }
@@ -1267,7 +1236,7 @@ function syncLocalTable(winners) {
     {
       round: game.round,
       trick: game.trick,
-      phase: game.phase,
+      phase: game.phase === 'setup' ? 'starting' : game.phase,
       currentLaw: game.currentLaw,
       lawUsage: game.lawUsage,
       trump: game.trump,
@@ -1591,25 +1560,6 @@ function choiceModal({ icon = '♛', title, text, options }) {
     $('modal').classList.remove('hidden');
   });
 }
-function infoModal({ icon = '♛', title, text, button = 'Continuar' }) {
-  return new Promise((resolve, reject) => {
-    modalResolver = resolve;
-    modalReject = reject;
-    $('modalIcon').textContent = icon;
-    $('modalTitle').textContent = title;
-    $('modalText').innerHTML = text;
-    $('modalChoices').innerHTML =
-      `<button id="continueModal" class="royal-btn primary">${button}</button>`;
-    $('modalFooter').textContent = '';
-    $('modal').classList.remove('hidden');
-    $('continueModal').onclick = () => {
-      closeModal();
-      const r = modalResolver;
-      modalResolver = null;
-      r();
-    };
-  });
-}
 function closeModal() {
   $('modal').classList.add('hidden');
   modalReject = null;
@@ -1696,7 +1646,6 @@ function enterOnlineBoard() {
   window.TronoPortal?.showOnly?.('gameScreen');
   $('versionLabel').textContent =
     'Protótipo digital v' + window.TronoNetwork.CLIENT_VERSION + ' • Multiplayer';
-  clearLog();
 }
 // Presentation bridge only. Network parsing and clock state belong to TronoThroneMatch.
 function presentOnlineMatch(state) {
@@ -1721,10 +1670,6 @@ function presentOnlineMatch(state) {
 async function handleOnlineGameEvent(msg) {
   const session = game;
   const ev = msg.event;
-  if (ev === 'log') {
-    logEvent(msg.message);
-    return;
-  }
   if (ev === 'influence-used') {
     showInfluenceUseFeedback(msg);
     return;
@@ -1779,31 +1724,6 @@ async function handleOnlineGameEvent(msg) {
   if (ev === 'turn-timeout') {
     const p = game?.players[msg.seat];
     toast(`⌛ ${p?.name || 'Jogador'} excedeu 1 minuto — carta aleatória.`, 2000);
-    return;
-  }
-  if (ev === 'round-ended') {
-    const me = msg.scores?.find((x) => x.seat === game?.localPlayerId);
-    toast(`Fim da Rodada ${msg.round}${me ? ` • ${me.prestige} Prestígio` : ''}`, 2400);
-    return;
-  }
-  if (ev === 'game-ended') {
-    const rows = (msg.scores || [])
-      .map(
-        (p, i) =>
-          `<div class="score-row final"><strong>${i + 1}º ${escAttr(p.name)}</strong><span>Pares ${p.pairs}</span><span>♛ ${p.crowns}</span><span>☾ ${p.shadows}</span><b>${p.prestige} Prestígio</b></div>`,
-      )
-      .join('');
-    const winners = (msg.winners || [])
-      .map((id) => msg.scores.find((s) => s.seat === id)?.name)
-      .filter(Boolean);
-    const finalLog = renderFinalLogHtml(msg.finalLog || clientLogHistory);
-    await infoModal({
-      icon: '♛',
-      title: 'Fim da Partida Online',
-      text: `<h3 class="winner-title">${winners.length > 1 ? 'Vitória compartilhada: ' + winners.map(escAttr).join(' e ') : escAttr(winners[0] || 'A partida terminou.')}</h3>${rows}${finalLog}`,
-      button: 'Voltar aos salões',
-    });
-    backToLobby();
     return;
   }
   if (ev === 'player-replaced-by-bot') {
@@ -2050,6 +1970,7 @@ function backToLobby() {
   onlineGameMode = false;
   game = null;
   thronePrivate.clear();
+  throneHistory.clear();
   throneMatch.clear();
   window.TronoSocial?.setChatHubMode?.(false);
   document.body.classList.remove('chat-only-active');
@@ -2208,11 +2129,6 @@ $('rulesClose').onclick = () => $('rulesDrawer').classList.add('hidden');
 $('rulesDrawer').addEventListener('click', (e) => {
   if (e.target === $('rulesDrawer')) $('rulesDrawer').classList.add('hidden');
 });
-$('clearLogBtn').onclick = clearLog;
-$('logBtn').onclick = () => toggleFloatingLog();
-$('logHideBtn').onclick = () => toggleFloatingLog(false);
-$('logResetBtn').onclick = () => resetFloatingLog();
-initFloatingLog();
 $('sortHandBtn').onclick = () => {
   if (!game || onlineGameMode) return;
   const p = game.players[0];
@@ -2242,141 +2158,6 @@ function showChallengeReveal(seat, card) {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3000);
 }
-function renderFinalLogHtml(entries = []) {
-  const rows = (entries || [])
-    .slice(-300)
-    .map(
-      (e) =>
-        `<div class="final-log-row"><span>R${e.round || '-'} · V${e.trick || '-'}</span><p>${escAttr(String(e.message || '').replace(/<[^>]+>/g, ''))}</p></div>`,
-    )
-    .join('');
-  return `<details class="final-log" open><summary>Crônica final da partida (${entries.length} registros)</summary><div class="final-log-list">${rows || '<em>Sem registros.</em>'}</div></details>`;
-}
-function toggleFloatingLog(force) {
-  const panel = $('eventLogPanel');
-  if (!panel) return;
-  const show = force === undefined ? panel.classList.contains('log-hidden') : !!force;
-  panel.classList.toggle('log-hidden', !show);
-  $('logBtn')?.classList.toggle('music-active', show);
-}
-function resetFloatingLog() {
-  const panel = $('eventLogPanel');
-  if (!panel) return;
-  panel.style.left = '';
-  panel.style.top = '';
-  panel.style.right = '18px';
-  panel.style.bottom = '244px';
-  panel.style.width = '390px';
-  panel.style.height = '250px';
-  storage.removeItem('tronoLogGeometry');
-}
-function saveFloatingLogGeometry() {
-  const panel = $('eventLogPanel');
-  if (!panel) return;
-  const r = panel.getBoundingClientRect();
-  storage.setItem(
-    'tronoLogGeometry',
-    JSON.stringify({ left: r.left, top: r.top, width: r.width, height: r.height }),
-  );
-}
-function restoreFloatingLogGeometry() {
-  const panel = $('eventLogPanel');
-  if (!panel || window.innerWidth <= 900) return;
-  try {
-    const geo = JSON.parse(storage.getItem('tronoLogGeometry') || 'null');
-    if (!geo) return;
-    const w = Math.max(280, Math.min(window.innerWidth - 12, geo.width || 390));
-    const h = Math.max(170, Math.min(window.innerHeight - 74, geo.height || 250));
-    const x = Math.max(4, Math.min(window.innerWidth - w - 4, geo.left || 18));
-    const y = Math.max(70, Math.min(window.innerHeight - h - 4, geo.top || 100));
-    Object.assign(panel.style, {
-      left: `${x}px`,
-      top: `${y}px`,
-      right: 'auto',
-      bottom: 'auto',
-      width: `${w}px`,
-      height: `${h}px`,
-    });
-  } catch (_) {
-    /* geometria antiga inválida */
-  }
-}
-function initFloatingLog() {
-  const panel = $('eventLogPanel'),
-    handle = $('eventDragHandle'),
-    grip = $('logResizeGrip');
-  if (!panel || !handle) return;
-  restoreFloatingLogGeometry();
-  let drag = null,
-    resize = null;
-  handle.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button')) return;
-    const r = panel.getBoundingClientRect();
-    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
-    panel.classList.add('dragging');
-    handle.setPointerCapture?.(e.pointerId);
-    e.preventDefault();
-  });
-  handle.addEventListener('pointermove', (e) => {
-    if (!drag) return;
-    const x = Math.max(4, Math.min(window.innerWidth - panel.offsetWidth - 4, e.clientX - drag.dx));
-    const y = Math.max(
-      70,
-      Math.min(window.innerHeight - panel.offsetHeight - 4, e.clientY - drag.dy),
-    );
-    panel.style.left = `${x}px`;
-    panel.style.top = `${y}px`;
-    panel.style.right = 'auto';
-    panel.style.bottom = 'auto';
-  });
-  const stopDrag = () => {
-    if (drag) saveFloatingLogGeometry();
-    drag = null;
-    panel.classList.remove('dragging');
-  };
-  handle.addEventListener('pointerup', stopDrag);
-  handle.addEventListener('pointercancel', stopDrag);
-  if (grip) {
-    grip.addEventListener('pointerdown', (e) => {
-      if (window.innerWidth <= 900) return;
-      const r = panel.getBoundingClientRect();
-      resize = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
-      grip.setPointerCapture?.(e.pointerId);
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    grip.addEventListener('pointermove', (e) => {
-      if (!resize) return;
-      const w = Math.max(
-        280,
-        Math.min(
-          window.innerWidth - panel.getBoundingClientRect().left - 4,
-          resize.w + e.clientX - resize.x,
-        ),
-      );
-      const h = Math.max(
-        170,
-        Math.min(
-          window.innerHeight - panel.getBoundingClientRect().top - 4,
-          resize.h + e.clientY - resize.y,
-        ),
-      );
-      panel.style.width = `${w}px`;
-      panel.style.height = `${h}px`;
-    });
-    const stopResize = () => {
-      if (resize) saveFloatingLogGeometry();
-      resize = null;
-    };
-    grip.addEventListener('pointerup', stopResize);
-    grip.addEventListener('pointercancel', stopResize);
-  }
-  if (window.ResizeObserver) {
-    new ResizeObserver(() => {
-      if (!drag && !resize && !panel.classList.contains('log-hidden')) saveFloatingLogGeometry();
-    }).observe(panel);
-  }
-}
 function syncLocalStatus() {
   if (!game || onlineGameMode) return;
   throneMatch.setLocal({
@@ -2392,7 +2173,7 @@ function syncLocalStatus() {
 function fatalError(err) {
   if (err.name === 'AbortError') return;
   console.error(err);
-  logEvent(`<strong>Erro de execução:</strong> ${err.message}`);
+  logEvent(`Erro de execução: ${err.message}`);
   toast('O jogo encontrou um erro. Veja o console.', 3000);
 }
 

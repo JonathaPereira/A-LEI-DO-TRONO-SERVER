@@ -248,3 +248,14 @@ test('court descriptions preserve law counts, trump, decree timing and successio
     /Lâmina/,
   );
 });
+
+test('the initial demo presentation accepts a starting table with no local seat or plays', async () => {
+  const f = await fixture();
+  f.set({ mode: 'local', match: null });
+  f.controller.setLocal(local({ phase: 'starting', localSeat: null, plays: [] }));
+  assert.equal(f.controller.getSnapshot().phase, 'starting');
+  assert.equal(f.controller.getSnapshot().localSeat, null);
+  assert.equal(f.controller.getSnapshot().plays.length, 0);
+  assert.deepEqual(f.warnings, []);
+  f.controller.dispose();
+});

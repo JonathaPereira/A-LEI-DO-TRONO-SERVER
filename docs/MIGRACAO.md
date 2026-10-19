@@ -2333,6 +2333,43 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   controles e motor local em `legacy/game.js`, tela cheia em `court-display.js` e,
   depois, separação das regras/coordenação do backend. Ainda não excluir esses arquivos.
 
+## Crônica e resultados em React — 19/10/2026
+
+- `lib/games/throne-history.ts` possui registros públicos, resultados e confirmação.
+  `throne-history-protocol.ts` valida assentos, totais, Pares/Prestígio, ranking,
+  empates e Crônica final. Copia/congela DTOs próprios; não retém mãos ou Espionagem.
+  A lista possui no máximo 600 registros e a Crônica final exibe os últimos 300.
+- Resultados online aguardam o estado público da rodada/fase e conferem seus totais.
+  Rodadas continuam avançando pelo servidor, com o aviso existente; confirmar o
+  resultado final delega a saída. Duplicatas, escopo antigo e confirmações antigas
+  não podem repetir o encerramento. O modo local usa Promise, resolvida somente
+  pela oferta confirmada e rejeitada com `AbortError` ao encerrar/trocar/descartar.
+- Janela, botões, placares e Crônica final são React em `throne-history.tsx`.
+  `throne-log-layout.ts` concentra arraste, resize, limites/persistência e descarte
+  de listeners/observador. O host do botão acompanha as configurações desktop,
+  preservando o portal. A mão e as escolhas cedem a apresentação aos resultados.
+- Removidos histórico duplicado, renderizadores HTML de registros/resultados,
+  `infoModal` e controles antigos da janela de `game.js`. Registros locais agora
+  são texto público; nomes/HTML literais não viram elementos ou código na interface.
+  A preparação local `setup` é normalizada para `starting` na projeção da mesa,
+  corrigindo uma rejeição transitória encontrada pela simulação completa.
+- Sete regressões novas cobrem parsers, pontuação/empates, fila, limite de registros,
+  contexto, confirmação/cancelamento, descarte e geometria. Outra cobre a mesa
+  inicial da demonstração. `npm test` passou; a suíte final de modelos passou com
+  120 testes. Tipagem, formatação e build estático também passaram.
+- Navegador completou uma partida online de três rodadas e os outros cinco cenários
+  de Decreto, além dos controles de janela, clique/teclado, cancelamento e diálogos
+  em 480×800/1080×1920, layouts Original/Discord. A simulação local real também
+  completou três rodadas e o resultado final usando somente confirmações React.
+  `test:throne:history:ui` repete esse fluxo local sem depender do histórico do chat.
+- Dois Electron reais abriram a Crônica pelas configurações, moveram/redimensionaram,
+  confirmaram placares e preservaram mic/câmera/tela, peers e socket. Navegação
+  local/online também passou. Capturas inspecionadas; `artifacts/throne-history-*`
+  reúne evidências locais, com mídia sintética e sem infraestrutura remota.
+- Próximo recorte: eventos/efeitos e seus cancelamentos. Ainda restam as escolhas,
+  mão, controles e simulação local em `legacy/game.js`, tela cheia em
+  `court-display.js` e a separação de regras/coordenação no backend.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

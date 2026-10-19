@@ -74,13 +74,7 @@ export function GameScreen() {
             >
               ⏺ Gravar
             </button>
-            <button
-              id={'logBtn'}
-              className={'icon-btn'}
-              title={'Abrir ou ocultar a Crônica da Corte'}
-            >
-              ☷ Log
-            </button>
+            <span id="throneLogToggleHost" style={{ display: 'contents' }}></span>
             <CallNavigationHost id="socialBtn" />
             <button id={'speedBtn'} className={'icon-btn'} title={'Alternar velocidade'}>
               ⏱ Normal
@@ -124,25 +118,7 @@ export function GameScreen() {
             <h3>Leis da rodada</h3>
             <div id={'lawTrackerList'}></div>
           </aside>
-          <aside id={'eventLogPanel'} className={'event-log-panel floating-log log-hidden'}>
-            <div id={'eventDragHandle'} className={'event-head'}>
-              <h3>Crônica da Corte</h3>
-              <div className={'event-head-actions'}>
-                <button id={'logResetBtn'} title={'Restaurar posição e tamanho'}>
-                  ↺
-                </button>
-                <button id={'clearLogBtn'} title={'Limpar registro'}>
-                  ⌫
-                </button>
-                <button id={'logHideBtn'} title={'Ocultar janela'}>
-                  ×
-                </button>
-              </div>
-            </div>
-            <div id={'eventLog'} className={'event-log'}></div>
-            <div className={'resize-hint'}>arraste pelo título • redimensione pelo canto ↘</div>
-            <div id={'logResizeGrip'} className={'log-resize-grip'} title={'Redimensionar'}></div>
-          </aside>
+          <aside id="eventLogPanel" className="event-log-panel floating-log log-hidden"></aside>
         </main>
 
         <section id="throneOnlineHand" className="hand-zone hidden"></section>

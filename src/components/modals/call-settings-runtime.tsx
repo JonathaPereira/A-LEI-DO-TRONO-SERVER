@@ -65,7 +65,13 @@ export function initializeCallSettings(target: Window): void {
       actions.className = 'game-settings-actions';
       actions.dataset.gameGroup = key;
       actions.append(
-        ...ids.map((id) => (id === 'socialBtn' ? get('call-nav-socialBtn') : get(id))),
+        ...ids.map((id) =>
+          id === 'socialBtn'
+            ? get('call-nav-socialBtn')
+            : id === 'logBtn'
+              ? get('throneLogToggleHost')
+              : get(id),
+        ),
       );
       group.append(summary, actions);
       game.append(group);

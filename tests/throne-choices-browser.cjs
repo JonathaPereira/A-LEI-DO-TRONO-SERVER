@@ -6,6 +6,7 @@ const path = require('node:path'),
   WebSocket = require('ws');
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
+const { exerciseThroneHistory } = require('./throne-history-controls.cjs');
 const { installCanvasCamera } = require('./camera-fixture');
 const { assertThroneSeats } = require('./throne-seat-assertions.cjs');
 const {
@@ -92,6 +93,8 @@ test(
                     this.addEventListener('message', (event) => {
                       const m = JSON.parse(event.data);
                       if (m.type === 'game-state') window.__choicePacket = m;
+                      if (m.type === 'game-event' && m.event === 'game-ended')
+                        window.__choiceGameDone = true;
                       if (m.type === 'game-event' && m.event === 'round-ended' && m.round === 1)
                         window.__choiceRoundDone = true;
                     });
@@ -104,7 +107,9 @@ test(
             const page = await context.newPage();
             page.on('pageerror', (e) => errors.push(e.message));
             page.on('console', (message) => {
-              if (/\[Throne(?:Choices|Hand|Match|Private|Seats|Table)\]/.test(message.text()))
+              if (
+                /\[Throne(?:Choices|Hand|Match|Private|Seats|Table|History)\]/.test(message.text())
+              )
                 warnings.push(message.text());
             });
             page.on('dialog', (dialog) => dialog.accept());
@@ -200,9 +205,12 @@ test(
             await page.locator('#readyOnlineBtn').click();
             await expect(page.locator('#startOnlineBtn')).toBeEnabled();
             await page.locator('#startOnlineBtn').click();
-            const deadline = Date.now() + 30000;
+            const deadline = Date.now() + (decree === 'reserva' ? 55000 : 30000);
             while (
-              !(await page.evaluate(() => !!window.__choiceRoundDone)) &&
+              !(await page.evaluate(
+                (full) => !!(full ? window.__choiceGameDone : window.__choiceRoundDone),
+                decree === 'reserva',
+              )) &&
               Date.now() < deadline
             ) {
               await page.evaluate(() => window.__LeiDoTrono.setFast());
@@ -494,7 +502,17 @@ test(
             await assertThroneTable(page);
             assert.deepEqual(await page.evaluate(() => window.__tableFailures), []);
             assert(await page.evaluate(() => window.__tableStates.has('result')));
-            await page.evaluate(() => window.TronoThroneBoard.backToLobby());
+            if (decree === 'reserva') {
+              await expect(page.locator('#throneResultDialog')).toBeVisible();
+              await expect(page.locator('#throneResultDialog .score-row.final')).toHaveCount(4);
+              assert(
+                await page.evaluate(
+                  () => window.TronoThroneHistory.getSnapshot().dialog.kind === 'final',
+                ),
+              );
+              await page.screenshot({ path: 'artifacts/throne-history-online-final.png' });
+              await page.locator('#throneResultContinue').click();
+            } else await page.evaluate(() => window.TronoThroneBoard.backToLobby());
             await assertThroneTable(page);
             assert.equal(await page.evaluate(() => window.TronoThroneTable.getSnapshot()), null);
             assert.equal(
@@ -524,7 +542,10 @@ test(
               await page.evaluate(() => window.TronoThroneHand.getSnapshot().context),
               null,
             );
-            if (decree === 'espionagem') await exerciseThroneTableControls(page);
+            if (decree === 'espionagem') {
+              await exerciseThroneTableControls(page);
+              await exerciseThroneHistory(page);
+            }
             assert.deepEqual(await page.evaluate(() => window.__tableFailures), []);
           } finally {
             peers.forEach((peer) => peer.terminate());
