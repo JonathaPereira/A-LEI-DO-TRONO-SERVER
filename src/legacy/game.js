@@ -2525,7 +2525,13 @@ function consumeChatOnlyRoom(room) {
   if (!window.TronoNetwork?.connected && $('chatOnlyStatus'))
     $('chatOnlyStatus').textContent = 'Reconectando ao servidor...';
 }
-async function enterChatOnly({ validatedIdentity, channelId } = {}) {
+async function enterChatOnly({
+  validatedIdentity,
+  channelId,
+  isCurrent = () => true,
+  showScreen,
+} = {}) {
+  if (!isCurrent()) return false;
   if (window.TronoAuth && !window.TronoAuth.user) {
     window.TronoAuth.open('login');
     return false;
@@ -2538,6 +2544,7 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
   )
     throw new Error('O chat não terminou de carregar. Recarregue com Ctrl+F5.');
   const validation = validatedIdentity || (await window.TronoPortal?.validateIdentity?.());
+  if (!isCurrent()) return false;
   if (validation && !validation.ok) {
     toast(validation.message || 'Escolha um nome disponível.', 1800);
     window.TronoPortal?.showPortal?.();
@@ -2552,6 +2559,7 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
   }
   storage.setItem('tronoPlayerName', name);
   await window.TronoCommunityAdmin?.refresh?.().catch(() => {});
+  if (!isCurrent()) return false;
   const requested = window.TronoChannels.get(channelId) ? channelId : null,
     current = window.TronoNetwork.currentRoom;
   const restoreCurrent = window.TronoChannels.get(current) && (!requested || requested === current);
@@ -2574,7 +2582,8 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
   try {
     window.TronoSocial.setChatHubMode?.(true);
     window.TronoSocial.showForRoom(true);
-    if (window.TronoPortal?.showOnly) window.TronoPortal.showOnly('chatOnlyScreen');
+    if (showScreen) showScreen();
+    else if (window.TronoPortal?.showOnly) window.TronoPortal.showOnly('chatOnlyScreen');
     else
       for (const id of [
         'portalScreen',
@@ -2611,14 +2620,17 @@ async function enterChatOnly({ validatedIdentity, channelId } = {}) {
       wasInVoice = window.TronoSocial.voiceJoined;
     if (!textSubscription && window.TronoNetwork.primaryRoom !== channelId && wasInVoice)
       await window.TronoSocial.leaveVoice();
+    if (!isCurrent()) return false;
     const online = await (textSubscription
       ? window.TronoNetwork.joinTextChannel(channelId, name)
       : window.TronoNetwork.joinChatChannel(channelId, name));
+    if (!isCurrent()) return false;
     window.TronoNetwork.requestChatChannels?.();
     if (chatOnlyMode && !online)
       $('chatOnlyStatus').textContent =
         'Servidor indisponível. Aguarde a reconexão ou volte ao início para tentar novamente.';
   } catch (err) {
+    if (!isCurrent()) return false;
     console.warn('Conexão ao chat:', err);
     if (chatOnlyMode)
       $('chatOnlyStatus').textContent =

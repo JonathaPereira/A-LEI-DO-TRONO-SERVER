@@ -100,19 +100,6 @@ export function initializeGameLibrary(target: Window): () => void {
   let root: ReturnType<typeof createRoot> | undefined,
     side: HTMLElement | undefined,
     disposed = false;
-  function portalClick(event: MouseEvent) {
-    if (
-      !(event.target instanceof Element) ||
-      event.target.closest('#openGuestGameBtn') ||
-      !event.target.closest(
-        '#openGamePortalBtn,#gamePortalCard,.portal-nav-btn[data-portal-target=game]',
-      )
-    )
-      return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    void controller.open('library');
-  }
   function bind() {
     if (disposed || root) return;
     side = doc.createElement('nav');
@@ -121,14 +108,12 @@ export function initializeGameLibrary(target: Window): () => void {
     doc.body.append(side);
     root = createRoot(side);
     flushSync(() => root!.render(<LibraryNavigation controller={controller} />));
-    doc.addEventListener('click', portalClick, true);
     controller.start();
   }
   target.addEventListener('trono:ready', bind, { once: true });
   const dispose = () => {
     disposed = true;
     target.removeEventListener('trono:ready', bind);
-    doc.removeEventListener('click', portalClick, true);
     controller.dispose();
     flushSync(() => root?.unmount());
     side?.remove();

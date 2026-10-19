@@ -155,6 +155,7 @@ export function initializeDesktopShell(target: Window) {
   }
   function portalClick(event: MouseEvent) {
     if (!(event.target instanceof Element)) return;
+    if (event.target.closest('#openGuestGameBtn')) return;
     const button = event.target.closest<HTMLElement>(
       '#openVoicePortalBtn,#voicePortalCard,#openGamePortalBtn,#gamePortalCard,#backFromChatOnlyBtn,#portalBrandBtn,.portal-nav-btn,[data-open-clips]',
     );

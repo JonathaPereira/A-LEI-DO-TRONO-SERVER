@@ -124,6 +124,33 @@ A seleção/troca de canais e a navegação de A Lei do Trono ainda passam por
 Esse fluxo consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
 consulta `lib/voice/navigation.ts`; os métodos públicos de `TronoSocial` são adaptadores.
 
+`lib/navigation/portal.ts` possui identidade exibida, disponibilidade do apelido,
+entrada no chat e intenção de navegação. Snapshots/feedback são imutáveis. Nome de
+conta é autoritativo; convidado conserva o campo editável. Mudanças de identidade
+publicam nome e feedback juntos, cancelando consultas e continuações antigas,
+inclusive no caso conta A → B → A. A entrada é deduplicada; sair para outra tela
+ou desconectar invalida a operação, sem o finalizador antigo liberar a nova.
+O welcome da conexão iniciada pela validação não dispara uma consulta automática
+concorrente que cancele a própria entrada.
+
+`components/navigation/portal-contents.tsx` renderiza nome, status, navegação e
+créditos em React. O diálogo reutiliza `GameDialog`; o paralaxe cancela frames e
+zera deslocamentos ao ocultar, redimensionar ou ativar movimento reduzido, e
+libera todos os listeners ao descartar.
+`portal-runtime.tsx` mantém `TronoPortal` por compatibilidade e altera a visibilidade
+dos hosts existentes. Monta antes do ready para que autenticação e áudio encontrem
+os mesmos botões. O player continua com seu dono de áudio; o portal não recria
+socket, dispositivos ou participação na chamada. A biblioteca deixou de interceptar
+cliques do portal: os controles React delegam ao catálogo existente. No desktop,
+o shell continua com sua navegação e permite o clique explícito em convidado.
+
+A ponte temporária atualiza os campos e feedback do lobby legado; valores são
+escritos somente quando a identidade muda, preservando nomes locais editados.
+`legacy/auth.js` publica a identidade pelo evento existente e deixou de escrever
+nos mesmos campos. A entrada de comunidade ainda está em `legacy/game.js` e recebe
+guardas de validade antes de continuar após esperas; o portal não assume sua
+participação. `legacy/portal.js` e sua entrada no manifesto foram excluídos.
+
 `lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
 visível, sem duplicar participação, partidas ou recursos de mídia. Botões do
 catálogo, retornos e navegação lateral são React em `components/games/`.
@@ -418,9 +445,9 @@ o workspace move o host completo `creatorAccountsButtonHost`, preservando a raiz
 alternam wrappers estáveis; desktop continua movendo somente os hosts internos do
 editor, aparência e biblioteca. Trocar abas não recria esses controles.
 
-Enquanto o portal permanece legado, sua verificação de apelido agendada é cancelada
-em `trono-auth-change` e confere a identidade antes de iniciar. Uma tarefa antiga
-não pode abrir o diálogo de convidado durante o login nem publicar feedback após logout.
+A verificação de apelido pertence ao dono tipado do portal descrito acima. Uma tarefa
+antiga não pode abrir o diálogo de convidado durante o login nem publicar feedback
+após logout.
 
 `lib/files/library.ts` possui lista, consulta de uso, exclusões pendentes e feedback
 de Meus arquivos. Reutiliza transporte, URL assinada e exclusões do cliente tipado.

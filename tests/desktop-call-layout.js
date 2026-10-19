@@ -210,6 +210,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
         messengerOwner: window.TronoDirectMessages,
         games: ['gamesSideNav','rogueliteScreen','rogueliteBack','rogueliteFullscreen','azulBack','azulFullscreen','azulRulesDialog','azulContent','azulRanking'].map(id => document.getElementById(id)),
+        portalOwner: window.TronoPortal,
+        portal: ['portalScreen','portalIdentity','portalMusicBtn','portalMusicVolume','portalCreditsDialog'].map(id => document.getElementById(id)),
         gameOwners: [window.TronoGameLibrary, window.TronoRogueliteHost, window.TronoAzul, window.TronoSplendor, window.TronoLoveLetter],
         loveLetter: ['loveLetterBack','loveLetterPlayDialog','loveLetterPrivateDialog','loveLetterRulesDialog','loveLetterContent'].map(id => document.getElementById(id)),
         splendor: ['splendorBack','splendorCardDialog','splendorReturnDialog','splendorCollectionDialog','splendorRulesDialog','splendorContent','splendorRanking'].map(id => document.getElementById(id)),
@@ -241,6 +243,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
+          portal: window.TronoPortal === before.portalOwner && before.portal.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           games: window.TronoGameLibrary === before.gameOwners[0] && window.TronoRogueliteHost === before.gameOwners[1] && window.TronoAzul === before.gameOwners[2] && before.games.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           splendor: window.TronoSplendor === before.gameOwners[3] && before.splendor.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           loveLetter: window.TronoLoveLetter === before.gameOwners[4] && before.loveLetter.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
@@ -523,6 +526,11 @@ test('real desktop keeps the same controls, tracks and connected peers across la
 
       await page.evaluate(() => window.TronoAppLayout.navigate('home'));
       await expect(page.locator('#portalScreen')).toBeVisible();
+      await expect(page.locator('#portalIdentity')).toHaveValue('Layout Principal');
+      await page.evaluate(() => window.TronoPortal.setCredits(true));
+      await expect(page.locator('#portalCreditsDialog')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#portalCreditsDialog')).toBeHidden();
       await expect(page.locator('#desktopTopBar #communityToggle')).toHaveCount(1);
       await expect(page.locator('#desktopRail #soundboardToggle')).toHaveCount(1);
       if (layout === 'original') {

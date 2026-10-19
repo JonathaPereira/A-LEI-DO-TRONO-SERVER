@@ -7,6 +7,7 @@ import { initializeFileLibrary } from '../components/files/library-runtime';
 import { initializeProfileViewer } from '../components/profiles/viewer-runtime';
 import { initializeProfileEditor } from '../components/profiles/editor-runtime';
 import { initializeDesktopShell } from '../components/desktop/shell-runtime';
+import { initializePortal } from '../components/navigation/portal-runtime';
 import { initializeAppLayout } from '../components/navigation/app-layout-runtime';
 import { initializeAppearance } from '../components/profiles/appearance-runtime';
 import { initializeCallWorkspace } from '../components/navigation/workspace-runtime';
@@ -77,7 +78,10 @@ export function LegacyRuntime() {
           initializeChannelManagement(window);
         }
         if (filename !== 'auth-boot.js') await loadScript(filename);
-        if (filename === 'auth.js') initializeProfileEditor(window);
+        if (filename === 'auth.js') {
+          initializePortal(window);
+          initializeProfileEditor(window);
+        }
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile hosts and remaining game bodies exist before settings mount;

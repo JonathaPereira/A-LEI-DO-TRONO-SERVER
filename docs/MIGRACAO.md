@@ -2008,9 +2008,48 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   não remover esses adaptadores antes da conversão de A Lei do Trono.
 - Próximo controlador: A Lei do Trono e sua navegação pelo portal.
 
+## Portal e entrada na comunidade — 19/10/2026
+
+- Removido `legacy/portal.js` inteiro (399 linhas) e sua entrada no manifesto.
+  `lib/navigation/portal.ts` possui identidade, disponibilidade de nome, status,
+  intenção de navegação, créditos e entrada deduplicada na comunidade.
+- Interface, créditos e paralaxe estão em `components/navigation/portal-*`.
+  O runtime monta uma única raiz antes do ready e conserva os botões já usados
+  pelos donos de autenticação e música. Não cria socket nem recursos de mídia.
+- O nome de conta é autoritativo; convidados mantêm edição do nome. A troca de
+  identidade limpa feedback e nome no mesmo snapshot. Conta/ABA, navegação,
+  desconexão e descarte invalidam continuações; uma operação antiga não libera
+  o bloqueio de uma entrada mais recente. O welcome não cancela a validação
+  explícita da conexão que o originou.
+- A biblioteca deixou de capturar cliques do portal, agora tratados em React.
+  O shell desktop conserva a navegação e deixa o botão de convidado chegar à
+  autenticação. A ponte do lobby atualiza valores somente quando a identidade
+  muda, sem apagar nomes locais a cada status de rede/música.
+- A entrada da comunidade ainda pertence a `legacy/game.js`. Recebe guardas
+  antes de continuar após validação, refresh de canais e operações de conexão;
+  navegar durante o refresh não reabre a comunidade por uma resposta antiga.
+- Onze testes do controlador substituem os três testes por avaliação de script
+  legado. A regressão de interface cobre web/desktop, conta, convidado, créditos,
+  teclado, hosts de música e cancelamento durante o refresh real da comunidade.
+- Tipagem, formatação, build e suíte completa passaram. Após os ajustes finais,
+  os onze casos do controlador, os três de interface e a regressão em dois
+  Electron reais passaram novamente. O teste nativo conserva dono/hosts do portal,
+  controles, microfone, câmera, tela, peers e socket, com mídia sintética.
+  Evidências locais: `artifacts/portal-*`.
+- A suíte antiga `tests/court-browser.js` ainda espera que entrar na comunidade
+  também conecte automaticamente a voz. A mesma primeira falha foi reproduzida
+  no build isolado de `9452760` e no build atual, antes das verificações da partida.
+  O teste original foi conservado, sem ocultar a falha. Atualizar essa suíte para
+  o gesto explícito de voz e os hosts atuais faz parte do próximo recorte da corte.
+  Evidências: `artifacts/portal-court-baseline.log` e `portal-court-current.log`.
+- O controlador local/online e a apresentação de A Lei do Trono continuam em
+  `legacy/game.js`/`court-display.js`. Os adaptadores de avatar ainda têm chamadores.
+  Próximo recorte: separar estado e apresentação de A Lei do Trono, preservando
+  o motor compartilhado e os modos local/online.
+
 ## Próximas alterações, em ordem
 
-1. Converter A Lei do Trono e sua navegação pelo portal.
+1. Converter o controlador e a apresentação de A Lei do Trono.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e

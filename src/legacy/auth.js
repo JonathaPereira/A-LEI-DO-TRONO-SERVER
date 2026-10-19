@@ -100,28 +100,10 @@ window.TronoAuth = (() => {
   }
   function syncAccount() {
     const name = user?.nickname || guest?.nickname || '';
-    for (const id of ['portalIdentity', 'playerIdentity']) {
-      const el = $(id);
-      if (el) {
-        el.value = name;
-        el.readOnly = !!user || !guest;
-        el.setAttribute('aria-readonly', String(el.readOnly));
-      }
-    }
-    window.TronoPortal?.syncIdentity?.(name, { persist: false });
     try {
       if (name) (window.TronoStorage || localStorage).setItem('tronoPlayerName', name);
       else (window.TronoStorage || localStorage).removeItem('tronoPlayerName');
     } catch {}
-    if ($('portalPlayerLabel'))
-      $('portalPlayerLabel').textContent = guest ? `${name} · Convidado` : name || 'Visitante';
-    for (const id of ['portalNameAvailability', 'nameAvailability'])
-      if ($(id))
-        $(id).textContent = user
-          ? 'Apelido da sua conta'
-          : guest
-            ? 'Convidado · acesso ao jogo e à voz da mesa'
-            : 'Entre ou jogue como convidado';
     $('accountGuestExitBtn')?.classList.toggle('hidden', !guest);
     $('openGuestGameBtn')?.classList.toggle('hidden', !!user);
     document.body.classList.toggle('guest-mode', !!guest);
