@@ -277,6 +277,19 @@ test('only the creator can request private account pages and role changes invali
   await assert.rejects(pending);
 });
 
+test('closing a directory cancels its pending token before sending private requests', async (t) => {
+  const h = await setup(t, 'creator'),
+    token = deferred(),
+    controller = new AbortController();
+  h.token(() => token.promise);
+  const pending = h.client.readAccounts(0, { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(pending);
+  token.resolve('late-token');
+  await tick();
+  assert.equal(h.requests.length, 0);
+});
+
 test('creator permission revocation hides account data even if the account and role stay the same', async (t) => {
   const h = await setup(t, 'creator'),
     held = deferred();

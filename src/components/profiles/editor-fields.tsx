@@ -7,6 +7,8 @@ import { AVATAR_PRESETS } from '../../lib/profiles/icons';
 import type { ProfileMediaKind } from '../../types/profiles';
 import { Avatar } from './avatar';
 import { ProfileEditorPreview } from './editor-preview';
+import type { RegisteredAccounts } from '../../lib/profiles/registered-accounts';
+import { CreatorAccountsButton } from './registered-accounts';
 
 const IMAGE_TYPES = 'image/png,image/jpeg,image/webp,image/gif';
 const STATUS_EMOJIS = [
@@ -160,9 +162,11 @@ function RangeField({
 export function ProfileEditor({
   controller,
   chooseGif,
+  accounts,
 }: {
   controller: ProfileEditorController;
   chooseGif: (media: ProfileMediaKind) => void;
+  accounts: RegisteredAccounts;
 }) {
   const state = useSyncExternalStore(
     controller.subscribe,
@@ -528,7 +532,9 @@ export function ProfileEditor({
             </button>
           ))}
         </div>
-        <div id="profileCreatorHost" />
+        <div id="profileCreatorHost">
+          <CreatorAccountsButton controller={accounts} profile disabled={disabled} />
+        </div>
       </div>
       <ProfileEditorPreview
         state={state}

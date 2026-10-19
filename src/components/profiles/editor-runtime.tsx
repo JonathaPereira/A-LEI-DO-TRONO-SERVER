@@ -2,7 +2,6 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { createProfileEditor } from '../../lib/profiles/editor';
 import type { ProfileEditor as EditorController } from '../../lib/profiles/editor';
-import { formatProfilePhoto } from '../../lib/profiles/media';
 import type { ProfilesClient } from '../../lib/profiles/client';
 import type { ProfileViewer } from '../../lib/profiles/viewer';
 import type { FilesClient } from '../../lib/files/client';
@@ -12,6 +11,7 @@ import type { AvatarAppearance } from '../../types/domain';
 import type { SettingsController } from '../../lib/settings/controller';
 import { ProfileEditor } from './editor-fields';
 import { initializeProfileGifs } from './gif-picker-runtime';
+import { initializeRegisteredAccounts } from './registered-accounts-runtime';
 
 interface EditorRuntime extends Window {
   TronoProfileEditor?: EditorController;
@@ -36,6 +36,7 @@ export function initializeProfileEditor(target: Window): EditorController {
   const runtime = target as EditorRuntime;
   if (runtime.TronoProfileEditor) return runtime.TronoProfileEditor;
   const gifs = initializeProfileGifs(target);
+  const accounts = initializeRegisteredAccounts(target);
   const document = target.document;
   const controller = createProfileEditor({
     getAccount: () => runtime.TronoAuth.user,
@@ -76,7 +77,6 @@ export function initializeProfileEditor(target: Window): EditorController {
       open,
       avatarHtml: runtime.TronoAvatars.avatarHtml,
       hydrate: runtime.TronoAvatars.hydrate,
-      formatPhoto: formatProfilePhoto,
       openMini: runtime.TronoProfileViewer.open,
       getProtectedFileIds: controller.getProtectedFileIds,
     },
@@ -85,6 +85,7 @@ export function initializeProfileEditor(target: Window): EditorController {
     createRoot(host).render(
       <ProfileEditor
         controller={controller}
+        accounts={accounts}
         chooseGif={(key) => {
           const state = controller.getSnapshot();
           if (!state.loaded || state.busy) return;

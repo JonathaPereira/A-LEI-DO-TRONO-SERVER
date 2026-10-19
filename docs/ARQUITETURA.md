@@ -150,9 +150,9 @@ Renomear extensões não constitui uma conversão de arquitetura.
 O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados de
 `renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
 mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
-existe somente enquanto há raízes ativas. `legacy/profile-files.js` ainda possui
-contas do criador e navegação das configurações web. Editor, biblioteca de arquivos,
-miniperfis e decorações já saíram desse controlador.
+existe somente enquanto há raízes ativas. `legacy/profile-files.js` foi removido.
+Editor, biblioteca de arquivos, miniperfis, decorações, contas do criador e navegação
+das configurações web têm donos tipados e interfaces React.
 
 `lib/profiles/client.ts` possui as consultas autenticadas de perfil e contas do
 criador. Editor e decorações usam esse cliente; o HTTP duplicado foi
@@ -203,6 +203,8 @@ emoji, seleção de mídia e prévia. `editor-runtime.tsx` monta uma raiz no
 `profileEditorHost`; desktop e web movem o host inteiro. Trocar abas conserva o
 rascunho e os nós; fechar as configurações descarta recursos e consultas pendentes.
 `TronoProfile` conserva apenas a fachada para chamadores ainda não convertidos.
+A preparação de imagens pertence a `media.ts`; a exportação antiga `formatPhoto`,
+sem chamadores, foi retirada da fachada.
 A resposta de `auth.updateProfile` só atualiza a sessão que iniciou o pedido,
 inclusive após sair e entrar novamente na mesma conta.
 
@@ -221,6 +223,25 @@ o token do aplicativo; catálogo e mídia usam requisições sem credenciais.
 do validador do servidor até a conversão desse domínio. Não apagar o arquivo.
 Eventos de fechamento atrasados dos diálogos de perfil/configurações são ignorados
 se o diálogo já foi reaberto; não podem descartar o novo rascunho.
+
+`lib/profiles/registered-accounts.ts` possui abertura, paginação, erros e descarte
+da listagem privada. O cliente de perfis autoriza cada página; o estado assina sua
+época de identidade/permissões, sem outro listener de autenticação ou transporte.
+Somente o criador com `viewEmails` disponível recebe os botões. Fechar, trocar de
+conta ou perder permissão aborta a consulta e limpa linhas/feedback imediatamente.
+`readAccounts` aceita sinal de cancelamento, inclusive durante a espera pelo token.
+Uma falha de paginação conserva as linhas e permite repetir o mesmo cursor.
+
+`components/profiles/registered-accounts.tsx` renderiza os dois botões e o diálogo;
+o runtime monta uma única instância. O editor contém seu botão como filho React;
+o workspace move o host completo `creatorAccountsButtonHost`, preservando a raiz.
+`components/modals/profile-dialog.tsx` possui a navegação web em React. As abas
+alternam wrappers estáveis; desktop continua movendo somente os hosts internos do
+editor, aparência e biblioteca. Trocar abas não recria esses controles.
+
+Enquanto o portal permanece legado, sua verificação de apelido agendada é cancelada
+em `trono-auth-change` e confere a identidade antes de iniciar. Uma tarefa antiga
+não pode abrir o diálogo de convidado durante o login nem publicar feedback após logout.
 
 `lib/files/library.ts` possui lista, consulta de uso, exclusões pendentes e feedback
 de Meus arquivos. Reutiliza transporte, URL assinada e exclusões do cliente tipado.
@@ -805,10 +826,10 @@ pedido já em andamento. Detecção e processo auxiliar continuam em
 `electron/activity.cjs`; `legacy/desktop-activity.js` foi removido.
 
 `call-settings-runtime.tsx` monta uma raiz React no painel existente. Antes dela,
-os controladores de perfil/jogos preparam os corpos que ainda possuem. O bootstrap
+os hosts de perfil e os controles restantes dos jogos já estão preparados. O bootstrap
 registra essa montagem depois do shell desktop e antes de atividade/notificações;
-ela executa nessa ordem em `trono:ready`. Não antecipar a transferência de perfil
-para antes da preparação de `profile-files.js` ao alterar essa sequência.
+ela executa nessa ordem em `trono:ready`. O editor/contas são inicializados após
+`auth.js`, usando o cliente de perfis já instalado; não dependem de scripts de perfil legados.
 
 `components/voice/settings-fields.tsx` renderiza os campos de microfone, câmera,
 saída, ganhos de voz, supressão/modo leve, perfil, formato/bitrate/conteúdo da tela
@@ -872,7 +893,7 @@ Perfil e jogo continuam em slots vazios (`ContentSlot`), preservando
 identidade e listeners dos nós. Editor, arquivos e aparência são React em hosts estáveis;
 mover os hosts conserva os controles e os rádios de tema/layout. Os campos de
 notificações e atividade são filhos React das abas compartilhadas. Os conteúdos
-administrativos/decorativos de perfil e os jogos ainda serão convertidos por domínio.
+dos jogos ainda serão convertidos por domínio; as superfícies de perfil já são React.
 
 `lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores
 e feedback compartilhado com a restauração de painéis. `appearance-fields.tsx`

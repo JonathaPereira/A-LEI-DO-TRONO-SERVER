@@ -84,7 +84,7 @@ export function createWorkspaceLayout(options: WorkspaceLayoutOptions) {
       if (started || disposed) return;
       started = true;
       const tools = get('workspaceToolsActions');
-      for (const id of ['communityManageBtn', 'creatorAccountsBtn', 'backFromChatOnlyBtn']) {
+      for (const id of ['communityManageBtn', 'creatorAccountsButtonHost', 'backFromChatOnlyBtn']) {
         const node = get(id);
         if (node && tools) tools.append(node);
       }

@@ -64,11 +64,11 @@ export function LegacyRuntime() {
       initializeChatMessages(window);
       initializeChannels(window);
       for (const filename of manifest.scripts) {
-        if (filename === 'profile-files.js') initializeProfileEditor(window);
         if (filename !== 'auth-boot.js') await loadScript(filename);
+        if (filename === 'auth.js') initializeProfileEditor(window);
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
         if (filename === 'soundboard-client.js') initializeAppearance(window);
-        // Profile/game controllers prepare borrowed bodies before the React shell mounts;
+        // Profile hosts and remaining game bodies exist before settings mount;
         // activity/notifications then bind to the mounted slots, matching their boot order.
         if (filename === 'call-controls-layout.js') {
           initializeDesktopShell(window);

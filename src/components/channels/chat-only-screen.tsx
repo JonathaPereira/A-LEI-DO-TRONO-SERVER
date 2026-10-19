@@ -40,6 +40,7 @@ export function ChatOnlyScreen() {
                 <b>Gerenciar</b>
               </button>
               <WorkspaceHost id="layout" />
+              <span id="creatorAccountsButtonHost" style={{ display: 'contents' }} />
               <button
                 id={'chatProfileBtn'}
                 className={'chat-header-action'}

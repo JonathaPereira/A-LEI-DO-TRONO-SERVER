@@ -810,7 +810,7 @@
   font-size: 11px;
   padding: 12px 18px;
 }
-#profileDialog .profile-settings-body > .profile-appearance,
+#profileDialog .profile-settings-body .profile-appearance,
 #profileDialog .profile-settings-files {
   height: 100%;
   margin: 0;
@@ -828,6 +828,9 @@
 #profileDialog .profile-settings-body > [hidden],
 #profileDialog .profile-editor[hidden] {
   display: none !important;
+}
+.profile-settings-pane {
+  display: contents;
 }
 @media (min-width: 1200px) {
   .desktop-app #desktopSettingsDialog:has([data-settings-panel='account']:not([hidden])) {

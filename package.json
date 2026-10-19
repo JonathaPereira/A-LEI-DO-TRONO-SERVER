@@ -15,15 +15,15 @@
     "test:desktop:audio": "node --test tests/desktop-call-audio.cjs",
     "test:desktop:sfu": "node --test tests/desktop-sfu.cjs",
     "test:desktop:layout": "node --test tests/desktop-call-layout.js",
-    "test": "node tests/integration.js && node tests/auth.js && node tests/features-v079.js && node tests/community-v080.js && node --test tests/community-management.js tests/giphy-provider.js tests/community-sql.js tests/files-soundboard.js tests/text-voice-channels.js tests/chat-history-sql.js tests/chat-history-restart.js tests/activity-presence.js && node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js && node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js && node --test tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js && node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js && node --test tests/love-letter-rules.js tests/love-letter-ws.js && node --test tests/bot-names.js && npm run test:socket && npm run test:chat && npm run test:channels && npm run test:files && npm run test:voice:capture && npm run test:voice:peers && npm run test:voice:sfu && npm run test:voice:playback && npm run test:voice:diagnostics && npm run test:voice:indicators && node --test tests/sfu-recovery.js && npm run test:voice:configuration && npm run test:voice:lifecycle && npm run test:voice:transport && npm run test:voice:quality && npm run test:voice:roster && npm run test:voice:audio && npm run test:voice:controls && npm run test:voice:interest && npm run test:voice:sharing && npm run test:voice:publication && npm run test:settings && npm run test:notifications && npm run test:activity && npm run test:profiles:reader && npm run test:profiles:editor",
+    "test": "node tests/integration.js && node tests/auth.js && node tests/features-v079.js && node tests/community-v080.js && node --test tests/community-management.js tests/giphy-provider.js tests/community-sql.js tests/files-soundboard.js tests/text-voice-channels.js tests/chat-history-sql.js tests/chat-history-restart.js tests/activity-presence.js && node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js && node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js && node --test tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js && node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js && node --test tests/love-letter-rules.js tests/love-letter-ws.js && node --test tests/bot-names.js && npm run test:socket && npm run test:chat && npm run test:channels && npm run test:files && npm run test:voice:capture && npm run test:voice:peers && npm run test:voice:sfu && npm run test:voice:playback && npm run test:voice:diagnostics && npm run test:voice:indicators && node --test tests/sfu-recovery.js && npm run test:voice:configuration && npm run test:voice:lifecycle && npm run test:voice:transport && npm run test:voice:quality && npm run test:voice:roster && npm run test:voice:audio && npm run test:voice:controls && npm run test:voice:interest && npm run test:voice:sharing && npm run test:voice:publication && npm run test:settings && npm run test:notifications && npm run test:activity && npm run test:profiles:reader && npm run test:profiles:editor && npm run test:portal",
     "test:auth": "node tests/auth.js",
     "test:notifications": "node --test tests/notifications.cjs tests/desktop-notifications.js",
     "test:notifications:ui": "node --test tests/notifications-browser.cjs",
     "test:activity": "node --test tests/desktop-activity-controls.cjs tests/desktop-activity.js tests/activity-presence.js",
     "test:activity:ui": "node --test tests/desktop-activity-browser.cjs",
     "test:profiles": "node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js",
-    "test:profiles:reader": "node --test tests/profile-reader.cjs tests/profile-decorations.cjs",
-    "test:profiles:ui": "node --test tests/member-profile-browser.cjs",
+    "test:profiles:reader": "node --test tests/profile-reader.cjs tests/profile-decorations.cjs tests/registered-accounts.cjs",
+    "test:profiles:ui": "node --test tests/member-profile-browser.cjs tests/registered-accounts-browser.cjs",
     "test:frontend": "node --test tests/frontend-browser.js",
     "test:clips": "node --test tests/clips-buffer.js tests/clips-browser.js",
     "test:social": "node --test tests/social-sql.js tests/call-stability.js tests/desktop-notifications.js tests/social-browser.js tests/messenger-enhancements-browser.js",
@@ -70,7 +70,8 @@
     "test:voice:publication": "node --test tests/device-publication.cjs",
     "test:settings": "node --test tests/settings.cjs tests/voice-settings.cjs tests/audio-preferences.cjs tests/connection-diagnostics.cjs tests/call-toolbar.cjs tests/call-stage.cjs tests/media-dialogs.cjs tests/media-focus.cjs tests/call-navigation.cjs tests/call-navigation-view.cjs tests/call-workspace.cjs tests/responsive-layout.cjs tests/app-layout.cjs tests/appearance-preferences.cjs tests/desktop-shell.cjs tests/desktop-update-controls.cjs",
     "test:profiles:editor": "node --test tests/profile-editor.cjs tests/profile-gif-picker.cjs",
-    "test:profiles:editor:ui": "node --test tests/profile-editor-browser.cjs"
+    "test:profiles:editor:ui": "node --test tests/profile-editor-browser.cjs",
+    "test:portal": "node --test tests/portal-name-check.cjs"
   },
   "engines": {
     "node": ">=24.12.0"

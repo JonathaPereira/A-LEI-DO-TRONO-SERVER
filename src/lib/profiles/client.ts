@@ -168,12 +168,12 @@ export function createProfiles(options: ProfilesOptions) {
       if (profile.id !== id) throw new Error('Resposta de perfil inválida.');
       return profile;
     },
-    async readAccounts(offset = 0) {
+    async readAccounts(offset = 0, { signal }: { signal?: AbortSignal } = {}) {
       if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000)
         throw new Error('Página de contas inválida.');
       syncIdentity();
       const scope = state;
-      const data = await api(`registered-accounts?offset=${offset}`, undefined, true);
+      const data = await api(`registered-accounts?offset=${offset}`, signal, true);
       assertCurrent(scope);
       const page = readRegisteredAccountsPage(data);
       if (

@@ -7,7 +7,6 @@
     "tabletop-audio.js",
     "auth.js",
     "rtc-config.js",
-    "profile-files.js",
     "light-noise.js",
     "noise-suppression.js",
     "stream-controls.js",

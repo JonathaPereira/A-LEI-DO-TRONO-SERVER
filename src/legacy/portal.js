@@ -106,7 +106,13 @@ window.TronoPortal = (() => {
     }
     return { ok: true, name };
   }
+  function cancelNameCheck() {
+    nameCheckSeq++;
+    clearTimeout(nameCheckTimer);
+    nameCheckTimer = null;
+  }
   function queueNameCheck(value) {
+    cancelNameCheck();
     if (window.TronoAuth && !window.TronoAuth.user && !window.TronoAuth.guest) {
       syncIdentity('');
       setNameFeedback({
@@ -117,8 +123,8 @@ window.TronoPortal = (() => {
       return;
     }
     const name = syncIdentity(value),
-      seq = ++nameCheckSeq;
-    clearTimeout(nameCheckTimer);
+      seq = nameCheckSeq,
+      owner = window.TronoAuth?.user?.id || window.TronoAuth?.guest?.id;
     if (!name.trim()) {
       setNameFeedback({
         available: false,
@@ -133,6 +139,12 @@ window.TronoPortal = (() => {
       message: 'Verificando disponibilidade…',
     });
     nameCheckTimer = setTimeout(async () => {
+      if (
+        seq !== nameCheckSeq ||
+        owner !== (window.TronoAuth?.user?.id || window.TronoAuth?.guest?.id)
+      )
+        return;
+      nameCheckTimer = null;
       try {
         const result = await window.TronoNetwork?.checkName?.(name.trim());
         if (seq === nameCheckSeq && result) setNameFeedback(result);
@@ -373,6 +385,7 @@ window.TronoPortal = (() => {
   }
 
   window.addEventListener('trono:ready', bind);
+  window.addEventListener('trono-auth-change', cancelNameCheck);
   return {
     showPortal,
     showOnly,

@@ -1724,13 +1724,42 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Próximo recorte: converter contas do criador e navegação das configurações web,
   permitindo remover `profile-files.js` integralmente. Captura e jogos intactos.
 
+## Remoção de profile-files.js — 18/10/2026
+
+- `lib/profiles/registered-accounts.ts` possui listagem privada, paginação e feedback.
+  Usa o cliente de perfis existente; `readAccounts` agora aceita cancelamento durante
+  autenticação e consulta. Perda de permissão, troca de conta e fechamento abortam
+  trabalho pendente e limpam os e-mails. Falhas de página conservam os dados anteriores
+  e permitem repetir o cursor. O servidor continua autorizando cada consulta.
+- `registered-accounts.tsx` renderiza botões e diálogo único em React. O botão do
+  editor pertence à sua árvore; o workspace move o host completo do botão de cabeçalho.
+  Ambos respeitam o papel de criador e `viewEmails`, inclusive na revogação em tempo real.
+- `profile-dialog.tsx` possui navegação web, seleção das abas e visibilidade em React.
+  Wrappers estáveis preservam os hosts internos movidos pelo desktop; editor,
+  aparência e arquivos conservam os mesmos controles e estado ao alternar abas.
+- Removidos `legacy/profile-files.js` (as últimas 120 linhas), sua entrada no manifesto
+  e a fachada `formatPhoto` sem chamadores. Bootstrap inicializa os donos após `auth.js`.
+  O CSS legado de perfis permanece usado; consolidar estilos é uma etapa separada.
+- A regressão de troca de conta revelou uma tarefa atrasada do portal: a consulta de
+  apelido agendada antes do logout podia abrir o diálogo de convidado sobre o login.
+  A tarefa agora é invalidada por mudança de identidade e confere seu dono antes
+  de consultar. Três regressões determinísticas e o fluxo de login sob concorrência passaram.
+- Sete regressões novas da listagem e uma do cancelamento de leitura integram a suíte;
+  o navegador cobre paginação, repetição após erro, texto escapado, Escape, dois botões,
+  revogação de permissão e logout nos hosts web/desktop. Electron real abriu/limpou o
+  diálogo durante uma chamada com mídia sintética e conservou controles, trilhas,
+  players, peers e socket. Tipagem, formatação, build e suíte completa validados.
+  Evidências: `artifacts/profile-final-*`.
+- Próximos domínios do frontend: gerenciamento/comunidade, mensageiro e jogos ainda
+  legados. `profile-data.js` permanece dependência do backend, sem carga no frontend.
+
 ## Próximas alterações, em ordem
 
 1. Converter navegação/gerenciamento de canais, perfis/configurações e jogos.
    Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
-   participação. Ao retirar `legacy/profile-files.js`, conservar o cliente de
-   `lib/files/` e os componentes compartilhados; remover adaptadores sem chamadores.
+   participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e
+   componentes compartilhados; remover adaptadores sem chamadores ao converter os demais donos.
    Os donos já convertidos estão descritos em `ARQUITETURA.md`: não restaurar
    estado/listeners nos adaptadores. A chamada deve sobreviver à navegação e às
    trocas de layout, preservando microfone, câmera, tela, replay e fallback SFU/P2P.

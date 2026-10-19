@@ -201,6 +201,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         profileEditorOwner: window.TronoProfileEditor,
         profileEditor: ['profileEditorHost','profileForm','profileNickname','profile-bio','profile-cover_zoom'].map(id => document.getElementById(id)),
         gifDialog: document.getElementById('profileGifDialog'),
+        directory: ['creatorAccountsButtonHost','creatorAccountsBtn','creatorAccountsDialog'].map(id => document.getElementById(id)),
         runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
         navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
         mic: window.TronoSocial.getLocalAudioTrack(),
@@ -224,6 +225,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           library: window.TronoFileLibrary === before.libraryOwner && !!before.libraryOwner && before.library.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           profileEditor: window.TronoProfileEditor === before.profileEditorOwner && !!before.profileEditorOwner && before.profileEditor.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           gifPicker: !!before.gifDialog && before.gifDialog === document.getElementById('profileGifDialog') && document.querySelectorAll('#profileGifDialog').length === 1 && typeof window.TronoProfileGifs === 'undefined',
+          directory: before.directory.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
           navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
@@ -373,6 +375,22 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#profile-bio')).toBeEnabled();
     await page.locator('#profile-bio').fill('Rascunho durante a chamada');
     await expect(page.locator('#profileLivePreview .member-bio')).toHaveText('Rascunho durante a chamada');
+    // Exercise the private dialog with fixture permissions; backend authorization has separate tests.
+    await page.route('**/community/registered-accounts?*', route => route.fulfill({json: {accounts:[{id:'24000000-0000-4000-8000-000000000001',nickname:'Conta de teste',email:'desktop-private@example.test',confirmed:true}],hasMore:false,nextOffset:1}}));
+    await page.evaluate(() => {
+      const user=window.TronoAuth.user;
+      window.__directoryIdentity={role:user.role,permissions:user.permissions};
+      user.role='creator';user.permissions={...user.permissions,viewEmails:true};
+      window.dispatchEvent(new Event('trono-role-change'));
+    });
+    await page.locator('#profileCreatorHost button').click();
+    await expect(page.locator('#creatorAccountsList')).toContainText('desktop-private@example.test');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
+    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+    await page.evaluate(() => {Object.assign(window.TronoAuth.user,window.__directoryIdentity);window.dispatchEvent(new Event('trono-role-change'));});
+    await expect(page.locator('#profileCreatorHost button')).toBeHidden();
+    await preserved();
     await page.route('**/community/gif-provider', route => route.fulfill({json: {provider: 'giphy', configured: false}}));
     await page.route('https://media.giphy.com/**', route => route.fulfill({contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')}));
     await page.locator('[data-profile-gif=avatar]').click();
