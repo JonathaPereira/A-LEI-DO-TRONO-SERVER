@@ -256,10 +256,10 @@ cartas nem envia comandos: timeout continua no servidor/motor local.
 O runtime conserva host, raiz, nós React e socket. `applyOnlineState`,
 `updateTurnTimer`, `turnTicker`, `lastOnlineTurnSeat` e as escritas legadas no
 cabeçalho foram removidos. `TronoThroneBoard.presentOnlineMatch` recebe somente o
-snapshot validado para a apresentação antiga. Conserva a identidade da sessão de
-animação, cujo estado de exibição ainda pode receber revelações dos eventos.
-Não interpreta pacotes nem possui outro relógio. Os demais eventos online e o
-restante da mesa ainda precisam ser convertidos.
+snapshot validado para a ponte antiga de navegação/controles. Sua cópia pública
+de compatibilidade não alimenta mais o dispatcher de eventos nem recebe cartas
+reveladas por ele. Não interpreta pacotes nem possui outro relógio. A ponte e os
+controles locais continuam pendentes.
 
 `lib/games/throne-seats.ts` projeta os assentos públicos. No online, reutiliza
 os jogadores do estado validado de `throne-match`, sem outro socket ou parser de
@@ -359,8 +359,36 @@ permanece com `throne-match`; o timer de jogada e as esperas de regras locais
 permanecem no motor. Sons delegam ao áudio compartilhado. A ponte não abre socket,
 nem controla captura, players ou peers. Foram retirados de `game.js` os corpos dos
 renderizadores, timers de efeitos e `exchangeSequence`; os adaptadores restantes
-apenas projetam dados/delegam. O dispatcher de eventos e o motor local continuam
-pendentes, assim como a tela cheia de `court-display.js`.
+apenas projetam dados/delegam. O dispatcher online usa o módulo abaixo; o motor
+local e a tela cheia de `court-display.js` continuam pendentes.
+
+`lib/games/throne-events.ts` despacha somente os efeitos públicos online e possui
+a deduplicação do aviso de turno por participação/rodada/vaza. Consulta diretamente
+o snapshot validado de `throne-match`; não mantém outra partida, mão ou relógio.
+Ticks, broadcasts iguais e turnos alheios não repetem o aviso. O início confere
+salão/assento antes de anunciar a partida e solicitar o estado pelo cliente atual.
+
+`throne-event-protocol.ts` projeta entradas por evento. Cartas de jogada e
+`revealedPlays` brutos são descartados; as cartas da mesa continuam exclusivamente
+com o estado público validado. O nome de quem usa Influência vem desse estado.
+Somente Desafio carrega uma revelação canônica já pública. Campos privados e
+extensões desconhecidas não chegam aos efeitos. Logs, prompts, placares e
+revelações privadas conservam seus próprios consumidores.
+
+Troca de conta/salão/assento, perda da mesa/conexão, cancelamento e descarte invalidam
+as continuações. Ganhos/resultados delegam ao mesmo dono de efeitos. A troca adquire
+um bloqueio do dono privado e o libera em `finally`, também no erro; invalidar
+participação/vaza ou descartar libera imediatamente os bloqueios pendentes. Uma
+promessa antiga não libera outro bloqueio nem publica erro na participação nova.
+O cancelamento explícito bloqueia eventos até novo início/participação. O protocolo
+atual não inclui identificadores de partida/vaza nos efeitos; conserva-se a ordem
+do socket, sem inventar correlação para pacotes recebidos.
+
+`throne-events-runtime.ts` assina os donos e o cliente existentes, uma vez por
+janela. Remove assinaturas/listeners no descarte. `handleOnlineGameEvent`, o ramo
+legado de `game-started` e o cálculo duplicado do aviso de turno foram removidos
+de `game.js`. O listener restante desse arquivo cuida de comunidade, conexão e
+erros de navegação; os controles e o motor locais ainda usam seus adaptadores.
 
 `lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
 confirmações, consulta posterior e espera pela animação de troca. O parser copia e

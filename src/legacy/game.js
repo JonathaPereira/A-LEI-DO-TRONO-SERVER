@@ -1420,67 +1420,15 @@ function presentOnlineMatch(state) {
   }
   if (leavingGame) return;
   if (!onlineGameMode) enterOnlineBoard();
-  const previousTurn = isLocalPlayersTurn() ? `${game.round}:${game.trick}` : null;
   const next = {
     ...state,
     decree: state.decree ? DECREES.find((d) => d.id === state.decree) : null,
     gameOver: state.phase === 'game-over',
   };
-  // Preserve the presentation session so pending exchange/reveal effects remain valid.
+  // Temporary public presentation adapter; the event owner reads ThroneMatch directly.
   if (game?.online) Object.assign(game, next);
   else game = next;
-  if (isLocalPlayersTurn() && previousTurn !== `${game.round}:${game.trick}`) showYourTurnNotice();
   renderAll();
-}
-async function handleOnlineGameEvent(msg) {
-  const ev = msg.event;
-  if (ev === 'influence-used') {
-    showInfluenceUseFeedback(msg);
-    return;
-  }
-  if (ev === 'card-played') {
-    throneEffects.played(msg.playerId, animationScale);
-    return;
-  }
-  if (ev === 'exchange') {
-    const release = thronePrivate.holdExchange();
-    try {
-      await showExchangeAnimation({
-        kind: msg.kind,
-        title: msg.title || 'Troca de cartas',
-        subtitle:
-          msg.kind === 'rotation'
-            ? 'Todos passam simultaneamente 1 carta oculta ao jogador à esquerda.'
-            : 'As cartas estão mudando de mãos.',
-        moves: msg.moves || [],
-      });
-    } finally {
-      release();
-    }
-    return;
-  }
-  if (ev === 'trick-result') {
-    // Only public names and bounded gains enter the transient renderer.
-    await throneEffects.result({ ...msg, players: game?.players }, animationScale);
-    return;
-  }
-  if (ev === 'challenge-reveal') {
-    if (game && msg.card) showChallengeReveal(msg.seat, msg.card);
-    return;
-  }
-  if (ev === 'turn-timeout') {
-    const p = game?.players[msg.seat];
-    toast(`⌛ ${p?.name || 'Jogador'} excedeu 1 minuto — carta aleatória.`, 2000);
-    return;
-  }
-  if (ev === 'player-replaced-by-bot') {
-    showConnectionNotice(msg.name, msg.botName, msg.reason || 'disconnect');
-    return;
-  }
-  if (ev === 'server-error') {
-    toast(`Erro do servidor: ${msg.message}`, 3000);
-    return;
-  }
 }
 function consumeChatOnlyRoom(room) {
   chatOnlyRoomState = room;
@@ -1691,6 +1639,7 @@ async function leaveChatOnly() {
   setTimeout(() => window.TronoNetwork?.requestRooms(), 120);
 }
 function backToLobby() {
+  window.TronoThroneEvents.clear();
   throneChoices.clear();
   throneHand.clear();
   leavingGame = true;
@@ -1786,12 +1735,6 @@ window.TronoNetwork?.onMessage((msg) => {
     } else if (msg.reason === 'disconnect') showConnectionNotice(msg.name, null, 'disconnect');
     else toast(`${msg.name || 'Um jogador'} deixou o salão.`, 1600);
   }
-  if (msg.type === 'game-started') {
-    enterOnlineBoard();
-    toast('♛ Partida online iniciada — o servidor controla a mesa.', 2200);
-    window.TronoNetwork?.requestState();
-  }
-  if (msg.type === 'game-event' && !leavingGame) handleOnlineGameEvent(msg).catch(fatalError);
   if (msg.type === 'error') {
     if (msg.code === 'NAME_TAKEN' || msg.code === 'NAME_REQUIRED') {
       window.TronoPortal?.setNameFeedback?.({

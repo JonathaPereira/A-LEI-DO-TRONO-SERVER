@@ -2407,6 +2407,47 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   separação das regras/coordenação de `server/runtime.cjs`. Não excluir esses
   arquivos enquanto conservarem esses consumidores.
 
+## Eventos públicos online em TypeScript — 19/10/2026
+
+- `throne-events.ts` despacha Influência, chegada de carta, trocas, Coroa/Sombra,
+  Desafio, timeout e substituição por bot, além dos avisos de erro/início. Usa o
+  estado público validado diretamente; não consulta a cópia de `game.js`, não
+  possui outra partida/relógio e não abre conexão/captura.
+- `throne-event-protocol.ts` copia/congela só os dados de cada efeito. Descarta
+  cartas brutas de jogada/resultado, mãos e extras privados; logs, prompts,
+  placares e revelações privadas continuam com seus consumidores anteriores.
+  O nome usado no aviso de Influência vem do estado público da mesa.
+- O aviso de turno tem uma única intenção por participação/rodada/vaza, sem
+  repetir em ticks/broadcasts. Eventos exigem conexão, participação e mesa online
+  válidas. Cancelar bloqueia até novo início/participação; modo local não consome
+  efeitos online. O início confere salão/assento antes de solicitar o estado.
+- Bloqueios privados de troca são liberados em conclusão/erro, invalidação e
+  descarte. Continuações antigas não liberam bloqueios novos nem publicam seus
+  erros na participação seguinte. O parser de trocas conserva papéis opcionais,
+  permitindo validar novamente a projeção ao cruzar a fronteira dos efeitos.
+- Removidos `handleOnlineGameEvent`, o ramo legado de `game-started` e o cálculo
+  do aviso de turno online em `presentOnlineMatch`. O bootstrap instala um único
+  dono por janela; o descarte remove suas assinaturas e o listener de identidade.
+- A ponte `presentOnlineMatch` ainda mantém compatibilidade de navegação/controles;
+  não foi apresentada como motor convertido. O listener restante de `game.js`
+  cuida de comunidade/conexão/erros de navegação. Ainda restam controles, escolhas/
+  mão e motor locais, `court-display.js` e regras/coordenação do backend.
+- O protocolo de efeitos atual não tem identificador de partida/vaza. O cliente
+  preserva a ordem do socket e invalida continuações da interface; não inventa
+  uma correlação que não foi enviada pelo servidor.
+- Nove regressões novas cobrem projeção/privacidade, entradas inválidas, despacho,
+  aviso de turno, escopo/cancelamento, trocas, falhas e descarte, incluindo A → B → A.
+  Tipagem, formatação, build estático e `npm test` passaram; os modelos somaram
+  136 testes. O navegador completou Reserva em três rodadas e os outros cinco
+  cenários de Decreto, sem erros/avisos dos donos da mesa. A suíte online mantém
+  as animações na duração normal e levou aproximadamente 167 segundos nesta rodada.
+- Simulação local de três rodadas e navegação local/online passaram. Dois Electron
+  reais preservaram controles, mic, câmera, tela, peers e socket. Captura de turno
+  inspecionada; logs em `artifacts/throne-events-*`. Mídia sintética local, sem
+  medição de transmissão de jogos reais ou infraestrutura TURN remota.
+- Próximo recorte: controles da mesa e escolhas/mão locais, retirando os adaptadores
+  e listeners correspondentes conforme cada dono assumir o fluxo completo.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

@@ -59,7 +59,7 @@ test(
       const page = await context.newPage();
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (message) => {
-        if (/\[Throne(?:History|Match|Table|Seats|Effects)\]/.test(message.text()))
+        if (/\[Throne(?:History|Match|Table|Seats|Effects|Events)\]/.test(message.text()))
           warnings.push(message.text());
       });
       await page.goto(origin);

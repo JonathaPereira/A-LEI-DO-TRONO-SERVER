@@ -104,7 +104,7 @@ export function effectExchange(value: unknown) {
       return {
         from,
         to,
-        role: m.role === 'shadow' ? 'shadow' : '',
+        role: m.role === 'shadow' ? 'shadow' : m.role === 'crown' ? 'crown' : undefined,
         label:
           m.label == null
             ? `${players[from].name} → ${players[to].name}`
