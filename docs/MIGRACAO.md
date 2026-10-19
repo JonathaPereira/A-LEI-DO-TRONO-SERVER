@@ -2087,6 +2087,44 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   preparação/cancelamento ao controlador antigo. Próximo recorte: estado privado
   online e escolhas da partida, preservando o motor compartilhado e o modo local.
 
+## Escolhas online de A Lei do Trono — 19/10/2026
+
+- Removidos `showOnlinePrompt`, `onlineOwnPlayer` e `onlineLastPromptId` de
+  `legacy/game.js`. `lib/games/throne-choices.ts` possui recebimento, correlação,
+  consulta da própria mão, envio único e ciclo de vida dessas escolhas.
+- `types/throne-choices.ts`/`throne-choice-protocol.ts` tipam e validam os prompts
+  de Decreto, Lei, Trunfo, Reserva, Corte, Conselho, Rotação, Desafio, alvo/carta/
+  posição cega da Usurpação. Retêm apenas a própria mão/Reserva e os fatos públicos
+  necessários; o payload original não é congelado nem alterado. Mãos adversárias,
+  baralho e campos extras não entram nesse contexto.
+- Prompts simultâneos de cartas/Rotação podem chegar antes do novo estado: ficam
+  aguardando o próximo pacote compatível. IDs repetidos/anteriores não reabrem uma
+  escolha respondida. O envio exige o mesmo objeto de prompt apresentado, opções
+  oferecidas e fase/ator coerentes; um clique antigo não responde ao novo `p1`.
+- Conta/salão/assento, desconexão, cancelamento e descarte limpam contexto e opções.
+  Ocultar a partida fecha o diálogo e conserva a escolha para o retorno. Presença
+  na mesma fase conserva a prévia da mão e o envio pendente, sem repetir comandos.
+- O diálogo e a prévia da mão/Reserva ao escolher Lei estão em React em
+  `components/games/throne-choices.tsx`. O runtime mantém host/raiz únicos e libera
+  observadores/assinaturas. O modal antigo ainda tem precedência para informações
+  privadas da Espionagem/Usurpação e escolhas locais, sem sobrepor os dois donos.
+- Quatorze regressões novas integram `test:games:models`/`npm test`, que passou com
+  65 casos de modelos de jogos. Tipagem, formatação e build passaram.
+- Cinco rodadas reais de servidor passaram pelos controles: Reserva, Conselho,
+  Corte Aberta, Rotação e Desafio, incluindo consulta da mão, escolhas de Lei e
+  Usurpação quando oferecidas. Os testes conservam as mesmas trilhas sintéticas
+  de microfone, câmera e tela. O relógio de testes oferece apenas Decretos válidos;
+  o adaptador de arquivos é instalado antes de carregar o runtime dos jogos.
+- Os diálogos couberam em 480×800 e 1080×1920 nos layouts Original/Discord.
+  Dois Electron reais completaram a escolha privada de Reserva, ocultaram e
+  retomaram o diálogo sem perder a escolha, e mantiveram trilhas, peers, socket,
+  donos/hosts e os demais controles durante o restante da regressão nativa.
+  Evidências locais: `artifacts/throne-choices-*`.
+- A aplicação completa do estado online, mão jogável/Influência, relógios,
+  informações privadas de Espionagem/Usurpação e animações ainda estão em
+  `legacy/game.js`; não foram substituídos pelo contexto mínimo de escolhas.
+  Próximo recorte: esses dados e controles da mão online, sem alterar o motor local.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

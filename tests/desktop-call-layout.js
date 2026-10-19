@@ -23,7 +23,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
   let fixture, finished = false;
   t.signal.addEventListener('abort', () => { if (!finished) apps.forEach(killTestApp); }, {once: true});
   try {
-    fixture = await startFixture({port: 10743, allowedOrigins: [origin], directAttachments: true});
+    fixture = await startFixture({port: 10743, allowedOrigins: [origin], directAttachments: true, gameDecree: 'reserva'});
     async function launch(email, nickname, layout = 'original') {
       await fixture.call('signup', {email, nickname, password: 'LayoutTest12!'});
       await fixture.call('verify', {token_hash: [...fixture.links.keys()].at(-1), type: 'signup'});
@@ -185,6 +185,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await localScreen.locator('.screen-collapse-btn').click();
     await expect(localScreen).not.toHaveClass(/share-collapsed/);
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
+    await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({page, receiver});
     await page.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
     await expect(page.locator('#roomSeats')).toContainText('Layout Principal');
     await expect(page.locator('#roomSeats .room-seat')).toHaveCount(4);
@@ -215,6 +216,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
         messengerOwner: window.TronoDirectMessages,
         games: ['gamesSideNav','rogueliteScreen','rogueliteBack','rogueliteFullscreen','azulBack','azulFullscreen','azulRulesDialog','azulContent','azulRanking'].map(id => document.getElementById(id)),
+        choiceOwner: window.TronoThroneChoices,
+        choiceHosts: ['throneChoiceHost','throneChoiceDialog'].map(id => document.getElementById(id)),
         throneOwner: window.TronoThroneLobby,
         throne: ['roomGrid','roomSeats','readyOnlineBtn','startOnlineBtn','backToLobbyBtn','roomSocialBtn','throneLobbyHost'].map(id => document.getElementById(id)),
         portalOwner: window.TronoPortal,
@@ -250,6 +253,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
           community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
           messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
+          choices: window.TronoThroneChoices === before.choiceOwner && before.choiceHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           throne: window.TronoThroneLobby === before.throneOwner && before.throne.every(node => node && node.isConnected && document.getElementById(node.id) === node) && !window.TronoAvatars && !window.TronoAvatarIcons && !window.TronoProfile.avatarHtml && !window.TronoProfile.hydrate,
           portal: window.TronoPortal === before.portalOwner && before.portal.every(node => node && node.isConnected && document.getElementById(node.id) === node),
           games: window.TronoGameLibrary === before.gameOwners[0] && window.TronoRogueliteHost === before.gameOwners[1] && window.TronoAzul === before.gameOwners[2] && before.games.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),

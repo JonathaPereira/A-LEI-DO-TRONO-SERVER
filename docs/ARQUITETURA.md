@@ -176,10 +176,37 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
 partidas; não possui o estado do salão.
 
-O jogo ainda possui simulação local, aplicação do estado online, prompts e
-animações em `legacy/game.js`. A flag duplicada de comunidade foi removida: os
+O jogo ainda possui simulação local, aplicação do estado online, informações
+privadas de Espionagem/Usurpação, Influência e animações em `legacy/game.js`.
+A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
+
+`lib/games/throne-choices.ts` possui os prompts de escolha enviados pelo servidor:
+Decreto, Lei, Trunfo, Reserva, Corte Aberta, Conselho, Rotação, Desafio e os três
+passos da Usurpação. `throne-choice-protocol.ts` copia/congela o contexto mínimo
+do participante: própria mão/Reserva, nomes públicos, fase, rodada/vaza e usos das
+Leis. Não retém mãos alheias, baralho ou campos extras. O servidor continua
+validando as regras e as opções finais; o módulo não recalcula o motor local.
+
+Os prompts de carta que chegam antes de seu estado aguardam o próximo pacote da
+fase correspondente. IDs repetidos/anteriores são ignorados. Uma resposta precisa
+do mesmo objeto de prompt oferecido, protegendo inclusive a reutilização de `p1`
+em outra partida. Pronto/identidade do salão não são copiados para outro dono.
+Trocar conta, salão ou assento, desconectar, cancelar ou descartar limpa o contexto.
+Ocultar a partida fecha o diálogo, conservando a escolha atual para o retorno.
+Após enviar, aguarda a próxima fase sem reenviar a escolha em eventos de presença.
+
+`components/games/throne-choices.tsx` renderiza o diálogo nativo e a consulta da
+própria mão ao escolher Lei. O runtime monta uma raiz/host por página e observa
+visibilidade e o modal antigo; informações privadas ainda legadas têm precedência
+para evitar dois diálogos simultâneos. Ao descartar, remove raiz, observadores e
+assinaturas. `showOnlinePrompt` e `onlineLastPromptId` foram removidos de
+`legacy/game.js`; modos locais continuam usando os modais anteriores.
+
+Esse contexto é exclusivo das escolhas: a aplicação completa de `game-state`,
+mão jogável, Influência, relógios e cinematics continuam no controlador antigo.
+Não tratar o protocolo online inteiro como convertido ou validado por esse parser.
 
 `lib/games/library.ts` possui a navegação do catálogo e projeta a tela de jogo
 visível, sem duplicar participação, partidas ou recursos de mídia. Botões do

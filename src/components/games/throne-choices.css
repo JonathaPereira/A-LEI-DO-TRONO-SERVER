@@ -1,0 +1,22 @@
+.throne-choice-dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #e7ddc2;
+  width: min(816px, 96vw);
+  max-width: 96vw;
+  max-height: 92dvh;
+  overflow: auto;
+}
+.throne-choice-dialog::backdrop {
+  background: rgb(0 0 0 / 76%);
+  backdrop-filter: blur(6px);
+}
+.throne-choice-dialog .modal-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: none;
+}
+.throne-choice-dialog button:disabled {
+  cursor: wait;
+}

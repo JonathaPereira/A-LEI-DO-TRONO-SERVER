@@ -30,6 +30,7 @@ let modalResolver = null,
   modalReject = null,
   leavingGame = false;
 const throneLobby = window.TronoThroneLobby;
+const throneChoices = window.TronoThroneChoices;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
 let onlineControl = {
@@ -41,7 +42,6 @@ let onlineControl = {
 };
 let onlineDeclaredSuit = null;
 let onlineInfluenceAction = 'none';
-let onlineLastPromptId = null;
 let onlineExchangeBusy = false;
 let exchangeSequence = 0;
 let onlineQueuedPrivateUsurpation = null;
@@ -309,6 +309,7 @@ function resetRoundStats() {
 }
 
 async function startGame(allAI = false) {
+  throneChoices.clear();
   leavingGame = false;
   await ensureAudio();
   const names = [0, 1, 2, 3].map((i) => $(`p${i}Name`).value);
@@ -2116,125 +2117,6 @@ function applyOnlineState(state) {
   }
   renderAll();
 }
-function onlineOwnPlayer() {
-  return game?.online ? game.players[game.localPlayerId] : null;
-}
-async function showOnlinePrompt(prompt) {
-  if (!prompt || onlineLastPromptId === prompt.id) return;
-  onlineLastPromptId = prompt.id;
-  const me = onlineOwnPlayer();
-  if (!me) return;
-  let value;
-  if (prompt.kind === 'choose-decree') {
-    const opts = prompt.options.map((id) => {
-      const d = DECREES.find((x) => x.id === id);
-      return { value: id, type: 'decree', title: d.name, subtitle: d.text, icon: d.icon };
-    });
-    value = await choiceModal({
-      icon: '📜',
-      title: 'Escolha o Decreto',
-      text: 'Você possui a escolha do Decreto desta rodada.',
-      options: opts,
-    });
-    window.TronoNetwork?.gameAction('choose-decree', { value });
-  } else if (prompt.kind === 'choose-trump') {
-    value = await choiceModal({
-      icon: '⚑',
-      title: 'Declare o Trunfo',
-      text: 'Como Sombra, escolha o Trunfo antes da abertura da vaza.',
-      options: prompt.options.map((s) => ({
-        value: s,
-        type: 'suit',
-        title: SUITS[s].name,
-        icon: SUITS[s].glyph,
-        color: SUITS[s].color,
-      })),
-    });
-    window.TronoNetwork?.gameAction('choose-trump', { value });
-  } else if (prompt.kind === 'choose-law') {
-    value = await chooseLawModal(me, prompt.options);
-    window.TronoNetwork?.gameAction('choose-law', { value });
-  } else if (prompt.kind === 'usurp-target') {
-    value = await choiceModal({
-      icon: '☾',
-      title: 'Usurpação — escolha uma Casa',
-      text: 'Escolha qualquer adversário para trocar uma carta fechada. Sua carta fica separada até a escolha, sem poder retornar.',
-      options: prompt.options.map((p) => ({
-        value: p.seat,
-        title: p.name,
-        subtitle: 'Trocar uma carta fechada',
-        icon: '♜',
-      })),
-    });
-    window.TronoNetwork?.gameAction('usurp-target', { targetSeat: value });
-  } else if (prompt.kind === 'usurp-pick') {
-    value = await choiceModal({
-      icon: '☾',
-      title: 'Usurpação — escolha às cegas',
-      text: `${prompt.otherName || 'A Casa escolhida'} embaralhou a mão. Escolha uma posição entre as cartas fechadas elegíveis. Sua carta está separada e nunca pode retornar. A Corte Aberta está protegida.`,
-      options: Array.from({ length: prompt.count }, (_, i) => ({
-        value: i,
-        type: 'hidden-card',
-        title: `Carta ${i + 1}`,
-        subtitle: 'Face voltada para baixo',
-      })),
-    });
-    window.TronoNetwork?.gameAction('usurp-pick', { index: value });
-  } else if (
-    [
-      'choose-reserva',
-      'choose-corte',
-      'choose-conselho',
-      'rotation',
-      'challenge',
-      'usurp-give',
-    ].includes(prompt.kind)
-  ) {
-    const cards = me.hand.filter((c) => (prompt.cardIds || []).includes(c.id));
-    const labels = {
-      'choose-reserva': [
-        'Reserva',
-        'Escolha a carta que ficará fora da mão durante as 9 primeiras vazas.',
-      ],
-      'choose-conselho': [
-        'Conselho',
-        'Escolha uma carta fechada para passar à direita. As quatro trocas acontecem simultaneamente.',
-      ],
-      'choose-corte': ['Corte Aberta', 'Escolha a carta que ficará pública até ser usada.'],
-      rotation: ['Rotação', 'Escolha 1 carta para passar ao jogador à esquerda.'],
-      challenge: ['Desafio', 'Sua Coroa exige um preço: revele 1 carta da sua mão.'],
-      'usurp-give': [
-        'Usurpação',
-        `Escolha 1 carta para entregar, virada para baixo, a ${prompt.otherName || 'a Casa escolhida'}. A carta da Corte Aberta não pode ser trocada.`,
-      ],
-    }[prompt.kind];
-    const card = await choiceModal({
-      icon: prompt.kind === 'usurp-give' ? '☾' : '♛',
-      title: labels[0],
-      text: labels[1],
-      options: cards.map((c) => ({
-        value: c.id,
-        type: 'card',
-        title: `${SUITS[c.suit].name} ${c.value}`,
-        img: cardAsset(c),
-      })),
-    });
-    const action =
-      prompt.kind === 'choose-reserva'
-        ? 'choose-reserva'
-        : prompt.kind === 'choose-corte'
-          ? 'choose-corte'
-          : prompt.kind === 'choose-conselho'
-            ? 'choose-conselho'
-            : prompt.kind === 'rotation'
-              ? 'rotation'
-              : prompt.kind === 'challenge'
-                ? 'challenge'
-                : 'usurp-give';
-    window.TronoNetwork?.gameAction(action, { cardId: card });
-  }
-}
-
 async function showIntelligence(clue) {
   if (!clue?.card) return;
   const card = clue.card;
@@ -2590,6 +2472,7 @@ async function leaveChatOnly() {
   setTimeout(() => window.TronoNetwork?.requestRooms(), 120);
 }
 function backToLobby() {
+  throneChoices.clear();
   leavingGame = true;
   clearLocalTurnTimer();
   exchangeSequence++;
@@ -2687,12 +2570,10 @@ window.TronoNetwork?.onMessage((msg) => {
   }
   if (msg.type === 'game-started') {
     enterOnlineBoard();
-    onlineLastPromptId = null;
     toast('♛ Partida online iniciada — o servidor controla a mesa.', 2200);
     window.TronoNetwork?.requestState();
   }
   if (msg.type === 'game-state' && !leavingGame) applyOnlineState(msg.state);
-  if (msg.type === 'game-prompt' && !leavingGame) showOnlinePrompt(msg.prompt).catch(fatalError);
   if (msg.type === 'private-intelligence' && !leavingGame)
     showIntelligence(msg.intelligence)
       .then(() => window.TronoNetwork.gameAction('intelligence-ack'))
