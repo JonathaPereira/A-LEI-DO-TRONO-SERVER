@@ -2,7 +2,7 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/sfu-*.js', 'tests/floating-call-browser.js', 'tests/member-profiles.js', 'profile-customization.js', 'community-management.js', 'tests/giphy-provider.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/native-microphone-browser.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/sfu-*.js', 'remote-pc.js', 'tests/remote-pc*.js', 'tests/floating-call-browser.js', 'tests/member-profiles.js', 'profile-customization.js', 'community-management.js', 'tests/giphy-provider.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/native-microphone-browser.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -10,7 +10,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,6 +25,17 @@ jobs:
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
+      - name: Verify remote PC beta consent, media and call preservation
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test --test-concurrency=1 tests/remote-pc.js tests/desktop-remote-input.js tests/remote-pc-browser.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Remote PC beta::$details"
+            exit $testExit
+          }
       - name: Verify SFU recovery and floating call layout
         shell: pwsh
         run: |
@@ -131,6 +142,16 @@ jobs:
             exit $buildExit
           }
         working-directory: desktop/app
+      - name: Verify native remote mouse and keyboard with a real Windows window
+        shell: pwsh
+        run: |
+          node --test tests/desktop-remote-native.js 2>&1 | Tee-Object artifacts/windows-remote-native.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-remote-native.log | Select-Object -Last 70) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Remote PC native input::$details"
+            exit $testExit
+          }
       - name: Test desktop policy and native Windows runtime
         shell: pwsh
         run: |

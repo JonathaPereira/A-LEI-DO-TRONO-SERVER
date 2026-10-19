@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
+const {RemotePc}=require('./remote-pc');
 const { RealtimeSfuManager } = require('./realtime-sfu');
 const { createAuth } = require('./auth');
 const {createFiles}=require('./files');
@@ -71,6 +72,8 @@ const rooms = new Map(roomDefs.map(([id, name]) => [id, {
 for (const [id,name,description] of CHAT_CHANNELS) rooms.set(id,{id,name,description,channelType:'mixed',kind:'chat',max:null,players:new Map(),createdAt:Date.now(),game:null,chatHistory:[],nextSeat:0});
 
 const realtimeSfu = new RealtimeSfuManager({rooms,send,broadcastVoiceRoster,chatOnlyRoomId:CHAT_ONLY_ROOM_ID,version:VERSION});
+const remotePc=new RemotePc({rooms,send,ice:()=>realtimeSfu._turnIceServers().catch(()=>({iceServers:[{urls:['stun:stun.cloudflare.com:3478']}],turn:false}))});
+const remoteSweep=setInterval(()=>remotePc.sweep(),2000);remoteSweep.unref();
 
 const rand = n => Math.floor(Math.random()*n);
 function shuffle(arr){
@@ -253,6 +256,7 @@ function leaveGameRoom(ws,reason='leave'){
   send(ws,{type:'left-game-room',roomId:id,primaryRoomId:ws.roomId,chatRoomId:selectedChatId(ws)||null});
 }
 function leaveVoiceRoom(ws,reason='leave',keepText=true){
+  remotePc.disconnect(ws);
   const room=rooms.get(ws.roomId);ws.roomId=null;if(!room)return;
   const p=room.players.get(ws.clientId);
   if(p&&(ws.gameRoomId===room.id||keepText&&ws.textRoomId===room.id)){
@@ -263,6 +267,7 @@ function leaveVoiceRoom(ws,reason='leave',keepText=true){
   send(ws,{type:'left-voice-room',roomId:room.id,primaryRoomId:null,chatRoomId:selectedChatId(ws)||null});
 }
 function leaveRoom(ws,reason='leave',keepText=false){
+  remotePc.disconnect(ws);
   leaveGameRoom(ws,reason);if(!keepText)leaveTextRoom(ws);leaveVoiceRoom(ws,reason,keepText);
 }
 function joinGameRoom(ws,roomId,rawName){
@@ -402,6 +407,7 @@ function handleVoiceState(ws,message){
   const previouslyJoined=!!player.voiceJoined;
   if(message.joined){chooseVoiceMode(room);if(message.transport==='p2p'||(!player.voiceJoined&&[...room.players.values()].filter(p=>p.voiceJoined).length>=realtimeSfu.statusPayload().maxParticipants))forceRoomP2p(room);}
   player.voiceJoined=!!message.joined;
+  if(!player.voiceJoined)remotePc.disconnect(ws);
   if(previouslyJoined!==player.voiceJoined)broadcastVoiceEvent(room,player,player.voiceJoined?'joined':'left','voice-toggle');
   player.voiceMuted=player.voiceJoined&&!!message.muted;
   player.voiceDeafened=player.voiceJoined&&!!message.deafened;
@@ -927,14 +933,14 @@ fileStorage.install(app);
 communityManagement.install(app,express);
 socialService.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),azul:azulService.health(),splendor:splendorService.health(),loveLetter:loveLetterService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{remotePc:true,loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),azul:azulService.health(),splendor:splendorService.health(),loveLetter:loveLetterService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.gameRoomId=null;ws.independentGames=false;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{remotePc:true,loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
@@ -1005,6 +1011,7 @@ wss.on('connection',(ws)=>{
       case 'voice-state':handleVoiceState(ws,message);break;
       case 'voice-signal':handleVoiceSignal(ws,message);break;
       case 'soundboard-play':void playSound(ws,message);break;
+      case 'remote-pc':void remotePc.handle(ws,message);break;
       case 'sfu-request':void realtimeSfu.handleRequest(ws,message);break;
       case 'state-request':{const room=gameRoomFor(ws),p=room?.players.get(ws.clientId);if(room?.game&&p)send(ws,{type:'game-state',state:privateGameState(room,p.seat)});break;}
       case 'ping':send(ws,{type:'pong',at:Date.now()});break;
@@ -1019,5 +1026,5 @@ if(require.main===module){
   server.listen(PORT,HOST,()=>console.log(`A Lei do Trono backend ${VERSION} em http://${HOST}:${PORT}`));
 }
 module.exports={evaluateTrick,pickWinner,playValue,clampCardValue,legalCards,influenceLegalCards,usurpacaoEligibleCards,prestige,totalPairs,makeDeck,SUITS,LAWS};
-function shutdown(){clearInterval(heartbeat);azulService.stop();splendorService.stop();loveLetterService.stop();community.stop();communityManagement.stop();realtimeSfu.stop();for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
+function shutdown(){clearInterval(remoteSweep);for(const s of remotePc.sessions.values())remotePc.finish(s,'restart');clearInterval(heartbeat);azulService.stop();splendorService.stop();loveLetterService.stop();community.stop();communityManagement.stop();realtimeSfu.stop();for(const ws of wss.clients){try{ws.close(1001,'Servidor reiniciando');}catch{}}server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();}
 process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);

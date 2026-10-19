@@ -1,6 +1,6 @@
 M&N · A Lei do Trono — Windows 0.2.10
 
-1. Instalação nova: instale MN-Trono-0.2.10-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.11-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -128,4 +128,7 @@ Falhas de câmera/tela tentam recuperar só a mídia afetada. O áudio recebido
 usa uma fila separada; o SFU continua como preferência antes do fallback.
 Após um fallback real, o modo P2P é coordenado para toda a sala e dura até
 esvaziar a voz. Todos podem sair da voz e entrar novamente para uma nova
-escolha do SFU. Guia: ATUALIZAR_WINDOWS_v0.2.10.md. Sem SQL ou backend novo.
+escolha do SFU. Guia: ATUALIZAR_WINDOWS_v0.2.11.md. Sem SQL ou backend novo.
+
+VERSÃO 0.2.11 — COMPARTILHAR PC BETA
+Novo botão no HUD para compartilhar um monitor com alguém da mesma chamada, sem desligar a voz. Mouse/teclado exigem autorização separada. Ctrl + Alt + Shift + F12 encerra o acesso; faixa do Windows indica compartilhamento. Um monitor e uma pessoa; sem controle de videogame. Requer backend atualizado no Render, sem SQL novo. Guia completo: COMPARTILHAR_PC_BETA.md.

@@ -1,3 +1,5 @@
+Compartilhar PC **Beta · Windows 0.2.11**: [uso e limites](COMPARTILHAR_PC_BETA.md), [atualização](ATUALIZAR_WINDOWS_v0.2.11.md). Requer redeploy do backend, sem SQL novo.
+
 ## Windows 0.2.10 · painel compacto e prioridade ao SFU
 
 Janela flutuante sem área vazia nem avatares excessivos, com ampliação compartilhada. Recuperação por mídia e filas separadas evitam que falhas de vídeo derrubem ou atrasem a voz SFU. Veja [a análise do fallback](ANALISE_SFU_E_JANELA_FLUTUANTE.md) e [como atualizar e publicar](ATUALIZAR_WINDOWS_v0.2.10.md).
