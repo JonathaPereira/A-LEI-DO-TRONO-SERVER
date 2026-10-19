@@ -2,15 +2,62 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/sfu-*.js', 'tests/floating-call-browser.js', 'tests/member-profiles.js', 'profile-customization.js', 'community-management.js', 'tests/giphy-provider.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/native-microphone-browser.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/sfu-*.js', 'remote-pc.js', 'tests/remote-pc*.js', 'tests/floating-call-browser.js', 'tests/member-profiles.js', 'profile-customization.js', 'community-management.js', 'tests/giphy-provider.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/native-microphone-browser.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
+    inputs:
+      refresh_instructions:
+        description: Refresh only instructions and hashes in an existing draft release
+        type: boolean
+        default: false
+      release_tag:
+        description: Exact draft build tag, required for instruction refresh
+        type: string
+        default: ''
 permissions:
   contents: write
   actions: write
 jobs:
+  refresh-instructions:
+    if: github.event_name == 'workflow_dispatch' && inputs.refresh_instructions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Refresh only the draft instructions and checksums
+        uses: actions/github-script@v7
+        env:
+          TASK_RELEASE_TAG: ${{ inputs.release_tag }}
+        with:
+          script: |
+            const fs=require('node:fs'),crypto=require('node:crypto');
+            const version=require('./desktop/app/package.json').version;
+            const tag=process.env.TASK_RELEASE_TAG;
+            if(!tag.startsWith(`desktop-v${version}-run-`)||!/^[a-zA-Z0-9.-]+$/.test(tag))throw Error('Choose a build tag for the current desktop version.');
+            const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
+            const release=releases.find(r=>r.tag_name===tag);
+            if(!release?.draft)throw Error('Only a draft release can have its instructions refreshed.');
+            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`];
+            const lines=names.map(name=>{
+              const asset=release.assets.find(a=>a.name===name);
+              if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
+              return asset.digest.slice(7)+'  '+name;
+            });
+            const instructions=fs.readFileSync('desktop/app/LEIA-ME-WINDOWS.txt');
+            if(!instructions.toString('utf8').split(/\r?\n/)[0].includes('Windows '+version))throw Error('Instruction heading must match the desktop version.');
+            lines.push(crypto.createHash('sha256').update(instructions).digest('hex')+'  LEIA-ME-WINDOWS.txt');
+            const files=[{name:'LEIA-ME-WINDOWS.txt',data:instructions},{name:`SHA256SUMS-${version}.txt`,data:Buffer.from(lines.join('\n')+'\n')}];
+            for(const file of files){
+              const old=release.assets.find(a=>a.name===file.name);
+              if(old)await github.rest.repos.deleteReleaseAsset({...context.repo,asset_id:old.id});
+              await github.rest.repos.uploadReleaseAsset({...context.repo,release_id:release.id,name:file.name,data:file.data,headers:{'content-type':'text/plain','content-length':file.data.length}});
+            }
+            core.notice('Instructions refreshed; EXE and ZIP assets were preserved: '+release.html_url);
   windows:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,6 +72,29 @@ jobs:
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
+      - name: Build Windows application audio capture
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
+          $buildExit = $LASTEXITCODE
+          if ($buildExit -ne 0) {
+            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows native audio::$details"
+            exit $buildExit
+          }
+        working-directory: desktop/app
+      - name: Verify remote PC beta media, consent and real native input
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test --test-concurrency=1 tests/remote-pc.js tests/desktop-remote-input.js tests/remote-pc-browser.js tests/desktop-remote-native.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Remote PC beta::$details"
+            exit $testExit
+          }
       - name: Verify SFU recovery and floating call layout
         shell: pwsh
         run: |
@@ -119,18 +189,6 @@ jobs:
             Write-Output "::error title=Love Letter validation::$details"
             exit $testExit
           }
-      - name: Build Windows application audio capture
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
-          $buildExit = $LASTEXITCODE
-          if ($buildExit -ne 0) {
-            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows native audio::$details"
-            exit $buildExit
-          }
-        working-directory: desktop/app
       - name: Test desktop policy and native Windows runtime
         shell: pwsh
         run: |

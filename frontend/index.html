@@ -6,7 +6,7 @@
   <title>M&amp;N · A Lei do Trono</title>
   <meta name="referrer" content="no-referrer" />
   <script src="auth-boot.js?v=091sharingclips"></script>
-  <script src="desktop-platform.js?v=095desktop013"></script>
+  <script src="desktop-platform.js?v=123remotebeta"></script>
   <script src="application-audio.js?v=110tabletop"></script>
   <link rel="stylesheet" href="style.css?v=091sharingclips" />
   <link rel="stylesheet" href="mn-chat.css?v=091sharingclips" />
@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="member-profile.css?v=115workspace">
   <link rel="stylesheet" href="profile-media.css?v=120giphy" />
   <link rel="stylesheet" href="call-floating.css?v=122sfufloating">
+  <link rel="stylesheet" href="remote-pc.css?v=123remotebeta">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -292,6 +293,7 @@
           <small>VÍDEO & TELA</small>
           <button id="cameraBtn" class="royal-btn call-action"><span class="call-icon">▣</span><span>Ligar câmera</span></button>
           <button id="screenShareBtn" class="royal-btn screen-share-btn call-action" disabled><span class="call-icon">▤</span><span>Compartilhar tela</span></button>
+          <button id="remotePcBtn" class="royal-btn call-action" type="button" title="Compartilhar PC · Beta"><span class="remote-hud-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8m-4-5v5m0-15v6m-3-3 3 3 3-3"/></svg></span><span>Compartilhar PC</span><b class="remote-beta">Beta</b></button>
         </div>
         <div class="call-control-group call-control-clips">
           <small>REPLAY</small>
@@ -424,7 +426,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.10-Windows.exe" download="MN-Trono-0.2.10-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.11-Windows.exe" download="MN-Trono-0.2.11-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -619,7 +621,7 @@
 
   <script src="audio.js?v=110tabletop"></script>
   <script src="tabletop-audio.js?v=112tabletop"></script>
-  <script src="network.js?v=110tabletop"></script>
+  <script src="network.js?v=123remotebeta"></script>
   <script src="auth.js?v=095desktop013"></script>
   <script src="rtc-config.js?v=091sharingclips"></script>
   <script src="audio-gain.js?v=091sharingclips"></script>
@@ -635,6 +637,7 @@
   <script src="call-stability.js?v=111voice"></script>
   <script src="sfu-recovery.js?v=122sfufloating"></script>
   <script src="social.js?v=122sfufloating"></script>
+  <script src="remote-pc.js?v=123remotebeta"></script>
   <script src="recording.js?v=091sharingclips"></script>
   <script src="clip-store.js?v=091sharingclips"></script>
   <script src="clips.js?v=095desktop013"></script>
@@ -659,7 +662,7 @@
   <script src="media-mosaic.js?v=122sfufloating"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="call-controls-layout.js?v=118communitycontrols"></script>
+  <script src="call-controls-layout.js?v=123remotebeta"></script>
   <script src="desktop-shell.js?v=119polish"></script>
   <script src="desktop-settings.js?v=115workspace"></script>
   <script src="app-layout.js?v=118communitycontrols"></script>
@@ -669,5 +672,21 @@
   <script src="messenger.js?v=119polish"></script>
   <script src="desktop-updates.js?v=117callcontrols"></script>
   <script src="call-workspace.js?v=119polish"></script>
+  <dialog id="remotePcDialog" class="remote-pc-dialog" aria-labelledby="remotePcTitle">
+    <header><div><span class="remote-pc-eyebrow">JOGUE JUNTO, NO MESMO PC</span><h2 id="remotePcTitle">Compartilhar PC <span class="remote-beta">Beta</span></h2></div><button id="remotePcClose" type="button" aria-label="Fechar compartilhamento de PC">×</button></header>
+    <p class="remote-pc-warning"><strong>Função em testes.</strong> Qualidade e atraso variam com a rede e o computador. Ao compartilhar, tudo que aparecer no monitor escolhido poderá ser visto. Mouse e teclado só são liberados com sua autorização. Você continua ouvindo e falando na chamada.</p>
+    <p id="remotePcSupport" class="remote-pc-note">Atualize o backend no Render para habilitar esta beta.</p>
+    <section id="remotePcSetup">
+      <p id="remotePcHostNotice" class="remote-pc-note">Para compartilhar seu PC, use o aplicativo Windows atualizado. Você pode receber um convite e assistir por aqui.</p>
+      <p id="remotePcVoiceNotice" class="remote-pc-note">Entre na voz com sua conta e convide alguém da mesma chamada.</p>
+      <label>Compartilhar com<select id="remotePcTarget" aria-label="Pessoa que poderá assistir ao PC"></select></label>
+      <label class="remote-pc-audio"><input id="remotePcAudio" type="checkbox"> Incluir áudio isolado de um jogo ou aplicativo <small>Windows compatível · escolha o aplicativo na próxima tela.</small></label>
+      <p class="remote-pc-footnote">Um monitor e um convidado por sessão. Perfil inicial de até 1080p / 60 FPS. Controle de videogame ainda não disponível.</p>
+    </section>
+    <section id="remotePcSession" hidden><div class="remote-pc-session-heading"><strong id="remotePcPeer"></strong><span class="remote-beta">Beta</span></div><video id="remotePcVideo" autoplay playsinline tabindex="0" aria-label="PC compartilhado; clique para controlar após autorização"></video><p id="remotePcHint"></p></section>
+    <p id="remotePcStatus" role="status" aria-live="polite"></p>
+    <footer><button id="remotePcStart" type="button" class="remote-primary">Escolher monitor e convidar</button><button id="remotePcAccept" type="button" class="remote-primary" hidden>Aceitar e assistir</button><button id="remotePcRequestControl" type="button" hidden>Pedir controle</button><button id="remotePcRevoke" type="button" hidden>Retirar controle</button><button id="remotePcFullscreen" type="button" hidden>Tela cheia</button><button id="remotePcEnd" type="button" class="remote-danger" hidden>Encerrar compartilhamento</button></footer>
+  </dialog>
+
 </body>
 </html>

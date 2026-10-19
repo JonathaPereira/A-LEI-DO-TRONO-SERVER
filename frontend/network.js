@@ -118,6 +118,7 @@ window.TronoNetwork = (()=>{
   function leaveGameRoom(){return independentGameVoice?send('leave-game-room'):leaveRoom();}
   function leaveVoiceRoom(){return independentGameVoice?send('leave-voice-room'):leaveRoom();}
   const api={
+    remotePc:(action,payload={})=>send('remote-pc',{action,...payload}),
     async ensureLoveLetter(){if(!await ensureAuthenticated())return false;if(!loveLetterSupported)throw new Error('Atualize o backend para jogar Love Letter.');return true;},
     loveLetter:(action,payload={})=>loveLetterSupported&&send('love-letter',{action,...payload}),
     async ensureSplendor(){if(!await ensureAuthenticated())return false;if(!splendorSupported)throw new Error('Splendor ainda não está disponível nesta conexão. Tente novamente após a atualização do servidor.');return true;},

@@ -2,7 +2,14 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.2.10',
+  version:'0.2.11',
+  remoteCapability:()=>ipcRenderer.invoke('mn:remote-capability'),
+  prepareRemoteCapture:name=>ipcRenderer.invoke('mn:remote-prepare',name),
+  allowRemoteControl:()=>ipcRenderer.invoke('mn:remote-allow'),
+  remoteInput:(token,event)=>ipcRenderer.send('mn:remote-input',{token,event}),
+  revokeRemoteControl:()=>ipcRenderer.invoke('mn:remote-revoke'),
+  stopRemote:()=>ipcRenderer.invoke('mn:remote-stop'),
+  onRemote:fn=>listen('mn:remote',fn),
   notify:value=>ipcRenderer.invoke('mn:notify',value),
   onNotificationClick:fn=>listen('mn:notification-click',fn),
   copyDiagnostics:text=>ipcRenderer.invoke('mn:copy-diagnostics',text),

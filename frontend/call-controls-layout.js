@@ -9,6 +9,7 @@ window.TronoCallControlsLayout = (() => {
     muteMicBtn: {label: 'Microfone', icon: '<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/>'},
     deafenVoiceBtn: {label: 'Áudio', icon: '<path d="M3 14v-3a9 9 0 0 1 18 0v3M3 13h4v8H3zM17 13h4v8h-4z"/>'},
     cameraBtn: {label: 'Câmera', icon: '<rect x="2" y="5" width="14" height="14" rx="3"/><path d="m16 10 6-4v12l-6-4"/>'},
+    remotePcBtn: {label:'PC · Beta',icon:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8m-4-5v5m0-15v6m-3-3 3 3 3-3"/>'},
     screenShareBtn: {label: 'Tela', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8m-4-5v5m-3-12 3-3 3 3m-3-3v7"/>'},
     soundboardToggle: {label: 'Efeitos', icon: '<path d="M3 10v4m4-7v10m5-15v20m5-15v10m4-7v4"/>'},
     voiceSettingsBtn: {label: 'Ajustes', icon: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>'},
@@ -34,7 +35,7 @@ window.TronoCallControlsLayout = (() => {
   }
 
   function label(node) {
-    const text = node.id === 'soundboardToggle' ? 'Efeitos de áudio' : node.lastElementChild?.textContent || '';
+    const text = node.id === 'soundboardToggle' ? 'Efeitos de áudio' : node.id==='remotePcBtn'?'Compartilhar PC · Beta':node.lastElementChild?.textContent || '';
     node.setAttribute('aria-label', text);
     node.title = text;
   }
@@ -79,7 +80,7 @@ window.TronoCallControlsLayout = (() => {
         place(node, rail, rail?.querySelector('[data-desktop-route="clips"]'));
       } else if (discord && id !== 'soundboardToggle') {
         const host = id === 'joinVoiceBtn' ? 'layoutConnectionControls'
-          : ['cameraBtn', 'screenShareBtn'].includes(id) ? 'layoutCallActions' : 'layoutUserControls';
+          : ['cameraBtn', 'screenShareBtn','remotePcBtn'].includes(id) ? 'layoutCallActions' : 'layoutUserControls';
         place(node, $(host));
       } else {
         restore(node);

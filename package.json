@@ -27,7 +27,8 @@
     "test:love-letter": "node --test tests/love-letter-rules.js tests/love-letter-ws.js tests/love-letter-browser.js",
     "test:tabletop": "node --test tests/bot-names.js tests/love-letter-browser.js tests/splendor-browser.js tests/tabletop-audio-browser.js",
     "test:sfu": "node --test --test-concurrency=1 tests/sfu-recovery.js tests/sfu-browser.js tests/floating-call-browser.js",
-    "test:voice": "node --test tests/voice-reception.js tests/desktop-audio-priority.js tests/call-stability.js tests/noise-processing.js tests/native-microphone-browser.js tests/voice-reception-browser.js"
+    "test:voice": "node --test tests/voice-reception.js tests/desktop-audio-priority.js tests/call-stability.js tests/noise-processing.js tests/native-microphone-browser.js tests/voice-reception-browser.js",
+    "test:remote": "node --test --test-concurrency=1 tests/remote-pc.js tests/desktop-remote-input.js tests/remote-pc-browser.js"
   },
   "engines": {
     "node": ">=18"
