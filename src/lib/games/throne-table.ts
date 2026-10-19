@@ -1,5 +1,3 @@
-import type { ThroneChoiceRules, ThroneLaw } from '../../types/throne-choices';
-import { throneLawTooltip } from './throne-court-copy.ts';
 import type { ThroneMatchSnapshot } from '../../types/throne-match';
 import type { ThroneTableState, ThroneWinners } from '../../types/throne-table';
 import { record } from '../files/protocol.ts';
@@ -7,7 +5,6 @@ import { freezeGame } from './freeze.ts';
 import { readThroneCourt, readThronePlays } from './throne-match-protocol.ts';
 
 interface Options {
-  rules: ThroneChoiceRules;
   source(): ThroneMatchSnapshot;
   subscribeSource(fn: () => void): () => void;
   warn?(error: unknown): void;
@@ -120,7 +117,6 @@ export function createThroneTable(options: Options) {
   }
   return {
     getSnapshot: () => state,
-    lawTooltip: (id: ThroneLaw) => throneLawTooltip(options.rules, state, id),
     subscribe(fn: () => void) {
       listeners.add(fn);
       return () => {

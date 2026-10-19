@@ -23,9 +23,15 @@ export function initializeThroneChoices(target: Window): () => void {
   if (previous) return previous;
   const runtime = target as Runtime,
     doc = target.document;
-  const board = doc.getElementById('gameScreen')!,
-    localModal = doc.getElementById('modal')!;
+  const board = doc.getElementById('gameScreen')!;
+
   const controller = createThroneChoices({
+    identity: () =>
+      runtime.TronoAuth.user
+        ? `user:${runtime.TronoAuth.user.id}`
+        : runtime.TronoAuth.guest
+          ? `guest:${runtime.TronoAuth.guest.id}`
+          : null,
     scope() {
       const lobby = runtime.TronoThroneLobby.getSnapshot();
       const identity = runtime.TronoAuth.user
@@ -41,7 +47,6 @@ export function initializeThroneChoices(target: Window): () => void {
     visible: () =>
       !doc.hidden &&
       !board.classList.contains('hidden') &&
-      localModal.classList.contains('hidden') &&
       !runtime.TronoThronePrivate.getSnapshot().open &&
       !runtime.TronoThroneHistory.getSnapshot().resultOpen,
     subscribeSource(fn) {
@@ -50,7 +55,6 @@ export function initializeThroneChoices(target: Window): () => void {
       const release = runtime.TronoThroneLobby.subscribe(fn),
         observer = new MutationObserver(fn);
       observer.observe(board, { attributes: true, attributeFilter: ['class'] });
-      observer.observe(localModal, { attributes: true, attributeFilter: ['class'] });
       target.addEventListener('trono-auth-change', fn);
       doc.addEventListener('visibilitychange', fn);
       return () => {

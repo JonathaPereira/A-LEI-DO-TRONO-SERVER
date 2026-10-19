@@ -2492,6 +2492,40 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   Permanecem os modais de Decreto/Lei/cartas, motor local e ponte de navegação,
   `court-display.js` e separação das regras/coordenação do backend.
 
+## Escolhas entre fases locais em React
+
+- Decreto, Lei, Trunfo, Reserva, Corte Aberta, Conselho, Rotação, Desafio e os três
+  passos da Usurpação agora usam o mesmo dono TypeScript e diálogo React do online.
+  A consulta da mão/Reserva e os destaques públicos também são compartilhados.
+- `beginLocal`/`showLocal` vinculam a Promise à sessão e identidade. Cancelar,
+  substituir, trocar conta/partida, iniciar o online ou descartar rejeita com
+  `AbortError`; callbacks antigos não consomem uma nova oferta. Ocultar mantém
+  a escolha sem confirmar. O modo local funciona offline e não envia comandos.
+- A projeção copia apenas cartas próprias e nomes públicos, sem congelar o motor.
+  A escolha cega só recebe quantidade/nome. O motor conserva planejamento de Leis,
+  cartas mutáveis e trocas simultâneas; o adaptador confere sessão e candidatos
+  antes de aplicar a resposta. Não há novo socket ou dono de mídia.
+- Excluídos `components/navigation/modal.tsx`, `choiceModal`, `chooseLawModal`,
+  resolvers globais e HTML/listeners substituídos. Removidos os observadores do
+  modal antigo e a fachada `lawTooltip` da mesa sem consumidores. Revelações e
+  resultados precedem escolhas; escolhas precedem a mão, sem ciclo de dependências.
+- Seis regressões de modelo cobrem todas as etapas, valores/índices, privacidade,
+  offline, ofertas antigas, cancelamento, conta/ABA e transição online. O helper
+  de interface compartilhado com Electron cobre teclado, consulta, ocultação,
+  cartas cegas, Escape obrigatório e cancelamento.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; modelos
+  somam 150 testes. Navegador completou a simulação de três rodadas, uma rodada
+  humana e os seis cenários online. Dois Electron reais repetiram escolhas e
+  conservaram microfone/câmera/tela, peers e socket.
+- Capturas Original/Discord em 480×800 e 1080×1920 inspecionadas. A consulta da mão
+  agora ocupa todas as colunas e quebra linhas: a grade estreita antes cortava a
+  Reserva. O teste confere os limites das cartas e ausência de recorte horizontal.
+  Evidências em `artifacts/throne-local-choices-*`. Mídia sintética local; não mede
+  jogos reais a 60 fps nem TURN de produção.
+- Próximo recorte: controles gerais/regras da mesa. Permanecem o motor local e
+  ponte de navegação em `legacy/game.js`, `court-display.js` e a separação das
+  regras/coordenação do backend. As escolhas locais entre fases não estão mais pendentes.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

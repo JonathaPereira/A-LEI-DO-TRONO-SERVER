@@ -176,19 +176,19 @@ de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
 partidas; não possui o estado do salão.
 
-O jogo ainda possui simulação, escolhas entre fases e aplicação das regras locais
-de Influência em `legacy/game.js`. A mão jogável usa o dono compartilhado abaixo. As projeções públicas e os efeitos usam os donos
-tipados descritos abaixo.
+O jogo ainda possui simulação e aplicação das regras locais de Influência em
+`legacy/game.js`. A mão e as escolhas entre fases usam os donos compartilhados
+abaixo, assim como as projeções públicas e os efeitos.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
 
-`lib/games/throne-choices.ts` possui os prompts de escolha enviados pelo servidor:
+`lib/games/throne-choices.ts` possui os prompts de escolha online e locais:
 Decreto, Lei, Trunfo, Reserva, Corte Aberta, Conselho, Rotação, Desafio e os três
 passos da Usurpação. `throne-choice-protocol.ts` copia/congela o contexto mínimo
 do participante: própria mão/Reserva, nomes públicos, fase, rodada/vaza e usos das
-Leis. Não retém mãos alheias, baralho ou campos extras. O servidor continua
-validando as regras e as opções finais; o módulo não recalcula o motor local.
+Leis. Não retém mãos alheias, baralho ou campos extras. O servidor e o motor local
+continuam validando regras e opções finais; o módulo não recalcula o planejador de Leis.
 
 Os prompts de carta que chegam antes de seu estado aguardam o próximo pacote da
 fase correspondente. IDs repetidos/anteriores são ignorados. Uma resposta precisa
@@ -198,13 +198,26 @@ Trocar conta, salão ou assento, desconectar, cancelar ou descartar limpa o cont
 Ocultar a partida fecha o diálogo, conservando a escolha atual para o retorno.
 Após enviar, aguarda a próxima fase sem reenviar a escolha em eventos de presença.
 
-`components/games/throne-choices.tsx` renderiza o diálogo nativo e a consulta da
-própria mão ao escolher Lei. O runtime monta uma raiz/host por página e observa
-visibilidade, o modal antigo e o dono das revelações privadas; essas informações
-têm precedência para evitar dois diálogos simultâneos. Ao descartar, remove raiz, observadores e
-assinaturas. `showOnlinePrompt` e `onlineLastPromptId` foram removidos de
-`legacy/game.js`; as escolhas locais de Decreto/Lei/cartas entre fases ainda usam
-os modais anteriores. A mão jogável e sua Influência já usam React.
+No modo local, `beginLocal` cria um token opaco vinculado à identidade;
+`showLocal` recebe a projeção mínima e retorna uma Promise resolvida uma única vez.
+O motor projeta a fase da escolha sem alterar suas próprias fases de execução.
+Cada oferta recebe um novo objeto de prompt. Cancelar, trocar conta/partida,
+iniciar uma partida online ou descartar rejeita com `AbortError`; sessões antigas
+não podem reabrir escolhas após A → B → A. Ocultar conserva a oferta sem responder.
+O modo local funciona offline, ignora pacotes de estado/erro de outra mesa e não
+envia ações de rede. A escolha cega recebe apenas quantidade/nome, sem cartas adversárias.
+O adaptador confere a sessão após o await e revalida o ID/candidatos antes de entregar
+uma carta ao motor mutável. Trocas simultâneas e proteção da Corte continuam nas regras.
+
+`components/games/throne-choices.tsx` renderiza o mesmo diálogo nativo para os dois
+modos e a consulta da própria mão/Reserva ao escolher Lei. O runtime monta uma
+raiz/host por página e observa visibilidade, revelações privadas e resultados.
+Esses diálogos têm precedência sobre escolhas; a mão observa também as escolhas,
+sem dependência circular. Descartar remove raiz, observadores e assinaturas.
+`choiceModal`, `chooseLawModal`, seus resolvers globais e renderizadores HTML foram
+removidos de `legacy/game.js`. `components/navigation/modal.tsx` e todos os seus
+observadores de visibilidade também foram removidos. As classes CSS de modal
+compartilhadas com outros jogos permanecem.
 
 Esse contexto é exclusivo das escolhas; não valida o protocolo online inteiro.
 
@@ -260,7 +273,7 @@ diálogo; o retorno restaura a escolha. Modais privados/resultados têm precedê
 
 `renderHandLocal`, `onHumanCardClick`, `humanPlayResolver`, os renderizadores de
 Influência/naipe e os listeners locais de cartas/checkbox/ordenação foram removidos.
-Os modais de escolhas entre fases, controles gerais e simulação permanecem no legado.
+Os controles gerais e a simulação permanecem no legado; escolhas entre fases usam React.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
@@ -321,8 +334,9 @@ Uma carta adversária só aparece após a revelação validada. Nas fases poster
 ao resultado, snapshots que voltam a mascará-la conservam apenas o conhecimento
 já público da mesma rodada/vaza. Nova vaza, cancelamento ou invalidação limpam
 essas cartas, consultas e destaques. Ticks do relógio não notificam a mesa.
-As descrições contextuais das regras ficam em `throne-court-copy.ts`, reutilizadas
-pela escolha de Lei local que ainda permanece no legado.
+As descrições contextuais das regras ficam em `throne-court-copy.ts`. A fachada
+`lawTooltip` do controlador da mesa foi removida com seu último consumidor legado;
+a apresentação React conserva as funções de texto compartilhadas.
 
 `components/games/throne-table.tsx` renderiza cartas, badges de Influência/Manobra,
 metadados e usos de Leis nos hosts estáveis. A consulta da própria carta oculta usa
@@ -443,9 +457,8 @@ Espionagem e resolvendo as trocas com as regras compartilhadas.
 `components/games/throne-private-dialog.tsx` renderiza os dois diálogos nativos,
 com texto React, cartas e confirmação. O runtime possui os listeners do Decreto,
 root/host e observadores. Escolhas e mão assinam esse dono para ocultar seus
-diálogos enquanto uma revelação estiver aberta; o modal antigo conserva a
-precedência para escolhas locais ainda não convertidas. Os resultados abaixo
-também suspendem as escolhas e a mão online enquanto abertos.
+diálogos enquanto uma revelação estiver aberta. Os resultados abaixo também
+suspendem as escolhas e a mão, nos dois modos, enquanto abertos.
 
 `onlineIntelligence`, `onlineQueuedPrivateUsurpation`, `onlineExchangeBusy`,
 `showIntelligence`, `showOnlinePrivateUsurpation`, `privateUsurpationHtml` e os

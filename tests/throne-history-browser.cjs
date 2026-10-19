@@ -59,7 +59,9 @@ test(
       const page = await context.newPage();
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (message) => {
-        if (/\[Throne(?:History|Match|Table|Seats|Effects|Events)\]/.test(message.text()))
+        if (
+          /\[Throne(?:History|Match|Table|Seats|Effects|Events|Choices|Hand)\]/.test(message.text())
+        )
           warnings.push(message.text());
       });
       await page.goto(origin);
@@ -67,6 +69,7 @@ test(
       await page.evaluate(() => window.TronoAuth.ready);
       await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
       await require('./throne-local-hand-controls.cjs').exerciseLocalHand(page);
+      await require('./throne-local-choices-controls.cjs').exerciseLocalChoices(page);
       await page.evaluate(() => window.TronoThroneLobby.enter('sala-chave'));
       await expect(page.locator('#roomScreen')).toBeVisible();
       await page.locator('#roomScreen details').evaluate((node) => {
@@ -126,8 +129,8 @@ test(
       ) {
         if (await page.locator('#thronePrivateDialog').isVisible())
           await page.locator('#thronePrivateContinue').click();
-        else if (await page.locator('#modal').isVisible()) {
-          const choice = page.locator('#modal .choice-card').first();
+        else if (await page.locator('#throneChoiceDialog').isVisible()) {
+          const choice = page.locator('#throneChoiceDialog .choice-card').first();
           if (await choice.isVisible()) await choice.click();
         } else {
           const card = page.locator('#humanHand .hand-card:enabled').first();

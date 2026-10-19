@@ -25,9 +25,7 @@ const shuffle = (arr) => {
 
 let animationScale = 1;
 let game = null;
-let modalResolver = null,
-  modalReject = null,
-  leavingGame = false;
+let leavingGame = false;
 const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
 const throneHand = window.TronoThroneHand;
@@ -45,9 +43,6 @@ const storage = window.TronoStorage || localStorage;
 const ensureAudio = (...args) => window.TronoAudio?.ensureAudio(...args) || Promise.resolve(false);
 const toggleMusic = (...args) => window.TronoAudio?.toggleMusic(...args);
 
-function cardAsset(card) {
-  return `assets/cards/${card.suit}_${String(card.value).padStart(2, '0')}.webp`;
-}
 function makeDeck() {
   let id = 0;
   const deck = [];
@@ -179,6 +174,7 @@ async function startGame(allAI = false) {
     phase: 'setup',
     allAI,
     handSession: throneHand.beginLocal(),
+    choiceSession: throneChoices.beginLocal(),
     gameOver: false,
     declaredLeadSuit: null,
     room: throneLobby.getSnapshot().selected,
@@ -234,18 +230,7 @@ async function chooseDecree() {
     `${chooser.name} possui o menor total bruto de Coroas + Sombras e recebe a escolha do Decreto.`,
   );
   if (!chooser.ai) {
-    const choice = await choiceModal({
-      icon: '📜',
-      title: 'Escolha o Decreto',
-      text: `Você recebeu a escolha desta rodada. Selecione 1 dos 2 Decretos sorteados.`,
-      options: picks.map((d) => ({
-        value: d.id,
-        type: 'decree',
-        title: d.name,
-        subtitle: d.text,
-        icon: d.icon,
-      })),
-    });
+    const choice = await chooseLocal({ kind: 'choose-decree', options: picks.map((d) => d.id) });
     return DECREES.find((d) => d.id === choice);
   }
   await delay(700);
@@ -260,12 +245,7 @@ async function applyDecreeRoundStart() {
       let card;
       if (p.ai) {
         card = chooseCpuReserve(p);
-      } else
-        card = await chooseCardFromHand(
-          p,
-          'Escolha sua Reserva',
-          'Esta carta ficará fora da mão durante as 9 primeiras vazas e será obrigatória na 10ª vaza.',
-        );
+      } else card = await chooseCardFromHand(p, 'choose-reserva');
       p.reserve = card;
       p.hand = p.hand.filter((c) => c.id !== card.id);
       logEvent(`${p.name} separou uma carta na Reserva.`);
@@ -276,11 +256,7 @@ async function applyDecreeRoundStart() {
       const candidates = p.hand.filter((c) => !c.public);
       let card = p.ai
         ? candidates[rand(candidates.length)]
-        : await chooseCardFromHand(
-            p,
-            'Corte Aberta',
-            'Revele 1 carta. Ela continuará em sua mão, mas ficará pública até ser usada.',
-          );
+        : await chooseCardFromHand(p, 'choose-corte', candidates);
       card.public = true;
       card.publicReason = 'Corte Aberta';
       logEvent(`${p.name} revelou ${SUITS[card.suit].name} ${card.value} pela Corte Aberta.`);
@@ -292,11 +268,7 @@ async function applyDecreeRoundStart() {
     for (const p of game.players) {
       const card = p.ai
         ? p.hand[rand(p.hand.length)]
-        : await chooseCardFromHand(
-            p,
-            'Conselho',
-            'Escolha uma carta fechada para passar ao jogador à direita. Todas as trocas acontecem juntas.',
-          );
+        : await chooseCardFromHand(p, 'choose-conselho');
       choices.set(p.id, card.id);
     }
     window.TronoRules.passCards(game.players, choices, -1);
@@ -379,18 +351,7 @@ async function declareTrump() {
     game.trump = scores[0].s;
     await delay(500);
   } else {
-    game.trump = await choiceModal({
-      icon: '⚑',
-      title: 'Declare o Trunfo',
-      text: 'Como Sombra da vaza anterior, escolha o naipe de Trunfo antes da abertura da vaza.',
-      options: SUIT_ORDER.map((s) => ({
-        value: s,
-        type: 'suit',
-        title: SUITS[s].name,
-        icon: SUITS[s].glyph,
-        color: SUITS[s].color,
-      })),
-    });
+    game.trump = await chooseLocal({ kind: 'choose-trump', options: SUIT_ORDER });
   }
   logEvent(`${chooser.name} declarou ${SUITS[game.trump].name} como Trunfo.`);
   renderAll();
@@ -416,17 +377,7 @@ function finishUsurpacaoExchange(shadow, target, index, state) {
 async function chooseUsurpacaoReturnIndex(shadow, crown) {
   const pickable = crown.hand.filter((c) => c.publicReason !== 'Corte Aberta');
   if (shadow.ai) return rand(pickable.length);
-  return await choiceModal({
-    icon: '☾',
-    title: 'Usurpação — escolha às cegas',
-    text: `${crown.name} embaralhou a mão. Sua carta está separada e será entregue somente depois da escolha; ela nunca pode retornar. Escolha uma das cartas fechadas elegíveis. A carta da Corte Aberta está protegida e não participa da troca.`,
-    options: pickable.map((_, i) => ({
-      value: i,
-      type: 'hidden-card',
-      title: `Carta ${i + 1}`,
-      subtitle: 'Face voltada para baixo',
-    })),
-  });
+  return await chooseLocal({ kind: 'usurp-pick', count: pickable.length, otherName: crown.name });
 }
 
 async function showPrivateUsurpationResult(shadow, crown, given, taken) {
@@ -450,16 +401,9 @@ async function performUsurpacao() {
   );
   const targetId = shadow.ai
     ? targets[rand(targets.length)].id
-    : await choiceModal({
-        icon: '☾',
-        title: 'Usurpação — escolha uma Casa',
-        text: 'Você pode trocar com qualquer adversário. Primeiro escolha a Casa; depois separe sua carta e escolha uma carta fechada da mão dela.',
-        options: targets.map((p) => ({
-          value: p.id,
-          title: p.name,
-          subtitle: 'Trocar uma carta fechada',
-          icon: '♜',
-        })),
+    : await chooseLocal({
+        kind: 'usurp-target',
+        options: targets.map((p) => ({ seat: p.id, name: p.name })),
       });
   const crown = game.players[targetId];
   let given;
@@ -471,9 +415,9 @@ async function performUsurpacao() {
   } else {
     given = await chooseCardFromHand(
       shadow,
-      'Usurpação',
-      'Escolha 1 carta da sua mão para entregar, virada para baixo, à Casa escolhida. A carta da Corte Aberta é protegida e não pode ser trocada.',
+      'usurp-give',
       shadow.hand.filter((c) => c.publicReason !== 'Corte Aberta'),
+      crown.name,
     );
   }
 
@@ -821,12 +765,7 @@ async function revealForChallenge(p) {
   if (!privateCards.length) return;
   let card = p.ai
     ? privateCards[rand(privateCards.length)]
-    : await chooseCardFromHand(
-        p,
-        'Desafio',
-        'Sua Coroa exige um preço: revele 1 carta da sua mão. Ela permanecerá pública até ser usada.',
-        privateCards,
-      );
+    : await chooseCardFromHand(p, 'challenge', privateCards);
   card.public = true;
   card.publicReason = 'Desafio';
   logEvent(`Desafio: ${p.name} revelou ${SUITS[card.suit].name} ${card.value}.`);
@@ -841,12 +780,7 @@ async function performRotation() {
   for (const p of game.players) {
     let card;
     if (p.ai) card = p.hand[rand(p.hand.length)];
-    else
-      card = await chooseCardFromHand(
-        p,
-        'Rotação',
-        `Fim da vaza ${game.trick}: escolha 1 carta para passar ao jogador à esquerda.`,
-      );
+    else card = await chooseCardFromHand(p, 'rotation');
     choices[p.id] = card;
   }
   await showExchangeAnimation({
@@ -888,7 +822,7 @@ async function chooseNextLaw(shadowP) {
     logEvent(`${shadowP.name}, como Sombra, escolheu ${LAWS[choice].name}.`);
     return choice;
   }
-  const choice = await chooseLawModal(shadowP, valid);
+  const choice = await chooseLocal({ kind: 'choose-law', options: valid });
   logEvent(`${shadowP.name}, como Sombra, escolheu ${LAWS[choice].name}.`);
   return choice;
 }
@@ -1099,110 +1033,45 @@ function selectedInfluenceCost(action) {
 function selectedInfluenceModifier(action) {
   return action === 'plus' ? 3 : action === 'minus' ? -3 : 0;
 }
-async function chooseCardFromHand(p, title, text, candidates = null) {
-  const cards = candidates || p.hand;
-  if (p.ai) return cards[rand(cards.length)];
-  const value = await choiceModal({
-    icon: '♛',
-    title,
-    text,
-    options: cards.map((c) => ({
-      value: c.id,
-      type: 'card',
-      title: `${SUITS[c.suit].name} ${c.value}`,
-      img: cardAsset(c),
-    })),
-  });
-  return p.hand.find((c) => c.id === value);
+// Copy only the human's own cards and public seats into the shared choices owner.
+// The local engine retains the rules, mutable cards and simultaneous exchanges.
+async function chooseLocal(prompt) {
+  const session = game,
+    own = session.players[0];
+  if (session.online || own.ai) throw new Error('A mesa não possui uma escolha humana local.');
+  const value = await throneChoices.showLocal(
+    session.choiceSession,
+    {
+      you: 0,
+      round: session.round,
+      trick: session.trick,
+      phase: prompt.kind,
+      lastCrown: session.lastCrown,
+      lastShadow: session.lastShadow,
+      hand: own.hand,
+      reserve: own.reserve,
+      players: session.players.map((p) => ({ seat: p.id, name: p.name })),
+      lawUsage: session.lawUsage,
+    },
+    prompt,
+  );
+  if (session !== game)
+    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
+  return value;
 }
-
-function chooseLawModal(player, valid) {
-  return new Promise((resolve, reject) => {
-    modalResolver = resolve;
-    modalReject = reject;
-    const renderLawView = () => {
-      $('modalIcon').textContent = '☾';
-      $('modalTitle').textContent = 'Escolha a próxima Lei';
-      $('modalText').textContent =
-        'Como Sombra, você controla a Lei da próxima vaza. Antes de decidir, você pode consultar sua mão.';
-      $('modalChoices').innerHTML = valid
-        .map(
-          (l, i) =>
-            `<button class="choice-card" data-law="${l}" data-tooltip="${escAttr(throneTable.lawTooltip(l))}"><img src="${LAWS[l].img}"><strong>${LAWS[l].name}</strong><small>Restam ${2 - game.lawUsage[l]} uso(s) antes desta escolha.</small></button>`,
-        )
-        .join('');
-      $('modalFooter').innerHTML =
-        `<button id="viewShadowDeckBtn" class="royal-btn deck-view-btn">🂠 Ver meu deck / mão (${player.hand.length}${player.reserve ? ' + Reserva' : ''})</button>`;
-      $('modalChoices')
-        .querySelectorAll('[data-law]')
-        .forEach(
-          (btn) =>
-            (btn.onclick = () => {
-              const value = btn.dataset.law;
-              closeModal();
-              const r = modalResolver;
-              modalResolver = null;
-              r(value);
-            }),
-        );
-      $('viewShadowDeckBtn').onclick = renderHandView;
-    };
-    const renderHandView = () => {
-      $('modalIcon').textContent = '🂠';
-      $('modalTitle').textContent = `Mão de ${player.name}`;
-      $('modalText').textContent =
-        'Consulte suas cartas e depois volte para escolher a Lei. As cartas públicas permanecem destacadas.';
-      const cards = [...player.hand];
-      $('modalChoices').innerHTML =
-        `<div class="deck-preview">${cards.map((c) => `<div class="deck-preview-card ${c.public ? 'public' : ''} ${c.publicReason === 'Corte Aberta' ? 'corte-open' : ''}"><img src="${cardAsset(c)}"><span>${SUITS[c.suit].name} ${c.value}</span>${c.public ? `<b>${c.publicReason}</b>` : ''}</div>`).join('')}${player.reserve ? `<div class="deck-preview-card reserve-preview"><img src="${cardAsset(player.reserve)}"><span>Reserva</span><b>Obrigatória na 10ª</b></div>` : ''}</div>`;
-      $('modalFooter').innerHTML =
-        '<button id="backToLawChoiceBtn" class="royal-btn primary">← Voltar para escolher a Lei</button>';
-      $('backToLawChoiceBtn').onclick = renderLawView;
-    };
-    renderLawView();
-    $('modal').classList.remove('hidden');
-  });
-}
-
-function choiceModal({ icon = '♛', title, text, options }) {
-  return new Promise((resolve, reject) => {
-    modalResolver = resolve;
-    modalReject = reject;
-    $('modalIcon').textContent = icon;
-    $('modalTitle').textContent = title;
-    $('modalText').textContent = text;
-    $('modalFooter').textContent = '';
-    $('modalChoices').innerHTML = options
-      .map((o, i) => {
-        if (o.type === 'card' || o.type === 'law')
-          return `<button class="choice-card" data-i="${i}">${o.img ? `<img src="${o.img}">` : ''}<strong>${o.title}</strong>${o.subtitle ? `<small>${o.subtitle}</small>` : ''}</button>`;
-        if (o.type === 'suit')
-          return `<button class="choice-card suit-choice" data-i="${i}" style="border-color:${o.color}"><span class="suit-glyph" style="color:${o.color}">${o.icon}</span><strong>${o.title}</strong></button>`;
-        if (o.type === 'decree')
-          return `<button class="choice-card decree-choice" data-i="${i}" data-tooltip="${escAttr(o.subtitle || 'Este Decreto permanecerá ativo durante toda a rodada.')}" ><span class="decree-icon">${o.icon}</span><strong>${o.title}</strong><p>${o.subtitle}</p></button>`;
-        if (o.type === 'hidden-card')
-          return `<button class="choice-card hidden-card-choice" data-i="${i}"><span class="hidden-card-back">♛</span><strong>${o.title}</strong><small>${o.subtitle || 'Carta fechada'}</small></button>`;
-        return `<button class="choice-card" data-i="${i}"><strong>${o.title}</strong></button>`;
-      })
-      .join('');
-    $('modalChoices')
-      .querySelectorAll('button')
-      .forEach(
-        (btn) =>
-          (btn.onclick = () => {
-            const opt = options[Number(btn.dataset.i)];
-            closeModal();
-            const r = modalResolver;
-            modalResolver = null;
-            r(opt.value);
-          }),
-      );
-    $('modal').classList.remove('hidden');
-  });
-}
-function closeModal() {
-  $('modal').classList.add('hidden');
-  modalReject = null;
+async function chooseCardFromHand(p, kind, candidates = p.hand, otherName) {
+  if (p.ai) return candidates[rand(candidates.length)];
+  if (p !== game.players[0]) throw new Error('Assento humano local inválido.');
+  const ids = candidates.map((c) => c.id);
+  const value = await chooseLocal({ kind, cardIds: ids, otherName });
+  const card = p.hand.find((c) => c.id === value && ids.includes(c.id));
+  if (
+    !card ||
+    (kind === 'usurp-give' && card.publicReason === 'Corte Aberta') ||
+    (kind === 'challenge' && card.public)
+  )
+    throw new Error('Carta local indisponível.');
+  return card;
 }
 
 let activeTooltipTarget = null;
@@ -1492,12 +1361,6 @@ function backToLobby() {
   leavingGame = true;
   clearLocalTurnTimer();
   throneEffects.clear();
-  const cancelled = Object.assign(new Error('A mesa foi encerrada neste aparelho.'), {
-    name: 'AbortError',
-  });
-  modalReject?.(cancelled);
-  modalResolver = null;
-  closeModal();
   if (
     window.TronoNetwork?.gameRoom &&
     window.TronoNetwork?.primaryRoom === window.TronoNetwork?.gameRoom

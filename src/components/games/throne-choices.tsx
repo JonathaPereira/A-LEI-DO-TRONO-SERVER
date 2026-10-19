@@ -194,7 +194,7 @@ export function ThroneChoiceDialog({
       aria-labelledby="throneChoiceTitle"
       visible={s.open}
       onDismiss={() => {
-        /* A server choice remains required until its phase changes. */
+        /* A choice remains required until the engine advances or the match ends. */
       }}
     >
       <div className="modal-card">

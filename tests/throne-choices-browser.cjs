@@ -350,9 +350,6 @@ test(
                     ? page.locator('#throneChoiceDialog [data-law="usurpacao"]')
                     : page.locator('#throneChoiceDialog .choice-card').first();
                 await preferred.click();
-              } else if (await page.locator('#modal').isVisible()) {
-                const next = page.locator('#continueModal');
-                if (await next.isVisible()) await next.click();
               } else {
                 const s = snapshot.packet,
                   key = s?.round + ':' + s?.trick;

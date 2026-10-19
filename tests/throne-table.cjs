@@ -69,7 +69,6 @@ async function fixture() {
   const source = new Set(),
     warnings = [];
   const controller = createThroneTable({
-    rules,
     source: () => state,
     subscribeSource(fn) {
       source.add(fn);

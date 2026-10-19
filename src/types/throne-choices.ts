@@ -18,7 +18,7 @@ export interface ThroneCard {
   readonly public: boolean;
   readonly publicReason: string | null;
 }
-/** Only the viewer's cards and public names needed for a server choice. */
+/** Only the viewer's cards and public names needed for a choice. */
 export interface ThroneChoiceContext {
   readonly you: number;
   readonly round: number;
@@ -55,6 +55,7 @@ export type ThronePrompt = PromptId &
       }
   );
 export interface ThroneChoicesSnapshot {
+  readonly mode: 'local' | 'online' | null;
   readonly context: ThroneChoiceContext | null;
   readonly prompt: ThronePrompt | null;
   readonly preview: boolean;

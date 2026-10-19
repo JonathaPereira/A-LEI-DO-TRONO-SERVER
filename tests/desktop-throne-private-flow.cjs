@@ -38,7 +38,7 @@ async function exerciseThronePrivate({ page, receiver }) {
         );
       }),
     );
-    await expect(client.locator('#modal')).toBeHidden();
+    await expect(client.locator('#modal')).toHaveCount(0);
     await expect(client.locator('#throneChoiceDialog')).toBeHidden();
   }
   await page.evaluate(() => window.TronoPortal.showOnly('portalScreen'));

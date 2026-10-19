@@ -4,7 +4,11 @@ import type {
   ThroneChoiceContext,
   ThronePrompt,
 } from '../../types/throne-choices';
-import { readThroneChoiceContext, readThronePrompt } from './throne-choice-protocol.ts';
+import {
+  readThroneChoiceContext,
+  readThroneLocalChoiceContext,
+  readThronePrompt,
+} from './throne-choice-protocol.ts';
 import { freezeGame } from './freeze.ts';
 
 export interface ThroneChoiceScope {
@@ -12,6 +16,7 @@ export interface ThroneChoiceScope {
   readonly seat: number;
 }
 interface Options {
+  identity?(): string | null;
   scope(): ThroneChoiceScope | null;
   connected(): boolean;
   visible(): boolean;
@@ -21,6 +26,7 @@ interface Options {
   warn?(error: unknown): void;
 }
 const initial: ThroneChoicesSnapshot = freezeGame({
+  mode: null,
   context: null,
   prompt: null,
   preview: false,
@@ -28,7 +34,7 @@ const initial: ThroneChoicesSnapshot = freezeGame({
   open: false,
   notice: '',
 });
-/** Server choices only: no local rules, animations, socket or media resources. */
+/** Shared choices projection; the server/local engine remains the owner of rules. */
 export function createThroneChoices(options: Options) {
   let state = initial,
     started = false,
@@ -36,6 +42,13 @@ export function createThroneChoices(options: Options) {
     scope: ThroneChoiceScope | null = null,
     highest = 0;
   let queued: ThronePrompt | null = null;
+  let localSession: object | null = null;
+  let localIdentity: string | null = null;
+  let localNumber = 0;
+  let pendingLocal: { resolve(value: string | number): void; reject(error: Error): void } | null =
+    null;
+  const abort = () =>
+    Object.assign(new Error('A escolha local foi encerrada.'), { name: 'AbortError' });
   const listeners = new Set<() => void>(),
     cleanup: (() => void)[] = [];
   function update(patch: Partial<ThroneChoicesSnapshot>) {
@@ -43,16 +56,33 @@ export function createThroneChoices(options: Options) {
     const next = { ...state, ...patch };
     state = freezeGame({
       ...next,
-      open: !!next.prompt && !!next.context && options.connected() && options.visible(),
+      open:
+        !!next.prompt &&
+        !!next.context &&
+        (next.mode === 'local' || options.connected()) &&
+        options.visible(),
     });
     listeners.forEach((fn) => fn());
   }
   function clear() {
+    const waiting = pendingLocal;
+    pendingLocal = null;
+    localSession = null;
+    localIdentity = null;
+    waiting?.reject(abort());
     highest = 0;
     queued = null;
     update(initial);
   }
   function sync() {
+    if (localSession) {
+      if ((options.identity?.() ?? null) !== localIdentity) clear();
+      else {
+        const open = !!state.prompt && !!state.context && options.visible();
+        if (open !== state.open) update({});
+      }
+      return;
+    }
     const current = options.scope();
     if (current?.key !== scope?.key || current?.seat !== scope?.seat) {
       scope = current;
@@ -99,6 +129,11 @@ export function createThroneChoices(options: Options) {
   function receive(message: SocketMessage) {
     if (disposed || !started) return;
     sync();
+    if (localSession) {
+      if (message.type !== 'game-started' || !options.connected() || !options.scope()) return;
+      clear();
+      sync();
+    }
     if (!scope || !options.connected()) return;
     try {
       switch (message.type) {
@@ -118,6 +153,7 @@ export function createThroneChoices(options: Options) {
             old?.round === context.round && old.trick === context.trick && old.you === context.you;
           const keep = same && state.prompt && valid(state.prompt, context);
           update({
+            mode: 'online',
             context,
             ...(!keep ? { prompt: null, preview: false, pending: false, notice: '' } : {}),
           });
@@ -161,7 +197,7 @@ export function createThroneChoices(options: Options) {
     sync();
     const { prompt, context } = state;
     if (
-      !scope ||
+      (!localSession && !scope) ||
       !context ||
       !prompt ||
       offered !== prompt ||
@@ -197,6 +233,14 @@ export function createThroneChoices(options: Options) {
         if (typeof value !== 'string' || !prompt.cardIds.includes(value)) return false;
         payload = { cardId: value };
     }
+    if (localSession) {
+      const waiting = pendingLocal;
+      if (!waiting) return false;
+      pendingLocal = null;
+      update({ context: null, prompt: null, preview: false, pending: false, notice: '' });
+      waiting.resolve(value);
+      return true;
+    }
     update({ pending: true, preview: false, notice: '' });
     try {
       if (options.send(prompt.kind, payload)) return true;
@@ -219,6 +263,38 @@ export function createThroneChoices(options: Options) {
     },
     choose,
     clear,
+    beginLocal(): object {
+      clear();
+      if (!started || disposed) throw abort();
+      localSession = {};
+      localIdentity = options.identity?.() ?? null;
+      update({ mode: 'local' });
+      return localSession;
+    },
+    showLocal(
+      session: object,
+      contextValue: unknown,
+      promptValue: unknown,
+    ): Promise<string | number> {
+      sync();
+      if (disposed || !started || session !== localSession) return Promise.reject(abort());
+      if (pendingLocal)
+        return Promise.reject(new Error('Já existe uma escolha local em andamento.'));
+      try {
+        const context = readThroneLocalChoiceContext(contextValue);
+        const prompt = readThronePrompt({
+          ...(typeof promptValue === 'object' && promptValue !== null ? promptValue : {}),
+          id: `p${++localNumber}`,
+        });
+        if (!valid(prompt, context)) throw new Error('Escolha incompatível com a mesa local.');
+        return new Promise((resolve, reject) => {
+          pendingLocal = { resolve, reject };
+          update({ mode: 'local', context, prompt, preview: false, pending: false, notice: '' });
+        });
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    },
     preview(show: boolean) {
       if (!disposed && state.prompt?.kind === 'choose-law' && !state.pending)
         update({ preview: show });
@@ -232,6 +308,7 @@ export function createThroneChoices(options: Options) {
     },
     dispose() {
       if (disposed) return;
+      clear();
       disposed = true;
       queued = null;
       scope = null;

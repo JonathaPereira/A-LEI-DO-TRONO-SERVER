@@ -20,7 +20,6 @@ export function initializeThronePrivate(target: Window): () => void {
   const runtime = target as Runtime,
     doc = target.document,
     board = doc.getElementById('gameScreen')!,
-    modal = doc.getElementById('modal')!,
     badge = doc.getElementById('decreeBadge')!;
   const controller = createThronePrivate({
     scope() {
@@ -36,14 +35,12 @@ export function initializeThronePrivate(target: Window): () => void {
     },
     match: () => runtime.TronoThroneMatch.getSnapshot(),
     connected: () => runtime.TronoNetwork.connected,
-    visible: () =>
-      !doc.hidden && !board.classList.contains('hidden') && modal.classList.contains('hidden'),
+    visible: () => !doc.hidden && !board.classList.contains('hidden'),
     subscribeSource(fn) {
       const lobby = runtime.TronoThroneLobby.subscribe(fn),
         match = runtime.TronoThroneMatch.subscribe(fn),
         observer = new MutationObserver(fn);
       observer.observe(board, { attributes: true, attributeFilter: ['class'] });
-      observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
       target.addEventListener('trono-auth-change', fn);
       doc.addEventListener('visibilitychange', fn);
       return () => {

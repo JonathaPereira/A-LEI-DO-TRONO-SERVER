@@ -124,10 +124,34 @@ export function readThroneChoiceContext(value: unknown, seat: number): ThroneCho
   );
   unique(players.map((p) => p.seat));
   const own = object((raw.players as unknown[]).find((value) => object(value).id === you));
+  return readContext(raw, own, players, you);
+}
+/** Local engine projection: public seats plus the human's own cards, never opponent hands. */
+export function readThroneLocalChoiceContext(value: unknown): ThroneChoiceContext {
+  const raw = object(value);
+  if (raw.you !== 0) throw invalid();
+  const players = array(
+    raw.players,
+    (value) => {
+      const p = object(value);
+      return { seat: integer(p.seat, 0, 3), name: text(p.name) };
+    },
+    4,
+    4,
+  );
+  unique(players.map((p) => p.seat));
+  return readContext(raw, raw, players, 0);
+}
+function readContext(
+  raw: Record<string, unknown>,
+  own: Record<string, unknown>,
+  players: { seat: number; name: string }[],
+  you: number,
+): ThroneChoiceContext {
   const hand = array(own.hand, readThroneCard, 0, 10),
     reserve = own.reserve == null ? null : readThroneCard(own.reserve);
   unique([...hand.map((c) => c.id), ...(reserve ? [reserve.id] : [])]);
-  if (own.handCount !== hand.length) throw invalid();
+  if (own !== raw && own.handCount !== hand.length) throw invalid();
   const usage = object(raw.lawUsage),
     lawUsage = Object.fromEntries(
       throneLaws.map((law) => [law, integer(usage[law], 0, 2)]),

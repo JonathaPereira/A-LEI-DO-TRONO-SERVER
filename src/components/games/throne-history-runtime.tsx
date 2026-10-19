@@ -26,7 +26,6 @@ export function initializeThroneHistory(target: Window): () => void {
     doc = target.document,
     board = doc.getElementById('gameScreen')!,
     panel = doc.getElementById('eventLogPanel')!,
-    modal = doc.getElementById('modal')!,
     toggleHost = doc.getElementById('throneLogToggleHost')!;
   const identity = () =>
     runtime.TronoAuth.user
@@ -48,7 +47,6 @@ export function initializeThroneHistory(target: Window): () => void {
     visible: () =>
       !doc.hidden &&
       !board.classList.contains('hidden') &&
-      modal.classList.contains('hidden') &&
       !runtime.TronoThronePrivate.getSnapshot().open,
     now: () => Date.now(),
     subscribeSource(fn) {
@@ -59,7 +57,6 @@ export function initializeThroneHistory(target: Window): () => void {
         ],
         observer = new MutationObserver(fn);
       observer.observe(board, { attributes: true, attributeFilter: ['class'] });
-      observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
       target.addEventListener('trono-auth-change', fn);
       doc.addEventListener('visibilitychange', fn);
       return () => {

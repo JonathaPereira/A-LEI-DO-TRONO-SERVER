@@ -1,3 +1,4 @@
+import type { ThroneChoices } from '../../lib/games/throne-choices';
 import type { ThroneHistory } from '../../lib/games/throne-history';
 import type { ThronePrivate } from '../../lib/games/throne-private';
 import { flushSync } from 'react-dom';
@@ -14,6 +15,7 @@ interface Runtime extends Window {
   TronoThroneLobby: ThroneLobby;
   TronoThronePrivate: ThronePrivate;
   TronoThroneHistory: ThroneHistory;
+  TronoThroneChoices: ThroneChoices;
   TronoThroneHand?: ThroneHand;
 }
 const installed = new WeakMap<Window, () => void>();
@@ -24,8 +26,8 @@ export function initializeThroneHand(target: Window): () => void {
     doc = target.document,
     board = doc.getElementById('gameScreen')!,
     local = doc.getElementById('throneLocalHand')!,
-    host = doc.getElementById('throneOnlineHand')!,
-    localModal = doc.getElementById('modal')!;
+    host = doc.getElementById('throneOnlineHand')!;
+
   const controller = createThroneHand({
     identity: () =>
       runtime.TronoAuth.user
@@ -48,21 +50,22 @@ export function initializeThroneHand(target: Window): () => void {
     visible: () =>
       !doc.hidden &&
       !board.classList.contains('hidden') &&
-      localModal.classList.contains('hidden') &&
+      !runtime.TronoThroneChoices.getSnapshot().open &&
       !runtime.TronoThronePrivate.getSnapshot().open &&
       !runtime.TronoThroneHistory.getSnapshot().resultOpen,
     subscribeSource(fn) {
+      const choiceRelease = runtime.TronoThroneChoices.subscribe(fn);
       const privateRelease = runtime.TronoThronePrivate.subscribe(fn);
       const historyRelease = runtime.TronoThroneHistory.subscribe(fn);
       const release = runtime.TronoThroneLobby.subscribe(fn),
         observer = new MutationObserver(fn);
       observer.observe(board, { attributes: true, attributeFilter: ['class'] });
-      observer.observe(localModal, { attributes: true, attributeFilter: ['class'] });
       target.addEventListener('trono-auth-change', fn);
       doc.addEventListener('visibilitychange', fn);
       return () => {
         release();
         privateRelease();
+        choiceRelease();
         historyRelease();
         observer.disconnect();
         target.removeEventListener('trono-auth-change', fn);

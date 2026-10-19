@@ -25,7 +25,6 @@ export function initializeThroneTable(target: Window): () => void {
   host.hidden = true;
   doc.body.append(host);
   const controller = createThroneTable({
-    rules: runtime.TronoRules,
     source: runtime.TronoThroneMatch.getSnapshot,
     subscribeSource: runtime.TronoThroneMatch.subscribe,
     warn: (error) => console.warn('[ThroneTable]', error),
