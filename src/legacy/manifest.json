@@ -2,7 +2,6 @@
   "scripts": [
     "auth-boot.js",
     "desktop-platform.js",
-    "application-audio.js",
     "audio.js",
     "auth.js",
     "light-noise.js",

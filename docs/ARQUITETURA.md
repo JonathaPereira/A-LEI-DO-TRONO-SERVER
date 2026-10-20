@@ -1011,6 +1011,19 @@ de worklet ao Window. `prepare-renderer.cjs` compila os dois e conserva os camin
 `application-audio-worklet.js`/`light-noise-worklet.js`; esses JS são gerados.
 Os dois fontes antigos saíram de `legacy/`. RNNoise e seus recursos foram preservados.
 
+`lib/voice/application-audio.ts` possui os grafos de áudio por aplicativo e os jobs
+nativos por ID, com um listener de IPC. Valida metadados/PCM, conserva a conversão
+int16 little-endian e devolve créditos mesmo ao descartar pacotes inválidos ou sem
+consumidor. Uma segunda criação do mesmo ID reutiliza a preparação/grafo existente.
+Fechar, perder a fonte ou falhar o processador cancela preparos, remove listeners,
+fecha a porta e encerra somente a trilha/contexto próprios. O stop do C++ começa
+sem aguardar o fechamento do contexto. Promessas tardias são observadas e não
+recriam grafos descartados. Microfone e vídeo da chamada não pertencem a esse dono.
+`application-audio-runtime.ts` adapta preload, módulo estático e pagehide; mantém
+`TronoApplicationAudio.create` para o seletor ainda legado, sem criar contexto no
+boot. O descarte remove o listener nativo e a fachada; um descarte antigo não pode
+remover uma instalação posterior. `legacy/application-audio.js` foi removido.
+
 `lib/voice/runtime.ts` compõe os donos da chamada por imports diretos, com uma
 instância por janela. O bootstrap instala preferências tipadas antes dos scripts
 e inicializa a voz após `noise-suppression.js`; os listeners iniciam uma única vez

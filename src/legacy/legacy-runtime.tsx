@@ -6,6 +6,7 @@ import { initializeThroneNavigation } from '../components/games/throne-navigatio
 import { initializeCommunityNavigation } from '../components/navigation/community-navigation-runtime';
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
+import { initializeApplicationAudio } from '../lib/voice/application-audio-runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
@@ -104,6 +105,7 @@ export function LegacyRuntime() {
           initializeChannelManagement(window);
         }
         if (filename !== 'auth-boot.js') await loadScript(filename);
+        if (filename === 'desktop-platform.js') initializeApplicationAudio(window);
         if (filename === 'auth.js') {
           initializePortal(window);
           initializeProfileEditor(window);

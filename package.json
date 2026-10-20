@@ -46,7 +46,7 @@
     "desktop:dev": "node scripts/dev-desktop.cjs",
     "test:voice:sfu": "node --test tests/sfu-session.cjs",
     "test:voice:peers": "node --test tests/p2p-peers.cjs tests/remote-media.cjs",
-    "test:voice:capture": "node --test tests/audio-worklets.cjs tests/microphone.cjs tests/microphone-processor.cjs tests/screen-capture.cjs tests/camera.cjs",
+    "test:voice:capture": "node --test tests/application-audio.cjs tests/audio-worklets.cjs tests/microphone.cjs tests/microphone-processor.cjs tests/screen-capture.cjs tests/camera.cjs",
     "test:files": "node --test tests/files-client.cjs tests/file-library.cjs",
     "test:files:ui": "node --test tests/file-library-browser.cjs",
     "test:channels": "node --test tests/channels.cjs tests/channel-management.cjs tests/channel-files.cjs",
@@ -88,7 +88,9 @@
     "test:recording": "node --test tests/manual-recording.cjs tests/manual-recording-browser.cjs",
     "test:activity:native": "node --test tests/desktop-activity-native.cjs",
     "test:voice:worklets": "node --test tests/audio-worklets.cjs tests/application-audio-worklet-browser.cjs tests/light-noise-processing.js",
-    "test:voice:worklets:native": "node --test tests/audio-worklets-native.cjs"
+    "test:voice:worklets:native": "node --test tests/audio-worklets-native.cjs",
+    "test:voice:application": "node --test tests/application-audio.cjs",
+    "test:voice:application:native": "node --test tests/application-audio-native.cjs"
   },
   "engines": {
     "node": ">=24.12.0"
