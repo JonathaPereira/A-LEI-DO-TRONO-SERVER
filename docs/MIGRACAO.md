@@ -29,7 +29,7 @@ O histórico das etapas anteriores permanece no Git.
 | Clipes | `lib/clips/` possui buffer WebM, worker, sessão, armazenamento, exportação, preferências, coordenação e ponte Windows; biblioteca e controles em React. |
 | Gravação manual | `lib/recording/` possui captura, mixer, encoder e escrita; `components/recording/` possui controles e runtime único. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; `sessions.ts`, `ice.ts` e `bot-names.ts` já foram extraídos. Restam serviços JS e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões e ICE já foram extraídos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -45,12 +45,18 @@ recursos em `public/roguelite/` foram preservados.
   da chamada não é encerrado.
 - `personal-prefs.js` e `rtc-config.js`: preferências e defaults RTC consolidados,
   preservando chaves existentes, STUN e pool de quatro candidatos.
-- `bot-names.js`: nenhum consumidor no renderer; sequência agora pertence ao backend.
-  O teste do pacote consulta o manifesto atual em vez de exigir scripts já removidos.
+- `bot-names.js`: sequência compartilhada em `lib/games/bot-names.ts`, importada
+  pelos serviços e pelo protótipo local, sem global. A remoção inicial havia deixado
+  esse consumidor local sem import; o teste nativo expôs a falha e agora verifica
+  também os quatro nomes. O teste do pacote consulta o manifesto atual em vez de
+  exigir scripts já removidos.
 - `profile-data.js` e `server/profile-customization.js`: validação de escrita
   compartilhada em `lib/profiles/validation.ts`, com entrada HTTP tipada como
   `unknown` em `server/profile-customization.ts`. Leitura tolerante de registros
   antigos continua separada; erros, defaults e regras de gravação foram preservados.
+- `azul-rules.js` e `azul-presentation.js`: motor e passos de pontuação tipados em
+  `lib/games/`, importados diretamente. Servidor conserva autoridade e pilhas
+  privadas; não há mais globais de regras/apresentação no renderer.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -66,8 +72,8 @@ O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 - Áudio: `audio.js`, `application-audio.js`, `light-noise.js`,
   `noise-suppression.js` e os worklets correspondentes.
 - Soundboard: `soundboard-client.js`.
-- Regras compartilhadas: `azul-rules.js`, `azul-presentation.js`,
-  `splendor-data.js`, `splendor-rules.js`, `love-letter-rules.js`.
+- Regras compartilhadas: `splendor-data.js`, `splendor-rules.js`,
+  `love-letter-rules.js`.
 
 `call-controls-layout.js` já é gerado do módulo TypeScript
 `lib/voice/control-layout.ts`; sua presença no manifesto não indica um controlador
@@ -129,7 +135,8 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Verificação | Resultado |
 | --- | --- |
 | `npm run typecheck`, `npm run format:check`, `npm run build` | Passaram. |
-| `npm test` | Cadeia completa de backend, jogos e modelos passou após a extração dos nomes dos bots. |
+| `npm test` | Cadeia completa de backend, jogos e modelos passou após a conversão de Azul e correção do import dos bots locais. |
+| Azul tipado | Paridade exata em 120 partidas (8.433 jogadas/601 replays); 25 regressões de regras/controle/SQL/WS e três casos de interface passaram. |
 | `npm run test:clips` | 55 verificações passaram; inclui persistência, quota, exportação, encoder, ponte e descarte. |
 | `npm run test:recording` | 14 verificações passaram; inclui cancelamento, mixer, finalização e arquivo decodificado. |
 | `npm run test:settings` | 137 verificações passaram após consolidar preferências. |
@@ -140,7 +147,9 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Pacote Windows sem instalador + `tests/desktop-packaged.js` | Executável real, recursos locais e RNNoise passaram com perfil temporário. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
-`manual-recording-*`, `personal-preferences-*`, `bot-names-*` e `profile-validation-*`.
+`manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
+e `azul-core-*`. As primeiras execuções nativas de `azul-core-desktop*` registram
+a regressão do import dos bots; `azul-core-desktop-fixed.log` registra a correção.
 O executável local de conferência está em
 `artifacts/windows-app/win-unpacked/MN Trono.exe`; não substitui a instalação.
 

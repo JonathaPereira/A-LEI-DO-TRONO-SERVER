@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),WebSocket=require('ws'),{startFixture}=require('./auth-fixture'),R=require('../src/legacy/azul-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),WebSocket=require('ws'),{startFixture}=require('./auth-fixture'),R=require('../src/lib/games/azul-rules.ts');
 async function client(base,token){const ws=new WebSocket(base.replace(/^http/,'ws')+'/ws'),messages=[],waiters=[];ws.on('message',raw=>{const msg=JSON.parse(raw);messages.push(msg);for(const w of [...waiters])if(w.p(msg)){clearTimeout(w.timer);waiters.splice(waiters.indexOf(w),1);w.resolve(msg);}});await new Promise((r,j)=>{ws.once('open',r);ws.once('error',j);});const c={ws,messages,send:m=>ws.send(JSON.stringify(m)),wait(p,after=0){const found=messages.slice(after).find(p);if(found)return Promise.resolve(found);return new Promise((resolve,reject)=>{const w={p,resolve,timer:setTimeout(()=>reject(Error('Timeout '+p)),8000)};waiters.push(w);});}};if(token){c.send({type:'authenticate',access_token:token});await c.wait(m=>m.type==='auth-result'&&m.ok);}return c;}
 test('Azul online is server-authoritative and independent of text/voice/Trono; completed records persist after restart',{timeout:40000},async()=>{
  const f=await startFixture({port:10741}),clients=[];

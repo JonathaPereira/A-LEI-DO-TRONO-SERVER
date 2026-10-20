@@ -4,7 +4,7 @@ interface BotPlayer {
   readonly ai?: boolean;
 }
 export const names = Object.freeze(['Epaminondas', 'Bonifácio', 'Cícero']);
-/** Shared by all tabletop services; human names do not reserve bot names. */
+/** Shared by local games and tabletop services; human names do not reserve bot names. */
 export function next(players: readonly BotPlayer[] = []): string {
   const used = new Set(
     players.filter((player) => player.bot || player.ai).map((player) => player.name),

@@ -1,7 +1,7 @@
 'use strict';
-const Bots = require('./bot-names.ts');
+const Bots = require('../src/lib/games/bot-names.ts');
 const crypto = require('node:crypto'),
-  Rules = require('../src/legacy/azul-rules');
+  Rules = require('../src/lib/games/azul-rules.ts');
 const failure = (code, message) => Object.assign(Error(message), { code });
 function createAzulService({
   auth,

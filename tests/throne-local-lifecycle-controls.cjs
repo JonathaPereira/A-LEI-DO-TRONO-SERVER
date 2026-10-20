@@ -61,6 +61,12 @@ async function exerciseLocalLifecycle(page) {
     window.__releaseLocalPreparation();
   });
   await expect(page.locator('#gameScreen')).toBeVisible();
+  const localNames = await page.evaluate(() => ({
+    global: typeof window.TronoBots,
+    names: window.__LeiDoTrono.getState().players.map((player) => player.name),
+  }));
+  assert.equal(localNames.global, 'undefined');
+  assert.deepEqual(localNames.names, ['Epaminondas', 'Bonifácio', 'Cícero', 'Epaminondas 2']);
   await page.evaluate(() => {
     const old = window.__LeiDoTrono.getState().localSession;
     window.__oldLocalRun = old;

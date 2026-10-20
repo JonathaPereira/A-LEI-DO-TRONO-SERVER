@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
+import { at as botName } from '../../lib/games/bot-names';
 import {
   createThroneLocalLifecycle,
   type ThroneLocalLifecycle,
@@ -35,7 +36,6 @@ interface Runtime extends Window {
   TronoThroneSeats: ThroneSeats;
   TronoThroneTable: ThroneTable;
   TronoThroneControls: ThroneControls;
-  TronoBots: { at(index: number): string };
   TronoThroneBoard?: {
     enterLocal(): void;
     backToLobby(): void;
@@ -61,7 +61,7 @@ export function initializeThroneLocal(target: Window): () => void {
     history: runtime.TronoThroneHistory,
     effects: runtime.TronoThroneEffects,
     random: () => Math.random(),
-    botName: (index) => runtime.TronoBots.at(index),
+    botName,
     scale: () => runtime.TronoThroneControls.getSnapshot().scale,
     show() {
       runtime.TronoThroneBoard!.enterLocal();

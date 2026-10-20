@@ -1,8 +1,8 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const R = require('../src/legacy/azul-rules');
-const P = require('../src/legacy/azul-presentation');
+const R = require('../src/lib/games/azul-rules.ts');
+const P = require('../src/lib/games/azul-presentation.ts');
 const modules = Promise.all([
   import('../src/lib/games/azul.ts'),
   import('../src/lib/games/azul-protocol.ts'),

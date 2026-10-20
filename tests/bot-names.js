@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test'),
   assert = require('node:assert/strict'),
-  Bots = require('../server/bot-names.ts');
+  Bots = require('../src/lib/games/bot-names.ts');
 test('all tabletop services use the same names, number extra bots, and keep replacement names after account changes', () => {
   assert.deepEqual(Bots.names, ['Epaminondas', 'Bonifácio', 'Cícero']);
   assert.equal(Bots.at(3), 'Epaminondas 2');

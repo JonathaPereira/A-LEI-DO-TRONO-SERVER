@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),express=require('express'),WebSocket=require('ws'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture'),R=require('../src/legacy/azul-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),express=require('express'),WebSocket=require('ws'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture'),R=require('../src/lib/games/azul-rules.ts');
 async function peer(base,token){const ws=new WebSocket(base.replace(/^http/,'ws')+'/ws'),messages=[];ws.on('message',raw=>messages.push(JSON.parse(raw)));await new Promise(r=>ws.once('open',r));const wait=async fn=>{for(let n=0;n<400;n++){const found=messages.findLast(fn);if(found)return found;await new Promise(r=>setTimeout(r,10));}throw Error('Missing peer message');};const send=m=>ws.send(JSON.stringify(m));send({type:'authenticate',access_token:token});await wait(m=>m.type==='auth-result'&&m.ok);return {ws,messages,send,wait};}
 const {installCanvasCamera}=require('./camera-fixture');
 test('Azul actual interface, both layouts and portrait displays keep the call and allow a full match',{timeout:180000},async t=>{

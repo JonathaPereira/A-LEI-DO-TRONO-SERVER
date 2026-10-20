@@ -2,14 +2,14 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { createAzul } from '../../lib/games/azul';
 import { createGameFullscreen } from '../../lib/games/fullscreen';
-import type { AzulRoom, AzulRules, AzulPresentation } from '../../types/azul';
+import * as rules from '../../lib/games/azul-rules';
+import * as presentation from '../../lib/games/azul-presentation';
+import type { AzulRoom } from '../../types/azul';
 import type { NetworkClient } from '../../lib/socket/client';
 import { AzulContents } from './azul-contents';
 import { createAzulAnimations } from './azul-animations';
 
 interface Runtime extends Window {
-  AzulRules: AzulRules;
-  AzulPresentation: AzulPresentation;
   TronoAuth: { user: { id: string } | null };
   TronoNetwork: NetworkClient;
   TronoPortal: { showOnly(id: string): void };
@@ -47,8 +47,8 @@ export function initializeAzul(target: Window): () => void {
     send: (action, payload) => runtime.TronoNetwork.azul(action, payload),
     visible,
     reducedMotion: () => motion.matches,
-    rules: runtime.AzulRules,
-    presentation: runtime.AzulPresentation,
+    rules,
+    presentation,
     uuid: () => target.crypto.randomUUID(),
     animate: (step, points) => animations?.step(step, points),
     captureMove: (room) => animations?.captureMove(room),
@@ -98,9 +98,7 @@ export function initializeAzul(target: Window): () => void {
     if (disposed || root) return;
     root = createRoot(screen);
     flushSync(() =>
-      root!.render(
-        <AzulContents controller={controller} fullscreen={fullscreen} rules={runtime.AzulRules} />,
-      ),
+      root!.render(<AzulContents controller={controller} fullscreen={fullscreen} rules={rules} />),
     );
     animations = createAzulAnimations({
       screen,

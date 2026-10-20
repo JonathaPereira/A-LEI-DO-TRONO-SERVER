@@ -138,13 +138,11 @@ test(
               '/roguelite/core.js',
               '/roguelite/game.js',
               '/roguelite-host.css',
-              '/azul-presentation.js',
               '/azul-art.css',
               '/assets/azul/tiles-and-factories.png',
               '/assets/azul/mural.png',
               '/assets/azul/box-cover.webp',
               '/assets/azul/wood-table.png',
-              '/azul-rules.js',
               '/games.css',
               '/court.css',
               '/app-layout.css',
@@ -224,19 +222,24 @@ test(
           page.locator('.games-cinzas-art').evaluate((n) => n.complete && n.naturalWidth > 0),
         )
         .toBe(true);
-      assert.equal(
-        await page.evaluate(
-          () =>
-            window.AzulRules.create([
-              { id: 'a', name: 'A' },
-              { id: 'b', name: 'B' },
-            ]).factories.length,
-        ),
-        5,
-      );
       await page.screenshot({
         path: path.resolve(__dirname, '../artifacts/windows-games-catalogue.png'),
       });
+      await page.locator('#playAzul').click();
+      await expect(page.locator('#azulScreen')).toBeVisible();
+      // A fresh packaged profile has no account: opening a network game requests login.
+      await expect(page.locator('#authDialog')).toBeVisible();
+      await page.locator('#authCloseBtn').click();
+      await expect(page.locator('#authDialog')).toBeHidden();
+      await expect(page.locator('#azulTurnStatus')).toHaveText('Escolha sua mesa');
+      await page.locator('#azulRulesButton').click();
+      await expect(page.locator('#azulRulesDialog')).toBeVisible();
+      await page.locator('#azulRulesClose').click();
+      assert.deepEqual(
+        await page.evaluate(() => [typeof window.AzulRules, typeof window.AzulPresentation]),
+        ['undefined', 'undefined'],
+      );
+      await page.locator('#azulBack').click();
       phase = 'installed roguelite preparation';
       await page.evaluate(() =>
         window.addEventListener('message', (e) => {

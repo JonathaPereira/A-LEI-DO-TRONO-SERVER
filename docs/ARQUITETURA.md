@@ -675,9 +675,12 @@ em React. `azul-animations.ts` somente mede os nós React e escreve numa camada
 vazia de efeitos; libera animações e frames no cancelamento. `lib/games/fullscreen.ts`
 possui o gesto de tela cheia, fallback, Escape e operações atrasadas do Azul.
 Não interfere na tela cheia de outra mídia. O runtime conserva os hosts e remove
-listeners/observadores ao descartar. As regras CommonJS e a construção pura dos
-passos de apresentação continuam compartilhadas em `legacy/azul-rules.js` e
-`legacy/azul-presentation.js`; sua extração será feita junto aos módulos compartilhados.
+listeners/observadores ao descartar. `lib/games/azul-rules.ts` possui o motor puro
+compartilhado com o servidor, incluindo pilhas privadas de compra/descarte, jogadas,
+bots e pontuação. `publicState()` projeta somente a mesa pública. O cliente importa
+regras diretamente; `azul-presentation.ts` constrói/aplica cópias dos passos sem
+recalcular ou enviar pontuações ao servidor. Os dois scripts legados, entradas no
+manifesto e globais `AzulRules`/`AzulPresentation` foram removidos.
 
 `lib/games/splendor.ts` possui mesa, seleção de fichas, pagamento com ouro,
 devoluções, ranking, diálogos e apresentação das negociações. `splendor-protocol.ts`
@@ -1844,11 +1847,12 @@ registra sinais. `index.ts` valida porta/host e trata o processo.
 `runtime.cjs` contém composição e regras de A Lei do Trono ainda por extrair.
 Os serviços existentes foram movidos para `server/` e formatados.
 
-`server/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
-bots. A Lei do Trono, Azul, Splendor e Love Letter importam esse módulo tipado;
-nenhum consumidor permanece no renderer. `legacy/bot-names.js` e o download
-estático correspondente saíram, e o boot dos controladores da mesa não depende
-mais desse script. O teste do pacote busca scripts/estilos pelo manifesto atual,
+`lib/games/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
+bots. Os quatro serviços de jogos e o protótipo local de A Lei do Trono importam
+esse módulo tipado diretamente, sem `TronoBots`. O fluxo nativo verifica também
+os nomes da partida local; apenas testar os serviços não cobre esse consumidor.
+`legacy/bot-names.js` e o download estático correspondente saíram, e o boot dos
+controladores da mesa não depende mais desse script. O teste do pacote busca scripts/estilos pelo manifesto atual,
 além das imagens, worklets, manual e recursos dos jogos, sem exigir controladores
 JS já substituídos pelo bundle Next.
 
