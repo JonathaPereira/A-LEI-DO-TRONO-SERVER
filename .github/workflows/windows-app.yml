@@ -2,7 +2,7 @@ name: Windows full app
 on:
   push:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*']
-    paths: ['desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/sfu-*.js', 'remote-pc.js', 'tests/remote-pc*.js', 'tests/floating-call-browser.js', 'tests/member-profiles.js', 'profile-customization.js', 'community-management.js', 'tests/giphy-provider.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/native-microphone-browser.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
+    paths: ['.gitattributes', 'desktop/**', 'frontend/**', 'tests/desktop-*.js', 'tests/app-layout-browser.js', 'tests/profile-media*.js', 'tests/sfu-*.js', 'remote-pc.js', 'voice-moderation.js', 'realtime-sfu.js', 'roles.js', 'tests/voice-moderation*.js', 'tests/remote-coop.js', 'tests/remote-pc*.js', 'tests/floating-call-browser.js', 'tests/member-profiles.js', 'profile-customization.js', 'community-management.js', 'tests/giphy-provider.js', 'tests/game-*.js', 'server.js', 'azul-service.js', 'splendor-service.js', 'love-letter-service.js', 'tests/splendor-*.js', 'tests/love-letter-*.js', 'tests/bot-names.js', 'tests/voice-*.js', 'tests/native-microphone-browser.js', 'tests/azul-*.js', 'tests/cinzas/**', 'tests/cinzas-upstream.js', 'tests/roguelite-browser.js', 'tests/build-downloads.js', 'tests/site-package.js', 'tests/download-retention.js', 'community.js', 'chat-history.js', 'files.js', 'social-service.js', 'supabase/**', 'tests/chat-moderation-*.js', 'tests/direct-attachments*', '.github/workflows/windows-app.yml']
   workflow_dispatch:
     inputs:
       refresh_instructions:
@@ -84,13 +84,42 @@ jobs:
             exit $buildExit
           }
         working-directory: desktop/app
+      - name: Prepare optional signed virtual controller driver for isolated XInput tests
+        shell: pwsh
+        run: |
+          # Windows Server lacks the Microsoft Xbox function driver present on
+          # normal Windows desktops. Stage the signed original package in CI only.
+          $xbox = Join-Path $env:RUNNER_TEMP 'Xbox360_64Eng.exe'
+          Invoke-WebRequest 'https://raw.githubusercontent.com/Zalafina/ViGEmBus_v1.16.116_Win7_InstallFiles/5c2e60100b13186e87b3a9a60ac69f07169739bb/1_pre_install_files/x64/Xbox360_64Eng.exe' -OutFile $xbox
+          if ((Get-FileHash $xbox -Algorithm SHA256).Hash.ToLower() -ne '0e72ed6d89d9b89690fde8122f46fa851740ef18e850d98d45e56f85a6682994') { throw 'Unexpected Xbox driver package hash' }
+          $xboxSignature = Get-AuthenticodeSignature $xbox
+          if ($xboxSignature.Status -ne 'Valid' -or $xboxSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'Invalid Microsoft Xbox package signature' }
+          $xboxRoot = Join-Path $env:RUNNER_TEMP 'Xbox360-original'
+          & "$env:ProgramFiles\7-Zip\7z.exe" x $xbox "-o$xboxRoot" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Xbox driver extraction failed' }
+          $xboxInf = Join-Path $xboxRoot 'xbox360\setup64\files\driver\win7\xusb21.inf'
+          pnputil /add-driver $xboxInf /install
+          if ($LASTEXITCODE -notin 0,3010) { throw 'Microsoft Xbox driver staging failed' }
+          $driver = Join-Path $env:RUNNER_TEMP 'ViGEmBus-1.22.0.exe'
+          Invoke-WebRequest 'https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe' -OutFile $driver
+          if ((Get-FileHash $driver -Algorithm SHA256).Hash.ToLower() -ne '89220a7865076b342892f98865f3499fb7c4cfd673159e89d352c360fd014c6a') { throw 'Unexpected driver hash' }
+          $signature = Get-AuthenticodeSignature $driver
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Nefarius') { throw 'Invalid driver signature' }
+          # Advanced Installer flags (not WiX). The runner is Windows Server;
+          # skip only the installer's desktop OS check in this disposable VM.
+          $log = Join-Path $env:RUNNER_TEMP 'ViGEmBus-install.log'
+          $install = Start-Process $driver -ArgumentList '/exenoui','/qn','/norestart','AI_SKIP_SYSTEM_REQUIREMENTS=1','/l*v',"`"$log`"" -PassThru
+          if (-not $install.WaitForExit(120000)) { Stop-Process $install.Id -Force; if (Test-Path $log) { Get-Content $log -Tail 60 }; throw 'Virtual controller driver installation timed out' }
+          $install.Refresh()
+          if ($install.ExitCode -notin 0,3010) { if (Test-Path $log) { Get-Content $log -Tail 80 }; throw "Driver installation failed: $($install.ExitCode)" }
       - name: Verify remote PC beta media, consent and real native input
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test --test-concurrency=1 tests/remote-pc.js tests/desktop-remote-input.js tests/remote-pc-browser.js tests/desktop-remote-native.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          node --test --test-concurrency=1 tests/remote-pc.js tests/remote-coop.js tests/desktop-remote-input.js tests/desktop-remote-gamepad.js tests/remote-pc-browser.js tests/desktop-remote-native.js tests/voice-moderation.js tests/voice-moderation-browser.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
+            Get-PnpDevice | Where-Object { $_.FriendlyName -match 'Xbox|ViGEm|Virtual Gamepad' } | Format-List Status,Class,FriendlyName,InstanceId,Problem
             $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Remote PC beta::$details"
             exit $testExit

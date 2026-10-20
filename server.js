@@ -5,6 +5,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 const {RemotePc}=require('./remote-pc');
+const {VoiceModeration}=require('./voice-moderation');
 const { RealtimeSfuManager } = require('./realtime-sfu');
 const { createAuth } = require('./auth');
 const {createFiles}=require('./files');
@@ -73,6 +74,7 @@ for (const [id,name,description] of CHAT_CHANNELS) rooms.set(id,{id,name,descrip
 
 const realtimeSfu = new RealtimeSfuManager({rooms,send,broadcastVoiceRoster,chatOnlyRoomId:CHAT_ONLY_ROOM_ID,version:VERSION});
 const remotePc=new RemotePc({rooms,send,ice:()=>realtimeSfu._turnIceServers().catch(()=>({iceServers:[{urls:['stun:stun.cloudflare.com:3478']}],turn:false}))});
+const voiceModeration=new VoiceModeration({rooms,send,changed:room=>{broadcastRoom(room);broadcastRooms();broadcastChatChannels();broadcastVoiceRoster(room);realtimeSfu.broadcastPublications(room);},removed:(room,p)=>{p.voiceJoined=false;p.voiceMuted=false;p.voiceDeafened=false;p.cameraOn=false;p.screenOn=false;remotePc.disconnect(p.ws);void realtimeSfu.cleanupClient(p.id,room.id);broadcastVoiceEvent(room,p,'left','moderation');resetVoiceModeIfEmpty(room);},restricted:(room,p)=>{if(p.mediaBlocked)remotePc.disconnect(p.ws);return realtimeSfu.enforceModeration(room,p);}});
 const remoteSweep=setInterval(()=>remotePc.sweep(),2000);remoteSweep.unref();
 
 const rand = n => Math.floor(Math.random()*n);
@@ -150,7 +152,7 @@ function safeRoom(room) {
 }
 function privateVoiceRoster(room){
   return [...room.players.values()].filter(p=>p.voiceJoined).sort((a,b)=>a.seat-b.seat).map(p=>({
-    id:p.id,accountId:p.ws.account?.id||null,name:p.name,guest:!!p.guest,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,muted:!!p.voiceMuted,deafened:!!p.voiceDeafened,camera:!!p.cameraOn,screen:!!p.screenOn,
+    id:p.id,accountId:p.ws.account?.id||null,name:p.name,guest:!!p.guest,avatar_preset:p.avatar_preset||'crown',avatar_file_id:p.avatar_file_id||null,seat:p.seat,role:p.guest?'guest':p.ws.account?.role||'member',serverMuted:!!p.serverMuted,mediaBlocked:!!p.mediaBlocked,muted:!!p.voiceMuted,deafened:!!p.voiceDeafened,camera:!!p.cameraOn,screen:!!p.screenOn,
     transport:p.mediaTransport||'p2p',quality:p.transmissionQuality||'balanced',screenFps:p.screenFps||30
   }));
 }
@@ -398,11 +400,13 @@ function forceRoomP2p(room,reason='A chamada foi sincronizada em P2P para todos.
 }
 function prepareVoice(ws,message){if(!ws.roomId&&ws.gameRoomId){ws.roomId=ws.gameRoomId;send(ws,{type:'voice-room-attached',room:safeRoom(rooms.get(ws.roomId))});}const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!player){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'NOT_IN_ROOM',message:'Entre em um canal primeiro.'}});return;}
   if(room.channelType==='text'){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'TEXT_CHANNEL',message:'Entre em um canal de voz para iniciar uma chamada.'}});return;}
-  const mode=chooseVoiceMode(room);send(ws,{type:'sfu-response',requestId:message.requestId,ok:true,data:{mode,revision:room.voiceRevision}});sendVoiceMode(room);
+  if(!voiceModeration.mayJoin(room,ws)){send(ws,{type:'sfu-response',requestId:message.requestId,ok:false,error:{code:'VOICE_BLOCKED',message:'Você foi removido desta chamada por 5 minutos.'}});return;}
+  const mode=chooseVoiceMode(room);send(ws,{type:'sfu-response',requestId:message.requestId,ok:true,data:{mode,revision:room.voiceRevision,moderation:voiceModeration.state(room,ws)}});sendVoiceMode(room);
 }
 function handleVoiceState(ws,message){
   const room=rooms.get(ws.roomId),player=room?.players.get(ws.clientId);if(!room||!player)return;
   if(room.channelType==='text'){send(ws,{type:'error',code:'TEXT_CHANNEL',message:'Este canal é somente de texto.'});return;}
+  if(message.joined&&!voiceModeration.mayJoin(room,ws))return;
   const previousTransport=player.mediaTransport;
   const previouslyJoined=!!player.voiceJoined;
   if(message.joined){chooseVoiceMode(room);if(message.transport==='p2p'||(!player.voiceJoined&&[...room.players.values()].filter(p=>p.voiceJoined).length>=realtimeSfu.statusPayload().maxParticipants))forceRoomP2p(room);}
@@ -413,6 +417,7 @@ function handleVoiceState(ws,message){
   player.voiceDeafened=player.voiceJoined&&!!message.deafened;
   player.cameraOn=player.voiceJoined&&!!message.camera;
   player.screenOn=player.voiceJoined&&!!message.screen;
+  voiceModeration.enforce(room,player);
   const q=String(message.quality||player.transmissionQuality||'balanced');
   player.transmissionQuality=['economy','balanced','high'].includes(q)?q:'balanced';
   player.screenFps=[15,30,60].includes(message.screenFps)?message.screenFps:player.screenFps||30;
@@ -928,19 +933,19 @@ const azulService=createAzulService({auth:accountAuth,wss,send});
 const splendorService=createSplendorService({auth:accountAuth,wss,send});
 const loveLetterService=createLoveLetterService({wss,send});
 const socialService=createSocialService({auth:accountAuth,wss,send,rooms,files:fileStorage});
-const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else if(p.ws.independentGames)leaveVoiceRoom(p.ws,'channel-deleted');else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room)broadcastRoom(room);}community.broadcast();void community.refreshDirectory();}});
+const communityManagement=createCommunityManagement({auth:accountAuth,rooms,db:(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)?fileStorage.db:null,onChanged:broadcastChatChannels,onDeleted:room=>{for(const p of [...room.players.values()]){if(p.ws.textRoomId===room.id)leaveTextRoom(p.ws);else if(p.ws.independentGames)leaveVoiceRoom(p.ws,'channel-deleted');else leaveRoom(p.ws,'channel-deleted',true);send(p.ws,{type:'channel-deleted',roomId:room.id});}},onRoleChanged:(id,role)=>{for(const ws of wss.clients)if(ws.account?.id===id){ws.account.role=role;send(ws,{type:'role-updated',role,permissions:permissions(role)});const room=rooms.get(ws.roomId);if(room){broadcastRoom(room);broadcastVoiceRoster(room);}}community.broadcast();void community.refreshDirectory();}});
 fileStorage.install(app);
 communityManagement.install(app,express);
 socialService.install(app,express);
 app.get('/',(_req,res)=>res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`));
-app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{remotePc:true,loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),azul:azulService.health(),splendor:splendorService.health(),loveLetter:loveLetterService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
+app.get('/health',(_req,res)=>res.json({ok:true,version:VERSION,features:{remotePc:true,remotePcProtocol:2,loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true},auth:accountAuth.health(),files:fileStorage.health(),presence:community.health(),chatHistory:chatHistory.health(),social:socialService.health(),azul:azulService.health(),splendor:splendorService.health(),loveLetter:loveLetterService.health(),community:communityManagement.health(),rooms:safeRooms(),chatOnlyCount:[...rooms.values()].filter(r=>r.kind==='chat').reduce((n,r)=>n+r.players.size,0),chatChannels:safeChatChannels(),realtime:realtimeSfu.publicHealth(),uptime:process.uptime()}));
 app.get('/realtime/status',(_req,res)=>res.json(realtimeSfu.statusPayload()));
 app.get('/rooms',(_req,res)=>res.json({rooms:safeRooms()}));
 
 wss.on('connection',(ws)=>{
   ws.clientId=crypto.randomUUID();ws.roomId=null;ws.textRoomId=null;ws.gameRoomId=null;ws.independentGames=false;ws.isAlive=true;ws.account=null;ws.authPending=false;ws.authAttempts=0;
   ws.on('pong',()=>{ws.isAlive=true;});
-  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{remotePc:true,loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
+  send(ws,{type:'welcome',clientId:ws.clientId,rooms:safeRooms(),chatChannels:safeChatChannels(),serverVersion:VERSION,features:{remotePc:true,remotePcProtocol:2,loveLetter:true,splendor:true,azul:true,soundboardRestart:true,voiceProfileActivity:true,independentGameVoice:true,gameRulesVersion:Rules.version,socialMessaging:true,chatModeration:true,channelNotifications:true,gameActivity:true,independentTextChannels:true,guestGame:true,voiceEvents:true,presence:true,roles:true,managedChannels:true,soundboard:true,screenFps:true},auth:accountAuth.health(),realtime:realtimeSfu.publicHealth()});
   ws.on('message',raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
     if(!message||typeof message!=='object'||Array.isArray(message)){send(ws,{type:'error',code:'BAD_JSON',message:'Mensagem inválida.'});return;}
@@ -1008,6 +1013,7 @@ wss.on('connection',(ws)=>{
       case 'chat-message':void handleChatMessage(ws,message.text,message.attachmentId,message.roomId);break;
       case 'voice-prepare':prepareVoice(ws,message);break;
       case 'voice-fallback':{const room=rooms.get(ws.roomId);if(room?.players.get(ws.clientId)?.voiceJoined)forceRoomP2p(room);break;}
+      case 'voice-moderate':voiceModeration.handle(ws,message);break;
       case 'voice-state':handleVoiceState(ws,message);break;
       case 'voice-signal':handleVoiceSignal(ws,message);break;
       case 'soundboard-play':void playSound(ws,message);break;

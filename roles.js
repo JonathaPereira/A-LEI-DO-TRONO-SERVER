@@ -7,6 +7,6 @@ function accountRole(user, profile = {}) {
   return profile.community_role === 'admin' ? 'admin' : 'member';
 }
 function permissions(role) {
-  return {manageChannels: ['creator', 'admin'].includes(role), moderateFiles: ['creator', 'admin'].includes(role), manageRoles: role === 'creator', viewEmails: role === 'creator', uploadSounds: ['creator', 'admin', 'member'].includes(role)};
+  return {moderateVoice: ['creator', 'admin'].includes(role), manageChannels: ['creator', 'admin'].includes(role), moderateFiles: ['creator', 'admin'].includes(role), manageRoles: role === 'creator', viewEmails: role === 'creator', uploadSounds: ['creator', 'admin', 'member'].includes(role)};
 }
 module.exports = {CREATOR_EMAIL, accountRole, permissions};
