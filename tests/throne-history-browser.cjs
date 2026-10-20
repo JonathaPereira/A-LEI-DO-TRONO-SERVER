@@ -169,6 +169,8 @@ test(
       const humanDeadline = Date.now() + 45000;
       while (
         !(await page.locator('#throneResultDialog').isVisible()) &&
+        !errors.length &&
+        !warnings.length &&
         Date.now() < humanDeadline
       ) {
         if (await page.locator('#thronePrivateDialog').isVisible())
@@ -194,6 +196,8 @@ test(
         }
         await page.waitForTimeout(35);
       }
+      assert.deepEqual(errors, [], 'Human local round must not throw page errors');
+      assert.deepEqual(warnings, [], 'Human local round must not report controller errors');
       await expect(page.locator('#throneResultDialog')).toBeVisible();
       assert(humanChallenges >= 1, 'The new human Crown must complete Desafio');
       assert(humanPlays >= 9, `Human round must play its hand (played ${humanPlays})`);

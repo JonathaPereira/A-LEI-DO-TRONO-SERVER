@@ -84,7 +84,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
   const TURN_MS = 60_000;
 
   const SUITS = ['cetro', 'chave', 'lamina', 'mascara'];
-  const Rules = require('../src/legacy/game-rules');
+  const Rules = require('../src/lib/games/throne-rules.ts').throneRules;
   const LAWS = Rules.lawOrder;
   const Bots = require('../src/legacy/bot-names');
   const BOT_NAMES = Bots.names;

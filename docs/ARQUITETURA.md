@@ -173,13 +173,14 @@ monta antes de `game.js`, recebe eventos do socket existente e libera observador
 assinaturas, raiz e timers ao descartar. O botão de comunicação conserva seu host.
 `TronoThroneLobby` é o dono consultado pelo controlador antigo: não há outra cópia
 de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
-`TronoThroneBoard` é uma ponte temporária para preparar nomes, iniciar o motor
-local e limpar sua projeção; não possui o estado do salão. O dono tipado do ciclo
-de vida decide quando uma execução local ainda pode continuar.
+`TronoThroneBoard` é uma ponte temporária para preparar nomes e alternar a
+navegação/apresentação online. O runtime tipado inicia e cancela o motor local
+diretamente; o ciclo de vida decide quando uma execução ainda pode continuar.
 
-O jogo ainda possui simulação e aplicação das regras locais de Influência em
-`legacy/game.js`. A mão e as escolhas entre fases usam os donos compartilhados
-abaixo, assim como as projeções públicas e os efeitos.
+A simulação, as fases e a aplicação das regras locais de Influência pertencem a
+`lib/games/throne-local-engine.ts`. A mão e as escolhas entre fases usam os donos
+compartilhados abaixo, assim como as projeções públicas e os efeitos.
+`legacy/game.js` conserva a navegação de comunidade e a ponte pública online.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
@@ -275,7 +276,7 @@ diálogo; o retorno restaura a escolha. Modais privados/resultados têm precedê
 `renderHandLocal`, `onHumanCardClick`, `humanPlayResolver`, os renderizadores de
 Influência/naipe e os listeners locais de cartas/checkbox/ordenação foram removidos.
 Os controles gerais e as escolhas entre fases usam React. Regras e sequência de fases
-da simulação ainda permanecem no legado; o ciclo de vida está no dono tipado abaixo.
+da simulação estão no motor tipado; o ciclo de vida está no dono descrito abaixo.
 
 `lib/games/throne-controls.ts` possui velocidade, abertura das regras e confirmação
 para sair. O motor consulta sua escala ao agendar pausas/efeitos; não há outra
@@ -317,13 +318,45 @@ são agendados pelo mesmo dono; limpar um ticket antigo não cancela seu sucesso
 Ocultar uma partida em execução conserva o prazo original. Não há outro socket,
 recurso de mídia ou cópia do baralho nesse módulo.
 
-O runtime só limpa os donos locais no início válido e delega a limpeza do motor à
-ponte `cancelLocal`, que confere o mesmo token e não limpa uma partida online nova.
+O runtime só limpa os donos locais no início válido e delega a limpeza do motor a
+`engine.cancel`, que confere o mesmo token e não limpa uma partida online nova.
 Callbacks antigos não registram erro nem retornam para uma sala posterior. O
 runtime libera raiz, observador e assinaturas no descarte. `sleep`, `localTurnTimer`,
 handlers de início e guardas esparsas foram retirados de `game.js`; as fases/regras
-continuam ali até o próximo recorte. A escolha de Desafio projeta a Coroa da vaza
+foram transferidas para o motor tipado. A escolha de Desafio projeta a Coroa da vaza
 recém-resolvida, antes de o motor avançar os marcadores da vaza anterior.
+
+`lib/games/throne-local-engine.ts` possui a execução privada de uma partida:
+baralho, distribuição, bots, Influência, Decretos, trocas, vazas, rodadas e pontuação
+acumulada. `types/throne-local.ts` descreve o estado mutável interno; ele não é um
+DTO online nem um snapshot de interface. Cada execução captura seu próprio objeto,
+sem consultar uma variável global que possa apontar para a partida seguinte.
+O ciclo de vida fornece `ThroneLocalRun`, com os mesmos guardas após awaits e o
+prazo humano de 60 segundos. O motor não acessa DOM, armazenamento, socket ou mídia.
+
+`throne-local-presentation.ts` adapta o mesmo estado aos donos de status, assentos,
+mesa e mão. Só projeta cartas adversárias públicas e oculta jogadas ainda fechadas;
+a demonstração não publica mãos/Reservas dos bots como se fossem do humano.
+Os donos existentes validam/copiam esses dados antes de apresentá-los. Escolhas,
+efeitos, resultados e revelações privadas também conservam seus contratos e donos.
+Não há outra instância de controle de mão, relógio, captura ou conexão.
+
+`components/games/throne-local-runtime.tsx` compõe motor, apresentação e ciclo de
+vida. Injeta aleatoriedade, nomes dos bots, escala e troca de tela, preservando a
+entrada de áudio existente. A ponte antiga só altera suas flags de navegação;
+`startLocal`, `cancelLocal`, o estado e as fases foram removidos de `legacy/game.js`.
+A consulta de diagnóstico `__LeiDoTrono.getState` delega ao motor local ou à
+projeção pública online, mantendo as regressões existentes.
+
+`lib/games/throne-rules.ts` é o núcleo compartilhado de Leis/Decretos, avaliação,
+seguimento de naipe, bloqueio de Influência, Usurpação, trocas simultâneas e
+Espionagem. Usa entradas estruturais mínimas para aceitar as cartas/assentos do
+servidor e do motor local sem copiar ou congelar seus estados mutáveis. Preserva
+ordem dos empates, valores efetivos limitados e proteção da Corte Aberta.
+Servidor e scripts do manual importam o mesmo TypeScript pelo Node suportado.
+O runtime instala `TronoRules` apenas para consumidores de compatibilidade;
+`legacy/game-rules.js`, sua entrada no manifesto e seu arquivo estático foram
+removidos. O catálogo/descritivos permanecem únicos.
 
 `lib/games/throne-law-planner.ts` é o planejador puro compartilhado pelo servidor
 (`runtime.cjs`) e motor local. Recebe somente Lei atual, usos, Decreto e próxima
@@ -332,7 +365,7 @@ que permitem concluir as dez vazas, com dois usos de cada, sem repetição segui
 e sem Usurpação quando restam menos de quatro cartas. Reserva continua reduzindo
 a mão antes da 10ª vaza. Memoização é exclusiva da chamada e não mistura Decretos.
 As duas buscas duplicadas foram removidas; `TronoThroneLawPlanner` é uma ponte
-pura temporária até a extração do motor. A ordem canônica das Leis agora fica
+pura temporária usada pela consulta de diagnóstico. A ordem canônica das Leis fica
 junto ao tipo em `types/throne-choices.ts`, reexportada pelo protocolo existente.
 
 `components/navigation/hover-tooltip.tsx` possui a apresentação React do tooltip
@@ -374,7 +407,8 @@ O runtime conserva host, raiz, nós React e socket. `applyOnlineState`,
 cabeçalho foram removidos. `TronoThroneBoard.presentOnlineMatch` recebe somente o
 snapshot validado para a ponte antiga de navegação/controles. Sua cópia pública
 de compatibilidade não alimenta mais o dispatcher de eventos nem recebe cartas
-reveladas por ele. Não interpreta pacotes nem possui outro relógio. A ponte e o motor local continuam pendentes.
+reveladas por ele. Não interpreta pacotes nem possui outro relógio. A ponte de
+navegação continua pendente; o motor local já é tipado.
 
 `lib/games/throne-seats.ts` projeta os assentos públicos. No online, reutiliza
 os jogadores do estado validado de `throne-match`, sem outro socket ou parser de

@@ -1,4 +1,5 @@
 'use client';
+import { throneRules } from '../lib/games/throne-rules';
 import { safeThroneLawChoices } from '../lib/games/throne-law-planner';
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
@@ -89,7 +90,10 @@ export function LegacyRuntime() {
           initializeChannelManagement(window);
         }
         if (filename === 'game.js') {
-          Object.assign(window, { TronoThroneLawPlanner: safeThroneLawChoices });
+          Object.assign(window, {
+            TronoThroneLawPlanner: safeThroneLawChoices,
+            TronoRules: throneRules,
+          });
           initializeThroneLobby(window);
           initializeThroneMatch(window);
           initializeThroneControls(window);

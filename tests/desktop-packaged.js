@@ -151,7 +151,6 @@ test(
             '/games.js',
             '/games.css',
             '/game.js',
-            '/game-rules.js',
             '/court.css',
             '/app-layout.css',
             '/chat-moderation.css',

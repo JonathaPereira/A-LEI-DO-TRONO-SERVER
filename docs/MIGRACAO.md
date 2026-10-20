@@ -2634,6 +2634,47 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   `legacy/game.js`, mantendo a ponte até migrar a navegação de comunidade. Ainda
   permanecem `court-display.js` e a coordenação/regras em `server/runtime.cjs`.
 
+## Motor local e regras compartilhadas em TypeScript
+
+- `throne-local-engine.ts` agora possui o estado privado e a sequência completa de
+  três rodadas: distribuição, bots, Decretos, Leis, Influência, jogadas, trocas,
+  revelações e placares. Cada execução captura seu próprio estado tipado em
+  `types/throne-local.ts`; não consulta o estado de uma execução posterior.
+- O motor recebe os donos existentes de mão/escolhas, mesa, assentos, status,
+  efeitos, revelações e resultados. `throne-local-presentation.ts` concentra as
+  projeções privadas/públicas, preservando os parsers e controles React existentes.
+  O runtime injeta aleatoriedade, escala, bots e navegação; não há DOM, socket ou
+  captura de mídia no motor. O ciclo de vida continua dono dos timers/cancelamento.
+- Removidos de `legacy/game.js` o estado mutável local, fases, decisões dos bots,
+  projeções e os métodos `startLocal`/`cancelLocal`. Restam a navegação de comunidade,
+  mensagens de sala e a ponte de apresentação online. A consulta de diagnóstico
+  usada pelos testes delega ao motor sem criar outro estado da partida.
+- `throne-rules.ts` substitui `legacy/game-rules.js`, que foi excluído do fonte e do
+  manifesto. Servidor, testes, interface e scripts do manual usam o mesmo núcleo
+  tipado. A preparação do renderer remove seu JS estático gerado; o teste de pacote
+  não exige mais esse recurso retirado. Leis, Decretos e critérios não mudaram.
+- Quatro regressões novas executam o motor sem navegador. São 64 partidas de três
+  rodadas com sementes fixas (32 demonstrações e 32 com humano automático), cobrindo os dez Decretos, 48 cartas conservadas,
+  40 cartas únicas jogadas por rodada, dois usos por Lei, pontuação acumulada e
+  limites de Influência/privacidade. Cancelamento com animação pendente não escreve
+  na partida seguinte; preempção online não limpa os novos donos. As mãos e escolhas
+  humanas usam os parsers reais e percorrem todos os tipos de prompt, inclusive os
+  que omitem o nome de outra Casa. Essa cobertura detecta texto vazio inválido ao
+  adaptar um campo opcional; a entrada preserva a ausência/default do protocolo.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; os modelos
+  somam 170 testes. Navegador completou três rodadas de demonstração e uma rodada
+  humana com Desafio. Salão e seis cenários autoritativos online também passaram.
+  Dois Electron reais conservaram controles, microfone, câmera, tela, peers e socket
+  durante navegação, cancelamento e início de outra partida local.
+- Uma comparação com `8f89b98`, nas mesmas 64 partidas/sementes e com os mesmos
+  adaptadores de teste, preservou exatamente as ações públicas e todos os placares
+  de rodada/final. Evidências em `artifacts/throne-local-engine-*`, inclusive a
+  falha inicial do prompt humano e sua correção. Mídia sintética local; não mede
+  60 fps em jogos reais nem TURN de produção.
+- Próximo recorte: migrar a navegação de comunidade/ponte restante de `game.js`,
+  seguida de `court-display.js`. No backend ainda há coordenação e regras de
+  aplicação em `server/runtime.cjs`, além do núcleo e planejador já compartilhados.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

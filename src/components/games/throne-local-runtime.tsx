@@ -3,8 +3,14 @@ import { createRoot } from 'react-dom/client';
 import {
   createThroneLocalLifecycle,
   type ThroneLocalLifecycle,
-  type ThroneLocalRun,
 } from '../../lib/games/throne-local-lifecycle';
+import {
+  createThroneLocalEngine,
+  type ThroneLocalEngine,
+} from '../../lib/games/throne-local-engine';
+import type { ThroneSeats } from '../../lib/games/throne-seats';
+import type { ThroneTable } from '../../lib/games/throne-table';
+import type { ThroneControls } from '../../lib/games/throne-controls';
 import type { ThroneLobby } from '../../lib/games/throne-lobby';
 import type { ThroneMatch } from '../../lib/games/throne-match';
 import type { ThroneChoices } from '../../lib/games/throne-choices';
@@ -25,9 +31,14 @@ interface Runtime extends Window {
   TronoThroneHistory: ThroneHistory;
   TronoThroneEffects: ThroneEffects;
   TronoThroneLocal?: ThroneLocalLifecycle;
+  TronoThroneLocalEngine?: ThroneLocalEngine;
+  TronoThroneSeats: ThroneSeats;
+  TronoThroneTable: ThroneTable;
+  TronoThroneControls: ThroneControls;
+  TronoBots: { at(index: number): string };
   TronoThroneBoard?: {
-    startLocal(run: ThroneLocalRun, demo: boolean): Promise<void>;
-    cancelLocal(run: ThroneLocalRun): void;
+    enterLocal(): void;
+    backToLobby(): void;
     notify(message: string, duration?: number): void;
   };
   TronoPortal: { showOnly(id: string): void };
@@ -40,6 +51,27 @@ export function initializeThroneLocal(target: Window): () => void {
     doc = target.document;
   const room = doc.getElementById('roomScreen')!,
     host = doc.getElementById('throneLocalStartHost')!;
+  const engine = createThroneLocalEngine({
+    hand: runtime.TronoThroneHand,
+    choices: runtime.TronoThroneChoices,
+    match: runtime.TronoThroneMatch,
+    seats: runtime.TronoThroneSeats,
+    table: runtime.TronoThroneTable,
+    private: runtime.TronoThronePrivate,
+    history: runtime.TronoThroneHistory,
+    effects: runtime.TronoThroneEffects,
+    random: () => Math.random(),
+    botName: (index) => runtime.TronoBots.at(index),
+    scale: () => runtime.TronoThroneControls.getSnapshot().scale,
+    show() {
+      runtime.TronoThroneBoard!.enterLocal();
+      doc.getElementById('setupScreen')!.classList.add('hidden');
+      room.classList.add('hidden');
+      doc.getElementById('gameScreen')!.classList.remove('hidden');
+    },
+    leave: () => runtime.TronoThroneBoard!.backToLobby(),
+  });
+  runtime.TronoThroneLocalEngine = engine;
   const controller = createThroneLocalLifecycle({
     source() {
       const identity = runtime.TronoAuth.user
@@ -77,8 +109,16 @@ export function initializeThroneLocal(target: Window): () => void {
       runtime.TronoThroneEffects.clear();
       runtime.TronoThroneMatch.clear();
     },
-    execute: (run, demo) => runtime.TronoThroneBoard!.startLocal(run, demo),
-    cancelled: (run) => runtime.TronoThroneBoard?.cancelLocal(run),
+    execute: (run, demo) =>
+      engine.start(
+        run,
+        demo,
+        [0, 1, 2, 3].map(
+          (index) => (doc.getElementById(`p${index}Name`) as HTMLInputElement).value,
+        ),
+        runtime.TronoThroneLobby.getSnapshot().selected,
+      ),
+    cancelled: (run) => engine.cancel(run),
     error(error) {
       console.error('[ThroneLocal]', error);
       runtime.TronoPortal.showOnly(
@@ -100,6 +140,7 @@ export function initializeThroneLocal(target: Window): () => void {
     controller.dispose();
     flushSync(() => root.unmount());
     if (runtime.TronoThroneLocal === controller) delete runtime.TronoThroneLocal;
+    if (runtime.TronoThroneLocalEngine === engine) delete runtime.TronoThroneLocalEngine;
     installed.delete(target);
   };
   installed.set(target, dispose);

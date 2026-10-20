@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
-const rules = require('../src/legacy/game-rules.js');
+const rules = require('../src/lib/games/throne-rules.ts').throneRules;
 const modules = Promise.all([
   import('../src/lib/games/throne-table.ts'),
   import('../src/lib/games/throne-match-protocol.ts'),

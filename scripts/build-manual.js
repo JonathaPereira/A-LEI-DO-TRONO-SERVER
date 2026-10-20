@@ -2,7 +2,7 @@
 // Both the handbook and the in-app reference use the engine's rule catalogue.
 const fs = require('node:fs'),
   path = require('node:path'),
-  R = require('../src/legacy/game-rules');
+  R = require('../src/lib/games/throne-rules.ts').throneRules;
 const dir = path.resolve(__dirname, '../public/manual');
 const e = (text) =>
   String(text).replace(
