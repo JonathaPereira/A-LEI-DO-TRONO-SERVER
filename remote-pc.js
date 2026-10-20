@@ -5,7 +5,7 @@ const crypto=require('node:crypto');
 class RemotePc {
   constructor({rooms,send,ice,now=Date.now}){Object.assign(this,{rooms,send,ice,now});this.sessions=new Map();this.byClient=new Map();this.rates=new WeakMap();}
   player(ws){return ws?.readyState===1&&ws.account?.expiresAt>this.now()?this.rooms.get(ws.roomId)?.players.get(ws.clientId):null;}
-  available(ws){return !!this.player(ws)?.voiceJoined;}
+  available(ws){const p=this.player(ws);return !!p?.voiceJoined&&!p.mediaBlocked;}
   valid(s){return this.available(s.host)&&this.available(s.viewer)&&s.host.roomId===s.room&&s.viewer.roomId===s.room&&s.host.account.id!==s.viewer.account.id;}
   emit(s,type,extra={}){for(const ws of [s.host,s.viewer])this.send(ws,{type,sessionId:s.id,...extra});}
   finish(s,reason='ended'){if(!s||!this.sessions.has(s.id))return;this.sessions.delete(s.id);for(const ws of [s.host,s.viewer])if(this.byClient.get(ws.clientId)===s.id)this.byClient.delete(ws.clientId);this.emit(s,'remote-ended',{reason});}

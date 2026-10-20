@@ -134,6 +134,7 @@ window.TronoNetwork = (()=>{
     sendChat:(text,attachmentId)=>!!currentRoom&&send('chat-message',{roomId:currentRoom,text,attachmentId}),
     async prepareVoice(){if(!await ((primaryRoom||gameRoom)?.startsWith('sala-')?ensureGameIdentity():ensureAuthenticated()))throw new Error('Entre na sua conta ou como convidado do jogo.');const requestId=makeId();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pendingSfu.delete(requestId);reject(new Error('Não foi possível sincronizar a chamada.'));},15000);pendingSfu.set(requestId,{resolve,reject,timer});send('voice-prepare',{requestId});});},
     fallbackVoice:()=>send('voice-fallback'),
+    moderateVoice:(targetId,action,requestId)=>send('voice-moderate',{targetId,action,requestId}),
     setVoiceState:(joined,muted=false,camera=false,screen=false,quality='balanced',transport='p2p')=>send('voice-state',{joined:!!joined,muted:!!muted,deafened:!!joined&&!!window.TronoSocial?.deafened,camera:!!camera,screen:!!screen,quality,transport,screenFps:window.TronoSocial?.screenSettings?.fps||30}),
     playSound:fileId=>send('soundboard-play',{fileId}),
     sendVoiceSignal:(targetId,signalType,data)=>send('voice-signal',{targetId,signalType,data}),

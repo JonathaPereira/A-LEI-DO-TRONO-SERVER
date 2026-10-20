@@ -103,7 +103,13 @@ class RealtimeSfuManager{
   }
   roomPublications(roomId){
     const map=this.publicationsByRoom.get(roomId);if(!map)return [];
-    return [...map.values()].filter(p=>p.ready).map(p=>({ownerId:p.ownerId,ownerName:p.ownerName,kind:p.kind,sessionId:p.sessionId,trackName:p.trackName,quality:p.quality,screenBitrate:p.screenBitrate,rids:p.rids||[],createdAt:p.createdAt}));
+    return [...map.values()].filter(p=>p.ready&&!this._moderated(roomId,p.ownerId,p.kind)).map(p=>({ownerId:p.ownerId,ownerName:p.ownerName,kind:p.kind,sessionId:p.sessionId,trackName:p.trackName,quality:p.quality,screenBitrate:p.screenBitrate,rids:p.rids||[],createdAt:p.createdAt}));
+  }
+  _moderated(roomId,id,kind){const p=this.rooms.get(roomId)?.players.get(id);return !!p&&((kind==='audio'&&p.serverMuted)||(kind!=='audio'&&p.mediaBlocked));}
+  async enforceModeration(room,player){
+    const subs=[...this.subscriptions.values()].filter(s=>s.roomId===room.id&&s.publisherId===player.id&&this._moderated(room.id,player.id,s.kind));
+    for(const sub of subs){this.subscriptions.delete(sub.sessionId);this.sessions.delete(sub.sessionId);}
+    this.broadcastPublications(room);await Promise.allSettled(subs.map(s=>this._closeSubscription(s,true)));
   }
   broadcastPublications(room){
     if(!room)return;const publications=this.roomPublications(room.id);
@@ -305,6 +311,7 @@ class RealtimeSfuManager{
       if(action==='publish-track'){
         const kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
         if(!ALLOWED_KINDS.has(kind)||!sdpOk(payload.sessionDescription,'offer')||typeof payload.mid!=='string')throw Object.assign(new Error('Publicação inválida.'),{code:'BAD_SFU_PUBLISH'});
+        if(kind!=='audio'&&player.mediaBlocked)throw Object.assign(new Error('Compartilhamento bloqueado pela moderação.'),{code:'VOICE_MEDIA_BLOCKED'});
         const gate=this._assertAvailable(kind,quality);if(!gate.ok){this._sendResponse(ws,requestId,false,null,gate);return;}
         const publishing=new Set([...this._pubMap(room.id).values()].map(p=>p.ownerId));
         const activeSfu=[...room.players.values()].filter(p=>p.voiceJoined&&(p.mediaTransport==='sfu'||publishing.has(p.id)));
@@ -318,6 +325,7 @@ class RealtimeSfuManager{
         let result;try{result=await this._cf('POST',`/sessions/${encodeURIComponent(sessionId)}/tracks/new`,body);}catch(err){this.sessions.delete(sessionId);throw err;}
         const trackResult=(result.tracks||[])[0]||{};if(trackResult.errorCode)throw Object.assign(new Error(trackResult.errorDescription||'Falha ao publicar track.'),{code:trackResult.errorCode});
         ensureCurrent();
+        if(kind!=='audio'&&player.mediaBlocked){await this._closePublication({roomId:room.id,ownerId:player.id,kind,sessionId,mid:String(payload.mid)},true);throw Object.assign(new Error('Compartilhamento bloqueado pela moderação.'),{code:'VOICE_MEDIA_BLOCKED'});}
         const actualTrackName=String(trackResult.trackName||trackName);
         const requestedBitrate=Number(payload.screenBitrate);const screenBitrate=kind==='screen'?Math.min(this.policy().highAllowed?15000000:6000000,Math.max(4000000,Number.isFinite(requestedBitrate)?requestedBitrate:PROFILE[quality].screen)):null;
         const pub={ownerId:player.id,ownerName:player.name,roomId:room.id,kind,quality,sessionId,trackName:actualTrackName,mid:String(payload.mid),screenBitrate,rids:['camera','screen'].includes(kind)?requestedRids:[],ready:false,createdAt:Date.now(),lastVerifiedAt:0};
@@ -327,6 +335,7 @@ class RealtimeSfuManager{
       }
       if(action==='subscribe-track'){
         const publisherId=String(payload.publisherId||''),kind=String(payload.kind||''),quality=ALLOWED_QUALITIES.has(payload.quality)?payload.quality:'balanced';
+        const ensureAudible=()=>{if(this._moderated(room.id,publisherId,kind))throw Object.assign(new Error('Mídia silenciada pela moderação.'),{code:'VOICE_MODERATED'});};ensureAudible();
         if(!ALLOWED_KINDS.has(kind)||publisherId===player.id)throw Object.assign(new Error('Assinatura inválida.'),{code:'BAD_SFU_SUBSCRIBE'});
         const pub=this._pubMap(room.id).get(this._pubKey(publisherId,kind));if(!pub)throw Object.assign(new Error('Publicação não está disponível.'),{code:'PUBLICATION_NOT_FOUND'});
         if(!pub.ready)throw Object.assign(new Error('Publicação ainda está conectando ao SFU.'),{code:'PUBLICATION_NOT_READY'});
@@ -343,6 +352,7 @@ class RealtimeSfuManager{
           throw Object.assign(new Error(tr.errorDescription||'Falha ao assinar track.'),{code:tr.errorCode});
         }
         ensureCurrent();
+        try{ensureAudible();}catch(err){await this._closeSubscription({sessionId,mid:String(tr.mid??'')},true);throw err;}
         if(!sdpOk(result.sessionDescription,'offer'))throw Object.assign(new Error('SFU não forneceu uma oferta SDP válida.'),{code:'BAD_SFU_OFFER'});
         const receivingMid=String(tr.mid??'');
         this.sessions.set(sessionId,{ownerId:player.id,roomId:room.id,purpose:'subscribe',pendingAnswer:true,kind,publisherId,createdAt:Date.now()});

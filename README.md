@@ -1,4 +1,4 @@
-Compartilhar PC **Beta · Windows 0.2.11**: [uso e limites](COMPARTILHAR_PC_BETA.md), [atualização](ATUALIZAR_WINDOWS_v0.2.11.md). Requer redeploy do backend, sem SQL novo.
+Windows **0.2.12**: controle separado para o convidado, perfil de resposta rápida e moderação da chamada. [Atualizar](ATUALIZAR_WINDOWS_v0.2.12.md) · [Compartilhar PC Beta](COMPARTILHAR_PC_BETA.md). Requer backend no Render, sem SQL novo.
 
 ## Windows 0.2.10 · painel compacto e prioridade ao SFU
 

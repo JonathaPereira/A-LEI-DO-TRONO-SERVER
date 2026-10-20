@@ -106,7 +106,8 @@ async function start(){
   applicationAudio=new ApplicationAudio(app,data=>{if(!window.isDestroyed())window.webContents.send('mn:application-audio',data);});
   remoteInput=new RemoteInput({app,displays:()=>screen.getAllDisplays(),point:p=>screen.dipToScreenPoint(p),publish:data=>{if(!window.isDestroyed())window.webContents.send('mn:remote',data);}});
   screen.on('display-removed',stopRemote);screen.on('display-metrics-changed',stopRemote);
-  ipcMain.handle('mn:remote-capability',event=>{trusted(event);return {host:remoteInput.available,beta:true,audio:applicationAudio.capability.available};});
+  ipcMain.handle('mn:remote-capability',async event=>{trusted(event);return {host:remoteInput.available,beta:true,audio:applicationAudio.capability.available,gamepad:await remoteInput.gamepadAvailable()};});
+  ipcMain.handle('mn:remote-driver',event=>{trusted(event);return shell.openExternal('https://github.com/nefarius/ViGEmBus/releases/tag/v1.22.0');});
   ipcMain.handle('mn:remote-prepare',async(event,peerName)=>{
     trusted(event);if(!remoteInput.available)throw Error('Instale a versão Windows com Compartilhar PC Beta.');
     if(remotePermit||capture)throw Error('Encerre o compartilhamento atual antes de iniciar outro.');
@@ -116,11 +117,12 @@ async function start(){
     if(!globalShortcut.register(REMOTE_STOP,stopRemote))throw Error('O atalho de emergência está ocupado. Libere Ctrl + Alt + Shift + F12 para continuar.');
     remotePermit={peerName,expires:Date.now()+60000,selected:false};return {allowed:true};
   });
-  ipcMain.handle('mn:remote-allow',async event=>{
+  ipcMain.handle('mn:remote-allow',async(event,mode='desktop')=>{
+    if(!['desktop','gamepad'].includes(mode))throw Error('Modo de controle inválido.');
     trusted(event);const permit=remotePermit;if(!permit?.selected)throw Error('Compartilhamento indisponível.');
-    const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Somente assistir','Permitir controle'],defaultId:0,cancelId:0,message:permit.peerName+' quer controlar seu PC',detail:'Permite mouse e teclado neste computador durante esta sessão beta. Não abra senhas ou informações privadas. Ctrl + Alt + Shift + F12 encerra o acesso.'});
+    const answer=await dialog.showMessageBox(window,{type:'question',buttons:['Somente assistir','Permitir controle'],defaultId:0,cancelId:0,message:permit.peerName+' quer controlar seu PC',detail:(mode==='gamepad'?'Permite um controle Xbox virtual separado para o convidado. Seu controle local permanece independente.':'Permite mouse e teclado neste computador durante esta sessão beta.')+' Não abra senhas ou informações privadas. Ctrl + Alt + Shift + F12 encerra o acesso.'});
     if(remotePermit!==permit||answer.response!==1)return {allowed:false};
-    const result=await remoteInput.start();if(remotePermit!==permit){remoteInput.stop();return {allowed:false};}return {allowed:true,...result};
+    const result=await remoteInput.start({mode});if(remotePermit!==permit){remoteInput.stop();return {allowed:false};}return {allowed:true,...result};
   });
   ipcMain.on('mn:remote-input',(event,data)=>{try{trusted(event);remoteInput.input(data?.token,data?.event);}catch{}});
   ipcMain.handle('mn:remote-revoke',event=>{trusted(event);remoteInput.stop();return true;});
