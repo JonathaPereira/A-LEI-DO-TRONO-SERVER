@@ -156,6 +156,7 @@ test(
             await page.evaluate(() => window.TronoPortal.showPortal());
             await expect(page.locator('#portalMusicVolume')).toHaveValue('17');
             await expect(page.locator('#portalNowPlaying')).toContainText('Kistol');
+            await require('./community-navigation-controls.cjs').exerciseCommunityNavigation(page);
             await page.evaluate(() => window.TronoAuth.logout());
             await expect(page.locator('#authDialog')).toBeVisible();
             await page.locator('#authCloseBtn').click();

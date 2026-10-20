@@ -18,14 +18,12 @@ export function ChatOnlyScreen() {
               <div>
                 <small>SEU PONTO DE ENCONTRO</small>
                 <h2 id="workspaceTitle" />
-                <p id={'chatOnlyStatus'}>Conectando ao salão de conversa...</p>
+                <p id="chatOnlyStatus" />
               </div>
             </div>
             <div className={'chat-app-statusbar'} aria-label={'Estado da comunicação'}>
               <span id="voiceConnectionIndicator" style={{ display: 'contents' }} />
-              <span id={'chatOnlyCount'} className={'participant-pill'}>
-                0 pessoas conectadas
-              </span>
+              <span id="chatOnlyCount" className="participant-pill" />
             </div>
             <div className={'chat-only-top-actions'}>
               <span id={'myRoleBadge'} className={'role-badge role-member'}>
@@ -63,14 +61,7 @@ export function ChatOnlyScreen() {
               </button>
               <CallNavigationHost id="chatOnlyTextBtn" />
               <CallNavigationHost id="chatOnlyOpenSocialBtn" />
-              <button
-                id={'backFromChatOnlyBtn'}
-                className={'chat-header-action back-action'}
-                title={'Voltar ao início'}
-              >
-                <span>←</span>
-                <b>Voltar</b>
-              </button>
+              <span id="communityBackHost" style={{ display: 'contents' }} />
             </div>
           </header>
           <div id="callWorkspaceSidebar">
@@ -124,7 +115,7 @@ export function ChatOnlyScreen() {
               <div className={'mn-sidebar-bottom'}>
                 <span className={'mn-online-dot'}></span>
                 <div>
-                  <strong id={'chatOnlyRoomName'}>Geral</strong>
+                  <strong id="chatOnlyRoomName" />
                   <small>Canal selecionado • M&amp;N</small>
                 </div>
               </div>

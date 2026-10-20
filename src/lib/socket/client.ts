@@ -244,8 +244,14 @@ export function createNetworkClient({
       );
     return transport.connected;
   }
-  async function joinTextChannel(roomId: string, name?: string) {
+  async function joinTextChannel(
+    roomId: string,
+    name?: string,
+    current: () => boolean = () => true,
+  ) {
+    if (!current()) return false;
     if (!(await ensureAuthenticated())) return false;
+    if (!current()) return false;
     if (!state.getSnapshot().features.independentTextChannels)
       throw new Error('Atualize o backend no Render para abrir texto sem sair da voz.');
     return send('join-text-channel', { roomId, name });
@@ -306,7 +312,8 @@ export function createNetworkClient({
     leaveGameRoom,
     leaveVoiceRoom,
     joinChatOnly: (name?: string) => joinRoom('chat-livre', name),
-    joinChatChannel: (id: string, name?: string) => joinRoom(id, name),
+    joinChatChannel: (id: string, name?: string, current: () => boolean = () => true) =>
+      joinRoom(id, name, current),
     requestChatChannels: () => send('list-chat-channels'),
     requestPresence: () => send('presence-request'),
     setActivity: (activity: { name: string } | null) =>

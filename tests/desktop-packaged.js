@@ -150,7 +150,6 @@ test(
             '/azul-rules.js',
             '/games.js',
             '/games.css',
-            '/game.js',
             '/court.css',
             '/app-layout.css',
             '/chat-moderation.css',

@@ -9,7 +9,7 @@ export function ChatPanel() {
         <div className={'court-chat-title'}>
           <div>
             <small>MENSAGENS</small>
-            <strong># conversa</strong>
+            <strong id="communityChatTitle" />
           </div>
           <div className={'chat-title-actions'}>
             <ChatClearButton />

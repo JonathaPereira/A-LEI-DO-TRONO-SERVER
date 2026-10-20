@@ -121,10 +121,12 @@ O bootstrap instala `TronoAppLayout` antes do ready e monta a estrutura antes do
 posicionadores. A observação da visibilidade das telas ainda legadas permanece na
 ponte; `legacy/app-layout.js` foi excluído.
 
-A seleção/troca de canais e a navegação de A Lei do Trono ainda passam por
-`legacy/game.js`; o shell desktop delega a esses donos por `lib/desktop/shell.ts`.
-Esse fluxo consulta o catálogo tipado, sem outra lista de canais. A apresentação da chamada
-consulta `lib/voice/navigation.ts`; os métodos públicos de `TronoSocial` são adaptadores.
+A seleção/troca de canais pertence a `lib/navigation/community-navigation.ts`;
+a navegação de A Lei do Trono pertence a `lib/games/throne-navigation.ts`.
+O shell desktop delega a esses donos por `lib/desktop/shell.ts`. O fluxo consulta
+o catálogo tipado, sem outra lista de canais. A apresentação da chamada consulta
+`lib/voice/navigation.ts`; os métodos públicos de `TronoSocial` são adaptadores.
+`legacy/game.js` foi excluído, assim como sua entrada no manifesto e o JS estático.
 
 `lib/navigation/portal.ts` possui identidade exibida, disponibilidade do apelido,
 entrada no chat e intenção de navegação. Snapshots/feedback são imutáveis. Nome de
@@ -149,9 +151,46 @@ o shell continua com sua navegação e permite o clique explícito em convidado.
 A ponte temporária atualiza os campos e feedback do lobby legado; valores são
 escritos somente quando a identidade muda, preservando nomes locais editados.
 `legacy/auth.js` publica a identidade pelo evento existente e deixou de escrever
-nos mesmos campos. A entrada de comunidade ainda está em `legacy/game.js` e recebe
-guardas de validade antes de continuar após esperas; o portal não assume sua
+nos mesmos campos. A entrada de comunidade usa seu dono tipado, com guardas
+de validade próprias e a guarda opcional do portal; o portal não assume sua
 participação. `legacy/portal.js` e sua entrada no manifesto foram excluídos.
+
+`lib/navigation/community-navigation.ts` possui intenções de entrada, troca de
+canal, saída e retomada da comunidade. `enter`, `switchChannel` e `leave` usam
+uma geração e o escopo conta/tela; navegação, conta/ABA, desconexão, descarte ou
+uma nova intenção invalidam continuações antigas. Cliques repetidos compartilham
+a entrada pendente. A validação do portal é opcional: chamadas diretas pelo shell,
+lista de canais ou mensagens também recebem proteção. O cliente de rede confere
+a guarda após autenticar e antes de enviar entradas em texto ou voz.
+
+Abrir/restaurar a comunidade não captura microfone. Uma chamada independente da
+mesa continua conectada; texto não executa `leaveVoice`. Uma troca explícita de
+voz guarda o destino somente até a confirmação correspondente, na mesma geração,
+conta e tela. Uma confirmação antiga não inicia captura. Saída atrasada não oculta
+nem desassocia uma entrada posterior. A associação efetiva continua no cliente de
+rede e os dispositivos continuam no ciclo de vida da chamada.
+
+A apresentação deriva nome/tipo/contagem de `CallNavigation.textRoom`, validando
+os campos usados, sem guardar participantes ou outro catálogo. O snapshot contém
+somente rótulos/status imutáveis. Exclusão limpa a intenção de retorno mesmo sem
+armazenamento disponível. A retomada persistida é restrita à mesma conta; a
+hidratação inicial da conta permite retomada, mas uma navegação explícita a impede.
+
+`components/navigation/community-navigation.tsx` renderiza status, contagem, nomes
+e botões de entrada/saída em React, por portais nos mesmos hosts. O runtime monta
+antes do shell capturar/mover controles e mantém a identidade de seus nós. A
+fachada `TronoChatHub` delega ao mesmo dono e ao catálogo existente. O descarte
+remove raiz, assinaturas, observador, ready/listeners e o timer da lista de salas.
+
+`lib/games/throne-navigation.ts` possui a intenção de sair e as flags de navegação
+da mesa. Recebe somente o snapshot online validado de `ThroneMatch`; a cópia pública
+serve à consulta de diagnóstico, sem interpretar pacotes nem possuir outro jogo.
+Sair bloqueia a reabertura por estado atrasado até uma nova entrada. Só encerra
+voz quando a chamada pertence à própria mesa; a chamada independente é preservada.
+A solicitação adiada da lista de salas é cancelada no próximo preparo/descarte.
+O runtime compõe a limpeza dos donos existentes, campos de nome e avisos; libera
+a assinatura de mensagens no descarte. `TronoThroneBoard` é a fachada desse dono.
+O bootstrap instala os donos da mesa após carregar os nomes dos bots, antes do ready.
 
 `lib/games/throne-lobby.ts` possui seleção de salão, roster, participante local e
 intenções de entrada, Pronto e início. `types/throne-lobby.ts` define somente o
@@ -169,10 +208,10 @@ Timeouts têm identidade própria para não liberar tentativas posteriores.
 
 `components/games/throne-lobby-controls.tsx` renderiza catálogo, assentos, avatares,
 status e controles em React, com portais nos hosts estáveis de setup/sala. O runtime
-monta antes de `game.js`, recebe eventos do socket existente e libera observador,
+monta antes da navegação da mesa, recebe eventos do socket existente e libera observador,
 assinaturas, raiz e timers ao descartar. O botão de comunicação conserva seu host.
-`TronoThroneLobby` é o dono consultado pelo controlador antigo: não há outra cópia
-de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
+`TronoThroneLobby` conserva seleção, roster, participante e pedidos de entrada;
+a navegação não mantém outra cópia desses dados.
 `TronoThroneBoard` é uma ponte temporária para preparar nomes e alternar a
 navegação/apresentação online. O runtime tipado inicia e cancela o motor local
 diretamente; o ciclo de vida decide quando uma execução ainda pode continuar.
@@ -180,7 +219,7 @@ diretamente; o ciclo de vida decide quando uma execução ainda pode continuar.
 A simulação, as fases e a aplicação das regras locais de Influência pertencem a
 `lib/games/throne-local-engine.ts`. A mão e as escolhas entre fases usam os donos
 compartilhados abaixo, assim como as projeções públicas e os efeitos.
-`legacy/game.js` conserva a navegação de comunidade e a ponte pública online.
+A navegação da comunidade e a projeção pública de compatibilidade são tipadas.
 A flag duplicada de comunidade foi removida: os
 guardas de troca de canal consultam `TronoCallNavigation.getSnapshot().hub`, de
 modo que voltar da mesa pela navegação existente não bloqueia a troca de canal.
@@ -364,8 +403,8 @@ vaza; não retém estado nem altera contadores do chamador. Oferece somente Leis
 que permitem concluir as dez vazas, com dois usos de cada, sem repetição seguida
 e sem Usurpação quando restam menos de quatro cartas. Reserva continua reduzindo
 a mão antes da 10ª vaza. Memoização é exclusiva da chamada e não mistura Decretos.
-As duas buscas duplicadas foram removidas; `TronoThroneLawPlanner` é uma ponte
-pura temporária usada pela consulta de diagnóstico. A ordem canônica das Leis fica
+As duas buscas duplicadas e a global `TronoThroneLawPlanner` foram removidas.
+O motor e a consulta de diagnóstico importam o planejador. A ordem das Leis fica
 junto ao tipo em `types/throne-choices.ts`, reexportada pelo protocolo existente.
 
 `components/navigation/hover-tooltip.tsx` possui a apresentação React do tooltip
@@ -405,10 +444,10 @@ cartas nem envia comandos: timeout continua no servidor/motor local.
 O runtime conserva host, raiz, nós React e socket. `applyOnlineState`,
 `updateTurnTimer`, `turnTicker`, `lastOnlineTurnSeat` e as escritas legadas no
 cabeçalho foram removidos. `TronoThroneBoard.presentOnlineMatch` recebe somente o
-snapshot validado para a ponte antiga de navegação/controles. Sua cópia pública
+snapshot validado para a navegação tipada da mesa. Sua cópia pública
 de compatibilidade não alimenta mais o dispatcher de eventos nem recebe cartas
 reveladas por ele. Não interpreta pacotes nem possui outro relógio. A ponte de
-navegação continua pendente; o motor local já é tipado.
+navegação e o motor local são tipados.
 
 `lib/games/throne-seats.ts` projeta os assentos públicos. No online, reutiliza
 os jogadores do estado validado de `throne-match`, sem outro socket ou parser de
@@ -509,8 +548,8 @@ permanece com `throne-match`; o timer de jogada e as esperas de regras locais
 permanecem no motor. Sons delegam ao áudio compartilhado. A ponte não abre socket,
 nem controla captura, players ou peers. Foram retirados de `game.js` os corpos dos
 renderizadores, timers de efeitos e `exchangeSequence`; os adaptadores restantes
-apenas projetam dados/delegam. O dispatcher online usa o módulo abaixo; o motor
-local e a tela cheia de `court-display.js` continuam pendentes.
+apenas projetam dados/delegam no motor tipado. O dispatcher online usa o módulo
+abaixo; a tela cheia de `court-display.js` continua pendente.
 
 `lib/games/throne-events.ts` despacha somente os efeitos públicos online e possui
 a deduplicação do aviso de turno por participação/rodada/vaza. Consulta diretamente
@@ -537,8 +576,8 @@ do socket, sem inventar correlação para pacotes recebidos.
 `throne-events-runtime.ts` assina os donos e o cliente existentes, uma vez por
 janela. Remove assinaturas/listeners no descarte. `handleOnlineGameEvent`, o ramo
 legado de `game-started` e o cálculo duplicado do aviso de turno foram removidos
-de `game.js`. O listener restante desse arquivo cuida de comunidade, conexão e
-erros de navegação; os controles e o motor locais ainda usam seus adaptadores.
+de `game.js`, que já foi excluído. Comunidade, conexão e erros de navegação usam
+os donos tipados de navegação; controles e motor local conservam seus módulos.
 
 `lib/games/throne-private.ts` possui as revelações de Espionagem/Usurpação,
 confirmações, consulta posterior e espera pela animação de troca. O parser copia e

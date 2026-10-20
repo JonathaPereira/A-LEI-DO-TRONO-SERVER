@@ -1,6 +1,7 @@
 'use client';
 import { throneRules } from '../lib/games/throne-rules';
-import { safeThroneLawChoices } from '../lib/games/throne-law-planner';
+import { initializeThroneNavigation } from '../components/games/throne-navigation-runtime';
+import { initializeCommunityNavigation } from '../components/navigation/community-navigation-runtime';
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeNotifications } from '../lib/notifications/browser';
@@ -89,9 +90,9 @@ export function LegacyRuntime() {
           initializeCommunity(window);
           initializeChannelManagement(window);
         }
-        if (filename === 'game.js') {
+        if (filename !== 'auth-boot.js') await loadScript(filename);
+        if (filename === 'bot-names.js') {
           Object.assign(window, {
-            TronoThroneLawPlanner: safeThroneLawChoices,
             TronoRules: throneRules,
           });
           initializeThroneLobby(window);
@@ -106,8 +107,9 @@ export function LegacyRuntime() {
           initializeThroneChoices(window);
           initializeThroneHand(window);
           initializeThroneLocal(window);
+          initializeThroneNavigation(window);
+          initializeCommunityNavigation(window);
         }
-        if (filename !== 'auth-boot.js') await loadScript(filename);
         if (filename === 'auth.js') {
           initializePortal(window);
           initializeProfileEditor(window);

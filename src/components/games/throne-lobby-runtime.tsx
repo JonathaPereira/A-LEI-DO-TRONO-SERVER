@@ -19,7 +19,7 @@ interface Runtime extends Window {
   };
 }
 const installed = new WeakMap<Window, () => void>();
-/** Mounted before game.js binds. The board bridge is looked up only on an actual user action. */
+/** Mounted before board navigation. Its facade is looked up only on an actual user action. */
 export function initializeThroneLobby(target: Window): () => void {
   const previous = installed.get(target);
   if (previous) return previous;

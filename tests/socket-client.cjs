@@ -329,3 +329,31 @@ test('browser initialization is idempotent and resolves local, IPv6 and installe
   assert.equal(first.connected, false);
   assert.equal(first.BACKEND_WS, 'ws://localhost:10000/ws');
 });
+
+test('chat and text joins cannot send after their account preparation loses the navigation guard', async () => {
+  for (const method of ['joinChatChannel', 'joinTextChannel']) {
+    let release,
+      current = true;
+    const h = await setup({
+      getIdentity: () => ({
+        user: { id: 'a' },
+        getAccessToken: () =>
+          new Promise((resolve) => {
+            release = resolve;
+          }),
+      }),
+    });
+    h.receive(welcome);
+    h.transport.request = async () => ({
+      type: 'auth-result',
+      ok: true,
+      user: { id: 'a', nickname: 'Alice', role: 'member', permissions: {} },
+    });
+    const pending = h.client[method]('text', 'Alice', () => current);
+    await new Promise((resolve) => setImmediate(resolve));
+    current = false;
+    release('token');
+    assert.equal(await pending, false);
+    assert.deepEqual(h.sent, []);
+  }
+});

@@ -43,9 +43,7 @@ export function SetupScreen() {
                 participantes imposto pelo servidor e sem iniciar uma partida.
               </p>
             </div>
-            <button id={'chatOnlyBtn'} className={'royal-btn primary'}>
-              Entrar no Salão Livre
-            </button>
+            <span id="communityEnterHost" style={{ display: 'contents' }} />
           </article>
           <div className="lobby-status" id="throneNetworkStatus" />
           <div className={'lobby-audio-panel'} aria-label={'Controles de áudio do lobby'}>

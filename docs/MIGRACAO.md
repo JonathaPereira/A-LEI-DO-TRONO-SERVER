@@ -2675,6 +2675,45 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   seguida de `court-display.js`. No backend ainda há coordenação e regras de
   aplicação em `server/runtime.cjs`, além do núcleo e planejador já compartilhados.
 
+## Navegação da comunidade/mesa e remoção de game.js
+
+- `legacy/game.js` foi excluído do fonte e do manifesto. O build remove o JS
+  estático gerado. Bootstrap e teste de pacote não exigem mais esse arquivo;
+  `TronoThroneLawPlanner` também foi removido. A consulta de diagnóstico importa
+  o planejador tipado diretamente e conserva o contrato usado nas regressões.
+- `community-navigation.ts` possui entrada, troca, saída e retomada, com geração,
+  conta/tela e guards após esperas. A entrada direta também é protegida, sem
+  depender da guarda do portal. Conta/ABA, navegação, desconexão e descarte não
+  deixam uma operação atrasada enviar entrada nem finalizar outra intenção.
+- Chamadas independentes da mesa sobrevivem à entrada na comunidade e ao texto.
+  Abrir/restaurar não captura voz. A retomada de voz após escolha explícita exige
+  confirmação do mesmo destino e intenção; resposta antiga não abre microfone.
+  O cliente de rede aceita e confere as guardas de texto/voz após autenticação.
+- `throne-navigation.ts` mantém somente flags/intenções da mesa e projeção pública
+  de compatibilidade. Sair bloqueia estados atrasados e só deixa voz da própria
+  mesa. Limpeza dos donos e avisos são compostos no runtime; não há outro jogo,
+  catálogo, socket, relógio de turno ou captura de mídia.
+- Cabeçalhos, contagem e botões de entrada/saída da comunidade são React nos hosts
+  existentes. `TronoChatHub` e `TronoThroneBoard` delegam aos donos tipados.
+  Descarte libera raízes, observadores, assinaturas, listeners e timers.
+- Onze testes novos de navegação e uma regressão no cliente de rede cobrem
+  deduplicação, cancelamento em validação/permissões/autenticação, conta/ABA,
+  desconexão, confirmações antigas, exclusão, retomada por conta e descarte.
+  O helper real adia permissões numa entrada direta, navega para outra tela e
+  confirma que a operação não reabre a comunidade. Depois entra normalmente e
+  verifica nomes e nós React, socket, microfone e fonte da tela preservados.
+- Validação: tipagem, formatação, build estático e `npm test` passaram (incluindo
+  os novos testes de navegação/cliente e os 170 modelos dos jogos). Portal passou
+  na web e com adaptador desktop; `test:ui` passou nos quatro fluxos de layouts,
+  canais, compositor e perfis. O salão local/online e três rodadas de demonstração
+  mais uma rodada humana passaram. Dois Electron reais passaram pela entrada
+  direta cancelada e navegação preservando os nós, socket, peers, câmera,
+  microfone e fonte de tela. Evidências em `artifacts/navigation-migration-*`.
+  Mídia sintética local; não mede 60 fps em jogos reais nem TURN de produção.
+- Próximo recorte do jogo: substituir `court-display.js` (tela cheia), mantendo
+  eventos nativos e fullscreen web. No backend restam coordenação e regras de
+  aplicação em `server/runtime.cjs`, além do núcleo/planejador já compartilhados.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.
