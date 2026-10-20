@@ -705,8 +705,14 @@ já reaberto. Animações só medem a mesa e escrevem na camada vazia de efeitos
 Splendor reutiliza o dono de tela cheia do Azul. Os cabeçalhos dos dois jogos
 montam antes de `trono:ready`, com slots vazios para os controles de volume existentes;
 atualizações React conservam esses controles e seus listeners. `legacy/splendor.js`
-foi excluído. `splendor-rules.js` e `splendor-data.js` continuam compartilhados
-com o servidor; a autoridade e o conteúdo clássico das regras foram preservados.
+foi excluído. `lib/games/splendor-rules.ts` possui o motor compartilhado e
+`splendor-data.ts` contém as mesmas 90 cartas e dez nobres, com procedência/licença
+preservadas em `docs/splendor/`. Estado privado mantém os baralhos e reservas reais;
+`publicState(viewer)` projeta apenas contagens e reservas ocultas dos adversários.
+Cliente e servidor importam módulos diretamente, sem `SplendorRules`/`SplendorData`
+globais; os dois scripts antigos saíram do manifesto e do fonte. Identificadores
+malformados não são confundidos com vagas vazias do mercado e retornam o erro de
+domínio sem alterar a partida. A autoridade e o conteúdo clássico foram preservados.
 
 `lib/games/love-letter.ts` possui a mesa do jogador atual, carta/alvo/palpite,
 ordem privada do Chanceler, confirmação de jogadas, leitura do Padre e feedback.
@@ -1870,9 +1876,10 @@ perfis assinados enviados pelo cliente. A organização não muda esse protocolo
 aplica timeout. A autorização continua no gerenciador SFU, antes de consultar
 o provedor. Tokens de infraestrutura nunca entram no bundle Next.
 
-Os jogos ainda compartilham regras CommonJS em `src/legacy/`. Mover essas regras
-para um módulo compartilhado testável é uma próxima etapa. Supabase/RLS e o
-armazenamento de arquivos foram preservados.
+Os jogos compartilham motores puros em `lib/games/`, com testes de regras e
+projeções por jogador. Nenhum motor permanece em `src/legacy/`; a coordenação dos
+serviços de mesa ainda é JavaScript. Supabase/RLS e o armazenamento de arquivos
+foram preservados.
 
 ## Electron
 

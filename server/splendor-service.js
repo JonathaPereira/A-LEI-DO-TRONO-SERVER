@@ -1,7 +1,7 @@
 'use strict';
 const Bots = require('../src/lib/games/bot-names.ts');
 const crypto = require('node:crypto'),
-  Rules = require('../src/legacy/splendor-rules');
+  Rules = require('../src/lib/games/splendor-rules.ts');
 const failure = (code, message) => Object.assign(Error(message), { code });
 function createSplendorService({
   auth,

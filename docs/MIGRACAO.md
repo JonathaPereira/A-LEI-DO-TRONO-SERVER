@@ -60,6 +60,9 @@ recursos em `public/roguelite/` foram preservados.
 - `love-letter-rules.js`: motor tipado em `lib/games/`, com estado privado separado
   da projeção pública por jogador. Mãos, Padre e escolhas do Chanceler preservados;
   fixture determinística usa aleatoriedade por sala, sem alterar exports globais.
+- `splendor-data.js` e `splendor-rules.js`: catálogo clássico e motor compartilhado
+  em TypeScript. Baralhos e reservas passam pela projeção pública por jogador;
+  pagamentos, ranking e licença dos dados permanecem preservados.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -75,16 +78,16 @@ O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 - Áudio: `audio.js`, `application-audio.js`, `light-noise.js`,
   `noise-suppression.js` e os worklets correspondentes.
 - Soundboard: `soundboard-client.js`.
-- Regras compartilhadas: `splendor-data.js`, `splendor-rules.js`.
 
 `call-controls-layout.js` já é gerado do módulo TypeScript
 `lib/voice/control-layout.ts`; sua presença no manifesto não indica um controlador
 JS ainda por converter. `scripts/prepare-renderer.cjs` compila esse módulo e poda
 assets estáticos obsoletos somente após compilação bem-sucedida.
 
-Próximo recorte: retirar regras compartilhadas dos jogos de `src/legacy/`, mantendo
-um motor comum ao servidor e à interface. Depois seguir pelos donos de áudio/conta,
-com regressões específicas e sem mudar captura/encoders incidentalmente.
+Todos os motores compartilhados dos jogos saíram de `src/legacy/`. Próximo recorte:
+transferir o adaptador de áudio de aplicativos e os worklets para os donos tipados,
+com regressões de recursos e Electron real. Depois seguir por áudio compartilhado,
+soundboard e conta, sem mudar captura/encoders incidentalmente.
 
 ### 2. Backend e contratos externos
 
@@ -140,6 +143,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | `npm test` | Cadeia completa de backend, jogos e modelos passou após a conversão de Azul e correção do import dos bots locais. |
 | Azul tipado | Paridade exata em 120 partidas (8.433 jogadas/601 replays); 25 regressões de regras/controle/SQL/WS e três casos de interface passaram. |
 | Love Letter tipado | Paridade em 100 partidas (6.728 jogadas/464 novas rodadas e visões privadas); 26 regressões e partida completa na interface passaram. Electron real e pacote também passaram sem global antigo. |
+| Splendor tipado | Paridade em 120 partidas/10.294 jogadas e catálogo completo; 26 regressões e três casos de interface passaram. Chamada no Electron e pacote passaram sem globais antigos. |
 | `npm run test:clips` | 55 verificações passaram; inclui persistência, quota, exportação, encoder, ponte e descarte. |
 | `npm run test:recording` | 14 verificações passaram; inclui cancelamento, mixer, finalização e arquivo decodificado. |
 | `npm run test:settings` | 137 verificações passaram após consolidar preferências. |
@@ -151,7 +155,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
-e `azul-core-*`/`love-letter-core-*`. As primeiras execuções nativas de `azul-core-desktop*` registram
+e `azul-core-*`/`love-letter-core-*`/`splendor-core-*`. As primeiras execuções nativas de `azul-core-desktop*` registram
 a regressão do import dos bots; `azul-core-desktop-fixed.log` registra a correção.
 O executável local de conferência está em
 `artifacts/windows-app/win-unpacked/MN Trono.exe`; não substitui a instalação.

@@ -89,6 +89,10 @@ async function exerciseSplendor({ app, page, frontend, screenshot, onPhase = () 
     await expect(page.locator('.sp-market .sp-card')).toHaveCount(12);
     await expect(page.locator('.sp-noble')).toHaveCount(5);
     await expect(page.locator('.sp-player')).toHaveCount(4);
+    assert.deepEqual(
+      await page.evaluate(() => [typeof window.SplendorRules, typeof window.SplendorData]),
+      ['undefined', 'undefined'],
+    );
     await expect(page.locator('[data-token="0"]')).toBeEnabled({ timeout: 18000 });
     const before = await page.evaluate(() => window.TronoSplendor.room.state.revision);
     for (const color of [0, 1, 2]) await page.locator('[data-token="' + color + '"]').click();

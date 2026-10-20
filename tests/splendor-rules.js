@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/legacy/splendor-rules'),D=require('../src/legacy/splendor-data');
+const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/lib/games/splendor-rules.ts'),D=require('../src/lib/games/splendor-data.ts');
 const players=n=>Array.from({length:n},(_,i)=>({id:'p'+i,name:'Mercador '+i})),start=n=>R.create(players(n),()=>.01),take=(...indices)=>({kind:'take',tokens:Array.from({length:6},(_,i)=>indices.filter(v=>v===i).length)});
 const current=s=>s.players[s.turn],play=(s,m)=>R.move(s,current(s).id,m);
 function seed(v){return ()=>{v=(Math.imul(v,1664525)+1013904223)>>>0;return v/4294967296;};}
@@ -56,4 +56,14 @@ test('bots complete full seeded games of every size without losing cards, tokens
   while(s.phase!=='finished'&&actions++<700){s=play(s,R.botMove(s,random));for(let i=0;i<6;i++)assert.equal(s.bank[i]+s.players.reduce((v,p)=>v+p.tokens[i],0),totals[i]);assert(s.players.every(p=>R.sum(p.tokens)<=10&&p.reserved.length<=3));const all=[...s.decks.flat(),...s.market.flat().filter(Boolean),...s.players.flatMap(p=>[...p.cards,...p.reserved])];assert.equal(all.length,90);assert.equal(new Set(all.map(c=>c.id)).size,90);for(const p of s.players){assert.equal(p.score,p.cards.reduce((v,c)=>v+c.points,0)+p.nobles.length*3);assert.deepEqual(p.bonuses,Array.from({length:5},(_,i)=>p.cards.filter(c=>c.bonus===i).length));}}
   assert.equal(s.phase,'finished');assert(s.players.some(p=>p.score>=15));assert.equal(new Set(s.players.map(p=>p.turns)).size,1);
  }
+});
+
+test('malformed reserve identifiers at a vacant market slot reject atomically with the domain error', () => {
+  const state = start(2);
+  state.market[0][0] = null;
+  const before = JSON.stringify(state);
+  for (const id of [undefined, null, 7, {}, [], 'unknown-card']) {
+    assert.throws(() => play(state, { kind: 'reserve', id }), { code: 'SPLENDOR_INVALID_MOVE' });
+    assert.equal(JSON.stringify(state), before);
+  }
 });

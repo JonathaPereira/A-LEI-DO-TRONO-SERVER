@@ -2,13 +2,13 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { createSplendor } from '../../lib/games/splendor';
 import { createGameFullscreen } from '../../lib/games/fullscreen';
-import type { SplendorRoom, SplendorRules, SplendorData } from '../../types/splendor';
+import * as rules from '../../lib/games/splendor-rules';
+import * as data from '../../lib/games/splendor-data';
+import type { SplendorRoom } from '../../types/splendor';
 import type { NetworkClient } from '../../lib/socket/client';
 import { SplendorContents } from './splendor-contents';
 import { createSplendorAnimations } from './splendor-animations';
 interface Runtime extends Window {
-  SplendorRules: SplendorRules;
-  SplendorData: SplendorData;
   TronoAuth: { user: { id: string } | null };
   TronoNetwork: NetworkClient;
   TronoPortal: { showOnly(id: string): void };
@@ -38,7 +38,7 @@ export function initializeSplendor(target: Window): () => void {
     subscribeMessages: (fn) => runtime.TronoNetwork.onMessage(fn),
     ensureAuthenticated: () => runtime.TronoNetwork.ensureSplendor(),
     send: (action, payload) => runtime.TronoNetwork.splendor(action, payload),
-    rules: runtime.SplendorRules,
+    rules,
     uuid: () => target.crypto.randomUUID(),
     effect: (e, p) => effects?.effect(e, p),
     capturePurchase: (e) => effects?.capturePurchase(e),
@@ -75,8 +75,8 @@ export function initializeSplendor(target: Window): () => void {
       <SplendorContents
         controller={controller}
         fullscreen={fullscreen}
-        rules={runtime.SplendorRules}
-        data={runtime.SplendorData}
+        rules={rules}
+        data={data}
       />,
     ),
   );
@@ -85,7 +85,7 @@ export function initializeSplendor(target: Window): () => void {
     layer: doc.getElementById('splendorEffects')!,
     visible,
     reduced: () => motion.matches,
-    rules: runtime.SplendorRules,
+    rules,
   });
   const sync = () => {
       controller.visibilityChanged();

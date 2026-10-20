@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
-const R = require('../src/legacy/splendor-rules');
+const R = require('../src/lib/games/splendor-rules.ts');
 const moduleReady = import('../src/lib/games/splendor.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 test('a preview from an older animation cannot reserve until reopened against the current table', async (t) => {

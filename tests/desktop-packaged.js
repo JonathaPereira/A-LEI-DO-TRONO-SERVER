@@ -125,8 +125,6 @@ test(
               '/love-letter.css',
               '/assets/love-letter/characters.webp',
               '/assets/love-letter/table.webp',
-              '/splendor-data.js',
-              '/splendor-rules.js',
               '/splendor.css',
               '/game-covers.css',
               '/assets/games/throne-cover.webp',

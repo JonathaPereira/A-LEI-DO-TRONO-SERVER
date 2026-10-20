@@ -7,8 +7,6 @@
     "auth.js",
     "light-noise.js",
     "noise-suppression.js",
-    "splendor-data.js",
-    "splendor-rules.js",
     "soundboard-client.js",
     "call-controls-layout.js"
   ],
