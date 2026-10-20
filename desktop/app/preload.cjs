@@ -2,7 +2,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 const listen=(channel,fn)=>{const handler=(_,data)=>fn(data);ipcRenderer.on(channel,handler);return()=>ipcRenderer.removeListener(channel,handler);};
 contextBridge.exposeInMainWorld('TronoDesktop',{
-  version:'0.2.12',
+  version:'0.2.13',
   remoteCapability:()=>ipcRenderer.invoke('mn:remote-capability'),
   prepareRemoteCapture:name=>ipcRenderer.invoke('mn:remote-prepare',name),
   allowRemoteControl:(mode='desktop')=>ipcRenderer.invoke('mn:remote-allow',mode),
@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('TronoDesktop',{
   onCaptureCancel:fn=>listen('mn:capture-cancel',fn),
   selectCapture:choice=>ipcRenderer.invoke('mn:capture-select',choice),
   chooseFolder:()=>ipcRenderer.invoke('mn:folder'),
+  openNexus:()=>ipcRenderer.invoke('mn:nexus'),
   openManual:()=>ipcRenderer.invoke('mn:manual'),
   openAttachment:choice=>ipcRenderer.invoke('mn:attachment',choice),
   saveClip:data=>ipcRenderer.invoke('mn:clip-save',data)
