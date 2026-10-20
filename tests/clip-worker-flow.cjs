@@ -115,4 +115,107 @@ async function exerciseClipWorker(page) {
   );
   assert.equal(result.preserved, true);
 }
-module.exports = { exerciseClipWorker };
+/** Exercise the typed session under native CSP, including a clip requested just before pause. */
+async function exerciseReplaySession(page) {
+  const result = await page.evaluate(async () => {
+    const source = window.TronoSocial.getLocalDisplayStream(),
+      originals = source.getTracks(),
+      microphone = window.TronoSocial.getLocalAudioTrack();
+    let clip, failure, session, release, video, url;
+    const persistence = new Promise((resolve) => {
+      release = resolve;
+    });
+    const until = async (predicate) => {
+      const deadline = performance.now() + 10000;
+      while (!predicate()) {
+        if (failure) throw Error(failure);
+        if (performance.now() >= deadline) throw Error('Replay session timeout');
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+    };
+    try {
+      session = await window.TronoCreateReplaySession({
+        source,
+        owner: 'native-test',
+        quality: { width: 1920, height: 1080, bitrate: 16000000, label: '1080p' },
+        fps: 60,
+        seconds: 15,
+        isCurrent: () => true,
+        onStatus() {},
+        async onClip(_session, value) {
+          clip = value;
+          await persistence;
+        },
+        onError(message) {
+          failure = message;
+        },
+        onEnded() {
+          failure = 'Test source ended';
+        },
+      });
+      session.start();
+      await until(() => session.status?.ready);
+      session.requestClip('native-session');
+      session.stop();
+      await until(() => clip);
+      const pendingBeforePersistence = session.pendingCount;
+      release();
+      await until(() => session.pendingCount === 0);
+      video = document.createElement('video');
+      video.muted = true;
+      url = URL.createObjectURL(clip.blob);
+      const decoded = new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(Error('Session clip did not decode')), 8000);
+        video.onloadeddata = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+        video.onerror = () => {
+          clearTimeout(timer);
+          reject(Error('Session clip is invalid'));
+        };
+      });
+      video.src = url;
+      video.load();
+      await decoded;
+      return {
+        id: clip.id,
+        bytes: clip.bytes,
+        duration: clip.duration,
+        width: video.videoWidth,
+        height: video.videoHeight,
+        pendingBeforePersistence,
+        pending: session.pendingCount,
+        stopping: session.stopping,
+        disposed: session.stream.getTracks().every((track) => track.readyState === 'ended'),
+        preserved:
+          window.TronoSocial.getLocalDisplayStream() === source &&
+          originals.every((track) => track.readyState === 'live') &&
+          window.TronoSocial.getLocalAudioTrack() === microphone &&
+          microphone.readyState === 'live',
+        failure,
+      };
+    } finally {
+      release();
+      session?.stop();
+      if (video) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      }
+      if (url) URL.revokeObjectURL(url);
+    }
+  });
+  assert.equal(result.id, 'native-session');
+  assert(
+    result.bytes > 0 && result.duration > 0 && result.width > 0 && result.height > 0,
+    JSON.stringify(result),
+  );
+  assert.equal(result.pendingBeforePersistence, 1);
+  assert.equal(result.pending, 0);
+  assert.equal(result.stopping, true);
+  assert.equal(result.disposed, true);
+  assert.equal(result.preserved, true);
+  assert.equal(result.failure, undefined);
+}
+module.exports = { exerciseClipWorker, exerciseReplaySession };

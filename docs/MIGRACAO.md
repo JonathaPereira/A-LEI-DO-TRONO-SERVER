@@ -2890,6 +2890,31 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   em `clip-desktop.js` e gravação manual em `recording.js`. Persistência e buffer
   já têm donos tipados; não restaurar os dois arquivos legados removidos.
 
+## Sessão de replay em TypeScript
+
+- `lib/clips/session.ts` passa a possuir clones, MediaRecorder, worker, leituras
+  serializadas, pedidos de clipe e encerramento. O bloco correspondente saiu de
+  `legacy/clips.js`; o adaptador usa `TronoCreateReplaySession`, sem acessar filas,
+  waiters, recorder ou worker. A fábrica só aloca recursos quando chamada.
+- A seleção da fonte e a geração de conta permanecem no coordenador atual.
+  Preparações canceladas liberam clones; há nova checagem ao receber a sessão
+  assíncrona. A configuração de codecs, bitrate, áudio e retenção foi conservada.
+- Pausar encerra somente clones e recorder; pedidos já feitos mantêm o worker
+  até a persistência terminar. Erro individual libera a vaga, falha fatal pausa
+  o replay, e leituras atrasadas não enviam dados a um worker terminado.
+- Seis regressões de ciclo de vida cobrem cancelamento durante constraints,
+  ordem/transferência dos fragmentos, pausa com persistência pendente, limite de
+  quatro pedidos, falha do worker, fallback do recorder e descarte após erro.
+- Typecheck, format:check e build estático passaram; `test:clips` passou nos 22
+  testes, incluindo áudio, exportação, atalhos, reload e quota. A chamada com
+  dois Electron reais passou e executou a sessão emitida sob a CSP nativa:
+  solicitou clipe, pausou imediatamente, aguardou a persistência e decodificou
+  o resultado, preservando fonte e microfone. Evidências locais em
+  `artifacts/clip-session-*`. A mídia é sintética; não mede jogos reais a 60 fps.
+- Restam a biblioteca, preferências, salvamento e bindings DOM de `clips.js`,
+  a ponte Windows `clip-desktop.js` e a gravação manual `recording.js`. Não copiar
+  estado de mídia de volta ao adaptador ao converter esses fluxos.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,

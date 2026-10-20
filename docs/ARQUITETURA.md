@@ -1673,12 +1673,27 @@ Cada worker possui um buffer e processa as mensagens na ordem recebida.
 `buffer-worker.ts` é a entrada isolada, emitida pelo Next como worker de módulo.
 Não é carregada como script da janela.
 
-`browser.ts` instala a fábrica tardia `TronoCreateClipWorker` para o coordenador
-ainda legado. `clips.js` conserva MediaRecorder, fila de leitura, transferências,
-waiters e término do worker; não cria outro dono nem outro encoder. O URL vem do
-bundle Next, sem depender de document.currentScript. `legacy/clip-buffer.js` foi
-excluído e seu JS antigo é podado pelo build. O desktop continua sem iniciar replay
-automaticamente; o teste nativo chama a fábrica explicitamente em um perfil descartável.
+`session.ts` possui os clones de replay, MediaRecorder, worker, fila de leitura e
+pedidos de clipe. Conserva codec, bitrate, áudio e limites anteriores. Restringe
+somente os clones; cancelamento durante applyConstraints libera esses clones
+antes de criar recorder/worker. A interface cancela uma preparação obsoleta por
+geração/conta/fonte e só então instala a sessão retornada.
+
+`requestClip` solicita o próximo fragmento, correlaciona até quatro pedidos e
+envia ArrayBuffers transferíveis na ordem das leituras. Ao pausar, a sessão para
+os clones, processa os fragmentos finais e conserva o worker até terminar os
+pedidos e sua persistência. Erros correlacionados liberam somente o pedido;
+falhas fatais encerram o replay sem tocar nas trilhas da chamada. Leituras tardias
+não postam em um worker já encerrado. A interface recebe status e resultados;
+não acessa mais recorder, worker, fila ou waiters.
+
+`browser.ts` instala as fábricas tardias `TronoCreateClipWorker` e
+`TronoCreateReplaySession`. `clips.js` ainda possui seleção de fonte, preferências,
+conta, biblioteca, salvamento e interface, delegando a sessão ao módulo tipado.
+O URL do worker vem do bundle Next, sem depender de document.currentScript.
+`legacy/clip-buffer.js` foi excluído e seu JS antigo é podado pelo build. O desktop
+continua sem iniciar replay automaticamente; o teste nativo chama as fábricas
+explicitamente em um perfil descartável.
 
 Na comunidade web, `workspace-layout.ts` move o grupo completo `callReplayControls`
 para `callReplayDock`, fora da barra antiga oculta. Ao sair, restaura sua posição;

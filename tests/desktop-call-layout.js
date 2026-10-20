@@ -175,6 +175,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     const remoteScreen = receiver.locator('#screenShareGrid .screen-share-tile[data-peer="' + senderId + '"] video');
     await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(0);
     await require('./clip-worker-flow.cjs').exerciseClipWorker(page);
+    await require('./clip-worker-flow.cjs').exerciseReplaySession(page);
     await require('./stream-controls-flow.cjs').exerciseStreamControls(receiver, remoteScreen.locator('..'));
     // The local preview may pause without replacing capture or interrupting received frames.
     const localScreen = page.locator('.screen-share-tile[data-peer="' + senderId + '"]');

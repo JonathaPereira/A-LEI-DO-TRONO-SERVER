@@ -281,11 +281,6 @@ if (!window.TronoDesktop) {
         message(e.message);
       }
     }
-    function dispose(s) {
-      if (s.closed && !s.waiters.size) {
-        s.worker.terminate();
-      }
-    }
     async function retain(s, result) {
       const id = result.id,
         createdAt = Date.now(),
@@ -330,8 +325,6 @@ if (!window.TronoDesktop) {
             'Replay pausado: sem espaço ou acesso ao armazenamento do navegador. Este clipe está somente na memória: salve ou descarte antes de retomar e antes de fechar a página.',
           );
       }
-      s.waiters.delete(id);
-      dispose(s);
       if (s.owner === owner) {
         await refresh();
         window.TronoClipDesktop?.saved(clips.filter((c) => c.blob).length);
@@ -351,20 +344,8 @@ if (!window.TronoDesktop) {
         renderState();
         return;
       }
-      if (s.stopping) return;
-      s.stopping = true;
       if (session === s) session = null;
-      try {
-        if (s.recorder.state !== 'inactive') s.recorder.stop();
-        else {
-          s.closed = true;
-          dispose(s);
-        }
-      } catch {
-        s.closed = true;
-        dispose(s);
-      }
-      s.stream.getTracks().forEach((t) => t.stop());
+      s.stop();
       if (current) {
         renderState();
         message('Buffer temporário descartado. Os clipes já criados continuam na biblioteca.');
@@ -400,124 +381,32 @@ if (!window.TronoDesktop) {
         current = owner;
       starting = true;
       renderState();
-      let stream, worker;
       try {
-        // Only the cloned tracks belong to this recorder. Never stop or constrain
-        // the screen/audio tracks used by the call when pausing local replay.
-        stream = new MediaStream(
-          source
-            .getTracks()
-            .filter((t) => t.readyState === 'live')
-            .map((t) => t.clone()),
-        );
-        const video = stream.getVideoTracks()[0];
-        if (!video) throw Error('A tela compartilhada não está mais disponível.');
-        const q = qualities[settings.quality],
-          actualSource = source.getVideoTracks()[0].getSettings();
-        const width = Math.min(q.width, actualSource.width || q.width),
-          height = Math.min(q.height, actualSource.height || q.height),
-          fps = Math.min(settings.fps, actualSource.frameRate || settings.fps);
-        try {
-          await video.applyConstraints({
-            width: { ideal: width, max: width },
-            height: { ideal: height, max: height },
-            frameRate: { ideal: fps, max: fps },
-          });
-        } catch {}
+        let s;
+        s = await window.TronoCreateReplaySession({
+          source,
+          owner: current,
+          quality: qualities[settings.quality],
+          fps: settings.fps,
+          seconds: settings.seconds,
+          isCurrent: () => request === generation && current === owner && sharedSource === source,
+          onStatus: () => {
+            if (session === s) renderState();
+          },
+          onClip: retain,
+          onError: (text) => {
+            if (session === s && s.stopping) stop(s);
+            message(text);
+          },
+          onEnded: () => stop(s),
+        });
+        if (!s) return;
         if (request !== generation || current !== owner || sharedSource !== source) {
-          stream.getTracks().forEach((t) => t.stop());
+          s.stop();
           return;
         }
-        const mime = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm'].find(
-          (m) => MediaRecorder.isTypeSupported(m),
-        );
-        if (!mime) throw Error('Replay WebM indisponível. Use Chrome ou Edge atualizado.');
-        const actual = video.getSettings(),
-          bitrate = Math.round(q.bitrate * (fps > 30 ? 1.5 : 1)),
-          maxBytes = Math.min(
-            256 * 1048576,
-            Math.max(64 * 1048576, Math.ceil((bitrate / 8) * (settings.seconds + 4) * 1.15)),
-          );
-        const options = { mimeType: mime, videoBitsPerSecond: bitrate, audioBitsPerSecond: 192000 };
-        let recorder;
-        try {
-          recorder = new MediaRecorder(stream, { ...options, videoKeyFrameIntervalDuration: 2000 });
-        } catch {
-          recorder = new MediaRecorder(stream, options);
-        }
-        worker = window.TronoCreateClipWorker();
-        const s = {
-          stream,
-          source,
-          worker,
-          recorder,
-          owner: current,
-          quality: actual.width && actual.height ? actual.width + '×' + actual.height : q.label,
-          fps: Math.round(actual.frameRate || fps),
-          hasAudio: stream.getAudioTracks().length > 0,
-          maxBytes,
-          label: video.label || 'Tela compartilhada',
-          waiters: new Set(),
-          flushing: [],
-          reads: Promise.resolve(),
-          status: null,
-          closed: false,
-          stopping: false,
-        };
         session = s;
-        worker.onmessage = (e) => {
-          const m = e.data;
-          if (m.type === 'status') {
-            s.status = m;
-            if (session === s) renderState();
-          } else if (m.type === 'clip') void retain(s, m);
-          else if (m.type === 'error') {
-            if (m.id) {
-              s.waiters.delete(m.id);
-              dispose(s);
-              message(m.message);
-            } else {
-              s.waiters.clear();
-              stop(s);
-              message(m.message);
-            }
-          }
-        };
-        worker.onerror = () => {
-          s.waiters.clear();
-          stop(s);
-          message('Falha no replay local. Sua chamada e os clipes já armazenados continuam.');
-          s.closed = true;
-          dispose(s);
-        };
-        worker.postMessage({ type: 'init', seconds: settings.seconds, fps: s.fps, maxBytes });
-        recorder.ondataavailable = (e) => {
-          s.reads = s.reads
-            .then(async () => {
-              if (e.data.size) {
-                const data = await e.data.arrayBuffer();
-                s.worker.postMessage({ type: 'chunk', data }, [data]);
-              }
-              for (const id of s.flushing.splice(0)) s.worker.postMessage({ type: 'clip', id });
-            })
-            .catch(() => {
-              s.waiters.clear();
-              stop(s);
-              message('Falha ao preparar o replay. Os clipes anteriores continuam armazenados.');
-            });
-        };
-        recorder.onstop = () => {
-          void s.reads.finally(() => {
-            s.closed = true;
-            dispose(s);
-          });
-        };
-        recorder.onerror = () => {
-          stop(s);
-          message('O navegador interrompeu o replay. Sua transmissão continua.');
-        };
-        video.addEventListener('ended', () => stop(s), { once: true });
-        recorder.start(1000);
+        s.start();
         starting = false;
         renderState();
         message(
@@ -528,8 +417,6 @@ if (!window.TronoDesktop) {
               : 'Replay ativo sem áudio: o navegador não forneceu áudio da tela. Habilite-o no seletor de compartilhamento, quando disponível.',
         );
       } catch (e) {
-        stream?.getTracks().forEach((t) => t.stop());
-        worker?.terminate();
         if (request !== generation || current !== owner) return;
         session = null;
         starting = false;
@@ -655,19 +542,15 @@ if (!window.TronoDesktop) {
         );
         return;
       }
-      if (s.waiters.size >= 4) {
+      if (s.pendingCount >= 4) {
         message('Aguarde os clipes em preparação antes de clipar novamente.');
         return;
       }
       const id = crypto.randomUUID();
-      s.waiters.add(id);
-      s.flushing.push(id);
       message('Preparando clipe…');
       try {
-        s.recorder.requestData();
+        s.requestClip(id);
       } catch {
-        s.flushing = s.flushing.filter((k) => k !== id);
-        s.waiters.delete(id);
         message('A captura não está disponível. Os clipes anteriores continuam armazenados.');
       }
     }
