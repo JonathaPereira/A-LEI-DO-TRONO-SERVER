@@ -16,14 +16,7 @@ export function RoomScreen() {
           <p id="roomOnlineStatus" className="online-room-status" />
           <details className={'local-test-fold'}>
             <summary>Opções locais de desenvolvimento</summary>
-            <div className={'setup-actions'}>
-              <button id={'startHumanBtn'} className={'royal-btn'}>
-                Preencher vagas com IAs e jogar local
-              </button>
-              <button id={'startDemoBtn'} className={'royal-btn'}>
-                Simular 4 IAs
-              </button>
-            </div>
+            <div id="throneLocalStartHost" className="setup-actions" />
           </details>
           <p className={'setup-note'}>
             Alpha multiplayer: o servidor agora controla o baralho, as mãos privadas, os turnos e as

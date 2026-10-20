@@ -60,7 +60,7 @@ test(
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (message) => {
         if (
-          /\[Throne(?:History|Match|Table|Seats|Effects|Events|Choices|Hand|Controls)\]/.test(
+          /\[Throne(?:History|Match|Table|Seats|Effects|Events|Choices|Hand|Controls|Local)\]/.test(
             message.text(),
           )
         )
@@ -69,6 +69,7 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
+      await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);
       await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page);
       await require('./throne-tooltip-controls.cjs').exerciseThroneTooltips(page);
       await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
@@ -124,8 +125,47 @@ test(
       await page.locator('#roomScreen details').evaluate((node) => {
         node.open = true;
       });
+      // A known first trick makes the human the new Crown under Desafio.
+      // Only this disposable fixture controls the shuffle and hands; rules remain unchanged.
+      await page.evaluate(() => {
+        window.__savedLocalRandom = Math.random;
+        window.__savedLocalDecrees = [...window.TronoRules.decrees];
+        const challenge = window.TronoRules.decrees.find((d) => d.id === 'desafio');
+        const rest = window.TronoRules.decrees.filter((d) => d.id !== 'desafio');
+        window.TronoRules.decrees.splice(0, 10, rest[0], challenge, ...rest.slice(1));
+        Math.random = () => 0;
+      });
       await page.locator('#startHumanBtn').click();
-      let humanPlays = 0;
+      await expect(page.locator('#throneChoiceDialog')).toBeVisible();
+      await page.evaluate(() => {
+        Math.random = window.__savedLocalRandom;
+        window.TronoRules.decrees.splice(0, 10, ...window.__savedLocalDecrees);
+        delete window.__savedLocalRandom;
+        delete window.__savedLocalDecrees;
+        const g = window.__LeiDoTrono.getState();
+        const suits = ['cetro', 'chave', 'lamina', 'mascara'];
+        const deck = Array.from({ length: 48 }, (_, id) => ({
+          id: `c${id}`,
+          suit: suits[Math.floor(id / 12)],
+          value: (id % 12) + 1,
+          public: false,
+          publicReason: null,
+        }));
+        const hands = [
+          [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+          [0, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+          [1, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+          [2, 3, 4, 5, 6, 7, 8, 9, 10, 39],
+        ];
+        g.players.forEach((p, seat) => {
+          p.hand = hands[seat].map((id) => deck[id]);
+        });
+        g.undealt = deck.slice(40);
+        g.firstRoundStarter = g.leader = 0;
+      });
+      await page.locator('#throneChoiceDialog .choice-card').filter({ hasText: 'Desafio' }).click();
+      let humanPlays = 0,
+        humanChallenges = 0;
       const humanDeadline = Date.now() + 45000;
       while (
         !(await page.locator('#throneResultDialog').isVisible()) &&
@@ -134,10 +174,18 @@ test(
         if (await page.locator('#thronePrivateDialog').isVisible())
           await page.locator('#thronePrivateContinue').click();
         else if (await page.locator('#throneChoiceDialog').isVisible()) {
+          const offered = await page.evaluate(() => window.TronoThroneChoices.getSnapshot());
+          if (offered.prompt?.kind === 'challenge') {
+            assert.equal(offered.context.lastCrown, 0);
+            humanChallenges++;
+          }
           const choice = page.locator('#throneChoiceDialog .choice-card').first();
           if (await choice.isVisible()) await choice.click();
         } else {
-          const card = page.locator('#humanHand .hand-card:enabled').first();
+          const card =
+            humanPlays === 0
+              ? page.locator('#humanHand [data-card="c11"]')
+              : page.locator('#humanHand .hand-card:enabled').first();
           if (await card.isVisible()) {
             await card.focus();
             await page.keyboard.press(humanPlays % 2 ? 'Space' : 'Enter');
@@ -147,6 +195,7 @@ test(
         await page.waitForTimeout(35);
       }
       await expect(page.locator('#throneResultDialog')).toBeVisible();
+      assert(humanChallenges >= 1, 'The new human Crown must complete Desafio');
       assert(humanPlays >= 9, `Human round must play its hand (played ${humanPlays})`);
       assert.equal(
         await page.evaluate(() => window.TronoThroneHistory.getSnapshot().dialog.round),

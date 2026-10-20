@@ -173,8 +173,9 @@ monta antes de `game.js`, recebe eventos do socket existente e libera observador
 assinaturas, raiz e timers ao descartar. O botão de comunicação conserva seu host.
 `TronoThroneLobby` é o dono consultado pelo controlador antigo: não há outra cópia
 de seleção, roster, participante ou pedido de entrada em `legacy/game.js`.
-`TronoThroneBoard` é uma ponte temporária para preparar nomes locais e cancelar
-partidas; não possui o estado do salão.
+`TronoThroneBoard` é uma ponte temporária para preparar nomes, iniciar o motor
+local e limpar sua projeção; não possui o estado do salão. O dono tipado do ciclo
+de vida decide quando uma execução local ainda pode continuar.
 
 O jogo ainda possui simulação e aplicação das regras locais de Influência em
 `legacy/game.js`. A mão e as escolhas entre fases usam os donos compartilhados
@@ -257,10 +258,10 @@ identidade/partida, iniciar o modo online ou descartar rejeita com `AbortError`.
 Tokens antigos não podem reapresentar a mão após A → B → A. O local funciona sem
 conexão e ignora pacotes de estado/erro de uma mesa em segundo plano.
 
-O motor conserva o prazo de 60 segundos e escolhe a carta automática; o timer
-captura a sessão, sua própria referência e a oferta tipada. `timeoutLocal` pode
-resolver uma oferta oculta, sem gastar a seleção de Influência. O dono não cria
-outro timer nem envia comandos de rede no local. Antes de aplicar uma escolha,
+O ciclo de vida local agenda o prazo de 60 segundos com um ticket por turno;
+o motor escolhe a carta automática e captura a oferta tipada. `timeoutLocal`
+pode resolver uma oferta oculta, sem gastar a seleção de Influência. O dono da
+mão não cria outro timer nem envia comandos de rede no local. Antes de aplicar uma escolha,
 o motor confere novamente cartas legais, saldo, Corte Aberta e declaração.
 Geometria é copiada/validada; a animação continua com seu dono existente.
 
@@ -273,7 +274,8 @@ diálogo; o retorno restaura a escolha. Modais privados/resultados têm precedê
 
 `renderHandLocal`, `onHumanCardClick`, `humanPlayResolver`, os renderizadores de
 Influência/naipe e os listeners locais de cartas/checkbox/ordenação foram removidos.
-Os controles gerais e as escolhas entre fases usam React. A simulação permanece no legado.
+Os controles gerais e as escolhas entre fases usam React. Regras e sequência de fases
+da simulação ainda permanecem no legado; o ciclo de vida está no dono tipado abaixo.
 
 `lib/games/throne-controls.ts` possui velocidade, abertura das regras e confirmação
 para sair. O motor consulta sua escala ao agendar pausas/efeitos; não há outra
@@ -296,8 +298,32 @@ conservando os nós React e sua posição no grupo Jogo.
 
 `navigation/rules-drawer.tsx`, HTML de regras, handlers de manual/regras/velocidade/
 Início, `escAttr` e CSS exclusivo do drawer antigo foram removidos. O runtime
-libera raiz, portais, observador e assinaturas. Permanecem no motor os gatilhos de
-início humano/demonstração e a ponte de navegação.
+libera raiz, portais, observador e assinaturas. Os gatilhos de início humano/
+demonstração agora usam o ciclo de vida local; a ponte de navegação permanece.
+
+`lib/games/throne-local-lifecycle.ts` possui preparação, sessão de execução,
+esperas canceláveis e timers locais. Início humano/demonstração é renderizado por
+`throne-local-start.tsx`; ambos os botões ficam indisponíveis durante a preparação.
+Cliques repetidos compartilham a mesma tentativa. O áudio é preparado antes de
+limpar/apresentar a mesa; identidade/ABA, sala, navegação durante a preparação,
+início online, cancelamento e descarte invalidam a tentativa. Não pode reabrir
+uma mesa depois de uma preparação atrasada.
+
+Cada execução tem um token distinto. `wait` rejeita imediatamente no cancelamento,
+mesmo se um trabalho externo ainda não resolveu; `check` valida o valor após o
+await e antes de aplicá-lo. As fronteiras assíncronas do motor usam esse contrato,
+incluindo efeitos, cartas, revelações e placares. Pausas e o ticket de 60 segundos
+são agendados pelo mesmo dono; limpar um ticket antigo não cancela seu sucessor.
+Ocultar uma partida em execução conserva o prazo original. Não há outro socket,
+recurso de mídia ou cópia do baralho nesse módulo.
+
+O runtime só limpa os donos locais no início válido e delega a limpeza do motor à
+ponte `cancelLocal`, que confere o mesmo token e não limpa uma partida online nova.
+Callbacks antigos não registram erro nem retornam para uma sala posterior. O
+runtime libera raiz, observador e assinaturas no descarte. `sleep`, `localTurnTimer`,
+handlers de início e guardas esparsas foram retirados de `game.js`; as fases/regras
+continuam ali até o próximo recorte. A escolha de Desafio projeta a Coroa da vaza
+recém-resolvida, antes de o motor avançar os marcadores da vaza anterior.
 
 `lib/games/throne-law-planner.ts` é o planejador puro compartilhado pelo servidor
 (`runtime.cjs`) e motor local. Recebe somente Lei atual, usos, Decreto e próxima

@@ -10,9 +10,7 @@ const SUIT_ORDER = ['cetro', 'chave', 'lamina', 'mascara'];
 const LAWS = window.TronoRules.laws;
 const LAW_ORDER = window.TronoRules.lawOrder;
 const DECREES = window.TronoRules.decrees;
-
 const $ = (id) => document.getElementById(id);
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rand = (n) => Math.floor(Math.random() * n);
 const shuffle = (arr) => {
   const a = [...arr];
@@ -22,9 +20,9 @@ const shuffle = (arr) => {
   }
   return a;
 };
-
 let game = null;
 let leavingGame = false;
+const throneLocal = window.TronoThroneLocal;
 const throneControls = window.TronoThroneControls;
 const throneLobby = window.TronoThroneLobby;
 const throneChoices = window.TronoThroneChoices;
@@ -37,12 +35,10 @@ const throneHistory = window.TronoThroneHistory;
 const throneEffects = window.TronoThroneEffects;
 let onlineGameMode = false;
 let chatOnlyRoomState = null;
-let localTurnTimer = null;
 // Audio controls initialize independently of the game/room interface.
 const storage = window.TronoStorage || localStorage;
 const ensureAudio = (...args) => window.TronoAudio?.ensureAudio(...args) || Promise.resolve(false);
 const toggleMusic = (...args) => window.TronoAudio?.toggleMusic(...args);
-
 function makeDeck() {
   let id = 0;
   const deck = [];
@@ -51,6 +47,7 @@ function makeDeck() {
       deck.push({ id: `c${id++}`, suit, value, public: false, publicReason: null });
   return deck;
 }
+
 function roundPairs(p) {
   return Math.min(p.roundCrowns, p.roundShadows);
 }
@@ -61,31 +58,35 @@ function roundPairs(p) {
 function totalPairs(p) {
   return Math.min(p.totalCrowns, p.totalShadows);
 }
+
 function totalPrestige(p) {
   return p.totalCrowns + p.totalShadows + 2 * totalPairs(p);
 }
+
 function rawAccumulated(p) {
   return p.totalCrowns + p.totalShadows;
 }
+
 function playerLabel(id) {
   return game.players[id].name;
 }
-async function delay(base) {
-  const current = game;
-  await sleep(Math.max(30, base * throneControls.getSnapshot().scale));
-  if (current && !current.online && current !== game)
-    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
+
+function delay(base) {
+  return game.localSession.delay(Math.max(30, base * throneControls.getSnapshot().scale));
 }
 // Rules and public effects emit text; the typed owner handles history and rendering.
 function logEvent(message) {
   throneHistory.appendPublic(message, game?.round || 0, game?.trick || 0);
 }
+
 function toast(text, ms = 1500) {
   throneEffects.toast(text, ms, throneControls.getSnapshot().scale);
 }
+
 function showConnectionNotice(name, botName = null, reason = 'disconnect') {
   throneEffects.connection(name, botName, reason);
 }
+
 function showInfluenceUseFeedback(value) {
   throneEffects.influence(value);
 }
@@ -94,6 +95,7 @@ function isLocalPlayersTurn() {
   if (!game || game.phase !== 'await-play' || game.turn == null) return false;
   return game.turn === (onlineGameMode ? game.localPlayerId : 0);
 }
+
 function showYourTurnNotice() {
   if (game)
     throneEffects.turn(
@@ -102,7 +104,6 @@ function showYourTurnNotice() {
     );
 }
 
-const BOT_NAMES = window.TronoBots.names;
 function createPlayers(names, allAI = false) {
   let botIndex = 0;
   return names.map((name, id) => {
@@ -140,18 +141,14 @@ function resetRoundStats() {
   }
 }
 
-async function startGame(allAI = false) {
-  clearLocalTurnTimer();
-  throneChoices.clear();
-  throneHand.clear();
-  throneMatch.clear();
-  thronePrivate.clear();
-  throneHistory.clear();
+async function startGame(allAI, localSession) {
+  const run = localSession;
+  run.assert();
   onlineGameMode = false;
   leavingGame = false;
-  await ensureAudio();
   const names = [0, 1, 2, 3].map((i) => $(`p${i}Name`).value);
   game = {
+    localSession,
     players: createPlayers(names, allAI),
     round: 1,
     trick: 1,
@@ -189,10 +186,12 @@ async function startGame(allAI = false) {
     `Partida iniciada${throneLobby.getSnapshot().selected ? ` em ${throneLobby.getSnapshot().selected.name}` : ''}. O sorteio definiu ${playerLabel(game.leader)} como primeiro líder.`,
   );
   renderAll();
-  await startRound();
+  run.check(await run.wait(startRound()));
 }
 
 async function startRound() {
+  const run = game.localSession;
+  run.assert();
   game.phase = 'round-start';
   game.trick = 1;
   game.currentLaw = 'ordem';
@@ -208,17 +207,18 @@ async function startRound() {
   game.undealt = deck;
   for (const p of game.players) sortHand(p);
   renderAll();
-
   toast(`Rodada ${game.round} — a corte se reúne`, 1800);
-  await delay(800);
-  game.decree = await chooseDecree();
+  run.check(await run.wait(delay(800)));
+  game.decree = run.check(await run.wait(chooseDecree()));
   logEvent(`Decreto: ${game.decree.name} vigorará durante toda a rodada.`);
   renderAll();
-  await applyDecreeRoundStart();
-  await beginTrick();
+  run.check(await run.wait(applyDecreeRoundStart()));
+  run.check(await run.wait(beginTrick()));
 }
 
 async function chooseDecree() {
+  const run = game.localSession;
+  run.assert();
   const min = Math.min(...game.players.map(rawAccumulated));
   const tied = game.players.filter((p) => rawAccumulated(p) === min);
   const chooser = tied[rand(tied.length)];
@@ -227,22 +227,31 @@ async function chooseDecree() {
     `${chooser.name} possui o menor total bruto de Coroas + Sombras e recebe a escolha do Decreto.`,
   );
   if (!chooser.ai) {
-    const choice = await chooseLocal({ kind: 'choose-decree', options: picks.map((d) => d.id) });
+    const choice = run.check(
+      await run.wait(
+        chooseLocal({
+          kind: 'choose-decree',
+          options: picks.map((d) => d.id),
+        }),
+      ),
+    );
     return DECREES.find((d) => d.id === choice);
   }
-  await delay(700);
+  run.check(await run.wait(delay(700)));
   const chosen = picks[rand(picks.length)];
   toast(`${chooser.name} escolheu ${chosen.name}`);
   return chosen;
 }
 
 async function applyDecreeRoundStart() {
+  const run = game.localSession;
+  run.assert();
   if (game.decree.id === 'reserva') {
     for (const p of game.players) {
       let card;
       if (p.ai) {
         card = chooseCpuReserve(p);
-      } else card = await chooseCardFromHand(p, 'choose-reserva');
+      } else card = run.check(await run.wait(chooseCardFromHand(p, 'choose-reserva')));
       p.reserve = card;
       p.hand = p.hand.filter((c) => c.id !== card.id);
       logEvent(`${p.name} separou uma carta na Reserva.`);
@@ -253,7 +262,7 @@ async function applyDecreeRoundStart() {
       const candidates = p.hand.filter((c) => !c.public);
       let card = p.ai
         ? candidates[rand(candidates.length)]
-        : await chooseCardFromHand(p, 'choose-corte', candidates);
+        : run.check(await run.wait(chooseCardFromHand(p, 'choose-corte', candidates)));
       card.public = true;
       card.publicReason = 'Corte Aberta';
       logEvent(`${p.name} revelou ${SUITS[card.suit].name} ${card.value} pela Corte Aberta.`);
@@ -265,31 +274,42 @@ async function applyDecreeRoundStart() {
     for (const p of game.players) {
       const card = p.ai
         ? p.hand[rand(p.hand.length)]
-        : await chooseCardFromHand(p, 'choose-conselho');
+        : run.check(await run.wait(chooseCardFromHand(p, 'choose-conselho')));
       choices.set(p.id, card.id);
     }
     window.TronoRules.passCards(game.players, choices, -1);
     for (const p of game.players) sortHand(p);
     logEvent('Conselho: todas as Casas passaram uma carta fechada à direita.');
-    await showExchangeAnimation({
-      kind: 'conselho',
-      title: 'Conselho — pacto entre as Casas',
-      subtitle: 'Quatro cartas passam simultaneamente à direita.',
-      moves: game.players.map((p) => ({
-        from: p.id,
-        to: (p.id + 3) % 4,
-        label: 'Carta fechada → direita',
-      })),
-    });
+    run.check(
+      await run.wait(
+        showExchangeAnimation({
+          kind: 'conselho',
+          title: 'Conselho — pacto entre as Casas',
+          subtitle: 'Quatro cartas passam simultaneamente à direita.',
+          moves: game.players.map((p) => ({
+            from: p.id,
+            to: (p.id + 3) % 4,
+            label: 'Carta fechada → direita',
+          })),
+        }),
+      ),
+    );
   }
   if (game.decree.id === 'espionagem') {
     for (const p of game.players)
       p.intelligence = window.TronoRules.intelligence(game.players, p.id);
     logEvent('Espionagem: cada Casa recebeu uma informação privada sobre o jogador à direita.');
     const clue = game.players[game.localPlayerId]?.intelligence;
-    if (clue) await thronePrivate.showLocal({ kind: 'intelligence', clue });
+    if (clue)
+      run.check(
+        await run.wait(
+          thronePrivate.showLocal({
+            kind: 'intelligence',
+            clue,
+          }),
+        ),
+      );
   }
-
   renderAll();
 }
 
@@ -299,7 +319,8 @@ function chooseCpuReserve(p) {
 }
 
 async function beginTrick() {
-  const session = game;
+  const run = game.localSession;
+  run.assert();
   if (game.gameOver) return;
   game.phase = 'trick-start';
   game.plays = [];
@@ -309,29 +330,25 @@ async function beginTrick() {
   renderAll();
   logEvent(`Vaza ${game.trick}: ${LAWS[game.currentLaw].name}.`);
   toast(`Vaza ${game.trick} • ${LAWS[game.currentLaw].name}`, 900);
-
-  if (game.currentLaw === 'estandarte') await declareTrump();
-  if (game.currentLaw === 'usurpacao') await performUsurpacao();
-
-  if (session !== game)
-    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
+  if (game.currentLaw === 'estandarte') run.check(await run.wait(declareTrump()));
+  if (game.currentLaw === 'usurpacao') run.check(await run.wait(performUsurpacao()));
   game.phase = 'await-play';
   game.turn = game.leader;
   for (let n = 0; n < 4; n++) {
     const pid = (game.leader + n) % 4;
     game.turn = pid;
     renderAll();
-    await playTurn(pid);
-    if (session !== game)
-      throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
+    run.check(await run.wait(playTurn(pid)));
   }
   clearLocalTurnTimer();
   game.turn = null;
   renderAll();
-  await resolveTrick();
+  run.check(await run.wait(resolveTrick()));
 }
 
 async function declareTrump() {
+  const run = game.localSession;
+  run.assert();
   const chooser = game.players[game.lastShadow];
   if (!chooser) {
     game.trump = SUIT_ORDER[rand(4)];
@@ -346,51 +363,85 @@ async function declareTrump() {
     }));
     scores.sort((a, b) => b.score - a.score);
     game.trump = scores[0].s;
-    await delay(500);
+    run.check(await run.wait(delay(500)));
   } else {
-    game.trump = await chooseLocal({ kind: 'choose-trump', options: SUIT_ORDER });
+    game.trump = run.check(
+      await run.wait(
+        chooseLocal({
+          kind: 'choose-trump',
+          options: SUIT_ORDER,
+        }),
+      ),
+    );
   }
   logEvent(`${chooser.name} declarou ${SUITS[game.trump].name} como Trunfo.`);
   renderAll();
 }
 
 async function showExchangeAnimation(value) {
-  const session = game;
-  await throneEffects.exchange(
-    { ...value, players: game.players, crown: game.lastCrown, shadow: game.lastShadow },
-    throneControls.getSnapshot().scale,
+  const run = game.localSession;
+  run.assert();
+  run.check(
+    await run.wait(
+      throneEffects.exchange(
+        {
+          ...value,
+          players: game.players,
+          crown: game.lastCrown,
+          shadow: game.lastShadow,
+        },
+        throneControls.getSnapshot().scale,
+      ),
+    ),
   );
-  if (session && !session.online && session !== game)
-    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
 }
 
 function prepareUsurpacaoExchange(shadow, target, given) {
   return window.TronoRules.reserveExchange(game.players, shadow, target, given?.id, shuffle);
 }
+
 function finishUsurpacaoExchange(shadow, target, index, state) {
   return window.TronoRules.finishExchange(shadow, target, state, index);
 }
 
 async function chooseUsurpacaoReturnIndex(shadow, crown) {
+  const run = game.localSession;
+  run.assert();
   const pickable = crown.hand.filter((c) => c.publicReason !== 'Corte Aberta');
   if (shadow.ai) return rand(pickable.length);
-  return await chooseLocal({ kind: 'usurp-pick', count: pickable.length, otherName: crown.name });
+  return run.check(
+    await run.wait(
+      chooseLocal({
+        kind: 'usurp-pick',
+        count: pickable.length,
+        otherName: crown.name,
+      }),
+    ),
+  );
 }
 
 async function showPrivateUsurpationResult(shadow, crown, given, taken) {
+  const run = game.localSession;
+  run.assert();
   const localId = game?.localPlayerId;
   if (localId == null || (localId !== shadow.id && localId !== crown.id)) return;
   const isShadow = localId === shadow.id;
-  await thronePrivate.showLocal({
-    kind: 'usurpation',
-    role: isShadow ? 'shadow' : 'target',
-    otherName: isShadow ? crown.name : shadow.name,
-    outgoing: isShadow ? given : taken,
-    incoming: isShadow ? taken : given,
-  });
+  run.check(
+    await run.wait(
+      thronePrivate.showLocal({
+        kind: 'usurpation',
+        role: isShadow ? 'shadow' : 'target',
+        otherName: isShadow ? crown.name : shadow.name,
+        outgoing: isShadow ? given : taken,
+        incoming: isShadow ? taken : given,
+      }),
+    ),
+  );
 }
 
 async function performUsurpacao() {
+  const run = game.localSession;
+  run.assert();
   const shadow = game.players[game.lastShadow];
   if (!shadow) return;
   const targets = game.players.filter(
@@ -398,10 +449,17 @@ async function performUsurpacao() {
   );
   const targetId = shadow.ai
     ? targets[rand(targets.length)].id
-    : await chooseLocal({
-        kind: 'usurp-target',
-        options: targets.map((p) => ({ seat: p.id, name: p.name })),
-      });
+    : run.check(
+        await run.wait(
+          chooseLocal({
+            kind: 'usurp-target',
+            options: targets.map((p) => ({
+              seat: p.id,
+              name: p.name,
+            })),
+          }),
+        ),
+      );
   const crown = game.players[targetId];
   let given;
   if (shadow.ai) {
@@ -410,11 +468,15 @@ async function performUsurpacao() {
       .sort((a, b) => a.value - b.value);
     given = pool[0];
   } else {
-    given = await chooseCardFromHand(
-      shadow,
-      'usurp-give',
-      shadow.hand.filter((c) => c.publicReason !== 'Corte Aberta'),
-      crown.name,
+    given = run.check(
+      await run.wait(
+        chooseCardFromHand(
+          shadow,
+          'usurp-give',
+          shadow.hand.filter((c) => c.publicReason !== 'Corte Aberta'),
+          crown.name,
+        ),
+      ),
     );
   }
 
@@ -423,25 +485,32 @@ async function performUsurpacao() {
 
   // Se a Sombra for humana, ela escolhe VISUALMENTE uma posição entre cartas fechadas.
   // Nenhum valor ou naipe é mostrado neste momento.
-  const pickIndex = await chooseUsurpacaoReturnIndex(shadow, crown);
+  const pickIndex = run.check(await run.wait(chooseUsurpacaoReturnIndex(shadow, crown)));
   const { taken } = finishUsurpacaoExchange(shadow, crown, pickIndex, before);
-
-  await showExchangeAnimation({
-    kind: 'usurpacao',
-    title: 'Usurpação — troca de mãos',
-    subtitle: `${shadow.name} escolhe uma carta fechada de ${crown.name}; a carta separada segue então para a Casa escolhida.`,
-    moves: [
-      { from: shadow.id, to: crown.id, role: 'shadow', label: 'Carta separada → Casa escolhida' },
-      {
-        from: crown.id,
-        to: shadow.id,
-        role: 'crown',
-        label: 'Carta aleatória → Sombra',
-        delay: 220,
-      },
-    ],
-  });
-
+  run.check(
+    await run.wait(
+      showExchangeAnimation({
+        kind: 'usurpacao',
+        title: 'Usurpação — troca de mãos',
+        subtitle: `${shadow.name} escolhe uma carta fechada de ${crown.name}; a carta separada segue então para a Casa escolhida.`,
+        moves: [
+          {
+            from: shadow.id,
+            to: crown.id,
+            role: 'shadow',
+            label: 'Carta separada → Casa escolhida',
+          },
+          {
+            from: crown.id,
+            to: shadow.id,
+            role: 'crown',
+            label: 'Carta aleatória → Sombra',
+            delay: 220,
+          },
+        ],
+      }),
+    ),
+  );
   sortHand(shadow);
   sortHand(crown);
   logEvent(
@@ -450,24 +519,27 @@ async function performUsurpacao() {
   renderAll();
 
   // Só o cliente de um dos dois envolvidos recebe a revelação das cartas.
-  await showPrivateUsurpationResult(shadow, crown, given, taken);
+  run.check(await run.wait(showPrivateUsurpationResult(shadow, crown, given, taken)));
   toast('Usurpação resolvida', 900);
   renderAll();
-  await delay(420);
+  run.check(await run.wait(delay(420)));
 }
 
 function isInfluenceBlocked(p = game?.players[game?.localPlayerId]) {
   return window.TronoRules.influenceBlocked(game, p);
 }
+
 function getLeadSuit() {
   return game.declaredLeadSuit || game.plays?.[0]?.card?.suit || null;
 }
+
 function canUseInfluence(p, cost = 1) {
   if (!p || p.influence < cost || isInfluenceBlocked(p)) return false;
   // Regra v0.5.5: a Coroa/líder também pode abrir a vaza com carta oculta.
   if (game.plays.length === 0) return p.id === game.leader;
   return true;
 }
+
 function announceHiddenLead(p, suit) {
   game.declaredLeadSuit = suit;
   logEvent(
@@ -478,16 +550,18 @@ function announceHiddenLead(p, suit) {
 }
 
 async function playTurn(pid) {
+  const run = game.localSession;
+  run.assert();
   const p = game.players[pid];
   if (game.decree.id === 'reserva' && game.trick === 10) {
     const card = p.reserve;
     p.reserve = null;
-    await commitPlay(p, card, false, null, true, 'none', 0);
+    run.check(await run.wait(commitPlay(p, card, false, null, true, 'none', 0)));
     return;
   }
   const legal = getLegalCards(p);
   if (p.ai) {
-    await delay(480);
+    run.check(await run.wait(delay(480)));
     const card = chooseCpuCard(p, legal);
     const inf = maybeCpuInfluence(p, card);
     if (inf.action !== 'none') {
@@ -497,18 +571,26 @@ async function playTurn(pid) {
         announceHiddenLead(p, card.suit);
       }
     }
-    await commitPlay(p, card, inf.action !== 'none', null, false, inf.action, inf.modifier);
+    run.check(
+      await run.wait(
+        commitPlay(p, card, inf.action !== 'none', null, false, inf.action, inf.modifier),
+      ),
+    );
   } else {
     renderHand();
-    const result = await waitHumanPlay(legal, p);
-    await commitPlay(
-      p,
-      result.card,
-      result.hidden,
-      result.sourceInfo,
-      false,
-      result.influenceAction || 'none',
-      result.modifier || 0,
+    const result = run.check(await run.wait(waitHumanPlay(legal, p)));
+    run.check(
+      await run.wait(
+        commitPlay(
+          p,
+          result.card,
+          result.hidden,
+          result.sourceInfo,
+          false,
+          result.influenceAction || 'none',
+          result.modifier || 0,
+        ),
+      ),
     );
   }
 }
@@ -551,70 +633,73 @@ function chooseCpuCard(p, legal) {
 }
 
 function clearLocalTurnTimer() {
-  if (localTurnTimer) {
-    clearTimeout(localTurnTimer);
-    localTurnTimer = null;
-  }
   if (game && !onlineGameMode) {
+    game.localSession.clearTurn();
     game.turnDeadline = null;
     syncLocalStatus();
   }
 }
-function waitHumanPlay(legal, p) {
-  const session = game;
+
+async function waitHumanPlay(legal, p) {
+  const session = game,
+    run = session.localSession;
+  run.assert();
   clearLocalTurnTimer();
-  game.turnDeadline = Date.now() + 60_000;
   const pending = throneHand.waitLocal(game.handSession, projectLocalHand(true));
   const offered = throneHand.getSnapshot().context;
-  const timer = setTimeout(() => {
-    if (game !== session || localTurnTimer !== timer) return;
+  const turn = run.turn(60_000, () => {
     const card = legal[rand(legal.length)];
     if (!throneHand.timeoutLocal(offered, card.id)) return;
-    localTurnTimer = null;
     game.turnDeadline = null;
     logEvent(`Tempo esgotado: ${p.name} recebeu uma jogada automática.`);
     toast('⌛ Tempo esgotado — carta aleatória jogada.', 1800);
     syncLocalStatus();
-  }, 60_000);
-  localTurnTimer = timer;
+  });
+  game.turnDeadline = turn.deadline;
   showYourTurnNotice();
   renderAll(false);
-  return pending
-    .then((move) => {
-      if (session !== game)
-        throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
-      const card = p.hand.find((c) => c.id === move.cardId),
-        action = move.influenceAction;
-      const hidden = action !== 'none',
-        cost = selectedInfluenceCost(action);
-      if (
-        !card ||
-        !getLegalCards(p).some((c) => c.id === card.id) ||
-        (hidden &&
-          (!canUseInfluence(p, cost) ||
-            card.publicReason === 'Corte Aberta' ||
-            (!game.plays.length && move.declaredSuit !== card.suit)))
-      )
-        throw new Error('Jogada local não autorizada pelo motor.');
-      clearLocalTurnTimer();
-      if (hidden) {
-        p.influence -= cost;
-        if (!game.plays.length) announceHiddenLead(p, move.declaredSuit);
-      }
-      renderHand();
-      syncLocalSeats();
-      return {
-        card,
-        hidden,
-        sourceInfo: move.origin ? { rect: move.origin } : null,
-        influenceAction: action,
-        modifier: selectedInfluenceModifier(action),
-      };
-    })
-    .finally(() => {
-      if (localTurnTimer === timer) clearLocalTurnTimer();
-      else clearTimeout(timer);
-    });
+  try {
+    const move = run.check(await run.wait(pending));
+    const card = p.hand.find((c) => c.id === move.cardId),
+      action = move.influenceAction;
+    const hidden = action !== 'none',
+      cost = selectedInfluenceCost(action);
+    if (
+      !card ||
+      !getLegalCards(p).some((c) => c.id === card.id) ||
+      (hidden &&
+        (!canUseInfluence(p, cost) ||
+          card.publicReason === 'Corte Aberta' ||
+          (!game.plays.length && move.declaredSuit !== card.suit)))
+    )
+      throw new Error('Jogada local não autorizada pelo motor.');
+    turn.cancel();
+    game.turnDeadline = null;
+    if (hidden) {
+      p.influence -= cost;
+      if (!game.plays.length) announceHiddenLead(p, move.declaredSuit);
+    }
+    renderHand();
+    syncLocalSeats();
+    return {
+      card,
+      hidden,
+      sourceInfo: move.origin
+        ? {
+            rect: move.origin,
+          }
+        : null,
+      influenceAction: action,
+      modifier: selectedInfluenceModifier(action),
+    };
+  } finally {
+    const active = turn.current();
+    turn.cancel();
+    if (active && game === session) {
+      game.turnDeadline = null;
+      syncLocalStatus();
+    }
+  }
 }
 
 async function commitPlay(
@@ -626,7 +711,8 @@ async function commitPlay(
   influenceAction = 'none',
   modifier = 0,
 ) {
-  const session = game;
+  const run = game.localSession;
+  run.assert();
   if (!isReserve) p.hand = p.hand.filter((c) => c.id !== card.id);
   const play = {
     playerId: p.id,
@@ -647,24 +733,34 @@ async function commitPlay(
     });
   syncLocalSeats();
   renderHand();
-  await animateCardToTable(play, sourceInfo);
-  if (session !== game)
-    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
+  run.check(await run.wait(animateCardToTable(play, sourceInfo)));
   logEvent(
     `${p.name} jogou ${hidden ? `uma carta oculta${play.order === 0 && game.declaredLeadSuit ? ` após anunciar ${SUITS[game.declaredLeadSuit].name}` : ''}` : `${SUITS[card.suit].name} ${card.value}`}${isReserve ? ' da Reserva' : ''}.`,
   );
 }
 
 async function animateCardToTable(play, sourceInfo) {
+  const run = game.localSession;
+  run.assert();
   syncLocalTable();
-  await throneEffects.arrival(
-    { seat: play.playerId, from: sourceInfo?.rect || null, card: play.card },
-    throneControls.getSnapshot().scale,
+  run.check(
+    await run.wait(
+      throneEffects.arrival(
+        {
+          seat: play.playerId,
+          from: sourceInfo?.rect || null,
+          card: play.card,
+        },
+        throneControls.getSnapshot().scale,
+      ),
+    ),
   );
 }
+
 function clampEffectiveValue(v) {
   return Math.max(1, Math.min(12, Number(v) || 0));
 }
+
 function playValue(play) {
   return clampEffectiveValue((play?.card?.value || 0) + (play?.modifier || 0));
 }
@@ -674,10 +770,12 @@ function evaluateTrick() {
 }
 
 async function resolveTrick() {
+  const run = game.localSession;
+  run.assert();
   game.phase = 'resolve';
   for (const play of game.plays) play.hidden = false;
   syncLocalTable();
-  await delay(450);
+  run.check(await run.wait(delay(450)));
   const { crown, shadow } = evaluateTrick();
   const crownP = game.players[crown.playerId],
     shadowP = game.players[shadow.playerId];
@@ -690,17 +788,23 @@ async function resolveTrick() {
     if (p.id !== crown.playerId && p.id !== shadow.playerId) {
       const before = p.influence;
       p.influence = Math.min(2, p.influence + 1);
-      if (p.influence > before) influenceGains.push({ player: p, before, after: p.influence });
+      if (p.influence > before)
+        influenceGains.push({
+          player: p,
+          before,
+          after: p.influence,
+        });
     }
   }
-
   if (game.lastCrown === crown.playerId) crownP.crownStreak++;
   else {
     for (const p of game.players) p.crownStreak = 0;
     crownP.crownStreak = 1;
   }
-
-  syncLocalTable({ crown: crown.playerId, shadow: shadow.playerId });
+  syncLocalTable({
+    crown: crown.playerId,
+    shadow: shadow.playerId,
+  });
   const crownShown = crown.modifier
     ? `${crown.card.value} ${crown.modifier > 0 ? '+3' : '-3'} → ${playValue(crown)}`
     : `${crown.card.value}`;
@@ -710,47 +814,54 @@ async function resolveTrick() {
   logEvent(
     `${LAWS[game.currentLaw].name} — Coroa: ${crownP.name} (${SUITS[crown.card.suit].name} ${crownShown}). Sombra: ${shadowP.name} (${SUITS[shadow.card.suit].name} ${shadowShown})${game.currentLaw === 'estandarte' && game.trump ? ` • Trunfo: ${SUITS[game.trump].glyph} ${SUITS[game.trump].name}` : ''}.`,
   );
-  await showTrickOutcome(crownP, shadowP);
+  run.check(await run.wait(showTrickOutcome(crownP, shadowP)));
   toast(`♛ ${crownP.name} • Sombra: ${shadowP.name}`, 1400);
   if (influenceGains.length) {
     renderAll();
     showInfluenceGains(influenceGains);
-    await delay(1750);
+    run.check(await run.wait(delay(1750)));
   }
-
   if (game.decree.id === 'desafio') {
     const shouldReveal = !crownP.hadCrown || game.lastCrown === crown.playerId;
-    if (shouldReveal) await revealForChallenge(crownP);
+    if (shouldReveal) run.check(await run.wait(revealForChallenge(crownP)));
   }
   crownP.hadCrown = true;
-
   game.lastCrown = crown.playerId;
   game.lastShadow = shadow.playerId;
   game.previousWinningSuit = crown.card.suit;
   game.leader = crown.playerId;
   renderAll();
-  await delay(900);
-
+  run.check(await run.wait(delay(900)));
   if (game.trick === 10) {
-    await endRound();
+    run.check(await run.wait(endRound()));
     return;
   }
-  if (game.decree.id === 'rotacao' && [7, 8, 9].includes(game.trick)) await performRotation();
-
-  const nextLaw = await chooseNextLaw(shadowP);
+  if (game.decree.id === 'rotacao' && [7, 8, 9].includes(game.trick))
+    run.check(await run.wait(performRotation()));
+  const nextLaw = run.check(await run.wait(chooseNextLaw(shadowP)));
   game.currentLaw = nextLaw;
   game.trick++;
   syncLocalTable(null);
-  await delay(350);
-  await beginTrick();
+  run.check(await run.wait(delay(350)));
+  run.check(await run.wait(beginTrick()));
 }
 
 async function showTrickOutcome(crown, shadow) {
-  const session = game;
-  await throneEffects.outcome({ crown, shadow }, throneControls.getSnapshot().scale);
-  if (session && !session.online && session !== game)
-    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
+  const run = game.localSession;
+  run.assert();
+  run.check(
+    await run.wait(
+      throneEffects.outcome(
+        {
+          crown,
+          shadow,
+        },
+        throneControls.getSnapshot().scale,
+      ),
+    ),
+  );
 }
+
 function showInfluenceGains(gains) {
   syncLocalSeats();
   throneEffects.gains(gains, throneControls.getSnapshot().scale);
@@ -758,39 +869,46 @@ function showInfluenceGains(gains) {
 }
 
 async function revealForChallenge(p) {
+  const run = game.localSession;
+  run.assert();
   const privateCards = p.hand.filter((c) => !c.public);
   if (!privateCards.length) return;
   let card = p.ai
     ? privateCards[rand(privateCards.length)]
-    : await chooseCardFromHand(p, 'challenge', privateCards);
+    : run.check(await run.wait(chooseCardFromHand(p, 'challenge', privateCards)));
   card.public = true;
   card.publicReason = 'Desafio';
   logEvent(`Desafio: ${p.name} revelou ${SUITS[card.suit].name} ${card.value}.`);
   renderAll();
   showChallengeReveal(p.id, card);
-  await delay(2100);
+  run.check(await run.wait(delay(2100)));
 }
 
 async function performRotation() {
+  const run = game.localSession;
+  run.assert();
   toast('Rotação — passe 1 carta à esquerda', 1200);
   const choices = [];
   for (const p of game.players) {
     let card;
     if (p.ai) card = p.hand[rand(p.hand.length)];
-    else card = await chooseCardFromHand(p, 'rotation');
+    else card = run.check(await run.wait(chooseCardFromHand(p, 'rotation')));
     choices[p.id] = card;
   }
-  await showExchangeAnimation({
-    kind: 'rotation',
-    title: `Rotação — fim da vaza ${game.trick}`,
-    subtitle: 'Todos passam simultaneamente 1 carta oculta ao jogador à esquerda.',
-    moves: game.players.map((p) => ({
-      from: p.id,
-      to: (p.id + 1) % 4,
-      label: `${p.name} → ${game.players[(p.id + 1) % 4].name}`,
-    })),
-  });
-
+  run.check(
+    await run.wait(
+      showExchangeAnimation({
+        kind: 'rotation',
+        title: `Rotação — fim da vaza ${game.trick}`,
+        subtitle: 'Todos passam simultaneamente 1 carta oculta ao jogador à esquerda.',
+        moves: game.players.map((p) => ({
+          from: p.id,
+          to: (p.id + 1) % 4,
+          label: `${p.name} → ${game.players[(p.id + 1) % 4].name}`,
+        })),
+      }),
+    ),
+  );
   const incoming = Array(4);
   for (const p of game.players) {
     const card = choices[p.id];
@@ -803,10 +921,12 @@ async function performRotation() {
   }
   logEvent(`Rotação: quatro cartas ocultas foram passadas simultaneamente para a esquerda.`);
   renderAll();
-  await delay(420);
+  run.check(await run.wait(delay(420)));
 }
 
 async function chooseNextLaw(shadowP) {
+  const run = game.localSession;
+  run.assert();
   const valid = getSafeLawChoices(game.trick + 1);
   if (!valid.length) {
     throw new Error(
@@ -814,12 +934,19 @@ async function chooseNextLaw(shadowP) {
     );
   }
   if (shadowP.ai) {
-    await delay(500);
+    run.check(await run.wait(delay(500)));
     const choice = valid[rand(valid.length)];
     logEvent(`${shadowP.name}, como Sombra, escolheu ${LAWS[choice].name}.`);
     return choice;
   }
-  const choice = await chooseLocal({ kind: 'choose-law', options: valid });
+  const choice = run.check(
+    await run.wait(
+      chooseLocal({
+        kind: 'choose-law',
+        options: valid,
+      }),
+    ),
+  );
   logEvent(`${shadowP.name}, como Sombra, escolheu ${LAWS[choice].name}.`);
   return choice;
 }
@@ -829,6 +956,8 @@ function getSafeLawChoices(nextTrick) {
 }
 
 async function endRound() {
+  const run = game.localSession;
+  run.assert();
   game.phase = 'round-end';
   const rows = game.players.map((p) => {
     const previousPrestige = p.prestige;
@@ -839,26 +968,41 @@ async function endRound() {
     p.prestige = cumulativePrestige;
     p.totalPairs = cumulativePairs;
     p.influence = 0;
-    return { p, pairs, score, cumulativePairs, cumulativePrestige };
+    return {
+      p,
+      pairs,
+      score,
+      cumulativePairs,
+      cumulativePrestige,
+    };
   });
   const nextStarter = (game.lastCrown + 1) % 4;
   syncLocalStatus();
-  await throneHistory.showLocal({
-    kind: 'round',
-    round: game.round,
-    scores: rows.map(({ p, pairs, score, cumulativePrestige }) => ({
-      seat: p.id,
-      name: p.name,
-      crowns: p.totalCrowns,
-      shadows: p.totalShadows,
-      pairs: p.totalPairs,
-      prestige: cumulativePrestige,
-      roundScore: { crowns: p.roundCrowns, shadows: p.roundShadows, pairs, gained: score },
-    })),
-  });
+  run.check(
+    await run.wait(
+      throneHistory.showLocal({
+        kind: 'round',
+        round: game.round,
+        scores: rows.map(({ p, pairs, score, cumulativePrestige }) => ({
+          seat: p.id,
+          name: p.name,
+          crowns: p.totalCrowns,
+          shadows: p.totalShadows,
+          pairs: p.totalPairs,
+          prestige: cumulativePrestige,
+          roundScore: {
+            crowns: p.roundCrowns,
+            shadows: p.roundShadows,
+            pairs,
+            gained: score,
+          },
+        })),
+      }),
+    ),
+  );
   logEvent(`Rodada ${game.round} encerrada.`);
   if (game.round >= 3) {
-    await endGame();
+    run.check(await run.wait(endGame()));
     return;
   }
   game.round++;
@@ -867,10 +1011,12 @@ async function endRound() {
     `${playerLabel(game.leader)} iniciará a nova rodada por estar à esquerda do vencedor da 10ª vaza.`,
   );
   syncLocalTable(null);
-  await startRound();
+  run.check(await run.wait(startRound()));
 }
 
 async function endGame() {
+  const run = game.localSession;
+  run.assert();
   game.gameOver = true;
   for (const p of game.players) {
     p.totalPairs = totalPairs(p);
@@ -878,18 +1024,22 @@ async function endGame() {
   }
   game.phase = 'game-over';
   syncLocalStatus();
-  await throneHistory.showLocal({
-    kind: 'final',
-    round: game.round,
-    scores: game.players.map((p) => ({
-      seat: p.id,
-      name: p.name,
-      crowns: p.totalCrowns,
-      shadows: p.totalShadows,
-      pairs: p.totalPairs,
-      prestige: p.prestige,
-    })),
-  });
+  run.check(
+    await run.wait(
+      throneHistory.showLocal({
+        kind: 'final',
+        round: game.round,
+        scores: game.players.map((p) => ({
+          seat: p.id,
+          name: p.name,
+          crowns: p.totalCrowns,
+          shadows: p.totalShadows,
+          pairs: p.totalPairs,
+          prestige: p.prestige,
+        })),
+      }),
+    ),
+  );
   backToLobby();
 }
 
@@ -986,47 +1136,69 @@ function projectLocalHand(awaiting = throneHand.waitingLocal) {
     decreeName: game.decree?.name || 'Decreto',
   };
 }
+
 function renderHand() {
   if (!game || onlineGameMode) return;
   throneHand.presentLocal(game.handSession, projectLocalHand(), game.players[0].ai);
 }
+
 function selectedInfluenceCost(action) {
   return action === 'sigilo' ? 1 : action === 'plus' || action === 'minus' ? 2 : 0;
 }
+
 function selectedInfluenceModifier(action) {
   return action === 'plus' ? 3 : action === 'minus' ? -3 : 0;
 }
 // Copy only the human's own cards and public seats into the shared choices owner.
 // The local engine retains the rules, mutable cards and simultaneous exchanges.
 async function chooseLocal(prompt) {
+  const run = game.localSession;
+  run.assert();
   const session = game,
     own = session.players[0];
   if (session.online || own.ai) throw new Error('A mesa não possui uma escolha humana local.');
-  const value = await throneChoices.showLocal(
-    session.choiceSession,
-    {
-      you: 0,
-      round: session.round,
-      trick: session.trick,
-      phase: prompt.kind,
-      lastCrown: session.lastCrown,
-      lastShadow: session.lastShadow,
-      hand: own.hand,
-      reserve: own.reserve,
-      players: session.players.map((p) => ({ seat: p.id, name: p.name })),
-      lawUsage: session.lawUsage,
-    },
-    prompt,
+  const value = run.check(
+    await run.wait(
+      throneChoices.showLocal(
+        session.choiceSession,
+        {
+          you: 0,
+          round: session.round,
+          trick: session.trick,
+          phase: prompt.kind,
+          // Desafio is paid by this trick's Crown, before previous-trick markers advance.
+          lastCrown: prompt.kind === 'challenge' ? own.id : session.lastCrown,
+          lastShadow: session.lastShadow,
+          hand: own.hand,
+          reserve: own.reserve,
+          players: session.players.map((p) => ({
+            seat: p.id,
+            name: p.name,
+          })),
+          lawUsage: session.lawUsage,
+        },
+        prompt,
+      ),
+    ),
   );
-  if (session !== game)
-    throw Object.assign(new Error('Partida local encerrada.'), { name: 'AbortError' });
   return value;
 }
+
 async function chooseCardFromHand(p, kind, candidates = p.hand, otherName) {
+  const run = game.localSession;
+  run.assert();
   if (p.ai) return candidates[rand(candidates.length)];
   if (p !== game.players[0]) throw new Error('Assento humano local inválido.');
   const ids = candidates.map((c) => c.id);
-  const value = await chooseLocal({ kind, cardIds: ids, otherName });
+  const value = run.check(
+    await run.wait(
+      chooseLocal({
+        kind,
+        cardIds: ids,
+        otherName,
+      }),
+    ),
+  );
   const card = p.hand.find((c) => c.id === value && ids.includes(c.id));
   if (
     !card ||
@@ -1059,6 +1231,7 @@ function presentOnlineMatch(state) {
   else game = next;
   renderAll();
 }
+
 function consumeChatOnlyRoom(room) {
   chatOnlyRoomState = room;
   if (room?.id)
@@ -1083,6 +1256,7 @@ function consumeChatOnlyRoom(room) {
   if (!window.TronoNetwork?.connected && $('chatOnlyStatus'))
     $('chatOnlyStatus').textContent = 'Reconectando ao servidor...';
 }
+
 async function enterChatOnly({
   validatedIdentity,
   channelId,
@@ -1193,6 +1367,7 @@ async function enterChatOnly({
   }
   return true;
 }
+
 let chatChannelSwitching = false;
 let chatChannelResumeVoice = null;
 async function switchChatChannel(channelId, { connectVoice = false } = {}) {
@@ -1251,6 +1426,7 @@ async function switchChatChannel(channelId, { connectVoice = false } = {}) {
     chatChannelSwitching = false;
   }
 }
+
 async function leaveChatOnly() {
   chatChannelResumeVoice = null;
   try {
@@ -1267,7 +1443,9 @@ async function leaveChatOnly() {
   else $('setupScreen').classList.remove('hidden');
   setTimeout(() => window.TronoNetwork?.requestRooms(), 120);
 }
+
 function backToLobby() {
+  throneLocal.cancel();
   window.TronoThroneEvents.clear();
   throneChoices.clear();
   throneHand.clear();
@@ -1292,7 +1470,6 @@ function backToLobby() {
   if (!window.TronoSocial?.voiceJoined) window.TronoSocial?.showForRoom?.(false);
   setTimeout(() => window.TronoNetwork?.requestRooms(), 120);
 }
-
 $('chatOnlyBtn')?.addEventListener('click', () =>
   enterChatOnly().catch((err) => {
     window.TronoPortal?.showPortal?.();
@@ -1377,7 +1554,9 @@ window.addEventListener('trono:ready', async () => {
   try {
     const saved = JSON.parse(sessionStorage.getItem('mn-resume-chat') || 'null');
     if (saved?.id && saved.userId === window.TronoAuth?.user?.id)
-      await enterChatOnly({ channelId: saved.id });
+      await enterChatOnly({
+        channelId: saved.id,
+      });
   } catch (err) {
     console.warn('Retomar chat:', err);
   }
@@ -1386,13 +1565,10 @@ window.addEventListener('trono:ready', async () => {
   const online = await window.TronoNetwork?.connect();
   if (online) window.TronoNetwork.requestRooms();
 });
-
-$('startHumanBtn').onclick = () => startGame(false).catch(fatalError);
-$('startDemoBtn').onclick = () => startGame(true).catch(fatalError);
-
 function showChallengeReveal(seat, card) {
   throneEffects.challenge({ seat, card });
 }
+
 function syncLocalStatus() {
   if (!game || onlineGameMode) return;
   throneMatch.setLocal({
@@ -1418,9 +1594,9 @@ window.TronoChatHub = {
   leave: leaveChatOnly,
   switchChannel: switchChatChannel,
   openChannelText(id) {
-    void window.TronoMessenger.joinChannel(id, { showText: true }).catch((e) =>
-      toast(e.message, 2200),
-    );
+    void window.TronoMessenger.joinChannel(id, {
+      showText: true,
+    }).catch((e) => toast(e.message, 2200));
   },
   get channels() {
     return window.TronoChannels.getSnapshot().channels;
@@ -1440,9 +1616,21 @@ window.__LeiDoTrono = {
   }),
 };
 
-// Temporary board bridge: lobby owns selection/rosters; this controller still owns match cancellation.
+// Temporary board bridge: typed owners control the lobby and lifecycle; the engine clears only its own run.
 window.TronoThroneBoard = {
   presentOnlineMatch,
+  startLocal: (session, demo) => startGame(demo, session),
+  cancelLocal(session) {
+    if (game?.localSession !== session) return;
+    game = null;
+    if (throneMatch.getSnapshot().mode === 'online') return;
+    throneChoices.clear();
+    throneHand.clear();
+    thronePrivate.clear();
+    throneHistory.clear();
+    throneEffects.clear();
+    throneMatch.clear();
+  },
   notify: toast,
   get online() {
     return !!game?.online;

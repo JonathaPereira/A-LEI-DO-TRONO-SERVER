@@ -188,6 +188,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
     await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({page, receiver});
     await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver});
+    await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);
     await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page, {responsive: false});
     await require('./throne-tooltip-controls.cjs').exerciseThroneTooltips(page, {responsive: false});
     await require('./throne-history-controls.cjs').exerciseThroneHistory(page, {responsive: false});
@@ -868,10 +869,10 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().readyState), 'live');
     // The converted desktop hand observer must measure real cards after local play starts.
     const peerMic = await receiver.evaluate(() => window.TronoSocial.getLocalAudioTrack().id);
-    await receiver.evaluate(() => {
-      window.TronoPortal.showOnly('setupScreen');
-      document.getElementById('startHumanBtn').click();
-    });
+    await receiver.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
+    await expect(receiver.locator('#roomScreen')).toBeVisible();
+    await receiver.locator('#roomScreen details').evaluate(node => { node.open = true; });
+    await receiver.locator('#startHumanBtn').click();
     await expect(receiver.locator('#gameScreen')).toBeVisible();
     await expect.poll(() => receiver.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
     for (const [width, height] of [[1280, 720], [480, 800], [480, 520]]) {

@@ -43,6 +43,7 @@ import { initializeThroneSeats } from '../components/games/throne-seats-runtime'
 import { initializeThroneMatch } from '../components/games/throne-match-runtime';
 import { initializeThroneHand } from '../components/games/throne-hand-runtime';
 import { initializeThroneChoices } from '../components/games/throne-choices-runtime';
+import { initializeThroneLocal } from '../components/games/throne-local-runtime';
 import { initializeThroneControls } from '../components/games/throne-controls-runtime';
 import { initializeThroneLobby } from '../components/games/throne-lobby-runtime';
 import { initializeConnectionDiagnostics } from '../components/voice/diagnostics-runtime';
@@ -100,6 +101,7 @@ export function LegacyRuntime() {
           initializeThroneEvents(window);
           initializeThroneChoices(window);
           initializeThroneHand(window);
+          initializeThroneLocal(window);
         }
         if (filename !== 'auth-boot.js') await loadScript(filename);
         if (filename === 'auth.js') {

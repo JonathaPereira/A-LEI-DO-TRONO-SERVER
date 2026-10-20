@@ -2596,6 +2596,44 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   `legacy/game.js`. Ainda permanecem motor/gatilhos locais, ponte de navegação,
   `court-display.js` e regras/coordenação de `server/runtime.cjs` além do planejador.
 
+## Ciclo de vida da simulação local
+
+- `throne-local-lifecycle.ts` possui preparação, tokens, esperas canceláveis,
+  pausas e tickets de turno. O runtime prepara o áudio existente e só depois
+  limpa/apresenta a mesa. Cliques repetidos compartilham a tentativa; sair da sala
+  durante a preparação impede que seu resultado atrasado inicie uma partida.
+- Conta/ABA, sala, início online, cancelamento e descarte invalidam a execução.
+  `wait` rejeita trabalhos pendentes; `check` confere o token após cada await.
+  Efeitos, mão, escolhas, revelações e placares já usam esse contrato. Respostas
+  antigas não aplicam cartas, mudam telas ou limpam a partida seguinte.
+- O prazo humano continua em 60 segundos. O motor conserva seleção automática e
+  regras; o dono tipado agenda/cancela os timers. Cada turno possui seu ticket,
+  de modo que um callback ou cleanup antigo não consome o sucessor. Ocultar uma
+  partida já iniciada conserva a execução e seu prazo. Não há outro socket/mídia.
+- Início humano/demonstração é React no host estável `throneLocalStartHost`, com
+  indisponibilidade/feedback de preparação. Removidos handlers legados de início,
+  `sleep`, `localTurnTimer`, guardas duplicadas e a constante `BOT_NAMES` sem uso.
+- Corrigida a projeção do Desafio humano: a escolha pertence à Coroa recém-obtida,
+  antes do avanço dos marcadores antigos no motor. A regressão joga uma primeira
+  vaza conhecida com Cetro 12 e confirma a revelação pela nova Coroa humana.
+- Seis regressões de modelo cobrem preparação, repetição, cancelamento, identidade/
+  ABA, salas, início online, trabalhos atrasados, prazos e descarte. O helper usa
+  a preparação de áudio adiada, cancelamento real e outra tentativa, preservando
+  os nós de início. A fixture desktop usa uma sala sem partida autoritativa ativa;
+  simulação local não consome os Decretos dos cenários online.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; a suíte
+  de modelos soma 166 testes. O navegador completou três rodadas de demonstração,
+  uma rodada humana com Desafio e os fluxos de navegação local/online do salão.
+  Dois Electron reais passaram pelo cancelamento da preparação e reinício local,
+  conservando controles, microfone, câmera, tela, peers e socket na navegação.
+  O cenário antigo que iniciava pelo botão oculto agora entra na sala antes de
+  jogar, respeitando a disponibilidade real do controle.
+- Evidências em `artifacts/throne-local-lifecycle-*`, incluindo execuções iniciais.
+  Mídia sintética local; sem medir 60 fps em jogos reais nem TURN de produção.
+- Próximo recorte: extrair estado/regras e sequência de fases do motor local de
+  `legacy/game.js`, mantendo a ponte até migrar a navegação de comunidade. Ainda
+  permanecem `court-display.js` e a coordenação/regras em `server/runtime.cjs`.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.
