@@ -72,6 +72,7 @@ export function GameScreen() {
             <span id="throneRulesHost" style={{ display: 'contents' }} />
             <span id="throneRestartHost" style={{ display: 'contents' }} />
           </div>
+          <span data-game-audio-slot="" style={{ display: 'contents' }} />
         </header>
 
         <main className={'board-wrap'}>

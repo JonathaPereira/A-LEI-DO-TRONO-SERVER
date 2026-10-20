@@ -676,7 +676,7 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)) {
     grid-column: 2 !important;
     grid-row: 1 !important;
   }
-  body.desktop-app #gameScreen.game-screen .topbar > [data-game-audio] {
+  body.desktop-app #gameScreen.game-screen .topbar > [data-game-audio-slot] > [data-game-audio] {
     grid-column: 3 !important;
     grid-row: 1 !important;
   }

@@ -191,6 +191,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);
     await require('./community-navigation-controls.cjs').exerciseCommunityNavigation(page);
     await require('./desktop-court-display-flow').exerciseCourtFullscreen({app:apps[0],page});
+    await require('./tabletop-audio-controls.cjs').exerciseTabletopAudio(page);
     await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page, {responsive: false});
     await require('./throne-tooltip-controls.cjs').exerciseThroneTooltips(page, {responsive: false});
     await require('./throne-history-controls.cjs').exerciseThroneHistory(page, {responsive: false});

@@ -1558,6 +1558,19 @@ possui somente assinaturas de interface, sem abrir players ou contextos. Comando
 começam no gesto original; input/change iguais aplicam volume uma vez. O descarte
 remove listeners e ignora continuações sem fechar os recursos emprestados.
 
+`lib/games/tabletop-audio.ts` possui a projeção dos volumes dos quatro jogos,
+memória de restauração após silenciar e abertura de um único painel. Lê os ganhos
+e o silêncio geral do player compartilhado, com uma assinatura por evento;
+não mantém outra persistência nem cria contexto de áudio. A prévia prepara áudio
+no gesto original e ignora continuações após fechar, trocar painel ou descartar.
+`components/games/tabletop-audio.tsx` renderiza os quatro painéis por portais nos
+hosts dos cabeçalhos. O runtime monta após os jogos e antes do ready; fecha por
+clique externo, Escape, aba oculta ou saída da tela. Escape devolve o foco ao
+resumo. O descarte remove raiz, observador e todos os listeners. O script
+`legacy/tabletop-audio.js`, a fachada sem consumidores e a entrada no manifesto
+foram removidos. O CSS continua na cascata existente; o host da mesa preserva
+a posição do controle nos layouts compactos.
+
 O player compartilhado com portal/jogos continua em `legacy/audio.js`. Expõe o
 status por getter e evento `trono-music-playback`, além de `trono-music-volume`,
 `trono-music-track` e `trono-audio-state`. Alterações feitas em outras telas chegam

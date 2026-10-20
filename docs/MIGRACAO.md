@@ -2753,6 +2753,35 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   além dos estilos em cascata e da coordenação/regras em `server/runtime.cjs`.
   O próximo recorte deve usar esse inventário; não restaurar game.js/court-display.js.
 
+## Controles de efeitos dos jogos em React e TypeScript
+
+- `lib/games/tabletop-audio.ts` e os componentes/runtime em `components/games/`
+  substituem `legacy/tabletop-audio.js`. O arquivo, sua entrada no manifesto,
+  fachada sem consumidores e exigência do JS no teste de pacote foram removidos.
+  O build poda o recurso antigo de `public/` e `out/`. O CSS continua necessário;
+  seu seletor compacto passou a considerar o host React da mesa.
+- Volumes individuais, silêncio geral, restauração e prévia dos quatro jogos
+  continuam delegando a `TronoAudio`. Persistência, síntese e contexto ficam no
+  mesmo dono em `legacy/audio.js`, ainda pendente de conversão. Nenhum socket,
+  player de voz ou dispositivo é recriado pelo novo controlador.
+- Uma assinatura por evento sincroniza alterações de outros consumidores. Os
+  snapshots são imutáveis; apenas um painel abre por vez. Clique externo, Escape,
+  aba oculta e saída da tela fecham o painel. Escape devolve o foco. Fechar,
+  trocar painel ou descartar invalida prévias que ainda aguardam áudio; falhas
+  de preparação são tratadas. Descarte libera assinaturas, observador e raiz.
+- Validação: typecheck, format:check, build e 181 regressões de modelos dos jogos
+  passaram, incluindo cinco testes novos de áudio. As sete verificações de
+  interface de Azul, Splendor e Love Letter passaram. A regressão web cobre os
+  quatro controles, teclado, alterações externas e persistência após recarregar;
+  a forma de onda real de Splendor teve RMS aproximado de 0,016 a 100%, 0,003
+  a 20% e zero silenciado. Dois Electron reais passaram pela chamada e pelos
+  mesmos controles, preservando nós, áudio compartilhado, socket, peers e trilhas.
+  Evidências em `artifacts/tabletop-audio-*`. Mídia sintética local; não mede
+  60 fps em jogos reais nem conectividade TURN de produção.
+- Próximo recorte: continuar pelos donos restantes de áudio, clipes/gravação,
+  autenticação ou núcleos dos demais jogos. O motor compartilhado de música e
+  efeitos continua legado; esta etapa converteu seus controles por jogo.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,

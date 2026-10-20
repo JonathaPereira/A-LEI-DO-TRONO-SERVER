@@ -1,6 +1,7 @@
 'use client';
 import { throneRules } from '../lib/games/throne-rules';
 import { initializeCourtFullscreen } from '../components/games/court-fullscreen-runtime';
+import { initializeTabletopAudio } from '../components/games/tabletop-audio-runtime';
 import { initializeThroneNavigation } from '../components/games/throne-navigation-runtime';
 import { initializeCommunityNavigation } from '../components/navigation/community-navigation-runtime';
 
@@ -138,6 +139,7 @@ export function LegacyRuntime() {
       initializeAzul(window);
       initializeSplendor(window);
       initializeLoveLetter(window);
+      initializeTabletopAudio(window);
       initializeRoguelite(window);
       initializeGameLibrary(window);
       initializeMessenger(window);

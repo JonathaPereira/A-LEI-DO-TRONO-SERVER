@@ -3,10 +3,10 @@ const { test } = require('node:test'),
   assert = require('node:assert/strict'),
   path = require('node:path'),
   express = require('express'),
-  { chromium } = require('@playwright/test');
+  { chromium, expect } = require('@playwright/test');
 test(
   'real game audio has independent saved gains; mute renders silence and Splendor volume changes the actual waveform',
-  { timeout: 30000 },
+  { timeout: 60000 },
   async () => {
     const server = await new Promise((r) => {
       const s = express()
@@ -20,6 +20,8 @@ test(
         args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--mute-audio'],
       });
       const page = await browser.newPage();
+      const errors = [];
+      page.on('pageerror', (error) => errors.push(error.message));
       await page.route('**/*', (r) =>
         new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort(),
       );
@@ -42,6 +44,9 @@ test(
       await page.goto('http://127.0.0.1:' + server.address().port);
       await page.waitForFunction(() => window.TronoAudio && window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
+      await page.waitForSelector('[data-game-audio="love-letter"]', { state: 'attached' });
+      await page.locator('#authCloseBtn').click();
+      await require('./tabletop-audio-controls.cjs').exerciseTabletopAudio(page);
       await page.evaluate(async () => {
         window.TronoAudio.setSfxEnabled(true);
         await window.TronoAudio.ensureAudio();
@@ -86,6 +91,9 @@ test(
       await page.reload();
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
+      for (const [key, value] of Object.entries(state)) {
+        await expect(page.locator(`[data-game-audio="${key}"] input`)).toHaveValue(String(value));
+      }
       assert.deepEqual(
         await page.evaluate(() =>
           Object.fromEntries(
@@ -97,6 +105,7 @@ test(
         ),
         state,
       );
+      assert.deepEqual(errors, []);
       console.log('Actual Splendor waveform RMS ' + JSON.stringify({ high, low, mute }));
     } finally {
       await browser?.close();

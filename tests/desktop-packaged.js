@@ -119,7 +119,6 @@ test(
             '/light-noise-worklet.js',
             '/voice-reception.css',
             '/bot-names.js',
-            '/tabletop-audio.js',
             '/tabletop-audio.css',
             '/love-letter-rules.js',
             '/love-letter.js',

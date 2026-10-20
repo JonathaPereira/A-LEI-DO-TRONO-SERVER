@@ -4,7 +4,6 @@
     "desktop-platform.js",
     "application-audio.js",
     "audio.js",
-    "tabletop-audio.js",
     "auth.js",
     "rtc-config.js",
     "light-noise.js",
