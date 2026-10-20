@@ -62,7 +62,9 @@ test(
       await Promise.all(manifest.files.map((file) => cache.read(file.path)));
       app = await _electron.launch({
         executablePath: executable,
-        args: ['--user-data-dir=' + directory],
+        // Resource/UI acceptance does not depend on a physical playback endpoint.
+        // Native process-loopback audio has its own unmuted regression.
+        args: ['--user-data-dir=' + directory, '--mute-audio'],
         timeout: 40000,
       });
       assert.equal(await app.evaluate(({ app }) => app.isPackaged), true);

@@ -4,8 +4,7 @@ const { test } = require('node:test'),
   assert = require('node:assert/strict'),
   path = require('node:path'),
   fs = require('node:fs/promises'),
-  os = require('node:os'),
-  { spawnSync, spawn } = require('node:child_process');
+  os = require('node:os');
 const { _electron, expect } = require('@playwright/test');
 const { startHTTPS } = require('./desktop-https-fixture');
 const { killTestApp, closeTestApp } = require('./desktop-test-close');
@@ -36,6 +35,7 @@ test(
           path.resolve(__dirname, '../electron'),
           '--user-data-dir=' + directory,
           '--desktop-diagnostics',
+          '--mute-audio',
           '--use-fake-device-for-media-stream',
           '--desktop-api-test-origin=' + api.url,
           ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
@@ -57,7 +57,7 @@ test(
       assert.equal(await page.evaluate(() => typeof process), 'undefined');
       assert.equal(
         await page.evaluate(() => window.TronoDesktop.version),
-        require('../desktop/app/package.json').version,
+        require('../electron/package.json').version,
       );
       phase = 'native diagnostics';
       const resources = await page.evaluate(() => window.TronoDesktop.getResources());
@@ -154,103 +154,7 @@ test(
       );
       assert(denied);
       phase = 'native Windows activity';
-      assert.equal(
-        (await page.evaluate(() => window.TronoDesktop.getActivityState())).enabled,
-        false,
-      );
-      if (process.platform === 'win32') {
-        const executable = path.resolve(
-            __dirname,
-            '../artifacts/native-audio/Release/MN-Application-Audio.exe',
-          ),
-          windowProcess = spawn(executable, ['--test-activity-window'], {
-            windowsHide: true,
-            stdio: ['ignore', 'pipe', 'pipe'],
-          });
-        let fixtureErrors = '';
-        windowProcess.stderr.on('data', (chunk) => {
-          fixtureErrors = (fixtureErrors + chunk.toString()).slice(-2048);
-        });
-        await new Promise((resolve, reject) => {
-          const timer = setTimeout(
-            () => reject(Error('Activity window did not open: ' + fixtureErrors)),
-            10000,
-          );
-          windowProcess.once('error', (error) => {
-            clearTimeout(timer);
-            reject(error);
-          });
-          windowProcess.stdout.once('data', () => {
-            clearTimeout(timer);
-            resolve();
-          });
-          windowProcess.once('exit', (code) => {
-            clearTimeout(timer);
-            reject(Error('Activity window exited: ' + code + ' ' + fixtureErrors));
-          });
-        });
-        try {
-          const id = require('../electron/activity.cjs').idFor(executable);
-          await expect
-            .poll(
-              async () => {
-                await page.evaluate(() => window.TronoDesktop.configureActivity({ enabled: true }));
-                return page.evaluate(
-                  (id) =>
-                    window.TronoDesktop.getActivityState().then((state) =>
-                      state.apps.some((app) => app.id === id),
-                    ),
-                  id,
-                );
-              },
-              {
-                timeout: 25000,
-                message: 'Native activity must detect the visible fixture executable',
-              },
-            )
-            .toBe(true);
-          const snapshot = await page.evaluate(() => window.TronoDesktop.getActivityState());
-          assert(!JSON.stringify(snapshot).includes('Private caption'));
-          assert(
-            snapshot.apps.every((row) => !Object.hasOwn(row, 'path') && !Object.hasOwn(row, 'pid')),
-          );
-          await page.evaluate(
-            (id) =>
-              window.TronoDesktop.configureActivity({
-                enabled: true,
-                preferredAppId: id,
-                name: 'Fixture Game',
-              }),
-            id,
-          );
-          await expect
-            .poll(() =>
-              page.evaluate(() =>
-                window.TronoDesktop.getActivityState().then((state) => state.game?.name),
-              ),
-            )
-            .toBe('Fixture Game');
-          await page.evaluate(() => window.TronoDesktop.configureActivity({ enabled: false }));
-          assert.equal(
-            (await page.evaluate(() => window.TronoDesktop.getActivityState())).game,
-            null,
-          );
-        } catch (error) {
-          console.error(
-            'Activity diagnostic',
-            JSON.stringify({
-              state: await page.evaluate(() => window.TronoDesktop.getActivityState()),
-              fixturePid: windowProcess.pid,
-              fixtureExit: windowProcess.exitCode,
-              fixtureErrors,
-            }),
-          );
-          throw error;
-        } finally {
-          windowProcess.kill();
-          await page.evaluate(() => window.TronoDesktop.configureActivity({ enabled: false }));
-        }
-      }
+      await require('./desktop-activity-flow.cjs').exerciseNativeActivity(page);
       phase = 'native file export';
       await app.evaluate(({ dialog }, directory) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
@@ -410,6 +314,7 @@ test(
           path.resolve(__dirname, '../electron'),
           '--user-data-dir=' + directory,
           '--desktop-diagnostics',
+          '--mute-audio',
           '--use-fake-device-for-media-stream',
           '--desktop-api-test-origin=' + api.url,
           ...(process.platform === 'linux' ? ['--no-sandbox'] : []),

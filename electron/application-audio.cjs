@@ -1,13 +1,11 @@
 'use strict';
 const { spawn } = require('node:child_process'),
   crypto = require('node:crypto'),
-  path = require('node:path'),
+  { nativeHelperPath } = require('./native-helper.cjs'),
   os = require('node:os'),
   fs = require('node:fs');
 function audioCapability(app) {
-  const executable = app.isPackaged
-    ? path.join(process.resourcesPath, 'native', 'MN-Application-Audio.exe')
-    : path.resolve(__dirname, '../../artifacts/native-audio/Release/MN-Application-Audio.exe');
+  const executable = nativeHelperPath(app);
   return {
     available:
       process.platform === 'win32' &&

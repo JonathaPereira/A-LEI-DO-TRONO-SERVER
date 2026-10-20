@@ -4,6 +4,7 @@ const { spawn } = require('node:child_process'),
   fsp = require('node:fs/promises'),
   path = require('node:path'),
   crypto = require('node:crypto');
+const { nativeHelperPath } = require('./native-helper.cjs');
 const GAMES = {
   'cs2.exe': 'Counter-Strike 2',
   'csgo.exe': 'Counter-Strike: Global Offensive',
@@ -52,11 +53,7 @@ const idFor = (filename) =>
   crypto.createHash('sha256').update(filename.toLowerCase()).digest('hex');
 class DesktopActivity {
   constructor(app, publish, options = {}) {
-    this.executable =
-      options.executable ||
-      (app.isPackaged
-        ? path.join(process.resourcesPath, 'native/MN-Application-Audio.exe')
-        : path.resolve(__dirname, '../../artifacts/native-audio/Release/MN-Application-Audio.exe'));
+    this.executable = options.executable || nativeHelperPath(app);
     this.available =
       options.available ?? (process.platform === 'win32' && fs.existsSync(this.executable));
     this.spawn = options.spawn || spawn;

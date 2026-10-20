@@ -89,6 +89,11 @@ transferir o adaptador de áudio de aplicativos e os worklets para os donos tipa
 com regressões de recursos e Electron real. Depois seguir por áudio compartilhado,
 soundboard e conta, sem mudar captura/encoders incidentalmente.
 
+Antes desse recorte, `electron/native-helper.cjs` consolidou os caminhos do helper
+C++ de áudio/atividade. O modo de desenvolvimento procurava um diretório acima
+do repositório; agora usa o artefato do mesmo build configurado no pacote.
+Uma regressão compara os dois consumidores à configuração do electron-builder.
+
 ### 2. Backend e contratos externos
 
 - Extrair regras de A Lei do Trono e coordenação de canais de `server/runtime.cjs`,
@@ -152,6 +157,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | `tests/call-controls-browser.js` | 13 verificações passaram após retirar o coordenador antigo de clipes. |
 | `npm run test:desktop:layout` | Cenário completo com dois Electron reais passou, incluindo gravação manual e política de clipes. |
 | Pacote Windows sem instalador + `tests/desktop-packaged.js` | Executável real, recursos locais e RNNoise passaram com perfil temporário. |
+| Caminho do helper/atividade | 29 verificações de núcleo, `test:activity:native`, fluxo completo de permissões/seletor/arquivos e pacote passaram. Recursos/interface usam `--mute-audio`; janela real detectada sem expor PID/caminhos. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
@@ -179,6 +185,23 @@ em `electron/node_modules` e do helper C++ compilado quando o fluxo o utiliza.
   Evidências: `artifacts/clip-buffer-desktop-policy-ui.log` e
   `artifacts/clip-buffer-desktop-policy-baseline.log`. Modernizar essas expectativas
   permanece pendente; não foram ignoradas para declarar sucesso.
+- Ao corrigir o caminho do helper, `tests/desktop-audio.js` esgotou 70 segundos
+  sem concluir a coleta de PCM. Esse teste executa o C++ diretamente e não usa o
+  novo resolvedor de caminhos. Não houve alteração do código C++ ou dos encoders.
+  `tests/desktop-runtime.js`, atualizado para `electron/package.json`, avançou por
+  atividade/seletor/arquivos, mas esgotou 160 segundos em `saved media permissions`,
+  aguardando o microfone. Sem reprodução física (`--mute-audio`), o fluxo completo
+  passou, incluindo permitir, lembrar, redefinir e recusar permissões. O aceite
+  de loopback físico permanece pendente; não atribuir
+  uma causa de dispositivo/driver sem nova evidência. Logs em
+  `artifacts/native-helper-path-audio.log` e `native-helper-path-runtime.log`.
+  O cenário de atividade foi extraído para um helper reutilizado e passou isolado
+  em `test:activity:native`; o fluxo maior mantém suas verificações de permissões.
+  O aceite de recursos/interface do pacote passou com `--mute-audio`, isolando-o
+  da reprodução física; esse modo ainda instancia os worklets e testa os jogos.
+  Isso não substitui nem ignora a regressão de PCM real, que continua sem mute.
+  Resultados com reprodução isolada: `native-helper-path-runtime-muted.log` e
+  `native-helper-path-packaged-muted.log`.
 - Mídia dos testes é sintética. Eles não medem 60 fps em jogos reais, conectividade
   TURN em produção, entrega de e-mail ou um deploy. A gravação usa encoder e mixer
   reais, mas destino de arquivo simulado; não prova o seletor/escrita do Windows.

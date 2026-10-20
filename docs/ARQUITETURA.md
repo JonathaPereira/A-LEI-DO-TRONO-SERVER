@@ -1885,6 +1885,10 @@ foram preservados.
 
 `electron/` contém main, preload, permissões, preferências, atualizações e
 captura. O renderer mantém isolamento de contexto e acesso nativo pelo preload.
+`native-helper.cjs` resolve o executável compartilhado por áudio e atividade:
+`artifacts/native-audio/Release` no desenvolvimento e `resources/native` no pacote.
+O caminho de desenvolvimento é o mesmo consumido por electron-builder; não procura
+mais uma pasta `artifacts` fora do repositório. Resolver capacidade não inicia o helper.
 O instalador carrega `resources/renderer`; o modo compilado local carrega `out/`.
 A política de scripts calcula hashes dos bootstraps do HTML instalado, sem
 liberar scripts inline arbitrários.
