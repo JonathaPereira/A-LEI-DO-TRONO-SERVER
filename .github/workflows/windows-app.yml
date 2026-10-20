@@ -87,6 +87,19 @@ jobs:
       - name: Prepare optional signed virtual controller driver for isolated XInput tests
         shell: pwsh
         run: |
+          # Windows Server lacks the Microsoft Xbox function driver present on
+          # normal Windows desktops. Stage the signed original package in CI only.
+          $xbox = Join-Path $env:RUNNER_TEMP 'Xbox360_64Eng.exe'
+          Invoke-WebRequest 'https://raw.githubusercontent.com/Zalafina/ViGEmBus_v1.16.116_Win7_InstallFiles/5c2e60100b13186e87b3a9a60ac69f07169739bb/1_pre_install_files/x64/Xbox360_64Eng.exe' -OutFile $xbox
+          if ((Get-FileHash $xbox -Algorithm SHA256).Hash.ToLower() -ne '0e72ed6d89d9b89690fde8122f46fa851740ef18e850d98d45e56f85a6682994') { throw 'Unexpected Xbox driver package hash' }
+          $xboxSignature = Get-AuthenticodeSignature $xbox
+          if ($xboxSignature.Status -ne 'Valid' -or $xboxSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'Invalid Microsoft Xbox package signature' }
+          $xboxRoot = Join-Path $env:RUNNER_TEMP 'Xbox360-original'
+          & "$env:ProgramFiles\7-Zip\7z.exe" x $xbox "-o$xboxRoot" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Xbox driver extraction failed' }
+          $xboxInf = Join-Path $xboxRoot 'xbox360\setup64\files\driver\win7\xusb21.inf'
+          pnputil /add-driver $xboxInf /install
+          if ($LASTEXITCODE -notin 0,3010) { throw 'Microsoft Xbox driver staging failed' }
           $driver = Join-Path $env:RUNNER_TEMP 'ViGEmBus-1.22.0.exe'
           Invoke-WebRequest 'https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe' -OutFile $driver
           if ((Get-FileHash $driver -Algorithm SHA256).Hash.ToLower() -ne '89220a7865076b342892f98865f3499fb7c4cfd673159e89d352c360fd014c6a') { throw 'Unexpected driver hash' }
@@ -106,6 +119,7 @@ jobs:
           node --test --test-concurrency=1 tests/remote-pc.js tests/remote-coop.js tests/desktop-remote-input.js tests/desktop-remote-gamepad.js tests/remote-pc-browser.js tests/desktop-remote-native.js tests/voice-moderation.js tests/voice-moderation-browser.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
+            Get-PnpDevice | Where-Object { $_.FriendlyName -match 'Xbox|ViGEm|Virtual Gamepad' } | Format-List Status,Class,FriendlyName,InstanceId,Problem
             $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Remote PC beta::$details"
             exit $testExit

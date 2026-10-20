@@ -25,7 +25,7 @@ int main(int argc,char**argv){
  if(mode=="--probe"||mode=="--gamepad"){
   bus=vigem_alloc();if(!bus||!VIGEM_SUCCESS(vigem_connect(bus))){unplug();std::cerr<<"Instale o driver opcional ViGEmBus no PC anfitrião para usar um controle separado.\n";return 3;}
   if(mode=="--probe"){unplug();return 0;}
-  pad=vigem_target_x360_alloc();if(!pad||!VIGEM_SUCCESS(vigem_target_add(bus,pad))){unplug();std::cerr<<"Não foi possível conectar o controle Xbox virtual.\n";return 4;}
+  pad=vigem_target_x360_alloc();const auto added=pad?vigem_target_add(bus,pad):VIGEM_ERROR_INVALID_TARGET;if(!VIGEM_SUCCESS(added)){unplug();std::cerr<<"Não foi possível conectar o controle Xbox virtual. Verifique o driver Xbox do Windows. Código: "<<std::hex<<added<<".\n";return 4;}
  }
  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
  HANDLE pipe=GetStdHandle(STD_INPUT_HANDLE);if(GetFileType(pipe)!=FILE_TYPE_PIPE){unplug();return 2;}
