@@ -19,6 +19,14 @@ outputs.set(
   'call-controls-layout.js',
   path.join(root, 'artifacts/renderer/lib/voice/control-layout.js'),
 );
+outputs.set(
+  'application-audio-worklet.js',
+  path.join(root, 'artifacts/renderer/lib/voice/worklets/application-audio.js'),
+);
+outputs.set(
+  'light-noise-worklet.js',
+  path.join(root, 'artifacts/renderer/lib/voice/worklets/light-noise.js'),
+);
 const compilerPackage = require.resolve('typescript/package.json');
 const compiler = path.resolve(path.dirname(compilerPackage), require(compilerPackage).bin.tsc);
 const result = spawnSync(process.execPath, [compiler, '-p', 'tsconfig.renderer.json'], {

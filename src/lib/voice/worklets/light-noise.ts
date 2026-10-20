@@ -1,6 +1,21 @@
 // Lightweight downward expander: no model, FFT, allocations or messages per block.
 // It attenuates the background BETWEEN phrases, not noise mixed with speech.
+import type {
+  AudioWorkletProcessorConstructor,
+  AudioWorkletRegistration,
+} from '../../../types/audio-worklet';
+
+declare const AudioWorkletProcessor: AudioWorkletProcessorConstructor;
+declare const sampleRate: number;
+declare const registerProcessor: AudioWorkletRegistration;
+
 class TronoLightNoiseProcessor extends AudioWorkletProcessor {
+  private stopped: boolean;
+  private gain: number;
+  private floor: number;
+  private minimum: number;
+  private frames: number;
+  private hold: number;
   constructor() {
     super();
     this.stopped = false;
@@ -13,7 +28,7 @@ class TronoLightNoiseProcessor extends AudioWorkletProcessor {
       if (e.data === 'destroy') this.stopped = true;
     };
   }
-  process(inputs, outputs) {
+  process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
     if (this.stopped) return false;
     const input = inputs[0]?.[0],
       output = outputs[0]?.[0];

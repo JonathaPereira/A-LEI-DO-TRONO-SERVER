@@ -1,5 +1,17 @@
-'use strict';
+import type {
+  AudioWorkletProcessorConstructor,
+  AudioWorkletRegistration,
+} from '../../../types/audio-worklet';
+
+declare const AudioWorkletProcessor: AudioWorkletProcessorConstructor;
+declare const sampleRate: number;
+declare const registerProcessor: AudioWorkletRegistration;
+
 class ApplicationAudioProcessor extends AudioWorkletProcessor {
+  private queue: Float32Array[];
+  private offset: number;
+  private frames: number;
+  private started: boolean;
   constructor() {
     super();
     this.queue = [];
@@ -18,7 +30,7 @@ class ApplicationAudioProcessor extends AudioWorkletProcessor {
       }
     };
   }
-  process(_, outputs) {
+  process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
     const channels = outputs[0];
     for (const channel of channels) channel.fill(0);
     if (!this.started) {

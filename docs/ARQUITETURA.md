@@ -1001,9 +1001,20 @@ em 100%; outros ganhos e RNNoise usam a trilha processada. `microphone.ts` escol
 a saída, aplica mute/ganho zero a todas as trilhas e invalida publicações antigas
 quando a seleção muda. Não reabre o dispositivo ao alternar o ganho.
 
+`lib/voice/worklets/application-audio.ts` possui a fila PCM estéreo, espera inicial
+de 60 ms e descarte do backlog antigo; mono continua consumindo os dois valores
+intercalados. `worklets/light-noise.ts` possui o expander leve, aprendizado do piso,
+ataque, hold e liberação, sem novas alocações por bloco. Os cálculos mantiveram
+paridade exata de amostras com os processadores anteriores. Os tipos de escopo
+ficam em `types/audio-worklet.d.ts`, como imports de tipo, sem adicionar globals
+de worklet ao Window. `prepare-renderer.cjs` compila os dois e conserva os caminhos
+`application-audio-worklet.js`/`light-noise-worklet.js`; esses JS são gerados.
+Os dois fontes antigos saíram de `legacy/`. RNNoise e seus recursos foram preservados.
+
 `lib/voice/runtime.ts` compõe os donos da chamada por imports diretos, com uma
-instância por janela. O bootstrap o inicializa após `personal-prefs.js`, na ordem
-anterior; o início dos listeners ocorre uma única vez em `trono:ready`.
+instância por janela. O bootstrap instala preferências tipadas antes dos scripts
+e inicializa a voz após `noise-suppression.js`; os listeners iniciam uma única vez
+em `trono:ready`.
 Callbacks adiam a leitura das dependências até sua composição estar completa.
 `runtime-ports.ts` descreve as entradas ainda legadas e a fachada `TronoSocial`,
 preservada para consumidores não convertidos. Não há registro global de fábricas
