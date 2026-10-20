@@ -2995,6 +2995,27 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   a web, e `recording.js`, gravação manual. O controlador principal de clipes
   não deve ser restaurado como script estático.
 
+## Ponte Windows dos clipes e remoção de clip-desktop.js
+
+- `lib/clips/desktop-bridge.ts` possui socket de loopback, pareamento, timeout,
+  configuração e deduplicação dos eventos. O painel agora é React em
+  `components/clips/desktop-panel.tsx`; o runtime mantém `TronoClipDesktop` e
+  restaura o código da sessão/fragmento sem conectar automaticamente.
+- `legacy/clip-desktop.js` e sua entrada no manifesto saíram. Mensagens JSON
+  inválidas ou anteriores ao pareamento não registram atalho nem criam clipes.
+  Falha de socket/envio/timeout remove handlers e timer e libera o teclado local;
+  mensagens/callbacks de uma conexão anterior não alteram a posterior.
+- Seis regressões novas cobrem pareamento, entrada inválida, configuração imutável,
+  deduplicação limitada/reconexão, callbacks antigos e descarte. O teste de Edge
+  usa um servidor WebSocket real de loopback para parear e disparar clipes com
+  outra janela em foco; verifica também retirada do token do fragmento e descarte.
+- O desktop conserva sua política atual e não instala essa ponte web. Não houve
+  mudança de captura ou encoder. Próximo recorte de mídia: `recording.js`.
+- Typecheck, format:check e build passaram, assim como as 55 verificações de
+  `test:clips` e a chamada com dois Electron reais. Os assets estáticos antigos
+  `public/clip-desktop.js` e `out/clip-desktop.js` foram podados. Evidências locais
+  em `artifacts/clip-bridge-*`; o servidor de atalho Windows é uma fixture local.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,

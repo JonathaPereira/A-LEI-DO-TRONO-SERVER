@@ -71,28 +71,7 @@ export function ClipsDialog() {
         </section>
         <section id={'clipsPreferences'} role={'tabpanel'} hidden>
           <div id="clipPreferencesHost" />
-          <div className={'clip-desktop-panel'}>
-            <strong>Atalho durante o jogo · Windows</strong>
-            <p id={'clipDesktopStatus'} role={'status'}>
-              Abra o componente M&amp;N Clipes para usar o atalho com o jogo em foco.
-            </p>
-            <label>
-              Código mostrado no aplicativo
-              <input
-                id={'clipDesktopCode'}
-                type={'text'}
-                autoComplete={'off'}
-                spellCheck={'false'}
-                placeholder={'Cole o código de conexão local'}
-              />
-            </label>
-            <button id={'clipDesktopConnect'} type={'button'}>
-              Conectar ao Windows
-            </button>
-            <button id={'clipDesktopDisconnect'} type={'button'} hidden>
-              Desconectar
-            </button>
-          </div>
+          <div id="clipDesktopHost" />
           <details className={'clips-info'}>
             <summary>Armazenamento e recursos</summary>
             <p>

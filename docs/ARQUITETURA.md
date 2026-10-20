@@ -1683,6 +1683,23 @@ sair da página ou descartar o controlador fecha a janela e remove seus listener
 uma abertura assíncrona obsoleta é fechada sem instalar controles. Não cria outra
 captura, recorder ou sessão de replay.
 
+`desktop-bridge.ts` possui um único WebSocket para o endpoint fixo de loopback
+`ws://127.0.0.1:32196/clips`, o pareamento explícito e o timeout de 30 segundos.
+Não conecta ao carregar a página. Valida mensagens JSON e só aceita registro de
+atalho/eventos de clipe após pareamento. IDs recentes são deduplicados em até 32
+entradas, inclusive em uma reconexão. Configurações são copiadas e só reenviadas
+quando mudam ou a conexão é refeita. Erro/timeout libera socket, timer e atalho
+global, permitindo voltar ao teclado local; callbacks de um socket antigo não
+alteram o atual.
+
+`components/clips/desktop-panel.tsx` possui o formulário React da ponte Windows.
+Seu runtime restaura o código em sessionStorage, remove o parâmetro secreto do
+fragmento preservando os demais e exige clique para conectar. Descarte desmonta
+o painel, remove pagehide e encerra a ponte; pagehide somente desconecta. Conserva
+o adaptador `TronoClipDesktop` e a preferência por um `TronoDesktopClips` externo
+quando fornecido. Não instala a ponte no desktop Electron. `legacy/clip-desktop.js`
+e sua entrada no manifesto foram excluídos.
+
 `library.ts` possui a lista por conta, pasta de destino, operações em andamento e
 clipes de emergência quando o IndexedDB falha. O snapshot imutável é consumido
 por `components/clips/library.tsx` com `useSyncExternalStore`. Trocas de conta e
