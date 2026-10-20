@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),{cleanProfile}=require('../server/profile-customization'),gifs=require('../src/lib/profiles/giphy.ts');
+const {test}=require('node:test'),assert=require('node:assert/strict'),{cleanProfile}=require('../server/profile-customization.ts'),gifs=require('../src/lib/profiles/giphy.ts');
 test('profile links accept bare domains and optional labels; emoji keeps one complete grapheme',()=>{
  const d=cleanProfile({links:[{url:'youtube.com/@exemplo'},{label:'Ao vivo',url:'http://twitch.tv/exemplo'},{label:'',url:''}],emoji:'👨‍👩‍👧‍👦',cover_position:15,cover_zoom:135});
  assert.deepEqual(d.links,[{label:'YouTube',url:'https://youtube.com/@exemplo'},{label:'Ao vivo',url:'https://twitch.tv/exemplo'}]);assert.equal(d.emoji,'👨‍👩‍👧‍👦');

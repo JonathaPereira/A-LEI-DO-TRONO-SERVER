@@ -47,6 +47,10 @@ recursos em `public/roguelite/` foram preservados.
   preservando chaves existentes, STUN e pool de quatro candidatos.
 - `bot-names.js`: nenhum consumidor no renderer; sequência agora pertence ao backend.
   O teste do pacote consulta o manifesto atual em vez de exigir scripts já removidos.
+- `profile-data.js` e `server/profile-customization.js`: validação de escrita
+  compartilhada em `lib/profiles/validation.ts`, com entrada HTTP tipada como
+  `unknown` em `server/profile-customization.ts`. Leitura tolerante de registros
+  antigos continua separada; erros, defaults e regras de gravação foram preservados.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -64,17 +68,15 @@ O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 - Soundboard: `soundboard-client.js`.
 - Regras compartilhadas: `azul-rules.js`, `azul-presentation.js`,
   `splendor-data.js`, `splendor-rules.js`, `love-letter-rules.js`.
-- Dependência somente do backend, fora do manifesto: `profile-data.js`.
 
 `call-controls-layout.js` já é gerado do módulo TypeScript
 `lib/voice/control-layout.ts`; sua presença no manifesto não indica um controlador
 JS ainda por converter. `scripts/prepare-renderer.cjs` compila esse módulo e poda
 assets estáticos obsoletos somente após compilação bem-sucedida.
 
-Próximo recorte: consolidar a validação de dados do perfil hoje duplicada entre
-`profile-data.js` e `lib/profiles/editor-validation.ts`, preservando o contrato HTTP
-validado pelo backend. Depois seguir pelas regras compartilhadas e pelos donos de
-áudio/conta, com regressões específicas e sem mudar captura/encoders incidentalmente.
+Próximo recorte: retirar regras compartilhadas dos jogos de `src/legacy/`, mantendo
+um motor comum ao servidor e à interface. Depois seguir pelos donos de áudio/conta,
+com regressões específicas e sem mudar captura/encoders incidentalmente.
 
 ### 2. Backend e contratos externos
 
@@ -132,12 +134,13 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | `npm run test:recording` | 14 verificações passaram; inclui cancelamento, mixer, finalização e arquivo decodificado. |
 | `npm run test:settings` | 137 verificações passaram após consolidar preferências. |
 | `npm run test:notifications:ui` | Três fluxos passaram. |
+| Perfis após validação compartilhada | 13 verificações de contrato/SQL/mídia, autenticação HTTP/WebSocket e três casos de edição nos layouts web/desktop passaram. |
 | `tests/call-controls-browser.js` | 13 verificações passaram após retirar o coordenador antigo de clipes. |
 | `npm run test:desktop:layout` | Cenário completo com dois Electron reais passou, incluindo gravação manual e política de clipes. |
 | Pacote Windows sem instalador + `tests/desktop-packaged.js` | Executável real, recursos locais e RNNoise passaram com perfil temporário. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
-`manual-recording-*`, `personal-preferences-*` e `bot-names-*`.
+`manual-recording-*`, `personal-preferences-*`, `bot-names-*` e `profile-validation-*`.
 O executável local de conferência está em
 `artifacts/windows-app/win-unpacked/MN Trono.exe`; não substitui a instalação.
 

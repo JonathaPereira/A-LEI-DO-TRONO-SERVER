@@ -923,8 +923,12 @@ o token do aplicativo; catálogo e mídia usam requisições sem credenciais.
 `components/profiles/gif-picker-dialog.tsx` possui o diálogo e o retorno de foco;
 `gif-picker-runtime.tsx` monta uma única raiz, usada diretamente pelo editor.
 `legacy/profile-gifs.js` e a fachada global `TronoProfileGifs` foram removidos.
-`profile-data.js` deixou de ser carregado no frontend, mas permanece dependência
-do validador do servidor até a conversão desse domínio. Não apagar o arquivo.
+`lib/profiles/validation.ts` concentra o contrato de escrita de links, emojis e
+créditos de mídia, compartilhado pelo editor e por `server/profile-customization.ts`.
+O servidor valida o corpo HTTP como `unknown` e conserva `INVALID_PROFILE`/HTTP 400
+para campos inválidos, limites, IDs de mídia e ajustes de aparência. A leitura
+tolerante de perfis antigos continua em `protocol.ts`; não equivale à autorização
+de uma escrita. `legacy/profile-data.js` e o validador JS duplicado foram removidos.
 Eventos de fechamento atrasados dos diálogos de perfil/configurações são ignorados
 se o diálogo já foi reaberto; não podem descartar o novo rascunho.
 

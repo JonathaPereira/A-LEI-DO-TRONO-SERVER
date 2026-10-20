@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {PGlite}=require('@electric-sql/pglite'),{cleanProfile}=require('../server/profile-customization'),{permissions}=require('../server/roles');
+const {PGlite}=require('@electric-sql/pglite'),{cleanProfile}=require('../server/profile-customization.ts'),{permissions}=require('../server/roles');
 const data=()=>cleanProfile({handle:'jonatha',bio:'Música e jogos',tags:['Jogos','Música'],links:[{label:'YouTube',url:'https://youtube.com/@jonatha'}]});
 test('profile inputs reject executable links, forged media ids and appearance values',()=>{
  for(const v of [{links:[{label:'x',url:'javascript:alert(1)'}]},{cover_file_id:'not-an-id'},{darkness:NaN},{tags:Array(13).fill('Jogos')},{handle:'bad handle'},{opacity:10},{links:[{label:'x',url:'https://user:password@example.test/'}]}])assert.throws(()=>cleanProfile(v));
