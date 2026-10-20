@@ -1312,6 +1312,10 @@ body[data-app-layout='discord'] #callWorkspace #socialPanel #callFocusDock butto
   max-height: none !important;
   aspect-ratio: auto !important;
 }
+/* The fallback player stays inside this stacking context, above the workspace header/rail. */
+body.media-focus-open #callWorkspace #callWorkspaceMain #socialPanel {
+  z-index: 100 !important;
+}
 #callWorkspace #communityPanel {
   position: absolute !important;
   inset: var(--cw-header) 0 0 auto !important;

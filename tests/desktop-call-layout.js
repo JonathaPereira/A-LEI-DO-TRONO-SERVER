@@ -173,10 +173,12 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await receiver.evaluate(id => window.TronoSocial.toggleWatchStream(id), senderId);
     const remoteScreen = receiver.locator('#screenShareGrid .screen-share-tile[data-peer="' + senderId + '"] video');
     await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(0);
+    await require('./stream-controls-flow.cjs').exerciseStreamControls(receiver, remoteScreen.locator('..'));
     // The local preview may pause without replacing capture or interrupting received frames.
     const localScreen = page.locator('.screen-share-tile[data-peer="' + senderId + '"]');
     await page.evaluate(() => { window.__previewSource = window.TronoSocial.getLocalDisplayStream(); });
     const framesBeforePause = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
+    await localScreen.hover();
     await localScreen.locator('.screen-resource-btn').click();
     await expect(localScreen).toHaveClass(/local-preview-paused/);
     assert.equal(await localScreen.locator('video').evaluate(video => video.srcObject), null);

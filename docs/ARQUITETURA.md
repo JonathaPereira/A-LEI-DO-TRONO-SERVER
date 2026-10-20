@@ -1289,8 +1289,18 @@ de perfil/imagem conservam suas validações de conta/identidade.
 para seus filhos. Docking move o host para o grid ou para um slot vazio do perfil;
 o mesmo elemento de vídeo conserva seu srcObject. Tela cheia/maximização impede
 movimentação até a saída. Desmontagem pausa/solta a referência do player, sem parar
-a trilha emprestada. Prévia, captura, recuperação e idle continuam em seus donos;
-`TronoStreamControls` é atualizado e descartado por superfície, sem relógio paralelo.
+a trilha emprestada. Prévia, captura e recuperação continuam em seus donos.
+`lib/voice/stream-controls.ts` possui o relógio de inatividade de cada transmissão,
+foco e ponteiros pressionados. O componente liga/atualiza esse dono e o descarta
+ao desmontar. Reparenting e renders com o mesmo estado não reiniciam o relógio;
+uma superfície que voltou ao DOM pode ser ligada novamente. Somente a modalidade
+de entrada é compartilhada por documento, com listeners liberados após o último
+player. Atividade em outro lugar não revela controles. Teclado e arraste os mantêm
+visíveis; liberação/cancelamento é capturada mesmo fora do player. Convites,
+colapso e prévia pausada ficam sem timer. O módulo não toca no vídeo nem nas trilhas.
+`legacy/stream-controls.js`, sua entrada no manifesto e o global foram removidos.
+A maximização alternativa eleva a camada do painel acima do cabeçalho e de seu
+botão flutuante, permitindo sair quando a API de fullscreen é recusada.
 `media-resize.ts` possui listeners de arraste com descarte por AbortController e
 conserva armazenamento/limites do tamanho. Arraste só ocorre fora do hub em janela larga.
 

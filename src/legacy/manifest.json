@@ -8,7 +8,6 @@
     "rtc-config.js",
     "light-noise.js",
     "noise-suppression.js",
-    "stream-controls.js",
     "personal-prefs.js",
     "recording.js",
     "clip-store.js",

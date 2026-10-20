@@ -1,9 +1,10 @@
 'use client';
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CallStage, ParticipantView, StageSnapshot } from '../../lib/voice/stage';
 import { BorrowedVideo } from './borrowed-video';
 import { bindMediaResize } from '../../lib/voice/media-resize';
+import { bindStreamControls, type StreamControls } from '../../lib/voice/stream-controls';
 
 export interface StageRuntime {
   TronoCallStage: CallStage;
@@ -11,10 +12,6 @@ export interface StageRuntime {
   TronoDesktop?: object;
   TronoProfile: {
     openMini(id: string): Promise<unknown>;
-  };
-  TronoStreamControls: {
-    update(tile: HTMLElement, active: boolean): void;
-    dispose(tile: HTMLElement): void;
   };
 }
 /** The portal target stays stable when docking. Reparenting never recreates the video. */
@@ -37,6 +34,14 @@ export function MediaTile({
     live = screen ? watching && p.screenLive : p.cameraLive;
   const docked = screen ? p.screenDock && watching : p.cameraDock;
   const host = screen ? 'screenShareGrid' : 'cameraGrid';
+  const idle = useRef<StreamControls | null>(null);
+  useLayoutEffect(
+    () => () => {
+      idle.current?.dispose();
+      idle.current = null;
+    },
+    [tile, screen],
+  );
   useLayoutEffect(() => {
     tile.dataset.peer = p.id;
     tile.style.order = String(
@@ -67,7 +72,10 @@ export function MediaTile({
       !tile.classList.contains('media-maximized')
     )
       target.append(tile);
-    if (screen) runtime.TronoStreamControls.update(tile, live && !p.collapsed && !paused);
+    if (screen) {
+      idle.current = bindStreamControls(tile);
+      idle.current.update(live && !p.collapsed && !paused);
+    }
   });
   useLayoutEffect(
     () =>
@@ -77,7 +85,6 @@ export function MediaTile({
   useLayoutEffect(
     () => () => {
       void client.releaseFocus(tile);
-      runtime.TronoStreamControls.dispose(tile);
       tile.remove();
     },
     [tile, runtime, client],

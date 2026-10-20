@@ -2782,6 +2782,36 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   autenticação ou núcleos dos demais jogos. O motor compartilhado de música e
   efeitos continua legado; esta etapa converteu seus controles por jogo.
 
+## Inatividade dos controles das transmissões em TypeScript
+
+- `lib/voice/stream-controls.ts` substitui `legacy/stream-controls.js`, que foi
+  excluído junto com sua entrada no manifesto e o global `TronoStreamControls`.
+  `MediaTile` liga o controlador ao próprio ciclo React, conservando o mesmo host,
+  vídeo e srcObject. O build remove o JS antigo dos recursos estáticos gerados.
+- Cada player mantém seu relógio de três segundos. Renders iguais e atividade
+  externa não o reiniciam. Foco por teclado e ponteiros pressionados conservam os
+  controles visíveis; múltiplos ponteiros são acompanhados até liberação/cancelamento
+  capturados no documento. Convite, colapso e prévia pausada não escondem controles.
+  Descarte cancela o timer, restaura tabindex e remove listeners. A modalidade de
+  entrada é compartilhada por documento e liberada após o último player.
+- A regressão real revelou que o botão flutuante de recolher o cabeçalho interceptava
+  a saída da maximização alternativa. `call-workspace.css` eleva a camada de mídia
+  enquanto esse modo está aberto; não move o player nem altera captura ou qualidade.
+- Validação: typecheck, format:check, build e 133 regressões de configurações/
+  apresentação passaram, incluindo seis testes novos de inatividade e descarte.
+  `test:voice:players` cobre modelos e a interface exportada com dois clientes web,
+  vídeo recebido, teclado, arraste, fullscreen real, recusa/fallback e convite.
+  O helper compartilhado também roda em `test:desktop:layout`, com dois Electron
+  reais, conservando vídeo/trilhas, socket, microfone e frames durante as transições.
+  Evidências em `artifacts/stream-controls-*`; mídia sintética local, sem medição
+  de 60 fps em jogos reais ou TURN de produção.
+- A suíte adicional `tests/call-controls-browser.js` passou em 11 verificações,
+  mas falhou ao reabrir o cabeçalho recolhido após reload (linha 381). A mesma
+  falha foi reproduzida com os fontes de `9ed1162`, exportados isoladamente com
+  Webpack em `artifacts/stream-controls-baseline/`. Não foi silenciada; diagnóstico
+  e logs atual/anterior estão em `stream-controls-call-ui*.log`. Investigar o
+  restabelecimento da navegação/visibilidade após reload em um próximo recorte.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,
