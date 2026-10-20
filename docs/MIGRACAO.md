@@ -2970,6 +2970,31 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   de fonte/conta, resumo/toolbar, abas e ações restantes em `clips.js`, a ponte
   Windows em `clip-desktop.js` e a gravação manual em `recording.js`.
 
+## Coordenador de replay e remoção de clips.js
+
+- `lib/clips/replay.ts` possui fonte emprestada, geração de preparo, sessão atual,
+  conta e retomada. `components/clips/runtime.ts` instala a fachada `TronoClips`
+  e o ciclo de vida; `replay-runtime.ts` possui resumo, toolbar, abas e ações.
+  O teclado/janela flutuante continua em seu dono tipado, criado pelo novo boot.
+- `legacy/clips.js` e sua entrada no manifesto saíram. Caminhos desktop sob a
+  guarda web eram inacessíveis e não tinham chamadores; saíram junto com os
+  botões permanentemente ocultos. A política desktop continua sem motor/controles
+  web de replay; o teste nativo verifica a ausência de ambos.
+- Pausa, troca de fonte/conta e descarte invalidam preparações pendentes. Erros
+  antigos não sobrescrevem a sessão atual; um clipe solicitado antes da troca de
+  conta permanece com o dono original. Retomada respeita clipes só em memória.
+  Nenhum desses caminhos restringe ou encerra trilhas da chamada.
+- Oito regressões novas cobrem essas corridas e falhas de preparação. A regressão
+  de navegador também verifica remoção dos listeners de UI, conta, teclado e
+  unload, sem alocar captura ao usar uma fachada já descartada.
+- Typecheck, format:check e build passaram; `test:clips` passou nas 49 verificações,
+  `call-controls-browser.js` nas 13 verificações e a chamada com dois Electron
+  reais também passou. `public/clips.js` e `out/clips.js` foram podados pelo build.
+  Evidências em `artifacts/clip-coordinator-*`; mídia sintética não mede jogos reais.
+- Próximos recortes: `clip-desktop.js`, ponte WebSocket do atalho Windows para
+  a web, e `recording.js`, gravação manual. O controlador principal de clipes
+  não deve ser restaurado como script estático.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,

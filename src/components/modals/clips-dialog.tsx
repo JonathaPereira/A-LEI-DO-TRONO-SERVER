@@ -56,12 +56,6 @@ export function ClipsDialog() {
             <button id={'clipShare'} type={'button'}>
               Compartilhar tela
             </button>
-            <button id={'clipStopLocal'} type={'button'} hidden>
-              Parar replay local
-            </button>
-            <button id={'clipChooseSource'} type={'button'} hidden>
-              Trocar fonte do replay
-            </button>
             <button id={'clipResume'} type={'button'} hidden>
               Retomar replay
             </button>

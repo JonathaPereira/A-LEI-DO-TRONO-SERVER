@@ -9,6 +9,7 @@ import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
+import { initializeClips } from '../components/clips/runtime';
 import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
 import { initializeFileLibrary } from '../components/files/library-runtime';
@@ -123,6 +124,7 @@ export function LegacyRuntime() {
           initializeProfileEditor(window);
         }
         if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
+        if (filename === 'recording.js') initializeClips(window);
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile hosts and remaining game bodies exist before settings mount;
         // activity/notifications then bind to the mounted slots, matching their boot order.

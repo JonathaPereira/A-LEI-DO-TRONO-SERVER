@@ -126,6 +126,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       await page.reload();await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       assert.equal(await page.evaluate(() => window.TronoNetwork.BACKEND_HTTP), fixture.base);
+      assert.deepEqual(await page.evaluate(() => ({engine: typeof window.TronoClips, controls: typeof window.TronoClipControls})), {engine: 'undefined', controls: 'undefined'});
       await expect(page.locator('#authDialog')).toBeVisible();
       await page.locator('#authEmail').fill(email);
       await page.locator('#authPassword').fill('LayoutTest12!');

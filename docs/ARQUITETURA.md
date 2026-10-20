@@ -1655,7 +1655,8 @@ referência. Descarte fecha a conexão e rejeita novas operações; uma abertura
 termine depois também é fechada. Gravações só confirmam no commit da transação;
 falha ao criar a requisição aborta a transação sem substituir um clipe anterior.
 
-`lib/clips/browser.ts` instala uma instância por página antes dos scripts de replay.
+`lib/clips/browser.ts` instala os serviços compartilhados por página antes dos
+controladores de replay.
 `TronoClipStore` conserva o acesso compatível aos registros existentes e compartilha
 a conexão com a biblioteca. `legacy/clip-store.js` e sua entrada no manifesto saíram.
 A persistência não possui captura, buffer, formato de vídeo ou IPC.
@@ -1701,8 +1702,8 @@ memória, sem confundir arquivo salvo com exportação cancelada.
 Os cards React possuem as ações e as URLs de prévia. Fechar o diálogo, ocultar a
 prévia, remover o card, mudar de conta ou sair da página pausa o player e revoga
 sua URL. As URLs de download têm duração própria e são liberadas também no
-pagehide. `library-runtime.tsx` instala somente a lista web; o coordenador legado
-não reescreve mais `clipList`. A política de replay suspenso no desktop continua.
+pagehide. `library-runtime.tsx` instala somente a lista web; o coordenador não
+reescreve `clipList`. A política de replay suspenso no desktop continua.
 
 `lib/clips/buffer.ts` possui o parser incremental de WebM/EBML e a retenção de
 blocos já codificados por tempo e memória. O snapshot começa em um keyframe de
@@ -1733,14 +1734,31 @@ não acessa mais recorder, worker, fila ou waiters.
 
 `browser.ts` instala as fábricas tardias `TronoCreateClipWorker` e
 `TronoCreateReplaySession`, além da instância compartilhada `TronoClipLibrary`.
-`clips.js` ainda possui seleção de fonte, detecção de conta e os controles
-restantes; observa as preferências e delega biblioteca, exportação e sessão aos
-módulos tipados. Não possui mais armazenamento de opções, captura de teclado ou
-DOM/listeners da janela flutuante.
+`replay.ts` possui a referência emprestada da tela compartilhada, a geração da
+preparação e a sessão atual. Trocar fonte/conta, pausar ou descartar invalida uma
+preparação antiga, inclusive ao voltar para a mesma conta. Status/erros atrasados
+não encerram nem sobrescrevem uma sessão posterior. Resultados de clipes já
+solicitados continuam sendo guardados para seu dono original. Falta de espaço
+pausa o replay e bloqueia retomada enquanto houver um Blob somente em memória.
+O coordenador não captura, restringe ou encerra trilhas da chamada.
+
+`components/clips/runtime.ts` instala `TronoClips` somente na web, na mesma ordem
+de boot anterior, e vincula conta, unload e pagehide uma vez. A fachada conserva
+os comandos usados pela chamada e pela ponte Windows, sem outro estado de mídia.
+`replay-runtime.ts` possui resumo, toolbar, abas e ações restantes, com listeners
+removíveis. O teclado/janela flutuante pertence a `controls-runtime.ts`, criado
+por esse boot; a montagem dos campos de preferências não possui esses listeners.
+Descarte remove os listeners e suspende a configuração do atalho global.
+
+`legacy/clips.js` e sua entrada no manifesto foram excluídos. Os caminhos de
+captura local/automática e miniatura desktop eram inacessíveis sob sua guarda
+web e não tinham consumidores externos; os botões permanentemente ocultos e
+essas ramificações também saíram. O aplicativo desktop conserva a política
+existente e não instala `TronoClips` nem `TronoClipControls`.
 O URL do worker vem do bundle Next, sem depender de document.currentScript.
 `legacy/clip-buffer.js` foi excluído e seu JS antigo é podado pelo build. O desktop
 continua sem iniciar replay automaticamente; o teste nativo chama as fábricas
-explicitamente em um perfil descartável.
+de buffer/sessão explicitamente em um perfil descartável.
 
 Na comunidade web, `workspace-layout.ts` move o grupo completo `callReplayControls`
 para `callReplayDock`, fora da barra antiga oculta. Ao sair, restaura sua posição;

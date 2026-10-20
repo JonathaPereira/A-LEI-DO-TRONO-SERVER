@@ -10,7 +10,6 @@
     "noise-suppression.js",
     "personal-prefs.js",
     "recording.js",
-    "clips.js",
     "clip-desktop.js",
     "bot-names.js",
     "azul-rules.js",
