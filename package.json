@@ -25,7 +25,7 @@
     "test:profiles:reader": "node --test tests/profile-reader.cjs tests/profile-decorations.cjs tests/registered-accounts.cjs",
     "test:profiles:ui": "node --test tests/member-profile-browser.cjs tests/registered-accounts-browser.cjs",
     "test:frontend": "node --test tests/frontend-browser.js",
-    "test:clips": "node --test tests/clips-buffer.js tests/clips-browser.js",
+    "test:clips": "node --test tests/clips-buffer.js tests/clip-worker.cjs tests/clips-browser.js",
     "test:social": "node --test tests/social-sql.js tests/call-stability.js tests/desktop-notifications.js tests/social-browser.js tests/messenger-enhancements-browser.js",
     "test:court": "node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/court-browser.js",
     "build:manual": "node scripts/build-law-assets.js && node scripts/build-manual.js && node scripts/print-manual.js",

@@ -1641,7 +1641,7 @@ a diálogos e popovers em primeiro plano, evitando fechar as configurações atr
 do seletor de GIFs, emoji ou miniperfil. A aba Meus arquivos agora
 é aceita pelo validador, sem cair silenciosamente em Áudio.
 
-## Armazenamento local de clipes
+## Clipes locais e buffer de replay
 
 `lib/clips/store.ts` possui a conexão e as transações IndexedDB. Mantém
 `trono-local-clips`, versão 1, as lojas `clips`/`settings` e o índice `owner`.
@@ -1658,7 +1658,27 @@ falha ao criar a requisição aborta a transação sem substituir um clipe anter
 `lib/clips/browser.ts` instala uma instância por página antes dos scripts de replay.
 `TronoClipStore` conserva o nome de compatibilidade para `legacy/clips.js`, ainda
 pendente de conversão. `legacy/clip-store.js` e sua entrada no manifesto saíram.
-Nenhuma captura, worker, buffer, formato de vídeo ou IPC mudou nesta etapa.
+A persistência não possui captura, buffer, formato de vídeo ou IPC.
+
+`lib/clips/buffer.ts` possui o parser incremental de WebM/EBML e a retenção de
+blocos já codificados por tempo e memória. O snapshot começa em um keyframe de
+vídeo e desloca timestamps de áudio/vídeo juntos; remonta Duration e clusters,
+sem decodificar ou reencodar. A implementação conserva o algoritmo anterior,
+com configuração e estado privados tipados.
+
+`worker-runtime.ts` valida comandos, IDs, opções e ArrayBuffers antes de tocar no
+buffer. Um pedido de clipe prematuro não descarta a captura. Fragmento inválido
+invalida o buffer até outro init, evitando devolver um clipe parcial após erro.
+Cada worker possui um buffer e processa as mensagens na ordem recebida.
+`buffer-worker.ts` é a entrada isolada, emitida pelo Next como worker de módulo.
+Não é carregada como script da janela.
+
+`browser.ts` instala a fábrica tardia `TronoCreateClipWorker` para o coordenador
+ainda legado. `clips.js` conserva MediaRecorder, fila de leitura, transferências,
+waiters e término do worker; não cria outro dono nem outro encoder. O URL vem do
+bundle Next, sem depender de document.currentScript. `legacy/clip-buffer.js` foi
+excluído e seu JS antigo é podado pelo build. O desktop continua sem iniciar replay
+automaticamente; o teste nativo chama a fábrica explicitamente em um perfil descartável.
 
 Na comunidade web, `workspace-layout.ts` move o grupo completo `callReplayControls`
 para `callReplayDock`, fora da barra antiga oculta. Ao sair, restaura sua posição;

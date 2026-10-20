@@ -3,8 +3,7 @@ if (!window.TronoDesktop) {
   window.TronoClips = (() => {
     const $ = (id) => document.getElementById(id),
       store = window.TronoClipStore,
-      storage = window.TronoStorage || localStorage,
-      workerURL = new URL('clip-buffer.js?v=091sharingclips', document.currentScript.src);
+      storage = window.TronoStorage || localStorage;
     const qualities = {
       light: { width: 1280, height: 720, bitrate: 6000000, label: '720p' },
       balanced: { width: 1920, height: 1080, bitrate: 16000000, label: '1080p' },
@@ -446,7 +445,7 @@ if (!window.TronoDesktop) {
         } catch {
           recorder = new MediaRecorder(stream, options);
         }
-        worker = new Worker(workerURL);
+        worker = window.TronoCreateClipWorker();
         const s = {
           stream,
           source,

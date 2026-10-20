@@ -2852,6 +2852,44 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   Windows em `clips.js`, `clip-buffer.js` e `clip-desktop.js`; a gravação manual em
   `recording.js` também continua legada. O armazenamento já tem dono tipado.
 
+## Buffer de replay e worker em TypeScript
+
+- `lib/clips/buffer.ts` substitui o núcleo de `legacy/clip-buffer.js`. Conserva
+  parsing incremental, retenção por tempo/memória, keyframes e remontagem WebM
+  com timestamps alinhados e duração explícita, sem decodificar/reencodar quadros.
+  O arquivo legado foi excluído e seu recurso estático antigo foi podado.
+- `worker-runtime.ts` possui o buffer e valida os comandos init/chunk/clip, IDs,
+  configuração e ArrayBuffers. Um clipe pedido cedo mantém a captura; um fragmento
+  inválido exige novo init e impede saída parcial após erro. `buffer-worker.ts`
+  é a entrada de módulo emitida pelo Next, isolada da janela.
+- `browser.ts` oferece uma fábrica tardia para `clips.js`, conservando um worker
+  por sessão. O coordenador legado ainda possui MediaRecorder, leituras, waiters,
+  transferências e descarte. A captura, clones, bitrate, processamento de áudio,
+  IPC e política de replay suspenso no desktop permanecem nos donos existentes.
+- Comparação com o fonte de `01d7efc` passou em seis cenários: fragmentos de um
+  byte, 4096 bytes e arquivo completo, com retenção de três segundos e limite de
+  40000 bytes. Status intermediários, timestamps e bytes dos clipes foram idênticos.
+  Evidências e hashes em `artifacts/clip-buffer-parity.*`; o original usado nessa
+  comparação permanece somente como artefato ignorado, sem ser publicado.
+- Typecheck, format:check e build passaram. `test:clips` passou nas 16 verificações
+  de protocolo, retenção, decodificação, áudio, busca, exportação, atalhos, quota e
+  reload. Quatro testes novos cobrem entrada inválida, inicialização, correlação
+  de erros e recuperação. Dois Electron reais passaram pela chamada/navegação;
+  um helper executou a fábrica/worker emitidos sob a CSP real, transferiu bytes
+  sem cópia, remuxou uma gravação curta e decodificou o Blob no player. Os clones
+  de teste e o worker foram encerrados, preservando a tela e o microfone originais.
+  Evidências em `artifacts/clip-buffer-*`; não mede 60 fps em jogos reais ou TURN.
+- A suíte antiga `tests/desktop-browser.js` passou na verificação de replay
+  suspenso sem alocar recursos, mas terminou com seis testes aprovados e dez
+  falhas. O mesmo resultado foi reproduzido na base isolada `9ed1162`, incluindo
+  expectativas antigas de entrada em chamada e fechamento das configurações.
+  Essas falhas não foram silenciadas; atualizar essa suíte permanece pendente.
+  Comparação em `artifacts/clip-buffer-desktop-policy-ui.log` e
+  `artifacts/clip-buffer-desktop-policy-baseline.log`.
+- Próximo recorte: coordenação/interface em `clips.js`, ponte de clipes Windows
+  em `clip-desktop.js` e gravação manual em `recording.js`. Persistência e buffer
+  já têm donos tipados; não restaurar os dois arquivos legados removidos.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,
