@@ -1738,7 +1738,7 @@ window.TronoSocial = (()=>{
   function toggleMute(){if(!voiceJoined||deafened||serverMuted)return;micMuted=!micMuted;applyMicrophoneMute();window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());updateButtons();renderVoiceRoster();updateMediaIndicators();}
   function toggleDeafen(){
     if(!voiceJoined)return;
-    if(!deafened){mutedBeforeDeafen=micMuted;deafened=true;micMuted=true;}else{deafened=false;micMuted=mutedBeforeDeafen;}
+    if(!deafened){mutedBeforeDeafen=micMuted;deafened=true;micMuted=true;}else{deafened=false;micMuted=serverMuted||mutedBeforeDeafen;}
     applyMicrophoneMute();for(const [id,audio]of remoteAudio){audio.muted=deafened||remotePlayback.get(id)?.route==='gain';updateRemoteGain(id);}
     if(!deafened)unlockCallAudio();window.TronoNetwork?.setVoiceState(true,micMuted,cameraOn,screenSharing,transmissionQuality,announcedTransport());updateButtons();renderVoiceRoster();updateMediaIndicators();
   }

@@ -92,8 +92,13 @@ jobs:
           if ((Get-FileHash $driver -Algorithm SHA256).Hash.ToLower() -ne '89220a7865076b342892f98865f3499fb7c4cfd673159e89d352c360fd014c6a') { throw 'Unexpected driver hash' }
           $signature = Get-AuthenticodeSignature $driver
           if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Nefarius') { throw 'Invalid driver signature' }
-          $install = Start-Process $driver -ArgumentList '/install','/quiet','/norestart' -Wait -PassThru
-          if ($install.ExitCode -notin 0,3010) { throw "Driver installation failed: $($install.ExitCode)" }
+          # Advanced Installer flags (not WiX). The runner is Windows Server;
+          # skip only the installer's desktop OS check in this disposable VM.
+          $log = Join-Path $env:RUNNER_TEMP 'ViGEmBus-install.log'
+          $install = Start-Process $driver -ArgumentList '/exenoui','/qn','/norestart','AI_SKIP_SYSTEM_REQUIREMENTS=1','/l*v',"`"$log`"" -PassThru
+          if (-not $install.WaitForExit(120000)) { Stop-Process $install.Id -Force; if (Test-Path $log) { Get-Content $log -Tail 60 }; throw 'Virtual controller driver installation timed out' }
+          $install.Refresh()
+          if ($install.ExitCode -notin 0,3010) { if (Test-Path $log) { Get-Content $log -Tail 80 }; throw "Driver installation failed: $($install.ExitCode)" }
       - name: Verify remote PC beta media, consent and real native input
         shell: pwsh
         run: |
