@@ -1660,6 +1660,28 @@ falha ao criar a requisição aborta a transação sem substituir um clipe anter
 a conexão com a biblioteca. `legacy/clip-store.js` e sua entrada no manifesto saíram.
 A persistência não possui captura, buffer, formato de vídeo ou IPC.
 
+`preferences.ts` possui as opções de replay e a captura do novo atalho. Conserva
+`tronoClips:<owner>`, versão 2, e a migração anterior de qualidade/FPS. Valida JSON,
+valores, modificadores e teclas reservadas; dados inválidos não interrompem o boot.
+Os snapshots e atalhos são imutáveis. Trocar de conta cancela a seleção e carrega
+somente suas opções; falha ao gravar mantém a escolha na sessão com aviso explícito.
+O coordenador observa alterações de qualidade/FPS/duração/auto para reiniciar só
+o replay. Alterar ou cancelar o atalho não reinicia mídia.
+
+`components/clips/preferences.tsx` possui campos controlados e ações da pasta.
+O legado deixou de escrever nesses campos ou instalar seus listeners. O runtime
+monta o trecho em `clipPreferencesHost`, somente no fluxo web existente.
+`controls-runtime.ts` possui um listener de teclado por documento, incluindo a
+janela flutuante; ignora repetição e campos editáveis e evita disparar localmente
+quando o atalho global Windows já está ativo. Escape durante a escolha cancela
+o atalho antes de fechar o diálogo.
+
+A janela flutuante reutiliza a instância aberta, exibe contagem numérica da
+biblioteca e delega clipar/abrir aos mesmos comandos existentes. Trocar de conta,
+sair da página ou descartar o controlador fecha a janela e remove seus listeners;
+uma abertura assíncrona obsoleta é fechada sem instalar controles. Não cria outra
+captura, recorder ou sessão de replay.
+
 `library.ts` possui a lista por conta, pasta de destino, operações em andamento e
 clipes de emergência quando o IndexedDB falha. O snapshot imutável é consumido
 por `components/clips/library.tsx` com `useSyncExternalStore`. Trocas de conta e
@@ -1711,8 +1733,10 @@ não acessa mais recorder, worker, fila ou waiters.
 
 `browser.ts` instala as fábricas tardias `TronoCreateClipWorker` e
 `TronoCreateReplaySession`, além da instância compartilhada `TronoClipLibrary`.
-`clips.js` ainda possui seleção de fonte, preferências, detecção de conta e os
-controles restantes; delega biblioteca, exportação e sessão aos módulos tipados.
+`clips.js` ainda possui seleção de fonte, detecção de conta e os controles
+restantes; observa as preferências e delega biblioteca, exportação e sessão aos
+módulos tipados. Não possui mais armazenamento de opções, captura de teclado ou
+DOM/listeners da janela flutuante.
 O URL do worker vem do bundle Next, sem depender de document.currentScript.
 `legacy/clip-buffer.js` foi excluído e seu JS antigo é podado pelo build. O desktop
 continua sem iniciar replay automaticamente; o teste nativo chama as fábricas

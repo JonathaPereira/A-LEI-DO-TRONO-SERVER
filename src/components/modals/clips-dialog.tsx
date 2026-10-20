@@ -76,68 +76,7 @@ export function ClipsDialog() {
           </p>
         </section>
         <section id={'clipsPreferences'} role={'tabpanel'} hidden>
-          <label className={'clip-audio'}>
-            <input id={'clipAuto'} type={'checkbox'} defaultChecked /> Preparar replay
-            automaticamente ao compartilhar a tela
-          </label>
-          <label id={'clipDesktopAutoLabel'} className={'clip-audio'} hidden>
-            <input id={'clipDesktopAuto'} type={'checkbox'} defaultChecked /> Preparar a tela
-            principal ao abrir o aplicativo
-          </label>
-          <div className={'clips-settings'}>
-            <label>
-              Qualidade do arquivo
-              <select id={'clipQuality'}>
-                <option value={'light'}>720p · Leve</option>
-                <option value={'balanced'}>1080p · Alta</option>
-                <option value={'high'}>1440p · Máxima</option>
-              </select>
-            </label>
-            <label>
-              FPS
-              <select id={'clipFps'} defaultValue="60">
-                <option value={'30'}>30 FPS</option>
-                <option value={'60'}>60 FPS</option>
-              </select>
-            </label>
-            <label>
-              Trecho recente
-              <select id={'clipSeconds'} defaultValue="30">
-                <option value={'15'}>15 segundos</option>
-                <option value={'30'}>30 segundos</option>
-                <option value={'60'}>60 segundos</option>
-                <option value={'120'}>2 minutos</option>
-              </select>
-            </label>
-            <label>
-              Atalho
-              <button
-                id={'clipShortcut'}
-                type={'button'}
-                aria-label={'Escolher atalho para clipar'}
-              >
-                Ctrl + Shift + X
-              </button>
-            </label>
-          </div>
-          <p className={'clips-help'}>
-            Áudio da tela incluído automaticamente quando disponível no compartilhamento. A
-            resolução depende da origem; configure antes de compartilhar para capturar com a
-            qualidade desejada. Mudar estas opções reinicia só o replay e descarta o buffer
-            anterior.
-          </p>
-          <div className={'clip-destination'}>
-            <div>
-              <small>SALVAR EM</small>
-              <strong id={'clipFolder'}></strong>
-            </div>
-            <button id={'clipChooseFolder'} type={'button'}>
-              Escolher pasta
-            </button>
-            <button id={'clipResetFolder'} type={'button'} hidden>
-              Salvar como / Downloads
-            </button>
-          </div>
+          <div id="clipPreferencesHost" />
           <div className={'clip-desktop-panel'}>
             <strong>Atalho durante o jogo · Windows</strong>
             <p id={'clipDesktopStatus'} role={'status'}>

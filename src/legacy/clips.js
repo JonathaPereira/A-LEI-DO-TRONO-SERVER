@@ -3,12 +3,8 @@ if (!window.TronoDesktop) {
   window.TronoClips = (() => {
     const $ = (id) => document.getElementById(id),
       library = window.TronoClipLibrary,
-      storage = window.TronoStorage || localStorage;
-    const qualities = {
-      light: { width: 1280, height: 720, bitrate: 6000000, label: '720p' },
-      balanced: { width: 1920, height: 1080, bitrate: 16000000, label: '1080p' },
-      high: { width: 2560, height: 1440, bitrate: 28000000, label: '1440p' },
-    };
+      preferences = window.TronoClipPreferences,
+      controls = window.TronoClipControls;
     let owner = 'local',
       settings,
       session = null,
@@ -17,68 +13,26 @@ if (!window.TronoDesktop) {
       localChoosing = false,
       starting = false,
       generation = 0,
-      choosingShortcut = false,
-      pip = null,
       localPrimary = false,
       autoPaused = false,
       automaticPreparing = false,
       lastCallJoined = false,
       lastCaptureError = null,
       localCaptureGeneration = 0;
-    let lastLibraryMessage = 0;
+    let lastLibraryMessage = 0,
+      lastPreferenceMessage = 0;
     const account = () => window.TronoAuth?.user?.id || 'local';
-    const defaults = () => ({
-      version: 2,
-      quality: 'balanced',
-      fps: 60,
-      seconds: 30,
-      auto: true,
-      desktopAuto: true,
-      shortcut: { code: 'KeyX', ctrl: true, shift: true, alt: false, meta: false },
-    });
     function message(text) {
       $('clipsStatus').textContent = text;
     }
-    function shortcutLabel(s = settings.shortcut) {
-      return [
-        s.ctrl ? 'Ctrl' : '',
-        s.alt ? 'Alt' : '',
-        s.shift ? 'Shift' : '',
-        s.meta ? 'Meta' : '',
-        s.code.replace(/^Key|^Digit/, ''),
-      ]
-        .filter(Boolean)
-        .join(' + ');
-    }
     function readSettings() {
-      let saved = {};
-      try {
-        saved = JSON.parse(storage.getItem('tronoClips:' + owner) || '{}');
-      } catch {}
-      if (saved.version !== 2) {
-        saved.quality = saved.quality === 'high' ? 'high' : 'balanced';
-        saved.fps = 60;
-      }
-      settings = { ...defaults(), ...saved, version: 2 };
-      if (!qualities[settings.quality]) settings.quality = 'light';
-      if (![30, 60].includes(settings.fps)) settings.fps = 30;
-      if (![15, 30, 60, 120].includes(settings.seconds)) settings.seconds = 30;
-      if (!settings.shortcut?.code) settings.shortcut = defaults().shortcut;
-      settings.auto = settings.auto !== false;
-    }
-    function saveSettings() {
-      storage.setItem('tronoClips:' + owner, JSON.stringify(settings));
+      preferences.setOwner(owner);
+      settings = preferences.getSnapshot().settings;
     }
     function renderState() {
-      const { directory, pendingCount: count } = library.getSnapshot();
+      const { pendingCount: count } = library.getSnapshot();
       const active = !!session && !session.stopping,
         ready = !!(active && session.status?.ready);
-      $('clipQuality').value = settings.quality;
-      $('clipFps').value = String(settings.fps);
-      $('clipSeconds').value = String(settings.seconds);
-      $('clipAuto').checked = settings.auto;
-      $('clipDesktopAuto').checked = settings.desktopAuto;
-      $('clipDesktopAutoLabel').hidden = !window.TronoDesktop;
       $('clipChooseSource').hidden = !window.TronoDesktop;
       $('clipChooseSource').disabled = localChoosing;
       const available = Math.min(
@@ -98,12 +52,11 @@ if (!window.TronoDesktop) {
               ? 'Ativar replay'
               : 'Clipar';
       $('clipToolbarNow').title = ready
-        ? 'Guardar o replay · ' + shortcutLabel()
+        ? 'Guardar o replay · ' + preferences.shortcutLabel()
         : window.TronoDesktop
           ? 'Ativar replay local sem transmitir para a chamada'
           : 'Compartilhe sua tela para preparar o replay';
       $('clipToolbarNow').classList.toggle('replay-ready', ready);
-      $('clipShortcut').textContent = choosingShortcut ? 'Pressione o atalho…' : shortcutLabel();
       $('clipSource').textContent = ready
         ? (localPrimary ? 'Tela principal · ' : 'Replay pronto · ') +
           Math.floor(session.status?.seconds || 0) +
@@ -127,12 +80,6 @@ if (!window.TronoDesktop) {
       $('clipStopLocal').hidden = !localSource;
       $('clipResume').hidden =
         !sharedSource || active || starting || (!settings.auto && !localSource);
-      $('clipFolder').textContent = directory
-        ? directory.name
-        : 'Escolher arquivo ao salvar / Downloads';
-      $('clipResetFolder').hidden = !directory;
-      $('clipChooseFolder').hidden =
-        !window.TronoDesktop && typeof window.showDirectoryPicker !== 'function';
       $('clipFloating').hidden = !window.documentPictureInPicture;
       $('clipPendingCount').textContent = count;
       $('clipToolbarCount').textContent = count;
@@ -149,17 +96,12 @@ if (!window.TronoDesktop) {
           },
         }),
       );
-      if (pip && !pip.closed) {
-        const status = pip.document.getElementById('pipStatus');
-        if (status) status.textContent = $('clipSource').textContent;
-        const button = pip.document.getElementById('pipClip');
-        if (button) {
-          button.disabled = !ready;
-          button.textContent = 'Clipar últimos ' + settings.seconds + ' s';
-        }
-        const count = pip.document.getElementById('pipCount');
-        if (count) count.textContent = count + ' clipes pendentes';
-      }
+      controls.update({
+        ready,
+        source: $('clipSource').textContent,
+        seconds: settings.seconds,
+        count,
+      });
     }
     const refresh = () => library.refresh();
     async function retain(s, result) {
@@ -217,11 +159,7 @@ if (!window.TronoDesktop) {
         message('Buffer temporário descartado. Os clipes já criados continuam na biblioteca.');
       }
     }
-    function captureProfile() {
-      const prefs = settings || defaults(),
-        q = qualities[prefs.quality];
-      return prefs.auto ? { width: q.width, height: q.height, fps: prefs.fps } : null;
-    }
+    const captureProfile = () => preferences.captureProfile();
     async function sharedStarted(source, { local = false, force = false } = {}) {
       if (!local && localSource && localPrimary) return; // Private primary-screen replay stays independent of the shared source.
       if (localSource && source !== localSource) {
@@ -252,7 +190,7 @@ if (!window.TronoDesktop) {
         s = await window.TronoCreateReplaySession({
           source,
           owner: current,
-          quality: qualities[settings.quality],
+          quality: preferences.getQuality(),
           fps: settings.fps,
           seconds: settings.seconds,
           isCurrent: () => request === generation && current === owner && sharedSource === source,
@@ -302,7 +240,7 @@ if (!window.TronoDesktop) {
       localChoosing = true;
       renderState();
       try {
-        const q = qualities[settings.quality];
+        const q = preferences.getQuality();
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             width: { ideal: q.width },
@@ -420,97 +358,6 @@ if (!window.TronoDesktop) {
         message('A captura não está disponível. Os clipes anteriores continuam armazenados.');
       }
     }
-    async function floating() {
-      if (pip && !pip.closed) {
-        pip.focus();
-        return;
-      }
-      try {
-        pip = await window.documentPictureInPicture.requestWindow({ width: 290, height: 210 });
-        const doc = pip.document;
-        doc.title = 'Clipes M&N';
-        const style = doc.createElement('style');
-        style.textContent =
-          'body{margin:0;padding:16px;background:#141727;color:#eef0ff;font:14px system-ui}button{padding:12px;width:100%;border:1px solid #8d7ec0;border-radius:10px;background:#453764;color:white;margin:8px 0;cursor:pointer}button:disabled{opacity:.5}small{display:block;color:#b5b8d2;margin:6px 0}';
-        doc.head.appendChild(style);
-        const title = doc.createElement('strong');
-        title.textContent = 'Clipes · M&N';
-        const status = doc.createElement('small');
-        status.id = 'pipStatus';
-        const button = doc.createElement('button');
-        button.id = 'pipClip';
-        button.onclick = clip;
-        const count = doc.createElement('small');
-        count.id = 'pipCount';
-        const back = doc.createElement('button');
-        back.textContent = 'Abrir central';
-        back.onclick = () => {
-          window.focus();
-          open();
-        };
-        doc.body.append(title, status, button, count, back);
-        doc.addEventListener('keydown', keydown);
-        renderState();
-      } catch {
-        message('Não foi possível abrir a janela flutuante. Use a central de clipes nesta página.');
-      }
-    }
-    function keydown(e) {
-      if (choosingShortcut) {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
-          choosingShortcut = false;
-          renderState();
-          return;
-        }
-        if (!/^(Key[A-Z]|Digit[0-9]|F\d{1,2})$/.test(e.code)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const reserved =
-          ['F5', 'F11', 'F12'].includes(e.code) ||
-          ((e.ctrlKey || e.metaKey) &&
-            ['KeyR', 'KeyW', 'KeyT', 'KeyL', 'KeyN', 'KeyP'].includes(e.code));
-        if (reserved || (!e.ctrlKey && !e.altKey && !e.metaKey && !/^F\d/.test(e.code))) {
-          message(
-            'Use Ctrl/Alt/Meta com uma tecla ou uma tecla F livre. Evite atalhos reservados do navegador.',
-          );
-          return;
-        }
-        settings.shortcut = {
-          code: e.code,
-          ctrl: e.ctrlKey,
-          alt: e.altKey,
-          shift: e.shiftKey,
-          meta: e.metaKey,
-        };
-        choosingShortcut = false;
-        saveSettings();
-        renderState();
-        message(
-          window.TronoDesktop
-            ? 'Atalho atualizado. Confira o estado do atalho global abaixo.'
-            : window.TronoClipDesktop?.connected
-              ? 'Atalho enviado ao componente Windows.'
-              : 'Atalho configurado para esta página. Conecte o componente Windows para usar durante o jogo.',
-        );
-        return;
-      }
-      const s = settings?.shortcut;
-      if (!s || e.repeat || e.target.closest?.('input,textarea,select,[contenteditable="true"]'))
-        return;
-      if (
-        e.code === s.code &&
-        e.ctrlKey === s.ctrl &&
-        e.altKey === s.alt &&
-        e.shiftKey === s.shift &&
-        e.metaKey === s.meta
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!window.TronoClipDesktop?.globalActive) clip();
-      }
-    }
     function tab(name) {
       document.querySelectorAll('[data-clips-tab]').forEach((b) => {
         const on = b.dataset.clipsTab === name;
@@ -543,6 +390,23 @@ if (!window.TronoDesktop) {
     function bind() {
       owner = account();
       readSettings();
+      controls.bind();
+      preferences.subscribe(() => {
+        const state = preferences.getSnapshot(),
+          previous = settings;
+        settings = state.settings;
+        renderState();
+        if (state.messageVersion !== lastPreferenceMessage) {
+          lastPreferenceMessage = state.messageVersion;
+          if (state.message) message(state.message);
+        }
+        if (state.owner !== owner || previous === settings) return;
+        if (
+          sharedSource &&
+          ['quality', 'fps', 'seconds', 'auto'].some((key) => previous[key] !== settings[key])
+        )
+          void sharedStarted(sharedSource, { local: localSource === sharedSource });
+      });
       renderState();
       library.subscribe(() => {
         renderState();
@@ -558,7 +422,6 @@ if (!window.TronoDesktop) {
         .forEach((b) => b.addEventListener('click', open));
       $('clipClose').onclick = () => {
         $('clipsDialog').close();
-        choosingShortcut = false;
         renderState();
       };
       $('clipNow').onclick = clip;
@@ -569,13 +432,7 @@ if (!window.TronoDesktop) {
             : startLocalReplay());
         else clip();
       };
-      $('clipChooseFolder').onclick = () => void library.chooseFolder();
-      $('clipFloating').onclick = () => void floating();
-      $('clipShortcut').onclick = () => {
-        choosingShortcut = true;
-        renderState();
-        message('Pressione o novo atalho. Esc cancela.');
-      };
+      $('clipFloating').onclick = () => void controls.openFloating();
       $('clipShare').onclick = async () => {
         if (window.TronoDesktop) {
           await startLocalReplay();
@@ -588,39 +445,12 @@ if (!window.TronoDesktop) {
       };
       $('clipStopLocal').onclick = stopLocalReplay;
       $('clipChooseSource').onclick = () => void startLocalReplay({ choose: true });
-      $('clipDesktopAuto').onchange = () => {
-        settings.desktopAuto = $('clipDesktopAuto').checked;
-        saveSettings();
-        if (settings.desktopAuto) {
-          autoPaused = false;
-          void ensureAutomaticReplay();
-        } else if (localPrimary) stopLocalReplay();
-      };
       $('clipResume').onclick = () => {
         if (sharedSource) void sharedStarted(sharedSource, { local: localSource === sharedSource });
       };
       document
         .querySelectorAll('[data-clips-tab]')
         .forEach((b) => (b.onclick = () => tab(b.dataset.clipsTab)));
-      $('clipResetFolder').onclick = () => void library.resetFolder();
-      for (const [id, key] of [
-        ['clipQuality', 'quality'],
-        ['clipFps', 'fps'],
-        ['clipSeconds', 'seconds'],
-        ['clipAuto', 'auto'],
-      ])
-        $(id).addEventListener('change', () => {
-          settings[key] =
-            key === 'auto' ? $(id).checked : key === 'quality' ? $(id).value : Number($(id).value);
-          saveSettings();
-          if (sharedSource)
-            void sharedStarted(sharedSource, { local: localSource === sharedSource });
-          else renderState();
-        });
-      document.addEventListener('keydown', keydown, true);
-      $('clipsDialog').addEventListener('close', () => {
-        choosingShortcut = false;
-      });
       window.addEventListener('trono-auth-change', () => void accountChanged());
       window.addEventListener('trono-call-change', (event) => {
         const joined = event.detail.joined;

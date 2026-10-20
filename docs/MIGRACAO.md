@@ -2943,6 +2943,33 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
 - Restam preferências, atalhos, janela flutuante, seleção/coordenação da fonte e
   controles do diálogo em `clips.js`, além de `clip-desktop.js` e `recording.js`.
 
+## Preferências, atalhos e janela flutuante dos clipes
+
+- `lib/clips/preferences.ts` possui opções, migração versão 2, validação e seleção
+  do atalho. Usa a mesma chave `tronoClips:<owner>` e snapshots imutáveis. JSON
+  inválido e teclas reservadas recebem fallback; falha de gravação mantém a opção
+  na sessão e avisa. Trocar de conta cancela a seleção pendente.
+- `components/clips/preferences.tsx` possui campos React e ações da pasta.
+  `controls-runtime.ts` possui teclado e janela flutuante, com um listener por
+  documento, remoção no descarte e cancelamento de aberturas obsoletas. O legado
+  perdeu parsing/gravação das preferências, listeners desses campos e da janela,
+  e o teclado. Uma alteração de atalho não reinicia o replay.
+- A contagem da janela flutuante agora usa o número de clipes, corrigindo o
+  sombreamento da variável que mostrava o elemento HTML em vez da quantidade.
+  Ela reutiliza a mesma sessão e fecha ao trocar de conta ou sair da página.
+- Sete regressões novas cobrem preferências anteriores, dados inválidos, troca
+  de conta, teclas reservadas, Windows global ativo, armazenamento bloqueado,
+  descarte de listeners e abertura de janela obsoleta. No navegador, uma janela
+  de mesma origem simula requestWindow para verificar contagem, reutilização e
+  clipar sem outra captura; isso não valida a API nativa de Picture-in-Picture.
+- Typecheck, format:check e build estático passaram; `test:clips` passou nas 40
+  verificações, incluindo persistência, exportação, áudio, atalhos e quota. O
+  fluxo de chamada/navegação com dois Electron reais passou. Evidências locais
+  em `artifacts/clip-preferences-*`; a chamada usa mídia sintética.
+- O desktop mantém a política atual de clipes suspensos. Restam a coordenação
+  de fonte/conta, resumo/toolbar, abas e ações restantes em `clips.js`, a ponte
+  Windows em `clip-desktop.js` e a gravação manual em `recording.js`.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,
