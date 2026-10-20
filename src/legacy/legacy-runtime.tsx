@@ -11,6 +11,7 @@ import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
 import { initializeClips } from '../components/clips/runtime';
 import { initializeClipDesktop } from '../components/clips/desktop-runtime';
+import { initializeRecorder } from '../components/recording/runtime';
 import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
 import { initializeFileLibrary } from '../components/files/library-runtime';
@@ -124,8 +125,9 @@ export function LegacyRuntime() {
           initializePortal(window);
           initializeProfileEditor(window);
         }
-        if (filename === 'personal-prefs.js') initializeVoiceRuntime(window);
-        if (filename === 'recording.js') {
+        if (filename === 'personal-prefs.js') {
+          initializeVoiceRuntime(window);
+          initializeRecorder(window);
           initializeClips(window);
           initializeClipDesktop(window);
         }

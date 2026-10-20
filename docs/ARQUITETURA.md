@@ -1782,6 +1782,35 @@ para `callReplayDock`, fora da barra antiga oculta. Ao sair, restaura sua posiç
 botões, contador e handlers mantêm a identidade. O desktop conserva sua política
 atual de clipes e não recebe esse grupo.
 
+## Gravação manual
+
+`lib/recording/capture.ts` possui a captura explícita de tela a 30 FPS e a mistura
+de áudio. A tela, sua saída mista/clonada e o AudioContext são próprios; o
+microfone da chamada é emprestado e nunca é encerrado. Cancelar enquanto aguarda
+o seletor/resume libera um resultado tardio. O caminho sem AudioContext usa um
+clone da primeira trilha de áudio, conservando o comportamento anterior.
+
+`recorder.ts` possui uma única gravação nas fases idle/selecting/recording/
+stopping/saving, seus fragmentos e a escolha da pasta. O seletor de destino abre
+no clique e não atrasa MediaRecorder.stop. Ao receber stop, a captura e a mistura
+são liberadas antes de esperar pela pasta ou pela escrita. A finalização impede
+outra gravação simultânea; cancelamento/descarte invalida preparações pendentes.
+`files.ts` conserva subpasta e nomes de arquivo anteriores, fecha a escrita antes
+de confirmar sucesso e aborta uma escrita falha antes do fallback de download.
+
+`components/recording/controls.tsx` possui timer, aviso e toasts em React. Portais
+montam o botão e o aviso em hosts estáveis; Configurações move `recordMatchHost`
+inteiro, mantendo os eventos React. Durante a seleção, o cancelamento fica no
+botão do cabeçalho sem aviso sobreposto; depois de iniciada, a gravação também
+pode ser encerrada no aviso. O runtime instala `TronoRecorder` uma vez tanto na
+web quanto no Electron, sem iniciar captura. Antes de sair da página tenta parar
+sem seletor; descarte explícito libera recursos, listeners, URLs e raízes React.
+
+`legacy/recording.js` e sua entrada no manifesto foram excluídos. Os codecs
+VP9/Opus → VP8/Opus → WebM e o bitrate de vídeo de 5 Mbps foram conservados.
+Fechar a página durante uma gravação não garante a exportação final; encerrar
+pelo controle de gravação continua sendo o fluxo de salvamento verificável.
+
 ## Backend
 
 Express e `ws` preservam o protocolo atual. Trocar esse transporte durante a

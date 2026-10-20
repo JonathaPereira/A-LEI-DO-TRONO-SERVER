@@ -70,7 +70,9 @@ export function initializeCallSettings(target: Window): void {
             ? get('call-nav-socialBtn')
             : id === 'logBtn'
               ? get('throneLogToggleHost')
-              : get(id),
+              : id === 'recordMatchBtn'
+                ? get('recordMatchHost')
+                : get(id),
         ),
       );
       group.append(summary, actions);

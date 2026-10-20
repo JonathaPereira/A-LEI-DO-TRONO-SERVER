@@ -3016,6 +3016,32 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   `public/clip-desktop.js` e `out/clip-desktop.js` foram podados. Evidências locais
   em `artifacts/clip-bridge-*`; o servidor de atalho Windows é uma fixture local.
 
+## Gravação manual tipada e remoção de recording.js
+
+- `lib/recording/capture.ts` possui tela, mixer e saída própria, preservando o
+  microfone emprestado. `recorder.ts` possui captura/preparo/finalização e os
+  fragmentos; `files.ts` possui escrita, abort e fallback de download.
+- `components/recording/controls.tsx` possui botão, timer, aviso e toasts React.
+  Configurações move o host completo do botão, preservando seus eventos. O runtime
+  instala uma instância explícita por página em web/Electron, sem captura no boot.
+  `legacy/recording.js` e a entrada no manifesto saíram.
+- A captura e o mixer agora encerram antes de aguardar pasta/escrita. Preparação
+  cancelada não cria recorder e libera sua tela tardia. Erro de escrita retorna
+  para idle e pode usar download; falha na pasta aborta o writable antes do fallback.
+  Codec, bitrate, subpasta e prefixo do arquivo foram conservados.
+- Dez regressões de ciclo de vida e recursos cobrem cancelamento, pasta pendente,
+  descarte, erros, empréstimo do microfone, mixer e fallback. No Edge, três fluxos
+  adicionais verificam cancelamento real, áudio/vídeo decodificados por FFmpeg,
+  liberação antes de resolver a pasta, download e remoção do runtime.
+- O helper compartilhado com Electron usa encoder e mixer reais com fontes
+  sintéticas e um destino de arquivo simulado. Restaura captura, seletor e seção
+  das Configurações ao sair; não prova um seletor ou escrita do sistema operacional.
+- Typecheck, format:check e build passaram; `test:recording` passou nas 14
+  verificações, `test:clips` nas 55 e a chamada/navegação com dois Electron reais
+  passou com o novo fluxo manual. `public/recording.js` e `out/recording.js` foram
+  podados. Evidências em `artifacts/manual-recording-*`. O aviso fica oculto na
+  seleção para não cobrir Cancelar; na gravação web, o botão do próprio aviso para.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,

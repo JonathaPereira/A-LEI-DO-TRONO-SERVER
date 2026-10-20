@@ -59,13 +59,7 @@ export function GameScreen() {
             <button id={'musicBtn'} className={'icon-btn'} title={'Ativar ou silenciar música'}>
               ♫ Música
             </button>
-            <button
-              id={'recordMatchBtn'}
-              className={'icon-btn record-btn'}
-              title={'Gravar a partida exibida nesta aba'}
-            >
-              ⏺ Gravar
-            </button>
+            <span id="recordMatchHost" style={{ display: 'contents' }} />
             <span id="throneLogToggleHost" style={{ display: 'contents' }}></span>
             <CallNavigationHost id="socialBtn" />
             <span id="throneSpeedHost" style={{ display: 'contents' }} />

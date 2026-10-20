@@ -192,6 +192,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await localScreen.locator('.screen-collapse-btn').click();
     await expect(localScreen).not.toHaveClass(/share-collapsed/);
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
+    await require('./manual-recording-flow.cjs').exerciseManualRecording(page, {desktop: true});
     await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({page, receiver});
     await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver});
     await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);

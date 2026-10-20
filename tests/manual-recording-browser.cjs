@@ -1,0 +1,220 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { writeFileSync, mkdirSync, statSync } = require('node:fs');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+const express = require('express');
+const { chromium, expect } = require('@playwright/test');
+const { startFixture } = require('./auth-fixture');
+const { exerciseManualRecording } = require('./manual-recording-flow.cjs');
+test(
+  'manual recording controls preserve call audio, encode playable video and release resources before saving',
+  { timeout: 60000 },
+  async (t) => {
+    const server = await new Promise((resolve) => {
+      const s = express()
+        .use(express.static(path.resolve(__dirname, '../out')))
+        .listen(0, '127.0.0.1', () => resolve(s));
+    });
+    const origin = 'http://127.0.0.1:' + server.address().port,
+      fixture = await startFixture({ port: 10933, appOrigin: origin });
+    const errors = [];
+    let browser;
+    const artifacts = path.resolve(__dirname, '../artifacts');
+    mkdirSync(artifacts, { recursive: true });
+    try {
+      const email = 'manual-recording@example.test';
+      await fixture.call('signup', { email, nickname: 'Gravador', password: 'Senha12!' });
+      await fixture.call('verify', { token_hash: [...fixture.links][0][0], type: 'signup' });
+      const data = (await fixture.call('login', { email, password: 'Senha12!' })).data;
+      browser = await chromium.launch({
+        executablePath: process.env.CHROMIUM_EXECUTABLE_PATH,
+        headless: true,
+        args: [
+          '--use-fake-device-for-media-stream',
+          '--use-fake-ui-for-media-stream',
+          '--autoplay-policy=no-user-gesture-required',
+          '--mute-audio',
+        ],
+      });
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 1000 },
+        permissions: ['microphone', 'camera'],
+        acceptDownloads: true,
+      });
+      await context.route('**/*', (route) =>
+        ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname)
+          ? route.continue()
+          : route.abort(),
+      );
+      await context.addInitScript(
+        ({ backend, data }) => {
+          window.TRONO_BACKEND_URL = backend;
+          sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+          localStorage.setItem('tronoMusicEnabled', '0');
+          localStorage.setItem('tronoSfxEnabled', '0');
+          localStorage.setItem('tronoNoiseSuppression', '0');
+          window.__manualCaptures = [];
+          navigator.mediaDevices.getDisplayMedia = async (options) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 360;
+            const draw = canvas.getContext('2d');
+            let frame = 0;
+            const paint = () => {
+              draw.fillStyle = frame++ % 2 ? '#466389' : '#182b4b';
+              draw.fillRect(0, 0, 640, 360);
+            };
+            paint();
+            const stream = canvas.captureStream(options.video.frameRate.ideal),
+              video = stream.getVideoTracks()[0],
+              stop = video.stop.bind(video),
+              timer = setInterval(paint, 32);
+            video.stop = () => {
+              clearInterval(timer);
+              stop();
+            };
+            const audio = new AudioContext(),
+              oscillator = audio.createOscillator(),
+              destination = audio.createMediaStreamDestination();
+            oscillator.connect(destination);
+            oscillator.start();
+            const track = destination.stream.getAudioTracks()[0],
+              stopAudio = track.stop.bind(track);
+            track.stop = () => {
+              stopAudio();
+              void audio.close();
+            };
+            stream.addTrack(track);
+            window.__manualCaptures.push(stream);
+            if (window.__manualDelay)
+              await new Promise((resolve) => {
+                window.__manualRelease = resolve;
+              });
+            return stream;
+          };
+        },
+        { backend: fixture.base, data },
+      );
+      const page = await context.newPage();
+      page.setDefaultTimeout(10000);
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.goto(origin);
+      await page.waitForFunction(() => window.TronoAuth?.ready);
+      await page.evaluate(() => window.TronoAuth.ready);
+      await page.locator('#openVoicePortalBtn').click();
+      await page.locator('#joinVoiceBtn').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+      await t.test(
+        'cancelling an unresolved capture closes the late result without starting a recorder',
+        async () => {
+          await page.evaluate(() => {
+            window.TronoPortal.showOnly('gameScreen');
+            window.__manualDelay = true;
+          });
+          await page.locator('#recordMatchBtn').click();
+          await expect.poll(() => page.evaluate(() => !!window.__manualRelease)).toBe(true);
+          await expect(page.locator('#recordMatchBtn')).toHaveText('Cancelar gravação');
+          await page.locator('#recordMatchBtn').click();
+          await page.evaluate(() => {
+            window.__manualRelease();
+            window.__manualDelay = false;
+          });
+          await expect
+            .poll(() =>
+              page.evaluate(() =>
+                window.__manualCaptures[0]
+                  .getTracks()
+                  .every((track) => track.readyState === 'ended'),
+              ),
+            )
+            .toBe(true);
+          assert.equal(await page.evaluate(() => window.TronoRecorder.getSnapshot().phase), 'idle');
+        },
+      );
+      await t.test(
+        'mixed video and audio decode and the destination remains pending after capture has stopped',
+        async () => {
+          const bytes = await exerciseManualRecording(page, { exportBytes: true }),
+            filename = path.join(artifacts, 'manual-recording.webm');
+          writeFileSync(filename, bytes);
+          const probe = spawnSync(
+            'ffprobe',
+            [
+              '-v',
+              'error',
+              '-show_entries',
+              'stream=codec_name,width,height',
+              '-of',
+              'json',
+              filename,
+            ],
+            { encoding: 'utf8' },
+          );
+          assert.equal(probe.status, 0, probe.stderr);
+          const info = JSON.parse(probe.stdout);
+          assert(
+            info.streams.some(
+              (stream) =>
+                ['vp9', 'vp8'].includes(stream.codec_name) &&
+                stream.width === 640 &&
+                stream.height === 360,
+            ),
+          );
+          assert(info.streams.some((stream) => stream.codec_name === 'opus'));
+          const decode = spawnSync(
+            'ffmpeg',
+            ['-v', 'error', '-threads', '2', '-i', filename, '-f', 'null', '-'],
+            { encoding: 'utf8', timeout: 15000 },
+          );
+          assert.equal(decode.status, 0, decode.stderr);
+        },
+      );
+      await t.test(
+        'browser download and runtime disposal preserve the microphone and remove listeners',
+        async () => {
+          await page.evaluate(() => {
+            window.showDirectoryPicker = undefined;
+          });
+          await page.locator('#recordMatchBtn').click();
+          await expect.poll(() => page.evaluate(() => window.TronoRecorder.recording)).toBe(true);
+          await page.waitForTimeout(500);
+          const downloading = page.waitForEvent('download');
+          await page.locator('#recordingStopBtn').click();
+          const download = await downloading;
+          const filename = path.join(artifacts, 'manual-recording-download.webm');
+          await download.saveAs(filename);
+          assert(statSync(filename).size > 0);
+          await expect
+            .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
+            .toBe('idle');
+          assert.equal(
+            await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().readyState),
+            'live',
+          );
+          await page.evaluate(async () => {
+            const recorder = window.TronoRecorder;
+            recorder.dispose();
+            await recorder.start();
+          });
+          await expect(page.locator('#recordMatchBtn')).toHaveCount(0);
+          assert.equal(await page.evaluate(() => typeof window.TronoRecorder), 'undefined');
+          assert.equal(
+            await page.evaluate(() =>
+              window.__manualCaptures.every((stream) =>
+                stream.getTracks().every((track) => track.readyState === 'ended'),
+              ),
+            ),
+            true,
+          );
+        },
+      );
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await fixture.stop();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  },
+);

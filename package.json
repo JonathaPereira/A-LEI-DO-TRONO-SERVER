@@ -84,7 +84,8 @@
     "test:messenger": "node --test tests/messenger.cjs",
     "test:messenger:ui": "node --test tests/social-browser.js tests/messenger-enhancements-browser.js",
     "test:voice:players": "node --test tests/stream-controls.cjs tests/stream-controls-browser.cjs",
-    "test:clips:store": "node --test tests/clip-store-browser.cjs"
+    "test:clips:store": "node --test tests/clip-store-browser.cjs",
+    "test:recording": "node --test tests/manual-recording.cjs tests/manual-recording-browser.cjs"
   },
   "engines": {
     "node": ">=24.12.0"
