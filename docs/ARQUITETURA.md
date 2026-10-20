@@ -1782,6 +1782,24 @@ para `callReplayDock`, fora da barra antiga oculta. Ao sair, restaura sua posiç
 botões, contador e handlers mantêm a identidade. O desktop conserva sua política
 atual de clipes e não recebe esse grupo.
 
+## Preferências por conta
+
+`lib/preferences/personal.ts` possui o cache preguiçoso de `mn-personal:<id>`.
+O dono vem da conta autenticada atual, sem usar apelido/socket; trocar de conta
+reinicializa o cache e carrega somente suas opções. Conserva get com fallback,
+set/remoção por undefined e o evento `trono-personal-change` após cada alteração,
+inclusive se localStorage estiver indisponível. Leitura não regrava nem migra os
+registros existentes. Dicionários sem protótipo evitam chaves herdadas.
+`browser.ts` instala uma instância antes dos consumidores, sem ler storage até
+o primeiro acesso. `legacy/personal-prefs.js` e sua entrada no manifesto saíram.
+
+O módulo `lib/voice/realtime.ts` já possui a configuração base ICE. A duplicação
+em `legacy/rtc-config.js` foi removida, conservando os STUN Google anteriores e
+iceCandidatePoolSize 4 no fallback P2P. Um TRONO_RTC_CONFIG fornecido pelo ambiente
+continua sendo respeitado. Credenciais temporárias e política TURN permanecem
+com o mesmo dono de configuração; o boot de voz ocorre depois do processamento
+de ruído estar disponível.
+
 ## Gravação manual
 
 `lib/recording/capture.ts` possui a captura explícita de tela a 30 FPS e a mistura

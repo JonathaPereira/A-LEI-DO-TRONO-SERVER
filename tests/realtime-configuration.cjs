@@ -295,6 +295,15 @@ test('ICE accepts string and array URLs, copies credentials and preserves P2P co
   assert(h.realtime.getSnapshot().turn);
   assert(!JSON.stringify(h.realtime.getSnapshot()).includes('secret'));
 });
+test('P2P defaults retain the STUN servers and candidate pool previously supplied by the static RTC script', async (t) => {
+  const h = await setup(t),
+    config = h.realtime.configuration('p2p');
+  assert.equal(config.iceCandidatePoolSize, 4);
+  assert.deepEqual(config.iceServers[0].urls, [
+    'stun:stun.l.google.com:19302',
+    'stun:stun1.l.google.com:19302',
+  ]);
+});
 
 test('invalid ICE replies restore default STUN atomically and never retain old TURN credentials', async (t) => {
   const h = await setup(t);

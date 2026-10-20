@@ -41,6 +41,7 @@ export function createRealtimeConfiguration(options: RealtimeOptions) {
   const baseIce = copyIce(
     options.baseIce ?? {
       iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }],
+      iceCandidatePoolSize: 4,
     },
   );
   let snapshot: RealtimeSnapshot = Object.freeze({ status: null, error: '', turn: false });

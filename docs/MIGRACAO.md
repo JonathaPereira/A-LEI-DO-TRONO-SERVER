@@ -3042,6 +3042,22 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   podados. Evidências em `artifacts/manual-recording-*`. O aviso fica oculto na
   seleção para não cobrir Cancelar; na gravação web, o botão do próprio aviso para.
 
+## Preferências por conta e configuração RTC duplicada
+
+- `lib/preferences/personal.ts` e seu adaptador de navegador substituem
+  `legacy/personal-prefs.js`, com a mesma chave por conta, cache preguiçoso,
+  comportamento de fallback, exclusão por undefined e evento de alteração.
+  Storage bloqueado não impede uso na sessão; nenhuma leitura regrava registros.
+- `legacy/rtc-config.js` também saiu do manifesto. A configuração tipada existente
+  conserva seus STUN e pool P2P de quatro candidatos; configuração explícita do
+  ambiente continua válida. O boot de voz/gravação/clipes ocorre após ruído pronto.
+- Quatro regressões novas cobrem cache/conta, logout, falha de storage e chaves de
+  dicionário; a regressão ICE confirma os mesmos defaults sem o script estático.
+- Typecheck, format:check, build, os 21 testes de preferências/RTC, as 137
+  verificações de configurações, os três fluxos de notificações e a chamada
+  completa com dois Electron reais passaram. Os dois assets antigos foram
+  podados. Evidências locais em `artifacts/personal-preferences-*`.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,
