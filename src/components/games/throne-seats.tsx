@@ -42,6 +42,7 @@ function PlayerDetails({ player: p, local }: { player: ThronePublicPlayer; local
       <div
         className={`influence-meter ${p.influence >= 2 ? 'ready' : ''}`}
         data-tooltip={influenceTip}
+        tabIndex={0}
       >
         <span className="influence-mark">✦</span>
         <span>INFLUÊNCIA</span>
@@ -120,6 +121,7 @@ export function ThroneSeatContents({
             id={`coinBank${p.id}`}
             className={`coin-bank coin-seat-${p.id} ${p.influence ? 'has-influence' : ''} ${p.influence >= 2 ? 'ready' : ''}`}
             data-tooltip={`${p.name}: ${p.influence}/2 Influências`}
+            tabIndex={0}
           >
             {[0, 1].map((i) => (
               <span key={i} className={`influence-coin ${i < p.influence ? '' : 'empty'}`}>

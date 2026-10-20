@@ -1,0 +1,55 @@
+.hover-tooltip {
+  position: fixed;
+  z-index: 260;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 28px));
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(224, 174, 77, 0.75);
+  background: linear-gradient(180deg, rgba(25, 21, 13, 0.98), rgba(8, 8, 7, 0.98));
+  color: #efe3c3;
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.72),
+    inset 0 0 18px rgba(217, 170, 75, 0.06);
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(5px) scale(0.98);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+.hover-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.hover-tooltip:after {
+  content: '';
+  position: absolute;
+  left: 18px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: #0d0c09;
+  border-right: 1px solid rgba(224, 174, 77, 0.75);
+  border-bottom: 1px solid rgba(224, 174, 77, 0.75);
+  transform: rotate(45deg);
+}
+[data-tooltip] {
+  cursor: help;
+}
+
+@media (max-width: 640px) {
+  .hover-tooltip {
+    max-width: min(280px, calc(100vw - 28px));
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hover-tooltip {
+    transition: none;
+  }
+}

@@ -1535,47 +1535,6 @@ body:before {
 }
 
 /* ===== v0.4.2 — tooltips, influência destacada, áudio e animações suaves ===== */
-.hover-tooltip {
-  position: fixed;
-  z-index: 260;
-  max-width: 320px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(224, 174, 77, 0.75);
-  background: linear-gradient(180deg, rgba(25, 21, 13, 0.98), rgba(8, 8, 7, 0.98));
-  color: #efe3c3;
-  box-shadow:
-    0 16px 42px rgba(0, 0, 0, 0.72),
-    inset 0 0 18px rgba(217, 170, 75, 0.06);
-  font-size: 12px;
-  line-height: 1.45;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(5px) scale(0.98);
-  transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
-}
-.hover-tooltip.visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-.hover-tooltip:after {
-  content: '';
-  position: absolute;
-  left: 18px;
-  bottom: -7px;
-  width: 12px;
-  height: 12px;
-  background: #0d0c09;
-  border-right: 1px solid rgba(224, 174, 77, 0.75);
-  border-bottom: 1px solid rgba(224, 174, 77, 0.75);
-  transform: rotate(45deg);
-}
-[data-tooltip] {
-  cursor: help;
-}
-
 /* Carta jogada: chegada contínua, sem piscar */
 .table-card-slot .card-face,
 .table-card-slot .card-back {
@@ -1917,10 +1876,6 @@ body:before {
   }
   .influence-emblem {
     font-size: 21px;
-  }
-  .hover-tooltip {
-    max-width: 250px;
-    font-size: 10px;
   }
 }
 
@@ -3345,10 +3300,6 @@ body:before {
     text-align: center;
     font-size: 10px;
     white-space: normal;
-  }
-  .hover-tooltip {
-    max-width: min(280px, 84vw);
-    font-size: 10px;
   }
 
   /* Cinemáticas preservadas, mas adaptadas à tela pequena */

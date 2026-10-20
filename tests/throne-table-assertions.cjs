@@ -29,7 +29,9 @@ function inspectThroneTable(remember = false) {
       `Uso ${Math.min(2, s.lawUsage[s.currentLaw] || 1)} de 2` &&
     document.getElementById('decreeBadge').textContent ===
       'DECRETO' + (decree ? `${decree.icon} ${decree.name}` : 'Escolhendo...') &&
-    document.getElementById('decreeBadge').tabIndex === (s.decree === 'espionagem' ? 0 : -1) &&
+    document.getElementById('decreeBadge').tabIndex === 0 &&
+    document.getElementById('decreeBadge').getAttribute('role') ===
+      (s.decree === 'espionagem' ? 'button' : null) &&
     document.getElementById('trumpInfo').classList.contains('hidden') === !s.trump &&
     document.getElementById('leadSuitInfo').classList.contains('hidden') === !s.declaredLeadSuit &&
     [...document.querySelectorAll('#lawTrackerList .law-track-row')].every(

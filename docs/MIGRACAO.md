@@ -2560,6 +2560,42 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   `legacy/game.js`; permanecem também `court-display.js` e regras/coordenação do
   backend. Os gatilhos de iniciar humano/demonstração ainda chamam o motor antigo.
 
+## Tooltips React e planejador de Leis compartilhado
+
+- O tooltip único usa React para conteúdo/geometria e um dono tipado para
+  ponteiro/foco/listeners. Lei, Decreto e Influência recebem foco pelo teclado;
+  Escape fecha a consulta. `aria-describedby` preserva IDs já existentes.
+- Navegação, diálogo, alvo removido/oculto, perda de foco da janela, scroll e resize
+  encerram consultas. Descrições reativas atualizam o mesmo alvo. Movimento usa um
+  frame; o observador só fica ligado durante uma consulta. Descarte libera
+  frame, observador e listeners. Eliminados estado,
+  listeners, timer de ocultação e RAF sem dono de `legacy/game.js`.
+- Estilos foram transferidos para `navigation/hover-tooltip.css`; posição e
+  largura respeitam o viewport. Conteúdo parecido com HTML continua texto literal.
+- O planejador duplicado em `game.js` e `server/runtime.cjs` virou a função pura
+  `lib/games/throne-law-planner.ts`. Não muda contadores do chamador nem retém
+  estado, e conserva ordem/opções das Leis, limites da Usurpação e Reserva.
+  A busca com memoização é exclusiva da chamada. O motor usa uma ponte temporária;
+  o servidor importa o mesmo fonte TypeScript pelo Node suportado pelo projeto.
+- Uma enumeração independente percorre os históricos alcançáveis, incluindo
+  becos sem saída, com/sem Reserva, e compara todas as opções do planejador.
+  Os demais Decretos e entradas inválidas também estão cobertos. A interface
+  confere foco, Escape, atualização, navegação, diálogo, bordas, alvo removido,
+  texto literal e a descrição ARIA nos dois layouts e no Electron.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; a suíte de
+  modelos soma 160 testes. Ciclo de vida do servidor passou em três testes.
+  Navegador completou três rodadas de simulação e uma rodada humana, além dos
+  seis cenários online. Dois Electron reais conservaram mic/câmera/tela, peers,
+  socket e identidade dos controles durante navegação e consultas.
+- Capturas Original/Discord em 480×800 e 1080×1920 inspecionadas. A caixa usa
+  largura própria para evitar uma coluna estreita perto da borda. A asserção da
+  mesa agora exige foco no Decreto e mantém papel de botão apenas na Espionagem.
+  Evidências em `artifacts/throne-tooltips-*`, incluindo execuções iniciais.
+  Mídia sintética local; sem medir 60 fps em jogos reais nem TURN de produção.
+- Próximo recorte: extrair o ciclo de vida e a coordenação da simulação local de
+  `legacy/game.js`. Ainda permanecem motor/gatilhos locais, ponte de navegação,
+  `court-display.js` e regras/coordenação de `server/runtime.cjs` além do planejador.
+
 ## Próximas alterações, em ordem
 
 1. Converter o controlador e a apresentação de A Lei do Trono.

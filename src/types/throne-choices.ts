@@ -1,5 +1,6 @@
 export type ThroneSuit = 'cetro' | 'chave' | 'lamina' | 'mascara';
-export type ThroneLaw = 'ordem' | 'estandarte' | 'revolta' | 'anarquia' | 'usurpacao';
+export const throneLaws = ['ordem', 'estandarte', 'revolta', 'anarquia', 'usurpacao'] as const;
+export type ThroneLaw = (typeof throneLaws)[number];
 export type ThroneDecree =
   | 'reserva'
   | 'rotacao'

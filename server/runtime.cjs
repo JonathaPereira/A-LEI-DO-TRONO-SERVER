@@ -15,6 +15,7 @@ const { createSplendorService } = require('./splendor-service');
 const { createLoveLetterService } = require('./love-letter-service');
 const { createCommunityManagement } = require('./community-management');
 const { permissions, CREATOR_EMAIL } = require('./roles');
+const { safeThroneLawChoices } = require('../src/lib/games/throne-law-planner.ts');
 
 function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}) {
   const scheduledTimers = new Set();
@@ -2175,45 +2176,11 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
     broadcastGameState(room);
     maybeFinishMultiStage(room);
   }
-  function minHandBeforeTrick(g, t) {
-    return g.decree?.id === 'reserva' ? (t === 10 ? 1 : 10 - t) : 11 - t;
-  }
-  function lawEligibleAt(g, law, trickNum) {
-    return !(law === 'usurpacao' && minHandBeforeTrick(g, trickNum) < 4);
-  }
-  function canFinishLawSequence(g, rem, lastLaw, trickNum, memo = new Map()) {
-    if (trickNum > 10) return LAWS.every((l) => rem[l] === 0);
-    const key = `${trickNum}|${lastLaw}|${LAWS.map((l) => rem[l]).join(',')}|${g.decree?.id || ''}`;
-    if (memo.has(key)) return memo.get(key);
-    for (const l of LAWS) {
-      if (rem[l] <= 0 || l === lastLaw) continue;
-      if (!lawEligibleAt(g, l, trickNum)) continue;
-      rem[l]--;
-      if (canFinishLawSequence(g, rem, l, trickNum + 1, memo)) {
-        rem[l]++;
-        memo.set(key, true);
-        return true;
-      }
-      rem[l]++;
-    }
-    memo.set(key, false);
-    return false;
-  }
-  function safeLawChoices(g, nextTrick) {
-    const rem = Object.fromEntries(LAWS.map((l) => [l, 2 - g.lawUsage[l]]));
-    return LAWS.filter((l) => {
-      if (rem[l] <= 0 || l === g.currentLaw || !lawEligibleAt(g, l, nextTrick)) return false;
-      rem[l]--;
-      const ok = canFinishLawSequence(g, rem, l, nextTrick + 1);
-      rem[l]++;
-      return ok;
-    });
-  }
   function chooseNextLawStage(room) {
     const g = room.game,
       seat = g.lastShadow,
       p = g.players[seat],
-      valid = safeLawChoices(g, g.trick + 1);
+      valid = safeThroneLawChoices(g, g.trick + 1);
     if (!valid.length) throw new Error('Não há Lei válida para a próxima vaza.');
     g.phase = 'choose-law';
     g.pending = { kind: 'law', seat, options: valid };

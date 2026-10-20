@@ -70,6 +70,7 @@ test(
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page);
+      await require('./throne-tooltip-controls.cjs').exerciseThroneTooltips(page);
       await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
       await require('./throne-local-hand-controls.cjs').exerciseLocalHand(page);
       await require('./throne-local-choices-controls.cjs').exerciseLocalChoices(page);

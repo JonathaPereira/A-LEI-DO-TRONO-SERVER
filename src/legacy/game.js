@@ -824,42 +824,8 @@ async function chooseNextLaw(shadowP) {
   return choice;
 }
 
-function minHandBeforeTrick(t) {
-  if (game.decree?.id === 'reserva') return t === 10 ? 1 : 10 - t;
-  return 11 - t;
-}
-function lawEligibleAt(law, trickNum) {
-  if (law === 'usurpacao' && minHandBeforeTrick(trickNum) < 4) return false;
-  return true;
-}
 function getSafeLawChoices(nextTrick) {
-  const rem = Object.fromEntries(LAW_ORDER.map((l) => [l, 2 - game.lawUsage[l]]));
-  return LAW_ORDER.filter((l) => {
-    if (rem[l] <= 0 || l === game.currentLaw || !lawEligibleAt(l, nextTrick)) return false;
-    rem[l]--;
-    const ok = canFinishLawSequence(rem, l, nextTrick + 1, game.decree?.id || '');
-    rem[l]++;
-    return ok;
-  });
-}
-function canFinishLawSequence(rem, lastLaw, trickNum, decreeId, memo = new Map()) {
-  if (trickNum > 10) return LAW_ORDER.every((l) => rem[l] === 0);
-  const key = `${trickNum}|${lastLaw}|${LAW_ORDER.map((l) => rem[l]).join(',')}|${decreeId}`;
-  if (memo.has(key)) return memo.get(key);
-  for (const l of LAW_ORDER) {
-    if (rem[l] <= 0 || l === lastLaw) continue;
-    const hand = decreeId === 'reserva' ? (trickNum === 10 ? 1 : 10 - trickNum) : 11 - trickNum;
-    if (l === 'usurpacao' && hand < 4) continue;
-    rem[l]--;
-    if (canFinishLawSequence(rem, l, trickNum + 1, decreeId, memo)) {
-      rem[l]++;
-      memo.set(key, true);
-      return true;
-    }
-    rem[l]++;
-  }
-  memo.set(key, false);
-  return false;
+  return window.TronoThroneLawPlanner(game, nextTrick);
 }
 
 async function endRound() {
@@ -1070,49 +1036,6 @@ async function chooseCardFromHand(p, kind, candidates = p.hand, otherName) {
     throw new Error('Carta local indisponível.');
   return card;
 }
-
-let activeTooltipTarget = null;
-function positionHoverTooltip(e) {
-  const tip = $('hoverTooltip');
-  if (!tip || tip.classList.contains('hidden')) return;
-  const pad = 14,
-    gap = 16;
-  const rect = tip.getBoundingClientRect();
-  let x = e.clientX + gap,
-    y = e.clientY - rect.height - gap;
-  if (x + rect.width + pad > window.innerWidth) x = e.clientX - rect.width - gap;
-  if (y < pad) y = e.clientY + gap;
-  tip.style.left = `${Math.max(pad, x)}px`;
-  tip.style.top = `${Math.max(pad, Math.min(window.innerHeight - rect.height - pad, y))}px`;
-}
-document.addEventListener('pointerover', (e) => {
-  const target = e.target.closest?.('[data-tooltip]');
-  if (!target || !target.dataset.tooltip) return;
-  activeTooltipTarget = target;
-  const tip = $('hoverTooltip');
-  if (!tip) return;
-  tip.textContent = target.dataset.tooltip;
-  tip.classList.remove('hidden');
-  requestAnimationFrame(() => tip.classList.add('visible'));
-  positionHoverTooltip(e);
-});
-document.addEventListener('pointermove', (e) => {
-  if (activeTooltipTarget) positionHoverTooltip(e);
-});
-document.addEventListener('pointerout', (e) => {
-  if (!activeTooltipTarget) return;
-  if (e.relatedTarget && activeTooltipTarget.contains(e.relatedTarget)) return;
-  const from = e.target.closest?.('[data-tooltip]');
-  if (from !== activeTooltipTarget) return;
-  const tip = $('hoverTooltip');
-  activeTooltipTarget = null;
-  if (tip) {
-    tip.classList.remove('visible');
-    setTimeout(() => {
-      if (!activeTooltipTarget) tip.classList.add('hidden');
-    }, 140);
-  }
-});
 
 function enterOnlineBoard() {
   onlineGameMode = true;

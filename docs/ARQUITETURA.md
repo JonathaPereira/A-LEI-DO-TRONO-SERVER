@@ -297,7 +297,30 @@ conservando os nós React e sua posição no grupo Jogo.
 `navigation/rules-drawer.tsx`, HTML de regras, handlers de manual/regras/velocidade/
 Início, `escAttr` e CSS exclusivo do drawer antigo foram removidos. O runtime
 libera raiz, portais, observador e assinaturas. Permanecem no motor os gatilhos de
-início humano/demonstração, a ponte de navegação e os tooltips globais legados.
+início humano/demonstração e a ponte de navegação.
+
+`lib/games/throne-law-planner.ts` é o planejador puro compartilhado pelo servidor
+(`runtime.cjs`) e motor local. Recebe somente Lei atual, usos, Decreto e próxima
+vaza; não retém estado nem altera contadores do chamador. Oferece somente Leis
+que permitem concluir as dez vazas, com dois usos de cada, sem repetição seguida
+e sem Usurpação quando restam menos de quatro cartas. Reserva continua reduzindo
+a mão antes da 10ª vaza. Memoização é exclusiva da chamada e não mistura Decretos.
+As duas buscas duplicadas foram removidas; `TronoThroneLawPlanner` é uma ponte
+pura temporária até a extração do motor. A ordem canônica das Leis agora fica
+junto ao tipo em `types/throne-choices.ts`, reexportada pelo protocolo existente.
+
+`components/navigation/hover-tooltip.tsx` possui a apresentação React do tooltip
+único; `lib/layout/hover-tooltip.ts` possui alvo, foco/ponteiro e listeners. Atualiza
+texto como texto, associa `aria-describedby` sem apagar outros IDs e oferece
+acesso por Tab aos metadados de Lei, Decreto e Influência. Escape dispensa a
+consulta até uma nova entrada/foco. Movimento usa no máximo um frame agendado.
+Ocultar/remover o alvo, sair da mesa, abrir um diálogo, desfocar a janela, rolar
+ou redimensionar fecha a consulta. Alterar a descrição no mesmo alvo atualiza o
+texto. O descarte cancela o frame, observador, listeners e descrição temporária;
+não restam timers de ocultação, RAFs ou estado correspondente em `game.js`.
+O observador só acompanha o DOM enquanto existe uma consulta ativa.
+O componente mede a caixa antes da pintura e a mantém dentro do viewport; sua
+largura independe da posição junto às bordas. CSS fica junto ao componente.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro

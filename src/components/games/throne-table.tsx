@@ -116,6 +116,7 @@ export function ThroneTableContents({
           <div
             className="law-mini"
             data-tooltip={throneLawTooltip(rules, s, s?.currentLaw || 'ordem')}
+            tabIndex={0}
           >
             <img id="currentLawImg" src={law.img} alt="Lei atual" />
             <div>
@@ -149,7 +150,7 @@ export function ThroneTableContents({
             id="decreeBadge"
             className="decree-badge"
             data-tooltip={throneDecreeTooltip(rules, s)}
-            tabIndex={s?.decree === 'espionagem' ? 0 : -1}
+            tabIndex={0}
             role={s?.decree === 'espionagem' ? 'button' : undefined}
             aria-label={
               s?.decree === 'espionagem'
@@ -169,6 +170,7 @@ export function ThroneTableContents({
             key={id}
             className={`law-track-row ${s?.currentLaw === id ? 'current' : ''}`}
             data-tooltip={throneLawTooltip(rules, s, id)}
+            tabIndex={0}
           >
             <span>{rules.laws[id].name}</span>
             <span className="law-pips">

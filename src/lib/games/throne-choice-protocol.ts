@@ -1,3 +1,4 @@
+import { throneLaws } from '../../types/throne-choices.ts';
 import type {
   ThroneCard,
   ThroneChoiceContext,
@@ -11,13 +12,7 @@ import { record } from '../files/protocol.ts';
 import { freezeGame } from './freeze.ts';
 
 export const throneSuits: readonly ThroneSuit[] = ['cetro', 'chave', 'lamina', 'mascara'];
-export const throneLaws: readonly ThroneLaw[] = [
-  'ordem',
-  'estandarte',
-  'revolta',
-  'anarquia',
-  'usurpacao',
-];
+export { throneLaws } from '../../types/throne-choices.ts';
 export const throneDecrees: readonly ThroneDecree[] = [
   'reserva',
   'rotacao',
