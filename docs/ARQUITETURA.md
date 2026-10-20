@@ -136,6 +136,10 @@ inclusive no caso conta A → B → A. A entrada é deduplicada; sair para outra
 ou desconectar invalida a operação, sem o finalizador antigo liberar a nova.
 O welcome da conexão iniciada pela validação não dispara uma consulta automática
 concorrente que cancele a própria entrada.
+A retomada automática e a entrada manual compartilham a consulta de disponibilidade
+quando conta, geração, versão e nome coincidem. Cada chamador conserva suas guardas;
+trocar identidade ou cancelar a navegação invalida o reaproveitamento. A última
+continuação libera a consulta, permitindo nova tentativa após erro.
 
 `components/navigation/portal-contents.tsx` renderiza nome, status, navegação e
 créditos em React. O diálogo reutiliza `GameDialog`; o paralaxe cancela frames e
@@ -1636,6 +1640,30 @@ fecha mídia/chat/diagnóstico antes das configurações web. A navegação dele
 a diálogos e popovers em primeiro plano, evitando fechar as configurações atrás
 do seletor de GIFs, emoji ou miniperfil. A aba Meus arquivos agora
 é aceita pelo validador, sem cair silenciosamente em Áudio.
+
+## Armazenamento local de clipes
+
+`lib/clips/store.ts` possui a conexão e as transações IndexedDB. Mantém
+`trono-local-clips`, versão 1, as lojas `clips`/`settings` e o índice `owner`.
+Blobs, diretórios e metadados completos são preservados; não recria nem limpa
+dados ao migrar. `types/clips.ts` aceita os registros antigos sem metadados de
+apresentação. A listagem continua filtrada por dono e ordenada por criação.
+
+A conexão abre sob demanda e é compartilhada por operações simultâneas. Falhar
+ao abrir permite nova tentativa; mudança de versão ou fechamento libera a
+referência. Descarte fecha a conexão e rejeita novas operações; uma abertura que
+termine depois também é fechada. Gravações só confirmam no commit da transação;
+falha ao criar a requisição aborta a transação sem substituir um clipe anterior.
+
+`lib/clips/browser.ts` instala uma instância por página antes dos scripts de replay.
+`TronoClipStore` conserva o nome de compatibilidade para `legacy/clips.js`, ainda
+pendente de conversão. `legacy/clip-store.js` e sua entrada no manifesto saíram.
+Nenhuma captura, worker, buffer, formato de vídeo ou IPC mudou nesta etapa.
+
+Na comunidade web, `workspace-layout.ts` move o grupo completo `callReplayControls`
+para `callReplayDock`, fora da barra antiga oculta. Ao sair, restaura sua posição;
+botões, contador e handlers mantêm a identidade. O desktop conserva sua política
+atual de clipes e não recebe esse grupo.
 
 ## Backend
 

@@ -52,7 +52,7 @@ export function VoicePanel() {
               style={{ display: 'contents' }}
             />
           </div>
-          <div className={'call-control-group call-control-clips'}>
+          <div id="callReplayControls" className={'call-control-group call-control-clips'}>
             <small>REPLAY</small>
             <button
               id={'clipToolbarNow'}
@@ -87,6 +87,7 @@ export function VoicePanel() {
             />
           </div>
         </div>
+        <div id="callReplayDock" aria-label="Controles de replay" />
         <div
           id={'voiceSettingsPanel'}
           className={'voice-settings-panel hidden'}

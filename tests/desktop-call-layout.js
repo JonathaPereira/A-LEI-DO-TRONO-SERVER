@@ -50,7 +50,8 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         localStorage.setItem('tronoSfxEnabled', '0');
         localStorage.setItem('tronoMusicEnabled', '0');
         localStorage.setItem('mnDesktopNoiseMode', 'off');
-        localStorage.setItem('mn-personal:' + accountId, JSON.stringify({appLayout: layout}));
+        if (localStorage.getItem('mn-personal:' + accountId) === null)
+          localStorage.setItem('mn-personal:' + accountId, JSON.stringify({appLayout: layout}));
         window.__layoutPeers = [];
         window.__layoutDescriptions = [];
         const trackListeners = new WeakMap();
@@ -894,6 +895,18 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         assert.equal(await receiver.evaluate(() => window.TronoSocial.getLocalAudioTrack().id), peerMic);
       }
     }
+    // Reload is the final step: it ends the disposable call, then restores the collapsed header.
+    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+    await expect(page.locator('#workspaceHeaderToggle')).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('#workspaceHeaderToggle').click();
+    await expect(page.locator('#workspaceHeader')).toBeHidden();
+    await page.reload();
+    await page.waitForFunction(() => window.TronoAuth?.ready);
+    await page.evaluate(() => window.TronoAuth.ready);
+    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+    await expect(page.locator('#workspaceHeaderToggle')).toHaveAttribute('aria-expanded', 'false');
+    await page.locator('#workspaceHeaderToggle').click();
+    await expect(page.locator('#workspaceHeader')).toBeVisible();
     assert.deepEqual(errors, []);
   } finally {
     finished = true;

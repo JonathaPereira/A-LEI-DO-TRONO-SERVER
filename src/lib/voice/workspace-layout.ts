@@ -44,6 +44,7 @@ export function createWorkspaceLayout(options: WorkspaceLayoutOptions) {
       if (state.active) {
         mounted = true;
         move('socialPanel', get('callWorkspaceMain'));
+        if (!options.desktop) move('callReplayControls', get('callReplayDock'));
         move('messengerPanel', get('socialPanel'));
         move('layoutVoicePanel', get('callWorkspaceSidebar'));
         move('communityPanel', shell);

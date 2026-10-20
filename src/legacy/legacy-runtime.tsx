@@ -6,6 +6,7 @@ import { initializeThroneNavigation } from '../components/games/throne-navigatio
 import { initializeCommunityNavigation } from '../components/navigation/community-navigation-runtime';
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
+import { initializeClipStore } from '../lib/clips/browser';
 import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
 import { initializeFileLibrary } from '../components/files/library-runtime';
@@ -87,6 +88,7 @@ export function LegacyRuntime() {
       initializeChatComposer(window);
       initializeChatMessages(window);
       initializeChannels(window);
+      initializeClipStore(window);
       for (const filename of manifest.scripts) {
         if (filename === 'soundboard-client.js') {
           initializeCommunity(window);

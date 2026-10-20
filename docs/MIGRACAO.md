@@ -2809,8 +2809,48 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   mas falhou ao reabrir o cabeçalho recolhido após reload (linha 381). A mesma
   falha foi reproduzida com os fontes de `9ed1162`, exportados isoladamente com
   Webpack em `artifacts/stream-controls-baseline/`. Não foi silenciada; diagnóstico
-  e logs atual/anterior estão em `stream-controls-call-ui*.log`. Investigar o
-  restabelecimento da navegação/visibilidade após reload em um próximo recorte.
+  e logs daquele recorte estão em `stream-controls-call-ui*.log`. A falha foi
+  resolvida na etapa de restauração da comunidade descrita abaixo.
+
+## Restauração da comunidade e armazenamento de clipes
+
+- Resolvida a falha do cabeçalho após reload, registrada acima. A retomada automática
+  e a entrada manual validavam o mesmo nome em paralelo; a segunda consulta cancelava
+  a primeira, cujo chamador devolvia a aplicação ao portal. Não era falha do botão
+  nem da preferência. `portal.ts` compartilha a consulta para a mesma conta, geração,
+  versão e nome. Navegação cancelada, mudança de identidade/nome ou desconexão mantêm
+  suas guardas; falhas liberam a consulta para nova tentativa.
+- O teste mínimo reproduziu o erro em cerca de 4,5 s; a regressão de concorrência
+  também falhou antes da correção. Os 24 testes de navegação passaram depois,
+  incluindo erro/retry e troca de conta com consultas compartilhadas. O teste mínimo
+  e a suíte original de `call-controls-browser.js` passaram; a falha da linha 381
+  deixou de reproduzir. O cenário nativo também recarrega ao final e verifica a
+  preferência antes de restaurar o cabeçalho. Seu fixture deixou de sobrescrever
+  preferências a cada reload. Diagnósticos em `artifacts/workspace-header-*`.
+- `lib/clips/store.ts`, `browser.ts` e `types/clips.ts` substituem `legacy/clip-store.js`.
+  O arquivo e a entrada no manifesto foram removidos. O banco `trono-local-clips`
+  continua na versão 1, com o mesmo schema, índice e registros. Preserva Blob,
+  metadados adicionais e diretórios escolhidos. A fachada `TronoClipStore` permanece
+  para a interface de replay ainda legada; não cria captura ou buffer.
+- Abertura é tardia e deduplicada, com retry após erro e liberação em versionchange,
+  fechamento ou descarte. Uma abertura concluída após descarte não mantém conexão.
+  Operações só confirmam no commit; uma falha de clone aborta a escrita, conservando
+  o registro anterior. Teste com IndexedDB/Blob/diretório reais cobre dados criados
+  no schema antigo, contas separadas, ordenação, exclusão, reload, erro/retry e upgrade.
+- A suíte de clipes revelou controles inacessíveis dentro da barra antiga oculta.
+  O posicionador do workspace agora move o grupo completo para um dock visível na
+  comunidade web, restaurando-o ao sair. O teste passou a consultar esse host real.
+  Os mesmos handlers e contador são conservados; o desktop mantém sua política atual.
+- Tipagem, formatação e build passaram. `test:clips` passou nas 12 verificações
+  de remux, histórico recente, áudio, busca/decodificação, exportação, atalhos,
+  pausa, quota e reload. FFmpeg/ffprobe portáteis, verificados pelo WinGet, ficaram
+  em `artifacts/ffmpeg/` e foram usados somente no PATH do processo de teste.
+  Evidências em `artifacts/clip-store-*`. Testes usam perfis e mídia sintéticos.
+  `test:ui` passou nos quatro fluxos e dois Electron reais passaram pelo cenário
+  completo de chamada, navegação e recarga final do cabeçalho.
+- Próximo recorte de clipes: buffer/worker, coordenação de replay, interface e ponte
+  Windows em `clips.js`, `clip-buffer.js` e `clip-desktop.js`; a gravação manual em
+  `recording.js` também continua legada. O armazenamento já tem dono tipado.
 
 ## Próximas alterações, em ordem
 

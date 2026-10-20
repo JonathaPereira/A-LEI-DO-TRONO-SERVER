@@ -71,6 +71,14 @@ export const safePlayerName = (value: unknown) =>
 const cancelled = (): IdentityValidation => ({ ok: false, code: 'CANCELLED' });
 /** Owns identity feedback and navigation intents, never call membership or media. */
 export function createPortal(options: Options) {
+  let validationCheck: {
+    epoch: number;
+    account: string;
+    name: string;
+    version: number;
+    users: number;
+    promise: Promise<NameAvailability>;
+  } | null = null;
   let state: PortalSnapshot = Object.freeze({
     name: '',
     label: 'Visitante',
@@ -117,6 +125,7 @@ export function createPortal(options: Options) {
   function cancelNavigation() {
     navigation++;
     opening = null;
+    validationCheck = null;
   }
   function syncIdentity(value: unknown, { persist = true } = {}) {
     if (disposed) return state.name;
@@ -225,17 +234,39 @@ export function createPortal(options: Options) {
           : 'O chat M&N exige login. Entre na sua conta para continuar.',
       };
     }
-    cancelNameCheck();
-    const version = checkVersion,
-      name = syncIdentity(state.name.trim());
-    const valid = () => current() && version === checkVersion && name === state.name;
+    const name = syncIdentity(state.name.trim());
     if (!name.trim()) {
+      cancelNameCheck();
       setNameFeedback({ code: 'NAME_REQUIRED', message: 'Digite um nome para entrar.' });
       return { ok: false, name: '', code: 'NAME_REQUIRED' };
     }
+    // Session restoration and a manual entry can validate the same name together.
+    // Share the request instead of cancelling the other caller's navigation.
+    let check = validationCheck;
+    if (
+      !check ||
+      check.epoch !== generation ||
+      check.account !== account ||
+      check.name !== name ||
+      check.version !== checkVersion
+    ) {
+      cancelNameCheck();
+      check = {
+        epoch: generation,
+        account,
+        name,
+        version: checkVersion,
+        users: 0,
+        promise: Promise.resolve().then(() => options.checkName(name)),
+      };
+      validationCheck = check;
+    }
+    const version = check.version;
+    const valid = () => current() && version === checkVersion && name === state.name;
+    check.users++;
     validating++;
     try {
-      const result = await options.checkName(name);
+      const result = await check.promise;
       if (!valid()) return cancelled();
       setNameFeedback(result);
       return {
@@ -259,6 +290,7 @@ export function createPortal(options: Options) {
       };
     } finally {
       validating--;
+      if (--check.users === 0 && validationCheck === check) validationCheck = null;
     }
   }
   function present(screen: PrimaryScreen) {

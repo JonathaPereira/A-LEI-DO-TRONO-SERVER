@@ -233,6 +233,50 @@ test('welcome from an explicit validation connection does not supersede that val
   assert.equal(f.timers.size, 0);
   assert.equal(f.calls.filter((c) => c[0] === 'check').length, 1);
 });
+
+test('restoration validation and explicit voice entry share the same name check', async () => {
+  const f = await fixture(),
+    pending = deferred();
+  f.check(() => pending.promise);
+  const restoring = f.controller.validateIdentity();
+  await flush();
+  const entering = f.controller.openVoice();
+  await flush();
+  pending.resolve({ available: true, name: 'Alice' });
+  const restored = await restoring;
+  // The restoration caller returns to the portal when its validation fails.
+  if (!restored.ok) f.controller.showPortal();
+  assert.equal(restored.ok, true);
+  assert.equal(await entering, true);
+  assert.equal(f.screen, 'chatOnlyScreen');
+  assert.equal(f.calls.filter((call) => call[0] === 'check').length, 1);
+});
+
+test('shared validation failures release the request for retry, including after an account change', async () => {
+  const f = await fixture(),
+    pending = deferred();
+  f.check(() => pending.promise);
+  const first = f.controller.validateIdentity(),
+    second = f.controller.validateIdentity();
+  await flush();
+  pending.reject(new Error('Offline'));
+  assert(
+    (await Promise.all([first, second])).every((result) => result.code === 'NAME_CHECK_FAILED'),
+  );
+  f.check(async (name) => ({ available: true, name }));
+  assert.equal((await f.controller.validateIdentity()).ok, true);
+  const old = deferred();
+  f.check(() => old.promise);
+  const a = f.controller.validateIdentity(),
+    b = f.controller.validateIdentity();
+  await flush();
+  f.identity({ user: { id: 'bob', nickname: 'Bob' }, guest: null });
+  f.check(async (name) => ({ available: true, name }));
+  assert.equal((await f.controller.validateIdentity()).name, 'Bob');
+  old.resolve({ available: true, name: 'Alice' });
+  assert((await Promise.all([a, b])).every((result) => result.code === 'CANCELLED'));
+  assert.equal(f.controller.getSnapshot().name, 'Bob');
+});
 test('failed entry releases its lock for retry; disconnect cancels the next continuation', async () => {
   const f = await fixture();
   f.enter(async () => {

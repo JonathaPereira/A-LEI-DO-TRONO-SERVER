@@ -10,7 +10,6 @@
     "noise-suppression.js",
     "personal-prefs.js",
     "recording.js",
-    "clip-store.js",
     "clips.js",
     "clip-desktop.js",
     "bot-names.js",

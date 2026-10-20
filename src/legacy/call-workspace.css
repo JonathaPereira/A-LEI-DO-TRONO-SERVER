@@ -1179,6 +1179,18 @@ body.chat-only-active #callWorkspace {
   padding: 14px !important;
   text-align: left !important;
 }
+#callReplayDock:empty {
+  display: none;
+}
+#callWorkspace #socialPanel #callReplayDock:not(:empty) {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  order: 19;
+  flex: none;
+  padding: 8px 12px;
+}
 #callWorkspace #socialPanel .voice-section #callFocusDock {
   position: relative !important;
   inset: auto !important;
