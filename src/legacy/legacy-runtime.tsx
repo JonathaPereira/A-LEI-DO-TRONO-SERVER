@@ -7,6 +7,7 @@ import { initializeCommunityNavigation } from '../components/navigation/communit
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeClipStore } from '../lib/clips/browser';
+import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeNotifications } from '../lib/notifications/browser';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
 import { initializeFileLibrary } from '../components/files/library-runtime';
@@ -89,6 +90,7 @@ export function LegacyRuntime() {
       initializeChatMessages(window);
       initializeChannels(window);
       initializeClipStore(window);
+      initializeClipLibraryView(window);
       for (const filename of manifest.scripts) {
         if (filename === 'soundboard-client.js') {
           initializeCommunity(window);

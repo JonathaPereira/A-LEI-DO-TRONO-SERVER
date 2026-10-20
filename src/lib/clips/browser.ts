@@ -1,8 +1,11 @@
 import { createClipStore, type ClipStore } from './store';
 import { createReplaySession, type ReplaySessionOptions } from './session';
+import { createClipLibrary, type ClipLibrary } from './library';
+import { createBrowserClipFiles } from './export';
 
 interface Runtime extends Window {
   TronoClipStore?: ClipStore;
+  TronoClipLibrary?: ClipLibrary;
   TronoCreateClipWorker?: () => Worker;
   TronoCreateReplaySession?: (
     options: ReplaySessionOptions,
@@ -16,6 +19,10 @@ export function initializeClipStore(target: Window): () => void {
   const runtime = target as Runtime,
     store = createClipStore(() => target.indexedDB);
   runtime.TronoClipStore = store;
+  const files = createBrowserClipFiles(target),
+    library = createClipLibrary(store, files);
+  runtime.TronoClipLibrary = library;
+  target.addEventListener('pagehide', files.dispose);
   const createWorker = () =>
     new Worker(new URL('./buffer-worker.ts', import.meta.url), {
       type: 'module',
@@ -34,8 +41,12 @@ export function initializeClipStore(target: Window): () => void {
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    target.removeEventListener('pagehide', files.dispose);
+    library.dispose();
+    files.dispose();
     store.dispose();
     if (runtime.TronoClipStore === store) delete runtime.TronoClipStore;
+    if (runtime.TronoClipLibrary === library) delete runtime.TronoClipLibrary;
     if (runtime.TronoCreateClipWorker === createWorker) delete runtime.TronoCreateClipWorker;
     if (runtime.TronoCreateReplaySession === createSession) delete runtime.TronoCreateReplaySession;
     installed.delete(target);

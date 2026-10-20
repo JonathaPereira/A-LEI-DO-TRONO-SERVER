@@ -2,7 +2,7 @@
 if (!window.TronoDesktop) {
   window.TronoClips = (() => {
     const $ = (id) => document.getElementById(id),
-      store = window.TronoClipStore,
+      library = window.TronoClipLibrary,
       storage = window.TronoStorage || localStorage;
     const qualities = {
       light: { width: 1280, height: 720, bitrate: 6000000, label: '720p' },
@@ -17,21 +17,15 @@ if (!window.TronoDesktop) {
       localChoosing = false,
       starting = false,
       generation = 0,
-      clips = [],
-      directory = null,
       choosingShortcut = false,
       pip = null,
-      loading = 0,
       localPrimary = false,
       autoPaused = false,
       automaticPreparing = false,
       lastCallJoined = false,
       lastCaptureError = null,
       localCaptureGeneration = 0;
-    const emergency = new Map(),
-      memoryOnly = new Set(),
-      urls = new Map(),
-      busy = new Set();
+    let lastLibraryMessage = 0;
     const account = () => window.TronoAuth?.user?.id || 'local';
     const defaults = () => ({
       version: 2,
@@ -76,6 +70,7 @@ if (!window.TronoDesktop) {
       storage.setItem('tronoClips:' + owner, JSON.stringify(settings));
     }
     function renderState() {
+      const { directory, pendingCount: count } = library.getSnapshot();
       const active = !!session && !session.stopping,
         ready = !!(active && session.status?.ready);
       $('clipQuality').value = settings.quality;
@@ -139,7 +134,6 @@ if (!window.TronoDesktop) {
       $('clipChooseFolder').hidden =
         !window.TronoDesktop && typeof window.showDirectoryPicker !== 'function';
       $('clipFloating').hidden = !window.documentPictureInPicture;
-      const count = clips.filter((c) => c.blob).length;
       $('clipPendingCount').textContent = count;
       $('clipToolbarCount').textContent = count;
       $('clipToolbarCount').hidden = !count;
@@ -164,123 +158,10 @@ if (!window.TronoDesktop) {
           button.textContent = 'Clipar últimos ' + settings.seconds + ' s';
         }
         const count = pip.document.getElementById('pipCount');
-        if (count) count.textContent = clips.filter((c) => c.blob).length + ' clipes pendentes';
+        if (count) count.textContent = count + ' clipes pendentes';
       }
     }
-    function revoke(id) {
-      if (urls.has(id)) {
-        URL.revokeObjectURL(urls.get(id));
-        urls.delete(id);
-      }
-    }
-    function renderList() {
-      const host = $('clipList');
-      for (const id of urls.keys()) revoke(id);
-      host.replaceChildren();
-      if (!clips.length) {
-        const empty = document.createElement('p');
-        empty.className = 'clips-empty';
-        empty.textContent = 'Seus clipes ficam aqui até você decidir salvar ou descartar.';
-        host.appendChild(empty);
-      }
-      for (const clip of clips) {
-        const card = document.createElement('article');
-        card.className = 'clip-card';
-        card.dataset.clipId = clip.id;
-        if (window.TronoDesktop) {
-          const poster = document.createElement(clip.poster ? 'img' : 'div');
-          poster.className = 'clip-poster';
-          if (clip.poster) {
-            poster.src = clip.poster;
-            poster.alt = 'Miniatura de ' + clip.name;
-          } else {
-            poster.setAttribute('aria-label', 'Clipe sem miniatura');
-          }
-          card.append(poster);
-        }
-        const heading = document.createElement('strong');
-        heading.textContent = clip.name;
-        const detail = document.createElement('small');
-        detail.textContent =
-          Math.round(clip.duration) +
-          ' s · ' +
-          clip.quality +
-          ' · ' +
-          clip.fps +
-          ' FPS · ' +
-          (clip.bytes / 1048576).toFixed(1) +
-          ' MB';
-        const state = document.createElement('span');
-        state.className = 'clip-state';
-        state.textContent =
-          clip.state === 'saved'
-            ? 'Salvo na pasta escolhida'
-            : clip.state === 'download'
-              ? 'Download solicitado · cópia local mantida'
-              : emergency.has(clip.id)
-                ? 'Somente nesta sessão · salve antes de fechar'
-                : window.TronoDesktop
-                  ? 'Armazenado neste app · pendente'
-                  : 'Armazenado no navegador · pendente';
-        const actions = document.createElement('div');
-        actions.className = 'clip-actions';
-        function button(label, fn) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.textContent = label;
-          b.disabled = busy.has(clip.id);
-          b.onclick = fn;
-          actions.appendChild(b);
-          return b;
-        }
-        if (clip.blob) {
-          const preview = document.createElement('div');
-          preview.className = 'clip-preview';
-          preview.hidden = true;
-          button('Prévia', () => {
-            if (!preview.hidden) {
-              preview.querySelector('video')?.pause();
-              preview.replaceChildren();
-              revoke(clip.id);
-              preview.hidden = true;
-              return;
-            }
-            const video = document.createElement('video');
-            video.controls = true;
-            video.playsInline = true;
-            video.preload = 'metadata';
-            const url = URL.createObjectURL(clip.blob);
-            urls.set(clip.id, url);
-            video.src = url;
-            video.setAttribute('aria-label', 'Prévia de ' + clip.name);
-            preview.appendChild(video);
-            preview.hidden = false;
-          });
-          button('Salvar', () => void save(clip.id));
-          card.appendChild(preview);
-        }
-        button(clip.blob ? 'Descartar' : 'Remover da lista', () => void discard(clip.id));
-        card.append(heading, detail, state, actions);
-        host.appendChild(card);
-      }
-      renderState();
-    }
-    async function refresh() {
-      const version = ++loading,
-        current = owner;
-      try {
-        const saved = await store.list(current);
-        if (version !== loading || current !== owner) return;
-        const merged = new Map(saved.map((c) => [c.id, c]));
-        for (const c of emergency.values()) if (c.owner === current) merged.set(c.id, c);
-        clips = [...merged.values()].sort((a, b) => b.createdAt - a.createdAt);
-        renderList();
-      } catch (e) {
-        clips = [...emergency.values()].filter((c) => c.owner === owner);
-        renderList();
-        message(e.message);
-      }
-    }
+    const refresh = () => library.refresh();
     async function retain(s, result) {
       const id = result.id,
         createdAt = Date.now(),
@@ -314,25 +195,10 @@ if (!window.TronoDesktop) {
           /* A thumbnail failure must never discard a replay. */
         }
       }
-      try {
-        await store.put(clip);
-      } catch {
-        emergency.set(id, clip);
-        memoryOnly.add(id);
+      await library.retain(clip, () => {
         if (session === s) stop(s);
-        if (s.owner === owner)
-          message(
-            'Replay pausado: sem espaço ou acesso ao armazenamento do navegador. Este clipe está somente na memória: salve ou descarte antes de retomar e antes de fechar a página.',
-          );
-      }
-      if (s.owner === owner) {
-        await refresh();
-        window.TronoClipDesktop?.saved(clips.filter((c) => c.blob).length);
-        if (!emergency.has(id))
-          message(
-            'Clipe armazenado. Você pode continuar jogando e guardar outros antes de salvar.',
-          );
-      }
+      });
+      if (s.owner === owner) window.TronoClipDesktop?.saved(library.getSnapshot().pendingCount);
     }
     function stop(s = session) {
       const current = s === session;
@@ -367,7 +233,7 @@ if (!window.TronoDesktop) {
       sharedSource = source;
       renderState();
       if (!settings.auto && !local && !force) return;
-      if ([...emergency.values()].some((c) => c.owner === owner && c.blob)) {
+      if (library.hasUnsavedMemory(owner)) {
         message(
           'Salve ou descarte os clipes guardados somente nesta sessão antes de retomar o replay.',
         );
@@ -554,147 +420,6 @@ if (!window.TronoDesktop) {
         message('A captura não está disponível. Os clipes anteriores continuam armazenados.');
       }
     }
-    async function chooseFolder() {
-      const current = owner;
-      try {
-        const handle = window.TronoDesktop
-          ? await window.TronoDesktop.chooseFolder()
-          : await window.showDirectoryPicker({ id: 'trono-clips', mode: 'readwrite' });
-        if (!handle || current !== owner) return;
-        directory = handle;
-        renderState();
-        try {
-          if (!handle.native) await store.setDirectory(current, handle);
-          message(
-            handle.native
-              ? 'Pasta escolhida para esta sessão do aplicativo. Nenhum clipe é salvo sem clicar em Salvar.'
-              : 'Pasta escolhida. Nenhum clipe é salvo nela sem clicar em Salvar.',
-          );
-        } catch {
-          message('Pasta escolhida para esta sessão. O navegador não permitiu lembrar essa pasta.');
-        }
-      } catch (e) {
-        if (e.name !== 'AbortError')
-          message(
-            'Não foi possível escolher a pasta. Você pode usar Salvar para escolher um arquivo.',
-          );
-      }
-    }
-    async function save(id) {
-      const clip = clips.find((c) => c.id === id);
-      if (!clip?.blob || busy.has(id)) return;
-      busy.add(id);
-      let handle, writable;
-      try {
-        if (window.TronoDesktop) {
-          const result = await window.TronoDesktop.saveClip({
-            filename: clip.filename,
-            directory: directory?.native ? directory.id : null,
-            bytes: await clip.blob.arrayBuffer(),
-          });
-          if (result.canceled) {
-            message('Salvamento cancelado. O clipe continua armazenado.');
-            return;
-          }
-          if (!result.saved) throw Error('Não foi possível salvar o clipe.');
-          const saved = { ...clip, blob: null, state: 'saved' };
-          try {
-            await store.put(saved);
-            emergency.delete(id);
-            memoryOnly.delete(id);
-            message('Clipe salvo.');
-          } catch {
-            emergency.set(id, saved);
-            message('Clipe salvo no arquivo. A lista local não pôde ser atualizada.');
-          }
-          return;
-        }
-        // Invoke picker/permission from this click, before storage work can expire user activation.
-        if (directory) {
-          const permission = directory.queryPermission
-            ? await directory.queryPermission({ mode: 'readwrite' })
-            : 'granted';
-          if (
-            permission !== 'granted' &&
-            (!directory.requestPermission ||
-              (await directory.requestPermission({ mode: 'readwrite' })) !== 'granted')
-          )
-            throw Error('Acesso à pasta negado. Escolha outra pasta e tente novamente.');
-          handle = await directory.getFileHandle(clip.filename, { create: true });
-        } else if (window.showSaveFilePicker)
-          handle = await window.showSaveFilePicker({
-            id: 'trono-clips',
-            suggestedName: clip.filename,
-            types: [{ description: 'Vídeo WebM', accept: { 'video/webm': ['.webm'] } }],
-          });
-        if (handle) {
-          writable = await handle.createWritable();
-          await writable.write(clip.blob);
-          await writable.close();
-          writable = null;
-          const saved = { ...clip, blob: null, state: 'saved' };
-          try {
-            await store.put(saved);
-            emergency.delete(id);
-            memoryOnly.delete(id);
-            message('Clipe salvo.');
-          } catch {
-            emergency.set(id, saved);
-            message(
-              'Clipe salvo no arquivo. A lista local não pôde ser atualizada e ele pode reaparecer pendente ao recarregar.',
-            );
-          }
-        } else {
-          const url = URL.createObjectURL(clip.blob),
-            a = document.createElement('a');
-          a.href = url;
-          a.download = clip.filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 30000);
-          const exported = { ...clip, state: 'download' };
-          try {
-            await store.put(exported);
-            emergency.delete(id);
-            memoryOnly.delete(id);
-          } catch {
-            emergency.set(id, exported);
-          }
-          message(
-            'Download solicitado. A cópia local fica guardada até você descartar; confira o arquivo em Downloads.',
-          );
-        }
-      } catch (e) {
-        try {
-          await writable?.abort();
-        } catch {}
-        message(
-          e.name === 'AbortError'
-            ? 'Salvamento cancelado. O clipe continua armazenado.'
-            : e.message || 'Não foi possível salvar. O clipe continua armazenado.',
-        );
-      } finally {
-        busy.delete(id);
-        await refresh();
-      }
-    }
-    async function discard(id) {
-      if (busy.has(id)) return;
-      busy.add(id);
-      try {
-        if (!memoryOnly.has(id)) await store.remove(id);
-        emergency.delete(id);
-        memoryOnly.delete(id);
-        revoke(id);
-        await refresh();
-        message('Clipe removido da lista local. Arquivos já salvos em uma pasta continuam lá.');
-      } catch (e) {
-        message(e.message);
-      } finally {
-        busy.delete(id);
-      }
-    }
     async function floating() {
       if (pip && !pip.closed) {
         pip.focus();
@@ -812,35 +537,22 @@ if (!window.TronoDesktop) {
       owner = next;
       autoPaused = false;
       readSettings();
-      directory = null;
-      clips = [];
-      renderList();
-      const current = owner;
-      try {
-        const saved = await store.directory(current);
-        if (current === owner) {
-          directory = saved || null;
-          renderState();
-        }
-      } catch {}
-      await refresh();
+      await library.setOwner(owner);
       void ensureAutomaticReplay();
     }
     function bind() {
       owner = account();
       readSettings();
       renderState();
-      void refresh();
-      const initialOwner = owner;
-      void store
-        .directory(initialOwner)
-        .then((h) => {
-          if (owner === initialOwner) {
-            directory = h || null;
-            renderState();
-          }
-        })
-        .catch(() => {});
+      library.subscribe(() => {
+        renderState();
+        const state = library.getSnapshot();
+        if (state.messageVersion !== lastLibraryMessage) {
+          lastLibraryMessage = state.messageVersion;
+          if (state.message) message(state.message);
+        }
+      });
+      void library.setOwner(owner);
       document
         .querySelectorAll('[data-open-clips]')
         .forEach((b) => b.addEventListener('click', open));
@@ -857,7 +569,7 @@ if (!window.TronoDesktop) {
             : startLocalReplay());
         else clip();
       };
-      $('clipChooseFolder').onclick = () => void chooseFolder();
+      $('clipChooseFolder').onclick = () => void library.chooseFolder();
       $('clipFloating').onclick = () => void floating();
       $('clipShortcut').onclick = () => {
         choosingShortcut = true;
@@ -890,12 +602,7 @@ if (!window.TronoDesktop) {
       document
         .querySelectorAll('[data-clips-tab]')
         .forEach((b) => (b.onclick = () => tab(b.dataset.clipsTab)));
-      $('clipResetFolder').onclick = () => {
-        directory = null;
-        renderState();
-        void store.setDirectory(owner, null).catch(() => {});
-        message('Ao salvar, você poderá escolher um arquivo ou usar Downloads.');
-      };
+      $('clipResetFolder').onclick = () => void library.resetFolder();
       for (const [id, key] of [
         ['clipQuality', 'quality'],
         ['clipFps', 'fps'],
@@ -913,7 +620,6 @@ if (!window.TronoDesktop) {
       document.addEventListener('keydown', keydown, true);
       $('clipsDialog').addEventListener('close', () => {
         choosingShortcut = false;
-        for (const video of $('clipList').querySelectorAll('video')) video.pause();
       });
       window.addEventListener('trono-auth-change', () => void accountChanged());
       window.addEventListener('trono-call-change', (event) => {
@@ -923,7 +629,7 @@ if (!window.TronoDesktop) {
       });
       void ensureAutomaticReplay();
       window.addEventListener('beforeunload', (e) => {
-        if (session || starting || [...emergency.values()].some((c) => c.blob)) {
+        if (session || starting || library.hasUnsavedMemory()) {
           e.preventDefault();
           e.returnValue = '';
         }
@@ -931,7 +637,6 @@ if (!window.TronoDesktop) {
       window.addEventListener('pagehide', () => {
         stopLocalReplay();
         stop();
-        for (const id of urls.keys()) revoke(id);
       });
     }
     window.addEventListener('trono:ready', bind);

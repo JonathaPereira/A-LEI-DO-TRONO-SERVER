@@ -1656,9 +1656,31 @@ termine depois também é fechada. Gravações só confirmam no commit da transa
 falha ao criar a requisição aborta a transação sem substituir um clipe anterior.
 
 `lib/clips/browser.ts` instala uma instância por página antes dos scripts de replay.
-`TronoClipStore` conserva o nome de compatibilidade para `legacy/clips.js`, ainda
-pendente de conversão. `legacy/clip-store.js` e sua entrada no manifesto saíram.
+`TronoClipStore` conserva o acesso compatível aos registros existentes e compartilha
+a conexão com a biblioteca. `legacy/clip-store.js` e sua entrada no manifesto saíram.
 A persistência não possui captura, buffer, formato de vídeo ou IPC.
+
+`library.ts` possui a lista por conta, pasta de destino, operações em andamento e
+clipes de emergência quando o IndexedDB falha. O snapshot imutável é consumido
+por `components/clips/library.tsx` com `useSyncExternalStore`. Trocas de conta e
+leituras concorrentes invalidam tanto sucessos quanto erros antigos, inclusive
+ao voltar para a mesma conta. Mudar a pasta invalida sua leitura/seleção pendente.
+Falha de armazenamento conserva o Blob em memória e informa o coordenador para
+pausar o replay; descartar um clipe nunca persistido dispensa acesso ao banco.
+
+`export.ts` possui permissões, seletor de arquivo, escrita/abort e download. O
+seletor abre diretamente no clique, antes de consultar o banco. Trocar de conta
+enquanto o seletor está aberto impede iniciar a escrita; uma escrita já iniciada
+termina e atualiza o registro do dono original, sem mensagens na conta nova.
+Só fechar o arquivo com sucesso libera o Blob da cópia local. Download conserva
+essa cópia. Se atualizar os metadados falhar, a biblioteca mantém a correção em
+memória, sem confundir arquivo salvo com exportação cancelada.
+
+Os cards React possuem as ações e as URLs de prévia. Fechar o diálogo, ocultar a
+prévia, remover o card, mudar de conta ou sair da página pausa o player e revoga
+sua URL. As URLs de download têm duração própria e são liberadas também no
+pagehide. `library-runtime.tsx` instala somente a lista web; o coordenador legado
+não reescreve mais `clipList`. A política de replay suspenso no desktop continua.
 
 `lib/clips/buffer.ts` possui o parser incremental de WebM/EBML e a retenção de
 blocos já codificados por tempo e memória. O snapshot começa em um keyframe de
@@ -1688,8 +1710,9 @@ não postam em um worker já encerrado. A interface recebe status e resultados;
 não acessa mais recorder, worker, fila ou waiters.
 
 `browser.ts` instala as fábricas tardias `TronoCreateClipWorker` e
-`TronoCreateReplaySession`. `clips.js` ainda possui seleção de fonte, preferências,
-conta, biblioteca, salvamento e interface, delegando a sessão ao módulo tipado.
+`TronoCreateReplaySession`, além da instância compartilhada `TronoClipLibrary`.
+`clips.js` ainda possui seleção de fonte, preferências, detecção de conta e os
+controles restantes; delega biblioteca, exportação e sessão aos módulos tipados.
 O URL do worker vem do bundle Next, sem depender de document.currentScript.
 `legacy/clip-buffer.js` foi excluído e seu JS antigo é podado pelo build. O desktop
 continua sem iniciar replay automaticamente; o teste nativo chama as fábricas

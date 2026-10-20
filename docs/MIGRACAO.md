@@ -2915,6 +2915,34 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   a ponte Windows `clip-desktop.js` e a gravação manual `recording.js`. Não copiar
   estado de mídia de volta ao adaptador ao converter esses fluxos.
 
+## Biblioteca de clipes, exportação e cards React
+
+- `lib/clips/library.ts` possui lista, pasta, operações em andamento e clipes
+  de emergência, com snapshot imutável e assinatura. `export.ts` possui seletor,
+  permissões, escrita/abort e download. A conexão IndexedDB e os registros antigos
+  continuam os mesmos. O código substituído saiu de `legacy/clips.js`.
+- `components/clips/library.tsx` possui cards, ações e URLs de prévia. Fechar o
+  diálogo libera player e URL; remover o card e sair da página também limpam os
+  recursos. O legado não cria mais cards nem mantém cópias de lista, pasta, busy,
+  emergency, memoryOnly ou URLs. Somente os controles restantes recebem snapshots.
+- Pedidos antigos de lista/pasta não restauram estado após troca de conta,
+  inclusive conta A → B → A. Seleção de arquivo abre no clique; trocar de conta
+  antes de iniciar a escrita a cancela. Uma escrita iniciada termina para o dono
+  original, sem atualizar avisos da conta nova. Arquivo só é marcado salvo após
+  close; download mantém a cópia e falha de metadados mantém a correção em memória.
+- Dez regressões novas cobrem concorrência, seleção/pasta obsoleta, cancelamento,
+  escrita interrompida, falta de espaço, limites por conta e falha de metadados.
+  O teste de navegador verifica também a revogação da URL ao fechar a prévia.
+- A biblioteca React atende o fluxo web existente. O desktop conserva a política
+  atual de clipes suspensos e não monta esse controlador; a ponte Windows usada
+  na web continua disponível. Não houve mudança de encoder ou captura.
+- Typecheck, format:check, build estático e as 32 verificações de `test:clips`
+  passaram. `test:clips:store` preservou Blobs, metadados e diretórios antigos;
+  `test:desktop:layout` passou com dois Electron reais. Evidências locais em
+  `artifacts/clip-library-*`; chamadas usam mídia sintética, sem medir jogos reais.
+- Restam preferências, atalhos, janela flutuante, seleção/coordenação da fonte e
+  controles do diálogo em `clips.js`, além de `clip-desktop.js` e `recording.js`.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,
