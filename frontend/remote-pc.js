@@ -2,7 +2,7 @@
 window.TronoRemotePc=(()=>{
  const $=id=>document.getElementById(id),pending=new Map(),performancePolicy=window.TronoRemotePerformance,gamepad=window.TronoRemoteGamepad,gameKeys=new Set();let current=null,roster=[],supported=false,capability={host:false},dialog,button,remoteGeneration=0;
 
- function request(action,payload={},timeout=12000){const requestId=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(requestId);reject(Error('O compartilhamento não respondeu. Tente novamente.'));},timeout);pending.set(requestId,{resolve,reject,timer});if(!window.TronoNetwork.remotePc(action,{...payload,requestId})){clearTimeout(timer);pending.delete(requestId);reject(Error('Servidor desconectado.'));}});}
+ function request(action,payload={},timeout=12000){const requestId=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(requestId);reject(Error('O compartilhamento não respondeu. Tente novamente.'));},timeout);pending.set(requestId,{resolve,reject,timer});if(!window.TronoNetwork.remotePc(action,{...payload,protocol:2,requestId})){clearTimeout(timer);pending.delete(requestId);reject(Error('Servidor desconectado.'));}});}
  function active(s){return current===s&&!s.closed;}
  function status(text){$('remotePcStatus').textContent=text;}
  function notify(s,text){if(active(s)){s.message=text;status(text);}}
@@ -136,7 +136,7 @@ window.TronoRemotePc=(()=>{
   $('remotePcAudio').disabled=!capability.audio;render();
  });
  window.TronoNetwork.onMessage(m=>{
-  if(m.type==='welcome'){supported=!!m.features?.remotePc;render();}
+  if(m.type==='welcome'){supported=!!m.features?.remotePc&&m.features.remotePcProtocol===2;render();}
   if(m.type==='remote-response'){const p=pending.get(m.requestId);if(p){pending.delete(m.requestId);clearTimeout(p.timer);if(m.ok)p.resolve(m.data);else p.reject(Error(m.error?.message||'Não foi possível compartilhar o PC.'));}return;}
   if(m.type==='voice-roster'){roster=m.players.filter(p=>p.joined!==false);render();}
   if(m.type==='connection'&&!m.connected){supported=false;for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('Conexão encerrada.'));}pending.clear();void stop({tell:false});}

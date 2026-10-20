@@ -4,7 +4,7 @@ A beta oferece um monitor compartilhado com uma pessoa da mesma chamada, com mou
 
 ## Como usar
 
-1. Atualize o aplicativo Windows de quem vai compartilhar. Os dois participantes entram em suas contas e na mesma sala de voz.
+1. Atualize os aplicativos Windows dos dois participantes para 0.2.12 (o convidado pode usar o site atualizado). Os dois participantes entram em suas contas e na mesma sala de voz.
 2. No HUD da chamada, abra **Compartilhar PC · Beta**, escolha a pessoa e clique em **Escolher monitor e convidar**. Leia o aviso e selecione um monitor inteiro.
 3. A outra pessoa recebe um convite e escolhe **Aceitar e assistir**. Pode assistir no aplicativo ou em navegador compatível com WebRTC.
 4. Para interagir, ela usa **Pedir controle**. O dono do computador confirma na janela nativa do Windows; negar mantém somente a visualização.

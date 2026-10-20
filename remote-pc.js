@@ -17,12 +17,13 @@ class RemotePc {
       if(!this.available(ws))return reply(null,'Entre na voz com sua conta para compartilhar um PC.');
       let rate=this.rates.get(ws);if(!rate||rate.until<this.now()){rate={count:0,until:this.now()+1000};this.rates.set(ws,rate);}if(++rate.count>100)return reply(null,'Aguarde antes de tentar novamente.');
       this.sweep();
+      if(['invite','accept'].includes(m.action)&&m.protocol!==2){if(m.action==='accept'){const old=this.sessions.get(m.sessionId);if(old?.viewer===ws)this.finish(old,'update-required');}return reply(null,'Atualize os dois aplicativos para Windows 0.2.12 ou use o site atualizado para receber. Esta versão antiga da beta não suporta o novo controle.');}
       if(m.action==='invite'){
         const room=this.rooms.get(ws.roomId),viewer=room.players.get(m.targetId)?.ws;
         if(!this.available(viewer)||viewer===ws||viewer.account.id===ws.account.id)return reply(null,'Escolha outra pessoa conectada à mesma voz.');
         if(this.byClient.has(ws.clientId)||this.byClient.has(viewer.clientId))return reply(null,'Um dos participantes já tem uma sessão de PC aberta.');
         const s={id:crypto.randomUUID(),host:ws,viewer,room:room.id,state:'invited',created:this.now(),hostSeen:this.now(),viewerSeen:this.now()};this.sessions.set(s.id,s);this.byClient.set(ws.clientId,s.id);this.byClient.set(viewer.clientId,s.id);
-        this.send(viewer,{type:'remote-invite',sessionId:s.id,hostName:ws.account.nickname,hostId:ws.clientId});return reply({sessionId:s.id});
+        this.send(viewer,{type:'remote-invite',protocol:2,sessionId:s.id,hostName:ws.account.nickname,hostId:ws.clientId});return reply({sessionId:s.id});
       }
       const s=this.sessions.get(m.sessionId);if(!s||![s.host,s.viewer].includes(ws)||!this.valid(s))return reply(null,'A sessão de PC não está mais disponível.');
       if(ws===s.host)s.hostSeen=this.now();else s.viewerSeen=this.now();

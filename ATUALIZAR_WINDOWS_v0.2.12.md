@@ -17,7 +17,8 @@ A voz continua usando sua conexão atual, com SFU como preferência existente.
 
 4. O ZIP já inclui `frontend/downloads/MN-Trono-0.2.12-Windows.exe` e `latest.yml`.
    Instale o EXE ou use a atualização interna depois da publicação no Surge.
-   Os participantes que hospedam o PC precisam atualizar o aplicativo.
+   Os dois participantes precisam do aplicativo 0.2.12; o convidado também pode
+   usar o site atualizado. A beta avisa quando detecta uma versão incompatível.
 
 ## Dois jogadores
 
