@@ -120,7 +120,6 @@ test(
               '/call-floating.css',
               '/court-display.css',
               '/tabletop-refinements.css',
-              '/light-noise.js',
               '/light-noise-worklet.js',
               '/voice-reception.css',
               '/tabletop-audio.css',

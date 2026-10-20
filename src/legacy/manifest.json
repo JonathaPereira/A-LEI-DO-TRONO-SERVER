@@ -4,8 +4,6 @@
     "desktop-platform.js",
     "audio.js",
     "auth.js",
-    "light-noise.js",
-    "noise-suppression.js",
     "soundboard-client.js",
     "call-controls-layout.js"
   ],

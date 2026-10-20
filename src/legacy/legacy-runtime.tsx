@@ -7,6 +7,7 @@ import { initializeCommunityNavigation } from '../components/navigation/communit
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeApplicationAudio } from '../lib/voice/application-audio-runtime';
+import { initializeNoiseProcessors } from '../lib/voice/noise-runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
@@ -109,8 +110,7 @@ export function LegacyRuntime() {
         if (filename === 'auth.js') {
           initializePortal(window);
           initializeProfileEditor(window);
-        }
-        if (filename === 'noise-suppression.js') {
+          initializeNoiseProcessors(window);
           initializeVoiceRuntime(window);
           initializeRecorder(window);
           initializeClips(window);

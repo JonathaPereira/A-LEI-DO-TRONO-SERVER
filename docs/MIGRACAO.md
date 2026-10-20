@@ -69,6 +69,9 @@ recursos em `public/roguelite/` foram preservados.
 - `application-audio.js`: dono tipado dos jobs/grafos por ID, assinatura IPC única,
   cancelamento de preparos e descarte de trilhas/contextos próprios. Créditos de
   pacotes descartados continuam sendo devolvidos; parar o C++ não aguarda o contexto.
+- `noise-suppression.js` e `light-noise.js`: cache/preparo dos filtros em
+  `lib/voice/noise-processors.ts`, recursos locais e fachadas em `noise-runtime.ts`.
+  Timers, fetch e nós são descartados; contextos/microfones são emprestados.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -81,8 +84,7 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 
 - Conta e plataforma: `auth-boot.js`, `auth.js`, `desktop-platform.js`.
-- Áudio: `audio.js`, `light-noise.js`,
-  `noise-suppression.js`. Os dois worklets próprios já são tipados.
+- Áudio: `audio.js`. Worklets e adaptadores de filtros já são tipados.
 - Soundboard: `soundboard-client.js`.
 
 `call-controls-layout.js` já é gerado do módulo TypeScript
@@ -91,9 +93,9 @@ JS ainda por converter. `scripts/prepare-renderer.cjs` compila esse módulo e po
 assets estáticos obsoletos somente após compilação bem-sucedida.
 
 Todos os motores compartilhados dos jogos saíram de `src/legacy/`. Próximo recorte:
-transferir os adaptadores de filtros para os donos tipados,
-com regressões de recursos e Electron real. Depois seguir por áudio compartilhado,
-soundboard e conta, sem mudar captura/encoders incidentalmente.
+transferir o seletor/ciclo de captura de `desktop-platform.js` para TypeScript e
+React, preservando confirmação de fonte/áudio, cancelamento e empréstimo da chamada.
+Depois seguir por áudio compartilhado, soundboard e conta, sem mudar encoders.
 
 Antes desse recorte, `electron/native-helper.cjs` consolidou os caminhos do helper
 C++ de áudio/atividade. O modo de desenvolvimento procurava um diretório acima
@@ -166,6 +168,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Caminho do helper/atividade | 29 verificações de núcleo, `test:activity:native`, fluxo completo de permissões/seletor/arquivos e pacote passaram. Recursos/interface usam `--mute-audio`; janela real detectada sem expor PID/caminhos. |
 | Worklets tipados | 5.704.704 amostras idênticas em 24 mil blocos, 44,1/48 kHz e mono/estéreo. Oito regressões, 51 de captura e renderização Web Audio no Electron real passaram. |
 | Dono de áudio por aplicativo | Oito regressões de protocolo/recursos e PCM via IPC/preload/worklet no Electron passaram, com créditos únicos e RMS 0,25. `npm test` completo e chamada/navegação nativa também passaram. |
+| Preparo dos filtros | 13 modelos, três fluxos de navegador e medição de fala/ruído no Electron passaram. Registro reaproveitado por contexto; nativo/off sem filtros extras; chamada/navegação nativa preservada. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
@@ -176,6 +179,8 @@ offline no Edge/Electron e o filtro leve com a fixture de fala. Renderização
 offline testa o DSP, sem validar o dispositivo físico de loopback.
 O dono nativo tem evidências em `artifacts/application-audio-*`; a regressão de
 IPC injeta PCM no main de um Electron descartável e não aprova captura física.
+Os filtros têm evidências em `artifacts/noise-processors-*`; a medição offline usa
+fala da fixture e o WASM local, sem substituir a verificação de microfone físico.
 O executável local de conferência está em
 `artifacts/windows-app/win-unpacked/MN Trono.exe`; não substitui a instalação.
 

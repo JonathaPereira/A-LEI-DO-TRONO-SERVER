@@ -1011,6 +1011,20 @@ de worklet ao Window. `prepare-renderer.cjs` compila os dois e conserva os camin
 `application-audio-worklet.js`/`light-noise-worklet.js`; esses JS são gerados.
 Os dois fontes antigos saíram de `legacy/`. RNNoise e seus recursos foram preservados.
 
+`lib/voice/noise-processors.ts` possui carregamento/validação do WASM local,
+registro dos módulos e recursos dos filtros. O registro pertence ao contexto
+emprestado e permanece em WeakMap mesmo se a espera expirar ou o loader for
+reinstalado, evitando registrar o processador duas vezes. O modelo é compartilhado
+pela fábrica; erro/timeout permite nova tentativa. Cada filtro possui seus próprios
+nós, porta e callbacks, encerrados por `destroy()` sem fechar contexto/microfone.
+Timeout de início e falha anterior à publicação rejeitam o preparo; uma falha de
+filtro já publicado notifica uma única vez. O descarte cancela esperas, fetch e
+timers e encerra os filtros criados. RNNoise continua mono a 48 kHz; o filtro leve
+conserva highpass de 75 Hz/Q 0,707. Nativo/off não empilham esses filtros.
+`noise-runtime.ts` adapta recursos estáticos e mantém `TronoNoise`/`TronoLightNoise`
+para consumidores existentes; não carrega modelo nem abre dispositivos no boot.
+`legacy/noise-suppression.js` e `legacy/light-noise.js` foram removidos.
+
 `lib/voice/application-audio.ts` possui os grafos de áudio por aplicativo e os jobs
 nativos por ID, com um listener de IPC. Valida metadados/PCM, conserva a conversão
 int16 little-endian e devolve créditos mesmo ao descartar pacotes inválidos ou sem
@@ -1025,9 +1039,9 @@ boot. O descarte remove o listener nativo e a fachada; um descarte antigo não p
 remover uma instalação posterior. `legacy/application-audio.js` foi removido.
 
 `lib/voice/runtime.ts` compõe os donos da chamada por imports diretos, com uma
-instância por janela. O bootstrap instala preferências tipadas antes dos scripts
-e inicializa a voz após `noise-suppression.js`; os listeners iniciam uma única vez
-em `trono:ready`.
+instância por janela. O bootstrap instala preferências tipadas antes dos scripts;
+após `auth.js`, instala filtros tipados e inicializa a voz. Os listeners iniciam
+uma única vez em `trono:ready`.
 Callbacks adiam a leitura das dependências até sua composição estar completa.
 `runtime-ports.ts` descreve as entradas ainda legadas e a fachada `TronoSocial`,
 preservada para consumidores não convertidos. Não há registro global de fábricas

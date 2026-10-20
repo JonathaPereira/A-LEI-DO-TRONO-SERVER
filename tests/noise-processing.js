@@ -3,13 +3,13 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),path=requ
 const express=require('express'),{chromium}=require('@playwright/test');
 
 test('real RNNoise worklet reduces stationary noise while retaining speech; destroys cleanly', {timeout:30000},async()=>{
-  const app=express();app.get('/',(_,res)=>res.send('<script src="/noise-suppression.js"></script>'));
+  const app=express();
   app.get('/speech.ogg',(_,res)=>res.sendFile(path.resolve(__dirname,'fixtures/speech-flite.ogg')));
   app.use(express.static(path.resolve(__dirname,'../out')));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});let browser;
   try{
     browser=await chromium.launch({executablePath:process.env.AUTH_TEST_CHROMIUM||process.env.CHROMIUM_EXECUTABLE_PATH||undefined,headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});
-    const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port);
+    const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.TronoNoise?.create);
     const metrics=await page.evaluate(async()=>{
       const ctx=new AudioContext({sampleRate:48000});await ctx.resume();
       const rn=await window.TronoNoise.create(ctx);
