@@ -117,7 +117,12 @@ export function initializeDesktopShell(target: Window) {
         'O servidor precisa ser atualizado para manter jogo e voz juntos. Sair da mesa?',
       ),
   });
-  const facade = { navigate: client.navigate };
+  const facade = {
+    navigate: client.navigate,
+    getSnapshot: client.getSnapshot,
+    subscribe: client.subscribe,
+    toggleFullscreen: client.toggleFullscreen,
+  };
   runtime.TronoDesktopShell = facade;
   function borrow(node: HTMLElement | null, host: HTMLElement) {
     if (!node) return;

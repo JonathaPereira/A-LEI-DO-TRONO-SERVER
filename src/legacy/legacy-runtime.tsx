@@ -1,5 +1,6 @@
 'use client';
 import { throneRules } from '../lib/games/throne-rules';
+import { initializeCourtFullscreen } from '../components/games/court-fullscreen-runtime';
 import { initializeThroneNavigation } from '../components/games/throne-navigation-runtime';
 import { initializeCommunityNavigation } from '../components/navigation/community-navigation-runtime';
 
@@ -120,6 +121,7 @@ export function LegacyRuntime() {
         // activity/notifications then bind to the mounted slots, matching their boot order.
         if (filename === 'call-controls-layout.js') {
           initializeDesktopShell(window);
+          initializeCourtFullscreen(window);
           window.addEventListener(
             'trono:ready',
             () => {

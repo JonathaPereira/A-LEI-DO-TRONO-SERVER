@@ -55,15 +55,7 @@ export function GameScreen() {
                 Eletrônica
               </button>
             </div>
-            <button
-              id={'courtFullscreen'}
-              className={'icon-btn'}
-              type={'button'}
-              aria-pressed={'false'}
-              title={'Tela cheia nativa'}
-            >
-              ⛶ Tela cheia
-            </button>
+            <span id="courtFullscreenHost" style={{ display: 'contents' }} />
             <button id={'musicBtn'} className={'icon-btn'} title={'Ativar ou silenciar música'}>
               ♫ Música
             </button>

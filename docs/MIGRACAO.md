@@ -2714,10 +2714,50 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   eventos nativos e fullscreen web. No backend restam coordenação e regras de
   aplicação em `server/runtime.cjs`, além do núcleo/planejador já compartilhados.
 
+## Tela cheia da mesa e remoção de court-display.js
+
+- `court-fullscreen.ts` e o botão React substituem o último controlador de tela
+  da mesa em `legacy/court-display.js`. O JS foi excluído do fonte/manifesto,
+  retirado dos recursos exigidos pelo teste de pacote e podado pelo build.
+  `court-display.css` permanece necessário; seu seletor considera o host React
+  sem recriar botão nem alterar a geometria da mesa.
+- O Electron usa o mesmo estado/comando de `DesktopShell`, incluindo bloqueio
+  de cliques e precedência dos eventos sobre respostas atrasadas. O dono da mesa
+  não cria outro consumidor IPC. A janela nativa continua cheia ao sair da mesa;
+  só a classe de apresentação é removida. Mudanças externas atualizam os dois botões.
+- Corrigido o emissor de estado em `electron/main.cjs`: em Windows, o getter ainda
+  retornava false dentro do evento `enter-full-screen`. O evento agora publica
+  seu estado de entrada/saída, enquanto a consulta explícita conserva o getter.
+  A sondagem real confirmou mesa, shell e janela sincronizados. O diagnóstico
+  anterior está nos artefatos; a asserção de classe não foi relaxada.
+- A web preserva ativação do usuário e serializa pedidos. Conclusão após ocultar/
+  sair/voltar ou descartar libera somente a entrada adquirida pela mesa. Tela cheia
+  externa do documento ou de outro player é conservada. Escape/recusas atualizam
+  estado/erro e permitem nova tentativa, sem fallback novo de maximização.
+- Seis testes novos de modelo cobrem gesto síncrono, repetição, entradas tardias,
+  propriedade do documento/player, recusa, descarte e o dono nativo compartilhado.
+  O helper web testa a Fullscreen API real, gesto, ocultação, promessa adiada,
+  recusa e entrada externa. O helper Electron testa janela real, ida/volta da
+  mesa, controles concorrentes, mudança externa e os mesmos nós/mídias.
+- Validação: tipagem, formatação, build estático e `npm test` passaram; os modelos
+  de jogos somam 176 testes. As 27 regressões desktop passaram; a primeira execução
+  restrita bloqueou rename de um temporário de preferências, e a repetição fora
+  dessa restrição passou sem modificar esse código. O navegador passou pelo helper
+  web e completou três rodadas de demonstração e uma rodada humana. Dois Electron
+  reais passaram pelo helper nativo e pelo cenário completo de navegação, mantendo
+  controles, socket, peers, microfone, câmera e fonte de tela. Evidências em
+  `artifacts/court-fullscreen-*`, incluindo diagnóstico, sondagem nativa e execuções
+  iniciais. Mídia sintética local; não mede 60 fps em jogos reais nem TURN de produção.
+- Os controladores de mesa, simulação e navegação de A Lei do Trono já são tipados.
+  Ainda há scripts de áudio, gravação/clipes, autenticação e núcleos de outros jogos,
+  além dos estilos em cascata e da coordenação/regras em `server/runtime.cjs`.
+  O próximo recorte deve usar esse inventário; não restaurar game.js/court-display.js.
+
 ## Próximas alterações, em ordem
 
-1. Converter o controlador e a apresentação de A Lei do Trono.
-   Cada controlador convertido perde sua entrada
+1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,
+   autenticação e núcleos compartilhados dos demais jogos. A mesa/navegação de
+   A Lei do Trono já está convertida. Cada controlador convertido perde sua entrada
    no manifesto e seus listeners DOM. Não recriar catálogo, socket ou estado de
    participação. Os perfis já usam os clientes de `lib/profiles/`/`lib/files/` e
    componentes compartilhados; remover adaptadores sem chamadores ao converter os demais donos.

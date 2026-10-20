@@ -549,7 +549,41 @@ permanecem no motor. Sons delegam ao áudio compartilhado. A ponte não abre soc
 nem controla captura, players ou peers. Foram retirados de `game.js` os corpos dos
 renderizadores, timers de efeitos e `exchangeSequence`; os adaptadores restantes
 apenas projetam dados/delegam no motor tipado. O dispatcher online usa o módulo
-abaixo; a tela cheia de `court-display.js` continua pendente.
+abaixo; a tela cheia da mesa usa o dono tipado descrito a seguir.
+
+`lib/games/court-fullscreen.ts` possui a intenção de tela cheia web da mesa e seu
+snapshot de apresentação. `components/games/court-fullscreen.tsx` renderiza o botão
+React em `courtFullscreenHost`, conservando ID e identidade do controle. O CSS
+considera esse host direto e conserva os mesmos limites/ocultação do shell.
+
+No Electron, o botão delega ao mesmo dono `lib/desktop/shell.ts` usado pelo rail.
+`TronoDesktopShell` expõe consulta, assinatura e comando desse dono; não há outra
+assinatura IPC, leitura inicial ou flag nativa no controlador da mesa. Cliques
+concorrentes compartilham o bloqueio nativo. Eventos de janela prevalecem sobre
+leituras e respostas antigas. Sair da mesa remove somente a apresentação
+`court-fullscreen`; a tela cheia nativa da aplicação permanece como antes.
+
+`electron/main.cjs` publica true/false a partir dos eventos de entrada/saída da
+janela. A medição real em Windows mostrou `isFullScreen()` ainda false durante
+`enter-full-screen`, embora a janela já entrasse em tela cheia. Consultar esse
+getter dentro do evento enviava o estado anterior e sobrepunha a resposta IPC.
+A consulta explícita conserva o getter; os eventos agora informam seu próprio estado.
+
+Na web, `requestFullscreen` é chamado no gesto original, antes do primeiro await.
+Cliques repetidos compartilham a operação pendente. Cada pedido adquire somente
+sua própria entrada no documento: ocultar, descartar ou receber a conclusão após
+sair/voltar pede saída dessa entrada, sem reabrir a mesa. Escape/fullscreenchange
+atualizam o botão; recusa permite nova tentativa e oferece F11. Ocultar/descartar
+não encerra uma tela cheia preexistente nem a de um player. Não há fallback de
+maximização da mesa: o dono de fullscreen dos demais jogos continua com sua
+política de elemento/imersão, e o dono de foco de mídia conserva seus players.
+
+O runtime monta após o shell e antes do ready. O descarte libera raiz, assinatura
+do shell, observador e listener do documento, remove a classe de apresentação e
+trata conclusões tardias. `legacy/court-display.js` e sua entrada no manifesto
+foram excluídos. `court-display.css` continua necessário para geometria/estilos;
+não é uma sobra do controlador. Nenhum player, trilha, captura, peer ou socket é
+criado, movido ou descartado por esse fluxo.
 
 `lib/games/throne-events.ts` despacha somente os efeitos públicos online e possui
 a deduplicação do aviso de turno por participação/rodada/vaza. Consulta diretamente

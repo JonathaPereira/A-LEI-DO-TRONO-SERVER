@@ -113,7 +113,6 @@ test(
         Promise.all(
           [
             '/call-floating.css',
-            '/court-display.js',
             '/court-display.css',
             '/tabletop-refinements.css',
             '/light-noise.js',

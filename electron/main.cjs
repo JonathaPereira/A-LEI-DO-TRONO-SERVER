@@ -360,8 +360,12 @@ async function start() {
     });
   }
   const windowState = () => ({ fullscreen: window.isFullScreen() });
-  for (const name of ['enter-full-screen', 'leave-full-screen'])
-    window.on(name, () => window.webContents.send('mn:window-state', windowState()));
+  // On Windows, isFullScreen() may still contain the previous value inside the event.
+  for (const [name, fullscreen] of [
+    ['enter-full-screen', true],
+    ['leave-full-screen', false],
+  ])
+    window.on(name, () => window.webContents.send('mn:window-state', { fullscreen }));
   ipcMain.handle('mn:window-state', (event) => {
     trusted(event);
     return windowState();

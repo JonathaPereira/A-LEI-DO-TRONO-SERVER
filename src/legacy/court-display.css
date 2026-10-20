@@ -333,7 +333,7 @@ body.court-fullscreen #gameScreen.game-screen .hand-zone {
   padding-left: 16px !important;
 }
 
-body.desktop-app #gameScreen.game-screen .top-actions > :not(#courtFullscreen) {
+body.desktop-app #gameScreen.game-screen .top-actions > :not(#courtFullscreenHost) {
   display: none !important;
 }
 body #gameScreen.game-screen .law-tracker {
