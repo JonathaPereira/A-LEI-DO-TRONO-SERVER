@@ -1840,6 +1840,14 @@ registra sinais. `index.ts` valida porta/host e trata o processo.
 `runtime.cjs` contém composição e regras de A Lei do Trono ainda por extrair.
 Os serviços existentes foram movidos para `server/` e formatados.
 
+`server/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
+bots. A Lei do Trono, Azul, Splendor e Love Letter importam esse módulo tipado;
+nenhum consumidor permanece no renderer. `legacy/bot-names.js` e o download
+estático correspondente saíram, e o boot dos controladores da mesa não depende
+mais desse script. O teste do pacote busca scripts/estilos pelo manifesto atual,
+além das imagens, worklets, manual e recursos dos jogos, sem exigir controladores
+JS já substituídos pelo bundle Next.
+
 `sessions.ts` mantém tickets opacos, aleatórios e guardados no servidor:
 12 horas, limite de 500 identidades e validação de apelido. Não são JWTs ou
 perfis assinados enviados pelo cliente. A organização não muda esse protocolo.

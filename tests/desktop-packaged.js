@@ -8,6 +8,7 @@ const { test } = require('node:test'),
   os = require('node:os');
 const { _electron, expect } = require('@playwright/test');
 const { killTestApp, closeTestApp } = require('./desktop-test-close');
+const legacyManifest = require('../src/legacy/manifest.json');
 test(
   'compiled Windows app starts with its own game, interface and RNNoise resources',
   { timeout: 130000 },
@@ -109,67 +110,65 @@ test(
       if (geometry.work.width >= 480) assert(geometry.window.width <= geometry.work.width);
       if (geometry.work.height >= 520) assert(geometry.window.height <= geometry.work.height);
       phase = 'installed resources';
-      const resources = await page.evaluate(async () =>
-        Promise.all(
-          [
-            '/call-floating.css',
-            '/court-display.css',
-            '/tabletop-refinements.css',
-            '/light-noise.js',
-            '/light-noise-worklet.js',
-            '/voice-reception.css',
-            '/bot-names.js',
-            '/tabletop-audio.css',
-            '/love-letter-rules.js',
-            '/love-letter.js',
-            '/love-letter.css',
-            '/assets/love-letter/characters.webp',
-            '/assets/love-letter/table.webp',
-            '/splendor-data.js',
-            '/splendor-rules.js',
-            '/splendor.js',
-            '/splendor.css',
-            '/game-covers.css',
-            '/assets/games/throne-cover.webp',
-            '/assets/games/splendor-cover.webp',
-            '/assets/splendor/developments.webp',
-            '/assets/splendor/nobles.webp',
-            '/roguelite/asset-manifest.json',
-            '/roguelite/core.js',
-            '/roguelite/game.js',
-            '/roguelite-host.js',
-            '/roguelite-host.css',
-            '/azul-presentation.js',
-            '/azul-art.css',
-            '/assets/azul/tiles-and-factories.png',
-            '/assets/azul/mural.png',
-            '/assets/azul/box-cover.webp',
-            '/assets/azul/wood-table.png',
-            '/azul-rules.js',
-            '/games.js',
-            '/games.css',
-            '/court.css',
-            '/app-layout.css',
-            '/chat-moderation.css',
-            '/manual/index.html',
-            '/manual/manual.css',
-            '/manual/throne.svg',
-            '/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf',
-            '/assets/laws/ordem.svg',
-            '/desktop-shell.css',
-            '/media-layout.css',
-            '/assets/portal_realms.png',
-            '/vendor/rnnoise/rnnoise.wasm',
-            '/application-audio-worklet.js',
-          ].map(async (url) => {
-            const response = await fetch(url);
-            return {
-              url,
-              status: response.status,
-              bytes: (await response.arrayBuffer()).byteLength,
-            };
-          }),
-        ),
+      const resources = await page.evaluate(
+        async (legacyAssets) =>
+          Promise.all(
+            [
+              ...legacyAssets,
+              '/call-floating.css',
+              '/court-display.css',
+              '/tabletop-refinements.css',
+              '/light-noise.js',
+              '/light-noise-worklet.js',
+              '/voice-reception.css',
+              '/tabletop-audio.css',
+              '/love-letter-rules.js',
+              '/love-letter.css',
+              '/assets/love-letter/characters.webp',
+              '/assets/love-letter/table.webp',
+              '/splendor-data.js',
+              '/splendor-rules.js',
+              '/splendor.css',
+              '/game-covers.css',
+              '/assets/games/throne-cover.webp',
+              '/assets/games/splendor-cover.webp',
+              '/assets/splendor/developments.webp',
+              '/assets/splendor/nobles.webp',
+              '/roguelite/asset-manifest.json',
+              '/roguelite/core.js',
+              '/roguelite/game.js',
+              '/roguelite-host.css',
+              '/azul-presentation.js',
+              '/azul-art.css',
+              '/assets/azul/tiles-and-factories.png',
+              '/assets/azul/mural.png',
+              '/assets/azul/box-cover.webp',
+              '/assets/azul/wood-table.png',
+              '/azul-rules.js',
+              '/games.css',
+              '/court.css',
+              '/app-layout.css',
+              '/chat-moderation.css',
+              '/manual/index.html',
+              '/manual/manual.css',
+              '/manual/throne.svg',
+              '/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf',
+              '/assets/laws/ordem.svg',
+              '/desktop-shell.css',
+              '/media-layout.css',
+              '/assets/portal_realms.png',
+              '/vendor/rnnoise/rnnoise.wasm',
+              '/application-audio-worklet.js',
+            ].map(async (url) => {
+              const response = await fetch(url);
+              return {
+                url,
+                status: response.status,
+                bytes: (await response.arrayBuffer()).byteLength,
+              };
+            }),
+          ),
+        [...legacyManifest.scripts, ...legacyManifest.styles].map((file) => '/' + file),
       );
       for (const resource of resources) {
         assert.equal(resource.status, 200, resource.url);

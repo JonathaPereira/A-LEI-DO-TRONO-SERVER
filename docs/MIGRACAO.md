@@ -3058,6 +3058,20 @@ Não afirmar que a suíte completa de clipes passou. Sem push ou mudança na mai
   completa com dois Electron reais passaram. Os dois assets antigos foram
   podados. Evidências locais em `artifacts/personal-preferences-*`.
 
+## Nomes dos bots no backend e pacote desktop atual
+
+- `server/bot-names.ts` substitui o UMD `legacy/bot-names.js`. Os quatro serviços
+  de jogos compartilham nomes e numeração com os mesmos resultados; não há uso
+  desse helper na interface. A inicialização da mesa ocorre na mesma sequência
+  após voz/clipes, sem precisar baixar um script de backend.
+- A regressão de recursos empacotados usa scripts/estilos do manifesto atual e
+  conserva verificações dos assets, manual, worklets e jogos. Retiradas somente
+  as expectativas de controladores estáticos já convertidos para o bundle Next.
+- Typecheck, format:check, build e `npm test` completo passaram. O diretório
+  empacotado foi gerado em `artifacts/windows-app` e o teste do executável real
+  passou com perfil temporário, recursos locais e RNNoise. Não foi executado
+  instalador nem alterado o aplicativo instalado. Evidências em `artifacts/bot-names-*`.
+
 ## Próximas alterações, em ordem
 
 1. Converter os scripts restantes do renderer por domínio: áudio, gravação/clipes,

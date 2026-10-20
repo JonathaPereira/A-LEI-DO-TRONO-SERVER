@@ -1,5 +1,5 @@
 'use strict';
-const Bots = require('../src/legacy/bot-names');
+const Bots = require('./bot-names.ts');
 const crypto = require('node:crypto'),
   Rules = require('../src/legacy/splendor-rules');
 const failure = (code, message) => Object.assign(Error(message), { code });

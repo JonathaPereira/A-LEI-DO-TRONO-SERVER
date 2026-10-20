@@ -86,7 +86,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
   const SUITS = ['cetro', 'chave', 'lamina', 'mascara'];
   const Rules = require('../src/lib/games/throne-rules.ts').throneRules;
   const LAWS = Rules.lawOrder;
-  const Bots = require('../src/legacy/bot-names');
+  const Bots = require('./bot-names.ts');
   const BOT_NAMES = Bots.names;
   const DECREES = Rules.decrees;
   const decreeById = Object.fromEntries(DECREES.map((d) => [d.id, d]));

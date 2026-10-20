@@ -104,7 +104,15 @@ export function LegacyRuntime() {
           initializeChannelManagement(window);
         }
         if (filename !== 'auth-boot.js') await loadScript(filename);
-        if (filename === 'bot-names.js') {
+        if (filename === 'auth.js') {
+          initializePortal(window);
+          initializeProfileEditor(window);
+        }
+        if (filename === 'noise-suppression.js') {
+          initializeVoiceRuntime(window);
+          initializeRecorder(window);
+          initializeClips(window);
+          initializeClipDesktop(window);
           Object.assign(window, {
             TronoRules: throneRules,
           });
@@ -122,16 +130,6 @@ export function LegacyRuntime() {
           initializeThroneLocal(window);
           initializeThroneNavigation(window);
           initializeCommunityNavigation(window);
-        }
-        if (filename === 'auth.js') {
-          initializePortal(window);
-          initializeProfileEditor(window);
-        }
-        if (filename === 'noise-suppression.js') {
-          initializeVoiceRuntime(window);
-          initializeRecorder(window);
-          initializeClips(window);
-          initializeClipDesktop(window);
         }
         if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile hosts and remaining game bodies exist before settings mount;
