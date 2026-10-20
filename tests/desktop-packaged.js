@@ -122,7 +122,6 @@ test(
               '/light-noise-worklet.js',
               '/voice-reception.css',
               '/tabletop-audio.css',
-              '/love-letter-rules.js',
               '/love-letter.css',
               '/assets/love-letter/characters.webp',
               '/assets/love-letter/table.webp',

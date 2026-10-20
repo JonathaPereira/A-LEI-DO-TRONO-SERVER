@@ -8,7 +8,7 @@ const { test } = require('node:test'),
   WebSocket = require('ws'),
   { chromium, expect } = require('@playwright/test'),
   { startFixture } = require('./auth-fixture'),
-  R = require('../src/legacy/love-letter-rules');
+  R = require('../src/lib/games/love-letter-rules.ts');
 async function peer(base, token) {
   const ws = new WebSocket(base.replace(/^http/, 'ws') + '/ws'),
     messages = [];

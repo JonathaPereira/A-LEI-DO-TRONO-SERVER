@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
-const R = require('../src/legacy/love-letter-rules');
+const R = require('../src/lib/games/love-letter-rules.ts');
 const moduleReady = import('../src/lib/games/love-letter.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 function deferred() {

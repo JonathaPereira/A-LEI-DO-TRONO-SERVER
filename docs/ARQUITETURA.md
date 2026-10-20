@@ -732,8 +732,14 @@ cliente de arquivos existente; não usam HTML/hidratação legados. `game-dialog
 é o diálogo controlado compartilhado com Splendor. Cabeçalhos conservam o slot de
 volume e Love Letter reutiliza o dono de tela cheia dos outros jogos. O runtime
 desfaz observers, listeners, timers e montagem React ao descartar.
-`legacy/love-letter.js` foi excluído; `love-letter-rules.js` permanece como motor
-CommonJS compartilhado com o backend para extração posterior.
+`lib/games/love-letter-rules.ts` possui o motor puro compartilhado, com tipos
+distintos para estado autoritativo e visão pública. `publicState(viewer)` oculta
+mãos adversárias, baralho/carta removida e observações do Padre de outras contas;
+a escolha privada do Chanceler não entra no evento público. A interface importa
+somente o módulo, sem `LoveLetterRules` global ou script estático. O serviço possui
+uma fonte de aleatoriedade por sala, `Math.random` por padrão; a fixture injeta sua
+semente sem alterar exports do motor ou adicionar parâmetros de teste ao produto.
+`legacy/love-letter.js` e `legacy/love-letter-rules.js` foram excluídos.
 
 `lib/games/roguelite.ts` possui preparação dos recursos de Cinzas, progresso,
 cancelamento, prontidão e tela cheia. Valida caminhos/tamanhos do manifesto e

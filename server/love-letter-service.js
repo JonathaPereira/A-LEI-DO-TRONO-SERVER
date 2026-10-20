@@ -1,12 +1,13 @@
 'use strict';
 const Bots = require('../src/lib/games/bot-names.ts');
 const crypto = require('node:crypto'),
-  Rules = require('../src/legacy/love-letter-rules');
+  Rules = require('../src/lib/games/love-letter-rules.ts');
 const failure = (code, message) => Object.assign(Error(message), { code: 'LOVE_LETTER_' + code });
 function createLoveLetterService({
   wss,
   send,
   now = Date.now,
+  createRandom = () => Math.random,
   botDelay = 4200,
   disconnectDelay = 90000,
 } = {}) {
@@ -84,7 +85,7 @@ function createLoveLetterService({
       apply(
         room,
         s.players[s.turn].id,
-        Rules.botMove(Rules.publicState(room.state, s.players[s.turn].id)),
+        Rules.botMove(Rules.publicState(room.state, s.players[s.turn].id), room.random),
       );
     }, botDelay);
   }
@@ -179,6 +180,7 @@ function createLoveLetterService({
           players: [{ id: ws.account.id, name: ws.account.nickname, ws: null, bot: false }],
           state: null,
           updatedAt: now(),
+          random: createRandom(),
         };
         rooms.set(room.id, room);
         attach(ws, room);
@@ -225,7 +227,7 @@ function createLoveLetterService({
             });
         if (room.players.length < 2)
           throw failure('PLAYERS', 'Convide outra pessoa ou complete com bots.');
-        room.state = Rules.create(room.players);
+        room.state = Rules.create(room.players, room.random);
         room.updatedAt = now();
         publish(room);
         lists();
@@ -235,7 +237,7 @@ function createLoveLetterService({
       if (msg.action === 'next-round') {
         if (room.hostId !== ws.account.id)
           throw failure('FORBIDDEN', 'O anfitrião inicia a próxima rodada.');
-        room.state = Rules.nextRound(room.state);
+        room.state = Rules.nextRound(room.state, room.random);
         room.updatedAt = now();
         publish(room);
         schedule(room);

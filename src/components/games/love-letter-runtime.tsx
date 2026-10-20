@@ -2,11 +2,11 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { createLoveLetter } from '../../lib/games/love-letter';
 import { createGameFullscreen } from '../../lib/games/fullscreen';
-import type { LoveLetterRoom, LoveLetterRules } from '../../types/love-letter';
+import * as rules from '../../lib/games/love-letter-rules';
+import type { LoveLetterRoom } from '../../types/love-letter';
 import type { NetworkClient } from '../../lib/socket/client';
 import { LoveLetterContents } from './love-letter-contents';
 interface Runtime extends Window {
-  LoveLetterRules: LoveLetterRules;
   TronoAuth: { user: { id: string } | null };
   TronoNetwork: NetworkClient;
   TronoPortal: { showOnly(id: string): void };
@@ -39,7 +39,7 @@ export function initializeLoveLetter(target: Window): () => void {
     subscribeMessages: (fn) => runtime.TronoNetwork.onMessage(fn),
     ensureAuthenticated: () => runtime.TronoNetwork.ensureLoveLetter(),
     send: (action, payload) => runtime.TronoNetwork.loveLetter(action, payload),
-    rules: runtime.LoveLetterRules,
+    rules,
     sound: (kind) => {
       if (visible()) runtime.TronoAudio?.playSfx(kind);
     },
@@ -69,11 +69,7 @@ export function initializeLoveLetter(target: Window): () => void {
   const root = createRoot(screen);
   flushSync(() =>
     root.render(
-      <LoveLetterContents
-        controller={controller}
-        fullscreen={fullscreen}
-        rules={runtime.LoveLetterRules}
-      />,
+      <LoveLetterContents controller={controller} fullscreen={fullscreen} rules={rules} />,
     ),
   );
   const sync = () => {

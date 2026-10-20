@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),WebSocket=require('ws'),{startFixture}=require('./auth-fixture'),{createLoveLetterService}=require('../server/love-letter-service'),R=require('../src/legacy/love-letter-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),WebSocket=require('ws'),{startFixture}=require('./auth-fixture'),{createLoveLetterService}=require('../server/love-letter-service'),R=require('../src/lib/games/love-letter-rules.ts');
 async function peer(base,token){const ws=new WebSocket(base.replace(/^http/,'ws')+'/ws'),messages=[];ws.on('message',raw=>messages.push(JSON.parse(raw)));await new Promise((r,j)=>{ws.once('open',r);ws.once('error',j);});const wait=async(fn,from=0)=>{for(let n=0;n<600;n++){const m=messages.slice(from).find(fn);if(m)return m;await new Promise(r=>setTimeout(r,10));}throw Error('Missing message '+fn);};const send=m=>ws.send(JSON.stringify(m));if(token){send({type:'authenticate',access_token:token});await wait(m=>m.type==='auth-result'&&m.ok);}return {ws,messages,send,wait};}
 test('Love Letter real authenticated server preserves private cards, validates actions and independent voice/text/Splendor memberships',{timeout:30000},async()=>{
  const f=await startFixture({port:10845}),clients=[];
@@ -18,4 +18,29 @@ test('Love Letter full service matches accept only legal server decisions; resum
   let turns=0;const byId=new Map([[restored.account.id,restored],[b.account.id,b]]);while(room.state.phase!=='finished'){clock+=1000;const s=room.state;if(s.phase==='round-over')service.handle(restored,{action:'next-round'});else{const c=byId.get(s.players[s.turn].id),view=c.out.findLast(m=>m.type==='love-letter-state').room.state;service.handle(c,{action:'move',revision:s.revision,move:R.botMove(view),score:999});}assert(room.state.revision>s.revision);assert(++turns<1500);}assert(room.state.players.every(p=>p.score<999));assert(room.state.winners.length);service.handle(restored,{action:'leave'});assert.equal(room.hostId,b.account.id);service.handle(b,{action:'leave'});assert(!service.rooms.has(id));
   service.handle(restored,{action:'create',maxPlayers:2});service.handle(restored,{action:'start',fillBots:true});room=service.rooms.get(restored.loveLetterRoomId);assert.equal(room.players.length,2);service.disconnect(restored);await new Promise(r=>setTimeout(r,35));assert(!service.rooms.has(room.id));
  }finally{service.stop();}
+});
+
+test('each Love Letter room owns an independent injected random stream', () => {
+  let streams = 0;
+  const clients = [0, 1].map(i => ({ account: { id: 'seeded-' + i, nickname: 'Casa ' + i, expiresAt: Date.now() + 60000 } }));
+  const service = createLoveLetterService({
+    wss: { clients: new Set(clients) }, send() {}, botDelay: 60000,
+    createRandom() {
+      streams++;
+      let seed = 1;
+      return () => ((seed = Math.imul(seed, 1664525) + 1013904223 >>> 0) / 4294967296);
+    },
+  });
+  try {
+    const snapshots = [];
+    for (const client of clients) {
+      service.handle(client, { action: 'create', maxPlayers: 4 });
+      service.handle(client, { action: 'start', fillBots: true });
+      const room = service.rooms.get(client.loveLetterRoomId);
+      assert(room.state);
+      snapshots.push({ turn: room.state.turn, deck: room.state.deck, hands: room.state.players.map(p => p.hand) });
+    }
+    assert.equal(streams, 2);
+    assert.deepEqual(snapshots[1], snapshots[0]);
+  } finally { service.stop(); }
 });

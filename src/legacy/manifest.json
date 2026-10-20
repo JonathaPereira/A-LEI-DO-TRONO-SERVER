@@ -9,7 +9,6 @@
     "noise-suppression.js",
     "splendor-data.js",
     "splendor-rules.js",
-    "love-letter-rules.js",
     "soundboard-client.js",
     "call-controls-layout.js"
   ],
