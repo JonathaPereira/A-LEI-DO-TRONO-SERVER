@@ -1,12 +1,11 @@
-Compartilhar PC Beta: atualize também o backend no Render. Sem SQL novo. Consulte COMPARTILHAR_PC_BETA.md no ZIP.
+M&N — frontend com instalador Windows 0.2.13
 
-M&N — frontend com instalador Windows 0.2.12
-
-1. Baixe MN-Trono-Frontend-0.2.12.zip da entrega validada no GitHub.
+1. Baixe MN-Trono-Frontend-0.2.13.zip da entrega validada no GitHub.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.2.12-Windows.exe
+   MN-Trono-0.2.13-Windows.exe
    latest.yml
-3. A revisão 0.2.12 exige redeploy do backend no Render para habilitar Compartilhar PC Beta. Não exige SQL novo.
+3. A integração do Nexus não exige SQL nem redeploy do backend.
+   Se ainda não aplicou o backend da 0.2.12, atualize-o para Compartilhar PC Beta.
    Se vier de uma versão anterior à 0.2.8, conclua também a configuração
    do GIPHY descrita no guia. O SQL de créditos continua no ZIP.
 4. Entre na pasta frontend pelo Git Bash e execute:
@@ -15,4 +14,6 @@ M&N — frontend com instalador Windows 0.2.12
 
 O instalador já acompanha o frontend. Preserve latest.yml e seu SHA-512.
 Não misture arquivos de entregas diferentes. Contas e preferências são mantidas.
-Consulte ATUALIZAR_WINDOWS_v0.2.12.md e PUBLICAR_SURGE_LEVE.md.
+Consulte ATUALIZAR_WINDOWS_v0.2.13.md e PUBLICAR_SURGE_LEVE.md.
+
+Nexus: a incorporação do jogo já está configurada. Não envie ZIP/PCK/WASM do Nexus ao Surge. Consulte INTEGRAR_NEXUS.md.

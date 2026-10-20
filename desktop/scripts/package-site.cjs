@@ -27,6 +27,7 @@ async function prepareSite({root=path.resolve(__dirname,'../..'),version,install
   await fs.writeFile(path.join(frontend,'index.html'),index.replace(/href="[^"]*MN-Trono-[^"/]+-Windows\.exe"/g,'href="'+url+'"').replace(/download="MN-Trono-[^"]+\.exe"/g,'download="'+filename+'"'));
   await fs.copyFile(path.join(root,'desktop/app/LEIA-ME-PUBLICAR.txt'),path.join(site,'LEIA-ME-PUBLICAR.txt'));
   await fs.copyFile(path.join(root,'PUBLICAR_SURGE_LEVE.md'),path.join(site,'PUBLICAR_SURGE_LEVE.md'));
+  await fs.copyFile(path.join(root,'INTEGRAR_NEXUS.md'),path.join(site,'INTEGRAR_NEXUS.md'));
   const numeric=v=>v.split('.').map(Number),compare=(a,b)=>{const x=numeric(a),y=numeric(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]-y[i];return 0;};
   await fs.copyFile(path.join(root,'ANALISE_SFU_E_JANELA_FLUTUANTE.md'),path.join(site,'ANALISE_SFU_E_JANELA_FLUTUANTE.md'));
   await fs.copyFile(path.join(root,'COMPARTILHAR_PC_BETA.md'),path.join(site,'COMPARTILHAR_PC_BETA.md'));

@@ -7,6 +7,7 @@ const {DesktopPreferences}=require('./preferences.cjs');
 const {DesktopActivity}=require('./activity.cjs');
 const {createNotifications}=require('./notifications.cjs');
 const {GameAssets}=require('./game-assets.cjs');
+const {createNexusLauncher}=require('./nexus.cjs');
 const {AudioPriority}=require('./audio-priority.cjs');
 const {RemoteInput}=require('./remote-input.cjs');
 const {ApplicationAudio}=require('./application-audio.cjs'),{createUpdates}=require('./updates.cjs');
@@ -98,6 +99,8 @@ async function start(){
   const workArea=screen.getPrimaryDisplay().workAreaSize;
   window=new BrowserWindow({title:'M&N · A Lei do Trono',icon:path.join(__dirname,'assets/icon.png'),width:Math.max(480,Math.min(1440,workArea.width)),height:Math.max(520,Math.min(960,workArea.height)),minWidth:480,minHeight:520,fullscreenable:true,show:false,backgroundColor:'#141727',webPreferences:{session:browserSession,preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
   window.on('ready-to-show',()=>window.show());
+  const nexus=createNexusLauncher({BrowserWindow,session,screen,dialog,parent:window,icon:path.join(__dirname,'assets/icon.png'),config:require(path.join(root,'nexus-config.js')),isQuitting:()=>quitting});
+  ipcMain.handle('mn:nexus',event=>{trusted(event);return nexus.open();});
   const notifications=createNotifications({Notification,window,activate:target=>{if(window.isDestroyed())return;window.show();if(window.isMinimized())window.restore();window.focus();window.webContents.send('mn:notification-click',target);}});
   ipcMain.handle('mn:notify',(event,value)=>{trusted(event);return notifications.notify(value);});
   app.on('will-quit',()=>notifications.dispose());
