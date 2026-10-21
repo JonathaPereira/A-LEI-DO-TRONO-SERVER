@@ -179,7 +179,7 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: autenticação, arquivos e serviço de Love Letter convertidos, na branch
+Checkpoint de trabalho: autenticação, arquivos, Love Letter e Azul convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
@@ -214,15 +214,24 @@ Stop limpa salas/participação e todos os timers, sem ações/broadcast tardios
 A fixture de embaralhamento usa a porta `loveLetterRandom` da composição, sem
 alterar exports ESM. O teste de nomes compartilhados também aponta para o módulo TS.
 
-Próximo recorte recomendado: `server/azul-service.js`, seguido de Splendor.
-Além de salas/timers/comandos, transferir RPC de ranking, persistência/retry e
-cancelamento; uma confirmação tardia após stop não deve reativar sala nem ranking.
-Preservar IDs idempotentes das partidas, exclusão de desistentes e estado pendente
-quando o ranking estiver indisponível. Os motores já estão tipados.
+`server/azul-service.js` foi removido. `azul-service.ts` possui a coordenação e
+`azul-protocol.ts` valida comandos/jogadas; `game-ranking.ts` possui HTTP privado,
+confirmação de gravação e readiness. Leitura de ranking reutiliza o protocolo puro
+do frontend, validando a página completa e descartando campos extras. `socket-command.ts`
+centraliza apenas a correlação limitada, compartilhada com Love Letter.
+Partida conserva ID idempotente e resultado calculado pelo servidor; retry manual
+cancela o timer anterior para manter uma tentativa agendada. Shutdown cancela RPC,
+salas e timers. Desconexão/troca de identidade suprime respostas tardias de ranking.
+Cada sala também possui seu fluxo de aleatoriedade, injetável na fábrica para testes.
+
+Próximo recorte recomendado: `server/splendor-service.js`. Reutilizar o transporte
+`game-ranking.ts` com `readSplendorRanking`, preservando projeções privadas por
+jogador, reservas cegas, pagamento/devolução de fichas, nobres e as opções atuais
+de bots. Aplicar a mesma posse de timers/RPC/retry sem duplicar o estado do jogo.
 
 Sequência restante, após esse recorte:
 
-1. `server/azul-service.js` e `splendor-service.js`:
+1. `server/splendor-service.js`:
    coordenação, timers, persistência e projeções privadas. Motores já são TS.
 2. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
    autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
@@ -236,7 +245,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 69 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 76 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -256,8 +265,13 @@ shutdown. Em 100 partidas completas, 5.148 jogadas, 601 avanços de rodada e 11.
 visões privadas foram idênticos ao serviço anterior. Partida completa no browser,
 fronteira nativa Electron e fluxo de jogos do pacote Windows existente passaram
 contra o backend atual. Nenhum instalador foi executado.
+Azul acrescenta sete regressões de fronteira, provider, retry e cancelamento.
+Em 100 partidas, 5.484 jogadas e 11.168 visões públicas foram idênticas ao serviço
+anterior. Partida completa nos dois layouts, visão portrait, Love Letter e a
+chamada com dois Electron reais passaram após a conversão.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
+Azul usa `artifacts/azul-service-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;

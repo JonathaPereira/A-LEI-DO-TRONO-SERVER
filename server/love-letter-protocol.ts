@@ -1,5 +1,7 @@
 import type { LoveLetterRoom, LoveLetterOpenRoom, LoveLetterMove } from '../src/types/love-letter';
 import { object } from './http-api.ts';
+import { readRequestId as requestId } from './socket-command.ts';
+export { requestId };
 
 export const loveLetterFailure = (code: string, message: string) =>
   Object.assign(Error(message), { code: 'LOVE_LETTER_' + code });
@@ -15,13 +17,6 @@ export type LoveLetterServerEvent =
   | { type: 'love-letter-rooms'; rooms: LoveLetterOpenRoom[]; resumeId: string | null }
   | { type: 'love-letter-left'; reason?: string }
   | { type: 'love-letter-error'; requestId?: string; code: string; message: string };
-export const requestId = (value: unknown): string | undefined =>
-  object(value) &&
-  typeof value.requestId === 'string' &&
-  value.requestId.length > 0 &&
-  value.requestId.length <= 128
-    ? value.requestId
-    : undefined;
 /** Structure is checked here; the authoritative rules validate moves after the revision check. */
 export function readLoveLetterCommand(value: unknown): LoveLetterCommand {
   const invalid = () => loveLetterFailure('ACTION', 'Opção inválida.');

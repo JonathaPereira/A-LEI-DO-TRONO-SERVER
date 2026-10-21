@@ -2143,6 +2143,18 @@ impede callbacks/novos comandos de publicarem estado. `loveLetterRandom` é a po
 opcional da composição para embaralhamento determinístico das fixtures; não há
 variável de ambiente de teste lida pelo serviço de produção.
 
+O backend de Azul usa `azul-service.ts` para coordenação, reconexão, bots e
+persistência da partida; `azul-protocol.ts` valida comandos e estrutura das jogadas
+antes do motor autoritativo. `game-ranking.ts` possui HTTP privado, timeout,
+cancelamento e readiness; o reader puro de ranking valida toda a página e remove
+campos extras. A partida mantém o ID idempotente entre tentativas e só inclui
+resultados calculados pelo motor, sem bots/desistentes. Retry manual substitui
+o timer anterior; desligar o serviço ou remover a sala impede confirmação/retry
+tardios. Pedidos de ranking pertencem à conexão e conferem novamente conta e
+expiração antes de enviar. `socket-command.ts` compartilha apenas a validação
+do ID de correlação entre domínios. A aleatoriedade pertence à sala, sem alterar
+o singleton de regras compartilhadas.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e
