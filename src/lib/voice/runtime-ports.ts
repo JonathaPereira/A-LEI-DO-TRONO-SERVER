@@ -35,7 +35,7 @@ type MeterSnapshot = ReturnType<ReturnType<typeof createSpeakingIndicators>['get
 type Sharing = ReturnType<typeof createScreenSharing>;
 type Call = ReturnType<typeof createVoiceCall>;
 
-/** Proven legacy inputs consumed by the call composition, not a declaration of the entire Window. */
+/** Inputs consumed by the call composition, not a declaration of the entire Window. */
 export interface VoiceRuntimePorts {
   TronoNetwork: NetworkClient;
   TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;

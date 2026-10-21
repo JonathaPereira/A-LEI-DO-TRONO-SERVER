@@ -52,10 +52,11 @@ O segundo comando inicia Next em `http://127.0.0.1:3000` e abre o Electron nessa
 origem. A interface procura o backend em `http://127.0.0.1:10000`. A origem local
 precisa estar em `AUTH_ALLOWED_ORIGINS`, como no exemplo.
 
-Páginas, componentes e estilos globais usam a atualização do Next. Controladores
-DOM podem exigir recarga completa: leia o guia de migração antes de introduzir
-estado React em uma área controlada por eles. Para editar `src/legacy/`, reinicie
-`desktop:dev` para preparar os arquivos de compatibilidade. Mudanças em
+Páginas, componentes e estilos globais usam a atualização do Next. Donos que
+duram pela página podem exigir recarga completa; mover um host deve preservar sua
+raiz React. Estilos em `src/styles/` ainda são preparados como arquivos estáticos:
+após editá-los, reinicie `desktop:dev` ou execute `npm run predev` e recarregue.
+Entradas clássicas de callback/worklets usam a mesma preparação. Mudanças em
 `electron/` exigem reabrir a aplicação; mudanças em C++ exigem recompilação.
 
 O modo de desenvolvimento aceita apenas uma origem HTTP em `127.0.0.1` com porta

@@ -531,6 +531,7 @@ export function createAccountSession(options: Options) {
       stopTimer();
       refreshPending = null;
       credentials = null;
+      state = Object.freeze({ ...state, user: null, guest: null });
       listeners.clear();
       resolveReady();
     },

@@ -3,11 +3,17 @@ type CallControlWindow = Window & {
   TronoCallToolbar?: { refresh(): void };
   TronoCallControlsLayout?: { refresh(): void };
 };
-const callControlWindow = window as unknown as CallControlWindow;
+const installed = new WeakMap<Window, () => void>();
 
 // Owns placement of the existing controls. Media and button actions stay with
 // their original controllers; this module never clones nodes or opens devices.
-callControlWindow.TronoCallControlsLayout = (() => {
+export function initializeCallControlLayout(target: Window) {
+  const previous = installed.get(target);
+  if (previous) return previous;
+  const callControlWindow = target as CallControlWindow,
+    document = target.document;
+  const observers: MutationObserver[] = [];
+  let disposed = false;
   const $ = (id: string) => document.getElementById(id);
   const homes = new Map<HTMLElement, Comment>();
   const controls = [
@@ -74,7 +80,7 @@ callControlWindow.TronoCallControlsLayout = (() => {
     const desktop = !!callControlWindow.TronoDesktop;
     const community = document.body.classList.contains('chat-only-active');
     const discord = document.body.dataset.appLayout === 'discord';
-    const sidebar = community && discord && innerWidth >= 1100;
+    const sidebar = community && discord && target.innerWidth >= 1100;
     const workspace = $('callWorkspace');
     if (workspace) workspace.dataset.controls = sidebar ? 'sidebar' : 'dock';
 
@@ -116,25 +122,54 @@ callControlWindow.TronoCallControlsLayout = (() => {
 
   // Register before desktop-shell/app-layout so homes always describe the HTML,
   // rather than a temporary location chosen by whichever layout ran first.
-  window.addEventListener('trono:ready', () => {
+  const bind = () => {
+    if (disposed || ready) return;
     toolbar = document.querySelector('#socialPanel .call-toolbar');
     for (const id of [...controls, 'communityToggle', 'voiceSettingsPanel']) remember($(id));
     for (const id of controls) {
       const node = $(id);
       if (!node || node.closest('[data-call-control-host]')) continue;
-      new MutationObserver(() => {
+      const observer = new MutationObserver(() => {
         decorate(node);
-      }).observe(node, { childList: true, subtree: true, characterData: true });
+      });
+      observer.observe(node, { childList: true, subtree: true, characterData: true });
+      observers.push(observer);
     }
     ready = true;
-    new MutationObserver(refresh).observe(document.body, {
+    const observer = new MutationObserver(refresh);
+    observer.observe(document.body, {
       attributes: true,
       attributeFilter: ['class', 'data-app-layout'],
     });
-    window.addEventListener('trono-call-change', refresh);
-    window.addEventListener('resize', refresh);
+    observers.push(observer);
+    target.addEventListener('trono-call-change', refresh);
+    target.addEventListener('resize', refresh);
     refresh();
-  });
-
-  return { refresh };
-})();
+  };
+  const facade = { refresh };
+  callControlWindow.TronoCallControlsLayout = facade;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    ready = false;
+    target.removeEventListener('trono:ready', bind);
+    target.removeEventListener('trono-call-change', refresh);
+    target.removeEventListener('resize', refresh);
+    target.removeEventListener('pagehide', dispose);
+    for (const observer of observers) observer.disconnect();
+    observers.length = 0;
+    for (const [node, marker] of homes) {
+      if (marker.isConnected) marker.after(node);
+      marker.remove();
+    }
+    homes.clear();
+    toolbar = null;
+    if (callControlWindow.TronoCallControlsLayout === facade)
+      delete callControlWindow.TronoCallControlsLayout;
+    if (installed.get(target) === dispose) installed.delete(target);
+  };
+  target.addEventListener('trono:ready', bind, { once: true });
+  target.addEventListener('pagehide', dispose, { once: true });
+  installed.set(target, dispose);
+  return dispose;
+}

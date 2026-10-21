@@ -849,27 +849,25 @@ conservando o botão e o handler em modo compacto. `desktop-shell.js` e
 `desktop-updates.js` saíram dos fontes/manifesto. Estado e handlers de clipes que
 nunca eram ativados pelo shell foram retirados, sem habilitar a função.
 
-## Compatibilidade durante a conversão
+## Composição e recursos do frontend
 
-`src/legacy/manifest.json` define a ordem dos estilos e controladores.
-`scripts/prepare-renderer.cjs` prepara JS/CSS públicos antes de iniciar ou compilar
-Next. Os arquivos copiados são descartáveis, com um único fonte. Após compilar,
-a preparação remove JS/CSS gerados na raiz de `public/` que perderam seu fonte;
-isso impede incluir controladores retirados no próximo pacote.
+`src/app/application-runtime.tsx` compõe os donos por imports diretos depois da
+hidratação, fora da fase de commit do React. Instala dependências antes dos seus
+consumidores e dispara `trono:ready` uma vez, depois de preparar os hosts. Não há
+carregador dinâmico de controladores nem dependência de `DOMContentLoaded`.
 
-`legacy-runtime.tsx` carrega os controladores uma vez, após hidratação, e dispara
-`trono:ready`. Isso substitui a dependência de `DOMContentLoaded`, que pode ocorrer
-antes da hidratação. Worklets mantêm os caminhos relativos existentes.
+`src/styles/` agrupa os estilos por domínio; `manifest.json` registra sua precedência
+explícita. `scripts/prepare-renderer.cjs` valida fontes e nomes de saída, compila
+callback/worklets e copia os estilos para os mesmos caminhos públicos anteriores.
+Só depois do sucesso remove JS/CSS gerados obsoletos da raiz de public. Saídas são
+descartáveis; o conteúdo e a ordem dos 33 estilos foram preservados na mudança.
+A separação em pastas não consolida ainda as sobreposições históricas de CSS.
 
-Os controladores podem mover ou reescrever seus elementos. Enquanto um controlador
-for dono de uma subárvore, evite renderizações React reativas dentro dela. Para
-converter um fluxo, transfira estado e eventos juntos e remova o listener antigo.
-Renomear extensões não constitui uma conversão de arquitetura.
-
-O nome `TronoFiles` é compatibilidade para o cliente tipado. Chamadores legados de
-`renderAttachment` fornecem um host vazio; `legacy-attachments.tsx` monta nele o
-mesmo componente React e desmonta a raiz quando o host sai do documento. O observer
-existe somente enquanto há raízes ativas. `legacy/profile-files.js` foi removido.
+Hosts móveis continuam pertencendo ao domínio que os renderiza. O layout move o
+host completo e preserva a raiz React e os recursos emprestados. `src/legacy/`,
+seu manifesto e `legacy-runtime.tsx` foram removidos. A ponte `renderAttachment`
+também foi apagada após confirmar ausência de consumidores; anexos usam
+`AttachmentContent` diretamente. `TronoFiles` encaminha ao mesmo cliente tipado.
 Editor, biblioteca de arquivos, miniperfis, decorações, contas do criador e navegação
 das configurações web têm donos tipados e interfaces React.
 
@@ -1065,6 +1063,11 @@ e sua entrada no manifesto foram removidos.
 
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.
+É importado pela composição antes do shell desktop/layout, sem script clássico.
+A instalação é única; descarte desliga observers/listeners, restaura os hosts
+emprestados e retira os marcadores. A mesma janela pode instalar um novo dono sem
+reativar listeners antigos. Conta mantém uma fachada inerte no fechamento da
+página para que os consumidores terminem sua limpeza sem acessar um global ausente.
 `lib/voice/microphone.ts` possui captura de microfone, troca de entrada, mute físico,
 seleção entre trilha bruta/processada e descarte. A geração da chamada e a do pedido
 invalidam permissões, processadores e publicações antigas. O módulo acompanha também

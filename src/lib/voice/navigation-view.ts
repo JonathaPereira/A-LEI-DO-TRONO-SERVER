@@ -9,7 +9,7 @@ interface NavigationViewOptions {
   closeSettings(): void;
   openMosaic(): void;
 }
-/** Compatibility for outer surfaces still positioned by legacy layouts. Buttons are React-owned. */
+/** Projects outer surfaces positioned by layout owners. Buttons are React-owned. */
 export function createCallNavigationView(options: NavigationViewOptions) {
   const { document: doc, navigation: client, window: viewport } = options;
   const get = (id: string) => doc.getElementById(id);

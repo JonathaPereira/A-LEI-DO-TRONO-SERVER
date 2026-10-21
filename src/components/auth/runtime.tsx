@@ -199,7 +199,8 @@ export function initializeAuth(target: Window) {
     forms.dispose();
     session.dispose();
     flushSync(() => root.unmount());
-    if (runtime.TronoAuth === facade) delete runtime.TronoAuth;
+    // Account is a dependency of later pagehide listeners and async call teardown.
+    // Keep the inert facade until the document dies or a new installation replaces it.
     if (installed.get(target) === dispose) installed.delete(target);
   };
   target.addEventListener('trono:ready', bind, { once: true });

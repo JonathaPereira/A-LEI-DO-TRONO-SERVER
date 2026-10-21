@@ -33,7 +33,7 @@ export async function openAttachmentImage(client: FilesClient, id: string): Prom
   update(Object.freeze({ client, id, epoch, url }));
 }
 
-/** One viewer for chat and legacy attachment hosts; identity/deletion invalidate the selection. */
+/** One viewer for attachment surfaces; identity/deletion invalidate the selection. */
 export function AttachmentImageViewer() {
   const selected = useSyncExternalStore(
     (listener) => {

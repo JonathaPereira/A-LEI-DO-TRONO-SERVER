@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import manifest from '@/legacy/manifest.json';
+import manifest from '@/styles/manifest.json';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <Script src="/auth-boot.js" strategy="beforeInteractive" />
         {manifest.styles.map((href) => (
-          <link key={href} rel="stylesheet" href={'/' + href} />
+          <link key={href} rel="stylesheet" href={'/' + href.split('/').at(-1)} />
         ))}
       </head>
       <body>{children}</body>

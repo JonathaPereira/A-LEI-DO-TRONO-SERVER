@@ -1,4 +1,4 @@
-/* Global additions belong here. Existing styles retain their order in legacy/manifest.json. */
+/* Shared Next globals. Domain stylesheet precedence is explicit in styles/manifest.json. */
 html {
   color-scheme: dark;
 }

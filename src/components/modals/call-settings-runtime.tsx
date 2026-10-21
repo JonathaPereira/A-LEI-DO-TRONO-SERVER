@@ -17,7 +17,7 @@ export function prepareCallSettings(target: Window) {
   return runtime.TronoCallSettings;
 }
 
-/** Converts only the settings shell; borrowed legacy bodies never become React children. */
+/** Owns the settings shell; borrowed domain hosts never become React children. */
 export function initializeCallSettings(target: Window): void {
   const runtime = target as unknown as SettingsRuntime;
   if (installed.has(target)) return;

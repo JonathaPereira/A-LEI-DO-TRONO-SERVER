@@ -190,6 +190,15 @@ test(
         assert.equal(await page.evaluate(() => sessionStorage.getItem('mn-auth-session-v1')), null);
       });
       assert.deepEqual(errors, []);
+      await page.evaluate(async () => {
+        dispatchEvent(new Event('pagehide'));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      assert.deepEqual(
+        await page.evaluate(() => ({ user: window.TronoAuth.user, guest: window.TronoAuth.guest })),
+        { user: null, guest: null },
+      );
+      assert.deepEqual(errors, []);
     } finally {
       await browser?.close();
       await fixture?.stop();

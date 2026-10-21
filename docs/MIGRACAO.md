@@ -100,6 +100,12 @@ recursos em `public/roguelite/` foram preservados.
   cancelam trabalho substituído. Diálogos estáticos anteriores foram apagados.
   Inicialização sai da fase de commit do React antes de montar raízes de domínio;
   não depende mais da espera acidental pelo download de um script.
+- `src/legacy/`: pasta removida. A composição em `src/app/application-runtime.tsx`
+  importa o layout de controles diretamente e não carrega scripts de domínio.
+  Estilos foram para `src/styles/` por domínio, com 33 arquivos/770.491 bytes e
+  precedência idênticos. Isso ainda não consolida sobreposições históricas de CSS.
+  A ponte de anexos sem consumidores foi apagada; layout de controles descarta
+  observers/listeners e restaura os nós emprestados.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -107,16 +113,9 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 
 ## Trabalho restante
 
-### 1. Consolidar a composição do frontend
-
-Não há mais controladores `.js` em `src/legacy/`. Os únicos scripts do manifesto,
-`auth-boot.js` e `call-controls-layout.js`, são gerados de TypeScript. Próximo
-recorte: importar o dono do layout de controles diretamente, dar descarte aos seus
-observers/listeners e substituir `legacy-runtime.tsx` por composição explícita em
-`src/app/`. O boot antecipado de callback deve continuar beforeInteractive.
-`scripts/prepare-renderer.cjs` compila entradas clássicas/worklets e poda assets
-estáticos obsoletos somente após compilação bem-sucedida.
-
+Não há mais `src/legacy/` nem controladores de domínio carregados por script.
+O boot antecipado de callback continua beforeInteractive e os worklets mantêm
+seus caminhos. Estilos ainda têm preparação estática conforme o guia desktop.
 A API
 `TronoApplicationAudio.cancel(id)` cancela somente o preparo/grafo desse job;
 não descarta o dono global nem as outras capturas.
@@ -126,7 +125,7 @@ C++ de áudio/atividade. O modo de desenvolvimento procurava um diretório acima
 do repositório; agora usa o artefato do mesmo build configurado no pacote.
 Uma regressão compara os dois consumidores à configuração do electron-builder.
 
-### 2. Backend e contratos externos
+### 1. Backend e contratos externos
 
 - Extrair regras de A Lei do Trono e coordenação de canais de `server/runtime.cjs`,
   preservando `createApplication()` e o isolamento por instância.
@@ -136,12 +135,13 @@ Uma regressão compara os dois consumidores à configuração do electron-builde
 - `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
   existentes estritos por estarem na mesma pasta.
 
-### 3. Estilos e limpeza final
+### 2. Estilos e limpeza final
 
 Consolidar CSS por domínio depois de retirar os respectivos controladores.
-A ordem atual contém sobreposições necessárias para estados de chamada fora da
-vista inicial. Não apagar `src/legacy/` inteira quando seus scripts terminarem:
-a pasta ainda contém estilos utilizados. Remover adaptadores apenas sem consumidores.
+A ordem em `src/styles/manifest.json` contém sobreposições necessárias para estados
+de chamada fora da vista inicial. As pastas já estão organizadas, mas ainda é
+necessário consolidar regras por domínio, validar a cascata e avaliar importação
+direta pelo Next. Remover adaptadores apenas sem consumidores.
 
 `public/` na raiz contém também recursos originais. Somente JS/CSS gerados na raiz,
 `out/`, `.next/` e `artifacts/` são saídas regeneráveis; não tratar todos os assets
@@ -149,7 +149,7 @@ como temporários. Licenças, créditos, modelos de áudio, SQL, manuais distrib
 e recursos dos jogos permanecem necessários. Evidências em `artifacts/` podem ser
 apagadas quando não forem mais úteis; builds/testes as recriam conforme necessário.
 
-### 4. Instalação nova do banco
+### 3. Instalação nova do banco
 
 Documentar e testar uma ordem única para SQL legados e migrações datadas em uma
 base vazia. Não reaplicar esse roteiro em bases existentes. Preservar RLS,
@@ -198,6 +198,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Soundboard | 17 regressões do cliente e dois contratos HTTP/PCM passaram. 48 comparações/29.201.262 bytes de WAV idênticos ao encoder anterior. Dez verificações de navegador/shell, chamada completa no Electron e pacote passaram; renderer nativo também decodificou 15 s estéreo a 48 kHz, preservando níveis/canais com tolerância de quantização. |
 | Boot da conta | Seis modelos de callback/HTML e sete verificações de navegador passaram: cadastro, confirmação de uso único, login/logout, recuperação, erros e restauração de convidado. Requisições de recursos não incluem tokens no referrer. Fluxo nativo de cabeçalho/captura/PCM/permissões passou. |
 | Conta tipada | 34 modelos de transporte/sessão/formulários/callback/HTML e autenticação HTTP/WS passaram. Sete verificações de conta e oito de permissões/comunidade/arquivos passaram no navegador. Electron real validou criptografia, restauração sem cache da aba, remoção de “lembrar”, login e logout no botão movido para configurações. Chamada completa com dois Electron, pacote Windows e `npm test` completo passaram. |
+| Composição e estilos | 28 verificações de navegador passaram, incluindo descarte/reinstalação do layout, hosts/trilhas preservados e fechamento com consumidores ativos. Os 33 estilos/770.491 bytes mantêm conteúdo e precedência idênticos. Tipagem, formatação, build, modelos de conta e `npm test` completo passaram; conta criptografada e pacote passaram no Electron real. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`

@@ -77,14 +77,15 @@ test(
       assert(saved.session.refresh_token);
       const bytes = await fs.readFile(path.join(directory, 'remembered-session.bin'));
       assert(!bytes.includes(Buffer.from(saved.session.refresh_token)));
-      await page.evaluate(() => sessionStorage.clear());
+      // Clear in the new document: a late role response in the old page may
+      // legitimately persist its tab snapshot before navigation commits.
+      await page.addInitScript(() => sessionStorage.removeItem('mn-auth-session-v1'));
       await page.reload({ waitUntil: 'domcontentloaded' });
       await ready();
       assert.equal(await page.evaluate(() => window.TronoAuth.user.nickname), 'Conta Nativa');
       await expect(page.locator('#authDialog')).toBeHidden();
       await page.evaluate(() => window.TronoAuth.setRemember(false));
       assert.equal(await page.evaluate(() => window.TronoDesktop.readSession()), null);
-      await page.evaluate(() => sessionStorage.clear());
       await page.reload({ waitUntil: 'domcontentloaded' });
       await ready();
       assert.equal(await page.evaluate(() => window.TronoAuth.user), null);

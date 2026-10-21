@@ -8,7 +8,7 @@ const { test } = require('node:test'),
   os = require('node:os');
 const { _electron, expect } = require('@playwright/test');
 const { killTestApp, closeTestApp } = require('./desktop-test-close');
-const legacyManifest = require('../src/legacy/manifest.json');
+const styleManifest = require('../src/styles/manifest.json');
 test(
   'compiled Windows app starts with its own game, interface and RNNoise resources',
   { timeout: 130000 },
@@ -164,7 +164,7 @@ test(
               };
             }),
           ),
-        [...legacyManifest.scripts, ...legacyManifest.styles].map((file) => '/' + file),
+        ['/auth-boot.js', ...styleManifest.styles.map((file) => '/' + path.posix.basename(file))],
       );
       for (const resource of resources) {
         assert.equal(resource.status, 200, resource.url);

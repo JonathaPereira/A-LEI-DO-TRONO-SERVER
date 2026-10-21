@@ -12,6 +12,7 @@ import { initializeNoiseProcessors } from '../lib/voice/noise-runtime';
 import { initializeAudio } from '../components/audio/runtime';
 import { initializeSoundboard } from '../components/soundboard/runtime';
 import { initializeAuth } from '../components/auth/runtime';
+import { initializeCallControlLayout } from '../lib/voice/control-layout';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
@@ -41,7 +42,6 @@ import { initializeLoveLetter } from '../components/games/love-letter-runtime';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
 
 import { useEffect, useState } from 'react';
-import manifest from './manifest.json';
 import {
   initializeCallSettings,
   prepareCallSettings,
@@ -50,7 +50,6 @@ import { initializeNetwork } from '../lib/socket/browser';
 import { initializeChatComposer, initializeChatMessages } from '../lib/chat/browser';
 import { initializeChannels } from '../lib/channels/browser';
 import { initializeFiles } from '../lib/files/browser';
-import { installLegacyAttachments } from '../components/files/legacy-attachments';
 import { initializeThroneHistory } from '../components/games/throne-history-runtime';
 import { initializeThroneEffects } from '../components/games/throne-effects-runtime';
 import { initializeThroneEvents } from '../components/games/throne-events-runtime';
@@ -71,35 +70,22 @@ import { initializeCallStage } from '../components/voice/call-stage-runtime';
 
 let startup: Promise<void> | undefined;
 
-function loadScript(filename: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = '/' + filename;
-    script.async = false;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Não foi possível carregar ${filename}.`));
-    document.head.append(script);
-  });
-}
-
 /**
- * Temporary adapter for the DOM controllers. React hydrates the screens first;
- * controllers then own their existing nodes until the next full navigation.
- * Do not put React state inside a subtree that a controller moves or rewrites.
+ * Compose page-scoped owners after hydration, then bind them once in dependency order.
+ * Movable hosts preserve their React roots, controls and borrowed media resources.
  */
-export function LegacyRuntime() {
+export function ApplicationRuntime() {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     // Leave React's effect commit before any domain root uses flushSync.
-    startup ??= Promise.resolve().then(async () => {
+    startup ??= Promise.resolve().then(() => {
       initializeAudio(window);
       initializePersonalPreferences(window);
       initializeNetwork(window);
       initializeFiles(window);
       initializeProfileViewer(window);
       initializeFileLibrary(window);
-      installLegacyAttachments(window);
       initializeChatComposer(window);
       initializeChatMessages(window);
       initializeChannels(window);
@@ -135,26 +121,22 @@ export function LegacyRuntime() {
       initializeChannelManagement(window);
       initializeSoundboard(window);
       initializeAppearance(window);
-      for (const filename of manifest.scripts) {
-        if (filename !== 'auth-boot.js') await loadScript(filename);
-        // Profile hosts and remaining game bodies exist before settings mount;
-        // activity/notifications then bind to the mounted slots, matching their boot order.
-        if (filename === 'call-controls-layout.js') {
-          initializeDesktopShell(window);
-          initializeCourtFullscreen(window);
-          window.addEventListener(
-            'trono:ready',
-            () => {
-              initializeCallSettings(window);
-              initializeConnectionDiagnostics(window);
-            },
-            { once: true },
-          );
-          initializeAppLayout(window);
-          initializeDesktopActivity(window);
-          initializeNotifications(window);
-        }
-      }
+      // Capture homes before shell/layout move the same controls. Settings bind
+      // after profile/game hosts exist and before activity/notification slots.
+      initializeCallControlLayout(window);
+      initializeDesktopShell(window);
+      initializeCourtFullscreen(window);
+      window.addEventListener(
+        'trono:ready',
+        () => {
+          initializeCallSettings(window);
+          initializeConnectionDiagnostics(window);
+        },
+        { once: true },
+      );
+      initializeAppLayout(window);
+      initializeDesktopActivity(window);
+      initializeNotifications(window);
       initializeAzul(window);
       initializeSplendor(window);
       initializeLoveLetter(window);

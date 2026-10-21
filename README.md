@@ -34,15 +34,17 @@ Para desenvolvimento com atualização ao salvar, veja
 ```text
 src/app/                   Página, layout e estilos globais do Next.js
 src/components/chat/       Mensagens, painel e compositor React
+src/components/auth/       Formulários de conta e convidado
 src/components/channels/   Canais e presença
 src/components/voice/      Painel de chamada
-src/components/modals/     Autenticação, perfis e configurações
+src/components/modals/     Perfis, mídia e configurações
 src/components/games/      Telas dos jogos existentes
 src/components/navigation/ Navegação e avisos
-src/lib/socket/            Comandos tipados usados pelo compositor
-src/lib/voice/             Organização dos controles de chamada
+src/lib/socket/            Transporte, comandos e estado compartilhado
+src/lib/auth/              Sessão, renovação e validação de conta
+src/lib/voice/             Captura, WebRTC e ciclo de vida da chamada
 src/types/                 Tipos do domínio
-src/legacy/                Controladores DOM ainda em conversão e estilos existentes
+src/styles/                Estilos por domínio e ordem de precedência
 server/                    HTTP, WebSocket, canais, persistência e jogos
   app.ts                   Composição tipada, reutilizável nos testes
   index.ts                 Porta, entrada do processo e encerramento
@@ -63,10 +65,10 @@ locais. Edite os fontes em `src/`; os arquivos gerados não são versionados.
 
 ## Estado da migração
 
-As telas são TSX e o desktop usa a exportação estática do Next. O compositor
-trata os eventos em React; anexos, mídia, rede e jogos ainda usam controladores
-de compatibilidade. A conversão desses controladores para módulos TypeScript
-independentes **ainda está em andamento**.
+O frontend usa módulos TypeScript e interfaces React; o desktop usa a exportação
+estática do Next. `src/legacy/` foi removida. Backend, validação dos contratos
+restantes e consolidação do CSS **ainda estão em andamento**. Fachadas `Trono*`
+encaminham aos donos existentes, preservando um socket e os recursos de mídia.
 
 O mapa de responsabilidades está em [Arquitetura](docs/ARQUITETURA.md).
 O que falta e o próximo trabalho estão em [Migração](docs/MIGRACAO.md),

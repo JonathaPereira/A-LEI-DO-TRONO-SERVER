@@ -33,7 +33,7 @@ import { RogueliteScreen } from '@/components/games/roguelite-screen';
 import { AzulScreen } from '@/components/games/azul-screen';
 import { SplendorScreen } from '@/components/games/splendor-screen';
 import { LoveLetterScreen } from '@/components/games/love-letter-screen';
-import { LegacyRuntime } from '@/legacy/legacy-runtime';
+import { ApplicationRuntime } from '@/app/application-runtime';
 import { AttachmentImageViewer } from '@/components/files/image-viewer';
 
 export function Application() {
@@ -75,7 +75,7 @@ export function Application() {
       <SplendorScreen />
       <LoveLetterScreen />
       <AttachmentImageViewer />
-      <LegacyRuntime />
+      <ApplicationRuntime />
     </>
   );
 }

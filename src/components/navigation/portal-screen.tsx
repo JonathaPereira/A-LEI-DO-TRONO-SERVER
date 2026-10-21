@@ -1,4 +1,4 @@
-/** Stable host: the portal runtime mounts its React controls before legacy audio/auth bind. */
+/** Stable host: portal controls mount before account and audio owners bind. */
 export function PortalScreen() {
   return (
     <section

@@ -5,21 +5,21 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const source = path.join(root, 'src/legacy');
+const source = path.join(root, 'src/styles');
 const target = path.join(root, 'public');
+const manifest = require('../src/styles/manifest.json');
 
 // Every root JS/CSS in public is generated; keep only current sources and typed outputs.
-const outputs = new Map(
-  fs
-    .readdirSync(source, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /\.(js|css)$/.test(entry.name))
-    .map((entry) => [entry.name, path.join(source, entry.name)]),
-);
+const outputs = new Map();
+for (const filename of manifest.styles) {
+  const input = path.resolve(source, filename),
+    output = path.basename(filename);
+  if (!input.startsWith(source + path.sep) || !filename.endsWith('.css') || outputs.has(output))
+    throw Error('Invalid or duplicate stylesheet: ' + filename);
+  if (!fs.statSync(input).isFile()) throw Error('Missing stylesheet: ' + filename);
+  outputs.set(output, input);
+}
 outputs.set('auth-boot.js', path.join(root, 'artifacts/renderer/lib/auth/callback-boot.js'));
-outputs.set(
-  'call-controls-layout.js',
-  path.join(root, 'artifacts/renderer/lib/voice/control-layout.js'),
-);
 outputs.set(
   'application-audio-worklet.js',
   path.join(root, 'artifacts/renderer/lib/voice/worklets/application-audio.js'),
@@ -43,4 +43,4 @@ for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
     fs.unlinkSync(path.join(target, entry.name));
 }
 for (const [filename, input] of outputs) fs.copyFileSync(input, path.join(target, filename));
-console.log('Renderer compatibility assets prepared.');
+console.log('Renderer styles, callback boot and audio worklets prepared.');

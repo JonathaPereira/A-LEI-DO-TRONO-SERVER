@@ -131,7 +131,7 @@ export function DesktopCallInfo({ client }: { client: DesktopShell }) {
     </div>
   );
 }
-/** The legacy soundboard keeps the outer button/action; React owns only its label. */
+/** The soundboard action bridge keeps its outer button; React owns its label. */
 export function DesktopEffectsLabel() {
   const drawing = <path d="M3 9v6m4-9v12m5-16v20m5-16v12m4-9v6" />;
   return (
