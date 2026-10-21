@@ -14,7 +14,7 @@ window.TronoNotifications=(()=>{
   async function notify({key,title,body='',target,mention=false,direct=false,request=false}){
     if(!allowed(target,{mention,direct,request}))return;
     const payload={key:account+':'+key,title,body:body.slice(0,220),target:{...target,accountId:account}};
-    if(window.TronoDesktop?.notify){try{await window.TronoDesktop.notify(payload);}catch{}return;}
+    if(window.TronoDesktop?.notify){if(!prefs().get('windowsNotifications',true))return;try{await window.TronoDesktop.notify(payload);}catch{}return;}
     if(document.hasFocus()&&document.visibilityState==='visible')return;
     if(window.Notification?.permission==='granted'){const notice=new Notification(title,{body:payload.body,tag:payload.key,icon:'assets/throne.png'});notice.onclick=()=>{window.focus();void navigate(payload.target);notice.close();};}
   }
@@ -32,6 +32,22 @@ window.TronoNotifications=(()=>{
     const pane=document.createElement('section');pane.className='voice-settings-pane';pane.dataset.settingsPanel='notifications';pane.hidden=true;pane.id='notificationSettings';button.setAttribute('aria-controls',pane.id);pane.setAttribute('role','tabpanel');
     pane.innerHTML='<h2>Notificações</h2><label class="social-setting">Avisos de mensagens<select id="notificationMode"><option value="mentions">Menções, amigos e mensagens privadas</option><option value="all">Todas as mensagens</option><option value="off">Desligados</option></select></label><p class="appearance-help">Mensagens privadas também aparecem em avisos compactos com o ícone de quem enviou. Em segundo plano, você recebe avisos do sistema. Use @apelido para mencionar alguém. Os contadores continuam funcionando com avisos desligados.</p><label class="social-setting">Silenciar um canal<select id="notificationChannel"></select></label><label class="auth-check"><input id="notificationChannelMute" type="checkbox"> Não receber avisos deste canal</label><button id="notificationPermission" class="secondary-button" type="button">Ativar avisos neste navegador</button><p id="notificationPermissionStatus" role="status" class="appearance-help"></p>';
     tabs.append(button);host.append(pane);
+    if(window.TronoDesktop?.notify){
+      const windows=document.createElement('div');
+      windows.className='windows-notification-settings';
+      windows.innerHTML='<label class="auth-check"><input id="windowsNotifications" type="checkbox"> Notificações do Windows</label><p class="appearance-help">Receba avisos quando o Trono estiver minimizado ou em segundo plano. Escolha “Todas as mensagens” acima para incluir mensagens comuns dos canais. O Windows pode silenciar avisos no modo Não incomodar.</p><button id="testWindowsNotification" class="secondary-button" type="button">Testar notificação do Windows</button><p id="windowsNotificationStatus" class="appearance-help" role="status"></p>';
+      pane.append(windows);
+      document.getElementById('windowsNotifications').onchange=e=>prefs().set('windowsNotifications',e.target.checked);
+      document.getElementById('testWindowsNotification').onclick=async()=>{
+        const status=document.getElementById('windowsNotificationStatus');
+        if(!account){status.textContent='Entre na sua conta para testar.';return;}
+        if(!prefs().get('windowsNotifications',true)){status.textContent='Ative Notificações do Windows para testar.';return;}
+        try{
+          const result=await window.TronoDesktop.notify({key:account+':preview:'+Date.now(),title:'M&N · Notificações ativadas',body:'As mensagens permitidas aparecerão aqui quando o Trono estiver em segundo plano.',preview:true,target:{type:'friends',id:account,accountId:account}});
+          status.textContent=result?.shown?'Aviso enviado ao Windows. Se não apareceu, confira Não incomodar e as permissões de notificação do M&N.':result?.reason==='limited'?'Aguarde um minuto antes de testar novamente.':'O Windows não disponibilizou as notificações neste dispositivo.';
+        }catch{status.textContent='Não foi possível enviar o aviso ao Windows.';}
+      };
+    }
     document.getElementById('notificationMode').onchange=e=>prefs().set('notifications',e.target.value);
     document.getElementById('notificationChannel').onchange=e=>document.getElementById('notificationChannelMute').checked=muted(e.target.value);
     document.getElementById('notificationChannelMute').onchange=e=>mute(document.getElementById('notificationChannel').value,e.target.checked);
@@ -39,7 +55,7 @@ window.TronoNotifications=(()=>{
     document.getElementById('notificationPermission').onclick=async()=>{if(!window.Notification)return;const answer=await Notification.requestPermission();document.getElementById('notificationPermissionStatus').textContent=answer==='granted'?'Avisos ativados.':'Avisos não foram permitidos. Você pode revisar a permissão nas configurações do navegador.';};
     sync();
   }
-  function sync(){const next=window.TronoAuth.user?.id||null;if(account!==next){account=next;counts.clear();seen.clear();}const mode=document.getElementById('notificationMode');if(mode)mode.value=prefs().get('notifications','mentions');render();}
+  function sync(){const next=window.TronoAuth.user?.id||null;if(account!==next){account=next;counts.clear();seen.clear();}const mode=document.getElementById('notificationMode');if(mode)mode.value=prefs().get('notifications','mentions');const windows=document.getElementById('windowsNotifications');if(windows)windows.checked=prefs().get('windowsNotifications',true);render();}
   window.addEventListener('DOMContentLoaded',()=>{
     installSettings();window.TronoDesktop?.onNotificationClick?.(target=>void navigate(target));
     window.TronoNetwork.onMessage(event=>{
@@ -52,7 +68,7 @@ window.TronoNotifications=(()=>{
     });
     const channelsHost=document.getElementById('chatChannelList'),textHost=document.getElementById('textChannelList');for(const host of [channelsHost,textHost])new MutationObserver(()=>{for(const el of host.children){const id=el.dataset.chatChannel;if(id)el.classList.toggle('channel-muted',muted(id));}}).observe(host,{childList:true});
     for(const type of ['focus','pointerdown'])window.addEventListener(type,()=>{if(visibleChannel(window.TronoNetwork.currentRoom))channelRead(window.TronoNetwork.currentRoom);});
-    window.addEventListener('trono-auth-change',sync);window.addEventListener('trono-personal-change',event=>{if(event.detail.key==='notifications'||event.detail.key.startsWith('mute:'))sync();});
+    window.addEventListener('trono-auth-change',sync);window.addEventListener('trono-personal-change',event=>{if(['notifications','windowsNotifications'].includes(event.detail.key)||event.detail.key.startsWith('mute:'))sync();});
   });
   return {notify,allowed,muted,mute,channelRead,render};
 })();

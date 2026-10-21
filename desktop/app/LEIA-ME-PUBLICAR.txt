@@ -1,8 +1,8 @@
-M&N — frontend com instalador Windows 0.2.14
+M&N — frontend com instalador Windows 0.2.15
 
-1. Baixe MN-Trono-Frontend-0.2.14.zip da entrega validada no GitHub.
+1. Baixe MN-Trono-Frontend-0.2.15.zip da entrega validada no GitHub.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.2.14-Windows.exe
+   MN-Trono-0.2.15-Windows.exe
    latest.yml
 3. A integração do Nexus não exige SQL nem redeploy do backend.
    Se ainda não aplicou o backend da 0.2.12, atualize-o para Compartilhar PC Beta.
@@ -14,6 +14,6 @@ M&N — frontend com instalador Windows 0.2.14
 
 O instalador já acompanha o frontend. Preserve latest.yml e seu SHA-512.
 Não misture arquivos de entregas diferentes. Contas e preferências são mantidas.
-Consulte ATUALIZAR_WINDOWS_v0.2.14.md e PUBLICAR_SURGE_LEVE.md.
+Consulte ATUALIZAR_WINDOWS_v0.2.15.md e PUBLICAR_SURGE_LEVE.md.
 
 Nexus: a incorporação do jogo já está configurada. Não envie ZIP/PCK/WASM do Nexus ao Surge. Consulte INTEGRAR_NEXUS.md.

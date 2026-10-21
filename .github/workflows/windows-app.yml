@@ -157,6 +157,8 @@ jobs:
           Remove-Item Env:QA_NATIVE
       - name: Verify Nexus integration and isolated game window
         run: node --test tests/nexus.js tests/nexus-browser.js
+      - name: Verify Windows notices, call alert settings and PC control alignment
+        run: node --test tests/desktop-notifications.js tests/desktop-notices-controls-browser.js
       - name: Verify native roguelite frame before packaging
         shell: pwsh
         run: |

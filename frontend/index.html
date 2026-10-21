@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="call-scene.css?v=098desktop016" />
   <link rel="stylesheet" href="court.css?v=100court" />
   <link rel="stylesheet" href="chat-moderation.css?v=101layouts" />
-  <link rel="stylesheet" href="app-layout.css?v=102voicepanel" />
+  <link rel="stylesheet" href="app-layout.css?v=215notices" />
   <link rel="stylesheet" href="games.css?v=106market" />
   <link rel="stylesheet" href="azul-art.css?v=105artwork" />
   <link rel="stylesheet" href="roguelite-host.css?v=107cinzas" />
@@ -38,11 +38,11 @@
   <link rel="stylesheet" href="voice-reception.css?v=111voice">
   <link rel="stylesheet" href="court-display.css?v=112tabletop">
   <link rel="stylesheet" href="tabletop-refinements.css?v=119polish">
-  <link rel="stylesheet" href="call-workspace.css?v=119polish">
+  <link rel="stylesheet" href="call-workspace.css?v=215notices">
   <link rel="stylesheet" href="member-profile.css?v=115workspace">
   <link rel="stylesheet" href="profile-media.css?v=120giphy" />
   <link rel="stylesheet" href="call-floating.css?v=122sfufloating">
-  <link rel="stylesheet" href="remote-pc.css?v=124coop">
+  <link rel="stylesheet" href="remote-pc.css?v=215notices">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"><span>♛</span><span>✦</span><span>⚜</span><span>✧</span><span>♜</span><span>✦</span></div>
@@ -325,7 +325,8 @@
               <label class="mn-gain-label"><span>Áudio de saída</span><output id="outputGainValue">100%</output><input id="outputGainSlider" type="range" min="0" max="300" step="5" value="100" /></label>
               <p>Volumes individuais de outros usuários aparecem nos participantes quando você entra na chamada.</p>
             </div>
-            <label class="mn-gain-label call-alert-volume"><span>Avisos de entrada e saída</span><output id="callAlertVolumeValue">85%</output><input id="callAlertVolume" type="range" min="0" max="100" step="5" value="85" aria-label="Volume dos avisos da chamada" /></label>
+            <label class="mn-gain-label call-alert-volume"><span>Avisos de entrada e saída</span><output id="callAlertVolumeValue">45%</output><input id="callAlertVolume" type="range" min="0" max="100" step="5" value="45" aria-label="Volume dos avisos da chamada" /></label>
+            <label class="auth-check"><input id="muteCallAlerts" type="checkbox"> Silenciar avisos de entrada e saída</label>
             <button id="testCallAlert" class="royal-btn settings-secondary" type="button" data-no-click-sfx="1">Ouvir aviso de chamada</button>
             <div class="settings-action-grid">
               <button id="noiseSuppressionBtn" class="royal-btn noise-active settings-secondary" type="button" aria-pressed="true" title="Redução de ruído do seu microfone">Supressor: Preparado</button>
@@ -427,7 +428,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.14-Windows.exe" download="MN-Trono-0.2.14-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.15-Windows.exe" download="MN-Trono-0.2.15-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -643,7 +644,7 @@
   <script src="voice-reception.js?v=111voice"></script>
   <script src="call-stability.js?v=111voice"></script>
   <script src="sfu-recovery.js?v=122sfufloating"></script>
-  <script src="social.js?v=124coop-122sfufloating"></script>
+  <script src="social.js?v=215notices"></script>
   <script src="remote-gamepad.js?v=124coop"></script>
   <script src="remote-performance.js?v=124coop"></script>
   <script src="remote-pc.js?v=124coop"></script>
@@ -665,7 +666,7 @@
   <script src="love-letter-rules.js?v=110tabletop"></script>
   <script src="love-letter.js?v=119polish"></script>
   <script src="roguelite-host.js?v=107cinzas"></script>
-  <script src="nexus-config.js?v=213nexus"></script>
+  <script src="nexus-config.js?v=215nexus"></script>
   <script src="nexus-host.js?v=213nexus"></script>
   <script src="community.js?v=116profilemedia"></script>
   <script src="community-admin.js?v=091sharingclips"></script>
@@ -673,13 +674,13 @@
   <script src="media-mosaic.js?v=122sfufloating"></script>
   <script src="appearance.js?v=098desktop016"></script>
   <script src="panel-layout.js?v=091sharingclips"></script>
-  <script src="call-controls-layout.js?v=124coop"></script>
+  <script src="call-controls-layout.js?v=215notices"></script>
   <script src="desktop-shell.js?v=213nexus"></script>
   <script src="desktop-settings.js?v=115workspace"></script>
   <script src="app-layout.js?v=213nexus"></script>
   <script src="media-layout.js?v=112tabletop"></script>
   <script src="desktop-activity.js?v=098desktop016"></script>
-  <script src="notifications.js?v=101layouts"></script>
+  <script src="notifications.js?v=215notices"></script>
   <script src="messenger.js?v=119polish"></script>
   <script src="desktop-updates.js?v=117callcontrols"></script>
   <script src="call-workspace.js?v=119polish"></script>

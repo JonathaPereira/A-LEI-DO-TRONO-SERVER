@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.14
+M&N · A Lei do Trono — Windows 0.2.15
 
-1. Instalação nova: instale MN-Trono-0.2.14-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.15-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -153,3 +153,21 @@ wss://nexus-pvp.onrender.com/pvp, já salvo na nova exportação do jogo.
 Publique o frontend e instale o EXE desta mesma entrega para atualizar
 o site e a janela do aplicativo. Sem SQL ou backend novo nesta atualização.
 Guia: ATUALIZAR_WINDOWS_v0.2.14.md.
+
+VERSÃO 0.2.15 — AVISOS, CONTROLES DA CALL E NEXUS
+Configurações > Notificações oferece Notificações do Windows e um botão de
+  teste. Selecione Todas as mensagens para incluir os canais; mensagens reais
+  notificam em segundo plano, respeitando filtros e canais silenciados.
+Configurações > Áudio oferece Silenciar avisos de entrada e saída, além do
+  volume. O aviso de entrada ficou menos agudo e mais baixo; demais efeitos
+  têm controle separado. Volumes anteriores escolhidos são preservados.
+PC, câmera e tela ficam alinhados no Discord. O botão de PC tem ícone visível
+  também fora da comunidade; a mudança de layout preserva a chamada.
+
+NOVO EMBED DO NEXUS
+Jogos > Nexus abre o upload 19926871 fornecido pelo proprietário.
+Publique o frontend e atualize o aplicativo desta entrega para abrir o novo
+upload no site e no Windows. O jogo continua hospedado no itch.io.
+Sem alteração no backend do Trono nem SQL novo. Para o PvP do Nexus 0.15,
+o servidor separado nexus-pvp precisa executar a branch codex/nexus-015.
+Guia: ATUALIZAR_WINDOWS_v0.2.15.md.

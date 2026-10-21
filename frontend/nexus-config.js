@@ -4,7 +4,7 @@
   const pageUrl = 'https://semchakra10.itch.io/nexus-mn';
   // Paste ONLY the src of the playable "Embed game" iframe here.
   // Leave empty to launch the official itch.io page in a new tab/window.
-  const embedUrl = 'https://itch.io/embed-upload/19915488?color=333333';
+  const embedUrl = 'https://itch.io/embed-upload/19926871?color=333333';
   function isEmbedURL(value) {
     try {
       const url = new URL(value);

@@ -197,7 +197,7 @@ body[data-app-layout=original] #callWorkspace .mn-sidebar-heading{min-height:28p
 #callWorkspace[data-controls=sidebar] #socialPanel .voice-section #callFocusDock{display:none!important}
 #callWorkspace[data-controls=sidebar] #layoutVoiceConnection{display:grid!important;grid-template-rows:40px 32px!important;gap:8px!important}
 #callWorkspace[data-controls=sidebar] #layoutConnectionControls,#callWorkspace[data-controls=sidebar] #layoutUserControls{display:flex!important;flex:none!important;gap:2px!important}
-#callWorkspace[data-controls=sidebar] #layoutCallActions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#callWorkspace[data-controls=sidebar] #layoutCallActions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
 #callWorkspace[data-controls=sidebar] #layoutVoicePanel .call-action>:not(.workspace-control-icon){display:none!important}
 #callWorkspace[data-controls=sidebar] #layoutVoicePanel .workspace-control-icon{display:block!important;width:18px!important;height:18px!important}
 #callWorkspace[data-controls=sidebar] #layoutVoicePanel .workspace-control-icon svg{width:18px;height:18px}
