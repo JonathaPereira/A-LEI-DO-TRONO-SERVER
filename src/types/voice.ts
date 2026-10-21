@@ -1,10 +1,6 @@
 export type MicrophoneMode = 'gain-only' | 'rnnoise' | 'native' | 'unavailable';
 export type VoiceMediaKind = 'audio' | 'camera' | 'screen' | 'screen-audio';
-export type PeerSignal =
-  | { readonly signalType: 'offer' | 'answer'; readonly data: RTCSessionDescriptionInit }
-  | { readonly signalType: 'ice'; readonly data: RTCIceCandidateInit }
-  | { readonly signalType: 'stream-watch'; readonly data: { readonly watching: boolean } }
-  | { readonly signalType: 'renegotiate-request'; readonly data: { readonly iceRestart: boolean } };
+export type { PeerSignal } from './peer-signal';
 
 /** Borrowed senders/transceivers for media publication and receiver diagnostics. */
 export interface VoicePeerConnection extends RTCPeerConnection {

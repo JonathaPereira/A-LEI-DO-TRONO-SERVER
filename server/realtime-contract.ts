@@ -22,7 +22,7 @@ export interface RealtimeRoom {
   id: string;
   kind: 'chat' | 'game';
   channelType?: ChannelType;
-  voiceMode?: string;
+  voiceMode?: string | null;
   players: Map<string, RealtimePlayer>;
 }
 export interface RealtimeSession {

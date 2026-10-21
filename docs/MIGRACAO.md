@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas, SFU e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com canais, chat/voz e composição. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas, SFU, participação/voz dos canais e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com chat/moderação, execução do soundboard e composição. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -147,10 +147,10 @@ Uma regressão compara os dois consumidores à configuração do electron-builde
 
 ### 1. Backend e contratos externos
 
-- Extrair coordenação de canais, chat/voz e composição de `server/runtime.cjs`,
+- Extrair chat/moderação, execução do soundboard e composição de `server/runtime.cjs`,
   preservando `createApplication()` e o isolamento por instância.
 - Converter o runtime por domínio, mantendo autorização e persistência.
-- Completar validação dos payloads externos com seus consumidores de canais/chat/voz.
+- Completar validação dos payloads externos com seus consumidores de chat/soundboard e identidade.
 - `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
   existentes estritos por estarem na mesma pasta.
 
@@ -261,16 +261,29 @@ O runtime delega também mudança de nome e substituição do jogador, sem possu
 outro timer de partida. `deck` e `firstRoundStarter` foram retirados do estado
 online por não terem leitores; o baralho de distribuição permanece local.
 
+`channel-service.ts` possui o catálogo e a participação independente em texto,
+voz e jogo, a projeção pública/roster privado, troca de modo e sinalização.
+`channel-contract.ts` descreve a mesma conexão e os membros compartilhados com
+os outros serviços; nenhum segundo socket ou capturador foi criado.
+`channel-protocol.ts` valida destinos e flags de voz. A sinalização usa o mesmo
+parser do cliente; os tipos de protocolo foram separados dos recursos DOM em
+`src/types/peer-signal.ts`, permitindo validação estrita no Node sem DOM.
+Sete fixtures WebSocket agora enviam ofertas com `data.type`, como o cliente real;
+as anteriores omitiram esse campo e eram corretamente recusadas pela validação.
+Destino inválido/cheio preserva a chamada; rosters privados exigem participação e
+estado/sinalização exigem o socket atual. Stop libera mapas e suprime broadcasts.
+
 Próximo recorte recomendado: o restante de `server/runtime.cjs` (aproximadamente
-1.600 linhas): canais/participação, chat/moderação, estado/sinalização de voz e
-composição HTTP/WebSocket. Ler regressões de canais/voz antes de transferir estado
-e listeners juntos. Manter `createApplication()`, um único socket e os donos de mídia.
+930 linhas): chat/moderação, execução do soundboard e composição HTTP/WebSocket.
+Manter `createApplication()`, um único socket e os donos de mídia. A fábrica de
+canais não executa callbacks durante a construção; callbacks adiados da composição
+conectam presença, histórico e jogos sem criar outra instância desses serviços.
 
 Sequência restante, após esse recorte:
 
-1. `server/runtime.cjs`: extrair canais/participação, chat/moderação e coordenação
-   da voz para donos tipados, mantendo instâncias independentes e shutdown.
-   Completar payloads dessas fronteiras e deixar somente composição no ponto de entrada.
+1. `server/runtime.cjs`: extrair chat/moderação e execução do soundboard para donos
+   tipados, mantendo instâncias independentes e shutdown. Completar payloads dessas
+   fronteiras/identidade e deixar somente composição no ponto de entrada tipado.
 2. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
@@ -278,7 +291,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 111 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 118 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -330,6 +343,12 @@ Os nove casos de interface de escolhas, lobby e simulação local passaram, incl
 as três rodadas locais, escolhas privadas e preservação dos recursos da chamada.
 `court-browser.js` falha na expectativa antiga de entrada automática em voz,
 antes de entrar na partida; a mesma falha foi reproduzida com o runtime anterior.
+Canais acrescentam sete regressões de participação, privacidade, limites/modo,
+destinos inválidos, convidados, mensagens malformadas e shutdown. A comparação
+com o coordenador anterior preservou 716 comandos, 3.904 eventos e 1.335 efeitos.
+Tipagem, formatação, build estático, suíte completa, sete casos de interface e
+a chamada com dois Electron passaram, além do relay SFU pelo backend tipado.
+Limites de aceites físicos/externos continuam os descritos abaixo.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
@@ -337,6 +356,7 @@ Splendor usa `artifacts/splendor-service-*`;
 política/uso SFU usam `artifacts/realtime-policy-*`;
 manager/provedor e relay usam `artifacts/realtime-manager-*`;
 A Lei do Trono usa `artifacts/throne-service-*`;
+canais/participação usam `artifacts/channel-service-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;

@@ -1,4 +1,4 @@
-import type { PeerSignal } from '../../types/voice';
+import type { PeerSignal } from '../../types/peer-signal';
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

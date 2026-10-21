@@ -52,7 +52,8 @@ P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`; a negociação S
 valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valida
 status de consumo e configuração ICE/TURN. O backend valida comandos SFU e
 respostas do provedor. `server/throne-protocol.ts` valida comandos de A Lei do
-Trono; as fronteiras de canais/chat/voz do runtime ainda precisam da conversão.
+Trono; canais/voz usam `server/channel-protocol.ts` e o mesmo parser P2P do cliente.
+As fronteiras de chat/soundboard/identidade do runtime ainda precisam da conversão.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -1995,8 +1996,8 @@ migração da interface ampliaria o risco sem resolver o acoplamento.
 `app.ts` expõe `createApplication()` e `close()`. Cada criação possui canais,
 sockets e serviços próprios. Importar o módulo não inicia um servidor nem
 registra sinais. `index.ts` valida porta/host e trata o processo.
-`runtime.cjs` ainda contém composição, canais/participação, chat/moderação e
-coordenação de voz. Esses consumidores ainda precisam da extração e tipagem estrita.
+`runtime.cjs` ainda contém composição, chat/moderação e execução do soundboard.
+Esses consumidores ainda precisam da extração e tipagem estrita.
 
 `lib/games/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
 bots. Os quatro serviços de jogos e o protótipo local de A Lei do Trono importam
@@ -2032,6 +2033,20 @@ Espionagem/Usurpação mantêm mensagens privadas individuais. Um token invalida
 transições antigas; `stop()` limpa todos os timers e libera cartas/pendências.
 Aleatoriedade e escala de transição são portas de teste, sem alterar os defaults
 ou o timeout de turno de 60 segundos. `createApplication()` continua isolando instâncias.
+
+`channel-service.ts` possui o catálogo e a participação em texto/voz/jogo na mesma
+conexão. Também coordena flags de mídia e modo compartilhado da chamada, projeções
+públicas e rosters privados, entrada/saída e sinalização P2P. Não captura mídia ou
+possui peers; pede limpeza ao dono SFU existente e substituição ao dono da partida.
+`channel-contract.ts` descreve a conexão/membro/sala compartilhados pelos serviços.
+`channel-protocol.ts` valida destinos e flags; ofertas, respostas, ICE e comandos
+P2P usam `lib/voice/peer-protocol.ts`. Seus DTOs em `types/peer-signal.ts` são puros,
+sem DOM; `types/voice.ts` continua contendo recursos exclusivos do browser.
+Mudar texto ou mesa conserva a identidade do membro da chamada, as flags e o modo;
+recusa de sala cheia não remove a participação anterior. Estado/sinalização verificam
+o socket atual e o destino P2P participante; rosters detalhados só vão à chamada.
+Callbacks adiados conectam os donos de histórico, presença e partidas na composição.
+O construtor não os executa. Stop limpa catálogo/membros e impede novos broadcasts.
 
 `roles.ts` recebe dados desconhecidos e deriva o cargo de dados verificados pelo
 provedor e do perfil persistido; metadados editáveis do usuário não decidem

@@ -21,7 +21,7 @@ test('Azul online is server-authoritative and independent of text/voice/Trono; c
   }
   await a.wait(m=>m.type==='azul-state'&&m.room.recordStatus==='saved');assert.equal(f.azulRecords.size,1);const persisted=[...f.azulRecords.values()][0];assert.equal(persisted.p_players.length,2);for(const p of persisted.p_players)assert.equal(p.score,view.state.players.find(x=>x.id===p.id).score);
   const aId=(await a.wait(m=>m.type==='welcome')).clientId,bId=(await b.wait(m=>m.type==='welcome')).clientId,voiceCheck=b.messages.length;
-  a.send({type:'voice-signal',targetId:bId,signalType:'offer',data:{sdp:'azul-kept-call'}});assert.equal((await b.wait(m=>m.type==='voice-signal'&&m.data.sdp==='azul-kept-call',voiceCheck)).fromId,aId);
+  a.send({type:'voice-signal',targetId:bId,signalType:'offer',data:{type:'offer',sdp:'azul-kept-call'}});assert.equal((await b.wait(m=>m.type==='voice-signal'&&m.data.sdp==='azul-kept-call',voiceCheck)).fromId,aId);
   a.send({type:'chat-message',text:'Jogando Azul sem sair da voz'});assert.equal((await a.wait(m=>m.type==='chat-message'&&m.message.text==='Jogando Azul sem sair da voz')).message.roomId,'chat-livre');
   a.send({type:'ready',ready:true});await a.wait(m=>m.type==='room-state'&&m.room.id==='sala-cetro'&&m.room.players.some(p=>p.id===aId&&p.ready));
   const count=f.azulRecords.size;a.send({type:'azul',action:'retry-record'});a.send({type:'azul',action:'ranking',requestId:'top'});const rows=(await a.wait(m=>m.type==='azul-ranking'&&m.requestId==='top')).rows;assert.equal(rows.length,2);assert.equal(f.azulRecords.size,count);
