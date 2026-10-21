@@ -1,0 +1,29 @@
+'use strict';
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.TicketToRideData=factory();})(typeof globalThis!=='undefined'?globalThis:this,()=>{
+ // Original vector layout; the classic USA board has 36 cities, 100 routes and 30 tickets.
+ const cities={
+  Vancouver:[80,55],Seattle:[75,117],Portland:[62,185],'San Francisco':[48,379],'Los Angeles':[117,505],
+  Calgary:[230,63],Helena:[305,217],'Salt Lake City':[260,348],'Las Vegas':[208,447],Phoenix:[295,507],
+  Winnipeg:[475,79],Duluth:[565,228],Omaha:[529,341],Denver:[416,370],'Santa Fe':[426,478],'El Paso':[408,586],
+  'Sault St. Marie':[714,156],Toronto:[837,238],Chicago:[705,322],'Kansas City':[560,417],'Oklahoma City':[564,507],Dallas:[590,595],Houston:[667,645],
+  'Saint Louis':[691,412],'Little Rock':[690,507],'New Orleans':[777,607],Nashville:[799,443],Atlanta:[878,506],Miami:[1044,675],Charleston:[996,507],Raleigh:[997,407],
+  Pittsburgh:[884,313],Washington:[1016,325],'New York':[1025,227],Boston:[1110,142],Montreal:[941,103]
+ };
+ const rows=[
+ ['Vancouver','Seattle',1,'gray','gray'],['Vancouver','Calgary',3,'gray'],['Seattle','Calgary',4,'gray'],['Seattle','Helena',6,'yellow'],['Seattle','Portland',1,'gray','gray'],
+ ['Portland','Salt Lake City',6,'blue'],['Portland','San Francisco',5,'green','purple'],['San Francisco','Salt Lake City',5,'orange','white'],['San Francisco','Los Angeles',3,'yellow','purple'],
+ ['Los Angeles','Las Vegas',2,'gray'],['Los Angeles','Phoenix',3,'gray'],['Los Angeles','El Paso',6,'black'],['Las Vegas','Salt Lake City',3,'orange'],['Salt Lake City','Helena',3,'purple'],['Salt Lake City','Denver',3,'red','yellow'],
+ ['Calgary','Winnipeg',6,'white'],['Calgary','Helena',4,'gray'],['Helena','Winnipeg',4,'blue'],['Helena','Duluth',6,'orange'],['Helena','Omaha',5,'red'],['Helena','Denver',4,'green'],
+ ['Winnipeg','Sault St. Marie',6,'gray'],['Winnipeg','Duluth',4,'black'],['Duluth','Sault St. Marie',3,'gray'],['Duluth','Toronto',6,'purple'],['Duluth','Chicago',3,'red'],['Duluth','Omaha',2,'gray','gray'],
+ ['Omaha','Chicago',4,'blue'],['Omaha','Kansas City',1,'gray','gray'],['Denver','Omaha',4,'purple'],['Denver','Kansas City',4,'black','orange'],['Denver','Oklahoma City',4,'red'],['Denver','Santa Fe',2,'gray'],['Denver','Phoenix',5,'white'],
+ ['Phoenix','Santa Fe',3,'gray'],['Phoenix','El Paso',3,'gray'],['Santa Fe','El Paso',2,'gray'],['Santa Fe','Oklahoma City',3,'blue'],['El Paso','Oklahoma City',5,'yellow'],['El Paso','Dallas',4,'red'],['El Paso','Houston',6,'green'],
+ ['Oklahoma City','Kansas City',2,'gray','gray'],['Oklahoma City','Little Rock',2,'gray'],['Oklahoma City','Dallas',2,'gray','gray'],['Dallas','Little Rock',2,'gray'],['Dallas','Houston',1,'gray','gray'],['Houston','New Orleans',2,'gray'],
+ ['Kansas City','Saint Louis',2,'blue','purple'],['Saint Louis','Chicago',2,'green','white'],['Saint Louis','Pittsburgh',5,'green'],['Saint Louis','Nashville',2,'gray'],['Saint Louis','Little Rock',2,'gray'],['Little Rock','Nashville',3,'white'],['Little Rock','New Orleans',3,'green'],
+ ['New Orleans','Atlanta',4,'yellow','orange'],['New Orleans','Miami',6,'red'],['Nashville','Atlanta',1,'gray'],['Nashville','Pittsburgh',4,'yellow'],['Nashville','Raleigh',3,'black'],['Atlanta','Raleigh',2,'gray','gray'],['Atlanta','Charleston',2,'gray'],['Atlanta','Miami',5,'blue'],
+ ['Charleston','Raleigh',2,'gray'],['Charleston','Miami',4,'purple'],['Raleigh','Washington',2,'gray','gray'],['Raleigh','Pittsburgh',2,'gray'],['Washington','Pittsburgh',2,'gray'],['Washington','New York',2,'orange','black'],['New York','Pittsburgh',2,'white','green'],
+ ['New York','Boston',2,'yellow','red'],['New York','Montreal',3,'blue'],['Pittsburgh','Toronto',2,'gray'],['Pittsburgh','Chicago',3,'orange','black'],['Chicago','Toronto',4,'white'],['Toronto','Montreal',3,'gray'],['Toronto','Sault St. Marie',2,'gray'],['Montreal','Sault St. Marie',5,'black'],['Montreal','Boston',2,'gray','gray']
+ ];
+ const routes=rows.flatMap(([a,b,length,...colors],group)=>colors.map((color,lane)=>({id:'r'+group+'-'+lane,group,a,b,length,color,lane,double:colors.length===2})));
+ const tickets=[['Boston','Miami',12],['Calgary','Phoenix',13],['Calgary','Salt Lake City',7],['Chicago','New Orleans',7],['Chicago','Santa Fe',9],['Dallas','New York',11],['Denver','El Paso',4],['Denver','Pittsburgh',11],['Duluth','El Paso',10],['Duluth','Houston',8],['Helena','Los Angeles',8],['Kansas City','Houston',5],['Los Angeles','Chicago',16],['Los Angeles','Miami',20],['Los Angeles','New York',21],['Montreal','Atlanta',9],['Montreal','New Orleans',13],['New York','Atlanta',6],['Portland','Nashville',17],['Portland','Phoenix',11],['San Francisco','Atlanta',17],['Sault St. Marie','Nashville',8],['Sault St. Marie','Oklahoma City',9],['Seattle','Los Angeles',9],['Seattle','New York',22],['Toronto','Miami',10],['Vancouver','Montreal',20],['Vancouver','Santa Fe',13],['Winnipeg','Houston',12],['Winnipeg','Little Rock',11]].map(([a,b,points],i)=>({id:'t'+i,a,b,points}));
+ return {cities,routes,tickets,colors:['purple','white','blue','yellow','orange','black','red','green'],names:{purple:'Roxo',white:'Branco',blue:'Azul',yellow:'Amarelo',orange:'Laranja',black:'Preto',red:'Vermelho',green:'Verde',loco:'Locomotiva',gray:'Qualquer cor'},points:[0,1,2,4,7,10,15]};
+});

@@ -46,7 +46,7 @@ if(window.TronoDesktop)window.addEventListener('DOMContentLoaded',()=>{
   const info=document.createElement('div');info.className='desktop-call-info';info.innerHTML='<small>SEU ESPAÇO, SEM INTERRUPÇÕES</small><strong id="desktopCallName">M&N · pronto para conectar</strong><span id="desktopCallStatus"></span>';
   dock.append(info);body.append(dock);window.TronoCallControlsLayout.refresh();
   $('socialBtn').addEventListener('click',()=>{body.classList.add('game-communication-open');window.TronoSocial.showPanel(true);});$('socialCloseBtn').addEventListener('click',()=>body.classList.remove('game-communication-open'));
-  const primary=['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen','gamesScreen','azulScreen','rogueliteScreen','nexusScreen','splendorScreen','loveLetterScreen'];let lastGame='setupScreen',previous='home',clipsOpen=false;
+  const primary=['portalScreen','setupScreen','roomScreen','chatOnlyScreen','gameScreen','gamesScreen','azulScreen','rogueliteScreen','nexusScreen','splendorScreen','loveLetterScreen','ticketToRideScreen'];let lastGame='setupScreen',previous='home',clipsOpen=false;
   function setView(view){body.dataset.desktopView=view;for(const b of rail.querySelectorAll('button[data-desktop-route]')){const selected=b.dataset.desktopRoute===view;b.classList.toggle('active',selected);if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}}
   function synchronize(){
     const visible=primary.find(id=>!$(id).classList.contains('hidden'));

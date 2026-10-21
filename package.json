@@ -1,6 +1,6 @@
 {
   "name": "a-lei-do-trono-backend",
-  "version": "0.13.0-alpha",
+  "version": "0.14.0-alpha",
   "private": true,
   "description": "Backend WebSocket para A Lei do Trono",
   "main": "server.js",
@@ -14,6 +14,7 @@
     "test:desktop:core": "node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/desktop-audio-priority.js tests/voice-reception.js tests/call-stability.js",
     "test:desktop:layout": "node --test tests/desktop-call-layout.js",
     "test": "node tests/integration.js && node tests/auth.js && node tests/features-v079.js && node tests/community-v080.js && node --test tests/community-management.js tests/community-sql.js tests/files-soundboard.js tests/text-voice-channels.js tests/chat-history-sql.js tests/chat-history-restart.js tests/activity-presence.js && node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js && node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js && node --test tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js && node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js && node --test tests/love-letter-rules.js tests/love-letter-ws.js && node --test tests/bot-names.js",
+    "test:ticket-to-ride": "node --test tests/ticket-to-ride-rules.js tests/ticket-to-ride-ws.js tests/ticket-to-ride-browser.js",
     "test:auth": "node tests/auth.js",
     "test:profiles": "node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js",
     "test:frontend": "node --test tests/frontend-browser.js",

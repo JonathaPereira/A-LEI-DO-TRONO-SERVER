@@ -212,6 +212,8 @@ jobs:
             Write-Output "::error title=Splendor validation::$details"
             exit $testExit
           }
+      - name: Verify Ticket to Ride USA rules, private tables and browser
+        run: npm run test:ticket-to-ride
       - name: Verify Love Letter second edition and private hands
         shell: pwsh
         run: |

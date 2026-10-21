@@ -55,7 +55,7 @@ test('Nexus loads only on demand, preserves live media and works in both layouts
         const snapshot = () => page.evaluate(() => ({socket: window.TronoNetwork.clientId, room: window.TronoNetwork.primaryRoom, voice: window.TronoSocial.voiceJoined, audio: window.TronoSocial.getLocalAudioTrack()?.id, camera: window.TronoSocial.getMediaSources().find(s => s.self)?.camera?.getVideoTracks()[0]?.id, screen: window.TronoSocial.getLocalDisplayStream()?.getVideoTracks()[0]?.id}));
         const before = await snapshot(); assert(before.audio && before.camera && before.screen);
         await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-        await expect(page.locator('.games-card')).toHaveCount(6); await page.locator('#playNexus').click();
+        await expect(page.locator('.games-card')).toHaveCount(7); await page.locator('#playNexus').click();
         await expect(page.locator('#nexusScreen')).toBeVisible(); assert.equal(remoteRequests, 0);
         await expect(page.locator('#nexusFrame')).toHaveCount(0);
         if (mode === 'website') {
