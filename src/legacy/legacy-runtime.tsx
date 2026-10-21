@@ -10,6 +10,7 @@ import { initializeApplicationAudio } from '../lib/voice/application-audio-runti
 import { initializeDesktopCapture } from '../components/desktop/capture-runtime';
 import { initializeNoiseProcessors } from '../lib/voice/noise-runtime';
 import { initializeAudio } from '../components/audio/runtime';
+import { initializeSoundboard } from '../components/soundboard/runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
@@ -106,10 +107,6 @@ export function LegacyRuntime() {
       initializeApplicationAudio(window);
       initializeDesktopCapture(window);
       for (const filename of manifest.scripts) {
-        if (filename === 'soundboard-client.js') {
-          initializeCommunity(window);
-          initializeChannelManagement(window);
-        }
         if (filename !== 'auth-boot.js') await loadScript(filename);
         if (filename === 'auth.js') {
           initializePortal(window);
@@ -136,8 +133,11 @@ export function LegacyRuntime() {
           initializeThroneLocal(window);
           initializeThroneNavigation(window);
           initializeCommunityNavigation(window);
+          initializeCommunity(window);
+          initializeChannelManagement(window);
+          initializeSoundboard(window);
+          initializeAppearance(window);
         }
-        if (filename === 'soundboard-client.js') initializeAppearance(window);
         // Profile hosts and remaining game bodies exist before settings mount;
         // activity/notifications then bind to the mounted slots, matching their boot order.
         if (filename === 'call-controls-layout.js') {

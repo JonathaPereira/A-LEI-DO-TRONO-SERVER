@@ -1003,6 +1003,29 @@ remove listeners/controles e fecha somente o contexto/player próprios; recursos
 emprestados permanecem ativos. As fachadas TronoAudio/TRONO_MUSIC_TRACKS preservam
 os consumidores ainda necessários; `legacy/audio.js` e sua entrada foram removidos.
 
+`lib/soundboard/controller.ts` possui biblioteca paginada, escolha/recorte,
+reprodução local/recebida, volume por conta e transações de envio/exclusão. Usa o
+FilesClient existente para autenticação, URLs e tombstones; não abre outro socket.
+Valida registros/paginação e publica listas completas; epoch de conta e gerações
+invalidam HTTP, decode e play antigos, inclusive ao sair e voltar à mesma conta.
+Prévia nunca envia comando de sala. Deafen silencia efeitos recebidos e preserva
+prévia local. Fechar menu cancela também URL de prévia pendente; efeito recebido
+da chamada continua. Parar remove src e revoga somente a URL local que possui.
+
+`soundboard/decode.ts` possui um contexto a 48 kHz por leitura. Abort descarta
+resultado tardio e inicia close sem aguardar decoder/fechamento; contexto da chamada
+não é emprestado nem fechado. `wav.ts` codifica somente quadros selecionados em
+PCM16, até dois canais/15 s, com validação independente no servidor. Picos imutáveis
+da waveform são calculados uma vez; o PCM completo permanece privado no dono.
+
+`components/soundboard/view.tsx` possui menu/editor/lista React; campos numéricos
+mantêm rascunho até blur para permitir edição sem saltos. Runtime monta antes dos
+donos de layout, preserva o nó do menu e adapta o botão móvel existente (conteúdo
+visual pertence ao shell), foco, clique externo, Escape e eventos da chamada.
+Pagehide remove observador, listeners, assinatura de rede, decoder/player e envio.
+`TronoSoundboard` é uma fachada para esse mesmo dono; `legacy/soundboard-client.js`
+e sua entrada no manifesto foram removidos.
+
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.
 `lib/voice/microphone.ts` possui captura de microfone, troca de entrada, mute físico,

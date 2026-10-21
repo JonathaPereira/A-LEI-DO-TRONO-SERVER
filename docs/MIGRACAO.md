@@ -29,6 +29,7 @@ O histórico das etapas anteriores permanece no Git.
 | Clipes | `lib/clips/` possui buffer WebM, worker, sessão, armazenamento, exportação, preferências, coordenação e ponte Windows; biblioteca e controles em React. |
 | Gravação manual | `lib/recording/` possui captura, mixer, encoder e escrita; `components/recording/` possui controles e runtime único. |
 | Música/efeitos locais | `lib/audio/` possui catálogo, player e síntese dos jogos; controles React em `components/audio/`; armazenamento resiliente em `lib/storage/`. Não possui recursos da chamada. |
+| Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
 | Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões e ICE já foram extraídos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
@@ -78,9 +79,14 @@ recursos em `public/roguelite/` foram preservados.
   job; metadados inválidos e respostas tardias liberam recursos próprios. A tela
   entregue pertence ao chamador; áudio do computador continua uma escolha explícita.
 - `audio.js`: preferências, player de música e efeitos separados em módulos tipados.
-  Controles do portal, lobby e mesa projetam o mesmo estado em React; timers/fontes,
+  Controles do portal, lobby e mesa projetam o mesmo estado em React; fontes,
   nós e contexto próprios são liberados sem fechar recursos emprestados. Faixas,
   fallbacks locais, créditos, ganhos e chaves existentes foram preservados.
+- `soundboard-client.js`: controle, editor e player convertidos. Troca de conta
+  cancela leitura/envio e invalida biblioteca/URLs antigas; fechar o menu cancela
+  a prévia pendente, preservando efeitos recebidos da chamada. Decoder fecha seu
+  próprio contexto; menu e waveform são React. Assinaturas de rede, eventos e
+  observador de layout têm descarte explícito.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -93,7 +99,6 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 
 - Conta: `auth-boot.js`, `auth.js`.
-- Soundboard: `soundboard-client.js`.
 
 `call-controls-layout.js` já é gerado do módulo TypeScript
 `lib/voice/control-layout.ts`; sua presença no manifesto não indica um controlador
@@ -101,8 +106,8 @@ JS ainda por converter. `scripts/prepare-renderer.cjs` compila esse módulo e po
 assets estáticos obsoletos somente após compilação bem-sucedida.
 
 Todos os motores compartilhados dos jogos, áudio local e seletor desktop saíram de
-`src/legacy/`. Próximo recorte: transferir soundboard e depois conta,
-sem mudar encoders. A API
+`src/legacy/`. Soundboard também está convertido. Próximo recorte: transferir
+conta e seu boot, preservando sessões, recuperação, convidados e permissões. A API
 `TronoApplicationAudio.cancel(id)` cancela somente o preparo/grafo desse job;
 não descarta o dono global nem as outras capturas.
 
@@ -162,7 +167,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Verificação | Resultado |
 | --- | --- |
 | `npm run typecheck`, `npm run format:check`, `npm run build` | Passaram. |
-| `npm test` | Cadeia completa de backend, jogos e modelos passou após a conversão de Azul e correção do import dos bots locais. |
+| `npm test` | Cadeia completa de backend, jogos e modelos passou após converter áudio compartilhado e integrar o controlador do soundboard. |
 | Azul tipado | Paridade exata em 120 partidas (8.433 jogadas/601 replays); 25 regressões de regras/controle/SQL/WS e três casos de interface passaram. |
 | Love Letter tipado | Paridade em 100 partidas (6.728 jogadas/464 novas rodadas e visões privadas); 26 regressões e partida completa na interface passaram. Electron real e pacote também passaram sem global antigo. |
 | Splendor tipado | Paridade em 120 partidas/10.294 jogadas e catálogo completo; 26 regressões e três casos de interface passaram. Chamada no Electron e pacote passaram sem globais antigos. |
@@ -180,6 +185,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Preparo dos filtros | 13 modelos, três fluxos de navegador e medição de fala/ruído no Electron passaram. Registro reaproveitado por contexto; nativo/off sem filtros extras; chamada/navegação nativa preservada. |
 | Seletor desktop | 14 regressões do controlador e cinco verificações da interface passaram; fluxo nativo de seleção/cancelamento/captura e chamada completa com dois Electron passaram. Cancelamento, resposta tardia, isolamento de jobs e preservação da tela entregue são cobertos. |
 | Música/efeitos locais | 12 regressões novas e 20 de áudio da chamada passaram; 102 comparações dos 17 efeitos com a versão anterior preservaram os grafos, envelopes, ganhos e buffers de ruído. Navegador verificou forma de onda real, mute, teclado, três painéis sincronizados e descarte sem fechar contexto/trilha emprestados. Portal web/desktop, chamada completa no Electron e pacote passaram. |
+| Soundboard | 17 regressões do cliente e dois contratos HTTP/PCM passaram. 48 comparações/29.201.262 bytes de WAV idênticos ao encoder anterior. Dez verificações de navegador/shell, chamada completa no Electron e pacote passaram; renderer nativo também decodificou 15 s estéreo a 48 kHz, preservando níveis/canais com tolerância de quantização. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
@@ -195,6 +201,11 @@ fala da fixture e o WASM local, sem substituir a verificação de microfone fís
 A comparação dos efeitos está em `artifacts/app-audio-parity.json`, com a fonte
 anterior obtida de `fcffedb`. O teste mantido de forma de onda e controles é
 `tests/tabletop-audio-browser.js`; os modelos ficam em `tests/app-audio.cjs`.
+O soundboard tem paridade em `artifacts/soundboard-wav-parity.json` e cadeia completa
+em `artifacts/soundboard-full-test.log`; `tests/soundboard-browser.cjs` cobre
+recorte, upload, reprodução de sala, foco, mobile e descarte. Decoder/codec e
+corridas de sessão/URLs ficam em `tests/soundboard.cjs`. O teste nativo curto é
+`tests/desktop-runtime.js`; todos usam dados sintéticos e não aprovam loopback físico.
 O executável local de conferência está em
 `artifacts/windows-app/win-unpacked/MN Trono.exe`; não substitui a instalação.
 

@@ -248,6 +248,41 @@ test(
         'live',
       );
       await page.evaluate(() => window.__nativeStream.getTracks().forEach((track) => track.stop()));
+      phase = 'soundboard PCM in native renderer';
+      const soundboardPCM = await page.evaluate(async () => {
+        const input = new AudioBuffer({
+          length: 16000 * 30,
+          sampleRate: 16000,
+          numberOfChannels: 2,
+        });
+        input.getChannelData(0).fill(0.25, 16000 * 11, 16000 * 26);
+        input.getChannelData(1).fill(-0.5, 16000 * 11, 16000 * 26);
+        const wav = window.TronoSoundboard.encodeWav(input, 11, 26);
+        const context = new AudioContext({ sampleRate: 48000 });
+        try {
+          const decoded = await context.decodeAudioData(await wav.arrayBuffer());
+          return {
+            duration: decoded.duration,
+            channels: decoded.numberOfChannels,
+            frames: decoded.length,
+            left: decoded.getChannelData(0)[1000],
+            right: decoded.getChannelData(1)[1000],
+          };
+        } finally {
+          await context.close();
+        }
+      });
+      assert.deepEqual(
+        {
+          duration: soundboardPCM.duration,
+          channels: soundboardPCM.channels,
+          frames: soundboardPCM.frames,
+        },
+        { duration: 15, channels: 2, frames: 720000 },
+      );
+      // PCM16 quantization and the 16→48 kHz browser resampler introduce sub-LSB rounding.
+      assert(Math.abs(soundboardPCM.left - 0.25) < 2 / 32768);
+      assert(Math.abs(soundboardPCM.right + 0.5) < 2 / 32768);
       phase = 'native persistent session';
       const remembered = {
         session: {

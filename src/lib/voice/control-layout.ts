@@ -50,7 +50,7 @@ callControlWindow.TronoCallControlsLayout = (() => {
       host.insertBefore(node, before);
   }
 
-  // Soundboard still owns a legacy button; never decorate React-owned controls.
+  // Soundboard keeps a movable action bridge; the desktop shell owns its React label.
   function decorate(node: HTMLElement | null) {
     if (!node || node.id !== 'soundboardToggle') return;
     if (node.dataset.desktopContent === 'react') return;
