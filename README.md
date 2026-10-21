@@ -1,3 +1,10 @@
+## Windows 0.3.1 · mesa Ticket to Ride
+
+Mapa central com cartas compradas à esquerda, compra à direita, objetivos e
+destinos nos cantos inferiores. Compras e vagões têm animações; tela cheia
+acomoda a mesa em 1366×768 e 1920×1080.
+Veja [como publicar o frontend e atualizar o app](ATUALIZAR_WINDOWS_v0.3.1.md).
+
 ## Windows 0.3.0 · Ticket to Ride nos EUA
 
 Jogos → Ticket to Ride adiciona o mapa clássico dos Estados Unidos para 2–5
