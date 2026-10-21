@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {createCommunity}=require('../server/community');
+const {createCommunity}=require('../server/community.ts');
 function setup(){const make=id=>({readyState:1,clientId:id,account:{id,nickname:id,expiresAt:Date.now()+60000}}),a=make('one'),b=make('two'),guest={readyState:1,clientId:'guest',guest:{id:'guest',nickname:'Guest',guest:true,expiresAt:Date.now()+60000}},clients=new Set([a,b,guest]),events=[];
   const community=createCommunity({wss:{clients},rooms:new Map(),send:(socket,data)=>events.push({socket,data}),auth:{configured:false},env:{}});return {community,a,b,guest,events,clients};
 }

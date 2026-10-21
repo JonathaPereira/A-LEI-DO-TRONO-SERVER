@@ -2044,6 +2044,21 @@ tabelas com RLS, search_path das funções privilegiadas e limites entre membro,
 criador e service_role. Histórico interno do CLI continua separado desse roteiro.
 Comandos e limites estão no guia de desenvolvimento desktop.
 
+`community.ts` possui presença, atividade pública e cache do diretório. Recebe
+somente as portas necessárias de sockets/salas; não altera a participação nem
+abre transportes. `community-protocol.ts` valida a página inteira da RPC privada
+antes de trocar o cache: limite de 1.000, IDs únicos, nomes e campos de aparência
+tipados. Campos extras, incluindo e-mail, não entram na projeção. Falha conserva
+os membros conhecidos e marca o diretório como indisponível.
+
+Consultas simultâneas compartilham uma promessa. `stop()` cancela HTTP/timer,
+limpa o cache e os tickets e impede publicação de respostas tardias. Atividade
+usa somente o nome do jogo da conexão autenticada; PID/caminho enviados são
+descartados. Visão de convidado conserva somente os participantes de jogos e não
+recebe atividade de contas. A localização da voz tem prioridade sobre o canal de
+texto selecionado. A validação de apelido saiu de `auth.js` para o contrato puro
+`lib/auth/nickname.ts`, compartilhado pelo serviço de conta e pelos convidados.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e

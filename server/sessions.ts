@@ -1,6 +1,6 @@
-const { randomBytes, randomUUID } = require('node:crypto') as typeof import('node:crypto');
+import { randomBytes, randomUUID } from 'node:crypto';
 
-interface GuestIdentity {
+export interface GuestIdentity {
   id: string;
   nickname: string;
   guest: true;
@@ -10,13 +10,13 @@ interface GuestIdentity {
   ticket: string;
 }
 
-interface GuestConnection {
+export interface GuestConnection {
   roomId?: string | null;
   gameRoomId?: string | null;
   guest?: GuestIdentity | null;
 }
 
-interface GuestRequest {
+export interface GuestRequest {
   name?: unknown;
   ticket?: unknown;
 }
@@ -27,7 +27,7 @@ interface GuestSessionsOptions {
 }
 
 /** Opaque, random tickets stay server-side; client claims never establish an identity. */
-function createGuestSessions({ validNickname, nameReserved }: GuestSessionsOptions) {
+export function createGuestSessions({ validNickname, nameReserved }: GuestSessionsOptions) {
   const tickets = new Map<string, GuestIdentity>();
 
   function authenticate(connection: GuestConnection, message: GuestRequest): GuestIdentity {
@@ -90,7 +90,5 @@ function createGuestSessions({ validNickname, nameReserved }: GuestSessionsOptio
     return expired;
   }
 
-  return { authenticate, prune };
+  return { authenticate, prune, clear: () => tickets.clear() };
 }
-
-module.exports = { createGuestSessions };

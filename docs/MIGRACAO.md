@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV do soundboard e histórico possuem módulos TS estritos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV, histórico e presença/comunidade possuem módulos TS estritos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -110,6 +110,11 @@ recursos em `public/roguelite/` foram preservados.
   TypeScript estrito. Histórico valida páginas RPC e mantém compatibilidade com
   metadados antigos; filas são isoladas por canal. Encerramento cancela requisições
   pendentes e impede executar jobs que aguardavam na fila.
+- `server/community.js`: presença/diretório convertidos com protocolo de RPC
+  separado. Página inválida não altera parcialmente membros ou nomes reservados;
+  consultas concorrentes compartilham uma promessa. Encerrar cancela HTTP/timer,
+  limpa tickets e impede respostas tardias. Apelidos têm um contrato puro comum
+  ao serviço de conta e aos convidados.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -207,6 +212,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Composição e estilos | 28 verificações de navegador passaram, incluindo descarte/reinstalação do layout, hosts/trilhas preservados e fechamento com consumidores ativos. Os 33 estilos/770.491 bytes mantêm conteúdo e precedência idênticos. Tipagem, formatação, build, modelos de conta e `npm test` completo passaram; conta criptografada e pacote passaram no Electron real. |
 | Serviços básicos do backend | Oito verificações de política/fila/cancelamento/ciclo de vida passaram. As 24 regressões relacionadas de SQL, persistência após reinício, perfis e soundboard passaram; `npm test` completo, tipagem, formatação e build também passaram. Provedor e bancos são fixtures locais. |
 | Instalação nova do banco | Seis verificações passaram: inventário único dos 13 SQL, instalação completa, 12 tabelas com RLS, funções privilegiadas com search_path fixo, privacidade/autorização e bloqueio de reexecução preservando os dados. Executado em PGlite descartável, sem Supabase remoto. |
+| Presença/comunidade do backend | Cinco regressões novas de diretório, atomicidade, cancelamento, privacidade, convidados e nomes passaram; suíte de ciclo de vida tem 13 verificações. Conta/HTTP/WS, `npm test` completo, tipagem, formatação e build passaram. Os 15 fluxos relacionados de navegador e chamada completa com dois Electron reais também passaram. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
