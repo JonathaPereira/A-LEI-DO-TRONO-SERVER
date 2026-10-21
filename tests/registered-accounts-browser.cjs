@@ -6,6 +6,7 @@ const express = require('express');
 const path = require('node:path');
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
+const { presentAccount, restoreAccount } = require('./auth-presentation-fixture.cjs');
 
 test(
   'the creator directory preserves pagination and clears private rows on close, permission loss and logout in both hosts',
@@ -140,10 +141,7 @@ test(
             hold = true;
             await page.locator('#creatorAccountsMore').click();
             await expect.poll(() => !!held).toBe(true);
-            await page.evaluate(() => {
-              window.TronoAuth.user.permissions.viewEmails = false;
-              window.dispatchEvent(new Event('trono-role-change'));
-            });
+            await presentAccount(page, { permissions: { viewEmails: false } });
             await expect(page.locator('#creatorAccountsDialog')).toBeHidden();
             await expect(profileButton).toBeHidden();
             await expect(page.locator('#creatorAccountsBtn')).toBeHidden();
@@ -153,10 +151,7 @@ test(
               .catch(() => {});
             held = null;
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
-            await page.evaluate(() => {
-              window.TronoAuth.user.permissions.viewEmails = true;
-              window.dispatchEvent(new Event('trono-role-change'));
-            });
+            await restoreAccount(page);
             await expect(profileButton).toBeVisible();
             // The header launcher lives in a moved host and shares the same dialog/controller.
             await page.evaluate(

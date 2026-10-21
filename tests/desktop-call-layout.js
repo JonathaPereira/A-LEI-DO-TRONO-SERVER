@@ -8,6 +8,7 @@ const path = require('node:path');
 const {_electron, expect} = require('@playwright/test');
 const {startFixture} = require('./auth-fixture');
 const {closeTestApp, killTestApp} = require('./desktop-test-close');
+const {presentAccount, restoreAccount} = require('./auth-presentation-fixture.cjs');
 
 const root = path.resolve(__dirname, '..');
 const origin = 'https://a-lei-do-trono.surge.sh';
@@ -425,12 +426,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#communityPanel')).toBeHidden();
     await preserved();
     // Fixture UI permissions only: mutation authorization remains enforced by the server.
-    await page.evaluate(() => {
-      const user = window.TronoAuth.user;
-      window.__managementPermissions = user.permissions;
-      user.permissions = {...user.permissions, manageChannels: true, manageRoles: true};
-      window.dispatchEvent(new Event('trono-role-change'));
-    });
+    await presentAccount(page, {permissions: {manageChannels: true, manageRoles: true}});
     await page.evaluate(() => window.TronoChannelManagement.openManager());
     await expect(page.locator('#channelManagerDialog')).toBeVisible();
     await page.locator('#channelName').fill('Rascunho com chamada ativa');
@@ -444,7 +440,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#roleSelect').selectOption('admin');
     await preserved();
     await page.keyboard.press('Escape');
-    await page.evaluate(() => { window.TronoAuth.user.permissions = window.__managementPermissions; window.dispatchEvent(new Event('trono-role-change')); });
+    await restoreAccount(page);
     await page.evaluate(() => window.TronoCommunityAdmin.openChannelFiles());
     await expect(page.locator('#channelFilesDialog')).toBeVisible();
     await preserved();
@@ -593,18 +589,13 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await expect(page.locator('#profileLivePreview .member-bio')).toHaveText('Rascunho durante a chamada');
     // Exercise the private dialog with fixture permissions; backend authorization has separate tests.
     await page.route('**/community/registered-accounts?*', route => route.fulfill({json: {accounts:[{id:'24000000-0000-4000-8000-000000000001',nickname:'Conta de teste',email:'desktop-private@example.test',confirmed:true}],hasMore:false,nextOffset:1}}));
-    await page.evaluate(() => {
-      const user=window.TronoAuth.user;
-      window.__directoryIdentity={role:user.role,permissions:user.permissions};
-      user.role='creator';user.permissions={...user.permissions,viewEmails:true};
-      window.dispatchEvent(new Event('trono-role-change'));
-    });
+    await presentAccount(page, {role: 'creator', permissions: {viewEmails: true}});
     await page.locator('#profileCreatorHost button').click();
     await expect(page.locator('#creatorAccountsList')).toContainText('desktop-private@example.test');
     await page.keyboard.press('Escape');
     await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
     await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-    await page.evaluate(() => {Object.assign(window.TronoAuth.user,window.__directoryIdentity);window.dispatchEvent(new Event('trono-role-change'));});
+    await restoreAccount(page);
     await expect(page.locator('#profileCreatorHost button')).toBeHidden();
     await preserved();
     await page.route('**/community/gif-provider', route => route.fulfill({json: {provider: 'giphy', configured: false}}));

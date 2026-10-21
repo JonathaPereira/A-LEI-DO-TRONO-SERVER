@@ -13,7 +13,7 @@ export function invalidResponse(message = 'Resposta inválida do servidor.') {
   return Object.assign(new Error(message), { code: 'INVALID_RESPONSE' });
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 

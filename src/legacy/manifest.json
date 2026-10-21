@@ -1,5 +1,5 @@
 {
-  "scripts": ["auth-boot.js", "auth.js", "call-controls-layout.js"],
+  "scripts": ["auth-boot.js", "call-controls-layout.js"],
   "styles": [
     "style.css",
     "mn-chat.css",

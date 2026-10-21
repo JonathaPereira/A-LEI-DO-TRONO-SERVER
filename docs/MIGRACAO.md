@@ -30,6 +30,7 @@ O histórico das etapas anteriores permanece no Git.
 | Gravação manual | `lib/recording/` possui captura, mixer, encoder e escrita; `components/recording/` possui controles e runtime único. |
 | Música/efeitos locais | `lib/audio/` possui catálogo, player e síntese dos jogos; controles React em `components/audio/`; armazenamento resiliente em `lib/storage/`. Não possui recursos da chamada. |
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
+| Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
 | Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões e ICE já foram extraídos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
@@ -92,6 +93,13 @@ recursos em `public/roguelite/` foram preservados.
   hashchange e descarte têm cobertura própria. O build agora posiciona a política
   de referrer antes dos recursos hoisted; Electron e servidor estático também a
   enviam em cabeçalho. A falha de referrer foi reproduzida com o bootstrap antigo.
+- `auth.js`: último controlador JavaScript do frontend removido. Sessão e
+  formulários têm donos tipados; credenciais não entram nos snapshots observáveis.
+  Renovação concorrente é única e respostas antigas não atravessam logout/troca
+  de conta. Persistência nativa é serializada; formulários, callbacks e convidados
+  cancelam trabalho substituído. Diálogos estáticos anteriores foram apagados.
+  Inicialização sai da fase de commit do React antes de montar raízes de domínio;
+  não depende mais da espera acidental pelo download de um script.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -99,20 +107,17 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 
 ## Trabalho restante
 
-### 1. Retirar os scripts ainda ativos, por domínio
+### 1. Consolidar a composição do frontend
 
-O inventário de execução é `src/legacy/manifest.json`. Permanecem:
+Não há mais controladores `.js` em `src/legacy/`. Os únicos scripts do manifesto,
+`auth-boot.js` e `call-controls-layout.js`, são gerados de TypeScript. Próximo
+recorte: importar o dono do layout de controles diretamente, dar descarte aos seus
+observers/listeners e substituir `legacy-runtime.tsx` por composição explícita em
+`src/app/`. O boot antecipado de callback deve continuar beforeInteractive.
+`scripts/prepare-renderer.cjs` compila entradas clássicas/worklets e poda assets
+estáticos obsoletos somente após compilação bem-sucedida.
 
-- Conta: `auth.js`.
-
-`auth-boot.js` e `call-controls-layout.js` já são gerados dos módulos TypeScript
-`lib/auth/callback-boot.ts` e `lib/voice/control-layout.ts`; sua presença no manifesto
-não indica controladores JS ainda por converter. `scripts/prepare-renderer.cjs` compila esses módulos e poda
-assets estáticos obsoletos somente após compilação bem-sucedida.
-
-Todos os motores compartilhados dos jogos, áudio local e seletor desktop saíram de
-`src/legacy/`. Soundboard também está convertido. Próximo recorte: transferir
-o dono da conta e os formulários, preservando sessões, recuperação, convidados e permissões. A API
+A API
 `TronoApplicationAudio.cancel(id)` cancela somente o preparo/grafo desse job;
 não descarta o dono global nem as outras capturas.
 
@@ -192,6 +197,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Música/efeitos locais | 12 regressões novas e 20 de áudio da chamada passaram; 102 comparações dos 17 efeitos com a versão anterior preservaram os grafos, envelopes, ganhos e buffers de ruído. Navegador verificou forma de onda real, mute, teclado, três painéis sincronizados e descarte sem fechar contexto/trilha emprestados. Portal web/desktop, chamada completa no Electron e pacote passaram. |
 | Soundboard | 17 regressões do cliente e dois contratos HTTP/PCM passaram. 48 comparações/29.201.262 bytes de WAV idênticos ao encoder anterior. Dez verificações de navegador/shell, chamada completa no Electron e pacote passaram; renderer nativo também decodificou 15 s estéreo a 48 kHz, preservando níveis/canais com tolerância de quantização. |
 | Boot da conta | Seis modelos de callback/HTML e sete verificações de navegador passaram: cadastro, confirmação de uso único, login/logout, recuperação, erros e restauração de convidado. Requisições de recursos não incluem tokens no referrer. Fluxo nativo de cabeçalho/captura/PCM/permissões passou. |
+| Conta tipada | 34 modelos de transporte/sessão/formulários/callback/HTML e autenticação HTTP/WS passaram. Sete verificações de conta e oito de permissões/comunidade/arquivos passaram no navegador. Electron real validou criptografia, restauração sem cache da aba, remoção de “lembrar”, login e logout no botão movido para configurações. Chamada completa com dois Electron, pacote Windows e `npm test` completo passaram. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`

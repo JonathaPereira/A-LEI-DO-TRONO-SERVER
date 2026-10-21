@@ -154,7 +154,7 @@ o shell continua com sua navegação e permite o clique explícito em convidado.
 
 A ponte temporária atualiza os campos e feedback do lobby legado; valores são
 escritos somente quando a identidade muda, preservando nomes locais editados.
-`legacy/auth.js` publica a identidade pelo evento existente e deixou de escrever
+`components/auth/runtime.tsx` publica a identidade pelo evento existente sem escrever
 nos mesmos campos. A entrada de comunidade usa seu dono tipado, com guardas
 de validade próprias e a guarda opcional do portal; o portal não assume sua
 participação. `legacy/portal.js` e sua entrada no manifesto foram excluídos.
@@ -986,8 +986,31 @@ O rascunho continua pertencendo ao editor; a biblioteca não mantém outro estad
 por beforeInteractive. Captura os campos de confirmação/recuperação, limpa query e
 fragmento, e entrega um objeto imutável de uso único ao dono da conta. Hashchange
 notifica somente após sanitizar; pagehide remove o listener e o callback pendente.
-Não publica tokens em eventos nem os grava em armazenamento. `auth.js` ainda
-consome essa entrada e permanece como o último script de domínio a converter.
+Não publica tokens em eventos nem os grava em armazenamento.
+
+`lib/auth/session.ts` possui credenciais privadas, renovação única, identidade de
+convidado e fila de persistência criptografada do desktop. O snapshot imutável
+expõe a conta, convidado e preferências; não expõe access/refresh tokens. Cache
+da aba usa sessionStorage tolerante a falhas e é validado contra `/me` ou renovado;
+localStorage recebe somente preferências. Trocas de identidade invalidam HTTP,
+restauração nativa e operações de perfil; uma troca de formulário não interrompe
+a renovação da conta ativa. Liberação de mídia da conta anterior termina antes
+de publicar uma nova identidade. Renovação/HTTP não sobrescrevem permissões mais
+recentes recebidas pelo socket.
+
+`lib/auth/api.ts` limita o transporte HTTP e omite cookies/referrer; `protocol.ts`
+valida respostas. `password.ts` compartilha a política existente com o servidor.
+`forms.ts` possui modos, campos, submissões e callback de uso único. Credencial de
+recuperação permanece privada; senhas não são persistidas e são apagadas ao fechar,
+trocar de modo ou concluir login. Cancelar uma submissão de convidado impede que
+uma resposta tardia publique a identidade ou abra o jogo.
+
+`components/auth/dialogs.tsx` renderiza ambos os diálogos, regras e feedback em
+React. `runtime.tsx` instala uma fachada e uma assinatura de rede, monta antes de
+`trono:ready` e descarta raízes/listeners/timers em pagehide. Eventos de identidade
+e de preferência são separados; persistir a conta não reinicia editores ou mídia.
+Botões do cabeçalho mantêm listeners nativos porque configurações movem o botão
+de logout entre hosts. `legacy/auth.js` e os diálogos estáticos foram removidos.
 
 Next pode emitir preloads antes da metadata. `scripts/prepare-static-html.cjs`,
 executado por postbuild, move a política no-referrer para antes desses recursos nos
@@ -1115,7 +1138,7 @@ possuir a instalação. `legacy/desktop-platform.js` e sua entrada foram removid
 
 `lib/voice/runtime.ts` compõe os donos da chamada por imports diretos, com uma
 instância por janela. O bootstrap instala preferências tipadas antes dos scripts;
-após `auth.js`, instala filtros tipados e inicializa a voz. Os listeners iniciam
+após o dono da conta, instala filtros tipados e inicializa a voz. Os listeners iniciam
 uma única vez em `trono:ready`.
 Callbacks adiam a leitura das dependências até sua composição estar completa.
 `runtime-ports.ts` descreve as entradas ainda legadas e a fachada `TronoSocial`,
@@ -1675,7 +1698,7 @@ pedido já em andamento. Detecção e processo auxiliar continuam em
 os hosts de perfil e os controles restantes dos jogos já estão preparados. O bootstrap
 registra essa montagem depois do shell desktop e antes de atividade/notificações;
 ela executa nessa ordem em `trono:ready`. O editor/contas são inicializados após
-`auth.js`, usando o cliente de perfis já instalado; não dependem de scripts de perfil legados.
+o dono da conta, usando o cliente de perfis já instalado; não dependem de scripts de perfil legados.
 
 `components/voice/settings-fields.tsx` renderiza os campos de microfone, câmera,
 saída, ganhos de voz, supressão/modo leve, perfil, formato/bitrate/conteúdo da tela

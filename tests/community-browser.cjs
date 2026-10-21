@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
+const { presentAccount } = require('./auth-presentation-fixture.cjs');
 
 test(
   'community preserves people, actions, voice notices and stable hosts in web and desktop layouts',
@@ -206,10 +207,7 @@ test(
                 '../artifacts/community-' + (native ? 'desktop' : 'web') + '.png',
               ),
             });
-            await page.evaluate(() => {
-              window.TronoAuth.user.permissions.manageRoles = false;
-              window.dispatchEvent(new Event('trono-role-change'));
-            });
+            await presentAccount(page, { permissions: { manageRoles: false } });
             await expect(page.locator('#communityMembers .role-edit-btn')).toHaveCount(0);
             await page.setViewportSize({ width: 900, height: 700 });
             await expect(page.locator('#communityPanel')).toBeHidden();

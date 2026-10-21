@@ -98,8 +98,9 @@
     "test:soundboard": "node --test tests/soundboard.cjs tests/files-soundboard.js",
     "test:soundboard:ui": "node --test tests/soundboard-browser.cjs",
     "postbuild": "node scripts/prepare-static-html.cjs",
-    "test:auth:models": "node --test tests/auth-callback.cjs tests/static-html.cjs",
-    "test:auth:ui": "node --test tests/auth-browser.cjs"
+    "test:auth:models": "node --test tests/auth-callback.cjs tests/auth-session.cjs tests/auth-forms.cjs tests/static-html.cjs",
+    "test:auth:ui": "node --test tests/auth-browser.cjs",
+    "test:auth:native": "node --test tests/auth-desktop.cjs"
   },
   "engines": {
     "node": ">=24.12.0"

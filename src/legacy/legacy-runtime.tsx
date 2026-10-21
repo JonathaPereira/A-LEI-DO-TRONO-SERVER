@@ -11,6 +11,7 @@ import { initializeDesktopCapture } from '../components/desktop/capture-runtime'
 import { initializeNoiseProcessors } from '../lib/voice/noise-runtime';
 import { initializeAudio } from '../components/audio/runtime';
 import { initializeSoundboard } from '../components/soundboard/runtime';
+import { initializeAuth } from '../components/auth/runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
@@ -90,7 +91,8 @@ export function LegacyRuntime() {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    startup ??= (async () => {
+    // Leave React's effect commit before any domain root uses flushSync.
+    startup ??= Promise.resolve().then(async () => {
       initializeAudio(window);
       initializePersonalPreferences(window);
       initializeNetwork(window);
@@ -106,38 +108,35 @@ export function LegacyRuntime() {
       initializeClipPreferencesView(window);
       initializeApplicationAudio(window);
       initializeDesktopCapture(window);
+      initializeAuth(window);
+      initializePortal(window);
+      initializeProfileEditor(window);
+      initializeNoiseProcessors(window);
+      initializeVoiceRuntime(window);
+      initializeRecorder(window);
+      initializeClips(window);
+      initializeClipDesktop(window);
+      Object.assign(window, { TronoRules: throneRules });
+      initializeThroneLobby(window);
+      initializeThroneMatch(window);
+      initializeThroneControls(window);
+      initializeThroneSeats(window);
+      initializeThroneTable(window);
+      initializeThronePrivate(window);
+      initializeThroneHistory(window);
+      initializeThroneEffects(window);
+      initializeThroneEvents(window);
+      initializeThroneChoices(window);
+      initializeThroneHand(window);
+      initializeThroneLocal(window);
+      initializeThroneNavigation(window);
+      initializeCommunityNavigation(window);
+      initializeCommunity(window);
+      initializeChannelManagement(window);
+      initializeSoundboard(window);
+      initializeAppearance(window);
       for (const filename of manifest.scripts) {
         if (filename !== 'auth-boot.js') await loadScript(filename);
-        if (filename === 'auth.js') {
-          initializePortal(window);
-          initializeProfileEditor(window);
-          initializeNoiseProcessors(window);
-          initializeVoiceRuntime(window);
-          initializeRecorder(window);
-          initializeClips(window);
-          initializeClipDesktop(window);
-          Object.assign(window, {
-            TronoRules: throneRules,
-          });
-          initializeThroneLobby(window);
-          initializeThroneMatch(window);
-          initializeThroneControls(window);
-          initializeThroneSeats(window);
-          initializeThroneTable(window);
-          initializeThronePrivate(window);
-          initializeThroneHistory(window);
-          initializeThroneEffects(window);
-          initializeThroneEvents(window);
-          initializeThroneChoices(window);
-          initializeThroneHand(window);
-          initializeThroneLocal(window);
-          initializeThroneNavigation(window);
-          initializeCommunityNavigation(window);
-          initializeCommunity(window);
-          initializeChannelManagement(window);
-          initializeSoundboard(window);
-          initializeAppearance(window);
-        }
         // Profile hosts and remaining game bodies exist before settings mount;
         // activity/notifications then bind to the mounted slots, matching their boot order.
         if (filename === 'call-controls-layout.js') {
@@ -172,8 +171,9 @@ export function LegacyRuntime() {
       initializeMediaDialogs(window);
       initializeMediaLayout(window);
       if ((window as Window & { TronoDesktop?: object }).TronoDesktop) initializeHandLayout(window);
-    })();
+    });
     void startup.catch((cause: unknown) => {
+      console.error('[Application startup]', cause);
       setError(cause instanceof Error ? cause.message : 'Falha ao iniciar a interface.');
     });
   }, []);

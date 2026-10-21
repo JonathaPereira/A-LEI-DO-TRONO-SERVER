@@ -3,23 +3,7 @@ const { accountRole, permissions } = require('./roles');
 const { cleanProfile } = require('./profile-customization.ts');
 
 // Supabase keeps password hashes and recovery tokens. The application never stores passwords.
-const SYMBOLS = '!@#$%^&*()_+-=[]{};\'\\:"|<>?,./`~';
-function passwordChecks(password) {
-  const p = typeof password === 'string' ? password : '';
-  return {
-    length: [...p].length >= 8,
-    lowercase: /[a-z]/.test(p),
-    uppercase: /[A-Z]/.test(p),
-    number: /[0-9]/.test(p),
-    symbol: [...p].some((c) => SYMBOLS.includes(c)),
-  };
-}
-function validPassword(password) {
-  return (
-    Object.values(passwordChecks(password)).every(Boolean) &&
-    Buffer.byteLength(password, 'utf8') <= 72
-  );
-}
+const { passwordChecks, validPassword } = require('../src/lib/auth/password.ts');
 function validNickname(name) {
   return typeof name === 'string' && /^[\p{L}\p{N} _.-]{2,20}$/u.test(name) && name === name.trim();
 }

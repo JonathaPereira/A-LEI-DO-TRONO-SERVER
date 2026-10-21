@@ -5,6 +5,7 @@ const express = require('express'),
   path = require('node:path');
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
+const { presentAccount } = require('./auth-presentation-fixture.cjs');
 
 test(
   'channel attachments preserve pagination, moderation, cancellation and shared previews',
@@ -135,10 +136,7 @@ test(
       await page.locator('#channelFileList .files-load-more').click();
       await expect(page.locator('#channelFileList .channel-file-card')).toHaveCount(3);
       assert.deepEqual(offsets, [0, 2, 2]);
-      await page.evaluate(() => {
-        window.TronoAuth.user.permissions.moderateFiles = false;
-        window.dispatchEvent(new Event('trono-role-change'));
-      });
+      await presentAccount(page, { permissions: { moderateFiles: false } });
       await expect(page.locator('#channelFileList .file-delete')).toHaveCount(1);
       page.once('dialog', (dialog) => dialog.accept());
       await page.locator('#channelFileList .file-delete').click();
@@ -173,10 +171,7 @@ test(
       await page.keyboard.press('Escape');
       await page.evaluate(() => window.TronoChannelManagement.openManager());
       await expect(page.locator('#channelName')).toHaveValue('Rascunho preservado');
-      await page.evaluate(() => {
-        window.TronoAuth.user.permissions.manageChannels = false;
-        window.dispatchEvent(new Event('trono-role-change'));
-      });
+      await presentAccount(page, { permissions: { manageChannels: false } });
       await expect(page.locator('#channelManagerDialog')).toBeHidden();
       await expect(page.locator('#createChannelBtn')).toBeHidden();
       assert.deepEqual(errors, []);

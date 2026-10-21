@@ -50,7 +50,18 @@ test(
           leaked.push(request.resourceType());
       });
       const ready = async () => {
-        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page
+          .waitForFunction(() => window.TronoAuth?.ready)
+          .catch(async (error) => {
+            throw new Error(
+              'Account startup: ' +
+                JSON.stringify({
+                  errors,
+                  notice: await page.locator('.application-load-error').allTextContents(),
+                }),
+              { cause: error },
+            );
+          });
         await page.evaluate(() => window.TronoAuth.ready);
       };
       const email = 'migration-auth@example.test';
