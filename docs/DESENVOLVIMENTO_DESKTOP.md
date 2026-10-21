@@ -63,6 +63,37 @@ O modo de desenvolvimento aceita apenas uma origem HTTP em `127.0.0.1` com porta
 explícita e é desativado no aplicativo empacotado. O instalador serve somente seus
 arquivos e autoriza os scripts de bootstrap por hash.
 
+## Instalação nova do banco
+
+`supabase/install.sql` é a ordem única dos 13 SQL existentes: base, upgrades e
+migrações datadas. Requer a infraestrutura de Auth do Supabase e recusa executar
+se alguma tabela da aplicação já existir. Para atualizar uma base existente,
+aplique somente os upgrades ainda necessários; não use esse instalador.
+
+```powershell
+npm run database:prepare
+npm run test:database
+```
+
+O primeiro comando somente gera `artifacts/database/fresh-install.sql`, pronto
+para revisar e executar no SQL Editor de um projeto de desenvolvimento novo.
+Não abre conexão nem lê credenciais. O segundo instala esse mesmo conteúdo em
+PGlite descartável e verifica RLS, permissões, perfis, e-mails privados e histórico.
+Não substitui a conferência num ambiente Supabase completo.
+
+Se usar psql, com a conexão do destino novo já configurada, a alternativa é
+`psql -f supabase/install.sql`. As inclusões são relativas ao próprio instalador,
+e ON_ERROR_STOP interrompe o processo no primeiro erro. Cada fonte conserva sua
+transação; se uma etapa falhar depois de outras confirmadas, corrija a causa e
+continue pelos arquivos pendentes, sem reaplicar o instalador inteiro.
+
+O roteiro não escreve no histórico interno do Supabase CLI nem transforma os
+SQL legados numa cadeia de `db reset`. Antes de adotar `db push`, confira
+`supabase migration list` e reconcilie as migrações datadas já executadas pelo
+[fluxo oficial de histórico](https://supabase.com/docs/reference/cli/supabase-migration-repair).
+Marcar uma migração como aplicada exige confirmar que seu SQL já foi executado;
+esse comando muda o histórico e não instala os objetos ausentes.
+
 ## Helper C++
 
 Para áudio isolado de aplicativos e detecção de atividade, instale Visual Studio

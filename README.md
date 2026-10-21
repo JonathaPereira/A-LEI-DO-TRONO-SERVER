@@ -55,7 +55,7 @@ electron/                  Janela, preload, permissões e auxiliares nativos
 public/                    Imagens, áudio, manuais, fornecedores e jogo Cinzas
 scripts/                   Desenvolvimento, mídia e empacotamento
 tests/                     Regressões e integrações
-supabase/                  SQL e migrações existentes
+supabase/                  SQL existentes e roteiro único de instalação nova
 docs/                      Arquitetura, desenvolvimento e andamento da migração
 docs/archive/              Notas usadas na distribuição e originais de arte
 ```

@@ -153,11 +153,13 @@ como temporários. Licenças, créditos, modelos de áudio, SQL, manuais distrib
 e recursos dos jogos permanecem necessários. Evidências em `artifacts/` podem ser
 apagadas quando não forem mais úteis; builds/testes as recriam conforme necessário.
 
-### 3. Instalação nova do banco
+### Instalação nova do banco: roteiro concluído
 
-Documentar e testar uma ordem única para SQL legados e migrações datadas em uma
-base vazia. Não reaplicar esse roteiro em bases existentes. Preservar RLS,
-permissões, privacidade de e-mails e idempotência onde o contrato já exige.
+`supabase/install.sql` centraliza a ordem dos 13 SQL e recusa uma base já instalada.
+`database:prepare` gera SQL para revisão/SQL Editor; `test:database` instala o mesmo
+conteúdo em PGlite vazio. Os fontes SQL anteriores não foram modificados. Comandos,
+limites e distinção em relação ao histórico/reset do CLI estão no guia desktop.
+O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alterado.
 
 ## Como continuar um recorte
 
@@ -204,6 +206,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Conta tipada | 34 modelos de transporte/sessão/formulários/callback/HTML e autenticação HTTP/WS passaram. Sete verificações de conta e oito de permissões/comunidade/arquivos passaram no navegador. Electron real validou criptografia, restauração sem cache da aba, remoção de “lembrar”, login e logout no botão movido para configurações. Chamada completa com dois Electron, pacote Windows e `npm test` completo passaram. |
 | Composição e estilos | 28 verificações de navegador passaram, incluindo descarte/reinstalação do layout, hosts/trilhas preservados e fechamento com consumidores ativos. Os 33 estilos/770.491 bytes mantêm conteúdo e precedência idênticos. Tipagem, formatação, build, modelos de conta e `npm test` completo passaram; conta criptografada e pacote passaram no Electron real. |
 | Serviços básicos do backend | Oito verificações de política/fila/cancelamento/ciclo de vida passaram. As 24 regressões relacionadas de SQL, persistência após reinício, perfis e soundboard passaram; `npm test` completo, tipagem, formatação e build também passaram. Provedor e bancos são fixtures locais. |
+| Instalação nova do banco | Seis verificações passaram: inventário único dos 13 SQL, instalação completa, 12 tabelas com RLS, funções privilegiadas com search_path fixo, privacidade/autorização e bloqueio de reexecução preservando os dados. Executado em PGlite descartável, sem Supabase remoto. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`

@@ -2035,6 +2035,15 @@ o contrato completo de `ChatMessage`. A interface mantém sua validação própr
 encerramento de `runtime.cjs` chama esse descarte. Rejeição de uma gravação não
 trava a fila do canal nem os demais canais. `.js` substituídos foram apagados.
 
+`supabase/install.sql` centraliza a sequência para uma instalação nova. A guarda
+exige Auth e bloqueia tabelas existentes antes de executar as inclusões. Os SQL
+originais continuam sendo as fontes; nenhuma migração anterior foi reescrita.
+`scripts/prepare-database.cjs` expande a sequência para SQL Editor sem acessar
+rede/credenciais. O teste instala os 13 fontes em PGlite vazio e verifica as 12
+tabelas com RLS, search_path das funções privilegiadas e limites entre membro,
+criador e service_role. Histórico interno do CLI continua separado desse roteiro.
+Comandos e limites estão no guia de desenvolvimento desktop.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e
