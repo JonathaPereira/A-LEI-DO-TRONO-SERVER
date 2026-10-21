@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.13
+M&N · A Lei do Trono — Windows 0.2.14
 
-1. Instalação nova: instale MN-Trono-0.2.13-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.2.14-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -145,3 +145,11 @@ da chamada por 5 minutos no menu de cada participante. Requer backend no
 Render + frontend novo + EXE novo. Sem SQL novo. Guia: ATUALIZAR_WINDOWS_v0.2.13.md.
 
 Nexus: abra Jogos > Nexus > Jogar Nexus. O jogo abre em uma janela própria do aplicativo e a chamada continua no Trono. Precisa de conexão; o progresso do Nexus é separado da conta do Trono.
+
+VERSÃO 0.2.14 — NEXUS ATUALIZADO
+Jogos > Nexus abre o novo upload 19915488 no itch.io, com Nexus 0.14 e
+dublagem sintética em português. O servidor correto é
+wss://nexus-pvp.onrender.com/pvp, já salvo na nova exportação do jogo.
+Publique o frontend e instale o EXE desta mesma entrega para atualizar
+o site e a janela do aplicativo. Sem SQL ou backend novo nesta atualização.
+Guia: ATUALIZAR_WINDOWS_v0.2.14.md.

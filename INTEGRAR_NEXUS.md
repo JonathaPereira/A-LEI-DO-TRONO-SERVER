@@ -1,13 +1,13 @@
-# Nexus no Trono — Windows 0.2.13 e site
+# Nexus no Trono — Windows 0.2.14 e site
 
-Esta versão parte da branch `codex/desktop-remote-coop-moderation-0212` (Windows 0.2.12) e mantém os jogos, o compartilhamento de PC e a chamada existentes.
+A versão Windows 0.2.14 atualiza a integração já mesclada na `main` (0.2.13) para o novo upload do Nexus 0.14 no itch.io. Mantém os jogos, o compartilhamento de PC e a chamada existentes.
 
 O catálogo ganhou **Jogos → Nexus** com capa, instruções de PvP e carregamento sob demanda. O jogo fica em https://semchakra10.itch.io/nexus-mn. ZIP, PCK e WASM não são copiados para o Trono. A integração acrescenta aproximadamente 140 KB de capa e código, antes de compressão HTTP.
 
 ## Publicar
 
-1. No GitHub Actions, abra a compilação da branch `codex/desktop-nexus-0213`. Aguarde todos os testes e o empacotamento Windows passarem.
-2. Baixe o pacote **MN-Trono-Frontend-0.2.13.zip** da entrega validada. Não publique um pacote de uma execução que falhou.
+1. No GitHub Actions, abra a compilação da branch `codex/desktop-nexus-0214`. Aguarde todos os testes e o empacotamento Windows passarem.
+2. Baixe o pacote **MN-Trono-Frontend-0.2.14.zip** da entrega validada. Não publique um pacote de uma execução que falhou.
 3. Extraia em uma pasta nova. Entre na pasta `frontend` extraída e execute:
 
    ```bash
@@ -15,18 +15,18 @@ O catálogo ganhou **Jogos → Nexus** com capa, instruções de PvP e carregame
    ```
 
 4. Abra o site e confira **Jogos → Nexus → Jogar Nexus**. O jogo abre dentro da página, com tela cheia e acesso alternativo à página oficial no itch.io.
-5. Confira `/downloads/latest.yml`: deve indicar `version: 0.2.13`. No aplicativo instalado, busque a atualização e reinicie; também é possível instalar o EXE da mesma entrega.
+5. Confira `/downloads/latest.yml`: deve indicar `version: 0.2.14`. No aplicativo instalado, busque a atualização e reinicie; também é possível instalar o EXE da mesma entrega.
 6. No aplicativo atualizado, **Jogar Nexus** abre uma janela própria, dentro do aplicativo. Clicar novamente traz essa janela de volta, sem iniciar outra cópia. A chamada permanece no Trono.
 
 A integração não exige mudança no backend do Trono, SQL ou novas chaves. Para quem ainda não publicou o backend da 0.2.12, o requisito anterior de redeploy para Compartilhar PC Beta continua válido.
 
 ## Abrir dentro da página do site
 
-O iframe fornecido pelo proprietário já está configurado: `https://itch.io/embed-upload/19912863?color=333333`. Se uma nova publicação alterar o upload, atualize da seguinte forma.
+O iframe fornecido pelo proprietário já está configurado: `https://itch.io/embed-upload/19915488?color=333333`. Se uma nova publicação alterar o upload, atualize da seguinte forma.
 
 1. Entre na sua conta do itch.io e abra as opções de incorporação **Embed game** do Nexus. Copie o código `<iframe ...>` do jogo HTML5. Não use o widget de compra ou download.
 2. Copie somente o valor de `src` para `embedUrl` em `frontend/nexus-config.js`. São aceitos HTTPS em `itch.io/embed-upload/ID` ou `html-classic.itch.zone/html/ID/index.html`.
-3. Suba a alteração, aguarde a compilação validada e publique o novo pacote. Caso a versão 0.2.13 já tenha sido distribuída, incremente a versão Windows ao gerar outro instalador.
+3. Suba a alteração, aguarde a compilação validada e publique o novo pacote. Caso a versão 0.2.14 já tenha sido distribuída, incremente a versão Windows ao gerar outro instalador.
 
 Com `embedUrl` vazio, o botão continua funcionando pela página oficial. Com um endereço válido, o site cria o iframe somente após o clique em Jogar. O botão **Abrir no itch.io** continua disponível na tela inicial do Nexus. Não insira chaves Supabase nem a URL WebSocket como endereço de iframe.
 
@@ -35,7 +35,7 @@ O aplicativo usa uma sessão exclusiva `persist:mn-nexus`, sem o bridge do Trono
 ## Começar o PvP
 
 1. Abra o Nexus no Trono e escolha **PvP online**.
-2. Se o jogo pedir o servidor, use `wss://nexus-mn.onrender.com/pvp`. A exportação preparada já inclui esse endereço.
+2. Se o jogo pedir o servidor, use `wss://nexus-pvp.onrender.com/pvp`. A exportação Nexus 0.14 já inclui esse endereço e migra o domínio antigo salvo no jogo.
 3. Escolha três heróis e seus engastes. As gemas do PvP são ilimitadas para os testes de balanceamento.
 4. Um jogador cria a sala e envia o código ao adversário, que escolhe entrar na sala.
 5. Os dois confirmam suas equipes. A batalha começa quando ambos estiverem prontos.
