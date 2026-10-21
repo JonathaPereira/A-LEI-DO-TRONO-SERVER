@@ -54,9 +54,10 @@ precisa estar em `AUTH_ALLOWED_ORIGINS`, como no exemplo.
 
 Páginas, componentes e estilos globais usam a atualização do Next. Donos que
 duram pela página podem exigir recarga completa; mover um host deve preservar sua
-raiz React. Estilos em `src/styles/` ainda são preparados como arquivos estáticos:
-após editá-los, reinicie `desktop:dev` ou execute `npm run predev` e recarregue.
-Entradas clássicas de callback/worklets usam a mesma preparação. Mudanças em
+raiz React. `src/styles/index.css` importa os estilos de domínio pelo Next;
+edite os fontes em `src/styles/`, sem gerar cópias CSS em `public/`. O pacote
+continua exigindo `npm run build` para incorporar alterações. Entradas clássicas
+de callback/worklets usam a preparação de `predev`/`prebuild`. Mudanças em
 `electron/` exigem reabrir a aplicação; mudanças em C++ exigem recompilação.
 
 O modo de desenvolvimento aceita apenas uma origem HTTP em `127.0.0.1` com porta

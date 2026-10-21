@@ -2,8 +2,6 @@ import { useSyncExternalStore } from 'react';
 import type { ThronePrivate } from '../../lib/games/throne-private';
 import type { ThroneCard } from '../../types/throne-choices';
 import { GameDialog } from './game-dialog';
-import './throne-choices.css';
-import './throne-private.css';
 
 const suits = { cetro: 'Cetro', chave: 'Chave', lamina: 'Lâmina', mascara: 'Máscara' };
 function Card({ card }: { card: ThroneCard }) {

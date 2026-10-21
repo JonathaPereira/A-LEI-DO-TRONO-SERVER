@@ -7,7 +7,6 @@ import type { ThroneLobby } from '../../lib/games/throne-lobby';
 import type { NetworkClient } from '../../lib/socket/client';
 import { createThroneHand, type ThroneHand } from '../../lib/games/throne-hand';
 import { ThroneHandContents } from './throne-hand';
-import './throne-choices.css';
 
 interface Runtime extends Window {
   TronoAuth: { user: { id: string } | null; guest: { id: string } | null };

@@ -136,7 +136,7 @@
   padding: clamp(16px, 2vw, 30px);
   background:
     linear-gradient(#10050911, #13050a22),
-    url('assets/love-letter/table.webp') center/100% 100%,
+    url('/assets/love-letter/table.webp') center/100% 100%,
     #540e22;
   border: 1px solid #b58b4a88;
   border-radius: 30px;
@@ -211,7 +211,7 @@
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: url('assets/love-letter/characters.webp') 0 0/500% 200%;
+  background: url('/assets/love-letter/characters.webp') 0 0/500% 200%;
 }
 .ll-online {
   position: absolute;
@@ -344,7 +344,7 @@
   right: 5%;
   top: 3%;
   height: 69%;
-  background: url('assets/love-letter/characters.webp') 0 0/500% 200%;
+  background: url('/assets/love-letter/characters.webp') 0 0/500% 200%;
   border-radius: 5px 5px 0 0;
 }
 .ll-card-art:after {
@@ -626,7 +626,7 @@
   height: 34px;
   flex: none;
   border-radius: 4px;
-  background: url('assets/love-letter/characters.webp') 0 0/500% 200%;
+  background: url('/assets/love-letter/characters.webp') 0 0/500% 200%;
 }
 .ll-reference-card b {
   font:
@@ -677,7 +677,7 @@
   margin: auto;
   background:
     linear-gradient(90deg, #28101bee, #28101bb0),
-    url('assets/love-letter/table.webp') center/cover;
+    url('/assets/love-letter/table.webp') center/cover;
   box-shadow: 0 15px 40px #0005;
 }
 .ll-lobby h2,

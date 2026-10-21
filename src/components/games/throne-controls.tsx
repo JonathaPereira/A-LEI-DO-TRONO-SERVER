@@ -4,7 +4,6 @@ import type { ThroneControls } from '../../lib/games/throne-controls';
 import type { ThroneChoiceRules } from '../../types/throne-choices';
 import { throneLaws as lawOrder } from '../../lib/games/throne-choice-protocol';
 import { GameDialog } from './game-dialog';
-import './throne-controls.css';
 
 export interface ThroneControlsHosts {
   speed: HTMLElement;

@@ -1,4 +1,4 @@
-/* Shared Next globals. Domain stylesheet precedence is explicit in styles/manifest.json. */
+/* Shared Next globals. Domain stylesheet precedence is explicit in styles/index.css. */
 html {
   color-scheme: dark;
 }

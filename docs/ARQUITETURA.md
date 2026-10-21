@@ -424,7 +424,7 @@ texto. O descarte cancela o frame, observador, listeners e descrição temporár
 não restam timers de ocultação, RAFs ou estado correspondente em `game.js`.
 O observador só acompanha o DOM enquanto existe uma consulta ativa.
 O componente mede a caixa antes da pintura e a mantém dentro do viewport; sua
-largura independe da posição junto às bordas. CSS fica junto ao componente.
+largura independe da posição junto às bordas. CSS fica em `styles/navigation/hover-tooltip.css`.
 
 `lib/games/throne-match.ts` possui o estado público online e o status/relógio
 compartilhados pelos modos online e local. `throne-match-protocol.ts` valida quatro
@@ -858,12 +858,23 @@ hidratação, fora da fase de commit do React. Instala dependências antes dos s
 consumidores e dispara `trono:ready` uma vez, depois de preparar os hosts. Não há
 carregador dinâmico de controladores nem dependência de `DOMContentLoaded`.
 
-`src/styles/` agrupa os estilos por domínio; `manifest.json` registra sua precedência
-explícita. `scripts/prepare-renderer.cjs` valida fontes e nomes de saída, compila
-callback/worklets e copia os estilos para os mesmos caminhos públicos anteriores.
-Só depois do sucesso remove JS/CSS gerados obsoletos da raiz de public. Saídas são
-descartáveis; o conteúdo e a ordem dos 33 estilos foram preservados na mudança.
-A separação em pastas não consolida ainda as sobreposições históricas de CSS.
+`src/styles/index.css` é a entrada única dos estilos globais de domínio, importada
+pelo layout raiz após `globals.css`. Seus imports preservam a precedência entre
+primitivos React e temas de jogos, chat, chamada e desktop. O Next compila e publica
+os estilos; não há manifesto nem cópias CSS na raiz de `public/`. URLs de imagens
+e fontes locais partem de `/assets/`, incluindo no pacote Electron.
+
+O antigo `base/style.css` foi dividido em 14 arquivos nos limites dos domínios,
+sem reordenar declarações. Regras globais antes importadas por componentes entram
+pela mesma cascata explícita. Foram removidas oito repetições exatamente iguais,
+conservando a última ocorrência no mesmo contexto. Overrides de tema e de estados
+continuam necessários; não os fundir só porque repetem um seletor. CSS Modules
+podem permanecer junto de futuros componentes com estilos isolados.
+
+`scripts/prepare-renderer.cjs` compila somente callback/worklets e, após sucesso,
+poda JS/CSS gerados obsoletos da raiz de `public/`. Recursos originais em subpastas
+não são podados. `test:styles` compara CSS compilado com os fontes em snapshots
+isolados da interface e verifica os caminhos locais; não mede FPS ou captura física.
 
 Hosts móveis continuam pertencendo ao domínio que os renderiza. O layout move o
 host completo e preserva a raiz React e os recursos emprestados. `src/legacy/`,
@@ -2018,7 +2029,8 @@ bots. Os quatro serviços de jogos e o protótipo local de A Lei do Trono import
 esse módulo tipado diretamente, sem `TronoBots`. O fluxo nativo verifica também
 os nomes da partida local; apenas testar os serviços não cobre esse consumidor.
 `legacy/bot-names.js` e o download estático correspondente saíram, e o boot dos
-controladores da mesa não depende mais desse script. O teste do pacote busca scripts/estilos pelo manifesto atual,
+controladores da mesa não depende mais desse script. O teste do pacote busca os
+estilos pelos links da página exportada e verifica somente os scripts ainda necessários,
 além das imagens, worklets, manual e recursos dos jogos, sem exigir controladores
 JS já substituídos pelo bundle Next.
 

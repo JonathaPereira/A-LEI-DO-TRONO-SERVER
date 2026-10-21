@@ -60,14 +60,14 @@ input[type='range']:not(.trim-range)::-webkit-slider-thumb {
   width: 26px;
   height: 32px;
   margin-top: -14px;
-  background: url('assets/volume-sword.svg') center/contain no-repeat;
+  background: url('/assets/volume-sword.svg') center/contain no-repeat;
   border: 0;
   filter: drop-shadow(0 2px 3px #080a12);
 }
 input[type='range']:not(.trim-range)::-moz-range-thumb {
   width: 26px;
   height: 32px;
-  background: url('assets/volume-sword.svg') center/contain no-repeat;
+  background: url('/assets/volume-sword.svg') center/contain no-repeat;
   border: 0;
   border-radius: 0;
   filter: drop-shadow(0 2px 3px #080a12);
@@ -196,12 +196,12 @@ body.chat-only-active .mn-gain-label output {
   height: 76px;
 }
 .portal-screen:before {
-  background-image: url('assets/portal_realms.png');
+  background-image: url('/assets/portal_realms.png');
   filter: none;
   transform: none;
 }
 .portal-stage {
-  background: url('assets/portal_realms.png') center/cover no-repeat;
+  background: url('/assets/portal_realms.png') center/cover no-repeat;
 }
 .portal-stage:before {
   display: none;
@@ -629,11 +629,11 @@ body.chat-only-active
     background-repeat: no-repeat !important;
   }
   .portal-choice-voice {
-    background-image: url('assets/portal_realms.png') !important;
+    background-image: url('/assets/portal_realms.png') !important;
     background-position: left center !important;
   }
   .portal-choice-game {
-    background-image: url('assets/portal_realms.png') !important;
+    background-image: url('/assets/portal_realms.png') !important;
     background-position: right center !important;
   }
   .portal-choice-content {

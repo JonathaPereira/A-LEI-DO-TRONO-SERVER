@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import manifest from '@/styles/manifest.json';
 import './globals.css';
+import '@/styles/index.css';
 
 export const metadata: Metadata = {
   title: 'M&N · A Lei do Trono',
@@ -14,9 +14,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt-BR">
       <head>
         <Script src="/auth-boot.js" strategy="beforeInteractive" />
-        {manifest.styles.map((href) => (
-          <link key={href} rel="stylesheet" href={'/' + href.split('/').at(-1)} />
-        ))}
       </head>
       <body>{children}</body>
     </html>

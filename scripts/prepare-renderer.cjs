@@ -5,20 +5,10 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const source = path.join(root, 'src/styles');
 const target = path.join(root, 'public');
-const manifest = require('../src/styles/manifest.json');
 
-// Every root JS/CSS in public is generated; keep only current sources and typed outputs.
+// Root JS/CSS in public are generated. Styles now belong to the Next CSS graph.
 const outputs = new Map();
-for (const filename of manifest.styles) {
-  const input = path.resolve(source, filename),
-    output = path.basename(filename);
-  if (!input.startsWith(source + path.sep) || !filename.endsWith('.css') || outputs.has(output))
-    throw Error('Invalid or duplicate stylesheet: ' + filename);
-  if (!fs.statSync(input).isFile()) throw Error('Missing stylesheet: ' + filename);
-  outputs.set(output, input);
-}
 outputs.set('auth-boot.js', path.join(root, 'artifacts/renderer/lib/auth/callback-boot.js'));
 outputs.set(
   'application-audio-worklet.js',
@@ -43,4 +33,4 @@ for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
     fs.unlinkSync(path.join(target, entry.name));
 }
 for (const [filename, input] of outputs) fs.copyFileSync(input, path.join(target, filename));
-console.log('Renderer styles, callback boot and audio worklets prepared.');
+console.log('Renderer callback boot and audio worklets prepared.');

@@ -1,0 +1,131 @@
+/* revelação privada da Usurpação */
+.private-exchange-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+.private-exchange-role {
+  align-self: center;
+  padding: 5px 12px;
+  border: 1px solid rgba(210, 170, 82, 0.42);
+  border-radius: 999px;
+  background: #12100c;
+  color: #d9ba73;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+}
+.private-exchange-cards {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+}
+.private-exchange-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 11px;
+  border: 1px solid #4c3b23;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #16130e, #0b0a08);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+.private-exchange-card small {
+  font-size: 8px;
+  letter-spacing: 1.35px;
+  color: #958567;
+}
+.private-exchange-card strong {
+  font-family: Georgia, serif;
+  color: #ead08d;
+  font-size: 12px;
+}
+.private-exchange-card img {
+  display: block;
+  width: 96px;
+  max-width: 24vw;
+  aspect-ratio: 63.5/88;
+  object-fit: cover;
+  border-radius: 7px;
+  border: 1px solid #69512c;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.48);
+}
+.private-exchange-card.outgoing {
+  border-color: rgba(156, 90, 94, 0.58);
+}
+.private-exchange-card.incoming {
+  border-color: rgba(83, 139, 99, 0.62);
+}
+.private-exchange-arrow {
+  font-size: 30px;
+  color: #d4aa53;
+  text-shadow: 0 0 16px rgba(212, 170, 83, 0.38);
+}
+.private-exchange-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border: 1px solid rgba(116, 91, 49, 0.55);
+  border-radius: 8px;
+  background: rgba(20, 17, 12, 0.85);
+  text-align: left;
+}
+.private-exchange-note strong {
+  color: #d9ba73;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.private-exchange-note span {
+  color: #a99b7c;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.private-exchange-note.neutral {
+  border-color: rgba(126, 102, 155, 0.58);
+  background: rgba(27, 20, 34, 0.72);
+}
+.private-exchange-note.neutral strong {
+  color: #c6a2dc;
+}
+@media (max-width: 620px) {
+  .private-exchange-cards {
+    grid-template-columns: 1fr;
+  }
+  .private-exchange-arrow {
+    transform: rotate(90deg);
+  }
+  .private-exchange-card img {
+    width: 82px;
+    max-width: none;
+  }
+}
+
+.hidden-card-choice {
+  min-width: 92px !important;
+}
+.hidden-card-back {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 80px;
+  margin: 0 auto 7px;
+  border-radius: 7px;
+  border: 2px solid #aa8138;
+  background: radial-gradient(circle at 50% 40%, #3a2c17 0 9%, #15120d 10% 46%, #080808 47%);
+  color: #d8ae56;
+  font-size: 24px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 2px rgba(26, 20, 11, 0.85);
+}
+.hidden-card-choice:hover .hidden-card-back {
+  transform: translateY(-4px);
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.58),
+    0 0 20px rgba(210, 166, 75, 0.2);
+}

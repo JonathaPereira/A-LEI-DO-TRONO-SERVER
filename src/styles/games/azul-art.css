@@ -3,7 +3,7 @@
   color: #f8edce;
   background:
     linear-gradient(#1e1207a6, #24140680),
-    url('assets/azul/wood-table.png') center/cover fixed;
+    url('/assets/azul/wood-table.png') center/cover fixed;
   scrollbar-color: #ba9764 #372619;
 }
 .az-title h1 {
@@ -89,7 +89,7 @@
   color: #526f6c;
 }
 .az-factory {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-repeat: no-repeat;
   background-size: 350.684932% 256%;
   background-position: 10.928962% 0.801282%;
@@ -112,7 +112,7 @@
   display: none;
 }
 .az-tile {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-repeat: no-repeat;
   background-color: transparent;
   border: 0;
@@ -151,12 +151,12 @@
 }
 .az-board {
   color: #204854;
-  background-image: url('assets/azul/mural.png');
+  background-image: url('/assets/azul/mural.png');
   background-size: 1335.652174% 1575.384615%;
   background-position: 40.816327% 7.820647%;
   background-repeat: no-repeat;
   border: 9px solid transparent;
-  border-image: url('assets/azul/mural.png') 26 stretch;
+  border-image: url('/assets/azul/mural.png') 26 stretch;
   padding: 10px;
   outline-offset: 1px;
   box-shadow: 0 7px 22px #160c0766;
@@ -182,7 +182,7 @@
   margin-bottom: 19px;
 }
 .az-name-plaque {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-size: 394.858612% 1003.921569%;
   background-position: 50.130776% 100%;
   background-repeat: no-repeat;
@@ -231,14 +231,14 @@
   bottom: 1px;
   width: 19px;
   height: 22px;
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-size: 2400% 1484.057971%;
   background-position: 17.255435% 61.570681%;
   background-repeat: no-repeat;
   clip-path: polygon(7% 22%, 27% 0, 100% 0, 100% 78%, 80% 100%, 0 100%, 0 26%);
 }
 .az-slot {
-  background-image: url('assets/azul/mural.png');
+  background-image: url('/assets/azul/mural.png');
   background-size: 1371.428571% 922.522523%;
   background-position: 41.502809% 16.757941%;
   background-repeat: no-repeat;
@@ -273,7 +273,7 @@
   padding-bottom: 16px;
 }
 .az-floor-slots {
-  background-image: url('assets/azul/mural.png');
+  background-image: url('/assets/azul/mural.png');
   background-size: 156.097561% 465.454545%;
   background-position: 5.072464% 91.666667%;
   background-repeat: no-repeat;
@@ -318,7 +318,7 @@
   border-radius: 2px;
   aspect-ratio: 492/266;
   align-self: start;
-  background-image: url('assets/azul/mural.png');
+  background-image: url('/assets/azul/mural.png');
   background-size: 312.195122% 384.962406%;
   background-position: 97.988506% 97.361478%;
   background-repeat: no-repeat;
@@ -333,7 +333,7 @@
   color: #5c7162;
 }
 .az-points-pop {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-size: 1280% 825.806452%;
   background-position: 68.29096% 61.777778%;
   background-repeat: no-repeat;

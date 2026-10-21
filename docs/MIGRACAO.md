@@ -51,7 +51,7 @@ recursos em `public/roguelite/` foram preservados.
 - `bot-names.js`: sequência compartilhada em `lib/games/bot-names.ts`, importada
   pelos serviços e pelo protótipo local, sem global. A remoção inicial havia deixado
   esse consumidor local sem import; o teste nativo expôs a falha e agora verifica
-  também os quatro nomes. O teste do pacote consulta o manifesto atual em vez de
+  também os quatro nomes. O teste do pacote consulta a página exportada em vez de
   exigir scripts já removidos.
 - `profile-data.js` e `server/profile-customization.js`: validação de escrita
   compartilhada em `lib/profiles/validation.ts`, com entrada HTTP tipada como
@@ -102,8 +102,8 @@ recursos em `public/roguelite/` foram preservados.
   não depende mais da espera acidental pelo download de um script.
 - `src/legacy/`: pasta removida. A composição em `src/app/application-runtime.tsx`
   importa o layout de controles diretamente e não carrega scripts de domínio.
-  Estilos foram para `src/styles/` por domínio, com 33 arquivos/770.491 bytes e
-  precedência idênticos. Isso ainda não consolida sobreposições históricas de CSS.
+  Estilos foram para `src/styles/` por domínio; a cascata agora é importada pelo
+  Next em `index.css`, conforme o checkpoint abaixo.
   A ponte de anexos sem consumidores foi apagada; layout de controles descarta
   observers/listeners e restaura os nós emprestados.
 - `server/roles.js`, `soundboard.js` e `chat-history.js`: fontes substituídos por
@@ -135,7 +135,7 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 
 Não há mais `src/legacy/` nem controladores de domínio carregados por script.
 O boot antecipado de callback continua beforeInteractive e os worklets mantêm
-seus caminhos. Estilos ainda têm preparação estática conforme o guia desktop.
+seus caminhos. Estilos são compilados pelo Next, conforme o guia desktop.
 A API
 `TronoApplicationAudio.cancel(id)` cancela somente o preparo/grafo desse job;
 não descarta o dono global nem as outras capturas.
@@ -153,13 +153,15 @@ fixtures são opções explícitas da fábrica, sem alterar exports de produçã
 `tsconfig.server.json` verifica todos os módulos do servidor estritamente, sem DOM.
 Aceites de produção/banco/mídia física continuam externos, conforme os limites abaixo.
 
-### 2. Estilos e limpeza final
+### 2. Estilos: conversão concluída; auditoria final pendente
 
-Consolidar CSS por domínio depois de retirar os respectivos controladores.
-A ordem em `src/styles/manifest.json` contém sobreposições necessárias para estados
-de chamada fora da vista inicial. As pastas já estão organizadas, mas ainda é
-necessário consolidar regras por domínio, validar a cascata e avaliar importação
-direta pelo Next. Remover adaptadores apenas sem consumidores.
+`src/styles/index.css` substitui o manifesto e os links de CSS estático. O layout
+raiz importa a cascata inteira pelo Next; primitivas React precedem os overrides
+de domínio na mesma ordem anterior. O monólito `base/style.css` virou 14 arquivos
+por responsabilidade, sem mudar a ordem das declarações. Oito regras exatamente
+repetidas foram removidas mantendo a última ocorrência no mesmo contexto.
+URLs locais usam `/assets/`; fontes, temas Original/Discord e recursos dos jogos
+permanecem. Adaptadores só devem ser removidos depois de verificar consumidores.
 
 `public/` na raiz contém também recursos originais. Somente JS/CSS gerados na raiz,
 `out/`, `.next/` e `artifacts/` são saídas regeneráveis; não tratar todos os assets
@@ -180,8 +182,8 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 Checkpoint de trabalho: autenticação, arquivos, os quatro serviços de jogos e SFU convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
-A migração completa ainda não está concluída: faltam consolidar a cascata de CSS,
-limpeza/auditoria final e os aceites físicos/externos descritos abaixo.
+A migração completa ainda não está concluída: faltam a limpeza/auditoria final
+e os aceites físicos/externos descritos abaixo.
 
 `server/auth.js` foi removido. `auth.ts`, `auth-provider.ts`, `auth-protocol.ts`
 e `auth-errors.ts` separam rotas/limites, transporte, validação e erros públicos.
@@ -311,23 +313,33 @@ compõe relógio/seed/armazenamento de testes com opções da mesma fábrica; os
 não modificam mais exports internos. Produção não lê esses flags de fixture.
 `createApplication()` continua sem abrir porta ou registrar sinais, com close idempotente.
 
-Próximo recorte recomendado: ler `src/styles/manifest.json`, `scripts/prepare-renderer.cjs`
-e `src/app/layout.tsx`. Consolidar/importar CSS pelo Next conservando a ordem atual,
-sem ajustar layout junto. Comparar a cascata e os estados de chamada/layout/portrait;
-os testes de interface usam `out/`. Atualizar as verificações do pacote/política se
-os caminhos de CSS gerado mudarem. Limpar saídas antigas somente quando substituídas.
+`src/styles/manifest.json`, os CSS globais dos componentes e as cópias CSS geradas
+na raiz de `public/` foram removidos. `index.css` explicita a cascata e o Next gera
+os arquivos em `/_next/`. `prepare-renderer.cjs` prepara somente o boot da conta
+e os dois worklets, podando saídas obsoletas após a compilação bem-sucedida.
+O teste do pacote resolve os estilos reais pelos links da página exportada.
+
+`test:styles` verifica inventário/imports únicos e assets locais, além de comparar
+as propriedades calculadas dos fontes com o CSS compilado em 14 estados de layout,
+chamada, configurações, portrait e jogos. O snapshot de referência anterior também
+passou nesses estados (cerca de 15,2 milhões de propriedades), antes e após a divisão
+e a deduplicação. A comparação congela a árvore num frame sem scripts/mídia ativos;
+não cobre pseudo-elementos, FPS nem garante comportamento de um dispositivo físico.
+Evidências locais: `artifacts/style-next-*`, `styles-before-next.json`,
+`style-foundation-split.json` e `style-deduplication.json`. São saídas ignoradas;
+o teste permanente compara diretamente o grafo de fontes com `out/`.
+
+Próximo recorte: auditar fontes/adaptadores sem consumidores e documentação;
+conservar recursos distribuídos e registrar os aceites externos ainda necessários.
 Manter `createApplication()`, um único socket e os donos de mídia. A fábrica de
 canais não executa callbacks durante a construção; callbacks adiados da composição
 conectam presença, histórico e jogos sem criar outra instância desses serviços.
 
 Sequência restante, após esse recorte:
 
-1. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
-   A movimentação de arquivos está concluída; as sobreposições e a preparação
-   estática continuam explicitamente preservadas.
-2. Auditar adaptadores sem consumidores, fontes/documentação e saídas antigas;
+1. Auditar adaptadores sem consumidores, fontes/documentação e saídas antigas;
    conservar recursos originais/distribuídos e um roteiro curto de continuidade.
-3. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
+2. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
@@ -476,6 +488,7 @@ Executada em Windows em 20–21/10/2026, após os recortes acima:
 | Boot da conta | Seis modelos de callback/HTML e sete verificações de navegador passaram: cadastro, confirmação de uso único, login/logout, recuperação, erros e restauração de convidado. Requisições de recursos não incluem tokens no referrer. Fluxo nativo de cabeçalho/captura/PCM/permissões passou. |
 | Conta tipada | 34 modelos de transporte/sessão/formulários/callback/HTML e autenticação HTTP/WS passaram. Sete verificações de conta e oito de permissões/comunidade/arquivos passaram no navegador. Electron real validou criptografia, restauração sem cache da aba, remoção de “lembrar”, login e logout no botão movido para configurações. Chamada completa com dois Electron, pacote Windows e `npm test` completo passaram. |
 | Composição e estilos | 28 verificações de navegador passaram, incluindo descarte/reinstalação do layout, hosts/trilhas preservados e fechamento com consumidores ativos. Os 33 estilos/770.491 bytes mantêm conteúdo e precedência idênticos. Tipagem, formatação, build, modelos de conta e `npm test` completo passaram; conta criptografada e pacote passaram no Electron real. |
+| Cascata compilada pelo Next | Tipagem, formatação, build, `npm test` e os três contratos de estilos passaram. Comparação com o CSS anterior e com o grafo atual passou em 14 estados (cerca de 15,2 milhões de propriedades cada). Layout/conta/portrait (10 casos), jogos (17), perfis/mensagens/soundboard e clipes (10) passaram; clipes foram repetidos com ffmpeg/ffprobe no PATH. Pacote Windows reconstruído, chamada com dois Electron e negociação pelo backend tipado/relay local também passaram (três casos). Logs `artifacts/style-next-*`; nada foi instalado ou publicado. |
 | Serviços básicos do backend | Oito verificações de política/fila/cancelamento/ciclo de vida passaram. As 24 regressões relacionadas de SQL, persistência após reinício, perfis e soundboard passaram; `npm test` completo, tipagem, formatação e build também passaram. Provedor e bancos são fixtures locais. |
 | Instalação nova do banco | Seis verificações passaram: inventário único dos 13 SQL, instalação completa, 12 tabelas com RLS, funções privilegiadas com search_path fixo, privacidade/autorização e bloqueio de reexecução preservando os dados. Executado em PGlite descartável, sem Supabase remoto. |
 | Presença/comunidade do backend | Cinco regressões novas de diretório, atomicidade, cancelamento, privacidade, convidados e nomes passaram; suíte de ciclo de vida tem 13 verificações. Conta/HTTP/WS, `npm test` completo, tipagem, formatação e build passaram. Os 15 fluxos relacionados de navegador e chamada completa com dois Electron reais também passaram. |

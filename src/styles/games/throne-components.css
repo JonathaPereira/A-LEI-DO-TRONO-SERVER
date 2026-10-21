@@ -1,0 +1,185 @@
+/* throne-choices */
+.throne-choice-dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #e7ddc2;
+  width: min(816px, 96vw);
+  max-width: 96vw;
+  max-height: 92dvh;
+  overflow: auto;
+}
+.throne-choice-dialog::backdrop {
+  background: rgb(0 0 0 / 76%);
+  backdrop-filter: blur(6px);
+}
+.throne-choice-dialog .modal-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: none;
+}
+.throne-choice-dialog button:disabled {
+  cursor: wait;
+}
+.throne-choice-dialog .deck-preview {
+  grid-column: 1 / -1;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* throne-history */
+.throne-result-dialog .score-row,
+.throne-result-dialog .score-row.final {
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 0.7fr)) minmax(0, 1fr);
+  overflow-wrap: anywhere;
+}
+.throne-result-dialog .modal-card {
+  max-width: 100%;
+}
+.throne-result-dialog .royal-btn {
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .throne-result-dialog .score-row,
+  .throne-result-dialog .score-row.final {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* throne-private */
+#thronePrivateDialog .modal-card {
+  overflow-wrap: anywhere;
+}
+#thronePrivateDialog .intelligence-reveal > img {
+  display: block;
+  max-width: min(180px, 70vw);
+  max-height: 35dvh;
+  object-fit: contain;
+  margin: 12px auto;
+}
+#thronePrivateDialog .private-exchange-card {
+  min-width: 0;
+}
+#thronePrivateDialog .private-exchange-card img {
+  max-width: 100%;
+  max-height: 32dvh;
+  object-fit: contain;
+}
+
+/* throne-hand */
+#throneOnlineHandCards > button.hand-card,
+#humanHand > button.hand-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+#throneOnlineHandCards > button.hand-card:focus-visible,
+#humanHand > button.hand-card:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+#throneHandInfluenceWrap:focus-within,
+#influenceToggleWrap:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+#throneHandDialog .choice-card,
+#throneLocalHandDialog .choice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#throneHandDialog .choice-grid,
+#throneLocalHandDialog .choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.throne-demo-hand {
+  color: #746a55;
+  align-self: center;
+}
+
+/* throne-controls */
+.throne-rules-dialog {
+  box-sizing: border-box;
+  width: min(960px, 96vw);
+  max-width: 96vw;
+  max-height: 92dvh;
+  margin: auto;
+  padding: 24px;
+  color: #b9ae94;
+  background: #11100c;
+  border: 1px solid #755d30;
+  border-radius: 16px;
+  box-shadow: 0 30px 90px #000;
+  overflow: auto;
+}
+.throne-rules-dialog::backdrop {
+  background: rgb(0 0 0 / 68%);
+  backdrop-filter: blur(6px);
+}
+.throne-rules-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.throne-rules-dialog h2 {
+  margin: 0;
+  color: #e5c26f;
+}
+.throne-rules-dialog #rulesClose {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: #c6b793;
+  font-size: 25px;
+  cursor: pointer;
+}
+.throne-rules-dialog .manual-btn {
+  margin: 8px 0 18px;
+  height: auto;
+  min-height: 44px;
+  white-space: normal;
+}
+.throne-rules-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.throne-rules-columns > div {
+  border: 1px solid #332d20;
+  border-radius: 10px;
+  padding: 13px;
+  background: #0a0a08;
+}
+.throne-rules-columns > div:first-child {
+  grid-column: 1 / -1;
+}
+.throne-rules-columns h3 {
+  color: #cfa44d;
+  margin-top: 0;
+}
+.throne-rules-columns p {
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .throne-rules-dialog {
+    padding: 14px 12px;
+  }
+  .throne-rules-dialog h2 {
+    font-size: 20px;
+  }
+  .throne-rules-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+}

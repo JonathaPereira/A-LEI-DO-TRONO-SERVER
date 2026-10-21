@@ -209,7 +209,7 @@ body[data-games-view='library'] .games-card-azul:is(:hover, :focus-visible) .gam
 .games-love-letter-art {
   position: absolute;
   inset: 0;
-  background: url('assets/love-letter/characters.webp') 100% 100%/500% 200%;
+  background: url('/assets/love-letter/characters.webp') 100% 100%/500% 200%;
   transition:
     transform 0.7s,
     filter 0.5s;

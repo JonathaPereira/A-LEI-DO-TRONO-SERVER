@@ -3,8 +3,6 @@ import { createPortal } from 'react-dom';
 import type { ThroneHistory } from '../../lib/games/throne-history';
 import type { ThroneResult } from '../../types/throne-history';
 import { GameDialog } from './game-dialog';
-import './throne-choices.css';
-import './throne-history.css';
 
 function ScoreRows({ result }: { result: ThroneResult }) {
   return (

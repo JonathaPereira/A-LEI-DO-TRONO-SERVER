@@ -7,7 +7,6 @@ import type {
   ThroneSuit,
 } from '../../types/throne-choices';
 import { GameDialog } from './game-dialog';
-import './throne-choices.css';
 
 const suits: Readonly<Record<ThroneSuit, { name: string; glyph: string; color: string }>> = {
   cetro: { name: 'Cetro', glyph: '♜', color: '#d4a63f' },

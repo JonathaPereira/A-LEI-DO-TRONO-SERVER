@@ -1,14 +1,14 @@
 /* Manrope is bundled locally under the SIL Open Font License. */
 @font-face {
   font-family: Manrope;
-  src: url('assets/fonts/manrope-latin-wght-normal.woff2') format('woff2');
+  src: url('/assets/fonts/manrope-latin-wght-normal.woff2') format('woff2');
   font-style: normal;
   font-weight: 200 800;
   font-display: swap;
 }
 @font-face {
   font-family: Manrope;
-  src: url('assets/fonts/manrope-latin-ext-wght-normal.woff2') format('woff2');
+  src: url('/assets/fonts/manrope-latin-ext-wght-normal.woff2') format('woff2');
   font-style: normal;
   font-weight: 200 800;
   font-display: swap;
@@ -1345,9 +1345,6 @@ body.channel-voice-active :is(#chatOnlyTextBtn, .court-chat-section) {
     height: calc(100dvh - 16px);
     padding: 16px;
     gap: 12px !important;
-  }
-  .media-focus-dialog > header {
-    padding-right: 30px;
   }
   .media-focus-dialog h2 {
     font-size: 18px;

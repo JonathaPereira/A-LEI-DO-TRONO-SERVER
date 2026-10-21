@@ -7,11 +7,6 @@ e as [notas da versão](docs/archive/ATUALIZAR_WINDOWS_v0.2.10.md).
 Aplicativo de comunicação e jogos, com interface Next.js + React + TypeScript,
 desktop Electron e backend Express/WebSocket. O foco de validação é Windows.
 
-A integração da main traz o desktop **0.2.9**, com os ajustes de chamada, chat e
-GIPHY adaptados à arquitetura desta branch, além da correção de voz em segundo
-plano. Veja as
-[notas da versão](docs/archive/ATUALIZAR_WINDOWS_v0.2.9.md).
-
 ## Começar
 
 Requer Node.js **24.12 ou superior** e npm. Na raiz:
@@ -44,13 +39,13 @@ src/lib/socket/            Transporte, comandos e estado compartilhado
 src/lib/auth/              Sessão, renovação e validação de conta
 src/lib/voice/             Captura, WebRTC e ciclo de vida da chamada
 src/types/                 Tipos do domínio
-src/styles/                Estilos por domínio e ordem de precedência
+src/styles/                Estilos por domínio, importados por index.css no Next
 server/                    HTTP, WebSocket, canais, persistência e jogos
   app.ts                   Composição tipada, reutilizável nos testes
   index.ts                 Porta, entrada do processo e encerramento
   ice.ts                   STUN/TURN e credenciais temporárias
   sessions.ts              Tickets e ciclo de vida dos convidados
-  runtime.cjs              Composição existente, isolada por instância
+  socket-gateway.ts        Conexões, identidade, dispatch e heartbeat
 electron/                  Janela, preload, permissões e auxiliares nativos
 public/                    Imagens, áudio, manuais, fornecedores e jogo Cinzas
 scripts/                   Desenvolvimento, mídia e empacotamento
@@ -66,9 +61,11 @@ locais. Edite os fontes em `src/`; os arquivos gerados não são versionados.
 ## Estado da migração
 
 O frontend usa módulos TypeScript e interfaces React; o desktop usa a exportação
-estática do Next. `src/legacy/` foi removida. Backend, validação dos contratos
-restantes e consolidação do CSS **ainda estão em andamento**. Fachadas `Trono*`
-encaminham aos donos existentes, preservando um socket e os recursos de mídia.
+estática do Next. `src/legacy/` e o runtime JavaScript do servidor foram removidos.
+Todos os módulos de `server/` têm tipagem estrita; os estilos de domínio entram
+na compilação do Next. A auditoria final e os aceites físicos/externos continuam
+pendentes. Fachadas `Trono*` encaminham aos donos existentes, preservando um socket
+e os recursos de mídia.
 
 O mapa de responsabilidades está em [Arquitetura](docs/ARQUITETURA.md).
 O que falta e o próximo trabalho estão em [Migração](docs/MIGRACAO.md),
@@ -84,6 +81,7 @@ npm test
 npm run test:server:lifecycle
 npm run test:desktop:core
 npm run test:ui
+npm run test:styles
 npm run test:desktop:layout
 ```
 

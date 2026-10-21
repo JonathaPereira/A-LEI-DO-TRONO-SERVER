@@ -282,7 +282,7 @@
   left: -20%;
   width: 140%;
   height: 100%;
-  background-image: url('assets/splendor/developments.webp');
+  background-image: url('/assets/splendor/developments.webp');
   background-size: 400% 300%;
   background-repeat: no-repeat;
 }
@@ -577,7 +577,7 @@
 .sp-noble-art {
   position: absolute;
   inset: 0;
-  background: url('assets/splendor/nobles.webp') 0 0/500% 200%;
+  background: url('/assets/splendor/nobles.webp') 0 0/500% 200%;
 }
 .sp-noble::after {
   content: '';
@@ -1365,16 +1365,6 @@
   .sp-room-tools {
     margin-bottom: 7px;
   }
-  .sp-center {
-    --sp-card-height: clamp(
-      92px,
-      calc((100dvh - var(--games-top) - var(--games-bottom) - 290px) / 3),
-      140px
-    );
-  }
-  .sp-market {
-    gap: 8px;
-  }
   .sp-action-bar {
     padding: 10px 13px;
     gap: 8px;
@@ -1462,13 +1452,6 @@
   gap: 13px 6px;
 }
 @media (orientation: landscape) and (max-height: 800px) {
-  .sp-center {
-    --sp-card-height: clamp(
-      92px,
-      calc((100dvh - var(--games-top) - var(--games-bottom) - 290px) / 3),
-      140px
-    );
-  }
   .sp-bank .sp-chip {
     width: 34px;
     height: 34px;
@@ -1964,7 +1947,7 @@
 .sp-screen {
   background:
     linear-gradient(#130f0dd9, #171313bd),
-    url('assets/azul/wood-table.png') center/cover fixed;
+    url('/assets/azul/wood-table.png') center/cover fixed;
   --sp-line: #b9976866;
 }
 .sp-player {

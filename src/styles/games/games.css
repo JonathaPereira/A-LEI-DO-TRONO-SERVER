@@ -300,7 +300,7 @@ body[data-app-layout='discord'][data-layout-view='game']:has(.mn-games-screen:no
   padding: 20px;
   background:
     linear-gradient(#f7f6eeeb, #eaf0e8e8),
-    url('assets/azul/tiles-and-factories.png') 0/110px;
+    url('/assets/azul/tiles-and-factories.png') 0/110px;
   color: var(--az-ink);
   isolation: isolate;
   scroll-padding-top: 120px;
@@ -579,7 +579,7 @@ body[data-app-layout='discord'][data-layout-view='game']:has(.mn-games-screen:no
   aspect-ratio: 1;
   border: 0;
   border-radius: 50%;
-  background: url('assets/azul/tiles-and-factories.png') center/contain;
+  background: url('/assets/azul/tiles-and-factories.png') center/contain;
   box-shadow:
     0 4px 4px #24423e26,
     0 12px 20px #153f4e14;
@@ -727,7 +727,7 @@ body[data-app-layout='discord'][data-layout-view='game']:has(.mn-games-screen:no
   border: 3px solid #205b6b;
   border-radius: 7px;
   padding: 12px;
-  background: url('assets/azul/mural.png') center/cover;
+  background: url('/assets/azul/mural.png') center/cover;
   box-shadow:
     inset 0 0 0 2px #d6b979,
     inset 0 0 0 5px #fdf5dd,
@@ -785,7 +785,7 @@ body[data-app-layout='discord'][data-layout-view='game']:has(.mn-games-screen:no
   justify-items: center;
   gap: 4px;
   padding: 14px 20px;
-  background: url('assets/azul/tiles-and-factories.png') center/100% 100%;
+  background: url('/assets/azul/tiles-and-factories.png') center/100% 100%;
   text-align: center;
   box-sizing: border-box;
 }
@@ -915,23 +915,23 @@ body[data-app-layout='discord'][data-layout-view='game']:has(.mn-games-screen:no
   position: relative;
 }
 .az-color-0 {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-color: #0785ad;
 }
 .az-color-1 {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-color: #edbd28;
 }
 .az-color-2 {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-color: #e93327;
 }
 .az-color-3 {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-color: #13383c;
 }
 .az-color-4 {
-  background-image: url('assets/azul/tiles-and-factories.png');
+  background-image: url('/assets/azul/tiles-and-factories.png');
   background-color: #eff4e8;
 }
 .az-color-5 {
@@ -1542,9 +1542,6 @@ body[data-app-layout='discord'][data-layout-view='game']:has(.mn-games-screen:no
   }
 }
 @media (max-width: 690px) {
-  .games-catalog {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .games-cover {
     height: 180px;
     flex-direction: row;

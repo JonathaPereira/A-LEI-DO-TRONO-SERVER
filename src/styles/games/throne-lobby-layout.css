@@ -1,0 +1,111 @@
+/* ===== Multiplayer lobby v0.5.0-alpha ===== */
+.online-room-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0 8px;
+}
+.online-ready-btn.ready-active {
+  border-color: #67b47d;
+  background: linear-gradient(180deg, #234d32, #163521);
+  color: #dff8e6;
+  box-shadow: 0 0 20px rgba(84, 190, 112, 0.2);
+}
+.online-room-status {
+  margin: 10px auto 14px;
+  padding: 10px 14px;
+  max-width: 620px;
+  border: 1px solid #3c3323;
+  border-radius: 9px;
+  background: rgba(8, 8, 7, 0.72);
+  color: #b9aa8d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.online-room-status strong {
+  color: #76cf8f;
+}
+.local-test-fold {
+  margin-top: 18px;
+  border-top: 1px solid #332a1a;
+  padding-top: 12px;
+}
+.local-test-fold summary {
+  cursor: pointer;
+  color: #7f745f;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.local-test-fold .setup-actions {
+  margin-top: 12px;
+}
+.room-seat {
+  position: relative;
+}
+.room-seat.is-me {
+  border-color: #9a7839;
+  box-shadow: inset 0 0 20px rgba(218, 172, 76, 0.08);
+}
+.room-seat.is-ready {
+  border-color: #3e7a52;
+}
+.room-seat .seat-copy {
+  min-width: 0;
+  flex: 1;
+}
+.room-seat strong em {
+  font-style: normal;
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #e3bb5f;
+  border: 1px solid #6e572b;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin-left: 5px;
+  vertical-align: 2px;
+}
+.seat-status {
+  font-size: 7px;
+  letter-spacing: 1px;
+  font-weight: 800;
+  border: 1px solid #443a29;
+  border-radius: 99px;
+  padding: 4px 7px;
+  color: #806f55;
+  white-space: nowrap;
+}
+.seat-status.ready {
+  border-color: #3d7950;
+  color: #7fd496;
+  background: rgba(48, 112, 69, 0.13);
+}
+.seat-status.waiting {
+  color: #81745e;
+}
+.royal-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+@media (max-width: 600px) {
+  .online-room-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .online-room-actions .royal-btn {
+    width: 100%;
+  }
+  .seat-status {
+    font-size: 6.5px;
+    padding: 4px 6px;
+  }
+  .room-seat strong em {
+    display: inline-block;
+    margin-top: 2px;
+  }
+  .online-room-status {
+    font-size: 10px;
+  }
+}

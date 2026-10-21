@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import type { ThroneHand } from '../../lib/games/throne-hand';
 import { throneSuits } from '../../lib/games/throne-choice-protocol';
 import { GameDialog } from './game-dialog';
-import './throne-hand.css';
 
 const names = { cetro: 'Cetro', chave: 'Chave', lamina: 'Lâmina', mascara: 'Máscara' };
 const actions = { none: 'Nenhuma', sigilo: 'Sigilo', plus: 'Manobra +3', minus: 'Manobra -3' };

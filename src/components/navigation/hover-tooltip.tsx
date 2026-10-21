@@ -5,7 +5,6 @@ import {
   tooltipPosition,
   type TooltipContent,
 } from '../../lib/layout/hover-tooltip';
-import './hover-tooltip.css';
 
 export function HoverTooltip() {
   const [view, setView] = useState<TooltipContent | null>(null);
