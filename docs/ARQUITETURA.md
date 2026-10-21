@@ -51,8 +51,8 @@ estado e as respostas de conta, convidado, nome e preparo da chamada. O consumid
 P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`; a negociação SFU
 valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valida
 status de consumo e configuração ICE/TURN. O backend valida comandos SFU e
-respostas do provedor. Os payloads de A Lei do Trono ainda serão convertidos
-com seu coordenador; o protocolo inteiro ainda não está tipado.
+respostas do provedor. `server/throne-protocol.ts` valida comandos de A Lei do
+Trono; as fronteiras de canais/chat/voz do runtime ainda precisam da conversão.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -402,7 +402,7 @@ O runtime instala `TronoRules` apenas para consumidores de compatibilidade;
 removidos. O catálogo/descritivos permanecem únicos.
 
 `lib/games/throne-law-planner.ts` é o planejador puro compartilhado pelo servidor
-(`runtime.cjs`) e motor local. Recebe somente Lei atual, usos, Decreto e próxima
+(`server/throne-service.ts`) e motor local. Recebe somente Lei atual, usos, Decreto e próxima
 vaza; não retém estado nem altera contadores do chamador. Oferece somente Leis
 que permitem concluir as dez vazas, com dois usos de cada, sem repetição seguida
 e sem Usurpação quando restam menos de quatro cartas. Reserva continua reduzindo
@@ -1995,8 +1995,8 @@ migração da interface ampliaria o risco sem resolver o acoplamento.
 `app.ts` expõe `createApplication()` e `close()`. Cada criação possui canais,
 sockets e serviços próprios. Importar o módulo não inicia um servidor nem
 registra sinais. `index.ts` valida porta/host e trata o processo.
-`runtime.cjs` contém composição e regras de A Lei do Trono ainda por extrair.
-Os serviços existentes foram movidos para `server/` e formatados.
+`runtime.cjs` ainda contém composição, canais/participação, chat/moderação e
+coordenação de voz. Esses consumidores ainda precisam da extração e tipagem estrita.
 
 `lib/games/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
 bots. Os quatro serviços de jogos e o protótipo local de A Lei do Trono importam
@@ -2017,8 +2017,21 @@ o provedor. Tokens de infraestrutura nunca entram no bundle Next.
 
 Os jogos compartilham motores puros em `lib/games/`, com testes de regras e
 projeções por jogador. Nenhum motor permanece em `src/legacy/`; a coordenação dos
-serviços de mesa ainda é JavaScript. Supabase/RLS e o armazenamento de arquivos
-foram preservados.
+quatro serviços de mesa é TypeScript estrito. Supabase/RLS e o armazenamento de
+arquivos foram preservados.
+
+`throne-service.ts` possui fases, distribuição, bots, cartas privadas, prompts,
+eventos e timers de A Lei do Trono. O runtime delega início, pronto, ações,
+substituição por bot, mudança de nome, projeção e shutdown. Não agenda outra
+transição de partida. `throne-contract.ts` descreve o estado autoritativo e cada
+pendência discriminada; `throne-protocol.ts` valida seleções, assentos/índices,
+cartas e campos de Influência, descartando extras. O motor continua conferindo
+fase, dono do assento, carta legal e custo. Só o socket atual pode agir pelo membro.
+Projeção por espectador oculta mãos, reservas e jogadas ocultas dos adversários;
+Espionagem/Usurpação mantêm mensagens privadas individuais. Um token invalida
+transições antigas; `stop()` limpa todos os timers e libera cartas/pendências.
+Aleatoriedade e escala de transição são portas de teste, sem alterar os defaults
+ou o timeout de turno de 60 segundos. `createApplication()` continua isolando instâncias.
 
 `roles.ts` recebe dados desconhecidos e deriva o cargo de dados verificados pelo
 provedor e do perfil persistido; metadados editáveis do usuário não decidem

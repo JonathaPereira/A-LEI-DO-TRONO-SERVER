@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas, SFU e coordenação de Love Letter/Azul/Splendor possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas, SFU e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com canais, chat/voz e composição. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -147,11 +147,10 @@ Uma regressão compara os dois consumidores à configuração do electron-builde
 
 ### 1. Backend e contratos externos
 
-- Extrair regras de A Lei do Trono e coordenação de canais de `server/runtime.cjs`,
+- Extrair coordenação de canais, chat/voz e composição de `server/runtime.cjs`,
   preservando `createApplication()` e o isolamento por instância.
-- Converter serviços JS por domínio, mantendo autorização e persistência.
-- Completar validação dos payloads externos com seus consumidores. Os comandos de
-  A Lei do Trono ainda precisam da conversão com seu coordenador.
+- Converter o runtime por domínio, mantendo autorização e persistência.
+- Completar validação dos payloads externos com seus consumidores de canais/chat/voz.
 - `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
   existentes estritos por estarem na mesma pasta.
 
@@ -179,11 +178,11 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: autenticação, arquivos, os três serviços de jogos e SFU convertidos, na branch
+Checkpoint de trabalho: autenticação, arquivos, os quatro serviços de jogos e SFU convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
-A migração completa ainda não está concluída: os serviços abaixo continuam em
-JavaScript e não ganham tipagem estrita por consumirem módulos TS.
+A migração completa ainda não está concluída: `runtime.cjs` permanece em
+JavaScript e não ganha tipagem estrita por consumir módulos TS.
 
 `server/auth.js` foi removido. `auth.ts`, `auth-provider.ts`, `auth-protocol.ts`
 e `auth-errors.ts` separam rotas/limites, transporte, validação e erros públicos.
@@ -251,15 +250,27 @@ prazo compartilhado de três segundos, aguardado pela composição. A limpeza re
 é melhor esforço: uma criação cuja resposta se perdeu não fornece ID para fechar.
 SDP/RTP/RID, perfis de bitrate/simulcast e tempos de recuperação foram preservados.
 
-Próximo recorte recomendado: `server/runtime.cjs`. Ler o coordenador completo e
-as regressões de canais/A Lei do Trono antes de separar estado e listeners.
-Manter `createApplication()`, um único WebSocket e os donos de mídia existentes.
+`throne-service.ts` agora possui as fases autoritativas de A Lei do Trono,
+cartas privadas, bots, prompts, projeção por espectador e todos os timers.
+`throne-contract.ts` descreve estado privado e pendências discriminadas;
+`throne-protocol.ts` projeta os campos conhecidos dos comandos. Seleções,
+índices/assentos e campos de Influência são validados antes de alterar a partida.
+Pronto/início/ações conferem o socket atual; saída transfere o assento ao bot.
+Shutdown invalida transições, limpa os timers de turno e solta o estado privado.
+O runtime delega também mudança de nome e substituição do jogador, sem possuir
+outro timer de partida. `deck` e `firstRoundStarter` foram retirados do estado
+online por não terem leitores; o baralho de distribuição permanece local.
+
+Próximo recorte recomendado: o restante de `server/runtime.cjs` (aproximadamente
+1.600 linhas): canais/participação, chat/moderação, estado/sinalização de voz e
+composição HTTP/WebSocket. Ler regressões de canais/voz antes de transferir estado
+e listeners juntos. Manter `createApplication()`, um único socket e os donos de mídia.
 
 Sequência restante, após esse recorte:
 
-1. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
-   Trono para donos por domínio, mantendo instâncias independentes e shutdown.
-   Completar os payloads de A Lei do Trono com seu consumidor.
+1. `server/runtime.cjs`: extrair canais/participação, chat/moderação e coordenação
+   da voz para donos tipados, mantendo instâncias independentes e shutdown.
+   Completar payloads dessas fronteiras e deixar somente composição no ponto de entrada.
 2. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
@@ -267,7 +278,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 103 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 111 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -310,12 +321,22 @@ O relay nativo agora atravessa também o manager Node tipado e seu adaptador de
 provedor, negociando mídia WebRTC real no Electron. Exige descarte imediato dos
 peers do cliente e aguarda separadamente o descarte remoto. Isso não testa uma
 conta Cloudflare real, TURN de produção, loopback físico nem FPS em jogo.
+A Lei do Trono acrescenta oito regressões de comandos, posse, privacidade,
+substituição por bot, cancelamento e isolamento. Dez partidas de três rodadas
+cobrem todos os decretos. A comparação com o coordenador anterior cobriu 100
+partidas completas, 14.611 ações, 123.950 visões privadas e 269.445 eventos idênticos.
+Tipagem, formatação, build estático, suíte completa e a fronteira Electron passaram.
+Os nove casos de interface de escolhas, lobby e simulação local passaram, incluindo
+as três rodadas locais, escolhas privadas e preservação dos recursos da chamada.
+`court-browser.js` falha na expectativa antiga de entrada automática em voz,
+antes de entrar na partida; a mesma falha foi reproduzida com o runtime anterior.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
 Splendor usa `artifacts/splendor-service-*`;
 política/uso SFU usam `artifacts/realtime-policy-*`;
 manager/provedor e relay usam `artifacts/realtime-manager-*`;
+A Lei do Trono usa `artifacts/throne-service-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;
