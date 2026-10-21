@@ -53,7 +53,8 @@ valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valid
 status de consumo e configuração ICE/TURN. O backend valida comandos SFU e
 respostas do provedor. `server/throne-protocol.ts` valida comandos de A Lei do
 Trono; canais/voz usam `server/channel-protocol.ts` e o mesmo parser P2P do cliente.
-Os campos de identidade/dispatch do runtime ainda precisam da conversão.
+`server/socket-protocol.ts` valida envelope/correlação e campos de identidade do
+convidado antes da fila; o gateway delega os comandos aos parsers de domínio.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -1996,8 +1997,21 @@ migração da interface ampliaria o risco sem resolver o acoplamento.
 `app.ts` expõe `createApplication()` e `close()`. Cada criação possui canais,
 sockets e serviços próprios. Importar o módulo não inicia um servidor nem
 registra sinais. `index.ts` valida porta/host e trata o processo.
-`runtime.cjs` ainda contém composição HTTP/WebSocket, identidade e dispatch.
-Esses consumidores ainda precisam da extração e tipagem estrita.
+`runtime.cjs` foi removido. `app.ts` é a composição real, verificada por TypeScript:
+cria HTTP/WebSocket e os serviços sem abrir porta ou registrar sinais. Opções de
+armazenamento/aleatoriedade/escala de tempo são dependências explícitas, também usadas
+pelas fixtures. `index.ts` inicia o processo somente quando executado como entrada;
+importá-lo não escuta porta. Sua função explícita é usada pela entrada de fixtures.
+
+`socket-gateway.ts` possui a conexão tipada `BackendSocket`, o único conjunto de
+listeners, a fila comum de conta/convidado e o heartbeat de cada aplicação.
+Verificações usam o sinal da conexão; saída, reconexão, revogação e shutdown o
+abortam. Uma resposta antiga não reconstrói identidade depois disso. Uma conta
+conectada continua impedida de virar convidado direto; uma tentativa inválida não
+desconecta seus jogos. O gateway conserva autorização de público/convidado/conta e
+delega estado/recursos aos mesmos donos. `socket-protocol.ts` limita envelope,
+correlação e campos do convidado; `capabilities.ts` possui os recursos comuns de
+health/welcome, com as mesmas projeções públicas. Não há outro socket ou capturador.
 
 `lib/games/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
 bots. Os quatro serviços de jogos e o protótipo local de A Lei do Trono importam
@@ -2086,7 +2100,7 @@ canal diferente ou mais de 51 itens falham integralmente. Registros antigos pode
 conservar metadados adicionais; essa leitura não declara que esses campos já têm
 o contrato completo de `ChatMessage`. A interface mantém sua validação própria.
 `close()` aborta os HTTP do serviço e impede operações enfileiradas/futuras; o
-encerramento de `runtime.cjs` chama esse descarte. Rejeição de uma gravação não
+encerramento de `app.ts` chama esse descarte. Rejeição de uma gravação não
 trava a fila do canal nem os demais canais. `.js` substituídos foram apagados.
 
 `supabase/install.sql` centraliza a sequência para uma instalação nova. A guarda

@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, chat/moderação, histórico, comunidade, mensagens diretas, SFU, execução do soundboard, participação/voz dos canais e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com composição e identidade WebSocket. |
+| Backend | `server/app.ts` compõe instâncias reais, `index.ts` inicia o processo; todos os módulos em `server/` são TS estritos, sem DOM. `socket-gateway.ts` possui conexões/identidade/heartbeat e delega aos donos de conta, chat, arquivos, canais, mídia e jogos. Não há runtime JS/CJS nem fachada que o esconda do compilador. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -145,14 +145,13 @@ C++ de áudio/atividade. O modo de desenvolvimento procurava um diretório acima
 do repositório; agora usa o artefato do mesmo build configurado no pacote.
 Uma regressão compara os dois consumidores à configuração do electron-builder.
 
-### 1. Backend e contratos externos
+### 1. Backend e contratos externos: conversão concluída
 
-- Converter composição e identidade WebSocket de `server/runtime.cjs`,
-  preservando `createApplication()` e o isolamento por instância.
-- Converter o runtime por domínio, mantendo autorização e persistência.
-- Completar validação dos payloads externos com seus consumidores de identidade.
-- `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
-  existentes estritos por estarem na mesma pasta.
+`runtime.cjs` foi removido. `app.ts` possui a composição verificada e
+`socket-gateway.ts` possui conexões/identidade/dispatch/heartbeat. As portas das
+fixtures são opções explícitas da fábrica, sem alterar exports de produção.
+`tsconfig.server.json` verifica todos os módulos do servidor estritamente, sem DOM.
+Aceites de produção/banco/mídia física continuam externos, conforme os limites abaixo.
 
 ### 2. Estilos e limpeza final
 
@@ -181,8 +180,8 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 Checkpoint de trabalho: autenticação, arquivos, os quatro serviços de jogos e SFU convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
-A migração completa ainda não está concluída: `runtime.cjs` permanece em
-JavaScript e não ganha tipagem estrita por consumir módulos TS.
+A migração completa ainda não está concluída: faltam consolidar a cascata de CSS,
+limpeza/auditoria final e os aceites físicos/externos descritos abaixo.
 
 `server/auth.js` foi removido. `auth.ts`, `auth-provider.ts`, `auth-protocol.ts`
 e `auth-errors.ts` separam rotas/limites, transporte, validação e erros públicos.
@@ -296,31 +295,43 @@ um pedido novo. Shutdown cancela esperas e solta limites/bloqueios. `files.sound
 agora encaminha AbortSignal à consulta, com regressão direta dessa fronteira.
 Captura, mixer, reprodução cliente e parâmetros de mídia não foram alterados.
 
-Próximo recorte recomendado: `server/runtime.cjs` (648 linhas), restrito à
-composição HTTP/WebSocket, autenticação/convidado, dispatch, heartbeat e shutdown.
-Converter esse último arquivo em código TS verificado e retirar o cast de fachada
-em `app.ts`; ele atualmente não torna o runtime estrito. Preservar o isolamento,
-fila de identidade e regras de convidados. Conferir `game-test-clock.cjs`,
-`love-letter-seed.cjs` e `direct-attachments-adapter.cjs`: são preloads de fixtures
-que importam/montam as dependências do runtime atual. Transferir essas portas junto
-com a composição; não manter um runtime legado só para satisfazer a fixture.
+`runtime.cjs` foi removido, sem adaptador de compatibilidade. `app.ts` agora compõe
+HTTP, WebSocket e serviços com opções tipadas; `socket-gateway.ts` possui a mesma
+conexão por cliente, listeners, fila de identidade e heartbeat. `socket-protocol.ts`
+valida envelope, correlação e campos do convidado; `capabilities.ts` elimina a
+duplicação dos recursos comuns entre health e welcome, preservando seus DTOs.
+Conta/convidado compartilham a fila: verificação tardia não ultrapassa uma operação
+posterior. A regra existente de impedir conta conectada de virar convidado direto
+permanece; uma tentativa inválida agora também não desconecta seus jogos.
+Sair, reconectar, revogar ou encerrar aborta a verificação e o trabalho enfileirado.
+
+`index.ts` expõe a entrada explícita do processo, sem iniciar ao ser importado.
+Portas inválidas são recusadas antes de criar serviços. `tests/server-fixture-entry.cjs`
+compõe relógio/seed/armazenamento de testes com opções da mesma fábrica; os helpers
+não modificam mais exports internos. Produção não lê esses flags de fixture.
+`createApplication()` continua sem abrir porta ou registrar sinais, com close idempotente.
+
+Próximo recorte recomendado: ler `src/styles/manifest.json`, `scripts/prepare-renderer.cjs`
+e `src/app/layout.tsx`. Consolidar/importar CSS pelo Next conservando a ordem atual,
+sem ajustar layout junto. Comparar a cascata e os estados de chamada/layout/portrait;
+os testes de interface usam `out/`. Atualizar as verificações do pacote/política se
+os caminhos de CSS gerado mudarem. Limpar saídas antigas somente quando substituídas.
 Manter `createApplication()`, um único socket e os donos de mídia. A fábrica de
 canais não executa callbacks durante a construção; callbacks adiados da composição
 conectam presença, histórico e jogos sem criar outra instância desses serviços.
 
 Sequência restante, após esse recorte:
 
-1. `server/runtime.cjs`: converter composição/identidade e remover o último
-   arquivo CJS do servidor. Manter instâncias independentes, um único socket,
-   autorização, fila de identidade e shutdown; completar payloads de identidade.
-2. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
+1. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
+2. Auditar adaptadores sem consumidores, fontes/documentação e saídas antigas;
+   conservar recursos originais/distribuídos e um roteiro curto de continuidade.
 3. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 138 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 150 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -391,6 +402,13 @@ navegação; armazenamento acrescenta uma de propagação do cancelamento. Tipag
 formatação, build, suíte completa, quatro casos de interface, reprodução PCM no
 Electron e a chamada com dois Electron passaram. Não medem loopback físico ou FPS
 em jogo; captura e codec permanecem os anteriores.
+Gateway/composição acrescentam onze regressões com WebSockets reais e uma da
+entrada CLI, cobrindo envelope, convidados, ordem de identidade, tentativa inválida,
+retry, perfil, revogação, reconexão, heartbeat e cancelamento. Tipagem, formatação,
+build e suíte completa passaram. Os sete casos de conta e os três de canais/lobby/
+Love Letter passaram no browser. No Electron, conta criptografada, chamada com dois
+clientes e jogos/recursos do pacote Windows existente passaram contra o novo backend.
+Nenhum pacote foi instalado e nenhum serviço de produção foi acessado.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
@@ -401,6 +419,7 @@ A Lei do Trono usa `artifacts/throne-service-*`;
 canais/participação usam `artifacts/channel-service-*`;
 chat/moderação usam `artifacts/chat-service-*`;
 execução do soundboard usa `artifacts/voice-soundboard-*`;
+gateway/composição usam `artifacts/socket-gateway-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;
