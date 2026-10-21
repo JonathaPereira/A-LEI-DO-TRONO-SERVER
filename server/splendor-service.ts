@@ -1,9 +1,61 @@
-'use strict';
-const Bots = require('../src/lib/games/bot-names.ts');
-const crypto = require('node:crypto'),
-  Rules = require('../src/lib/games/splendor-rules.ts');
-const failure = (code, message) => Object.assign(Error(message), { code });
-function createSplendorService({
+import * as Bots from '../src/lib/games/bot-names.ts';
+import crypto from 'node:crypto';
+import * as Rules from '../src/lib/games/splendor-rules.ts';
+import { readSplendorRanking } from '../src/lib/games/splendor-protocol.ts';
+import type { BackendAccount, AuthGateway } from './auth-contract';
+import type { SplendorRoom } from '../src/types/splendor';
+import {
+  readSplendorCommand,
+  readSplendorMove,
+  requestId,
+  type SplendorServerEvent,
+} from './splendor-protocol.ts';
+import { object } from './http-api.ts';
+import { createGameRanking } from './game-ranking.ts';
+const failure = (code: string, message: string) => Object.assign(Error(message), { code });
+type Account = Pick<BackendAccount, 'id' | 'nickname' | 'expiresAt'>;
+export interface SplendorConnection {
+  account?: Account | null;
+  splendorRoomId?: string | null;
+  splendorWatching?: boolean;
+}
+type Connection = SplendorConnection;
+type AuthenticatedConnection = Connection & { account: Account };
+interface Player {
+  id: string;
+  name: string;
+  bot: boolean;
+  ws: Connection | null;
+  forfeited?: boolean;
+  offlineTimer?: NodeJS.Timeout;
+}
+interface Room {
+  id: string;
+  hostId: string;
+  maxPlayers: number;
+  players: Player[];
+  state: Rules.SplendorGameState | null;
+  updatedAt: number;
+  random: () => number;
+  botTimer?: NodeJS.Timeout;
+  retryTimer?: NodeJS.Timeout;
+  matchId?: string;
+  usedBots?: boolean;
+  saving?: boolean;
+  recordStatus?: SplendorRoom['recordStatus'];
+}
+interface Options {
+  auth: Pick<AuthGateway, 'configured'>;
+  send(connection: Connection, event: SplendorServerEvent): void;
+  wss: { clients: Iterable<Connection> };
+  env?: NodeJS.ProcessEnv;
+  fetchImpl?: typeof fetch;
+  now?: () => number;
+  botDelay?: number;
+  disconnectDelay?: number;
+  createRandom?: () => () => number;
+}
+export function createSplendorService({
   auth,
   send,
   wss,
@@ -11,80 +63,52 @@ function createSplendorService({
   fetchImpl = fetch,
   now = Date.now,
   botDelay = 3800,
+  createRandom = () => Math.random,
   disconnectDelay = 90000,
-} = {}) {
-  const rooms = new Map(),
-    membership = new Map(),
-    timers = new Set(),
-    rates = new Map();
+}: Options) {
+  const rooms = new Map<string, Room>(),
+    membership = new Map<string, string>(),
+    timers = new Set<NodeJS.Timeout>(),
+    rates = new Map<string, { count: number; until: number }>();
+  const lifetime = new AbortController();
+  const rankingJobs = new Map<Connection, Set<AbortController>>();
+  let closed = false;
   const url = String(env.SUPABASE_URL || '').replace(/\/+$/, ''),
-    key = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY,
+    key = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '',
     configured = !!(auth.configured && key);
-  let ready = false;
-  function later(fn, ms) {
+  const ranking = createGameRanking({
+    game: 'splendor',
+    configured,
+    url,
+    key,
+    fetchImpl,
+    signal: lifetime.signal,
+    read: readSplendorRanking,
+    unavailable: (configured) =>
+      failure(
+        'SPLENDOR_RANKING_UNAVAILABLE',
+        configured
+          ? 'Não foi possível acessar os recordes. Tente novamente mais tarde.'
+          : 'Recordes temporariamente indisponíveis. Você pode continuar jogando.',
+      ),
+  });
+  const active = (room: Room) => !closed && rooms.get(room.id) === room;
+  function later(fn: () => void, ms: number) {
     const timer = setTimeout(() => {
       timers.delete(timer);
-      fn();
+      if (!closed) fn();
     }, ms);
     timer.unref?.();
     timers.add(timer);
     return timer;
   }
-  function cancel(timer) {
-    clearTimeout(timer);
-    timers.delete(timer);
+  function cancel(timer?: NodeJS.Timeout | null) {
+    clearTimeout(timer ?? undefined);
+    if (timer) timers.delete(timer);
   }
-  async function rpc(name, body) {
-    if (!configured)
-      throw failure(
-        'SPLENDOR_RANKING_UNAVAILABLE',
-        'Recordes temporariamente indisponíveis. Você pode continuar jogando.',
-      );
-    try {
-      const res = await fetchImpl(url + '/rest/v1/rpc/' + name, {
-        method: 'POST',
-        headers: {
-          apikey: key,
-          ...(!String(key).startsWith('sb_secret_') ? { Authorization: 'Bearer ' + key } : {}),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!res.ok) throw Error();
-      const data = await res.json();
-      if (name === 'splendor_record_match' && data?.saved !== true) throw Error();
-      if (
-        name === 'splendor_top_five' &&
-        (!Array.isArray(data) ||
-          data.length > 5 ||
-          data.some(
-            (r) =>
-              typeof r.playerId !== 'string' ||
-              typeof r.name !== 'string' ||
-              !Number.isInteger(r.score) ||
-              r.score < 0 ||
-              r.score > 200 ||
-              !Number.isInteger(r.cards) ||
-              r.cards < 0 ||
-              r.cards > 90 ||
-              !['online', 'bots'].includes(r.mode) ||
-              !Number.isFinite(Date.parse(r.date)),
-          ))
-      )
-        throw Error();
-      ready = true;
-      return data;
-    } catch {
-      ready = false;
-      throw failure(
-        'SPLENDOR_RANKING_UNAVAILABLE',
-        'Não foi possível acessar os recordes. Tente novamente mais tarde.',
-      );
-    }
-  }
-  const valid = (ws) => ws.account && ws.account.expiresAt > now();
-  function view(room, viewerId) {
+  const valid = (ws: Connection): ws is AuthenticatedConnection =>
+    !!ws.account && ws.account.expiresAt > now();
+  function view(room: Room, viewer: string): SplendorRoom {
     return {
       id: room.id,
       hostId: room.hostId,
@@ -96,16 +120,17 @@ function createSplendorService({
         online: !!p.ws,
         forfeited: !!p.forfeited,
       })),
-      state: room.state ? Rules.publicState(room.state, viewerId) : null,
+      state: room.state ? Rules.publicState(room.state, viewer) : null,
       recordStatus: room.recordStatus || null,
     };
   }
-  function publish(room) {
+  function publish(room: Room) {
+    if (!active(room)) return;
     for (const p of room.players)
       if (p.ws && valid(p.ws) && p.ws.account.id === p.id)
         send(p.ws, { type: 'splendor-state', room: view(room, p.id) });
   }
-  function list(ws) {
+  function list(ws: AuthenticatedConnection) {
     send(ws, {
       type: 'splendor-rooms',
       rooms: [...rooms.values()]
@@ -120,19 +145,30 @@ function createSplendorService({
     });
   }
   function lists() {
+    if (closed) return;
     for (const ws of wss.clients) if (valid(ws) && ws.splendorWatching) list(ws);
   }
-  function remove(room) {
+  function remove(room: Room) {
     cancel(room.botTimer);
     cancel(room.retryTimer);
     for (const p of room.players) {
       cancel(p.offlineTimer);
+      if (p.ws?.splendorRoomId === room.id) p.ws.splendorRoomId = null;
+      p.ws = null;
       if (membership.get(p.id) === room.id) membership.delete(p.id);
     }
     rooms.delete(room.id);
   }
-  async function persist(room) {
-    if (room.recordStatus === 'saved' || room.saving) return;
+  async function persist(room: Room) {
+    if (
+      !active(room) ||
+      !room.state ||
+      !room.matchId ||
+      room.recordStatus === 'saved' ||
+      room.saving
+    )
+      return;
+    cancel(room.retryTimer);
     const players = room.state.players
       .filter((p) => !p.bot && !room.players.find((x) => x.id === p.id)?.forfeited)
       .map((p) => ({ id: p.id, score: p.score, cards: p.cards.length }));
@@ -149,19 +185,22 @@ function createSplendorService({
     room.recordStatus = 'saving';
     publish(room);
     try {
-      await rpc('splendor_record_match', {
+      await ranking.save({
         p_match: room.matchId,
         p_rounds: room.state.round,
         p_mode: room.usedBots ? 'bots' : 'online',
         p_players: players,
       });
+      if (!active(room)) return;
       room.recordStatus = 'saved';
       cancel(room.retryTimer);
     } catch {
+      if (!active(room)) return;
       room.recordStatus = 'pending';
       room.retryTimer = later(() => void persist(room), 30000);
     } finally {
       room.saving = false;
+      if (!active(room)) return;
       publish(room);
       if (room.recordStatus === 'saved' && !room.players.some((p) => p.ws)) {
         remove(room);
@@ -169,31 +208,38 @@ function createSplendorService({
       }
     }
   }
-  function schedule(room) {
+  function schedule(room: Room) {
     cancel(room.botTimer);
-    if (!room.state || room.state.phase === 'finished') return;
+    if (!active(room) || !room.state || room.state.phase === 'finished') return;
     const player = room.players[room.state.turn];
     if (!player.bot) return;
     room.botTimer = later(() => {
-      if (!rooms.has(room.id) || room.state.phase === 'finished') return;
-      applyMove(room, player.id, Rules.botMove(room.state));
+      if (!active(room) || !room.state || room.state.phase === 'finished') return;
+      applyMove(room, player.id, Rules.botMove(room.state, room.random));
     }, botDelay);
   }
-  function applyMove(room, id, input) {
-    room.state = Rules.move(room.state, id, input);
+  function applyMove(room: Room, id: string, input: unknown) {
+    if (!room.state) throw failure('SPLENDOR_NOT_PLAYING', 'Não há rodada em andamento.');
+    room.state = Rules.move(room.state, id, readSplendorMove(input));
     room.updatedAt = now();
     publish(room);
     if (room.state.phase === 'finished') void persist(room);
     else schedule(room);
   }
-  function detach(ws, explicit = false) {
-    const room = rooms.get(ws.splendorRoomId),
+  function detach(ws: Connection, explicit = false) {
+    for (const job of rankingJobs.get(ws) || []) job.abort();
+    rankingJobs.delete(ws);
+    if (closed) {
+      ws.splendorRoomId = null;
+      return;
+    }
+    const room = rooms.get(ws.splendorRoomId || ''),
       p = room?.players.find((p) => p.id === ws.account?.id && p.ws === ws);
     ws.splendorRoomId = null;
-    if (!p) return;
+    if (!p || !room) return;
     p.ws = null;
     cancel(p.offlineTimer);
-    function leave() {
+    const leave = () => {
       if (!rooms.has(room.id) || p.ws) return;
       membership.delete(p.id);
       if (room.state && room.state.phase !== 'finished') {
@@ -202,12 +248,12 @@ function createSplendorService({
         p.name = Bots.next(room.players.filter((x) => x !== p));
         room.usedBots = true;
         Object.assign(
-          room.state.players.find((x) => x.id === p.id),
+          room.state.players.find((x) => x.id === p.id)!,
           { forfeited: true, bot: true, name: p.name },
         );
       } else if (!room.state) {
         room.players = room.players.filter((x) => x !== p);
-        if (room.hostId === p.id) room.hostId = room.players[0]?.id;
+        if (room.hostId === p.id) room.hostId = room.players[0]?.id || room.hostId;
       }
       if (
         !room.players.some((x) => x.ws) &&
@@ -219,14 +265,14 @@ function createSplendorService({
         schedule(room);
       }
       lists();
-    }
+    };
     if (explicit) leave();
     else {
       p.offlineTimer = later(leave, disconnectDelay);
       publish(room);
     }
   }
-  function attach(ws, room) {
+  function attach(ws: AuthenticatedConnection, room: Room) {
     const p = room.players.find((p) => p.id === ws.account.id);
     if (!p) throw failure('SPLENDOR_NOT_MEMBER', 'Você não participa desta mesa.');
     if (p.forfeited)
@@ -235,16 +281,17 @@ function createSplendorService({
     p.ws = ws;
     p.name = ws.account.nickname;
     ws.splendorRoomId = room.id;
-    if (room.state) room.state.players.find((x) => x.id === p.id).name = p.name;
+    if (room.state) room.state.players.find((x) => x.id === p.id)!.name = p.name;
     membership.set(p.id, room.id);
     publish(room);
     lists();
   }
-  function handle(ws, msg) {
+  function handle(ws: Connection, value: unknown) {
+    if (closed) return;
     if (!valid(ws)) {
       send(ws, {
         type: 'splendor-error',
-        requestId: msg.requestId,
+        requestId: requestId(value),
         code: 'AUTH_REQUIRED',
         message: 'Entre na sua conta para jogar Splendor e guardar seus recordes.',
       });
@@ -257,6 +304,7 @@ function createSplendorService({
         rates.set(ws.account.id, rate);
       }
       if (++rate.count > 100) throw failure('SPLENDOR_RATE_LIMIT', 'Aguarde um instante.');
+      const msg = readSplendorCommand(value);
       ws.splendorWatching = true;
       const action = msg.action;
       if (action === 'list') {
@@ -264,16 +312,34 @@ function createSplendorService({
         return;
       }
       if (action === 'ranking') {
-        void rpc('splendor_top_five', {})
-          .then((rows) => send(ws, { type: 'splendor-ranking', rows, requestId: msg.requestId }))
-          .catch((error) =>
-            send(ws, {
-              type: 'splendor-error',
-              requestId: msg.requestId,
-              code: error.code,
-              message: error.message,
-            }),
-          );
+        const controller = new AbortController(),
+          id = ws.account.id;
+        let jobs = rankingJobs.get(ws);
+        if (!jobs) {
+          jobs = new Set();
+          rankingJobs.set(ws, jobs);
+        }
+        jobs.add(controller);
+        const current = () =>
+          !closed && !controller.signal.aborted && valid(ws) && ws.account.id === id;
+        void ranking
+          .list(controller.signal)
+          .then((rows) => {
+            if (current()) send(ws, { type: 'splendor-ranking', rows, requestId: msg.requestId });
+          })
+          .catch((error: unknown) => {
+            if (current())
+              send(ws, {
+                type: 'splendor-error',
+                requestId: msg.requestId,
+                code: 'SPLENDOR_RANKING_UNAVAILABLE',
+                message: error instanceof Error ? error.message : 'Ranking indisponível.',
+              });
+          })
+          .finally(() => {
+            jobs.delete(controller);
+            if (!jobs.size && rankingJobs.get(ws) === jobs) rankingJobs.delete(ws);
+          });
         return;
       }
       if (action === 'create') {
@@ -291,13 +357,14 @@ function createSplendorService({
         if (![2, 3, 4].includes(maxPlayers))
           throw failure('SPLENDOR_PLAYERS', 'Escolha 2, 3 ou 4 participantes.');
         const id = crypto.randomBytes(5).toString('hex').toUpperCase(),
-          room = {
+          room: Room = {
             id,
             hostId: ws.account.id,
             maxPlayers,
             players: [{ id: ws.account.id, name: ws.account.nickname, bot: false, ws: null }],
             state: null,
             updatedAt: now(),
+            random: createRandom(),
           };
         rooms.set(id, room);
         attach(ws, room);
@@ -319,7 +386,7 @@ function createSplendorService({
         attach(ws, room);
         return;
       }
-      const room = rooms.get(ws.splendorRoomId);
+      const room = rooms.get(ws.splendorRoomId || '');
       if (!room || !room.players.some((p) => p.ws === ws))
         throw failure('SPLENDOR_NOT_MEMBER', 'Entre em uma mesa primeiro.');
       if (action === 'leave') {
@@ -351,7 +418,7 @@ function createSplendorService({
             });
         room.matchId = crypto.randomUUID();
         room.usedBots = room.players.some((p) => p.bot);
-        room.state = Rules.create(room.players);
+        room.state = Rules.create(room.players, room.random);
         room.updatedAt = now();
         publish(room);
         lists();
@@ -374,9 +441,9 @@ function createSplendorService({
     } catch (error) {
       send(ws, {
         type: 'splendor-error',
-        requestId: msg.requestId,
-        code: error.code || 'SPLENDOR_ERROR',
-        message: error.message,
+        requestId: requestId(value),
+        code: object(error) && typeof error.code === 'string' ? error.code : 'SPLENDOR_ERROR',
+        message: error instanceof Error ? error.message : 'Não foi possível atualizar a mesa.',
       });
     }
   }
@@ -395,12 +462,13 @@ function createSplendorService({
     for (const [id, r] of rates) if (r.until < now()) rates.delete(id);
   }, 60000);
   cleanup.unref?.();
-  function updateAccount(account) {
+  function updateAccount(account: Account) {
+    if (closed) return;
     for (const room of rooms.values()) {
       const p = room.players.find((p) => p.id === account.id);
       if (!p || p.forfeited) continue;
       p.name = account.nickname;
-      if (room.state) room.state.players.find((x) => x.id === p.id).name = p.name;
+      if (room.state) room.state.players.find((x) => x.id === p.id)!.name = p.name;
       publish(room);
     }
     lists();
@@ -409,8 +477,20 @@ function createSplendorService({
     handle,
     disconnect: detach,
     updateAccount,
-    health: () => ({ configured, ready, persistent: configured }),
+    health: () => ({ configured, ready: ranking.ready, persistent: configured }),
     stop() {
+      if (closed) return;
+      closed = true;
+      lifetime.abort();
+      for (const ws of wss.clients) {
+        ws.splendorWatching = false;
+        ws.splendorRoomId = null;
+      }
+      for (const room of rooms.values()) for (const player of room.players) player.ws = null;
+      rooms.clear();
+      membership.clear();
+      rates.clear();
+      rankingJobs.clear();
       clearInterval(cleanup);
       for (const timer of timers) clearTimeout(timer);
       timers.clear();
@@ -418,4 +498,3 @@ function createSplendorService({
     rooms,
   };
 }
-module.exports = { createSplendorService };

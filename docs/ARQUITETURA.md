@@ -2155,6 +2155,16 @@ expiração antes de enviar. `socket-command.ts` compartilha apenas a validaçã
 do ID de correlação entre domínios. A aleatoriedade pertence à sala, sem alterar
 o singleton de regras compartilhadas.
 
+`splendor-service.ts` aplica a mesma posse de sala, participação, timers e RPC,
+reutilizando `game-ranking.ts` e o reader puro específico do ranking de Splendor.
+O resultado persistido contém apenas pontuação e quantidade de cartas calculadas
+pelo motor, com o mesmo ID entre tentativas. `splendor-protocol.ts` limita comandos,
+IDs e vetores de seis fichas e projeta os campos da ação; mercado, reservas,
+pagamento/devolução e nobres seguem autoritativos no motor. Cada evento de estado
+usa `publicState(viewer)`: baralhos e reservas cegas de outras pessoas não entram
+na visão, inclusive no histórico de jogadas. Shutdown cancela gravações/leituras
+concorrentes e impede novos eventos ou tentativas de persistência.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e

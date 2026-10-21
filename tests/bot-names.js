@@ -7,7 +7,7 @@ test('all tabletop services use the same names, number extra bots, and keep repl
   assert.equal(Bots.at(3), 'Epaminondas 2');
   for (const [file, factory, kind] of [
     ['azul-service.ts', 'createAzulService', 'azul'],
-    ['splendor-service', 'createSplendorService', 'splendor'],
+    ['splendor-service.ts', 'createSplendorService', 'splendor'],
     ['love-letter-service.ts', 'createLoveLetterService', 'love-letter'],
   ]) {
     const me = { account: { id: 'me', nickname: 'Pessoa', expiresAt: Date.now() + 60000 } },

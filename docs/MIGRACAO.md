@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade e mensagens diretas possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços de jogos/SFU e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas e coordenação de Love Letter/Azul/Splendor possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam `realtime-sfu.js` e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -179,7 +179,7 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: autenticação, arquivos, Love Letter e Azul convertidos, na branch
+Checkpoint de trabalho: autenticação, arquivos e os três serviços de jogos convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
@@ -224,28 +224,36 @@ cancela o timer anterior para manter uma tentativa agendada. Shutdown cancela RP
 salas e timers. Desconexão/troca de identidade suprime respostas tardias de ranking.
 Cada sala também possui seu fluxo de aleatoriedade, injetável na fábrica para testes.
 
-Próximo recorte recomendado: `server/splendor-service.js`. Reutilizar o transporte
-`game-ranking.ts` com `readSplendorRanking`, preservando projeções privadas por
-jogador, reservas cegas, pagamento/devolução de fichas, nobres e as opções atuais
-de bots. Aplicar a mesma posse de timers/RPC/retry sem duplicar o estado do jogo.
+`server/splendor-service.js` foi removido. `splendor-service.ts` usa o mesmo
+transporte de ranking com `readSplendorRanking` e possui timers/RPC/retry por
+instância. `splendor-protocol.ts` valida comandos, IDs e vetores de fichas;
+reservas cegas, pagamento, devolução e nobres continuam validados pelo motor.
+A projeção continua individual por jogador, inclusive nos logs da reserva cega.
+
+Próximo recorte recomendado: `server/realtime-sfu.js`, com cuidado de mídia.
+Começar lendo o manager completo e os testes de SFU/recuperação/desktop. Separar
+contratos, configuração/política, uso mensal e transporte do provedor, mantendo
+filas por sessão, gerações por cliente, autorização por sala e descarte de tracks.
+Preservar SDP/RTP/RID, perfis de bitrate/simulcast, limites e tempos de recuperação;
+não misturar ajustes de desempenho com essa conversão. O stop atual só limpa o
+intervalo e força um tick: é necessário transferir também HTTP/filas e impedir
+respostas tardias de recriarem sessões/publicações. Repetir SFU real no Electron.
 
 Sequência restante, após esse recorte:
 
-1. `server/splendor-service.js`:
-   coordenação, timers, persistência e projeções privadas. Motores já são TS.
-2. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
+1. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
    autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
-3. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
+2. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
    Trono para donos por domínio, mantendo instâncias independentes e shutdown.
    Completar os payloads de jogos/SFU que ainda não têm validação integral.
-4. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
+3. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
-5. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
+4. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 76 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 82 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -269,9 +277,16 @@ Azul acrescenta sete regressões de fronteira, provider, retry e cancelamento.
 Em 100 partidas, 5.484 jogadas e 11.168 visões públicas foram idênticas ao serviço
 anterior. Partida completa nos dois layouts, visão portrait, Love Letter e a
 chamada com dois Electron reais passaram após a conversão.
+Splendor acrescenta seis regressões de fronteira, reservas privadas, carteira,
+recordes e shutdown concorrente. Em 100 partidas, 6.143 jogadas e 12.486 visões
+privadas foram idênticas ao serviço anterior. Os três casos de interface, incluindo
+partidas completas nos dois hosts e preservação da chamada, e o pacote Windows
+existente passaram contra o backend atual. Restam apenas dois arquivos JS/CJS no
+servidor; isso ainda não encerra a migração completa.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
+Splendor usa `artifacts/splendor-service-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;
