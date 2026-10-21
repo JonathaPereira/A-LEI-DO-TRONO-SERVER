@@ -776,7 +776,6 @@ export function createThroneService({
         hidden: false,
         declaredSuit: null,
         isReserve: live.decree?.id === 'reserva' && live.trick === 10 && p.reserve?.id === card.id,
-        timeout: true,
       });
     }, TURN_MS + 60);
   }
@@ -815,7 +814,7 @@ export function createThroneService({
   function influenceLegalCards(g: ThroneGame, p: ThroneMatchPlayer) {
     return legalCards(g, p).filter((c) => c.publicReason !== 'Corte Aberta');
   }
-  function chooseBotPlay(g: ThroneGame, p: ThroneMatchPlayer, legal: ThroneServerCard[]) {
+  function chooseBotPlay(g: ThroneGame, legal: ThroneServerCard[]) {
     const sorted = [...legal].sort((a, b) => a.value - b.value),
       seek = random() < 0.55;
     if (g.currentLaw === 'revolta') return seek ? sorted[0] : sorted[sorted.length - 1];
@@ -861,7 +860,7 @@ export function createThroneService({
         room,
         () => {
           if (!room.game || room.game.turn !== seat || room.game.phase !== 'await-play') return;
-          const card = chooseBotPlay(g, p, legal);
+          const card = chooseBotPlay(g, legal);
           let influenceAction: ThroneInfluenceAction = 'none',
             modifier = 0,
             declaredSuit: ThroneSuit | null = null;
@@ -974,14 +973,12 @@ export function createThroneService({
       modifier = 0,
       declaredSuit = null,
       isReserve = false,
-      timeout = false,
     }: {
       hidden?: boolean;
       influenceAction?: ThroneInfluenceAction;
       modifier?: number;
       declaredSuit?: ThroneSuit | null;
       isReserve?: boolean;
-      timeout?: boolean;
     } = {},
   ) {
     const g = room.game!;

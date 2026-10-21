@@ -54,7 +54,7 @@ export async function drainRejectedUpload(req: IncomingMessage) {
   // before closing; otherwise Windows can reset even the error response.
   const drained = (async () => {
     try {
-      for await (const chunk of req.iterator({ destroyOnReturn: false })) {
+      for await (const _chunk of req.iterator({ destroyOnReturn: false })) {
         /* discard */
       }
     } catch {}

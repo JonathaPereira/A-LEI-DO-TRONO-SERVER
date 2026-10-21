@@ -6,7 +6,6 @@ import { AppearanceFields } from './appearance-fields';
 interface AppearanceRuntime {
   TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoAuth: { user: { id: string } | null; ready: Promise<unknown> };
-  TronoAppearance?: { readonly theme: string };
 }
 const installed = new WeakSet<Window>();
 /** Register where the previous appearance script lived so settings capture the React fields. */
@@ -25,11 +24,6 @@ export function initializeAppearance(target: Window) {
       target.dispatchEvent(new CustomEvent('trono-theme-change', { detail: { theme } }));
     },
   });
-  runtime.TronoAppearance = {
-    get theme() {
-      return client.getSnapshot().theme;
-    },
-  };
   target.addEventListener(
     'trono:ready',
     () => {

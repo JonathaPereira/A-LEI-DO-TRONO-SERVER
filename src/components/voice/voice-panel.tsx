@@ -103,7 +103,7 @@ export function VoicePanel() {
           <div className={'mosaic-toolbar'}>
             <div>
               <span className={'section-eyebrow'}>AO VIVO</span>
-              <strong>Câmeras &amp; telas</strong>
+              <strong />
             </div>
             <span id="expandMosaicHost" style={{ display: 'contents' }} />
           </div>

@@ -25,8 +25,10 @@ publique instaladores como parte de uma refatoração de estrutura.
 
 ## Onde editar
 
-Edite telas em `src/components/`, bibliotecas em `src/lib/`, módulos existentes
-em `src/legacy/`, backend em `server/` e integração nativa em `electron/`.
+Edite telas em `src/components/`, bibliotecas em `src/lib/`, estilos de domínio
+em `src/styles/`, backend em `server/` e integração nativa em `electron/`.
+`src/legacy/` foi removida. A tipagem também recusa variáveis, imports e parâmetros
+sem uso; use o prefixo `_` somente para posições obrigatórias de callbacks.
 Os JS/CSS preparados em `public/`, `.next/` e `out/` são gerados. Preserve recursos,
 créditos e licenças de `public/assets`, `public/vendor` e `public/roguelite`.
 

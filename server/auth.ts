@@ -223,7 +223,7 @@ export function createAuth({
     route(
       'post',
       'signup',
-      async (req, body, signal) => {
+      async (_req, body) => {
         const email = emailFrom(body),
           password = requirePassword(body),
           nickname = String(body.nickname || '')
@@ -254,7 +254,7 @@ export function createAuth({
       'signup',
       5,
     );
-    route('post', 'login', async (req, body, signal) => {
+    route('post', 'login', async (_req, body, signal) => {
       const email = emailFrom(body);
       if (typeof body.password !== 'string' || !body.password || body.password.length > 1024)
         throw authError('INVALID_CREDENTIALS', 'E-mail ou senha inválidos.', 401);
@@ -270,7 +270,7 @@ export function createAuth({
     route(
       'post',
       'refresh',
-      async (req, body, signal) => {
+      async (_req, body, signal) => {
         if (!validToken(body.refresh_token))
           throw authError('AUTH_REQUIRED', 'Entre novamente na sua conta.', 401);
         return sessionPayload(
@@ -288,7 +288,7 @@ export function createAuth({
     route(
       'post',
       'recover',
-      async (req, body, signal) => {
+      async (_req, body) => {
         const email = emailFrom(body),
           redirect = new URL(site!.href);
         redirect.searchParams.set('auth', 'recovery');
@@ -308,7 +308,7 @@ export function createAuth({
       'recover',
       5,
     );
-    route('post', 'verify', async (req, body, signal) => {
+    route('post', 'verify', async (_req, body) => {
       const { token_hash, type } = body;
       if (
         typeof token_hash !== 'string' ||
@@ -353,7 +353,7 @@ export function createAuth({
     route(
       'get',
       'me',
-      async (req, body, signal) => ({
+      async (req, _body, signal) => ({
         user: publicAccount(await identity(tokenFrom(req), signal)),
       }),
       'me',
@@ -401,7 +401,7 @@ export function createAuth({
       'profile',
       15,
     );
-    route('post', 'logout', async (req, body, signal) => {
+    route('post', 'logout', async (req, _body, signal) => {
       const token = tokenFrom(req),
         account = await identity(token, signal);
       await upstream('/auth/v1/logout?scope=local', { method: 'POST', token });

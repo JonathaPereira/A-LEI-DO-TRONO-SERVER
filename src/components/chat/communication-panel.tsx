@@ -13,7 +13,7 @@ export function CommunicationPanel() {
         <div id={'socialDragHandle'} className={'social-head'}>
           <div>
             <small>SALA DE VOZ</small>
-            <strong id={'mnStageRoomName'}>Geral</strong>
+            <strong id={'mnStageRoomName'} />
           </div>
           <div className={'social-head-actions'}>
             <button id={'socialModeBtn'} title={'Ampliar câmeras e telas da chamada'}>

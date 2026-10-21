@@ -60,6 +60,11 @@ continua exigindo `npm run build` para incorporar alterações. Entradas clássi
 de callback/worklets usam a preparação de `predev`/`prebuild`. Mudanças em
 `electron/` exigem reabrir a aplicação; mudanças em C++ exigem recompilação.
 
+O fluxo de CSS foi conferido no Next em desenvolvimento: salvar um estilo de
+domínio atualizou a página sem recarga, troca da conexão ou parada de microfone
+sintético. Isso não significa que qualquer mudança no código de captura possa
+ser aplicada durante uma chamada sem reiniciar seus donos.
+
 O modo de desenvolvimento aceita apenas uma origem HTTP em `127.0.0.1` com porta
 explícita e é desativado no aplicativo empacotado. O instalador serve somente seus
 arquivos e autoriza os scripts de bootstrap por hash.

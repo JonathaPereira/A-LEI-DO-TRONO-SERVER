@@ -671,7 +671,7 @@ function createLocalExecution(
     const legal = getLegalCards(p);
     if (p.ai) {
       run.check(await run.wait(delay(480)));
-      const card = chooseCpuCard(p, legal);
+      const card = chooseCpuCard(legal);
       const inf = maybeCpuInfluence(p, card);
       if (inf.action !== 'none') {
         p.influence -= inf.cost;
@@ -738,7 +738,7 @@ function createLocalExecution(
     return throneRules.followCards(cards, game.currentLaw, leadSuit, game.trump);
   }
 
-  function chooseCpuCard(p: ThroneLocalPlayer, legal: ThroneLocalCard[]) {
+  function chooseCpuCard(legal: ThroneLocalCard[]) {
     const sorted = [...legal].sort((a, b) => a.value - b.value);
     const seekCrown = options.random() < 0.55;
     if (game.currentLaw === 'revolta') return seekCrown ? sorted[0] : sorted[sorted.length - 1];

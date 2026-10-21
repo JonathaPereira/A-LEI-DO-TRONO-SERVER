@@ -3,6 +3,8 @@
     "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "rewriteRelativeImportExtensions": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -20,8 +22,8 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "allowJs": true,
-    "incremental": true
+    "incremental": true,
+    "allowJs": true
   },
   "include": [
     "next-env.d.ts",
@@ -30,5 +32,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "src/legacy/**/*.js"]
+  "exclude": ["node_modules"]
 }

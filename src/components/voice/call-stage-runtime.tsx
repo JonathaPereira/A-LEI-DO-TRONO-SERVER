@@ -10,8 +10,6 @@ export function initializeCallStage(target: Window) {
     doc = target.document;
   const get = (id: string) => doc.getElementById(id)!;
   const title = doc.querySelector<HTMLElement>('.mosaic-toolbar strong')!;
-  for (const element of [title, get('mnStageRoomName'), get('textVoiceRoomName')])
-    element.replaceChildren();
   const host = doc.createElement('div');
   host.style.display = 'contents';
   doc.body.append(host);

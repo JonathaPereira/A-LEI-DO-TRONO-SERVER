@@ -408,7 +408,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
                 .getCapture()
                 ?.outgoing.getAudioTracks()
                 .find((t) => t.readyState === 'live'),
-    onPublicationRetry: (kind, error, attempt, done) => {
+    onPublicationRetry: (kind, error, _attempt, done) => {
       if (errorField(error, 'code') === 'HIGH_BUDGET_BLOCKED') {
         realtime.restrictHighQuality();
       }

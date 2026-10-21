@@ -7,6 +7,9 @@ estática permite a mesma interface na web e no Electron. Não há Server Action
 API Routes ou cookies do servidor Next: conta, dados e WebSocket pertencem ao
 backend existente.
 
+Frontend e backend usam `noUnusedLocals`/`noUnusedParameters`. Posições necessárias
+de callbacks podem usar `_`; remover argumentos e opções privados sem leitores.
+
 `components/application.tsx` compõe as telas por domínio. As telas preservam IDs
 e hierarquia relevantes dos controles anteriores. `chat-composer.tsx` possui o
 campo de texto, seletor de arquivo/emojis e feedback em React. `lib/chat/composer.ts`

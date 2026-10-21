@@ -167,7 +167,7 @@ export function createCommunityManagement<Room extends ChannelRoom>({
       );
       return { accounts: rows, hasMore: rows.length === 50, nextOffset: offset + rows.length };
     });
-    route('get', '/channels', (req, identity) =>
+    route('get', '/channels', (_req, identity) =>
       serial(
         async () => ({ channels: await sync(identity.token, identity.signal) }),
         identity.signal,
