@@ -4,7 +4,7 @@
   const pageUrl = 'https://semchakra10.itch.io/nexus-mn';
   // Paste ONLY the src of the playable "Embed game" iframe here.
   // Leave empty to launch the official itch.io page in a new tab/window.
-  const embedUrl = 'https://itch.io/embed-upload/19912863?color=333333';
+  const embedUrl = 'https://itch.io/embed-upload/19915488?color=333333';
   function isEmbedURL(value) {
     try {
       const url = new URL(value);
@@ -14,7 +14,7 @@
       );
     } catch { return false; }
   }
-  const config = Object.freeze({pageUrl, embedUrl: isEmbedURL(embedUrl) ? embedUrl : '', pvpUrl: 'wss://nexus-mn.onrender.com/pvp', isEmbedURL});
+  const config = Object.freeze({pageUrl, embedUrl: isEmbedURL(embedUrl) ? embedUrl : '', pvpUrl: 'wss://nexus-pvp.onrender.com/pvp', isEmbedURL});
   if (typeof module === 'object' && module.exports) module.exports = config;
   else window.TronoNexusConfig = config;
 })();
