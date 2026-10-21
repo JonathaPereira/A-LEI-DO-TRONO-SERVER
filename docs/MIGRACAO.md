@@ -166,6 +166,53 @@ conteúdo em PGlite vazio. Os fontes SQL anteriores não foram modificados. Coma
 limites e distinção em relação ao histórico/reset do CLI estão no guia desktop.
 O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alterado.
 
+## Ponto de retomada da maratona
+
+Checkpoint de código: `85c3be2`, na branch `codex/next-typescript-structure`.
+O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
+A migração completa ainda não está concluída: os serviços abaixo continuam em
+JavaScript e não ganham tipagem estrita por consumirem módulos TS.
+
+Próximo recorte recomendado: `server/community-management.js`. Mapear primeiro
+os consumidores em `runtime.cjs`, autenticação HTTP, consultas de canais e
+atualizações de cargo. Transferir o dono do refresh/cache e seus timers juntos;
+validar respostas e comandos como `unknown`, sem duplicar o mapa de salas ou o
+estado das permissões. Usar `roles.ts`, `community.ts` e os contratos já existentes.
+
+Sequência restante, após esse recorte:
+
+1. `server/social-service.js`: amigos, conversas, marcação de leitura, limites e
+   anexos diretos; manter confirmação da persistência antes do broadcast.
+2. `server/auth.js` e `server/files.js`: contratos dos provedores, sessão e
+   armazenamento. Preservar verificação autoritativa da conta, revogação,
+   permissões, quotas e exclusões; não transportar segredos para o renderer.
+3. `server/azul-service.js`, `splendor-service.js` e `love-letter-service.js`:
+   coordenação, timers, persistência e projeções privadas. Motores já são TS.
+4. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
+   autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
+5. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
+   Trono para donos por domínio, mantendo instâncias independentes e shutdown.
+   Completar os payloads de jogos/SFU que ainda não têm validação integral.
+6. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
+   A movimentação de arquivos está concluída; as sobreposições e a preparação
+   estática continuam explicitamente preservadas.
+7. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
+   sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
+
+Última validação de código: `typecheck`, `format:check`, build estático e
+`npm test` completos passaram. `test:server:lifecycle` tem 13 verificações;
+`test:database` tem seis. Os 15 casos de conta/comunidade/arquivos/permissões e a
+chamada completa com dois Electron reais passaram após converter presença.
+Não há alteração pendente de código, instalação do aplicativo ou publicação remota.
+As evidências desta etapa ficam em `artifacts/community-service-*`; a composição
+tem `application-composition-*`, a conta `auth-owner-*` e a instalação
+`database-install-*`. Algumas primeiras tentativas nesses diretórios registram
+falhas de fixtures já corrigidas; os resultados finais são os descritos aqui.
+
+Comandos e ambiente de Edge, Electron e FFmpeg estão no guia desktop. Após mudar
+código, repetir as verificações relevantes antes do próximo commit assinado;
+manter `main` em `7db2d81` e publicar somente mediante pedido explícito.
+
 ## Como continuar um recorte
 
 1. Localizar consumidores, eventos, estado e recursos antes de mover o código.
