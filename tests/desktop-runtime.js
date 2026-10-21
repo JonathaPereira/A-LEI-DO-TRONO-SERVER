@@ -49,6 +49,10 @@ test(
       let page = await app.firstWindow();
       await expect(page.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
       assert.equal(page.url(), 'https://a-lei-do-trono.surge.sh/');
+      assert.equal(
+        await page.evaluate(async () => (await fetch('/')).headers.get('referrer-policy')),
+        'no-referrer',
+      );
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       if (await page.locator('#authDialog').isVisible())

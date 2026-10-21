@@ -87,6 +87,11 @@ recursos em `public/roguelite/` foram preservados.
   a prévia pendente, preservando efeitos recebidos da chamada. Decoder fecha seu
   próprio contexto; menu e waveform são React. Assinaturas de rede, eventos e
   observador de layout têm descarte explícito.
+- `auth-boot.js`: fonte tipada em `lib/auth/callback-boot.ts`, conservando o caminho
+  estático e a entrada beforeInteractive. Credenciais são consumidas uma vez;
+  hashchange e descarte têm cobertura própria. O build agora posiciona a política
+  de referrer antes dos recursos hoisted; Electron e servidor estático também a
+  enviam em cabeçalho. A falha de referrer foi reproduzida com o bootstrap antigo.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -98,16 +103,16 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 
 O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 
-- Conta: `auth-boot.js`, `auth.js`.
+- Conta: `auth.js`.
 
-`call-controls-layout.js` já é gerado do módulo TypeScript
-`lib/voice/control-layout.ts`; sua presença no manifesto não indica um controlador
-JS ainda por converter. `scripts/prepare-renderer.cjs` compila esse módulo e poda
+`auth-boot.js` e `call-controls-layout.js` já são gerados dos módulos TypeScript
+`lib/auth/callback-boot.ts` e `lib/voice/control-layout.ts`; sua presença no manifesto
+não indica controladores JS ainda por converter. `scripts/prepare-renderer.cjs` compila esses módulos e poda
 assets estáticos obsoletos somente após compilação bem-sucedida.
 
 Todos os motores compartilhados dos jogos, áudio local e seletor desktop saíram de
 `src/legacy/`. Soundboard também está convertido. Próximo recorte: transferir
-conta e seu boot, preservando sessões, recuperação, convidados e permissões. A API
+o dono da conta e os formulários, preservando sessões, recuperação, convidados e permissões. A API
 `TronoApplicationAudio.cancel(id)` cancela somente o preparo/grafo desse job;
 não descarta o dono global nem as outras capturas.
 
@@ -186,6 +191,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Seletor desktop | 14 regressões do controlador e cinco verificações da interface passaram; fluxo nativo de seleção/cancelamento/captura e chamada completa com dois Electron passaram. Cancelamento, resposta tardia, isolamento de jobs e preservação da tela entregue são cobertos. |
 | Música/efeitos locais | 12 regressões novas e 20 de áudio da chamada passaram; 102 comparações dos 17 efeitos com a versão anterior preservaram os grafos, envelopes, ganhos e buffers de ruído. Navegador verificou forma de onda real, mute, teclado, três painéis sincronizados e descarte sem fechar contexto/trilha emprestados. Portal web/desktop, chamada completa no Electron e pacote passaram. |
 | Soundboard | 17 regressões do cliente e dois contratos HTTP/PCM passaram. 48 comparações/29.201.262 bytes de WAV idênticos ao encoder anterior. Dez verificações de navegador/shell, chamada completa no Electron e pacote passaram; renderer nativo também decodificou 15 s estéreo a 48 kHz, preservando níveis/canais com tolerância de quantização. |
+| Boot da conta | Seis modelos de callback/HTML e sete verificações de navegador passaram: cadastro, confirmação de uso único, login/logout, recuperação, erros e restauração de convidado. Requisições de recursos não incluem tokens no referrer. Fluxo nativo de cabeçalho/captura/PCM/permissões passou. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
@@ -206,6 +212,9 @@ em `artifacts/soundboard-full-test.log`; `tests/soundboard-browser.cjs` cobre
 recorte, upload, reprodução de sala, foco, mobile e descarte. Decoder/codec e
 corridas de sessão/URLs ficam em `tests/soundboard.cjs`. O teste nativo curto é
 `tests/desktop-runtime.js`; todos usam dados sintéticos e não aprovam loopback físico.
+Callbacks usam `test:auth:models` e `test:auth:ui`; referência da falha anterior em
+`artifacts/auth-callback-baseline.log`. Testes de autenticação usam somente o
+provedor local da fixture, sem acessar contas ou configurações Supabase reais.
 O executável local de conferência está em
 `artifacts/windows-app/win-unpacked/MN Trono.exe`; não substitui a instalação.
 

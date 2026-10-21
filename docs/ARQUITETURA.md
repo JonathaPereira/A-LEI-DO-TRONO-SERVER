@@ -982,6 +982,20 @@ os IDs de avatar/capa/fundo selecionados via `getProtectedFileIds()` e notifica
 mudanças do rascunho; a biblioteca protege esses IDs também na ação de excluir.
 O rascunho continua pertencendo ao editor; a biblioteca não mantém outro estado de perfil.
 
+`lib/auth/callback-boot.ts` é a entrada clássica gerada em `/auth-boot.js`, carregada
+por beforeInteractive. Captura os campos de confirmação/recuperação, limpa query e
+fragmento, e entrega um objeto imutável de uso único ao dono da conta. Hashchange
+notifica somente após sanitizar; pagehide remove o listener e o callback pendente.
+Não publica tokens em eventos nem os grava em armazenamento. `auth.js` ainda
+consome essa entrada e permanece como o último script de domínio a converter.
+
+Next pode emitir preloads antes da metadata. `scripts/prepare-static-html.cjs`,
+executado por postbuild, move a política no-referrer para antes desses recursos nos
+HTML de entrada exportados, preservando charset, scripts e metadata. A transformação
+é idempotente e atua somente nos HTML gerados da raiz de out, preservando Cinzas.
+Servidor estático e respostas locais do Electron enviam também Referrer-Policy.
+Usar `npm run build` inclui essa preparação; não substituir por `next build` isolado.
+
 `lib/storage/preferences.ts` mantém a semântica de preferências tolerante a falhas:
 escritas em memória prevalecem quando localStorage está bloqueado/cheio e remoções
 mantêm tombstones para não ressuscitar valores persistidos. O bootstrap instala

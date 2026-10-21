@@ -11,6 +11,7 @@
     "plugins": []
   },
   "include": [
+    "src/lib/auth/callback-boot.ts",
     "src/lib/voice/control-layout.ts",
     "src/lib/voice/worklets/*.ts",
     "src/types/audio-worklet.d.ts"

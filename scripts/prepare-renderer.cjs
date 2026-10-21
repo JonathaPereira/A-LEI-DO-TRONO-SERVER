@@ -15,6 +15,7 @@ const outputs = new Map(
     .filter((entry) => entry.isFile() && /\.(js|css)$/.test(entry.name))
     .map((entry) => [entry.name, path.join(source, entry.name)]),
 );
+outputs.set('auth-boot.js', path.join(root, 'artifacts/renderer/lib/auth/callback-boot.js'));
 outputs.set(
   'call-controls-layout.js',
   path.join(root, 'artifacts/renderer/lib/voice/control-layout.js'),

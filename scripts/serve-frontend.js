@@ -11,7 +11,12 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw Error('FRONTEND_PORT must be a valid TCP port');
 const app = express();
 app.disable('x-powered-by');
-app.use(express.static(renderer, { maxAge: 0 }));
+app.use(
+  express.static(renderer, {
+    maxAge: 0,
+    setHeaders: (response) => response.setHeader('Referrer-Policy', 'no-referrer'),
+  }),
+);
 const server = app.listen(port, '127.0.0.1', () =>
   console.log('Frontend development server ready on port ' + port),
 );

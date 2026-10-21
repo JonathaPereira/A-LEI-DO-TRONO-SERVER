@@ -190,6 +190,7 @@ async function start() {
       const response = await net.fetch(pathToFileURL(real).href),
         headers = new Headers(response.headers);
       headers.set('Cache-Control', 'no-store');
+      headers.set('Referrer-Policy', 'no-referrer');
       headers.set(
         'Content-Security-Policy',
         contentSecurityPolicy(
