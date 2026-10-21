@@ -4,7 +4,7 @@ const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
-const { RealtimeSfuManager } = require('./realtime-sfu');
+const { RealtimeSfuManager } = require('./realtime-sfu.ts');
 const { createAuth } = require('./auth.ts');
 const { createFiles } = require('./files.ts');
 const { createCommunity } = require('./community.ts');
@@ -143,7 +143,6 @@ function createRuntime({
     rooms,
     send,
     broadcastVoiceRoster,
-    chatOnlyRoomId: CHAT_ONLY_ROOM_ID,
     version: VERSION,
   });
 
@@ -2959,17 +2958,20 @@ function createRuntime({
     community.stop();
     communityManagement.stop();
     chatHistory.close();
-    realtimeSfu.stop();
+    const closingSfu = realtimeSfu.stop();
     accountAuth.stop();
     fileStorage.stop();
     for (const client of wss.clients) client.terminate();
-    closePromise = new Promise((resolve, reject) => {
-      wss.close(() => {
-        if (!server.listening) return resolve();
-        server.close((error) => (error ? reject(error) : resolve()));
-        server.closeIdleConnections();
-      });
-    });
+    closePromise = Promise.all([
+      closingSfu,
+      new Promise((resolve, reject) => {
+        wss.close(() => {
+          if (!server.listening) return resolve();
+          server.close((error) => (error ? reject(error) : resolve()));
+          server.closeIdleConnections();
+        });
+      }),
+    ]).then(() => undefined);
     return closePromise;
   }
   return { app, server, wss, close };

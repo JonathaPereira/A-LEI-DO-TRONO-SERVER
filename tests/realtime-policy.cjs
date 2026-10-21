@@ -12,7 +12,7 @@ const {
   PROFILE,
 } = require('../server/realtime-policy.ts');
 const { createRealtimeUsage, monthKeyUTC } = require('../server/realtime-usage.ts');
-const { RealtimeSfuManager } = require('../server/realtime-sfu');
+const { RealtimeSfuManager } = require('../server/realtime-sfu.ts');
 const usage = (bytes = 0) => ({ month: '2026-10', bytes, lastTick: 0, loadedFromDisk: false });
 function temporary(t) {
   const root = fs.mkdtempSync(path.resolve('artifacts/realtime-policy-'));

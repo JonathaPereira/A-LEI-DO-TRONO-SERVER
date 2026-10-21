@@ -8,6 +8,12 @@ export const ALLOWED_KINDS: ReadonlySet<string> = new Set([
   'screen-audio',
 ]);
 export const ALLOWED_QUALITIES: ReadonlySet<string> = new Set(['economy', 'balanced', 'high']);
+export const isRealtimeKind = (value: unknown): value is RealtimeKind =>
+  typeof value === 'string' && ALLOWED_KINDS.has(value);
+export const isRealtimeQuality = (value: unknown): value is RealtimeQuality =>
+  typeof value === 'string' && ALLOWED_QUALITIES.has(value);
+export const isRealtimeRid = (value: unknown): value is RealtimeRid =>
+  value === 'f' || value === 'h' || value === 'q';
 const QUALITY_ORDER: readonly string[] = ['economy', 'balanced', 'high'];
 export const PROFILE: Record<
   RealtimeQuality,

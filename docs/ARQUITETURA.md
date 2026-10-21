@@ -50,9 +50,9 @@ snapshot imutável de capacidades e participação em texto/voz/jogo, com
 estado e as respostas de conta, convidado, nome e preparo da chamada. O consumidor
 P2P valida SDP, ICE e comandos em `lib/voice/peer-protocol.ts`; a negociação SFU
 valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valida
-status de consumo e configuração ICE/TURN. Payloads de jogos e os demais
-comandos de consumo SFU ainda serão convertidos com seus consumidores;
-o protocolo inteiro ainda não está tipado.
+status de consumo e configuração ICE/TURN. O backend valida comandos SFU e
+respostas do provedor. Os payloads de A Lei do Trono ainda serão convertidos
+com seu coordenador; o protocolo inteiro ainda não está tipado.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -1657,7 +1657,7 @@ Lista, barra e painéis de mídia/diagnóstico são React, com projeções próp
 Os módulos notificam a composição para anexar áudio, registrar/remover proteção
 do receiver, pedir fallback ou atualizar projeções. Não há cópias de estado ou
 listeners de negociação. Os campos das configurações são descritos abaixo.
-O backend SFU permanece em `server/realtime-sfu.js`; seu protocolo não foi alterado.
+O backend SFU está em `server/realtime-sfu.ts`; preserva o protocolo e os parâmetros de mídia.
 
 `components/files/image-viewer.tsx` mantém um único visualizador React para anexos
 do chat e dos consumidores legados. Trocar de conta ou excluir o arquivo invalida
@@ -2172,9 +2172,26 @@ credenciais. Defaults, limiares e fallback de camadas permanecem os anteriores.
 com teto de 15 segundos por tick, reinicia no mês UTC e não cobra o intervalo em
 que o processo esteve desligado. Falha de arquivo é não fatal. O manager lê o
 mesmo estado por getter; não mantém outro contador. Env/caminho são injetáveis
-por instância para testes locais. Negociação, provedor, filas e shutdown ainda
-pertencem a `realtime-sfu.js` e aguardam conversão; testes do relay no cliente não
-substituem regressões diretas desse manager.
+por instância para testes locais.
+
+`realtime-sfu.ts` possui sessões, filas e catálogo de publicações/assinaturas.
+`realtime-contract.ts` descreve suas fronteiras e `realtime-provider.ts` possui o
+HTTP e a validação das respostas da [API Realtime SFU](https://developers.cloudflare.com/realtime/sfu/api/).
+Credenciais ficam no servidor; erros públicos não carregam o token. Cada participação
+em sala possui um escopo cancelável, compartilhado pelos pedidos ativos e filas.
+Sair o invalida antes de limpar recursos; uma nova participação não aguarda as
+filas antigas. Reservas incluem publicações em andamento no limite de participantes.
+Autorização confere o socket atual e a posse da sessão, além da sala e do modo de voz.
+Confirmações revalidam participação e publicação após a negociação remota.
+
+`abortable.ts` limita a espera mesmo se um adaptador ignorar AbortSignal; `ice.ts`
+valida a página TURN inteira e cancela HTTP/cache ao encerrar. `stop()` do SFU é
+idempotente: aborta HTTP/TURN/filas, limpa mapas e tenta fechar as tracks conhecidas
+em paralelo com prazo total de três segundos. A composição aguarda esse descarte.
+Fechamento remoto é melhor esforço: uma resposta perdida de criação não fornece
+ID recuperável para fechar a sessão. Regressões diretas exercitam o manager com
+provedor injetado; o relay nativo também atravessa esse backend com mídia real no
+Electron, sem acessar uma conta Cloudflare nem provar captura física de jogos.
 
 ## Electron
 

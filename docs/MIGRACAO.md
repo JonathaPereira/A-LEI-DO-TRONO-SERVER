@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas e coordenação de Love Letter/Azul/Splendor possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam `realtime-sfu.js` e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas, SFU e coordenação de Love Letter/Azul/Splendor possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -150,8 +150,8 @@ Uma regressão compara os dois consumidores à configuração do electron-builde
 - Extrair regras de A Lei do Trono e coordenação de canais de `server/runtime.cjs`,
   preservando `createApplication()` e o isolamento por instância.
 - Converter serviços JS por domínio, mantendo autorização e persistência.
-- Completar validação dos payloads externos com seus consumidores. Jogos e alguns
-  comandos de consumo SFU ainda não possuem validação completa.
+- Completar validação dos payloads externos com seus consumidores. Os comandos de
+  A Lei do Trono ainda precisam da conversão com seu coordenador.
 - `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
   existentes estritos por estarem na mesma pasta.
 
@@ -179,7 +179,7 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: autenticação, arquivos e os três serviços de jogos convertidos, na branch
+Checkpoint de trabalho: autenticação, arquivos, os três serviços de jogos e SFU convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
@@ -237,37 +237,37 @@ contador por getter, sem cópia paralela. Caminho de checkpoint/env podem ser
 injetados por instância; dados malformados não restauram bytes. Defaults, limites
 e perfis de bitrate foram preservados. Leitura/gravação de arquivo saiu do manager,
 assim como helpers de política substituídos e `totalGb()`, sem consumidores.
-`realtime-sfu.js` continua necessário: negociação, transporte e shutdown ainda
-estão nesse arquivo. Não é uma conversão completa do manager.
+`realtime-sfu.js` foi removido. `realtime-sfu.ts` possui sessões, participação,
+filas e publicações/assinaturas; `realtime-contract.ts` descreve essas fronteiras.
+`realtime-provider.ts` valida respostas completas, limita HTTP e remove credenciais
+dos erros. `abortable.ts` delimita a espera mesmo se um adaptador ignorar o sinal;
+`ice.ts` usa o mesmo cancelamento e recusa páginas TURN parcialmente inválidas.
+Autorização continua por socket, participante e sala. Cada participação possui um
+escopo cancelável; sair invalida trabalho ativo e enfileirado sem bloquear a próxima
+chamada. Reservas de publicação incluem pedidos em andamento no limite de donos.
+Respostas tardias não reinstalam sessões nem confirmam publicações substituídas.
+O shutdown aborta HTTP/filas/TURN, limpa mapas e tenta fechar tracks conhecidas com
+prazo compartilhado de três segundos, aguardado pela composição. A limpeza remota
+é melhor esforço: uma criação cuja resposta se perdeu não fornece ID para fechar.
+SDP/RTP/RID, perfis de bitrate/simulcast e tempos de recuperação foram preservados.
 
-Próximo recorte recomendado: `server/realtime-sfu.js`, com cuidado de mídia.
-Começar lendo o manager completo e os testes de SFU/recuperação/desktop. Separar
-contratos e transporte do provedor (política/uso já foram extraídos), mantendo
-filas por sessão, gerações por cliente, autorização por sala e descarte de tracks.
-Preservar SDP/RTP/RID, perfis de bitrate/simulcast, limites e tempos de recuperação;
-não misturar ajustes de desempenho com essa conversão. O stop atual só limpa o
-intervalo e força um tick: é necessário transferir também HTTP/filas e impedir
-respostas tardias de recriarem sessões/publicações. Repetir SFU real no Electron.
-Os testes existentes de SFU/desktop exercitam principalmente donos do cliente e
-um relay WebRTC local. Acrescentar regressões diretas do manager com provedor
-injetado para publicação/assinatura, filas, encerramento e respostas inválidas;
-não tratar esses testes do cliente como prova integral do backend/provedor real.
+Próximo recorte recomendado: `server/runtime.cjs`. Ler o coordenador completo e
+as regressões de canais/A Lei do Trono antes de separar estado e listeners.
+Manter `createApplication()`, um único WebSocket e os donos de mídia existentes.
 
 Sequência restante, após esse recorte:
 
-1. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
-   autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
-2. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
+1. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
    Trono para donos por domínio, mantendo instâncias independentes e shutdown.
-   Completar os payloads de jogos/SFU que ainda não têm validação integral.
-3. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
+   Completar os payloads de A Lei do Trono com seu consumidor.
+2. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
-4. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
+3. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 88 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 103 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -295,18 +295,27 @@ Splendor acrescenta seis regressões de fronteira, reservas privadas, carteira,
 recordes e shutdown concorrente. Em 100 partidas, 6.143 jogadas e 12.486 visões
 privadas foram idênticas ao serviço anterior. Os três casos de interface, incluindo
 partidas completas nos dois hosts e preservação da chamada, e o pacote Windows
-existente passaram contra o backend atual. Restam apenas dois arquivos JS/CJS no
+existente passaram contra o backend atual. Resta apenas um arquivo JS/CJS no
 servidor; isso ainda não encerra a migração completa.
 Política SFU acrescenta seis regressões de configuração, limites, camadas,
 checkpoint, retomada/virada mensal e isolamento. Houve paridade em 20 casos de
 limite/base, 960 estimativas de bitrate e 1.500 decisões de RID. Os 125 casos de
 `test:sfu`, a chamada completa com dois Electron e o relay SFU em Electron passaram.
 Nenhum parâmetro de negociação, captura, bitrate ou recuperação foi ajustado.
+O manager SFU acrescenta 15 regressões diretas de negociação, autorização, limite
+concorrente, validação do provedor/TURN, filas, saída/reentrada e shutdown limitado.
+Doze fluxos das quatro mídias e três qualidades conservaram 102 chamadas ao provedor
+e 162 eventos no protocolo. Os 125 casos SFU e a chamada com dois Electron passaram.
+O relay nativo agora atravessa também o manager Node tipado e seu adaptador de
+provedor, negociando mídia WebRTC real no Electron. Exige descarte imediato dos
+peers do cliente e aguarda separadamente o descarte remoto. Isso não testa uma
+conta Cloudflare real, TURN de produção, loopback físico nem FPS em jogo.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
 Splendor usa `artifacts/splendor-service-*`;
 política/uso SFU usam `artifacts/realtime-policy-*`;
+manager/provedor e relay usam `artifacts/realtime-manager-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;
