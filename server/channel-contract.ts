@@ -1,6 +1,6 @@
 import type { BackendAccount } from './auth-contract';
 import type { GuestIdentity } from './sessions';
-import type { ChannelType, ChatMessage, MediaTransport } from '../src/types/domain';
+import type { ChannelType, MediaTransport } from '../src/types/domain';
 import type { ThroneGame } from './throne-contract';
 import type { RealtimeQuality } from './realtime-policy';
 
@@ -32,7 +32,6 @@ export interface ChannelMember {
   mediaTransport: MediaTransport;
   transmissionQuality: RealtimeQuality;
   screenFps?: 15 | 30 | 60;
-  lastChatAt: number;
 }
 export interface ChannelRoom {
   id: string;
@@ -44,8 +43,6 @@ export interface ChannelRoom {
   players: Map<string, ChannelMember>;
   createdAt: number;
   game: ThroneGame | null;
-  chatHistory: ChatMessage[];
-  chatRevision?: number;
   nextSeat: number;
   voiceMode?: 'sfu' | 'p2p' | null;
   voiceRevision?: number;

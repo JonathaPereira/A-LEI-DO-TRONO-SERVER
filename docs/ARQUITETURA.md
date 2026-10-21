@@ -53,7 +53,7 @@ valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valid
 status de consumo e configuração ICE/TURN. O backend valida comandos SFU e
 respostas do provedor. `server/throne-protocol.ts` valida comandos de A Lei do
 Trono; canais/voz usam `server/channel-protocol.ts` e o mesmo parser P2P do cliente.
-As fronteiras de chat/soundboard/identidade do runtime ainda precisam da conversão.
+As fronteiras de soundboard/identidade do runtime ainda precisam da conversão.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -1996,7 +1996,7 @@ migração da interface ampliaria o risco sem resolver o acoplamento.
 `app.ts` expõe `createApplication()` e `close()`. Cada criação possui canais,
 sockets e serviços próprios. Importar o módulo não inicia um servidor nem
 registra sinais. `index.ts` valida porta/host e trata o processo.
-`runtime.cjs` ainda contém composição, chat/moderação e execução do soundboard.
+`runtime.cjs` ainda contém composição e execução do soundboard.
 Esses consumidores ainda precisam da extração e tipagem estrita.
 
 `lib/games/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
@@ -2047,6 +2047,20 @@ recusa de sala cheia não remove a participação anterior. Estado/sinalização
 o socket atual e o destino P2P participante; rosters detalhados só vão à chamada.
 Callbacks adiados conectam os donos de histórico, presença e partidas na composição.
 O construtor não os executa. Stop limpa catálogo/membros e impede novos broadcasts.
+
+`chat-service.ts` possui buffer de até cem mensagens por sala, revisão, limites
+por membro/conexão, menções e notificações. Esses dados não ficam mais expostos
+na sala/conexão do coordenador. `chat-protocol.ts` projeta texto e IDs conhecidos.
+O dono de persistência `chat-history.ts` continua possuindo a única fila por sala,
+compartilhada com envio, leitura e moderação; uma página antiga não reaparece após
+o evento de exclusão. O formato SQL conserva compatibilidade dos metadados antigos.
+Cada operação confere sala, socket e identidade antes e depois de IO; moderação
+revalida o criador antes de enviar o RPC e usa o ator capturado. Um append já aceito
+conserva autoria/avisos após a saída do remetente, sem assumir a conta substituta.
+Reset de histórico transitório invalida trabalho antigo e conserva a revisão,
+evitando que clientes ignorem mensagens novas. Exclusão de canal/arquivo também
+entra pelos métodos desse dono. Stop aborta esperas, solta buffers/limites e
+suprime respostas tardias; a composição encerra o adaptador de persistência.
 
 `roles.ts` recebe dados desconhecidos e deriva o cargo de dados verificados pelo
 provedor e do perfil persistido; metadados editáveis do usuário não decidem

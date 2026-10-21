@@ -27,6 +27,7 @@ interface Options {
   presenceChanged(): void;
   nameReserved(name: string): boolean;
   sendHistory(ws: ChannelConnection, room: ChannelRoom): Promise<void>;
+  clearHistory?(room: ChannelRoom): void;
 }
 export function createChannelRooms(): Map<string, ChannelRoom> {
   const CHAT_CHANNELS = [
@@ -51,7 +52,6 @@ export function createChannelRooms(): Map<string, ChannelRoom> {
         players: new Map(),
         createdAt: Date.now(),
         game: null,
-        chatHistory: [],
         nextSeat: 0,
       },
     ]),
@@ -67,7 +67,6 @@ export function createChannelRooms(): Map<string, ChannelRoom> {
       players: new Map(),
       createdAt: Date.now(),
       game: null,
-      chatHistory: [],
       nextSeat: 0,
     });
 
@@ -84,7 +83,6 @@ export function createManagedChatRoom(channel: ManagedChannel): ChannelRoom {
     players: new Map(),
     createdAt: Date.now(),
     game: null,
-    chatHistory: [],
     nextSeat: 0,
   };
 }
@@ -99,6 +97,7 @@ export function createChannelService({
   presenceChanged,
   nameReserved,
   sendHistory: sendChatHistory,
+  clearHistory = () => {},
 }: Options) {
   let closed = false;
   const roomFor = (id: unknown) => (typeof id === 'string' ? rooms.get(id) : undefined);
@@ -277,7 +276,7 @@ export function createChannelService({
     ws.textRoomId = null;
     if (!room) return;
     if (ws.roomId !== room.id && ws.gameRoomId !== room.id) room.players.delete(ws.clientId);
-    if (!room.players.size && room.kind !== 'chat') room.chatHistory = [];
+    if (!room.players.size && room.kind !== 'chat') clearHistory(room);
     broadcastRoom(room);
     broadcastChatChannels();
   }
@@ -305,7 +304,6 @@ export function createChannelService({
       screenOn: false,
       mediaTransport: 'p2p',
       transmissionQuality: 'balanced',
-      lastChatAt: 0,
     };
   }
   function joinTextRoom(ws: ChannelConnection, roomId: unknown, rawName: unknown) {
@@ -370,7 +368,7 @@ export function createChannelService({
 
     if (leaving) throneService.disconnect(room, leaving, reason);
 
-    if (room.players.size === 0 && room.kind !== 'chat') room.chatHistory = [];
+    if (room.players.size === 0 && room.kind !== 'chat') clearHistory(room);
     resetVoiceModeIfEmpty(room);
     broadcastRoom(room);
     broadcastRooms();

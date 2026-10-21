@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade, mensagens diretas, SFU, participação/voz dos canais e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com chat/moderação, execução do soundboard e composição. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, chat/moderação, histórico, comunidade, mensagens diretas, SFU, participação/voz dos canais e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com execução do soundboard e composição. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -147,10 +147,10 @@ Uma regressão compara os dois consumidores à configuração do electron-builde
 
 ### 1. Backend e contratos externos
 
-- Extrair chat/moderação, execução do soundboard e composição de `server/runtime.cjs`,
+- Extrair execução do soundboard e composição de `server/runtime.cjs`,
   preservando `createApplication()` e o isolamento por instância.
 - Converter o runtime por domínio, mantendo autorização e persistência.
-- Completar validação dos payloads externos com seus consumidores de chat/soundboard e identidade.
+- Completar validação dos payloads externos com seus consumidores de soundboard e identidade.
 - `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
   existentes estritos por estarem na mesma pasta.
 
@@ -273,16 +273,28 @@ as anteriores omitiram esse campo e eram corretamente recusadas pela validação
 Destino inválido/cheio preserva a chamada; rosters privados exigem participação e
 estado/sinalização exigem o socket atual. Stop libera mapas e suprime broadcasts.
 
+`chat-service.ts` agora possui buffers limitados a cem mensagens, revisão, limites
+por membro/conexão e notificações. `chat-protocol.ts` valida texto, IDs, paginação e
+moderação. Estado e limites saíram da sala/conexão: `channel-contract.ts` não declara
+mais `chatHistory`, `chatRevision` ou `lastChatAt`. Os canais chamam `reset()` no
+histórico transitório; anexos excluídos são marcados pelo mesmo dono do buffer.
+Reset invalida trabalhos anteriores e conserva a revisão monotônica. Histórico,
+envio e moderação compartilham a fila do `chat-history.ts`, sem cópia de fila.
+Autoria/identidade e papel de criador são revalidados antes do RPC enfileirado;
+uma gravação persistente já aceita conserva avisos após o remetente sair.
+Shutdown cancela as esperas e impede reconstrução de buffers/eventos tardios.
+O armazenamento continua sendo encerrado separadamente pela composição.
+
 Próximo recorte recomendado: o restante de `server/runtime.cjs` (aproximadamente
-930 linhas): chat/moderação, execução do soundboard e composição HTTP/WebSocket.
+720 linhas): execução do soundboard e composição HTTP/WebSocket.
 Manter `createApplication()`, um único socket e os donos de mídia. A fábrica de
 canais não executa callbacks durante a construção; callbacks adiados da composição
 conectam presença, histórico e jogos sem criar outra instância desses serviços.
 
 Sequência restante, após esse recorte:
 
-1. `server/runtime.cjs`: extrair chat/moderação e execução do soundboard para donos
-   tipados, mantendo instâncias independentes e shutdown. Completar payloads dessas
+1. `server/runtime.cjs`: extrair execução do soundboard para um dono
+   tipado, mantendo instâncias independentes e shutdown. Completar payloads dessas
    fronteiras/identidade e deixar somente composição no ponto de entrada tipado.
 2. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
@@ -291,7 +303,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 118 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 129 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -349,6 +361,13 @@ com o coordenador anterior preservou 716 comandos, 3.904 eventos e 1.335 efeitos
 Tipagem, formatação, build estático, suíte completa, sete casos de interface e
 a chamada com dois Electron passaram, além do relay SFU pelo backend tipado.
 Limites de aceites físicos/externos continuam os descritos abaixo.
+Chat acrescenta onze regressões de entrada, autoria, anexos, menções, limite de
+histórico, revisão, fila/moderação, perda de papel, troca/expiração de conta,
+saída durante IO, reset e shutdown. Tipagem, formatação, build e suíte completa
+passaram. Compositor, anexos, moderação e notificações passaram no browser.
+A fixture de moderação foi corrigida após reproduzir no runtime anterior a mesma
+falha: uma troca somente de transporte não abre o drawer. O teste agora usa o
+botão visível de abrir chat e mantém todas as asserções de exclusão/persistência.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
@@ -357,6 +376,7 @@ política/uso SFU usam `artifacts/realtime-policy-*`;
 manager/provedor e relay usam `artifacts/realtime-manager-*`;
 A Lei do Trono usa `artifacts/throne-service-*`;
 canais/participação usam `artifacts/channel-service-*`;
+chat/moderação usam `artifacts/chat-service-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;

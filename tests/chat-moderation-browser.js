@@ -121,6 +121,8 @@ test(
         .poll(() => a.evaluate(() => window.TronoNetwork.currentRoom))
         .toBe('chat-conversa');
       await a.evaluate(() => window.TronoNetwork.joinTextChannel('chat-livre'));
+      // A transport-only room change does not open the drawer; use the visible chat action.
+      await a.getByRole('button', { name: 'Abrir chat de Geral', exact: true }).click();
       await expect(scoped).toBeVisible();
       await expect(b.locator('#courtChatMessages')).toContainText('Confirmação vinculada ao canal');
       await scoped.locator('.chat-message-delete').click();

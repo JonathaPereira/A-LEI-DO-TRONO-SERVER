@@ -9,7 +9,7 @@ export interface HistoryRoom {
   id: string;
   kind: string;
   channelType?: ChannelType;
-  chatHistory?: StoredChatMessage[];
+  chatHistory?: Array<StoredChatMessage | ChatMessage>;
 }
 interface Options {
   auth: { configured: boolean; required: boolean };

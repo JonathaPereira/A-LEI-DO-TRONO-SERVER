@@ -14,7 +14,8 @@ const { createAzulService } = require('./azul-service.ts');
 const { createSplendorService } = require('./splendor-service.ts');
 const { createLoveLetterService } = require('./love-letter-service.ts');
 const { createCommunityManagement } = require('./community-management.ts');
-const { permissions, CREATOR_EMAIL } = require('./roles.ts');
+const { permissions } = require('./roles.ts');
+const { createChatService } = require('./chat-service.ts');
 const { createThroneService } = require('./throne-service.ts');
 const {
   createChannelRooms,
@@ -88,232 +89,11 @@ function createRuntime({
     version: VERSION,
   });
 
-  function sanitizeChat(value) {
-    return String(value || '')
-      .replace(/\r\n?/g, '\n')
-      .replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
-      .slice(0, 300);
-  }
   function broadcastAll(payload) {
     for (const client of wss.clients) send(client, payload);
   }
   function send(ws, payload) {
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
-  }
-  async function handleChatMessage(ws, rawText, attachmentId, requestedRoomId) {
-    const room = rooms.get(channels.selectedChatId(ws)),
-      player = room?.players.get(ws.clientId);
-    if (!room || !player || (requestedRoomId !== undefined && requestedRoomId !== room.id)) {
-      send(ws, {
-        type: 'error',
-        code: 'NOT_IN_ROOM',
-        message: 'Selecione novamente o canal para enviar a mensagem.',
-      });
-      return;
-    }
-    if (room.channelType === 'voice') {
-      send(ws, {
-        type: 'error',
-        code: 'VOICE_CHANNEL',
-        message: 'Use um canal de texto para enviar mensagens.',
-      });
-      return;
-    }
-    if (ws.guest && attachmentId) {
-      send(ws, {
-        type: 'error',
-        code: 'LOGIN_REQUIRED_FILES',
-        message: 'Entre em uma conta para enviar anexos.',
-      });
-      return;
-    }
-    const now = Date.now();
-    if (now - (player.lastChatAt || 0) < 450) {
-      send(ws, {
-        type: 'error',
-        code: 'CHAT_RATE',
-        message: 'Aguarde um instante antes de enviar outra mensagem.',
-      });
-      return;
-    }
-    const text = sanitizeChat(rawText);
-    if (!text && !attachmentId) return;
-    player.lastChatAt = now;
-    try {
-      await chatHistory.serial(room.id, async () => {
-        let attachment = null;
-        if (attachmentId)
-          attachment = await fileStorage.attachment(attachmentId, ws.account?.id, room.id);
-        if (channels.selectedChatId(ws) !== room.id || room.players.get(player.id) !== player)
-          return;
-        const message = {
-          id: crypto.randomUUID(),
-          roomId: room.id,
-          senderId: player.id,
-          seat: player.seat,
-          name: player.name,
-          accountId: ws.account?.id || null,
-          avatar_preset: player.avatar_preset || 'crown',
-          avatar_file_id: player.avatar_file_id || null,
-          text,
-          attachment,
-          ts: now,
-        };
-        await chatHistory.append(room, message, ws.account?.id);
-        if (rooms.get(room.id) !== room) return;
-        if (!Array.isArray(room.chatHistory)) room.chatHistory = [];
-        room.chatHistory.push(message);
-        if (room.chatHistory.length > 100)
-          room.chatHistory.splice(0, room.chatHistory.length - 100);
-        room.chatRevision = (room.chatRevision || 0) + 1;
-        for (const p of room.players.values())
-          send(p.ws, { type: 'chat-message', message, revision: room.chatRevision });
-        if (room.kind === 'chat')
-          for (const receiver of wss.clients) {
-            if (
-              !receiver.account ||
-              receiver.account.expiresAt <= Date.now() ||
-              receiver.account.id === ws.account?.id
-            )
-              continue;
-            const nickname = receiver.account.nickname.toLocaleLowerCase('pt-BR'),
-              lower = text.toLocaleLowerCase('pt-BR');
-            const start = lower.indexOf('@' + nickname),
-              tail = start < 0 ? '' : lower.slice(start + nickname.length + 1);
-            const mentioned = start >= 0 && (!tail || !/^\p{L}|^\p{N}|^_/u.test(tail));
-            send(receiver, {
-              type: 'chat-notice',
-              id: message.id,
-              roomId: room.id,
-              roomName: room.name,
-              name: player.name,
-              text: text || 'Enviou um anexo',
-              mentioned,
-            });
-          }
-      });
-    } catch (e) {
-      send(ws, {
-        type: 'error',
-        code: e.code || 'CHAT_HISTORY_UNAVAILABLE',
-        message: e.message,
-        failedMessage: { roomId: room.id, text },
-      });
-    }
-  }
-  async function sendChatHistory(ws, room, before = null) {
-    try {
-      await chatHistory.serial(room.id, async () => {
-        const history = await chatHistory.read(room, before);
-        if (channels.selectedChatId(ws) !== room.id || room.players.get(ws.clientId)?.ws !== ws)
-          return;
-        send(ws, {
-          type: 'chat-history',
-          roomId: room.id,
-          ...history,
-          revision: room.chatRevision || 0,
-          older: !!before,
-        });
-      });
-    } catch (e) {
-      send(ws, {
-        type: 'error',
-        code: e.code || 'CHAT_HISTORY_UNAVAILABLE',
-        message: e.message,
-        roomId: room.id,
-      });
-    }
-  }
-  function requestChatHistory(ws, message) {
-    const room = rooms.get(channels.selectedChatId(ws));
-    if (!room || room.id !== message.roomId || !room.players.has(ws.clientId)) return;
-    if (message.before !== undefined && !/^[0-9a-f-]{36}$/i.test(message.before)) return;
-    if (Date.now() - (ws.lastHistoryAt || 0) < 800) {
-      send(ws, {
-        type: 'error',
-        code: 'CHAT_HISTORY_RATE',
-        message: 'Aguarde um instante antes de carregar outra página.',
-      });
-      return;
-    }
-    ws.lastHistoryAt = Date.now();
-    void sendChatHistory(ws, room, message.before || null);
-  }
-  // History reads, appends and moderation share the room queue. A reply that was
-  // already loading therefore cannot restore a message after its deletion event.
-  async function handleChatModeration(ws, message) {
-    const action = message.type === 'chat-history-clear' ? 'clear' : 'delete',
-      room = rooms.get(message.roomId);
-    const result = {
-      type: 'chat-moderation-result',
-      requestId: String(message.requestId || '').slice(0, 80),
-      action,
-      roomId: message.roomId,
-      id: message.id,
-    };
-    const reject = (code, text) =>
-      send(ws, { ...result, ok: false, error: { code, message: text } });
-    if (
-      !ws.account ||
-      ws.account.expiresAt <= Date.now() ||
-      ws.account.role !== 'creator' ||
-      String(ws.account.email || '')
-        .trim()
-        .toLowerCase() !== CREATOR_EMAIL
-    ) {
-      reject('FORBIDDEN', 'Somente o criador pode apagar mensagens do canal.');
-      return;
-    }
-    if (
-      !room ||
-      room.kind !== 'chat' ||
-      room.channelType === 'voice' ||
-      channels.selectedChatId(ws) !== room.id ||
-      room.players.get(ws.clientId)?.ws !== ws
-    ) {
-      reject('NOT_IN_ROOM', 'Selecione um canal de texto para moderar suas mensagens.');
-      return;
-    }
-    if (
-      action === 'delete' &&
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(message.id || '')
-    ) {
-      reject('INVALID_MESSAGE', 'Mensagem inválida.');
-      return;
-    }
-    try {
-      await chatHistory.serial(room.id, async () => {
-        if (
-          rooms.get(room.id) !== room ||
-          channels.selectedChatId(ws) !== room.id ||
-          room.players.get(ws.clientId)?.ws !== ws
-        ) {
-          reject('NOT_IN_ROOM', 'O canal mudou. Selecione novamente antes de apagar.');
-          return;
-        }
-        if (action === 'clear') await chatHistory.clear(room, ws.account.id);
-        else await chatHistory.remove(room, message.id, ws.account.id);
-        if (action === 'clear') room.chatHistory = [];
-        else room.chatHistory = (room.chatHistory || []).filter((m) => m.id !== message.id);
-        room.chatRevision = (room.chatRevision || 0) + 1;
-        const update = {
-          type: action === 'clear' ? 'chat-history-cleared' : 'chat-message-deleted',
-          roomId: room.id,
-          revision: room.chatRevision,
-          ...(action === 'delete' ? { id: message.id } : {}),
-        };
-        for (const player of room.players.values()) send(player.ws, update);
-        send(ws, { ...result, ok: true });
-      });
-    } catch (e) {
-      reject(
-        e.code || 'CHAT_HISTORY_UNAVAILABLE',
-        'Não foi possível apagar as mensagens. Confira a atualização SQL e tente novamente.',
-      );
-    }
   }
   async function playSound(ws, message) {
     const room = rooms.get(ws.roomId),
@@ -410,7 +190,8 @@ function createRuntime({
     throne: throneService,
     presenceChanged: () => community.broadcast(),
     nameReserved: (name) => community.nameReserved(name),
-    sendHistory: sendChatHistory,
+    sendHistory: (...args) => chat.sendHistory(...args),
+    clearHistory: (room) => chat.reset(room),
   });
   const chatHistory = createChatHistory({ auth: accountAuth });
   const fileStorage = createFiles({
@@ -431,11 +212,17 @@ function createRuntime({
             send(ws, { type: 'attachment-deleted', id: row.id });
         return;
       }
-      for (const room of rooms.values())
-        for (const m of room.chatHistory || [])
-          if (m.attachment?.id === row.id) m.attachment.deleted = true;
+      chat.attachmentDeleted(row.id, row.room_id);
       broadcastAll({ type: 'attachment-deleted', id: row.id });
     },
+  });
+  const chat = createChatService({
+    rooms,
+    wss,
+    send,
+    history: chatHistory,
+    files: fileStorage,
+    selectedChatId: (ws) => channels.selectedChatId(ws) || null,
   });
   const community = createCommunity({ wss, rooms, send, auth: accountAuth });
   const azulService = createAzulService({ auth: accountAuth, wss, send });
@@ -457,7 +244,10 @@ function createRuntime({
         ? fileStorage.db
         : null,
     onChanged: (...args) => channels.broadcastChatChannels(...args),
-    onDeleted: (room) => channels.deleteRoom(room),
+    onDeleted: (room) => {
+      channels.deleteRoom(room);
+      chat.reset(room);
+    },
     onRoleChanged: (id, role) => {
       for (const ws of wss.clients)
         if (ws.account?.id === id) {
@@ -815,14 +605,14 @@ function createRuntime({
           throneService.handle(ws, message);
           break;
         case 'chat-history-request':
-          requestChatHistory(ws, message);
+          chat.requestHistory(ws, message);
           break;
         case 'chat-message-delete':
         case 'chat-history-clear':
-          void handleChatModeration(ws, message);
+          void chat.moderate(ws, message);
           break;
         case 'chat-message':
-          void handleChatMessage(ws, message.text, message.attachmentId, message.roomId);
+          void chat.message(ws, message);
           break;
         case 'voice-prepare':
           channels.prepareVoice(ws, message);
@@ -902,6 +692,7 @@ function createRuntime({
     socialService.stop();
     community.stop();
     communityManagement.stop();
+    chat.stop();
     chatHistory.close();
     const closingSfu = realtimeSfu.stop();
     channels.stop();

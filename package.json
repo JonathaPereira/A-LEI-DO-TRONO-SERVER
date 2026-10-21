@@ -52,7 +52,7 @@
     "test:channels": "node --test tests/channels.cjs tests/channel-management.cjs tests/channel-files.cjs",
     "test:chat": "node --test tests/chat-composer.cjs tests/chat-messages.cjs",
     "test:socket": "node --test tests/socket-transport.cjs tests/socket-client.cjs tests/socket-network.cjs",
-    "test:server:lifecycle": "node --test tests/server-lifecycle.cjs tests/server-modules.cjs tests/backend-services.cjs tests/server-community.cjs tests/community-management-models.cjs tests/provider-cancellation.cjs tests/server-social.cjs tests/server-auth.cjs tests/server-files.cjs tests/storage-r2.cjs tests/love-letter-service.cjs tests/azul-service.cjs tests/splendor-service.cjs tests/realtime-policy.cjs tests/server-realtime.cjs tests/throne-service.cjs tests/channel-service.cjs",
+    "test:server:lifecycle": "node --test tests/server-lifecycle.cjs tests/server-modules.cjs tests/backend-services.cjs tests/server-community.cjs tests/community-management-models.cjs tests/provider-cancellation.cjs tests/server-social.cjs tests/server-auth.cjs tests/server-files.cjs tests/storage-r2.cjs tests/love-letter-service.cjs tests/azul-service.cjs tests/splendor-service.cjs tests/realtime-policy.cjs tests/server-realtime.cjs tests/throne-service.cjs tests/channel-service.cjs tests/chat-service.cjs",
     "test:ui": "node --test tests/chat-composer-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js tests/channels-browser.cjs",
     "test:voice:playback": "node --test tests/audio-playback.cjs",
     "test:voice:diagnostics": "node --test tests/voice-reception.js tests/voice-telemetry.cjs",
