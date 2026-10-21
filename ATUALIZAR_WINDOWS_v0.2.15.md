@@ -1,5 +1,7 @@
 # Atualizar para Windows 0.2.15
 
+[Baixar a entrega validada (entre no GitHub com a conta do repositório)](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/untagged-cf5fa04e7db22c73dc6d) · [Compilação Windows aprovada](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/39620677756). A entrega inclui `MN-Trono-Frontend-0.2.15.zip`, `MN-Trono-0.2.15-Windows.exe`, instruções e checksums correspondentes.
+
 Esta versão acrescenta controles claros para notificações de mensagens no Windows, deixa o aviso de entrada na chamada mais suave e corrige a organização dos controles de PC, câmera e tela.
 
 ## Usar as melhorias
