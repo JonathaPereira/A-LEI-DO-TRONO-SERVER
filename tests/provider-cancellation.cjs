@@ -80,6 +80,31 @@ test('identity forwards cancellation to the profile lookup after provider token 
   assert.equal(seen.length, 1);
   assert.equal(seen[0].aborted, true);
 });
+test('direct attachment preflight forwards cancellation to its private file lookup', async (t) => {
+  t.mock.method(global, 'setInterval', () => ({ unref() {} }));
+  const started = deferred(),
+    seen = [],
+    controller = new AbortController();
+  const files = createFiles({
+    auth: { configured: false },
+    env: { SUPABASE_URL: 'https://provider.invalid', SUPABASE_SECRET_KEY: 'sb_secret_fixture' },
+    fetchImpl: pendingFetch(started, seen),
+    adapter: {},
+  });
+  const work = files.directAttachment(
+      '20000000-0000-4000-8000-000000000001',
+      'owner',
+      'peer',
+      controller.signal,
+    ),
+    rejected = assert.rejects(work, { code: 'STORAGE_UNAVAILABLE' });
+  await started.promise;
+  controller.abort();
+  await rejected;
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].aborted, true);
+});
+
 test('privileged storage RPC forwards the caller cancellation through its existing adapter', async (t) => {
   t.mock.method(global, 'setInterval', () => ({ unref() {} }));
   const started = deferred(),

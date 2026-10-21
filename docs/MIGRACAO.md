@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV, histórico, presença e gerenciamento da comunidade possuem módulos TS estritos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV, histórico, comunidade e mensagens diretas possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -121,6 +121,11 @@ recursos em `public/roguelite/` foram preservados.
   alteram o mapa. Mutações já iniciadas concluem a sincronização mesmo se o
   cliente HTTP fechar; o encerramento do serviço cancela ambas. A regressão de
   mensagem de perfil interrompido por troca de conta também foi corrigida.
+- `server/social-service.js`: amigos, mensagens privadas, convites, anexos,
+  paginação e limites por conta/ação convertidos. Respostas usam o protocolo
+  compartilhado; confirmação e broadcast correspondem ao envio solicitado.
+  Leituras canceladas não degradam a saúde do serviço; descarte impede publicações
+  tardias. A validação de anexos encaminha cancelamento ao mesmo adapter de arquivos.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -174,47 +179,46 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: gerenciamento da comunidade convertido, na branch
+Checkpoint de trabalho: mensagens diretas do backend convertidas, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
 JavaScript e não ganham tipagem estrita por consumirem módulos TS.
 
-Próximo recorte recomendado: `server/social-service.js`. Reutilizar
-`auth-contract.ts` e a fronteira HTTP em `http-api.ts`, preservando o limite de
-12 KB e o contrato de erros/preflight desse domínio. Validar respostas de RPC
-como `unknown`, manter privacidade das conversas e enviar confirmação/broadcast
-somente após persistir. Cuidado com cancelamento: leituras pertencem ao cliente;
-mutações já iniciadas pertencem ao serviço até terminar ou o servidor encerrar.
+Próximo recorte recomendado: `server/auth.js`. Separar contrato/respostas do
+provedor, sessão e rotas públicas, preservando o acesso fechado por padrão,
+confirmação, recuperação e revogação. Usar `auth-contract.ts`, a política de senha
+e o validador de apelido já compartilhados. Não tratar JWT decodificado localmente
+como prova de identidade: a verificação pelo provedor permanece autoritativa.
+Transferir também o timer de limpeza de limites e o ciclo de vida dos HTTP.
 
 Sequência restante, após esse recorte:
 
-1. `server/social-service.js`: amigos, conversas, marcação de leitura, limites e
-   anexos diretos; manter confirmação da persistência antes do broadcast.
-2. `server/auth.js` e `server/files.js`: contratos dos provedores, sessão e
+1. `server/auth.js` e `server/files.js`: contratos dos provedores, sessão e
    armazenamento. Preservar verificação autoritativa da conta, revogação,
    permissões, quotas e exclusões; não transportar segredos para o renderer.
-3. `server/azul-service.js`, `splendor-service.js` e `love-letter-service.js`:
+2. `server/azul-service.js`, `splendor-service.js` e `love-letter-service.js`:
    coordenação, timers, persistência e projeções privadas. Motores já são TS.
-4. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
+3. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
    autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
-5. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
+4. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
    Trono para donos por domínio, mantendo instâncias independentes e shutdown.
    Completar os payloads de jogos/SFU que ainda não têm validação integral.
-6. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
+5. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
-7. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
+6. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 24 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 33 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
 também passaram, preservando o erro do domínio.
 Não há alteração pendente de código, instalação do aplicativo ou publicação remota.
-As evidências do gerenciador ficam em `artifacts/community-management-*`;
+As evidências de mensagens diretas ficam em `artifacts/social-service-*`;
+gerenciamento usa `artifacts/community-management-*`;
 presença usa `artifacts/community-service-*`; a composição
 tem `application-composition-*`, a conta `auth-owner-*` e a instalação
 `database-install-*`. Algumas primeiras tentativas nesses diretórios registram
@@ -272,6 +276,7 @@ Executada em Windows em 20–21/10/2026, após os recortes acima:
 | Instalação nova do banco | Seis verificações passaram: inventário único dos 13 SQL, instalação completa, 12 tabelas com RLS, funções privilegiadas com search_path fixo, privacidade/autorização e bloqueio de reexecução preservando os dados. Executado em PGlite descartável, sem Supabase remoto. |
 | Presença/comunidade do backend | Cinco regressões novas de diretório, atomicidade, cancelamento, privacidade, convidados e nomes passaram; suíte de ciclo de vida tem 13 verificações. Conta/HTTP/WS, `npm test` completo, tipagem, formatação e build passaram. Os 15 fluxos relacionados de navegador e chamada completa com dois Electron reais também passaram. |
 | Gerenciamento da comunidade | Oito regressões de protocolo/HTTP/fila e três dos adapters de cancelamento passaram; ciclo de vida soma 24 testes. Tipagem, formatação, build e `npm test` passaram. Os 12 casos de interfaces, chamada com dois Electron, conta criptografada e pacote Windows passaram. Corrigido também o erro de perfil cancelado, com 22 modelos de sessão e os dois hosts do editor aprovados. |
+| Mensagens diretas do backend | Oito regressões de protocolo, privacidade, limites, cancelamento e HTTP passaram; lookup de anexo também cancela pelo adapter. Ciclo de vida soma 33 testes. SQL/anexos HTTP, `npm test`, tipagem sem DOM, formatação e build passaram. Os 15 casos de mensagens/convites/anexos na interface e a chamada completa com dois Electron reais passaram. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`

@@ -21,6 +21,9 @@ export function installAccountApi({
   signal,
   code,
   message,
+  bodyLimit = '8kb',
+  methods = 'GET, POST, DELETE, OPTIONS',
+  parseBodyBeforeAuth = false,
 }: {
   app: Express;
   express: Pick<typeof import('express'), 'json'>;
@@ -29,6 +32,9 @@ export function installAccountApi({
   signal: AbortSignal;
   code: string;
   message: string;
+  bodyLimit?: string;
+  methods?: string;
+  parseBodyBeforeAuth?: boolean;
 }) {
   const contexts = new WeakMap<ApiRequest, AccountContext>();
   const unavailable = () => apiError(code, message, 503);
@@ -53,11 +59,7 @@ export function installAccountApi({
       },
     });
   }
-  const authenticate: RequestHandler<Record<string, string>, unknown, unknown> = async (
-    req,
-    res,
-    next,
-  ) => {
+  const boundary: RequestHandler<Record<string, string>, unknown, unknown> = (req, res, next) => {
     res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
     const origin = req.headers.origin;
     if (origin && !auth.allowedOrigins.has(origin)) {
@@ -68,7 +70,7 @@ export function installAccountApi({
       res.set({
         'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': methods,
       });
       res.vary('Origin');
     }
@@ -78,6 +80,17 @@ export function installAccountApi({
     }
     if (req.method === 'OPTIONS') {
       res.sendStatus(204);
+      return;
+    }
+    next();
+  };
+  const authenticate: RequestHandler<Record<string, string>, unknown, unknown> = async (
+    req,
+    res,
+    next,
+  ) => {
+    if (signal.aborted) {
+      respond(res, unavailable());
       return;
     }
     const client = new AbortController(),
@@ -104,7 +117,8 @@ export function installAccountApi({
       respond(res, error);
     }
   };
-  app.use(base, authenticate, express.json({ limit: '8kb' }));
+  const json = express.json({ limit: bodyLimit });
+  app.use(base, boundary, ...(parseBodyBeforeAuth ? [json, authenticate] : [authenticate, json]));
   app.use(base, (error: unknown, _req: ApiRequest, res: Response, next: NextFunction) => {
     if (!error) return next();
     respond(res, apiError('INVALID_REQUEST', 'Dados inválidos.'));

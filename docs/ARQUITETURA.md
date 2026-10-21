@@ -2062,6 +2062,21 @@ de conta/DB receberam signal opcional sem trocar protocolos ou credenciais.
 Perfil interrompido por troca de conta mantém o cancelamento do transporte,
 mas a fachada da sessão devolve o erro do domínio em vez de expor o AbortError.
 
+`social-service.ts` possui amigos, histórico privado, envios, leitura e limites por
+conta/ação; não mantém outro socket ou cópia de salas. `social-protocol.ts` usa o
+mesmo protocolo puro do frontend e valida toda a página de até 51 mensagens antes
+de selecionar 50. Confirmação de envio deve corresponder a ID, remetente, sala e
+anexo solicitados; dados de outra conversa ou campos extras não são publicados.
+Broadcast ocorre após persistência e só para as duas contas ativas participantes.
+
+Leituras e validação prévia de anexo usam o escopo do cliente; uma mutação já enviada
+termina sob o escopo do serviço. `stop()` cancela pendências, limpa os limites e
+impede respostas tardias de reativarem o serviço. O shutdown do runtime chama esse
+descarte. A fronteira HTTP conserva os 12 KB e o parsing antes da autenticação
+desse domínio; comunidade conserva 8 KB e a ordem anterior. Erros de JSON agora
+têm resposta JSON pública comum. O compilador de backend usa somente ES2022/Node,
+sem DOM; tipos compartilhados de fetch usam `RequestInit['body']` nos dois ambientes.
+
 `community.ts` possui presença, atividade pública e cache do diretório. Recebe
 somente as portas necessárias de sockets/salas; não altera a participação nem
 abre transportes. `community-protocol.ts` valida a página inteira da RPC privada

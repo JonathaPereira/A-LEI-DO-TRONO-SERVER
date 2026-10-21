@@ -314,10 +314,10 @@ function createFiles({
     ...(r.kind === 'soundboard' ? { durationMs: r.duration_ms } : {}),
   });
   const first = (data) => (Array.isArray(data) ? data[0] : data);
-  async function lookup(id) {
+  async function lookup(id, signal) {
     if (!/^[a-f0-9-]{36}$/i.test(id || ''))
       throw error('FILE_NOT_FOUND', 'Arquivo não encontrado.', 404);
-    return first(await db(`chat_files?id=eq.${id}&limit=1`));
+    return first(await db(`chat_files?id=eq.${id}&limit=1`, 'GET', undefined, signal));
   }
   async function remove(row) {
     const marked = first(
@@ -357,8 +357,8 @@ function createFiles({
       throw error('INVALID_ATTACHMENT', 'Esse anexo não está disponível neste canal.');
     return publicFile(row);
   }
-  async function directAttachment(id, owner, peerId) {
-    const row = await lookup(id);
+  async function directAttachment(id, owner, peerId, signal) {
+    const row = await lookup(id, signal);
     if (
       !row ||
       row.state !== 'ready' ||

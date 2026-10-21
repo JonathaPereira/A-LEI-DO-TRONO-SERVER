@@ -9,7 +9,7 @@ const { createAuth } = require('./auth');
 const { createFiles } = require('./files');
 const { createCommunity } = require('./community.ts');
 const { createChatHistory } = require('./chat-history.ts');
-const { createSocialService } = require('./social-service');
+const { createSocialService } = require('./social-service.ts');
 const { createAzulService } = require('./azul-service');
 const { createSplendorService } = require('./splendor-service');
 const { createLoveLetterService } = require('./love-letter-service');
@@ -2949,6 +2949,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
     azulService.stop();
     splendorService.stop();
     loveLetterService.stop();
+    socialService.stop();
     community.stop();
     communityManagement.stop();
     chatHistory.close();
