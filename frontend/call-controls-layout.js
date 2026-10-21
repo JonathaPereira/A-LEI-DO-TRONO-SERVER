@@ -41,7 +41,7 @@ window.TronoCallControlsLayout = (() => {
   }
 
   function decorate(node, definition) {
-    const workspace=document.body.classList.contains('chat-only-active')&&node.closest('#callWorkspace');
+    const workspace=(document.body.classList.contains('chat-only-active')&&node.closest('#callWorkspace'))||(node.id==='remotePcBtn'&&node.closest('#layoutCallActions,#desktopCallDock'));
     if(!workspace)node.querySelector('.workspace-control-icon')?.remove();
     else if (!node.querySelector('.workspace-control-icon')) {
       const icon = document.createElement('span');

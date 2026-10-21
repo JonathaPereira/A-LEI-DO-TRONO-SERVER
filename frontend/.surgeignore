@@ -1,6 +1,6 @@
 # Permite somente o instalador atual. O empacotador atualiza esta exceção.
 *.exe
-!downloads/MN-Trono-0.2.14-Windows.exe
+!downloads/MN-Trono-0.2.15-Windows.exe
 *.zip
 *.tar
 *.tgz

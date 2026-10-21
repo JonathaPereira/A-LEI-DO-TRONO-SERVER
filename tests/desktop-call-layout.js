@@ -11,7 +11,7 @@ const {closeTestApp, killTestApp} = require('./desktop-test-close');
 
 const root = path.resolve(__dirname, '..');
 const origin = 'https://a-lei-do-trono.surge.sh';
-const controls = ['muteMicBtn', 'deafenVoiceBtn', 'cameraBtn', 'screenShareBtn', 'soundboardToggle', 'voiceSettingsBtn', 'joinVoiceBtn'];
+const controls = ['muteMicBtn', 'deafenVoiceBtn', 'cameraBtn', 'remotePcBtn', 'screenShareBtn', 'soundboardToggle', 'voiceSettingsBtn', 'joinVoiceBtn'];
 
 test('real desktop keeps the same controls, tracks and connected peers across layouts and navigation', {
   timeout: 180000,
@@ -153,7 +153,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     async function communityControls(layout) {
       const sidebar=layout==='discord'&&await page.evaluate(()=>innerWidth>=1100);
       for(const id of controls){
-        const host=!sidebar?'callFocusDock':id==='soundboardToggle'?'desktopRail':id==='joinVoiceBtn'?'layoutConnectionControls':['cameraBtn','screenShareBtn'].includes(id)?'layoutCallActions':'layoutUserControls';
+        const host=!sidebar?'callFocusDock':id==='soundboardToggle'?'desktopRail':id==='joinVoiceBtn'?'layoutConnectionControls':['cameraBtn','remotePcBtn','screenShareBtn'].includes(id)?'layoutCallActions':'layoutUserControls';
         await expect(page.locator('#'+host+' #'+id)).toHaveCount(1);
         await expect(page.locator('#'+id)).toBeVisible();
       }
@@ -172,7 +172,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
         for (const id of controls.filter(id => id !== 'soundboardToggle')) await expect(page.locator('#desktopCallDock #' + id)).toHaveCount(1);
       } else {
         for (const id of ['muteMicBtn', 'deafenVoiceBtn', 'voiceSettingsBtn']) await expect(page.locator('#layoutUserControls #' + id)).toHaveCount(1);
-        for (const id of ['cameraBtn', 'screenShareBtn']) await expect(page.locator('#layoutCallActions #' + id)).toHaveCount(1);
+        for (const id of ['cameraBtn', 'remotePcBtn', 'screenShareBtn']) await expect(page.locator('#layoutCallActions #' + id)).toHaveCount(1);
         await expect(page.locator('#layoutConnectionControls #joinVoiceBtn')).toHaveCount(1);
       }
       await preserved();

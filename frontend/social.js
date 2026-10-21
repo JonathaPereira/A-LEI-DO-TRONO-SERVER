@@ -259,9 +259,12 @@ window.TronoSocial = (()=>{
   let settingsTab=storage.getItem('tronoVoiceSettingsTab')||'audio';
   let voiceRosterInitialized=false;
   let voiceEventsSupported=false;
-  let callAlertVolume=Math.max(0,Math.min(100,Number(storage.getItem('mnCallAlertVolume')??85)||0));
+  let callAlertVolume=Math.max(0,Math.min(100,Number(storage.getItem('mnCallAlertVolume')??45)||0));
   let callSoundContext=null;
   const callSoundCooldown=new Map();
+  let callAlertsMuted=storage.getItem('mnCallAlertsMuted')==='1';
+  const activeCallAlerts=new Set();
+  function silenceCallAlerts(){if(!callSoundContext)return;for(const gain of activeCallAlerts){gain.gain.cancelScheduledValues(callSoundContext.currentTime);gain.gain.setValueAtTime(0,callSoundContext.currentTime);}}
   let chatDrawerOpen=false;
   let chatUnreadCount=0;
   let emojiOpen=false;
@@ -350,14 +353,14 @@ window.TronoSocial = (()=>{
   function ensureLocalStream(){if(!localStream)localStream=new MediaStream();return localStream;}
   function playCallSound(kind='join',id='local'){
     if(deafened||window.TronoAudio?.sfxEnabled===false||storage.getItem('tronoSfxEnabled')==='0')return;
+    if(kind!=='message'&&(callAlertsMuted||callAlertVolume===0))return;
     const key=`${kind}:${id}`,now=Date.now();if((callSoundCooldown.get(key)||0)>now-750)return;callSoundCooldown.set(key,now);
     const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;
     try{
       if(!callSoundContext||callSoundContext.state==='closed')callSoundContext=new Ctx();
       if(callSoundContext.state==='suspended')callSoundContext.resume().catch(()=>{});
-      if(kind!=='message'&&callAlertVolume===0)return;
-      const ctx=callSoundContext,t=ctx.currentTime+.01,g=ctx.createGain();g.connect(ctx.destination);const level=kind==='message'?.11:.52*callAlertVolume/100;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,level),t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+(kind==='message'?.36:.65));
-      const notes=kind==='join'?[784,1047,1568]:kind==='message'?[1320,1760]:kind==='disconnect'?[740,554,370]:[1047,698];notes.forEach((freq,i)=>{const at=t+i*(kind==='message'?.11:.17),o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(freq,at);o.connect(g);o.start(at);o.stop(at+(kind==='message'?.18:.22));o.onended=()=>{o.disconnect();if(i===notes.length-1)g.disconnect();};});
+      const ctx=callSoundContext,t=ctx.currentTime+.01,g=ctx.createGain();g.connect(ctx.destination);const level=kind==='message'?.11:.32*callAlertVolume/100;if(kind!=='message')activeCallAlerts.add(g);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0001,level),t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+(kind==='message'?.36:.65));
+      const notes=kind==='join'?[659,784,1047]:kind==='message'?[1320,1760]:kind==='disconnect'?[740,554,370]:[1047,698];notes.forEach((freq,i)=>{const at=t+i*(kind==='message'?.11:.17),o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(freq,at);o.connect(g);o.start(at);o.stop(at+(kind==='message'?.18:.22));o.onended=()=>{o.disconnect();if(i===notes.length-1){activeCallAlerts.delete(g);g.disconnect();}};});
     }catch(err){console.warn('[TronoSocial] aviso sonoro',err);}
   }
   function primeCallSounds(){if(window.TronoAudio?.sfxEnabled===false)return;const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;try{if(!callSoundContext||callSoundContext.state==='closed')callSoundContext=new Ctx();if(callSoundContext.state==='suspended')void callSoundContext.resume().catch(()=>{});if(selectedOutput&&callSoundContext.setSinkId)void callSoundContext.setSinkId(selectedOutput).catch(()=>{});}catch{}}
@@ -2021,8 +2024,10 @@ window.TronoSocial = (()=>{
     $('voiceInputSelect')?.addEventListener('change',changeInput);$('voiceOutputSelect')?.addEventListener('change',changeOutput);$('cameraInputSelect')?.addEventListener('change',changeCamera);$('transmissionQualitySelect')?.addEventListener('change',changeTransmissionQuality);
     $('noiseModeSelect')?.addEventListener('change',e=>void setNoiseMode(e.target.value));
     $('voiceLightModeBtn')?.addEventListener('click',toggleVoiceLightMode);
+    if($('muteCallAlerts'))$('muteCallAlerts').checked=callAlertsMuted;
+    $('muteCallAlerts')?.addEventListener('change',e=>{callAlertsMuted=e.target.checked;storage.setItem('mnCallAlertsMuted',callAlertsMuted?'1':'0');if(callAlertsMuted)silenceCallAlerts();});
     if($('callAlertVolume'))$('callAlertVolume').value=callAlertVolume;if($('callAlertVolumeValue'))$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;
-    $('callAlertVolume')?.addEventListener('input',e=>{callAlertVolume=Math.max(0,Math.min(100,Number(e.target.value)||0));storage.setItem('mnCallAlertVolume',String(callAlertVolume));$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;primeCallSounds();});$('testCallAlert')?.addEventListener('click',()=>{primeCallSounds();playCallSound('join','test');});
+    $('callAlertVolume')?.addEventListener('input',e=>{callAlertVolume=Math.max(0,Math.min(100,Number(e.target.value)||0));storage.setItem('mnCallAlertVolume',String(callAlertVolume));if(callAlertVolume===0)silenceCallAlerts();$('callAlertVolumeValue').textContent=`${callAlertVolume}%`;primeCallSounds();});$('testCallAlert')?.addEventListener('click',()=>{primeCallSounds();playCallSound('join','test');});
     window.addEventListener('trono-auth-change',()=>{updateChatModeration();profileActivities.clear();if(volumeOwner!==window.TronoAuth.user?.id){volumeOwner=window.TronoAuth.user?.id||null;peerVolumes.clear();}renderProfileActivities();});
     window.TronoNetwork?.onMessage(msg=>{
       if(msg.type==='presence'){profileActivities.clear();if(msg.scope==='community')for(const person of msg.members||[])if(person.online&&person.activity?.name)profileActivities.set(person.id,person.activity);renderProfileActivities();}
