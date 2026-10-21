@@ -237,6 +237,30 @@ test('logout prevents a delayed login response from overwriting the cleared iden
   assert.equal(f.auth.length, 0);
   f.owner.dispose();
 });
+test('profile cancellation after an identity change reports the account boundary rather than the transport abort', async () => {
+  const f = fixture({
+    api: (path, _body, _token, _method, signal) =>
+      path === 'login'
+        ? data()
+        : path === 'profile'
+          ? new Promise((_resolve, reject) =>
+              signal.addEventListener('abort', () => reject(signal.reason), { once: true }),
+            )
+          : {},
+  });
+  try {
+    await f.login();
+    const saving = f.owner.updateProfile({ nickname: 'old draft' });
+    const cancelled = assert.rejects(saving, /A conta foi alterada durante o salvamento/);
+    await tick();
+    await f.owner.logout();
+    await cancelled;
+    assert.equal(f.owner.getSnapshot().user, null);
+  } finally {
+    f.owner.dispose();
+  }
+});
+
 test('a profile result cannot cross logout and a later login to the same account', async () => {
   const profile = deferred(),
     f = fixture({

@@ -255,7 +255,7 @@ function createFiles({
   const r2 = adapter || r2Adapter(env),
     active = new Map();
   let cleaning = false;
-  async function db(path, method = 'GET', body) {
+  async function db(path, method = 'GET', body, signal) {
     let res;
     try {
       res = await fetchImpl(`${url}/rest/v1/${path}`, {
@@ -267,7 +267,9 @@ function createFiles({
           Prefer: 'return=representation',
         },
         body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
+          : AbortSignal.timeout(15000),
       });
     } catch {
       throw error('STORAGE_UNAVAILABLE', 'Não foi possível acessar o armazenamento.', 503);

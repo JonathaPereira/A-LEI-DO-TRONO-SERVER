@@ -1,6 +1,6 @@
 # Estado da migração
 
-Atualizado em 20/10/2026. Este documento registra o estado atual e as pendências;
+Atualizado em 21/10/2026. Este documento registra o estado atual e as pendências;
 os detalhes de responsabilidade e ciclo de vida ficam em [ARQUITETURA.md](ARQUITETURA.md).
 O histórico das etapas anteriores permanece no Git.
 
@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV, histórico e presença/comunidade possuem módulos TS estritos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV, histórico, presença e gerenciamento da comunidade possuem módulos TS estritos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -115,6 +115,12 @@ recursos em `public/roguelite/` foram preservados.
   consultas concorrentes compartilham uma promessa. Encerrar cancela HTTP/timer,
   limpa tickets e impede respostas tardias. Apelidos têm um contrato puro comum
   ao serviço de conta e aos convidados.
+- `server/community-management.js`: canais, cargos e consultas de perfis/contas
+  convertidos. HTTP autenticado e leitura das respostas têm módulos próprios.
+  Salas continuam criadas pelo runtime e reutilizadas; leituras canceladas não
+  alteram o mapa. Mutações já iniciadas concluem a sincronização mesmo se o
+  cliente HTTP fechar; o encerramento do serviço cancela ambas. A regressão de
+  mensagem de perfil interrompido por troca de conta também foi corrigida.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -168,16 +174,18 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de código: `85c3be2`, na branch `codex/next-typescript-structure`.
+Checkpoint de trabalho: gerenciamento da comunidade convertido, na branch
+`codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
 JavaScript e não ganham tipagem estrita por consumirem módulos TS.
 
-Próximo recorte recomendado: `server/community-management.js`. Mapear primeiro
-os consumidores em `runtime.cjs`, autenticação HTTP, consultas de canais e
-atualizações de cargo. Transferir o dono do refresh/cache e seus timers juntos;
-validar respostas e comandos como `unknown`, sem duplicar o mapa de salas ou o
-estado das permissões. Usar `roles.ts`, `community.ts` e os contratos já existentes.
+Próximo recorte recomendado: `server/social-service.js`. Reutilizar
+`auth-contract.ts` e a fronteira HTTP em `http-api.ts`, preservando o limite de
+12 KB e o contrato de erros/preflight desse domínio. Validar respostas de RPC
+como `unknown`, manter privacidade das conversas e enviar confirmação/broadcast
+somente após persistir. Cuidado com cancelamento: leituras pertencem ao cliente;
+mutações já iniciadas pertencem ao serviço até terminar ou o servidor encerrar.
 
 Sequência restante, após esse recorte:
 
@@ -200,11 +208,14 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 13 verificações;
-`test:database` tem seis. Os 15 casos de conta/comunidade/arquivos/permissões e a
-chamada completa com dois Electron reais passaram após converter presença.
+`npm test` completos passaram. `test:server:lifecycle` tem 24 verificações;
+`test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
+e a chamada completa com dois Electron reais passaram após converter o gerenciador.
+Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
+também passaram, preservando o erro do domínio.
 Não há alteração pendente de código, instalação do aplicativo ou publicação remota.
-As evidências desta etapa ficam em `artifacts/community-service-*`; a composição
+As evidências do gerenciador ficam em `artifacts/community-management-*`;
+presença usa `artifacts/community-service-*`; a composição
 tem `application-composition-*`, a conta `auth-owner-*` e a instalação
 `database-install-*`. Algumas primeiras tentativas nesses diretórios registram
 falhas de fixtures já corrigidas; os resultados finais são os descritos aqui.
@@ -230,7 +241,7 @@ as mesmas trilhas e players. Captura só ocorre pela ação autorizada do usuár
 
 ## Validação local mais recente
 
-Executada em Windows em 20/10/2026, após os recortes acima:
+Executada em Windows em 20–21/10/2026, após os recortes acima:
 
 | Verificação | Resultado |
 | --- | --- |
@@ -260,6 +271,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Serviços básicos do backend | Oito verificações de política/fila/cancelamento/ciclo de vida passaram. As 24 regressões relacionadas de SQL, persistência após reinício, perfis e soundboard passaram; `npm test` completo, tipagem, formatação e build também passaram. Provedor e bancos são fixtures locais. |
 | Instalação nova do banco | Seis verificações passaram: inventário único dos 13 SQL, instalação completa, 12 tabelas com RLS, funções privilegiadas com search_path fixo, privacidade/autorização e bloqueio de reexecução preservando os dados. Executado em PGlite descartável, sem Supabase remoto. |
 | Presença/comunidade do backend | Cinco regressões novas de diretório, atomicidade, cancelamento, privacidade, convidados e nomes passaram; suíte de ciclo de vida tem 13 verificações. Conta/HTTP/WS, `npm test` completo, tipagem, formatação e build passaram. Os 15 fluxos relacionados de navegador e chamada completa com dois Electron reais também passaram. |
+| Gerenciamento da comunidade | Oito regressões de protocolo/HTTP/fila e três dos adapters de cancelamento passaram; ciclo de vida soma 24 testes. Tipagem, formatação, build e `npm test` passaram. Os 12 casos de interfaces, chamada com dois Electron, conta criptografada e pacote Windows passaram. Corrigido também o erro de perfil cancelado, com 22 modelos de sessão e os dois hosts do editor aprovados. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`

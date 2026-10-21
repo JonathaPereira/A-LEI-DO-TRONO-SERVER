@@ -2044,6 +2044,24 @@ tabelas com RLS, search_path das funções privilegiadas e limites entre membro,
 criador e service_role. Histórico interno do CLI continua separado desse roteiro.
 Comandos e limites estão no guia de desenvolvimento desktop.
 
+`community-management.ts` possui a fila de alterações/refresh dos canais e cargos.
+Recebe o mapa existente e a fábrica de sala do runtime; atualizar metadados
+conserva objetos, players e recursos. `management-protocol.ts` valida páginas e
+respostas antes de aplicá-las, recusa duplicatas e projeta campos conhecidos de
+perfis públicos e contas privadas. E-mails continuam exclusivos do criador.
+
+`auth-contract.ts` descreve a identidade do adaptador autoritativo.
+`http-api.ts` centraliza origem, CORS, autenticação, JSON limitado e erros públicos.
+Dados do request são `unknown`; tokens/contextos ficam em um WeakMap por request,
+sem alterar o objeto global da conta ou o request do Express. Fechar o cliente
+cancela leituras e jobs ainda na fila. Uma mutação já enviada usa o escopo do
+serviço para terminar a sincronização e as notificações mesmo sem seu cliente;
+`stop()` cancela esse escopo e impede novas alterações ou broadcasts. Os adapters
+de conta/DB receberam signal opcional sem trocar protocolos ou credenciais.
+
+Perfil interrompido por troca de conta mantém o cancelamento do transporte,
+mas a fachada da sessão devolve o erro do domínio em vez de expor o AbortError.
+
 `community.ts` possui presença, atividade pública e cache do diretório. Recebe
 somente as portas necessárias de sockets/salas; não altera a participação nem
 abre transportes. `community-protocol.ts` valida a página inteira da RPC privada

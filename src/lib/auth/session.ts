@@ -467,7 +467,13 @@ export function createAccountSession(options: Options) {
       if (!token || !user || disposed || epoch !== state.epoch)
         throw Error('Entre na sua conta novamente.');
       const expectedRole = roleRevision;
-      const result = await options.api('profile', profile, token, 'POST', scope.signal);
+      const result = await options
+        .api('profile', profile, token, 'POST', scope.signal)
+        .catch((error) => {
+          if (disposed || epoch !== state.epoch || !credentials)
+            throw Error('A conta foi alterada durante o salvamento.');
+          throw error;
+        });
       if (disposed || epoch !== state.epoch || !credentials)
         throw Error('A conta foi alterada durante o salvamento.');
       const updated = readAuthAccount(result.user);

@@ -13,7 +13,7 @@ const { createSocialService } = require('./social-service');
 const { createAzulService } = require('./azul-service');
 const { createSplendorService } = require('./splendor-service');
 const { createLoveLetterService } = require('./love-letter-service');
-const { createCommunityManagement } = require('./community-management');
+const { createCommunityManagement } = require('./community-management.ts');
 const { permissions, CREATOR_EMAIL } = require('./roles.ts');
 const { safeThroneLawChoices } = require('../src/lib/games/throne-law-planner.ts');
 
@@ -2481,6 +2481,16 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
   const communityManagement = createCommunityManagement({
     auth: accountAuth,
     rooms,
+    createRoom: (channel) => ({
+      id: channel.id,
+      kind: 'chat',
+      max: null,
+      players: new Map(),
+      createdAt: Date.now(),
+      game: null,
+      chatHistory: [],
+      nextSeat: 0,
+    }),
     db:
       process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
         ? fileStorage.db

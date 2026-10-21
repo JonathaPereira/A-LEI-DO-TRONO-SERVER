@@ -81,7 +81,7 @@ function createAuth({
         );
     }
   }
-  async function upstream(path, { method = 'GET', body, token } = {}) {
+  async function upstream(path, { method = 'GET', body, token, signal } = {}) {
     assertConfigured();
     let response;
     try {
@@ -93,7 +93,9 @@ function createAuth({
           'Content-Type': 'application/json',
         },
         body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(12_000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(12_000)])
+          : AbortSignal.timeout(12_000),
       });
     } catch {
       throw authError(
@@ -233,15 +235,16 @@ function createAuth({
     if (!m) throw authError('AUTH_REQUIRED', 'Entre na sua conta para continuar.', 401);
     return m[1];
   }
-  async function identity(token) {
+  async function identity(token, signal) {
     if (typeof token !== 'string' || token.length > 12_000)
       throw authError('AUTH_REQUIRED', 'Entre na sua conta para continuar.', 401);
     // The hosted Auth service validates the token. Never trust a locally decoded JWT for identity.
-    const user = await upstream('/auth/v1/user', { token });
+    const user = await upstream('/auth/v1/user', { token, signal });
     if (!user.id || user.is_anonymous || !user.email_confirmed_at)
       throw authError('EMAIL_NOT_CONFIRMED', 'Confirme seu e-mail antes de entrar.', 403);
     const rows = await upstream(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`, {
       token,
+      signal,
     });
     const profile = Array.isArray(rows) ? rows.find((p) => p.id === user.id) : null;
     if (!profile || !validNickname(profile.nickname))
@@ -547,7 +550,8 @@ function createAuth({
     install,
     allowedOrigins,
     tokenFrom,
-    request: (token, path, method = 'GET', body) => upstream(path, { token, method, body }),
+    request: (token, path, method = 'GET', body, signal) =>
+      upstream(path, { token, method, body, signal }),
   };
 }
 module.exports = {
