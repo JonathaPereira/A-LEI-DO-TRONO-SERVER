@@ -9,6 +9,7 @@ import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeApplicationAudio } from '../lib/voice/application-audio-runtime';
 import { initializeDesktopCapture } from '../components/desktop/capture-runtime';
 import { initializeNoiseProcessors } from '../lib/voice/noise-runtime';
+import { initializeAudio } from '../components/audio/runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
 import { initializeClipPreferencesView } from '../components/clips/preferences-runtime';
@@ -89,6 +90,7 @@ export function LegacyRuntime() {
 
   useEffect(() => {
     startup ??= (async () => {
+      initializeAudio(window);
       initializePersonalPreferences(window);
       initializeNetwork(window);
       initializeFiles(window);

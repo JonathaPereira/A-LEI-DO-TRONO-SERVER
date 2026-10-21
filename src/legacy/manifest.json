@@ -1,11 +1,5 @@
 {
-  "scripts": [
-    "auth-boot.js",
-    "audio.js",
-    "auth.js",
-    "soundboard-client.js",
-    "call-controls-layout.js"
-  ],
+  "scripts": ["auth-boot.js", "auth.js", "soundboard-client.js", "call-controls-layout.js"],
   "styles": [
     "style.css",
     "mn-chat.css",

@@ -38,7 +38,7 @@ type Call = ReturnType<typeof createVoiceCall>;
 /** Proven legacy inputs consumed by the call composition, not a declaration of the entire Window. */
 export interface VoiceRuntimePorts {
   TronoNetwork: NetworkClient;
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoAuth: { readonly user: { readonly id: string } | null };
   TronoPersonal?: {
     get(key: string, fallback: unknown): unknown;

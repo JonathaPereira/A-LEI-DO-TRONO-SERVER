@@ -35,11 +35,13 @@ test(
             this.__meter.fftSize = 2048;
             this.__meter.connect(super.destination);
             window.__gameMeter = this.__meter;
+            (window.__gameContexts ??= []).push(this);
           }
           get destination() {
             return this.__meter || super.destination;
           }
         };
+        window.__NativeAudio = Native;
       });
       await page.goto('http://127.0.0.1:' + server.address().port);
       await page.waitForFunction(() => window.TronoAudio && window.TronoAuth?.ready);
@@ -105,6 +107,57 @@ test(
         ),
         state,
       );
+      assert.deepEqual(errors, []);
+      // All three music panels project one owner, including real keyboard range events.
+      if (await page.locator('#authDialog').isVisible())
+        await page.locator('#authCloseBtn').click();
+      await page.evaluate(() => {
+        window.TronoAudio.setMusicVolume(23);
+        window.TronoAudio.setMusicTrack('rock', { play: false });
+      });
+      await expect(page.locator('#portalScreen')).toBeVisible();
+      await page.locator('#portalMusicVolume').focus();
+      await page.locator('#portalMusicVolume').press('End');
+      await page.locator('#portalMusicVolume').press('ArrowLeft');
+      for (const id of ['musicVolumeValue', 'lobbyMusicVolumeValue', 'portalMusicVolumeValue'])
+        await expect(page.locator('#' + id)).toHaveText('99%');
+      for (const id of ['gameScreen', 'setupScreen', 'portalScreen'])
+        await expect(page.locator('#' + id + ' .track-btn[data-track="rock"]')).toHaveClass(
+          /active/,
+        );
+      const cleanup = await page.evaluate(async () => {
+        const audio = window.TronoAudio;
+        await audio.ensureAudio();
+        const borrowed = new window.__NativeAudio();
+        await borrowed.resume();
+        const track = borrowed.createMediaStreamDestination().stream.getAudioTracks()[0];
+        const openContexts = window.__gameContexts.filter((context) => context.state !== 'closed');
+        await audio.dispose();
+        const ownedClosed =
+          openContexts.filter((context) => context.state === 'closed').length === 1;
+        window.dispatchEvent(new Event('pagehide'));
+        const result = {
+          ownedClosed,
+          borrowedState: borrowed.state,
+          borrowedTrack: track.readyState,
+          playerPaused: document.getElementById('bgMusic').paused,
+          facadeRemoved: !window.TronoAudio,
+          controlsRemoved: !document.querySelector('[data-audio-controls-root]'),
+          cannotRestart: !(await audio.ensureAudio()),
+        };
+        track.stop();
+        await borrowed.close();
+        return result;
+      });
+      assert.deepEqual(cleanup, {
+        ownedClosed: true,
+        borrowedState: 'running',
+        borrowedTrack: 'live',
+        playerPaused: true,
+        facadeRemoved: true,
+        controlsRemoved: true,
+        cannotRestart: true,
+      });
       assert.deepEqual(errors, []);
       console.log('Actual Splendor waveform RMS ' + JSON.stringify({ high, low, mute }));
     } finally {

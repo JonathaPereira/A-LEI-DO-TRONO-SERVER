@@ -1,3 +1,4 @@
+import { MusicControlHost } from '../audio/music-controls';
 import { CallNavigationHost } from '@/components/navigation/call-navigation';
 export function GameScreen() {
   return (
@@ -13,52 +14,10 @@ export function GameScreen() {
           </div>
           <div id="throneStatusHost" className="round-status"></div>
           <div className={'top-actions'}>
-            <div className={'music-volume'} title={'Volume da música de fundo'}>
-              <span>♫</span>
-              <input
-                id={'musicVolume'}
-                type={'range'}
-                min={'0'}
-                max={'100'}
-                defaultValue={'32'}
-                aria-label={'Volume da música'}
-              />
-              <output id={'musicVolumeValue'}>32%</output>
-            </div>
-            <div className={'music-track-select top-track-select'} aria-label={'Escolha da trilha'}>
-              <button
-                className={'track-btn active'}
-                data-track={'lofi'}
-                title={'Lofi again — omfgdude • CC0'}
-              >
-                Lo-fi
-              </button>
-              <button
-                className={'track-btn'}
-                data-track={'edm'}
-                title={'Joyfully — MintoDog • CC0'}
-              >
-                EDM
-              </button>
-              <button
-                className={'track-btn'}
-                data-track={'rock'}
-                title={'Codename Granny II — Kistol • CC0'}
-              >
-                Rock
-              </button>
-              <button
-                className={'track-btn'}
-                data-track={'electronic'}
-                title={'Claimed by the Void — vitalezzz • CC0'}
-              >
-                Eletrônica
-              </button>
-            </div>
+            <MusicControlHost id="game-volume" />
+            <MusicControlHost id="game-tracks" />
             <span id="courtFullscreenHost" style={{ display: 'contents' }} />
-            <button id={'musicBtn'} className={'icon-btn'} title={'Ativar ou silenciar música'}>
-              ♫ Música
-            </button>
+            <MusicControlHost id="game-toggle" />
             <span id="recordMatchHost" style={{ display: 'contents' }} />
             <span id="throneLogToggleHost" style={{ display: 'contents' }}></span>
             <CallNavigationHost id="socialBtn" />

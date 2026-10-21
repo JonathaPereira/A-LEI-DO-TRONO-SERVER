@@ -35,7 +35,7 @@ interface Runtime extends Window {
   TronoThroneLocalEngine: ThroneLocalEngine;
   TronoCommunityNavigation?: CommunityNavigation;
   TronoThroneBoard?: ThroneNavigation;
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoAudio: { toggleMusic(): void };
   __LeiDoTrono?: {
     getState(): unknown;

@@ -63,7 +63,7 @@
     "test:voice:transport": "node --test tests/voice-transport.cjs",
     "test:voice:quality": "node --test tests/voice-quality.cjs tests/call-stability.js",
     "test:voice:roster": "node --test tests/voice-roster.cjs",
-    "test:voice:audio": "node --test tests/call-audio.cjs",
+    "test:voice:audio": "node --test tests/app-audio.cjs tests/call-audio.cjs",
     "test:voice:controls": "node --test tests/voice-controls.cjs",
     "test:voice:interest": "node --test tests/media-interest.cjs",
     "test:voice:sharing": "node --test tests/screen-sharing.cjs tests/screen-publication.cjs",

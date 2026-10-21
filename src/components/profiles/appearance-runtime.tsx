@@ -4,7 +4,7 @@ import { createAppearancePreferences } from '../../lib/profiles/appearance';
 import { AppearanceFields } from './appearance-fields';
 
 interface AppearanceRuntime {
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoAuth: { user: { id: string } | null; ready: Promise<unknown> };
   TronoAppearance?: { readonly theme: string };
 }

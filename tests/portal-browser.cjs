@@ -95,7 +95,13 @@ test(
             if (!desktop) await page.locator('#portalMusicVolume').fill('17');
             else
               await page.evaluate(() => {
-                document.getElementById('portalMusicVolume').value = '17';
+                // Use the native setter so React observes the synthetic range change,
+                // matching the browser's own value update before its input event.
+                const input = document.getElementById('portalMusicVolume');
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(
+                  input,
+                  '17',
+                );
               });
             await page.locator('#portalMusicVolume').dispatchEvent('input');
             await expect(page.locator('#portalMusicVolumeValue')).toHaveText('17%');

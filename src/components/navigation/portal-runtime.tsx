@@ -17,7 +17,7 @@ interface Runtime extends Window {
     openGuest(): void;
   };
   TronoNetwork: NetworkClient;
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoPortal?: Portal;
   TronoGames?: { openLibrary(): unknown };
   TronoSocial?: {

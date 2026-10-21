@@ -982,6 +982,27 @@ os IDs de avatar/capa/fundo selecionados via `getProtectedFileIds()` e notifica
 mudanças do rascunho; a biblioteca protege esses IDs também na ação de excluir.
 O rascunho continua pertencendo ao editor; a biblioteca não mantém outro estado de perfil.
 
+`lib/storage/preferences.ts` mantém a semântica de preferências tolerante a falhas:
+escritas em memória prevalecem quando localStorage está bloqueado/cheio e remoções
+mantêm tombstones para não ressuscitar valores persistidos. O bootstrap instala
+uma instância antes dos consumidores; a fachada `TronoStorage` oferece apenas
+getItem/setItem/removeItem, refletidos nos tipos dos adaptadores.
+
+`lib/audio/player.ts` possui música/efeitos locais e preferências por jogo;
+`catalog.ts` conserva fontes CC0, créditos e fallbacks distribuídos. Contexto e
+grafos são criados somente em interação explícita e não pertencem à chamada.
+Gerações impedem que play antigo publique erro/status ou retome música após mute
+ou descarte. Falha da fonte principal usa o fallback uma vez por faixa; o áudio
+HTML permanece disponível sem Web Audio. `effects.ts` conserva síntese, ganhos e
+envelopes originais, remove grafos ao terminar e encerra fontes agendadas no descarte.
+
+`components/audio/music-controls.tsx` renderiza controles do portal, lobby e mesa
+sobre o mesmo snapshot. `runtime.tsx` monta os portais no trono:ready e possui
+desbloqueio por gesto, efeitos de clique e listener de erro da música. Pagehide
+remove listeners/controles e fecha somente o contexto/player próprios; recursos
+emprestados permanecem ativos. As fachadas TronoAudio/TRONO_MUSIC_TRACKS preservam
+os consumidores ainda necessários; `legacy/audio.js` e sua entrada foram removidos.
+
 `lib/voice/control-layout.ts` é o único responsável por posicionar controles.
 Move os mesmos nós e não abre dispositivos, clona elementos ou renegocia peers.
 `lib/voice/microphone.ts` possui captura de microfone, troca de entrada, mute físico,

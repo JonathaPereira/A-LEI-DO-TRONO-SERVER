@@ -24,7 +24,7 @@ interface Runtime extends Window {
   TronoThroneBoard: ThroneNavigation;
   TronoCommunityAdmin?: { refresh(): Promise<unknown> };
   TronoMessenger: { joinChannel(id: string, options: { showText: boolean }): Promise<unknown> };
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoDesktop?: object;
   TronoCommunityNavigation?: CommunityNavigation;
   TronoChatHub?: {

@@ -6,7 +6,7 @@ import type { NetworkClient } from '../socket/client';
 interface ActivityRuntime extends Window {
   TronoDesktop?: DesktopActivityNative;
   TronoDesktopActivity?: DesktopActivityController;
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoAuth: { user: { id: string } | null; ready: Promise<unknown> };
   TronoNetwork: NetworkClient;
   __LeiDoTrono?: { getState(): unknown };

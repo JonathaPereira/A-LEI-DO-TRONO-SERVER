@@ -11,7 +11,7 @@ export interface SettingsRuntime {
   TronoConnectionDiagnostics: ConnectionDiagnostics;
   TronoVoiceSettings: VoiceSettings;
   TronoAudioPreferences: AudioPreferences;
-  TronoStorage?: Storage;
+  TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoDesktop?: {
     getMediaPermissions(): Promise<string[]>;
     resetMediaPermissions(): Promise<unknown>;

@@ -8,7 +8,7 @@ import { bindStreamControls, type StreamControls } from '../../lib/voice/stream-
 
 export interface StageRuntime {
   TronoCallStage: CallStage;
-  TronoStorage: Storage;
+  TronoStorage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoDesktop?: object;
   TronoProfile: {
     openMini(id: string): Promise<unknown>;

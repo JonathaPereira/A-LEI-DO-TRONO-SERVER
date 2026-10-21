@@ -1,3 +1,4 @@
+import { MusicControlHost } from '../audio/music-controls';
 import { useSyncExternalStore } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Portal } from '../../lib/navigation/portal';
@@ -205,54 +206,12 @@ export function PortalContents({ controller }: { controller: Portal }) {
           <div>
             <small>TRILHA CC0</small>
             <strong id={'portalNowPlaying'}>{state.nowPlaying}</strong>
-            <small
-              id={'portalMusicStatus'}
-              className={'music-playback-status'}
-              role={'status'}
-              aria-live={'polite'}
-            ></small>
+            <MusicControlHost id="portal-status" />
           </div>
         </div>
-        <div className={'portal-track-select'} aria-label={'Escolha da trilha'}>
-          <button
-            className={'track-btn active'}
-            data-track={'lofi'}
-            title={'Lofi again — omfgdude • CC0'}
-          >
-            Lo-fi
-          </button>
-          <button className={'track-btn'} data-track={'edm'} title={'Joyfully — MintoDog • CC0'}>
-            EDM
-          </button>
-          <button
-            className={'track-btn'}
-            data-track={'rock'}
-            title={'Codename Granny II — Kistol • CC0'}
-          >
-            Rock
-          </button>
-          <button
-            className={'track-btn'}
-            data-track={'electronic'}
-            title={'Claimed by the Void — vitalezzz • CC0'}
-          >
-            Eletrônica
-          </button>
-        </div>
-        <button id={'portalMusicBtn'} className={'portal-music-btn'} type={'button'}>
-          ♫ Música ligada
-        </button>
-        <label className={'portal-volume'}>
-          <span>Volume</span>
-          <input
-            id={'portalMusicVolume'}
-            type={'range'}
-            min={'0'}
-            max={'100'}
-            defaultValue={'32'}
-          />
-          <output id={'portalMusicVolumeValue'}>32%</output>
-        </label>
+        <MusicControlHost id="portal-tracks" />
+        <MusicControlHost id="portal-toggle" />
+        <MusicControlHost id="portal-volume" />
         <button
           id={'portalCreditsBtn'}
           onClick={() => controller.setCredits(true)}

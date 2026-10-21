@@ -1,3 +1,4 @@
+import { MusicControlHost } from '../audio/music-controls';
 export function SetupScreen() {
   return (
     <>
@@ -46,39 +47,7 @@ export function SetupScreen() {
             <span id="communityEnterHost" style={{ display: 'contents' }} />
           </article>
           <div className="lobby-status" id="throneNetworkStatus" />
-          <div className={'lobby-audio-panel'} aria-label={'Controles de áudio do lobby'}>
-            <button id={'lobbyMusicBtn'} className={'royal-btn lobby-music-toggle'}>
-              ♫ Música ligada
-            </button>
-            <label className={'lobby-volume'}>
-              <span>Volume</span>
-              <input
-                id={'lobbyMusicVolume'}
-                type={'range'}
-                min={'0'}
-                max={'100'}
-                defaultValue={'32'}
-              />
-              <output id={'lobbyMusicVolumeValue'}>32%</output>
-            </label>
-            <div
-              className={'music-track-select lobby-track-select'}
-              aria-label={'Escolha da trilha'}
-            >
-              <button className={'track-btn active'} data-track={'lofi'}>
-                Lo-fi
-              </button>
-              <button className={'track-btn'} data-track={'edm'}>
-                EDM
-              </button>
-              <button className={'track-btn'} data-track={'rock'}>
-                Rock
-              </button>
-              <button className={'track-btn'} data-track={'electronic'}>
-                Eletrônica
-              </button>
-            </div>
-          </div>
+          <MusicControlHost id="lobby" />
         </div>
       </section>
     </>
