@@ -179,22 +179,27 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: mensagens diretas do backend convertidas, na branch
+Checkpoint de trabalho: autenticação do backend convertida, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
 JavaScript e não ganham tipagem estrita por consumirem módulos TS.
 
-Próximo recorte recomendado: `server/auth.js`. Separar contrato/respostas do
-provedor, sessão e rotas públicas, preservando o acesso fechado por padrão,
-confirmação, recuperação e revogação. Usar `auth-contract.ts`, a política de senha
-e o validador de apelido já compartilhados. Não tratar JWT decodificado localmente
-como prova de identidade: a verificação pelo provedor permanece autoritativa.
-Transferir também o timer de limpeza de limites e o ciclo de vida dos HTTP.
+`server/auth.js` foi removido. `auth.ts`, `auth-provider.ts`, `auth-protocol.ts`
+e `auth-errors.ts` separam rotas/limites, transporte, validação e erros públicos.
+Conta continua fechada por padrão e verificada pelo provedor antes de ler claims
+locais. Confirmação, recuperação sem enumeração, perfis e revogação permanecem.
+O shutdown agora cancela os HTTP e limpa o timer/limites dessa instância;
+gravações já aceitas conservam as notificações após o cliente fechar.
+
+Próximo recorte recomendado: `server/files.js`. Separar assinatura/transporte R2,
+contratos das linhas/RPC e serviço de arquivos. Transferir também timer de limpeza,
+uploads e cancelamento. Não liberar quota/reserva antes de confirmar exclusão do
+objeto; um PUT interrompido pode ter sido aceito pelo armazenamento.
 
 Sequência restante, após esse recorte:
 
-1. `server/auth.js` e `server/files.js`: contratos dos provedores, sessão e
+1. `server/files.js`: contratos dos provedores e
    armazenamento. Preservar verificação autoritativa da conta, revogação,
    permissões, quotas e exclusões; não transportar segredos para o renderer.
 2. `server/azul-service.js`, `splendor-service.js` e `love-letter-service.js`:
@@ -211,13 +216,19 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 33 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 44 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
 também passaram, preservando o erro do domínio.
 Não há alteração pendente de código, instalação do aplicativo ou publicação remota.
-As evidências de mensagens diretas ficam em `artifacts/social-service-*`;
+Autenticação do backend acrescenta 11 regressões de provedor, identidade,
+shutdown, HTTP e posse das alterações; 35 modelos e o fluxo HTTP/WebSocket de
+conta passaram. Os 13 casos de conta/editor/diretório no browser também passaram.
+No Electron real, persistência criptografada da conta e a chamada completa com
+dois clientes passaram; essa etapa não mede loopback físico ou FPS de jogo.
+As evidências dessa etapa ficam em `artifacts/backend-auth-*`;
+mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;
 presença usa `artifacts/community-service-*`; a composição
 tem `application-composition-*`, a conta `auth-owner-*` e a instalação

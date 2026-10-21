@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
-const { createAuth } = require('../server/auth');
+const { createAuth } = require('../server/auth.ts');
 const { createFiles } = require('../server/files');
 const deferred = () => {
   let resolve;

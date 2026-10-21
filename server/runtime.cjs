@@ -5,7 +5,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 const { RealtimeSfuManager } = require('./realtime-sfu');
-const { createAuth } = require('./auth');
+const { createAuth } = require('./auth.ts');
 const { createFiles } = require('./files');
 const { createCommunity } = require('./community.ts');
 const { createChatHistory } = require('./chat-history.ts');
@@ -2954,6 +2954,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
     communityManagement.stop();
     chatHistory.close();
     realtimeSfu.stop();
+    accountAuth.stop();
     for (const client of wss.clients) client.terminate();
     closePromise = new Promise((resolve, reject) => {
       wss.close(() => {

@@ -2051,6 +2051,22 @@ respostas antes de aplicá-las, recusa duplicatas e projeta campos conhecidos de
 perfis públicos e contas privadas. E-mails continuam exclusivos do criador.
 
 `auth-contract.ts` descreve a identidade do adaptador autoritativo.
+`auth.ts` possui as rotas públicas de conta e seus limites por IP/e-mail;
+`auth-provider.ts` é o transporte único para Auth/Data API, com timeout e
+cancelamento até a leitura do corpo. `auth-errors.ts` traduz somente motivos
+conhecidos; mensagens, respostas e credenciais do provedor não são repassadas.
+`auth-protocol.ts` valida usuário confirmado, perfil único e credenciais antes
+de construir a conta. A verificação remota precede a leitura local de expiração
+e ID da sessão; metadados editáveis não atribuem nome/cargo. Perfis antigos sem
+os campos opcionais mantêm os defaults existentes.
+
+As rotas conservam JSON de 16 KB, CORS, no-store/no-referrer, confirmação sem
+login automático e recuperação sem enumeração de contas. Leituras pertencem ao
+cliente; alterações já enviadas, incluindo perfil, senha e logout, pertencem ao
+serviço e terminam sua sincronização/notificação mesmo se o HTTP for fechado.
+`stop()` cancela HTTP, limpa o timer e os limites; respostas tardias não chamam
+revogação/atualização. O runtime inclui esse descarte no shutdown da instância.
+
 `http-api.ts` centraliza origem, CORS, autenticação, JSON limitado e erros públicos.
 Dados do request são `unknown`; tokens/contextos ficam em um WeakMap por request,
 sem alterar o objeto global da conta ou o request do Express. Fechar o cliente
