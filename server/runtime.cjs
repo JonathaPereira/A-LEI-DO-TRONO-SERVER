@@ -16,6 +16,7 @@ const { createLoveLetterService } = require('./love-letter-service.ts');
 const { createCommunityManagement } = require('./community-management.ts');
 const { permissions } = require('./roles.ts');
 const { createChatService } = require('./chat-service.ts');
+const { createVoiceSoundboard } = require('./voice-soundboard.ts');
 const { createThroneService } = require('./throne-service.ts');
 const {
   createChannelRooms,
@@ -95,81 +96,6 @@ function createRuntime({
   function send(ws, payload) {
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
   }
-  async function playSound(ws, message) {
-    const room = rooms.get(ws.roomId),
-      player = room?.players.get(ws.clientId);
-    if (!ws.account || ws.account.expiresAt <= Date.now()) {
-      send(ws, {
-        type: 'error',
-        code: 'AUTH_REQUIRED',
-        message: 'Entre em uma conta para usar os efeitos sonoros.',
-      });
-      return;
-    }
-    if (!player?.voiceJoined) {
-      send(ws, {
-        type: 'error',
-        code: 'VOICE_REQUIRED',
-        message: 'Entre na chamada para tocar um efeito.',
-      });
-      return;
-    }
-    const now = Date.now(),
-      blocked = () => Date.now() < (room.soundUntil || 0) && room.soundFileId !== message.fileId;
-    if (ws.soundPending || now - (ws.lastSoundAt || 0) < 150) {
-      send(ws, {
-        type: 'error',
-        code: 'SOUND_RATE',
-        message: 'Aguarde um instante antes de tocar novamente.',
-      });
-      return;
-    }
-    if (blocked()) {
-      send(ws, {
-        type: 'error',
-        code: 'SOUND_RATE',
-        message: 'Aguarde o efeito atual terminar para trocar de áudio.',
-      });
-      return;
-    }
-    ws.lastSoundAt = now;
-    ws.soundPending = true;
-    try {
-      const file = await fileStorage.sound(message.fileId);
-      if (
-        ws.roomId !== room.id ||
-        room.players.get(player.id) !== player ||
-        !player.voiceJoined ||
-        ws.account?.expiresAt <= Date.now()
-      )
-        return;
-      if (blocked())
-        throw Object.assign(Error('Aguarde o efeito atual terminar para trocar de áudio.'), {
-          code: 'SOUND_RATE',
-        });
-      room.soundUntil = Date.now() + Math.max(3000, file.durationMs);
-      room.soundFileId = file.id;
-      const event = {
-        type: 'soundboard-play',
-        id: crypto.randomUUID(),
-        roomId: room.id,
-        file,
-        playerId: player.id,
-        name: player.name,
-        at: Date.now(),
-      };
-      for (const p of room.players.values()) if (p.voiceJoined) send(p.ws, event);
-    } catch (e) {
-      send(ws, {
-        type: 'error',
-        code: e.code || 'SOUND_UNAVAILABLE',
-        message: e.status || e.code === 'SOUND_RATE' ? e.message : 'Efeito sonoro indisponível.',
-      });
-    } finally {
-      ws.soundPending = false;
-    }
-  }
-
   const throneService = createThroneService({
     rooms,
     send,
@@ -223,6 +149,11 @@ function createRuntime({
     history: chatHistory,
     files: fileStorage,
     selectedChatId: (ws) => channels.selectedChatId(ws) || null,
+  });
+  const soundboard = createVoiceSoundboard({
+    files: fileStorage,
+    participation: (ws) => channels.voiceParticipation(ws),
+    send,
   });
   const community = createCommunity({ wss, rooms, send, auth: accountAuth });
   const azulService = createAzulService({ auth: accountAuth, wss, send });
@@ -627,7 +558,7 @@ function createRuntime({
           channels.handleVoiceSignal(ws, message);
           break;
         case 'soundboard-play':
-          void playSound(ws, message);
+          void soundboard.play(ws, message);
           break;
         case 'sfu-request':
           void realtimeSfu.handleRequest(ws, message);
@@ -692,6 +623,7 @@ function createRuntime({
     socialService.stop();
     community.stop();
     communityManagement.stop();
+    soundboard.stop();
     chat.stop();
     chatHistory.close();
     const closingSfu = realtimeSfu.stop();

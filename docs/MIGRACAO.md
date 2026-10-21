@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, chat/moderação, histórico, comunidade, mensagens diretas, SFU, participação/voz dos canais e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com execução do soundboard e composição. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, chat/moderação, histórico, comunidade, mensagens diretas, SFU, execução do soundboard, participação/voz dos canais e coordenação dos quatro jogos possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Resta `runtime.cjs`, com composição e identidade WebSocket. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -147,10 +147,10 @@ Uma regressão compara os dois consumidores à configuração do electron-builde
 
 ### 1. Backend e contratos externos
 
-- Extrair execução do soundboard e composição de `server/runtime.cjs`,
+- Converter composição e identidade WebSocket de `server/runtime.cjs`,
   preservando `createApplication()` e o isolamento por instância.
 - Converter o runtime por domínio, mantendo autorização e persistência.
-- Completar validação dos payloads externos com seus consumidores de soundboard e identidade.
+- Completar validação dos payloads externos com seus consumidores de identidade.
 - `tsconfig.server.json` verifica módulos TS estritamente; não torna os serviços JS
   existentes estritos por estarem na mesma pasta.
 
@@ -285,17 +285,34 @@ uma gravação persistente já aceita conserva avisos após o remetente sair.
 Shutdown cancela as esperas e impede reconstrução de buffers/eventos tardios.
 O armazenamento continua sendo encerrado separadamente pela composição.
 
-Próximo recorte recomendado: o restante de `server/runtime.cjs` (aproximadamente
-720 linhas): execução do soundboard e composição HTTP/WebSocket.
+`voice-soundboard.ts` possui pedidos de reprodução, limite por conexão e bloqueio
+de sobreposição por sala. Esses campos não ficam mais na sala/conexão. Conserva
+reinício do mesmo som, limite de 150 ms e janela mínima de três segundos para
+trocar de som; metadados antigos sem duração usam essa janela mínima.
+`channel-service.ts` emite um token opaco por participação de voz. Sair/reentrar
+o troca, enquanto texto, jogo, flags e modo de transporte conservam o token da
+mesma chamada. Carregamentos antigos não tocam na próxima chamada nem bloqueiam
+um pedido novo. Shutdown cancela esperas e solta limites/bloqueios. `files.sound()`
+agora encaminha AbortSignal à consulta, com regressão direta dessa fronteira.
+Captura, mixer, reprodução cliente e parâmetros de mídia não foram alterados.
+
+Próximo recorte recomendado: `server/runtime.cjs` (648 linhas), restrito à
+composição HTTP/WebSocket, autenticação/convidado, dispatch, heartbeat e shutdown.
+Converter esse último arquivo em código TS verificado e retirar o cast de fachada
+em `app.ts`; ele atualmente não torna o runtime estrito. Preservar o isolamento,
+fila de identidade e regras de convidados. Conferir `game-test-clock.cjs`,
+`love-letter-seed.cjs` e `direct-attachments-adapter.cjs`: são preloads de fixtures
+que importam/montam as dependências do runtime atual. Transferir essas portas junto
+com a composição; não manter um runtime legado só para satisfazer a fixture.
 Manter `createApplication()`, um único socket e os donos de mídia. A fábrica de
 canais não executa callbacks durante a construção; callbacks adiados da composição
 conectam presença, histórico e jogos sem criar outra instância desses serviços.
 
 Sequência restante, após esse recorte:
 
-1. `server/runtime.cjs`: extrair execução do soundboard para um dono
-   tipado, mantendo instâncias independentes e shutdown. Completar payloads dessas
-   fronteiras/identidade e deixar somente composição no ponto de entrada tipado.
+1. `server/runtime.cjs`: converter composição/identidade e remover o último
+   arquivo CJS do servidor. Manter instâncias independentes, um único socket,
+   autorização, fila de identidade e shutdown; completar payloads de identidade.
 2. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
@@ -303,7 +320,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 129 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 138 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -368,6 +385,12 @@ passaram. Compositor, anexos, moderação e notificações passaram no browser.
 A fixture de moderação foi corrigida após reproduzir no runtime anterior a mesma
 falha: uma troca somente de transporte não abre o drawer. O teste agora usa o
 botão visível de abrir chat e mantém todas as asserções de exclusão/persistência.
+Execução do soundboard acrescenta oito regressões de autorização, concorrência,
+reinício, troca de chamada/conta, cancelamento e manutenção da participação durante
+navegação; armazenamento acrescenta uma de propagação do cancelamento. Tipagem,
+formatação, build, suíte completa, quatro casos de interface, reprodução PCM no
+Electron e a chamada com dois Electron passaram. Não medem loopback físico ou FPS
+em jogo; captura e codec permanecem os anteriores.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
@@ -377,6 +400,7 @@ manager/provedor e relay usam `artifacts/realtime-manager-*`;
 A Lei do Trono usa `artifacts/throne-service-*`;
 canais/participação usam `artifacts/channel-service-*`;
 chat/moderação usam `artifacts/chat-service-*`;
+execução do soundboard usa `artifacts/voice-soundboard-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;

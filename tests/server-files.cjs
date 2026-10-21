@@ -37,6 +37,20 @@ const deferred = () => {
   });
   return { promise, resolve };
 };
+test('sound lookup forwards caller cancellation before starting a database read', async () => {
+  const f = fixture(),
+    controller = new AbortController();
+  try {
+    f.rows.set(fileId, row({ kind: 'soundboard', mime: 'audio/wav', duration_ms: 1000 }));
+    controller.abort();
+    await assert.rejects(f.service.sound(fileId, controller.signal), {
+      code: 'STORAGE_UNAVAILABLE',
+    });
+    assert.equal(f.calls.length, 0);
+  } finally {
+    f.service.stop();
+  }
+});
 function fixture(ports = {}) {
   const rows = new Map(),
     objects = new Map(),

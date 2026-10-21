@@ -187,7 +187,7 @@ export function createFiles({
   async function sound(id: string, signal?: AbortSignal) {
     if (!configured)
       throw error('STORAGE_UNCONFIGURED', 'Efeitos sonoros ainda não foram ativados.', 503);
-    const row = await lookup(id);
+    const row = await lookup(id, signal);
     if (!row || row.state !== 'ready' || row.kind !== 'soundboard')
       throw error('FILE_NOT_FOUND', 'Efeito sonoro não encontrado.', 404);
     return publicFile(row);

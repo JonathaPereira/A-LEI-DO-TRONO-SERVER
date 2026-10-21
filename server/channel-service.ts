@@ -100,6 +100,7 @@ export function createChannelService({
   clearHistory = () => {},
 }: Options) {
   let closed = false;
+  let voiceTokens = new WeakMap<ChannelMember, object>();
   const roomFor = (id: unknown) => (typeof id === 'string' ? rooms.get(id) : undefined);
   function sanitizeName(value: unknown) {
     const raw = (typeof value === 'string' ? value : '')
@@ -356,6 +357,7 @@ export function createChannelService({
     if (!room) return;
     const leaving = room.players.get(ws.clientId);
     if (leaving && leaving.ws !== ws) return;
+    if (leaving) voiceTokens.delete(leaving);
     if (leaving?.voiceJoined)
       broadcastVoiceEvent(
         room,
@@ -417,6 +419,7 @@ export function createChannelService({
     if (p && (ws.gameRoomId === room.id || (keepText && ws.textRoomId === room.id))) {
       if (p.voiceJoined) broadcastVoiceEvent(room, p, 'left', reason);
       p.voiceJoined = false;
+      voiceTokens.delete(p);
       p.voiceMuted = false;
       p.voiceDeafened = false;
       p.cameraOn = false;
@@ -711,6 +714,10 @@ export function createChannelService({
         forceRoomP2p(room);
     }
     player.voiceJoined = !!message.joined;
+    if (previouslyJoined !== player.voiceJoined) {
+      if (player.voiceJoined) voiceTokens.set(player, {});
+      else voiceTokens.delete(player);
+    }
     if (previouslyJoined !== player.voiceJoined)
       broadcastVoiceEvent(room, player, player.voiceJoined ? 'joined' : 'left', 'voice-toggle');
     player.voiceMuted = player.voiceJoined && !!message.muted;
@@ -778,6 +785,14 @@ export function createChannelService({
   }
 
   return {
+    voiceParticipation(ws: ChannelConnection) {
+      if (closed) return null;
+      const room = roomFor(ws.roomId),
+        player = room?.players.get(ws.clientId);
+      if (!room || !player || player.ws !== ws || !player.voiceJoined) return null;
+      const token = voiceTokens.get(player);
+      return token ? { room, player, token } : null;
+    },
     safeRooms,
     safeRoom,
     publicPlayer,
@@ -834,6 +849,7 @@ export function createChannelService({
     stop() {
       if (closed) return;
       closed = true;
+      voiceTokens = new WeakMap();
       for (const room of rooms.values()) room.players.clear();
       rooms.clear();
     },

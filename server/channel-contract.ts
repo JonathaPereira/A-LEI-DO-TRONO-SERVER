@@ -46,6 +46,4 @@ export interface ChannelRoom {
   nextSeat: number;
   voiceMode?: 'sfu' | 'p2p' | null;
   voiceRevision?: number;
-  soundUntil?: number;
-  soundFileId?: string;
 }

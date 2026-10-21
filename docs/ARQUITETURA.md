@@ -53,7 +53,7 @@ valida respostas e catálogos em `sfu-protocol.ts`. `realtime-protocol.ts` valid
 status de consumo e configuração ICE/TURN. O backend valida comandos SFU e
 respostas do provedor. `server/throne-protocol.ts` valida comandos de A Lei do
 Trono; canais/voz usam `server/channel-protocol.ts` e o mesmo parser P2P do cliente.
-As fronteiras de soundboard/identidade do runtime ainda precisam da conversão.
+Os campos de identidade/dispatch do runtime ainda precisam da conversão.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
@@ -1996,7 +1996,7 @@ migração da interface ampliaria o risco sem resolver o acoplamento.
 `app.ts` expõe `createApplication()` e `close()`. Cada criação possui canais,
 sockets e serviços próprios. Importar o módulo não inicia um servidor nem
 registra sinais. `index.ts` valida porta/host e trata o processo.
-`runtime.cjs` ainda contém composição e execução do soundboard.
+`runtime.cjs` ainda contém composição HTTP/WebSocket, identidade e dispatch.
 Esses consumidores ainda precisam da extração e tipagem estrita.
 
 `lib/games/bot-names.ts` possui a sequência compartilhada de nomes/numeração dos
@@ -2061,6 +2061,18 @@ Reset de histórico transitório invalida trabalho antigo e conserva a revisão,
 evitando que clientes ignorem mensagens novas. Exclusão de canal/arquivo também
 entra pelos métodos desse dono. Stop aborta esperas, solta buffers/limites e
 suprime respostas tardias; a composição encerra o adaptador de persistência.
+
+`voice-soundboard.ts` possui pedidos de reprodução, limite por conexão e bloqueio
+de sobreposição por sala, em mapas privados. Não toca nem captura áudio: emite o
+mesmo evento aos participantes da chamada para o dono de reprodução existente.
+Conserva reinício do mesmo som, 150 ms entre pedidos e janela mínima de três
+segundos para trocar de som. Metadados antigos sem duração usam essa janela mínima.
+O coordenador de canais fornece `{room, player, token}` somente para o socket atual
+na voz. O token muda ao sair/reentrar, e se conserva durante navegação/flags/fallback
+de transporte. IO tardio revalida token e identidade; um pedido da nova chamada
+cancela a espera antiga sem herdar seu bloqueio. `files.sound()` encaminha o sinal
+à consulta. Stop aborta esperas e solta os limites/bloqueios. Captura e reprodução
+do cliente continuam com seus donos, sem ajustes de codec, bitrate ou temporização.
 
 `roles.ts` recebe dados desconhecidos e deriva o cargo de dados verificados pelo
 provedor e do perfil persistido; metadados editáveis do usuário não decidem
