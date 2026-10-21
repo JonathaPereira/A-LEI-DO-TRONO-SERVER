@@ -1,5 +1,7 @@
 # Ticket to Ride · tabuleiro e cartas
 
+[**Baixar todas as imagens em ZIP — 13,7 MB**](Ticket-to-Ride-Artes-Completas.zip?raw=true)
+
 Imagens para visualizar e baixar. Clique em uma imagem para abri-la no GitHub.
 
 ## Tabuleiro clássico dos EUA
