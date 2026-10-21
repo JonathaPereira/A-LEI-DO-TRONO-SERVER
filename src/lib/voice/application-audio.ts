@@ -172,6 +172,12 @@ export function createApplicationAudio(options: Options) {
     }
   });
   return {
+    cancel(id: string): boolean {
+      const resource = resources.get(id);
+      if (!resource) return false;
+      void close(resource);
+      return true;
+    },
     create(value: unknown): Promise<ApplicationAudioPipe> {
       if (disposed)
         return Promise.reject(new DOMException('Captura de áudio encerrada.', 'AbortError'));

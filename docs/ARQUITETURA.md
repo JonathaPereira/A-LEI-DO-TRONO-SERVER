@@ -1034,9 +1034,26 @@ fecha a porta e encerra somente a trilha/contexto próprios. O stop do C++ come�
 sem aguardar o fechamento do contexto. Promessas tardias são observadas e não
 recriam grafos descartados. Microfone e vídeo da chamada não pertencem a esse dono.
 `application-audio-runtime.ts` adapta preload, módulo estático e pagehide; mantém
-`TronoApplicationAudio.create` para o seletor ainda legado, sem criar contexto no
+`TronoApplicationAudio.create` e `cancel(id)` para o seletor tipado, sem criar contexto no
 boot. O descarte remove o listener nativo e a fachada; um descarte antigo não pode
 remover uma instalação posterior. `legacy/application-audio.js` foi removido.
+
+`lib/desktop/capture.ts` possui a escolha e o preparo da captura desktop. Valida
+requisições/respostas do preload, mantém somente uma escolha pendente e observa
+rejeições de IPC antes de a aquisição terminar. Cada captura entrega suas trilhas
+ao chamador somente após o preparo; falha ou descarte durante o preparo libera
+somente seus recursos. Cancelamento de áudio usa o ID do job, preservando outros
+grafos. Fechar áudio não bloqueia a rejeição da captura enquanto um AudioContext
+ainda está fechando. A tela já entregue nunca é encerrada pelo descarte do seletor;
+parar essa tela fecha o áudio por aplicativo associado e remove os listeners.
+
+`components/desktop/capture-dialog.tsx` projeta esse estado em React, mantendo
+confirmação da fonte, áudio isolado por aplicativo como padrão disponível e áudio
+do computador somente por escolha explícita. Miniaturas são URLs locais de imagem;
+nomes de janelas são texto. `capture-runtime.tsx` instala uma vez o adaptador de
+getDisplayMedia antes dos scripts restantes, monta no `trono:ready` e descarta em
+pagehide. Preserva os argumentos originais e restaura o método somente se ainda
+possuir a instalação. `legacy/desktop-platform.js` e sua entrada foram removidos.
 
 `lib/voice/runtime.ts` compõe os donos da chamada por imports diretos, com uma
 instância por janela. O bootstrap instala preferências tipadas antes dos scripts;

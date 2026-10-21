@@ -25,7 +25,7 @@ O histórico das etapas anteriores permanece no Git.
 | Perfis e comunidade | `lib/profiles/`, `lib/community/` e `lib/messenger/` possuem leitura/edição, presença, conversas e anexos; interfaces em React. |
 | Notificações | `lib/notifications/` possui preferências, contadores, deduplicação e entrega web/nativa. |
 | Chamada | `lib/voice/` possui captura, publicação, P2P, SFU, recuperação, reprodução, diagnóstico, navegação e controles. Configurações e painéis em React. |
-| Jogos | Controladores, mesa, navegação, escolhas e motor local de A Lei do Trono convertidos. Azul, Splendor, Love Letter e host de Cinzas têm controladores tipados; alguns motores compartilhados ainda são JS. |
+| Jogos | Controladores, mesa, navegação, escolhas e motor local de A Lei do Trono convertidos. Azul, Splendor e Love Letter têm motores compartilhados e controladores tipados; host de Cinzas integrado. |
 | Clipes | `lib/clips/` possui buffer WebM, worker, sessão, armazenamento, exportação, preferências, coordenação e ponte Windows; biblioteca e controles em React. |
 | Gravação manual | `lib/recording/` possui captura, mixer, encoder e escrita; `components/recording/` possui controles e runtime único. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
@@ -72,6 +72,10 @@ recursos em `public/roguelite/` foram preservados.
 - `noise-suppression.js` e `light-noise.js`: cache/preparo dos filtros em
   `lib/voice/noise-processors.ts`, recursos locais e fachadas em `noise-runtime.ts`.
   Timers, fetch e nós são descartados; contextos/microfones são emprestados.
+- `desktop-platform.js`: seletor React em `components/desktop/capture-dialog.tsx`
+  e controlador em `lib/desktop/capture.ts`. Cancelamento de preparo usa o ID do
+  job; metadados inválidos e respostas tardias liberam recursos próprios. A tela
+  entregue pertence ao chamador; áudio do computador continua uma escolha explícita.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -83,7 +87,7 @@ continua disponível. Não reativar captura automática como efeito da migraçã
 
 O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 
-- Conta e plataforma: `auth-boot.js`, `auth.js`, `desktop-platform.js`.
+- Conta: `auth-boot.js`, `auth.js`.
 - Áudio: `audio.js`. Worklets e adaptadores de filtros já são tipados.
 - Soundboard: `soundboard-client.js`.
 
@@ -92,10 +96,11 @@ O inventário de execução é `src/legacy/manifest.json`. Permanecem:
 JS ainda por converter. `scripts/prepare-renderer.cjs` compila esse módulo e poda
 assets estáticos obsoletos somente após compilação bem-sucedida.
 
-Todos os motores compartilhados dos jogos saíram de `src/legacy/`. Próximo recorte:
-transferir o seletor/ciclo de captura de `desktop-platform.js` para TypeScript e
-React, preservando confirmação de fonte/áudio, cancelamento e empréstimo da chamada.
-Depois seguir por áudio compartilhado, soundboard e conta, sem mudar encoders.
+Todos os motores compartilhados dos jogos e o seletor desktop saíram de
+`src/legacy/`. Próximo recorte: transferir o áudio compartilhado de `audio.js`
+com seus consumidores, depois soundboard e conta, sem mudar encoders. A API
+`TronoApplicationAudio.cancel(id)` cancela somente o preparo/grafo desse job;
+não descarta o dono global nem as outras capturas.
 
 Antes desse recorte, `electron/native-helper.cjs` consolidou os caminhos do helper
 C++ de áudio/atividade. O modo de desenvolvimento procurava um diretório acima
@@ -167,8 +172,9 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Pacote Windows sem instalador + `tests/desktop-packaged.js` | Executável real, recursos locais e RNNoise passaram com perfil temporário. |
 | Caminho do helper/atividade | 29 verificações de núcleo, `test:activity:native`, fluxo completo de permissões/seletor/arquivos e pacote passaram. Recursos/interface usam `--mute-audio`; janela real detectada sem expor PID/caminhos. |
 | Worklets tipados | 5.704.704 amostras idênticas em 24 mil blocos, 44,1/48 kHz e mono/estéreo. Oito regressões, 51 de captura e renderização Web Audio no Electron real passaram. |
-| Dono de áudio por aplicativo | Oito regressões de protocolo/recursos e PCM via IPC/preload/worklet no Electron passaram, com créditos únicos e RMS 0,25. `npm test` completo e chamada/navegação nativa também passaram. |
+| Dono de áudio por aplicativo | Nove regressões de protocolo/recursos, incluindo cancelamento por ID, e PCM via IPC/preload/worklet no Electron passaram, com créditos únicos e RMS 0,25. `npm test` completo passou no recorte anterior; chamada/navegação nativa também passou após integrar o seletor. |
 | Preparo dos filtros | 13 modelos, três fluxos de navegador e medição de fala/ruído no Electron passaram. Registro reaproveitado por contexto; nativo/off sem filtros extras; chamada/navegação nativa preservada. |
+| Seletor desktop | 14 regressões do controlador e cinco verificações da interface passaram; fluxo nativo de seleção/cancelamento/captura e chamada completa com dois Electron passaram. Cancelamento, resposta tardia, isolamento de jobs e preservação da tela entregue são cobertos. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`

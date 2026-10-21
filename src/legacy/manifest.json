@@ -1,7 +1,6 @@
 {
   "scripts": [
     "auth-boot.js",
-    "desktop-platform.js",
     "audio.js",
     "auth.js",
     "soundboard-client.js",

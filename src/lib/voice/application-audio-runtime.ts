@@ -3,7 +3,7 @@ import type { ApplicationAudioNative } from '../../types/application-audio';
 
 interface Runtime extends Window {
   TronoDesktop?: ApplicationAudioNative;
-  TronoApplicationAudio?: Pick<ReturnType<typeof createApplicationAudio>, 'create'>;
+  TronoApplicationAudio?: Pick<ReturnType<typeof createApplicationAudio>, 'create' | 'cancel'>;
 }
 const installed = new WeakMap<Window, () => Promise<void>>();
 
@@ -29,7 +29,7 @@ export function initializeApplicationAudio(target: Window): (() => Promise<void>
     ended: () => target.dispatchEvent(new CustomEvent('trono-application-audio-ended')),
     warn: (error) => console.warn('[ApplicationAudio]', error),
   });
-  const facade = { create: controller.create };
+  const facade = { create: controller.create, cancel: controller.cancel };
   runtime.TronoApplicationAudio = facade;
   let disposal: Promise<void> | undefined;
   const dispose = () => {

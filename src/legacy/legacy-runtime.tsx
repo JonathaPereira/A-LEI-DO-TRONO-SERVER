@@ -7,6 +7,7 @@ import { initializeCommunityNavigation } from '../components/navigation/communit
 
 import { initializeVoiceRuntime } from '../lib/voice/runtime';
 import { initializeApplicationAudio } from '../lib/voice/application-audio-runtime';
+import { initializeDesktopCapture } from '../components/desktop/capture-runtime';
 import { initializeNoiseProcessors } from '../lib/voice/noise-runtime';
 import { initializeClipStore } from '../lib/clips/browser';
 import { initializeClipLibraryView } from '../components/clips/library-runtime';
@@ -100,13 +101,14 @@ export function LegacyRuntime() {
       initializeClipStore(window);
       initializeClipLibraryView(window);
       initializeClipPreferencesView(window);
+      initializeApplicationAudio(window);
+      initializeDesktopCapture(window);
       for (const filename of manifest.scripts) {
         if (filename === 'soundboard-client.js') {
           initializeCommunity(window);
           initializeChannelManagement(window);
         }
         if (filename !== 'auth-boot.js') await loadScript(filename);
-        if (filename === 'desktop-platform.js') initializeApplicationAudio(window);
         if (filename === 'auth.js') {
           initializePortal(window);
           initializeProfileEditor(window);

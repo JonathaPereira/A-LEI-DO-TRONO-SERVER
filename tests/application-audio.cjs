@@ -204,6 +204,27 @@ test('disposal cancels a pending worklet and observes its late rejection without
   assert.deepEqual(f.stopped, ['capture-a']);
 });
 
+test('cancelling one pending ID preserves another active application audio graph', async () => {
+  const module = deferred(),
+    f = fixture({
+      loadModule: (context) => (context.sampleRate === 48000 ? module.promise : Promise.resolve()),
+    });
+  const active = await f.owner.create(info('active'));
+  const pending = f.owner.create({ ...info('pending'), sampleRate: 48000 });
+  const rejected = assert.rejects(pending, { name: 'AbortError' });
+  await tick();
+  assert.equal(f.owner.cancel('pending'), true);
+  assert.equal(f.owner.cancel('pending'), false);
+  assert.equal(f.owner.cancel('unknown'), false);
+  await rejected;
+  assert.deepEqual(f.stopped, ['pending']);
+  assert.equal(f.contexts[0].closes, 0);
+  module.resolve();
+  await tick();
+  await active.close();
+  await f.owner.dispose();
+});
+
 test('native termination cancels a pending resume and stops the helper before context close resolves', async () => {
   const resumed = deferred(),
     closed = deferred();
