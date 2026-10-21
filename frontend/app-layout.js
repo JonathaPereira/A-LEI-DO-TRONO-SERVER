@@ -78,7 +78,7 @@ window.TronoAppLayout=(()=>{
     $('channelHomeBtn').onclick=()=>void navigate('home');
     for(const input of document.querySelectorAll('[name=appLayout]'))input.onchange=()=>{if(input.checked)apply(input.value,{save:true});};
     new MutationObserver(syncView).observe(document.body,{attributes:true,attributeFilter:['class','data-desktop-view']});
-    for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen','gamesScreen','azulScreen','rogueliteScreen','nexusScreen','splendorScreen','loveLetterScreen'])new MutationObserver(syncView).observe($(id),{attributes:true,attributeFilter:['class']});
+    for(const id of ['portalScreen','setupScreen','roomScreen','gameScreen','chatOnlyScreen','gamesScreen','azulScreen','rogueliteScreen','nexusScreen','splendorScreen','loveLetterScreen','ticketToRideScreen'])new MutationObserver(syncView).observe($(id),{attributes:true,attributeFilter:['class']});
     window.addEventListener('trono-auth-change',read);window.addEventListener('trono-profile-change',identity);window.addEventListener('trono-call-change',identity);
     window.TronoNetwork.onMessage(event=>{if(['connection','room-state','joined-room','joined-text-channel','voice-room-attached','left-voice-room'].includes(event.type))identity();});
     window.addEventListener('trono-personal-change',event=>{if(event.detail.key==='appLayout'&&window.TronoPersonal.get('appLayout','original')!==current)read();});

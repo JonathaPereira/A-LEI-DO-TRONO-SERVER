@@ -1,3 +1,11 @@
+## Windows 0.3.0 · Ticket to Ride nos EUA
+
+Jogos → Ticket to Ride adiciona o mapa clássico dos Estados Unidos para 2–5
+participantes, mesas por código, bots e destinos privados. O servidor valida
+cartas, pagamentos, rotas duplas, rodada final e maior caminho. A chamada e o
+compartilhamento de PC do PR #40 preservam o protocolo 2 e o controle separado.
+Veja [como atualizar a versão 0.3.0](ATUALIZAR_WINDOWS_v0.3.0.md).
+
 Windows **0.2.12**: controle separado para o convidado, perfil de resposta rápida e moderação da chamada. [Atualizar](ATUALIZAR_WINDOWS_v0.2.12.md) · [Compartilhar PC Beta](COMPARTILHAR_PC_BETA.md). Requer backend no Render, sem SQL novo.
 
 ## Windows 0.2.10 · painel compacto e prioridade ao SFU

@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.15
+M&N · A Lei do Trono — Windows 0.3.0
 
-1. Instalação nova: instale MN-Trono-0.2.15-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.0-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -154,7 +154,7 @@ Publique o frontend e instale o EXE desta mesma entrega para atualizar
 o site e a janela do aplicativo. Sem SQL ou backend novo nesta atualização.
 Guia: ATUALIZAR_WINDOWS_v0.2.14.md.
 
-VERSÃO 0.2.15 — AVISOS, CONTROLES DA CALL E NEXUS
+VERSÃO 0.3.0 — AVISOS, CONTROLES DA CALL E NEXUS
 Configurações > Notificações oferece Notificações do Windows e um botão de
   teste. Selecione Todas as mensagens para incluir os canais; mensagens reais
   notificam em segundo plano, respeitando filtros e canais silenciados.
@@ -170,4 +170,9 @@ Publique o frontend e atualize o aplicativo desta entrega para abrir o novo
 upload no site e no Windows. O jogo continua hospedado no itch.io.
 Sem alteração no backend do Trono nem SQL novo. Para o PvP do Nexus 0.15,
 o servidor separado nexus-pvp precisa executar a branch codex/nexus-015.
-Guia: ATUALIZAR_WINDOWS_v0.2.15.md.
+Guia: ATUALIZAR_WINDOWS_v0.3.0.md.
+
+Windows 0.3.0: Ticket to Ride no mapa clássico dos EUA.
+Jogos → Ticket to Ride: 2–5 pessoas, bots, destinos secretos e maior caminho.
+Atualize o backend para 0.14.0-alpha antes do frontend e EXE. Sem SQL novo.
+Compartilhar PC Beta conserva o protocolo 2 e o controle separado do convidado.
