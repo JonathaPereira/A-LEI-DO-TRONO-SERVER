@@ -1,5 +1,5 @@
 'use strict';
-const { accountRole, permissions } = require('./roles');
+const { accountRole, permissions } = require('./roles.ts');
 const { cleanProfile } = require('./profile-customization.ts');
 
 // Supabase keeps password hashes and recovery tokens. The application never stores passwords.

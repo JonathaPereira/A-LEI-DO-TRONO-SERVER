@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
 const express=require('express'),{chromium,expect}=require('@playwright/test');
-const {startFixture}=require('./auth-fixture'),{validateSound}=require('../server/soundboard');
+const {startFixture}=require('./auth-fixture'),{validateSound}=require('../server/soundboard.ts');
 function wave(seconds){const size=seconds*16000*2,b=Buffer.alloc(44+size);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(16000,24);b.writeUInt32LE(32000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(size,40);return b;}
 
 test('frontend Chromium: permissions, channels, fullscreen, camera recovery, audio trimming and responsive layout', {timeout:180000}, async t=>{

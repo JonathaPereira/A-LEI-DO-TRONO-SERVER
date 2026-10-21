@@ -8,13 +8,13 @@ const { RealtimeSfuManager } = require('./realtime-sfu');
 const { createAuth } = require('./auth');
 const { createFiles } = require('./files');
 const { createCommunity } = require('./community');
-const { createChatHistory } = require('./chat-history');
+const { createChatHistory } = require('./chat-history.ts');
 const { createSocialService } = require('./social-service');
 const { createAzulService } = require('./azul-service');
 const { createSplendorService } = require('./splendor-service');
 const { createLoveLetterService } = require('./love-letter-service');
 const { createCommunityManagement } = require('./community-management');
-const { permissions, CREATOR_EMAIL } = require('./roles');
+const { permissions, CREATOR_EMAIL } = require('./roles.ts');
 const { safeThroneLawChoices } = require('../src/lib/games/throne-law-planner.ts');
 
 function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}) {
@@ -2941,6 +2941,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
     loveLetterService.stop();
     community.stop();
     communityManagement.stop();
+    chatHistory.close();
     realtimeSfu.stop();
     for (const client of wss.clients) client.terminate();
     closePromise = new Promise((resolve, reject) => {

@@ -3,8 +3,8 @@ const crypto = require('crypto');
 const https = require('https');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
-const { permissions } = require('./roles');
-const { validateSound, MAX_BYTES: SOUND_BYTES } = require('./soundboard');
+const { permissions } = require('./roles.ts');
+const { validateSound, MAX_BYTES: SOUND_BYTES } = require('./soundboard.ts');
 const LIMITS = { file: 10_000_000, video: 100_000_000, avatar: 10_000_000, total: 8_000_000_000 };
 const PREVIEW_MIMES = new Set([
   'image/png',

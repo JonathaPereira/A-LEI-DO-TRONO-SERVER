@@ -1,11 +1,10 @@
-'use strict';
-
-const MAX_SECONDS = 15,
+export const MAX_SECONDS = 15,
   MAX_BYTES = 44 + 48000 * 2 * 2 * MAX_SECONDS;
-const invalid = (code, message) => Object.assign(Error(message), { code, status: 400 });
+const invalid = (code: 'INVALID_SOUND' | 'SOUND_TOO_LONG', message: string) =>
+  Object.assign(Error(message), { code, status: 400 });
 // The browser converts decoded uploads to canonical PCM WAV. Read sample counts,
 // not client-provided duration/metadata, so renamed files cannot bypass the limit.
-function validateSound(buffer) {
+export function validateSound(buffer: unknown) {
   if (
     !Buffer.isBuffer(buffer) ||
     buffer.length < 46 ||
@@ -39,6 +38,5 @@ function validateSound(buffer) {
   const frames = dataBytes / block;
   if (frames > rate * MAX_SECONDS)
     throw invalid('SOUND_TOO_LONG', 'O efeito sonoro pode ter no máximo 15 segundos.');
-  return { mime: 'audio/wav', durationMs: Math.ceil((frames * 1000) / rate) };
+  return { mime: 'audio/wav' as const, durationMs: Math.ceil((frames * 1000) / rate) };
 }
-module.exports = { validateSound, MAX_SECONDS, MAX_BYTES };

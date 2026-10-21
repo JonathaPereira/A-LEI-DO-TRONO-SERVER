@@ -4,7 +4,7 @@ const { test } = require('node:test'),
 const { createSoundboard } = require('../src/lib/soundboard/controller.ts');
 const { encodeWav, waveformPeaks } = require('../src/lib/soundboard/wav.ts');
 const { decodeSound } = require('../src/lib/soundboard/decode.ts');
-const { validateSound } = require('../server/soundboard');
+const { validateSound } = require('../server/soundboard.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const deferred = () => {
   let resolve, reject;

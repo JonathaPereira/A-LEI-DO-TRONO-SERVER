@@ -5,7 +5,7 @@ const path = require('node:path'),
   express = require('express');
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
-const { validateSound } = require('../server/soundboard');
+const { validateSound } = require('../server/soundboard.ts');
 function wave(seconds) {
   const bytes = Buffer.alloc(44 + 16000 * seconds * 2);
   bytes.write('RIFF');

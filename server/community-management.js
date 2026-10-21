@@ -1,5 +1,5 @@
 'use strict';
-const { permissions } = require('./roles');
+const { permissions } = require('./roles.ts');
 const fail = (code, message, status = 400) => Object.assign(Error(message), { code, status });
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

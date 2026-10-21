@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
-const express=require('express'),{createFiles}=require('../server/files'),{validateSound}=require('../server/soundboard');
+const express=require('express'),{createFiles}=require('../server/files'),{validateSound}=require('../server/soundboard.ts');
 function wave(seconds,rate=16000,channels=1){
   const size=seconds*rate*channels*2,b=Buffer.alloc(44+size);
   b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(channels,22);b.writeUInt32LE(rate,24);b.writeUInt32LE(rate*channels*2,28);b.writeUInt16LE(channels*2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(size,40);return b;

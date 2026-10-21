@@ -2020,6 +2020,21 @@ projeções por jogador. Nenhum motor permanece em `src/legacy/`; a coordenaçã
 serviços de mesa ainda é JavaScript. Supabase/RLS e o armazenamento de arquivos
 foram preservados.
 
+`roles.ts` recebe dados desconhecidos e deriva o cargo de dados verificados pelo
+provedor e do perfil persistido; metadados editáveis do usuário não decidem
+privilégios. Papéis inválidos não recebem permissões. `soundboard.ts` valida o
+buffer externo e os campos PCM/contagem de amostras, mantendo o mesmo limite de
+15 segundos e a mesma aceitação de WAV mono/estéreo de 8 a 48 kHz.
+
+`chat-history.ts` mantém filas por canal e confirma gravação antes do broadcast.
+Respostas RPC entram como `unknown`; páginas com linhas inválidas, IDs repetidos,
+canal diferente ou mais de 51 itens falham integralmente. Registros antigos podem
+conservar metadados adicionais; essa leitura não declara que esses campos já têm
+o contrato completo de `ChatMessage`. A interface mantém sua validação própria.
+`close()` aborta os HTTP do serviço e impede operações enfileiradas/futuras; o
+encerramento de `runtime.cjs` chama esse descarte. Rejeição de uma gravação não
+trava a fila do canal nem os demais canais. `.js` substituídos foram apagados.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e

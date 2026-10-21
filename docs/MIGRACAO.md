@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões e ICE já foram extraídos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV do soundboard e histórico possuem módulos TS estritos. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -106,6 +106,10 @@ recursos em `public/roguelite/` foram preservados.
   precedência idênticos. Isso ainda não consolida sobreposições históricas de CSS.
   A ponte de anexos sem consumidores foi apagada; layout de controles descarta
   observers/listeners e restaura os nós emprestados.
+- `server/roles.js`, `soundboard.js` e `chat-history.js`: fontes substituídos por
+  TypeScript estrito. Histórico valida páginas RPC e mantém compatibilidade com
+  metadados antigos; filas são isoladas por canal. Encerramento cancela requisições
+  pendentes e impede executar jobs que aguardavam na fila.
 
 O desktop mantém a política existente de replay web suspenso: não cria
 `TronoClips`, controles web ou ponte web de clipes no Electron. A gravação manual
@@ -199,6 +203,7 @@ Executada em Windows em 20/10/2026, após os recortes acima:
 | Boot da conta | Seis modelos de callback/HTML e sete verificações de navegador passaram: cadastro, confirmação de uso único, login/logout, recuperação, erros e restauração de convidado. Requisições de recursos não incluem tokens no referrer. Fluxo nativo de cabeçalho/captura/PCM/permissões passou. |
 | Conta tipada | 34 modelos de transporte/sessão/formulários/callback/HTML e autenticação HTTP/WS passaram. Sete verificações de conta e oito de permissões/comunidade/arquivos passaram no navegador. Electron real validou criptografia, restauração sem cache da aba, remoção de “lembrar”, login e logout no botão movido para configurações. Chamada completa com dois Electron, pacote Windows e `npm test` completo passaram. |
 | Composição e estilos | 28 verificações de navegador passaram, incluindo descarte/reinstalação do layout, hosts/trilhas preservados e fechamento com consumidores ativos. Os 33 estilos/770.491 bytes mantêm conteúdo e precedência idênticos. Tipagem, formatação, build, modelos de conta e `npm test` completo passaram; conta criptografada e pacote passaram no Electron real. |
+| Serviços básicos do backend | Oito verificações de política/fila/cancelamento/ciclo de vida passaram. As 24 regressões relacionadas de SQL, persistência após reinício, perfis e soundboard passaram; `npm test` completo, tipagem, formatação e build também passaram. Provedor e bancos são fixtures locais. |
 
 Evidências ignoradas pelo Git: `artifacts/clip-coordinator-*`, `clip-bridge-*`,
 `manual-recording-*`, `personal-preferences-*`, `bot-names-*`, `profile-validation-*`
