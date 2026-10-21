@@ -230,14 +230,28 @@ instância. `splendor-protocol.ts` valida comandos, IDs e vetores de fichas;
 reservas cegas, pagamento, devolução e nobres continuam validados pelo motor.
 A projeção continua individual por jogador, inclusive nos logs da reserva cega.
 
+Primeiro recorte de SFU concluído: `realtime-policy.ts` possui leitura de env,
+perfis, limites de consumo, qualidade/RID e estimativas de egress;
+`realtime-usage.ts` possui contador e checkpoint mensal. O manager usa o mesmo
+contador por getter, sem cópia paralela. Caminho de checkpoint/env podem ser
+injetados por instância; dados malformados não restauram bytes. Defaults, limites
+e perfis de bitrate foram preservados. Leitura/gravação de arquivo saiu do manager,
+assim como helpers de política substituídos e `totalGb()`, sem consumidores.
+`realtime-sfu.js` continua necessário: negociação, transporte e shutdown ainda
+estão nesse arquivo. Não é uma conversão completa do manager.
+
 Próximo recorte recomendado: `server/realtime-sfu.js`, com cuidado de mídia.
 Começar lendo o manager completo e os testes de SFU/recuperação/desktop. Separar
-contratos, configuração/política, uso mensal e transporte do provedor, mantendo
+contratos e transporte do provedor (política/uso já foram extraídos), mantendo
 filas por sessão, gerações por cliente, autorização por sala e descarte de tracks.
 Preservar SDP/RTP/RID, perfis de bitrate/simulcast, limites e tempos de recuperação;
 não misturar ajustes de desempenho com essa conversão. O stop atual só limpa o
 intervalo e força um tick: é necessário transferir também HTTP/filas e impedir
 respostas tardias de recriarem sessões/publicações. Repetir SFU real no Electron.
+Os testes existentes de SFU/desktop exercitam principalmente donos do cliente e
+um relay WebRTC local. Acrescentar regressões diretas do manager com provedor
+injetado para publicação/assinatura, filas, encerramento e respostas inválidas;
+não tratar esses testes do cliente como prova integral do backend/provedor real.
 
 Sequência restante, após esse recorte:
 
@@ -253,7 +267,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 82 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 88 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -283,10 +297,16 @@ privadas foram idênticas ao serviço anterior. Os três casos de interface, inc
 partidas completas nos dois hosts e preservação da chamada, e o pacote Windows
 existente passaram contra o backend atual. Restam apenas dois arquivos JS/CJS no
 servidor; isso ainda não encerra a migração completa.
+Política SFU acrescenta seis regressões de configuração, limites, camadas,
+checkpoint, retomada/virada mensal e isolamento. Houve paridade em 20 casos de
+limite/base, 960 estimativas de bitrate e 1.500 decisões de RID. Os 125 casos de
+`test:sfu`, a chamada completa com dois Electron e o relay SFU em Electron passaram.
+Nenhum parâmetro de negociação, captura, bitrate ou recuperação foi ajustado.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
 Love Letter usa `artifacts/love-letter-service-*`;
 Azul usa `artifacts/azul-service-*`;
 Splendor usa `artifacts/splendor-service-*`;
+política/uso SFU usam `artifacts/realtime-policy-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;

@@ -2165,6 +2165,17 @@ usa `publicState(viewer)`: baralhos e reservas cegas de outras pessoas não entr
 na visão, inclusive no histórico de jogadas. Shutdown cancela gravações/leituras
 concorrentes e impede novos eventos ou tentativas de persistência.
 
+`realtime-policy.ts` reúne configuração, perfis de bitrate, limites, qualidade/RID
+e estimativas de egress do SFU; o payload público seleciona campos e não contém
+credenciais. Defaults, limiares e fallback de camadas permanecem os anteriores.
+`realtime-usage.ts` é o dono do contador e do arquivo de checkpoint: integra egress
+com teto de 15 segundos por tick, reinicia no mês UTC e não cobra o intervalo em
+que o processo esteve desligado. Falha de arquivo é não fatal. O manager lê o
+mesmo estado por getter; não mantém outro contador. Env/caminho são injetáveis
+por instância para testes locais. Negociação, provedor, filas e shutdown ainda
+pertencem a `realtime-sfu.js` e aguardam conversão; testes do relay no cliente não
+substituem regressões diretas desse manager.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e

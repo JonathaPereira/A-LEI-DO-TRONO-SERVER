@@ -1,33 +1,17 @@
 'use strict';
-
-const fs = require('fs');
-const path = require('path');
-
-const CF_BASE = 'https://rtc.live.cloudflare.com/v1';
 const { createIceProvider } = require('./ice.ts');
-const USAGE_FILE = process.env.REALTIME_USAGE_FILE || '/tmp/a_lei_do_trono_realtime_usage.json';
-const ALLOWED_KINDS = new Set(['audio', 'camera', 'screen', 'screen-audio']);
-const ALLOWED_QUALITIES = new Set(['economy', 'balanced', 'high']);
-const QUALITY_ORDER = ['economy', 'balanced', 'high'];
-const PROFILE = {
-  economy: { audio: 64000, camera: { f: 900000, h: 450000, q: 180000 }, screen: 4000000 },
-  balanced: { audio: 96000, camera: { f: 2200000, h: 950000, q: 350000 }, screen: 8000000 },
-  high: { audio: 128000, camera: { f: 3500000, h: 1400000, q: 450000 }, screen: 10000000 },
-};
-
-function envBool(name, fallback = false) {
-  const v = process.env[name];
-  if (v == null) return fallback;
-  return /^(1|true|yes|on)$/i.test(String(v).trim());
-}
-function envNum(name, fallback) {
-  const n = Number(process.env[name]);
-  return Number.isFinite(n) ? n : fallback;
-}
-function monthKeyUTC(ts = Date.now()) {
-  const d = new Date(ts);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}
+const {
+  PROFILE,
+  ALLOWED_KINDS,
+  ALLOWED_QUALITIES,
+  readRealtimeSettings,
+  realtimePolicy,
+  clampRealtimeQuality,
+  clampRealtimeRid,
+  subscriptionBitrate,
+} = require('./realtime-policy.ts');
+const { createRealtimeUsage } = require('./realtime-usage.ts');
+const CF_BASE = 'https://rtc.live.cloudflare.com/v1';
 function sdpOk(desc, type) {
   return (
     !!desc &&
@@ -49,56 +33,43 @@ function safeErrorBody(body) {
 }
 
 class RealtimeSfuManager {
-  constructor({ rooms, send, broadcastVoiceRoster, chatOnlyRoomId, version }) {
+  constructor({
+    rooms,
+    send,
+    broadcastVoiceRoster,
+    chatOnlyRoomId,
+    version,
+    env = process.env,
+    usageFile = env.REALTIME_USAGE_FILE || '/tmp/a_lei_do_trono_realtime_usage.json',
+  }) {
     this.rooms = rooms;
     this.send = send;
     this.broadcastVoiceRoster = broadcastVoiceRoster;
     this.chatOnlyRoomId = chatOnlyRoomId;
     this.version = version;
-    this.appId = String(process.env.CLOUDFLARE_REALTIME_APP_ID || '').trim();
-    this.token = String(process.env.CLOUDFLARE_REALTIME_API_TOKEN || '').trim();
-    this.enabled = envBool('CLOUDFLARE_REALTIME_ENABLED', false);
-    this.turnEnabled = envBool('CLOUDFLARE_TURN_ENABLED', false);
-    this.turnKeyId = String(process.env.CLOUDFLARE_TURN_KEY_ID || '').trim();
-    this.turnToken = String(process.env.CLOUDFLARE_TURN_API_TOKEN || '').trim();
-    this.turnTtl = Math.max(
-      600,
-      Math.min(172800, Math.floor(envNum('CLOUDFLARE_TURN_TTL_SECONDS', 21600))),
-    );
+    Object.assign(this, readRealtimeSettings(env));
     this.ice = createIceProvider({
       enabled: this.turnEnabled,
       keyId: this.turnKeyId,
       token: this.turnToken,
       ttl: this.turnTtl,
     });
-    this.softLimitGb = Math.max(0, envNum('REALTIME_MONTHLY_SOFT_LIMIT_GB', 800));
-    this.hardLimitGb = Math.max(this.softLimitGb, envNum('REALTIME_MONTHLY_HARD_LIMIT_GB', 950));
-    this.ultraDisableGb = Math.max(0, envNum('REALTIME_ULTRA_DISABLE_GB', 800));
-    this.highDisableGb = Math.max(this.ultraDisableGb, envNum('REALTIME_HIGH_DISABLE_GB', 850));
-    this.screenDisableGb = Math.max(this.highDisableGb, envNum('REALTIME_SCREEN_DISABLE_GB', 900));
-    this.monthBaseGb = Math.max(0, envNum('REALTIME_MONTHLY_BASE_GB', 0));
-    this.maxParticipants = Math.max(
-      2,
-      Math.min(32, Math.floor(envNum('REALTIME_MAX_PARTICIPANTS', 8))),
-    );
-    this.estimateSafetyFactor = Math.max(
-      1,
-      Math.min(4, envNum('REALTIME_ESTIMATE_SAFETY_FACTOR', 1.5)),
-    );
     this.sessions = new Map();
     this.clientGenerations = new Map();
     this.sessionQueues = new Map();
     this.publicationsByRoom = new Map();
     this.subscriptions = new Map();
-    this.usage = { month: monthKeyUTC(), bytes: 0, lastTick: Date.now(), loadedFromDisk: false };
+    this.usageMeter = createRealtimeUsage({ file: usageFile });
     this.lastPolicySignature = '';
     this.lastRestrictionSignature = '';
     this.enforcementRunning = false;
-    this._loadUsage();
     this.timer = setInterval(() => this._tick(), 5000);
     this.timer.unref?.();
   }
 
+  get usage() {
+    return this.usageMeter.state;
+  }
   stop() {
     clearInterval(this.timer);
     this._tick(true);
@@ -109,40 +80,8 @@ class RealtimeSfuManager {
   turnConfigured() {
     return !!(this.turnKeyId && this.turnToken);
   }
-  totalGb() {
-    return this.monthBaseGb + this.usage.bytes / 1e9;
-  }
   policy() {
-    const gb = this.totalGb();
-    const hardBlocked = gb >= this.hardLimitGb;
-    const screenAllowed = gb < this.screenDisableGb && !hardBlocked;
-    const highAllowed = gb < this.highDisableGb && !hardBlocked;
-    const ultraAllowed = false; // Perfil Ultra removido de todos os canais.
-    const maxQuality = hardBlocked ? 'economy' : !highAllowed ? 'balanced' : 'high';
-    return {
-      enabled: this.enabled,
-      configured: this.configured(),
-      hardBlocked,
-      softWarning: gb >= this.softLimitGb,
-      screenAllowed,
-      highAllowed,
-      ultraAllowed,
-      maxQuality,
-      estimatedGb: Number(gb.toFixed(3)),
-      processEstimatedGb: Number((this.usage.bytes / 1e9).toFixed(3)),
-      baseGb: this.monthBaseGb,
-      thresholds: {
-        soft: this.softLimitGb,
-        ultra: this.ultraDisableGb,
-        high: this.highDisableGb,
-        screen: this.screenDisableGb,
-        hard: this.hardLimitGb,
-      },
-      month: this.usage.month,
-      maxParticipants: this.maxParticipants,
-      usageIsEstimate: true,
-      estimateSafetyFactor: this.estimateSafetyFactor,
-    };
+    return realtimePolicy(this, this.usage);
   }
   statusPayload() {
     const p = this.policy();
@@ -202,28 +141,6 @@ class RealtimeSfuManager {
     for (const p of room.players.values()) if (p.voiceJoined) this.send(p.ws, payload);
   }
 
-  _loadUsage() {
-    try {
-      const data = JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
-      if (data?.month === this.usage.month && Number.isFinite(Number(data.bytes))) {
-        this.usage.bytes = Math.max(0, Number(data.bytes));
-        this.usage.loadedFromDisk = true;
-      }
-    } catch {}
-  }
-  _saveUsage() {
-    try {
-      fs.mkdirSync(path.dirname(USAGE_FILE), { recursive: true });
-      fs.writeFileSync(
-        USAGE_FILE,
-        JSON.stringify({
-          month: this.usage.month,
-          bytes: this.usage.bytes,
-          updatedAt: new Date().toISOString(),
-        }),
-      );
-    } catch {}
-  }
   _currentEgressBps() {
     let total = 0;
     for (const sub of this.subscriptions.values())
@@ -231,15 +148,9 @@ class RealtimeSfuManager {
     return total;
   }
   _tick(force = false) {
-    const now = Date.now(),
-      m = monthKeyUTC(now);
-    if (m !== this.usage.month) {
-      this.usage = { month: m, bytes: 0, lastTick: now, loadedFromDisk: false };
-    }
-    const dt = Math.max(0, Math.min(15000, now - this.usage.lastTick));
-    this.usage.lastTick = now;
-    if (dt > 0) this.usage.bytes += (this._currentEgressBps() / 8) * (dt / 1000);
-    if (force || now % 15000 < 5200) this._saveUsage();
+    const now = Date.now();
+    this.usageMeter.advance(this._currentEgressBps(), now);
+    if (force || now % 15000 < 5200) this.usageMeter.save(now);
     const currentPolicy = this.policy(),
       sig = JSON.stringify(currentPolicy);
     if (sig !== this.lastPolicySignature) {
@@ -364,13 +275,8 @@ class RealtimeSfuManager {
   _pubKey(ownerId, kind) {
     return `${ownerId}:${kind}`;
   }
-  _qualityIndex(q) {
-    return Math.max(0, QUALITY_ORDER.indexOf(q));
-  }
   _clampQuality(q) {
-    q = ALLOWED_QUALITIES.has(q) ? q : 'balanced';
-    const max = this.policy().maxQuality;
-    return this._qualityIndex(q) > this._qualityIndex(max) ? max : q;
+    return clampRealtimeQuality(q, this.policy());
   }
   clampQuality(q) {
     return this._clampQuality(q);
@@ -386,32 +292,11 @@ class RealtimeSfuManager {
     }
     return quality;
   }
-  _preferredRid(q) {
-    q = this._clampQuality(q);
-    return q === 'economy' ? 'q' : 'f';
-  }
   _clampRid(pub, requestedRid, desiredQuality = 'balanced') {
-    const available = Array.isArray(pub?.rids)
-      ? pub.rids.filter((r) => ['f', 'h', 'q'].includes(r))
-      : [];
-    if (!available.length) return null;
-    let rid = available.includes(requestedRid) ? requestedRid : this._preferredRid(desiredQuality);
-    const p = this.policy();
-    if (rid === 'f' && !p.highAllowed) rid = 'h';
-    if (!available.includes(rid))
-      rid = available.includes('h') ? 'h' : available.includes('q') ? 'q' : available[0];
-    return rid;
+    return clampRealtimeRid(pub, requestedRid, desiredQuality, this.policy());
   }
   _subscriptionBps(pub, preferredRid) {
-    const pr = PROFILE[pub.quality] || PROFILE.balanced;
-    let bps;
-    if (pub.kind === 'audio') bps = pr.audio;
-    else if (pub.kind === 'screen-audio') bps = 192000;
-    else if (pub.kind === 'screen') {
-      const factor = preferredRid === 'q' ? 0.18 : preferredRid === 'h' ? 0.42 : 1;
-      bps = (pub.screenBitrate || pr.screen) * factor;
-    } else bps = pr.camera[preferredRid] || pr.camera.h;
-    return Math.ceil(bps * this.estimateSafetyFactor);
+    return subscriptionBitrate(pub, preferredRid, this.estimateSafetyFactor);
   }
   async _publicationActive(pub, { maxAge = 1200 } = {}) {
     if (!pub?.sessionId || !pub?.trackName) return false;
