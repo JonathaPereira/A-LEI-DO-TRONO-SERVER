@@ -1,35 +1,84 @@
-'use strict';
-const Bots = require('../src/lib/games/bot-names.ts');
-const crypto = require('node:crypto'),
-  Rules = require('../src/lib/games/love-letter-rules.ts');
-const failure = (code, message) => Object.assign(Error(message), { code: 'LOVE_LETTER_' + code });
-function createLoveLetterService({
+import * as Bots from '../src/lib/games/bot-names.ts';
+import crypto from 'node:crypto';
+import * as Rules from '../src/lib/games/love-letter-rules.ts';
+import type { BackendAccount } from './auth-contract';
+import type { LoveLetterRoom } from '../src/types/love-letter';
+import {
+  readLoveLetterCommand,
+  readLoveLetterMove,
+  requestId,
+  loveLetterFailure as failure,
+  type LoveLetterServerEvent,
+} from './love-letter-protocol.ts';
+import { object } from './http-api.ts';
+type Account = Pick<
+  BackendAccount,
+  'id' | 'nickname' | 'expiresAt' | 'avatar_preset' | 'avatar_file_id'
+>;
+export interface LoveLetterConnection {
+  account?: Account | null;
+  loveLetterWatching?: boolean;
+  loveLetterRoomId?: string | null;
+}
+type Connection = LoveLetterConnection;
+type AuthenticatedConnection = Connection & { account: Account };
+interface Player {
+  id: string;
+  name: string;
+  bot: boolean;
+  ws: Connection | null;
+  forfeited?: boolean;
+  avatar_preset?: string;
+  avatar_file_id?: string | null;
+  offlineTimer?: NodeJS.Timeout | null;
+}
+interface Room {
+  id: string;
+  hostId: string;
+  maxPlayers: number;
+  players: Player[];
+  state: Rules.LoveLetterGameState | null;
+  updatedAt: number;
+  random: () => number;
+  botTimer?: NodeJS.Timeout;
+}
+interface Options {
+  wss: { clients: Iterable<Connection> };
+  send(connection: Connection, event: LoveLetterServerEvent): void;
+  now?: () => number;
+  createRandom?: () => () => number;
+  botDelay?: number;
+  disconnectDelay?: number;
+}
+export function createLoveLetterService({
   wss,
   send,
   now = Date.now,
   createRandom = () => Math.random,
   botDelay = 4200,
   disconnectDelay = 90000,
-} = {}) {
-  const rooms = new Map(),
-    membership = new Map(),
-    rates = new Map(),
-    timers = new Set();
-  const valid = (ws) => !!ws.account && ws.account.expiresAt > now();
-  function later(fn, ms) {
+}: Options) {
+  const rooms = new Map<string, Room>(),
+    membership = new Map<string, string>(),
+    rates = new Map<string, { count: number; until: number }>(),
+    timers = new Set<NodeJS.Timeout>();
+  let closed = false;
+  const valid = (ws: Connection): ws is AuthenticatedConnection =>
+    !!ws.account && ws.account.expiresAt > now();
+  function later(fn: () => void, ms: number) {
     const t = setTimeout(() => {
       timers.delete(t);
-      fn();
+      if (!closed) fn();
     }, ms);
     t.unref?.();
     timers.add(t);
     return t;
   }
-  function cancel(t) {
-    clearTimeout(t);
-    timers.delete(t);
+  function cancel(t?: NodeJS.Timeout | null) {
+    clearTimeout(t ?? undefined);
+    if (t) timers.delete(t);
   }
-  function view(room, id) {
+  function view(room: Room, id: string): LoveLetterRoom {
     return {
       id: room.id,
       hostId: room.hostId,
@@ -46,12 +95,13 @@ function createLoveLetterService({
       state: room.state ? Rules.publicState(room.state, id) : null,
     };
   }
-  function publish(room) {
+  function publish(room: Room) {
+    if (closed) return;
     for (const p of room.players)
       if (p.ws && valid(p.ws) && p.ws.account.id === p.id)
         send(p.ws, { type: 'love-letter-state', room: view(room, p.id) });
   }
-  function list(ws) {
+  function list(ws: AuthenticatedConnection) {
     send(ws, {
       type: 'love-letter-rooms',
       rooms: [...rooms.values()]
@@ -66,22 +116,26 @@ function createLoveLetterService({
     });
   }
   function lists() {
+    if (closed) return;
     for (const ws of wss.clients) if (valid(ws) && ws.loveLetterWatching) list(ws);
   }
-  function remove(room) {
+  function remove(room: Room) {
     cancel(room.botTimer);
     for (const p of room.players) {
       cancel(p.offlineTimer);
       if (membership.get(p.id) === room.id) membership.delete(p.id);
+      if (p.ws?.loveLetterRoomId === room.id) p.ws.loveLetterRoomId = null;
+      p.ws = null;
     }
     rooms.delete(room.id);
   }
-  function schedule(room) {
+  function schedule(room: Room) {
     cancel(room.botTimer);
     const s = room.state;
-    if (!s || !['action', 'chancellor'].includes(s.phase) || !room.players[s.turn].bot) return;
+    if (closed || !s || !['action', 'chancellor'].includes(s.phase) || !room.players[s.turn].bot)
+      return;
     room.botTimer = later(() => {
-      if (!rooms.has(room.id)) return;
+      if (closed || !rooms.has(room.id) || !room.state) return;
       apply(
         room,
         s.players[s.turn].id,
@@ -89,17 +143,22 @@ function createLoveLetterService({
       );
     }, botDelay);
   }
-  function apply(room, id, move) {
-    room.state = Rules.move(room.state, id, move);
+  function apply(room: Room, id: string, move: unknown) {
+    if (!room.state) throw failure('NOT_PLAYING', 'A partida ainda não começou.');
+    room.state = Rules.move(room.state, id, readLoveLetterMove(move));
     room.updatedAt = now();
     publish(room);
     schedule(room);
   }
-  function detach(ws, explicit = false) {
-    const room = rooms.get(ws.loveLetterRoomId),
+  function detach(ws: Connection, explicit = false) {
+    if (closed) {
+      ws.loveLetterRoomId = null;
+      return;
+    }
+    const room = rooms.get(ws.loveLetterRoomId || ''),
       p = room?.players.find((p) => p.id === ws.account?.id && p.ws === ws);
     ws.loveLetterRoomId = null;
-    if (!p) return;
+    if (!p || !room) return;
     p.ws = null;
     cancel(p.offlineTimer);
     const leave = () => {
@@ -110,12 +169,13 @@ function createLoveLetterService({
         p.forfeited = true;
         p.name = Bots.next(room.players.filter((x) => x !== p));
         Object.assign(
-          room.state.players.find((x) => x.id === p.id),
+          room.state.players.find((x) => x.id === p.id)!,
           { bot: true, forfeited: true, name: p.name },
         );
       } else room.players = room.players.filter((x) => x !== p);
       if (room.hostId === p.id)
-        room.hostId = room.players.find((x) => x.ws)?.id || room.players.find((x) => !x.bot)?.id;
+        room.hostId =
+          room.players.find((x) => x.ws)?.id || room.players.find((x) => !x.bot)?.id || room.hostId;
       if (!room.players.some((x) => x.ws || (x.offlineTimer && membership.has(x.id)))) remove(room);
       else {
         publish(room);
@@ -129,8 +189,8 @@ function createLoveLetterService({
       publish(room);
     }
   }
-  function attach(ws, room) {
-    const p = room.players.find((p) => p.id === ws.account.id);
+  function attach(ws: AuthenticatedConnection, room: Room) {
+    const p = room.players.find((p) => p.id === ws.account.id)!;
     if (p.forfeited) throw failure('LEFT', 'Você saiu desta partida. Entre em uma nova mesa.');
     if (p.ws && p.ws !== ws)
       throw failure('OTHER_SESSION', 'Sua conta já está nesta mesa em outra sessão.');
@@ -142,11 +202,12 @@ function createLoveLetterService({
     p.avatar_file_id = ws.account.avatar_file_id;
     ws.loveLetterRoomId = room.id;
     membership.set(p.id, room.id);
-    if (room.state) room.state.players.find((x) => x.id === p.id).name = p.name;
+    if (room.state) room.state.players.find((x) => x.id === p.id)!.name = p.name;
     publish(room);
     lists();
   }
-  function handle(ws, msg) {
+  function handle(ws: Connection, value: unknown) {
+    if (closed) return;
     if (!valid(ws)) {
       send(ws, {
         type: 'love-letter-error',
@@ -162,6 +223,7 @@ function createLoveLetterService({
         rates.set(ws.account.id, rate);
       }
       if (++rate.count > 100) throw failure('RATE_LIMIT', 'Aguarde um instante.');
+      const msg = readLoveLetterCommand(value);
       ws.loveLetterWatching = true;
       if (msg.action === 'list') {
         list(ws);
@@ -173,7 +235,7 @@ function createLoveLetterService({
         if (rooms.size >= 100) throw failure('BUSY', 'Mesas ocupadas. Tente novamente mais tarde.');
         if (!Number.isInteger(msg.maxPlayers) || !Rules.targetScore(msg.maxPlayers))
           throw failure('PLAYERS', 'Escolha de 2 a 6 participantes.');
-        const room = {
+        const room: Room = {
           id: crypto.randomBytes(5).toString('hex').toUpperCase(),
           hostId: ws.account.id,
           maxPlayers: msg.maxPlayers,
@@ -186,7 +248,7 @@ function createLoveLetterService({
         attach(ws, room);
         return;
       }
-      if (['join', 'resume'].includes(msg.action)) {
+      if (msg.action === 'join' || msg.action === 'resume') {
         const existing = membership.get(ws.account.id);
         if (existing && existing !== msg.roomId)
           throw failure('ALREADY_SEATED', 'Saia da mesa atual antes de entrar em outra.');
@@ -200,7 +262,7 @@ function createLoveLetterService({
         attach(ws, room);
         return;
       }
-      const room = rooms.get(ws.loveLetterRoomId);
+      const room = rooms.get(ws.loveLetterRoomId || '');
       if (!room || !room.players.some((p) => p.ws === ws))
         throw failure('NOT_MEMBER', 'Entre em uma mesa primeiro.');
       if (msg.action === 'leave') {
@@ -237,6 +299,7 @@ function createLoveLetterService({
       if (msg.action === 'next-round') {
         if (room.hostId !== ws.account.id)
           throw failure('FORBIDDEN', 'O anfitrião inicia a próxima rodada.');
+        if (!room.state) throw failure('NOT_PLAYING', 'A partida ainda não começou.');
         room.state = Rules.nextRound(room.state, room.random);
         room.updatedAt = now();
         publish(room);
@@ -252,11 +315,12 @@ function createLoveLetterService({
       }
       throw failure('ACTION', 'Opção inválida.');
     } catch (e) {
+      const known = object(e) && typeof e.code === 'string' && e.code.startsWith('LOVE_LETTER_');
       send(ws, {
         type: 'love-letter-error',
-        requestId: msg.requestId,
-        code: e.code || 'LOVE_LETTER_ERROR',
-        message: e.message,
+        requestId: requestId(value),
+        code: known ? (e.code as string) : 'LOVE_LETTER_ERROR',
+        message: known && e instanceof Error ? e.message : 'Não foi possível atualizar a mesa.',
       });
     }
   }
@@ -274,25 +338,35 @@ function createLoveLetterService({
   return {
     handle,
     disconnect: detach,
-    updateAccount(account) {
+    updateAccount(account: Account) {
+      if (closed) return;
       for (const r of rooms.values()) {
         const p = r.players.find((p) => p.id === account.id);
         if (!p || p.forfeited) continue;
         p.name = account.nickname;
         p.avatar_preset = account.avatar_preset;
         p.avatar_file_id = account.avatar_file_id;
-        if (r.state) r.state.players.find((p) => p.id === account.id).name = p.name;
+        if (r.state) r.state.players.find((p) => p.id === account.id)!.name = p.name;
         publish(r);
       }
       lists();
     },
-    health: () => ({ available: true, rooms: rooms.size }),
+    health: () => ({ available: !closed, rooms: rooms.size }),
     rooms,
     stop() {
+      if (closed) return;
+      closed = true;
+      for (const ws of wss.clients) {
+        ws.loveLetterWatching = false;
+        ws.loveLetterRoomId = null;
+      }
+      for (const room of rooms.values()) for (const player of room.players) player.ws = null;
+      rooms.clear();
+      membership.clear();
+      rates.clear();
       clearInterval(cleanup);
       for (const t of timers) clearTimeout(t);
       timers.clear();
     },
   };
 }
-module.exports = { createLoveLetterService };

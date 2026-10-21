@@ -2132,6 +2132,17 @@ recebe atividade de contas. A localização da voz tem prioridade sobre o canal 
 texto selecionado. A validação de apelido saiu de `auth.js` para o contrato puro
 `lib/auth/nickname.ts`, compartilhado pelo serviço de conta e pelos convidados.
 
+O backend de Love Letter usa `love-letter-service.ts` para salas, participação,
+bots, prazos de reconexão, limites e shutdown. `love-letter-protocol.ts` recebe
+dados desconhecidos, limita comandos/jogadas e descarta campos extras; revisão
+é conferida antes da jogada e o motor valida cartas, turno, alvo e ordem do
+Chanceler. A projeção `publicState(viewer)` mantém baralho, mãos alheias e efeitos
+privados fora do evento de cada participante. O serviço não altera voz/texto nem
+outras mesas. Stop cancela timers, descarta referências de salas/participantes e
+impede callbacks/novos comandos de publicarem estado. `loveLetterRandom` é a porta
+opcional da composição para embaralhamento determinístico das fixtures; não há
+variável de ambiente de teste lida pelo serviço de produção.
+
 ## Electron
 
 `electron/` contém main, preload, permissões, preferências, atualizações e

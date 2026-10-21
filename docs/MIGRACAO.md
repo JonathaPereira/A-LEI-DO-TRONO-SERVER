@@ -179,7 +179,7 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: autenticação e arquivos do backend convertidos, na branch
+Checkpoint de trabalho: autenticação, arquivos e serviço de Love Letter convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
@@ -205,14 +205,24 @@ de anexos usa essa porta em vez de alterar exports ESM. O registro sintético do
 soundboard agora inclui `object_key`, presente nas linhas reais; a ausência foi
 corretamente recusada pela validação nova. Nenhuma validação foi afrouxada.
 
-Próximo recorte recomendado: `server/love-letter-service.js`. Transferir salas,
-participação, projeções privadas, timers de bot/desconexão e validação dos comandos
-para TS. A fixture de aleatoriedade altera exports CommonJS desse serviço e deverá
-passar por uma porta explícita, como foi feito com armazenamento.
+`server/love-letter-service.js` também foi removido. `love-letter-service.ts`
+possui salas, participação, limites, bots, reconexão e timers;
+`love-letter-protocol.ts` valida comandos e estrutura da jogada. O motor segue
+autoritativo e recebe somente campos conhecidos após conferir a revisão.
+`publicState(viewer)` continua sendo a única projeção de cartas/efeitos privados.
+Stop limpa salas/participação e todos os timers, sem ações/broadcast tardios.
+A fixture de embaralhamento usa a porta `loveLetterRandom` da composição, sem
+alterar exports ESM. O teste de nomes compartilhados também aponta para o módulo TS.
+
+Próximo recorte recomendado: `server/azul-service.js`, seguido de Splendor.
+Além de salas/timers/comandos, transferir RPC de ranking, persistência/retry e
+cancelamento; uma confirmação tardia após stop não deve reativar sala nem ranking.
+Preservar IDs idempotentes das partidas, exclusão de desistentes e estado pendente
+quando o ranking estiver indisponível. Os motores já estão tipados.
 
 Sequência restante, após esse recorte:
 
-1. `server/love-letter-service.js`, `azul-service.js` e `splendor-service.js`:
+1. `server/azul-service.js` e `splendor-service.js`:
    coordenação, timers, persistência e projeções privadas. Motores já são TS.
 2. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
    autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
@@ -226,7 +236,7 @@ Sequência restante, após esse recorte:
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 63 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 69 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -241,7 +251,13 @@ Armazenamento acrescenta 19 regressões de privacidade, validação, quota,
 cancelamento, R2 e descarte. Links assinados foram idênticos em 24 cenários;
 upload/download/soundboard e a chamada completa em dois Electron passaram.
 Os testes usam adaptadores locais, sem acessar R2/Supabase reais.
+Love Letter acrescenta seis regressões de fronteira, privacidade, rate limit e
+shutdown. Em 100 partidas completas, 5.148 jogadas, 601 avanços de rodada e 11.698
+visões privadas foram idênticos ao serviço anterior. Partida completa no browser,
+fronteira nativa Electron e fluxo de jogos do pacote Windows existente passaram
+contra o backend atual. Nenhum instalador foi executado.
 Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
+Love Letter usa `artifacts/love-letter-service-*`;
 autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;

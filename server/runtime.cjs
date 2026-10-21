@@ -12,12 +12,17 @@ const { createChatHistory } = require('./chat-history.ts');
 const { createSocialService } = require('./social-service.ts');
 const { createAzulService } = require('./azul-service');
 const { createSplendorService } = require('./splendor-service');
-const { createLoveLetterService } = require('./love-letter-service');
+const { createLoveLetterService } = require('./love-letter-service.ts');
 const { createCommunityManagement } = require('./community-management.ts');
 const { permissions, CREATOR_EMAIL } = require('./roles.ts');
 const { safeThroneLawChoices } = require('../src/lib/games/throne-law-planner.ts');
 
-function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null, objectStorage } = {}) {
+function createRuntime({
+  scheduleDelay = (ms) => ms,
+  chooseDecrees = null,
+  objectStorage,
+  loveLetterRandom,
+} = {}) {
   const scheduledTimers = new Set();
 
   const app = express();
@@ -2471,7 +2476,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null, objec
   const community = createCommunity({ wss, rooms, send, auth: accountAuth });
   const azulService = createAzulService({ auth: accountAuth, wss, send });
   const splendorService = createSplendorService({ auth: accountAuth, wss, send });
-  const loveLetterService = createLoveLetterService({ wss, send });
+  const loveLetterService = createLoveLetterService({ wss, send, createRandom: loveLetterRandom });
   const socialService = createSocialService({
     auth: accountAuth,
     wss,

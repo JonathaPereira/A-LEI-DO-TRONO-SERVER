@@ -8,7 +8,7 @@ test('all tabletop services use the same names, number extra bots, and keep repl
   for (const [file, factory, kind] of [
     ['azul-service', 'createAzulService', 'azul'],
     ['splendor-service', 'createSplendorService', 'splendor'],
-    ['love-letter-service', 'createLoveLetterService', 'love-letter'],
+    ['love-letter-service.ts', 'createLoveLetterService', 'love-letter'],
   ]) {
     const me = { account: { id: 'me', nickname: 'Pessoa', expiresAt: Date.now() + 60000 } },
       friend = { account: { id: 'friend', nickname: 'Amigo', expiresAt: Date.now() + 60000 } },
