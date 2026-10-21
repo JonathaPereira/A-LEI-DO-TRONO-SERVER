@@ -82,7 +82,7 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
     }
     if(soundboard&&url.pathname==='/rest/v1/chat_files'){
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);
-      return reply(200,url.searchParams.get('id')==='eq.'+soundId?[{id:soundId,owner_id:[...users.values()][0]?.id,name:'Efeito',bytes:32044,mime:'audio/wav',kind:'soundboard',room_id:null,duration_ms:1000,state:'ready',created_at:new Date().toISOString()}]:[]);
+      return reply(200,url.searchParams.get('id')==='eq.'+soundId?[{id:soundId,owner_id:[...users.values()][0]?.id,object_key:'soundboard/fixture/'+soundId,name:'Efeito',bytes:32044,mime:'audio/wav',kind:'soundboard',room_id:null,duration_ms:1000,state:'ready',created_at:new Date().toISOString()}]:[]);
     }
     if(directAttachments&&(url.pathname==='/rest/v1/chat_files'||['reserve_direct_file','reserve_chat_file','mark_chat_file_deleting','direct_file_access','chat_storage_usage'].some(name=>url.pathname==='/rest/v1/rpc/'+name))){
       if(req.headers.apikey!=='sb_secret_fixture_only')return fail('permission_denied',403);

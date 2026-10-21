@@ -32,7 +32,7 @@ O histórico das etapas anteriores permanece no Git.
 | Soundboard | `lib/soundboard/` possui biblioteca, player, decode, recorte WAV e upload por sessão; `components/soundboard/` possui menu, editor e waveform React. Transporte e exclusões são compartilhados com FilesClient. |
 | Conta | `lib/auth/` possui transporte, validação, sessão, renovação, convidados e formulários; `components/auth/` possui diálogos React e integração única com rede/desktop. Política de senha compartilhada com o backend. |
 | Preferências/layout | `lib/preferences/` possui preferências por conta; layout, aparência, shell desktop, atividade e controles de atualização possuem donos tipados. |
-| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; sessões, ICE, permissões, WAV, histórico, comunidade e mensagens diretas possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços JS e `runtime.cjs`. |
+| Backend | `server/app.ts` compõe instâncias, `index.ts` inicia o processo; conta, arquivos, sessões, ICE, permissões, WAV, histórico, comunidade e mensagens diretas possuem módulos TS estritos, sem DOM. Jogos importam regras/nomes compartilhados de `lib/games/`. Restam serviços de jogos/SFU e `runtime.cjs`. |
 | Electron | `electron/` contém janela, preload, permissões e captura. Desenvolvimento/testes usam identidade e perfis separados da instalação. |
 
 As fachadas `Trono*` ainda necessárias encaminham aos mesmos donos; não devem
@@ -179,7 +179,7 @@ O aceite num Supabase completo permanece externo; nenhum projeto remoto foi alte
 
 ## Ponto de retomada da maratona
 
-Checkpoint de trabalho: autenticação do backend convertida, na branch
+Checkpoint de trabalho: autenticação e arquivos do backend convertidos, na branch
 `codex/next-typescript-structure`.
 O frontend não tem mais pasta legacy nem controladores JavaScript de domínio.
 A migração completa ainda não está concluída: os serviços abaixo continuam em
@@ -192,31 +192,41 @@ locais. Confirmação, recuperação sem enumeração, perfis e revogação perm
 O shutdown agora cancela os HTTP e limpa o timer/limites dessa instância;
 gravações já aceitas conservam as notificações após o cliente fechar.
 
-Próximo recorte recomendado: `server/files.js`. Separar assinatura/transporte R2,
-contratos das linhas/RPC e serviço de arquivos. Transferir também timer de limpeza,
-uploads e cancelamento. Não liberar quota/reserva antes de confirmar exclusão do
-objeto; um PUT interrompido pode ter sido aceito pelo armazenamento.
+`server/files.js` foi removido. `files.ts` possui autorização, uploads, quota e
+limpeza; `files-protocol.ts` valida páginas/reserva/confirmação; contratos e
+limites ficam em `files-contract.ts`. `storage-database.ts`, `storage-r2.ts` e
+`file-upload.ts` possuem DB, assinatura/objeto e leitura limitada do upload.
+Shutdown cancela HTTP/objeto e libera timer/deadlines; uma resposta tardia não
+libera quota nem publica exclusão. PUT incerto conserva a reserva até a limpeza
+posterior confirmar exclusão. Autorização privada exige booleano explícito.
+
+O runtime recebe `objectStorage` como dependência opcional para testes. A fixture
+de anexos usa essa porta em vez de alterar exports ESM. O registro sintético do
+soundboard agora inclui `object_key`, presente nas linhas reais; a ausência foi
+corretamente recusada pela validação nova. Nenhuma validação foi afrouxada.
+
+Próximo recorte recomendado: `server/love-letter-service.js`. Transferir salas,
+participação, projeções privadas, timers de bot/desconexão e validação dos comandos
+para TS. A fixture de aleatoriedade altera exports CommonJS desse serviço e deverá
+passar por uma porta explícita, como foi feito com armazenamento.
 
 Sequência restante, após esse recorte:
 
-1. `server/files.js`: contratos dos provedores e
-   armazenamento. Preservar verificação autoritativa da conta, revogação,
-   permissões, quotas e exclusões; não transportar segredos para o renderer.
-2. `server/azul-service.js`, `splendor-service.js` e `love-letter-service.js`:
+1. `server/love-letter-service.js`, `azul-service.js` e `splendor-service.js`:
    coordenação, timers, persistência e projeções privadas. Motores já são TS.
-3. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
+2. `server/realtime-sfu.js`: negociação/provedor e descarte. Preservar protocolo,
    autorização e parâmetros atuais de mídia; repetir testes nativos de chamada.
-4. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
+3. `server/runtime.cjs`: extrair coordenação de canais e partida de A Lei do
    Trono para donos por domínio, mantendo instâncias independentes e shutdown.
    Completar os payloads de jogos/SFU que ainda não têm validação integral.
-5. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
+4. Consolidar a cascata em `src/styles/` e avaliar imports diretos pelo Next.
    A movimentação de arquivos está concluída; as sobreposições e a preparação
    estática continuam explicitamente preservadas.
-6. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
+5. Fechar os aceites físicos/externos descritos abaixo. Não confundir PCM
    sintético, PGlite ou browser/Electron com captura física, e-mail ou produção.
 
 Última validação de código: `typecheck`, `format:check`, build estático e
-`npm test` completos passaram. `test:server:lifecycle` tem 44 verificações;
+`npm test` completos passaram. `test:server:lifecycle` tem 63 verificações;
 `test:database` tem seis. Os 12 casos de comunidade/canais/arquivos/diretório/editor
 e a chamada completa com dois Electron reais passaram após converter o gerenciador.
 Os 22 modelos da sessão e a regressão de troca de conta durante salvar perfil
@@ -227,7 +237,12 @@ shutdown, HTTP e posse das alterações; 35 modelos e o fluxo HTTP/WebSocket de
 conta passaram. Os 13 casos de conta/editor/diretório no browser também passaram.
 No Electron real, persistência criptografada da conta e a chamada completa com
 dois clientes passaram; essa etapa não mede loopback físico ou FPS de jogo.
-As evidências dessa etapa ficam em `artifacts/backend-auth-*`;
+Armazenamento acrescenta 19 regressões de privacidade, validação, quota,
+cancelamento, R2 e descarte. Links assinados foram idênticos em 24 cenários;
+upload/download/soundboard e a chamada completa em dois Electron passaram.
+Os testes usam adaptadores locais, sem acessar R2/Supabase reais.
+Evidências: `artifacts/storage-owner-*` e `storage-signature-parity.json`;
+autenticação fica em `artifacts/backend-auth-*`;
 mensagens diretas ficam em `artifacts/social-service-*`;
 gerenciamento usa `artifacts/community-management-*`;
 presença usa `artifacts/community-service-*`; a composição

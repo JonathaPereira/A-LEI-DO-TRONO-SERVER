@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 const { RealtimeSfuManager } = require('./realtime-sfu');
 const { createAuth } = require('./auth.ts');
-const { createFiles } = require('./files');
+const { createFiles } = require('./files.ts');
 const { createCommunity } = require('./community.ts');
 const { createChatHistory } = require('./chat-history.ts');
 const { createSocialService } = require('./social-service.ts');
@@ -17,7 +17,7 @@ const { createCommunityManagement } = require('./community-management.ts');
 const { permissions, CREATOR_EMAIL } = require('./roles.ts');
 const { safeThroneLawChoices } = require('../src/lib/games/throne-law-planner.ts');
 
-function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}) {
+function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null, objectStorage } = {}) {
   const scheduledTimers = new Set();
 
   const app = express();
@@ -2445,6 +2445,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
 
   const chatHistory = createChatHistory({ auth: accountAuth });
   const fileStorage = createFiles({
+    adapter: objectStorage,
     auth: accountAuth,
     membership: (id, roomId) =>
       [...(rooms.get(roomId)?.players.values() || [])].some((p) => p.ws.account?.id === id),
@@ -2955,6 +2956,7 @@ function createRuntime({ scheduleDelay = (ms) => ms, chooseDecrees = null } = {}
     chatHistory.close();
     realtimeSfu.stop();
     accountAuth.stop();
+    fileStorage.stop();
     for (const client of wss.clients) client.terminate();
     closePromise = new Promise((resolve, reject) => {
       wss.close(() => {

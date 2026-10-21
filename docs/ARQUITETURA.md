@@ -2051,6 +2051,30 @@ respostas antes de aplicá-las, recusa duplicatas e projeta campos conhecidos de
 perfis públicos e contas privadas. E-mails continuam exclusivos do criador.
 
 `auth-contract.ts` descreve a identidade do adaptador autoritativo.
+`files.ts` possui o serviço de arquivos. A conta verificada e seu signal ficam em
+contextos privados por request; o Express não recebe campos de conta adicionais.
+`files-contract.ts` descreve registro privado, limites e porta `ObjectStorage`;
+`files-protocol.ts` valida páginas completas, identidade da reserva/confirmação,
+metadados e uso de quota. Listas filtradas recusam linhas de outro dono/canal,
+anexos privados exigem autorização booleana explícita e `object_key` não entra
+na projeção pública. Chaves de objetos existentes não foram renomeadas.
+
+`storage-database.ts` possui HTTP privilegiado, JSON e tradução dos motivos
+conhecidos do banco. `storage-r2.ts` preserva assinatura e links de cinco minutos,
+streaming HTTPS e diagnóstico limitado a status/código permitido; `file-upload.ts`
+possui detecção, leitura inicial e drenagem limitada de corpos recusados.
+Nenhum desses adaptadores cria outro cliente de mídia ou transporta segredos
+para o renderer. O runtime aceita `objectStorage` como porta opcional de composição;
+fixtures a usam sem alterar exports de módulos TS.
+
+Excluir marca a linha, confirma a exclusão do objeto e só então libera quota e
+notifica. Uma exclusão aceita termina mesmo sem seu cliente. Um PUT sem confirmação
+mantém a reserva pendente, inclusive se a primeira tentativa de remover o objeto
+parecer bem-sucedida; a limpeza posterior confirma novamente antes de liberar quota.
+`stop()` cancela DB/R2/streams, deadlines e timer de limpeza. Adapters que ignoram
+abort não podem liberar quota nem notificar depois do shutdown. Leituras e uploads
+usam também o escopo do cliente; falha de um request não encerra o serviço.
+
 `auth.ts` possui as rotas públicas de conta e seus limites por IP/e-mail;
 `auth-provider.ts` é o transporte único para Auth/Data API, com timeout e
 cancelamento até a leitura do corpo. `auth-errors.ts` traduz somente motivos

@@ -2,7 +2,7 @@
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const { createAuth } = require('../server/auth.ts');
-const { createFiles } = require('../server/files');
+const { createFiles } = require('../server/files.ts');
 const deferred = () => {
   let resolve;
   const promise = new Promise((yes) => {
