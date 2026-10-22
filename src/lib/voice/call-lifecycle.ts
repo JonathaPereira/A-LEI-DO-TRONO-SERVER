@@ -42,6 +42,7 @@ export function createVoiceCall(options: CallOptions) {
     joining: false,
   });
   let joining: Joining | null = null;
+  let activeRoomId: string | null = null;
   let activeController: AbortController | undefined;
   let unsubscribe: (() => void) | undefined;
   let disposed = false;
@@ -60,6 +61,7 @@ export function createVoiceCall(options: CallOptions) {
   function end(reason: VoiceLeaveReason) {
     const wasJoined = snapshot.joined;
     joining = null;
+    activeRoomId = null;
     // Invalidate before any release callback can dispatch track/network events.
     snapshot = Object.freeze({
       generation: snapshot.generation + 1,
@@ -92,6 +94,9 @@ export function createVoiceCall(options: CallOptions) {
       resolve: (value) => resolve(value),
     };
     joining = job;
+    // Navigation consumes the same departure event before this owner does.
+    // Bind identity to the call attempt instead of consulting cleared metadata.
+    activeRoomId = options.roomId() ?? null;
     activeController = job.controller;
     const generation = snapshot.generation + 1;
     const current = () =>
@@ -128,6 +133,8 @@ export function createVoiceCall(options: CallOptions) {
         ensure();
         options.onPrepared(choice);
         ensure();
+        // Preparation may attach a game room before capture starts.
+        activeRoomId = options.roomId() ?? activeRoomId;
         await abortable(options.microphone.acquire({ generation }), job.controller.signal);
         ensure();
         update({ joined: true, phase: 'connecting' });
@@ -171,7 +178,7 @@ export function createVoiceCall(options: CallOptions) {
         else if (
           ['left-game-room', 'left-voice-room', 'channel-deleted'].includes(message.type) &&
           typeof message.roomId === 'string' &&
-          message.roomId === options.roomId()
+          message.roomId === activeRoomId
         )
           end('leave');
       });

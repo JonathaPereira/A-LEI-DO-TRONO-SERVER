@@ -331,6 +331,54 @@ check(
   },
 );
 
+check('a cleared navigation room cannot hide the departure of the active call', async (t) => {
+  for (const type of ['left-game-room', 'left-voice-room', 'channel-deleted']) {
+    const h = await setup(t);
+    h.call.start();
+    assert(await h.call.toggle());
+    h.state.room = null;
+    h.emit({ type, roomId: 'room' });
+    assert.equal(h.call.getSnapshot().joined, false);
+    assert.equal(h.state.stops, 1);
+    assert(h.events.includes('release-video'));
+    assert(h.events.includes('release-peers'));
+  }
+});
+
+check('room departure cancels pending entry after navigation has cleared its room', async (t) => {
+  const h = await setup(t);
+  const gate = deferred();
+  h.call.start();
+  h.prepare(() => gate.promise);
+  const pending = h.call.toggle();
+  await tick();
+  h.state.room = null;
+  h.emit({ type: 'channel-deleted', roomId: 'room' });
+  assert.equal(await pending, false);
+  assert.equal(h.state.stops, 1);
+  gate.resolve({ mode: 'p2p', revision: 1 });
+  await tick();
+  assert.equal(h.state.captures, 0);
+  assert.equal(h.call.getSnapshot().joining, false);
+});
+
+check(
+  'the prepared call binds the room established by preparation before metadata is cleared',
+  async (t) => {
+    const h = await setup(t);
+    h.call.start();
+    h.prepare(async () => {
+      h.state.room = 'confirmed';
+      return { mode: 'p2p', revision: 1 };
+    });
+    assert(await h.call.toggle());
+    h.state.room = null;
+    h.emit({ type: 'channel-deleted', roomId: 'confirmed' });
+    assert.equal(h.call.getSnapshot().joined, false);
+    assert.equal(h.state.stops, 1);
+  },
+);
+
 check(
   'disconnect cancels pending entry and reports a disconnect for established membership',
   async (t) => {

@@ -15,6 +15,11 @@ A navegação normaliza o `channelType: null` legítimo das salas de jogo para
 Ao mudar o escopo da sala/identidade, o estado da partida online limpa também seu
 modo; limpar somente a mesa deixaria o início de partida local bloqueado.
 
+O ciclo de vida da chamada guarda a sala da tentativa, confirmada após o preparo.
+Ao processar uma saída ou exclusão, compara essa identidade própria com o evento;
+não consulta metadados de navegação que outro listener já pode ter apagado. Assim,
+libera microfone, peers e demais recursos também durante uma entrada pendente.
+
 `components/application.tsx` compõe as telas por domínio. As telas preservam IDs
 e hierarquia relevantes dos controles anteriores. `chat-composer.tsx` possui o
 campo de texto, seletor de arquivo/emojis e feedback em React. `lib/chat/composer.ts`

@@ -63,13 +63,18 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   fora do grafo das entradas de produção. Rotas, boot e worklets foram tratados
   como entradas próprias. É evidência auxiliar; não autoriza apagar recursos
   distribuídos ou APIs externas por ausência de um import estático.
-- A suíte da Corte foi atualizada para participação explícita na voz, controles
+- `ae30757`: atualiza a suíte da Corte para participação explícita na voz, controles
   visíveis, hosts de mão/diálogos React e o contrato de fullscreen do desktop.
   A troca privada simulada agora usa cartas distintas e uma fase/participantes
   coerentes; a validação de produção não foi afrouxada. Foram encontradas e
   corrigidas duas falhas reais: `channelType: null` legítimo das salas de jogo
   era recusado na navegação; o modo online permanecia após mudar/sair da sala,
   impedindo iniciar uma partida local. Há regressões mínimas para ambos os casos.
+- A chamada agora guarda a identidade da sala da tentativa e a confirma após o
+  preparo. A saída/exclusão encerra os recursos mesmo se a navegação já tiver
+  consumido o evento e apagado seus metadados. Isso corrige captura que permanecia
+  ativa ao excluir um canal ocupado. Há regressões para chamadas ativas, preparo
+  pendente e anexação de sala durante o preparo, preservando saídas de outros jogos.
 
 ## Validação local
 
@@ -84,6 +89,7 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
 | Electron após CSS | Pacote Windows reconstruído, chamada completa com dois Electron e relay WebRTC real através do backend tipado passaram (três casos). Não houve instalação. |
 | Limpeza final | 30 modelos de motor local/escolhas/mãos/ciclo de vida/aparência e oito casos de layout/aparência/editor/chamada nativa passaram, além da cadeia completa `npm test`. Evidências em `artifacts/final-cleanup-*`. |
 | Transições de jogo/voz | 24 modelos de partida/navegação passaram. `test:court` passou nos 18 casos de regras, partidas, participação e interface, incluindo ida/volta do jogo, chamada na mesa, fullscreen, fila de revelação privada e local após online. A cadeia `npm test`, a chamada com dois Electron, o relay SFU e o pacote atual reconstruído também passaram. Logs `game-transition-*`/`game-transitions-*` e `court-final-regressions.log`. |
+| Saída do canal de voz | 19 modelos de ciclo de vida, tipagem, formatação, build e `npm test` passaram. A interface verifica que a chamada está conectada antes de excluir o canal e que depois não há microfone ativo. Chamada com dois Electron, relay SFU e pacote reconstruído passaram. A Corte passou em seis casos tanto no Chromium padrão quanto no Edge, emulando viewport sem tentar redimensionar a janela nativa fullscreen. Logs `call-room-exit-*` e `court-fullscreen-viewport*`. Uma execução agrupada falhou no idle dos controles de transmissão; a repetição nativa isolada passou com as mesmas asserções. |
 | Paridade | Jogos, efeitos, worklets, WAV, assinatura de arquivos e protocolos foram comparados durante cada conversão. Resultados detalhados e commits anteriores permanecem no Git; nenhuma qualidade de captura/codec/bitrate foi reduzida nesta limpeza. |
 
 Testes de interface consomem `out/`; execute build antes. Neste ambiente, Edge usa
@@ -114,9 +120,18 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 
 ### Suítes antigas a revisar
 
-- `tests/frontend-browser.js` (`test:frontend`): espera `#chatOnlyScreen` visível,
-  embora use `display: contents`; a área visível atual é `#callWorkspace`. A primeira
-  falha foi reproduzida em `7db2d81`. Referência: `migration-frontend-baseline.log`.
+- `tests/frontend-browser.js` (`test:frontend`) está em revisão. O fonte foi
+  formatado, usa a área visível `#callWorkspace`, mídia sintética estável e para
+  na primeira falha para não contaminar os cenários seguintes. Os nove primeiros
+  casos passaram: cargos, anexos, canais/exclusão com liberação de captura, envio,
+  histórico após reinício, temas, reset/responsividade, seletor de tela e RNNoise.
+  A antiga verificação dos resizers ocultos foi atualizada para o contrato atual
+  de responsividade/reset descrito em ARQUITETURA; RNNoise verifica a rota de
+  fallback ao suspender o contexto e a troca real pelo seletor de entrada.
+  Retomar no caso de modo leve: a expectativa antiga é `light`, enquanto o
+  controlador atual usa tratamento `native`, conforme a política de não empilhar
+  um expander que cortava sílabas. Depois dele ainda restam os demais cenários.
+  Evidências mais recentes: `artifacts/frontend-noise-device-controls.log`.
 - `tests/desktop-browser.js`: seis casos passaram e dez falharam nas expectativas
   antigas de entrada automática em voz/fechamento de configurações, também em
   `9ed1162`. Referências: `clip-buffer-desktop-policy-ui.log` e
