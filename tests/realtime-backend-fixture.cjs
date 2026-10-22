@@ -14,6 +14,7 @@ const deferred = () => {
   return { promise, resolve };
 };
 function fixture(t, ports = {}) {
+  fs.mkdirSync(path.resolve('artifacts'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve('artifacts/server-realtime-'));
   const peers = [0, 1, 2].map((i) => ({ clientId: 'client-' + i, roomId: 'voice', out: [] }));
   const room = {

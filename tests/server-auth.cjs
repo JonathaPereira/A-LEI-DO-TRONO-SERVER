@@ -110,19 +110,24 @@ function fixture(ports = {}) {
   };
 }
 
-test('identity verifies the provider before claims and only persisted roles authorize accounts', async () => {
+test('identity verifies the provider before claims and keeps the submitted token across clock ticks', async (t) => {
+  let clock = Date.now();
+  t.mock.method(Date, 'now', () => clock);
+  const accessToken = token();
   let currentUser = { ...user(), user_metadata: { role: 'creator', nickname: 'Forjado' } },
     currentProfile = profile();
   const f = fixture({
-    fetch: async (url) =>
-      url.endsWith('/auth/v1/user')
+    fetch: async (url) => {
+      clock += 1000;
+      return url.endsWith('/auth/v1/user')
         ? Response.json(currentUser)
         : url.includes('/profiles?')
           ? Response.json([currentProfile])
-          : undefined,
+          : undefined;
+    },
   });
   try {
-    const member = await f.service.identity(token());
+    const member = await f.service.identity(accessToken);
     assert.equal(member.nickname, 'Conta');
     assert.equal(member.role, 'member');
     assert.equal(member.sessionId, sid);
@@ -140,14 +145,14 @@ test('identity verifies the provider before claims and only persisted roles auth
       ].sort(),
     );
     currentProfile.community_role = 'admin';
-    assert.equal((await f.service.identity(token())).role, 'admin');
+    assert.equal((await f.service.identity(accessToken)).role, 'admin');
     currentUser.email = CREATOR_EMAIL;
-    assert.equal((await f.service.identity(token())).role, 'creator');
+    assert.equal((await f.service.identity(accessToken)).role, 'creator');
     assert(
       f.calls.every(
         (call) =>
           call.headers.apikey === env.SUPABASE_PUBLISHABLE_KEY &&
-          call.headers.Authorization === 'Bearer ' + token(),
+          call.headers.Authorization === 'Bearer ' + accessToken,
       ),
     );
     const denied = fixture({

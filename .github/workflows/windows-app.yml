@@ -84,7 +84,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run format:check
       - run: npm run build
-      - run: npm run test:server:lifecycle
+      - name: Verify backend lifecycle and service integration
+        timeout-minutes: 2
+        run: npm run test:server:lifecycle
       - name: Verify profile validation and persistence
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Install Chromium for integration tests

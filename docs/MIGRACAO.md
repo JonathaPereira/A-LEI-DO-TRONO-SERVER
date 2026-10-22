@@ -7,7 +7,8 @@ O histórico detalhado das conversões permanece no Git.
 
 ## Branch e limites
 
-- Trabalhar em `port_main_migration_updates`; commits locais assinados.
+- Correção atual em `codex/fix-backend-ci`, baseada na main remota `21297fa`;
+  commits locais assinados. A main local não foi alterada.
 - Upstream incorporado cobrindo `8044ec4..6b9ae47`: desktop 0.2.11 a 0.3.2 e backend 0.14.0-alpha portados para a arquitetura migrada.
 - Não publicar, fazer deploy nem substituir o aplicativo instalado sem pedido
   explícito. O pacote em `artifacts/windows-app/win-unpacked/` é só para conferência.
@@ -87,6 +88,18 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   - **Remote PC Beta & Gamepad Virtual**: Streaming de baixa latência e controle remoto via WebRTC (`src/lib/voice/remote-*`, `src/components/voice/remote-pc-dialog.tsx`, `src/styles/voice/remote-pc.css`, `server/remote-pc.ts`), telemetria em tempo real e injeção nativa de controle virtual Xbox 360 no Windows via ViGEmClient C++ addon (`electron/remote-input.cjs`, `electron/native-audio/remote-input.cpp`).
   - **Moderação de Voz**: Ações de staff para mutar/desmutar forçado, bloquear/liberar mídias de vídeo/tela e expulsar da sala de voz no card de participantes (`src/components/voice/participant-card.tsx`), suportado pelo serviço de moderação do backend (`server/voice-moderation.ts`) com verificação rigorosa de cargos no servidor.
   - **Regressões e testes**: 15 arquivos de testes novos cobrindo regras, protocolo WS, Nexus, Remote Input, Gamepad, e moderação. Todos os testes unitários (34/34 casos) passam com 100% de sucesso. Typecheck estrito (`npm run typecheck`), verificação de formatação (`npm run format:check`) e build estático do Next.js (`npm run build`) passam com código de saída 0.
+
+- **CI de lifecycle após o merge `21297fa`**: a fixture do gateway não fornecia
+  Ticket to Ride nem Remote PC. A reconexão lançava uma exceção antes de fechar o
+  socket antigo e o teste aguardava indefinidamente. As portas de teste agora
+  acompanham os serviços e verificam o descarte dos quatro jogos. As expectativas
+  de cargos incluem `moderateVoice`; fixtures SFU criam sua pasta temporária antes
+  de usá-la. O teste de autenticação conserva o token enviado e avança o relógio
+  explicitamente, eliminando a falha intermitente na virada de segundo.
+  Os 150 casos passaram em uma cópia limpa da main em cerca de 1,7 s, além do
+  comando final no checkout (cerca de 2,4 s com build em paralelo). Tipagem,
+  formatação e build estático passaram. Cada teste tem limite de 30 s; a etapa do
+  workflow tem limite de 2 minutos. Correção local, sem publicação ou novo deploy.
 
 ## Validação local
 

@@ -15,6 +15,7 @@ const { createRealtimeUsage, monthKeyUTC } = require('../server/realtime-usage.t
 const { RealtimeSfuManager } = require('../server/realtime-sfu.ts');
 const usage = (bytes = 0) => ({ month: '2026-10', bytes, lastTick: 0, loadedFromDisk: false });
 function temporary(t) {
+  fs.mkdirSync(path.resolve('artifacts'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve('artifacts/realtime-policy-'));
   t.after(() => {
     assert.equal(path.dirname(root), path.resolve('artifacts'));

@@ -45,6 +45,7 @@ test('role policy uses verified provider email and persisted profile while malfo
     assert(Object.values(permissions(input)).every((value) => value === false));
   }
   assert.deepEqual(permissions('creator'), {
+    moderateVoice: true,
     manageChannels: true,
     moderateFiles: true,
     manageRoles: true,
@@ -52,6 +53,7 @@ test('role policy uses verified provider email and persisted profile while malfo
     uploadSounds: true,
   });
   assert.deepEqual(permissions('admin'), {
+    moderateVoice: true,
     manageChannels: true,
     moderateFiles: true,
     manageRoles: false,
@@ -59,6 +61,7 @@ test('role policy uses verified provider email and persisted profile while malfo
     uploadSounds: true,
   });
   assert.deepEqual(permissions('member'), {
+    moderateVoice: false,
     manageChannels: false,
     moderateFiles: false,
     manageRoles: false,

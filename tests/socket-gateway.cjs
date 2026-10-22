@@ -34,7 +34,7 @@ async function fixture({ identity = async (token) => account(token), required = 
     requests = [],
     clients = [];
   const games = Object.fromEntries(
-    ['azul', 'splendor', 'loveLetter'].map((name) => [
+    ['azul', 'splendor', 'loveLetter', 'ticketToRide'].map((name) => [
       name,
       {
         handle: (ws, message) => calls.push([name, 'handle', ws.clientId, message]),
@@ -51,6 +51,10 @@ async function fixture({ identity = async (token) => account(token), required = 
       requests.push({ token, signal });
       return identity(token, signal);
     },
+  };
+  const remotePc = {
+    handle: async (ws, message) => calls.push(['remotePc', 'handle', ws.clientId, message]),
+    disconnect: (ws) => calls.push(['remotePc', 'disconnect', ws.clientId]),
   };
   const community = createCommunity({ wss, rooms, send: sendSocket, auth, env: {} });
   const throne = {
@@ -85,6 +89,7 @@ async function fixture({ identity = async (token) => account(token), required = 
     send: sendSocket,
     auth,
     sfu,
+    remotePc,
     throne,
     presenceChanged: () => community.broadcast(),
     nameReserved: (name) => community.nameReserved(name),
@@ -97,6 +102,7 @@ async function fixture({ identity = async (token) => account(token), required = 
     channels,
     throne,
     ...games,
+    remotePc,
     community,
     communityManagement: { refreshFor: async () => {} },
     chat: {
@@ -391,6 +397,13 @@ test('reconnecting an account session closes its older socket and preserves the 
     assert.equal(await closed, 4002);
     assert.equal(a.server.account, null);
     assert.equal(b.server.account.id, 'same');
+    for (const game of ['azul', 'splendor', 'loveLetter', 'ticketToRide'])
+      assert(
+        f.calls.some(
+          ([name, action, id]) =>
+            name === game && action === 'disconnect' && id === a.server.clientId,
+        ),
+      );
   } finally {
     await f.close();
   }
