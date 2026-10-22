@@ -214,7 +214,8 @@ todos em Windows e no mesmo commit:
 - `windows`: helpers C++, Electron real, entrada remota, SFU e áudio. O teste
   completo de layout/chamada executa logo após o build nativo. As medições de
   áudio ficam neste runner, separadas da carga das interfaces; loopback e runtime
-  também executam sequencialmente entre si.
+  também executam sequencialmente entre si. Os contratos do atualizador real
+  (`desktop-updates.js`) pertencem a este job, que instala `electron/node_modules`.
 
 `delivery` depende do sucesso dos três. Só então gera o diretório do aplicativo,
 testa o binário empacotado, cria instalador/ZIP e publica o rascunho privado.
@@ -265,9 +266,24 @@ validados. O teste do aplicativo empacotado passou antes e depois do NSIS. O
 instalador foi gerado com `--prepackaged`, e o preparo dos downloads passou
 (site 188,9 MiB; instalador 135,5 MiB). Logs `artifacts/ci-parallel-*`.
 
-Esses resultados não medem o paralelismo, os caches ou a transferência no GitHub:
-a primeira execução remota reorganizada ainda precisa ser conferida. A etapa de
-instalação do driver virtual do runner não foi executada no computador de Felipe.
+Na primeira execução reorganizada (`39845535930`, commit `2f56fd0`), interfaces
+e Windows nativo passaram. O backend falhou somente em dois contratos do
+atualizador: `GenericProvider` é importado de `electron/node_modules`, ausente
+naquele job. O teste local anterior tinha as dependências de ambos os projetos
+instaladas, o que mascarou essa dependência. A entrega ficou corretamente bloqueada.
+
+O mesmo grupo foi reproduzido em cópia temporária dos fontes sem dependências do
+Electron: 32 passaram e dois falharam com `MODULE_NOT_FOUND`. `desktop-updates.js`
+foi transferido inteiro para uma etapa própria no job Windows, após o preparo do
+Electron. O grupo de backend restante passou em 27 casos sem essa pasta; os sete
+contratos do atualizador passaram no ambiente com suas dependências. O inventário
+permanece com 95 arquivos de teste, sem eliminar nem duplicar casos. O backend
+completo passou em 261 testes numa instalação própria com `npm ci` somente na raiz,
+sem junction, worktree ou dependências do Electron. Tipagem, formatação, build e
+actionlint também passaram. Logs `artifacts/ci-checks-*` e `ci-updater-*`;
+conferir a execução remota após o push da correção.
+
+A instalação do driver virtual do runner não foi executada no computador de Felipe.
 As validações locais não publicaram release nem instalaram o aplicativo.
 Commit e push da contribuição foram autorizados posteriormente por Felipe.
 
