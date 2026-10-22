@@ -12,6 +12,7 @@ Os créditos e descrições das conversões ficam nos `ARTWORK.md` desses recurs
 - [Cartas de Splendor](ART-SPLENDOR-CARTAS-0.1.17.png)
 - [Capa de A Lei do Trono](ART-TRONO-CAPA.png)
 - [Proposta de capa de Cinzas](ROGUELITE-CAPA-PROPOSTA.png)
+- [Artes e fontes de Ticket to Ride](ticket-to-ride/README.md)
 
 Capturas antigas de interface foram removidas. O histórico Git conserva as
 revisões anteriores; novas capturas de teste pertencem a `artifacts/`.
