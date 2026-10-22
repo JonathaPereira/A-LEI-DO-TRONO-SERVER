@@ -1,1 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><Compile Include="../TronoClips/BridgeServer.cs" Link="BridgeServer.cs"/><Compile Include="../TronoClips/KeyBinding.cs" Link="KeyBinding.cs"/><Compile Include="../TronoClips/NativeKeys.cs" Link="NativeKeys.cs"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../clips-helper/BridgeServer.cs" Link="BridgeServer.cs" />
+    <Compile Include="../clips-helper/KeyBinding.cs" Link="KeyBinding.cs" />
+    <Compile Include="../clips-helper/NativeKeys.cs" Link="NativeKeys.cs" />
+  </ItemGroup>
+</Project>
