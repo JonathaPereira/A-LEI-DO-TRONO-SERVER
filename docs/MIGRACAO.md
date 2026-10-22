@@ -178,6 +178,23 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   superior a 0.3.3, atualizando também preload, lockfile e instruções. Não instalar
   um pacote de QA com a identidade/registro do aplicativo real. A instalação do
   usuário foi apenas consultada.
+- **Criação da janela no runner (`39832539204`)**: o teste focal da Corte passou,
+  mas o segundo Electron falhou antes do login. A linha de redimensionamento
+  consultava `BrowserWindow.getAllWindows()[0]` antes de criar a janela. O helper
+  de teste `desktop-first-window.cjs` aguarda `firstWindow()`, obtém a BrowserWindow
+  correspondente à página e só então define o tamanho. A regressão nativa
+  `desktop-window-start.cjs` controla a criação real da janela: reproduziu o mesmo
+  `undefined.setContentSize` com a ordem antiga e passou com a espera correta.
+  Ela integra `test:desktop:layout`. Não altera o aplicativo nem os timeouts.
+  Tipagem, formatação e build passaram. O comando completo passou nos três casos,
+  sem skips: janela adiada, geometria da Corte e chamada com dois Electron
+  (aproximadamente 77 s na etapa nativa). Evidência em
+  `artifacts/actions-window-layout-final.log`; execução remota do ajuste pendente.
+
+A branch `codex/fix-backend-ci` ainda acompanha `origin/main` como upstream;
+esse vínculo explica pushes da contribuição para a main pela sincronização.
+Este ajuste de inicialização fica local, sem commit/push nem mudança de configuração
+Git. Corrigir o destino antes de voltar a usar sincronização automática.
 
 Evidências locais: `artifacts/actions-*.log`, `actions-delivery-audit.json` e os
 pacotes gerados. Runner/permissões do GitHub dependem da próxima execução remota;

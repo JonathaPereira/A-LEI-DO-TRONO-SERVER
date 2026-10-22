@@ -8,6 +8,7 @@ const path = require('node:path');
 const {_electron, expect} = require('@playwright/test');
 const {startFixture} = require('./auth-fixture');
 const {closeTestApp, killTestApp} = require('./desktop-test-close');
+const {firstSizedWindow} = require('./desktop-first-window.cjs');
 const {presentAccount, restoreAccount} = require('./auth-presentation-fixture.cjs');
 
 const root = path.resolve(__dirname, '..');
@@ -40,10 +41,9 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       apps.push(app);
       assert.deepEqual(await app.evaluate(({app}) => ({packaged: app.isPackaged, name: app.getName()})), {packaged: false, name: 'MN Trono Desenvolvimento'});
-      await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].setContentSize(1024, 740));
       // These dialogs concern synthetic devices in disposable test profiles only.
       await app.evaluate(({dialog}) => { dialog.showMessageBox = async () => ({response: 0}); });
-      const page = await app.firstWindow();
+      const page = await firstSizedWindow(app, {width: 1024, height: 740});
       await page.route('https://a-lei-do-trono-server.onrender.com/**', async route => { try { await route.abort(); } catch {} });
       // BrowserWindow uses a persistent session partition. Bind setup to this
       // page, rather than ElectronApplication's default browser context.
