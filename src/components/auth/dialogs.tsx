@@ -1,6 +1,9 @@
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { authModes, type AuthForms } from '../../lib/auth/forms';
 import { passwordChecks } from '../../lib/auth/password';
+import { version as desktopVersion } from '../../../electron/package.json';
+
+const installerName = `MN-Trono-${desktopVersion}-Windows.exe`;
 
 const rules = {
   length: 'Mínimo de 8 caracteres',
@@ -72,8 +75,8 @@ export function AuthDialogs({ forms, desktop }: { forms: AuthForms; desktop: boo
         <a
           id="authDesktopDownload"
           className="auth-desktop-download"
-          href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.3.2-Windows.exe"
-          download="MN-Trono-0.3.2-Windows.exe"
+          href={`https://a-lei-do-trono.surge.sh/downloads/${installerName}`}
+          download={installerName}
         >
           <svg
             viewBox="0 0 24 24"

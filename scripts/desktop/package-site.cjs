@@ -25,6 +25,13 @@ async function prepareSite({
   ).version;
   if (!/^\d+\.\d+\.\d+$/.test(version) || !/^[-\w.]+\/[-\w.]+$/.test(repository))
     throw Error('Versão ou repositório de downloads inválido.');
+  const index = await fs.readFile(path.join(root, 'out/index.html'), 'utf8'),
+    metadata = /<meta\b[^>]*\bname=["']mn-desktop-version["'][^>]*>/i.exec(index)?.[0],
+    frontendVersion = /\bcontent=["'](\d+\.\d+\.\d+)["']/i.exec(metadata || '')?.[1];
+  if (frontendVersion !== version)
+    throw Error(
+      'A versão do frontend não corresponde ao instalador. Execute npm run build antes de preparar os downloads.',
+    );
   const filename = `MN-Trono-${version}-Windows.exe`,
     source = installerPath || path.join(root, 'artifacts/windows-app', filename);
   const bytes = await fs.readFile(source);
@@ -78,15 +85,6 @@ async function prepareSite({
   await fs.writeFile(
     path.join(downloads, 'latest.yml'),
     `version: ${version}\nfiles:\n  - url: ${filename}\n    sha512: ${hash}\n    size: ${bytes.length}\npath: ${filename}\nsha512: ${hash}\nreleaseDate: '${new Date().toISOString()}'\n`,
-  );
-  const index = await fs.readFile(path.join(frontend, 'index.html'), 'utf8');
-  if (!/href="[^"]*MN-Trono-[^"/]+-Windows\.exe"/.test(index))
-    throw Error('Link do instalador não encontrado no frontend.');
-  await fs.writeFile(
-    path.join(frontend, 'index.html'),
-    index
-      .replace(/href="[^"]*MN-Trono-[^"/]+-Windows\.exe"/g, 'href="' + url + '"')
-      .replace(/download="MN-Trono-[^"]+\.exe"/g, 'download="' + filename + '"'),
   );
   await fs.copyFile(
     path.join(root, 'electron/LEIA-ME-PUBLICAR.txt'),

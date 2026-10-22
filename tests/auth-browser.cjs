@@ -67,6 +67,17 @@ test(
       const email = 'migration-auth@example.test';
       await page.goto(origin);
       await ready();
+      const { version } = require('../electron/package.json');
+      const installer = `MN-Trono-${version}-Windows.exe`;
+      await expect(page.locator('meta[name="mn-desktop-version"]')).toHaveAttribute(
+        'content',
+        version,
+      );
+      await expect(page.locator('#authDesktopDownload')).toHaveAttribute('download', installer);
+      await expect(page.locator('#authDesktopDownload')).toHaveAttribute(
+        'href',
+        `https://a-lei-do-trono.surge.sh/downloads/${installer}`,
+      );
       await t.test(
         'signup checks the password and requires email confirmation before login',
         async () => {

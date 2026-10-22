@@ -10,8 +10,15 @@ o site com um único instalador e seu manifesto de atualização, mantendo a pas
 `frontend/` dentro do ZIP para compatibilidade com a distribuição existente.
 
 O [guia único de atualizações](ATUALIZACOES.md) acompanha a raiz do ZIP. O workflow
-Windows valida o build antes de preparar os downloads. A branch acompanha o
-desktop 0.2.10; sincronizar os fontes não publica nem instala uma nova distribuição.
+Windows valida o build antes de preparar os downloads. A versão do desktop fica
+em `electron/package.json`; sincronizar os fontes não publica nem instala uma nova
+distribuição.
+
+O layout exporta essa versão no metadado `mn-desktop-version`, e o botão de download
+usa a mesma fonte. O empacotador verifica a versão antes de substituir saídas;
+uma exportação ausente ou de outra versão exige executar `npm run build` novamente.
+O botão é montado pelo React no cliente, sem reescrever HTML ou chunks do Next para
+trocar seu link depois da compilação.
 
 Antes de atualizar uma instalação antiga, confira os
 [pré-requisitos de GIFs](ATUALIZACOES.md#gifs-do-giphy): SQL de créditos, endpoint

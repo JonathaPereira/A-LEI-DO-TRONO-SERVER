@@ -109,6 +109,30 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   altera somente o teste; captura, transporte e validação de produção permanecem
   iguais. Tipagem, formatação e build estático também foram conferidos.
 
+- **Etapas restantes dos Actions após Ticket to Ride**: o restante do job Windows
+  passou localmente: Love Letter (16 casos), runtime/áudio/políticas e
+  empacotamento (38, nenhum ignorado), chamada entre layouts (1) e executável
+  empacotado (1). Helpers C++, diretório do aplicativo e instalador NSIS 0.3.2
+  foram gerados. Preparo real e ZIP passaram, com um único EXE e hashes
+  correspondentes; frontend com instalador ocupa cerca de 188,9 MiB (limite 190).
+  Publicação e retenção foram executadas apenas com portas GitHub em memória,
+  inclusive usando os arquivos reais; não houve upload/deploy/exclusão remota.
+- **Contrato da entrega Next/Electron**: a execução revelou uma falha posterior
+  ao instalador. O empacotador procurava no HTML um link montado pelo React no
+  cliente. Layout e botão agora derivam a versão de `electron/package.json`;
+  o empacotador confere `mn-desktop-version` antes de substituir saídas, sem
+  editar chunks/HTML. Regressões cobrem HTML sem botão, versão ausente/divergente
+  e link no navegador (17 casos com publicação/retenção simuladas). Tipagem,
+  formatação e build passaram.
+- **Workflow independente de clipes**: `TronoClipTests.csproj` ainda referenciava
+  `../TronoClips/`. Os links agora usam `../clips-helper/`. Testes .NET da ponte
+  e atalho Windows passaram; publicação self-contained e montagem do pacote com
+  EXE e instruções passaram em `artifacts/`.
+
+Evidências locais: `artifacts/actions-*.log`, `actions-delivery-audit.json` e os
+pacotes gerados. Runner/permissões do GitHub dependem da próxima execução remota;
+as validações locais não publicaram o aplicativo.
+
 ## Validação local
 
 | Verificação | Resultado / alcance |

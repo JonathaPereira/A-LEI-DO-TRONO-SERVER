@@ -12,6 +12,7 @@ async function fixture() {
     'out/downloads',
     'out/manual',
     'out/vendor/rnnoise',
+    'out/_next/static/chunks',
     'electron',
     'supabase/migrations',
     'installer',
@@ -33,7 +34,11 @@ async function fixture() {
     await fs.writeFile(path.join(root, file), 'fixture');
   await fs.writeFile(
     path.join(root, 'out/index.html'),
-    '<a id="authDesktopDownload" href="/downloads/MN-Trono-0.1.10-Windows.exe" download="MN-Trono-0.1.10-Windows.exe">Desktop</a>',
+    '<html><head><meta name="mn-desktop-version" content="0.1.11"/></head><body><div id="app"></div><script src="/_next/static/chunks/auth.js"></script></body></html>',
+  );
+  await fs.writeFile(
+    path.join(root, 'out/_next/static/chunks/auth.js'),
+    'const download = {href:"https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.11-Windows.exe",name:"MN-Trono-0.1.11-Windows.exe"};',
   );
   await fs.writeFile(path.join(root, 'out/LEIA_ME_v0.7.9.txt'), 'old instructions');
   await fs.writeFile(path.join(root, 'out/.surgeignore'), '*.exe\n*.zip\n');
@@ -64,10 +69,7 @@ test('Surge package contains the entire frontend and exactly the latest installe
       await fs.readFile(path.join(result.site, 'COMPARTILHAR_PC_BETA.md'), 'utf8'),
       'fixture',
     );
-    assert.equal(
-      await fs.readFile(path.join(result.site, 'INTEGRAR_NEXUS.md'), 'utf8'),
-      'fixture',
-    );
+    assert.equal(await fs.readFile(path.join(result.site, 'INTEGRAR_NEXUS.md'), 'utf8'), 'fixture');
     assert.equal(
       await fs.readFile(path.join(result.site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'), 'utf8'),
       'fixture',
@@ -82,8 +84,11 @@ test('Surge package contains the entire frontend and exactly the latest installe
       [],
     );
     const index = await fs.readFile(path.join(result.frontend, 'index.html'), 'utf8');
-    assert(index.includes('href="' + result.url + '"'));
-    assert(index.includes('download="MN-Trono-0.1.11-Windows.exe"'));
+    assert.equal(index, await fs.readFile(path.join(f.root, 'out/index.html'), 'utf8'));
+    assert.deepEqual(
+      await fs.readFile(path.join(result.frontend, '_next/static/chunks/auth.js')),
+      await fs.readFile(path.join(f.root, 'out/_next/static/chunks/auth.js')),
+    );
     const yaml = await fs.readFile(path.join(result.frontend, 'downloads/latest.yml'), 'utf8');
     assert(yaml.includes('version: 0.1.11'));
     assert(yaml.includes('url: MN-Trono-0.1.11-Windows.exe'));
@@ -141,6 +146,26 @@ test('Surge package contains the entire frontend and exactly the latest installe
     await fs.rm(f.root, { recursive: true, force: true });
   }
 });
+test('a missing or mismatched frontend version cannot replace distribution outputs', async () => {
+  const f = await fixture();
+  try {
+    const directory = path.join(f.root, 'artifacts/windows-download');
+    await fs.mkdir(directory, { recursive: true });
+    const sentinel = path.join(directory, 'keep.txt');
+    await fs.writeFile(sentinel, 'previous delivery');
+    for (const html of [
+      '<html><head></head></html>',
+      '<meta content="0.1.10" name="mn-desktop-version"/>',
+    ]) {
+      await fs.writeFile(path.join(f.root, 'out/index.html'), html);
+      await assert.rejects(prepareSite({ ...f, version: '0.1.11' }), /versão do frontend/i);
+      assert.equal(await fs.readFile(sentinel, 'utf8'), 'previous delivery');
+    }
+  } finally {
+    await fs.rm(f.root, { recursive: true, force: true });
+  }
+});
+
 test('an invalid executable or oversized frontend prevents a ready-to-publish result', async () => {
   const f = await fixture();
   try {

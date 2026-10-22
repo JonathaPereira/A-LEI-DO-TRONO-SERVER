@@ -7,6 +7,11 @@ estática permite a mesma interface na web e no Electron. Não há Server Action
 API Routes ou cookies do servidor Next: conta, dados e WebSocket pertencem ao
 backend existente.
 
+O layout publica `mn-desktop-version` a partir de `electron/package.json`.
+O botão de download da autenticação usa essa mesma versão; o empacotador confere
+o metadado da exportação antes de gerar uma entrega. Chunks e HTML compilados
+são preservados, sem procurar um botão que só é montado pelo React no cliente.
+
 Frontend e backend usam `noUnusedLocals`/`noUnusedParameters`. Posições necessárias
 de callbacks podem usar `_`; remover argumentos e opções privados sem leitores.
 
