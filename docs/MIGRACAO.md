@@ -1,6 +1,6 @@
 # Estado da migração
 
-Atualizado em 21/10/2026. Este é o checkpoint para continuar sem o histórico do
+Atualizado em 22/10/2026. Este é o checkpoint para continuar sem o histórico do
 chat. Responsabilidades e ciclos de vida estão em [ARQUITETURA.md](ARQUITETURA.md);
 comandos e ambiente em [DESENVOLVIMENTO_DESKTOP.md](DESENVOLVIMENTO_DESKTOP.md).
 O histórico detalhado das conversões permanece no Git.
@@ -99,6 +99,7 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
 | Paridade | Jogos, efeitos, worklets, WAV, assinatura de arquivos e protocolos foram comparados durante cada conversão. Resultados detalhados e commits anteriores permanecem no Git; nenhuma qualidade de captura/codec/bitrate foi reduzida nesta limpeza. |
 | Suítes antes desatualizadas | `frontend-browser.js`: 25 testes (20 cenários + quatro subcenários de mídia + raiz); `desktop-browser.js`: 16 testes (15 cenários + raiz). Todos passaram, sem skips. Fontes formatados, participação explícita em voz, fixtures completas e falha inicial preservada. Logs `final-frontend-green.log` e `desktop-final-current-controls.log`. |
 | Fechamento visual | `test:ui` passou nos quatro domínios; `test:court`, 18 testes. Regressões isoladas de stream recebido/fullscreen e shell/soundboard passaram em sete testes. Electron real passou com dois clientes, relay SFU local e pacote final reconstruído, em três testes sequenciais, sem instalação. Logs `final-focused-players-shell.log`, `final-migration-electron.log` e `final-court-layout-regressions.log`. |
+| Áudio nativo e runtime | O teste original `desktop-audio.js` passou sem skip: capturou o tom do processo selecionado e excluiu outro processo, pelo helper C++ e API do Windows. `desktop-runtime.js` passou com áudio silenciado e habilitado, conservando as mesmas asserções de permissões, sessão, picker, arquivos e IPC. Os timeouts antigos não se reproduziram; sua causa não foi estabelecida. Logs `native-acceptance-current.log` (dois testes) e `native-runtime-unmuted-option.log` (um teste). |
 
 Testes de interface consomem `out/`; execute build antes. Neste ambiente, Edge usa
 `CHROMIUM_EXECUTABLE_PATH` e as suítes antigas também `AUTH_TEST_CHROMIUM`.
@@ -129,11 +130,9 @@ regressões específicas, com reprodução antes de alterar captura/codec/bitrat
 
 ### Aceite físico e externo
 
-- `tests/desktop-audio.js` esgotou 70 s sem concluir PCM no helper C++.
-  `tests/desktop-runtime.js` avançou por atividade, seletor e arquivos, mas esgotou
-  160 s aguardando microfone em `saved media permissions`. Com `--mute-audio`, o
-  fluxo completo e o pacote passaram. O PCM físico continua inconclusivo; não há
-  evidência para atribuir causa ao driver. Logs `native-helper-path-*`.
+Felipe informou que ainda não executou esse aceite. Não concluir a meta
+com base apenas nas fontes sintéticas ou nos testes locais.
+
 - Conferir microfone/loopback real e compartilhar um jogo com efeitos a 60 fps
   entre computadores. Os testes sintéticos não medem esse desempenho nem a rede
   real. Comparar recepção, áudio, recuperação e preservação da chamada ao navegar.
@@ -142,6 +141,23 @@ regressões específicas, com reprodução antes de alterar captura/codec/bitrat
 - Gravação usa mixer/encoder reais, mas simula o destino de arquivos; conferir
   seletor e escrita no Windows. Parar explicitamente antes de fechar a janela:
   o fechamento não garante exportação de uma gravação em andamento.
+
+### Repetir a verificação nativa local
+
+O helper deve estar compilado (`npm run desktop:build:native`). Com uma saída de
+áudio disponível, o primeiro comando gera dois tons para verificar isolamento;
+o segundo modo habilita áudio nas duas janelas do teste de runtime:
+
+```powershell
+node --test --test-concurrency=1 tests/desktop-audio.js tests/desktop-runtime.js
+$env:QA_UNMUTED_AUDIO = '1'
+node --test tests/desktop-runtime.js
+Remove-Item Env:QA_UNMUTED_AUDIO
+```
+
+O runtime usa perfis descartáveis e dispositivos falsos do Chromium, inclusive
+sem `--mute-audio`. O loopback usa processos geradores de tom reais. Isso aprova
+esses caminhos locais, sem aprovar microfone físico, jogo, rede ou serviços reais.
 
 ## Como retomar
 

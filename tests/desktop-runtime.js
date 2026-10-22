@@ -12,6 +12,9 @@ test(
   'installed desktop boundary, native shortcut, picker and filesystem integration',
   { timeout: 160000 },
   async (t) => {
+    // Keep CI quiet by default; this mode exercises the same assertions with
+    // the native audio service audible. Devices remain Chromium test sources.
+    const audioArgs = process.env.QA_UNMUTED_AUDIO === '1' ? [] : ['--mute-audio'];
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-runtime-'));
     let app,
       api,
@@ -35,7 +38,7 @@ test(
           path.resolve(__dirname, '../electron'),
           '--user-data-dir=' + directory,
           '--desktop-diagnostics',
-          '--mute-audio',
+          ...audioArgs,
           '--use-fake-device-for-media-stream',
           '--desktop-api-test-origin=' + api.url,
           ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
@@ -353,7 +356,7 @@ test(
           path.resolve(__dirname, '../electron'),
           '--user-data-dir=' + directory,
           '--desktop-diagnostics',
-          '--mute-audio',
+          ...audioArgs,
           '--use-fake-device-for-media-stream',
           '--desktop-api-test-origin=' + api.url,
           ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
