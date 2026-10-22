@@ -1,3 +1,10 @@
+## Windows 0.3.2 · artes do Ticket to Ride
+
+O tabuleiro, as nove cartas, os versos de vagões e destinos e as peças usam
+as imagens fornecidas em `Ticket-to-Ride-Artes-Completas.zip`. As áreas de
+seleção e os vagões animados acompanham as rotas do tabuleiro da referência.
+Veja [a entrega de frontend e Windows](ATUALIZAR_WINDOWS_v0.3.2.md).
+
 ## Windows 0.3.1 · mesa Ticket to Ride
 
 Mapa central com cartas compradas à esquerda, compra à direita, objetivos e

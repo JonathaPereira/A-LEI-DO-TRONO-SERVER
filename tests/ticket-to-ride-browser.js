@@ -11,13 +11,25 @@ test('USA railway browser: authenticated tables, ticket selection, real turns/cl
   await a.getByRole('button',{name:'Criar mesa',exact:true}).click();await expect(a.getByRole('heading',{name:'Sua mesa está pronta'})).toBeVisible();const id=await a.evaluate(()=>window.TronoTicketToRide.room.id);await b.locator('#ticketToRideCode').fill(id);await b.getByRole('button',{name:'Entrar na mesa',exact:true}).click();await expect(b.getByRole('heading',{name:'Sua mesa está pronta'})).toBeVisible();await a.getByRole('button',{name:'Iniciar com os presentes'}).click();
   for(const page of [a,b]){await expect(page.locator('#ticketToRideChoice')).toBeVisible();await expect(page.locator('#ticketToRideKeep')).toBeDisabled();await page.locator('.tr-ticket-option input').nth(0).check();await expect(page.locator('#ticketToRideKeep')).toBeDisabled();await page.locator('.tr-ticket-option input').nth(1).check();await page.locator('#ticketToRideKeep').click();await expect(page.locator('#ticketToRideChoice')).toHaveCount(0);}
   await expect.poll(()=>a.evaluate(()=>window.TronoTicketToRide.room.state.phase)).toBe('playing');await expect(a.locator('.tr-map [data-route]')).toHaveCount(100);await expect(a.locator('.tr-city')).toHaveCount(36);
+  await expect(a.locator('.tr-map .tr-board-art')).toHaveAttribute('href','assets/ticket-to-ride/board-usa.jpg');
+  const artwork=await a.evaluate(async()=>{
+   const A=window.TicketToRideArt,images=await Promise.all([A.board,A.fronts,A.back,A.destinations,A.wagons].map(async url=>{const image=new Image();image.src=url;await image.decode();return image;}));
+   const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=683;const context=canvas.getContext('2d');context.drawImage(images[0],0,0);
+   const cities=Object.entries(A.cities).map(([name,[x,y]])=>{const [r,g,b]=context.getImageData(x,y,1,1).data;return {name,onMarker:r>g+15&&r>b+30};});
+   return {loaded:images.every(image=>image.naturalWidth>0),cities,cards:Object.values(A.cards),dimensions:images.map(image=>[image.naturalWidth,image.naturalHeight])};
+  });assert(artwork.loaded);assert.deepEqual(artwork.dimensions,[[1024,683],[1024,1536],[512,768],[512,768],[768,512]]);
+  assert.deepEqual(artwork.cities.filter(c=>!c.onMarker),[],'city hit coordinates must match the orange markers on the supplied board');
+  assert.equal(new Set(artwork.cards.map(rect=>rect.join(','))).size,9);assert(artwork.cards.every(([x,y,w,h])=>x>=0&&y>=0&&x+w<=1024&&y+h<=1536));
+  for(const route of ['r0-0','r0-1','r7-0','r7-1','r11-0','r15-0','r26-0','r26-1','r47-0','r47-1','r55-0','r69-0','r77-1']){
+   await a.locator(`[data-route="${route}"] .tr-route-target`).click();const title=await a.evaluate(id=>{const r=window.TicketToRideData.routes.find(r=>r.id===id);return r.a+' → '+r.b;},route);await expect(a.locator('#ticketToRidePayment h2')).toHaveText(title);await a.getByRole('button',{name:'Fechar rota',exact:true}).click();
+  }
   const firstTurn=await a.evaluate(()=>window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn].id),buyer=await a.evaluate(id=>window.TronoAuth.user.id===id,firstTurn)?a:b;
   for(let i=0;i<2;i++){const revision=await buyer.evaluate(()=>window.TronoTicketToRide.room.state.revision);await buyer.locator('#ticketToRideDeck').click();await expect.poll(()=>buyer.evaluate(()=>window.TronoTicketToRide.room.state.revision)).toBe(revision+1);}
   const observer=buyer===a?b:a;await expect.poll(()=>observer.evaluate(()=>window.__railFaces.length)).toBe(2);assert.deepEqual(await observer.evaluate(()=>window.__railFaces),[null,null],'blind draws must animate only card backs for the opponent');
   let claims=0;for(let i=0;i<120&&claims<4;i++){
    const turn=await a.evaluate(()=>window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn].id);const page=await a.evaluate(id=>window.TronoAuth.user.id===id,turn)?a:b;
    const {move,revision}=await page.evaluate(()=>{const s=window.TronoTicketToRide.room.state;return {move:window.TicketToRideRules.botMove(s),revision:s.revision};});
-   if(move.kind==='claim'){await page.locator(`[data-route="${move.routeId}"]`).click();const options=await page.locator('#ticketToRidePayment select option').allTextContents();const D=await page.evaluate(()=>window.TicketToRideData.names);const index=options.findIndex(text=>text.includes(D[move.color]+' + '+move.locos+' locomotiva'));assert(index>=0);await page.locator('#ticketToRidePayment select').selectOption(String(index));await page.locator('#ticketToRideClaim').click();claims++;}
+   if(move.kind==='claim'){await page.locator(`[data-route="${move.routeId}"] .tr-route-target`).click();const options=await page.locator('#ticketToRidePayment select option').allTextContents();const D=await page.evaluate(()=>window.TicketToRideData.names);const index=options.findIndex(text=>text.includes(D[move.color]+' + '+move.locos+' locomotiva'));assert(index>=0);await page.locator('#ticketToRidePayment select').selectOption(String(index));await page.locator('#ticketToRideClaim').click();claims++;}
    else if(move.kind==='draw'){if(move.source==='market')await page.locator(`[data-market-index="${move.index}"]`).click();else await page.locator('#ticketToRideDeck').click();}
    else if(move.kind==='draw-tickets')await page.locator('#ticketToRideDrawTickets').click();
    else if(move.kind==='tickets'){for(const id of move.keep)await page.locator(`.tr-ticket-option input[value="${id}"]`).check();await page.locator('#ticketToRideKeep').click();}
@@ -26,6 +38,7 @@ test('USA railway browser: authenticated tables, ticket selection, real turns/cl
   }assert.equal(claims,4);await expect(a.locator('.tr-owned')).toHaveCount(4);assert(await a.evaluate(()=>window.TronoTicketToRide.room.state.players.find(p=>p.id!==window.TronoAuth.user.id).hand===null));
   for(const page of [a,b]){
    assert(await page.evaluate(()=>window.__railEffects.includes('wagon')),'confirmed claims must animate wagons for both players');
+   const pieces=await page.evaluate(()=>{const s=window.TronoTicketToRide.room.state,D=window.TicketToRideData;return Object.keys(s.claimed).reduce((count,id)=>count+D.routes.find(r=>r.id===id).length,0);});await expect(page.locator('.tr-owned .tr-wagon-art use')).toHaveCount(pieces);
   }
   assert(await a.evaluate(()=>window.__railEffects.includes('card'))||await b.evaluate(()=>window.__railEffects.includes('card')),'confirmed card draws must animate into the private hand');
   await expect.poll(()=>a.locator('.tr-card-flight').count()).toBe(0);

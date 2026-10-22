@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.3.1
+M&N · A Lei do Trono — Windows 0.3.2
 
-1. Instalação nova: instale MN-Trono-0.3.1-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.2-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -183,3 +183,10 @@ esquerdo e destinos no inferior direito. Animações de compra e de vagões,
 com respeito a movimento reduzido. Tela cheia ajustada para 1366×768 e 1920×1080.
 As artes finais das cartas ainda aguardam os arquivos do proprietário.
 Sem alteração no backend ou SQL. Guia: ATUALIZAR_WINDOWS_v0.3.1.md.
+
+Windows 0.3.2: artes fornecidas aplicadas ao Ticket to Ride.
+Tabuleiro original, nove frentes de cartas, verso de vagões, verso de destinos
+e peças coloridas usam o conjunto Ticket-to-Ride-Artes-Completas.zip.
+Rotas clicáveis e vagões animados acompanham a imagem do tabuleiro.
+A disposição, os destinos privados e o movimento reduzido foram preservados.
+Sem SQL ou backend novo. Guia: ATUALIZAR_WINDOWS_v0.3.2.md.

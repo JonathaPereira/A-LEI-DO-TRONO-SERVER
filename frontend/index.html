@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="splendor.css?v=119polish"/>
   <link rel="stylesheet" href="tabletop-audio.css?v=110tabletop"/>
   <link rel="stylesheet" href="love-letter.css?v=119polish"/>
-  <link rel="stylesheet" href="ticket-to-ride.css?v=031"/>
+  <link rel="stylesheet" href="ticket-to-ride.css?v=032"/>
   <link rel="stylesheet" href="voice-reception.css?v=111voice">
   <link rel="stylesheet" href="court-display.css?v=112tabletop">
   <link rel="stylesheet" href="tabletop-refinements.css?v=119polish">
@@ -429,7 +429,7 @@
     <span class="auth-brand">✦ M&amp;N · SUA CONTA</span>
     <h2 id="authTitle">Bem-vindo de volta</h2>
     <p id="authIntro">Entre na sua conta para conversar e jogar.</p>
-    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.3.1-Windows.exe" download="MN-Trono-0.3.1-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
+    <a id="authDesktopDownload" class="auth-desktop-download" href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.3.2-Windows.exe" download="MN-Trono-0.3.2-Windows.exe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg><span>Baixe a versão desktop<small>Windows · 64 bits</small></span></a>
     <form id="authForm">
       <label class="auth-field hidden">Apelido<input id="authNickname" name="nickname" type="text" minlength="2" maxlength="20" autocomplete="nickname" disabled /><small>De 2 a 20 caracteres. Será seu nome no chat e no jogo.</small></label>
       <label class="auth-field">E-mail<input id="authEmail" name="email" type="email" maxlength="254" autocomplete="email" inputmode="email" required /></label>
@@ -604,7 +604,7 @@
   <section id="ticketToRideScreen" class="screen hidden mn-games-screen tr-screen" aria-label="Ticket to Ride, mapa clássico dos EUA">
     <header class="tr-heading"><div class="tr-brand"><button id="ticketToRideBack" type="button" class="tr-button">‹ Jogos</button><h1>TICKET TO RIDE<small>ESTADOS UNIDOS · MAPA CLÁSSICO</small></h1></div><div class="tr-heading-actions"><strong id="ticketToRideStatus" role="status">ESTAÇÃO M&amp;N</strong><button id="ticketToRideFullscreen" class="tr-button" type="button">Tela cheia</button><button id="ticketToRideRulesButton" class="tr-button" type="button">Como jogar</button></div></header>
     <p id="ticketToRideNotice" class="tr-notice" role="status" aria-live="polite"></p><div id="ticketToRideContent"></div>
-    <footer class="tr-footnote">Ticket to Ride · Alan R. Moon / Days of Wonder. Implementação de fã para M&amp;N. Mapa vetorial próprio, regras do jogo base dos EUA. Não inclui expansões. A chamada e o compartilhamento de PC continuam independentes da mesa. Mesas em andamento ficam na memória do servidor; um reinício encerra as partidas.</footer>
+    <footer class="tr-footnote">Ticket to Ride · Alan R. Moon / Days of Wonder. Implementação de fã para M&amp;N. Tabuleiro dos EUA e artes de cartas e vagões fornecidos pelo proprietário. Não inclui expansões. A chamada e o compartilhamento de PC continuam independentes da mesa. Mesas em andamento ficam na memória do servidor; um reinício encerra as partidas.</footer>
     <dialog id="ticketToRideRulesDialog" class="tr-dialog" aria-labelledby="ticketToRideRulesTitle"><button type="button" data-close aria-label="Fechar regras">×</button><span class="tr-eyebrow">O GUIA DO VIAJANTE</span><h2 id="ticketToRideRulesTitle">Uma ferrovia de costa a costa</h2>
       <p>De 2 a 5 participantes. Cada pessoa começa com 45 vagões, 4 cartas de trem e 3 bilhetes; mantenha pelo menos 2 bilhetes, sem mostrá-los aos demais.</p>
       <ol><li><strong>Comprar cartas:</strong> compre duas cartas, abertas ou do monte. Uma locomotiva aberta vale pelas duas compras e só pode ser a primeira. Locomotiva do monte conta como uma carta. Cinco cartas ficam abertas; três locomotivas abertas fazem o mercado ser renovado, quando o estoque permite.</li><li><strong>Construir:</strong> pague cartas da mesma cor e quantidade da rota. Cinza aceita qualquer cor única. Locomotivas substituem cartas. Comprimentos de 1, 2, 3, 4, 5 e 6 dão 1, 2, 4, 7, 10 e 15 pontos. Você precisa de vagões suficientes.</li><li><strong>Comprar destinos:</strong> receba até 3 bilhetes; mantenha pelo menos 1. Os rejeitados vão ao fundo. Conexões usam apenas suas próprias rotas, sem direção.</li></ol>
@@ -680,7 +680,8 @@
   <script src="splendor.js?v=119polish"></script>
   <script src="ticket-to-ride-data.js?v=030"></script>
   <script src="ticket-to-ride-rules.js?v=030"></script>
-  <script src="ticket-to-ride.js?v=031"></script>
+  <script src="ticket-to-ride-art.js?v=032"></script>
+  <script src="ticket-to-ride.js?v=032"></script>
   <script src="love-letter-rules.js?v=110tabletop"></script>
   <script src="love-letter.js?v=119polish"></script>
   <script src="roguelite-host.js?v=107cinzas"></script>
