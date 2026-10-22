@@ -2,7 +2,7 @@ name: Frontend with latest installer
 on:
   push:
     branches: ['codex/surge-*']
-    paths: ['scripts/desktop/**', 'src/**', 'public/**', 'package*.json', 'next.config.mjs', 'tests/site-package.js', 'tests/build-downloads.js', 'docs/PUBLICAR_SURGE_LEVE.md', '.github/workflows/surge-package.yml']
+    paths: ['scripts/desktop/**', 'src/**', 'public/**', 'package*.json', 'next.config.mjs', 'tests/site-package.js', 'tests/build-downloads.js', 'docs/PUBLICAR_SURGE_LEVE.md', 'docs/ATUALIZACOES.md', '.github/workflows/surge-package.yml']
   workflow_dispatch:
 permissions:
   contents: write

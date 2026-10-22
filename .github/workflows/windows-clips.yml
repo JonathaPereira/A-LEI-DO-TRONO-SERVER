@@ -24,7 +24,7 @@ jobs:
         shell: pwsh
         run: |
           Remove-Item build/windows-clips/*.pdb
-          Copy-Item docs/archive/desktop-bridge.txt build/windows-clips/LEIA-ME-WINDOWS.txt
+          Copy-Item electron/clips-helper/LEIA-ME-WINDOWS.txt build/windows-clips/LEIA-ME-WINDOWS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: MN-Clipes-Windows-x64

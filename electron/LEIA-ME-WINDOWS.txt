@@ -34,7 +34,6 @@ M&N · A Lei do Trono — Windows 0.2.10
     Mercado central maior, murais compactos e seleção em grade nas telas verticais/menores.
     A contagem detalha cada conexão, penalidade e bônus, com efeitos sonoros.
     Concluir contagem mostra o resultado imediatamente; movimento reduzido é respeitado.
-    Esta atualização visual mantém backend 0.10.0-alpha e dispensa SQL novo.
     Somente o criador apaga mensagens e limpa o chat; o histórico usa Supabase.
 11. F11 e o botão Tela cheia ampliam a janela. Streams têm maximização própria.
     Perfis expandem detalhes e volume sem empurrar a transmissão.
@@ -49,7 +48,7 @@ M&N · A Lei do Trono — Windows 0.2.10
 O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
 O instalador atual é baixado do próprio site, em downloads/.
 O instalador não tem assinatura digital; use o projeto/domínio oficial.
-Consulte ATUALIZAR_WINDOWS_v0.2.10.md para publicar o pacote completo do site.
+Consulte ATUALIZACOES.md no ZIP do site para requisitos e histórico de atualizações.
 
 Cinzas do Abismo v0.5: campanha de 15 capítulos e horda sem fim.
 Ao abrir pela primeira vez no Windows, aguarde os recursos serem guardados localmente.
@@ -70,62 +69,3 @@ Love Letter, 2ª edição: mesas para 2–6 pessoas e bots, 21 cartas, Espiã e 
 Mesa de veludo vinho com cartas ilustradas, descartes públicos e favores.
 Efeitos e escolhas secretas são validados pelo servidor; regras em Como jogar.
 O anfitrião inicia a próxima rodada. Mesas ficam em memória durante a partida.
-
-RECEPÇÃO DE VOZ 0.2.1
-Configurações → Áudio → Proteger a voz recebida durante jogos. Ligada por padrão, local a este aparelho. A margem de reprodução solicitada pode variar de 60 a 140 ms, sem trocar a trilha ou reconectar. Volumes normais permanecem diretos. Amplificação usa contexto separado do microfone.
-No Windows, só o serviço de áudio do próprio app é elegível a prioridade moderada. Prioridades maiores são preservadas; sem permissão, mantém o padrão do sistema. Sair da chamada desfaz os ajustes feitos pelo app. Não é uma reserva fixa de CPU e não exige administrador.
-O diagnóstico compara intervalos recentes e não exporta identidades ou mensagens. Esta revisão não exige SQL novo ou mudança de backend.
-
-Windows 0.2.2: tela cheia nativa e mesa responsiva no Trono; Usurpação online; peças do centro do Azul; recursos por cor e negociações detalhadas no Splendor; filtro leve entre falas. Backend 0.13.0-alpha, sem SQL novo.
-
-Windows 0.2.4: a entrada na chamada é uma escolha do usuário. Abrir ou reabrir
-o app não liga a voz. Clique na sala desejada para conectar ou use Conectar.
-O avatar na lista de salas aparece somente durante a chamada. Há busca pública
-de GIFs no perfil, ajuste vertical/zoom da capa, links e emojis corrigidos,
-cartões menores com o fundo do perfil e botões verdes/vermelhos por ação.
-Use o backend desta revisão. Guia: ATUALIZAR_WINDOWS_v0.2.4.md.
-
-Windows 0.2.5: Assistir stream funciona sem maximizar. Desligar câmera/tela
-atualiza a chamada sem esperar a limpeza da conexão. Mensagens diretas ficam
-mais acima no Original, capas emolduram os cartões e o Discord mantém o ícone
-de atualização no canto inferior esquerdo. A seta no canto superior direito
-oculta/restaura a barra superior, com preferência salva por conta.
-Backend 0.13.0-alpha compatível, sem SQL novo. Guia: ATUALIZAR_WINDOWS_v0.2.5.md.
-
-Windows 0.2.6: controles visíveis na lateral do Discord e no centro inferior
-do Original, sem ícones duplicados ao trocar de aba. O status da voz não
-reabre o chat da sala atual. Cartões centrais usam o fundo do perfil; a capa
-aparece somente atrás dos nomes nas mensagens diretas. Câmera e transmissão
-avisam os outros participantes assim que a captura começa, sem aguardar a
-publicação na rede. Backend 0.13.0-alpha compatível, sem SQL novo.
-Guia: ATUALIZAR_WINDOWS_v0.2.6.md.
-
-Windows 0.2.7: imagens no chat sem nomes extensos e com visualização ampliada.
-O chat de texto abre pelo ícone ao lado da sala; clicar na sala mantém o foco
-na chamada. Splendor mostra os mercadores ao lado do mercado. Love Letter
-mantém o histórico aberto, com uma entrada por jogada, carta, alvo e efeito,
-sem as três etapas que reconstruíam a mesa. O modo nativo do microfone volta
-a usar a redução do navegador sem empilhar o filtro adicional. RNNoise segue
-como opção separada. Backend 0.13.0-alpha, sem SQL novo.
-Guia: ATUALIZAR_WINDOWS_v0.2.7.md.
-
-Windows 0.2.8: o seletor de GIFs usa GIPHY. Sem chave, abra a busca externa e
-cole o link para ver a prévia e usar no avatar, capa ou fundo. A busca dentro
-do app exige GIPHY_API_KEY no Render e o backend desta revisão.
-Execute 20261016140000_giphy_profile_credits.sql no Supabase antes de salvar
-novos créditos. O arquivo está na raiz do ZIP. Guia: ATUALIZAR_WINDOWS_v0.2.8.md.
-
-Windows 0.2.9: envio da voz em segundo plano. O microfone nativo/desligado
-em 100% usa a captura diretamente; RNNoise e ganho personalizado mantêm
-seu processamento. O renderer conserva prioridade normal no Windows ao
-minimizar, cobrir ou esconder a janela. Instale o EXE novo no computador
-que transmite a voz. A correção de voz não exige SQL nem backend novo.
-Guia: ATUALIZAR_WINDOWS_v0.2.9.md.
-
-Windows 0.2.10: painel flutuante compacto, com avatares limitados e sem área
-vazia nem câmeras duplicadas ao redor da mesa. Ampliar reutiliza o mosaico.
-Falhas de câmera/tela tentam recuperar só a mídia afetada. O áudio recebido
-usa uma fila separada; o SFU continua como preferência antes do fallback.
-Após um fallback real, o modo P2P é coordenado para toda a sala e dura até
-esvaziar a voz. Todos podem sair da voz e entrar novamente para uma nova
-escolha do SFU. Guia: ATUALIZAR_WINDOWS_v0.2.10.md. Sem SQL ou backend novo.

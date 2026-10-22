@@ -122,6 +122,19 @@ e `style-deduplication.json`. Os logs antigos dos serviços usam os prefixos
 Essas saídas podem ser apagadas quando não forem mais úteis. Código/testes e o
 checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 
+## Documentação de atualizações
+
+As oito notas Windows de 0.2.3 a 0.2.10 foram consolidadas em
+`docs/ATUALIZACOES.md`, com requisitos operacionais e resumo das versões. O pacote
+usa esse nome fixo; não criar outro Markdown a cada atualização. O histórico
+detalhado continua no Git. O leia-me Windows deixou de repetir as notas antigas.
+As instruções do auxiliar de clipes ficam junto ao fonte em
+`electron/clips-helper/LEIA-ME-WINDOWS.txt`; o workflow acompanha esse caminho.
+`docs/archive/previews/` mantém os originais de arte, sem alterações.
+
+Tipagem, formatação, build estático e nove regressões de empacotamento/downloads
+passaram após a consolidação. Não houve alteração de mídia nem publicação.
+
 ## O que ainda falta
 
 A conversão do código e a atualização das suítes antigas estão concluídas.
@@ -173,5 +186,5 @@ não reintroduzir entrada automática em voz, resizers retirados ou controladore
 Após mudanças: tipagem, formatação, build, regressões relevantes e Electron real
 quando houver mídia. Atualize este checkpoint e crie commit local assinado.
 Não editar `out/`, `.next/` nem JS/CSS gerados na raiz de `public/`. `public/assets`,
-`public/vendor`, `public/manual`, Cinzas, SQL, licenças e notas distribuídas são
+`public/vendor`, `public/manual`, Cinzas, SQL, licenças e guias distribuídos são
 recursos originais e continuam necessários.

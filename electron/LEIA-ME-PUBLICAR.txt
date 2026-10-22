@@ -13,4 +13,4 @@ M&N — frontend com instalador Windows 0.2.10
 
 O instalador já acompanha o frontend. Preserve latest.yml e seu SHA-512.
 Não misture arquivos de entregas diferentes. Contas e preferências são mantidas.
-Consulte ATUALIZAR_WINDOWS_v0.2.10.md e PUBLICAR_SURGE_LEVE.md.
+Consulte ATUALIZACOES.md e PUBLICAR_SURGE_LEVE.md, incluídos na raiz do ZIP.

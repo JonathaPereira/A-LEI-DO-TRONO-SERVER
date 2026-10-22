@@ -9,15 +9,14 @@ O empacotamento Windows usa `electron/package.json` e inclui `out/` em
 o site com um único instalador e seu manifesto de atualização, mantendo a pasta
 `frontend/` dentro do ZIP para compatibilidade com a distribuição existente.
 
-As notas por versão necessárias ao pacote ficam em `docs/archive/`. O workflow
+O [guia único de atualizações](ATUALIZACOES.md) acompanha a raiz do ZIP. O workflow
 Windows valida o build antes de preparar os downloads. A branch acompanha o
 desktop 0.2.10; sincronizar os fontes não publica nem instala uma nova distribuição.
 
-O GIPHY exige a migração `supabase/migrations/20261016140000_giphy_profile_credits.sql`
-no banco de destino e o endpoint autenticado `/community/gif-provider` do backend.
-`GIPHY_API_KEY` é a chave pública do cliente GIPHY, enviada ao navegador autenticado;
-nunca use uma credencial privada de serviço nessa variável. Sem ela, a importação
-por link continua disponível. Veja as [notas da 0.2.8](archive/ATUALIZAR_WINDOWS_v0.2.8.md).
+Antes de atualizar uma instalação antiga, confira os
+[pré-requisitos de GIFs](ATUALIZACOES.md#gifs-do-giphy): SQL de créditos, endpoint
+do backend e chave pública `GIPHY_API_KEY`. Sem chave, a importação por link continua
+disponível.
 
 ## Configuração do backend
 
@@ -39,15 +38,16 @@ já existentes de autenticação, SMTP, R2 e mídia ao atualizar somente o códi
 Os links de confirmação e recuperação precisam apontar para o frontend correto;
 confira a [configuração de URLs do Supabase](https://supabase.com/docs/guides/auth/redirect-urls).
 
-Os limites de consumo e participantes continuam em `server/realtime-sfu.js`,
+Os limites de consumo e participantes continuam em `server/realtime-sfu.ts`,
 com variáveis `REALTIME_*`. A estimativa local de tráfego não substitui a medição
 do provedor. Preserve esses valores e a configuração de persistência de uso ao
 atualizar uma instalação existente.
 
 Os SQL legados ficam em `supabase/*.sql` e as migrações datadas em
 `supabase/migrations/`. Aplique somente as mudanças ausentes na base de destino;
-notas de versão antigas não comprovam o estado atual de outro banco. Uma rotina
-única de instalação nova reproduzível ainda está pendente na migração do projeto.
+notas de versão antigas não comprovam o estado atual de outro banco. Para uma base
+nova, use o roteiro `supabase/install.sql` descrito em
+[Instalação nova do banco](DESENVOLVIMENTO_DESKTOP.md#instalação-nova-do-banco).
 
 Para comandos locais e pré-requisitos, consulte
 [Desenvolvimento desktop](DESENVOLVIMENTO_DESKTOP.md). Para critérios de validação,

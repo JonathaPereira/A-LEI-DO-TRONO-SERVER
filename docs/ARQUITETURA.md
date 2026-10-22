@@ -2327,8 +2327,10 @@ builds empacotados. Permite atualização de componentes ao salvar.
 ## Documentação e arquivos
 
 README é o ponto de entrada. Desenvolvimento descreve execução; este documento
-registra decisões; MIGRACAO registra pendências. `docs/archive/` conserva as duas
-notas usadas na distribuição, instruções do bridge Windows e originais de arte.
+registra decisões; MIGRACAO registra pendências. `docs/ATUALIZACOES.md` reúne as
+exigências de atualização e acompanha a distribuição, sem um arquivo por versão.
+As instruções do bridge Windows ficam em `electron/clips-helper/LEIA-ME-WINDOWS.txt`;
+`docs/archive/previews/` conserva os originais de arte.
 Documentos substituídos e capturas antigas podem ser recuperados pelo histórico Git.
 Licenças, créditos, modelos de áudio, SQL e recursos de jogos foram mantidos.
 Arquivos gerados ficam fora do Git.

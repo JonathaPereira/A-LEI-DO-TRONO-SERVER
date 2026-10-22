@@ -2,7 +2,7 @@
 
 Atualização desktop **0.2.10** integrada: painel de chamada compacto e recuperação
 independente de mídias SFU. Veja a [política de recuperação](docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md)
-e as [notas da versão](docs/archive/ATUALIZAR_WINDOWS_v0.2.10.md).
+e o [guia de atualizações](docs/ATUALIZACOES.md).
 
 Aplicativo de comunicação e jogos, com interface Next.js + React + TypeScript,
 desktop Electron e backend Express/WebSocket. O foco de validação é Windows.
@@ -51,8 +51,8 @@ public/                    Imagens, áudio, manuais, fornecedores e jogo Cinzas
 scripts/                   Desenvolvimento, mídia e empacotamento
 tests/                     Regressões e integrações
 supabase/                  SQL existentes e roteiro único de instalação nova
-docs/                      Arquitetura, desenvolvimento e andamento da migração
-docs/archive/              Notas usadas na distribuição e originais de arte
+docs/                      Arquitetura, desenvolvimento, atualizações e migração
+docs/archive/previews/     Originais de arte preservados
 ```
 
 `out/`, `.next/`, `artifacts/` e os JS/CSS gerados na raiz de `public/` são saídas

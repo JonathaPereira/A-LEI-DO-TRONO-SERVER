@@ -100,22 +100,7 @@ async function prepareSite({
     path.join(root, 'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
     path.join(site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
   );
-  const numeric = (v) => v.split('.').map(Number),
-    compare = (a, b) => {
-      const x = numeric(a),
-        y = numeric(b);
-      for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
-      return 0;
-    };
-  const guides = (await fs.readdir(path.join(root, 'docs/archive')))
-    .map((name) => ({ name, version: /^ATUALIZAR_WINDOWS_v(\d+\.\d+\.\d+)\.md$/.exec(name)?.[1] }))
-    .filter((g) => g.version && compare(g.version, version) <= 0)
-    .sort((a, b) => compare(b.version, a.version))
-    .slice(0, 2);
-  if (guides[0]?.version !== version)
-    throw Error('Guia de publicação da versão atual não encontrado.');
-  for (const guide of guides)
-    await fs.copyFile(path.join(root, 'docs/archive', guide.name), path.join(site, guide.name));
+  await fs.copyFile(path.join(root, 'docs/ATUALIZACOES.md'), path.join(site, 'ATUALIZACOES.md'));
   for (const file of ['upgrade-azul.sql', 'upgrade-splendor.sql'])
     await fs.copyFile(path.join(root, 'supabase', file), path.join(site, file));
   await fs.copyFile(

@@ -32,5 +32,6 @@ sem uso; use o prefixo `_` somente para posições obrigatórias de callbacks.
 Os JS/CSS preparados em `public/`, `.next/` e `out/` são gerados. Preserve recursos,
 créditos e licenças de `public/assets`, `public/vendor` e `public/roguelite`.
 
-Atualize a documentação responsável pela informação. As notas de `docs/archive/`
-são históricas.
+Atualize a documentação responsável pela informação. Exigências de atualização
+ficam em `docs/ATUALIZACOES.md`, incluído nos pacotes; não crie um Markdown por
+versão. O histórico detalhado permanece nos commits e nas releases.

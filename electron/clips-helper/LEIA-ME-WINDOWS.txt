@@ -4,8 +4,8 @@ Este componente permite clipar com o jogo em foco, mantendo o chat no outro
 monitor. Não grava tela, não captura microfone e não recebe seus vídeos:
 ele envia somente o comando do atalho para o navegador neste computador.
 
-ANTES DE USAR: publique o frontend com replay integrado (cache 091sharingclips).
-A versão antiga do site não possui a conexão com este componente.
+ANTES DE USAR: use o site atualizado com replay integrado.
+Versões antigas do site não possuem a conexão com este componente.
 
 1. Extraia o ZIP e abra MN-Clipes.exe. Não precisa instalar .NET nem usar admin.
 2. No aplicativo, clique em Copiar código.
@@ -39,5 +39,3 @@ Conexão local: WebSocket 127.0.0.1:32196, autenticado por código aleatório.
 Não aceita conexões de outros computadores. O atalho usa RegisterHotKey
 exclusivamente para a combinação escolhida, sem monitorar outras teclas.
 Compatibilidade: Windows 10/11 x64, navegador Chrome/Edge atualizado.
-
-Windows 0.2.2: tela cheia nativa e mesa responsiva no Trono; Usurpação online; peças do centro do Azul; recursos por cor e negociações detalhadas no Splendor; filtro leve entre falas. Backend 0.13.0-alpha, sem SQL novo.

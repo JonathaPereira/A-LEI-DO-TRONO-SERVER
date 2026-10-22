@@ -15,7 +15,7 @@ async function fixture() {
     'electron',
     'supabase/migrations',
     'installer',
-    'docs/archive',
+    'docs',
   ])
     await fs.mkdir(path.join(root, dir), { recursive: true });
   for (const file of [
@@ -23,10 +23,7 @@ async function fixture() {
     'electron/LEIA-ME-PUBLICAR.txt',
     'docs/PUBLICAR_SURGE_LEVE.md',
     'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md',
-    'docs/archive/ATUALIZAR_WINDOWS_v0.1.11.md',
-    'docs/archive/ATUALIZAR_WINDOWS_v0.1.10.md',
-    'docs/archive/ATUALIZAR_WINDOWS_v0.1.9.md',
-    'docs/archive/ATUALIZAR_WINDOWS_v0.1.12.md',
+    'docs/ATUALIZACOES.md',
     'supabase/migrations/20261016140000_giphy_profile_credits.sql',
     'supabase/upgrade-azul.sql',
     'supabase/upgrade-splendor.sql',
@@ -69,9 +66,10 @@ test('Surge package contains the entire frontend and exactly the latest installe
       await fs.readFile(path.join(result.site, '20261016140000_giphy_profile_credits.sql'), 'utf8'),
       'fixture',
     );
+    assert.equal(await fs.readFile(path.join(result.site, 'ATUALIZACOES.md'), 'utf8'), 'fixture');
     assert.deepEqual(
-      (await fs.readdir(result.site)).filter((n) => n.startsWith('ATUALIZAR_WINDOWS_')).sort(),
-      ['ATUALIZAR_WINDOWS_v0.1.10.md', 'ATUALIZAR_WINDOWS_v0.1.11.md'],
+      (await fs.readdir(result.site)).filter((n) => n.startsWith('ATUALIZAR_WINDOWS_')),
+      [],
     );
     const index = await fs.readFile(path.join(result.frontend, 'index.html'), 'utf8');
     assert(index.includes('href="' + result.url + '"'));
