@@ -1,9 +1,22 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A branch migrada
-incorpora o desktop **0.3.2** e backend **0.14.0-alpha**, portando todas as atualizações
-da `main` (0.2.11 a 0.3.2). A versão de cada pacote é identificada pelo
+prepara o desktop **0.3.4** e backend **0.14.0-alpha**, portando as atualizações
+da `main` (0.2.11 a 0.3.2) e a correção do instalador da 0.3.3. A versão de cada pacote é identificada pelo
 instalador e pelo manifesto `downloads/latest.yml` daquela entrega.
+
+## Windows 0.3.4
+
+Entrega da arquitetura migrada para Next.js, React e TypeScript. Preserva jogos,
+chamadas, transmissão de tela, perfis, arquivos e soundboard. A atualização do
+instalador incorporada da 0.3.3 fecha também o aplicativo escondido na bandeja e
+aceita diretórios com apóstrofo. Contas, sessão lembrada e preferências são mantidas.
+Ao autorizar a instalação, a chamada é encerrada; escolha um momento conveniente.
+
+A 0.3.4 é posterior às instalações 0.3.3 e pode ser oferecida pelo atualizador,
+que não aceita downgrade. A entrega permanece pendente até o workflow Windows
+aprovar o pacote e sua publicação no Surge ser concluída. Esta preparação não
+introduz SQL nem muda a versão do backend em relação à 0.3.2/0.14.0-alpha.
 
 ### Novidades incorporadas (0.2.11 a 0.3.2 / 0.14.0-alpha)
 - **Ticket to Ride**: Novo jogo de tabuleiro ferroviário com mapa interativo, cartas de vagão e bilhetes de destino, pontuação dinâmica e bots.

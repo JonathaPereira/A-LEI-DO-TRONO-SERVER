@@ -1,6 +1,6 @@
 {
   "name": "mn-trono-desktop",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "M&N e A Lei do Trono — aplicativo Windows",
   "author": "Jonatha Pereira",
   "private": true,
@@ -60,7 +60,8 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "include": "installer.nsh"
     },
     "publish": [
       {

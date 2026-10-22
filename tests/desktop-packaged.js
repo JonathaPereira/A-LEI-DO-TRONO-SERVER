@@ -106,9 +106,14 @@ test(
         require('../electron/package.json').version,
       );
       assert.equal(
-        (await page.evaluate(() => window.TronoDesktop.remoteCapability())).host,
-        true,
+        await app.evaluate(({ app }) => app.getVersion()),
+        require('../electron/package.json').version,
       );
+      await expect(page.locator('meta[name="mn-desktop-version"]')).toHaveAttribute(
+        'content',
+        require('../electron/package.json').version,
+      );
+      assert.equal((await page.evaluate(() => window.TronoDesktop.remoteCapability())).host, true);
       const geometry = await app.evaluate(({ BrowserWindow, screen }) => ({
         window: BrowserWindow.getAllWindows()[0].getBounds(),
         work: screen.getPrimaryDisplay().workAreaSize,

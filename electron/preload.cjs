@@ -6,7 +6,7 @@ const listen = (channel, fn) => {
   return () => ipcRenderer.removeListener(channel, handler);
 };
 contextBridge.exposeInMainWorld('TronoDesktop', {
-  version: '0.3.2',
+  version: '0.3.4',
   remoteCapability: () => ipcRenderer.invoke('mn:remote-capability'),
   prepareRemoteCapture: (name) => ipcRenderer.invoke('mn:remote-prepare', name),
   allowRemoteControl: (mode = 'desktop') => ipcRenderer.invoke('mn:remote-allow', mode),
