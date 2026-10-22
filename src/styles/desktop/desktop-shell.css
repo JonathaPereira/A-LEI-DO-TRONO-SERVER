@@ -313,7 +313,7 @@ body.desktop-app[data-desktop-view='game'] #socialPanel.social-chat-hub {
   right: auto !important;
   top: var(--desktop-effects-top, 120px) !important;
   bottom: auto !important;
-  max-height: calc(100dvh - 24px) !important;
+  max-height: var(--desktop-effects-height, calc(100dvh - 24px)) !important;
   z-index: 850;
 }
 .desktop-app #desktopRail button[aria-expanded='true'],

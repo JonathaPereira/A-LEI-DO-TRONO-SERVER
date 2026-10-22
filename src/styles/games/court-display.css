@@ -796,6 +796,13 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)) {
     max-width: 90%;
   }
 }
+/* Keep the law summary clear of the played cards in short windows. The law's
+   name, image, trump and complete focus/hover description remain available. */
+@media (max-width: 1000px) and (max-height: 550px) {
+  body.desktop-app #gameScreen.game-screen .law-mini small {
+    display: none;
+  }
+}
 /* The Discord call panel occupies the left corner on wide screens. */
 body.desktop-app[data-app-layout='discord']:not(.court-fullscreen)
   #gameScreen.game-screen

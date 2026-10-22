@@ -1072,9 +1072,9 @@ body.chat-only-active #callWorkspace {
 }
 #callWorkspace #socialPanel #voiceRoster .voice-person.media-in-profile {
   display: grid !important;
-  grid-template-columns: 30px minmax(0, 1fr) !important;
+  grid-template-columns: 30px minmax(0, 1fr) 26px !important;
   grid-template-rows: auto 20px 20px !important;
-  grid-template-areas: 'preview preview' 'avatar name' 'avatar meta' !important;
+  grid-template-areas: 'preview preview preview' 'avatar name expand' 'avatar meta expand' !important;
   gap: 3px 8px !important;
   justify-content: stretch !important;
   justify-items: start !important;
@@ -1085,6 +1085,12 @@ body.chat-only-active #callWorkspace {
   aspect-ratio: auto !important;
   overflow: hidden !important;
   text-align: left !important;
+}
+/* Profile actions belong to the identity footer, clear of the video's controls. */
+#callWorkspace #socialPanel #voiceRoster .voice-person.media-in-profile > .participant-expand {
+  grid-area: expand !important;
+  position: static !important;
+  inset: auto !important;
 }
 #callWorkspace #socialPanel #voiceRoster .voice-person.media-in-profile > .mn-person-avatar {
   grid-area: avatar !important;
@@ -1824,9 +1830,9 @@ body[data-app-layout='original'] #callWorkspace #workspaceTools {
     .mn-media-stage.has-screen
     #voiceRoster
     .voice-person.media-in-profile {
-    grid-template-columns: 22px minmax(0, 1fr) !important;
+    grid-template-columns: 22px minmax(0, 1fr) 26px !important;
     grid-template-rows: 40px 22px !important;
-    grid-template-areas: 'preview preview' 'avatar name' !important;
+    grid-template-areas: 'preview preview preview' 'avatar name expand' !important;
     gap: 3px 5px !important;
   }
   #callWorkspace

@@ -102,10 +102,14 @@ export function ParticipantCard({
       if ((event as ToggleEvent).newState === 'closed') setExpanded(false);
     };
     popup.addEventListener('toggle', toggle);
+    const observer = new ResizeObserver(position);
+    observer.observe(card.current!);
+    observer.observe(popup);
     window.addEventListener('resize', position);
     document.getElementById('voiceRoster')?.addEventListener('scroll', position, { passive: true });
     position();
     return () => {
+      observer.disconnect();
       popup.removeEventListener('toggle', toggle);
       window.removeEventListener('resize', position);
       document.getElementById('voiceRoster')?.removeEventListener('scroll', position);

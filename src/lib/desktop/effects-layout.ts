@@ -5,17 +5,20 @@ export function createDesktopEffectsLayout(target: Window) {
   if (!menu) return () => {};
   let frame: number | undefined,
     disposed = false;
+  function bounds(id: string) {
+    const element = doc.getElementById(id),
+      rect = element?.getBoundingClientRect();
+    return rect && rect.width > 0 && rect.height > 0 ? rect : null;
+  }
   function position() {
     frame = undefined;
     if (disposed || !menu || menu.hidden) return;
-    const button = doc.getElementById('soundboardToggle'),
-      topbar = doc.getElementById('desktopTopBar'),
-      bottom = doc.getElementById(
-        doc.body.dataset.appLayout === 'discord' ? 'layoutVoicePanel' : 'desktopCallDock',
-      );
-    if (!button || !topbar || !bottom) return;
-    const topBound = topbar.getBoundingClientRect().bottom + 12,
-      bottomBound = bottom.getBoundingClientRect().top - 12;
+    const button = doc.getElementById('soundboardToggle');
+    if (!button) return;
+    const topbar = bounds('workspaceHeader') ?? bounds('desktopTopBar'),
+      bottom = bounds('callFocusDock') ?? bounds('layoutVoicePanel') ?? bounds('desktopCallDock'),
+      topBound = (topbar?.bottom ?? 0) + 12,
+      bottomBound = (bottom?.top ?? target.innerHeight) - 12;
     const height = Math.max(120, bottomBound - topBound) + 'px';
     if (menu.style.getPropertyValue('--desktop-effects-height') !== height)
       menu.style.setProperty('--desktop-effects-height', height);

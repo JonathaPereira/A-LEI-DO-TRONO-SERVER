@@ -322,6 +322,28 @@ test(
                 await expect(
                   page.locator('#soundboardToggle > .workspace-control-icon'),
                 ).toHaveCount(1);
+                await expect
+                  .poll(() =>
+                    menu.evaluate((node) => {
+                      const visible = (id) => {
+                        const rect = document.getElementById(id)?.getBoundingClientRect();
+                        return rect?.width && rect?.height ? rect : null;
+                      };
+                      const rect = node.getBoundingClientRect(),
+                        header = visible('workspaceHeader') ?? visible('desktopTopBar'),
+                        controls =
+                          visible('callFocusDock') ??
+                          visible('layoutVoicePanel') ??
+                          visible('desktopCallDock');
+                      return (
+                        rect.top >= (header?.bottom ?? 0) + 11 &&
+                        rect.bottom <= (controls?.top ?? innerHeight) - 11 &&
+                        rect.left >= 0 &&
+                        rect.right <= innerWidth
+                      );
+                    }),
+                  )
+                  .toBe(true);
                 await page.locator('#soundboardClose').click();
                 await expect(menu).toBeHidden();
                 await assertIdentity();

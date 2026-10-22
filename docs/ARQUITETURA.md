@@ -71,7 +71,7 @@ convidado antes da fila; o gateway delega os comandos aos parsers de domínio.
 
 `browser.ts` instala uma única instância por página, importada pelo Next antes
 dos controladores. `TronoNetwork` permanece apenas como nome de compatibilidade
-para consumidores não convertidos. `legacy/network.js` e sua entrada no manifesto
+para os consumidores existentes. `legacy/network.js` e sua entrada no manifesto
 foram excluídos. O catálogo de canais consome esse snapshot para refletir a seleção
 imediatamente, sem esperar outro broadcast da lista.
 
@@ -113,7 +113,7 @@ avisos e avatares das mesas em React. Perfil, mensagens e edição de cargos del
 a seus donos atuais; o servidor continua autorizando alterações. `community-runtime.tsx`
 liga eventos de conta, conexão, teclado e viewport. Monta nos hosts estáveis do
 painel/avisos, move junto com os layouts existentes e libera raízes, timers e
-assinaturas no descarte. Nas mesas ainda estáticas, possui apenas os hosts de
+assinaturas no descarte. Nas mesas, possui apenas os hosts compartilhados de
 avatares. `TronoCommunity` aponta para esse mesmo controlador, usado pela chamada
 para publicar avisos. `legacy/community.js` e sua entrada no manifesto foram removidos.
 
@@ -133,7 +133,7 @@ toolbar tipado; não deriva estado do texto no DOM. `app-layout-controls.tsx`
 renderiza conexão/perfil, rail web e seletor em React. Os slots vazios recebem
 os mesmos controles da chamada; o painel inteiro pode mudar de lugar sem recriá-los.
 O bootstrap instala `TronoAppLayout` antes do ready e monta a estrutura antes dos
-posicionadores. A observação da visibilidade das telas ainda legadas permanece na
+posicionadores. A observação da visibilidade das telas compartilhadas permanece na
 ponte; `legacy/app-layout.js` foi excluído.
 
 A seleção/troca de canais pertence a `lib/navigation/community-navigation.ts`;
@@ -790,7 +790,7 @@ O fechamento do gerenciamento conserva o rascunho da mesma conta; uma troca de c
 o limpa. Uma consulta global do catálogo pode terminar após fechar o diálogo, sem
 reabrir a interface. Exclusões continuam pedindo confirmação e o servidor autoriza
 toda mutação. A fachada `TronoCommunityAdmin` delega a esse dono para a navegação
-ainda legada; não mantém outra lista nem outros listeners.
+compartilhada; não mantém outra lista nem outros listeners.
 
 `lib/channels/files.ts` possui somente a listagem paginada de anexos do canal atual.
 Valida página completa, cursor e canal dos arquivos antes de aceitar os dados.
@@ -845,15 +845,17 @@ Descarte remove raízes, listeners, timers, uploads e HTTP, sem fechar socket/m�
 estado visual da janela. Navegação reutiliza portal, jogos e catálogo existentes;
 perfil/configurações não trocam a área e clipes conservam o bloqueio atual. O IPC
 continua no preload: a leitura inicial da janela e respostas de toggle não podem
-sobrescrever um evento nativo posterior. Assinaturas, observação das telas ainda
-legadas e raízes React são liberadas pelo runtime do shell.
+sobrescrever um evento nativo posterior. Assinaturas, observação das telas
+compartilhadas e raízes React são liberadas pelo runtime do shell.
 
 `components/desktop/shell-controls.tsx` renderiza rail, topo, sombra e informação
 da chamada, usando o status do toolbar tipado. O runtime monta antes das
 configurações e de app-layout; move os mesmos hosts de diagnóstico e controles.
-O botão de soundboard conserva sua ação legada; apenas seu conteúdo é React,
+O botão de soundboard conserva sua ação no controlador tipado; seu conteúdo é React,
 marcado para o posicionador não recriar seus ícones. `effects-layout.ts` observa
 visibilidade/tamanho e limita o menu à região disponível, agrupando medições por frame.
+Usa as barras visíveis do workspace ou do shell, ignorando retângulos vazios;
+o CSS aplica a altura calculada para manter o menu acima dos controles.
 
 `lib/desktop/updates.ts` valida estados nativos e possui somente apresentação,
 banner manual/automático, pedidos pendentes e ações. Eventos mais novos vencem
@@ -945,7 +947,7 @@ seguinte envia somente as mídias restantes. O cliente de arquivos continua úni
 emoji, seleção de mídia e prévia. `editor-runtime.tsx` monta uma raiz no
 `profileEditorHost`; desktop e web movem o host inteiro. Trocar abas conserva o
 rascunho e os nós; fechar as configurações descarta recursos e consultas pendentes.
-`TronoProfile` conserva apenas a fachada para chamadores ainda não convertidos.
+`TronoProfile` conserva apenas a fachada para os chamadores existentes.
 A preparação de imagens pertence a `media.ts`; a exportação antiga `formatPhoto`,
 sem chamadores, foi retirada da fachada.
 A resposta de `auth.updateProfile` só atualiza a sessão que iniciou o pedido,
@@ -1170,8 +1172,8 @@ instância por janela. O bootstrap instala preferências tipadas antes dos scrip
 após o dono da conta, instala filtros tipados e inicializa a voz. Os listeners iniciam
 uma única vez em `trono:ready`.
 Callbacks adiam a leitura das dependências até sua composição estar completa.
-`runtime-ports.ts` descreve as entradas ainda legadas e a fachada `TronoSocial`,
-preservada para consumidores não convertidos. Não há registro global de fábricas
+`runtime-ports.ts` descreve as portas tipadas e a fachada `TronoSocial`,
+preservada para os consumidores existentes. Não há registro global de fábricas
 `TronoVoiceCapture`; `legacy/social.js` e sua entrada no manifesto foram excluídos.
 As instâncias duram pela página; entrada, saída e descarte de mídia continuam
 nos donos existentes, sem outro socket, peer ou captura.
@@ -1472,6 +1474,10 @@ e abertura de perfil por mouse/teclado. Avatares usam o componente React/cliente
 arquivos já compartilhados. `ParticipantBackground` renderiza imagem/variáveis dentro
 de `data-profile-background-slot`, sem alterar os slots dos players. Respostas antigas
 de perfil/imagem conservam suas validações de conta/identidade.
+Nos cards com mídia, a ação de perfil ocupa o rodapé de identidade, separada dos
+controles do vídeo, inclusive em janelas baixas. Um ResizeObserver acompanha card
+e popover para atualizar a posição quando a mídia muda de lugar; é desconectado
+no cleanup do mesmo efeito que remove os listeners de janela/rolagem.
 
 `media-tile.tsx` cria um host estável por tipo/participante e usa um portal React
 para seus filhos. Docking move o host para o grid ou para um slot vazio do perfil;
@@ -1513,9 +1519,9 @@ monta antes dos layouts; cada botão fica em um host estável com `display: cont
 As configurações movem o host de Comunicação, conservando seu botão e eventos React.
 Os controladores `desktop-shell.js` e `call-workspace.js` foram excluídos; seus handlers não devem ser restaurados.
 `navigation-view.ts` é a ponte para classes/visibilidade dos containers que os layouts
-legados ainda movem; assina o mesmo estado e possui Escape, breakpoint e foco adiado
-do compositor. Fechar, trocar de sala ou descartar cancela o foco. Apenas Ampliar
-continua com um botão legado, integrado ao mesmo controlador de mosaico.
+compartilhados movem; assina o mesmo estado e possui Escape, breakpoint e foco adiado
+do compositor. Fechar, trocar de sala ou descartar cancela o foco. O botão Ampliar
+é React em `media-dialogs-runtime.tsx`, integrado ao mesmo controlador de mosaico.
 
 `lib/voice/workspace.ts` projeta navegação, layout, cabeçalho por conta e atalhos
 para até sete conversas. Consome os donos existentes; não consulta a caixa de
@@ -1549,7 +1555,7 @@ arraste/redimensionamento do painel flutuante, sem escrever nos seus filhos Reac
 Consulta a navegação existente; entrar no hub, trocar o breakpoint ou descartar o
 controlador cancela o gesto e libera a captura do ponteiro. Valores salvos são
 validados e limitados à janela; telas estreitas voltam à geometria do CSS. O botão
-Ampliar e a visibilidade do painel ainda se integram à navegação legada.
+Ampliar e a visibilidade do painel integram-se à navegação tipada da chamada.
 
 `components/modals/media-focus-dialog.tsx` possui a grade ampliada em React;
 `lib/voice/mosaic.ts` mantém somente abertura e seleção de até seis pessoas.
@@ -1804,7 +1810,7 @@ Perfil e jogo continuam em slots vazios (`ContentSlot`), preservando
 identidade e listeners dos nós. Editor, arquivos e aparência são React em hosts estáveis;
 mover os hosts conserva os controles e os rádios de tema/layout. Os campos de
 notificações e atividade são filhos React das abas compartilhadas. Os conteúdos
-dos jogos ainda serão convertidos por domínio; as superfícies de perfil já são React.
+dos jogos e as superfícies de perfil são React nos respectivos domínios.
 
 `lib/profiles/appearance.ts` possui tema por conta/convidado, catálogo das dez cores
 e feedback compartilhado com a restauração de painéis. `appearance-fields.tsx`

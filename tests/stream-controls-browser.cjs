@@ -98,6 +98,23 @@ test(
         )
         .toBeGreaterThan(0);
       await exerciseStreamControls(viewer, tile);
+      // Docking a watched stream must leave both the stream's maximize button
+      // and the participant's profile button clickable with the pointer.
+      const card = viewer.locator(`#voiceRoster .voice-person[data-peer="${id}"]`);
+      await card.locator('.participant-expand').click();
+      await card.locator('.participant-media-layout select').selectOption('screen');
+      await card.locator('.participant-expand').click();
+      const docked = card.locator('.participant-screen-slot .screen-share-tile');
+      await expect(docked).toHaveClass(/has-video/);
+      await docked.hover();
+      await docked.locator('.media-fullscreen-btn').click();
+      await expect.poll(() => viewer.evaluate(() => !!document.fullscreenElement)).toBe(true);
+      await docked.hover();
+      await docked.locator('.media-fullscreen-btn').click();
+      await expect.poll(() => viewer.evaluate(() => !!document.fullscreenElement)).toBe(false);
+      await card.locator('.participant-expand').click();
+      await card.locator('.participant-media-layout select').selectOption('stage');
+      await card.locator('.participant-expand').click();
       // Unwatched invitations must remain actionable after the idle duration.
       await tile.hover();
       await tile.getByRole('button', { name: 'Parar de assistir', exact: true }).click();
