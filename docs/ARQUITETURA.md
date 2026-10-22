@@ -2100,6 +2100,10 @@ Espionagem/Usurpação mantêm mensagens privadas individuais. Um token invalida
 transições antigas; `stop()` limpa todos os timers e libera cartas/pendências.
 Aleatoriedade e escala de transição são portas de teste, sem alterar os defaults
 ou o timeout de turno de 60 segundos. `createApplication()` continua isolando instâncias.
+O seletor opcional de decretos recebe a identificação da sala. A fixture em
+`tests/game-test-clock.cjs` fixa uma opção por sala: rodadas de bots numa sala
+abandonada não consomem o decreto reservado ao próximo cenário. Um contador
+global por rodada tornava os testes dependentes da velocidade do renderer.
 
 `channel-service.ts` possui o catálogo e a participação em texto/voz/jogo na mesma
 conexão. Também coordena flags de mídia e modo compartilhado da chamada, projeções

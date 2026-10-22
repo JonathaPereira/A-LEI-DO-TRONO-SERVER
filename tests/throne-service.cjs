@@ -19,6 +19,64 @@ const selectDecree = (f, decree) => {
   act(f, chooser, 'choose-decree', { value: decree });
 };
 
+test('fixture decrees for a second room do not depend on how far abandoned bots have played', () => {
+  withClock((clock) => {
+    for (const abandonedRound of [1, 2, 3]) {
+      const previous = process.env.TRONO_TEST_DECREE;
+      let options;
+      try {
+        process.env.TRONO_TEST_DECREE = 'reserva,espionagem';
+        options = require('./game-test-clock.cjs')();
+      } finally {
+        if (previous === undefined) delete process.env.TRONO_TEST_DECREE;
+        else process.env.TRONO_TEST_DECREE = previous;
+      }
+      const f = fixture({ humans: 2, ...options });
+      try {
+        f.service.start(f.sockets[0]);
+        assert.deepEqual(f.room.game.pending.options, ['reserva']);
+        for (const ws of f.sockets) {
+          const player = f.room.players.get(ws.clientId);
+          f.room.players.delete(ws.clientId);
+          f.service.disconnect(f.room, player, 'leave');
+        }
+        let transitions = 0;
+        while (f.room.game.round < abandonedRound) {
+          assert(++transitions < 2000, 'abandoned bots must progress to the requested round');
+          clock.next();
+        }
+        const room = {
+          id: 'sala-mascara',
+          kind: 'game',
+          name: 'Máscara',
+          players: new Map(),
+          game: null,
+        };
+        f.rooms.set(room.id, room);
+        for (const [seat, ws] of f.sockets.entries()) {
+          ws.roomId = room.id;
+          room.players.set(ws.clientId, {
+            id: ws.clientId,
+            ws,
+            seat,
+            name: `Casa ${seat}`,
+            ready: true,
+          });
+        }
+        f.service.start(f.sockets[0]);
+        assert.deepEqual(
+          room.game.pending.options,
+          ['espionagem'],
+          `prior bots reached round ${abandonedRound}`,
+        );
+      } finally {
+        f.service.stop();
+        assert.equal(clock.pending, 0);
+      }
+    }
+  });
+});
+
 test('Throne commands validate every selection, numeric input and influence field before projecting known values', () => {
   for (const input of [
     null,

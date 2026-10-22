@@ -129,6 +129,19 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   e atalho Windows passaram; publicação self-contained e montagem do pacote com
   EXE e instruções passaram em `artifacts/`.
 
+- **Intermitência dos controles no Electron (`39815922261`)**: a fixture usava um
+  contador global para alternar Reserva/Espionagem. Depois que os humanos saíam
+  da primeira sala, os bots continuavam jogando; uma rodada adicional consumia o
+  decreto reservado à segunda sala. O teste esperava informação privada de
+  Espionagem enquanto o servidor solicitava a escolha de Reserva.
+  O seletor injetado agora recebe a sala e a fixture fixa seu decreto por sala.
+  Uma regressão com serviço real e relógio controlado falhou antes da correção
+  e passou depois, cobrindo bots da sala anterior nas rodadas 1, 2 e 3.
+  Os 151 casos de backend, cinco de rodadas e sete de escolhas no navegador
+  passaram; o teste completo de controles passou duas vezes consecutivas no
+  Electron. Tipagem, formatação e build passaram. Logs específicos usam o prefixo
+  `artifacts/actions-controls-`; os timeouts e a captura de mídia não foram alterados.
+
 Evidências locais: `artifacts/actions-*.log`, `actions-delivery-audit.json` e os
 pacotes gerados. Runner/permissões do GitHub dependem da próxima execução remota;
 as validações locais não publicaram o aplicativo.

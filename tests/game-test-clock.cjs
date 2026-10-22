@@ -20,8 +20,13 @@ module.exports = function gameTestOptions() {
   )
     throw new Error('Invalid test decree');
   let nextDecree = 0;
+  const byRoom = new Map();
   return {
     scheduleDelay: (ms) => Math.min(ms, 8),
-    chooseDecrees: () => [decrees[nextDecree++ % decrees.length]],
+    chooseDecrees: (_decrees, roomId) => {
+      // Bots keep playing after humans leave; their later rounds must not consume another scenario's decree.
+      if (!byRoom.has(roomId)) byRoom.set(roomId, decrees[nextDecree++ % decrees.length]);
+      return [byRoom.get(roomId)];
+    },
   };
 };

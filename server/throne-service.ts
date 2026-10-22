@@ -34,7 +34,7 @@ interface Options {
   broadcastRooms(): void;
   version: string;
   scheduleDelay?(ms: number): number;
-  chooseDecrees?(decrees: typeof Rules.decrees): ThroneDecree[];
+  chooseDecrees?(decrees: typeof Rules.decrees, roomId: string): ThroneDecree[];
   random?(): number;
 }
 const SUITS: ThroneSuit[] = ['cetro', 'chave', 'lamina', 'mascara'];
@@ -354,7 +354,7 @@ export function createThroneService({
     const tied = g.players.filter((p) => rawAccumulated(p) === min);
     const chooser = tied[rand(tied.length)];
     const picks = chooseDecrees
-      ? chooseDecrees(DECREES)
+      ? chooseDecrees(DECREES, room.id)
       : shuffle(DECREES)
           .slice(0, 2)
           .map((d) => d.id);
