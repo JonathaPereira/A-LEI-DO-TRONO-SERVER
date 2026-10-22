@@ -1,3 +1,8 @@
+## Windows 0.3.3 · correção da instalação
+
+O instalador encerra a instância anterior escondida na bandeja e aceita
+caminhos com apóstrofo. Veja [como atualizar](ATUALIZAR_WINDOWS_v0.3.3.md).
+
 ## Windows 0.3.2 · artes do Ticket to Ride
 
 O tabuleiro, as nove cartas, os versos de vagões e destinos e as peças usam
