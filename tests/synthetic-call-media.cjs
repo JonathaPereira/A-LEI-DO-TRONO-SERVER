@@ -1,7 +1,7 @@
 'use strict';
 
 /** Install with context.addInitScript. Sources live for the page so borrowed clones remain live. */
-function installSyntheticCallMedia() {
+function installSyntheticCallMedia({ simulateNativeSuppression = false } = {}) {
   const sources = [];
   navigator.mediaDevices.getUserMedia = async (constraints) => {
     const stream = new MediaStream();
@@ -15,7 +15,19 @@ function installSyntheticCallMedia() {
       tone.connect(gain).connect(output);
       tone.start();
       await context.resume();
-      output.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+      output.stream.getAudioTracks().forEach((track) => {
+        // Exercise native-mode routing without claiming that an oscillator has
+        // a microphone driver's suppression capability or DSP.
+        if (simulateNativeSuppression) {
+          const settings = track.getSettings.bind(track);
+          let native = !!constraints.audio.noiseSuppression;
+          track.getSettings = () => ({ ...settings(), noiseSuppression: native });
+          track.applyConstraints = async (options) => {
+            if ('noiseSuppression' in options) native = !!options.noiseSuppression;
+          };
+        }
+        stream.addTrack(track);
+      });
       sources.push({ context, stream: output.stream });
     }
     if (constraints.video) {

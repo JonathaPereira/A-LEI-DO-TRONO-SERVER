@@ -75,6 +75,12 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   consumido o evento e apagado seus metadados. Isso corrige captura que permanecia
   ativa ao excluir um canal ocupado. Há regressões para chamadas ativas, preparo
   pendente e anexação de sala durante o preparo, preservando saídas de outros jogos.
+- `f3784c7`: o botão do perfil tem espaço próprio no rodapé do
+  card com mídia; não cobre mais o fullscreen do vídeo. O popover acompanha o
+  tamanho do card por ResizeObserver, descartado junto dos listeners.
+  O soundboard considera as barras visíveis do workspace e aplica sua altura
+  disponível. Na mesa desktop de 480×520, o rótulo redundante “LEI ATUAL” fica
+  oculto para não sobrepor as cartas; nome, imagem, trunfo e tooltip permanecem.
 
 ## Validação local
 
@@ -91,6 +97,8 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
 | Transições de jogo/voz | 24 modelos de partida/navegação passaram. `test:court` passou nos 18 casos de regras, partidas, participação e interface, incluindo ida/volta do jogo, chamada na mesa, fullscreen, fila de revelação privada e local após online. A cadeia `npm test`, a chamada com dois Electron, o relay SFU e o pacote atual reconstruído também passaram. Logs `game-transition-*`/`game-transitions-*` e `court-final-regressions.log`. |
 | Saída do canal de voz | 19 modelos de ciclo de vida, tipagem, formatação, build e `npm test` passaram. A interface verifica que a chamada está conectada antes de excluir o canal e que depois não há microfone ativo. Chamada com dois Electron, relay SFU e pacote reconstruído passaram. A Corte passou em seis casos tanto no Chromium padrão quanto no Edge, emulando viewport sem tentar redimensionar a janela nativa fullscreen. Logs `call-room-exit-*` e `court-fullscreen-viewport*`. Uma execução agrupada falhou no idle dos controles de transmissão; a repetição nativa isolada passou com as mesmas asserções. |
 | Paridade | Jogos, efeitos, worklets, WAV, assinatura de arquivos e protocolos foram comparados durante cada conversão. Resultados detalhados e commits anteriores permanecem no Git; nenhuma qualidade de captura/codec/bitrate foi reduzida nesta limpeza. |
+| Suítes antes desatualizadas | `frontend-browser.js`: 25 testes (20 cenários + quatro subcenários de mídia + raiz); `desktop-browser.js`: 16 testes (15 cenários + raiz). Todos passaram, sem skips. Fontes formatados, participação explícita em voz, fixtures completas e falha inicial preservada. Logs `final-frontend-green.log` e `desktop-final-current-controls.log`. |
+| Fechamento visual | `test:ui` passou nos quatro domínios; `test:court`, 18 testes. Regressões isoladas de stream recebido/fullscreen e shell/soundboard passaram em sete testes. Electron real passou com dois clientes, relay SFU local e pacote final reconstruído, em três testes sequenciais, sem instalação. Logs `final-focused-players-shell.log`, `final-migration-electron.log` e `final-court-layout-regressions.log`. |
 
 Testes de interface consomem `out/`; execute build antes. Neste ambiente, Edge usa
 `CHROMIUM_EXECUTABLE_PATH` e as suítes antigas também `AUTH_TEST_CHROMIUM`.
@@ -98,8 +106,10 @@ Exportação/decodificação requerem `ffmpeg` e `ffprobe` no PATH; a cópia por
 fica em `artifacts/ffmpeg/extracted/`. Clipes passaram após corrigir esse ambiente.
 Nesta rodada, a câmera oferecida pelo modo de captura falsa do Edge encerrou com
 evento nativo até numa página vazia, sem o projeto (`camera-browser-only.log`).
-`tests/synthetic-call-media.cjs` fornece fontes estáveis de câmera/microfone à
-suíte da Corte. As asserções de preservação das mesmas trilhas continuam; o teste
+`tests/synthetic-call-media.cjs` fornece fontes estáveis de câmera/microfone às
+suítes da Corte, frontend e desktop. A capacidade de supressão nativa é simulada
+explicitamente quando necessária; isso não executa DSP de um driver real.
+As asserções de preservação das mesmas trilhas continuam; o teste
 não aprova dispositivos físicos. Não houve alteração no dono da captura da câmera.
 
 Evidências ignoradas: `artifacts/style-next-*`, `final-cleanup-*`,
@@ -112,31 +122,10 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 
 ## O que ainda falta
 
-1. Atualizar as expectativas das duas suítes antigas abaixo para os fluxos atuais,
-   mantendo suas verificações relevantes. As regressões atuais por domínio e
-   Electron passam, mas essas suítes antigas ainda não devem ser declaradas verdes.
-2. Concluir o aceite físico e externo. A conversão dos módulos está concluída;
-   o aceite completo da migração permanece aberto até esses resultados.
-
-### Suítes antigas a revisar
-
-- `tests/frontend-browser.js` (`test:frontend`) está em revisão. O fonte foi
-  formatado, usa a área visível `#callWorkspace`, mídia sintética estável e para
-  na primeira falha para não contaminar os cenários seguintes. Os nove primeiros
-  casos passaram: cargos, anexos, canais/exclusão com liberação de captura, envio,
-  histórico após reinício, temas, reset/responsividade, seletor de tela e RNNoise.
-  A antiga verificação dos resizers ocultos foi atualizada para o contrato atual
-  de responsividade/reset descrito em ARQUITETURA; RNNoise verifica a rota de
-  fallback ao suspender o contexto e a troca real pelo seletor de entrada.
-  Retomar no caso de modo leve: a expectativa antiga é `light`, enquanto o
-  controlador atual usa tratamento `native`, conforme a política de não empilhar
-  um expander que cortava sílabas. Depois dele ainda restam os demais cenários.
-  Evidências mais recentes: `artifacts/frontend-noise-device-controls.log`.
-- `tests/desktop-browser.js`: seis casos passaram e dez falharam nas expectativas
-  antigas de entrada automática em voz/fechamento de configurações, também em
-  `9ed1162`. Referências: `clip-buffer-desktop-policy-ui.log` e
-  `clip-buffer-desktop-policy-baseline.log`. Não trocar participação de texto por
-  voz automaticamente só para satisfazer o teste antigo.
+A conversão do código e a atualização das suítes antigas estão concluídas.
+O aceite físico e externo abaixo continua aberto. Não há outra fila de arquivos
+legacy para converter; falhas encontradas nesse aceite devem ser tratadas como
+regressões específicas, com reprodução antes de alterar captura/codec/bitrate.
 
 ### Aceite físico e externo
 
@@ -156,10 +145,11 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 
 ## Como retomar
 
-Confira branch/status e este documento. O próximo recorte útil é modernizar os
-dois testes antigos; comece por `test:frontend`, usando os controles visíveis
-atuais e participação explícita na chamada. Compare qualquer falha nova com a
-referência anterior antes de alterar produção ou enfraquecer uma asserção.
+Confira branch/status e este documento. O próximo passo é executar o desktop
+deste checkout pelo fluxo do README e fazer o aceite físico/externo acima.
+Se houver falha, registre cenário, versão, transporte e diagnóstico local antes
+de ajustar o dono do recurso afetado. As suítes frontend/desktop já estão verdes;
+não reintroduzir entrada automática em voz, resizers retirados ou controladores JS.
 
 Após mudanças: tipagem, formatação, build, regressões relevantes e Electron real
 quando houver mídia. Atualize este checkpoint e crie commit local assinado.
