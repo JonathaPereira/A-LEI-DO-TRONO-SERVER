@@ -7,8 +7,9 @@ O histórico detalhado das conversões permanece no Git.
 
 ## Branch e limites
 
-- Correção atual em `codex/fix-backend-ci`, baseada na main remota `588ad46`;
-  commits locais assinados. A main local não foi alterada.
+- Contribuição atual em `codex/desktop-ci-parallel`, baseada na main `f3472cb`,
+  no clone novo sem worktrees adicionais nem upstream para main. Felipe autorizou
+  commit e push desta contribuição em 22/10/2026; a main não foi alterada.
 - Upstream incorporado cobrindo `8044ec4..6b9ae47`: desktop 0.2.11 a 0.3.2 e backend 0.14.0-alpha portados para a arquitetura migrada.
 - Não publicar, fazer deploy nem substituir o aplicativo instalado sem pedido
   explícito. O pacote em `artifacts/windows-app/win-unpacked/` é só para conferência.
@@ -174,8 +175,8 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   `codex/desktop-installer-running-app`. Esse build usa a estrutura anterior à
   migração e inclui um ajuste NSIS para fechar o aplicativo na bandeja. A main
   migrada `588ad46` declara 0.3.2; não havia novos commits nela ao buscar o remoto.
-  Antes da próxima entrega, portar esse ajuste para `electron/` e escolher versão
-  superior a 0.3.3, atualizando também preload, lockfile e instruções. Não instalar
+  O ajuste foi posteriormente portado para `electron/` na preparação da 0.3.4,
+  com preload, lockfile e instruções sincronizados. Não instalar
   um pacote de QA com a identidade/registro do aplicativo real. A instalação do
   usuário foi apenas consultada.
 - **Criação da janela no runner (`39832539204`)**: o teste focal da Corte passou,
@@ -189,16 +190,150 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   Tipagem, formatação e build passaram. O comando completo passou nos três casos,
   sem skips: janela adiada, geometria da Corte e chamada com dois Electron
   (aproximadamente 77 s na etapa nativa). Evidência em
-  `artifacts/actions-window-layout-final.log`; execução remota do ajuste pendente.
+  `artifacts/actions-window-layout-final.log`. A execução remota `39835581336`,
+  commit `f3472cb`, passou em 22/10/2026; o job Windows completo levou 13min48s.
 
-A branch `codex/fix-backend-ci` ainda acompanha `origin/main` como upstream;
-esse vínculo explica pushes da contribuição para a main pela sincronização.
-Este ajuste de inicialização fica local, sem commit/push nem mudança de configuração
-Git. Corrigir o destino antes de voltar a usar sincronização automática.
+A antiga branch `codex/fix-backend-ci` acompanhava `origin/main` como upstream;
+esse vínculo explicava pushes da contribuição para a main pela sincronização.
+Felipe substituiu o clone. No clone novo há um único checkout; a contribuição
+`codex/desktop-ci-parallel` foi criada sem upstream, a partir de `f3472cb`.
+Main e origin/main permanecem nesse commit. Ao publicar a contribuição, usar o
+nome próprio da branch como destino, sem configurar origin/main como upstream.
 
 Evidências locais: `artifacts/actions-*.log`, `actions-delivery-audit.json` e os
 pacotes gerados. Runner/permissões do GitHub dependem da próxima execução remota;
 as validações locais não publicaram o aplicativo.
+
+## Organização da esteira Windows
+
+O workflow `Windows full app` separa a validação em três jobs independentes,
+todos em Windows e no mesmo commit:
+
+- `checks`: tipagem, formatação, backend, regras, privacidade e contratos de entrega.
+- `interfaces`: interfaces em Chromium, nos modos web e desktop simulado, e jogos.
+- `windows`: helpers C++, Electron real, entrada remota, SFU e áudio. O teste
+  completo de layout/chamada executa logo após o build nativo. As medições de
+  áudio ficam neste runner, separadas da carga das interfaces; loopback e runtime
+  também executam sequencialmente entre si. Os contratos do atualizador real
+  (`desktop-updates.js`) pertencem a este job, que instala `electron/node_modules`.
+
+`delivery` depende do sucesso dos três. Só então gera o diretório do aplicativo,
+testa o binário empacotado, cria instalador/ZIP e publica o rascunho privado.
+O NSIS recebe `--prepackaged` com esse mesmo diretório: não recompõe a aplicação
+após seu teste. Na validação local, os 226 arquivos anteriores permaneceram
+idênticos; o NSIS acrescentou somente seu auxiliar normal `resources/elevate.exe`.
+O diretório final também passou novamente no teste de aplicativo empacotado.
+O fluxo especial de atualizar somente as instruções de um rascunho continua
+independente. O nome do workflow e a exigência de conclusão com sucesso, usados
+por `frontend-publish.yml`, permanecem iguais.
+
+A comparação das listas na primeira etapa preservou os 94 arquivos de teste da
+esteira anterior. A preparação da 0.3.4 acrescenta o teste de instalação descrito
+abaixo. Apenas `desktop-notifications.js` e `call-stability.js` deixaram
+de executar duas vezes. Nenhuma asserção foi retirada nem tornou-se opcional.
+O teste grande `desktop-call-layout.js` permanece completo nesta etapa.
+
+Cada job usa cache de downloads npm e instala as dependências do seu lockfile.
+Interfaces, mídia nativa e entrega geram seu próprio frontend no mesmo commit;
+isso repete um build curto, evitando transferir a exportação e grandes pacotes
+entre runners. O único artefato de transferência contém os dois EXE C++ já
+validados (cerca de 650 KiB antes da compressão). A entrega restaura esses arquivos
+em `artifacts/native-audio/Release`, sem recompilar os helpers.
+
+O artefato `native-helpers-<run_id>` expira em um dia e é removido após a entrega
+bem-sucedida. Se outra validação ou a entrega falhar, continua disponível nesse
+prazo para repetir somente os jobs que falharam; o nome não muda entre tentativas.
+Depois de expirar, repetir a execução completa. Evidências de falha ficam em
+artefatos separados por domínio durante sete dias. Instalador e ZIP continuam
+armazenados na release privada, sem transferi-los por artefatos do Actions.
+
+Próximas decisões dependem dos tempos da primeira execução reorganizada: conferir
+o ganho real com a disponibilidade de runners, avaliar o custo total de minutos
+e só então selecionar suítes por domínio/arquivos alterados. Paralelismo reduz a
+espera quando há runners disponíveis, mas repete preparação e pode consumir mais
+minutos. Não mover cobertura crítica para uma execução opcional para obter verde.
+Desmembrar o teste grande de layout exige comparar as garantias específicas de
+continuidade de mídia com as suítes de domínio antes de retirar cenários dele.
+
+Validação local desta alteração: tipagem, formatação, build estático, actionlint
+1.7.12 e análise sintática dos comandos PowerShell passaram. Os comandos extraídos
+dos jobs reorganizados passaram em 268 testes de backend/contratos e 44 de
+interfaces, sem skips. A inicialização adiada da janela, geometria da Corte,
+chamada completa com dois Electron, loopback do Windows e runtime passaram em
+cinco testes, também sem skips. Helpers compilados e transferência local por ZIP
+conservaram seus hashes; os dois EXE incluídos no pacote são idênticos aos
+validados. O teste do aplicativo empacotado passou antes e depois do NSIS. O
+instalador foi gerado com `--prepackaged`, e o preparo dos downloads passou
+(site 188,9 MiB; instalador 135,5 MiB). Logs `artifacts/ci-parallel-*`.
+
+Na primeira execução reorganizada (`39845535930`, commit `2f56fd0`), interfaces
+e Windows nativo passaram. O backend falhou somente em dois contratos do
+atualizador: `GenericProvider` é importado de `electron/node_modules`, ausente
+naquele job. O teste local anterior tinha as dependências de ambos os projetos
+instaladas, o que mascarou essa dependência. A entrega ficou corretamente bloqueada.
+
+O mesmo grupo foi reproduzido em cópia temporária dos fontes sem dependências do
+Electron: 32 passaram e dois falharam com `MODULE_NOT_FOUND`. `desktop-updates.js`
+foi transferido inteiro para uma etapa própria no job Windows, após o preparo do
+Electron. O grupo de backend restante passou em 27 casos sem essa pasta; os sete
+contratos do atualizador passaram no ambiente com suas dependências. O inventário
+permanece com 95 arquivos de teste, sem eliminar nem duplicar casos. O backend
+completo passou em 261 testes numa instalação própria com `npm ci` somente na raiz,
+sem junction, worktree ou dependências do Electron. Tipagem, formatação, build e
+actionlint também passaram. Logs `artifacts/ci-checks-*` e `ci-updater-*`;
+conferir a execução remota após o push da correção.
+
+A instalação do driver virtual do runner não foi executada no computador de Felipe.
+As validações locais não publicaram release nem instalaram o aplicativo.
+Commit e push da contribuição foram autorizados posteriormente por Felipe.
+
+## Preparação da entrega Windows 0.3.4
+
+`electron/package.json`, as duas entradas de versão do lockfile, preload e
+instruções da distribuição estão sincronizados em 0.3.4. O backend conserva
+0.14.0-alpha. O build exporta essa versão no metadado do frontend e no botão de
+download. Os guias existentes foram atualizados, sem criar outro Markdown de
+notas de versão. O roteiro de publicação pelo workflow e a alternativa manual
+ficam em `PUBLICAR_SURGE_LEVE.md` e acompanham o ZIP.
+
+`electron/installer.nsh` é o hook exato da 0.3.3 (`0f52f55a`), agora referenciado
+por `build.nsis.include`. Usa o plugin nativo nsProcess para localizar o nome
+exato do executável, pedir seu fechamento e, após autorização da instalação,
+encerrar a instância que continuar escondida na bandeja. Não interpola o caminho
+em PowerShell. Mantém a identidade do produto, conta e preferências.
+
+O teste upstream `desktop-installer.js` foi adaptado para `electron/` e bloqueado
+fora de Windows GitHub-hosted descartável. Na entrega, executa depois do NSIS e
+antes de preparar/publicar downloads: instala em diretório com apóstrofo,
+simula a versão antiga que se esconde ao fechar, atualiza, verifica o perfil e
+reabre. Um skip nessa etapa reprova o job. Não executar esse instalador de QA
+no computador de Felipe; o teste usa a mesma identidade do produto instalado.
+
+Tipagem, formatação, build e 17 testes de atualizador/distribuição passaram.
+Manifestos, preload executado em VM e metadado exportado concordam em 0.3.4.
+O diretório empacotado foi gerado e sua versão Windows, ASAR, preload e renderer
+também identificam 0.3.4. O teste de aplicativo empacotado agora compara essas
+versões durante sua execução real.
+
+A abertura local do novo binário foi bloqueada antes de iniciar o aplicativo:
+duas tentativas, saída 4551 e stderr informando bloqueio pela política Device
+Guard da organização. Não foi alterada nem contornada a política. A abertura do
+pacote 0.3.4 e a instalação sobre a bandeja precisam passar no runner Windows;
+o sucesso local do pacote 0.3.2 não aprova automaticamente esta entrega.
+Evidências em `artifacts/release-034/`, especialmente `packaged-launch-debug.log`.
+
+O NSIS 0.3.4 foi gerado com o hook portado e `--prepackaged`. O preparo do site
+passou (188,9 MiB, instalador 135,5 MiB): `latest.yml` informa 0.3.4 e o SHA-512
+confere com o único EXE em downloads. O binário e os arquivos locais não são uma
+entrega aprovada enquanto as verificações de execução/instalação não passarem.
+
+Após o push autorizado da contribuição, aguardar os três jobs de validação e o
+job de entrega do Windows full app; só
+depois copiar a tag `desktop-v0.3.4-run-<id>-attempt-<tentativa>` gerada e executar
+Publish approved frontend na branch correspondente. Não usar uma tag 0.3.2 ou
+0.3.3 para publicar o código 0.3.4. O destino do push é a própria contribuição,
+com upstream `origin/codex/desktop-ci-parallel`. Instalação do produto e publicação
+no Surge não foram executadas nem autorizadas nesta etapa.
 
 ## Validação local
 

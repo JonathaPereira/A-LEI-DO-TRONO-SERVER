@@ -14,6 +14,35 @@ Windows valida o build antes de preparar os downloads. A versão do desktop fica
 em `electron/package.json`; sincronizar os fontes não publica nem instala uma nova
 distribuição.
 
+## Publicar pelo GitHub
+
+1. Suba a contribuição para sua própria branch e aguarde o workflow
+   **Windows full app** terminar com sucesso. Uma alteração apenas local não gera
+   um pacote remoto. Para a entrega atual, o desktop deve declarar **0.3.4**.
+2. Na execução aprovada, abra o resumo **Downloads Windows 0.3.4** e copie a tag
+   exata da release privada: `desktop-v0.3.4-run-<id>-attempt-<tentativa>`.
+3. Em **Actions → Publish approved frontend → Run workflow**, selecione a branch
+   cujo código corresponde à entrega aprovada e cole a tag em `release_tag`.
+   Se a contribuição já estiver integrada e corresponder ao pacote, use `main`.
+   O repositório precisa ter o secret `SURGE_TOKEN` configurado.
+4. Execute e confira as etapas **Publish the verified directory to Surge** e
+   **Verify published version**. Esse workflow reutiliza os pacotes aprovados e
+   verifica seus hashes, sem repetir a suíte Windows nem gerar outro instalador.
+5. Confira `version: 0.3.4` em
+   <https://a-lei-do-trono.surge.sh/downloads/latest.yml>. No aplicativo instalado,
+   busque a atualização pelo rodapé e reinicie quando o download estiver pronto.
+
+Para publicação manual, baixe `MN-Trono-Frontend-0.3.4.zip` da mesma release,
+extraia numa pasta nova e abra um terminal dentro de `frontend/`:
+
+```powershell
+npx --yes surge@0.46.0 . a-lei-do-trono.surge.sh
+```
+
+Autentique-se na conta que pode publicar nesse domínio. Envie a pasta `frontend/`
+inteira, inclusive `downloads/`; preserve o EXE e `latest.yml` da mesma entrega.
+Publicar o pacote 0.3.2 não atualiza automaticamente uma instalação 0.3.3.
+
 O layout exporta essa versão no metadado `mn-desktop-version`, e o botão de download
 usa a mesma fonte. O empacotador verifica a versão antes de substituir saídas;
 uma exportação ausente ou de outra versão exige executar `npm run build` novamente.

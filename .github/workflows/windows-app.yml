@@ -67,10 +67,13 @@ jobs:
               await github.rest.repos.uploadReleaseAsset({...context.repo,release_id:release.id,name:file.name,data:file.data,headers:{'content-type':'text/plain','content-length':file.data.length}});
             }
             core.notice('Instructions refreshed; EXE and ZIP assets were preserved: '+release.html_url);
-  windows:
+  # Separate runners keep browser activity out of native audio measurements.
+  # All validation jobs use the same workflow commit and remain required.
+  checks:
+    name: Types, formatting and backend
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: 18
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,17 +81,130 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm ci
-        working-directory: electron
       - run: npm run typecheck
       - run: npm run format:check
-      - run: npm run build
       - name: Verify backend lifecycle and service integration
         timeout-minutes: 2
         run: npm run test:server:lifecycle
       - name: Verify profile validation and persistence
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
+      - name: Verify revised game rules and independent voice
+        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
+      - name: Verify private attachments and creator moderation
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js 2>&1 | Tee-Object artifacts/windows-messaging.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-messaging.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows messaging validation::$details"
+            exit $testExit
+          }
+      - name: Verify Cinzas v0.5 gameplay and verified offline media cache
+        run: node --test tests/cinzas-upstream.js tests/game-assets.js
+      - name: Verify Splendor classic rules, private tables and persistent records
+        shell: pwsh
+        run: |
+          node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js 2>&1 | Tee-Object artifacts/windows-splendor.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-splendor.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Splendor validation::$details"
+            exit $testExit
+          }
+      - name: Verify Love Letter second edition and private hands
+        shell: pwsh
+        run: |
+          node --test tests/love-letter-rules.js tests/love-letter-ws.js tests/bot-names.js 2>&1 | Tee-Object artifacts/windows-love-letter.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-love-letter.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Love Letter validation::$details"
+            exit $testExit
+          }
+      - name: Verify desktop policies and distribution contracts
+        run: node --test tests/desktop-policy.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/voice-reception.js tests/desktop-audio-priority.js tests/site-package.js tests/download-retention.js tests/build-downloads.js
+      - name: Save backend failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/windows-*.log
+  interfaces:
+    name: Browser interfaces and games
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Install Chromium for integration tests
+        run: npx playwright install chromium
+      - name: Verify call workspace and profile layouts
+        shell: pwsh
+        run: |
+          node --test --test-concurrency=1 tests/chat-composer-browser.cjs tests/channels-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js tests/call-controls-browser.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:QA_NATIVE = '1'
+          node --test --test-concurrency=1 tests/app-layout-browser.js tests/profile-media-browser.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item Env:QA_NATIVE
+      - name: Verify Nexus integration and isolated game window
+        run: node --test tests/nexus.js tests/nexus-browser.js
+      - name: Verify Windows notices, call alert settings and PC control alignment
+        run: node --test tests/desktop-notices-controls-browser.js
+      - name: Verify Splendor player visibility and stable Love Letter logs
+        run: node --test --test-concurrency=1 tests/splendor-browser.js tests/love-letter-browser.js
+      - name: Verify Ticket to Ride USA rules, private tables and browser
+        run: npm run test:ticket-to-ride
+      - name: Save interfaces failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interfaces-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/profile-media*/failure-*.png
+            artifacts/nexus/*.png
+            artifacts/splendor/*.png
+            artifacts/love-letter/*.png
+            artifacts/ticket-to-ride/*.png
+  windows:
+    name: Real Windows media and desktop
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
       - name: Build Windows application audio capture
@@ -103,6 +219,11 @@ jobs:
             exit $buildExit
           }
         working-directory: electron
+      - name: Verify call controls preserve live desktop media across layouts
+        run: npm run test:desktop:layout
+      - name: Verify installed Electron updater contracts
+        # GenericProvider is loaded from electron/node_modules, installed in this job.
+        run: node --test tests/desktop-updates.js
       - name: Prepare optional signed virtual controller driver for isolated XInput tests
         shell: pwsh
         run: |
@@ -127,7 +248,7 @@ jobs:
           # Advanced Installer flags (not WiX). The runner is Windows Server;
           # skip only the installer's desktop OS check in this disposable VM.
           $log = Join-Path $env:RUNNER_TEMP 'ViGEmBus-install.log'
-          $install = Start-Process $driver -ArgumentList '/exenoui','/qn','/norestart','AI_SKIP_SYSTEM_REQUIREMENTS=1','/l*v',"`"$log`"" -PassThru
+          $install = Start-Process $driver -ArgumentList '/exenoui','/qn','/norestart','AI_SKIP_SYSTEM_REQUIREMENTS=1','/l*v',"`"$log`"" -WindowStyle Hidden -PassThru
           if (-not $install.WaitForExit(120000)) { Stop-Process $install.Id -Force; if (Test-Path $log) { Get-Content $log -Tail 60 }; throw 'Virtual controller driver installation timed out' }
           $install.Refresh()
           if ($install.ExitCode -notin 0,3010) { if (Test-Path $log) { Get-Content $log -Tail 80 }; throw "Driver installation failed: $($install.ExitCode)" }
@@ -159,19 +280,6 @@ jobs:
             Write-Output "::error title=Background outgoing microphone::$details"
             exit $testExit
           }
-      - name: Verify call workspace and profile layouts
-        shell: pwsh
-        run: |
-          node --test --test-concurrency=1 tests/chat-composer-browser.cjs tests/channels-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js tests/call-controls-browser.js
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:QA_NATIVE = '1'
-          node --test --test-concurrency=1 tests/app-layout-browser.js tests/profile-media-browser.js
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Remove-Item Env:QA_NATIVE
-      - name: Verify Nexus integration and isolated game window
-        run: node --test tests/nexus.js tests/nexus-browser.js
-      - name: Verify Windows notices, call alert settings and PC control alignment
-        run: node --test tests/desktop-notifications.js tests/desktop-notices-controls-browser.js
       - name: Verify native roguelite frame before packaging
         shell: pwsh
         run: |
@@ -198,50 +306,11 @@ jobs:
           }
       - name: Verify microphone PCM and native processing
         run: node --test --test-concurrency=1 tests/native-microphone-browser.js tests/light-noise-processing.js
-      - name: Verify Splendor player visibility and stable Love Letter logs
-        run: node --test --test-concurrency=1 tests/splendor-browser.js tests/love-letter-browser.js
-      - name: Verify revised game rules and independent voice
-        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
-      - name: Verify private attachments and creator moderation
+      - name: Verify native Windows audio and runtime
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js 2>&1 | Tee-Object artifacts/windows-messaging.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-messaging.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows messaging validation::$details"
-            exit $testExit
-          }
-      - name: Verify Cinzas v0.5 gameplay and verified offline media cache
-        run: node --test tests/cinzas-upstream.js tests/game-assets.js
-      - name: Verify Splendor classic rules, private tables and persistent records
-        shell: pwsh
-        run: |
-          node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js 2>&1 | Tee-Object artifacts/windows-splendor.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-splendor.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Splendor validation::$details"
-            exit $testExit
-          }
-      - name: Verify Ticket to Ride USA rules, private tables and browser
-        run: npm run test:ticket-to-ride
-      - name: Verify Love Letter second edition and private hands
-        shell: pwsh
-        run: |
-          node --test tests/love-letter-rules.js tests/love-letter-ws.js tests/bot-names.js 2>&1 | Tee-Object artifacts/windows-love-letter.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-love-letter.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Love Letter validation::$details"
-            exit $testExit
-          }
-      - name: Test desktop policy and native Windows runtime
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-policy.js tests/desktop-updates.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/call-stability.js tests/voice-reception.js tests/desktop-audio-priority.js tests/desktop-audio.js tests/desktop-runtime.js tests/site-package.js tests/download-retention.js tests/build-downloads.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          node --test --test-concurrency=1 tests/desktop-audio.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
@@ -250,8 +319,56 @@ jobs:
             Write-Output "::error title=Windows app runtime::$details"
             exit $testExit
           }
-      - name: Verify call controls preserve live desktop media across layouts
-        run: npm run test:desktop:layout
+      - name: Share only the validated native helpers
+        uses: actions/upload-artifact@v4
+        with:
+          # Keep the name across attempts so rerunning only failed jobs works.
+          name: native-helpers-${{ github.run_id }}
+          overwrite: true
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            artifacts/native-audio/Release/MN-Application-Audio.exe
+            artifacts/native-audio/Release/MN-Remote-Input.exe
+      - name: Save windows-ui failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ui-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/desktop-layout-failure-*.png
+            artifacts/throne-private-hit-*.png
+            artifacts/court-fullscreen-native-state.json
+            artifacts/windows-*.log
+            electron/artifacts/native-audio-build.log
+  delivery:
+    name: Package and deliver after all checks
+    # Default success handling blocks packaging and publication on any failure.
+    needs: [checks, interfaces, windows]
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: electron
+      - run: npm run build
+      - name: Restore the helpers validated by this run
+        uses: actions/download-artifact@v4
+        with:
+          name: native-helpers-${{ github.run_id }}
+          path: artifacts/native-audio/Release
       - name: Build Windows application directory
         run: npx electron-builder --win --x64 --dir --publish never
         working-directory: electron
@@ -266,8 +383,20 @@ jobs:
             exit $testExit
           }
       - name: Build Windows x64 installer
-        run: npm run pack:win
+        # Wrap the directory that just passed its real packaged-app smoke test.
+        run: npm run pack:win -- --prepackaged ../artifacts/windows-app/win-unpacked
         working-directory: electron
+      - name: Verify installation over a running app in the tray
+        shell: pwsh
+        run: |
+          node --test tests/desktop-installer.js 2>&1 | Tee-Object artifacts/windows-installer.log
+          $testExit = $LASTEXITCODE
+          if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP') { $testExit = 1 }
+          if ($testExit -ne 0) {
+            $details = ((Get-Content artifacts/windows-installer.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows installer upgrade::$details"
+            exit $testExit
+          }
       - name: Prepare user download
         env:
           GH_TOKEN: ${{ github.token }}
@@ -290,16 +419,23 @@ jobs:
           script: |
             const {cleanArtifacts}=require('./scripts/desktop/download-retention.cjs');
             await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});
-      - name: Save UI failure evidence
+      - name: Remove temporary native helper transfer
+        # On failure, retain for one day to allow retrying delivery alone.
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const name = `native-helpers-${context.runId}`;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {...context.repo, run_id: context.runId, per_page: 100});
+            for (const artifact of artifacts.filter(item => item.name === name)) {
+              await github.rest.actions.deleteArtifact({...context.repo, artifact_id: artifact.id});
+            }
+      - name: Save delivery failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-ui-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          name: delivery-failure-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
-            artifacts/desktop-layout-failure-*.png
-            artifacts/throne-private-hit-*.png
-            artifacts/court-fullscreen-native-state.json
-            artifacts/profile-media*/failure-*.png
-            artifacts/windows-*.log
+            artifacts/windows-packaged.log
+            artifacts/windows-installer.log
