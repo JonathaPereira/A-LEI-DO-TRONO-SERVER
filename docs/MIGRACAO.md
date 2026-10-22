@@ -100,6 +100,7 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
 | Suítes antes desatualizadas | `frontend-browser.js`: 25 testes (20 cenários + quatro subcenários de mídia + raiz); `desktop-browser.js`: 16 testes (15 cenários + raiz). Todos passaram, sem skips. Fontes formatados, participação explícita em voz, fixtures completas e falha inicial preservada. Logs `final-frontend-green.log` e `desktop-final-current-controls.log`. |
 | Fechamento visual | `test:ui` passou nos quatro domínios; `test:court`, 18 testes. Regressões isoladas de stream recebido/fullscreen e shell/soundboard passaram em sete testes. Electron real passou com dois clientes, relay SFU local e pacote final reconstruído, em três testes sequenciais, sem instalação. Logs `final-focused-players-shell.log`, `final-migration-electron.log` e `final-court-layout-regressions.log`. |
 | Áudio nativo e runtime | O teste original `desktop-audio.js` passou sem skip: capturou o tom do processo selecionado e excluiu outro processo, pelo helper C++ e API do Windows. `desktop-runtime.js` passou com áudio silenciado e habilitado, conservando as mesmas asserções de permissões, sessão, picker, arquivos e IPC. Os timeouts antigos não se reproduziram; sua causa não foi estabelecida. Logs `native-acceptance-current.log` (dois testes) e `native-runtime-unmuted-option.log` (um teste). |
+| Uso real entre computadores | Em 22/10/2026, Felipe testou na própria máquina e relatou que seus amigos conseguiram assistir à transmissão e ouvi-lo normalmente. Confirmou que usou a versão local deste projeto, aberta pelo fluxo `npm run desktop:start`. Aprova qualitativamente voz e recepção da tela na rede real; não registra taxa efetiva de quadros, áudio do jogo ou transporte usado. Checkout desta conferência: `29c0a93`. |
 
 Testes de interface consomem `out/`; execute build antes. Neste ambiente, Edge usa
 `CHROMIUM_EXECUTABLE_PATH` e as suítes antigas também `AUTH_TEST_CHROMIUM`.
@@ -124,18 +125,20 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 ## O que ainda falta
 
 A conversão do código e a atualização das suítes antigas estão concluídas.
-O aceite físico e externo abaixo continua aberto. Não há outra fila de arquivos
+O teste básico de voz e transmissão entre computadores foi aprovado pelo usuário;
+as verificações complementares abaixo continuam abertas. Não há outra fila de arquivos
 legacy para converter; falhas encontradas nesse aceite devem ser tratadas como
 regressões específicas, com reprodução antes de alterar captura/codec/bitrate.
 
 ### Aceite físico e externo
 
-Felipe informou que ainda não executou esse aceite. Não concluir a meta
-com base apenas nas fontes sintéticas ou nos testes locais.
+Felipe confirmou o uso da versão local migrada com amigos: voz e recepção da tela
+funcionaram normalmente. Esse relato não é uma medição de FPS nem confirma os
+demais fluxos abaixo; não repetir o aceite básico como se ainda não tivesse sido feito.
 
-- Conferir microfone/loopback real e compartilhar um jogo com efeitos a 60 fps
-  entre computadores. Os testes sintéticos não medem esse desempenho nem a rede
-  real. Comparar recepção, áudio, recuperação e preservação da chamada ao navegar.
+- Complementar o teste com áudio do jogo/loopback e jogo com efeitos a 60 fps.
+  A recepção de tela e voz na rede real já foi confirmada; a taxa efetiva de quadros,
+  recuperação e preservação da chamada ao navegar não foram relatadas nesse aceite.
 - Conferir TURN/SFU, confirmação/recuperação por e-mail e banco no ambiente de
   desenvolvimento apropriado. Fixtures locais/PGlite não aprovam serviços reais.
 - Gravação usa mixer/encoder reais, mas simula o destino de arquivos; conferir
@@ -161,8 +164,8 @@ esses caminhos locais, sem aprovar microfone físico, jogo, rede ou serviços re
 
 ## Como retomar
 
-Confira branch/status e este documento. O próximo passo é executar o desktop
-deste checkout pelo fluxo do README e fazer o aceite físico/externo acima.
+Confira branch/status e este documento. Voz e transmissão da versão local já
+foram testadas com amigos; o próximo passo é complementar o aceite descrito acima.
 Se houver falha, registre cenário, versão, transporte e diagnóstico local antes
 de ajustar o dono do recurso afetado. As suítes frontend/desktop já estão verdes;
 não reintroduzir entrada automática em voz, resizers retirados ou controladores JS.

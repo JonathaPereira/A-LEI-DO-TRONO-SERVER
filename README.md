@@ -64,7 +64,8 @@ O frontend usa módulos TypeScript e interfaces React; o desktop usa a exportaç
 estática do Next. `src/legacy/` e o runtime JavaScript do servidor foram removidos.
 Todos os módulos de `server/` têm tipagem estrita; os estilos de domínio entram
 na compilação do Next. As suítes frontend/desktop foram atualizadas e passam
-completas; o aceite físico e externo continua pendente. Fachadas `Trono*`
+completas. Voz e transmissão já foram confirmadas pelo usuário com amigos na versão
+local; o aceite complementar está registrado em Migração. Fachadas `Trono*`
 encaminham aos donos existentes, preservando um socket e os recursos de mídia.
 
 O mapa de responsabilidades está em [Arquitetura](docs/ARQUITETURA.md).
