@@ -290,3 +290,16 @@ jobs:
           script: |
             const {cleanArtifacts}=require('./scripts/desktop/download-retention.cjs');
             await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});
+      - name: Save UI failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ui-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/desktop-layout-failure-*.png
+            artifacts/throne-private-hit-*.png
+            artifacts/court-fullscreen-native-state.json
+            artifacts/profile-media*/failure-*.png
+            artifacts/windows-*.log

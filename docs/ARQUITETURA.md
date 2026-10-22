@@ -609,6 +609,11 @@ foram excluídos. `court-display.css` continua necessário para geometria/estilo
 não é uma sobra do controlador. Nenhum player, trilha, captura, peer ou socket é
 criado, movido ou descartado por esse fluxo.
 
+A geometria da Corte usa trilhas intrínsecas de CSS Grid para separar cartas e
+centro informativo. Em janelas baixas, as quatro cartas ficam em uma linha abaixo
+da lei/decreto; o contêiner da mesa rola se faltar espaço. Não recolocar posições
+absolutas nas cartas nem esconder sobreposições com `pointer-events` ou z-index.
+
 `lib/games/throne-events.ts` despacha somente os efeitos públicos online e possui
 a deduplicação do aviso de turno por participação/rodada/vaza. Consulta diretamente
 o snapshot validado de `throne-match`; não mantém outra partida, mão ou relógio.

@@ -7,7 +7,7 @@ O histórico detalhado das conversões permanece no Git.
 
 ## Branch e limites
 
-- Correção atual em `codex/fix-backend-ci`, baseada na main remota `21297fa`;
+- Correção atual em `codex/fix-backend-ci`, baseada na main remota `588ad46`;
   commits locais assinados. A main local não foi alterada.
 - Upstream incorporado cobrindo `8044ec4..6b9ae47`: desktop 0.2.11 a 0.3.2 e backend 0.14.0-alpha portados para a arquitetura migrada.
 - Não publicar, fazer deploy nem substituir o aplicativo instalado sem pedido
@@ -141,6 +141,43 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   passaram; o teste completo de controles passou duas vezes consecutivas no
   Electron. Tipagem, formatação e build passaram. Logs específicos usam o prefixo
   `artifacts/actions-controls-`; os timeouts e a captura de mídia não foram alterados.
+
+- **Sobreposição dos controles da Corte (`39819723658`)**: a carta inferior
+  invadia o decreto quando o espaço útil diminuía. A regressão focal reproduziu
+  `tableCard0` sobre Espionagem em 1008 × 651 antes da correção. Cartas, centro
+  e moedas agora ocupam trilhas distintas da grade; a mesa tem rolagem quando necessário.
+  Foram retiradas as posições absolutas conflitantes e a regra antiga que
+  escondia a crônica entre 901 e 1100 px. `test:desktop:layout` começa com a
+  regressão focal e depois usa dois Electron em janela inicialmente pequena,
+  variando dimensões nos dois layouts e preservando as mesmas mídias/peers.
+  Não há cliques forçados nem aumento dos timeouts.
+  A etapa completa passou novamente após ajustar as moedas: regressão focal
+  em cerca de 11 s e chamada nativa em 85 s, sem casos ignorados. Depois do
+  ajuste final passaram também Corte/partidas locais/estilos (11 casos),
+  políticas/áudio/runtime/entrega (38) e o executável recém-compilado (1).
+  Tipagem, formatação e exportação estática passaram; YAML do workflow validado.
+  Instalador NSIS recompilado sem instalação. Preparo local e ZIP passaram:
+  frontend com instalador em 188,9 MiB (limite 190), 237 arquivos e um único EXE
+  com SHA-256 igual ao instalador gerado. Estes pacotes são de QA local 0.3.2;
+  não foram publicados nem substituíram a versão instalada.
+- **Grupo de interface do Windows**: uma execução local revelou outra corrida:
+  o teste de canais abria o texto antes da confirmação da troca de sala, que
+  fechava esse painel. O teste aguarda a confirmação e a seleção antes de abrir.
+  O grupo completo passou em 17 casos e a variante desktop em mais dois.
+  A falha de emoji do perfil em `39822368692` não foi reproduzida nessas
+  repetições, inclusive com CPU do renderer reduzida em quatro vezes; não há
+  correção presumida desse ponto. Falhas de perfil e Electron
+  agora salvam imagens; o workflow retém apenas essas evidências e logs por sete
+  dias, sem incluir perfis locais nem o diretório inteiro de artifacts.
+- **Diferença de versões conferida**: o registro do Windows informa 0.3.3,
+  originada do build bem-sucedido `39703076365`, commit `0f52f55a`, branch
+  `codex/desktop-installer-running-app`. Esse build usa a estrutura anterior à
+  migração e inclui um ajuste NSIS para fechar o aplicativo na bandeja. A main
+  migrada `588ad46` declara 0.3.2; não havia novos commits nela ao buscar o remoto.
+  Antes da próxima entrega, portar esse ajuste para `electron/` e escolher versão
+  superior a 0.3.3, atualizando também preload, lockfile e instruções. Não instalar
+  um pacote de QA com a identidade/registro do aplicativo real. A instalação do
+  usuário foi apenas consultada.
 
 Evidências locais: `artifacts/actions-*.log`, `actions-delivery-audit.json` e os
 pacotes gerados. Runner/permissões do GitHub dependem da próxima execução remota;

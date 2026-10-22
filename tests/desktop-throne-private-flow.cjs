@@ -1,7 +1,7 @@
 'use strict';
 const { expect } = require('@playwright/test'),
   assert = require('node:assert/strict');
-async function exerciseThronePrivate({ page, receiver }) {
+async function exerciseThronePrivate({ page, receiver, apps }) {
   for (const client of [page, receiver])
     await expect.poll(() => client.evaluate(() => window.TronoNetwork.gameRoom)).toBe(null);
   for (const client of [page, receiver]) {
@@ -47,15 +47,69 @@ async function exerciseThronePrivate({ page, receiver }) {
   await expect(page.locator('#thronePrivateDialog')).toBeVisible();
   await page.screenshot({ path: 'artifacts/throne-private-electron.png' });
   for (const client of [page, receiver]) await client.locator('#thronePrivateContinue').click();
-  for (const client of [page, receiver]) {
+  for (const [index, client] of [page, receiver].entries()) {
     await expect(client.locator('#thronePrivateDialog')).toBeHidden();
-    await client.locator('#decreeBadge').click();
-    await expect(client.locator('#thronePrivateDialog')).toBeVisible();
-    assert.equal(
-      await client.evaluate(() => window.TronoThronePrivate.getSnapshot().dialog.action),
-      null,
+    const app = apps[index];
+    const original = await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].getContentSize(),
     );
-    await client.locator('#thronePrivateContinue').click();
+    try {
+      for (const [width, height] of [
+        original,
+        [1008, 651],
+        [1440, 900],
+        [1280, 720],
+        [1024, 700],
+        [800, 600],
+        [480, 700],
+        [480, 520],
+      ]) {
+        await app.evaluate(
+          ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(...size),
+          [width, height],
+        );
+        await client.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
+        try {
+          await client.locator('#decreeBadge').click();
+        } catch (error) {
+          await client.screenshot({
+            path: `artifacts/throne-private-hit-${index}-${width}x${height}.png`,
+          });
+          console.error(
+            'Decree hit target:',
+            { index, width, height },
+            await client.evaluate(() => {
+              const rect = (selector) => {
+                const r = document.querySelector(selector).getBoundingClientRect();
+                return { x: r.x, y: r.y, width: r.width, height: r.height };
+              };
+              return {
+                window: [innerWidth, innerHeight],
+                decree: rect('#decreeBadge'),
+                slot: rect('#tableCard0'),
+                table: rect('.royal-table'),
+                info: rect('#throneCourtHost'),
+              };
+            }),
+          );
+          throw error;
+        }
+        await expect(client.locator('#thronePrivateDialog')).toBeVisible();
+        assert.equal(
+          await client.evaluate(() => window.TronoThronePrivate.getSnapshot().dialog.action),
+          null,
+        );
+        await client.locator('#thronePrivateContinue').click();
+      }
+    } finally {
+      await app.evaluate(
+        ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(...size),
+        original,
+      );
+    }
   }
   for (const client of [page, receiver]) {
     await client.evaluate(() => window.TronoThroneBoard.backToLobby());

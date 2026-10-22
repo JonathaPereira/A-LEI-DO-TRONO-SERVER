@@ -40,6 +40,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
       });
       apps.push(app);
       assert.deepEqual(await app.evaluate(({app}) => ({packaged: app.isPackaged, name: app.getName()})), {packaged: false, name: 'MN Trono Desenvolvimento'});
+      await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].setContentSize(1024, 740));
       // These dialogs concern synthetic devices in disposable test profiles only.
       await app.evaluate(({dialog}) => { dialog.showMessageBox = async () => ({response: 0}); });
       const page = await app.firstWindow();
@@ -195,7 +196,7 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
     await require('./manual-recording-flow.cjs').exerciseManualRecording(page, {desktop: true});
     await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({page, receiver});
-    await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver});
+    await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver, apps});
     await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);
     await require('./community-navigation-controls.cjs').exerciseCommunityNavigation(page);
     await require('./desktop-court-display-flow').exerciseCourtFullscreen({app:apps[0],page});
@@ -903,6 +904,12 @@ test('real desktop keeps the same controls, tracks and connected peers across la
     await page.locator('#workspaceHeaderToggle').click();
     await expect(page.locator('#workspaceHeader')).toBeVisible();
     assert.deepEqual(errors, []);
+  } catch (error) {
+    await Promise.allSettled(apps.map(async (app, index) => {
+      const page = await app.firstWindow({timeout: 1000});
+      await page.screenshot({path: `artifacts/desktop-layout-failure-${index}.png`, timeout: 3000});
+    }));
+    throw error;
   } finally {
     finished = true;
     for (const app of apps.reverse()) await closeTestApp(app);

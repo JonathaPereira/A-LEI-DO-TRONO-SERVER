@@ -359,6 +359,17 @@ test(
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
       await expect(page.locator('.room-presence-icons .community-avatar')).toHaveCount(1);
       assert.deepEqual(errors, []);
+    } catch (error) {
+      const pages = browser?.contexts().flatMap((context) => context.pages()) || [];
+      await Promise.allSettled(
+        pages.map((page, index) =>
+          page.screenshot({
+            path: `${out}/failure-${index}.png`,
+            timeout: 3000,
+          }),
+        ),
+      );
+      throw error;
     } finally {
       await browser?.close();
       await fixture.stop();

@@ -154,6 +154,12 @@ test(
 
       // Reading clears the badge while the channel remains muted.
       await row('chat-livre').click();
+      // A row click starts an asynchronous room transition. Its acknowledgement
+      // clears the previous drawer; open text only after that transition finishes.
+      await expect
+        .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))
+        .toBe('chat-livre');
+      await expect(row('chat-livre')).toHaveAttribute('aria-current', 'page');
       await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
       await page.locator('#courtChatInput').click();
       await expect(row('chat-livre').locator('.channel-unread')).toHaveCount(0);

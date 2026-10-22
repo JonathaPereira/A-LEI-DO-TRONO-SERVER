@@ -40,12 +40,12 @@ body #gameScreen.game-screen .board-wrap {
   container: court-board / inline-size;
   display: grid !important;
   grid-template-columns: minmax(110px, 180px) minmax(0, 1fr) minmax(110px, 180px) !important;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+  grid-template-rows: minmax(min-content, 1fr) minmax(min-content, 1fr) auto !important;
   grid-template-areas: 'p2 table p3' 'p1 table p0' 'laws laws laws' !important;
   gap: 12px !important;
   padding: 14px !important;
   min-height: 380px !important;
-  overflow: visible;
+  overflow: auto;
   box-sizing: border-box;
 }
 body #gameScreen.game-screen .royal-table {
@@ -56,9 +56,9 @@ body #gameScreen.game-screen .royal-table {
   align-self: stretch !important;
   justify-self: stretch;
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
   min-width: 0 !important;
-  min-height: 0 !important;
+  min-height: min-content !important;
   max-width: none !important;
   max-height: none !important;
   border-radius: 12% !important;
@@ -91,21 +91,7 @@ body #gameScreen.game-screen .stats {
   gap: 4px 8px;
   font-size: 10px !important;
 }
-body #gameScreen.game-screen .slot-top {
-  top: 10px !important;
-}
-body #gameScreen.game-screen .slot-bottom {
-  bottom: 10px !important;
-}
-body #gameScreen.game-screen .slot-left {
-  left: 10px !important;
-}
-body #gameScreen.game-screen .slot-right {
-  right: 10px !important;
-}
 body #gameScreen.game-screen .center-info {
-  transform: translate(-50%, -50%) !important;
-  max-width: calc(100% - 2 * var(--card-w) - 30px);
   gap: 5px !important;
 }
 body #gameScreen.game-screen .law-mini {
@@ -249,10 +235,6 @@ body.court-fullscreen
     --card-w: 58px;
     border-radius: 9% !important;
   }
-  body #gameScreen.game-screen .center-info {
-    transform: translate(-50%, -50%) !important;
-    max-width: calc(100% - 150px);
-  }
   body #gameScreen.game-screen .hand-card {
     width: 53px !important;
     height: 74px !important;
@@ -278,10 +260,6 @@ body.court-fullscreen
   }
   body #gameScreen.game-screen .royal-table {
     --card-w: 46px;
-  }
-  body #gameScreen.game-screen .center-info {
-    transform: translate(-50%, -50%) !important;
-    max-width: calc(100% - 118px);
   }
   body #gameScreen.game-screen .law-tracker {
     flex-direction: column;
@@ -348,7 +326,7 @@ body.desktop-app #gameScreen.game-screen {
   overflow: hidden;
 }
 body.desktop-app #gameScreen.game-screen .board-wrap {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+  grid-template-rows: minmax(min-content, 1fr) minmax(min-content, 1fr) auto !important;
   min-height: 0 !important;
 }
 body.desktop-app #gameScreen.game-screen .hand-zone {
@@ -367,7 +345,7 @@ body.desktop-app #gameScreen.game-screen .center-info {
 }
 @media (max-width: 1000px) {
   body.desktop-app #gameScreen.game-screen .board-wrap {
-    grid-template-rows: auto minmax(0, 1fr) auto auto !important;
+    grid-template-rows: auto minmax(min-content, 1fr) auto auto !important;
   }
   body.desktop-app #gameScreen.game-screen .player-panel {
     padding: 4px 7px !important;
@@ -508,7 +486,7 @@ body #gameScreen.game-screen .score-board {
   }
   body.desktop-app #gameScreen.game-screen .board-wrap {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    grid-template-rows: auto minmax(min-content, 1fr) auto !important;
     grid-template-areas: 'p0 p1 p2 p3' 'table table table table' 'laws laws laws laws' !important;
   }
   body.desktop-app #gameScreen.game-screen .player-panel {
@@ -542,27 +520,6 @@ body #gameScreen.game-screen .score-board {
   body.desktop-app #gameScreen.game-screen .royal-table .table-card-slot {
     --card-w: 32px;
     --card-h: 45px;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-top {
-    left: 18%;
-    top: 7px !important;
-    transform: translateX(-50%);
-  }
-  body.desktop-app #gameScreen.game-screen .slot-right {
-    right: calc(18% - 16px) !important;
-    top: 7px !important;
-    transform: none;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-bottom {
-    left: 82%;
-    bottom: 7px !important;
-    transform: translateX(-50%);
-  }
-  body.desktop-app #gameScreen.game-screen .slot-left {
-    left: calc(18% - 16px) !important;
-    top: auto;
-    bottom: 7px;
-    transform: none;
   }
   body.desktop-app #gameScreen.game-screen .law-tracker {
     padding: 3px !important;
@@ -611,27 +568,6 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)) {
   body.desktop-app #gameScreen.game-screen .score-board strong {
     font-size: 12px !important;
     line-height: 1.1 !important;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-top {
-    left: 18%;
-    top: 7px !important;
-    transform: translateX(-50%);
-  }
-  body.desktop-app #gameScreen.game-screen .slot-right {
-    right: calc(18% - 20px) !important;
-    top: 7px !important;
-    transform: none;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-bottom {
-    left: 82%;
-    bottom: 7px !important;
-    transform: translateX(-50%);
-  }
-  body.desktop-app #gameScreen.game-screen .slot-left {
-    left: calc(18% - 20px) !important;
-    top: auto;
-    bottom: 7px;
-    transform: none;
   }
 }
 
@@ -768,32 +704,6 @@ body #gameScreen.game-screen .public-cards:not(:has(.public-card-chip)) {
   }
   body.desktop-app #gameScreen.game-screen .influence-action {
     display: none;
-  }
-  body.desktop-app #gameScreen.game-screen .royal-table .table-card-slot {
-    top: auto !important;
-    bottom: 6px !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-bottom {
-    left: 12.5% !important;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-left {
-    left: 37.5% !important;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-top {
-    left: 62.5% !important;
-  }
-  body.desktop-app #gameScreen.game-screen .slot-right {
-    left: 87.5% !important;
-  }
-  body.desktop-app #gameScreen.game-screen .center-info {
-    top: 5px;
-    transform: translateX(-50%) !important;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 90%;
   }
 }
 /* Keep the law summary clear of the played cards in short windows. The law's
@@ -969,5 +879,96 @@ body.court-fullscreen #layoutVoicePanel {
   body.desktop-app[data-app-layout='discord']:has(#gameScreen.game-screen:not(.hidden))
     #layoutProfile {
     padding: 2px;
+  }
+}
+
+/* Cards and the law/decree occupy separate intrinsic tracks. When the shell
+   leaves too little height, the board scrolls instead of covering its controls. */
+body #gameScreen.game-screen .royal-table {
+  display: grid;
+  --court-bank-space: 44px;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  grid-template-rows: max-content minmax(min-content, 1fr) max-content;
+  gap: 8px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+body #gameScreen.game-screen .royal-table .table-card-slot {
+  position: relative;
+  inset: auto !important;
+  transform: none !important;
+  align-self: center;
+  justify-self: center;
+  margin-top: var(--court-bank-space);
+}
+body #gameScreen.game-screen .table-influence-coins {
+  display: contents;
+}
+body #gameScreen.game-screen .coin-bank {
+  position: relative;
+  inset: auto;
+  transform: none;
+  align-self: start;
+  justify-self: center;
+}
+body #gameScreen.game-screen .slot-top,
+body #gameScreen.game-screen .coin-seat-2 {
+  grid-area: 1 / 2;
+}
+body #gameScreen.game-screen .slot-left,
+body #gameScreen.game-screen .coin-seat-1 {
+  grid-area: 2 / 1;
+}
+body #gameScreen.game-screen .slot-right,
+body #gameScreen.game-screen .coin-seat-3 {
+  grid-area: 2 / 3;
+}
+body #gameScreen.game-screen .slot-bottom,
+body #gameScreen.game-screen .coin-seat-0 {
+  grid-area: 3 / 2;
+}
+body #gameScreen.game-screen .center-info {
+  position: relative;
+  inset: auto;
+  transform: none !important;
+  grid-area: 2 / 2;
+  align-self: center;
+  justify-self: center;
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 900px) {
+  body #gameScreen.game-screen .royal-table {
+    --court-bank-space: 34px;
+  }
+}
+@media (max-height: 650px) {
+  body.desktop-app #gameScreen.game-screen .royal-table {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: auto max-content;
+    padding: 6px;
+    gap: 6px;
+  }
+  body.desktop-app #gameScreen.game-screen .center-info {
+    grid-area: 1 / 1 / 2 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  body.desktop-app #gameScreen.game-screen .slot-bottom,
+  body.desktop-app #gameScreen.game-screen .coin-seat-0 {
+    grid-area: 2 / 1;
+  }
+  body.desktop-app #gameScreen.game-screen .slot-left,
+  body.desktop-app #gameScreen.game-screen .coin-seat-1 {
+    grid-area: 2 / 2;
+  }
+  body.desktop-app #gameScreen.game-screen .slot-top,
+  body.desktop-app #gameScreen.game-screen .coin-seat-2 {
+    grid-area: 2 / 3;
+  }
+  body.desktop-app #gameScreen.game-screen .slot-right,
+  body.desktop-app #gameScreen.game-screen .coin-seat-3 {
+    grid-area: 2 / 4;
   }
 }

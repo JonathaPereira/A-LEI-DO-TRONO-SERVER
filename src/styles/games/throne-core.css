@@ -850,9 +850,6 @@
     width: 66vw;
     min-width: 520px;
   }
-  .event-log-panel {
-    display: none;
-  }
   .player-panel {
     width: 165px;
   }
