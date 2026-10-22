@@ -63,7 +63,7 @@ locais. Edite os fontes em `src/`; os arquivos gerados não são versionados.
 O frontend usa módulos TypeScript e interfaces React; o desktop usa a exportação
 estática do Next. `src/legacy/` e o runtime JavaScript do servidor foram removidos.
 Todos os módulos de `server/` têm tipagem estrita; os estilos de domínio entram
-na compilação do Next. A auditoria final e os aceites físicos/externos continuam
+na compilação do Next. A revisão das suítes antigas e os aceites físicos/externos continuam
 pendentes. Fachadas `Trono*` encaminham aos donos existentes, preservando um socket
 e os recursos de mídia.
 

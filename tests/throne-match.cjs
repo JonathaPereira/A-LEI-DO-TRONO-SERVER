@@ -265,6 +265,18 @@ test('explicit cancellation blocks delayed state packets; a new match can reuse 
   assert(f.context());
   assert.equal(f.ticks.size, 1);
 });
+
+test('leaving an online room clears its mode so another lobby can offer local play', async () => {
+  const f = await fixture();
+  f.context();
+  assert.equal(f.controller.getSnapshot().mode, 'online');
+  f.scope(null);
+  assert.equal(f.controller.getSnapshot().mode, null);
+  assert.equal(f.controller.getSnapshot().match, null);
+  f.scope({ key: 'user:a:other', seat: 0 });
+  assert.equal(f.controller.getSnapshot().mode, null);
+  f.controller.dispose();
+});
 test('malformed and older snapshots cannot display a prior accepted table', async () => {
   const f = await fixture(),
     m = f.context(table({ round: 2 }));

@@ -133,6 +133,34 @@ test('a game becomes the voice context only when primary; attachment keeps indep
   assert.equal(client.getSnapshot().voiceRoom.id, 'voice');
   assert.equal(client.getSnapshot().textRoom.id, 'text');
 });
+
+test('the server game-room shape with a null channel type establishes voice context without changing text membership', async (t) => {
+  const { client, message, membership, calls } = await setup(t);
+  membership.primaryRoom = 'game';
+  membership.gameRoom = 'game';
+  client.consumeTextRoom(room('text', 'text'));
+  message({
+    type: 'joined-game-room',
+    room: {
+      id: 'game',
+      kind: 'game',
+      name: 'Mesa',
+      channelType: null,
+      voiceActive: false,
+      players: [],
+    },
+    primaryRoomId: 'game',
+    chatRoomId: 'text',
+  });
+  assert.equal(client.getSnapshot().voiceRoom?.id, 'game');
+  assert.equal(client.getSnapshot().voiceRoom.channelType, 'mixed');
+  assert.equal(client.getSnapshot().textRoom.id, 'text');
+  assert(calls.some((call) => Array.isArray(call) && call[0] === 'voice' && call[1] === 'game'));
+  message({ type: 'room-state', room: { id: 'game', kind: 'game', channelType: 42 } });
+  assert.equal(client.getSnapshot().voiceRoom?.id, 'game');
+  message({ type: 'room-state', room: { id: 'game', kind: 'chat', channelType: null } });
+  assert.equal(client.getSnapshot().voiceRoom.kind, 'game');
+});
 test('unread and mute use the current chat activity; account and guest messages are recognized as self', async (t) => {
   const { client, calls, saved } = await setup(t);
   client.showForRoom(true);

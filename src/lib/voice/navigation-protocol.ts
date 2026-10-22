@@ -8,10 +8,16 @@ export function readNavigationRoom(value: unknown): NavigationRoom | null {
     (value.kind !== 'chat' && value.kind !== 'game') ||
     (value.name !== undefined && typeof value.name !== 'string') ||
     (value.channelType !== undefined &&
+      !(value.kind === 'game' && value.channelType === null) &&
       (typeof value.channelType !== 'string' ||
         !['text', 'voice', 'mixed'].includes(value.channelType))) ||
     (value.voiceActive !== undefined && typeof value.voiceActive !== 'boolean')
   )
     return null;
-  return Object.freeze({ ...value }) as NavigationRoom;
+  // Game rooms are mixed media rooms; the server represents their missing
+  // community-channel classification as null. Keep the internal domain non-null.
+  return Object.freeze({
+    ...value,
+    ...(value.kind === 'game' && value.channelType === null ? { channelType: 'mixed' } : {}),
+  }) as NavigationRoom;
 }

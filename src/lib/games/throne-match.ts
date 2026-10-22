@@ -122,7 +122,8 @@ export function createThroneMatch(options: Options) {
       scope = next;
       blocked = state.mode === 'local';
     }
-    if (state.mode === 'online' && (changed || !options.connected())) publish({ match: null });
+    if (state.mode === 'online' && (changed || !options.connected()))
+      publish({ match: null, ...(changed ? { mode: null } : {}) });
     else publish();
   }
   function receive(message: SocketMessage) {

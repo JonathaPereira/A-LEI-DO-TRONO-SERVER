@@ -54,7 +54,7 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   divide o antigo `base/style.css` em 14 arquivos de domínio, sem reordenar declarações.
   Oito regras exatamente repetidas foram removidas mantendo a última ocorrência
   no mesmo contexto. Temas Original/Discord e URLs locais de imagens/fontes permanecem.
-- A auditoria posterior habilita `noUnusedLocals`/`noUnusedParameters` no frontend
+- `259615c`: habilita `noUnusedLocals`/`noUnusedParameters` no frontend
   e backend, remove argumentos/opções privados sem leitura e a fachada
   `TronoAppearance` sem consumidores. Posições obrigatórias de callbacks usam `_`.
   Títulos da chamada têm hosts React vazios e um único dono de conteúdo, sem
@@ -63,6 +63,13 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   fora do grafo das entradas de produção. Rotas, boot e worklets foram tratados
   como entradas próprias. É evidência auxiliar; não autoriza apagar recursos
   distribuídos ou APIs externas por ausência de um import estático.
+- A suíte da Corte foi atualizada para participação explícita na voz, controles
+  visíveis, hosts de mão/diálogos React e o contrato de fullscreen do desktop.
+  A troca privada simulada agora usa cartas distintas e uma fase/participantes
+  coerentes; a validação de produção não foi afrouxada. Foram encontradas e
+  corrigidas duas falhas reais: `channelType: null` legítimo das salas de jogo
+  era recusado na navegação; o modo online permanecia após mudar/sair da sala,
+  impedindo iniciar uma partida local. Há regressões mínimas para ambos os casos.
 
 ## Validação local
 
@@ -76,12 +83,18 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
 | CSS em desenvolvimento | Alterar um estilo de domínio atualizou o Next dev sem recarregar a página, trocar a identidade da conexão ou encerrar o microfone sintético. Fonte temporário restaurado após o teste. |
 | Electron após CSS | Pacote Windows reconstruído, chamada completa com dois Electron e relay WebRTC real através do backend tipado passaram (três casos). Não houve instalação. |
 | Limpeza final | 30 modelos de motor local/escolhas/mãos/ciclo de vida/aparência e oito casos de layout/aparência/editor/chamada nativa passaram, além da cadeia completa `npm test`. Evidências em `artifacts/final-cleanup-*`. |
+| Transições de jogo/voz | 24 modelos de partida/navegação passaram. `test:court` passou nos 18 casos de regras, partidas, participação e interface, incluindo ida/volta do jogo, chamada na mesa, fullscreen, fila de revelação privada e local após online. A cadeia `npm test`, a chamada com dois Electron, o relay SFU e o pacote atual reconstruído também passaram. Logs `game-transition-*`/`game-transitions-*` e `court-final-regressions.log`. |
 | Paridade | Jogos, efeitos, worklets, WAV, assinatura de arquivos e protocolos foram comparados durante cada conversão. Resultados detalhados e commits anteriores permanecem no Git; nenhuma qualidade de captura/codec/bitrate foi reduzida nesta limpeza. |
 
 Testes de interface consomem `out/`; execute build antes. Neste ambiente, Edge usa
 `CHROMIUM_EXECUTABLE_PATH` e as suítes antigas também `AUTH_TEST_CHROMIUM`.
 Exportação/decodificação requerem `ffmpeg` e `ffprobe` no PATH; a cópia portátil
 fica em `artifacts/ffmpeg/extracted/`. Clipes passaram após corrigir esse ambiente.
+Nesta rodada, a câmera oferecida pelo modo de captura falsa do Edge encerrou com
+evento nativo até numa página vazia, sem o projeto (`camera-browser-only.log`).
+`tests/synthetic-call-media.cjs` fornece fontes estáveis de câmera/microfone à
+suíte da Corte. As asserções de preservação das mesmas trilhas continuam; o teste
+não aprova dispositivos físicos. Não houve alteração no dono da captura da câmera.
 
 Evidências ignoradas: `artifacts/style-next-*`, `final-cleanup-*`,
 `final-source-imports.json`, `styles-before-next.json`, `style-foundation-split.json`
@@ -93,7 +106,7 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 
 ## O que ainda falta
 
-1. Atualizar as expectativas das três suítes antigas abaixo para os fluxos atuais,
+1. Atualizar as expectativas das duas suítes antigas abaixo para os fluxos atuais,
    mantendo suas verificações relevantes. As regressões atuais por domínio e
    Electron passam, mas essas suítes antigas ainda não devem ser declaradas verdes.
 2. Concluir o aceite físico e externo. A conversão dos módulos está concluída;
@@ -109,9 +122,6 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
   `9ed1162`. Referências: `clip-buffer-desktop-policy-ui.log` e
   `clip-buffer-desktop-policy-baseline.log`. Não trocar participação de texto por
   voz automaticamente só para satisfazer o teste antigo.
-- `tests/court-browser.js`: presume entrada automática em voz antes da partida;
-  a falha também foi reproduzida com o runtime anterior. Escolhas, lobby e partidas
-  já têm regressões atuais por domínio. Revisar o preparo da chamada desse fluxo.
 
 ### Aceite físico e externo
 
@@ -132,7 +142,7 @@ checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
 ## Como retomar
 
 Confira branch/status e este documento. O próximo recorte útil é modernizar os
-três testes antigos; comece por `test:frontend`, usando os controles visíveis
+dois testes antigos; comece por `test:frontend`, usando os controles visíveis
 atuais e participação explícita na chamada. Compare qualquer falha nova com a
 referência anterior antes de alterar produção ou enfraquecer uma asserção.
 

@@ -10,6 +10,11 @@ backend existente.
 Frontend e backend usam `noUnusedLocals`/`noUnusedParameters`. Posições necessárias
 de callbacks podem usar `_`; remover argumentos e opções privados sem leitores.
 
+A navegação normaliza o `channelType: null` legítimo das salas de jogo para
+`mixed`, sem aceitar classificações desconhecidas ou null em canais da comunidade.
+Ao mudar o escopo da sala/identidade, o estado da partida online limpa também seu
+modo; limpar somente a mesa deixaria o início de partida local bloqueado.
+
 `components/application.tsx` compõe as telas por domínio. As telas preservam IDs
 e hierarquia relevantes dos controles anteriores. `chat-composer.tsx` possui o
 campo de texto, seletor de arquivo/emojis e feedback em React. `lib/chat/composer.ts`
