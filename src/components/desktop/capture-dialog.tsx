@@ -87,7 +87,7 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
             <option value="application" disabled={!request?.applicationAudio}>
               Aplicativo escolhido · isolado
             </option>
-            <option value="system" disabled={!request?.windows}>
+            <option value="system" disabled={!request?.windows || !!request?.remote}>
               Computador inteiro
             </option>
           </select>
@@ -107,7 +107,7 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
             onChange={(event) => controller.setAudioSource(event.currentTarget.value)}
           >
             <option value="">Escolha um aplicativo</option>
-            {request?.sources
+            {(request?.audioSources ?? request?.sources ?? [])
               .filter((source) => source.id.startsWith('window:'))
               .map((source) => (
                 <option key={source.id} value={source.id}>

@@ -26,6 +26,7 @@ function notificationPayload(value) {
     key: value.key,
     title: value.title.slice(0, 100),
     body: value.body.slice(0, 220),
+    preview: value.preview === true,
     target: { type: target.type, id: target.id, accountId: target.accountId },
   };
 }
@@ -36,7 +37,8 @@ function createNotifications({ Notification, window, activate, now = Date.now })
   function notify(value) {
     const data = notificationPayload(value),
       stamp = now();
-    if (window.isFocused() && window.isVisible()) return { shown: false, reason: 'focused' };
+    if (!data.preview && window.isFocused() && window.isVisible())
+      return { shown: false, reason: 'focused' };
     if (!Notification.isSupported()) return { shown: false, reason: 'unsupported' };
     for (const [key, at] of seen) if (stamp - at > 300000) seen.delete(key);
     timestamps = timestamps.filter((at) => stamp - at < 60000);

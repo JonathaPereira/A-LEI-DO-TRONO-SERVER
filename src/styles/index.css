@@ -37,9 +37,11 @@
 @import './games/azul-art.css';
 @import './games/roguelite-host.css';
 @import './games/game-covers.css';
+@import './games/nexus-host.css';
 @import './games/splendor.css';
 @import './games/tabletop-audio.css';
 @import './games/love-letter.css';
+@import './games/ticket-to-ride.css';
 @import './voice/voice-reception.css';
 @import './games/court-display.css';
 @import './games/tabletop-refinements.css';
@@ -47,3 +49,4 @@
 @import './profiles/member-profile.css';
 @import './profiles/profile-media.css';
 @import './voice/call-floating.css';
+@import './voice/remote-pc.css';

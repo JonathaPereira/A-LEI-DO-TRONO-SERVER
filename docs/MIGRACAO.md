@@ -7,9 +7,8 @@ O histórico detalhado das conversões permanece no Git.
 
 ## Branch e limites
 
-- Trabalhar em `codex/next-typescript-structure`; commits locais assinados.
-- `main` permanece em `7db2d81`. Upstream incorporado até `8044ec4`, desktop 0.2.10;
-  isso não indica uma consulta mais recente ao remoto.
+- Trabalhar em `port_main_migration_updates`; commits locais assinados.
+- Upstream incorporado cobrindo `8044ec4..6b9ae47`: desktop 0.2.11 a 0.3.2 e backend 0.14.0-alpha portados para a arquitetura migrada.
 - Não publicar, fazer deploy nem substituir o aplicativo instalado sem pedido
   explícito. O pacote em `artifacts/windows-app/win-unpacked/` é só para conferência.
 - Preservar todos os jogos, mensagens, perfis, arquivos, chamadas, clipes e soundboard.
@@ -23,14 +22,15 @@ O histórico detalhado das conversões permanece no Git.
 | Composição frontend | `src/app/`, `src/components/application.tsx` e `src/app/application-runtime.tsx`. Next App Router, React e TypeScript estrito; exportação estática compartilhada com Electron. |
 | Transporte, canais e chat | `src/lib/socket/`, `lib/channels/`, `lib/chat/`; interfaces nos componentes dos respectivos domínios. Transporte, identidade e participação únicos. |
 | Conta, arquivos e perfis | `lib/auth/`, `lib/files/`, `lib/profiles/`, `lib/community/`, `lib/messenger/`; formulários, editor, biblioteca e conversas em React. |
-| Chamadas | `lib/voice/` possui captura, publicação, P2P, SFU, recuperação, reprodução e diagnóstico. Painéis e configurações em React. |
-| Jogos | `lib/games/` possui regras e controladores tipados de A Lei do Trono, Azul, Splendor e Love Letter; componentes em `components/games/`. Cinzas continua independente em `public/roguelite/`. |
+| Chamadas e moderação | `lib/voice/` possui captura, publicação, P2P, SFU, recuperação, reprodução, diagnóstico e moderação de participantes (mutar, bloquear mídia, expulsar). Painéis e configurações em React. |
+| Jogos e lançador | `lib/games/` possui regras e controladores tipados de A Lei do Trono, Azul, Splendor, Love Letter, Ticket to Ride e hub Nexus; componentes em `components/games/`. Cinzas continua independente em `public/roguelite/`. |
+| Remote PC e Gamepad | `lib/voice/remote-*`, `components/voice/remote-pc-dialog.tsx`, `electron/remote-input.cjs` e `electron/native-audio/remote-input.cpp` para controle remoto WebRTC e injeção nativa de controle virtual Xbox (ViGEm). |
 | Clipes e gravação | `lib/clips/` e `lib/recording/` possuem buffer, worker, armazenamento, mixer, encoder, exportação e ponte Windows; controles/bibliotecas em React. |
 | Áudio e soundboard | `lib/audio/` e `lib/soundboard/` possuem efeitos, player, decode, recorte e envio. Worklets tipados em `lib/voice/worklets/`; recursos e ganhos anteriores preservados. |
 | Shell e preferências | `lib/desktop/`, `lib/preferences/`, `lib/settings/`, `lib/notifications/` e componentes dos domínios possuem layout, atividade, avisos e atualização. |
-| Backend | Todos os módulos de `server/` são TS estritos, sem DOM. `app.ts` compõe serviços; `index.ts` inicia o processo; `socket-gateway.ts` possui conexão, identidade, dispatch e heartbeat. |
+| Backend | Todos os módulos de `server/` são TS estritos, sem DOM. `app.ts` compõe serviços; `index.ts` inicia o processo; `socket-gateway.ts` possui conexão, identidade, dispatch e heartbeat; serviços para Ticket to Ride, moderação e Remote PC. |
 | Estilos | `src/styles/index.css` explicita a cascata de domínio, importada pelo layout raiz após `globals.css`. Next compila e distribui o CSS. |
-| Electron | `electron/` possui janela, preload, permissões, arquivos e auxiliares nativos. Desenvolvimento e testes usam identidade/perfil separados da instalação. |
+| Electron | `electron/` possui janela, preload, permissões, arquivos, notificações, Nexus IPC e auxiliares nativos (ViGEm). Desenvolvimento e testes usam identidade/perfil separados da instalação. |
 
 `src/legacy/`, o manifesto de scripts, `legacy-runtime.tsx` e `server/runtime.cjs`
 foram removidos. Não há controladores de domínio JS carregados pelo renderer nem
@@ -81,6 +81,12 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   O soundboard considera as barras visíveis do workspace e aplica sua altura
   disponível. Na mesa desktop de 480×520, o rótulo redundante “LEI ATUAL” fica
   oculto para não sobrepor as cartas; nome, imagem, trunfo e tooltip permanecem.
+- **Port das novidades da `main` (0.2.11 a 0.3.2 / backend 0.14.0-alpha)**:
+  - **Ticket to Ride**: Motor de jogo completo (`src/lib/games/ticket-to-ride*`), tipos TypeScript (`src/types/ticket-to-ride.ts`), tela interativa com mapa SVG e seleções em React (`src/components/games/ticket-to-ride-screen.tsx`), estilos (`src/styles/games/ticket-to-ride.css`), serviço autoritativo (`server/ticket-to-ride-service.ts`) e protocolo (`server/ticket-to-ride-protocol.ts`). Suíte de regras, bot e isolamento de mãos públicas/privadas verificadas.
+  - **Nexus Hub & Launcher**: Launcher e isolamento de jogos web externos (`src/lib/games/nexus*`, `src/components/games/nexus-screen.tsx`, `src/styles/games/nexus-host.css`, `electron/nexus.cjs`) com sandbox estrito e token seguro.
+  - **Remote PC Beta & Gamepad Virtual**: Streaming de baixa latência e controle remoto via WebRTC (`src/lib/voice/remote-*`, `src/components/voice/remote-pc-dialog.tsx`, `src/styles/voice/remote-pc.css`, `server/remote-pc.ts`), telemetria em tempo real e injeção nativa de controle virtual Xbox 360 no Windows via ViGEmClient C++ addon (`electron/remote-input.cjs`, `electron/native-audio/remote-input.cpp`).
+  - **Moderação de Voz**: Ações de staff para mutar/desmutar forçado, bloquear/liberar mídias de vídeo/tela e expulsar da sala de voz no card de participantes (`src/components/voice/participant-card.tsx`), suportado pelo serviço de moderação do backend (`server/voice-moderation.ts`) com verificação rigorosa de cargos no servidor.
+  - **Regressões e testes**: 15 arquivos de testes novos cobrindo regras, protocolo WS, Nexus, Remote Input, Gamepad, e moderação. Todos os testes unitários (34/34 casos) passam com 100% de sucesso. Typecheck estrito (`npm run typecheck`), verificação de formatação (`npm run format:check`) e build estático do Next.js (`npm run build`) passam com código de saída 0.
 
 ## Validação local
 

@@ -1,9 +1,15 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A branch migrada
-incorpora o desktop **0.2.10** e backend **0.13.0-alpha**. Atualizações posteriores
-da main ainda não foram incorporadas. A versão de cada pacote é identificada pelo
+incorpora o desktop **0.3.2** e backend **0.14.0-alpha**, portando todas as atualizações
+da `main` (0.2.11 a 0.3.2). A versão de cada pacote é identificada pelo
 instalador e pelo manifesto `downloads/latest.yml` daquela entrega.
+
+### Novidades incorporadas (0.2.11 a 0.3.2 / 0.14.0-alpha)
+- **Ticket to Ride**: Novo jogo de tabuleiro ferroviário com mapa interativo, cartas de vagão e bilhetes de destino, pontuação dinâmica e bots.
+- **Nexus Hub & Launcher**: Gerenciador de jogos web independentes em iframe seguro com tokens temporários de autenticação.
+- **Remote PC Beta & Gamepad Virtual**: Controle remoto e coop de PC em baixa latência via WebRTC com injeção nativa de controle virtual Xbox no Windows (ViGEm).
+- **Moderação de Chamada**: Ferramentas de staff no card de participante para mutar/desmutar, bloquear/liberar câmera e tela, e desconectar membros da voz.
 
 ## Instalar ou atualizar no Windows
 

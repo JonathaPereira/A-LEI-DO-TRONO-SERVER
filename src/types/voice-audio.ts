@@ -9,4 +9,5 @@ export interface CallAudioSnapshot {
 }
 export interface CallAlertsSnapshot extends CallAudioSnapshot {
   readonly volume: number;
+  readonly muted: boolean;
 }

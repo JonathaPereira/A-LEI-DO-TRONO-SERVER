@@ -396,7 +396,7 @@ body[data-app-layout='discord'] #layoutConnectionControls #joinVoiceBtn.call-act
 body[data-app-layout='discord'] #layoutCallActions {
   position: static;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   height: 32px;

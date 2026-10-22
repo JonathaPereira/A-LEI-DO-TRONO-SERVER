@@ -52,6 +52,12 @@ test(
         args: ['--user-data-dir=' + directory, path.resolve(__dirname, '../electron')],
         timeout: 20000,
       });
+      app
+        .process()
+        .stderr?.on('data', (chunk) => diagnostics.push('stderr ' + String(chunk).trim()));
+      await app.evaluate(({ dialog }) => {
+        dialog.showErrorBox = (t, c) => console.error('dialog ' + t + ' ' + c);
+      });
       page = await app.firstWindow();
       page.on('console', (m) => {
         if (m.type() === 'error' || /frame|Refused|Content Security|Native bridge/i.test(m.text()))

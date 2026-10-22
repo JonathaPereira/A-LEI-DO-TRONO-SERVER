@@ -15,7 +15,12 @@ interface ApplicationAudio {
 interface PreferencesOptions {
   audio(): ApplicationAudio;
   tracks(): Readonly<Record<string, { label: string; artist: string }>>;
-  alerts: Pick<ReturnType<typeof createCallAlerts>, 'getSnapshot' | 'setVolume' | 'prime' | 'play'>;
+  alerts: Pick<
+    ReturnType<typeof createCallAlerts>,
+    'getSnapshot' | 'setVolume' | 'prime' | 'play'
+  > & {
+    setMuted?(value: boolean): boolean;
+  };
   protection: Pick<ReturnType<typeof createVoiceTelemetry>, 'getSnapshot' | 'configureProtection'>;
   events: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>;
   storage: Pick<Storage, 'setItem'>;
@@ -50,6 +55,7 @@ export function createAudioPreferences(options: PreferencesOptions) {
       currentTrack: audio.currentTrack,
       musicStatus: audio.musicStatus,
       alertVolume: options.alerts.getSnapshot().volume,
+      alertsMuted: Boolean(options.alerts.getSnapshot().muted),
       protection: options.protection.getSnapshot().enabled,
       tracks,
     });
@@ -115,6 +121,12 @@ export function createAudioPreferences(options: PreferencesOptions) {
         if (options.alerts.getSnapshot().volume === next) return;
         options.alerts.setVolume(next);
         options.alerts.prime();
+      });
+    },
+    setAlertsMuted(muted: boolean) {
+      return run(() => {
+        if (Boolean(options.alerts.getSnapshot().muted) === muted) return;
+        options.alerts.setMuted?.(muted);
       });
     },
     testAlert() {

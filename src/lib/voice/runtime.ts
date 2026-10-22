@@ -289,9 +289,35 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     onRecover: recoverRemoteMedia,
   });
 
+  function isModerated(id: string, kind: 'audio' | 'camera' | 'screen' | 'screen-audio' = 'audio') {
+    const p = privateVoiceRoster.get(id);
+    return kind === 'audio' ? !!p?.serverMuted : !!p?.mediaBlocked;
+  }
+  function applyVoiceModeration(p?: { serverMuted?: boolean; mediaBlocked?: boolean } | null) {
+    if (!p) return;
+    const before = controlState();
+    const nextMuted = !!p.serverMuted;
+    const nextBlocked = !!p.mediaBlocked;
+    const changed = before.serverMuted !== nextMuted || before.mediaBlocked !== nextBlocked;
+    callControls.setModeration({ serverMuted: nextMuted, mediaBlocked: nextBlocked });
+    if (nextBlocked) {
+      if (cameraOn() || cameraCapture.getSnapshot().loading) cameraCapture.stop();
+      if (changed) void stopScreenShare(true);
+      if (window.TronoRemotePc?.active) void window.TronoRemotePc.stop();
+    }
+    if (changed) {
+      refreshCallControls();
+      renderVoiceRoster();
+    }
+  }
+
   const audioPlayback: ReturnType<typeof createAudioPlayback> = createAudioPlayback({
     volume: storage.getItem('mnOutputGain') ?? 100,
     output: storage.getItem('tronoVoiceOutput') || '',
+    moderated: (key) =>
+      key.startsWith('stream:')
+        ? isModerated(key.slice(7), 'screen-audio')
+        : isModerated(key, 'audio'),
     createAudio: (key) => {
       const audio = document.createElement('audio');
       audio.autoplay = true;
@@ -323,7 +349,10 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     storage,
     getSettings: () => ({
       enabled: window.TronoAudio?.sfxEnabled !== false,
-      muted: controlState().deafened || storage.getItem('tronoSfxEnabled') === '0',
+      muted:
+        controlState().deafened ||
+        storage.getItem('tronoSfxEnabled') === '0' ||
+        storage.getItem('mnCallAlertsMuted') === '1',
       output: audioPlayback.getSnapshot().output,
     }),
     createContext: () => {
@@ -515,6 +544,10 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
     onPreparing: prepareCallUi,
     onPrepared: (choice) => {
+      callControls.setModeration({
+        serverMuted: !!choice.moderation?.muted,
+        mediaBlocked: !!choice.moderation?.mediaBlocked,
+      });
       voiceTransport.prepare(choice.mode);
       setStatus('Solicitando acesso ao microfone…');
     },
@@ -594,7 +627,13 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       ),
     onSound: playCallSound,
     onNotice: callNotice,
-    onChange: renderCallMedia,
+    onLocalModeration: (moderation) => {
+      applyVoiceModeration(moderation);
+    },
+    onChange: () => {
+      audioPlayback.refresh();
+      renderCallMedia();
+    },
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
   });
   const privateVoiceRoster = voiceRoster.members;
@@ -602,6 +641,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     call: () => voiceCall.getSnapshot(),
     localId: meId,
     participant: (id) => privateVoiceRoster.get(id),
+    moderated: (id, kind) => isModerated(id, kind),
     community: () => inChatHub(),
     isSfu: () => transportIsSfu(),
     cameraTracks: (id) => remoteMedia.getStreams(id).av.getVideoTracks(),
@@ -640,6 +680,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       sfu: transportIsSfu(),
       screenAllowed: realtime.getSnapshot().status?.screenAllowed,
       highAllowed: realtime.getSnapshot().status?.highAllowed,
+      mediaBlocked: controlState().mediaBlocked,
     }),
     capture: screenCapture,
     quality: callQuality,
@@ -671,8 +712,9 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       if (dialog instanceof HTMLDialogElement && dialog.open) dialog.close();
     },
     sharing: screenSharingControls,
-    call: () => voiceCall.getSnapshot(),
+    call: () => ({ ...voiceCall.getSnapshot(), mediaBlocked: controlState().mediaBlocked }),
     replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
+    onBlocked: () => setStatus('Compartilhamento bloqueado pela moderação.', 'warn'),
   });
   window.TronoScreenOptions = screenOptions;
 
@@ -1085,7 +1127,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     voiceTransport.begin();
     window.TronoNetwork?.setVoiceState(
       true,
-      false,
+      controlState().micMuted,
       cameraOn(),
       screenSharing(),
       qualityPreferences().transmissionQuality,
@@ -1254,6 +1296,26 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         volumeOwner = window.TronoAuth.user?.id || null;
         audioPlayback.clearVoiceGains();
       }
+      renderVoiceRoster();
+    });
+    window.TronoNetwork?.onMessage((msg) => {
+      if (msg.type === 'voice-moderated' && msg.roomId === currentVoiceRoom()?.id) {
+        const message =
+          typeof msg.message === 'string' && msg.message ? msg.message : 'Moderação aplicada.';
+        if (msg.action === 'kick') {
+          void leaveVoice('moderation');
+          setStatus(message, 'warn');
+        } else {
+          applyVoiceModeration({
+            serverMuted: typeof msg.muted === 'boolean' ? msg.muted : controlState().serverMuted,
+            mediaBlocked:
+              typeof msg.mediaBlocked === 'boolean'
+                ? msg.mediaBlocked
+                : controlState().mediaBlocked,
+          });
+          setStatus(message, 'warn');
+        }
+      }
     });
     voiceSettings.refresh();
     voiceSettings.start();
@@ -1382,6 +1444,8 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         discord: document.body.dataset.appLayout === 'discord',
         desktop: !!window.TronoDesktop,
         micMuted: controls.micMuted,
+        serverMuted: controls.serverMuted,
+        mediaBlocked: controls.mediaBlocked,
         deafened: controls.deafened,
         camera: cameraOn(),
         cameraPending: controls.cameraTogglePending,
@@ -1426,6 +1490,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         hub: inChatHub(),
         publicActive: !!publicVoiceActive(),
         roomName: currentVoiceRoom()?.name || (inChatHub() ? 'Geral' : 'Voz da mesa'),
+        localRole: window.TronoAuth?.user?.role || 'member',
         previewPaused: preview.previewPaused,
         previewCollapsed: preview.collapsed,
         participants: call.joined
@@ -1437,10 +1502,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
                 ...p,
                 accountId: p.accountId || (self ? (window.TronoAuth?.user?.id ?? null) : null),
                 self,
-                muted: self ? controlState().micMuted : !!p.muted,
+                muted: self ? controlState().micMuted : !!p.muted || !!p.serverMuted,
+                serverMuted: self ? controlState().serverMuted : !!p.serverMuted,
+                mediaBlocked: self ? controlState().mediaBlocked : !!p.mediaBlocked,
                 deafened: self ? controlState().deafened : !!p.deafened,
-                camera: self ? cameraOn() : !!p.camera,
-                screen: self ? screenSharing() : !!p.screen,
+                camera: self ? cameraOn() : !p.mediaBlocked && !!p.camera,
+                screen: self ? screenSharing() : !p.mediaBlocked && !!p.screen,
                 transport: self ? announcedTransport() : p.transport || 'p2p',
                 hiddenCamera: mediaInterest.isCameraHidden(p.id),
                 watching: self || mediaInterest.isWatching(p.id),
@@ -1477,6 +1544,13 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       live ? remoteMedia.cancelRecovery(id) : remoteMedia.scheduleRecovery(id),
     fullscreen: (tile) => mediaFocus.toggle(tile),
     releaseFocus: (tile) => mediaFocus.release(tile),
+    moderateVoice: (targetId, action, requestId) =>
+      !!window.TronoNetwork?.moderateVoice?.(targetId, action, requestId),
+    confirmKick: (name) =>
+      window.confirm(
+        'Remover ' + name + ' desta chamada por 5 minutos? O jogo e o chat continuam disponíveis.',
+      ),
+    onStatus: setStatus,
   });
   window.TronoCallStage = callStage;
   const mediaFocus: ReturnType<typeof createMediaFocus> = createMediaFocus({
@@ -1647,6 +1721,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         bitrate: effectiveScreenBitrate(),
         audio: screenSharingControls.getSnapshot().audio,
       };
+    },
+    get mediaBlocked() {
+      return controlState().mediaBlocked;
+    },
+    get serverMuted() {
+      return controlState().serverMuted;
     },
     get deafened() {
       return controlState().deafened;

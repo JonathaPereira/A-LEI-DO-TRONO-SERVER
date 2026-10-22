@@ -28,10 +28,13 @@ import { ChannelFilesDialog } from '@/components/modals/channel-files-dialog';
 import { SoundboardToggle } from '@/components/navigation/soundboard-toggle';
 import { SoundboardDialog } from '@/components/modals/soundboard-dialog';
 import { MediaFocusDialog } from '@/components/modals/media-focus-dialog';
+import { RemotePcDialog } from '@/components/modals/remote-pc-dialog';
 import { GamesScreen } from '@/components/games/games-screen';
+import { NexusScreen } from '@/components/games/nexus-screen';
 import { RogueliteScreen } from '@/components/games/roguelite-screen';
 import { AzulScreen } from '@/components/games/azul-screen';
 import { SplendorScreen } from '@/components/games/splendor-screen';
+import { TicketToRideScreen } from '@/components/games/ticket-to-ride-screen';
 import { LoveLetterScreen } from '@/components/games/love-letter-screen';
 import { ApplicationRuntime } from '@/app/application-runtime';
 import { AttachmentImageViewer } from '@/components/files/image-viewer';
@@ -69,10 +72,13 @@ export function Application() {
       <SoundboardToggle />
       <SoundboardDialog />
       <MediaFocusDialog />
+      <RemotePcDialog />
       <GamesScreen />
+      <NexusScreen />
       <RogueliteScreen />
       <AzulScreen />
       <SplendorScreen />
+      <TicketToRideScreen />
       <LoveLetterScreen />
       <AttachmentImageViewer />
       <ApplicationRuntime />

@@ -17,11 +17,13 @@ import type { createThroneService } from './throne-service';
 import type { createAzulService } from './azul-service';
 import type { createSplendorService } from './splendor-service';
 import type { createLoveLetterService } from './love-letter-service';
+import type { createTicketToRideService } from './ticket-to-ride-service';
 import type { createCommunity } from './community';
 import type { createCommunityManagement } from './community-management';
 import type { createChatService } from './chat-service';
 import type { createVoiceSoundboard } from './voice-soundboard';
 import type { RealtimeSfuManager } from './realtime-sfu';
+import type { RemotePc } from './remote-pc';
 export class BackendSocket extends WebSocket implements ChannelConnection {
   clientId = randomUUID();
   roomId: string | null = null;
@@ -52,6 +54,8 @@ interface Options {
   azul: ReturnType<typeof createAzulService>;
   splendor: ReturnType<typeof createSplendorService>;
   loveLetter: ReturnType<typeof createLoveLetterService>;
+  ticketToRide: ReturnType<typeof createTicketToRideService>;
+  remotePc: RemotePc;
   community: ReturnType<typeof createCommunity>;
   communityManagement: ReturnType<typeof createCommunityManagement>;
   chat: ReturnType<typeof createChatService>;
@@ -69,6 +73,8 @@ export function createSocketGateway({
   azul: azulService,
   splendor: splendorService,
   loveLetter: loveLetterService,
+  ticketToRide: ticketToRideService,
+  remotePc,
   community,
   communityManagement,
   chat,
@@ -160,6 +166,7 @@ export function createSocketGateway({
               azulService.disconnect(ws);
               splendorService.disconnect(ws);
               loveLetterService.disconnect(ws);
+              ticketToRideService.disconnect(ws);
             }
             if (ws.guest?.id !== identity.id) channels.leaveRoom(ws, 'guest-change');
             for (const other of wss.clients)
@@ -219,6 +226,7 @@ export function createSocketGateway({
               azulService.disconnect(ws);
               splendorService.disconnect(ws);
               loveLetterService.disconnect(ws);
+              ticketToRideService.disconnect(ws);
               channels.leaveRoom(ws, 'account-change');
             }
             if (!priorAccount && account.sessionId)
@@ -232,6 +240,7 @@ export function createSocketGateway({
                   azulService.disconnect(other);
                   splendorService.disconnect(other);
                   loveLetterService.disconnect(other);
+                  ticketToRideService.disconnect(other);
                   other.account = null;
                   other.identityScope.abort();
                   other.close(4002, 'Sessão reconectada em outra aba');
@@ -268,6 +277,7 @@ export function createSocketGateway({
               azulService.disconnect(ws);
               splendorService.disconnect(ws);
               loveLetterService.disconnect(ws);
+              ticketToRideService.disconnect(ws);
               ws.account = null;
               channels.leaveRoom(ws, 'auth-expired');
             }
@@ -343,6 +353,9 @@ export function createSocketGateway({
         case 'love-letter':
           loveLetterService.handle(ws, message);
           break;
+        case 'ticket-to-ride':
+          ticketToRideService.handle(ws, message);
+          break;
         case 'list-rooms':
           send(ws, { type: 'rooms', rooms: channels.safeRooms() });
           break;
@@ -417,6 +430,9 @@ export function createSocketGateway({
         case 'voice-fallback':
           channels.fallbackVoice(ws);
           break;
+        case 'voice-moderate':
+          channels.moderateVoice(ws, message);
+          break;
         case 'voice-state':
           channels.handleVoiceState(ws, message);
           break;
@@ -425,6 +441,9 @@ export function createSocketGateway({
           break;
         case 'soundboard-play':
           void soundboard.play(ws, message);
+          break;
+        case 'remote-pc':
+          void remotePc.handle(ws, message);
           break;
         case 'sfu-request':
           void realtimeSfu.handleRequest(ws, message);
@@ -453,6 +472,7 @@ export function createSocketGateway({
       azulService.disconnect(ws);
       splendorService.disconnect(ws);
       loveLetterService.disconnect(ws);
+      ticketToRideService.disconnect(ws);
       community.note(ws);
       channels.leaveRoom(ws, 'disconnect');
       community.broadcast();
@@ -493,6 +513,7 @@ export function createSocketGateway({
           azulService.disconnect(ws);
           splendorService.disconnect(ws);
           loveLetterService.disconnect(ws);
+          ticketToRideService.disconnect(ws);
           ws.account = null;
           ws.identityScope.abort();
           channels.leaveRoom(ws, 'auth-expired');
@@ -510,6 +531,7 @@ export function createSocketGateway({
       azulService.updateAccount(account);
       splendorService.updateAccount(account);
       loveLetterService.updateAccount(account);
+      ticketToRideService.updateAccount(account);
       for (const ws of wss.clients)
         if (ws.account?.id === account.id) {
           ws.account = { ...ws.account, ...account };

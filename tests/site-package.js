@@ -22,7 +22,9 @@ async function fixture() {
     'electron/LEIA-ME-WINDOWS.txt',
     'electron/LEIA-ME-PUBLICAR.txt',
     'docs/PUBLICAR_SURGE_LEVE.md',
+    'docs/INTEGRAR_NEXUS.md',
     'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md',
+    'docs/COMPARTILHAR_PC_BETA.md',
     'docs/ATUALIZACOES.md',
     'supabase/migrations/20261016140000_giphy_profile_credits.sql',
     'supabase/upgrade-azul.sql',
@@ -58,6 +60,14 @@ test('Surge package contains the entire frontend and exactly the latest installe
   try {
     const result = await prepareSite({ ...f, version: '0.1.11' });
     assert(result.siteBytes < MAX_SITE_BYTES);
+    assert.equal(
+      await fs.readFile(path.join(result.site, 'COMPARTILHAR_PC_BETA.md'), 'utf8'),
+      'fixture',
+    );
+    assert.equal(
+      await fs.readFile(path.join(result.site, 'INTEGRAR_NEXUS.md'), 'utf8'),
+      'fixture',
+    );
     assert.equal(
       await fs.readFile(path.join(result.site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'), 'utf8'),
       'fixture',

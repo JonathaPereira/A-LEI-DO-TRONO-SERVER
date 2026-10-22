@@ -17,7 +17,7 @@ import {
   responseError,
 } from './protocol.ts';
 
-export const CLIENT_VERSION = '0.13.0-alpha';
+export const CLIENT_VERSION = '0.14.0-alpha';
 
 export function backendWebSocketUrl(http: string): string {
   return `${http.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')}/ws`;
@@ -276,6 +276,16 @@ export function createNetworkClient({
       : leaveRoom();
   }
   const api = {
+    remotePc: (action: string, payload: Record<string, unknown> = {}) =>
+      send('remote-pc', { action, ...payload }),
+    async ensureTicketToRide() {
+      if (!(await ensureAuthenticated())) return false;
+      if (!state.getSnapshot().features.ticketToRide)
+        throw new Error('Atualize o backend para jogar Ticket to Ride.');
+      return true;
+    },
+    ticketToRide: (action: string, payload: Record<string, unknown> = {}) =>
+      state.getSnapshot().features.ticketToRide && send('ticket-to-ride', { action, ...payload }),
     async ensureLoveLetter() {
       if (!(await ensureAuthenticated())) return false;
       if (!state.getSnapshot().features.loveLetter)
@@ -361,6 +371,8 @@ export function createNetworkClient({
       return readPreparedVoice(msg.data);
     },
     fallbackVoice: () => send('voice-fallback'),
+    moderateVoice: (targetId: string, action: string, requestId: string) =>
+      send('voice-moderate', { targetId, action, requestId }),
     setVoiceState: (
       joined: boolean,
       muted = false,

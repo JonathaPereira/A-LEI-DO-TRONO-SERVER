@@ -65,6 +65,37 @@ export function NotificationFields({ client }: { client: NotificationsController
       <p id="notificationPermissionStatus" role="status" className="appearance-help">
         {state.permissionStatus}
       </p>
+      {state.desktop ? (
+        <div className="windows-notification-settings">
+          <label className="auth-check">
+            <input
+              id="windowsNotifications"
+              type="checkbox"
+              checked={state.windowsEnabled}
+              onChange={(event) => client.setWindowsEnabled(event.target.checked)}
+            />{' '}
+            Notificações do Windows
+          </label>
+          <p className="appearance-help">
+            Receba avisos quando o Trono estiver minimizado ou em segundo plano. Escolha “Todas as
+            mensagens” acima para incluir mensagens comuns dos canais. O Windows pode silenciar
+            avisos no modo Não incomodar.
+          </p>
+          <button
+            id="testWindowsNotification"
+            className="secondary-button"
+            type="button"
+            onClick={() => {
+              void client.testWindowsNotification();
+            }}
+          >
+            Testar notificação do Windows
+          </button>
+          <p id="windowsNotificationStatus" className="appearance-help" role="status">
+            {state.windowsStatus}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

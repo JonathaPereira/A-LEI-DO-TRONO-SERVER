@@ -5,6 +5,7 @@ interface InterestOptions {
   call(): Pick<VoiceCallSnapshot, 'joined' | 'generation'>;
   localId(): string | null | undefined;
   participant(id: string): { camera: boolean; screen: boolean } | undefined;
+  moderated?(id: string, kind: VoiceMediaKind): boolean;
   community(): boolean;
   isSfu(): boolean;
   cameraTracks(id: string): readonly MediaStreamTrack[];
@@ -113,6 +114,7 @@ export function createMediaInterest(options: InterestOptions) {
     wants(publication: { ownerId: string; kind: VoiceMediaKind }) {
       return (
         publication.ownerId !== options.localId() &&
+        !options.moderated?.(publication.ownerId, publication.kind) &&
         (publication.kind !== 'camera' || !hidden.has(publication.ownerId)) &&
         (!['screen', 'screen-audio'].includes(publication.kind) ||
           (options.community() && watching.has(publication.ownerId)))

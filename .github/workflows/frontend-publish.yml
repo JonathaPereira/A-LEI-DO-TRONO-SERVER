@@ -1,0 +1,127 @@
+name: Publish approved frontend
+on:
+  push:
+    branches: [codex/desktop-ticket-to-ride-art]
+    paths: [.github/workflows/frontend-publish.yml]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Exact approved desktop build tag to publish
+        type: string
+        required: true
+permissions:
+  # GitHub exposes draft releases only to callers with push access.
+  contents: write
+  actions: read
+concurrency:
+  group: surge-production
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check existing Surge credential without exposing it
+        id: auth
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        shell: bash
+        run: |
+          if [ -n "$SURGE_TOKEN" ]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Surge publication was not executed: repository secret SURGE_TOKEN is not configured.'
+            echo 'Frontend publication was not executed. Add the repository secret SURGE_TOKEN, then run this workflow with an approved desktop build tag.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.auth.outputs.configured == 'true'
+        with:
+          node-version: '24'
+      - name: Find the matching successful Windows delivery
+        if: steps.auth.outputs.configured == 'true'
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),{execFileSync}=require('node:child_process');
+          const {version}=require('./electron/package.json'),requested=process.env.REQUESTED_TAG;
+          const api=path=>JSON.parse(execFileSync('gh',['api',path],{encoding:'utf8',maxBuffer:4*1024*1024}));
+          if(requested&&!/^desktop-v\d+\.\d+\.\d+-run-\d+(?:-attempt-\d+)?$/.test(requested))throw Error('Invalid build tag.');
+          (async()=>{
+            for(let attempt=0;attempt<45;attempt++){
+              const releases=api(`repos/${process.env.GITHUB_REPOSITORY}/releases?per_page=100`);
+              for(const release of releases){
+                if(requested?release.tag_name!==requested:!release.tag_name.startsWith(`desktop-v${version}-run-`))continue;
+                const required=[`MN-Trono-Frontend-${version}.zip`,`MN-Trono-${version}-Windows.exe`,`SHA256SUMS-${version}.txt`];
+                if(!release.body?.includes('<!-- mn-desktop-build-v1 -->')||!required.every(name=>release.assets.some(a=>a.name===name&&a.state==='uploaded')))continue;
+                const sha=release.target_commitish;
+                if(!/^[a-f0-9]{40}$/.test(sha))continue;
+                try{execFileSync('git',['diff','--quiet',sha,'HEAD','--','src','public','electron','scripts']);}catch{continue;}
+                const runId=/^desktop-v\d+\.\d+\.\d+-run-(\d+)/.exec(release.tag_name)?.[1];
+                if(!runId)continue;
+                const run=api(`repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`);
+                if(run.name!=='Windows full app'||run.conclusion!=='success'||run.head_sha!==sha)continue;
+                fs.appendFileSync(process.env.GITHUB_OUTPUT,`tag=${release.tag_name}\nversion=${version}\n`);
+                console.log('Approved delivery:',release.tag_name,sha);return;
+              }
+              if(requested)throw Error('The requested release is incomplete, failed validation or does not match this checkout.');
+              await new Promise(resolve=>setTimeout(resolve,20000));
+            }
+            throw Error('No matching successful Windows delivery became available.');
+          })().catch(error=>{console.error(error.message);process.exit(1);});
+          NODE
+      - name: Download and verify the frontend and installer
+        if: steps.auth.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_TAG: ${{ steps.release.outputs.tag }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          mkdir -p artifacts/surge-delivery
+          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --dir artifacts/surge-delivery
+          python3 <<'PY'
+          from pathlib import Path, PurePosixPath
+          import base64, hashlib, os, re, zipfile
+          root=Path('artifacts/surge-delivery'); version=os.environ['APP_VERSION']
+          sums={name:digest for digest,name in (line.split('  ',1) for line in (root/f'SHA256SUMS-{version}.txt').read_text().splitlines())}
+          archive=root/f'MN-Trono-Frontend-{version}.zip'
+          assert hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()==sums[archive.name]
+          with zipfile.ZipFile(archive) as z:
+              for entry in z.infolist():
+                  path=PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts
+              name=f'MN-Trono-{version}-Windows.exe'
+              assert [p for p in z.namelist() if p.endswith('.exe')]==['frontend/downloads/'+name]
+              with z.open('frontend/downloads/'+name) as executable:
+                  sha256=hashlib.sha256(); sha512=hashlib.sha512()
+                  while block:=executable.read(1024*1024): sha256.update(block); sha512.update(block)
+              assert sha256.hexdigest()==sums[name]
+              manifest=z.read('frontend/downloads/latest.yml').decode()
+              assert re.search(r'^version: '+re.escape(version)+r'$',manifest,re.M)
+              assert set(re.findall(r'sha512: (\S+)',manifest))=={base64.b64encode(sha512.digest()).decode()}
+              z.extractall(root/'verified')
+          print('Frontend, installer and update manifest verified.')
+          PY
+      - name: Publish the verified directory to Surge
+        if: steps.auth.outputs.configured == 'true'
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        run: npx --yes surge@0.46.0 artifacts/surge-delivery/verified/frontend a-lei-do-trono.surge.sh
+      - name: Verify published version
+        if: steps.auth.outputs.configured == 'true'
+        env:
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 3 https://a-lei-do-trono.surge.sh/downloads/latest.yml -o artifacts/surge-delivery/published-latest.yml
+          grep -Fx "version: $APP_VERSION" artifacts/surge-delivery/published-latest.yml
+          echo "Published and verified frontend $APP_VERSION at https://a-lei-do-trono.surge.sh/." >> "$GITHUB_STEP_SUMMARY"

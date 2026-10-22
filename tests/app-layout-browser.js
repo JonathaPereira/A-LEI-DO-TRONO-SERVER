@@ -265,6 +265,7 @@ test(
                 'deafenVoiceBtn',
                 'cameraBtn',
                 'screenShareBtn',
+                'remotePcBtn',
                 'soundboardToggle',
                 'voiceSettingsBtn',
                 'joinVoiceBtn',

@@ -6,7 +6,15 @@ const listen = (channel, fn) => {
   return () => ipcRenderer.removeListener(channel, handler);
 };
 contextBridge.exposeInMainWorld('TronoDesktop', {
-  version: '0.2.10',
+  version: '0.3.2',
+  remoteCapability: () => ipcRenderer.invoke('mn:remote-capability'),
+  prepareRemoteCapture: (name) => ipcRenderer.invoke('mn:remote-prepare', name),
+  allowRemoteControl: (mode = 'desktop') => ipcRenderer.invoke('mn:remote-allow', mode),
+  openRemoteDriver: () => ipcRenderer.invoke('mn:remote-driver'),
+  remoteInput: (token, event) => ipcRenderer.send('mn:remote-input', { token, event }),
+  revokeRemoteControl: () => ipcRenderer.invoke('mn:remote-revoke'),
+  stopRemote: () => ipcRenderer.invoke('mn:remote-stop'),
+  onRemote: (fn) => listen('mn:remote', fn),
   notify: (value) => ipcRenderer.invoke('mn:notify', value),
   onNotificationClick: (fn) => listen('mn:notification-click', fn),
   copyDiagnostics: (text) => ipcRenderer.invoke('mn:copy-diagnostics', text),
@@ -37,6 +45,7 @@ contextBridge.exposeInMainWorld('TronoDesktop', {
   onCaptureCancel: (fn) => listen('mn:capture-cancel', fn),
   selectCapture: (choice) => ipcRenderer.invoke('mn:capture-select', choice),
   chooseFolder: () => ipcRenderer.invoke('mn:folder'),
+  openNexus: () => ipcRenderer.invoke('mn:nexus'),
   openManual: () => ipcRenderer.invoke('mn:manual'),
   openAttachment: (choice) => ipcRenderer.invoke('mn:attachment', choice),
   saveClip: (data) => ipcRenderer.invoke('mn:clip-save', data),

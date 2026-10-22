@@ -11,7 +11,7 @@ const optionalId = (value: unknown) => value == null || isParticipantId(value);
 const optionalSeat = (value: unknown) =>
   value === undefined || (Number.isInteger(value) && Number(value) >= 0);
 const flags = (value: Record<string, unknown>) =>
-  ['muted', 'deafened', 'camera', 'screen'].every(
+  ['muted', 'serverMuted', 'mediaBlocked', 'deafened', 'camera', 'screen'].every(
     (key) => value[key] === undefined || typeof value[key] === 'boolean',
   );
 const transport = (value: unknown) =>
@@ -20,6 +20,7 @@ function validState(value: Record<string, unknown>) {
   return (
     flags(value) &&
     optionalString(value.name) &&
+    optionalString(value.role) &&
     optionalSeat(value.seat) &&
     transport(value.transport) &&
     (value.quality === undefined || isQuality(value.quality))
@@ -43,6 +44,8 @@ export function parseVoiceParticipants(value: unknown): readonly VoiceParticipan
     )
       return null;
     ids.add(row.id);
+    const serverMuted = row.serverMuted === true;
+    const mediaBlocked = row.mediaBlocked === true;
     participants.push(
       Object.freeze({
         id: row.id,
@@ -50,12 +53,15 @@ export function parseVoiceParticipants(value: unknown): readonly VoiceParticipan
         name: (row.name as string | undefined) ?? 'Participante',
         avatar_preset: (row.avatar_preset as string | undefined) || 'crown',
         avatar_file_id: (row.avatar_file_id as string | null | undefined) ?? null,
+        role: typeof row.role === 'string' && row.role ? row.role : undefined,
         seat: row.seat as number | undefined,
         joined: true,
-        muted: row.muted === true,
+        muted: row.muted === true || serverMuted,
+        serverMuted,
+        mediaBlocked,
         deafened: row.deafened === true,
-        camera: row.camera === true,
-        screen: row.screen === true,
+        camera: !mediaBlocked && row.camera === true,
+        screen: !mediaBlocked && row.screen === true,
         transport: (row.transport as VoiceParticipant['transport'] | undefined) ?? 'p2p',
         quality: (row.quality as VoiceParticipant['quality'] | undefined) ?? 'balanced',
       }),
@@ -71,15 +77,19 @@ export function parseVoiceState(value: unknown): VoiceStateUpdate | null {
     !validState(value)
   )
     return null;
+  const serverMuted = typeof value.serverMuted === 'boolean' ? value.serverMuted : undefined;
+  const mediaBlocked = typeof value.mediaBlocked === 'boolean' ? value.mediaBlocked : undefined;
   return {
     playerId: value.playerId,
     joined: value.joined,
     name: value.name as string | undefined,
     seat: value.seat as number | undefined,
-    muted: value.muted === true,
+    muted: value.muted === true || serverMuted === true,
+    serverMuted,
+    mediaBlocked,
     deafened: value.deafened === true,
-    camera: value.camera === true,
-    screen: value.screen === true,
+    camera: mediaBlocked !== true && value.camera === true,
+    screen: mediaBlocked !== true && value.screen === true,
     transport: value.transport as VoiceParticipant['transport'] | undefined,
     quality: value.quality as VoiceParticipant['quality'] | undefined,
   };

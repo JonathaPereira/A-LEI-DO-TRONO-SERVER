@@ -1,8 +1,8 @@
 # M&N · A Lei do Trono
 
-Atualização desktop **0.2.10** integrada: painel de chamada compacto e recuperação
-independente de mídias SFU. Veja a [política de recuperação](docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md)
-e o [guia de atualizações](docs/ATUALIZACOES.md).
+Atualização desktop **0.3.2** e backend **0.14.0-alpha** integradas: Ticket to Ride, hub Nexus,
+Remote PC Beta com emulação de gamepad Xbox (ViGEm) e moderação de chamada na voz. Veja o [guia de atualizações](docs/ATUALIZACOES.md)
+e a [arquitetura do sistema](docs/ARQUITETURA.md).
 
 Aplicativo de comunicação e jogos, com interface Next.js + React + TypeScript,
 desktop Electron e backend Express/WebSocket. O foco de validação é Windows.

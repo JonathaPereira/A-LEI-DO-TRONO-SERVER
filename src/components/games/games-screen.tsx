@@ -194,6 +194,32 @@ export function GamesScreen() {
             </span>
           </GameAction>
           <GameAction
+            destination="ticket-to-ride"
+            id={'playTicketToRide'}
+            className={'games-card games-card-railway'}
+            type={'button'}
+          >
+            <span className={'games-cover games-railway-cover'}>
+              <span className={'games-railway-mark'} aria-hidden={'true'}>
+                ▰<br />
+                ━━━━━━━━
+              </span>
+              <span>
+                TICKET TO RIDE<small>A grande viagem americana.</small>
+              </span>
+            </span>
+            <span className={'games-card-body'}>
+              <small>FERROVIAS · DESTINOS · 2–5 JOGADORES</small>
+              <strong>Ticket to Ride · EUA</strong>
+              <span>
+                Conecte as cidades do mapa clássico. Cada destino guarda uma nova história.
+              </span>
+              <b className={'games-card-cta'}>
+                Embarcar na viagem <i aria-hidden={'true'}>↗</i>
+              </b>
+            </span>
+          </GameAction>
+          <GameAction
             destination="love-letter"
             id={'playLoveLetter'}
             className={'games-card games-card-love-letter'}
@@ -221,6 +247,31 @@ export function GamesScreen() {
                     <path d={'M7 17 17 7M7 7h10v10'}></path>
                   </svg>
                 </i>
+              </b>
+            </span>
+          </GameAction>
+          <GameAction
+            destination="nexus"
+            id={'playNexus'}
+            className={'games-card games-card-nexus'}
+            type={'button'}
+          >
+            <span className={'games-cover'}>
+              <img
+                src={'assets/games/nexus-cover.webp'}
+                alt={'Vesper diante da cidade do Nexus e do Farol azul'}
+                width={'630'}
+                height={'500'}
+                loading={'lazy'}
+                decoding={'async'}
+              />
+            </span>
+            <span className={'games-card-body'}>
+              <small>RPG TÁTICO 2D · CAMPANHA · PVP 1×1</small>
+              <strong>Nexus</strong>
+              <span>Reúna seu trio, combine habilidades e desafie seus amigos.</span>
+              <b className={'games-card-cta'}>
+                Entrar no Nexus <i aria-hidden={'true'}>↗</i>
               </b>
             </span>
           </GameAction>

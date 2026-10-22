@@ -189,14 +189,18 @@ test(
             const before = await snapshot();
             assert(before.track && before.camera && before.screen);
             await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-            await expect(page.locator('.games-card')).toHaveCount(5);
+            await expect(page.locator('.games-card')).toHaveCount(7);
             await page.evaluate(() => document.fonts.ready);
             await expect
               .poll(() =>
                 page.locator('.games-box-art').evaluate((n) => n.complete && n.naturalWidth > 0),
               )
               .toBe(true);
-            for (const img of ['.games-throne-art', '.games-card-splendor img'])
+            for (const img of [
+              '.games-throne-art',
+              '.games-card-splendor img',
+              '.games-card-nexus img',
+            ])
               await expect
                 .poll(() => page.locator(img).evaluate((n) => n.complete && n.naturalWidth > 0))
                 .toBe(true);
@@ -208,13 +212,15 @@ test(
             ]) {
               if (native && width < 480) continue;
               await page.setViewportSize({ width, height });
-              const covers = await page.locator('.games-card').evaluateAll((ns) =>
-                ns.map((n) => {
-                  const c = n.querySelector('.games-cover').getBoundingClientRect(),
-                    t = n.querySelector('.games-cover>span:last-child').getBoundingClientRect();
-                  return { left: c.left, right: c.right, textLeft: t.left, textRight: t.right };
-                }),
-              );
+              const covers = await page
+                .locator('.games-card:not(.games-card-nexus)')
+                .evaluateAll((ns) =>
+                  ns.map((n) => {
+                    const c = n.querySelector('.games-cover').getBoundingClientRect(),
+                      t = n.querySelector('.games-cover>span:last-child').getBoundingClientRect();
+                    return { left: c.left, right: c.right, textLeft: t.left, textRight: t.right };
+                  }),
+                );
               assert(covers.every((r) => r.textLeft >= r.left && r.textRight <= r.right));
               assert(
                 await page

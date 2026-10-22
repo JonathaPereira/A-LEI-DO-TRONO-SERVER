@@ -21,6 +21,7 @@ export function initializeCallControlLayout(target: Window) {
     'muteMicBtn',
     'deafenVoiceBtn',
     'cameraBtn',
+    'remotePcBtn',
     'screenShareBtn',
     'voiceSettingsBtn',
     'soundboardToggle',
@@ -56,19 +57,29 @@ export function initializeCallControlLayout(target: Window) {
       host.insertBefore(node, before);
   }
 
-  // Soundboard keeps a movable action bridge; the desktop shell owns its React label.
+  // Soundboard and Remote PC keep movable action bridges; the desktop shell owns Soundboard's React label.
   function decorate(node: HTMLElement | null) {
-    if (!node || node.id !== 'soundboardToggle') return;
+    if (!node || (node.id !== 'soundboardToggle' && node.id !== 'remotePcBtn')) return;
     if (node.dataset.desktopContent === 'react') return;
+    const isRemotePc = node.id === 'remotePcBtn';
     const workspace =
-      document.body.classList.contains('chat-only-active') && node.closest('#callWorkspace');
+      (document.body.classList.contains('chat-only-active') && node.closest('#callWorkspace')) ||
+      (isRemotePc && node.closest('#layoutCallActions,#desktopCallDock'));
     if (!workspace) node.querySelector('.workspace-control-icon')?.remove();
     else if (!node.querySelector('.workspace-control-icon')) {
       const icon = document.createElement('span');
       icon.className = 'workspace-control-icon';
-      icon.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-15v20m5-15v10m4-7v4"/></svg>';
+      icon.innerHTML = isRemotePc
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8m-4-5v5m0-15v6m-3-3 3 3 3-3"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-15v20m5-15v10m4-7v4"/></svg>';
       node.prepend(icon);
+    }
+    if (isRemotePc) {
+      if (!node.dataset.workspaceLabel) node.dataset.workspaceLabel = 'PC · Beta';
+      const title = node.title || 'Compartilhar PC · Beta';
+      node.setAttribute('aria-label', title);
+      node.title = title;
+      return;
     }
     node.dataset.workspaceLabel = 'Efeitos';
     node.setAttribute('aria-label', 'Efeitos de áudio');
@@ -103,7 +114,7 @@ export function initializeCallControlLayout(target: Window) {
         const host =
           id === 'joinVoiceBtn'
             ? 'layoutConnectionControls'
-            : ['cameraBtn', 'screenShareBtn'].includes(id)
+            : ['cameraBtn', 'screenShareBtn', 'remotePcBtn'].includes(id)
               ? 'layoutCallActions'
               : 'layoutUserControls';
         place(node, $(host));

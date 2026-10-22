@@ -10,12 +10,14 @@ interface AlertsOptions {
 interface Tone {
   gain: GainNode;
   oscillators: Set<OscillatorNode>;
+  callAlert: boolean;
 }
 const clampVolume = (value: unknown) => Math.max(0, Math.min(100, Number(value) || 0));
 
 /** Owns alert volume, cooldown, oscillators and its own context; never microphone audio. */
 export function createCallAlerts(options: AlertsOptions) {
-  let volume = clampVolume(options.storage.getItem('mnCallAlertVolume') ?? 85);
+  let volume = clampVolume(options.storage.getItem('mnCallAlertVolume') ?? 45);
+  let muted = options.storage.getItem('mnCallAlertsMuted') === '1';
   let context: VoiceAudioContext | null = null,
     disposed = false;
   const cooldown = new Map<string, number>(),
@@ -24,6 +26,14 @@ export function createCallAlerts(options: AlertsOptions) {
   let routing: Promise<void> | undefined;
   const now = options.now ?? Date.now;
   const warn = options.warn ?? ((error: unknown) => console.warn('[CallAlerts]', error));
+  function silence() {
+    if (!context) return;
+    for (const tone of tones) {
+      if (!tone.callAlert) continue;
+      tone.gain.gain.cancelScheduledValues?.(context.currentTime);
+      tone.gain.gain.setValueAtTime(0, context.currentTime);
+    }
+  }
   function ensure() {
     if (disposed) return null;
     if (!context || context.state === 'closed') {
@@ -83,6 +93,7 @@ export function createCallAlerts(options: AlertsOptions) {
   function play(kind: CallSoundKind = 'join', id = 'local') {
     const settings = options.getSettings();
     if (disposed || !settings.enabled || settings.muted) return;
+    if (kind !== 'message' && (muted || volume === 0)) return;
     const key = `${kind}:${id}`,
       stamp = now();
     if ((cooldown.get(key) ?? -Infinity) > stamp - 750) return;
@@ -92,19 +103,18 @@ export function createCallAlerts(options: AlertsOptions) {
       const ctx = ensure();
       if (!ctx) return;
       if (ctx.state === 'suspended') resume(ctx);
-      if (kind !== 'message' && volume === 0) return;
       const time = ctx.currentTime + 0.01,
         gain = ctx.createGain();
-      tone = { gain, oscillators: new Set() };
+      tone = { gain, oscillators: new Set(), callAlert: kind !== 'message' };
       tones.add(tone);
       gain.connect(ctx.destination);
-      const level = kind === 'message' ? 0.11 : (0.52 * volume) / 100;
+      const level = kind === 'message' ? 0.11 : (0.32 * volume) / 100;
       gain.gain.setValueAtTime(0.0001, time);
       gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, level), time + 0.025);
       gain.gain.exponentialRampToValueAtTime(0.0001, time + (kind === 'message' ? 0.36 : 0.65));
       const notes =
         kind === 'join'
-          ? [784, 1047, 1568]
+          ? [659, 784, 1047]
           : kind === 'message'
             ? [1320, 1760]
             : kind === 'disconnect'
@@ -137,12 +147,20 @@ export function createCallAlerts(options: AlertsOptions) {
     unlock,
     play,
     getSnapshot: (): CallAlertsSnapshot =>
-      Object.freeze({ volume, context: context?.state ?? null }),
+      Object.freeze({ volume, muted, context: context?.state ?? null }),
     setVolume(value: unknown) {
       if (disposed) return volume;
       volume = clampVolume(value);
       options.storage.setItem('mnCallAlertVolume', String(volume));
+      if (volume === 0) silence();
       return volume;
+    },
+    setMuted(value: boolean) {
+      if (disposed) return muted;
+      muted = !!value;
+      options.storage.setItem('mnCallAlertsMuted', muted ? '1' : '0');
+      if (muted) silence();
+      return muted;
     },
     dispose() {
       if (disposed) return;

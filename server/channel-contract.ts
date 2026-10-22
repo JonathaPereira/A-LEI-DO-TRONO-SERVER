@@ -29,6 +29,8 @@ export interface ChannelMember {
   voiceDeafened: boolean;
   cameraOn: boolean;
   screenOn: boolean;
+  serverMuted?: boolean;
+  mediaBlocked?: boolean;
   mediaTransport: MediaTransport;
   transmissionQuality: RealtimeQuality;
   screenFps?: 15 | 30 | 60;

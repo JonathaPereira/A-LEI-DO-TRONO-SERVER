@@ -33,6 +33,9 @@ export const NO_NETWORK_FEATURES: NetworkFeatures = Object.freeze({
   azul: false,
   splendor: false,
   loveLetter: false,
+  ticketToRide: false,
+  remotePc: false,
+  remotePcProtocol: 0,
   independentTextChannels: false,
   independentGameVoice: false,
   gameActivity: false,
@@ -41,12 +44,24 @@ export const NO_NETWORK_FEATURES: NetworkFeatures = Object.freeze({
 function readFeatures(value: unknown): NetworkFeatures {
   if (value === undefined) return NO_NETWORK_FEATURES;
   if (!isRecord(value)) throw invalidResponse('Capacidades do servidor inválidas.');
-  for (const key of Object.keys(NO_NETWORK_FEATURES))
-    if (value[key] !== undefined && typeof value[key] !== 'boolean') throw invalidResponse();
+  for (const key of Object.keys(NO_NETWORK_FEATURES)) {
+    if (key === 'remotePcProtocol') {
+      if (
+        value[key] !== undefined &&
+        (typeof value[key] !== 'number' || !Number.isSafeInteger(value[key]))
+      )
+        throw invalidResponse();
+    } else if (value[key] !== undefined && typeof value[key] !== 'boolean') {
+      throw invalidResponse();
+    }
+  }
   return Object.freeze({
     azul: value.azul === true,
     splendor: value.splendor === true,
     loveLetter: value.loveLetter === true,
+    ticketToRide: value.ticketToRide === true,
+    remotePc: value.remotePc === true,
+    remotePcProtocol: typeof value.remotePcProtocol === 'number' ? value.remotePcProtocol : 0,
     independentTextChannels: value.independentTextChannels === true,
     independentGameVoice: value.independentGameVoice === true,
     gameActivity: value.gameActivity === true,
@@ -153,7 +168,12 @@ export function readPreparedVoice(value: unknown): PreparedVoice {
     !['p2p', 'sfu', 'sfu-pending'].includes(value.mode) ||
     typeof value.revision !== 'number' ||
     !Number.isSafeInteger(value.revision) ||
-    value.revision < 0
+    value.revision < 0 ||
+    (value.moderation !== undefined &&
+      (!isRecord(value.moderation) ||
+        (value.moderation.muted !== undefined && typeof value.moderation.muted !== 'boolean') ||
+        (value.moderation.mediaBlocked !== undefined &&
+          typeof value.moderation.mediaBlocked !== 'boolean')))
   )
     throw invalidResponse();
   return value as unknown as PreparedVoice;

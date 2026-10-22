@@ -29,6 +29,7 @@ export interface NotificationPayload {
   readonly key: string;
   readonly title: string;
   readonly body: string;
+  readonly preview?: boolean;
   readonly target: ScopedNotificationTarget;
 }
 
@@ -45,5 +46,7 @@ export interface NotificationsSnapshot {
   readonly permissionStatus: string;
   readonly permissionPending: boolean;
   readonly desktop: boolean;
+  readonly windowsEnabled: boolean;
+  readonly windowsStatus: string;
   readonly notices: Readonly<Record<string, ChannelNotice>>;
 }

@@ -51,6 +51,8 @@ export const EMPTY_NOTIFICATIONS: NotificationsSnapshot = Object.freeze({
   permissionStatus: '',
   permissionPending: false,
   desktop: false,
+  windowsEnabled: true,
+  windowsStatus: '',
   notices: Object.freeze({}),
 });
 
@@ -93,6 +95,10 @@ export function createNotifications(options: NotificationsOptions) {
     return value === 'all' || value === 'off' ? value : 'mentions';
   }
 
+  function readWindowsEnabled(): boolean {
+    return preferences.get('windowsNotifications', true) !== false;
+  }
+
   function muted(id: string): boolean {
     return !!id && preferences.get('mute:' + id, false) === true;
   }
@@ -105,6 +111,7 @@ export function createNotifications(options: NotificationsOptions) {
     if (disposed) return;
     update({
       mode: readMode(),
+      windowsEnabled: readWindowsEnabled(),
       selectedMuted: muted(state.selectedChannelId),
       notices: Object.freeze(
         Object.fromEntries(
@@ -131,7 +138,7 @@ export function createNotifications(options: NotificationsOptions) {
       counts.clear();
       seen.clear();
       cancelReads();
-      update({ permissionPending: false, permissionStatus: '' });
+      update({ permissionPending: false, permissionStatus: '', windowsStatus: '' });
     }
     render();
   }
@@ -214,6 +221,7 @@ export function createNotifications(options: NotificationsOptions) {
         target: Object.freeze({ ...request.target, accountId: owner }),
       });
     if (options.desktopNotify) {
+      if (!readWindowsEnabled()) return;
       try {
         await options.desktopNotify(payload);
       } catch (error) {
@@ -323,7 +331,8 @@ export function createNotifications(options: NotificationsOptions) {
         network.onMessage(onMessage),
         options.subscribeIdentity(syncIdentity),
         options.subscribePreferences((key) => {
-          if (key === 'notifications' || key.startsWith('mute:')) syncIdentity();
+          if (key === 'notifications' || key === 'windowsNotifications' || key.startsWith('mute:'))
+            syncIdentity();
         }),
         options.subscribeAttention(readCurrent),
         options.subscribeNotificationClick((target) => void navigate(target)),
@@ -352,6 +361,50 @@ export function createNotifications(options: NotificationsOptions) {
     },
     setSelectedMuted(value: boolean) {
       mute(state.selectedChannelId, value);
+    },
+    setWindowsEnabled(value: boolean) {
+      if (disposed) return;
+      preferences.set('windowsNotifications', !!value);
+      render();
+    },
+    async testWindowsNotification(): Promise<void> {
+      ensureIdentity();
+      if (disposed || !options.desktopNotify) return;
+      if (!accountId) {
+        update({ windowsStatus: 'Entre na sua conta para testar.' });
+        return;
+      }
+      if (!readWindowsEnabled()) {
+        update({ windowsStatus: 'Ative Notificações do Windows para testar.' });
+        return;
+      }
+      const owner = accountId,
+        expected = generation;
+      try {
+        const raw = await options.desktopNotify({
+          key: owner + ':preview:' + Date.now(),
+          title: 'M&N · Notificações ativadas',
+          body: 'As mensagens permitidas aparecerão aqui quando o Trono estiver em segundo plano.',
+          preview: true,
+          target: { type: 'friends', id: owner, accountId: owner },
+        });
+        if (disposed || expected !== generation || owner !== options.getAccountId()) return;
+        const result =
+          raw && typeof raw === 'object'
+            ? (raw as { shown?: boolean; reason?: string })
+            : undefined;
+        update({
+          windowsStatus: result?.shown
+            ? 'Aviso enviado ao Windows. Se não apareceu, confira Não incomodar e as permissões de notificação do M&N.'
+            : result?.reason === 'limited'
+              ? 'Aguarde um minuto antes de testar novamente.'
+              : 'O Windows não disponibilizou as notificações neste dispositivo.',
+        });
+      } catch (error) {
+        if (disposed || expected !== generation || owner !== options.getAccountId()) return;
+        update({ windowsStatus: 'Não foi possível enviar o aviso ao Windows.' });
+        warn(error);
+      }
     },
     requestPermission,
     notify,

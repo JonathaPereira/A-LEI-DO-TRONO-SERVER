@@ -231,6 +231,38 @@ export function ParticipantCard({
             <output>{p.volume}%</output>
           </label>
         )}
+        {p.canModerate && (
+          <div className="participant-moderation" aria-label="Moderação da chamada">
+            <small>Moderação da chamada</small>
+            <button
+              type="button"
+              disabled={p.pendingModeration?.mute}
+              data-moderation={p.serverMuted ? 'unmute' : 'mute'}
+              onClick={() => void client.moderate(p.id, p.serverMuted ? 'unmute' : 'mute', p.name)}
+            >
+              {p.serverMuted ? 'Liberar microfone' : 'Silenciar microfone'}
+            </button>
+            <button
+              type="button"
+              disabled={p.pendingModeration?.media}
+              data-moderation={p.mediaBlocked ? 'allow-media' : 'block-media'}
+              onClick={() =>
+                void client.moderate(p.id, p.mediaBlocked ? 'allow-media' : 'block-media', p.name)
+              }
+            >
+              {p.mediaBlocked ? 'Liberar câmera e telas' : 'Bloquear câmera e telas'}
+            </button>
+            <button
+              type="button"
+              className="moderation-danger"
+              disabled={p.pendingModeration?.kick}
+              data-moderation="kick"
+              onClick={() => void client.moderate(p.id, 'kick', p.name)}
+            >
+              Remover da chamada · 5 min
+            </button>
+          </div>
+        )}
       </div>
       <button
         ref={expand}

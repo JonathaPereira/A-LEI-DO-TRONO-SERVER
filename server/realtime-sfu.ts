@@ -38,7 +38,7 @@ interface Options {
   rooms: ReadonlyMap<string, RealtimeRoom>;
   send(ws: RealtimeConnection, message: { type: string; [key: string]: unknown }): void;
   broadcastVoiceRoster(room: RealtimeRoom): void;
-  version: string;
+  version?: string;
   env?: NodeJS.ProcessEnv;
   usageFile?: string;
   fetchImpl?: typeof fetch;
@@ -77,10 +77,10 @@ export class RealtimeSfuManager {
   private readonly provider: ReturnType<typeof createRealtimeProvider>;
   private readonly scope = new AbortController();
   private readonly clientScopes = new Map<string, AbortController>();
-  private readonly sessions = new Map<string, RealtimeSession>();
+  readonly sessions = new Map<string, RealtimeSession>();
   private readonly sessionQueues = new Map<string, Promise<void>>();
   private readonly publicationsByRoom = new Map<string, Map<string, RealtimePublication>>();
-  private readonly subscriptions = new Map<string, RealtimeSubscription>();
+  readonly subscriptions = new Map<string, RealtimeSubscription>();
   private readonly pendingPublishers = new Map<string, Map<string, Set<object>>>();
   private readonly usageMeter: ReturnType<typeof createRealtimeUsage>;
   private readonly timer: NodeJS.Timeout;
@@ -93,7 +93,7 @@ export class RealtimeSfuManager {
     rooms,
     send,
     broadcastVoiceRoster,
-    version,
+    version = '0.14.0-alpha',
     fetchImpl = fetch,
     env = process.env,
     usageFile = env.REALTIME_USAGE_FILE || '/tmp/a_lei_do_trono_realtime_usage.json',
@@ -207,7 +207,7 @@ export class RealtimeSfuManager {
     const map = this.publicationsByRoom.get(roomId);
     if (!map) return [];
     return [...map.values()]
-      .filter((p) => p.ready)
+      .filter((p) => p.ready && !this._moderated(roomId, p.ownerId, p.kind))
       .map((p) => ({
         ownerId: p.ownerId,
         ownerName: p.ownerName,
@@ -219,6 +219,24 @@ export class RealtimeSfuManager {
         rids: p.rids || [],
         createdAt: p.createdAt,
       }));
+  }
+  _moderated(roomId: string, id: string, kind: string) {
+    const p = this.rooms.get(roomId)?.players.get(id);
+    return !!p && ((kind === 'audio' && !!p.serverMuted) || (kind !== 'audio' && !!p.mediaBlocked));
+  }
+  async enforceModeration(room: RealtimeRoom, player: RealtimePlayer) {
+    const subs = [...this.subscriptions.values()].filter(
+      (s) =>
+        s.roomId === room.id &&
+        s.publisherId === player.id &&
+        this._moderated(room.id, player.id, s.kind),
+    );
+    for (const sub of subs) {
+      this.subscriptions.delete(sub.sessionId);
+      this.sessions.delete(sub.sessionId);
+    }
+    this.broadcastPublications(room);
+    await Promise.allSettled(subs.map((s) => this._closeSubscription(s, true)));
   }
   broadcastPublications(room: RealtimeRoom | undefined) {
     if (this.closed || !room) return;
@@ -671,6 +689,10 @@ export class RealtimeSfuManager {
           payload.mid.length > 128
         )
           throw Object.assign(new Error('Publicação inválida.'), { code: 'BAD_SFU_PUBLISH' });
+        if (kind !== 'audio' && player.mediaBlocked)
+          throw Object.assign(new Error('Compartilhamento bloqueado pela moderação.'), {
+            code: 'VOICE_MEDIA_BLOCKED',
+          });
         const gate = this._assertAvailable(kind, quality);
         if (!gate.ok) {
           this._sendResponse(ws, requestId, false, null, gate);
@@ -735,6 +757,29 @@ export class RealtimeSfuManager {
                 { code: trackResult.errorCode },
               );
             ensureCurrent();
+            if (kind !== 'audio' && player.mediaBlocked) {
+              await this._closePublication(
+                {
+                  roomId: room.id,
+                  ownerId: player.id,
+                  ownerName: player.name,
+                  kind,
+                  quality,
+                  sessionId,
+                  trackName: String(trackResult.trackName || trackName),
+                  mid: String(payload.mid),
+                  screenBitrate: null,
+                  rids: [],
+                  ready: false,
+                  createdAt: Date.now(),
+                  lastVerifiedAt: 0,
+                },
+                true,
+              );
+              throw Object.assign(new Error('Compartilhamento bloqueado pela moderação.'), {
+                code: 'VOICE_MEDIA_BLOCKED',
+              });
+            }
             const actualTrackName = String(trackResult.trackName || trackName);
             const requestedBitrate = Number(payload.screenBitrate);
             const screenBitrate =
@@ -786,6 +831,13 @@ export class RealtimeSfuManager {
         const publisherId = stringValue(payload.publisherId),
           kind = stringValue(payload.kind),
           quality = isRealtimeQuality(payload.quality) ? payload.quality : 'balanced';
+        const ensureAudible = () => {
+          if (this._moderated(room.id, publisherId, kind))
+            throw Object.assign(new Error('Mídia silenciada pela moderação.'), {
+              code: 'VOICE_MODERATED',
+            });
+        };
+        ensureAudible();
         if (!isRealtimeKind(kind) || publisherId === player.id)
           throw Object.assign(new Error('Assinatura inválida.'), { code: 'BAD_SFU_SUBSCRIBE' });
         const pub = this._pubMap(room.id).get(this._pubKey(publisherId, kind));
@@ -862,6 +914,26 @@ export class RealtimeSfuManager {
             });
           }
           ensurePublicationCurrent();
+          try {
+            ensureAudible();
+          } catch (err) {
+            await this._closeSubscription(
+              {
+                sessionId,
+                ownerId: player.id,
+                roomId: room.id,
+                publisherId,
+                publisherSessionId: pub.sessionId,
+                kind,
+                mid: String(tr.mid ?? ''),
+                preferredRid: preferredRid || null,
+                estimatedBps: 0,
+                createdAt: Date.now(),
+              },
+              true,
+            );
+            throw err;
+          }
           if (!sdpOk(result.sessionDescription, 'offer'))
             throw Object.assign(new Error('SFU não forneceu uma oferta SDP válida.'), {
               code: 'BAD_SFU_OFFER',

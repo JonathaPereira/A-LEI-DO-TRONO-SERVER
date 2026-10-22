@@ -72,8 +72,8 @@ export function AuthDialogs({ forms, desktop }: { forms: AuthForms; desktop: boo
         <a
           id="authDesktopDownload"
           className="auth-desktop-download"
-          href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.2.10-Windows.exe"
-          download="MN-Trono-0.2.10-Windows.exe"
+          href="https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.3.2-Windows.exe"
+          download="MN-Trono-0.3.2-Windows.exe"
         >
           <svg
             viewBox="0 0 24 24"

@@ -97,8 +97,16 @@ async function prepareSite({
     path.join(site, 'PUBLICAR_SURGE_LEVE.md'),
   );
   await fs.copyFile(
+    path.join(root, 'docs/INTEGRAR_NEXUS.md'),
+    path.join(site, 'INTEGRAR_NEXUS.md'),
+  );
+  await fs.copyFile(
     path.join(root, 'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
     path.join(site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
+  );
+  await fs.copyFile(
+    path.join(root, 'docs/COMPARTILHAR_PC_BETA.md'),
+    path.join(site, 'COMPARTILHAR_PC_BETA.md'),
   );
   await fs.copyFile(path.join(root, 'docs/ATUALIZACOES.md'), path.join(site, 'ATUALIZACOES.md'));
   for (const file of ['upgrade-azul.sql', 'upgrade-splendor.sql'])

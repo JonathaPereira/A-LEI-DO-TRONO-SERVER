@@ -18,6 +18,7 @@ export function accountRole(user: unknown, profile: unknown = {}): MemberRole {
 }
 export function permissions(role: unknown) {
   return {
+    moderateVoice: role === 'creator' || role === 'admin',
     manageChannels: role === 'creator' || role === 'admin',
     moderateFiles: role === 'creator' || role === 'admin',
     manageRoles: role === 'creator',

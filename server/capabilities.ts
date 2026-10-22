@@ -1,6 +1,9 @@
 import { throneRules } from '../src/lib/games/throne-rules.ts';
 /** Shared protocol advertisement. Availability and authorization remain domain decisions. */
 export const serverFeatures = Object.freeze({
+  remotePc: true,
+  remotePcProtocol: 2,
+  ticketToRide: true,
   loveLetter: true,
   splendor: true,
   azul: true,

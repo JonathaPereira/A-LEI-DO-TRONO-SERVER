@@ -40,6 +40,9 @@ import { initializeAzul } from '../components/games/azul-runtime';
 import { initializeSplendor } from '../components/games/splendor-runtime';
 import { initializeLoveLetter } from '../components/games/love-letter-runtime';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
+import { initializeNexus } from '../lib/games/nexus';
+import { initializeTicketToRide } from '../lib/games/ticket-to-ride';
+import { initializeRemotePc } from '../lib/voice/remote-pc';
 
 import { useEffect, useState } from 'react';
 import {
@@ -140,10 +143,13 @@ export function ApplicationRuntime() {
       initializeAzul(window);
       initializeSplendor(window);
       initializeLoveLetter(window);
+      initializeTicketToRide(window);
       initializeTabletopAudio(window);
       initializeRoguelite(window);
+      initializeNexus(window);
       initializeGameLibrary(window);
       initializeMessenger(window);
+      initializeRemotePc(window);
       prepareCallSettings(window);
       initializeCallToolbar(window);
       initializeCallNavigation(window);

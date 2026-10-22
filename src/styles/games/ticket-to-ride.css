@@ -1,0 +1,1419 @@
+.tr-screen {
+  --tr-ink: #eee7d6;
+  --tr-muted: #a9b5b8;
+  --tr-gold: #e3ba70;
+  background: radial-gradient(ellipse at 50% 30%, #27444b, transparent 65%), #10262c;
+  color: var(--tr-ink);
+  padding: 18px 24px;
+  text-align: left;
+  font-family: Inter, system-ui, sans-serif;
+}
+.tr-screen,
+.tr-screen * {
+  box-sizing: border-box;
+}
+.tr-screen :is(button, select, input) {
+  font: inherit;
+}
+.tr-screen :is(button, select, input):focus-visible,
+.tr-route:focus-visible {
+  outline: 3px solid #f2c56b;
+  outline-offset: 3px;
+}
+.tr-heading,
+.tr-brand,
+.tr-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tr-heading {
+  justify-content: space-between;
+  border-bottom: 1px solid #c7aa6340;
+  padding-bottom: 12px;
+}
+.tr-brand h1 {
+  font:
+    700 clamp(18px, 2vw, 28px)/1.15 Georgia,
+    serif;
+  letter-spacing: 0.06em;
+}
+.tr-brand h1 small {
+  display: block;
+  margin-top: 5px;
+  font:
+    600 9px/1.5 Inter,
+    system-ui,
+    sans-serif;
+  color: var(--tr-gold);
+  letter-spacing: 0.2em;
+}
+.tr-heading-actions {
+  flex-wrap: wrap;
+}
+.tr-heading-actions > strong {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--tr-muted);
+}
+.tr-button {
+  border: 1px solid #62716e;
+  background: #243e43;
+  color: var(--tr-ink);
+  border-radius: 7px;
+  padding: 9px 13px;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.tr-button:hover:not(:disabled) {
+  background: #38554f;
+  border-color: var(--tr-gold);
+}
+.tr-screen button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tr-primary {
+  background: var(--tr-gold);
+  color: #203035;
+  border-color: var(--tr-gold);
+  font-weight: 750;
+}
+.tr-primary:hover:not(:disabled) {
+  background: #f5d08b;
+  color: #16202b;
+}
+.tr-link {
+  background: none;
+  border: 0;
+  color: #dfc18a;
+  text-decoration: underline;
+  padding: 6px;
+  cursor: pointer;
+}
+.tr-eyebrow {
+  display: block;
+  color: var(--tr-gold);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  font-weight: 750;
+}
+.tr-intro {
+  max-width: 750px;
+  padding: 45px 0 28px;
+}
+.tr-intro h2 {
+  font:
+    italic 60px/1.1 Georgia,
+    serif;
+  margin: 14px 0 18px;
+  color: #f0e1be;
+}
+.tr-intro p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #b6c0c7;
+  max-width: 600px;
+}
+.tr-metrics {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.tr-metrics span {
+  border: 1px solid #596b68;
+  padding: 8px 12px;
+  border-radius: 25px;
+  font-size: 12px;
+}
+.tr-lobby {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  max-width: 900px;
+}
+.tr-panel {
+  background: linear-gradient(135deg, #233e43e6, #142e35eb);
+  border: 1px solid #b999554d;
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 0;
+}
+.tr-panel h2 {
+  font:
+    600 19px/1.3 Georgia,
+    serif;
+  margin: 4px 0 8px;
+}
+.tr-panel h3 {
+  font-size: 16px;
+  margin: 10px 0 14px;
+}
+.tr-panel p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.tr-panel label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0;
+}
+.tr-panel :is(input:not([type='checkbox']), select) {
+  background: #12282e;
+  color: #ece6d7;
+  border: 1px solid #7b8575;
+  border-radius: 6px;
+  padding: 9px;
+  max-width: 100%;
+}
+.tr-lobby .tr-button,
+.tr-open-tables .tr-button {
+  margin: 6px;
+}
+.tr-open-tables {
+  padding: 18px 0;
+}
+.tr-notice {
+  color: #ffd29c;
+  font-size: 12px;
+  margin: 8px 0;
+}
+.tr-notice:empty {
+  display: none;
+}
+.tr-table-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--tr-muted);
+  min-height: 28px;
+}
+.tr-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 6px;
+}
+.tr-player {
+  border: 1px solid #c4ad5e30;
+  border-left: 3px solid var(--player);
+  background: #132d33;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+}
+.tr-player strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tr-player b {
+  color: var(--player);
+  font-size: 13px;
+}
+.tr-player small {
+  font-size: 9px;
+  color: #b4bfc5;
+  grid-column: 1/-1;
+}
+.tr-player.tr-active {
+  box-shadow: inset 0 0 0 1px var(--player);
+  background: #2a4445;
+}
+.tr-turn {
+  background: #d2b16e14;
+  border-left: 2px solid var(--tr-gold);
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #eee1bd;
+  line-height: 1.4;
+}
+#ticketToRideContent {
+  display: grid;
+  gap: 8px;
+}
+/* Private hand on the left, station on the right; journeys occupy the lower corners. */
+.tr-layout {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 166px;
+  grid-template-areas: 'players players players' 'hand board supply' 'objectives board destinations';
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+}
+.tr-players-column {
+  grid-area: players;
+  min-width: 0;
+}
+.tr-players-column .tr-log {
+  margin-top: 8px;
+}
+.tr-hand {
+  grid-area: hand;
+}
+.tr-board-column {
+  grid-area: board;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  align-content: center;
+}
+.tr-sidebar {
+  grid-area: supply;
+  min-width: 0;
+  display: flex;
+}
+.tr-supply {
+  flex: 1;
+}
+.tr-tickets {
+  grid-area: objectives;
+}
+.tr-destination-deck {
+  grid-area: destinations;
+}
+.tr-layout > .tr-panel,
+.tr-supply {
+  margin: 0;
+  padding: 12px;
+}
+.tr-layout :is(.tr-hand, .tr-supply, .tr-destination-deck) h2 {
+  font-size: 17px;
+}
+.tr-muted {
+  font-size: 12px;
+  color: var(--tr-muted);
+}
+.tr-layout .tr-muted {
+  font-size: 10px;
+  line-height: 1.5;
+}
+.tr-map-wrap {
+  width: 100%;
+  border: 4px solid #b49159;
+  outline: 1px solid #6b5a36;
+  outline-offset: 2px;
+  border-radius: 9px;
+  background: #d7d1b9;
+  box-shadow: 0 12px 35px #0005;
+  overflow: hidden;
+}
+.tr-map {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tr-map-title {
+  font:
+    700 19px Georgia,
+    serif;
+  letter-spacing: 3px;
+  fill: #69745b;
+}
+.tr-map-subtitle {
+  font: 9px sans-serif;
+  letter-spacing: 4px;
+  fill: #6c765d;
+}
+.tr-city {
+  font:
+    600 10px Inter,
+    system-ui,
+    sans-serif;
+  fill: #35483e;
+  paint-order: stroke;
+  stroke: #e6ddc5;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.tr-route {
+  cursor: pointer;
+}
+.tr-route:hover rect,
+.tr-route:focus-visible rect,
+.tr-route.tr-selected rect {
+  stroke: #c97623;
+  stroke-width: 2.5;
+}
+.tr-wagon-art {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.tr-owned .tr-wagon-art {
+  filter: drop-shadow(0 1.5px 1px #29372c80);
+}
+.tr-payment {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  width: min(330px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  background: #122c32f5;
+  box-shadow: 0 12px 35px #0006;
+  border-color: var(--tr-gold);
+}
+.tr-payment .tr-primary {
+  width: 100%;
+  margin-top: 10px;
+}
+.tr-payment select {
+  width: 100%;
+  font-size: 11px;
+}
+.tr-payment label {
+  display: block;
+}
+.tr-train-card {
+  --train: #9caa9f;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  border: 3px solid #e9dbb5;
+  border-radius: 4px;
+  color: #f5e5bf;
+  padding: 7px 4px;
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    color-mix(in srgb, var(--train) 55%, #2b3c3b),
+    #142a30 95%
+  );
+  box-shadow:
+    inset 0 0 0 1px #876c3b,
+    0 3px 6px #0006;
+  overflow: hidden;
+}
+.tr-train-card:before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid #e3ca8966;
+  border-radius: 30% 30% 4px 4px;
+  pointer-events: none;
+}
+.tr-train-art {
+  display: block;
+  width: 100%;
+  max-width: 95px;
+  height: auto;
+  color: var(--train);
+  filter: drop-shadow(0 2px 2px #0005);
+}
+.tr-card-name {
+  font-size: 9px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+}
+.tr-train-card b {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  background: #f0dfb2;
+  border-radius: 50%;
+  color: #193136;
+  font-size: 11px;
+}
+.tr-train-card[data-train-color='purple'] {
+  --train: #b38acc;
+}
+.tr-train-card[data-train-color='white'] {
+  --train: #eee4ce;
+}
+.tr-train-card[data-train-color='blue'] {
+  --train: #6ba8d1;
+}
+.tr-train-card[data-train-color='yellow'] {
+  --train: #e7c958;
+}
+.tr-train-card[data-train-color='orange'] {
+  --train: #e9a25c;
+}
+.tr-train-card[data-train-color='black'] {
+  --train: #5d6264;
+}
+.tr-train-card[data-train-color='red'] {
+  --train: #e07666;
+}
+.tr-train-card[data-train-color='green'] {
+  --train: #83b58b;
+}
+.tr-train-card[data-train-color='loco'] {
+  --train: #eed388;
+  background: linear-gradient(140deg, #567e9a, #84627e 48%, #9c7845);
+}
+.tr-hand-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 4px 12px;
+  margin-top: 14px;
+}
+.tr-hand .tr-train-card {
+  width: 100%;
+  aspect-ratio: 1.9;
+  min-height: 65px;
+  flex: none;
+  transform: rotate(-3deg);
+  margin-top: -10px;
+}
+.tr-hand .tr-train-card:nth-child(even) {
+  transform: rotate(3deg);
+}
+.tr-hand .tr-train-card:first-child {
+  margin-top: 0;
+}
+.tr-hand .tr-train-art {
+  width: 70%;
+  max-width: 90px;
+}
+.tr-hand .tr-card-name {
+  font-size: 10px;
+}
+.tr-hand .tr-train-card b {
+  width: 24px;
+  height: 24px;
+  font:
+    700 16px Georgia,
+    serif;
+  right: 6px;
+  top: 5px;
+}
+
+.tr-market {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin-top: 12px;
+}
+.tr-market .tr-train-card {
+  width: 100%;
+  min-height: 52px;
+  flex-direction: row;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.tr-market .tr-train-art {
+  width: 58px;
+}
+.tr-market .tr-card-name {
+  font-size: 10px;
+}
+.tr-market button:hover:not(:disabled),
+.tr-deck:hover:not(:disabled),
+.tr-destination-card:hover:not(:disabled) {
+  filter: brightness(1.17);
+  border-color: #f5dc9d;
+}
+.tr-deck {
+  display: grid;
+  justify-items: center;
+  width: calc(100% - 4px);
+  min-height: 90px;
+  margin: 12px 0 5px;
+  background:
+    repeating-linear-gradient(45deg, #344c4b33, #344c4b33 3px, transparent 3px, transparent 6px),
+    #172e35;
+  border: 3px double #c7ab69;
+  box-shadow:
+    2px 2px 0 #dac994,
+    4px 4px 0 #20383d,
+    5px 5px 0 #d0bd89;
+  cursor: pointer;
+}
+.tr-deck-emblem {
+  font:
+    32px Georgia,
+    serif;
+  color: var(--tr-gold);
+}
+.tr-deck .tr-card-name {
+  letter-spacing: 0.08em;
+  font-size: 8px;
+}
+.tr-ticket-collection {
+  display: flex;
+  flex-direction: column;
+  max-height: 130px;
+  gap: 10px;
+  overflow: auto;
+  padding: 6px 3px 5px;
+  scrollbar-width: thin;
+}
+.tr-ticket-button {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.tr-ticket {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 12px;
+  background: linear-gradient(120deg, #efe2bd, #dfd3b6);
+  color: #3b453f;
+  border: 1px solid #b59e6a;
+  border-radius: 6px;
+  font-size: 11px;
+  min-height: 66px;
+  box-shadow:
+    inset 0 0 0 3px #f9efcf,
+    0 2px 4px #0002;
+}
+.tr-ticket strong {
+  line-height: 1.5;
+}
+.tr-ticket b {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tr-ticket-icon {
+  font-size: 21px;
+  color: #8e6d42;
+}
+.tr-ticket.tr-complete {
+  background: #c8dbc2;
+  border-color: #6d946b;
+}
+.tr-ticket-button[aria-pressed='true'] .tr-ticket {
+  outline: 2px solid var(--tr-gold);
+  outline-offset: 1px;
+}
+.tr-ticket-choice {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #a8905d66;
+}
+.tr-ticket-option {
+  cursor: pointer;
+}
+.tr-ticket-option .tr-ticket {
+  flex: 1;
+}
+.tr-ticket-option input {
+  accent-color: #e8ba69;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.tr-ticket-choice .tr-primary {
+  width: 100%;
+}
+.tr-tickets .tr-ticket-collection .tr-ticket {
+  grid-template-columns: 17px 1fr;
+  padding: 9px;
+  gap: 4px;
+  font-size: 10px;
+  min-height: 65px;
+}
+.tr-tickets .tr-ticket-collection .tr-ticket b {
+  grid-column: 2;
+  font-size: 12px;
+}
+.tr-destination-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  width: calc(100% - 4px);
+  min-height: 94px;
+  margin: 8px 0 4px;
+  border: 3px double #c9ac6b;
+  border-radius: 6px;
+  color: #efe0b8;
+  background: radial-gradient(ellipse, #3b5d59, #173238);
+  box-shadow:
+    2px 2px 0 #dac994,
+    4px 4px 0 #20383d,
+    5px 5px 0 #d0bd89;
+  cursor: pointer;
+}
+.tr-compass {
+  font:
+    36px/1 Georgia,
+    serif;
+  color: var(--tr-gold);
+}
+.tr-destination-card > span:not(.tr-compass) {
+  font-size: 8px;
+  letter-spacing: 0.09em;
+}
+.tr-destination-card strong {
+  font-size: 10px;
+}
+.tr-log {
+  padding: 8px 0;
+  color: var(--tr-muted);
+  font-size: 11px;
+}
+.tr-log summary {
+  cursor: pointer;
+  color: #d7bf88;
+}
+.tr-log p {
+  border-top: 1px solid #b9a26330;
+  padding: 7px 0;
+}
+.tr-results {
+  position: absolute;
+  inset: 8px;
+  z-index: 5;
+  overflow: auto;
+  padding: 20px;
+  background: #17343af5;
+}
+.tr-results > article {
+  border-top: 1px solid #85836b;
+  padding-top: 10px;
+}
+.tr-results .tr-ticket {
+  max-width: 500px;
+  margin: 8px 0;
+}
+.tr-footnote {
+  color: #8e9f9e;
+  font-size: 10px;
+  line-height: 1.7;
+  margin-top: 20px;
+  max-width: 1000px;
+}
+.tr-at-table > .tr-footnote {
+  display: none;
+}
+.tr-dialog {
+  background: #1b3339;
+  color: #e7e1ce;
+  border: 1px solid #a79364;
+  border-radius: 12px;
+  padding: 28px;
+  width: min(650px, 94vw);
+  max-height: 85dvh;
+  overflow: auto;
+  text-align: left;
+}
+.tr-dialog::backdrop {
+  background: #06101dcc;
+  backdrop-filter: blur(5px);
+}
+.tr-dialog p,
+.tr-dialog li {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.tr-dialog [data-close] {
+  float: right;
+  border: 0;
+  background: none;
+  color: #eeddb5;
+  font-size: 24px;
+  cursor: pointer;
+}
+.tr-card-flight {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  margin: 0;
+  min-height: 0;
+  max-width: none;
+  transform-origin: center;
+}
+.tr-ticket-flight {
+  display: grid;
+  place-items: center;
+  font:
+    700 11px Georgia,
+    serif;
+}
+.tr-screen:fullscreen {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 12px 18px;
+}
+.tr-screen::backdrop {
+  background: #10262c;
+}
+/* Fit the whole table in landscape; keep the two piles in their corners. */
+@media (min-width: 1000px) and (min-aspect-ratio: 4/3) and (min-height: 600px) {
+  .tr-at-table {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 12px 18px;
+  }
+  .tr-at-table .tr-heading {
+    flex-shrink: 0;
+    padding-bottom: 8px;
+  }
+  .tr-at-table .tr-heading .tr-button {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+  .tr-at-table #ticketToRideContent {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 6px;
+  }
+  .tr-at-table .tr-layout {
+    min-height: 0;
+    grid-template-columns: clamp(142px, 12vw, 180px) minmax(0, 1fr) clamp(148px, 12vw, 180px);
+    grid-template-rows: auto minmax(0, 1fr) 165px;
+    gap: 10px;
+  }
+  .tr-at-table .tr-layout > .tr-panel,
+  .tr-at-table .tr-supply {
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+  .tr-at-table .tr-board-column {
+    align-content: stretch;
+    align-items: stretch;
+  }
+  .tr-at-table .tr-map-wrap {
+    height: 100%;
+    min-height: 0;
+  }
+  .tr-at-table .tr-map {
+    height: 100%;
+    width: 100%;
+  }
+  .tr-at-table .tr-market {
+    gap: 5px;
+    margin-top: 9px;
+  }
+  .tr-at-table .tr-market .tr-train-card {
+    min-height: 42px;
+  }
+  .tr-at-table .tr-market .tr-train-art {
+    width: 45px;
+  }
+  .tr-at-table .tr-deck {
+    min-height: 64px;
+    margin-top: 10px;
+  }
+  .tr-at-table .tr-deck-emblem {
+    font-size: 24px;
+  }
+  .tr-at-table .tr-tickets:has(.tr-ticket-choice) {
+    overflow: visible;
+  }
+  .tr-at-table .tr-ticket-choice {
+    position: absolute;
+    z-index: 6;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, 70%);
+    max-height: calc(100% - 30px);
+    overflow: auto;
+    padding: 20px;
+    margin: 0;
+    background: #153139;
+    border: 1px solid var(--tr-gold);
+    border-radius: 12px;
+    box-shadow: 0 25px 100px 30px #041c27c9;
+  }
+  .tr-at-table .tr-players-column {
+    position: relative;
+  }
+  .tr-at-table .tr-players-column .tr-log {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    margin: 0;
+    padding: 2px 0;
+    z-index: 8;
+    background: #17343a;
+  }
+  .tr-at-table .tr-scoreboard {
+    padding-right: 125px;
+  }
+  .tr-at-table .tr-log[open] {
+    width: 350px;
+    max-height: 50dvh;
+    overflow: auto;
+    padding: 14px;
+    border: 1px solid #b99955;
+    border-radius: 8px;
+  }
+  .tr-at-table .tr-tickets .tr-ticket-collection {
+    max-height: 85px;
+  }
+  .tr-at-table .tr-tickets h2 {
+    font-size: 17px;
+    margin-bottom: 3px;
+  }
+}
+/* Wide screens have a separate scoreboard, as on the reference table. */
+@media (min-width: 1600px) and (min-aspect-ratio: 4/3) and (min-height: 600px) {
+  .tr-at-table .tr-layout {
+    grid-template-columns: clamp(150px, 11vw, 210px) minmax(0, 1fr) clamp(150px, 10vw, 185px) 185px;
+    grid-template-rows: minmax(0, 1fr) 165px;
+    grid-template-areas: 'hand board supply players' 'objectives board destinations players';
+  }
+  .tr-at-table .tr-scoreboard {
+    grid-template-columns: 1fr;
+    padding-right: 0;
+    gap: 10px;
+  }
+  .tr-at-table .tr-player {
+    padding: 14px 10px;
+  }
+  .tr-at-table .tr-players-column {
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+  .tr-at-table .tr-players-column .tr-log {
+    position: static;
+    margin-top: 14px;
+    padding: 10px;
+    background: #17343a;
+    border-radius: 6px;
+  }
+  .tr-at-table .tr-log[open] {
+    width: auto;
+    max-height: none;
+  }
+  .tr-at-table .tr-deck {
+    min-height: 90px;
+  }
+  .tr-at-table .tr-market {
+    gap: 10px;
+  }
+  .tr-at-table .tr-market .tr-train-card {
+    min-height: 65px;
+    flex-direction: column;
+    gap: 0;
+  }
+  .tr-at-table .tr-market .tr-train-art {
+    width: 70px;
+  }
+}
+@media (min-width: 1000px) and (min-aspect-ratio: 4/3) and (min-height: 600px) and (max-height: 850px) {
+  .tr-at-table .tr-supply > .tr-eyebrow {
+    display: none;
+  }
+  .tr-at-table .tr-supply h2 {
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+  .tr-at-table .tr-supply .tr-muted {
+    font-size: 9px;
+    line-height: 1.3;
+  }
+  .tr-at-table .tr-deck {
+    min-height: 50px;
+    margin: 8px 0 4px;
+  }
+  .tr-at-table .tr-deck-emblem {
+    font-size: 20px;
+  }
+  .tr-at-table .tr-market {
+    margin-top: 8px;
+    gap: 4px;
+  }
+  .tr-at-table .tr-market .tr-train-card {
+    min-height: 34px;
+    padding: 3px 6px;
+    flex-direction: row;
+    gap: 5px;
+  }
+  .tr-at-table .tr-market .tr-train-art {
+    width: 38px;
+  }
+  .tr-at-table .tr-market .tr-card-name {
+    font-size: 9px;
+  }
+}
+@media (max-width: 999px), (max-aspect-ratio: 4/3) {
+  .tr-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'players players' 'board board' 'hand supply' 'objectives destinations';
+    grid-template-rows: auto auto auto auto;
+  }
+  .tr-map-wrap {
+    overflow: auto;
+  }
+  .tr-map {
+    min-width: 650px;
+  }
+  .tr-market {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tr-market .tr-train-card {
+    flex-direction: column;
+  }
+  .tr-deck {
+    min-height: 75px;
+  }
+  .tr-tickets .tr-ticket-collection {
+    flex-direction: column;
+    max-height: 260px;
+  }
+  .tr-ticket-button {
+    flex-basis: auto;
+  }
+  .tr-payment {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-height: none;
+    margin-top: 12px;
+  }
+}
+@media (max-width: 650px) {
+  .tr-screen {
+    padding: 12px 10px 24px;
+  }
+  .tr-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tr-heading-actions {
+    width: 100%;
+    gap: 7px;
+  }
+  .tr-heading-actions > strong {
+    margin-right: auto;
+    font-size: 9px;
+  }
+  .tr-brand {
+    gap: 10px;
+  }
+  .tr-brand h1 {
+    font-size: 20px;
+  }
+  .tr-button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .tr-intro h2 {
+    font-size: 44px;
+  }
+  .tr-lobby {
+    grid-template-columns: 1fr;
+  }
+  .tr-scoreboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tr-player {
+    padding: 7px;
+  }
+  .tr-layout {
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .tr-layout > .tr-panel,
+  .tr-supply {
+    padding: 9px;
+  }
+  .tr-layout :is(.tr-hand, .tr-supply, .tr-destination-deck) h2 {
+    font-size: 16px;
+  }
+  .tr-market {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  .tr-market .tr-train-card {
+    flex-direction: row;
+    min-height: 44px;
+  }
+  .tr-market .tr-train-art {
+    width: 45px;
+  }
+  .tr-market .tr-card-name {
+    font-size: 9px;
+  }
+  .tr-ticket {
+    padding: 10px 7px;
+    grid-template-columns: 15px 1fr;
+    font-size: 10px;
+  }
+  .tr-ticket b {
+    grid-column: 2;
+    font-size: 11px;
+  }
+  .tr-ticket-option .tr-ticket {
+    grid-template-columns: 15px 1fr auto;
+  }
+  .tr-ticket-option .tr-ticket b {
+    grid-column: auto;
+  }
+  .tr-compass {
+    font-size: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tr-screen *,
+  .tr-screen *:before,
+  .tr-screen *:after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.games-railway-cover {
+  background: radial-gradient(ellipse at 70% 20%, #82918a, #354e53 55%, #192c3b);
+  position: relative;
+  overflow: hidden;
+}
+.games-railway-cover:before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border: 1px solid #d8bf8566;
+  transform: rotate(-8deg);
+  background: repeating-linear-gradient(
+    30deg,
+    transparent,
+    transparent 35px,
+    #d7c79216 36px,
+    #d7c79216 38px
+  );
+}
+.games-railway-mark {
+  position: absolute;
+  top: 18%;
+  left: 8%;
+  right: 8%;
+  font:
+    700 80px/1 Georgia,
+    serif;
+  color: #efc471;
+  transform: rotate(-10deg);
+  opacity: 0.8;
+}
+.games-railway-cover > span:last-child {
+  position: absolute;
+  bottom: 12%;
+  left: 8%;
+  right: 8%;
+  font:
+    700 34px/1.2 Georgia,
+    serif;
+  color: #fff1cb;
+  text-shadow: 0 3px 15px #142332;
+}
+.games-railway-cover > span:last-child small {
+  display: block;
+  font:
+    12px/2 system-ui,
+    sans-serif;
+  letter-spacing: 0.09em;
+}
+/* Artwork supplied in Ticket-to-Ride-Artes-Completas.zip; the SVG viewports
+   select the original cards and pieces without redrawing their illustrations. */
+.tr-board-art,
+.tr-city {
+  pointer-events: none;
+}
+.tr-route-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tr-route:hover .tr-route-path,
+.tr-route:focus-visible .tr-route-path,
+.tr-route.tr-selected .tr-route-path {
+  stroke: #ffcf54;
+  stroke-opacity: 0.55;
+  stroke-width: 12;
+}
+.tr-owned .tr-wagon-art {
+  filter: drop-shadow(0 1px 1px #0007);
+}
+.tr-train-card,
+.tr-market .tr-train-card,
+.tr-hand .tr-train-card {
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  box-shadow: 0 3px 7px #0005;
+  overflow: hidden;
+}
+.tr-train-card:before {
+  display: none;
+}
+.tr-train-art,
+.tr-hand .tr-train-art,
+.tr-market .tr-train-art,
+.tr-at-table .tr-market .tr-train-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  filter: none;
+  pointer-events: none;
+}
+.tr-train-card > .tr-card-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.tr-train-card b {
+  z-index: 1;
+  top: 2px;
+  right: 2px;
+  box-shadow: 0 2px 5px #0009;
+}
+.tr-hand-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 3px;
+  margin-top: 8px;
+  align-content: start;
+}
+.tr-hand .tr-train-card {
+  aspect-ratio: 0.646;
+  min-height: 0;
+  width: 100%;
+  margin-top: -12px;
+  transform: rotate(-2deg);
+  flex: none;
+}
+.tr-hand .tr-train-card:nth-child(even) {
+  transform: rotate(2deg);
+}
+.tr-hand .tr-train-card:nth-child(-n + 2) {
+  margin-top: 0;
+}
+.tr-market,
+.tr-at-table .tr-market {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.tr-market .tr-train-card,
+.tr-at-table .tr-market .tr-train-card {
+  display: block;
+  aspect-ratio: 0.646;
+  min-height: 0;
+  height: auto;
+  gap: 0;
+  cursor: pointer;
+}
+.tr-back-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.tr-deck,
+.tr-at-table .tr-deck {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 95px;
+  min-height: 0;
+  padding: 0;
+  margin: 10px 0 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.tr-deck b {
+  right: 12%;
+  top: 0;
+}
+.tr-deck .tr-back-art {
+  filter: drop-shadow(3px 3px 0 #c6ad6c);
+}
+.tr-destination-card {
+  position: relative;
+  display: block;
+  height: 92px;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  margin: 4px 0 0;
+}
+.tr-destination-card > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.tr-destination-card > strong {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  border-radius: 10px;
+  padding: 3px 6px;
+  background: #142d35;
+  color: #f4df9b;
+}
+.tr-destination-card .tr-back-art {
+  filter: drop-shadow(3px 3px 0 #c6ad6c);
+}
+.tr-card-flight {
+  border: 0;
+  aspect-ratio: auto;
+  pointer-events: none;
+}
+.tr-card-flight.tr-deck,
+.tr-card-flight.tr-destination-card {
+  margin: 0;
+  min-height: 0;
+}
+.tr-card-flight .tr-back-art {
+  filter: none;
+}
+.tr-ticket-mini-map {
+  display: block;
+  grid-column: 1/-1;
+  grid-row: 2;
+  width: 100%;
+  height: 50px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.tr-ticket {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-rows: auto 50px;
+  gap: 4px;
+  padding: 7px;
+}
+.tr-ticket > strong {
+  grid-column: 2;
+  grid-row: 1;
+}
+.tr-ticket > b {
+  grid-column: 3;
+  grid-row: 1;
+}
+.tr-ticket-icon {
+  grid-column: 1;
+  grid-row: 1;
+}
+.tr-tickets .tr-ticket-collection .tr-ticket {
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  grid-template-rows: auto 50px;
+  min-height: 0;
+  padding: 5px;
+  gap: 3px;
+}
+.tr-tickets .tr-ticket-collection .tr-ticket b {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 10px;
+}
+.tr-ticket-option .tr-ticket {
+  grid-template-rows: auto 65px;
+}
+.tr-ticket-option .tr-ticket-mini-map {
+  height: 65px;
+}
+.tr-ticket-collection,
+.tr-at-table .tr-tickets .tr-ticket-collection {
+  max-height: 100px;
+  padding: 3px;
+}
+.games-railway-cover {
+  background:
+    linear-gradient(0deg, #132c3ee6, transparent 70%),
+    url('/assets/ticket-to-ride/board-usa.jpg') center/cover;
+}
+.games-railway-cover:before,
+.games-railway-mark {
+  display: none;
+}
+@media (min-width: 1000px) and (min-aspect-ratio: 4/3) and (min-height: 600px) {
+  .tr-at-table .tr-layout {
+    grid-template-rows: auto minmax(0, 1fr) 150px;
+  }
+  .tr-at-table .tr-destination-deck > .tr-eyebrow,
+  .tr-at-table .tr-tickets > .tr-eyebrow,
+  .tr-at-table .tr-tickets > .tr-muted {
+    display: none;
+  }
+  .tr-at-table .tr-tickets h2,
+  .tr-at-table .tr-destination-deck h2 {
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+  .tr-at-table .tr-tickets,
+  .tr-at-table .tr-destination-deck {
+    padding: 9px;
+  }
+}
+@media (min-width: 1600px) and (min-aspect-ratio: 4/3) and (min-height: 600px) {
+  .tr-at-table .tr-layout {
+    grid-template-rows: minmax(0, 1fr) 150px;
+  }
+  .tr-at-table .tr-deck {
+    height: 110px;
+  }
+  .tr-at-table .tr-market .tr-train-card {
+    height: auto;
+  }
+}
+@media (min-width: 1000px) and (min-aspect-ratio: 4/3) and (min-height: 600px) and (max-height: 850px) {
+  .tr-at-table .tr-layout {
+    grid-template-rows: auto minmax(0, 1fr) 140px;
+  }
+  .tr-at-table .tr-deck {
+    height: 64px;
+    margin-top: 8px;
+  }
+  .tr-at-table .tr-market {
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .tr-at-table .tr-market .tr-train-card {
+    height: 80px;
+    aspect-ratio: auto;
+  }
+  .tr-at-table .tr-market .tr-train-art {
+    width: 100%;
+  }
+  .tr-at-table .tr-hand .tr-train-card b {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+  }
+}
+@media (min-width: 1600px) and (min-aspect-ratio: 4/3) and (min-height: 600px) and (max-height: 850px) {
+  .tr-at-table .tr-layout {
+    grid-template-rows: minmax(0, 1fr) 140px;
+  }
+}
+.tr-city {
+  fill: transparent;
+  stroke: transparent;
+}
+.tr-city-highlight {
+  fill: #f7d47166;
+  stroke: #d69c22;
+}

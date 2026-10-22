@@ -15,6 +15,7 @@ export interface StagePerson extends VoiceParticipant {
   screenLive: boolean;
   hasScreenAudio: boolean;
 }
+export type VoiceModerationAction = 'mute' | 'unmute' | 'block-media' | 'allow-media' | 'kick';
 export interface StageSource {
   generation: number;
   joined: boolean;
@@ -22,6 +23,7 @@ export interface StageSource {
   hub: boolean;
   publicActive: boolean;
   roomName: string;
+  localRole?: string;
   previewPaused: boolean;
   previewCollapsed: boolean;
   participants: readonly StagePerson[];
@@ -41,6 +43,9 @@ interface StageOptions {
   recover(id: string, live: boolean): void;
   fullscreen(tile: HTMLElement): Promise<void>;
   releaseFocus(tile: HTMLElement): Promise<void>;
+  moderateVoice?(targetId: string, action: VoiceModerationAction, requestId: string): boolean;
+  confirmKick?(name: string): boolean;
+  onStatus?(text: string, kind: 'ok' | 'warn' | 'error'): void;
   warn?(error: unknown): void;
 }
 const isMode = (value: string): value is ProfileMedia =>
@@ -54,13 +59,16 @@ const record = (value: unknown): Record<string, unknown> | null =>
 export function createCallStage(options: StageOptions) {
   const layouts = new Map<string, ProfileMedia>(),
     collapsed = new Set<string>(),
-    activities = new Map<string, string>();
+    activities = new Map<string, string>(),
+    pendingModeration = new Map<string, { key: string; timer: ReturnType<typeof setTimeout> }>();
   const listeners = new Set<() => void>();
   const warn = options.warn ?? ((error: unknown) => console.warn('[CallStage]', error));
   let generation: number | undefined,
     switching: object | null = null,
     disposed = false;
   let unsubscribe: (() => void) | undefined;
+  const isModerationPending = (targetId: string, action: string) =>
+    [...pendingModeration.values()].some((job) => job.key === `${targetId}:${action}`);
   function read() {
     const source = options.read();
     if (generation !== undefined && generation !== source.generation) {
@@ -74,11 +82,19 @@ export function createCallStage(options: StageOptions) {
     for (const id of collapsed)
       if (!ids.has(id) || !source.participants.find((p) => p.id === id)?.screen)
         collapsed.delete(id);
+    const localRole = source.localRole || 'member';
+    const canModerateAny = localRole === 'admin' || localRole === 'creator';
     const participants = Object.freeze(
       (source.joined ? source.participants : []).map((p) => {
         const mode = layouts.get(p.id) || 'auto',
           cameraDock = mode === 'camera' || mode === 'auto',
           screenDock = mode === 'screen';
+        const targetRole = p.role || 'member';
+        const canModerate =
+          canModerateAny &&
+          !p.self &&
+          targetRole !== 'creator' &&
+          (localRole === 'creator' || targetRole !== 'admin');
         const summary =
           (p.muted ? 'microfone mutado' : p.speaking ? 'falando…' : 'na voz') +
           (p.deafened ? ' • áudio silenciado' : '') +
@@ -95,6 +111,12 @@ export function createCallStage(options: StageOptions) {
           cameraDock,
           screenDock,
           summary,
+          canModerate,
+          pendingModeration: Object.freeze({
+            mute: isModerationPending(p.id, p.serverMuted ? 'unmute' : 'mute'),
+            media: isModerationPending(p.id, p.mediaBlocked ? 'allow-media' : 'block-media'),
+            kick: isModerationPending(p.id, 'kick'),
+          }),
           activity: activities.get(p.accountId || '') || '',
           collapsed: p.watching && (p.self ? source.previewCollapsed : collapsed.has(p.id)),
         });
@@ -144,7 +166,29 @@ export function createCallStage(options: StageOptions) {
             activities.set(person.id, activity.name);
         }
       refresh();
-    } else if (message.type === 'connection' && !message.connected) resetActivities();
+    } else if (message.type === 'connection' && !message.connected) {
+      for (const job of pendingModeration.values()) clearTimeout(job.timer);
+      pendingModeration.clear();
+      resetActivities();
+    } else if (
+      message.type === 'voice-moderation-result' &&
+      typeof message.requestId === 'string'
+    ) {
+      const job = pendingModeration.get(message.requestId);
+      if (job) {
+        clearTimeout(job.timer);
+        pendingModeration.delete(message.requestId);
+        options.onStatus?.(
+          message.ok
+            ? 'Moderação aplicada.'
+            : (typeof message.error === 'string' && message.error) || 'Não foi possível moderar.',
+          message.ok ? 'ok' : 'error',
+        );
+        refresh();
+      }
+    } else if (message.type === 'role-updated') {
+      refresh();
+    }
   }
   async function run(action: () => unknown) {
     if (disposed) return;
@@ -222,6 +266,24 @@ export function createCallStage(options: StageOptions) {
         if (p && !p.self && p.watching && p.screenVolume !== clampAudioGain(value))
           options.setScreenVolume(id, value);
       }),
+    moderate(id: string, action: VoiceModerationAction, name = 'Participante') {
+      if (disposed || !options.moderateVoice) return;
+      if (action === 'kick' && options.confirmKick && !options.confirmKick(name)) return;
+      const requestId = crypto.randomUUID(),
+        key = `${id}:${action}`;
+      const timer = setTimeout(() => {
+        if (!pendingModeration.delete(requestId)) return;
+        options.onStatus?.('A moderação não respondeu.', 'warn');
+        refresh();
+      }, 8000);
+      pendingModeration.set(requestId, { key, timer });
+      refresh();
+      if (!options.moderateVoice(id, action, requestId)) {
+        clearTimeout(timer);
+        pendingModeration.delete(requestId);
+        refresh();
+      }
+    },
     recoverVisible() {
       if (disposed) return;
       for (const p of getSnapshot().participants)
@@ -249,6 +311,8 @@ export function createCallStage(options: StageOptions) {
     },
     dispose() {
       disposed = true;
+      for (const job of pendingModeration.values()) clearTimeout(job.timer);
+      pendingModeration.clear();
       unsubscribe?.();
       unsubscribe = undefined;
       options.authEvents.removeEventListener('trono-auth-change', resetActivities);

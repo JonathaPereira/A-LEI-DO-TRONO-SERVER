@@ -28,6 +28,9 @@ export interface NetworkFeatures {
   readonly azul: boolean;
   readonly splendor: boolean;
   readonly loveLetter: boolean;
+  readonly ticketToRide: boolean;
+  readonly remotePc: boolean;
+  readonly remotePcProtocol: number;
   readonly independentTextChannels: boolean;
   readonly independentGameVoice: boolean;
   readonly gameActivity: boolean;
@@ -78,6 +81,11 @@ export interface NameAvailability {
 export interface PreparedVoice {
   mode: MediaTransport;
   revision: number;
+  moderation?: {
+    muted?: boolean;
+    mediaBlocked?: boolean;
+    blockedUntil?: number;
+  };
 }
 
 export interface VoiceContext {

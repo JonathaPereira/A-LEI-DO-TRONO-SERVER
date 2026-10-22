@@ -49,8 +49,10 @@ const screens = [
   'gameScreen',
   'gamesScreen',
   'azulScreen',
+  'nexusScreen',
   'rogueliteScreen',
   'splendorScreen',
+  'ticketToRideScreen',
   'loveLetterScreen',
 ] as const;
 const installed = new WeakMap<Window, () => void>();

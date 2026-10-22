@@ -6,6 +6,7 @@ import type { createThroneService } from './throne-service';
 import type { ChannelConnection, ChannelRoom, ChannelMember } from './channel-contract';
 import { object } from './http-api.ts';
 import { readVoiceState, readVoiceSignal, roomId as validRoomId } from './channel-protocol.ts';
+import { VoiceModeration } from './voice-moderation.ts';
 type WireEvent = { type: string; [key: string]: unknown };
 interface Options {
   rooms: Map<string, ChannelRoom>;
@@ -19,7 +20,11 @@ interface Options {
     | 'notePlayerQuality'
     | 'broadcastStatus'
     | 'broadcastPublications'
+    | 'enforceModeration'
   >;
+  remotePc?: {
+    disconnect(ws: ChannelConnection): void;
+  };
   throne: Pick<
     ReturnType<typeof createThroneService>,
     'disconnect' | 'privateState' | 'rename' | 'broadcastState'
@@ -93,6 +98,7 @@ export function createChannelService({
   send,
   auth: accountAuth,
   sfu: realtimeSfu,
+  remotePc,
   throne: throneService,
   presenceChanged,
   nameReserved,
@@ -102,6 +108,33 @@ export function createChannelService({
   let closed = false;
   let voiceTokens = new WeakMap<ChannelMember, object>();
   const roomFor = (id: unknown) => (typeof id === 'string' ? rooms.get(id) : undefined);
+  const voiceModeration = new VoiceModeration<ChannelRoom, ChannelMember>({
+    rooms,
+    send: (ws, message) => send(ws as ChannelConnection, message as WireEvent),
+    changed: (room) => {
+      broadcastRoom(room);
+      broadcastRooms();
+      broadcastChatChannels();
+      broadcastVoiceRoster(room);
+      realtimeSfu.broadcastPublications(room);
+    },
+    removed: (room, p) => {
+      p.voiceJoined = false;
+      voiceTokens.delete(p);
+      p.voiceMuted = false;
+      p.voiceDeafened = false;
+      p.cameraOn = false;
+      p.screenOn = false;
+      remotePc?.disconnect(p.ws);
+      void realtimeSfu.cleanupClient(p.id, room.id);
+      broadcastVoiceEvent(room, p, 'left', 'moderation');
+      resetVoiceModeIfEmpty(room);
+    },
+    restricted: (room, p) => {
+      if (p.mediaBlocked) remotePc?.disconnect(p.ws);
+      return realtimeSfu.enforceModeration(room, p);
+    },
+  });
   function sanitizeName(value: unknown) {
     const raw = (typeof value === 'string' ? value : '')
       .replace(/[<>]/g, '')
@@ -208,6 +241,9 @@ export function createChannelService({
         avatar_preset: p.avatar_preset || 'crown',
         avatar_file_id: p.avatar_file_id || null,
         seat: p.seat,
+        role: p.guest ? 'guest' : p.ws.account?.role || 'member',
+        serverMuted: !!p.serverMuted,
+        mediaBlocked: !!p.mediaBlocked,
         muted: !!p.voiceMuted,
         deafened: !!p.voiceDeafened,
         camera: !!p.cameraOn,
@@ -412,6 +448,7 @@ export function createChannelService({
   }
   function leaveVoiceRoom(ws: ChannelConnection, reason = 'leave', keepText = true) {
     if (closed) return;
+    remotePc?.disconnect(ws);
     const room = roomFor(ws.roomId);
     ws.roomId = null;
     if (!room) return;
@@ -441,6 +478,7 @@ export function createChannelService({
   }
   function leaveRoom(ws: ChannelConnection, reason = 'leave', keepText = false) {
     if (closed) return;
+    remotePc?.disconnect(ws);
     leaveGameRoom(ws, reason);
     if (!keepText) leaveTextRoom(ws);
     leaveVoiceRoom(ws, reason, keepText);
@@ -681,12 +719,28 @@ export function createChannelService({
       });
       return;
     }
+    if (!voiceModeration.mayJoin(room, ws)) {
+      send(ws, {
+        type: 'sfu-response',
+        requestId: message.requestId,
+        ok: false,
+        error: {
+          code: 'VOICE_BLOCKED',
+          message: 'Você foi removido desta chamada por 5 minutos.',
+        },
+      });
+      return;
+    }
     const mode = chooseVoiceMode(room);
     send(ws, {
       type: 'sfu-response',
       requestId: message.requestId,
       ok: true,
-      data: { mode, revision: room.voiceRevision },
+      data: {
+        mode,
+        revision: room.voiceRevision,
+        moderation: voiceModeration.state(room, ws),
+      },
     });
     sendVoiceMode(room);
   }
@@ -701,6 +755,7 @@ export function createChannelService({
       send(ws, { type: 'error', code: 'TEXT_CHANNEL', message: 'Este canal é somente de texto.' });
       return;
     }
+    if (message.joined && !voiceModeration.mayJoin(room, ws)) return;
     const previousTransport = player.mediaTransport;
     const previouslyJoined = !!player.voiceJoined;
     if (message.joined) {
@@ -714,6 +769,7 @@ export function createChannelService({
         forceRoomP2p(room);
     }
     player.voiceJoined = !!message.joined;
+    if (!player.voiceJoined) remotePc?.disconnect(ws);
     if (previouslyJoined !== player.voiceJoined) {
       if (player.voiceJoined) voiceTokens.set(player, {});
       else voiceTokens.delete(player);
@@ -724,6 +780,7 @@ export function createChannelService({
     player.voiceDeafened = player.voiceJoined && !!message.deafened;
     player.cameraOn = player.voiceJoined && !!message.camera;
     player.screenOn = player.voiceJoined && !!message.screen;
+    voiceModeration.enforce(room, player);
     player.transmissionQuality = message.quality || player.transmissionQuality || 'balanced';
     player.screenFps = message.screenFps || player.screenFps || 30;
     const transport = message.transport || player.mediaTransport || 'p2p';
@@ -814,6 +871,10 @@ export function createChannelService({
     prepareVoice,
     handleVoiceState,
     handleVoiceSignal,
+    moderateVoice(ws: ChannelConnection, input: unknown) {
+      if (closed || !object(input)) return;
+      voiceModeration.handle(ws, input);
+    },
     fallbackVoice(ws: ChannelConnection) {
       if (closed) return;
       const room = roomFor(ws.roomId);

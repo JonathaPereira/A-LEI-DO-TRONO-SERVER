@@ -1,6 +1,6 @@
-M&N · A Lei do Trono — Windows 0.2.10
+M&N · A Lei do Trono — Windows 0.3.2
 
-1. Instalação nova: instale MN-Trono-0.2.10-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.2-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -69,3 +69,19 @@ Love Letter, 2ª edição: mesas para 2–6 pessoas e bots, 21 cartas, Espiã e 
 Mesa de veludo vinho com cartas ilustradas, descartes públicos e favores.
 Efeitos e escolhas secretas são validados pelo servidor; regras em Como jogar.
 O anfitrião inicia a próxima rodada. Mesas ficam em memória durante a partida.
+
+Compartilhar PC Beta e moderação: botão PC no HUD para compartilhar um monitor
+com alguém da mesma chamada sem desligar a voz. Mouse/teclado ou controle Xbox
+virtual separado (com driver opcional ViGEmBus 1.22.0 no anfitrião) exigem
+autorização explícita; Ctrl + Alt + Shift + F12 encerra o acesso. Perfil inicial
+720p/60 FPS com adaptação e indicadores reais. Administradores e criador podem
+silenciar microfone, bloquear mídia ou remover da chamada por 5 minutos.
+
+Nexus: abra Jogos → Nexus → Jogar Nexus. O jogo abre no upload 19926871 do itch.io
+(em janela própria isolada no aplicativo Windows), mantendo a chamada ativa no Trono.
+
+Ticket to Ride (mapa clássico dos EUA): mesas online para 2–5 pessoas e bots,
+110 cartas de trem, 30 bilhetes de destino secretos e bônus de maior caminho contínuo.
+Tabuleiro original, nove frentes de cartas, versos e peças coloridas aplicados,
+com rotas clicáveis e vagões animados respeitando movimento reduzido.
+Requer backend 0.14.0-alpha; sem SQL novo.

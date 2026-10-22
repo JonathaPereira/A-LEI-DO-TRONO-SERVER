@@ -112,7 +112,9 @@ function main() {
   const executable = path.join(build, 'Release/MN-Application-Audio.exe');
   if (!fs.existsSync(executable))
     throw Error('A compilação terminou sem gerar o helper esperado: ' + executable);
-  console.log('Helper pronto: ' + executable);
+  const input = path.join(build, 'Release/MN-Remote-Input.exe');
+  if (!fs.existsSync(input)) throw Error('Helper de controle remoto não foi gerado.');
+  console.log('Helpers prontos: ' + executable + ', ' + input);
 }
 
 try {

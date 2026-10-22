@@ -1,5 +1,14 @@
 export type GameDestination =
-  'library' | 'throne' | 'azul' | 'roguelite' | 'splendor' | 'love-letter' | 'community' | 'home';
+  | 'library'
+  | 'throne'
+  | 'azul'
+  | 'roguelite'
+  | 'splendor'
+  | 'ticket-to-ride'
+  | 'love-letter'
+  | 'nexus'
+  | 'community'
+  | 'home';
 export const GAME_LINKS = Object.freeze([
   { id: 'library', label: 'Todos os jogos' },
   { id: 'throne', label: '♛ A Lei do Trono' },
@@ -7,6 +16,7 @@ export const GAME_LINKS = Object.freeze([
   { id: 'roguelite', label: '✦ Cinzas do Abismo' },
   { id: 'splendor', label: '◇ Splendor' },
   { id: 'love-letter', label: '✉ Love Letter' },
+  { id: 'nexus', label: '✧ Nexus' },
   { id: 'community', label: '🎙 Comunidade' },
 ] as const);
 interface LibraryOptions {
@@ -46,7 +56,7 @@ export function createGameLibrary(options: LibraryOptions) {
       if (
         !started ||
         disposed ||
-        ![...GAME_LINKS.map((link) => link.id), 'home'].includes(destination)
+        ![...GAME_LINKS.map((link) => link.id), 'ticket-to-ride', 'home'].includes(destination)
       )
         return;
       try {

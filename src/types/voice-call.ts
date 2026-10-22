@@ -1,5 +1,5 @@
 export type VoiceCallPhase = 'idle' | 'preparing' | 'microphone' | 'connecting' | 'joined';
-export type VoiceLeaveReason = 'leave' | 'disconnect';
+export type VoiceLeaveReason = 'leave' | 'disconnect' | 'moderation';
 
 export interface VoiceCallSnapshot {
   readonly generation: number;

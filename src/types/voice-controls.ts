@@ -1,6 +1,8 @@
 export type NoiseEngine = 'native' | 'rnnoise' | 'off';
 export interface VoiceControlsSnapshot {
   readonly micMuted: boolean;
+  readonly serverMuted: boolean;
+  readonly mediaBlocked: boolean;
   readonly deafened: boolean;
   readonly microphoneVolume: number;
   readonly noiseSuppression: boolean;

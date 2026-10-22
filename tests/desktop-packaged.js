@@ -89,6 +89,7 @@ test(
         ),
       );
       await fs.access(path.join(resourceRoot, 'renderer/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf'));
+      await fs.access(path.join(resourceRoot, 'native/MN-Remote-Input.exe'));
       phase = 'installed interface';
       page = await app.firstWindow();
       page.setDefaultTimeout(15000);
@@ -103,6 +104,10 @@ test(
       assert.equal(
         await page.evaluate(() => window.TronoDesktop.version),
         require('../electron/package.json').version,
+      );
+      assert.equal(
+        (await page.evaluate(() => window.TronoDesktop.remoteCapability())).host,
+        true,
       );
       const geometry = await app.evaluate(({ BrowserWindow, screen }) => ({
         window: BrowserWindow.getAllWindows()[0].getBounds(),
@@ -129,8 +134,14 @@ test(
               '/assets/love-letter/table.webp',
               '/assets/games/throne-cover.webp',
               '/assets/games/splendor-cover.webp',
+              '/assets/games/nexus-cover.webp',
               '/assets/splendor/developments.webp',
               '/assets/splendor/nobles.webp',
+              '/assets/ticket-to-ride/board-usa.jpg',
+              '/assets/ticket-to-ride/train-cards.webp',
+              '/assets/ticket-to-ride/train-back.webp',
+              '/assets/ticket-to-ride/destination-back.webp',
+              '/assets/ticket-to-ride/wagons.webp',
               '/roguelite/asset-manifest.json',
               '/roguelite/core.js',
               '/roguelite/game.js',
@@ -204,9 +215,20 @@ test(
       await expect(page.locator('#desktopCallDock #voiceSettingsBtn')).toBeVisible();
       await expect(page.locator('#desktopHome')).toBeVisible();
       phase = 'installed games';
+      assert.equal(await page.evaluate(() => window.TicketToRideData.routes.length), 100);
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.TicketToRideRules.create([
+              { id: 'a', name: 'A' },
+              { id: 'b', name: 'B' },
+            ]).players[0].trains,
+        ),
+        45,
+      );
       await page.locator('[data-desktop-route=game]').click();
       await expect(page.locator('#gamesScreen')).toBeVisible();
-      await expect(page.locator('.games-card')).toHaveCount(5);
+      await expect(page.locator('.games-card')).toHaveCount(7);
       await expect
         .poll(() =>
           page.locator('.games-box-art').evaluate((n) => n.complete && n.naturalWidth > 0),
@@ -231,10 +253,16 @@ test(
       await expect(page.locator('#azulRulesDialog')).toBeVisible();
       await page.locator('#azulRulesClose').click();
       assert.deepEqual(
-        await page.evaluate(() => [typeof window.AzulRules, typeof window.AzulPresentation]),
-        ['undefined', 'undefined'],
+        await page.evaluate(() => [
+          typeof window.AzulRules,
+          typeof window.AzulPresentation,
+          typeof window.TronoTicketToRide?.open,
+        ]),
+        ['undefined', 'undefined', 'function'],
       );
       await page.locator('#azulBack').click();
+      phase = 'installed Nexus isolation';
+      await require('./desktop-nexus-flow').exerciseNexus({ app, page });
       phase = 'installed roguelite preparation';
       await page.evaluate(() =>
         window.addEventListener('message', (e) => {

@@ -25,6 +25,32 @@ interface Operation {
 }
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
+function readSources(list: unknown, requireThumbnail: boolean) {
+  if (!Array.isArray(list)) return null;
+  const sources = [],
+    ids = new Set<string>();
+  for (const source of list) {
+    if (
+      !object(source) ||
+      typeof source.id !== 'string' ||
+      !source.id ||
+      ids.has(source.id) ||
+      typeof source.name !== 'string' ||
+      (requireThumbnail
+        ? typeof source.thumbnail !== 'string'
+        : source.thumbnail !== undefined && typeof source.thumbnail !== 'string')
+    )
+      return null;
+    ids.add(source.id);
+    const thumbnail =
+      typeof source.thumbnail === 'string' &&
+      /^data:image\/(png|jpeg|webp);base64,/.test(source.thumbnail)
+        ? source.thumbnail
+        : '';
+    sources.push(Object.freeze({ id: source.id, name: source.name, thumbnail }));
+  }
+  return Object.freeze(sources);
+}
 function readRequest(value: unknown): DesktopCaptureRequest | null {
   if (
     !object(value) ||
@@ -32,34 +58,23 @@ function readRequest(value: unknown): DesktopCaptureRequest | null {
     !value.id ||
     typeof value.audio !== 'boolean' ||
     typeof value.windows !== 'boolean' ||
-    typeof value.applicationAudio !== 'boolean' ||
-    !Array.isArray(value.sources)
+    (value.remote !== undefined && typeof value.remote !== 'boolean') ||
+    typeof value.applicationAudio !== 'boolean'
   )
     return null;
-  const sources = [],
-    ids = new Set<string>();
-  for (const source of value.sources) {
-    if (
-      !object(source) ||
-      typeof source.id !== 'string' ||
-      !source.id ||
-      ids.has(source.id) ||
-      typeof source.name !== 'string' ||
-      typeof source.thumbnail !== 'string'
-    )
-      return null;
-    ids.add(source.id);
-    const thumbnail = /^data:image\/(png|jpeg|webp);base64,/.test(source.thumbnail)
-      ? source.thumbnail
-      : '';
-    sources.push(Object.freeze({ id: source.id, name: source.name, thumbnail }));
-  }
+  const sources = readSources(value.sources, true);
+  if (!sources) return null;
+  const audioSources =
+    value.audioSources === undefined ? sources : readSources(value.audioSources, false);
+  if (!audioSources) return null;
   return Object.freeze({
     id: value.id,
     audio: value.audio,
     windows: value.windows,
+    remote: value.remote === true,
     applicationAudio: value.applicationAudio,
-    sources: Object.freeze(sources),
+    sources,
+    audioSources,
   });
 }
 function readSelection(value: unknown): DesktopCaptureSelection {
@@ -251,7 +266,7 @@ export function createDesktopCapture(options: Options) {
         !request?.audio ||
         (mode !== 'none' && mode !== 'application' && mode !== 'system') ||
         (mode === 'application' && !request.applicationAudio) ||
-        (mode === 'system' && !request.windows)
+        (mode === 'system' && (!request.windows || request.remote))
       )
         return;
       update({ audioMode: mode, message: '' });
@@ -259,7 +274,9 @@ export function createDesktopCapture(options: Options) {
     setAudioSource(id: string) {
       if (
         !id ||
-        state.request?.sources.some((source) => source.id === id && source.id.startsWith('window:'))
+        (state.request?.audioSources ?? state.request?.sources)?.some(
+          (source) => source.id === id && source.id.startsWith('window:'),
+        )
       )
         update({ audioSource: id, message: '' });
     },

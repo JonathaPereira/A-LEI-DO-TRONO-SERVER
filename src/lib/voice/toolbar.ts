@@ -18,6 +18,8 @@ export interface ToolbarSource {
   discord: boolean;
   desktop: boolean;
   micMuted: boolean;
+  serverMuted?: boolean;
+  mediaBlocked?: boolean;
   deafened: boolean;
   camera: boolean;
   cameraPending: boolean;
@@ -86,14 +88,16 @@ export function createCallToolbar(options: ToolbarOptions) {
           s.micMuted ? 'Ativar microfone' : 'Mutar microfone',
           s.micMuted ? '🔇' : '🎙',
           'Microfone',
-          !s.joined || s.deafened,
+          !s.joined || s.deafened || !!s.serverMuted,
           s.micMuted,
           'danger-active',
-          s.deafened
-            ? 'Ative o áudio da chamada para liberar o microfone.'
-            : s.micMuted
-              ? 'Ativar microfone'
-              : 'Mutar microfone',
+          s.serverMuted
+            ? 'Microfone silenciado pela moderação.'
+            : s.deafened
+              ? 'Ative o áudio da chamada para liberar o microfone.'
+              : s.micMuted
+                ? 'Ativar microfone'
+                : 'Mutar microfone',
         ),
         deafenVoiceBtn: button(
           'deafenVoiceBtn',
@@ -111,20 +115,30 @@ export function createCallToolbar(options: ToolbarOptions) {
           s.camera ? 'Desligar' : 'Câmera',
           s.textOnly ||
             joining ||
+            !!s.mediaBlocked ||
             (!s.camera && (s.cameraPending || s.cameraLoading)) ||
             (s.discord && !s.joined),
           s.camera,
           'camera-active',
+          s.mediaBlocked
+            ? 'Câmera bloqueada pela moderação.'
+            : s.camera
+              ? 'Desligar câmera'
+              : 'Ligar câmera',
         ),
         screenShareBtn: button(
           'screenShareBtn',
           s.screen ? (s.desktop ? 'Parar tela' : 'Parar compartilhamento') : 'Compartilhar tela',
           s.screen ? '■' : '▤',
           s.screen ? 'Parar tela' : 'Tela',
-          !s.joined || !s.communityVoice,
+          !s.joined || !s.communityVoice || !!s.mediaBlocked,
           s.screen,
           'screen-active',
-          s.screen ? 'Parar compartilhamento' : 'Compartilhar tela',
+          s.mediaBlocked
+            ? 'Compartilhamento bloqueado pela moderação.'
+            : s.screen
+              ? 'Parar compartilhamento'
+              : 'Compartilhar tela',
         ),
         voiceSettingsBtn: button(
           'voiceSettingsBtn',

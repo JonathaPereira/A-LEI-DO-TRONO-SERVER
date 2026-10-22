@@ -22,6 +22,15 @@ export function VoiceAudioPreferences({ client }: { client: AudioPreferences }) 
           onChange={(event) => void client.setAlertVolume(event.currentTarget.value)}
         />
       </label>
+      <label className="auth-check">
+        <input
+          id="muteCallAlerts"
+          type="checkbox"
+          checked={state.alertsMuted}
+          onChange={(event) => void client.setAlertsMuted(event.currentTarget.checked)}
+        />{' '}
+        Silenciar avisos de entrada e saída
+      </label>
       <button
         id="testCallAlert"
         className="royal-btn settings-secondary"

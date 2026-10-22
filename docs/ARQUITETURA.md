@@ -776,6 +776,23 @@ progresso e iframe; `roguelite-runtime.tsx` possui listeners e descarte do host.
 `legacy/roguelite-host.js` e sua entrada no manifesto foram excluídos. O jogo
 embutido em `public/roguelite/` permanece como recurso independente.
 
+`lib/games/ticket-to-ride.ts` possui gerenciamento de sala, seleções de rotas e cartas,
+histórico de jogadas, diálogo de bilhetes e renderização da mesa ferroviária.
+`components/games/ticket-to-ride-screen.tsx` renderiza o mapa ferroviário SVG com rotas
+duplas/únicas, baralho público de vagões, mãos privadas, seleções de compra e descarte,
+classificação e diálogo de objetivos em React. `lib/games/ticket-to-ride-rules.ts`
+possui o motor autoritativo puro, cálculo de pontuação contínua por extensão de rota,
+validação de rotas ocupadas, detecção de maior ferrovia contínua ao final da partida e
+estratégia de bot para preenchimento de mesas. `ticket-to-ride-data.ts` e `ticket-to-ride-art.ts`
+contêm as definições geográficas de cidades/rotas e ilustrações vetoriais das cartas.
+A projeção pública oculta baralhos e bilhetes/mãos de outros participantes.
+
+`lib/games/nexus-config.ts` e `lib/games/nexus.ts` gerenciam o hub de jogos web externos
+e launcher, oferecendo isolamento em iframe com sandbox estrito, handshake seguro via
+token temporário e verificação de origem. `components/games/nexus-screen.tsx` renderiza
+a biblioteca de títulos, status de conexão e iframe em React, com ponte Electron em
+`electron/nexus.cjs` para persistência e carregamento seguro.
+
 `lib/channels/management.ts` possui rascunho e operações de canais, edição de cargos,
 feedback e consultas HTTP da comunidade. A lista administrativa projeta o catálogo
 compartilhado, sem um segundo cache de canais. Metadados SQL são normalizados e
@@ -2264,6 +2281,20 @@ usa `publicState(viewer)`: baralhos e reservas cegas de outras pessoas não entr
 na visão, inclusive no histórico de jogadas. Shutdown cancela gravações/leituras
 concorrentes e impede novos eventos ou tentativas de persistência.
 
+`ticket-to-ride-service.ts` e `ticket-to-ride-protocol.ts` implementam o backend
+autoritativo de Ticket to Ride, gerenciando ciclo de vida das salas, reconexão de
+jogadores, preenchimento com bots, validação de turnos e transições de fase.
+Mensagens fora de sequência ou com revisão defasada são rejeitadas com erro `TICKET_TO_RIDE_STALE`.
+A projeção de estado `publicState(viewer)` garante isolamento estrito de mãos e cartas de
+objetivo privadas entre competidores.
+
+`remote-pc.ts` gerencia sessões de controle remoto e coop de PC de baixa latência,
+coordenando sinalização WebRTC com alocação dinâmica de STUN/TURN, limpeza periódica
+de sessões inativas (`sweep`), e suporte a protocolo de input virtual.
+`voice-moderation.ts` processa requisições de moderação de voz (mutar/desmutar participantes,
+bloquear/permitir vídeo e tela, e expulsão da sala), validando cargos e permissões do
+remetente no backend sem confiar no cliente.
+
 `realtime-policy.ts` reúne configuração, perfis de bitrate, limites, qualidade/RID
 e estimativas de egress do SFU; o payload público seleciona campos e não contém
 credenciais. Defaults, limiares e fallback de camadas permanecem os anteriores.
@@ -2323,6 +2354,12 @@ e a ausência do registro global antigo.
 
 O modo Next de desenvolvimento é explícito, aceita loopback e não funciona em
 builds empacotados. Permite atualização de componentes ao salvar.
+
+`electron/remote-input.cjs` e `electron/native-audio/remote-input.cpp` fornecem a ponte
+nativa para o Remote PC no Electron. No Windows, o addon C++ se conecta ao driver
+ViGEmBus via ViGEmClient para instanciar controles virtuais Xbox 360, traduzindo pacotes
+de gamepad recebidos pelo canal de dados WebRTC com injeção de baixa sobrecarga e
+suporte a múltiplos jogadores cooperativos locais.
 
 ## Documentação e arquivos
 

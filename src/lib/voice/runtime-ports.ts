@@ -39,7 +39,8 @@ type Call = ReturnType<typeof createVoiceCall>;
 export interface VoiceRuntimePorts {
   TronoNetwork: NetworkClient;
   TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-  TronoAuth: { readonly user: { readonly id: string } | null };
+  TronoAuth: { readonly user: { readonly id: string; readonly role?: string } | null };
+  TronoRemotePc?: { readonly active: boolean; stop(): unknown; open?(): void };
   TronoPersonal?: {
     get(key: string, fallback: unknown): unknown;
     set(key: string, value: unknown): void;
@@ -147,6 +148,8 @@ export interface SocialFacade {
   getLocalDisplayStream(): MediaStream | null | undefined;
   getLocalAudioTrack(): MediaStreamTrack | null;
   readonly screenSettings: ScreenFormat & { readonly bitrate: number; readonly audio: boolean };
+  readonly mediaBlocked: boolean;
+  readonly serverMuted: boolean;
   readonly deafened: boolean;
   toggleWatchStream(id: string): Promise<void>;
   toggleWatchCamera(id: string): Promise<void>;

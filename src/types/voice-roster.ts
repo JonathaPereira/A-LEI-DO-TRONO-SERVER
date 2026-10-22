@@ -8,9 +8,12 @@ export interface VoiceParticipant {
   readonly name: string;
   readonly avatar_preset: string;
   readonly avatar_file_id: string | null;
+  readonly role?: string;
   readonly seat?: number;
   readonly joined: true;
   readonly muted: boolean;
+  readonly serverMuted?: boolean;
+  readonly mediaBlocked?: boolean;
   readonly deafened: boolean;
   readonly camera: boolean;
   readonly screen: boolean;
@@ -23,6 +26,8 @@ export interface VoiceStateUpdate {
   readonly name?: string;
   readonly seat?: number;
   readonly muted: boolean;
+  readonly serverMuted?: boolean;
+  readonly mediaBlocked?: boolean;
   readonly deafened: boolean;
   readonly camera: boolean;
   readonly screen: boolean;

@@ -10,8 +10,10 @@ export interface DesktopCaptureRequest {
   readonly id: string;
   readonly audio: boolean;
   readonly windows: boolean;
+  readonly remote?: boolean;
   readonly applicationAudio: boolean;
   readonly sources: readonly DesktopCaptureSource[];
+  readonly audioSources?: readonly DesktopCaptureSource[];
 }
 export interface DesktopCaptureChoice {
   readonly id: string;

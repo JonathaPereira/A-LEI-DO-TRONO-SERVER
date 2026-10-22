@@ -15,6 +15,8 @@ export interface RealtimePlayer {
   name: string;
   ws: RealtimeConnection;
   voiceJoined?: boolean;
+  serverMuted?: boolean;
+  mediaBlocked?: boolean;
   mediaTransport?: string;
   transmissionQuality?: RealtimeQuality;
 }

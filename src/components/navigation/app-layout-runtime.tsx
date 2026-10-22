@@ -55,8 +55,10 @@ const screens = [
   'chatOnlyScreen',
   'gamesScreen',
   'azulScreen',
+  'nexusScreen',
   'rogueliteScreen',
   'splendorScreen',
+  'ticketToRideScreen',
   'loveLetterScreen',
 ] as const;
 const gameScreens = ['setupScreen', 'roomScreen', 'gameScreen'] as const;

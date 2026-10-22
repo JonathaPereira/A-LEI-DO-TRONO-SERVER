@@ -1,6 +1,6 @@
 {
   "name": "mn-trono-desktop",
-  "version": "0.2.10",
+  "version": "0.3.2",
   "description": "M&N e A Lei do Trono — aplicativo Windows",
   "author": "Jonatha Pereira",
   "private": true,
@@ -42,6 +42,14 @@
       {
         "from": "../artifacts/native-audio/Release/MN-Application-Audio.exe",
         "to": "native/MN-Application-Audio.exe"
+      },
+      {
+        "from": "../artifacts/native-audio/Release/MN-Remote-Input.exe",
+        "to": "native/MN-Remote-Input.exe"
+      },
+      {
+        "from": "native-audio/vendor/ViGEmClient/LICENSE",
+        "to": "native/ViGEmClient-LICENSE.txt"
       }
     ],
     "win": {

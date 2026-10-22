@@ -4,6 +4,7 @@ on:
     branches: [main, codex/windows-app-foundation, 'codex/desktop-*', 'codex/next-*']
     paths:
       [
+        '.gitattributes',
         'electron/**',
         'src/**',
         'public/**',
@@ -16,13 +17,60 @@ on:
         '.github/workflows/windows-app.yml',
       ]
   workflow_dispatch:
+    inputs:
+      refresh_instructions:
+        description: Refresh only instructions and hashes in an existing draft release
+        type: boolean
+        default: false
+      release_tag:
+        description: Exact draft build tag, required for instruction refresh
+        type: string
+        default: ''
 permissions:
   contents: write
   actions: write
 jobs:
+  refresh-instructions:
+    if: github.event_name == 'workflow_dispatch' && inputs.refresh_instructions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Refresh only the draft instructions and checksums
+        uses: actions/github-script@v7
+        env:
+          TASK_RELEASE_TAG: ${{ inputs.release_tag }}
+        with:
+          script: |
+            const fs=require('node:fs'),crypto=require('node:crypto');
+            const version=require('./electron/package.json').version;
+            const tag=process.env.TASK_RELEASE_TAG;
+            if(!tag.startsWith(`desktop-v${version}-run-`)||!/^[a-zA-Z0-9.-]+$/.test(tag))throw Error('Choose a build tag for the current desktop version.');
+            const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
+            const release=releases.find(r=>r.tag_name===tag);
+            if(!release?.draft)throw Error('Only a draft release can have its instructions refreshed.');
+            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`];
+            const lines=names.map(name=>{
+              const asset=release.assets.find(a=>a.name===name);
+              if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
+              return asset.digest.slice(7)+'  '+name;
+            });
+            const instructions=fs.readFileSync('electron/LEIA-ME-WINDOWS.txt');
+            if(!instructions.toString('utf8').split(/\r?\n/)[0].includes('Windows '+version))throw Error('Instruction heading must match the desktop version.');
+            lines.push(crypto.createHash('sha256').update(instructions).digest('hex')+'  LEIA-ME-WINDOWS.txt');
+            const files=[{name:'LEIA-ME-WINDOWS.txt',data:instructions},{name:`SHA256SUMS-${version}.txt`,data:Buffer.from(lines.join('\n')+'\n')}];
+            for(const file of files){
+              const old=release.assets.find(a=>a.name===file.name);
+              if(old)await github.rest.repos.deleteReleaseAsset({...context.repo,asset_id:old.id});
+              await github.rest.repos.uploadReleaseAsset({...context.repo,release_id:release.id,name:file.name,data:file.data,headers:{'content-type':'text/plain','content-length':file.data.length}});
+            }
+            core.notice('Instructions refreshed; EXE and ZIP assets were preserved: '+release.html_url);
   windows:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,6 +89,58 @@ jobs:
         run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
+      - name: Build Windows application audio capture
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
+          $buildExit = $LASTEXITCODE
+          if ($buildExit -ne 0) {
+            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows native audio::$details"
+            exit $buildExit
+          }
+        working-directory: electron
+      - name: Prepare optional signed virtual controller driver for isolated XInput tests
+        shell: pwsh
+        run: |
+          # Windows Server lacks the Microsoft Xbox function driver present on
+          # normal Windows desktops. Stage the signed original package in CI only.
+          $xbox = Join-Path $env:RUNNER_TEMP 'Xbox360_64Eng.exe'
+          Invoke-WebRequest 'https://raw.githubusercontent.com/Zalafina/ViGEmBus_v1.16.116_Win7_InstallFiles/5c2e60100b13186e87b3a9a60ac69f07169739bb/1_pre_install_files/x64/Xbox360_64Eng.exe' -OutFile $xbox
+          if ((Get-FileHash $xbox -Algorithm SHA256).Hash.ToLower() -ne '0e72ed6d89d9b89690fde8122f46fa851740ef18e850d98d45e56f85a6682994') { throw 'Unexpected Xbox driver package hash' }
+          $xboxSignature = Get-AuthenticodeSignature $xbox
+          if ($xboxSignature.Status -ne 'Valid' -or $xboxSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'Invalid Microsoft Xbox package signature' }
+          $xboxRoot = Join-Path $env:RUNNER_TEMP 'Xbox360-original'
+          & "$env:ProgramFiles\7-Zip\7z.exe" x $xbox "-o$xboxRoot" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Xbox driver extraction failed' }
+          $xboxInf = Join-Path $xboxRoot 'xbox360\setup64\files\driver\win7\xusb21.inf'
+          pnputil /add-driver $xboxInf /install
+          if ($LASTEXITCODE -notin 0,3010) { throw 'Microsoft Xbox driver staging failed' }
+          $driver = Join-Path $env:RUNNER_TEMP 'ViGEmBus-1.22.0.exe'
+          Invoke-WebRequest 'https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe' -OutFile $driver
+          if ((Get-FileHash $driver -Algorithm SHA256).Hash.ToLower() -ne '89220a7865076b342892f98865f3499fb7c4cfd673159e89d352c360fd014c6a') { throw 'Unexpected driver hash' }
+          $signature = Get-AuthenticodeSignature $driver
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Nefarius') { throw 'Invalid driver signature' }
+          # Advanced Installer flags (not WiX). The runner is Windows Server;
+          # skip only the installer's desktop OS check in this disposable VM.
+          $log = Join-Path $env:RUNNER_TEMP 'ViGEmBus-install.log'
+          $install = Start-Process $driver -ArgumentList '/exenoui','/qn','/norestart','AI_SKIP_SYSTEM_REQUIREMENTS=1','/l*v',"`"$log`"" -PassThru
+          if (-not $install.WaitForExit(120000)) { Stop-Process $install.Id -Force; if (Test-Path $log) { Get-Content $log -Tail 60 }; throw 'Virtual controller driver installation timed out' }
+          $install.Refresh()
+          if ($install.ExitCode -notin 0,3010) { if (Test-Path $log) { Get-Content $log -Tail 80 }; throw "Driver installation failed: $($install.ExitCode)" }
+      - name: Verify remote PC beta media, consent and real native input
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test --test-concurrency=1 tests/remote-pc.js tests/remote-coop.js tests/desktop-remote-input.js tests/desktop-remote-gamepad.js tests/remote-pc-browser.js tests/desktop-remote-native.js tests/voice-moderation.js tests/voice-moderation-browser.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          $testExit = $LASTEXITCODE
+          if ($testExit -ne 0) {
+            Get-PnpDevice | Where-Object { $_.FriendlyName -match 'Xbox|ViGEm|Virtual Gamepad' } | Format-List Status,Class,FriendlyName,InstanceId,Problem
+            $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Remote PC beta::$details"
+            exit $testExit
+          }
       - name: Verify SFU recovery and floating call layout
         shell: pwsh
         run: |
@@ -66,6 +166,10 @@ jobs:
           node --test --test-concurrency=1 tests/app-layout-browser.js tests/profile-media-browser.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Remove-Item Env:QA_NATIVE
+      - name: Verify Nexus integration and isolated game window
+        run: node --test tests/nexus.js tests/nexus-browser.js
+      - name: Verify Windows notices, call alert settings and PC control alignment
+        run: node --test tests/desktop-notifications.js tests/desktop-notices-controls-browser.js
       - name: Verify native roguelite frame before packaging
         shell: pwsh
         run: |
@@ -119,6 +223,8 @@ jobs:
             Write-Output "::error title=Splendor validation::$details"
             exit $testExit
           }
+      - name: Verify Ticket to Ride USA rules, private tables and browser
+        run: npm run test:ticket-to-ride
       - name: Verify Love Letter second edition and private hands
         shell: pwsh
         run: |
@@ -129,18 +235,6 @@ jobs:
             Write-Output "::error title=Love Letter validation::$details"
             exit $testExit
           }
-      - name: Build Windows application audio capture
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
-          $buildExit = $LASTEXITCODE
-          if ($buildExit -ne 0) {
-            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows native audio::$details"
-            exit $buildExit
-          }
-        working-directory: electron
       - name: Test desktop policy and native Windows runtime
         shell: pwsh
         run: |

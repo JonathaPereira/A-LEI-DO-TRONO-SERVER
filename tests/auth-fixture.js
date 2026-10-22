@@ -2,7 +2,7 @@
 // TEST ONLY: fake Supabase contracts, no connection to a user's Supabase project.
 const http=require('http'),crypto=require('crypto'),path=require('path'),{spawn}=require('child_process');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,required=true,realtime=false,soundboard=false,directAttachments=false,gameDecree=null,allowedOrigins=[],loveLetterSeed=null}={}){
+async function startFixture({appOrigin='http://127.0.0.1:18880',port=10780,required=true,realtime=false,soundboard=false,directAttachments=false,gameDecree=null,allowedOrigins=[],loveLetterSeed=null}={}){
   const users=new Map(),access=new Map(),refresh=new Map(),links=new Map(),chatMessages=new Map(),historyState={fail:false};let backend;
   const azulRecords=new Map(),splendorRecords=new Map();
   const channels=new Map([['chat-livre','Geral'],['chat-jogos','Jogos'],['chat-conversa','Conversa']].map(([id,name])=>[id,{id,name,description:'',channel_type:'mixed'}]));
@@ -160,7 +160,7 @@ async function startFixture({appOrigin='http://127.0.0.1:18880',port=10280,requi
   async function boot(){
   // The fixture entry composes explicit game/storage dependencies; production keeps its default entry.
   backend=spawn(process.execPath,[path.resolve(__dirname,(loveLetterSeed!==null||directAttachments||gameDecree)?'server-fixture-entry.cjs':'../server/index.ts')],{env:{...process.env,PORT:String(port),MN_TEST_DIRECT_ATTACHMENTS:String(directAttachments),...(loveLetterSeed!==null?{MN_TEST_LOVE_LETTER_SEED:String(loveLetterSeed)}:{}),...(gameDecree?{TRONO_TEST_DECREE:gameDecree}:{}),AUTH_TEST_LOCAL:'true',AUTH_REQUIRED:String(required),SUPABASE_URL:`http://127.0.0.1:${provider.address().port}`,SUPABASE_PUBLISHABLE_KEY:'fixture-key',SUPABASE_SECRET_KEY:'sb_secret_fixture_only',APP_URL:appOrigin+'/',AUTH_ALLOWED_ORIGINS:allowedOrigins.join(','),CLOUDFLARE_REALTIME_ENABLED:String(realtime),CLOUDFLARE_REALTIME_APP_ID:realtime?'test-app':'',CLOUDFLARE_REALTIME_API_TOKEN:realtime?'test-token':'',...(soundboard||directAttachments?{R2_ACCOUNT_ID:'a'.repeat(32),R2_BUCKET:'fixture',R2_ACCESS_KEY_ID:'fixture-only',R2_SECRET_ACCESS_KEY:'fixture-only'}:{})},stdio:['ignore','pipe','pipe']});let logs='';backend.stdout.on('data',d=>logs+=d);backend.stderr.on('data',d=>logs+=d);
-    for(let attempt=0;attempt<100;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===99)throw new Error('Backend did not start: '+logs);await wait(50);}
+    for(let attempt=0;attempt<300;attempt++){try{const r=await fetch(base+'/health');if(r.ok)break;}catch{}if(attempt===299)throw new Error('Backend did not start: '+logs);await wait(50);}
   }
   async function stopBackend(){const child=backend;if(child.exitCode!==null)return;const closed=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');const timer=setTimeout(()=>child.kill('SIGKILL'),2000);await closed;clearTimeout(timer);}
   await boot();

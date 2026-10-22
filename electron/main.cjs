@@ -33,7 +33,9 @@ const { DesktopPreferences } = require('./preferences.cjs');
 const { DesktopActivity } = require('./activity.cjs');
 const { createNotifications } = require('./notifications.cjs');
 const { GameAssets } = require('./game-assets.cjs');
+const { createNexusLauncher, nexusConfig } = require('./nexus.cjs');
 const { AudioPriority } = require('./audio-priority.cjs');
+const { RemoteInput } = require('./remote-input.cjs');
 const { ApplicationAudio } = require('./application-audio.cjs'),
   { createUpdates } = require('./updates.cjs');
 const { contentSecurityPolicy } = require('./content-security.cjs');
@@ -66,6 +68,55 @@ let window,
   preferences,
   activity;
 const folders = new Map();
+let remoteInput,
+  remotePermit = null,
+  remoteNotice = null;
+const REMOTE_STOP = 'Control+Alt+Shift+F12';
+function stopRemote() {
+  remotePermit = null;
+  if (capture?.remote) cancelCapture();
+  remoteInput?.reset();
+  globalShortcut.unregister(REMOTE_STOP);
+  if (remoteNotice) {
+    const old = remoteNotice;
+    remoteNotice = null;
+    old.destroy();
+  }
+  if (window && !window.isDestroyed()) window.webContents.send('mn:remote', { type: 'ended' });
+}
+function showRemoteNotice(name) {
+  if (remoteNotice) return;
+  const area = screen.getPrimaryDisplay().workArea;
+  remoteNotice = new BrowserWindow({
+    width: 380,
+    height: 112,
+    x: Math.round(area.x + (area.width - 380) / 2),
+    y: area.y + 8,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    title: 'PC compartilhado · Beta',
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
+  });
+  remoteNotice.setMenu(null);
+  remoteNotice.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  remoteNotice.webContents.on('will-navigate', (event) => {
+    event.preventDefault();
+    stopRemote();
+  });
+  remoteNotice.on('closed', () => {
+    if (remoteNotice) {
+      remoteNotice = null;
+      stopRemote();
+    }
+  });
+  const safe = String(name).replace(/[&<>"']/g, '');
+  const html = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{margin:0;padding:10px 14px;background:#191d2d;color:#f1f2fa;font:12px system-ui}b{color:#c2b4ff}a{float:right;color:#ffc3c3}small{display:block;margin-top:6px;color:#b5bed2}</style><b>PC compartilhado · Beta</b><a href="mn-remote-stop:">Encerrar</a><div>${safe}</div><small>Encerrar: Ctrl + Alt + Shift + F12</small>`;
+  void remoteNotice.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+}
+
 const trace = (...values) => {
   if (!app.isPackaged && app.commandLine.hasSwitch('desktop-diagnostics'))
     console.error('[desktop]', ...values);
@@ -85,6 +136,7 @@ else {
     quitting = true;
   });
   app.on('will-quit', () => {
+    stopRemote();
     globalShortcut.unregisterAll();
     applicationAudio?.stopAll();
     activity?.dispose();
@@ -234,6 +286,20 @@ async function start() {
     },
   });
   window.on('ready-to-show', () => window.show());
+  const nexus = createNexusLauncher({
+    BrowserWindow,
+    session,
+    screen,
+    dialog,
+    parent: window,
+    icon: path.join(__dirname, 'assets/icon.png'),
+    config: nexusConfig,
+    isQuitting: () => quitting,
+  });
+  ipcMain.handle('mn:nexus', (event) => {
+    trusted(event);
+    return nexus.open();
+  });
   const notifications = createNotifications({
     Notification,
     window,
@@ -272,6 +338,86 @@ async function start() {
   });
   applicationAudio = new ApplicationAudio(app, (data) => {
     if (!window.isDestroyed()) window.webContents.send('mn:application-audio', data);
+  });
+  remoteInput = new RemoteInput({
+    app,
+    displays: () => screen.getAllDisplays(),
+    point: (p) => screen.dipToScreenPoint(p),
+    publish: (data) => {
+      if (!window.isDestroyed()) window.webContents.send('mn:remote', data);
+    },
+  });
+  screen.on('display-removed', stopRemote);
+  screen.on('display-metrics-changed', stopRemote);
+  ipcMain.handle('mn:remote-capability', async (event) => {
+    trusted(event);
+    return {
+      host: remoteInput.available,
+      beta: true,
+      audio: applicationAudio.capability.available,
+      gamepad: await remoteInput.gamepadAvailable(),
+    };
+  });
+  ipcMain.handle('mn:remote-driver', (event) => {
+    trusted(event);
+    return shell.openExternal('https://github.com/nefarius/ViGEmBus/releases/tag/v1.22.0');
+  });
+  ipcMain.handle('mn:remote-prepare', async (event, peerName) => {
+    trusted(event);
+    if (!remoteInput.available) throw Error('Instale a versão Windows com Compartilhar PC Beta.');
+    if (remotePermit || capture)
+      throw Error('Encerre o compartilhamento atual antes de iniciar outro.');
+    if (typeof peerName !== 'string' || !peerName.trim() || peerName.length > 80)
+      throw Error('Participante inválido.');
+    // The HUD notice and the explicit monitor picker authorize viewing. Keep
+    // this preflight short so getDisplayMedia retains the user's activation.
+    if (!globalShortcut.register(REMOTE_STOP, stopRemote))
+      throw Error(
+        'O atalho de emergência está ocupado. Libere Ctrl + Alt + Shift + F12 para continuar.',
+      );
+    remotePermit = { peerName, expires: Date.now() + 60000, selected: false };
+    return { allowed: true };
+  });
+  ipcMain.handle('mn:remote-allow', async (event, mode = 'desktop') => {
+    if (!['desktop', 'gamepad'].includes(mode)) throw Error('Modo de controle inválido.');
+    trusted(event);
+    const permit = remotePermit;
+    if (!permit?.selected) throw Error('Compartilhamento indisponível.');
+    const answer = await dialog.showMessageBox(window, {
+      type: 'question',
+      buttons: ['Somente assistir', 'Permitir controle'],
+      defaultId: 0,
+      cancelId: 0,
+      message: permit.peerName + ' quer controlar seu PC',
+      detail:
+        (mode === 'gamepad'
+          ? 'Permite um controle Xbox virtual separado para o convidado. Seu controle local permanece independente.'
+          : 'Permite mouse e teclado neste computador durante esta sessão beta.') +
+        ' Não abra senhas ou informações privadas. Ctrl + Alt + Shift + F12 encerra o acesso.',
+    });
+    if (remotePermit !== permit || answer.response !== 1) return { allowed: false };
+    const result = await remoteInput.start({ mode });
+    if (remotePermit !== permit) {
+      remoteInput.stop();
+      return { allowed: false };
+    }
+    return { allowed: true, ...result };
+  });
+  ipcMain.on('mn:remote-input', (event, data) => {
+    try {
+      trusted(event);
+      remoteInput.input(data?.token, data?.event);
+    } catch {}
+  });
+  ipcMain.handle('mn:remote-revoke', (event) => {
+    trusted(event);
+    remoteInput.stop();
+    return true;
+  });
+  ipcMain.handle('mn:remote-stop', (event) => {
+    trusted(event);
+    stopRemote();
+    return true;
   });
   activity = new DesktopActivity(app, (state) => {
     if (!window.isDestroyed()) window.webContents.send('mn:activity', state);
@@ -402,18 +548,21 @@ async function start() {
   });
   window.webContents.on('render-process-gone', () => {
     voicePriority.setActive(false);
+    stopRemote();
     clearHotkey();
     cancelCapture();
     applicationAudio.stopAll();
     activity.dispose();
   });
-  window.webContents.on('did-start-navigation', (_, url, isInPlace, isMainFrame) => {
+  window.webContents.on('did-start-navigation', (_, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
       voicePriority.setActive(false);
+      stopRemote();
       cancelCapture();
     }
   });
   window.webContents.on('did-navigate', () => {
+    stopRemote();
     clearHotkey();
     applicationAudio.stopAll();
   });
@@ -585,19 +734,27 @@ async function start() {
     };
     capture = pending;
     try {
+      const isRemote =
+        !!remotePermit && !remotePermit.selected && remotePermit.expires > Date.now();
+      pending.remote = isRemote;
       const { desktopCapturer } = require('electron'),
         sources = await desktopCapturer.getSources({
           types: ['screen', 'window'],
           thumbnailSize: { width: 320, height: 180 },
         });
       if (capture !== pending || window.isDestroyed()) return;
-      const options = sources.filter((s) => s.id !== window.getMediaSourceId());
-      pending.sources = options;
+      const all = sources.filter((s) => s.id !== window.getMediaSourceId()),
+        options = isRemote ? all.filter((s) => s.id.startsWith('screen:')) : all;
+      pending.sources = all;
       window.webContents.send('mn:capture', {
         id: pending.id,
         audio: request.audioRequested,
         windows: process.platform === 'win32',
         applicationAudio: applicationAudio.capability.available,
+        remote: isRemote,
+        audioSources: all
+          .filter((s) => s.id.startsWith('window:'))
+          .map((s) => ({ id: s.id, name: s.name })),
         sources: options.map((s) => ({
           id: s.id,
           name: s.name,
@@ -621,9 +778,26 @@ async function start() {
     capture = null;
     clearTimeout(current.timer);
     const source = current.sources.find((s) => s.id === choice.source);
-    if (!source) {
+    if (!source || (current.remote && !source.id.startsWith('screen:'))) {
       current.callback({});
+      if (current.remote) stopRemote();
       return { selected: false };
+    }
+    if (current.remote) {
+      if (!remotePermit || remotePermit.expires < Date.now()) {
+        current.callback({});
+        stopRemote();
+        return { selected: false };
+      }
+      try {
+        remoteInput.select(source.display_id);
+        remotePermit.selected = true;
+        showRemoteNotice(remotePermit.peerName);
+      } catch (error) {
+        current.callback({});
+        stopRemote();
+        return { selected: false, error: error.message };
+      }
     }
     let audio = null;
     if (current.audio && choice.audioMode === 'application') {
@@ -643,6 +817,7 @@ async function start() {
     current.callback({
       video: source,
       ...(current.audio &&
+      !current.remote &&
       (choice.audioMode === 'system' || choice.audio === true) &&
       process.platform === 'win32'
         ? { audio: 'loopback' }

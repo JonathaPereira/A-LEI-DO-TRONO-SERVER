@@ -9,8 +9,10 @@ export const primaryScreens = [
   'gameScreen',
   'gamesScreen',
   'azulScreen',
+  'nexusScreen',
   'rogueliteScreen',
   'splendorScreen',
+  'ticketToRideScreen',
   'loveLetterScreen',
 ] as const;
 export type PrimaryScreen = (typeof primaryScreens)[number];

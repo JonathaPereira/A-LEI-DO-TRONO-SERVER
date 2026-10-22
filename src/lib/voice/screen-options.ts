@@ -2,9 +2,10 @@ import type { createScreenSharing } from './screen-sharing';
 
 interface ScreenOptions {
   sharing: Pick<ReturnType<typeof createScreenSharing>, 'dialogOptions' | 'configure' | 'start'>;
-  call(): { joined: boolean; generation: number };
+  call(): { joined: boolean; generation: number; mediaBlocked?: boolean };
   replayEnabled(): boolean;
   closeDialog(): void;
+  onBlocked?(): void;
 }
 interface ScreenOptionsSnapshot {
   readonly open: boolean;
@@ -37,7 +38,7 @@ export function createScreenOptions(options: ScreenOptions) {
   function refresh() {
     if (!snapshot.open) return;
     const call = options.call();
-    if (!call.joined || generation !== call.generation) {
+    if (!call.joined || call.mediaBlocked || generation !== call.generation) {
       close();
       return;
     }
@@ -62,6 +63,10 @@ export function createScreenOptions(options: ScreenOptions) {
     open() {
       const call = options.call();
       if (!call.joined) return;
+      if (call.mediaBlocked) {
+        options.onBlocked?.();
+        return;
+      }
       generation = call.generation;
       const value = options.sharing.dialogOptions();
       update({

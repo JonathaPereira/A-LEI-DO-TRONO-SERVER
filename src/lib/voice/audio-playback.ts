@@ -3,6 +3,7 @@ import { createAudioGain } from './audio-gain.ts';
 interface PlaybackOptions {
   volume: unknown;
   output: string;
+  moderated?(key: string): boolean;
   createAudio(key: string): HTMLAudioElement;
   createStream(track: MediaStreamTrack): MediaStream;
   createContext(): PlaybackContext | null;
@@ -162,6 +163,7 @@ export function createAudioPlayback(options: PlaybackOptions) {
   }
   function update(entry: Entry) {
     const gain = effectiveGain(entry.key);
+    const blocked = deafened || !!options.moderated?.(entry.key);
     if (
       entry.graph &&
       (gain <= 1 || entry.graph.ctx.state !== 'running' || !outputMatches(entry.graph.ctx))
@@ -172,7 +174,7 @@ export function createAudioPlayback(options: PlaybackOptions) {
       if (ctx) resume(ctx);
       if (ctx?.state === 'running' && outputMatches(ctx)) {
         try {
-          entry.graph = createAudioGain(ctx, entry.stream, deafened ? 0 : gain);
+          entry.graph = createAudioGain(ctx, entry.stream, blocked ? 0 : gain);
         } catch (error) {
           warn(error);
         }
@@ -181,14 +183,10 @@ export function createAudioPlayback(options: PlaybackOptions) {
     entry.route = entry.graph ? 'gain' : 'direct';
     if (entry.graph) {
       entry.blocked = false;
-      entry.graph.gain.gain.setTargetAtTime(
-        deafened ? 0 : gain,
-        entry.graph.ctx.currentTime,
-        0.012,
-      );
+      entry.graph.gain.gain.setTargetAtTime(blocked ? 0 : gain, entry.graph.ctx.currentTime, 0.012);
     }
-    entry.audio.muted = deafened || entry.route === 'gain';
-    entry.audio.volume = Math.min(1, gain);
+    entry.audio.muted = blocked || entry.route === 'gain';
+    entry.audio.volume = blocked ? 0 : Math.min(1, gain);
     if (entry.route === 'direct') void play(entry);
   }
   function refresh() {

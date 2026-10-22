@@ -23,7 +23,7 @@ interface ControlOptions {
   restartTelemetry(): void;
   isSfu(): boolean;
   onChange(change: VoiceControlChange): void;
-  onStatus(message: string, kind?: 'ok' | 'error'): void;
+  onStatus(message: string, kind?: 'ok' | 'warn' | 'error'): void;
   warn?(error: unknown): void;
 }
 const isEngine = (value: unknown): value is NoiseEngine =>
@@ -66,6 +66,8 @@ export function createCallControls(options: ControlOptions) {
   const engine = isEngine(storedEngine) ? storedEngine : 'native';
   let snapshot: VoiceControlsSnapshot = Object.freeze({
     micMuted: false,
+    serverMuted: false,
+    mediaBlocked: false,
     deafened: false,
     cameraTogglePending: false,
     microphoneVolume: clampAudioGain(storage.getItem(keys.microphoneVolume) ?? 100),
@@ -155,6 +157,10 @@ export function createCallControls(options: ControlOptions) {
   }
   function toggleMute() {
     if (disposed || !options.call().joined || snapshot.deafened) return false;
+    if (snapshot.serverMuted) {
+      options.onStatus('Microfone silenciado pela moderação.', 'warn');
+      return false;
+    }
     snapshot = Object.freeze({ ...snapshot, micMuted: !snapshot.micMuted });
     options.microphone.setMuted(snapshot.micMuted);
     options.announce();
@@ -165,7 +171,11 @@ export function createCallControls(options: ControlOptions) {
     if (disposed || !options.call().joined) return false;
     if (!snapshot.deafened) mutedBeforeDeafen = snapshot.micMuted;
     const deafened = !snapshot.deafened;
-    snapshot = Object.freeze({ ...snapshot, deafened, micMuted: deafened || mutedBeforeDeafen });
+    snapshot = Object.freeze({
+      ...snapshot,
+      deafened,
+      micMuted: snapshot.serverMuted || deafened || mutedBeforeDeafen,
+    });
     options.microphone.setMuted(snapshot.micMuted);
     options.setDeafened(snapshot.deafened);
     if (!snapshot.deafened) options.unlockAudio();
@@ -221,6 +231,10 @@ export function createCallControls(options: ControlOptions) {
       options.onStatus('Câmera desligada.', 'ok');
       return true;
     }
+    if (snapshot.mediaBlocked) {
+      options.onStatus('Câmera bloqueada pela moderação.', 'warn');
+      return false;
+    }
     if (cameraIntent || options.camera.getSnapshot().loading) return false;
     const intent = {};
     cameraIntent = intent;
@@ -229,6 +243,10 @@ export function createCallControls(options: ControlOptions) {
     try {
       if (!options.call().joined && !(await options.join())) return false;
       if (!current()) return false;
+      if (snapshot.mediaBlocked) {
+        options.onStatus('Câmera bloqueada pela moderação.', 'warn');
+        return false;
+      }
       options.onStatus('Solicitando acesso à câmera...');
       await options.camera.acquire();
       if (!current()) return false;
@@ -274,7 +292,20 @@ export function createCallControls(options: ControlOptions) {
     resetParticipation() {
       if (disposed) return;
       mutedBeforeDeafen = false;
-      update({ micMuted: false, deafened: false }, 'mute');
+      update({ micMuted: false, serverMuted: false, mediaBlocked: false, deafened: false }, 'mute');
+    },
+    setModeration(moderation: { serverMuted?: boolean; mediaBlocked?: boolean } = {}) {
+      if (disposed) return;
+      const serverMuted =
+        typeof moderation.serverMuted === 'boolean' ? moderation.serverMuted : snapshot.serverMuted;
+      const mediaBlocked =
+        typeof moderation.mediaBlocked === 'boolean'
+          ? moderation.mediaBlocked
+          : snapshot.mediaBlocked;
+      const micMuted = serverMuted ? true : snapshot.micMuted;
+      snapshot = Object.freeze({ ...snapshot, serverMuted, mediaBlocked, micMuted });
+      if (serverMuted) options.microphone.setMuted(true);
+      options.onChange('mute');
     },
     async setMicrophoneGain(value: unknown) {
       if (disposed) return;

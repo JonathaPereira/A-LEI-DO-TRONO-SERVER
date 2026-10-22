@@ -9,7 +9,12 @@ interface SharingOptions {
   community(): boolean;
   supported(): boolean;
   join(): Promise<boolean>;
-  policy(): { sfu: boolean; screenAllowed?: boolean; highAllowed?: boolean };
+  policy(): {
+    sfu: boolean;
+    screenAllowed?: boolean;
+    highAllowed?: boolean;
+    mediaBlocked?: boolean;
+  };
   capture: Pick<ReturnType<typeof createScreenCapture>, 'getCapture' | 'start' | 'stop'>;
   quality: Pick<ReturnType<typeof createCallQuality>, 'getSnapshot' | 'configure'>;
   peers: ReadonlyMap<string, VoicePeerConnection>;
@@ -47,12 +52,20 @@ export function createScreenSharing(options: SharingOptions) {
   async function start({ replace = false } = {}) {
     if (disposed || !options.community()) return false;
     if (active() && !replace) return true;
+    if (options.policy().mediaBlocked) {
+      options.onStatus('Compartilhamento bloqueado pela moderação.', 'warn');
+      return false;
+    }
     if (!options.supported()) {
       options.onStatus('Compartilhamento de tela não é suportado neste navegador.', 'error');
       return false;
     }
     if (!options.call().joined && !(await options.join())) return false;
     if (disposed || !options.call().joined) return false;
+    if (options.policy().mediaBlocked) {
+      options.onStatus('Compartilhamento bloqueado pela moderação.', 'warn');
+      return false;
+    }
     const generation = options.call().generation;
     if (options.policy().sfu && options.policy().screenAllowed === false) {
       options.onStatus('Compartilhamento bloqueado pelo freio mensal de consumo.', 'warn');

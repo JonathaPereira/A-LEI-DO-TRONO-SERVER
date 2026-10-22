@@ -550,7 +550,12 @@ export function createSfuSession(options: SfuOptions) {
             await subscribe(pub, currentJob);
             if (current() && currentJob()) clearRetry(key);
           } catch (error) {
-            if (!current() || !currentJob() || errorCode(error) === 'SFU_CANCELLED') return;
+            if (
+              !current() ||
+              !currentJob() ||
+              ['SFU_CANCELLED', 'VOICE_MODERATED'].includes(errorCode(error))
+            )
+              return;
             warn(error);
             if (stalePublication(error)) {
               await refreshPublications();

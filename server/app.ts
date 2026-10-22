@@ -11,6 +11,8 @@ import { createSocialService } from './social-service.ts';
 import { createAzulService } from './azul-service.ts';
 import { createSplendorService } from './splendor-service.ts';
 import { createLoveLetterService } from './love-letter-service.ts';
+import { createTicketToRideService } from './ticket-to-ride-service.ts';
+import { RemotePc } from './remote-pc.ts';
 import { createCommunityManagement } from './community-management.ts';
 import { permissions } from './roles.ts';
 import { createChatService } from './chat-service.ts';
@@ -62,7 +64,7 @@ export function createApplication({
       !info.origin || !accountAuth.required || accountAuth.allowedOrigins.has(info.origin),
   });
 
-  const VERSION = '0.13.0-alpha';
+  const VERSION = '0.14.0-alpha';
 
   const rooms = createChannelRooms();
   const realtimeSfu = new RealtimeSfuManager({
@@ -74,6 +76,17 @@ export function createApplication({
     },
     version: VERSION,
   });
+  const remotePc = new RemotePc({
+    rooms,
+    send,
+    ice: () =>
+      realtimeSfu._turnIceServers().catch(() => ({
+        iceServers: [{ urls: ['stun:stun.cloudflare.com:3478'] }],
+        turn: false,
+      })),
+  });
+  const remoteSweep = setInterval(() => remotePc.sweep(), 2000);
+  remoteSweep.unref?.();
 
   function broadcastAll(payload: unknown) {
     for (const client of wss.clients) send(client, payload);
@@ -101,6 +114,7 @@ export function createApplication({
     send,
     auth: accountAuth,
     sfu: realtimeSfu,
+    remotePc,
     throne: throneService,
     presenceChanged: () => community.broadcast(),
     nameReserved: (name) => community.nameReserved(name),
@@ -148,6 +162,7 @@ export function createApplication({
   const azulService = createAzulService({ auth: accountAuth, wss, send });
   const splendorService = createSplendorService({ auth: accountAuth, wss, send });
   const loveLetterService = createLoveLetterService({ wss, send, createRandom: loveLetterRandom });
+  const ticketToRideService = createTicketToRideService({ wss, send });
   const socialService = createSocialService({
     auth: accountAuth,
     wss,
@@ -174,7 +189,10 @@ export function createApplication({
           ws.account.role = role;
           send(ws, { type: 'role-updated', role, permissions: permissions(role) });
           const room = rooms.get(ws.roomId || '');
-          if (room) channels.broadcastRoom(room);
+          if (room) {
+            channels.broadcastRoom(room);
+            channels.broadcastVoiceRoster(room);
+          }
         }
       community.broadcast();
       void community.refreshDirectory();
@@ -199,6 +217,7 @@ export function createApplication({
       azul: azulService.health(),
       splendor: splendorService.health(),
       loveLetter: loveLetterService.health(),
+      ticketToRide: ticketToRideService.health(),
       community: communityManagement.health(),
       rooms: channels.safeRooms(),
       chatOnlyCount: [...rooms.values()]
@@ -221,6 +240,8 @@ export function createApplication({
     azul: azulService,
     splendor: splendorService,
     loveLetter: loveLetterService,
+    ticketToRide: ticketToRideService,
+    remotePc,
     community,
     communityManagement,
     chat,
@@ -231,11 +252,14 @@ export function createApplication({
   let closePromise: Promise<void> | undefined;
   function close() {
     if (closePromise) return closePromise;
+    clearInterval(remoteSweep);
+    remotePc.stop();
     gateway.stop();
     throneService.stop();
     azulService.stop();
     splendorService.stop();
     loveLetterService.stop();
+    ticketToRideService.stop();
     socialService.stop();
     community.stop();
     communityManagement.stop();

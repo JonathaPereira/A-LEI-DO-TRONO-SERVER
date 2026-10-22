@@ -31,6 +31,7 @@ interface RosterOptions {
   restoreGain(id: string, accountId: string): void;
   onSound(kind: 'join' | 'leave' | 'disconnect', id: string): void;
   onNotice(notice: VoiceNotice): void;
+  onLocalModeration?(moderation: { serverMuted?: boolean; mediaBlocked?: boolean }): void;
   onChange(): void;
   onMessage(listener: (message: SocketMessage) => void): () => void;
   warn?(error: unknown): void;
@@ -111,9 +112,15 @@ export function createVoiceRoster(options: RosterOptions) {
       for (const id of members.keys())
         if (id !== options.localId() && !next.has(id)) options.onSound('leave', id);
     }
-    for (const p of participants)
+    for (const p of participants) {
       if (p.accountId && (members.get(p.id)?.accountId !== p.accountId || !options.hasGain(p.id)))
         options.restoreGain(p.id, p.accountId);
+      if (p.id === options.localId())
+        options.onLocalModeration?.({
+          serverMuted: !!p.serverMuted,
+          mediaBlocked: !!p.mediaBlocked,
+        });
+    }
     members.clear();
     for (const [id, p] of next) members.set(id, p);
     update(true);
@@ -182,7 +189,9 @@ export function createVoiceRoster(options: RosterOptions) {
       if (!state) return;
       const old = members.get(state.playerId),
         was = !!old;
-      if (state.joined)
+      if (state.joined) {
+        const serverMuted = state.serverMuted ?? old?.serverMuted ?? false;
+        const mediaBlocked = state.mediaBlocked ?? old?.mediaBlocked ?? false;
         members.set(
           state.playerId,
           Object.freeze({
@@ -191,17 +200,20 @@ export function createVoiceRoster(options: RosterOptions) {
             name: old?.name ?? state.name ?? 'Participante',
             avatar_preset: old?.avatar_preset ?? 'crown',
             avatar_file_id: old?.avatar_file_id ?? null,
+            role: old?.role ?? 'member',
             seat: old?.seat ?? state.seat,
             joined: true,
-            muted: state.muted,
+            muted: state.muted || serverMuted,
+            serverMuted,
+            mediaBlocked,
             deafened: state.deafened,
-            camera: state.camera,
-            screen: state.screen,
+            camera: !mediaBlocked && state.camera,
+            screen: !mediaBlocked && state.screen,
             transport: state.transport ?? old?.transport ?? 'p2p',
             quality: state.quality ?? old?.quality ?? 'balanced',
           }),
         );
-      else members.delete(state.playerId);
+      } else members.delete(state.playerId);
       if (
         !snapshot.eventsSupported &&
         snapshot.initialized &&
