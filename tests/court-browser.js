@@ -287,61 +287,88 @@ test(
           await page.evaluate(() => {
             document.getElementById('yourTurnNotice')?.classList.add('hidden');
           });
-          for (const layout of ['original', 'discord']) {
-            await setLayout(page, layout);
-            for (const [width, height] of [
-              [1440, 900],
-              [1280, 720],
-              [1080, 1920],
-              [720, 1280],
-              [480, 800],
-            ]) {
-              await page.setViewportSize({ width, height });
-              const boxes = await page.evaluate(() => {
-                const rect = (n) => {
-                  const r = n.getBoundingClientRect();
-                  return {
-                    x: r.x,
-                    y: r.y,
-                    right: r.right,
-                    bottom: r.bottom,
-                    width: r.width,
-                    height: r.height,
-                  };
-                };
-                return {
-                  table: rect(document.querySelector('.royal-table')),
-                  screen: rect(document.querySelector('#gameScreen')),
-                  slots: [...document.querySelectorAll('.table-card-slot')].map(rect),
-                  hand: [...document.querySelectorAll('#throneOnlineHandCards .hand-card')].map(
-                    rect,
-                  ),
-                  overflow: document.documentElement.scrollWidth > innerWidth + 1,
-                };
-              });
-              assert(!boxes.overflow, JSON.stringify({ layout, width, boxes }));
-              assert(
-                boxes.slots.every(
-                  (r) =>
-                    r.x >= boxes.table.x &&
-                    r.right <= boxes.table.right + 1 &&
-                    r.y >= boxes.table.y &&
-                    r.bottom <= boxes.table.bottom + 1,
-                ),
-              );
-              assert(boxes.hand.every((r) => r.height >= 70));
-              assert.deepEqual(await snapshot(), before);
-              if (width === 1280 || width === 1080 || width === 480)
-                await page.screenshot({
-                  path: 'artifacts/court/native-' + layout + '-' + width + '.png',
+          // Fullscreen windows cannot be resized by Browser.setWindowBounds.
+          // Emulate the CSS viewport while keeping the real fullscreen tree.
+          const metrics = await context.newCDPSession(page);
+          try {
+            for (const layout of ['original', 'discord']) {
+              await setLayout(page, layout);
+              for (const [width, height] of [
+                [1440, 900],
+                [1280, 720],
+                [1080, 1920],
+                [720, 1280],
+                [480, 800],
+              ]) {
+                await metrics.send('Emulation.setDeviceMetricsOverride', {
+                  width,
+                  height,
+                  screenWidth: width,
+                  screenHeight: height,
+                  deviceScaleFactor: 1,
+                  mobile: false,
                 });
+                await expect
+                  .poll(() => page.evaluate(() => ({ width: innerWidth, height: innerHeight })))
+                  .toEqual({ width, height });
+                const boxes = await page.evaluate(() => {
+                  const rect = (n) => {
+                    const r = n.getBoundingClientRect();
+                    return {
+                      x: r.x,
+                      y: r.y,
+                      right: r.right,
+                      bottom: r.bottom,
+                      width: r.width,
+                      height: r.height,
+                    };
+                  };
+                  return {
+                    table: rect(document.querySelector('.royal-table')),
+                    screen: rect(document.querySelector('#gameScreen')),
+                    slots: [...document.querySelectorAll('.table-card-slot')].map(rect),
+                    hand: [...document.querySelectorAll('#throneOnlineHandCards .hand-card')].map(
+                      rect,
+                    ),
+                    overflow: document.documentElement.scrollWidth > innerWidth + 1,
+                  };
+                });
+                assert(!boxes.overflow, JSON.stringify({ layout, width, boxes }));
+                assert(
+                  boxes.slots.every(
+                    (r) =>
+                      r.x >= boxes.table.x &&
+                      r.right <= boxes.table.right + 1 &&
+                      r.y >= boxes.table.y &&
+                      r.bottom <= boxes.table.bottom + 1,
+                  ),
+                );
+                assert(boxes.hand.every((r) => r.height >= 70));
+                assert.deepEqual(await snapshot(), before);
+                if (width === 1280 || width === 1080 || width === 480) {
+                  const shot = await metrics.send('Page.captureScreenshot', {
+                    format: 'png',
+                    captureBeyondViewport: true,
+                    clip: { x: 0, y: 0, width, height, scale: 1 },
+                  });
+                  await fs.writeFile(
+                    'artifacts/court/native-' + layout + '-' + width + '.png',
+                    Buffer.from(shot.data, 'base64'),
+                  );
+                }
+              }
             }
+            await page.locator('#courtFullscreen').click();
+            await expect
+              .poll(() => page.evaluate(() => document.fullscreenElement === null))
+              .toBe(true);
+          } finally {
+            if (await page.evaluate(() => !!document.fullscreenElement))
+              await page.evaluate(() => document.exitFullscreen());
+            await metrics.send('Emulation.clearDeviceMetricsOverride');
+            await metrics.detach();
           }
           await page.setViewportSize({ width: 1280, height: 720 });
-          await page.locator('#courtFullscreen').click();
-          await expect
-            .poll(() => page.evaluate(() => document.fullscreenElement === null))
-            .toBe(true);
           // Exercise the exact packet order: exchange, private reveal, replacement state.
           // A new state object must not abandon the queued private result.
           await page.evaluate(() => {
