@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),express=require('express');
-const {createCommunityManagement}=require('../community-management');
+const {createCommunityManagement}=require('../server/community-management.ts');
 test('GIPHY client configuration requires authentication, respects origins and exposes no service credentials',async()=>{
  const env={},auth={configured:false,allowedOrigins:new Set(['https://app.example.test']),tokenFrom:req=>req.headers.authorization,identity:async token=>{if(token!=='Bearer fixture-session')throw Object.assign(Error('Entre na conta'),{status:401});return {id:'member',role:'member'};}},management=createCommunityManagement({auth,rooms:new Map(),env}),app=express();management.install(app,express);app.get('/health',(req,res)=>res.json(management.health()));const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));}),base='http://127.0.0.1:'+server.address().port;
  try{

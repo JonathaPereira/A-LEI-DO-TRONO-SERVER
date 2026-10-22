@@ -52,7 +52,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs=require('node:fs'),{execFileSync}=require('node:child_process');
-          const {version}=require('./desktop/app/package.json'),requested=process.env.REQUESTED_TAG;
+          const {version}=require('./electron/package.json'),requested=process.env.REQUESTED_TAG;
           const api=path=>JSON.parse(execFileSync('gh',['api',path],{encoding:'utf8',maxBuffer:4*1024*1024}));
           if(requested&&!/^desktop-v\d+\.\d+\.\d+-run-\d+(?:-attempt-\d+)?$/.test(requested))throw Error('Invalid build tag.');
           (async()=>{
@@ -64,7 +64,7 @@ jobs:
                 if(!release.body?.includes('<!-- mn-desktop-build-v1 -->')||!required.every(name=>release.assets.some(a=>a.name===name&&a.state==='uploaded')))continue;
                 const sha=release.target_commitish;
                 if(!/^[a-f0-9]{40}$/.test(sha))continue;
-                try{execFileSync('git',['diff','--quiet',sha,'HEAD','--','frontend','desktop/app','desktop/scripts']);}catch{continue;}
+                try{execFileSync('git',['diff','--quiet',sha,'HEAD','--','src','public','electron','scripts']);}catch{continue;}
                 const runId=/^desktop-v\d+\.\d+\.\d+-run-(\d+)/.exec(release.tag_name)?.[1];
                 if(!runId)continue;
                 const run=api(`repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`);

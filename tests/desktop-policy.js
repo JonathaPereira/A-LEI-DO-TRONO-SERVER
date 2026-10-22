@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
-const {APP_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('../desktop/app/policy.cjs');
-const {clipBytes,writeClip}=require('../desktop/app/clip-files.cjs');
+const {APP_ORIGIN,isAppURL,bundlePath,clipFilename,accelerator}=require('../electron/policy.cjs');
+const {clipBytes,writeClip}=require('../electron/clip-files.cjs');
 test('desktop origin and local bundle reject external domains, encoded traversal and invalid names',()=>{
   const root=path.resolve(os.tmpdir(),'mn-bundle');assert(isAppURL(APP_ORIGIN+'/index.html'));for(const url of ['file:///index.html',APP_ORIGIN+'.evil.test/',APP_ORIGIN.replace('https:','http:'),'bad'])assert(!isAppURL(url));
   assert.equal(bundlePath(root,APP_ORIGIN+'/'),path.join(root,'index.html'));

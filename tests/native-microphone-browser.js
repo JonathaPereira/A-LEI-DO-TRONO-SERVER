@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),express=require('express'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
 test('native microphone preserves quiet PCM without stacking an expander or RNNoise',{timeout:45000},async()=>{
- const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve('frontend'))).listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port,fixture=await startFixture({port:10893,appOrigin:origin});let browser;
+ const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve(__dirname,'../out'))).listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port,fixture=await startFixture({port:10893,appOrigin:origin});let browser;
  try{
   const email='native-mic@example.test';await fixture.call('signup',{email,nickname:'Microfone',password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});const data=(await fixture.call('login',{email,password:'Senha12!'})).data;
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||(process.platform==='linux'?'/usr/bin/chromium':undefined),args:['--no-sandbox','--autoplay-policy=no-user-gesture-required','--mute-audio']});const context=await browser.newContext();await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
@@ -13,7 +13,7 @@ test('native microphone preserves quiet PCM without stacking an expander or RNNo
     window.__captureOptions=options;const ctx=new AudioContext({sampleRate:48000});await ctx.resume();const osc=ctx.createOscillator(),gain=ctx.createGain(),out=ctx.createMediaStreamDestination();osc.frequency.value=440;gain.gain.value=.0004;osc.connect(gain);gain.connect(out);osc.start();const track=out.stream.getAudioTracks()[0],settings=track.getSettings.bind(track);track.getSettings=()=>({...settings(),noiseSuppression:true});window.__rawMicrophone=out.stream;window.__toneContext=ctx;return out.stream;
    };
   },{base:fixture.base,data});
-  const page=await context.newPage();await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);
+  const page=await context.newPage();await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
   await page.evaluate(()=>{window.__extraFilters=[];for(const [name,api]of [['light',window.TronoLightNoise],['rnnoise',window.TronoNoise]]){const create=api.create;api.create=(...args)=>{window.__extraFilters.push(name);return create(...args);};}});
   await page.evaluate(async()=>{await window.TronoChatHub.enter({channelId:'chat-livre'});await window.TronoSocial.joinVoice();});await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);
   const measure=()=>page.evaluate(async()=>{

@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowJs": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "moduleDetection": "legacy",
+    "rootDir": "./src",
+    "outDir": "./artifacts/renderer",
+    "plugins": []
+  },
+  "include": [
+    "src/lib/auth/callback-boot.ts",
+    "src/lib/voice/worklets/*.ts",
+    "src/types/audio-worklet.d.ts"
+  ],
+  "exclude": ["node_modules"]
+}

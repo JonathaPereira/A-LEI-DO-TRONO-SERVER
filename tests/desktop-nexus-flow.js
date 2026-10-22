@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const {expect} = require('@playwright/test');
-const config = require('../frontend/nexus-config.js');
+const config = require('../src/lib/games/nexus-config.ts');
 
 // Exercise the real packaged Electron partition/preload and fixed IPC boundary.
 // Only the remote response is simulated; no external itch.io availability needed.

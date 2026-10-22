@@ -2,7 +2,7 @@ name: Frontend with latest installer
 on:
   push:
     branches: ['codex/surge-*']
-    paths: ['desktop/scripts/**', 'frontend/.surgeignore', 'frontend/index.html', 'tests/site-package.js', 'tests/build-downloads.js', 'PUBLICAR_SURGE_LEVE.md', '.github/workflows/surge-package.yml']
+    paths: ['scripts/desktop/**', 'src/**', 'public/**', 'package*.json', 'next.config.mjs', 'tests/site-package.js', 'tests/build-downloads.js', 'docs/PUBLICAR_SURGE_LEVE.md', 'docs/ATUALIZACOES.md', '.github/workflows/surge-package.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - run: npm ci
+      - run: npm run build
       - name: Test single-installer packaging, manifest and retention
         run: node --test tests/site-package.js tests/download-retention.js tests/build-downloads.js
       - name: Find the approved installer for this version
@@ -25,8 +27,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const {version}=require('./desktop/app/package.json');
-            const {planBuildRetention}=require('./desktop/scripts/publish-build.cjs');
+            const {version}=require('./electron/package.json');
+            const {planBuildRetention}=require('./scripts/desktop/publish-build.cjs');
             const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
             const plan=planBuildRetention(releases);
             const source=releases.find(r=>plan.keep.includes(r.id)&&r.tag_name.startsWith('desktop-v'+version+'-run-'));
@@ -38,19 +40,19 @@ jobs:
           MN_SOURCE_TAG: ${{ steps.source.outputs.tag }}
         run: |
           mkdir -p artifacts/windows-app
-          version=$(node -p "require('./desktop/app/package.json').version")
+          version=$(node -p "require('./electron/package.json').version")
           gh release download "$MN_SOURCE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-$version-Windows.exe" --dir artifacts/windows-app
       - name: Package frontend with only its current installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          node desktop/scripts/prepare-downloads.cjs
+          node scripts/desktop/prepare-downloads.cjs
           node -e "const fs=require('fs');const report=JSON.parse(fs.readFileSync('artifacts/site-download/TAMANHO-E-DOWNLOAD.json'));console.log('::notice title=Package size and installer identity::'+JSON.stringify(report));"
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile, ZIP_DEFLATED
           import json
-          version=json.loads(Path('desktop/app/package.json').read_text())['version']
+          version=json.loads(Path('electron/package.json').read_text())['version']
           source=Path('artifacts/site-download')
           with ZipFile(Path('artifacts') / f'MN-Trono-Frontend-{version}.zip','w',ZIP_DEFLATED) as archive:
               for file in sorted(source.rglob('*')):
@@ -62,11 +64,11 @@ jobs:
           MN_SOURCE_TAG: ${{ steps.source.outputs.tag }}
         with:
           script: |
-            const {publishBuild}=require('./desktop/scripts/publish-build.cjs');
+            const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
             await publishBuild({github,context,core});
       - name: Retain only current and previous distribution artifacts
         uses: actions/github-script@v7
         with:
           script: |
-            const {cleanArtifacts}=require('./desktop/scripts/download-retention.cjs');
+            const {cleanArtifacts}=require('./scripts/desktop/download-retention.cjs');
             await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});

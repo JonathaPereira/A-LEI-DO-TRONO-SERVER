@@ -1,0 +1,1036 @@
+/* HUD, turnos, áudio e feedback de playtest */
+.turn-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  color: #d7c6a0 !important;
+  min-width: 58px;
+  text-align: center;
+}
+.turn-timer.warning {
+  border-color: #bb873b !important;
+  color: #ffd985 !important;
+  box-shadow: 0 0 15px rgba(205, 145, 53, 0.22);
+}
+.turn-timer.danger {
+  border-color: #a94343 !important;
+  color: #ffaaaa !important;
+  background: #291010 !important;
+  animation: timerUrgent 0.75s ease-in-out infinite;
+}
+.turn-timer.idle {
+  opacity: 0.5;
+}
+@keyframes timerUrgent {
+  50% {
+    box-shadow: 0 0 20px rgba(210, 65, 65, 0.38);
+    transform: scale(1.03);
+  }
+}
+
+.trump-glyph {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  font-size: 21px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Carta privada jogada por Influência: só o próprio cliente recebe a imagem. */
+.private-hidden-card {
+  position: relative;
+  cursor: help;
+  overflow: hidden;
+}
+.private-hidden-card .private-hidden-peek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 7px;
+  opacity: 0;
+  transform: scale(0.94);
+  transition: 0.22s ease;
+  z-index: 5;
+}
+.private-hidden-card em {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 5px;
+  transform: translateX(-50%);
+  font: normal 7px/1.2 Georgia;
+  color: #e0c57e;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid #70562d;
+  border-radius: 99px;
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+.private-hidden-card:hover .private-hidden-peek,
+.private-hidden-card:focus .private-hidden-peek,
+.private-hidden-card.peek .private-hidden-peek {
+  opacity: 1;
+  transform: scale(1);
+}
+.private-hidden-card:hover > span,
+.private-hidden-card:hover > em,
+.private-hidden-card:focus > span,
+.private-hidden-card:focus > em,
+.private-hidden-card.peek > span,
+.private-hidden-card.peek > em {
+  opacity: 0;
+}
+
+/* Desafio: carta pública deliberadamente mais evidente. */
+.public-card-chip.desafio-open {
+  border-color: #bd5549;
+  box-shadow:
+    0 0 0 1px rgba(189, 85, 73, 0.18),
+    0 0 20px rgba(189, 85, 73, 0.28);
+  padding: 3px;
+}
+.public-card-chip.desafio-open img {
+  width: 44px;
+  height: 61px;
+}
+.public-label.desafio-label {
+  background: #7f2928;
+  border-color: #dc7467;
+  color: #ffe0d9;
+}
+.hand-card.desafio-open-hand {
+  outline: 2px solid #c14f46;
+  box-shadow: 0 0 22px rgba(193, 79, 70, 0.38);
+}
+.hand-card.desafio-open-hand:before {
+  content: '⚔ DESAFIO';
+  position: absolute;
+  z-index: 3;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #7f2928;
+  border: 1px solid #dc7467;
+  color: #ffe0d9;
+  border-radius: 99px;
+  padding: 2px 5px;
+  font-size: 7px;
+  letter-spacing: 0.5px;
+  font-weight: bold;
+}
+.challenge-reveal-float {
+  position: fixed;
+  z-index: 160;
+  width: 150px;
+  padding: 10px;
+  border: 1px solid #ca6a58;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(42, 17, 15, 0.98), rgba(10, 8, 7, 0.98));
+  box-shadow:
+    0 20px 55px #000,
+    0 0 35px rgba(193, 79, 70, 0.35);
+  text-align: center;
+  pointer-events: none;
+  animation: challengeReveal 3s ease both;
+}
+.challenge-reveal-float img {
+  display: block;
+  width: 100px;
+  height: 139px;
+  object-fit: cover;
+  margin: 0 auto 7px;
+  border-radius: 7px;
+  box-shadow: 0 8px 24px #000;
+}
+.challenge-reveal-float strong {
+  display: block;
+  color: #f0c6b8;
+  font-size: 11px;
+}
+.challenge-bubble {
+  position: absolute;
+  left: 50%;
+  top: -15px;
+  transform: translateX(-50%);
+  background: #8b302c;
+  border: 1px solid #ef8d78;
+  color: #fff1e8;
+  border-radius: 99px;
+  padding: 5px 9px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  box-shadow: 0 0 18px rgba(212, 92, 76, 0.4);
+}
+@keyframes challengeReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+  25%,
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.94);
+  }
+}
+
+/* Trilhas: taverna original + três opções genéricas originais. */
+.music-track-select {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.track-btn {
+  border: 1px solid #3e3524;
+  background: #0c0b09;
+  color: #8f826a;
+  border-radius: 6px;
+  padding: 5px 7px;
+  font: 9px Georgia;
+  cursor: pointer;
+  transition: 0.18s;
+}
+.track-btn:hover {
+  border-color: #8d7139;
+  color: #dcc186;
+}
+.track-btn.active {
+  border-color: #c79c48;
+  color: #f0d18b;
+  background: #21190d;
+  box-shadow: 0 0 12px rgba(199, 156, 72, 0.17);
+}
+.lobby-audio-panel {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr);
+  gap: 9px 12px;
+  align-items: center;
+  margin: 18px auto 0;
+  padding: 12px;
+  border: 1px solid #352d20;
+  border-radius: 12px;
+  background: rgba(7, 7, 6, 0.68);
+  max-width: 660px;
+  text-align: left;
+}
+.lobby-volume {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  color: #a99a79;
+  font-size: 10px;
+}
+.lobby-volume input {
+  width: 100%;
+  accent-color: #c69a42;
+}
+.lobby-volume output {
+  min-width: 34px;
+  text-align: right;
+  color: #d0b46f;
+}
+.lobby-track-select {
+  grid-column: 1/-1;
+  justify-content: center;
+}
+.lobby-music-toggle {
+  min-width: 145px;
+}
+
+/* Crônica da Corte: janela flutuante, arrastável e redimensionável. */
+.event-log-panel.floating-log {
+  position: fixed !important;
+  right: 18px;
+  bottom: 244px;
+  left: auto;
+  top: auto;
+  transform: none !important;
+  width: 360px;
+  height: 225px;
+  min-width: 260px;
+  min-height: 150px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 90px);
+  resize: both;
+  overflow: hidden;
+  z-index: 96 !important;
+  padding: 0 !important;
+  background: rgba(8, 8, 7, 0.97);
+  box-shadow:
+    0 18px 55px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(206, 165, 79, 0.06);
+}
+.event-log-panel.log-hidden {
+  display: none !important;
+}
+.event-log-panel .event-head {
+  height: 38px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #342d20;
+  cursor: move;
+  user-select: none;
+  background: linear-gradient(180deg, #17140e, #0d0c09);
+}
+.event-head-actions {
+  display: flex;
+  gap: 3px;
+}
+.event-head-actions button {
+  width: 28px;
+  height: 25px;
+  border: 1px solid #413720 !important;
+  border-radius: 5px !important;
+  background: #0a0907 !important;
+  color: #a99978 !important;
+}
+.event-head-actions button:hover {
+  color: #f0d38c !important;
+  border-color: #856a35 !important;
+}
+.event-log-panel .event-log {
+  height: calc(100% - 57px) !important;
+  overflow: auto !important;
+  padding: 7px 10px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.resize-hint {
+  height: 18px;
+  padding: 1px 7px;
+  text-align: right;
+  color: #625846;
+  font-size: 7px;
+  pointer-events: none;
+}
+.final-log {
+  margin-top: 16px;
+  border: 1px solid #443720;
+  border-radius: 9px;
+  background: #0c0b09;
+  text-align: left;
+}
+.final-log summary {
+  cursor: pointer;
+  padding: 9px 10px;
+  color: #d6b76f;
+  font-size: 11px;
+}
+.final-log-list {
+  max-height: 240px;
+  overflow: auto;
+  border-top: 1px solid #2e281c;
+  padding: 7px;
+}
+.final-log-row {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 8px;
+  padding: 5px 3px;
+  border-bottom: 1px solid #211e16;
+  font-size: 9px;
+}
+.final-log-row span {
+  color: #85775d;
+}
+.final-log-row p {
+  margin: 0;
+  color: #c7baa0;
+  line-height: 1.35;
+}
+
+/* Jogador ativo mais claro, especialmente para o dono do navegador. */
+.player-panel.active {
+  border-color: #e4bd67 !important;
+  box-shadow:
+    0 0 0 2px rgba(228, 189, 103, 0.18),
+    0 0 34px rgba(228, 189, 103, 0.28) !important;
+}
+.player-panel.local-player.active {
+  animation: yourTurnGlow 1.25s ease-in-out infinite;
+}
+@keyframes yourTurnGlow {
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(238, 201, 114, 0.3),
+      0 0 44px rgba(238, 201, 114, 0.4);
+  }
+}
+
+/* Desktop: ocupa os espaços laterais sem sobrepor painéis. */
+@media (min-width: 901px) {
+  .game-screen {
+    grid-template-rows: auto minmax(610px, 1fr) 228px;
+  }
+  .board-wrap {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(205px, 235px) minmax(620px, 1fr) minmax(205px, 235px);
+    grid-template-rows: 1fr 1fr auto;
+    grid-template-areas: 'p2 table p3' 'p1 table p0' 'laws laws laws';
+    gap: 12px;
+    padding: 13px 15px 10px;
+    overflow: visible;
+    min-height: 610px;
+  }
+  .table-aura {
+    left: 50%;
+    top: 47%;
+    width: 75%;
+    height: 75%;
+  }
+  #player0 {
+    grid-area: p0;
+  }
+  #player1 {
+    grid-area: p1;
+  }
+  #player2 {
+    grid-area: p2;
+  }
+  #player3 {
+    grid-area: p3;
+  }
+  .player-panel {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    height: max-content;
+    align-self: center;
+    min-height: 146px;
+    padding: 10px 11px;
+  }
+  .royal-table {
+    grid-area: table;
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 520px;
+    border-radius: 15%;
+    align-self: stretch;
+  }
+  .royal-table:before {
+    border-radius: 14%;
+  }
+  .slot-left {
+    left: 22px;
+  }
+  .slot-right {
+    right: 22px;
+  }
+  .slot-top {
+    top: 20px;
+  }
+  .slot-bottom {
+    bottom: 20px;
+  }
+  .law-tracker {
+    grid-area: laws;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    padding: 8px 12px;
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 15px;
+  }
+  .law-tracker h3 {
+    margin: 0 !important;
+    white-space: nowrap;
+  }
+  .law-tracker #lawTrackerList {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0 12px;
+  }
+  .law-track-row {
+    padding: 5px 0;
+  }
+  .top-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 58vw;
+  }
+  .top-track-select {
+    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 900px) {
+  .top-track-select {
+    order: 5;
+    width: 100%;
+    justify-content: center;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+  }
+  .track-btn {
+    flex: 0 0 auto;
+  }
+  .round-status {
+    grid-template-columns: 1fr 1fr;
+  }
+  .round-status #turnBadge {
+    grid-column: 1/-1;
+  }
+  .round-status #turnTimer {
+    grid-column: 1/-1;
+    justify-self: center;
+    width: 86px;
+  }
+  .event-log-panel.floating-log {
+    width: calc(100vw - 16px) !important;
+    height: 230px !important;
+    min-width: 0;
+    right: 8px !important;
+    bottom: 150px !important;
+    resize: none;
+  }
+  .lobby-audio-panel {
+    grid-template-columns: 1fr;
+  }
+  .lobby-volume,
+  .lobby-track-select {
+    grid-column: 1;
+  }
+  .lobby-music-toggle {
+    width: 100%;
+  }
+  .public-card-chip.desafio-open img {
+    width: 31px;
+    height: 43px;
+  }
+  .hand-card.desafio-open-hand:before {
+    font-size: 5px;
+    top: -5px;
+  }
+  .challenge-reveal-float {
+    width: 125px;
+  }
+  .challenge-reveal-float img {
+    width: 82px;
+    height: 114px;
+  }
+}
+
+/* Ícone legível do Log quando os textos dos botões do topo são ocultados no mobile. */
+@media (max-width: 900px) {
+  #logBtn {
+    font-size: 0;
+  }
+  #logBtn::before {
+    content: '☷';
+    font-size: 16px;
+    line-height: 1;
+  }
+}
+
+/* aviso de turno reforçado + HUD de playtest */
+.turn-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 145;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+.turn-notice-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(221, 178, 82, 0.17),
+    rgba(0, 0, 0, 0.12) 38%,
+    rgba(0, 0, 0, 0.58) 100%
+  );
+  opacity: 0;
+}
+.turn-notice-card {
+  position: relative;
+  min-width: min(520px, 88vw);
+  padding: 20px 34px 18px;
+  border: 2px solid #e0b65f;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(38, 29, 14, 0.98), rgba(9, 8, 6, 0.98));
+  box-shadow:
+    0 28px 100px #000,
+    0 0 0 6px rgba(224, 182, 95, 0.07),
+    0 0 70px rgba(224, 182, 95, 0.38);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(28px) scale(0.72);
+}
+.turn-notice-crown {
+  display: block;
+  margin-top: -52px;
+  color: #ffd978;
+  font-size: 68px;
+  line-height: 1;
+  filter: drop-shadow(0 0 24px rgba(255, 204, 99, 0.65));
+}
+.turn-notice-card small {
+  display: block;
+  margin-top: 5px;
+  color: #ad9562;
+  font-size: 10px;
+  letter-spacing: 3px;
+}
+.turn-notice-card strong {
+  display: block;
+  margin: 3px 0;
+  color: #fff0bd;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: 4px;
+  text-shadow: 0 0 24px rgba(255, 211, 120, 0.35);
+}
+.turn-notice-card > span:not(.turn-notice-crown) {
+  display: block;
+  color: #d8c7a1;
+  font-size: 14px;
+}
+.turn-notice-card b {
+  display: inline-block;
+  margin: 11px 0 4px;
+  padding: 5px 15px;
+  border: 1px solid #7e6534;
+  border-radius: 99px;
+  background: #100e09;
+  color: #ffe29a;
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1.5px;
+}
+.turn-notice-card em {
+  display: block;
+  color: #897c64;
+  font-size: 10px;
+  font-style: normal;
+}
+.turn-notice.play .turn-notice-vignette {
+  animation: turnNoticeVignette 2.35s ease both;
+}
+.turn-notice.play .turn-notice-card {
+  animation: turnNoticeCard 2.35s cubic-bezier(0.18, 0.8, 0.18, 1) both;
+}
+@keyframes turnNoticeVignette {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes turnNoticeCard {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.7);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+  18%,
+  76% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+  }
+}
+
+/* O aviso continua visível no HUD depois que o pop-up desaparece. */
+#turnBadge.your-turn-badge {
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.8px;
+  color: #241805 !important;
+  background: linear-gradient(180deg, #ffe29a, #c68f32) !important;
+  border-color: #ffe1a0 !important;
+  box-shadow: 0 0 22px rgba(226, 178, 80, 0.42) !important;
+  animation: turnBadgePulse 1.15s ease-in-out infinite;
+}
+@keyframes turnBadgePulse {
+  50% {
+    transform: scale(1.055);
+    box-shadow: 0 0 32px rgba(241, 194, 92, 0.62);
+  }
+}
+.game-screen.your-turn-active .royal-table {
+  box-shadow:
+    0 25px 75px #000,
+    inset 0 0 0 7px rgba(213, 166, 75, 0.05),
+    inset 0 0 80px #000,
+    0 0 42px rgba(224, 182, 95, 0.16);
+}
+.game-screen.your-turn-active .hand-zone {
+  box-shadow: 0 -8px 38px rgba(216, 170, 76, 0.12);
+}
+
+/* Painéis não invadem o painel vizinho quando muitas cartas ficam públicas. */
+.public-cards {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  max-height: 76px;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #5e4b29 #0b0a08;
+}
+.player-panel {
+  overflow: hidden;
+}
+@media (min-width: 901px) {
+  .board-wrap {
+    grid-template-columns: minmax(225px, 260px) minmax(640px, 1fr) minmax(225px, 260px) !important;
+    grid-template-rows: minmax(180px, 1fr) minmax(180px, 1fr) auto !important;
+    gap: 14px !important;
+    padding: 14px 18px 11px !important;
+  }
+  .player-panel {
+    min-height: 160px !important;
+    max-height: 270px;
+    align-self: stretch !important;
+  }
+  .royal-table {
+    min-height: 540px !important;
+  }
+}
+@media (max-width: 900px) {
+  .turn-notice-card {
+    min-width: min(360px, 88vw);
+    padding: 17px 20px 15px;
+  }
+  .turn-notice-crown {
+    font-size: 54px;
+    margin-top: -43px;
+  }
+  .turn-notice-card strong {
+    font-size: 34px;
+    letter-spacing: 3px;
+  }
+  .turn-notice-card > span:not(.turn-notice-crown) {
+    font-size: 11px;
+  }
+  .turn-notice-card b {
+    font-size: 18px;
+  }
+  #turnBadge.your-turn-badge {
+    font-size: 13px !important;
+  }
+  .public-cards {
+    max-height: 58px;
+  }
+}
+
+/* mesa compacta, Influência em moedas e crônica realmente flutuante */
+@media (min-width: 901px) {
+  :root {
+    --card-w: 118px;
+    --card-h: 165px;
+  }
+  .game-screen {
+    grid-template-rows: auto minmax(570px, 1fr) 228px;
+  }
+  .board-wrap {
+    grid-template-columns: minmax(240px, 285px) minmax(560px, 800px) minmax(240px, 285px) !important;
+    grid-template-rows: minmax(170px, 1fr) minmax(170px, 1fr) auto !important;
+    justify-content: center;
+    gap: 14px 18px !important;
+    padding: 14px 22px 11px !important;
+    min-height: 590px !important;
+  }
+  .royal-table {
+    width: min(100%, 800px) !important;
+    height: min(500px, calc(100% - 14px)) !important;
+    min-height: 470px !important;
+    max-height: 500px;
+    align-self: center !important;
+    justify-self: center;
+    border-radius: 18% !important;
+  }
+  .royal-table:before {
+    border-radius: 17% !important;
+  }
+  .table-aura {
+    width: min(68%, 860px) !important;
+    height: 68% !important;
+    top: 46% !important;
+  }
+  .slot-top {
+    top: 14px !important;
+  }
+  .slot-bottom {
+    bottom: 14px !important;
+  }
+  .slot-left {
+    left: 20px !important;
+  }
+  .slot-right {
+    right: 20px !important;
+  }
+  .player-panel {
+    min-height: 150px !important;
+    max-height: 260px !important;
+  }
+  .public-card-chip img {
+    width: 34px !important;
+    height: 48px !important;
+  }
+  .public-card-chip.corte-open img {
+    width: 48px !important;
+    height: 67px !important;
+  }
+  .public-card-chip.desafio-open img {
+    width: 50px !important;
+    height: 70px !important;
+  }
+}
+
+/* Influência passa a existir fisicamente na leitura da mesa como moedas azuis. */
+.table-influence-coins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+}
+.coin-bank {
+  position: absolute;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 30px;
+  padding: 3px 7px;
+  border-radius: 99px;
+  background: rgba(5, 16, 27, 0.64);
+  border: 1px solid rgba(72, 159, 219, 0.24);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  transition: 0.25s var(--ease);
+}
+.coin-bank.coin-seat-0 {
+  left: 50%;
+  bottom: 5px;
+  transform: translateX(-50%);
+}
+.coin-bank.coin-seat-1 {
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.coin-bank.coin-seat-2 {
+  left: 50%;
+  top: 5px;
+  transform: translateX(-50%);
+}
+.coin-bank.coin-seat-3 {
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.influence-coin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #dff7ff;
+  font: bold 14px/1 Georgia;
+  background: radial-gradient(
+    circle at 32% 28%,
+    #9ee8ff 0 12%,
+    #3aa1d8 24%,
+    #12669e 58%,
+    #073b63 78%,
+    #061d31 100%
+  );
+  border: 1px solid #8ce4ff;
+  box-shadow:
+    inset 0 0 0 2px rgba(4, 55, 92, 0.7),
+    0 0 10px rgba(56, 174, 230, 0.42),
+    0 4px 8px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 2px #06314e;
+  animation: coinSettle 0.44s var(--ease) both;
+}
+.influence-coin.empty {
+  opacity: 0.15;
+  filter: grayscale(0.55);
+  box-shadow: none;
+  background: #1a2630;
+  border-color: #41525f;
+  color: #607684;
+}
+.coin-bank.has-influence {
+  border-color: rgba(93, 198, 245, 0.48);
+  box-shadow:
+    0 0 18px rgba(31, 151, 213, 0.16),
+    0 7px 18px rgba(0, 0, 0, 0.38);
+}
+.coin-bank.ready {
+  border-color: #6ad7ff;
+  box-shadow:
+    0 0 25px rgba(67, 190, 242, 0.34),
+    0 7px 18px rgba(0, 0, 0, 0.42);
+}
+.coin-bank.gain-flash .influence-coin:not(.empty) {
+  animation: coinGain 0.9s cubic-bezier(0.18, 0.8, 0.18, 1);
+}
+@keyframes coinSettle {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) rotate(-80deg) scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes coinGain {
+  0% {
+    transform: translateY(-24px) scale(0.4);
+    filter: brightness(2);
+  }
+  35% {
+    transform: translateY(0) scale(1.35);
+    filter: brightness(1.8);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Crônica: nenhuma geometria !important, para o usuário poder mover e redimensionar de verdade. */
+.event-log-panel.floating-log {
+  position: fixed !important;
+  right: 18px;
+  bottom: 244px;
+  left: auto;
+  top: auto;
+  width: 390px;
+  height: 250px;
+  min-width: 280px;
+  min-height: 170px;
+  max-width: calc(100vw - 12px);
+  max-height: calc(100vh - 74px);
+  resize: both;
+  overflow: hidden;
+  z-index: 96 !important;
+}
+.event-log-panel.floating-log.dragging {
+  user-select: none;
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(221, 178, 82, 0.2);
+}
+.log-resize-grip {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 22px;
+  height: 22px;
+  cursor: nwse-resize;
+  z-index: 4;
+  background: linear-gradient(
+    135deg,
+    transparent 0 42%,
+    #6b5830 43% 49%,
+    transparent 50% 61%,
+    #a28242 62% 68%,
+    transparent 69%
+  );
+  opacity: 0.85;
+}
+#logResetBtn {
+  font-size: 12px;
+}
+
+/* Mesa menor: centro informativo mais compacto e cartas jogadas mais presentes. */
+.center-info {
+  max-width: 42%;
+}
+.table-card-slot {
+  box-shadow: 0 0 0 1px rgba(214, 174, 88, 0.05);
+}
+.table-card-slot .card-face,
+.table-card-slot .card-back {
+  filter: drop-shadow(0 8px 13px rgba(0, 0, 0, 0.5));
+}
+
+@media (max-width: 900px) {
+  .table-influence-coins {
+    z-index: 9;
+  }
+  .coin-bank {
+    min-width: 42px;
+    min-height: 24px;
+    padding: 2px 4px;
+    gap: 3px;
+  }
+  .influence-coin {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+  .coin-bank.coin-seat-0 {
+    bottom: 3px;
+  }
+  .coin-bank.coin-seat-2 {
+    top: 3px;
+  }
+  .coin-bank.coin-seat-1 {
+    left: 3px;
+  }
+  .coin-bank.coin-seat-3 {
+    right: 3px;
+  }
+  .event-log-panel.floating-log {
+    width: calc(100vw - 16px);
+    height: 230px;
+    min-width: 0;
+    right: 8px;
+    bottom: 150px;
+    resize: none;
+  }
+  .log-resize-grip {
+    display: none;
+  }
+}

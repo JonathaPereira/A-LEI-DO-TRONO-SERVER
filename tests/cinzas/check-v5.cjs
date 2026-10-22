@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
-const {Engine,CARDS,Rig,SPECIALS,MONSTERS,hordeTuning,CHAPTERS}=require('../../frontend/roguelite/core.js');
-const Ledger=require('../../frontend/roguelite/persistence.js');
+const {Engine,CARDS,Rig,SPECIALS,MONSTERS,hordeTuning,CHAPTERS}=require('../../public/roguelite/core.js');
+const Ledger=require('../../public/roguelite/persistence.js');
 let passed=0;const test=(name,fn)=>{fn();passed++;console.log('PASS '+name);};
 const make=()=>{const e=new Engine();e.start({mode:'horde',seed:'v5-check',name:'Lia'});return e;};
 const tick=(e,n)=>{for(let i=0;i<n;i++)e.update(1/60,{});};

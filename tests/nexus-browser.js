@@ -3,10 +3,11 @@ const {test} = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs/promises'), path = require('node:path');
 const express = require('express'), {chromium, expect} = require('@playwright/test');
 const {startFixture} = require('./auth-fixture');
-const config = require('../frontend/nexus-config.js');
+const {installCanvasCamera} = require('./camera-fixture');
+const config = require('../src/lib/games/nexus-config.ts');
 
 test('Nexus loads only on demand, preserves live media and works in both layouts and launch modes', {timeout: 150000}, async t => {
-  const server = await new Promise(resolve => { const s = express().use(express.static(path.resolve('frontend'))).listen(0, '127.0.0.1', () => resolve(s)); });
+  const server = await new Promise(resolve => { const s = express().use(express.static(path.resolve('out'))).listen(0, '127.0.0.1', () => resolve(s)); });
   const origin = 'http://127.0.0.1:' + server.address().port;
   const fixture = await startFixture({port: 10857, appOrigin: origin});
   let browser;
@@ -23,10 +24,6 @@ test('Nexus loads only on demand, preserves live media and works in both layouts
       await context.route('**/*', async route => {
         const url = new URL(route.request().url());
         if (url.hostname === '127.0.0.1') {
-          if (mode === 'website' && url.pathname === '/nexus-config.js') {
-            const source = await fs.readFile('frontend/nexus-config.js', 'utf8');
-            return route.fulfill({contentType: 'text/javascript', body: source.replace(/const embedUrl = [^;]+;/, "const embedUrl = '';")});
-          }
           return route.continue();
         }
         if (['itch.io', 'semchakra10.itch.io'].includes(url.hostname)) {
@@ -35,18 +32,19 @@ test('Nexus loads only on demand, preserves live media and works in both layouts
         }
         return route.abort();
       });
+      await context.addInitScript(installCanvasCamera, {display: true});
       await context.addInitScript(({base, data, mode}) => {
         if (window !== window.top) return;
         window.TRONO_BACKEND_URL = base;
         sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
         localStorage.setItem('tronoMusicEnabled', '0'); localStorage.setItem('tronoSfxEnabled', '0'); localStorage.setItem('mnDesktopNoiseMode', 'native');
-        navigator.mediaDevices.getDisplayMedia = async () => { const canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720; return canvas.captureStream(15); };
+        if (mode === 'website') window.TronoNexusConfig = {embedUrl: ''};
         if (mode === 'desktop') window.TronoDesktop = {version: '0.2.15', clipsSuspended: true, openNexus: async () => { window.__nexusOpened = (window.__nexusOpened || 0) + 1; return {opened: true}; }, readSession: async () => null, saveSession: async () => {}, getMediaPermissions: async () => ['audio', 'video'], onCapture: () => {}, onCaptureCancel: () => {}, getWindowState: async () => ({fullscreen: false}), onWindowState: () => {}, onUpdateState: () => {}, getUpdateState: async () => ({status: 'idle'}), onApplicationAudio: () => {}, configureClips: async () => ({suspended: true})};
       }, {base: fixture.base, data, mode});
       const page = await context.newPage(), errors = [];
       page.on('pageerror', error => errors.push(error.message)); page.setDefaultTimeout(12000);
       try {
-        await page.goto(origin); await page.evaluate(() => window.TronoAuth.ready);
+        await page.goto(origin); await page.waitForFunction(() => window.TronoAuth?.ready); await page.evaluate(() => window.TronoAuth.ready);
         await page.evaluate(() => window.TronoChatHub.enter({channelId: 'chat-jogos'}));
         if (!await page.evaluate(() => window.TronoSocial.voiceJoined)) await page.locator('#joinVoiceBtn').click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);

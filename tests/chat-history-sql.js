@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {PGlite}=require('@electric-sql/pglite');
-const {createChatHistory}=require('../chat-history');
+const {createChatHistory}=require('../server/chat-history.ts');
 test('persistent chat SQL: ordering, pagination, replay, attachment deletion, channel isolation and private permissions',async()=>{
   const db=new PGlite(),account='10000000-0000-4000-8000-000000000001',attachment='20000000-0000-4000-8000-000000000001';
   try{
@@ -10,11 +10,20 @@ test('persistent chat SQL: ordering, pagination, replay, attachment deletion, ch
     await db.query('insert into auth.users values($1,$2,now(),$3)',[account,'membro@example.test',JSON.stringify({nickname:'Membro'})]);
     async function fetchImpl(url,options){const args=JSON.parse(options.body),name=new URL(url).pathname.split('/').at(-1);await db.exec('set role service_role');try{if(name==='chat_history_append'){await db.query('select public.chat_history_append($1,$2,$3,$4)',[args.p_id,args.p_room,args.p_sender,args.p_message]);return new Response(null,{status:204});}const {rows}=await db.query('select * from public.chat_history_read($1,$2,$3)',[args.p_room,args.p_before,args.p_limit]);return Response.json(rows);}catch{return Response.json({},{status:400});}finally{await db.exec('reset role');}}
     const settings={auth:{configured:true,required:true},env:{SUPABASE_URL:'https://example.test',SUPABASE_SECRET_KEY:'sb_secret_test'},fetchImpl},store=createChatHistory(settings),room={id:'chat-livre',kind:'chat',channelType:'mixed',chatHistory:[]};
-    const messages=[];for(let i=0;i<55;i++){const message={id:crypto.randomUUID(),roomId:room.id,text:'Mensagem '+i,accountId:account,attachment:null};messages.push(message);await store.append(room,message,account);}
+    // Millisecond timestamps can tie in PGlite. Ordered fixture IDs keep the expected
+    // sequence deterministic while the independent tie case below tests UUID ordering.
+    const fixtureId=i=>'30000000-0000-4000-8000-'+i.toString(16).padStart(12,'0');
+    const messages=[];for(let i=0;i<55;i++){const message={id:fixtureId(i),roomId:room.id,text:'Mensagem '+i,accountId:account,attachment:null};messages.push(message);await store.append(room,message,account);}
     const latest=await store.read(room);assert.equal(latest.messages.length,50);assert.equal(latest.messages[0].text,'Mensagem 5');assert.equal(latest.messages.at(-1).text,'Mensagem 54');assert(latest.hasMore);
     const older=await store.read(room,latest.before);assert.equal(older.messages.length,5);assert.equal(older.messages[0].text,'Mensagem 0');assert(!older.hasMore);
     const foreign={...room,id:'chat-jogos'};assert.equal((await store.read(foreign)).messages.length,0);assert.equal((await store.read(foreign,latest.before)).messages.length,0);
     await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/upgrade-chat-history.sql'),'utf8'));const replacement=createChatHistory(settings);assert.deepEqual((await replacement.read(room)).messages,latest.messages,'fresh backend store and repeat migration must preserve history');
+    // Insert out of UUID order, then force a timestamp tie to verify the SQL cursor.
+    const ties=[82,80,81].map(i=>({id:fixtureId(i),roomId:foreign.id,text:'Empate '+i}));
+    for(const message of ties)await store.append(foreign,message,account);
+    await db.query("update public.chat_messages set created_at='2026-01-01T00:00:00Z' where room_id=$1",[foreign.id]);
+    const tied=await store.read(foreign);assert.deepEqual(tied.messages.map(m=>m.id),[80,81,82].map(fixtureId));
+    assert.deepEqual((await store.read(foreign,fixtureId(82))).messages.map(m=>m.id),[80,81].map(fixtureId));
     for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from public.chat_messages'),/permission denied/);await assert.rejects(db.query('select * from public.chat_history_read($1)',[room.id]),/permission denied/);await assert.rejects(db.query('select public.chat_history_append($1,$2,$3,$4)',[crypto.randomUUID(),room.id,account,messages[0]]),/permission denied/);await db.exec('reset role');}
     await assert.rejects(db.query('insert into public.chat_messages(id,room_id,message) values($1,$2,$3)',[crypto.randomUUID(),room.id,{}]),/chat_message_shape/);
     await db.query('select public.reserve_chat_file($1,$2,$3,$4,$5,$6,$7,$8)',[attachment,account,'chat/test','Foto',68,'image/png','chat',room.id]);await db.query("update public.chat_files set state='ready' where id=$1",[attachment]);

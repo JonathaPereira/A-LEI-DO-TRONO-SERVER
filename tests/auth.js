@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('assert/strict'),{WebSocket}=require('ws'),{startFixture}=require('./auth-fixture');
-const {passwordChecks,validPassword,createAuth}=require('../auth');
+const {passwordChecks,validPassword,createAuth}=require('../server/auth.ts');
 function connect(base){return new Promise((resolve,reject)=>{const ws=new WebSocket(base.replace('http','ws')+'/ws'),queue=[],pending=[];ws.on('error',reject);ws.on('message',raw=>{const m=JSON.parse(raw);const i=pending.findIndex(w=>w.pred(m));if(i<0)queue.push(m);else{const w=pending.splice(i,1)[0];clearTimeout(w.timer);w.resolve(m);}});ws.on('open',()=>resolve({ws,wait(pred){const i=queue.findIndex(pred);if(i>=0)return Promise.resolve(queue.splice(i,1)[0]);return new Promise((resolve,reject)=>{const w={pred,resolve,timer:setTimeout(()=>reject(new Error('WebSocket timeout')),3000)};pending.push(w);});}}));});}
 (async()=>{
  const fixture=await startFixture();let sock;

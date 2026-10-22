@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../frontend/azul-rules'),P=require('../frontend/azul-presentation');
+const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/lib/games/azul-rules.ts'),P=require('../src/lib/games/azul-presentation.ts');
 function random(seed){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 test('scoring presentation reproduces authoritative walls, floor penalties and final bonuses in complete 2–4-player games',()=>{
   let rounds=0,penalties=0,bonuses=0;

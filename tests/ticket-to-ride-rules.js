@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),D=require('../frontend/ticket-to-ride-data'),R=require('../frontend/ticket-to-ride-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),D=require('../src/lib/games/ticket-to-ride-data.ts'),R=require('../src/lib/games/ticket-to-ride-rules.ts');
 const rng=seed=>()=>((seed=Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
 function create(n=2,seed=42){return R.create(Array.from({length:n},(_,i)=>({id:'p'+i,name:'Pessoa '+i})),{random:rng(seed)});}
 function start(n=2,seed=42){let s=create(n,seed);for(const p of s.players)s=R.move(s,p.id,{kind:'tickets',keep:p.pending.slice(0,2)});return s;}

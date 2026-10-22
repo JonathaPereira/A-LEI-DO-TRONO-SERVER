@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events'),{PassThrough}=require('node:stream'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
-const {DesktopActivity,idFor}=require('../desktop/app/activity.cjs');
+const {DesktopActivity,idFor}=require('../electron/activity.cjs');
 function helper(){const child=new EventEmitter();child.stdin=new PassThrough();child.stdout=new PassThrough();child.stderr=new PassThrough();child.kill=()=>child.emit('close');child.stdin.once('finish',()=>{child.closed=true;queueMicrotask(()=>child.emit('close'));});return child;}
 function next(activity,rows){return new Promise(resolve=>{const publish=activity.publish;activity.publish=state=>{activity.publish=publish;publish(state);resolve(state);};activity.child.stdout.write(JSON.stringify({type:'apps',apps:rows})+'\n');});}
 const cs={pid:8123,exe:'cs2.exe',path:'C:\\Games\\CS2\\cs2.exe',product:'Counter-Strike',foreground:false},browser={pid:9234,exe:'chrome.exe',path:'C:\\Browser\\chrome.exe',product:'Chrome',foreground:true};

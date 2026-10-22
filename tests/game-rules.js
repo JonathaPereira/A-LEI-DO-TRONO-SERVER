@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../frontend/game-rules');
+const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../src/lib/games/throne-rules.ts').throneRules;
 const play=(suit,value,playerId,modifier=0)=>({playerId,card:{suit,value},modifier});
 const outcome=(cards,law='ordem',trump)=>{const result=R.evaluate(cards,law,cards[0].card.suit,trump);return [result.crown.playerId,result.shadow.playerId];};
 test('Ordem distinguishes the opening suit from Anarquia and falls back only without a second eligible card',()=>{

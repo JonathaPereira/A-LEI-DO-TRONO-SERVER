@@ -1,29 +1,62 @@
 'use strict';
 // Both the handbook and the in-app reference use the engine's rule catalogue.
-const fs=require('node:fs'),path=require('node:path'),R=require('../frontend/game-rules');
-const dir=path.resolve(__dirname,'../frontend/manual');
-const e=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pdf='A_Lei_do_Trono_Manual_v0.9.0.pdf';
-const examples={
- ordem:'Cetro 10 abre; Chave 4, Máscara 3 e Lâmina 8 seguem. Coroa: Cetro 10. Sem outro Cetro, Sombra: Máscara 3. Se Chave 4 fosse Cetro 4, esse Cetro seria a Sombra, mesmo existindo Máscara 3.',
- estandarte:'Trunfo declarado: Cetro. Máscara 12 abre; Cetro 8, Cetro 3 e Chave 1 seguem. Coroa: Cetro 8. Sombra: Cetro 3. A Máscara que abriu não recebe a Sombra. Com somente Cetro 8 na mesa, a Sombra seria Chave 1.',
- revolta:'Cetro 10 abre; Cetro 4, Máscara 12 e Chave 1 seguem. Coroa: Cetro 4. Sombra: Máscara 12. A Chave 1 não vence porque não pertence ao naipe inicial.',
- anarquia:'Cetro 10 abre; Cetro 4, Máscara 12 e Chave 1 seguem. Coroa: Máscara 12. Sombra: Chave 1. Todos os naipes são livres.',
- usurpacao:'A Sombra separa Lâmina 2 e escolhe a Casa à sua frente. Escolhe uma posição entre as cartas fechadas dessa Casa e recebe Chave 9. Só então Lâmina 2 entra na mão da Casa escolhida. Não existe chance de pegar Lâmina 2 de volta.'
+const fs = require('node:fs'),
+  path = require('node:path'),
+  R = require('../src/lib/games/throne-rules.ts').throneRules;
+const dir = path.resolve(__dirname, '../public/manual');
+const e = (text) =>
+  String(text).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+const pdf = 'A_Lei_do_Trono_Manual_v0.9.0.pdf';
+const examples = {
+  ordem:
+    'Cetro 10 abre; Chave 4, Máscara 3 e Lâmina 8 seguem. Coroa: Cetro 10. Sem outro Cetro, Sombra: Máscara 3. Se Chave 4 fosse Cetro 4, esse Cetro seria a Sombra, mesmo existindo Máscara 3.',
+  estandarte:
+    'Trunfo declarado: Cetro. Máscara 12 abre; Cetro 8, Cetro 3 e Chave 1 seguem. Coroa: Cetro 8. Sombra: Cetro 3. A Máscara que abriu não recebe a Sombra. Com somente Cetro 8 na mesa, a Sombra seria Chave 1.',
+  revolta:
+    'Cetro 10 abre; Cetro 4, Máscara 12 e Chave 1 seguem. Coroa: Cetro 4. Sombra: Máscara 12. A Chave 1 não vence porque não pertence ao naipe inicial.',
+  anarquia:
+    'Cetro 10 abre; Cetro 4, Máscara 12 e Chave 1 seguem. Coroa: Máscara 12. Sombra: Chave 1. Todos os naipes são livres.',
+  usurpacao:
+    'A Sombra separa Lâmina 2 e escolhe a Casa à sua frente. Escolhe uma posição entre as cartas fechadas dessa Casa e recebe Chave 9. Só então Lâmina 2 entra na mão da Casa escolhida. Não existe chance de pegar Lâmina 2 de volta.',
 };
-const laws=R.lawOrder.map(id=>`<article class="law" id="lei-${id}"><img src="../${R.laws[id].img}" alt="Ilustração da Lei ${e(R.laws[id].name)}"><div><span class="eyebrow">LEI DA VAZA</span><h3>${e(R.laws[id].name)}</h3><p>${e(R.laws[id].description)}</p><div class="example"><b>Na mesa</b><p>${e(examples[id])}</p></div></div></article>`).join('\n');
-const decrees=R.decrees.map(d=>`<article class="decree" id="decreto-${d.id}"><span class="sigil" aria-hidden="true">${d.icon}</span><div><h3>${e(d.name)}</h3><p>${e(d.text)}</p></div></article>`).join('\n');
-const html=`<!doctype html>
+const laws = R.lawOrder
+  .map(
+    (id) =>
+      `<article class="law" id="lei-${id}"><img src="../${R.laws[id].img}" alt="Ilustração da Lei ${e(R.laws[id].name)}"><div><span class="eyebrow">LEI DA VAZA</span><h3>${e(R.laws[id].name)}</h3><p>${e(R.laws[id].description)}</p><div class="example"><b>Na mesa</b><p>${e(examples[id])}</p></div></div></article>`,
+  )
+  .join('\n');
+const decrees = R.decrees
+  .map(
+    (d) =>
+      `<article class="decree" id="decreto-${d.id}"><span class="sigil" aria-hidden="true">${d.icon}</span><div><h3>${e(d.name)}</h3><p>${e(d.text)}</p></div></article>`,
+  )
+  .join('\n');
+const html = `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' file:; style-src 'self' file:; font-src 'self' file:; base-uri 'none'; form-action 'none'"><title>A Lei do Trono · Manual da Corte ${R.version}</title><link rel="stylesheet" href="manual.css"></head><body>
 <a class="skip" href="#inicio">Ir para o manual</a><nav class="reading-bar" aria-label="Manual"><a href="#inicio">♛ A Lei do Trono</a><div><a href="#leis">Leis</a><a href="#decretos">Decretos</a><a class="download" href="${pdf}" download>Baixar PDF</a></div></nav>
 <main id="inicio">
 <header class="cover"><div><span class="eyebrow">O LIVRO DA CORTE · REGRAS ${R.version}</span><h1>A Lei<br>do Trono</h1><p class="tagline">Nem toda vitória nasce da maior carta.</p><p>Quatro Casas disputam Prestígio. A Coroa conduz a mesa. A Sombra muda a Lei. Entre poder e astúcia, o equilíbrio decide quem ocupa o Trono.</p><div class="facts"><span><b>4</b> jogadores</span><span><b>3</b> rodadas</span><span><b>10</b> vazas por rodada</span></div></div><img src="throne.svg" alt="O Trono da corte"></header>
-<section class="chapter" id="corte"><span class="eyebrow">I · PREPARE SUA CASA</span><h2>A mesa e o objetivo</h2><p>O baralho tem <b>48 cartas</b>: Cetro, Chave, Lâmina e Máscara, cada naipe com valores de 1 a 12. São quatro jogadores; o modo digital pode completar vagas com Casas controladas pelo jogo.</p><div class="suits">${[['cetro','Cetro'],['chave','Chave'],['lamina','Lâmina'],['mascara','Máscara']].map(([id,name])=>`<figure><img src="../assets/cards/${id}_10.webp" alt="Carta ${name} 10"><figcaption>${name}</figcaption></figure>`).join('')}</div><p>A cada rodada, embaralhe o baralho inteiro e distribua <b>10 cartas por jogador</b>. As 8 restantes não entram na rodada. São 10 vazas; em cada uma, todos jogam uma carta. O objetivo é acumular Coroas e Sombras, formando pares para ganhar Prestígio.</p><aside><b>Coroa e Sombra sempre são pessoas diferentes.</b><p>Os títulos pertencem a quem jogou as cartas elegíveis daquela vaza. Não são cargos permanentes nem modificam o papel de criador ou Admin do M&amp;N.</p></aside></section>
+<section class="chapter" id="corte"><span class="eyebrow">I · PREPARE SUA CASA</span><h2>A mesa e o objetivo</h2><p>O baralho tem <b>48 cartas</b>: Cetro, Chave, Lâmina e Máscara, cada naipe com valores de 1 a 12. São quatro jogadores; o modo digital pode completar vagas com Casas controladas pelo jogo.</p><div class="suits">${[
+  ['cetro', 'Cetro'],
+  ['chave', 'Chave'],
+  ['lamina', 'Lâmina'],
+  ['mascara', 'Máscara'],
+]
+  .map(
+    ([id, name]) =>
+      `<figure><img src="../assets/cards/${id}_10.webp" alt="Carta ${name} 10"><figcaption>${name}</figcaption></figure>`,
+  )
+  .join(
+    '',
+  )}</div><p>A cada rodada, embaralhe o baralho inteiro e distribua <b>10 cartas por jogador</b>. As 8 restantes não entram na rodada. São 10 vazas; em cada uma, todos jogam uma carta. O objetivo é acumular Coroas e Sombras, formando pares para ganhar Prestígio.</p><aside><b>Coroa e Sombra sempre são pessoas diferentes.</b><p>Os títulos pertencem a quem jogou as cartas elegíveis daquela vaza. Não são cargos permanentes nem modificam o papel de criador ou Admin do M&amp;N.</p></aside></section>
 <section class="chapter" id="fluxo"><span class="eyebrow">II · O RITMO DO PODER</span><h2>Como a partida avança</h2><ol><li><b>Decrete a rodada.</b> Quem possui o menor total acumulado de Coroas + Sombras escolhe entre dois Decretos sorteados. Empate entre Casas: sorteie o responsável. O Decreto fica fixo até o fim da rodada.</li><li><b>Abra com Ordem.</b> Toda rodada começa com a Lei Ordem. Na primeira rodada, o líder é sorteado; nas seguintes, começa quem está à esquerda da Coroa da 10ª vaza anterior.</li><li><b>Jogue uma vaza.</b> O líder abre. Em sentido de jogo, cada Casa joga uma carta permitida. No app, a ordem e as cartas válidas são indicadas automaticamente.</li><li><b>Resolva os títulos.</b> Revele cartas ocultas e aplique seus modificadores. A Lei define uma Coroa e uma Sombra. Em qualquer empate de valor efetivo, vence quem jogou primeiro.</li><li><b>Prepare a próxima vaza.</b> A Coroa abre a próxima vaza. A Sombra escolhe a próxima Lei. Aplique efeitos de fim de vaza, como Desafio e Rotação, antes de continuar.</li></ol><aside><b>As cinco Leis aparecem duas vezes por rodada.</b><p>Cada Lei tem dois usos e não pode aparecer em duas vazas consecutivas. Usurpação exige pelo menos quatro cartas na mão de todas as Casas. O app oferece somente escolhas que permitem completar as dez vazas, respeitando também a Reserva.</p></aside><p>Nas trocas, <b>esquerda</b> é a próxima Casa na ordem de jogo; <b>direita</b> é a Casa anterior. Conselho e Rotação são simultâneos: escolha usando sua mão atual, antes de receber a carta de outra Casa.</p></section>
 <section class="chapter" id="leis"><span class="eyebrow">III · CINCO LEIS, CINCO CAMINHOS</span><h2>Quem leva a Coroa? Quem leva a Sombra?</h2><p>“Maior” e “menor” sempre consideram o <b>valor efetivo</b> da carta, depois da Influência. O naipe inicial é o naipe da carta que abre a vaza, mesmo quando ela é oculta.</p>${laws}<aside><b>O trunfo não altera o naipe inicial.</b><p>Em Estandarte, você pode jogar trunfo mesmo tendo o naipe inicial. Fora essa exceção, deve seguir o naipe se puder. Sem o naipe inicial na mão, pode escolher qualquer carta. A Coroa e a Sombra dependem dos trunfos efetivamente jogados, e não de quem declarou o trunfo.</p></aside></section>
 <section class="chapter" id="influencia"><span class="eyebrow">IV · PODER EM SEGREDO</span><h2>Influência da Corte</h2><p>Ao terminar uma vaza sem receber Coroa nem Sombra, ganhe <b>1 Influência</b>, até o máximo de <b>2</b>. O saldo é zerado no começo da rodada; Favor Real concede 1 logo no início.</p><div class="powers"><article><span class="sigil">✦</span><h3>Sigilo · custa 1</h3><p>Jogue uma carta virada para baixo, sem mudar seu valor.</p></article><article><span class="sigil">✦ ✦</span><h3>Manobra da Corte · custa 2</h3><p>Jogue oculta e escolha <b>+3</b> ou <b>−3</b> no valor efetivo, limitado entre 1 e 12. Ex.: 10 + 3 = 12; 2 − 3 = 1.</p></article></div><p>O gasto e a escolha do modificador são <b>anunciados a todos imediatamente</b>. Apenas a identidade da carta fica oculta até a resolução. A carta ainda precisa ser uma jogada válida sob a Lei; Influência não permite ignorar o naipe obrigatório. Ao abrir a vaza oculta, anuncie o naipe real da carta.</p><aside><b>Limites do poder</b><p>Corte Aberta impede usar Influência na carta que protege. Silêncio bloqueia o gasto de todos nas primeiras três vazas. Peso da Coroa bloqueia somente a Coroa anterior, durante a vaza seguinte; na primeira vaza, ninguém é bloqueado por Peso da Coroa. O saldo continua podendo ser acumulado normalmente.</p></aside></section>
 <section class="chapter" id="decretos"><span class="eyebrow">V · A VONTADE DA RODADA</span><h2>Os dez Decretos</h2><p>Um Decreto modifica a rodada inteira. Sua escolha acontece antes da primeira vaza e permanece fixa durante as dez vazas.</p><div class="decrees">${decrees}</div><aside><b>Espionagem é uma pista, não uma carta pública.</b><p>Somente o destinatário vê a carta observada do jogador à direita. Ela permanece com o dono e pode depois ser jogada ou trocada. No app, clique no Decreto Espionagem para consultar sua pista novamente. A informação nunca é enviada aos outros participantes da mesa ou da chamada.</p></aside><aside><b>Cartas protegidas</b><p>Corte Aberta protege a carta contra Usurpação e Influência enquanto ela estiver na mão. Desafio apenas revela a carta: ela pode ser trocada e usar Influência. Em Desafio, a primeira Coroa de cada Casa exige uma revelação; novas Coroas consecutivas exigem outra, se ainda houver carta fechada para revelar.</p></aside></section>
 <section class="chapter" id="prestigio"><span class="eyebrow">VI · QUEM OCUPA O TRONO</span><h2>Prestígio e vitória</h2><p>Cada Coroa vale <b>1 Prestígio</b>; cada Sombra vale <b>1 Prestígio</b>. Cada par acumulado de uma Coroa e uma Sombra concede mais <b>2 Prestígios</b>. Os títulos se acumulam ao longo das três rodadas; os pares não são zerados entre rodadas.</p><div class="formula">Prestígio = Coroas + Sombras + 2 × pares</div><div class="example"><b>Exemplo</b><p>5 Coroas e 3 Sombras formam 3 pares. Prestígio = 5 + 3 + 2 × 3 = <b>14</b>. Uma Casa com 4 Coroas e 4 Sombras soma <b>16</b>. Equilibrar poder e astúcia pode valer mais do que vencer todas as vazas.</p></div><p>Após a terceira rodada, vence quem possui mais Prestígio. Desempates, nesta ordem: <b>mais pares</b>, <b>mais Coroas</b>, <b>mais Sombras</b>. Se todos esses critérios continuarem iguais, o Trono é compartilhado.</p><h3>Jogo e M&amp;N, lado a lado</h3><p>Você pode manter a chamada de voz do M&amp;N ao entrar na mesa e navegar entre jogo e comunidade. A chamada e as mensagens selecionadas continuam independentes da partida. Se a voz começou na própria mesa, abrir a comunidade mantém essa chamada e abre o texto separadamente; para mudar de chamada, selecione uma sala de voz. Sair da mesa preserva a chamada da comunidade; desconectar da conta encerra todas as participações. Se alguém abandonar uma partida em andamento, a Casa continua com uma IA.</p><h3>Consulta rápida</h3><table><thead><tr><th>Momento</th><th>O que fazer</th></tr></thead><tbody><tr><td>Antes da rodada</td><td>Distribuir cartas → escolher Decreto → aplicar efeitos iniciais.</td></tr><tr><td>Antes da vaza</td><td>Confirmar Lei → declarar trunfo ou resolver Usurpação, se necessário.</td></tr><tr><td>Durante a vaza</td><td>Jogar carta válida; escolher Influência antes da jogada.</td></tr><tr><td>Fim da vaza</td><td>Revelar → Coroa e Sombra → Influência → efeitos do Decreto → próxima Lei.</td></tr><tr><td>Fim da rodada</td><td>Acumular títulos e pares → recolher todas as cartas → nova distribuição.</td></tr></tbody></table></section>
 <footer><span>♛ A Lei do Trono</span><p>Manual da Corte · regras ${R.version} · M&amp;N</p><a href="${pdf}" download>Guardar o manual em PDF</a></footer></main></body></html>`;
-fs.writeFileSync(path.join(dir,'index.html'),html);
-console.log('Manual temático HTML atualizado com '+R.decrees.length+' Decretos.');
+fs.writeFileSync(path.join(dir, 'index.html'), html);
+console.log('Manual temático HTML atualizado com ' + R.decrees.length + ' Decretos.');

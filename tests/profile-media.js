@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),{cleanProfile}=require('../profile-customization'),gifs=require('../frontend/profile-gifs');
+const {test}=require('node:test'),assert=require('node:assert/strict'),{cleanProfile}=require('../server/profile-customization.ts'),gifs=require('../src/lib/profiles/giphy.ts');
 test('profile links accept bare domains and optional labels; emoji keeps one complete grapheme',()=>{
  const d=cleanProfile({links:[{url:'youtube.com/@exemplo'},{label:'Ao vivo',url:'http://twitch.tv/exemplo'},{label:'',url:''}],emoji:'👨‍👩‍👧‍👦',cover_position:15,cover_zoom:135});
  assert.deepEqual(d.links,[{label:'YouTube',url:'https://youtube.com/@exemplo'},{label:'Ao vivo',url:'https://twitch.tv/exemplo'}]);assert.equal(d.emoji,'👨‍👩‍👧‍👦');
@@ -34,4 +34,11 @@ test('downloads validate GIF signatures, declared and streamed size, and final r
  await assert.rejects(gifs.download(item,{fetcher:async()=>({ok:true,url:'https://evil.test/a.gif'})}),/baixar/);
  await assert.rejects(gifs.download(item,{fetcher:async()=>new Response('<html>fake</html>')}),/GIF válido/);
  const file=await gifs.download(item,{fetcher:async()=>new Response('GIF89aVALID')});assert.equal(file.type,'image/gif');assert.equal(file.name,'perfil.gif');assert.equal(await file.text(),'GIF89aVALID');
+});
+
+test('malformed catalogue entries are ignored and aborted downloads cancel their reader',async()=>{
+ for(const value of [null,[],{data:[null,false,[],{id:'abc123',type:'gif',url:gif.url,images:{original:null}}]}])assert.deepEqual(gifs.parse(value).items,[]);
+ const controller=new AbortController();let cancelled=false;
+ const pending=gifs.download(gifs.fromURL(gif.url),{signal:controller.signal,fetcher:async()=>new Response(new ReadableStream({pull(){controller.abort();},cancel(){cancelled=true;}}))});
+ await assert.rejects(pending,error=>error.name==='AbortError');assert(cancelled);
 });

@@ -1,134 +1,1359 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
-const express=require('express'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
-test('desktop compact settings, remembered login and suspended replay preserve calls',{timeout:150000},async t=>{
-  const host=express();host.use(express.static(path.resolve(__dirname,'../frontend')));const server=await new Promise(r=>{const s=host.listen(0,'127.0.0.1',()=>r(s));}),origin='http://127.0.0.1:'+server.address().port;
-  const fixture=await startFixture({port:10687,appOrigin:origin});let browser,remembered=null;const errors=[],artifacts=path.resolve(__dirname,'../artifacts');fs.mkdirSync(artifacts,{recursive:true});
-  try{
-    await fixture.call('signup',{email:'desktop@example.test',nickname:'Desktop Test',password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links][0][0],type:'signup'});const data=(await fixture.call('login',{email:'desktop@example.test',password:'Senha12!'})).data;
-    browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','--mute-audio']});
-    const context=await browser.newContext({viewport:{width:1440,height:1000},permissions:['camera','microphone']});
-    await context.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());
-    await context.exposeBinding('__readRemembered',()=>remembered);await context.exposeBinding('__saveRemembered',(_,value)=>{remembered=value;return {saved:!!value};});
-    await context.addInitScript(({backend,data})=>{
-      window.TRONO_BACKEND_URL=backend;if(!localStorage.getItem('desktop-fixture-initialized')){sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('desktop-fixture-initialized','1');}localStorage.setItem('tronoSfxEnabled','0');localStorage.setItem('tronoClips:'+data.user.id,JSON.stringify({version:2,desktopAuto:true,auto:true}));
-      window.__native={captures:0,recorders:0,workers:0,replayCalls:0,configurations:[],captureSelections:[],permissions:['audio','video']};
-      window.TronoDesktop={version:'0.2.1',clipsSuspended:true,readSession:()=>window.__readRemembered(),saveSession:value=>window.__saveRemembered(value),getMediaPermissions:async()=>window.__native.permissions,resetMediaPermissions:async()=>{window.__native.permissions=[];},prepareReplay:async()=>{window.__native.replayCalls++;return {suspended:true,active:false};},onClip:fn=>window.__native.clip=fn,onCapture:fn=>window.__native.capture=fn,onCaptureCancel:fn=>window.__native.cancel=fn,configureClips:async value=>{window.__native.configurations.push(value);return {active:false,suspended:true};},selectCapture:async value=>{window.__native.captureSelections.push(value);return true;},onApplicationAudio:fn=>window.__native.audio=fn,ackApplicationAudio:()=>{},stopApplicationAudio:async()=>{}};
-      window.__native.activityState={available:true,enabled:false,game:null,apps:[{id:'a'.repeat(64),name:'Meu jogo'}],error:null};Object.assign(window.TronoDesktop,{getActivityState:async()=>window.__native.activityState,onActivity:fn=>window.__native.activity=fn,configureActivity:async config=>{const state=window.__native.activityState;state.enabled=config.enabled;state.game=config.enabled?{name:config.preferredAppId?(config.name||'Meu jogo'):'Counter-Strike 2',startedAt:Date.now()}:null;window.__native.activity?.(state);return state;}});
-      Object.assign(window.TronoDesktop,{getWindowState:async()=>({fullscreen:!!window.__native.fullscreen}),onWindowState:fn=>window.__native.windowState=fn,toggleFullscreen:async()=>{window.__native.fullscreen=!window.__native.fullscreen;const state={fullscreen:window.__native.fullscreen};window.__native.windowState?.(state);return state;},getUpdateState:async()=>({status:'idle'}),onUpdateState:fn=>window.__native.update=fn,checkUpdates:async()=>({status:'current'}),installUpdate:async()=>({canceled:true}),openAttachment:async value=>{window.__native.attachment=value;return {opened:true};}});
-      Object.assign(window.TronoDesktop,{copyDiagnostics:async text=>{window.__native.diagnosticReport=text;return {copied:true};},getResources:async()=>({appCpuPercent:4,appMemoryMB:215,freeMemoryMB:4096}),notify:async value=>{(window.__native.notifications||=[]).push(value);return {shown:true};},onNotificationClick:fn=>window.__native.notificationClick=fn});
-      const Recorder=MediaRecorder,WorkerClass=Worker;window.MediaRecorder=class extends Recorder{constructor(...args){super(...args);window.__native.recorders++;}};window.Worker=class extends WorkerClass{constructor(...args){super(...args);if(String(args[0]).includes('clip-buffer'))window.__native.workers++;}};
-      navigator.mediaDevices.getDisplayMedia=async()=>{window.__native.captures++;const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const draw=canvas.getContext('2d'),timer=setInterval(()=>{draw.fillStyle='#6d4580';draw.fillRect(0,0,1280,720);},30),stream=canvas.captureStream(30),video=stream.getVideoTracks()[0],stop=video.stop.bind(video);video.stop=()=>{clearInterval(timer);stop();};return stream;};
-    },{backend:fixture.base,data});
-    let page;async function open(){page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());page.setDefaultTimeout(10000);await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);await expect(page.locator('#desktopRail')).toBeVisible();}
-    await open();
-    await t.test('clips are visibly locked and old automatic preferences never allocate replay resources',async()=>{
-      await expect(page.locator('[data-desktop-route="clips"]')).toBeDisabled();await expect(page.locator('[data-desktop-route="clips"]')).toContainText('Em desenvolvimento');await expect(page.locator('#clipToolbarNow')).toBeHidden();await expect(page.locator('#desktopReplayStatus')).toHaveCount(0);assert.deepEqual(await page.evaluate(()=>({captures:window.__native.captures,recorders:window.__native.recorders,workers:window.__native.workers,replayCalls:window.__native.replayCalls,engine:typeof window.TronoClips})),{captures:0,recorders:0,workers:0,replayCalls:0,engine:'undefined'});
-      await page.evaluate(async owner=>window.TronoClipStore.put({id:'kept-clip',owner,createdAt:Date.now(),filename:'kept.webm',blob:new Blob(['kept-clip']),state:'pending'}),data.user.id);await page.evaluate(()=>window.TronoDesktopShell.navigate('clips'));assert.equal(await page.evaluate(()=>document.body.dataset.desktopView),'home');
-    });
-    await t.test('music starts muted and all preferences share one settings dialog',async()=>{
-      assert.equal(await page.evaluate(()=>window.TronoAudio.musicEnabled),false);await page.locator('#voiceSettingsBtn').click();await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-      for(const topic of ['account','appearance','audio','video','capture','game','activity','connection','privacy']){await page.locator('[data-settings-tab="'+topic+'"]').click();await expect(page.locator('#desktop-settings-'+topic)).toBeVisible();}
-      await page.locator('[data-settings-tab="appearance"]').click();await page.locator('input[name="profileTheme"][value="green"]').check();await expect.poll(()=>page.evaluate(()=>document.documentElement.dataset.theme)).toBe('green');
-      await page.locator('[data-settings-tab="audio"]').click();await expect(page.locator('#noiseModeSelect')).toHaveValue('native');await page.locator('#voiceSettingsClose').click();await expect(page.locator('#desktopSettingsDialog')).toBeHidden();await expect(page.locator('#voiceSettingsBtn')).toHaveAttribute('aria-expanded','false');
-    });
-    await t.test('optional Windows activity reaches website presence and clears immediately when disabled',async()=>{
-      await fixture.call('signup',{email:'reader@example.test',nickname:'Leitor Site',password:'Senha12!'});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});const reader=(await fixture.call('login',{email:'reader@example.test',password:'Senha12!'})).data;
-      const webContext=await browser.newContext({viewport:{width:1440,height:1000}});await webContext.route('**/*',r=>['127.0.0.1','localhost'].includes(new URL(r.request().url()).hostname)?r.continue():r.abort());await webContext.addInitScript(({backend,data})=>{window.TRONO_BACKEND_URL=backend;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('tronoSfxEnabled','0');},{backend:fixture.base,data:reader});const web=await webContext.newPage();try{
-        await web.goto(origin);await web.evaluate(()=>window.TronoAuth.ready);await web.locator('#communityToggle').click();assert.equal(await web.evaluate(()=>typeof window.TronoDesktop),'undefined');
-        await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab="activity"]').click();await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();await page.locator('#desktopActivityEnabled').check();await expect(page.locator('#desktopActivityStatus')).toContainText('Jogando Counter-Strike 2');await expect(web.locator('.community-game-activity')).toContainText('Counter-Strike 2');
-        await page.locator('#desktopActivityApp').selectOption('a'.repeat(64));await page.locator('#desktopActivityName').fill('Jogo escolhido');await page.locator('#desktopActivityName').press('Tab');await expect(web.locator('.community-game-activity')).toContainText('Jogo escolhido');
-        await page.locator('#desktopActivityEnabled').uncheck();await expect(web.locator('.community-game-activity')).toHaveCount(0);await page.locator('#voiceSettingsClose').click();assert.equal(await page.evaluate(()=>window.__native.activityState.enabled),false);
-      }finally{await webContext.close();}
-    });
-    await t.test('entering voice and clicking a voice channel connects automatically; text stays independent',async()=>{
-      await page.locator('#openVoicePortalBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.primaryRoom)).toBe('chat-livre');await page.evaluate(()=>{window.__voiceTrack=window.TronoSocial.getLocalAudioTrack();});
-      await page.locator('[data-chat-channel="chat-jogos"]').click();await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.primaryRoom)).toBe('chat-jogos');await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);
-      await page.locator('#joinVoiceBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(false);await page.locator('[data-chat-channel="chat-jogos"]').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);
-      await page.evaluate(()=>{window.__voiceTrack=window.TronoSocial.getLocalAudioTrack();});await page.locator('#chatOnlyTextBtn').click();await page.locator('#courtChatInput').fill('Texto do desktop sem sair da voz');await page.locator('#courtChatSend').click();await expect(page.locator('#courtChatMessages')).toContainText('Texto do desktop sem sair da voz');assert(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack()===window.__voiceTrack&&window.__voiceTrack.readyState==='live'));
-    });
-    await t.test('changing light/native, RNNoise and disabled modes preserves a muted call',async()=>{
-      await page.locator('#muteMicBtn').click();await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab="audio"]').click();
-      await page.locator('#noiseModeSelect').selectOption('rnnoise');await expect.poll(()=>page.evaluate(()=>window.TronoSocial.noiseState.mode),{timeout:20000}).toBe('rnnoise');assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),false);
-      await page.evaluate(()=>{window.__beforeNoiseChange=window.TronoSocial.getLocalAudioTrack();const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async()=>{navigator.mediaDevices.getUserMedia=get;throw new DOMException('Fixture: microphone busy','NotReadableError');};});
-      await page.locator('#noiseModeSelect').selectOption('native');await expect.poll(()=>page.evaluate(()=>window.TronoSocial.noiseMode)).toBe('rnnoise');assert(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack()===window.__beforeNoiseChange&&!window.__beforeNoiseChange.enabled&&window.__beforeNoiseChange.readyState==='live'));
-      await page.evaluate(()=>{const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async()=>{navigator.mediaDevices.getUserMedia=get;throw new DOMException('Fixture: microphone busy','NotReadableError');};});await page.locator('#voiceLightModeBtn').click();await expect.poll(()=>page.evaluate(()=>({light:window.TronoSocial.voiceLightMode,engine:window.TronoSocial.noiseMode}))).toEqual({light:false,engine:'rnnoise'});
-      await page.locator('#noiseModeSelect').selectOption('native');await expect.poll(()=>page.evaluate(()=>window.TronoSocial.noiseState.mode),{timeout:15000}).toBe('light');assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),false);
-      await page.locator('#noiseModeSelect').selectOption('off');await expect.poll(()=>page.evaluate(()=>window.TronoSocial.noiseState.mode)).toBe('off');assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),false);await page.locator('#noiseModeSelect').selectOption('native');await expect.poll(()=>page.evaluate(()=>window.TronoSocial.noiseState.mode)).toBe('light');await page.locator('#voiceSettingsClose').click();await page.locator('#muteMicBtn').click();
-    });
-    await t.test('two compact profiles and portrait/short displays preserve the fitted stream and call',async()=>{
-      const reader=(await fixture.call('login',{email:'reader@example.test',password:'Senha12!'})).data;const {WebSocket}=require('ws'),peer=new WebSocket(fixture.base.replace(/^http/,'ws')+'/ws'),messages=[];peer.on('message',raw=>messages.push(JSON.parse(raw)));require('./court-peer-fixture')(peer);const wait=async predicate=>{for(let n=0;n<400;n++){const found=messages.find(predicate);if(found)return found;await new Promise(resolve=>setTimeout(resolve,10));}throw Error('Voice peer fixture message missing');};
-      await new Promise((resolve,reject)=>{peer.once('open',resolve);peer.once('error',reject);});peer.send(JSON.stringify({type:'authenticate',access_token:reader.session.access_token}));await wait(m=>m.type==='auth-result'&&m.ok);peer.send(JSON.stringify({type:'join-room',roomId:await page.evaluate(()=>window.TronoNetwork.primaryRoom)}));await wait(m=>m.type==='joined-room');peer.send(JSON.stringify({type:'voice-state',joined:true,transport:'p2p'}));await expect(page.locator('#voiceRoster .voice-person')).toHaveCount(2);
-      try{
-      const remote=page.locator('#voiceRoster .voice-person[data-peer="'+(await wait(m=>m.type==='welcome')).clientId+'"]');peer.send(JSON.stringify({type:'activity-state',activity:{name:'Spotify',userId:data.user.id}}));await expect(remote.locator('.participant-activity')).toHaveText('Spotify');await expect(page.locator('#voiceRoster .voice-person').first().locator('.participant-activity')).toBeHidden();
-      await fixture.call('profile',{nickname:'Leitor Renovado',avatar_preset:'crown'},reader.session.access_token);await expect(remote.locator(':scope > strong')).toHaveText('Leitor Renovado');await expect(remote.locator('.participant-activity')).toHaveText('Spotify');
-      await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab=activity]').click();await page.locator('#desktopActivityEnabled').check();await page.locator('#voiceSettingsClose').click();await expect(page.locator('#voiceRoster .voice-person').first().locator('.participant-activity')).toHaveText('Jogo escolhido');
-      await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);const card=page.locator('#voiceRoster .voice-person').first();await expect(card.locator('.participant-camera-slot video')).toBeVisible();await expect.poll(()=>card.locator('.participant-camera-slot video').evaluate(v=>v.videoWidth)).toBeGreaterThan(0);const cameraOnly=await card.locator('.participant-camera-slot').boundingBox(),activityOnly=await card.locator('.participant-activity').boundingBox();assert(activityOnly.y>=cameraOnly.y+cameraOnly.height,'activity stays below the camera preview');await page.screenshot({path:path.join(artifacts,'windows-camera-activity.png')});
-      await page.locator('#screenShareBtn').click();await expect(page.locator('#shareReplayHelp')).toBeHidden();await page.locator('#screenOptionsConfirm').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.screenSharing)).toBe(true);for(const size of [{width:1280,height:720},{width:1024,height:768},{width:900,height:600},{width:1080,height:1920},{width:720,height:1280},{width:480,height:800},{width:480,height:520}]){await page.setViewportSize(size);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const tile=page.locator('#screenShareGrid .screen-share-tile').first();await expect(tile).toBeInViewport();const bounds=await tile.boundingBox(),dock=await page.locator('#desktopCallDock').boundingBox();assert(bounds.height>=80&&bounds.y+bounds.height<=dock.y+1,JSON.stringify({size,bounds,dock}));assert(await page.locator('.mn-media-stage').evaluate(el=>el.scrollHeight<=el.clientHeight+1));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-        for(const profile of await page.locator('#voiceRoster .voice-person').all()){const shape=await profile.boundingBox();assert(shape.width<=289&&shape.height<=69,JSON.stringify({size,shape}));}
-        const shape=await card.boundingBox(),avatar=await card.locator('.mn-person-avatar').boundingBox(),preview=await card.locator('.participant-camera-slot').boundingBox(),name=await card.locator(':scope > strong').boundingBox(),dot=await card.locator('.participant-online-dot').boundingBox();assert(avatar.width===32&&avatar.height===32&&dot.x+dot.width>avatar.x+avatar.width&&preview.width===80&&preview.height===46&&name.x+name.width<=preview.x,JSON.stringify({size,shape,avatar,preview,name,dot}));const activity=await card.locator('.participant-activity').boundingBox();assert(activity.y>=name.y+name.height&&activity.x+activity.width<=preview.x+1,JSON.stringify({size,activity,name,preview}));await expect(card.locator('.participant-expand svg')).toHaveCount(1);
-        await card.locator('.participant-expand').click();await expect(card.locator('.participant-details')).toBeVisible();const expanded=await tile.boundingBox();assert(Math.abs(bounds.height-expanded.height)<1&&Math.abs(bounds.width-expanded.width)<1,'profile expansion must preserve stream dimensions '+JSON.stringify({size,bounds,expanded}));await card.locator('.participant-expand').click();
-        assert(await page.locator('#desktopCallDock .call-action>span:not(.call-icon)').evaluateAll(labels=>labels.every(el=>{const label=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();return label.x>=button.x&&label.x+label.width<=button.x+button.width+1&&label.y+label.height<=button.y+button.height+1;})),'active call labels must stay inside their buttons');
-        await page.screenshot({path:path.join(artifacts,'windows-stream-fit-'+size.width+'x'+size.height+'.png')});}await page.setViewportSize({width:1440,height:1000});await card.locator('.participant-expand').click();await card.locator('.participant-media-layout select').selectOption('screen');await expect(card.locator('.participant-screen-slot video')).toBeVisible();
-      assert.deepEqual(await page.evaluate(()=>({captures:window.__native.captures,recorders:window.__native.recorders,workers:window.__native.workers,replayCalls:window.__native.replayCalls})),{captures:1,recorders:0,workers:0,replayCalls:0});
-      await page.evaluate(()=>{window.__keptVoice=window.TronoSocial.getLocalAudioTrack();});for(const view of ['home','game','community']){await page.locator('[data-desktop-route="'+view+'"]').click();assert(await page.evaluate(()=>window.TronoSocial.voiceJoined&&window.TronoSocial.getLocalAudioTrack()===window.__keptVoice&&window.__keptVoice.readyState==='live'));}
-      await page.locator('#screenShareBtn').click();await page.locator('#cameraBtn').click();for(const size of [{width:1440,height:900},{width:720,height:1280},{width:480,height:520}]){await page.setViewportSize(size);for(const profile of await page.locator('#voiceRoster .voice-person').all()){const bounds=await profile.boundingBox();assert(bounds.width<=289&&bounds.height<=149,JSON.stringify({size,bounds}));}await page.screenshot({path:path.join(artifacts,'windows-voice-profiles-'+size.width+'x'+size.height+'.png')});}await page.setViewportSize({width:1440,height:1000});
-      await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab=activity]').click();await page.locator('#desktopActivityEnabled').uncheck();await page.locator('#voiceSettingsClose').click();await expect(card.locator('.participant-activity')).toBeHidden();
-      }finally{peer.terminate();await expect(page.locator('#voiceRoster .voice-person')).toHaveCount(1);}
-    });
-    await t.test('compact effects stay beside the rail and above the dock on short and portrait screens',async()=>{
-      const files=Array.from({length:24},(_,i)=>({id:'effect-'+i,name:'Efeito '+(i+1)+'.wav',ownerId:data.user.id,durationMs:1000}));await page.route(fixture.base+'/files/soundboard**',route=>route.fulfill({json:{files,hasMore:false}}));
-      for(const size of [{width:1280,height:720},{width:1080,height:1920},{width:720,height:1280},{width:480,height:520}]){await page.setViewportSize(size);await page.locator('#soundboardToggle').click();await expect(page.locator('.sound-card')).toHaveCount(24);const menu=await page.locator('#soundboardDialog').boundingBox(),top=await page.locator('#desktopTopBar').boundingBox(),dock=await page.locator('#desktopCallDock').boundingBox(),card=await page.locator('.sound-card').first().boundingBox(),icon=await page.locator('.sound-thumbnail').first().boundingBox();assert(menu.x>=top.x&&menu.x+menu.width<=size.width&&menu.y>=top.y+top.height+11&&menu.y+menu.height<=dock.y-11,JSON.stringify({size,menu,top,dock}));assert(icon.width===20&&card.height<=84,JSON.stringify({size,card,icon}));await page.screenshot({path:path.join(artifacts,'windows-effects-'+size.width+'x'+size.height+'.png')});await page.locator('#soundboardClose').click();}await page.setViewportSize({width:1440,height:1000});
-    });
-    await t.test('online people, telemetry and fullscreen remain available and collapsible',async()=>{
-      await page.locator('#communityToggle').click();await expect(page.locator('#communityPanel')).toBeVisible();await expect(page.locator('#communityMembers')).toContainText('Desktop Test');await page.locator('#communityClose').click();await expect(page.locator('#communityPanel')).toBeHidden();await page.locator('#telemetryOpenBtn').click();await expect(page.locator('#telemetryPanel')).toBeVisible();await expect(page.locator('#telemetryAppVersion')).toHaveText('0.2.1');await page.locator('#telemetryCloseBtn').click();await page.locator('#desktopFullscreen').click();await expect(page.locator('#desktopFullscreen')).toHaveAttribute('aria-pressed','true');await page.locator('#desktopFullscreen').click();
-    });
-    await t.test('Windows diagnostic copying and notification settings use the shared control center',async()=>{
-      await page.locator('#telemetryOpenBtn').click();await expect(page.locator('#telemetryResources')).toContainText('215 MB');await page.locator('#copyDiagnostics').click();await expect(page.locator('#copyDiagnosticsStatus')).toContainText('Copiado');const copied=await page.evaluate(()=>JSON.parse(window.__native.diagnosticReport));assert.equal(copied.version,'0.2.1');assert.equal(copied.resources.appMemoryMB,215);assert(!Object.hasOwn(copied,'nickname'));await page.locator('#telemetryCloseBtn').click();
-      await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab=notifications]').click();await expect(page.locator('#notificationMode')).toHaveValue('mentions');await page.locator('#notificationChannel').selectOption('chat-jogos');await page.locator('#notificationChannelMute').check();assert.equal(await page.evaluate(()=>window.TronoNotifications.muted('chat-jogos')),true);await page.locator('#notificationChannelMute').uncheck();await page.locator('#voiceSettingsClose').click();
-      const primary=await page.evaluate(()=>window.TronoNetwork.primaryRoom);await page.evaluate(()=>{window.__notificationMic=window.TronoSocial.getLocalAudioTrack();window.TronoSocial.toggleTextChat(false);});await expect(page.locator('#courtChatInput')).toBeHidden();await page.evaluate(accountId=>window.__native.notificationClick({type:'channel',id:'chat-conversa',accountId}),data.user.id);await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.currentRoom)).toBe('chat-conversa');await expect(page.locator('#courtChatInput')).toBeVisible();assert.equal(await page.evaluate(()=>window.TronoNetwork.primaryRoom),primary);assert(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack()===window.__notificationMic&&window.__notificationMic.readyState==='live'));await page.evaluate(({accountId,id})=>window.__native.notificationClick({type:'channel',id,accountId}),{accountId:data.user.id,id:primary});await expect.poll(()=>page.evaluate(()=>window.TronoNetwork.currentRoom)).toBe(primary);
-    });
-    await t.test('landscape and portrait windows keep channels, call buttons and settings accessible',async()=>{
-      for(const size of [{width:1280,height:720},{width:900,height:600},{width:720,height:1280},{width:480,height:800},{width:480,height:520}]){
-        await page.setViewportSize(size);const version=await page.locator('#desktopUpdateCheck').boundingBox();assert(version.y+version.height<=size.height&&version.y>=size.height-90,JSON.stringify({size,version}));
-        for(const view of ['home','game']){await page.locator('[data-desktop-route="'+view+'"]').click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),JSON.stringify({size,view}));if(size.width===480)await page.screenshot({path:path.join(artifacts,'windows-'+view+'-'+size.width+'x'+size.height+'.png')});}
-        await page.locator('[data-desktop-route="community"]').click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),JSON.stringify(size));for(const id of ['joinVoiceBtn','muteMicBtn','deafenVoiceBtn','cameraBtn','screenShareBtn','voiceSettingsBtn'])await expect(page.locator('#'+id)).toBeInViewport();
-        if(size.width<=900){await page.locator('#desktopChannelsToggle').click();await expect(page.locator('.mn-channel-sidebar')).toBeVisible();await expect(page.locator('[data-chat-channel]').first()).toBeInViewport();assert(await page.locator('[data-chat-channel]').first().evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'channel must be clickable above the call and shade');const sidebar=await page.locator('.mn-sidebar-bottom').boundingBox(),dock=await page.locator('#desktopCallDock').boundingBox();await page.screenshot({path:path.join(artifacts,'windows-channels-'+size.width+'x'+size.height+'.png')});assert(sidebar.y+sidebar.height<=dock.y+1,JSON.stringify({size,sidebar,dock}));await page.locator('#desktopSidebarShade').click({position:{x:size.width-100,y:20}});await expect(page.locator('.mn-channel-sidebar')).toBeHidden();}
-        await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab="capture"]').click();await expect(page.locator('#screenFormatSelect')).toBeVisible();assert(await page.locator('#desktopSettingsDialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1));await expect.poll(()=>page.locator('#desktopSettingsDialog').evaluate(el=>Math.round(el.getBoundingClientRect().height))).toBeGreaterThan(250);
-        if(size.height>=size.width||size.width<=640){const layout=await page.locator('#desktopSettingsDialog').evaluate(el=>{const tabs=el.querySelector('.voice-settings-tabs').getBoundingClientRect(),body=el.querySelector('.voice-settings-content').getBoundingClientRect(),pane=el.querySelector('.voice-settings-pane:not([hidden])').getBoundingClientRect();return {tabs:{y:tabs.y,height:tabs.height},body:{y:body.y,height:body.height},pane:{y:pane.y,height:pane.height}};});assert(layout.tabs.height<=61&&Math.abs(layout.body.y-layout.tabs.y-layout.tabs.height)<2&&layout.pane.y-layout.body.y<=20&&layout.body.y+layout.body.height-layout.pane.y-layout.pane.height<=22,JSON.stringify({size,layout}));}
-        await page.screenshot({path:path.join(artifacts,'windows-'+size.width+'x'+size.height+'.png')});await page.locator('#voiceSettingsClose').click();
-      }await page.setViewportSize({width:1440,height:1000});
-    });
-    await t.test('latest update destination is visible even when several versions behind',async()=>{
-      await page.evaluate(()=>{window.TronoDesktop.version='0.1.1';window.__native.update({status:'downloading',version:'0.2.1',percent:62});});await page.locator('#desktopUpdateCheck').click();await page.evaluate(()=>window.__native.update({status:'ready',version:'0.2.1'}));const banner=page.locator('.desktop-update-banner');await expect(banner).toContainText('de 0.1.1 direto para 0.2.1');await expect(banner.getByRole('button',{name:'Instalar 0.2.1 e reiniciar'})).toBeVisible();await expect(banner.getByRole('button',{name:'Buscar última versão'})).toBeVisible();await page.setViewportSize({width:480,height:520});const bounds=await banner.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=480&&bounds.y>=0&&bounds.y+bounds.height<=520,JSON.stringify(bounds));await page.screenshot({path:path.join(artifacts,'windows-latest-update.png')});await banner.getByRole('button',{name:'Fechar aviso de atualização'}).click();await page.evaluate(()=>{window.TronoDesktop.version='0.2.1';window.__native.update({status:'idle'});});await page.setViewportSize({width:1440,height:1000});
-    });
-    await t.test('resetting permissions is explicit and does not activate camera or start replay',async()=>{
-      await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab="privacy"]').click();await expect(page.locator('#desktopPermissionsStatus')).toContainText('permitido');await page.locator('#desktopResetPermissions').click();await expect(page.locator('#desktopPermissionsStatus')).toContainText('perguntar ao usar');assert.equal(await page.evaluate(()=>window.TronoSocial.voiceJoined),false);assert.equal(await page.evaluate(()=>window.TronoSocial.cameraOn),false);await page.locator('#voiceSettingsClose').click();
-    });
-    await t.test('remembered login restores on a new app window, logout clears it, and opting out stays logged out',async()=>{
-      await expect.poll(()=>!!remembered).toBe(true);await page.close();await open();assert.equal(await page.evaluate(()=>window.TronoAuth.user?.nickname),'Desktop Test');assert.equal(await page.locator('#authDialog').isVisible(),false);assert.equal(await page.evaluate(()=>window.TronoSocial.voiceJoined),false);
-      assert.equal(await page.evaluate(async owner=>(await window.TronoClipStore.list(owner)).find(c=>c.id==='kept-clip').blob.size,data.user.id),9);assert.equal(await page.evaluate(()=>window.__native.recorders+window.__native.workers+window.__native.captures),0);
-      await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab="account"]').click();await page.locator('#accountLogoutBtn').click();await expect(page.locator('#authDialog')).toBeVisible();await expect.poll(()=>remembered).toBe(null);
-      await page.locator('#authEmail').fill('desktop@example.test');await page.locator('#authPassword').fill('Senha12!');await page.locator('#authRemember').uncheck();await page.locator('#authSubmitBtn').click();await expect(page.locator('#authDialog')).toBeHidden();await page.close();await open();await expect(page.locator('#authDialog')).toBeVisible();assert.equal(await page.evaluate(()=>window.TronoAuth.user),null);
-      await page.locator('#authEmail').fill('desktop@example.test');await page.locator('#authPassword').fill('Senha12!');await page.locator('#authRemember').check();await page.locator('#authSubmitBtn').click();await expect(page.locator('#authDialog')).toBeHidden();await expect.poll(()=>!!remembered).toBe(true);await page.close();await open();assert.equal(await page.evaluate(()=>window.TronoAuth.user?.nickname),'Desktop Test');await page.screenshot({path:path.join(artifacts,'windows-home.png')});
-    });
-    await t.test('native source picker still allows explicit audio choice and cancellation',async()=>{
-      await page.evaluate(()=>window.__native.capture({id:'capture-1',audio:true,windows:true,sources:[{id:'window:1:0',name:'Jogo',thumbnail:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}]}));await page.locator('.desktop-capture-sources button').click();await page.locator('#desktopCaptureConfirm').click();assert.equal(await page.evaluate(()=>window.__native.captureSelections.at(-1).audioMode),'none');await page.evaluate(()=>{window.__native.capture({id:'capture-2',audio:false,windows:true,sources:[]});window.__native.cancel({id:'capture-2'});});await expect(page.locator('.desktop-capture-dialog')).toBeHidden();
-    });
-    await t.test('real online match keeps the complete hand above the dock and game utilities in settings',async()=>{
-      await expect(page.locator('body')).toHaveAttribute('data-app-layout','original');await page.setViewportSize({width:1280,height:720});await page.locator('[data-desktop-route="game"]').click();await page.locator('#playThrone').click();await page.locator('.room-enter[data-room="sala-cetro"]').click();await expect(page.locator('#roomScreen')).toBeVisible();
-      const {WebSocket}=require('ws'),peer=new WebSocket(fixture.base.replace(/^http/,'ws')+'/ws'),messages=[];peer.on('message',raw=>messages.push(JSON.parse(raw)));require('./court-peer-fixture')(peer);const wait=async predicate=>{for(let n=0;n<500;n++){const found=messages.find(predicate);if(found)return found;await new Promise(resolve=>setTimeout(resolve,10));}throw Error('Game fixture message missing');};
-      try{await new Promise((resolve,reject)=>{peer.once('open',resolve);peer.once('error',reject);});peer.send(JSON.stringify({type:'guest-authenticate',name:'Jogador Teste',requestId:'game-guest'}));await wait(m=>m.type==='guest-result'&&m.ok);peer.send(JSON.stringify({type:'join-room',roomId:'sala-cetro'}));await wait(m=>m.type==='joined-room');peer.send(JSON.stringify({type:'ready',ready:true}));await page.locator('#voiceSettingsBtn').click();await page.locator('[data-settings-tab=game]').click();await expect(page.locator('#speedBtn')).toBeVisible();await page.locator('#speedBtn').click();await expect(page.locator('#desktopSettingsDialog')).toBeHidden();await page.locator('#readyOnlineBtn').click();await expect(page.locator('#startOnlineBtn')).toBeEnabled();await page.locator('#startOnlineBtn').click();await expect(page.locator('#gameScreen')).toBeVisible();await expect(page.locator('#socialPanel')).toBeHidden();await expect.poll(()=>page.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
-        await expect.poll(async()=>{if(await page.locator('#modal').isVisible()){const choice=page.locator('#modal .choice-card').first();if(await choice.isVisible())await choice.click();else if(await page.locator('#continueModal').isVisible())await page.locator('#continueModal').click();}return page.evaluate(()=>window.__LeiDoTrono.getState()?.phase);},{timeout:15000}).toBe('await-play');
-        for(const layout of ['original','discord'])for(const size of [{width:1280,height:720},{width:900,height:600},{width:720,height:1280},{width:480,height:800},{width:480,height:520}]){
-          await page.evaluate(value=>window.TronoAppLayout.apply(value),layout);await page.setViewportSize(size);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));let geometry;
-          await expect.poll(async()=>{geometry=await page.evaluate(()=>{const hand=document.getElementById('humanHand'),card=hand.querySelector('.hand-card'),dock=document.getElementById(document.body.dataset.appLayout==='discord'?'layoutVoicePanel':'desktopCallDock');if(!card)return null;const rect=el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};return {card:rect(card),hand:rect(hand),dock:rect(dock),allFit:[...hand.querySelectorAll('.hand-card')].every(el=>{const c=rect(el),h=rect(hand);return c.width>0&&c.height>0&&c.x>=h.x&&c.right<=h.right+1&&c.y>=h.y&&c.bottom<=h.bottom+1;})};});return !!geometry?.allFit;}, {message:JSON.stringify({layout,size})}).toBe(true);
-          const table=await page.locator('.royal-table').boundingBox();assert(table.width>150&&table.height>=80,JSON.stringify({layout,size,table}));const slots=await page.locator('.table-card-slot').evaluateAll(ns=>ns.map(n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));assert(slots.every(r=>r.x>=table.x-1&&r.right<=table.x+table.width+1&&r.y>=table.y-1&&r.bottom<=table.y+table.height+1),JSON.stringify({layout,size,table,slots}));const middle=await page.locator('.center-info').boundingBox();const intersects=(a,b)=>Math.min(a.right??a.x+a.width,b.right??b.x+b.width)-Math.max(a.x,b.x)>1&&Math.min(a.bottom??a.y+a.height,b.bottom??b.y+b.height)-Math.max(a.y,b.y)>1;assert(!slots.some((a,i)=>slots.some((b,j)=>i<j&&intersects(a,b))),JSON.stringify({layout,size,slots}));assert(!slots.some(r=>intersects(r,middle)),JSON.stringify({layout,size,slots,middle}));const {card,hand,dock}=geometry,overlap=Math.min(hand.right,dock.right)-Math.max(hand.x,dock.x)>1&&Math.min(hand.bottom,dock.bottom)-Math.max(hand.y,dock.y)>1;
-          assert(!overlap,JSON.stringify({layout,size,card,hand,dock}));const audio=page.locator('#gameScreen [data-game-audio=throne]');await audio.locator('summary').click();const popup=await audio.locator('.tt-audio-panel').boundingBox();assert(popup.x>=0&&popup.y>=0&&popup.x+popup.width<=size.width&&popup.y+popup.height<=size.height,JSON.stringify({layout,size,popup}));await audio.locator('input').press('Home');assert.equal(await page.evaluate(()=>window.TronoAudio.gameVolume('throne')),0);await audio.locator('input').press('End');await audio.locator('summary').click();await page.screenshot({path:path.join(artifacts,'windows-match-'+layout+'-'+size.width+'x'+size.height+'.png')});
+const { test } = require('node:test'),
+  assert = require('node:assert/strict'),
+  path = require('node:path'),
+  fs = require('node:fs');
+const express = require('express'),
+  { chromium, expect } = require('@playwright/test'),
+  { startFixture } = require('./auth-fixture');
+const { installSyntheticCallMedia } = require('./synthetic-call-media.cjs');
+test(
+  'desktop compact settings, remembered login and suspended replay preserve calls',
+  { timeout: 150000 },
+  async (t) => {
+    const host = express();
+    host.use(express.static(path.resolve(__dirname, '../out')));
+    const server = await new Promise((r) => {
+        const s = host.listen(0, '127.0.0.1', () => r(s));
+      }),
+      origin = 'http://127.0.0.1:' + server.address().port;
+    const fixture = await startFixture({ port: 10687, appOrigin: origin });
+    let browser,
+      remembered = null;
+    const errors = [],
+      artifacts = path.resolve(__dirname, '../artifacts');
+    fs.mkdirSync(artifacts, { recursive: true });
+    // A failed step leaves shared dialogs/session state unfinished. Preserve the
+    // first failure instead of reporting cascading failures in later scenarios.
+    async function step(name, fn) {
+      let failure;
+      await t.test(name, async (context) => {
+        try {
+          await fn(context);
+        } catch (error) {
+          failure = error;
+          throw error;
         }
-        await expect(page.locator('#courtFullscreen')).toBeVisible();await expect(page.locator('#gameScreen .top-actions>button:visible')).toHaveCount(1);
-      }finally{peer.terminate();}
-    });
-    assert.deepEqual(errors,[]);
-  }finally{await browser?.close();await fixture.stop();await new Promise(r=>server.close(r));}
-});
+      });
+      if (failure) throw failure;
+    }
+    try {
+      await fixture.call('signup', {
+        email: 'desktop@example.test',
+        nickname: 'Desktop Test',
+        password: 'Senha12!',
+      });
+      await fixture.call('verify', { token_hash: [...fixture.links][0][0], type: 'signup' });
+      const data = (
+        await fixture.call('login', { email: 'desktop@example.test', password: 'Senha12!' })
+      ).data;
+      browser = await chromium.launch({
+        executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--use-fake-device-for-media-stream',
+          '--use-fake-ui-for-media-stream',
+          '--autoplay-policy=no-user-gesture-required',
+          '--mute-audio',
+        ],
+      });
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 1000 },
+        permissions: ['camera', 'microphone'],
+      });
+      await context.addInitScript(installSyntheticCallMedia, { simulateNativeSuppression: true });
+      await context.route('**/*', (r) =>
+        ['127.0.0.1', 'localhost'].includes(new URL(r.request().url()).hostname)
+          ? r.continue()
+          : r.abort(),
+      );
+      await context.exposeBinding('__readRemembered', () => remembered);
+      await context.exposeBinding('__saveRemembered', (_, value) => {
+        remembered = value;
+        return { saved: !!value };
+      });
+      await context.addInitScript(
+        ({ backend, data }) => {
+          window.TRONO_BACKEND_URL = backend;
+          if (!localStorage.getItem('desktop-fixture-initialized')) {
+            sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+            localStorage.setItem('desktop-fixture-initialized', '1');
+          }
+          localStorage.setItem('tronoSfxEnabled', '0');
+          localStorage.setItem(
+            'tronoClips:' + data.user.id,
+            JSON.stringify({ version: 2, desktopAuto: true, auto: true }),
+          );
+          window.__native = {
+            captures: 0,
+            recorders: 0,
+            workers: 0,
+            replayCalls: 0,
+            configurations: [],
+            captureSelections: [],
+            permissions: ['audio', 'video'],
+          };
+          window.TronoDesktop = {
+            version: '0.2.1',
+            clipsSuspended: true,
+            readSession: () => window.__readRemembered(),
+            saveSession: (value) => window.__saveRemembered(value),
+            getMediaPermissions: async () => window.__native.permissions,
+            resetMediaPermissions: async () => {
+              window.__native.permissions = [];
+            },
+            prepareReplay: async () => {
+              window.__native.replayCalls++;
+              return { suspended: true, active: false };
+            },
+            onClip: (fn) => (window.__native.clip = fn),
+            onCapture: (fn) => (window.__native.capture = fn),
+            onCaptureCancel: (fn) => (window.__native.cancel = fn),
+            configureClips: async (value) => {
+              window.__native.configurations.push(value);
+              return { active: false, suspended: true };
+            },
+            selectCapture: async (value) => {
+              window.__native.captureSelections.push(value);
+              const pending = window.__native.pendingPicker;
+              if (!pending || pending.id !== value.id) return { selected: false };
+              window.__native.pendingPicker = null;
+              if (value.source) pending.resolve();
+              else pending.reject(new DOMException('Cancelled', 'NotAllowedError'));
+              return { selected: !!value.source };
+            },
+            onApplicationAudio: (fn) => (window.__native.audio = fn),
+            ackApplicationAudio: () => {},
+            stopApplicationAudio: async () => {},
+          };
+          window.__native.activityState = {
+            available: true,
+            enabled: false,
+            game: null,
+            apps: [{ id: 'a'.repeat(64), name: 'Meu jogo' }],
+            error: null,
+          };
+          Object.assign(window.TronoDesktop, {
+            getActivityState: async () => window.__native.activityState,
+            onActivity: (fn) => (window.__native.activity = fn),
+            configureActivity: async (config) => {
+              const state = window.__native.activityState;
+              state.enabled = config.enabled;
+              state.game = config.enabled
+                ? {
+                    name: config.preferredAppId ? config.name || 'Meu jogo' : 'Counter-Strike 2',
+                    startedAt: Date.now(),
+                  }
+                : null;
+              window.__native.activity?.(state);
+              return state;
+            },
+          });
+          Object.assign(window.TronoDesktop, {
+            getWindowState: async () => ({ fullscreen: !!window.__native.fullscreen }),
+            onWindowState: (fn) => (window.__native.windowState = fn),
+            toggleFullscreen: async () => {
+              window.__native.fullscreen = !window.__native.fullscreen;
+              const state = { fullscreen: window.__native.fullscreen };
+              window.__native.windowState?.(state);
+              return state;
+            },
+            getUpdateState: async () => ({ status: 'idle' }),
+            onUpdateState: (fn) => (window.__native.update = fn),
+            checkUpdates: async () => ({ status: 'current' }),
+            installUpdate: async () => ({ canceled: true }),
+            openAttachment: async (value) => {
+              window.__native.attachment = value;
+              return { opened: true };
+            },
+          });
+          Object.assign(window.TronoDesktop, {
+            copyDiagnostics: async (text) => {
+              window.__native.diagnosticReport = text;
+              return { copied: true };
+            },
+            getResources: async () => ({ appCpuPercent: 4, appMemoryMB: 215, freeMemoryMB: 4096 }),
+            notify: async (value) => {
+              (window.__native.notifications ||= []).push(value);
+              return { shown: true };
+            },
+            onNotificationClick: (fn) => (window.__native.notificationClick = fn),
+          });
+          const Recorder = MediaRecorder,
+            WorkerClass = Worker;
+          window.MediaRecorder = class extends Recorder {
+            constructor(...args) {
+              super(...args);
+              window.__native.recorders++;
+            }
+          };
+          window.Worker = class extends WorkerClass {
+            constructor(...args) {
+              super(...args);
+              if (args[1]?.name === 'clip-buffer') window.__native.workers++;
+            }
+          };
+          navigator.mediaDevices.getDisplayMedia = async () => {
+            window.__native.captures++;
+            const request = window.__native.nextCaptureRequest;
+            if (request) {
+              window.__native.nextCaptureRequest = null;
+              await new Promise((resolve, reject) => {
+                window.__native.pendingPicker = { id: request.id, resolve, reject };
+                queueMicrotask(() => window.__native.capture(request));
+              });
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = 1280;
+            canvas.height = 720;
+            const draw = canvas.getContext('2d'),
+              timer = setInterval(() => {
+                draw.fillStyle = '#6d4580';
+                draw.fillRect(0, 0, 1280, 720);
+              }, 30),
+              stream = canvas.captureStream(30),
+              video = stream.getVideoTracks()[0],
+              stop = video.stop.bind(video);
+            video.stop = () => {
+              clearInterval(timer);
+              stop();
+            };
+            return stream;
+          };
+        },
+        { backend: fixture.base, data },
+      );
+      let page;
+      async function goHome() {
+        if (await page.locator('#callWorkspace').isVisible())
+          await page.locator('[data-workspace-area="games"]').click();
+        await page.locator('#desktopHome').click();
+        await expect(page.locator('#portalScreen')).toBeVisible();
+      }
+      async function open() {
+        page = await context.newPage();
+        page.on('pageerror', (e) => errors.push(e.message));
+        page.on('dialog', (d) => d.accept());
+        page.setDefaultTimeout(10000);
+        await page.goto(origin);
+        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        await expect(page.locator('#desktopRail')).toBeVisible();
+      }
+      await open();
+      await step(
+        'clips are visibly locked and old automatic preferences never allocate replay resources',
+        async () => {
+          await expect(page.locator('[data-desktop-route="clips"]')).toBeDisabled();
+          await expect(page.locator('[data-desktop-route="clips"]')).toContainText(
+            'Em desenvolvimento',
+          );
+          await expect(page.locator('#clipToolbarNow')).toBeHidden();
+          await expect(page.locator('#desktopReplayStatus')).toHaveCount(0);
+          assert.deepEqual(
+            await page.evaluate(() => ({
+              captures: window.__native.captures,
+              recorders: window.__native.recorders,
+              workers: window.__native.workers,
+              replayCalls: window.__native.replayCalls,
+              engine: typeof window.TronoClips,
+            })),
+            { captures: 0, recorders: 0, workers: 0, replayCalls: 0, engine: 'undefined' },
+          );
+          await page.evaluate(
+            async (owner) =>
+              window.TronoClipStore.put({
+                id: 'kept-clip',
+                owner,
+                createdAt: Date.now(),
+                filename: 'kept.webm',
+                blob: new Blob(['kept-clip']),
+                state: 'pending',
+              }),
+            data.user.id,
+          );
+          await page.evaluate(() => window.TronoDesktopShell.navigate('clips'));
+          assert.equal(await page.evaluate(() => document.body.dataset.desktopView), 'home');
+        },
+      );
+      await step('music starts muted and all preferences share one settings dialog', async () => {
+        assert.equal(await page.evaluate(() => window.TronoAudio.musicEnabled), false);
+        await page.locator('#voiceSettingsBtn').click();
+        await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+        for (const topic of [
+          'account',
+          'appearance',
+          'audio',
+          'video',
+          'capture',
+          'game',
+          'activity',
+          'connection',
+          'privacy',
+        ]) {
+          await page.locator('[data-settings-tab="' + topic + '"]').click();
+          await expect(page.locator('#desktop-settings-' + topic)).toBeVisible();
+        }
+        await page.locator('[data-settings-tab="appearance"]').click();
+        await page.locator('input[name="profileTheme"][value="green"]').check();
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+          .toBe('green');
+        await page.locator('[data-settings-tab="audio"]').click();
+        await expect(page.locator('#noiseModeSelect')).toHaveValue('native');
+        await page.locator('#voiceSettingsClose').click();
+        await expect(page.locator('#desktopSettingsDialog')).toBeHidden();
+        await expect(page.locator('#voiceSettingsBtn')).toHaveAttribute('aria-expanded', 'false');
+      });
+      await step(
+        'optional Windows activity reaches website presence and clears immediately when disabled',
+        async () => {
+          await fixture.call('signup', {
+            email: 'reader@example.test',
+            nickname: 'Leitor Site',
+            password: 'Senha12!',
+          });
+          await fixture.call('verify', {
+            token_hash: [...fixture.links.keys()].at(-1),
+            type: 'signup',
+          });
+          const reader = (
+            await fixture.call('login', { email: 'reader@example.test', password: 'Senha12!' })
+          ).data;
+          const webContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+          await webContext.route('**/*', (r) =>
+            ['127.0.0.1', 'localhost'].includes(new URL(r.request().url()).hostname)
+              ? r.continue()
+              : r.abort(),
+          );
+          await webContext.addInitScript(
+            ({ backend, data }) => {
+              window.TRONO_BACKEND_URL = backend;
+              sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+              localStorage.setItem('tronoMusicEnabled', '0');
+              localStorage.setItem('tronoSfxEnabled', '0');
+            },
+            { backend: fixture.base, data: reader },
+          );
+          const web = await webContext.newPage();
+          try {
+            await web.goto(origin);
+            await web.waitForFunction(() => window.TronoAuth?.ready);
+            await web.evaluate(() => window.TronoAuth.ready);
+            await web.locator('#communityToggle').click();
+            assert.equal(await web.evaluate(() => typeof window.TronoDesktop), 'undefined');
+            await page.locator('#voiceSettingsBtn').click();
+            await page.locator('[data-settings-tab="activity"]').click();
+            await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();
+            await page.locator('#desktopActivityEnabled').check();
+            await expect(page.locator('#desktopActivityStatus')).toContainText(
+              'Jogando Counter-Strike 2',
+            );
+            await expect(web.locator('.community-game-activity')).toContainText('Counter-Strike 2');
+            await page.locator('#desktopActivityApp').selectOption('a'.repeat(64));
+            await page.locator('#desktopActivityName').fill('Jogo escolhido');
+            await page.locator('#desktopActivityName').press('Tab');
+            await expect(web.locator('.community-game-activity')).toContainText('Jogo escolhido');
+            await page.locator('#desktopActivityEnabled').uncheck();
+            await expect(web.locator('.community-game-activity')).toHaveCount(0);
+            await page.locator('#voiceSettingsClose').click();
+            assert.equal(await page.evaluate(() => window.__native.activityState.enabled), false);
+          } finally {
+            await webContext.close();
+          }
+        },
+      );
+      await step(
+        'opening the workspace waits for explicit voice entry; voice channels connect and text stays independent',
+        async () => {
+          await page.locator('#openVoicePortalBtn').click();
+          await expect(page.locator('#callWorkspace')).toBeVisible();
+          assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+          assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack()), null);
+          await page.locator('#joinVoiceBtn').click();
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+          await expect
+            .poll(() => page.evaluate(() => window.TronoNetwork.primaryRoom))
+            .toBe('chat-livre');
+          await page.evaluate(() => {
+            window.__voiceTrack = window.TronoSocial.getLocalAudioTrack();
+          });
+          await page.locator('[data-chat-channel="chat-jogos"]').click();
+          await expect
+            .poll(() => page.evaluate(() => window.TronoNetwork.primaryRoom))
+            .toBe('chat-jogos');
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+          await page.locator('#joinVoiceBtn').click();
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(false);
+          await page.locator('[data-chat-channel="chat-jogos"]').click();
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+          await page.evaluate(() => {
+            window.__voiceTrack = window.TronoSocial.getLocalAudioTrack();
+          });
+          await page.locator('#chatOnlyTextBtn').click();
+          await page.locator('#courtChatInput').fill('Texto do desktop sem sair da voz');
+          await page.locator('#courtChatSend').click();
+          await expect(page.locator('#courtChatMessages')).toContainText(
+            'Texto do desktop sem sair da voz',
+          );
+          assert(
+            await page.evaluate(
+              () =>
+                window.TronoSocial.getLocalAudioTrack() === window.__voiceTrack &&
+                window.__voiceTrack.readyState === 'live',
+            ),
+          );
+        },
+      );
+      await step(
+        'changing light/native, RNNoise and disabled modes preserves a muted call',
+        async () => {
+          await page.locator('#muteMicBtn').click();
+          await page.locator('#voiceSettingsBtn').click();
+          await page.locator('[data-settings-tab="audio"]').click();
+          await page.locator('#noiseModeSelect').selectOption('rnnoise');
+          await expect
+            .poll(() => page.evaluate(() => window.TronoSocial.noiseState.mode), { timeout: 20000 })
+            .toBe('rnnoise');
+          assert.equal(
+            await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled),
+            false,
+          );
+          await page.evaluate(() => {
+            window.__beforeNoiseChange = window.TronoSocial.getLocalAudioTrack();
+            const get = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+            navigator.mediaDevices.getUserMedia = async () => {
+              navigator.mediaDevices.getUserMedia = get;
+              throw new DOMException('Fixture: microphone busy', 'NotReadableError');
+            };
+          });
+          await page.locator('#noiseModeSelect').selectOption('native');
+          await expect
+            .poll(() => page.evaluate(() => window.TronoSocial.noiseMode))
+            .toBe('rnnoise');
+          assert(
+            await page.evaluate(
+              () =>
+                window.TronoSocial.getLocalAudioTrack() === window.__beforeNoiseChange &&
+                !window.__beforeNoiseChange.enabled &&
+                window.__beforeNoiseChange.readyState === 'live',
+            ),
+          );
+          await page.evaluate(() => {
+            const get = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+            navigator.mediaDevices.getUserMedia = async () => {
+              navigator.mediaDevices.getUserMedia = get;
+              throw new DOMException('Fixture: microphone busy', 'NotReadableError');
+            };
+          });
+          await page.locator('#voiceLightModeBtn').click();
+          await expect
+            .poll(() =>
+              page.evaluate(() => ({
+                light: window.TronoSocial.voiceLightMode,
+                engine: window.TronoSocial.noiseMode,
+              })),
+            )
+            .toEqual({ light: false, engine: 'rnnoise' });
+          await page.locator('#noiseModeSelect').selectOption('native');
+          await expect
+            .poll(() => page.evaluate(() => window.TronoSocial.noiseState.mode), { timeout: 15000 })
+            .toBe('native');
+          assert.equal(
+            await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled),
+            false,
+          );
+          await page.locator('#noiseModeSelect').selectOption('off');
+          await expect
+            .poll(() => page.evaluate(() => window.TronoSocial.noiseState.mode))
+            .toBe('off');
+          assert.equal(
+            await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled),
+            false,
+          );
+          await page.locator('#noiseModeSelect').selectOption('native');
+          await expect
+            .poll(() => page.evaluate(() => window.TronoSocial.noiseState.mode))
+            .toBe('native');
+          await page.locator('#voiceSettingsClose').click();
+          await page.locator('#muteMicBtn').click();
+        },
+      );
+      await step(
+        'two compact profiles and portrait/short displays preserve the fitted stream and call',
+        async () => {
+          const reader = (
+            await fixture.call('login', { email: 'reader@example.test', password: 'Senha12!' })
+          ).data;
+          const { WebSocket } = require('ws'),
+            peer = new WebSocket(fixture.base.replace(/^http/, 'ws') + '/ws'),
+            messages = [];
+          peer.on('message', (raw) => messages.push(JSON.parse(raw)));
+          require('./court-peer-fixture')(peer);
+          const wait = async (predicate) => {
+            for (let n = 0; n < 400; n++) {
+              const found = messages.find(predicate);
+              if (found) return found;
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+            throw Error('Voice peer fixture message missing');
+          };
+          await new Promise((resolve, reject) => {
+            peer.once('open', resolve);
+            peer.once('error', reject);
+          });
+          peer.send(
+            JSON.stringify({ type: 'authenticate', access_token: reader.session.access_token }),
+          );
+          await wait((m) => m.type === 'auth-result' && m.ok);
+          peer.send(
+            JSON.stringify({
+              type: 'join-room',
+              roomId: await page.evaluate(() => window.TronoNetwork.primaryRoom),
+            }),
+          );
+          await wait((m) => m.type === 'joined-room');
+          peer.send(JSON.stringify({ type: 'voice-state', joined: true, transport: 'p2p' }));
+          await expect(page.locator('#voiceRoster .voice-person')).toHaveCount(2);
+          try {
+            const remote = page.locator(
+              '#voiceRoster .voice-person[data-peer="' +
+                (await wait((m) => m.type === 'welcome')).clientId +
+                '"]',
+            );
+            peer.send(
+              JSON.stringify({
+                type: 'activity-state',
+                activity: { name: 'Spotify', userId: data.user.id },
+              }),
+            );
+            await expect(remote.locator('.participant-activity')).toHaveText('Spotify');
+            await expect(
+              page.locator('#voiceRoster .voice-person').first().locator('.participant-activity'),
+            ).toBeHidden();
+            await fixture.call(
+              'profile',
+              { nickname: 'Leitor Renovado', avatar_preset: 'crown' },
+              reader.session.access_token,
+            );
+            await expect(remote.locator(':scope > strong')).toHaveText('Leitor Renovado');
+            await expect(remote.locator('.participant-activity')).toHaveText('Spotify');
+            await page.locator('#voiceSettingsBtn').click();
+            await page.locator('[data-settings-tab=activity]').click();
+            await page.locator('#desktopActivityEnabled').check();
+            await page.locator('#voiceSettingsClose').click();
+            await expect(
+              page.locator('#voiceRoster .voice-person').first().locator('.participant-activity'),
+            ).toHaveText('Jogo escolhido');
+            await page.locator('#cameraBtn').click();
+            await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+            const card = page.locator('#voiceRoster .voice-person').first();
+            await expect(card.locator('.participant-camera-slot video')).toBeVisible();
+            await expect
+              .poll(() =>
+                card.locator('.participant-camera-slot video').evaluate((v) => v.videoWidth),
+              )
+              .toBeGreaterThan(0);
+            const cameraOnly = await card.locator('.participant-camera-slot').boundingBox(),
+              activityOnly = await card.locator('.participant-activity').boundingBox();
+            assert(
+              activityOnly.y >= cameraOnly.y + cameraOnly.height,
+              'activity stays below the camera preview',
+            );
+            await page.screenshot({ path: path.join(artifacts, 'windows-camera-activity.png') });
+            await page.locator('#screenShareBtn').click();
+            await expect(page.locator('#shareReplayHelp')).toBeHidden();
+            await page.locator('#screenOptionsConfirm').click();
+            await expect
+              .poll(() => page.evaluate(() => window.TronoSocial.screenSharing))
+              .toBe(true);
+            for (const size of [
+              { width: 1280, height: 720 },
+              { width: 1024, height: 768 },
+              { width: 900, height: 600 },
+              { width: 1080, height: 1920 },
+              { width: 720, height: 1280 },
+              { width: 480, height: 800 },
+              { width: 480, height: 520 },
+            ]) {
+              await page.setViewportSize(size);
+              await page.evaluate(
+                () =>
+                  new Promise((resolve) =>
+                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                  ),
+              );
+              const tile = page.locator('#screenShareGrid .screen-share-tile').first();
+              await expect(tile).toBeInViewport();
+              const bounds = await tile.boundingBox(),
+                dock = await page.locator('#callFocusDock').boundingBox();
+              assert(
+                bounds.height >= 80 && bounds.y + bounds.height <= dock.y + 1,
+                JSON.stringify({ size, bounds, dock }),
+              );
+              assert(
+                await page
+                  .locator('.mn-media-stage')
+                  .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
+              );
+              assert(
+                await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+              );
+              for (const profile of await page.locator('#voiceRoster .voice-person').all()) {
+                const shape = await profile.boundingBox();
+                assert(shape.width <= 289 && shape.height <= 132, JSON.stringify({ size, shape }));
+              }
+              const shape = await card.boundingBox(),
+                avatar = await card.locator('.mn-person-avatar').boundingBox(),
+                preview = await card.locator('.participant-camera-slot').boundingBox(),
+                name = await card.locator(':scope > strong').boundingBox(),
+                dot = await card.locator('.participant-online-dot').boundingBox();
+              assert(
+                avatar.width > 0 &&
+                  avatar.height > 0 &&
+                  dot.x + dot.width > avatar.x + avatar.width &&
+                  preview.width > 0 &&
+                  preview.height > 0 &&
+                  preview.x >= shape.x &&
+                  preview.x + preview.width <= shape.x + shape.width + 1 &&
+                  name.y >= preview.y + preview.height,
+                JSON.stringify({ size, shape, avatar, preview, name, dot }),
+              );
+              const activity = await card.locator('.participant-activity').boundingBox();
+              if (size.height <= 550) {
+                await expect(card.locator('.participant-meta')).toBeHidden();
+              } else {
+                assert(
+                  activity &&
+                    activity.y >= name.y + name.height &&
+                    activity.x + activity.width <= shape.x + shape.width + 1,
+                  JSON.stringify({ size, activity, name, preview }),
+                );
+              }
+              await expect(card.locator('.participant-expand svg')).toHaveCount(1);
+              await card.locator('.participant-expand').click();
+              await expect(card.locator('.participant-details')).toBeVisible();
+              const expanded = await tile.boundingBox();
+              assert(
+                Math.abs(bounds.height - expanded.height) < 1 &&
+                  Math.abs(bounds.width - expanded.width) < 1,
+                'profile expansion must preserve stream dimensions ' +
+                  JSON.stringify({ size, bounds, expanded }),
+              );
+              await card.locator('.participant-expand').click();
+              assert(
+                await page
+                  .locator('#callFocusDock .call-action>span:not(.call-icon):visible')
+                  .evaluateAll((labels) =>
+                    labels.every((el) => {
+                      const label = el.getBoundingClientRect(),
+                        button = el.parentElement.getBoundingClientRect();
+                      return (
+                        label.x >= button.x &&
+                        label.x + label.width <= button.x + button.width + 1 &&
+                        label.y + label.height <= button.y + button.height + 1
+                      );
+                    }),
+                  ),
+                'active call labels must stay inside their buttons',
+              );
+              await page.screenshot({
+                path: path.join(
+                  artifacts,
+                  'windows-stream-fit-' + size.width + 'x' + size.height + '.png',
+                ),
+              });
+            }
+            await page.setViewportSize({ width: 1440, height: 1000 });
+            await card.locator('.participant-expand').click();
+            await card.locator('.participant-media-layout select').selectOption('screen');
+            await expect(card.locator('.participant-screen-slot video')).toBeVisible();
+            await card.locator('.participant-expand').click();
+            assert.deepEqual(
+              await page.evaluate(() => ({
+                captures: window.__native.captures,
+                recorders: window.__native.recorders,
+                workers: window.__native.workers,
+                replayCalls: window.__native.replayCalls,
+              })),
+              { captures: 1, recorders: 0, workers: 0, replayCalls: 0 },
+            );
+            await page.evaluate(() => {
+              window.__keptVoice = window.TronoSocial.getLocalAudioTrack();
+            });
+            for (const view of ['home', 'game', 'community']) {
+              if (view === 'home') {
+                await goHome();
+              } else {
+                await page.locator('[data-desktop-route="' + view + '"]').click();
+              }
+              assert(
+                await page.evaluate(
+                  () =>
+                    window.TronoSocial.voiceJoined &&
+                    window.TronoSocial.getLocalAudioTrack() === window.__keptVoice &&
+                    window.__keptVoice.readyState === 'live',
+                ),
+              );
+            }
+            await page.locator('#screenShareBtn').click();
+            await page.locator('#cameraBtn').click();
+            for (const size of [
+              { width: 1440, height: 900 },
+              { width: 720, height: 1280 },
+              { width: 480, height: 520 },
+            ]) {
+              await page.setViewportSize(size);
+              for (const profile of await page.locator('#voiceRoster .voice-person').all()) {
+                const bounds = await profile.boundingBox();
+                assert(
+                  bounds.width <= size.width - 24 && bounds.height <= 149,
+                  JSON.stringify({ size, bounds }),
+                );
+              }
+              await page.screenshot({
+                path: path.join(
+                  artifacts,
+                  'windows-voice-profiles-' + size.width + 'x' + size.height + '.png',
+                ),
+              });
+            }
+            await page.setViewportSize({ width: 1440, height: 1000 });
+            await page.locator('#voiceSettingsBtn').click();
+            await page.locator('[data-settings-tab=activity]').click();
+            await page.locator('#desktopActivityEnabled').uncheck();
+            await page.locator('#voiceSettingsClose').click();
+            await expect(card.locator('.participant-activity')).toBeHidden();
+          } finally {
+            peer.terminate();
+            await expect(page.locator('#voiceRoster .voice-person')).toHaveCount(1);
+          }
+        },
+      );
+      await step(
+        'compact effects stay beside the rail and above the dock on short and portrait screens',
+        async () => {
+          const files = Array.from({ length: 24 }, (_, i) => ({
+            id: 'effect-' + i,
+            name: 'Efeito ' + (i + 1) + '.wav',
+            ownerId: data.user.id,
+            kind: 'soundboard',
+            mime: 'audio/wav',
+            bytes: 32044,
+            durationMs: 1000,
+          }));
+          await page.route(fixture.base + '/files/soundboard**', (route) =>
+            route.fulfill({ json: { files, hasMore: false } }),
+          );
+          for (const size of [
+            { width: 1280, height: 720 },
+            { width: 1080, height: 1920 },
+            { width: 720, height: 1280 },
+            { width: 480, height: 520 },
+          ]) {
+            await page.setViewportSize(size);
+            await page.locator('#soundboardToggle').click();
+            await expect(page.locator('.sound-card')).toHaveCount(24);
+            await expect
+              .poll(
+                async () => {
+                  const menu = await page.locator('#soundboardDialog').boundingBox(),
+                    top = await page.locator('#workspaceHeader').boundingBox(),
+                    dock = await page.locator('#callFocusDock').boundingBox();
+                  return (
+                    menu &&
+                    top &&
+                    dock &&
+                    menu.x >= top.x &&
+                    menu.x + menu.width <= size.width &&
+                    menu.y >= top.y + top.height + 11 &&
+                    menu.y + menu.height <= dock.y - 11
+                  );
+                },
+                { message: JSON.stringify(size) },
+              )
+              .toBe(true);
+            const card = await page.locator('.sound-card').first().boundingBox(),
+              icon = await page.locator('.sound-thumbnail').first().boundingBox();
+            assert(icon.width === 20 && card.height <= 84, JSON.stringify({ size, card, icon }));
+            await page.screenshot({
+              path: path.join(
+                artifacts,
+                'windows-effects-' + size.width + 'x' + size.height + '.png',
+              ),
+            });
+            await page.locator('#soundboardClose').click();
+          }
+          await page.setViewportSize({ width: 1440, height: 1000 });
+        },
+      );
+      await step(
+        'online people, telemetry and fullscreen remain available and collapsible',
+        async () => {
+          await page.locator('#communityToggle').click();
+          await expect(page.locator('#communityPanel')).toBeVisible();
+          await expect(page.locator('#communityMembers')).toContainText('Desktop Test');
+          await page.locator('#communityClose').click();
+          await expect(page.locator('#communityPanel')).toBeHidden();
+          await page.locator('#telemetryStatusPill').click();
+          await expect(page.locator('#telemetryPanel')).toBeVisible();
+          await expect(page.locator('#telemetryAppVersion')).toHaveText('0.2.1');
+          await page.locator('#telemetryCloseBtn').click();
+          await goHome();
+          await page.locator('#desktopFullscreen').click();
+          await expect(page.locator('#desktopFullscreen')).toHaveAttribute('aria-pressed', 'true');
+          await page.locator('#desktopFullscreen').click();
+          await page.locator('[data-desktop-route="community"]').click();
+        },
+      );
+      await step(
+        'Windows diagnostic copying and notification settings use the shared control center',
+        async () => {
+          await page.locator('#telemetryStatusPill').click();
+          await expect(page.locator('#telemetryResources')).toContainText('215 MB');
+          await page.locator('#copyDiagnostics').click();
+          await expect(page.locator('#copyDiagnosticsStatus')).toContainText('Copiado');
+          const copied = await page.evaluate(() => JSON.parse(window.__native.diagnosticReport));
+          assert.equal(copied.version, '0.2.1');
+          assert.equal(copied.resources.appMemoryMB, 215);
+          assert(!Object.hasOwn(copied, 'nickname'));
+          await page.locator('#telemetryCloseBtn').click();
+          await page.locator('#voiceSettingsBtn').click();
+          await page.locator('[data-settings-tab=notifications]').click();
+          await expect(page.locator('#notificationMode')).toHaveValue('mentions');
+          await page.locator('#notificationChannel').selectOption('chat-jogos');
+          await page.locator('#notificationChannelMute').check();
+          assert.equal(
+            await page.evaluate(() => window.TronoNotifications.muted('chat-jogos')),
+            true,
+          );
+          await page.locator('#notificationChannelMute').uncheck();
+          await page.locator('#voiceSettingsClose').click();
+          const primary = await page.evaluate(() => window.TronoNetwork.primaryRoom);
+          await page.evaluate(() => {
+            window.__notificationMic = window.TronoSocial.getLocalAudioTrack();
+            window.TronoSocial.toggleTextChat(false);
+          });
+          await expect(page.locator('#courtChatInput')).toBeHidden();
+          await page.evaluate(
+            (accountId) =>
+              window.__native.notificationClick({
+                type: 'channel',
+                id: 'chat-conversa',
+                accountId,
+              }),
+            data.user.id,
+          );
+          await expect
+            .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
+            .toBe('chat-conversa');
+          await expect(page.locator('#courtChatInput')).toBeVisible();
+          assert.equal(await page.evaluate(() => window.TronoNetwork.primaryRoom), primary);
+          assert(
+            await page.evaluate(
+              () =>
+                window.TronoSocial.getLocalAudioTrack() === window.__notificationMic &&
+                window.__notificationMic.readyState === 'live',
+            ),
+          );
+          await page.evaluate(
+            ({ accountId, id }) =>
+              window.__native.notificationClick({ type: 'channel', id, accountId }),
+            { accountId: data.user.id, id: primary },
+          );
+          await expect
+            .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
+            .toBe(primary);
+        },
+      );
+      await step(
+        'landscape and portrait windows keep channels, call buttons and settings accessible',
+        async () => {
+          for (const size of [
+            { width: 1280, height: 720 },
+            { width: 900, height: 600 },
+            { width: 720, height: 1280 },
+            { width: 480, height: 800 },
+            { width: 480, height: 520 },
+          ]) {
+            await page.setViewportSize(size);
+            await goHome();
+            const version = await page.locator('#desktopUpdateCheck').boundingBox();
+            assert(
+              version.y + version.height <= size.height && version.y >= size.height - 90,
+              JSON.stringify({ size, version }),
+            );
+            for (const view of ['home', 'game']) {
+              await page.locator('[data-desktop-route="' + view + '"]').click();
+              assert(
+                await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+                JSON.stringify({ size, view }),
+              );
+              if (size.width === 480)
+                await page.screenshot({
+                  path: path.join(
+                    artifacts,
+                    'windows-' + view + '-' + size.width + 'x' + size.height + '.png',
+                  ),
+                });
+            }
+            await page.locator('[data-desktop-route="community"]').click();
+            assert(
+              await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+              JSON.stringify(size),
+            );
+            for (const id of [
+              'joinVoiceBtn',
+              'muteMicBtn',
+              'deafenVoiceBtn',
+              'cameraBtn',
+              'screenShareBtn',
+              'voiceSettingsBtn',
+            ])
+              await expect(page.locator('#' + id)).toBeInViewport();
+            if (size.width <= 900) {
+              await page.locator('#workspaceSidebarBtn').click();
+              await expect(page.locator('.mn-channel-sidebar')).toBeVisible();
+              await expect(page.locator('[data-chat-channel]').first()).toBeInViewport();
+              assert(
+                await page
+                  .locator('[data-chat-channel]')
+                  .first()
+                  .evaluate((el) => {
+                    const r = el.getBoundingClientRect();
+                    return el.contains(
+                      document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2),
+                    );
+                  }),
+                'channel must be clickable above the call and shade',
+              );
+              const sidebar = await page.locator('#callWorkspaceSidebar').boundingBox();
+              await page.screenshot({
+                path: path.join(
+                  artifacts,
+                  'windows-channels-' + size.width + 'x' + size.height + '.png',
+                ),
+              });
+              assert(
+                sidebar.y >= 0 && sidebar.y + sidebar.height <= size.height + 1,
+                JSON.stringify({ size, sidebar }),
+              );
+              await page
+                .locator('#workspaceSidebarShade')
+                .click({ position: { x: size.width - 100, y: 20 } });
+              await expect(page.locator('.mn-channel-sidebar')).toBeHidden();
+            }
+            await page.locator('#voiceSettingsBtn').click();
+            await page.locator('[data-settings-tab="capture"]').click();
+            await expect(page.locator('#screenFormatSelect')).toBeVisible();
+            assert(
+              await page
+                .locator('#desktopSettingsDialog')
+                .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+            );
+            await expect
+              .poll(() =>
+                page
+                  .locator('#desktopSettingsDialog')
+                  .evaluate((el) => Math.round(el.getBoundingClientRect().height)),
+              )
+              .toBeGreaterThan(250);
+            if (size.height >= size.width || size.width <= 640) {
+              const layout = await page.locator('#desktopSettingsDialog').evaluate((el) => {
+                const tabs = el.querySelector('.voice-settings-tabs').getBoundingClientRect(),
+                  body = el.querySelector('.voice-settings-content').getBoundingClientRect(),
+                  pane = el
+                    .querySelector('.voice-settings-pane:not([hidden])')
+                    .getBoundingClientRect();
+                return {
+                  tabs: { y: tabs.y, height: tabs.height },
+                  body: { y: body.y, height: body.height },
+                  pane: { y: pane.y, height: pane.height },
+                };
+              });
+              assert(
+                layout.tabs.height <= 61 &&
+                  Math.abs(layout.body.y - layout.tabs.y - layout.tabs.height) < 2 &&
+                  layout.pane.y - layout.body.y <= 20 &&
+                  layout.body.y + layout.body.height - layout.pane.y - layout.pane.height <= 22,
+                JSON.stringify({ size, layout }),
+              );
+            }
+            await page.screenshot({
+              path: path.join(artifacts, 'windows-' + size.width + 'x' + size.height + '.png'),
+            });
+            await page.locator('#voiceSettingsClose').click();
+          }
+          await page.setViewportSize({ width: 1440, height: 1000 });
+        },
+      );
+      await step(
+        'latest update destination is visible even when several versions behind',
+        async () => {
+          await goHome();
+          await page.evaluate(() => {
+            window.TronoDesktop.version = '0.1.1';
+            window.__native.update({ status: 'downloading', version: '0.2.1', percent: 62 });
+          });
+          await page.locator('#desktopUpdateCheck').click();
+          await page.evaluate(() => window.__native.update({ status: 'ready', version: '0.2.1' }));
+          const banner = page.locator('.desktop-update-banner');
+          await expect(banner).toContainText('de 0.1.1 direto para 0.2.1');
+          await expect(
+            banner.getByRole('button', { name: 'Instalar 0.2.1 e reiniciar' }),
+          ).toBeVisible();
+          await expect(banner.getByRole('button', { name: 'Buscar última versão' })).toBeVisible();
+          await page.setViewportSize({ width: 480, height: 520 });
+          const bounds = await banner.boundingBox();
+          assert(
+            bounds.x >= 0 &&
+              bounds.x + bounds.width <= 480 &&
+              bounds.y >= 0 &&
+              bounds.y + bounds.height <= 520,
+            JSON.stringify(bounds),
+          );
+          await page.screenshot({ path: path.join(artifacts, 'windows-latest-update.png') });
+          await banner.getByRole('button', { name: 'Fechar aviso de atualização' }).click();
+          await page.evaluate(() => {
+            window.TronoDesktop.version = '0.2.1';
+            window.__native.update({ status: 'idle' });
+          });
+          await page.setViewportSize({ width: 1440, height: 1000 });
+        },
+      );
+      await step(
+        'resetting permissions is explicit and does not activate camera or start replay',
+        async () => {
+          await page.locator('#voiceSettingsBtn').click();
+          await page.locator('[data-settings-tab="privacy"]').click();
+          await expect(page.locator('#desktopPermissionsStatus')).toContainText('permitido');
+          await page.locator('#desktopResetPermissions').click();
+          await expect(page.locator('#desktopPermissionsStatus')).toContainText(
+            'perguntar ao usar',
+          );
+          assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+          assert.equal(await page.evaluate(() => window.TronoSocial.cameraOn), false);
+          await page.locator('#voiceSettingsClose').click();
+        },
+      );
+      await step(
+        'remembered login restores on a new app window, logout clears it, and opting out stays logged out',
+        async () => {
+          await expect.poll(() => !!remembered).toBe(true);
+          await page.close();
+          await open();
+          assert.equal(await page.evaluate(() => window.TronoAuth.user?.nickname), 'Desktop Test');
+          assert.equal(await page.locator('#authDialog').isVisible(), false);
+          assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+          assert.equal(
+            await page.evaluate(
+              async (owner) =>
+                (await window.TronoClipStore.list(owner)).find((c) => c.id === 'kept-clip').blob
+                  .size,
+              data.user.id,
+            ),
+            9,
+          );
+          assert.equal(
+            await page.evaluate(
+              () => window.__native.recorders + window.__native.workers + window.__native.captures,
+            ),
+            0,
+          );
+          await page.locator('#voiceSettingsBtn').click();
+          await page.locator('[data-settings-tab="account"]').click();
+          await page.locator('#accountLogoutBtn').click();
+          await expect(page.locator('#authDialog')).toBeVisible();
+          await expect.poll(() => remembered).toBe(null);
+          await page.locator('#authEmail').fill('desktop@example.test');
+          await page.locator('#authPassword').fill('Senha12!');
+          await page.locator('#authRemember').uncheck();
+          await page.locator('#authSubmitBtn').click();
+          await expect(page.locator('#authDialog')).toBeHidden();
+          await page.close();
+          await open();
+          await expect(page.locator('#authDialog')).toBeVisible();
+          assert.equal(await page.evaluate(() => window.TronoAuth.user), null);
+          await page.locator('#authEmail').fill('desktop@example.test');
+          await page.locator('#authPassword').fill('Senha12!');
+          await page.locator('#authRemember').check();
+          await page.locator('#authSubmitBtn').click();
+          await expect(page.locator('#authDialog')).toBeHidden();
+          await expect.poll(() => !!remembered).toBe(true);
+          await page.close();
+          await open();
+          assert.equal(await page.evaluate(() => window.TronoAuth.user?.nickname), 'Desktop Test');
+          await page.screenshot({ path: path.join(artifacts, 'windows-home.png') });
+        },
+      );
+      await step(
+        'native source picker still allows explicit audio choice and cancellation',
+        async () => {
+          await page.evaluate(() => {
+            window.__native.nextCaptureRequest = {
+              id: 'capture-1',
+              audio: true,
+              windows: true,
+              applicationAudio: false,
+              sources: [
+                {
+                  id: 'window:1:0',
+                  name: 'Jogo',
+                  thumbnail:
+                    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                },
+              ],
+            };
+            window.__native.pickerResult = navigator.mediaDevices
+              .getDisplayMedia({ video: true, audio: true })
+              .then(
+                (stream) => {
+                  stream.getTracks().forEach((track) => track.stop());
+                  return 'selected';
+                },
+                (error) => error.name,
+              );
+          });
+          await page.locator('.desktop-capture-sources button').click();
+          await page.locator('#desktopCaptureConfirm').click();
+          assert.equal(
+            await page.evaluate(() => window.__native.captureSelections.at(-1).audioMode),
+            'none',
+          );
+          assert.equal(await page.evaluate(() => window.__native.pickerResult), 'selected');
+          await page.evaluate(() => {
+            window.__native.nextCaptureRequest = {
+              id: 'capture-2',
+              audio: false,
+              windows: true,
+              applicationAudio: false,
+              sources: [],
+            };
+            window.__native.pickerResult = navigator.mediaDevices
+              .getDisplayMedia({ video: true })
+              .then(
+                () => 'selected',
+                (error) => error.name,
+              );
+          });
+          await expect(page.locator('.desktop-capture-dialog')).toBeVisible();
+          await page.evaluate(() => {
+            window.__native.cancel({ id: 'capture-2' });
+            window.__native.pendingPicker.reject(new DOMException('Cancelled', 'NotAllowedError'));
+            window.__native.pendingPicker = null;
+          });
+          await expect(page.locator('.desktop-capture-dialog')).toBeHidden();
+          assert.equal(await page.evaluate(() => window.__native.pickerResult), 'NotAllowedError');
+        },
+      );
+      await step(
+        'real online match keeps the complete hand above the dock and game utilities in settings',
+        async () => {
+          await expect(page.locator('body')).toHaveAttribute('data-app-layout', 'original');
+          await page.setViewportSize({ width: 1280, height: 720 });
+          await page.locator('[data-desktop-route="game"]').click();
+          await page.locator('#playThrone').click();
+          await page.locator('.room-enter[data-room="sala-cetro"]').click();
+          await expect(page.locator('#roomScreen')).toBeVisible();
+          const { WebSocket } = require('ws'),
+            peer = new WebSocket(fixture.base.replace(/^http/, 'ws') + '/ws'),
+            messages = [];
+          peer.on('message', (raw) => messages.push(JSON.parse(raw)));
+          require('./court-peer-fixture')(peer);
+          const wait = async (predicate) => {
+            for (let n = 0; n < 500; n++) {
+              const found = messages.find(predicate);
+              if (found) return found;
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+            throw Error('Game fixture message missing');
+          };
+          try {
+            await new Promise((resolve, reject) => {
+              peer.once('open', resolve);
+              peer.once('error', reject);
+            });
+            peer.send(
+              JSON.stringify({
+                type: 'guest-authenticate',
+                name: 'Jogador Teste',
+                requestId: 'game-guest',
+              }),
+            );
+            await wait((m) => m.type === 'guest-result' && m.ok);
+            peer.send(JSON.stringify({ type: 'join-room', roomId: 'sala-cetro' }));
+            await wait((m) => m.type === 'joined-room');
+            peer.send(JSON.stringify({ type: 'ready', ready: true }));
+            await page.locator('#voiceSettingsBtn').click();
+            await page.locator('[data-settings-tab=game]').click();
+            await expect(page.locator('#speedBtn')).toBeVisible();
+            const speed = await page.locator('#speedBtn').getAttribute('aria-label');
+            await page.locator('#speedBtn').click();
+            await expect(page.locator('#speedBtn')).not.toHaveAttribute('aria-label', speed);
+            await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+            await page.locator('#voiceSettingsClose').click();
+            await expect(page.locator('#desktopSettingsDialog')).toBeHidden();
+            await page.locator('#readyOnlineBtn').click();
+            await expect(page.locator('#startOnlineBtn')).toBeEnabled();
+            await page.locator('#startOnlineBtn').click();
+            await expect(page.locator('#gameScreen')).toBeVisible();
+            await expect(page.locator('#socialPanel')).toBeHidden();
+            await expect
+              .poll(() => page.locator('#throneOnlineHandCards .hand-card').count())
+              .toBeGreaterThan(0);
+            await expect
+              .poll(
+                async () => {
+                  if (await page.locator('#throneChoiceDialog').isVisible()) {
+                    const choice = page.locator('#throneChoiceDialog .choice-card').first();
+                    if (await choice.isVisible()) await choice.click();
+                  }
+                  if (await page.locator('#thronePrivateContinue').isVisible())
+                    await page.locator('#thronePrivateContinue').click();
+                  return page.evaluate(() => window.__LeiDoTrono.getState()?.phase);
+                },
+                { timeout: 15000 },
+              )
+              .toBe('await-play');
+            for (const layout of ['original', 'discord'])
+              for (const size of [
+                { width: 1280, height: 720 },
+                { width: 900, height: 600 },
+                { width: 720, height: 1280 },
+                { width: 480, height: 800 },
+                { width: 480, height: 520 },
+              ]) {
+                await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+                await page.setViewportSize(size);
+                await page.evaluate(
+                  () =>
+                    new Promise((resolve) =>
+                      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                    ),
+                );
+                let geometry;
+                await expect
+                  .poll(
+                    async () => {
+                      geometry = await page.evaluate(() => {
+                        const hand = document.getElementById('throneOnlineHandCards'),
+                          card = hand.querySelector('.hand-card'),
+                          dock = document.getElementById(
+                            document.body.dataset.appLayout === 'discord'
+                              ? 'layoutVoicePanel'
+                              : 'desktopCallDock',
+                          );
+                        if (!card) return null;
+                        const rect = (el) => {
+                          const r = el.getBoundingClientRect();
+                          return {
+                            x: r.x,
+                            y: r.y,
+                            width: r.width,
+                            height: r.height,
+                            right: r.right,
+                            bottom: r.bottom,
+                          };
+                        };
+                        return {
+                          card: rect(card),
+                          hand: rect(hand),
+                          dock: rect(dock),
+                          allFit: [...hand.querySelectorAll('.hand-card')].every((el) => {
+                            const c = rect(el),
+                              h = rect(hand);
+                            return (
+                              c.width > 0 &&
+                              c.height > 0 &&
+                              c.x >= h.x &&
+                              c.right <= h.right + 1 &&
+                              c.y >= h.y &&
+                              c.bottom <= h.bottom + 1
+                            );
+                          }),
+                        };
+                      });
+                      return !!geometry?.allFit;
+                    },
+                    { message: JSON.stringify({ layout, size }) },
+                  )
+                  .toBe(true);
+                const table = await page.locator('.royal-table').boundingBox();
+                assert(
+                  table.width > 150 && table.height >= 80,
+                  JSON.stringify({ layout, size, table }),
+                );
+                const slots = await page.locator('.table-card-slot').evaluateAll((ns) =>
+                  ns.map((n) => {
+                    const r = n.getBoundingClientRect();
+                    return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+                  }),
+                );
+                assert(
+                  slots.every(
+                    (r) =>
+                      r.x >= table.x - 1 &&
+                      r.right <= table.x + table.width + 1 &&
+                      r.y >= table.y - 1 &&
+                      r.bottom <= table.y + table.height + 1,
+                  ),
+                  JSON.stringify({ layout, size, table, slots }),
+                );
+                const middle = await page.locator('.center-info').boundingBox();
+                const intersects = (a, b) =>
+                  Math.min(a.right ?? a.x + a.width, b.right ?? b.x + b.width) -
+                    Math.max(a.x, b.x) >
+                    1 &&
+                  Math.min(a.bottom ?? a.y + a.height, b.bottom ?? b.y + b.height) -
+                    Math.max(a.y, b.y) >
+                    1;
+                assert(
+                  !slots.some((a, i) => slots.some((b, j) => i < j && intersects(a, b))),
+                  JSON.stringify({ layout, size, slots }),
+                );
+                assert(
+                  !slots.some((r) => intersects(r, middle)),
+                  JSON.stringify({ layout, size, slots, middle }),
+                );
+                const { card, hand, dock } = geometry,
+                  overlap =
+                    Math.min(hand.right, dock.right) - Math.max(hand.x, dock.x) > 1 &&
+                    Math.min(hand.bottom, dock.bottom) - Math.max(hand.y, dock.y) > 1;
+                assert(!overlap, JSON.stringify({ layout, size, card, hand, dock }));
+                const audio = page.locator('#gameScreen [data-game-audio=throne]');
+                await audio.locator('summary').click();
+                const popup = await audio.locator('.tt-audio-panel').boundingBox();
+                assert(
+                  popup.x >= 0 &&
+                    popup.y >= 0 &&
+                    popup.x + popup.width <= size.width &&
+                    popup.y + popup.height <= size.height,
+                  JSON.stringify({ layout, size, popup }),
+                );
+                await audio.locator('input').press('Home');
+                assert.equal(await page.evaluate(() => window.TronoAudio.gameVolume('throne')), 0);
+                await audio.locator('input').press('End');
+                await audio.locator('summary').click();
+                await page.screenshot({
+                  path: path.join(
+                    artifacts,
+                    'windows-match-' + layout + '-' + size.width + 'x' + size.height + '.png',
+                  ),
+                });
+              }
+            await expect(page.locator('#courtFullscreen')).toBeVisible();
+            await expect(page.locator('#gameScreen .top-actions button:visible')).toHaveCount(1);
+          } finally {
+            peer.terminate();
+          }
+        },
+      );
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await fixture.stop();
+      await new Promise((r) => server.close(r));
+    }
+  },
+);

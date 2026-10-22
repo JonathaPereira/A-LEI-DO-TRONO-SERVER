@@ -1,104 +1,127 @@
-# Desenvolvimento do desktop M&N
+# Desenvolvimento desktop
 
-O foco atual do projeto é o aplicativo Windows. O Electron carrega os arquivos de
-`frontend/` do checkout local e acrescenta navegação, configurações, permissões,
-atualização e integrações nativas. A experiência no navegador serve como uma
-validação complementar; ela não substitui a avaliação do aplicativo real.
+O aplicativo Windows tem dois modos locais. Ambos usam um perfil de teste em
+`artifacts/desktop-profile`, separado do perfil da instalação do usuário.
 
-## Abrir a versão local
-
-Use Node.js 24 e npm. Execute na raiz do repositório:
+## Interface compilada e backend existente
 
 ```powershell
 npm ci
 npm run desktop:install
+npm run build
 npm run desktop:start
 ```
 
-As duas instalações só precisam ser repetidas quando as respectivas dependências
-mudarem. Para abrir novamente, basta `npm run desktop:start`.
+O Electron serve `out/` como a origem instalada, sem executar um servidor Next no
+computador do usuário. Esse modo usa o backend publicado e as contas existentes.
+Chat, arquivos e alterações de perfil afetam o serviço real. Após editar fontes,
+execute `npm run build` e recarregue a janela. Não precisa gerar instalador.
 
-A interface é a deste checkout, sem precisar gerar instalador. O aplicativo usa o
-backend existente em `https://a-lei-do-trono-server.onrender.com`: entre com a mesma
-conta da comunidade. Mensagens e outras ações nessa sessão usam o serviço real.
-Não é necessário iniciar `npm start` ou o servidor estático para esse fluxo.
+## Atualização ao salvar com backend local
 
-O comando da raiz guarda a sessão e as preferências de desenvolvimento em
-`artifacts/desktop-profile/`, separado do perfil da versão instalada. Essa pasta é
-ignorada pelo Git e pode conter dados privados da conta; não a compartilhe.
+Prepare o ambiente local:
 
-Depois de editar HTML, CSS ou JavaScript de `frontend/`, use **Visualização →
-Recarregar**. Para mudanças em `desktop/app/`, encerre em **M&N → Sair** e execute
-o comando novamente. Fechar a janela normalmente envia o aplicativo para a bandeja.
-F11 alterna tela cheia. O atualizador fica em modo de desenvolvimento nesta execução.
+```powershell
+Copy-Item .env.example .env
+```
 
-## Recursos nativos opcionais para avaliar a interface
+Configure as credenciais do ambiente de desenvolvimento em `.env`. O backend usa
+Supabase para contas e persistência; mantenha autenticação obrigatória. As chaves
+secretas ficam somente no backend. As migrações SQL estão em `supabase/`; esta
+reorganização não executa migrações nem altera serviços remotos.
 
-O helper C++ é usado para áudio isolado por aplicativo e detecção de jogos.
-A interface, autenticação, chat e os fluxos comuns de mídia podem iniciar sem ele.
+`APP_URL` identifica o frontend HTTPS usado nos links de autenticação. O backend
+exige HTTPS para essa variável fora dos testes. Para abrir a interface local,
+mantenha `http://127.0.0.1:3000` em `AUTH_ALLOWED_ORIGINS`; isso não exige trocar
+`APP_URL` para HTTP. Use a URL HTTPS do seu ambiente de desenvolvimento e confira
+os redirecionamentos permitidos na configuração de autenticação desse ambiente.
 
-Para compilar o helper, instale Visual Studio Build Tools com desenvolvimento
-desktop em C++, um Windows SDK recente e CMake 3.24 ou posterior. Então execute:
+Em um terminal:
+
+```powershell
+npm run server:dev
+```
+
+Em outro:
+
+```powershell
+npm run desktop:dev
+```
+
+O segundo comando inicia Next em `http://127.0.0.1:3000` e abre o Electron nessa
+origem. A interface procura o backend em `http://127.0.0.1:10000`. A origem local
+precisa estar em `AUTH_ALLOWED_ORIGINS`, como no exemplo.
+
+Páginas, componentes e estilos globais usam a atualização do Next. Donos que
+duram pela página podem exigir recarga completa; mover um host deve preservar sua
+raiz React. `src/styles/index.css` importa os estilos de domínio pelo Next;
+edite os fontes em `src/styles/`, sem gerar cópias CSS em `public/`. O pacote
+continua exigindo `npm run build` para incorporar alterações. Entradas clássicas
+de callback/worklets usam a preparação de `predev`/`prebuild`. Mudanças em
+`electron/` exigem reabrir a aplicação; mudanças em C++ exigem recompilação.
+
+O fluxo de CSS foi conferido no Next em desenvolvimento: salvar um estilo de
+domínio atualizou a página sem recarga, troca da conexão ou parada de microfone
+sintético. Isso não significa que qualquer mudança no código de captura possa
+ser aplicada durante uma chamada sem reiniciar seus donos.
+
+O modo de desenvolvimento aceita apenas uma origem HTTP em `127.0.0.1` com porta
+explícita e é desativado no aplicativo empacotado. O instalador serve somente seus
+arquivos e autoriza os scripts de bootstrap por hash.
+
+## Instalação nova do banco
+
+`supabase/install.sql` é a ordem única dos 13 SQL existentes: base, upgrades e
+migrações datadas. Requer a infraestrutura de Auth do Supabase e recusa executar
+se alguma tabela da aplicação já existir. Para atualizar uma base existente,
+aplique somente os upgrades ainda necessários; não use esse instalador.
+
+```powershell
+npm run database:prepare
+npm run test:database
+```
+
+O primeiro comando somente gera `artifacts/database/fresh-install.sql`, pronto
+para revisar e executar no SQL Editor de um projeto de desenvolvimento novo.
+Não abre conexão nem lê credenciais. O segundo instala esse mesmo conteúdo em
+PGlite descartável e verifica RLS, permissões, perfis, e-mails privados e histórico.
+Não substitui a conferência num ambiente Supabase completo.
+
+Se usar psql, com a conexão do destino novo já configurada, a alternativa é
+`psql -f supabase/install.sql`. As inclusões são relativas ao próprio instalador,
+e ON_ERROR_STOP interrompe o processo no primeiro erro. Cada fonte conserva sua
+transação; se uma etapa falhar depois de outras confirmadas, corrija a causa e
+continue pelos arquivos pendentes, sem reaplicar o instalador inteiro.
+
+O roteiro não escreve no histórico interno do Supabase CLI nem transforma os
+SQL legados numa cadeia de `db reset`. Antes de adotar `db push`, confira
+`supabase migration list` e reconcilie as migrações datadas já executadas pelo
+[fluxo oficial de histórico](https://supabase.com/docs/reference/cli/supabase-migration-repair).
+Marcar uma migração como aplicada exige confirmar que seu SQL já foi executado;
+esse comando muda o histórico e não instala os objetos ausentes.
+
+## Helper C++
+
+Para áudio isolado de aplicativos e detecção de atividade, instale Visual Studio
+ou Build Tools com **Desenvolvimento para desktop com C++**, MSVC, Windows SDK e
+CMake. Depois:
 
 ```powershell
 npm run desktop:build:native
 ```
 
-O resultado esperado é `artifacts/native-audio/Release/MN-Application-Audio.exe`.
-O comando detecta Visual Studio e CMake mesmo em um terminal aberto antes da
-instalação. Também substitui um cache NMake antigo pelo gerador Visual Studio x64;
-não é necessário configurar o NMake ou abrir um Developer PowerShell.
-Reabra o app depois da compilação. Captura isolada exige Windows build 20348 ou
-superior; câmera e microfone também dependem das permissões do sistema.
+O script detecta Visual Studio e CMake, escolhe o gerador disponível e produz
+`artifacts/native-audio/Release/MN-Application-Audio.exe`. Não configure NMake
+manualmente. A interface pode abrir sem o helper; as funções que dependem dele
+ficam indisponíveis.
 
-## Comandos da raiz
+## Empacotar
 
-| Comando | Finalidade |
-| --- | --- |
-| `npm run desktop:install` | Instalar as dependências fixadas do Electron |
-| `npm run desktop:start` | Abrir o aplicativo com perfil de desenvolvimento |
-| `npm run desktop:build:native` | Compilar o helper Windows de áudio e atividade |
-| `npm run test:desktop:core` | Validar políticas, preferências, atualizações, notificações e lógica de áudio |
-| `npm run test:desktop:layout` | Exercitar layouts e navegação em duas instâncias reais do Electron com contas e mídias de teste |
-| `npm run test:profiles` | Validar perfis e autorização com banco local de teste |
-| `npm run desktop:package` | Gerar o instalador Windows; exige o helper compilado |
+```powershell
+npm run desktop:build:native
+npm run desktop:package
+```
 
-Os testes de núcleo não substituem a validação de Electron real, dispositivos ou
-chamadas entre máquinas. Os testes completos e a publicação estão descritos em
-`WINDOWS_APP.md` e `.github/workflows/windows-app.yml`.
-
-## Organização dos controles da chamada
-
-`frontend/call-controls-layout.js` é o único módulo que posiciona os botões da
-chamada, o acesso às pessoas e a barra de controles. Ele registra as posições
-originais antes da montagem do desktop e escolhe diretamente o destino de cada
-elemento. Os botões são movidos, preservando identidade e listeners.
-
-- `desktop-shell.js` monta a navegação e os contêineres do aplicativo.
-- `app-layout.js` aplica a preferência Original/Discord e atualiza perfil e conexão.
-- `call-workspace.js` monta a área da comunidade e controla sua navegação lateral.
-- `call-controls-layout.js` centraliza posicionamento, ícones e rótulos dos controles.
-
-Os módulos de apresentação podem chamar `TronoCallControlsLayout.refresh()` após
-criar seus contêineres. Mudanças de tela e de estado da chamada também atualizam
-o posicionamento. O módulo não captura mídia, não abre conexão e não conecta
-handlers de ações aos botões. As configurações do desktop continuam no diálogo
-montado por `desktop-settings.js`.
-
-O teste `tests/desktop-call-layout.js` usa duas instâncias do Electron e um backend
-local com provedor de contas simulado. Ele verifica os mesmos nós, tracks, socket,
-conexão WebRTC e associações à voz e ao jogo durante a troca de layouts, navegação,
-assinatura de texto e redimensionamento. Também verifica mute e configurações.
-As capturas ficam em `artifacts/call-layout/`. Não usa contas ou dispositivos reais.
-
-Esse teste reproduziu no código anterior a perda da posição do microfone ao
-retornar ao layout Original após alternar entre as áreas. O teste passa com o
-posicionamento centralizado e também integra o workflow Windows existente.
-
-## Próximas etapas de organização
-
-Os comandos de desenvolvimento e o posicionamento dos controles já estão
-centralizados. As próximas etapas são extrair estado de mídia, chat e apresentação
-para responsabilidades menores. Trocar a área visível ou abrir texto/jogos deve
-preservar a chamada e suas mídias; trocar a própria sala de voz segue o fluxo
-explícito de saída e entrada.
+O pacote inclui a saída estática em `resources/renderer`. Os recursos grandes de
+Cinzas mantêm a política de cache verificado. Valide as regressões Windows de
+`CONTRIBUTING.md` antes de distribuir.

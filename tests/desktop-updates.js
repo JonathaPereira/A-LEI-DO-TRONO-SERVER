@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events');
-const {createUpdates,UPDATE_URL}=require('../desktop/app/updates.cjs');
+const {createUpdates,UPDATE_URL}=require('../electron/updates.cjs');
 test('updates download internally and install only after readiness and restart consent',async()=>{
   const updater=new EventEmitter();let installed=0,prepared=0,allowed=false,checks=0,feed;
   updater.setFeedURL=value=>feed=value;updater.checkForUpdates=async()=>{checks++;updater.emit('checking-for-update');};updater.quitAndInstall=()=>installed++;
@@ -37,13 +37,13 @@ test('an offline latest-version check retains the already verified installer',as
   await service.check({force:true});assert.equal(service.state.status,'ready');assert.equal(service.state.version,'0.1.2');assert.match(service.state.message,/já baixada/);
 });
 test('the installed updater reads the existing Surge feed and resolves an external GitHub installer with SHA-512',async()=>{
- const {GenericProvider}=require('../desktop/app/node_modules/electron-updater/out/providers/GenericProvider'),crypto=require('node:crypto'),bytes=Buffer.from('test installer'),sha512=crypto.createHash('sha512').update(bytes).digest('base64');
+ const {GenericProvider}=require('../electron/node_modules/electron-updater/out/providers/GenericProvider'),crypto=require('node:crypto'),bytes=Buffer.from('test installer'),sha512=crypto.createHash('sha512').update(bytes).digest('base64');
  const download='https://github.com/JonathaPereira/MN-Trono-Downloads/releases/download/v0.1.11/MN-Trono-0.1.11-Windows.exe',requests=[];
  const provider=new GenericProvider({provider:'generic',url:UPDATE_URL},{channel:null,isAddNoCacheQuery:false},{platform:'win32',executor:{request:async options=>{requests.push(options);return `version: 0.1.11\nfiles:\n  - url: ${download}\n    sha512: ${sha512}\n    size: ${bytes.length}\npath: ${download}\nsha512: ${sha512}\n`;}}});
  const info=await provider.getLatestVersion(),resolved=provider.resolveFiles(info);assert.equal(requests[0].hostname,'a-lei-do-trono.surge.sh');assert.equal(requests[0].path,'/downloads/latest.yml');assert.equal(resolved.length,1);assert.equal(resolved[0].url.href,download);assert.equal(resolved[0].info.sha512,sha512);assert.equal(resolved[0].info.size,bytes.length);
 });
 test('the installed updater resolves the single current installer next to latest.yml on Surge',async()=>{
- const {GenericProvider}=require('../desktop/app/node_modules/electron-updater/out/providers/GenericProvider'),crypto=require('node:crypto'),bytes=Buffer.from('current approved installer'),sha512=crypto.createHash('sha512').update(bytes).digest('base64'),filename='MN-Trono-0.1.12-Windows.exe';
+ const {GenericProvider}=require('../electron/node_modules/electron-updater/out/providers/GenericProvider'),crypto=require('node:crypto'),bytes=Buffer.from('current approved installer'),sha512=crypto.createHash('sha512').update(bytes).digest('base64'),filename='MN-Trono-0.1.12-Windows.exe';
  const provider=new GenericProvider({provider:'generic',url:UPDATE_URL},{channel:null,isAddNoCacheQuery:false},{platform:'win32',executor:{request:async()=>`version: 0.1.12\nfiles:\n  - url: ${filename}\n    sha512: ${sha512}\n    size: ${bytes.length}\npath: ${filename}\nsha512: ${sha512}\n`}});
  const resolved=provider.resolveFiles(await provider.getLatestVersion());assert.equal(resolved.length,1);assert.equal(resolved[0].url.href,UPDATE_URL+filename);assert.equal(resolved[0].info.sha512,sha512);assert.equal(resolved[0].info.size,bytes.length);
 });

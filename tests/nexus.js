@@ -2,8 +2,8 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {EventEmitter} = require('node:events');
-const config = require('../frontend/nexus-config.js');
-const {allowedGameURL, createNexusLauncher} = require('../desktop/app/nexus.cjs');
+const config = require('../src/lib/games/nexus-config.ts');
+const {allowedGameURL, createNexusLauncher} = require('../electron/nexus.cjs');
 
 test('Nexus accepts playable itch URLs and rejects credentials, arbitrary pages and deceptive hosts', () => {
   for (const url of ['https://itch.io/embed-upload/123?color=000000', 'https://html-classic.itch.zone/html/123/index.html']) {

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
-const {Engine,CARDS,CHAPTERS,TERRAIN}=require('../../frontend/roguelite/core.js');
-const {Controller,DEFAULT,buttonLabel,profileFor}=require('../../frontend/roguelite/controller.js');
+const {Engine,CARDS,CHAPTERS,TERRAIN}=require('../../public/roguelite/core.js');
+const {Controller,DEFAULT,buttonLabel,profileFor}=require('../../public/roguelite/controller.js');
 let passed=0;const test=(name,run)=>{run();passed++;console.log('PASS '+name);};
 const make=(options={})=>{const e=new Engine();e.start({seed:'v4-regression',...options});return e;};
 const tick=(e,n,input={})=>{for(let i=0;i<n;i++)e.update(1/60,input);};

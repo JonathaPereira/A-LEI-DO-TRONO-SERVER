@@ -5,7 +5,7 @@ const {chromium,expect}=require('@playwright/test');
 const {startFixture}=require('./auth-fixture');
 
 test('Windows message notices, call alert mute and compact PC control survive settings and layout changes',{timeout:120000},async()=>{
- const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve('frontend'))).listen(0,'127.0.0.1',()=>resolve(s));});
+ const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve('out'))).listen(0,'127.0.0.1',()=>resolve(s));});
  const origin='http://127.0.0.1:'+server.address().port,fixture=await startFixture({port:10863,appOrigin:origin});let browser;
  try{
   await fixture.call('signup',{email:'desktop-notices@example.test',nickname:'Avisos',password:'Senha12!'});
@@ -23,7 +23,7 @@ test('Windows message notices, call alert mute and compact PC control survive se
    window.TronoDesktop={version:'0.2.15',clipsSuspended:true,notify:async value=>{__notices.push(value);return {shown:true}},onNotificationClick:callback=>window.__noticeClick=callback,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>[],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};
   },{base:fixture.base,data});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);
-  await page.goto(origin);await page.evaluate(()=>window.TronoAuth.ready);
+  await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
   await page.evaluate(()=>{window.TronoSocial.toggleVoiceSettings(true);window.TronoSocial.setSettingsTab('notifications')});
   await expect(page.locator('#windowsNotifications')).toBeChecked();await page.locator('#testWindowsNotification').click();
   assert.equal(await page.evaluate(()=>__notices.length),1);assert.equal(await page.evaluate(()=>__notices[0].preview),true);
@@ -40,7 +40,7 @@ test('Windows message notices, call alert mute and compact PC control survive se
   await page.locator('#muteCallAlerts').check();await page.waitForTimeout(800);await page.evaluate(()=>__notes.length=0);await page.locator('#testCallAlert').click();
   assert.equal(await page.evaluate(()=>__notes.length),0,'Dedicated mute creates no call tones');
   assert.equal(await page.evaluate(()=>TronoAudio.sfxEnabled),true,'Other effects remain enabled');
-  await page.reload();await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(()=>{window.TronoSocial.toggleVoiceSettings(true);window.TronoSocial.setSettingsTab('audio')});
+  await page.reload();await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(()=>{window.TronoSocial.toggleVoiceSettings(true);window.TronoSocial.setSettingsTab('audio')});
   await expect(page.locator('#muteCallAlerts')).toBeChecked();await expect(page.locator('#callAlertVolume')).toHaveValue('45');
   await page.evaluate(()=>window.TronoSocial.setSettingsTab('notifications'));await expect(page.locator('#notificationMode')).toHaveValue('off');await expect(page.locator('#windowsNotifications')).toBeChecked();
   await page.evaluate(()=>window.TronoSocial.toggleVoiceSettings(false));

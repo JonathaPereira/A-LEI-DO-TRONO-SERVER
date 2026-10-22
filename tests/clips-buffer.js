@@ -5,7 +5,7 @@ const {mkdtempSync,readFileSync,writeFileSync,rmSync}=require('node:fs');
 const {tmpdir}=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const {ClipBuffer}=require('../frontend/clip-buffer');
+const {ClipBuffer}=require('../src/lib/clips/buffer.ts');
 
 function run(binary,args){
   const result=spawnSync(binary,args,{encoding:'utf8',timeout:15000});
