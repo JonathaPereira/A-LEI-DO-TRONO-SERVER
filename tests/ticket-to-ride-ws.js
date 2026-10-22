@@ -14,7 +14,13 @@ test('real authenticated railway server isolates hands, enforces host/turn/revis
     for(const c of [a,b]){const s=c.messages.findLast(m=>m.type==='ticket-to-ride-state').room.state,p=s.players.find(p=>p.hand);c.send({type:'ticket-to-ride',action:'move',revision:s.revision,move:{kind:'tickets',keep:p.pending.slice(0,2)}});await c.wait(m=>m.type==='ticket-to-ride-state'&&m.room.state?.revision===s.revision+1);await new Promise(r=>setTimeout(r,30));}
     await a.wait(m=>m.type==='ticket-to-ride-state'&&m.room.state?.phase==='playing');const s=a.messages.findLast(m=>m.type==='ticket-to-ride-state').room.state,active=s.players[s.turn].id===users[0].user.id?a:b,wrong=active===a?b:a,offset=wrong.messages.length;
     wrong.send({type:'ticket-to-ride',action:'move',revision:s.revision,move:{kind:'draw',source:'deck'}});assert.equal((await wrong.wait(m=>m.type==='ticket-to-ride-error',offset)).code,'TICKET_TO_RIDE_INVALID_MOVE');const from=active.messages.length;active.send({type:'ticket-to-ride',action:'move',revision:-1,move:{}});assert.equal((await active.wait(m=>m.type==='ticket-to-ride-error',from)).code,'TICKET_TO_RIDE_STALE');active.send({type:'ticket-to-ride',action:'move',revision:s.revision,move:{kind:'draw',source:'deck'}});await a.wait(m=>m.type==='ticket-to-ride-state'&&m.room.state?.revision===s.revision+1);
-    const bId=(await b.wait(m=>m.type==='welcome')).clientId;a.send({type:'voice-signal',targetId:bId,signalType:'offer',data:{sdp:'rail-call'}});await b.wait(m=>m.type==='voice-signal'&&m.data.sdp==='rail-call');a.send({type:'chat-message',text:'A viagem preserva a chamada'});assert.equal((await a.wait(m=>m.type==='chat-message'&&m.message.text==='A viagem preserva a chamada')).message.roomId,'chat-livre');const off=a.messages.length;a.send({type:'love-letter',action:'state'});assert((await a.wait(m=>m.type==='love-letter-state',off)).room.id);
+    const bId=(await b.wait(m=>m.type==='welcome')).clientId;
+    a.send({type:'voice-signal',targetId:bId,signalType:'offer',data:{type:'offer',sdp:'rail-call'}});
+    const signal=await b.wait(m=>m.type==='voice-signal'&&m.data.sdp==='rail-call');
+    assert.equal(signal.fromId,(await a.wait(m=>m.type==='welcome')).clientId);
+    assert.equal(signal.signalType,'offer');
+    assert.deepEqual(signal.data,{type:'offer',sdp:'rail-call'});
+    a.send({type:'chat-message',text:'A viagem preserva a chamada'});assert.equal((await a.wait(m=>m.type==='chat-message'&&m.message.text==='A viagem preserva a chamada')).message.roomId,'chat-livre');const off=a.messages.length;a.send({type:'love-letter',action:'state'});assert((await a.wait(m=>m.type==='love-letter-state',off)).room.id);
   } catch (err) {
     console.error('TTR WS test error:', err);
     throw err;

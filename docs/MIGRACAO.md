@@ -101,6 +101,14 @@ conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase
   formatação e build estático passaram. Cada teste tem limite de 30 s; a etapa do
   workflow tem limite de 2 minutos. Correção local, sem publicação ou novo deploy.
 
+- **CI de Ticket to Ride**: o teste WebSocket enviava uma oferta sem
+  `data.type: 'offer'`, rejeitada pelo parser compartilhado de sinalização.
+  O cenário agora envia o contrato completo e confere remetente, tipo e SDP
+  recebidos após iniciar a partida. A suíte completa passou (14 casos, incluindo
+  navegador) e as regressões de canais/voz em jogos passaram (8 casos). A correção
+  altera somente o teste; captura, transporte e validação de produção permanecem
+  iguais. Tipagem, formatação e build estático também foram conferidos.
+
 ## Validação local
 
 | Verificação | Resultado / alcance |
