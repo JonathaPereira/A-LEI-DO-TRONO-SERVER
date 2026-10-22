@@ -1,10 +1,10 @@
-M&N — frontend com instalador Windows 0.3.1
+M&N — frontend com instalador Windows 0.3.2
 
-1. Baixe MN-Trono-Frontend-0.3.1.zip da entrega validada no GitHub.
+1. Baixe MN-Trono-Frontend-0.3.2.zip da entrega validada no GitHub.
 2. Extraia numa pasta nova. frontend/downloads contém somente:
-   MN-Trono-0.3.1-Windows.exe
+   MN-Trono-0.3.2-Windows.exe
    latest.yml
-3. A mesa Ticket to Ride recebeu nova disposição e animações.
+3. A mesa Ticket to Ride recebeu as cartas, os versos, os vagões e o tabuleiro fornecidos.
    Reutiliza o backend 0.14.0-alpha da 0.3.0, sem SQL novo.
    Se estiver vindo de versão anterior à 0.3.0, siga primeiro o guia da 0.3.0.
 4. Entre na pasta frontend pelo Git Bash e execute:
@@ -13,6 +13,6 @@ M&N — frontend com instalador Windows 0.3.1
 
 O instalador já acompanha o frontend. Preserve latest.yml e seu SHA-512.
 Não misture arquivos de entregas diferentes. Contas e preferências são mantidas.
-Consulte ATUALIZAR_WINDOWS_v0.3.1.md.
+Consulte ATUALIZAR_WINDOWS_v0.3.2.md.
 
 Nexus: a incorporação do jogo já está configurada. Não envie ZIP/PCK/WASM do Nexus ao Surge. Consulte INTEGRAR_NEXUS.md.

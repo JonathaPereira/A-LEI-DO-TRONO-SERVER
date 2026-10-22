@@ -1,10 +1,10 @@
 'use strict';
 window.TronoTicketToRide=(()=>{
- const $=id=>document.getElementById(id),D=window.TicketToRideData,R=window.TicketToRideRules,ns='http://www.w3.org/2000/svg';
+ const $=id=>document.getElementById(id),D=window.TicketToRideData,R=window.TicketToRideRules,A=window.TicketToRideArt,ns='http://www.w3.org/2000/svg';
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
  const button=(text,fn,cls='tr-button')=>{const n=el('button',cls,text);n.type='button';n.onclick=fn;return n;};
  const svg=(tag,attrs={})=>{const n=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);return n;};
- const uid=()=>window.TronoAuth.user?.id,palette=['#f17966','#53c6bf','#e5b856','#a79be7','#70b3ed'];
+ const uid=()=>window.TronoAuth.user?.id,palette=A.playerColors;
  let room=null,rooms=[],resume=null,notice='',pending=false,timer,selection=null,highlight=null,drawOrigin=null;
  const effects=new Set(),reducedMotion=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  const mine=s=>s.players.find(p=>p.id===uid()),active=s=>s.phase==='playing'&&s.players[s.turn]?.id===uid(),locked=()=>pending||!window.TronoNetwork.connected;
@@ -22,7 +22,7 @@ window.TronoTicketToRide=(()=>{
  function flyCard(source,target,color,ticket=false,index=0){
   if(!source||!target||!source.width||!source.height)return;
   const end=target.getBoundingClientRect();if(!end.width||!end.height)return;
-  const card=ticket?el('div','tr-ticket tr-ticket-flight','BILHETE DE DESTINO'):color?trainCard(color):el('div','tr-train-card tr-deck','✦');
+  const card=ticket?cardBack(true):color?trainCard(color):cardBack();
   card.classList.add('tr-card-flight');card.setAttribute('aria-hidden','true');
   Object.assign(card.style,{left:source.left+'px',top:source.top+'px',width:source.width+'px',height:source.height+'px'});$('ticketToRideScreen').append(card);
   const x=end.left+end.width/2-source.left-source.width/2,y=end.top+end.height/2-source.top-source.height/2;
@@ -54,7 +54,11 @@ window.TronoTicketToRide=(()=>{
   const join=el('section','tr-panel');join.append(el('span','tr-eyebrow','VIAJE COM AMIGOS'),el('h3','','Embarcar com um código'));const code=el('input');code.id='ticketToRideCode';code.placeholder='Código da mesa';code.maxLength=10;code.setAttribute('aria-label','Código da mesa');join.append(code,button('Entrar na mesa',()=>void request('join',{roomId:code.value.trim().toUpperCase()})));if(resume)join.append(button('Retomar minha mesa',()=>void request('resume',{roomId:resume}),'tr-button tr-primary'));grid.append(create,join);host.append(grid);
   const list=el('section','tr-open-tables');list.append(el('h3','','Mesas aguardando partida'));if(!rooms.length)list.append(el('p','','A estação está tranquila. Crie a primeira mesa.'));for(const r of rooms)list.append(button(r.name+' · '+r.players+'/'+r.maxPlayers+' · '+r.id,()=>void request('join',{roomId:r.id})));host.append(list);
  }
- function ticketCard(id,complete=false){const t=D.tickets.find(t=>t.id===id),n=el('div','tr-ticket'+(complete?' tr-complete':''));n.dataset.ticketId=id;n.append(el('span','tr-ticket-icon',complete?'✓':'↔'),el('strong','',t.a+' → '+t.b),el('b','',t.points+' pts'));return n;}
+ function ticketCard(id,complete=false){
+  const t=D.tickets.find(t=>t.id===id),n=el('div','tr-ticket'+(complete?' tr-complete':'')),preview=svg('svg',{viewBox:'0 0 1024 683',class:'tr-ticket-mini-map','aria-hidden':'true'});n.dataset.ticketId=id;
+  preview.append(svg('image',{href:A.board,width:1024,height:683}));for(const city of [t.a,t.b]){const [x,y]=A.cities[city];preview.append(svg('circle',{cx:x,cy:y,r:28,fill:'#2b9a4b',stroke:'#fff5ca','stroke-width':12}));}
+  n.append(preview,el('span','tr-ticket-icon',complete?'✓':'↔'),el('strong','',t.a+' → '+t.b),el('b','',t.points+' pts'));return n;
+ }
  function tickets(host,s,p){
   const panel=el('section','tr-panel tr-tickets');panel.setAttribute('aria-label','Seus objetivos');panel.append(el('span','tr-eyebrow','SUAS VIAGENS'),el('h2','','Objetivos'),el('p','tr-muted',p.completed.length+' de '+p.tickets.length+' concluídos · bilhetes privados'));
   const collection=el('div','tr-ticket-collection');
@@ -65,44 +69,38 @@ window.TronoTicketToRide=(()=>{
   }host.append(panel);
  }
  function map(s){
-  const wrap=el('section','tr-map-wrap'),canvas=svg('svg',{viewBox:'0 0 1200 740',role:'img','aria-label':'Ferrovias do mapa clássico dos Estados Unidos',class:'tr-map'});canvas.append(svg('rect',{width:1200,height:740,rx:18,fill:'#e6ddc5'}));
-  const land=svg('path',{d:'M40 85L115 40 265 43 485 52 650 73 730 82 795 123 922 60 1012 82 1096 102 1152 148 1080 244 1054 311 1074 350 1054 394 1036 446 1045 509 1012 542 1015 588 1072 679 1040 705 984 648 947 586 896 585 858 625 787 642 751 679 680 683 642 667 578 643 537 662 502 631 480 618 424 623 356 597 309 586 241 573 182 559 109 543 62 474 25 397 34 313 46 251 32 186Z',fill:'#d5d4b6',stroke:'#b5baa0','stroke-width':3});canvas.append(land);
-  // Subtle grid, mountain chains and Great Lakes are original vector artwork.
-  for(let x=80;x<1200;x+=80)canvas.append(svg('path',{d:`M${x} 0V740`,stroke:'#7d8877','stroke-opacity':'.08'}));for(let y=60;y<740;y+=60)canvas.append(svg('path',{d:`M0 ${y}H1200`,stroke:'#7d8877','stroke-opacity':'.08'}));
-  for(let i=0;i<16;i++){const x=160+(i%4)*35,y=200+Math.floor(i/4)*62;canvas.append(svg('path',{d:`M${x} ${y+27}l15-28 15 28-15-15Z`,fill:'#9fae96','fill-opacity':'.5'}));}
-  for(const d of ['M650 151q44-35 86 6l-31 20Z','M720 187q34-19 40 31l-15 37-16-9Z','M777 199q9-47 27-40l9 45-18 22Z','M797 253q41-30 62-1l-28 13Z'])canvas.append(svg('path',{d,fill:'#a1bbc1'}));
-  const title=svg('text',{x:72,y:688,class:'tr-map-title'});title.textContent='THE GREAT AMERICAN RAILWAY';canvas.append(title);const subtitle=svg('text',{x:74,y:710,class:'tr-map-subtitle'});subtitle.textContent='36 CIDADES · COSTA A COSTA';canvas.append(subtitle);
+  const wrap=el('section','tr-map-wrap'),canvas=svg('svg',{viewBox:'0 0 1024 683',role:'group','aria-label':'Ferrovias do mapa clássico dos Estados Unidos',class:'tr-map'}),defs=svg('defs');
+  for(const color of A.playerPieces){const box=A.pieces[color]||A.pieces.blue,symbol=svg('symbol',{id:'tr-piece-'+color,viewBox:box.join(' ')}),image=svg('image',{href:A.wagons,width:1536,height:1024});if(color==='purple')image.style.filter='hue-rotate(65deg)';symbol.append(image);defs.append(symbol);}canvas.append(defs);
+  canvas.append(svg('image',{href:A.board,width:1024,height:683,class:'tr-board-art','aria-hidden':'true'}));
   for(const r of D.routes){
-   const [ax,ay]=D.cities[r.a],[bx,by]=D.cities[r.b],dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy),offset=r.double?(r.lane?5:-5):0,nx=-dy/len*offset,ny=dx/len*offset,angle=Math.atan2(dy,dx)*180/Math.PI,owner=s.claimed[r.id],player=s.players.findIndex(p=>p.id===owner),color=owner?palette[player]:{purple:'#976a9b',white:'#fff7e0',blue:'#5589a6',yellow:'#deb64d',orange:'#d28c4c',black:'#52565a',red:'#bf6b5c',green:'#72966b',gray:'#a5a294'}[r.color];
+   const owner=s.claimed[r.id],player=s.players.findIndex(p=>p.id===owner),geometry=A.geometry(r);
    const g=svg('g',{'data-route':r.id,role:'button',tabindex:0,'aria-label':`${r.a} — ${r.b} · ${r.length} ${D.names[r.color]}${owner?' · '+s.players[player].name:''}`,class:'tr-route'+(owner?' tr-owned':'')+(selection===r.id?' tr-selected':'')});
-   const hit=svg('line',{x1:ax+nx,y1:ay+ny,x2:bx+nx,y2:by+ny,stroke:'transparent','stroke-width':16});g.append(hit);
-   for(let i=0;i<r.length;i++){const fraction=(i+.5)/r.length,x=ax+dx*fraction+nx,y=ay+dy*fraction+ny,w=Math.min(27,(len-25)/r.length-4),slot=svg('g',{transform:`translate(${x} ${y}) rotate(${angle})`}),art=svg('g',{class:owner?'tr-wagon-art':'tr-track-art'});
-    art.append(svg('rect',{x:-w/2,y:-4,width:w,height:8,rx:2,fill:color,stroke:owner?'#fff4d8':'#525a50','stroke-width':owner?1.4:.7}));
-    if(owner){art.append(svg('rect',{x:-w/2+3,y:-2.5,width:Math.max(1,w-6),height:3,rx:1,fill:'#ffffff55'}));for(const cx of [-w/2+4,w/2-4])art.append(svg('circle',{cx,cy:4,r:1.6,fill:'#25343a'}));}
-    slot.append(art);g.append(slot);
-   }
+   g.append(svg('path',{d:geometry.path,fill:'none',stroke:'transparent','stroke-width':16,class:'tr-route-path'}));
+   if(owner)for(const wagon of geometry.wagons){const slot=svg('g',{transform:`translate(${wagon.x} ${wagon.y}) rotate(${wagon.angle+14})`}),art=svg('g',{class:'tr-wagon-art'});art.append(svg('use',{href:'#tr-piece-'+A.playerPieces[player],x:-wagon.width/2,y:-wagon.width/3,width:wagon.width,height:wagon.width*2/3,'aria-hidden':'true'}));slot.append(art);g.append(slot);}
+   g.append(svg('circle',{cx:geometry.middle.x,cy:geometry.middle.y,r:8,fill:'transparent',class:'tr-route-target','aria-hidden':'true'}));
    const choose=()=>{selection=r.id;notice='';render();if(!window.matchMedia('(min-width: 1000px) and (min-aspect-ratio: 4/3)').matches)$('ticketToRidePayment')?.scrollIntoView({block:'nearest',behavior:reducedMotion()?'instant':'smooth'});};g.onclick=choose;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}};canvas.append(g);
   }
-  const destination=D.tickets.find(t=>t.id===highlight);for(const [name,[x,y]]of Object.entries(D.cities)){if(destination&&[destination.a,destination.b].includes(name))canvas.append(svg('circle',{cx:x,cy:y,r:17,fill:'none',stroke:'#c56440','stroke-width':4}));canvas.append(svg('circle',{cx:x,cy:y,r:5,fill:'#f8f0db',stroke:'#48594f','stroke-width':2}));const text=svg('text',{x:x+8,y:y-9,class:'tr-city'});text.textContent=name;canvas.append(text);}wrap.append(canvas);return wrap;
+  const destination=D.tickets.find(t=>t.id===highlight);for(const [name,[x,y]]of Object.entries(A.cities)){const selected=destination&&[destination.a,destination.b].includes(name);canvas.append(svg('circle',{cx:x,cy:y,r:selected?11:5,fill:selected?'#f7d47166':'transparent',stroke:selected?'#d69c22':'transparent','stroke-width':3,class:'tr-city'+(selected?' tr-city-highlight':''),'aria-label':name}));}wrap.append(canvas);return wrap;
  }
  function payment(host,s,p){
   const r=D.routes.find(r=>r.id===selection);if(!r)return;const panel=el('section','tr-panel tr-payment');panel.id='ticketToRidePayment';panel.append(el('span','tr-eyebrow','CONSTRUIR FERROVIA'),el('h2','',r.a+' → '+r.b),el('p','',r.length+' vagões · '+D.points[r.length]+' pontos · '+D.names[r.color]));
   const options=R.payments(s,p,r);if(s.claimed[r.id])panel.append(el('p','','Esta rota já tem uma ferrovia.'));else if(!active(s)||s.drawn||p.pending.length)panel.append(el('p','','Construa no seu turno, antes de comprar cartas.'));else if(!options.length)panel.append(el('p','','Você precisa de cartas e vagões suficientes. Rotas paralelas ficam bloqueadas em partidas com 2–3 pessoas e não podem pertencer à mesma pessoa.'));
   else{const label=el('label','','Pagamento '),select=el('select');select.setAttribute('aria-label','Pagamento da rota');options.forEach((o,i)=>{const opt=el('option','',(r.length-o.locos)+' '+D.names[o.color]+' + '+o.locos+' locomotiva(s)');opt.value=i;select.append(opt);});label.append(select);const pay=button('Construir rota',()=>void commit({kind:'claim',routeId:r.id,...options[Number(select.value)]}),'tr-button tr-primary');pay.id='ticketToRideClaim';pay.disabled=locked();panel.append(label,pay);}panel.append(button('Fechar rota',()=>{selection=null;render();},'tr-link'));host.append(panel);
  }
- function trainCard(color,count,onClick){const n=onClick?button('',onClick,'tr-train-card'):el('div','tr-train-card');n.dataset.trainColor=color;
-  const picture=svg('svg',{viewBox:'0 0 100 64',class:'tr-train-art','aria-hidden':'true'});picture.append(svg('path',{d:color==='loco'?'M12 42V27h15V15h12v12h13V9h8v18h17l9 17H12Z':'M10 17h79v28H10Z',fill:'currentColor',stroke:'#f4e6bf','stroke-width':1.5}));
-  if(color!=='loco')for(let x=20;x<82;x+=15)picture.append(svg('rect',{x,y:24,width:9,height:10,rx:1,fill:'#14242f99'}));
-  for(const x of [26,74])picture.append(svg('circle',{cx:x,cy:47,r:7,fill:'#152630',stroke:'#e6cc91','stroke-width':2}));picture.append(svg('path',{d:'M5 56H96',stroke:'#e6cc91','stroke-width':2}));
-  n.append(picture,el('span','tr-card-name',D.names[color]));if(count!==undefined){n.append(el('b','',String(count)));n.classList.toggle('tr-empty',count===0);n.setAttribute('aria-label',D.names[color]+': '+count+' carta(s)');}return n;}
+ function cardBack(destination=false){const n=el('div',destination?'tr-destination-card':'tr-train-card tr-deck'),image=el('img','tr-back-art');image.src=destination?A.destinations:A.back;image.alt='';image.width=512;image.height=768;image.setAttribute('aria-hidden','true');n.append(image);return n;}
+ function trainCard(color,count,onClick){
+  const n=onClick?button('',onClick,'tr-train-card'):el('div','tr-train-card');n.dataset.trainColor=color;if(!onClick)n.setAttribute('role','img');
+  const picture=svg('svg',{viewBox:A.cards[color].join(' '),class:'tr-train-art','aria-hidden':'true'});picture.append(svg('image',{href:A.fronts,width:1024,height:1536}));n.append(picture,el('span','tr-card-name',D.names[color]));
+  if(count!==undefined){n.append(el('b','',String(count)));n.setAttribute('aria-label',D.names[color]+': '+count+' carta(s)');}return n;
+ }
  function market(host,s,p){
   const panel=el('section','tr-panel tr-supply');panel.setAttribute('aria-label','Compra de vagões');panel.append(el('span','tr-eyebrow','A ESTAÇÃO'),el('h2','','Comprar vagões'),el('p','tr-muted',s.drawn?'Escolha a segunda carta.':'Duas cartas ou uma locomotiva aberta.'));
-  const cards=el('div','tr-market');s.market.forEach((c,i)=>{const n=trainCard(c,undefined,()=>void commit({kind:'draw',source:'market',index:i}));n.dataset.marketIndex=i;n.setAttribute('aria-label','Comprar '+D.names[c]+' · carta '+(i+1));n.disabled=locked()||!active(s)||p.pending.length>0||c==='loco'&&s.drawn>0;cards.append(n);});const deck=button('',()=>void commit({kind:'draw',source:'deck'}),'tr-train-card tr-deck');deck.append(el('span','tr-deck-emblem','✦'),el('span','tr-card-name','MONTE FECHADO'),el('b','',String(s.deckCount)));deck.id='ticketToRideDeck';deck.setAttribute('aria-label','Comprar do monte fechado · '+s.deckCount+' cartas');deck.disabled=s.phase!=='playing'||locked()||!active(s)||p.pending.length>0||!s.deckCount&&!s.discardCount;panel.append(deck,cards);
+  const cards=el('div','tr-market');s.market.forEach((c,i)=>{const n=trainCard(c,undefined,()=>void commit({kind:'draw',source:'market',index:i}));n.dataset.marketIndex=i;n.setAttribute('aria-label','Comprar '+D.names[c]+' · carta '+(i+1));n.disabled=locked()||!active(s)||p.pending.length>0||c==='loco'&&s.drawn>0;cards.append(n);});const deck=button('',()=>void commit({kind:'draw',source:'deck'}),'tr-train-card tr-deck');deck.append(...cardBack().childNodes,el('span','tr-card-name','MONTE FECHADO'),el('b','',String(s.deckCount)));deck.id='ticketToRideDeck';deck.setAttribute('aria-label','Comprar do monte fechado · '+s.deckCount+' cartas');deck.disabled=s.phase!=='playing'||locked()||!active(s)||p.pending.length>0||!s.deckCount&&!s.discardCount;panel.append(deck,cards);
   if(!s.market.length&&!s.deckCount&&!s.discardCount&&s.phase==='playing'){const pass=button('Passar · sem cartas disponíveis',()=>void commit({kind:'pass'}));pass.disabled=locked()||!active(s)||D.routes.some(r=>R.payments(s,p,r).length);panel.append(pass);}host.append(panel);
  }
  function destinationDeck(host,s,p){
   const panel=el('section','tr-panel tr-destination-deck');panel.setAttribute('aria-label','Pilha de cartas de destino');panel.append(el('span','tr-eyebrow','PRÓXIMA VIAGEM'),el('h2','','Cartas de destino'));
-  const take=button('',()=>void commit({kind:'draw-tickets'}),'tr-destination-card');take.append(el('span','tr-compass','✥'),el('span','','COMPRAR DESTINOS'),el('strong','',s.ticketCount+' bilhetes'));take.id='ticketToRideDrawTickets';take.setAttribute('aria-label','Comprar bilhetes · '+s.ticketCount);take.disabled=s.phase!=='playing'||locked()||!active(s)||s.drawn>0||p.pending.length>0||!s.ticketCount;panel.append(take);host.append(panel);
+  const take=button('',()=>void commit({kind:'draw-tickets'}),'tr-destination-card');take.append(...cardBack(true).childNodes,el('span','','COMPRAR DESTINOS'),el('strong','',s.ticketCount+' bilhetes'));take.id='ticketToRideDrawTickets';take.setAttribute('aria-label','Comprar bilhetes · '+s.ticketCount);take.disabled=s.phase!=='playing'||locked()||!active(s)||s.drawn>0||p.pending.length>0||!s.ticketCount;panel.append(take);host.append(panel);
  }
  function render(){
   const host=$('ticketToRideContent');if(!host)return;for(const animation of effects)if(host.contains(animation.effect?.target))animation.cancel();host.replaceChildren();$('ticketToRideScreen').classList.toggle('tr-at-table',!!room?.state);$('ticketToRideNotice').textContent=notice;const status=$('ticketToRideStatus');status.textContent=room?'MESA '+room.id:'ESTAÇÃO M&N';if(!room){lobby(host);return;}
