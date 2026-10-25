@@ -1,65 +1,391 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),express=require('express'),path=require('node:path'),fs=require('node:fs/promises'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
-test('USA railway browser: authenticated tables, ticket selection, real turns/claims, private hands, navigation and responsive map',{timeout:120000},async()=>{
- const server=await new Promise(resolve=>{const s=express().use(express.static(path.resolve(__dirname,'../out'))).listen(0,'127.0.0.1',()=>resolve(s));}),origin='http://127.0.0.1:'+server.address().port,f=await startFixture({port:10848,appOrigin:origin});let browser;const errors=[],out=path.resolve(__dirname,'../artifacts/ticket-to-ride');await fs.mkdir(out,{recursive:true});
- try{
-  browser=await chromium.launch({executablePath:process.env.AUTH_TEST_CHROMIUM||process.env.CHROMIUM_EXECUTABLE_PATH||(process.platform==='linux'?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required']});
-  async function player(i){const email='rail-browser-'+i+'@example.test';await f.call('signup',{email,nickname:'Viajante '+i,password:'Senha12!'});await f.call('verify',{token_hash:[...f.links.keys()].at(-1),type:'signup'});const data=(await f.call('login',{email,password:'Senha12!'})).data,context=await browser.newContext({viewport:{width:1440,height:1000}});await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());await context.addInitScript(({base,data})=>{window.TRONO_BACKEND_URL=base;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('tronoSfxEnabled','0');},{base:f.base,data});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(()=>window.TronoGames.openLibrary());await page.locator('#playTicketToRide').click();await expect(page.locator('#ticketToRideScreen')).toBeVisible();return page;}
-  const a=await player(0),b=await player(1);
-  // Record actual Web Animations calls without replacing their execution.
-  for(const page of [a,b])await page.evaluate(()=>{window.__railEffects=[];window.__railFaces=[];const original=Element.prototype.animate;Element.prototype.animate=function(...args){if(this.matches('.tr-card-flight,.tr-wagon-art'))window.__railEffects.push(this.classList.contains('tr-card-flight')?'card':'wagon');if(this.matches('.tr-card-flight'))window.__railFaces.push(this.dataset.trainColor||null);return original.apply(this,args);};});
-  await a.getByRole('button',{name:'Criar mesa',exact:true}).click();await expect(a.getByRole('heading',{name:'Sua mesa está pronta'})).toBeVisible();const id=await a.evaluate(()=>window.TronoTicketToRide.room.id);await b.locator('#ticketToRideCode').fill(id);await b.getByRole('button',{name:'Entrar na mesa',exact:true}).click();await expect(b.getByRole('heading',{name:'Sua mesa está pronta'})).toBeVisible();await a.getByRole('button',{name:'Iniciar com os presentes'}).click();
-  for(const page of [a,b]){await expect(page.locator('#ticketToRideChoice')).toBeVisible();await expect(page.locator('#ticketToRideKeep')).toBeDisabled();await page.locator('.tr-ticket-option input').nth(0).check();await expect(page.locator('#ticketToRideKeep')).toBeDisabled();await page.locator('.tr-ticket-option input').nth(1).check();await page.locator('#ticketToRideKeep').click();await expect(page.locator('#ticketToRideChoice')).toHaveCount(0);}
-  await expect.poll(()=>a.evaluate(()=>window.TronoTicketToRide.room.state.phase)).toBe('playing');await expect(a.locator('.tr-map [data-route]')).toHaveCount(100);await expect(a.locator('.tr-city')).toHaveCount(36);
-  await expect(a.locator('.tr-map .tr-board-art')).toHaveAttribute('href','assets/ticket-to-ride/board-usa.jpg');
-  const artwork=await a.evaluate(async()=>{
-   const A=window.TicketToRideArt,images=await Promise.all([A.board,A.fronts,A.back,A.destinations,A.wagons].map(async url=>{const image=new Image();image.src=url;await image.decode();return image;}));
-   const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=683;const context=canvas.getContext('2d');context.drawImage(images[0],0,0);
-   const cities=Object.entries(A.cities).map(([name,[x,y]])=>{const [r,g,b]=context.getImageData(x,y,1,1).data;return {name,onMarker:r>g+15&&r>b+30};});
-   return {loaded:images.every(image=>image.naturalWidth>0),cities,cards:Object.values(A.cards),dimensions:images.map(image=>[image.naturalWidth,image.naturalHeight])};
-  });assert(artwork.loaded);assert.deepEqual(artwork.dimensions,[[1024,683],[1024,1536],[512,768],[512,768],[768,512]]);
-  assert.deepEqual(artwork.cities.filter(c=>!c.onMarker),[],'city hit coordinates must match the orange markers on the supplied board');
-  assert.equal(new Set(artwork.cards.map(rect=>rect.join(','))).size,9);assert(artwork.cards.every(([x,y,w,h])=>x>=0&&y>=0&&x+w<=1024&&y+h<=1536));
-  for(const route of ['r0-0','r0-1','r7-0','r7-1','r11-0','r15-0','r26-0','r26-1','r47-0','r47-1','r55-0','r69-0','r77-1']){
-   await a.locator(`[data-route="${route}"] .tr-route-target`).click();const title=await a.evaluate(id=>{const r=window.TicketToRideData.routes.find(r=>r.id===id);return r.a+' → '+r.b;},route);await expect(a.locator('#ticketToRidePayment h2')).toHaveText(title);await a.getByRole('button',{name:'Fechar rota',exact:true}).click();
-  }
-  const firstTurn=await a.evaluate(()=>window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn].id),buyer=await a.evaluate(id=>window.TronoAuth.user.id===id,firstTurn)?a:b;
-  for(let i=0;i<2;i++){const revision=await buyer.evaluate(()=>window.TronoTicketToRide.room.state.revision);await buyer.locator('#ticketToRideDeck').click();await expect.poll(()=>buyer.evaluate(()=>window.TronoTicketToRide.room.state.revision)).toBe(revision+1);}
-  const observer=buyer===a?b:a;await expect.poll(()=>observer.evaluate(()=>window.__railFaces.length)).toBe(2);assert.deepEqual(await observer.evaluate(()=>window.__railFaces),[null,null],'blind draws must animate only card backs for the opponent');
-  let claims=0;for(let i=0;i<120&&claims<4;i++){
-   const turn=await a.evaluate(()=>window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn].id);const page=await a.evaluate(id=>window.TronoAuth.user.id===id,turn)?a:b;
-   const {move,revision}=await page.evaluate(()=>{const s=window.TronoTicketToRide.room.state;return {move:window.TicketToRideRules.botMove(s),revision:s.revision};});
-   if(move.kind==='claim'){await page.locator(`[data-route="${move.routeId}"] .tr-route-target`).click();const options=await page.locator('#ticketToRidePayment select option').allTextContents();const D=await page.evaluate(()=>window.TicketToRideData.names);const index=options.findIndex(text=>text.includes(D[move.color]+' + '+move.locos+' locomotiva'));assert(index>=0);await page.locator('#ticketToRidePayment select').selectOption(String(index));await page.locator('#ticketToRideClaim').click();claims++;}
-   else if(move.kind==='draw'){if(move.source==='market')await page.locator(`[data-market-index="${move.index}"]`).click();else await page.locator('#ticketToRideDeck').click();}
-   else if(move.kind==='draw-tickets')await page.locator('#ticketToRideDrawTickets').click();
-   else if(move.kind==='tickets'){for(const id of move.keep)await page.locator(`.tr-ticket-option input[value="${id}"]`).check();await page.locator('#ticketToRideKeep').click();}
-   else throw Error('Unexpected bot move '+move.kind);
-   await expect.poll(()=>page.evaluate(()=>window.TronoTicketToRide.room.state.revision)).toBe(revision+1);await expect.poll(()=>a.evaluate(()=>window.TronoTicketToRide.room.state.revision)).toBe(revision+1);await expect.poll(()=>b.evaluate(()=>window.TronoTicketToRide.room.state.revision)).toBe(revision+1);
-  }assert.equal(claims,4);await expect(a.locator('.tr-owned')).toHaveCount(4);assert(await a.evaluate(()=>window.TronoTicketToRide.room.state.players.find(p=>p.id!==window.TronoAuth.user.id).hand===null));
-  for(const page of [a,b]){
-   assert(await page.evaluate(()=>window.__railEffects.includes('wagon')),'confirmed claims must animate wagons for both players');
-   const pieces=await page.evaluate(()=>{const s=window.TronoTicketToRide.room.state,D=window.TicketToRideData;return Object.keys(s.claimed).reduce((count,id)=>count+D.routes.find(r=>r.id===id).length,0);});await expect(page.locator('.tr-owned .tr-wagon-art use')).toHaveCount(pieces);
-  }
-  assert(await a.evaluate(()=>window.__railEffects.includes('card'))||await b.evaluate(()=>window.__railEffects.includes('card')),'confirmed card draws must animate into the private hand');
-  await expect.poll(()=>a.locator('.tr-card-flight').count()).toBe(0);
-  await a.locator('.tr-ticket-button').first().click();await expect(a.locator('.tr-ticket-button').first()).toHaveAttribute('aria-pressed','true');await a.screenshot({path:out+'/desktop.png',fullPage:true});
-  for(const [width,height]of [[1366,768],[1920,1080]]){
-   await a.setViewportSize({width,height});await a.locator('#ticketToRideFullscreen').click();await expect.poll(()=>a.evaluate(()=>document.fullscreenElement?.id)).toBe('ticketToRideScreen');await expect(a.locator('#ticketToRideFullscreen')).toHaveAttribute('aria-pressed','true');
-   const geometry=await a.evaluate(()=>{const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};const root=document.querySelector('#ticketToRideScreen');return {hand:rect('.tr-hand'),map:rect('.tr-map-wrap'),supply:rect('.tr-supply'),lastMarket:rect('.tr-market .tr-train-card:last-child'),goals:rect('.tr-tickets'),destinations:rect('.tr-destination-deck'),scrollHeight:root.scrollHeight,clientHeight:root.clientHeight,width:innerWidth,height:innerHeight};});
-   assert(geometry.hand.right<=geometry.map.left,'private hand must stay to the left of the map');assert(geometry.supply.left>=geometry.map.right,'draw pile must stay to the right of the map');
-   assert(geometry.goals.top>=geometry.hand.bottom,'objectives must occupy the lower left corner');assert(geometry.destinations.top>=geometry.supply.bottom,'destination cards must occupy the lower right corner');
-   for(const name of ['hand','map','supply','goals','destinations']){assert(geometry[name].left>=0&&geometry[name].right<=width&&geometry[name].bottom<=height,name+' must fit fullscreen');assert(geometry[name].height>0);}
-   assert(geometry.scrollHeight<=geometry.clientHeight+1,'fullscreen must fit without page scrolling');
-   assert(geometry.lastMarket.bottom<=geometry.supply.bottom,'all five face-up cards must fit without scrolling the station');
-   await a.screenshot({path:out+'/fullscreen-'+width+'x'+height+'.png'});await a.locator('#ticketToRideFullscreen').click();await expect.poll(()=>a.evaluate(()=>document.fullscreenElement)).toBe(null);
-  }
-  // Reduced-motion users still receive confirmed state changes, with no flight effects.
-  const turn=await a.evaluate(()=>window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn].id),current=await a.evaluate(id=>window.TronoAuth.user.id===id,turn)?a:b;
-  await current.emulateMedia({reducedMotion:'reduce'});const effectCount=await current.evaluate(()=>window.__railEffects.length),revision=await current.evaluate(()=>window.TronoTicketToRide.room.state.revision);
-  await current.locator('#ticketToRideDeck').click();await expect.poll(()=>current.evaluate(()=>window.TronoTicketToRide.room.state.revision)).toBe(revision+1);assert.equal(await current.evaluate(()=>window.__railEffects.length),effectCount);await current.emulateMedia({reducedMotion:'no-preference'});
-  const table=await a.evaluate(()=>window.TronoTicketToRide.room.id);await a.locator('#ticketToRideBack').click();await expect(a.locator('#gamesScreen')).toBeVisible();await expect(a.locator('#ticketToRideScreen')).toBeHidden();await a.locator('#playTicketToRide').click();assert.equal(await a.evaluate(()=>window.TronoTicketToRide.room.id),table);
-  await a.locator('#ticketToRideRulesButton').click();await expect(a.locator('#ticketToRideRulesDialog')).toBeVisible();await a.locator('#ticketToRideRulesDialog [data-close]').click();
-  for(const [width,height]of [[390,844],[1080,1920]]){await a.setViewportSize({width,height});assert(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'page must not overflow horizontally');await a.screenshot({path:out+'/'+width+'x'+height+'.png',fullPage:true});}
-  assert.deepEqual(errors,[]);
- }finally{await browser?.close();await f.stop();await new Promise(r=>server.close(r));}
-});
+const { test } = require('node:test'),
+  assert = require('node:assert/strict'),
+  express = require('express'),
+  path = require('node:path'),
+  fs = require('node:fs/promises'),
+  { chromium, expect } = require('@playwright/test'),
+  { startFixture } = require('./auth-fixture');
+test(
+  'USA railway browser: authenticated tables, ticket selection, real turns/claims, private hands, navigation and responsive map',
+  { timeout: 120000 },
+  async () => {
+    const server = await new Promise((resolve) => {
+        const s = express()
+          .use(express.static(path.resolve(__dirname, '../out')))
+          .listen(0, '127.0.0.1', () => resolve(s));
+      }),
+      origin = 'http://127.0.0.1:' + server.address().port,
+      f = await startFixture({ port: 10848, appOrigin: origin });
+    let browser;
+    const errors = [],
+      out = path.resolve(__dirname, '../artifacts/ticket-to-ride');
+    await fs.mkdir(out, { recursive: true });
+    try {
+      browser = await chromium.launch({
+        executablePath:
+          process.env.AUTH_TEST_CHROMIUM ||
+          process.env.CHROMIUM_EXECUTABLE_PATH ||
+          (process.platform === 'linux' ? '/usr/bin/chromium' : undefined),
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--use-fake-device-for-media-stream',
+          '--use-fake-ui-for-media-stream',
+          '--autoplay-policy=no-user-gesture-required',
+        ],
+      });
+      async function player(i) {
+        const email = 'rail-browser-' + i + '@example.test';
+        await f.call('signup', { email, nickname: 'Viajante ' + i, password: 'Senha12!' });
+        await f.call('verify', { token_hash: [...f.links.keys()].at(-1), type: 'signup' });
+        const data = (await f.call('login', { email, password: 'Senha12!' })).data,
+          context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+        await context.route('**/*', (r) =>
+          new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort(),
+        );
+        await context.addInitScript(
+          ({ base, data }) => {
+            window.TRONO_BACKEND_URL = base;
+            sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+            localStorage.setItem('tronoMusicEnabled', '0');
+            localStorage.setItem('tronoSfxEnabled', '0');
+          },
+          { base: f.base, data },
+        );
+        const page = await context.newPage();
+        page.on('pageerror', (e) => errors.push(e.message));
+        await page.goto(origin);
+        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        await page.evaluate(() => window.TronoGames.openLibrary());
+        await page.locator('button[data-game="ticket-to-ride"]').click();
+        await expect(page.locator('#ticketToRideScreen')).toBeVisible();
+        return page;
+      }
+      const a = await player(0),
+        b = await player(1);
+      // Record actual Web Animations calls without replacing their execution.
+      for (const page of [a, b])
+        await page.evaluate(() => {
+          window.__railEffects = [];
+          window.__railFaces = [];
+          const original = Element.prototype.animate;
+          Element.prototype.animate = function (...args) {
+            if (this.matches('.tr-card-flight,.tr-wagon-art'))
+              window.__railEffects.push(
+                this.classList.contains('tr-card-flight') ? 'card' : 'wagon',
+              );
+            if (this.matches('.tr-card-flight'))
+              window.__railFaces.push(this.dataset.trainColor || null);
+            return original.apply(this, args);
+          };
+        });
+      await a.getByRole('button', { name: 'Criar mesa', exact: true }).click();
+      await expect(a.getByRole('heading', { name: 'Sua mesa está pronta' })).toBeVisible();
+      const id = await a.evaluate(() => window.TronoTicketToRide.room.id);
+      await b.locator('#ticketToRideCode').fill(id);
+      await b.getByRole('button', { name: 'Entrar na mesa', exact: true }).click();
+      await expect(b.getByRole('heading', { name: 'Sua mesa está pronta' })).toBeVisible();
+      await a.getByRole('button', { name: 'Iniciar com os presentes' }).click();
+      for (const page of [a, b]) {
+        await expect(page.locator('#ticketToRideChoice')).toBeVisible();
+        await expect(page.locator('#ticketToRideKeep')).toBeDisabled();
+        await page.locator('.tr-ticket-option input').nth(0).check();
+        await expect(page.locator('#ticketToRideKeep')).toBeDisabled();
+        await page.locator('.tr-ticket-option input').nth(1).check();
+        await page.locator('#ticketToRideKeep').click();
+        await expect(page.locator('#ticketToRideChoice')).toHaveCount(0);
+      }
+      await expect
+        .poll(() => a.evaluate(() => window.TronoTicketToRide.room.state.phase))
+        .toBe('playing');
+      await expect(a.locator('.tr-map [data-route]')).toHaveCount(100);
+      await expect(a.locator('.tr-city')).toHaveCount(36);
+      await expect(a.locator('.tr-map .tr-board-art')).toHaveAttribute(
+        'href',
+        'assets/ticket-to-ride/board-usa.jpg',
+      );
+      const artwork = await a.evaluate(async () => {
+        const A = window.TicketToRideArt,
+          images = await Promise.all(
+            [A.board, A.fronts, A.back, A.destinations, A.wagons].map(async (url) => {
+              const image = new Image();
+              image.src = url;
+              await image.decode();
+              return image;
+            }),
+          );
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 683;
+        const context = canvas.getContext('2d');
+        context.drawImage(images[0], 0, 0);
+        const cities = Object.entries(A.cities).map(([name, [x, y]]) => {
+          const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+          return { name, onMarker: r > g + 15 && r > b + 30 };
+        });
+        return {
+          loaded: images.every((image) => image.naturalWidth > 0),
+          cities,
+          cards: Object.values(A.cards),
+          dimensions: images.map((image) => [image.naturalWidth, image.naturalHeight]),
+        };
+      });
+      assert(artwork.loaded);
+      assert.deepEqual(artwork.dimensions, [
+        [1024, 683],
+        [1024, 1536],
+        [512, 768],
+        [512, 768],
+        [768, 512],
+      ]);
+      assert.deepEqual(
+        artwork.cities.filter((c) => !c.onMarker),
+        [],
+        'city hit coordinates must match the orange markers on the supplied board',
+      );
+      assert.equal(new Set(artwork.cards.map((rect) => rect.join(','))).size, 9);
+      assert(
+        artwork.cards.every(([x, y, w, h]) => x >= 0 && y >= 0 && x + w <= 1024 && y + h <= 1536),
+      );
+      for (const route of [
+        'r0-0',
+        'r0-1',
+        'r7-0',
+        'r7-1',
+        'r11-0',
+        'r15-0',
+        'r26-0',
+        'r26-1',
+        'r47-0',
+        'r47-1',
+        'r55-0',
+        'r69-0',
+        'r77-1',
+      ]) {
+        await a.locator(`[data-route="${route}"] .tr-route-target`).click();
+        const title = await a.evaluate((id) => {
+          const r = window.TicketToRideData.routes.find((r) => r.id === id);
+          return r.a + ' → ' + r.b;
+        }, route);
+        await expect(a.locator('#ticketToRidePayment h2')).toHaveText(title);
+        await a.getByRole('button', { name: 'Fechar rota', exact: true }).click();
+      }
+      const firstTurn = await a.evaluate(
+          () =>
+            window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn]
+              .id,
+        ),
+        buyer = (await a.evaluate((id) => window.TronoAuth.user.id === id, firstTurn)) ? a : b;
+      for (let i = 0; i < 2; i++) {
+        const revision = await buyer.evaluate(() => window.TronoTicketToRide.room.state.revision);
+        await buyer.locator('#ticketToRideDeck').click();
+        await expect
+          .poll(() => buyer.evaluate(() => window.TronoTicketToRide.room.state.revision))
+          .toBe(revision + 1);
+      }
+      const observer = buyer === a ? b : a;
+      await expect.poll(() => observer.evaluate(() => window.__railFaces.length)).toBe(2);
+      assert.deepEqual(
+        await observer.evaluate(() => window.__railFaces),
+        [null, null],
+        'blind draws must animate only card backs for the opponent',
+      );
+      let claims = 0;
+      for (let i = 0; i < 120 && claims < 4; i++) {
+        const turn = await a.evaluate(
+          () =>
+            window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn]
+              .id,
+        );
+        const page = (await a.evaluate((id) => window.TronoAuth.user.id === id, turn)) ? a : b;
+        const { move, revision } = await page.evaluate(() => {
+          const s = window.TronoTicketToRide.room.state;
+          return { move: window.TicketToRideRules.botMove(s), revision: s.revision };
+        });
+        if (move.kind === 'claim') {
+          await page.locator(`[data-route="${move.routeId}"] .tr-route-target`).click();
+          const options = await page
+            .locator('#ticketToRidePayment select option')
+            .allTextContents();
+          const D = await page.evaluate(() => window.TicketToRideData.names);
+          const index = options.findIndex((text) =>
+            text.includes(D[move.color] + ' + ' + move.locos + ' locomotiva'),
+          );
+          assert(index >= 0);
+          await page.locator('#ticketToRidePayment select').selectOption(String(index));
+          await page.locator('#ticketToRideClaim').click();
+          claims++;
+        } else if (move.kind === 'draw') {
+          if (move.source === 'market')
+            await page.locator(`[data-market-index="${move.index}"]`).click();
+          else await page.locator('#ticketToRideDeck').click();
+        } else if (move.kind === 'draw-tickets')
+          await page.locator('#ticketToRideDrawTickets').click();
+        else if (move.kind === 'tickets') {
+          for (const id of move.keep)
+            await page.locator(`.tr-ticket-option input[value="${id}"]`).check();
+          await page.locator('#ticketToRideKeep').click();
+        } else throw Error('Unexpected bot move ' + move.kind);
+        await expect
+          .poll(() => page.evaluate(() => window.TronoTicketToRide.room.state.revision))
+          .toBe(revision + 1);
+        await expect
+          .poll(() => a.evaluate(() => window.TronoTicketToRide.room.state.revision))
+          .toBe(revision + 1);
+        await expect
+          .poll(() => b.evaluate(() => window.TronoTicketToRide.room.state.revision))
+          .toBe(revision + 1);
+      }
+      assert.equal(claims, 4);
+      await expect(a.locator('.tr-owned')).toHaveCount(4);
+      assert(
+        await a.evaluate(
+          () =>
+            window.TronoTicketToRide.room.state.players.find(
+              (p) => p.id !== window.TronoAuth.user.id,
+            ).hand === null,
+        ),
+      );
+      for (const page of [a, b]) {
+        assert(
+          await page.evaluate(() => window.__railEffects.includes('wagon')),
+          'confirmed claims must animate wagons for both players',
+        );
+        const pieces = await page.evaluate(() => {
+          const s = window.TronoTicketToRide.room.state,
+            D = window.TicketToRideData;
+          return Object.keys(s.claimed).reduce(
+            (count, id) => count + D.routes.find((r) => r.id === id).length,
+            0,
+          );
+        });
+        await expect(page.locator('.tr-owned .tr-wagon-art use')).toHaveCount(pieces);
+      }
+      assert(
+        (await a.evaluate(() => window.__railEffects.includes('card'))) ||
+          (await b.evaluate(() => window.__railEffects.includes('card'))),
+        'confirmed card draws must animate into the private hand',
+      );
+      await expect.poll(() => a.locator('.tr-card-flight').count()).toBe(0);
+      await a.locator('.tr-ticket-button').first().click();
+      await expect(a.locator('.tr-ticket-button').first()).toHaveAttribute('aria-pressed', 'true');
+      await a.screenshot({ path: out + '/desktop.png', fullPage: true });
+      for (const [width, height] of [
+        [1366, 768],
+        [1920, 1080],
+      ]) {
+        await a.setViewportSize({ width, height });
+        await a.locator('#ticketToRideFullscreen').click();
+        await expect
+          .poll(() => a.evaluate(() => document.fullscreenElement?.id))
+          .toBe('ticketToRideScreen');
+        await expect(a.locator('#ticketToRideFullscreen')).toHaveAttribute('aria-pressed', 'true');
+        const geometry = await a.evaluate(() => {
+          const rect = (s) => {
+            const r = document.querySelector(s).getBoundingClientRect();
+            return {
+              left: r.left,
+              top: r.top,
+              right: r.right,
+              bottom: r.bottom,
+              width: r.width,
+              height: r.height,
+            };
+          };
+          const root = document.querySelector('#ticketToRideScreen');
+          return {
+            hand: rect('.tr-hand'),
+            map: rect('.tr-map-wrap'),
+            supply: rect('.tr-supply'),
+            lastMarket: rect('.tr-market .tr-train-card:last-child'),
+            goals: rect('.tr-tickets'),
+            destinations: rect('.tr-destination-deck'),
+            scrollHeight: root.scrollHeight,
+            clientHeight: root.clientHeight,
+            width: innerWidth,
+            height: innerHeight,
+          };
+        });
+        assert(
+          geometry.hand.right <= geometry.map.left,
+          'private hand must stay to the left of the map',
+        );
+        assert(
+          geometry.supply.left >= geometry.map.right,
+          'draw pile must stay to the right of the map',
+        );
+        assert(
+          geometry.goals.top >= geometry.hand.bottom,
+          'objectives must occupy the lower left corner',
+        );
+        assert(
+          geometry.destinations.top >= geometry.supply.bottom,
+          'destination cards must occupy the lower right corner',
+        );
+        for (const name of ['hand', 'map', 'supply', 'goals', 'destinations']) {
+          assert(
+            geometry[name].left >= 0 &&
+              geometry[name].right <= width &&
+              geometry[name].bottom <= height,
+            name + ' must fit fullscreen',
+          );
+          assert(geometry[name].height > 0);
+        }
+        assert(
+          geometry.scrollHeight <= geometry.clientHeight + 1,
+          'fullscreen must fit without page scrolling',
+        );
+        assert(
+          geometry.lastMarket.bottom <= geometry.supply.bottom,
+          'all five face-up cards must fit without scrolling the station',
+        );
+        await a.screenshot({ path: out + '/fullscreen-' + width + 'x' + height + '.png' });
+        await a.locator('#ticketToRideFullscreen').click();
+        await expect.poll(() => a.evaluate(() => document.fullscreenElement)).toBe(null);
+      }
+      // Reduced-motion users still receive confirmed state changes, with no flight effects.
+      const turn = await a.evaluate(
+          () =>
+            window.TronoTicketToRide.room.state.players[window.TronoTicketToRide.room.state.turn]
+              .id,
+        ),
+        current = (await a.evaluate((id) => window.TronoAuth.user.id === id, turn)) ? a : b;
+      await current.emulateMedia({ reducedMotion: 'reduce' });
+      const effectCount = await current.evaluate(() => window.__railEffects.length),
+        revision = await current.evaluate(() => window.TronoTicketToRide.room.state.revision);
+      await current.locator('#ticketToRideDeck').click();
+      await expect
+        .poll(() => current.evaluate(() => window.TronoTicketToRide.room.state.revision))
+        .toBe(revision + 1);
+      assert.equal(await current.evaluate(() => window.__railEffects.length), effectCount);
+      await current.emulateMedia({ reducedMotion: 'no-preference' });
+      const table = await a.evaluate(() => window.TronoTicketToRide.room.id);
+      await a.locator('#ticketToRideBack').click();
+      await expect(a.locator('#gamesScreen')).toBeVisible();
+      await expect(a.locator('#ticketToRideScreen')).toBeHidden();
+      await a.locator('button[data-game="ticket-to-ride"]').click();
+      assert.equal(await a.evaluate(() => window.TronoTicketToRide.room.id), table);
+      await a.locator('#ticketToRideRulesButton').click();
+      await expect(a.locator('#ticketToRideRulesDialog')).toBeVisible();
+      await a.locator('#ticketToRideRulesDialog [data-close]').click();
+      for (const [width, height] of [
+        [390, 844],
+        [1080, 1920],
+      ]) {
+        await a.setViewportSize({ width, height });
+        assert(
+          await a.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+          'page must not overflow horizontally',
+        );
+        await a.screenshot({ path: out + '/' + width + 'x' + height + '.png', fullPage: true });
+      }
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await f.stop();
+      await new Promise((r) => server.close(r));
+    }
+  },
+);

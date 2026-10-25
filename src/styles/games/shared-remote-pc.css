@@ -1,0 +1,122 @@
+/* Game dependencies extracted from src/styles/voice/remote-pc.css. */
+@scope (#gameSurface) {
+  .remote-beta {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border: 1px solid #ad94ff66;
+    border-radius: 5px;
+    background: #9070e51c;
+    color: #cbbaff;
+    font: 700 9px/1.4 system-ui;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+  #remotePcBtn {
+    position: relative;
+  }
+  #remotePcBtn .remote-hud-icon {
+    display: inline-flex;
+    width: 19px;
+    height: 19px;
+    flex: none;
+  }
+  #remotePcBtn .workspace-control-icon {
+    flex: none;
+  }
+  #desktopCallDock #remotePcBtn .remote-hud-icon {
+    display: none !important;
+  }
+  #desktopCallDock #remotePcBtn .workspace-control-icon {
+    display: block !important;
+    width: 20px;
+    height: 20px;
+  }
+  #remotePcBtn svg {
+    width: 100%;
+    height: 100%;
+  }
+  #remotePcBtn .remote-beta {
+    margin-left: 3px;
+  }
+  #remotePcBtn[data-active='true'] {
+    border-color: #7cd8bc !important;
+    background: #1e5045 !important;
+    color: #b8ffe9 !important;
+  } /* Same grid cell and geometry as camera/screen; Beta is an anchored badge. */
+  #callWorkspace[data-controls='sidebar'] #layoutCallActions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  #layoutCallActions #remotePcBtn {
+    display: grid !important;
+    place-items: center !important;
+    grid-column: auto !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 6px !important;
+  }
+  #layoutCallActions #remotePcBtn > span:not(.workspace-control-icon) {
+    display: none !important;
+  }
+  #layoutCallActions #remotePcBtn > .workspace-control-icon {
+    display: block !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+  #remotePcBtn > .remote-beta {
+    position: absolute !important;
+    right: 2px !important;
+    top: 1px !important;
+    font-size: 7px !important;
+    padding: 0 3px !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+  }
+  #callWorkspace #socialPanel #callFocusDock #remotePcBtn > .remote-beta,
+  #layoutCallActions #remotePcBtn > .remote-beta {
+    display: inline-flex !important;
+  }
+  #callWorkspace #socialPanel #callFocusDock #remotePcBtn::after {
+    content: 'PC' !important;
+  }
+  .participant-moderation {
+    display: grid;
+    gap: 5px;
+    border-top: 1px solid #ffffff18;
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+  .participant-moderation > small {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-bottom: 3px;
+  }
+  .participant-moderation > button {
+    width: 100%;
+    padding: 8px 10px;
+    text-align: left;
+    border: 1px solid #ffffff12;
+    border-radius: 7px;
+    background: #ffffff08;
+    color: inherit;
+    cursor: pointer;
+    font: 500 11px system-ui;
+  }
+  .participant-moderation > button:hover {
+    background: #ffffff14;
+  }
+  .participant-moderation > button:disabled {
+    opacity: 0.45;
+  }
+  .participant-moderation > .moderation-danger {
+    color: #ff9fb2;
+    border-color: #ff9fb230;
+  }
+  #callWorkspace[data-controls='sidebar']
+    #layoutVoicePanel
+    #layoutCallActions
+    #remotePcBtn
+    > .remote-beta {
+    display: inline-flex !important;
+  }
+}

@@ -805,12 +805,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     window.TronoCommunity?.voiceNotice?.(event);
   }
   function toggleVoiceSettings(force?: boolean) {
-    window.TronoCallSettings.toggle(force);
+    window.TronoCallSettings?.toggle(force);
   }
   function setSettingsTab(
     tab: Parameters<VoiceRuntimeWindow['TronoCallSettings']['select']>[0] = 'audio',
   ) {
-    window.TronoCallSettings.select(tab);
+    window.TronoCallSettings?.select(tab);
   }
   function updateQualityUI() {
     screenOptions.refresh();
@@ -1622,6 +1622,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
   });
 
   const facade: SocialFacade = {
+    primeVoiceGesture: unlockCallAudio,
     onChatActivity,
     diagnostics,
     showPanel,

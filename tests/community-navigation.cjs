@@ -433,3 +433,12 @@ test('initial account hydration permits account-scoped restoration while explici
   assert.equal(g.sends[0].id, 'text');
   g.controller.dispose();
 });
+
+test('opening text in a mixed channel does not select or leave voice', async () => {
+  const f = fixture({ desktop: true });
+  await f.controller.enter({ channelId: 'mixed', textOnly: true });
+  assert.equal(f.sends[0].kind, 'text');
+  assert.equal(f.calls.left, 0);
+  assert.equal(f.calls.joined, 0);
+  f.controller.dispose();
+});

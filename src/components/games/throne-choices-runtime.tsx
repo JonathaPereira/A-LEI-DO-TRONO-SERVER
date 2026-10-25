@@ -73,7 +73,7 @@ export function initializeThroneChoices(target: Window): () => void {
   runtime.TronoThroneChoices = controller;
   const host = doc.createElement('div');
   host.id = 'throneChoiceHost';
-  doc.body.append(host);
+  (doc.getElementById('gameSurface') ?? doc.body).append(host);
   const root = createRoot(host);
   flushSync(() =>
     root.render(<ThroneChoiceDialog controller={controller} rules={runtime.TronoRules} />),

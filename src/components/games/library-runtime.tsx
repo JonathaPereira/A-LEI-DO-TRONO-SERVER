@@ -1,12 +1,14 @@
-import { flushSync } from 'react-dom';
-import { createRoot } from 'react-dom/client';
 import { createGameLibrary } from '../../lib/games/library';
 import type { GameLibrary, GameDestination } from '../../lib/games/library';
-import { LibraryNavigation } from './library-controls';
 
 interface LibraryRuntime extends Window {
   TronoAuth: { readonly user: object | null };
-  TronoPortal: { showOnly(id: string): void };
+  TronoPortal: {
+    showOnly(id: string): void;
+    openGame(direct?: boolean): void;
+    openVoice(): Promise<boolean>;
+    showPortal(): void;
+  };
   TronoSocial: { showForRoom(show: boolean): void };
   TronoAppLayout: { navigate(route: 'home' | 'community' | 'throne'): Promise<unknown> };
   TronoDesktopShell?: { navigate(route: 'throne'): Promise<unknown> };
@@ -73,7 +75,7 @@ export function initializeGameLibrary(target: Window): () => void {
           if (runtime.TronoAuth.user) void runtime.TronoAzul.refreshRooms();
           return;
         case 'throne':
-          return (runtime.TronoDesktopShell ?? runtime.TronoAppLayout).navigate('throne');
+          return runtime.TronoPortal.openGame(true);
         case 'azul':
           return runtime.TronoAzul.open();
         case 'roguelite':
@@ -87,7 +89,9 @@ export function initializeGameLibrary(target: Window): () => void {
         case 'nexus':
           return runtime.TronoNexus.open();
         default:
-          return runtime.TronoAppLayout.navigate(destination);
+          return runtime.TronoAuth.user
+            ? runtime.TronoPortal.openVoice()
+            : runtime.TronoPortal.showPortal();
       }
     },
     warn: (error) => console.warn('[GameLibrary]', error),
@@ -105,26 +109,11 @@ export function initializeGameLibrary(target: Window): () => void {
     },
   };
   runtime.TronoGames = facade;
-  let root: ReturnType<typeof createRoot> | undefined,
-    side: HTMLElement | undefined,
-    disposed = false;
-  function bind() {
-    if (disposed || root) return;
-    side = doc.createElement('nav');
-    side.id = 'gamesSideNav';
-    side.setAttribute('aria-label', 'Jogos da comunidade');
-    doc.body.append(side);
-    root = createRoot(side);
-    flushSync(() => root!.render(<LibraryNavigation controller={controller} />));
-    controller.start();
-  }
+  const bind = () => controller.start();
   target.addEventListener('trono:ready', bind, { once: true });
   const dispose = () => {
-    disposed = true;
     target.removeEventListener('trono:ready', bind);
     controller.dispose();
-    flushSync(() => root?.unmount());
-    side?.remove();
     if (runtime.TronoGames === facade) delete runtime.TronoGames;
     if (runtime.TronoGameLibrary === controller) delete runtime.TronoGameLibrary;
     installed.delete(target);

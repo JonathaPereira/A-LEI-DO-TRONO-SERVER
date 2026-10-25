@@ -1,5 +1,3 @@
-import { flushSync } from 'react-dom';
-import { createRoot } from 'react-dom/client';
 import { createAuthApi } from '../../lib/auth/api';
 import { createAccountSession, type SessionSnapshot } from '../../lib/auth/session';
 import { createAuthForms, type AuthForms } from '../../lib/auth/forms';
@@ -7,7 +5,6 @@ import { readAccount } from '../../lib/socket/protocol';
 import { createPreferenceStorage, type PreferenceStorage } from '../../lib/storage/preferences';
 import type { NetworkClient } from '../../lib/socket/client';
 import type { AuthCallback, AuthSessionData } from '../../types/auth';
-import { AuthDialogs } from './dialogs';
 
 interface Runtime extends Window {
   TronoNetwork: NetworkClient;
@@ -112,6 +109,10 @@ export function initializeAuth(target: Window) {
     enterGame: () => runtime.TronoPortal?.openGame(),
   });
   const facade = {
+    forms,
+    getSnapshot: session.getSnapshot,
+    subscribe: session.subscribe,
+    endGuest: session.endGuest,
     ready: session.ready,
     updateProfile: session.updateProfile,
     setRemember: session.setRemember,
@@ -137,8 +138,6 @@ export function initializeAuth(target: Window) {
     validPassword: forms.validPassword,
   };
   runtime.TronoAuth = facade;
-  const root = createRoot(doc.getElementById('authDialogsRoot')!);
-  flushSync(() => root.render(<AuthDialogs forms={forms} desktop={!!runtime.TronoDesktop} />));
   const unsubscribe = network.onMessage((message) => {
     if (message.type === 'connection' && !message.connected) acknowledgedAccount = null;
     if (message.type === 'error' && message.code === 'AUTH_REQUIRED') session.expire();
@@ -198,7 +197,6 @@ export function initializeAuth(target: Window) {
     unsubscribe();
     forms.dispose();
     session.dispose();
-    flushSync(() => root.unmount());
     // Account is a dependency of later pagehide listeners and async call teardown.
     // Keep the inert facade until the document dies or a new installation replaces it.
     if (installed.get(target) === dispose) installed.delete(target);

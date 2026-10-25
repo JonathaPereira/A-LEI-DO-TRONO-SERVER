@@ -307,9 +307,9 @@ test('dispose detaches gestures and state listeners and closes only its owned mi
   assert.equal(ctx.onstatechange, null);
   assert.equal(h.audio.ensureContext(), null);
 });
-test('alert volume defaults to 85%, clamps invalid input and persists the existing preference key', async (t) => {
+test('alert volume defaults to 45%, clamps invalid input and persists the existing preference key', async (t) => {
   const h = await alertsSetup(t);
-  assert.equal(h.alerts.getSnapshot().volume, 85);
+  assert.equal(h.alerts.getSnapshot().volume, 45);
   assert.equal(h.alerts.setVolume(180), 100);
   assert.equal(h.values.get('mnCallAlertVolume'), '100');
   assert.equal(h.alerts.setVolume(-20), 0);
@@ -333,7 +333,7 @@ test('muted and disabled alerts create no graph; warming muted alerts remains si
 test('each alert keeps its existing notes and envelope; zero call volume preserves message sounds', async (t) => {
   const h = await alertsSetup(t);
   const notes = {
-    join: [784, 1047, 1568],
+    join: [659, 784, 1047],
     leave: [1047, 698],
     disconnect: [740, 554, 370],
     message: [1320, 1760],
@@ -347,7 +347,7 @@ test('each alert keeps its existing notes and envelope; zero call volume preserv
     );
   }
   const ctx = h.contexts[0];
-  assert.equal(ctx.gains[0].levels[1][1], (0.52 * 85) / 100);
+  assert.equal(ctx.gains[0].levels[1][1], (0.32 * 45) / 100);
   assert.equal(ctx.gains[3].levels[1][1], 0.11);
   h.alerts.setVolume(0);
   const count = ctx.oscillators.length;

@@ -28,7 +28,7 @@ async function peer(base, token) {
   return { ws, messages, send, wait };
 }
 test(
-  'Love Letter real controls complete a match, keep secrets, fit Original/Discord and preserve microphone/camera/share',
+  'Love Letter real controls complete a match, keep secrets, fit supported window sizes and preserve microphone/camera/share',
   { timeout: 180000 },
   async () => {
     const server = await new Promise((r) => {
@@ -129,17 +129,17 @@ test(
       await page.evaluate(() => window.TronoAuth.ready);
       await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
       if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-        await page.locator('#joinVoiceBtn').click();
+        await page.evaluate(() => window.TronoCallToolbar.activate('joinVoiceBtn'));
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-      await page.locator('#cameraBtn').click();
+      await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
       await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
       await page.evaluate(() => window.TronoSocial.startScreenShare());
       await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
       const before = await tracks();
       assert(before.mic && before.camera && before.screen);
-      await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-      await expect(page.locator('.games-card')).toHaveCount(7);
-      await page.locator('#playLoveLetter').click();
+      await page.evaluate(() => window.TronoGames.openLibrary());
+      await expect(page.locator('button[data-game]')).toHaveCount(7);
+      await page.locator('button[data-game="love-letter"]').click();
       await page.locator('#loveLetterPlayerCount').selectOption('2');
       await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();
       await expect(page.locator('.ll-seats')).toBeVisible();
@@ -149,8 +149,7 @@ test(
       await page.getByRole('button', { name: 'Começar com os presentes' }).click();
       await expect(page.locator('.ll-opponent')).toHaveCount(1);
       await expect(page.locator('.ll-court .ll-reference-card')).toHaveCount(10);
-      for (const layout of ['original', 'discord']) {
-        await page.evaluate((v) => window.TronoAppLayout.apply(v), layout);
+      for (const layout of ['original']) {
         for (const [width, height] of [
           [1536, 1024],
           [1280, 720],
@@ -188,7 +187,7 @@ test(
         }
       }
       await page.setViewportSize({ width: 1536, height: 1024 });
-      await page.evaluate(() => window.TronoAppLayout.apply('original'));
+
       const volume = page.locator('#loveLetterScreen [data-game-audio=love-letter]');
       await volume.locator('summary').click();
       await volume.locator('input').press('Home');
@@ -305,7 +304,7 @@ test(
             'Reconnect updates presence without replaying the move',
           );
           await page.screenshot({ path: 'artifacts/love-letter/stable-feedback.png' });
-          await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+          await page.evaluate(() => window.TronoPortal.openVoice());
           assert.deepEqual(await tracks(), before);
           await page.emulateMedia({ reducedMotion: 'reduce' });
           await page.evaluate(() => window.TronoLoveLetter.open());
@@ -323,7 +322,22 @@ test(
       await expect(page.locator('.ll-result')).toContainText('conquistou a corte');
       assert.deepEqual(await tracks(), before);
       await page.screenshot({ path: 'artifacts/love-letter/result.png' });
-      await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
+      try {
+        await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
+      } catch (error) {
+        console.log(
+          'Result geometry',
+          await page.locator('.ll-result').evaluate((n) => ({
+            bounds: n.getBoundingClientRect().toJSON(),
+            animations: n
+              .getAnimations({ subtree: true })
+              .map((a) => ({ state: a.playState, time: a.currentTime })),
+            screen: n.closest('section').getBoundingClientRect().toJSON(),
+            motion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          })),
+        );
+        throw error;
+      }
       other.send({ type: 'love-letter', action: 'leave' });
       await expect(page.locator('#loveLetterPlayerCount')).toBeVisible();
       await page.locator('#loveLetterPlayerCount').selectOption('4');

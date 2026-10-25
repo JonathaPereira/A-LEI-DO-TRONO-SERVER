@@ -233,3 +233,17 @@ test('subscription installs once; disposal ignores messages and delayed commands
   assert.equal(calls.length, count);
   assert.equal(saved.size, 0);
 });
+
+test('opening call or text changes presentation without changing room participation',async(t)=>{
+ const h=await setup(t);
+ assert.equal(h.client.getSnapshot().page,'chat');
+ const membership={...h.membership};
+ h.client.showCall();
+ assert.equal(h.client.getSnapshot().page,'call');
+ assert.deepEqual(h.membership,membership);
+ h.client.showChat();
+ assert.equal(h.client.getSnapshot().page,'chat');
+ assert.deepEqual(h.membership,membership);
+ h.client.showCall();h.client.dispose();h.client.showChat();
+ assert.equal(h.client.getSnapshot().page,'call','Disposed presentation ignores later commands');
+});

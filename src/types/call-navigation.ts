@@ -7,6 +7,7 @@ export interface NavigationRoom extends RoomReference {
   readonly voiceActive?: boolean;
 }
 export interface CallNavigationSnapshot {
+  readonly page: 'chat' | 'call';
   readonly hub: boolean;
   readonly panelAvailable: boolean;
   readonly panelOpen: boolean;

@@ -30,7 +30,7 @@ export function initializeTabletopAudio(target: Window): () => void {
   const controller = createTabletopAudio({ audio: (target as Runtime).TronoAudio, events: target });
   const host = doc.createElement('div');
   host.id = 'tabletopAudioHost';
-  doc.body.append(host);
+  (doc.getElementById('gameSurface') ?? doc.body).append(host);
   const root = createRoot(host);
   flushSync(() => root.render(<TabletopAudioControls controller={controller} hosts={hosts} />));
   controller.start();

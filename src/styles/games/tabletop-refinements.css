@@ -1,488 +1,486 @@
-/* Center tiles are physical pieces, collected into one selectable group per color. */
-.az-center-tiles {
-  max-height: none !important;
-  overflow: visible !important;
-  align-items: center;
-  gap: 7px !important;
-}
-.az-center-tiles .az-center-group {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 3px;
-  padding: 5px !important;
-  border: 1px solid #b4976955;
-  border-radius: 7px;
-  max-width: 100%;
-  box-sizing: border-box;
-  background: #fff5d516;
-}
-.az-center-tiles .az-center-group .az-tile {
-  width: 25px !important;
-  height: 25px !important;
-  flex: 0 0 25px;
-}
-.az-center-tiles .az-center-group.selected {
-  outline: 2px solid #f4c768;
-  background: #ffdf8540;
-}
-.az-market-ring.az-market-expanded {
-  display: grid !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  aspect-ratio: auto !important;
-}
-.az-market-ring.az-market-expanded .az-factory {
-  position: relative !important;
-  inset: auto !important;
-  transform: none !important;
-  width: 100% !important;
-}
-.az-market-ring.az-market-expanded .az-center {
-  position: static !important;
-  inset: auto !important;
-  transform: none !important;
-  grid-column: 1/-1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-radius: 16px !important;
-  width: 100% !important;
-  height: auto !important;
-  min-height: 80px !important;
-  padding: 14px !important;
-  box-sizing: border-box;
-}
-.az-market-expanded .az-center-tiles {
-  width: 100%;
-  justify-content: flex-start !important;
-  flex-wrap: wrap;
-}
-.az-score-flight {
-  position: fixed;
-  z-index: 40;
-  pointer-events: none;
-  color: #fff1bb;
-  text-shadow: 0 2px 5px #172f36;
-  font:
-    900 34px Georgia,
-    serif;
-}
-.az-scoring .az-score-plaque {
-  border-radius: 9px;
-  background: #f4d68555;
-  transition: background 0.6s;
-}
-.az-scoring .az-connected {
-  animation: azConnection 1.35s ease-out both;
-  animation-delay: calc(var(--connection-index, 0) * 90ms);
-}
-.az-points-pop {
-  animation-duration: 1.85s;
-}
-@keyframes azConnection {
-  0% {
-    box-shadow: 0 0 0 #ffe1a200;
-    filter: brightness(1);
+@scope (#gameSurface) {
+  /* Center tiles are physical pieces, collected into one selectable group per color. */
+  .az-center-tiles {
+    max-height: none !important;
+    overflow: visible !important;
+    align-items: center;
+    gap: 7px !important;
   }
-  40% {
-    box-shadow: 0 0 18px #fbc96a;
-    filter: brightness(1.35);
+  .az-center-tiles .az-center-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px !important;
+    border: 1px solid #b4976955;
+    border-radius: 7px;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #fff5d516;
   }
-  100% {
-    box-shadow: 0 0 7px #ffe1a266;
-    filter: brightness(1);
+  .az-center-tiles .az-center-group .az-tile {
+    width: 25px !important;
+    height: 25px !important;
+    flex: 0 0 25px;
   }
-}
-/* Per-color purchase power: permanent card discount + consumable chip. */
-.sp-player .sp-inventory.sp-purchasing-power,
-.sp-self .sp-inventory.sp-purchasing-power {
-  display: block !important;
-  padding: 9px !important;
-  border: 1px solid #bba47b55;
-  border-radius: 10px;
-  background: #101b2466;
-  min-width: 0;
-}
-.sp-resource-colors {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.sp-resource-color {
-  min-width: 0;
-  padding: 5px 2px;
-  border-radius: 6px;
-  background: #d9d9d608;
-  display: grid;
-  justify-items: center;
-  gap: 5px;
-}
-.sp-resource-name {
-  font-size: 8px;
-  color: #d5c6af;
-  line-height: 1.3;
-  text-align: center;
-}
-.sp-resource-equation {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 3px;
-}
-.sp-resource-equation .sp-bonus-card {
-  min-width: 0 !important;
-  width: 22px;
-  height: 27px !important;
-  padding: 2px !important;
-  gap: 0;
-  position: relative;
-}
-.sp-resource-equation .sp-bonus-card > .sp-gem {
-  position: absolute;
-  inset: 2px auto auto 2px;
-  width: 8px !important;
-  height: 8px !important;
-  opacity: 0.65;
-}
-.sp-resource-equation .sp-bonus-card > b {
-  font-size: 13px;
-  z-index: 1;
-}
-.sp-resource-equation .sp-wallet-color {
-  flex: none;
-}
-.sp-resource-equation .sp-chip {
-  width: 25px !important;
-  height: 25px !important;
-}
-.sp-resource-equation .sp-chip b {
-  font-size: 13px !important;
-}
-.sp-resource-plus {
-  font: 700 11px var(--ui-font);
-  color: #c5b9a3;
-}
-.sp-resource-total {
-  font-size: 12px;
-  color: #ffe1a0;
-  line-height: 1.2;
-}
-.sp-resource-legend {
-  display: block;
-  font-size: 8px;
-  color: #c3b9ac;
-  line-height: 1.6;
-  margin-top: 9px;
-}
-.sp-self .sp-resource-colors {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-}
-.sp-self .sp-resource-equation .sp-bonus-card {
-  width: 25px;
-  height: 30px !important;
-}
-.sp-event-copy {
-  display: grid;
-  gap: 5px;
-  flex: 1;
-  min-width: 0;
-}
-.sp-event-copy > strong {
-  font-size: 12px;
-  color: #ffe1a3;
-}
-.sp-event-copy > span {
-  font-size: 11px;
-  line-height: 1.6;
-}
-.sp-event-payment {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-}
-.sp-event-payment small {
-  font-size: 10px;
-}
-.sp-event-payment .sp-chip {
-  width: 24px;
-  height: 24px;
-}
-.sp-event-payment .sp-chip b {
-  font-size: 12px;
-}
-.sp-purchase-showcase {
-  position: fixed;
-  left: 50%;
-  top: 40%;
-  transform: translate(-50%, -50%);
-  z-index: 35;
-  max-width: calc(100vw - 36px);
-  width: 290px;
-  padding: 22px;
-  box-sizing: border-box;
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  border: 1px solid #e3be7c;
-  border-radius: 16px;
-  background: radial-gradient(ellipse at top, #59462df5, #121b25fa);
-  box-shadow: 0 16px 70px #000b;
-  pointer-events: none;
-  animation: spShowcase 0.8s both;
-}
-.sp-purchase-showcase .sp-card {
-  width: 110px;
-  max-width: none;
-  opacity: 1 !important;
-}
-.sp-purchase-showcase strong {
-  font:
-    700 18px Georgia,
-    serif;
-  color: #ffe9b9;
-}
-.sp-purchase-showcase > span {
-  font-size: 12px;
-  text-align: center;
-  color: #dce6e9;
-}
-.sp-purchase-showcase > b {
-  font-size: 12px;
-  color: #f3d17c;
-  text-align: center;
-}
-@keyframes spShowcase {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -45%) scale(0.85);
+  .az-center-tiles .az-center-group.selected {
+    outline: 2px solid #f4c768;
+    background: #ffdf8540;
   }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+  .az-market-ring.az-market-expanded {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    aspect-ratio: auto !important;
   }
-}
-@container sp-screen (max-width:1000px) {
-  .sp-opponents .sp-resource-colors {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+  .az-market-ring.az-market-expanded .az-factory {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    width: 100% !important;
   }
-}
-@container sp-screen (max-width:800px) {
-  .sp-self .sp-inventory {
+  .az-market-ring.az-market-expanded .az-center {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
     grid-column: 1/-1;
-    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-radius: 16px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 80px !important;
+    padding: 14px !important;
+    box-sizing: border-box;
   }
-  .sp-opponents .sp-resource-colors {
+  .az-market-expanded .az-center-tiles {
+    width: 100%;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+  .az-score-flight {
+    position: fixed;
+    z-index: 40;
+    pointer-events: none;
+    color: #fff1bb;
+    text-shadow: 0 2px 5px #172f36;
+    font:
+      900 34px Georgia,
+      serif;
+  }
+  .az-scoring .az-score-plaque {
+    border-radius: 9px;
+    background: #f4d68555;
+    transition: background 0.6s;
+  }
+  .az-scoring .az-connected {
+    animation: azConnection 1.35s ease-out both;
+    animation-delay: calc(var(--connection-index, 0) * 90ms);
+  }
+  .az-points-pop {
+    animation-duration: 1.85s;
+  }
+  @keyframes azConnection {
+    0% {
+      box-shadow: 0 0 0 #ffe1a200;
+      filter: brightness(1);
+    }
+    40% {
+      box-shadow: 0 0 18px #fbc96a;
+      filter: brightness(1.35);
+    }
+    100% {
+      box-shadow: 0 0 7px #ffe1a266;
+      filter: brightness(1);
+    }
+  } /* Per-color purchase power: permanent card discount + consumable chip. */
+  .sp-player .sp-inventory.sp-purchasing-power,
+  .sp-self .sp-inventory.sp-purchasing-power {
+    display: block !important;
+    padding: 9px !important;
+    border: 1px solid #bba47b55;
+    border-radius: 10px;
+    background: #101b2466;
+    min-width: 0;
+  }
+  .sp-resource-colors {
+    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
-  .sp-self .sp-resource-equation {
-    gap: 2px;
+  .sp-resource-color {
+    min-width: 0;
+    padding: 5px 2px;
+    border-radius: 6px;
+    background: #d9d9d608;
+    display: grid;
+    justify-items: center;
+    gap: 5px;
   }
-}
-@container sp-screen (max-width:420px) {
-  .sp-self .sp-resource-colors {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .sp-resource-name {
+    font-size: 8px;
+    color: #d5c6af;
+    line-height: 1.3;
+    text-align: center;
   }
   .sp-resource-equation {
-    flex-wrap: nowrap;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
   }
-  .sp-event-banner {
-    gap: 7px;
+  .sp-resource-equation .sp-bonus-card {
+    min-width: 0 !important;
+    width: 22px;
+    height: 27px !important;
+    padding: 2px !important;
+    gap: 0;
+    position: relative;
   }
-  .sp-event-value {
-    font-size: 24px !important;
+  .sp-resource-equation .sp-bonus-card > .sp-gem {
+    position: absolute;
+    inset: 2px auto auto 2px;
+    width: 8px !important;
+    height: 8px !important;
+    opacity: 0.65;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .az-scoring .az-connected,
+  .sp-resource-equation .sp-bonus-card > b {
+    font-size: 13px;
+    z-index: 1;
+  }
+  .sp-resource-equation .sp-wallet-color {
+    flex: none;
+  }
+  .sp-resource-equation .sp-chip {
+    width: 25px !important;
+    height: 25px !important;
+  }
+  .sp-resource-equation .sp-chip b {
+    font-size: 13px !important;
+  }
+  .sp-resource-plus {
+    font: 700 11px var(--ui-font);
+    color: #c5b9a3;
+  }
+  .sp-resource-total {
+    font-size: 12px;
+    color: #ffe1a0;
+    line-height: 1.2;
+  }
+  .sp-resource-legend {
+    display: block;
+    font-size: 8px;
+    color: #c3b9ac;
+    line-height: 1.6;
+    margin-top: 9px;
+  }
+  .sp-self .sp-resource-colors {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .sp-self .sp-resource-equation .sp-bonus-card {
+    width: 25px;
+    height: 30px !important;
+  }
+  .sp-event-copy {
+    display: grid;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
+  }
+  .sp-event-copy > strong {
+    font-size: 12px;
+    color: #ffe1a3;
+  }
+  .sp-event-copy > span {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .sp-event-payment {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+  }
+  .sp-event-payment small {
+    font-size: 10px;
+  }
+  .sp-event-payment .sp-chip {
+    width: 24px;
+    height: 24px;
+  }
+  .sp-event-payment .sp-chip b {
+    font-size: 12px;
+  }
   .sp-purchase-showcase {
-    animation: none !important;
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    z-index: 35;
+    max-width: calc(100vw - 36px);
+    width: 290px;
+    padding: 22px;
+    box-sizing: border-box;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    border: 1px solid #e3be7c;
+    border-radius: 16px;
+    background: radial-gradient(ellipse at top, #59462df5, #121b25fa);
+    box-shadow: 0 16px 70px #000b;
+    pointer-events: none;
+    animation: spShowcase 0.8s both;
   }
-}
-
-.sp-resource-total {
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-.sp-resource-color:last-child .sp-resource-total {
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-/* Keep every merchant beside the market; expand reserves only when needed. */
-.sp-table {
-  display: grid;
-  max-width: 1500px;
-  margin: auto;
-  align-items: start;
-  grid-template-columns: 245px minmax(0, 1fr) 170px;
-  gap: 12px;
-}
-.sp-players {
-  grid-column: 1;
-  grid-row: 2;
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  min-width: 0;
-}
-.sp-players .sp-opponents {
-  display: contents;
-}
-.sp-players .sp-player {
-  display: block;
-  grid-column: auto;
-  grid-row: auto;
-  padding: 7px 8px;
-  min-width: 0;
-}
-.sp-players .sp-player > header {
-  margin-bottom: 4px;
-  gap: 4px;
-  min-height: 23px;
-}
-.sp-players .sp-player > header strong {
-  font-size: 11px;
-}
-.sp-players .sp-player > header small {
-  display: none;
-}
-.sp-players .sp-score {
-  width: 25px;
-  height: 25px;
-  font-size: 16px;
-}
-.sp-players .sp-inventory.sp-purchasing-power {
-  padding: 3px !important;
-  border: 0;
-  background: none;
-}
-.sp-players :is(.sp-inventory-title, .sp-resource-legend, .sp-resource-name, .sp-resource-plus) {
-  display: none;
-}
-.sp-players .sp-resource-colors {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 2px;
-}
-.sp-players .sp-resource-color {
-  gap: 2px;
-  padding: 2px 0;
-}
-.sp-players .sp-resource-equation {
-  flex-wrap: nowrap;
-  gap: 2px;
-}
-.sp-players .sp-resource-equation .sp-bonus-card {
-  width: 16px;
-  height: 20px !important;
-}
-.sp-players .sp-resource-equation .sp-chip {
-  width: 17px !important;
-  height: 17px !important;
-  border-width: 1px;
-}
-.sp-players .sp-resource-equation :is(.sp-chip b, .sp-bonus-card > b) {
-  font-size: 10px !important;
-}
-.sp-players .sp-resource-total {
-  font-size: 9px;
-  white-space: nowrap;
-  line-height: 1.2;
-}
-.sp-players .sp-resource-color:last-child .sp-resource-total {
-  font-size: 7px;
-}
-.sp-players .sp-player-foot {
-  margin: 3px 0 0;
-  gap: 2px;
-}
-.sp-players .sp-player-foot > .sp-link {
-  padding: 0;
-  font-size: 8px;
-}
-.sp-player-details {
-  font-size: 8px;
-  color: #c9bdab;
-  margin-top: 3px;
-}
-.sp-player-details summary {
-  cursor: pointer;
-}
-.sp-player-details .sp-reserved {
-  margin-top: 5px;
-  display: flex;
-  gap: 5px;
-}
-.sp-player-details .sp-card {
-  width: 45px;
-}
-@container sp-screen (min-width:801px) {
-  .sp-table > .sp-center {
-    grid-column: 2;
-    grid-row: 2;
+  .sp-purchase-showcase .sp-card {
+    width: 110px;
+    max-width: none;
+    opacity: 1 !important;
   }
-  .sp-table > .sp-side {
-    grid-column: 3;
-    grid-row: 2;
+  .sp-purchase-showcase strong {
+    font:
+      700 18px Georgia,
+      serif;
+    color: #ffe9b9;
   }
-}
-@container sp-screen (max-width:800px) {
+  .sp-purchase-showcase > span {
+    font-size: 12px;
+    text-align: center;
+    color: #dce6e9;
+  }
+  .sp-purchase-showcase > b {
+    font-size: 12px;
+    color: #f3d17c;
+    text-align: center;
+  }
+  @keyframes spShowcase {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -45%) scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+  @container sp-screen (max-width:1000px) {
+    .sp-opponents .sp-resource-colors {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+  @container sp-screen (max-width:800px) {
+    .sp-self .sp-inventory {
+      grid-column: 1/-1;
+      grid-row: 2;
+    }
+    .sp-opponents .sp-resource-colors {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .sp-self .sp-resource-equation {
+      gap: 2px;
+    }
+  }
+  @container sp-screen (max-width:420px) {
+    .sp-self .sp-resource-colors {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .sp-resource-equation {
+      flex-wrap: nowrap;
+    }
+    .sp-event-banner {
+      gap: 7px;
+    }
+    .sp-event-value {
+      font-size: 24px !important;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .az-scoring .az-connected,
+    .sp-purchase-showcase {
+      animation: none !important;
+    }
+  }
+  .sp-resource-total {
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .sp-resource-color:last-child .sp-resource-total {
+    font-size: 9px;
+    line-height: 1.5;
+  } /* Keep every merchant beside the market; expand reserves only when needed. */
   .sp-table {
-    grid-template-columns: minmax(0, 1fr);
+    display: grid;
+    max-width: 1500px;
+    margin: auto;
+    align-items: start;
+    grid-template-columns: 245px minmax(0, 1fr) 170px;
+    gap: 12px;
   }
   .sp-players {
     grid-column: 1;
     grid-row: 2;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-width: 0;
   }
-  .sp-table > .sp-center {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  .sp-table > .sp-side {
-    grid-column: 1;
-    grid-row: 4;
-  }
-}
-@container sp-screen (max-width:480px) {
-  .sp-players {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-@media (orientation: landscape) and (max-height: 800px) {
-  .sp-screen[data-playing='true'] .sp-heading {
-    margin-bottom: 4px;
-  }
-  .sp-screen[data-playing='true'] .sp-brand h1 {
-    font-size: 23px;
-  }
-  .sp-screen[data-playing='true'] .sp-room-tools {
-    margin-bottom: 4px;
-  }
-  .sp-screen[data-playing='true'] .sp-action-bar {
-    padding: 8px 12px;
-  }
-  .sp-screen[data-playing='true'] .sp-action-bar small {
-    display: none;
+  .sp-players .sp-opponents {
+    display: contents;
   }
   .sp-players .sp-player {
-    padding: 5px 7px;
+    display: block;
+    grid-column: auto;
+    grid-row: auto;
+    padding: 7px 8px;
+    min-width: 0;
   }
   .sp-players .sp-player > header {
-    min-height: 20px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+    gap: 4px;
+    min-height: 23px;
+  }
+  .sp-players .sp-player > header strong {
+    font-size: 11px;
+  }
+  .sp-players .sp-player > header small {
+    display: none;
   }
   .sp-players .sp-score {
-    width: 21px;
-    height: 21px;
-    font-size: 14px;
+    width: 25px;
+    height: 25px;
+    font-size: 16px;
+  }
+  .sp-players .sp-inventory.sp-purchasing-power {
+    padding: 3px !important;
+    border: 0;
+    background: none;
+  }
+  .sp-players :is(.sp-inventory-title, .sp-resource-legend, .sp-resource-name, .sp-resource-plus) {
+    display: none;
+  }
+  .sp-players .sp-resource-colors {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .sp-players .sp-resource-color {
+    gap: 2px;
+    padding: 2px 0;
+  }
+  .sp-players .sp-resource-equation {
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .sp-players .sp-resource-equation .sp-bonus-card {
+    width: 16px;
+    height: 20px !important;
+  }
+  .sp-players .sp-resource-equation .sp-chip {
+    width: 17px !important;
+    height: 17px !important;
+    border-width: 1px;
+  }
+  .sp-players .sp-resource-equation :is(.sp-chip b, .sp-bonus-card > b) {
+    font-size: 10px !important;
+  }
+  .sp-players .sp-resource-total {
+    font-size: 9px;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+  .sp-players .sp-resource-color:last-child .sp-resource-total {
+    font-size: 7px;
   }
   .sp-players .sp-player-foot {
-    margin-top: 0;
+    margin: 3px 0 0;
+    gap: 2px;
   }
-  .sp-players .sp-player-details {
-    margin-top: 1px;
+  .sp-players .sp-player-foot > .sp-link {
+    padding: 0;
+    font-size: 8px;
+  }
+  .sp-player-details {
+    font-size: 8px;
+    color: #c9bdab;
+    margin-top: 3px;
+  }
+  .sp-player-details summary {
+    cursor: pointer;
+  }
+  .sp-player-details .sp-reserved {
+    margin-top: 5px;
+    display: flex;
+    gap: 5px;
+  }
+  .sp-player-details .sp-card {
+    width: 45px;
+  }
+  @container sp-screen (min-width:801px) {
+    .sp-table > .sp-center {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .sp-table > .sp-side {
+      grid-column: 3;
+      grid-row: 2;
+    }
+  }
+  @container sp-screen (max-width:800px) {
+    .sp-table {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sp-players {
+      grid-column: 1;
+      grid-row: 2;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sp-table > .sp-center {
+      grid-column: 1;
+      grid-row: 3;
+    }
+    .sp-table > .sp-side {
+      grid-column: 1;
+      grid-row: 4;
+    }
+  }
+  @container sp-screen (max-width:480px) {
+    .sp-players {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (orientation: landscape) and (max-height: 800px) {
+    .sp-screen[data-playing='true'] .sp-heading {
+      margin-bottom: 4px;
+    }
+    .sp-screen[data-playing='true'] .sp-brand h1 {
+      font-size: 23px;
+    }
+    .sp-screen[data-playing='true'] .sp-room-tools {
+      margin-bottom: 4px;
+    }
+    .sp-screen[data-playing='true'] .sp-action-bar {
+      padding: 8px 12px;
+    }
+    .sp-screen[data-playing='true'] .sp-action-bar small {
+      display: none;
+    }
+    .sp-players .sp-player {
+      padding: 5px 7px;
+    }
+    .sp-players .sp-player > header {
+      min-height: 20px;
+      margin-bottom: 2px;
+    }
+    .sp-players .sp-score {
+      width: 21px;
+      height: 21px;
+      font-size: 14px;
+    }
+    .sp-players .sp-player-foot {
+      margin-top: 0;
+    }
+    .sp-players .sp-player-details {
+      margin-top: 1px;
+    }
   }
 }

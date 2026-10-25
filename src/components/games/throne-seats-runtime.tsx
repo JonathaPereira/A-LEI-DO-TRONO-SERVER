@@ -19,7 +19,7 @@ export function initializeThroneSeats(target: Window): () => void {
     host = doc.createElement('div');
   host.id = 'throneSeatsHost';
   host.hidden = true;
-  doc.body.append(host);
+  (doc.getElementById('gameSurface') ?? doc.body).append(host);
   const controller = createThroneSeats({
     source: runtime.TronoThroneMatch.getSnapshot,
     subscribeSource: runtime.TronoThroneMatch.subscribe,

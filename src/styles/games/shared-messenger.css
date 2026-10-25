@@ -1,0 +1,51 @@
+/* Game dependencies extracted from src/styles/chat/messenger.css. */
+@scope (#gameSurface) {
+  .messenger-toggle.has-unread {
+    color: var(--theme-accent, #8c7dff);
+  }
+  .messenger-person.selected {
+    background: color-mix(in srgb, var(--theme-accent, #8c7dff) 12%, transparent);
+    border-radius: 10px;
+  }
+  .direct-message.own {
+    margin-left: auto;
+    background: color-mix(in srgb, var(--theme-accent, #8c7dff) 13%, var(--theme-bg, #0b1420));
+  } /* Friends keep the same controller while moving with the user's layout. */
+  #desktopRail #messengerToggle.has-unread {
+    color: var(--theme-accent);
+    background: var(--theme-soft);
+  }
+  .direct-attachment .file-download {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  @keyframes messenger-notice-in {
+    from {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  } /* In the original narrow layout, Friends belongs to the channel strip. */
+  #chatOnlyScreen .mn-sidebar-scroll:has(> #messengerToggle.messenger-inline-button) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    width: max-content;
+    min-width: 100%;
+    overflow: visible;
+    padding-top: 0;
+  }
+  #chatOnlyScreen
+    .mn-sidebar-scroll:has(> #messengerToggle.messenger-inline-button)
+    > .mn-channel-list {
+    display: flex;
+    width: auto;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+}

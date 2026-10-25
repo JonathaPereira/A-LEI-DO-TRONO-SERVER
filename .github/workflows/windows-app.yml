@@ -88,16 +88,16 @@ jobs:
       - run: npm run format:check
       - name: Verify backend lifecycle and service integration
         timeout-minutes: 2
-        run: npm run test:server:lifecycle
+        run: npm test -- --suite all --filter '(?:server-lifecycle\.cjs|server-modules\.cjs|backend-services\.cjs|server-community\.cjs|community-management-models\.cjs|provider-cancellation\.cjs|server-social\.cjs|server-auth\.cjs|server-files\.cjs|storage-r2\.cjs|love-letter-service\.cjs|azul-service\.cjs|splendor-service\.cjs|realtime-policy\.cjs|server-realtime\.cjs|throne-service\.cjs|channel-service\.cjs|chat-service\.cjs|voice-soundboard\.cjs|socket-gateway\.cjs)$'
       - name: Verify profile validation and persistence
-        run: node --test tests/member-profiles.js tests/profile-media.js tests/giphy-provider.js
+        run: npm test -- --suite all --filter '(?:member-profiles\.js|profile-media\.js|giphy-provider\.js)$'
       - name: Verify revised game rules and independent voice
-        run: node --test tests/game-rules.js tests/game-voice-membership.js tests/game-rounds.js tests/azul-rules.js tests/azul-presentation.js tests/azul-sql.js tests/azul-ws.js
+        run: npm test -- --suite all --filter '(?:game-rules\.js|game-voice-membership\.js|game-rounds\.js|azul-rules\.js|azul-presentation\.js|azul-sql\.js|azul-ws\.js)$'
       - name: Verify private attachments and creator moderation
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/chat-moderation-sql.js tests/chat-moderation-ws.js tests/direct-attachments-sql.js tests/direct-attachments-http.js 2>&1 | Tee-Object artifacts/windows-messaging.log
+          npm test -- --suite all --filter '(?:chat-moderation-sql\.js|chat-moderation-ws\.js|direct-attachments-sql\.js|direct-attachments-http\.js)$' 2>&1 | Tee-Object artifacts/windows-messaging.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-messaging.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -105,11 +105,11 @@ jobs:
             exit $testExit
           }
       - name: Verify Cinzas v0.5 gameplay and verified offline media cache
-        run: node --test tests/cinzas-upstream.js tests/game-assets.js
+        run: npm test -- --suite all --filter '(?:cinzas-upstream\.js|game-assets\.js)$'
       - name: Verify Splendor classic rules, private tables and persistent records
         shell: pwsh
         run: |
-          node --test tests/splendor-rules.js tests/splendor-sql.js tests/splendor-ws.js 2>&1 | Tee-Object artifacts/windows-splendor.log
+          npm test -- --suite all --filter '(?:splendor-rules\.js|splendor-sql\.js|splendor-ws\.js)$' 2>&1 | Tee-Object artifacts/windows-splendor.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-splendor.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -119,7 +119,7 @@ jobs:
       - name: Verify Love Letter second edition and private hands
         shell: pwsh
         run: |
-          node --test tests/love-letter-rules.js tests/love-letter-ws.js tests/bot-names.js 2>&1 | Tee-Object artifacts/windows-love-letter.log
+          npm test -- --suite all --filter '(?:love-letter-rules\.js|love-letter-ws\.js|bot-names\.js)$' 2>&1 | Tee-Object artifacts/windows-love-letter.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-love-letter.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -127,7 +127,7 @@ jobs:
             exit $testExit
           }
       - name: Verify desktop policies and distribution contracts
-        run: node --test tests/desktop-policy.js tests/desktop-preferences.js tests/desktop-activity.js tests/desktop-notifications.js tests/voice-reception.js tests/desktop-audio-priority.js tests/site-package.js tests/download-retention.js tests/build-downloads.js
+        run: npm test -- --suite all --filter '(?:desktop-policy\.js|desktop-preferences\.js|desktop-activity\.js|desktop-notifications\.js|voice-reception\.js|desktop-audio-priority\.js|site-package\.js|download-retention\.js|build-downloads\.js)$'
       - name: Save backend failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -158,20 +158,20 @@ jobs:
       - name: Verify call workspace and profile layouts
         shell: pwsh
         run: |
-          node --test --test-concurrency=1 tests/chat-composer-browser.cjs tests/channels-browser.cjs tests/app-layout-browser.js tests/profile-media-browser.js tests/call-controls-browser.js
+          npm test -- --suite all --filter '(?:application-shell-browser\.cjs|chat-composer-browser\.cjs|channels-browser\.cjs|app-layout-browser\.js|profile-media-browser\.js|call-controls-browser\.js)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
-          node --test --test-concurrency=1 tests/app-layout-browser.js tests/profile-media-browser.js
+          npm test -- --suite all --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Remove-Item Env:QA_NATIVE
       - name: Verify Nexus integration and isolated game window
-        run: node --test tests/nexus.js tests/nexus-browser.js
+        run: npm test -- --suite all --filter '(?:nexus\.js|nexus-browser\.js)$'
       - name: Verify Windows notices, call alert settings and PC control alignment
-        run: node --test tests/desktop-notices-controls-browser.js
+        run: npm test -- --suite all --filter '(?:desktop-notices-controls-browser\.js)$'
       - name: Verify Splendor player visibility and stable Love Letter logs
-        run: node --test --test-concurrency=1 tests/splendor-browser.js tests/love-letter-browser.js
+        run: npm test -- --suite all --filter '(?:splendor-browser\.js|love-letter-browser\.js)$'
       - name: Verify Ticket to Ride USA rules, private tables and browser
-        run: npm run test:ticket-to-ride
+        run: npm test -- --suite all --filter '(?:ticket-to-ride-rules\.js|ticket-to-ride-ws\.js|ticket-to-ride-browser\.js)$'
       - name: Save interfaces failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -185,6 +185,7 @@ jobs:
             artifacts/splendor/*.png
             artifacts/love-letter/*.png
             artifacts/ticket-to-ride/*.png
+            artifacts/frontend-reset/auth-regression/*.png
   windows:
     name: Real Windows media and desktop
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
@@ -220,10 +221,10 @@ jobs:
           }
         working-directory: electron
       - name: Verify call controls preserve live desktop media across layouts
-        run: npm run test:desktop:layout
+        run: npm test -- --suite all --filter '(?:auth-desktop\.cjs|desktop-window-start\.cjs|throne-court-layout\.cjs|desktop-call-layout\.js)$'
       - name: Verify installed Electron updater contracts
         # GenericProvider is loaded from electron/node_modules, installed in this job.
-        run: node --test tests/desktop-updates.js
+        run: npm test -- --suite all --filter '(?:desktop-updates\.js)$'
       - name: Prepare optional signed virtual controller driver for isolated XInput tests
         shell: pwsh
         run: |
@@ -256,7 +257,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test --test-concurrency=1 tests/remote-pc.js tests/remote-coop.js tests/desktop-remote-input.js tests/desktop-remote-gamepad.js tests/remote-pc-browser.js tests/desktop-remote-native.js tests/voice-moderation.js tests/voice-moderation-browser.js 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          npm test -- --suite all --filter '(?:remote-pc\.js|remote-coop\.js|desktop-remote-input\.js|desktop-remote-gamepad\.js|remote-pc-browser\.js|desktop-remote-native\.js|voice-moderation\.js|voice-moderation-browser\.js)$' 2>&1 | Tee-Object artifacts/windows-remote-pc.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             Get-PnpDevice | Where-Object { $_.FriendlyName -match 'Xbox|ViGEm|Virtual Gamepad' } | Format-List Status,Class,FriendlyName,InstanceId,Problem
@@ -267,13 +268,13 @@ jobs:
       - name: Verify SFU recovery and floating call layout
         shell: pwsh
         run: |
-          npm run test:sfu
+          npm test -- --suite all --filter '(?:voice-roster\.cjs|voice-quality\.cjs|call-stability\.js|voice-transport\.cjs|call-lifecycle\.cjs|realtime-configuration\.cjs|sfu-recovery\.js|sfu-session\.cjs|sfu-browser\.js|floating-call-browser\.js)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify outgoing microphone PCM with real Windows background windows
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-background-voice.js 2>&1 | Tee-Object artifacts/windows-background-voice.log
+          npm test -- --suite all --filter '(?:desktop-background-voice\.js)$' 2>&1 | Tee-Object artifacts/windows-background-voice.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-background-voice.log | Select-Object -Last 70) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -284,7 +285,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test tests/desktop-cinzas-runtime.js 2>&1 | Tee-Object artifacts/windows-cinzas-runtime.log
+          npm test -- --suite all --filter '(?:desktop-cinzas-runtime\.js)$' 2>&1 | Tee-Object artifacts/windows-cinzas-runtime.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-cinzas-runtime.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -294,7 +295,7 @@ jobs:
       - name: Verify received voice under UI load
         shell: pwsh
         run: |
-          node --test tests/voice-reception-browser.js 2>&1 | Tee-Object artifacts/windows-voice-reception.log
+          npm test -- --suite all --filter '(?:voice-reception-browser\.js)$' 2>&1 | Tee-Object artifacts/windows-voice-reception.log
           $testExit = $LASTEXITCODE
           $voiceResult = ((Select-String -Path artifacts/windows-voice-reception.log -Pattern 'Receive PCM under long UI tasks|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Received voice evidence::$voiceResult"
@@ -305,12 +306,12 @@ jobs:
             exit $testExit
           }
       - name: Verify microphone PCM and native processing
-        run: node --test --test-concurrency=1 tests/native-microphone-browser.js tests/light-noise-processing.js
+        run: npm test -- --suite all --filter '(?:native-microphone-browser\.js|light-noise-processing\.js)$'
       - name: Verify native Windows audio and runtime
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          node --test --test-concurrency=1 tests/desktop-audio.js tests/desktop-runtime.js 2>&1 | Tee-Object artifacts/windows-runtime.log
+          npm test -- --suite all --filter '(?:desktop-audio\.js|desktop-runtime\.js)$' 2>&1 | Tee-Object artifacts/windows-runtime.log
           $testExit = $LASTEXITCODE
           $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
           Write-Output "::notice title=Application audio validation::$audioResult"
@@ -342,6 +343,7 @@ jobs:
             artifacts/throne-private-hit-*.png
             artifacts/court-fullscreen-native-state.json
             artifacts/windows-*.log
+            artifacts/frontend-reset/auth-regression/*.png
             electron/artifacts/native-audio-build.log
   delivery:
     name: Package and deliver after all checks
@@ -375,7 +377,7 @@ jobs:
       - name: Verify the compiled Windows app
         shell: pwsh
         run: |
-          node --test tests/desktop-packaged.js 2>&1 | Tee-Object artifacts/windows-packaged.log
+          npm test -- --suite all --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-packaged.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
@@ -389,7 +391,7 @@ jobs:
       - name: Verify installation over a running app in the tray
         shell: pwsh
         run: |
-          node --test tests/desktop-installer.js 2>&1 | Tee-Object artifacts/windows-installer.log
+          npm test -- --suite all --filter '(?:desktop-installer\.js)$' 2>&1 | Tee-Object artifacts/windows-installer.log
           $testExit = $LASTEXITCODE
           if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP') { $testExit = 1 }
           if ($testExit -ne 0) {

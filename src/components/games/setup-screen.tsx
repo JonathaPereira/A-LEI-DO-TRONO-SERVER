@@ -5,7 +5,7 @@ export function SetupScreen() {
       <section id={'setupScreen'} className={'screen setup-screen lobby-screen hidden'}>
         <div className={'setup-card lobby-card'}>
           <button id={'backFromLobbyBtn'} className={'back-lobby portal-back-btn'} type={'button'}>
-            ← Voltar ao portal
+            ← Voltar à Corte
           </button>
           <div className={'crest'}>♛</div>
           <h1>A LEI DO TRONO</h1>

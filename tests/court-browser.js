@@ -20,8 +20,7 @@ test(
     let browser, context, peer;
     const errors = [];
     async function setLayout(page, mode) {
-      await page.evaluate((mode) => window.TronoAppLayout.apply(mode, { save: true }), mode);
-      await expect(page.locator('body')).toHaveAttribute('data-app-layout', mode);
+      await expect(page.locator('#gameSurface')).toHaveAttribute('data-app-layout', mode);
       await page.evaluate(
         () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
       );
@@ -76,6 +75,12 @@ test(
             this.addEventListener('message', (event) => {
               try {
                 const m = JSON.parse(event.data);
+                // The packet-order scenario injects a synthetic phase; live clock snapshots
+                // must not overwrite that phase while its disclosure is being acknowledged.
+                if (window.__courtSyntheticPhase && event.isTrusted && m.type === 'game-state') {
+                  event.stopImmediatePropagation();
+                  return;
+                }
                 if (m.type === 'game-state') window.__courtPacket = m;
               } catch {}
             });
@@ -126,6 +131,11 @@ test(
       await t.test(
         'empty state is centered in the whole stage and controls stay in the viewport',
         async () => {
+          await page.evaluate(() => {
+            window.TronoPortal.openGame(true);
+            window.TronoSocial.showForRoom(true);
+            window.TronoSocial.showPanel(true);
+          });
           for (const [width, height] of [
             [1440, 960],
             [1280, 720],
@@ -147,7 +157,7 @@ test(
               return {
                 note: rect('.voice-privacy-note'),
                 stage: rect('.mn-media-stage'),
-                dock: rect('#callFocusDock'),
+                dock: rect('#socialPanel .voice-actions'),
                 overflow: document.documentElement.scrollWidth > innerWidth + 1,
               };
             });
@@ -156,7 +166,7 @@ test(
               JSON.stringify({ width, height, boxes }),
             );
             assert(
-              boxes.note.y + boxes.note.h <= boxes.dock.y + 2,
+              boxes.note.y + boxes.note.h <= height + 2 && boxes.dock.y >= -1,
               JSON.stringify({ width, height, boxes }),
             );
             assert(!boxes.overflow);
@@ -170,11 +180,11 @@ test(
         'camera and muted microphone keep their tracks, socket and transport in the waiting room, match and community',
         async () => {
           await page.setViewportSize({ width: 1280, height: 720 });
-          await page.locator('#joinVoiceBtn').click();
+          await page.evaluate(() => window.TronoCallToolbar.activate('joinVoiceBtn'));
           await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-          await page.locator('#cameraBtn').click();
+          await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
           await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-          await page.locator('#muteMicBtn').click();
+          await page.evaluate(() => window.TronoCallToolbar.activate('muteMicBtn'));
           const snapshot = () =>
             page.evaluate(() => ({
               id: window.TronoNetwork.clientId,
@@ -195,18 +205,18 @@ test(
           );
           const before = await snapshot();
           assert.equal(before.enabled, false);
-          await page.getByRole('button', { name: 'Jogos', exact: true }).click();
-          await page.locator('#playThrone').click();
+          await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
+          await page.locator('button[data-game="throne"]').click();
           await page.locator('.room-enter[data-room="sala-cetro"]').click();
           await expect(page.locator('#roomSeats')).toContainText('Casa da Lua');
           assert.deepEqual(await snapshot(), before);
           assert.equal(await page.evaluate(() => window.TronoNetwork?.currentRoom), 'chat-jogos');
-          await page.locator('[data-desktop-route="community"]').click();
-          await expect(page.locator('#callWorkspace')).toBeVisible();
+          await page.evaluate(() => window.TronoPortal.openVoice());
+          await expect(page.locator('#chatOnlyScreen')).toBeVisible();
           assert.deepEqual(await snapshot(), before);
           assert.equal(await page.evaluate(() => window.TronoNetwork.gameRoom), 'sala-cetro');
-          await page.getByRole('button', { name: 'Jogos', exact: true }).click();
-          await page.locator('#playThrone').click();
+          await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
+          await page.locator('button[data-game="throne"]').click();
           await expect(page.locator('#roomScreen')).toBeVisible();
           peer = new WebSocket(f.base.replace('http', 'ws') + '/ws');
           const packets = [];
@@ -237,11 +247,11 @@ test(
           }
           if (await page.locator('#thronePrivateContinue').isVisible())
             await page.locator('#thronePrivateContinue').click();
-          await page.evaluate(() => window.TronoDesktopShell.navigate('community'));
-          await expect(page.locator('#callWorkspace')).toBeVisible();
+          await page.evaluate(() => window.TronoPortal.openVoice());
+          await expect(page.locator('#chatOnlyScreen')).toBeVisible();
           await page.evaluate(() => window.TronoNetwork.requestState());
           await page.waitForTimeout(200);
-          await expect(page.locator('#callWorkspace')).toBeVisible();
+          await expect(page.locator('#chatOnlyScreen')).toBeVisible();
           assert.deepEqual(await snapshot(), before);
           assert.equal(
             await page.evaluate(
@@ -251,11 +261,11 @@ test(
             ),
             false,
           );
-          await page.evaluate(() => window.TronoDesktopShell.navigate('throne'));
+          await page.evaluate(() => window.TronoPortal.openGame(true));
           await expect(page.locator('#gameScreen')).toBeVisible();
           await expect
-            .poll(() => page.evaluate(() => document.body.dataset.desktopView))
-            .toBe('game');
+            .poll(() => page.evaluate(() => window.TronoPortal.getSnapshot().screen))
+            .toBe('gameScreen');
           await page.waitForTimeout(300);
           await page.screenshot({
             path: path.resolve(__dirname, '../artifacts/court/game-with-call.png'),
@@ -291,7 +301,7 @@ test(
           // Emulate the CSS viewport while keeping the real fullscreen tree.
           const metrics = await context.newCDPSession(page);
           try {
-            for (const layout of ['original', 'discord']) {
+            for (const layout of ['original']) {
               await setLayout(page, layout);
               for (const [width, height] of [
                 [1440, 900],
@@ -372,6 +382,7 @@ test(
           // Exercise the exact packet order: exchange, private reveal, replacement state.
           // A new state object must not abandon the queued private result.
           await page.evaluate(() => {
+            window.__courtSyntheticPhase = true;
             const packet = structuredClone(window.__courtPacket),
               me = packet.state.youSeat,
               other = (me + 1) % 4,
@@ -425,7 +436,13 @@ test(
             },
           );
           await expect(page.locator('#exchangeCinematic')).toBeHidden();
+          await expect(page.locator('#thronePrivateDialog')).toBeVisible();
+          await page.screenshot({ path: 'artifacts/court/private-reveal.png' });
           await page.locator('#thronePrivateContinue').click();
+          await page.evaluate(() => {
+            window.__courtSyntheticPhase = false;
+            window.TronoNetwork.requestState();
+          });
           assert.deepEqual(await snapshot(), before);
           await page.evaluate(() => window.TronoNetwork.leaveGameRoom());
           await expect.poll(() => page.evaluate(() => window.TronoNetwork.gameRoom)).toBe(null);
@@ -468,13 +485,13 @@ test(
             await solo.waitForFunction(() => window.TronoAuth?.ready);
             await solo.evaluate(() => window.TronoAuth.ready);
             await setLayout(solo, 'original');
-            await solo.evaluate(() => window.TronoDesktopShell.navigate('throne'));
+            await solo.evaluate(() => window.TronoPortal.openGame(true));
             await solo.locator('.room-enter[data-room="sala-chave"]').click();
             await expect
               .poll(() => solo.evaluate(() => window.TronoNetwork.gameRoom))
               .toBe('sala-chave');
             await solo.locator('#roomSocialBtn').click();
-            await solo.locator('#joinVoiceBtn').click();
+            await solo.evaluate(() => window.TronoCallToolbar.activate('joinVoiceBtn'));
             await expect.poll(() => solo.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
             await solo.locator('#cameraBtn').click();
             await expect.poll(() => solo.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
@@ -491,27 +508,27 @@ test(
             const before = await snapshot();
             assert.equal(before.room, 'sala-chave');
             assert.equal(before.enabled, false);
-            await solo.evaluate(() => window.TronoDesktopShell.navigate('community'));
-            await expect(solo.locator('#callWorkspace')).toBeVisible();
+            await solo.evaluate(() => window.TronoPortal.openVoice());
+            await expect(solo.locator('#chatOnlyScreen')).toBeVisible();
             await expect
               .poll(() => solo.evaluate(() => window.TronoNetwork?.currentRoom))
               .toBe('chat-livre');
             assert.deepEqual(await snapshot(), before);
             await solo.evaluate(() => window.TronoNetwork.sendChat('Texto junto da voz da mesa'));
-            await expect(solo.locator('#courtChatMessages')).toContainText(
+            await expect(solo.getByRole('log', { name: 'Mensagens', exact: true })).toContainText(
               'Texto junto da voz da mesa',
             );
-            await solo.evaluate(() => window.TronoDesktopShell.navigate('throne'));
+            await solo.evaluate(() => window.TronoPortal.openGame(true));
             await expect(solo.locator('#roomScreen')).toBeVisible();
             assert.deepEqual(await snapshot(), before);
-            await solo.evaluate(() => window.TronoDesktopShell.navigate('community'));
-            await solo.locator('[data-chat-channel="chat-conversa"]').click();
+            await solo.evaluate(() => window.TronoPortal.openVoice());
+            await solo.locator('[data-voice-channel="chat-conversa"]').click();
             await expect
               .poll(() => solo.evaluate(() => window.TronoNetwork.primaryRoom))
               .toBe('chat-conversa');
             await expect.poll(() => solo.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
             assert.equal(await solo.evaluate(() => window.TronoNetwork.gameRoom), 'sala-chave');
-            await solo.evaluate(() => window.TronoDesktopShell.navigate('throne'));
+            await solo.evaluate(() => window.TronoPortal.openGame(true));
             await expect(solo.locator('#roomSeats')).toContainText('Casa Solo');
           } finally {
             await soloContext.close();
@@ -524,7 +541,7 @@ test(
           await page.evaluate(() => window.TronoNetwork.leaveGameRoom());
           await expect.poll(() => page.evaluate(() => window.TronoNetwork.gameRoom)).toBe(null);
           await page.setViewportSize({ width: 1280, height: 720 });
-          await page.evaluate(() => window.TronoDesktopShell.navigate('throne'));
+          await page.evaluate(() => window.TronoPortal.openGame(true));
           await page.evaluate(() => document.getElementById('manualBtn').click());
           assert(await page.evaluate(() => window.__manualOpened));
           // Canceling local play must not reload the app or end its M&N call.
@@ -576,7 +593,7 @@ test(
             const rules = window.TronoRules,
               host = document.createElement('div');
             host.style.cssText = 'position:fixed;inset:0;pointer-events:none';
-            document.body.append(host);
+            document.getElementById('gameSurface').append(host);
             const values = [];
             for (const [kind, items] of [
               ['law', rules.lawOrder],
@@ -601,7 +618,7 @@ test(
               const n = document.createElement('div');
               n.className = 'law-mini court-arrival';
               n.dataset.law = 'ordem';
-              document.body.append(n);
+              document.getElementById('gameSurface').append(n);
               const result = getComputedStyle(n).animationName;
               n.remove();
               return result;

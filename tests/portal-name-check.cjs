@@ -11,7 +11,7 @@ function deferred() {
   });
   return { promise, resolve, reject };
 }
-async function fixture() {
+async function fixture(options = {}) {
   const { createPortal } = await ready;
   let identity = { user: { id: 'alice', nickname: 'Alice' }, guest: null };
   let check = async (name) => ({ available: true, name, message: 'Disponível' });
@@ -27,6 +27,7 @@ async function fixture() {
     calls = [],
     writes = [];
   const controller = createPortal({
+    ...options,
     identity: () => identity,
     authReady: Promise.resolve(),
     connected: () => true,
@@ -321,4 +322,26 @@ test('start/dispose release subscriptions, timers and continuations exactly once
   assert.equal(await f.controller.openVoice(), false);
   assert.equal(f.calls.length, count);
   assert.equal(f.writes.length, writes);
+});
+
+test('an account opens community directly and logout cancels a pending account entry', async () => {
+  const f = await fixture({ entry: 'community' });
+  await flush();
+  assert.equal(f.screen, 'chatOnlyScreen');
+  const check = deferred();
+  f.check(() => check.promise);
+  f.identity({ user: { id: 'bob', nickname: 'Bob' }, guest: null });
+  await flush();
+  f.identity({ user: null, guest: null });
+  check.resolve({ available: true, name: 'Bob' });
+  await flush();
+  assert.equal(f.screen, 'portalScreen');
+  f.controller.dispose();
+});
+
+test('returning to an existing game keeps its current room screen', async () => {
+  const f = await fixture({ gameScreen: () => 'roomScreen' });
+  f.controller.openGame(true);
+  assert.equal(f.screen, 'roomScreen');
+  f.controller.dispose();
 });

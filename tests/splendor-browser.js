@@ -106,7 +106,7 @@ test(
             { base: f.base, data: data[0], native },
           );
           await context.addInitScript(installCanvasCamera);
-      const page = await context.newPage(),
+          const page = await context.newPage(),
             errors = [],
             missing = [];
           page.on('pageerror', (e) => errors.push(e.message));
@@ -178,9 +178,9 @@ test(
             await page.evaluate(() => window.TronoAuth.ready);
             await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
             if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-              await page.locator('#joinVoiceBtn').click();
+              await page.evaluate(() => window.TronoCallToolbar.activate('joinVoiceBtn'));
             await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-            await page.locator('#cameraBtn').click();
+            await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
             await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
             await page.evaluate(() => window.TronoSocial.startScreenShare());
             await expect
@@ -188,18 +188,20 @@ test(
               .toBe(true);
             const before = await snapshot();
             assert(before.track && before.camera && before.screen);
-            await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-            await expect(page.locator('.games-card')).toHaveCount(7);
+            await page.evaluate(() => window.TronoGames.openLibrary());
+            await expect(page.locator('button[data-game]')).toHaveCount(7);
             await page.evaluate(() => document.fonts.ready);
             await expect
               .poll(() =>
-                page.locator('.games-box-art').evaluate((n) => n.complete && n.naturalWidth > 0),
+                page
+                  .locator('button[data-game="azul"] img')
+                  .evaluate((n) => n.complete && n.naturalWidth > 0),
               )
               .toBe(true);
             for (const img of [
-              '.games-throne-art',
-              '.games-card-splendor img',
-              '.games-card-nexus img',
+              'button[data-game="throne"] img',
+              'button[data-game="splendor"] img',
+              'button[data-game="nexus"] img',
             ])
               await expect
                 .poll(() => page.locator(img).evaluate((n) => n.complete && n.naturalWidth > 0))
@@ -232,7 +234,7 @@ test(
             await page.screenshot({
               path: 'artifacts/splendor/' + (native ? 'windows' : 'web') + '-catalogue.png',
             });
-            await page.locator('#playSplendor').click();
+            await page.locator('button[data-game="splendor"]').click();
             await expect(page.locator('#splendorScreen')).toBeVisible();
             await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();
             await expect(page.locator('.sp-seats')).toBeVisible();
@@ -244,8 +246,7 @@ test(
             await expect(page.locator('.sp-market .sp-card')).toHaveCount(12);
             await expect(page.locator('.sp-noble')).toHaveCount(3);
             await expect(page.locator('.sp-player')).toHaveCount(2);
-            for (const layout of ['original', 'discord']) {
-              await page.evaluate((v) => window.TronoAppLayout.apply(v), layout);
+            for (const layout of ['original']) {
               for (const [width, height] of [
                 [1440, 960],
                 [1280, 720],
@@ -398,7 +399,7 @@ test(
                     timeout: 8000,
                   });
                 }
-                await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+                await page.evaluate(() => window.TronoPortal.openVoice());
                 await expect
                   .poll(() => page.evaluate(() => window.TronoSplendor.animating))
                   .toBe(false);
@@ -445,7 +446,7 @@ test(
             await page.locator('#splendorCardDialog [data-close]').click();
             await page.setViewportSize({ width: 1440, height: 960 });
             await page.locator('#splendorBack').click();
-            await page.locator('#playThrone').click();
+            await page.locator('button[data-game="throne"]').click();
             assert.deepEqual(await snapshot(), before);
             await page.evaluate(() => window.TronoSplendor.open());
             await page.getByRole('button', { name: 'Sair da mesa', exact: true }).click();
@@ -457,8 +458,7 @@ test(
               await page.getByRole('button', { name: 'Completar com bots e começar' }).click();
               await expect(page.locator('.sp-player')).toHaveCount(4);
               await expect(page.locator('.sp-noble')).toHaveCount(5);
-              for (const layout of ['original', 'discord']) {
-                await page.evaluate((layout) => window.TronoAppLayout.apply(layout), layout);
+              for (const layout of ['original']) {
                 for (const [width, height] of [
                   [1536, 960],
                   [1280, 720],

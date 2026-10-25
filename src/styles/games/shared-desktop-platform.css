@@ -1,0 +1,6 @@
+/* Game dependencies extracted from src/styles/desktop/desktop-platform.css. */
+@scope (#gameSurface) {
+  .desktop-capture-dialog > header .dialog-close {
+    position: static;
+  }
+}
