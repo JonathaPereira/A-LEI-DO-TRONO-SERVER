@@ -70,7 +70,7 @@ test(
         await page.goto(origin);
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
-        await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-livre' }));
+        await page.locator('[data-channel=chat-livre]').click();
         await expect
           .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))
           .toBe('chat-livre');
@@ -95,18 +95,17 @@ test(
       };
       const text = (await create({ name: 'Texto React', type: 'text' })).channel;
       const voice = (await create({ name: 'Voz React', type: 'voice' })).channel;
-      const row = (id) => page.locator(`[data-chat-channel="${id}"]`);
-      await expect(page.locator(`#textChannelList [data-chat-channel="${text.id}"]`)).toBeVisible();
-      await expect(
-        page.locator(`#chatChannelList [data-chat-channel="${voice.id}"]`),
-      ).toBeVisible();
+      const row = (id) =>
+        page.locator(`[${id === voice.id ? 'data-voice-channel' : 'data-channel'}="${id}"]`);
+      await expect(row(text.id)).toBeVisible();
+      await expect(row(voice.id)).toBeVisible();
       await row(text.id).click();
       await expect(row(text.id)).toHaveAttribute('aria-current', 'page');
       assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
       assert.equal(await page.evaluate(() => window.__captureCount), 0);
       await row(voice.id).click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-      await expect(row(voice.id).locator('.community-avatar')).toHaveCount(1);
+      await expect(row(voice.id).locator('small')).toHaveText('1');
       await page.evaluate(() => {
         window.__keptMic = window.TronoSocial.getLocalAudioTrack();
         window.__keptClient = window.TronoNetwork.clientId;
@@ -124,17 +123,17 @@ test(
           ),
         );
       await row(text.id).click();
-      await expect(row(text.id)).toHaveClass(/active/);
-      await expect(row(voice.id)).toHaveAttribute('aria-current', 'false');
+      await expect(row(text.id)).toHaveAttribute('data-active', 'true');
+      await expect(row(voice.id)).toHaveAttribute('data-connected', 'true');
       await preserved();
 
       await sender.evaluate(() => window.TronoNetwork.sendChat('Mensagem em outro canal'));
-      await expect(row('chat-livre').locator('.channel-unread')).toHaveText('1');
+      await expect(row('chat-livre').locator('[data-channel-unread]')).toHaveText('1');
       await page.evaluate(() => window.TronoNotifications.mute('chat-livre', true));
-      await expect(row('chat-livre')).toHaveClass(/channel-muted/);
+      await expect(row('chat-livre')).toHaveAttribute('data-muted', 'true');
       await page.evaluate(() => window.TronoNetwork.requestChatChannels());
-      await expect(row('chat-livre').locator('.channel-unread')).toHaveText('1');
-      await expect(row('chat-livre')).toHaveClass(/channel-muted/);
+      await expect(row('chat-livre').locator('[data-channel-unread]')).toHaveText('1');
+      await expect(row('chat-livre')).toHaveAttribute('data-muted', 'true');
       await expect(row(text.id)).toHaveAttribute('aria-current', 'page');
       await preserved();
 
@@ -149,7 +148,7 @@ test(
       assert.equal(await page.evaluate(() => window.TronoNetwork.primaryRoom), voice.id);
       await preserved();
       await row(voice.id).click();
-      await expect(row(voice.id)).toHaveAttribute('aria-current', 'page');
+      await expect(row(voice.id)).toHaveAttribute('data-connected', 'true');
       await preserved();
 
       // Reading clears the badge while the channel remains muted.
@@ -160,10 +159,9 @@ test(
         .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))
         .toBe('chat-livre');
       await expect(row('chat-livre')).toHaveAttribute('aria-current', 'page');
-      await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
-      await page.locator('#courtChatInput').click();
-      await expect(row('chat-livre').locator('.channel-unread')).toHaveCount(0);
-      await expect(row('chat-livre')).toHaveClass(/channel-muted/);
+      await page.getByRole('textbox', { name: 'Mensagem no canal', exact: true }).click();
+      await expect(row('chat-livre').locator('[data-channel-unread]')).toHaveCount(0);
+      await expect(row('chat-livre')).toHaveAttribute('data-muted', 'true');
       assert.deepEqual(errors, []);
     } finally {
       await browser?.close();

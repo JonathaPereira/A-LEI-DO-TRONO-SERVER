@@ -123,6 +123,66 @@ Código deste repositório é inspecionado por ferramentas normais. Ausência do
 de REA não significa ausência de uma instalação; diagnosticar conforme a skill,
 sem reinstalação preventiva nem alterações de configuração não autorizadas.
 
+## Configurações e recursos do Marco 3
+
+A apresentação em implementação conserva a identidade Corte e Phosphor. Meu perfil
+abre pela área pessoal persistente. Trocar abas conserva o rascunho; salvar usa a
+validação atual e descartar recupera o perfil confirmado. Em telas estreitas, Ver prévia alterna a área de edição para o cartão sem
+perder o rascunho; Voltar à edição recupera os controles. GIF, emoji, viewer e diretório administrativo
+fecham primeiro seu próprio diálogo/popover com Escape.
+
+Cores das mesas personalizam os jogos compatíveis por conta/aparelho; o shell
+conserva sua paleta. Música, efeitos e créditos ficam em Jogos. Permissões, lembrar
+sessão e atividade aparecem segundo as capacidades reais do aplicativo Windows.
+Gerenciamento e cargos só aparecem para contas autorizadas.
+
+Soundboard permanece na chamada e na sidebar. Clipes, Compartilhar PC e gravação
+ficam em Configurações → Recursos, também acessível a partir dos jogos. Navegação não inicia outra captura ou encerra uma chamada.
+A gravação apresenta início/cancelamento/finalização e salva depois de encerrar os
+recursos próprios. Replay segue disponível na web e suspenso no Windows conforme
+a política existente; a interface informa essa diferença. Remote PC conserva
+convite e consentimento explícitos para entrada remota.
+
+Esta seção descreve a implementação em QA. Aceite visual do Marco 3 permanece
+pendente; não estende a aprovação dos marcos anteriores.
+
+### Polimento solicitado em 25/10
+
+A seleção da sidebar representa a tela aberta. Participação em voz usa indicador
+próprio; biblioteca, amigos e canal não ficam selecionados ao mesmo tempo. Amigos
+mostra apenas amizades aceitas; Convites reúne solicitações e Comunidade permite
+encontrar as demais pessoas. A seta decorativa junto à marca foi retirada.
+
+A entrada sem identidade é uma tela exclusiva, com restauração de sessão antes
+de mostrar o formulário. Não apresenta catálogo/canais atrás de um modal. Contas
+autenticadas em transição exibem progresso, sem pedir login novamente.
+
+No desktop, campos e prévia ocupam painéis irmãos com rolagens independentes;
+o cartão não possui uma segunda rolagem interna. Assim, editar enquadramento,
+cor ou fundo conserva o cartão à vista. O rodapé de salvar/descartar é separado,
+sem cobrir conteúdo; bio conserva o limite de 300 caracteres e sua exibição remove espaços
+nas extremidades e excesso de linhas vazias. Cores das mesas usa cartões de cor;
+a explicação distingue essa preferência da identidade visual da Corte. Foco por
+teclado permanece discreto; cliques e campos não recebem o contorno grosso.
+
+O nome na área pessoal abre um cartão com edição, visualização do perfil,
+configurações e saída. Gravação, clipes e Remote PC ficam na aba Recursos das
+configurações; o menu de reticências foi retirado. Áudio rápido
+e soundboard abrem junto aos controles por hover no desktop e por clique/toque;
+hover não rouba foco nem inicia áudio. Soundboard tem acesso na chamada e na
+sidebar; áudio rápido fica somente na sidebar.
+O seletor nativo oferece Aplicativos e Tela inteira conforme as fontes reais;
+não inventa uma aba de dispositivos que o contrato atual não oferece.
+
+Referência: novas imagens fornecidas pelo usuário. Discord reaberto com o perfil
+existente e inspecionado autenticado via REA: `rea-polish-inspection.json`,
+`ev_536c558fa8fd3c5cdd054556ab6dcbf3d2f22f9536fa41abef58ee78143a0753`.
+Essa inspeção confirma abas de pessoas e acesso à conta. A tentativa adicional
+de abrir o cartão por cenário REA falhou; uma tentativa com Playwright
+encontrou o alvo invisível. Não atribuir
+à inspeção atual prova de hover ou captura ativa: essas referências vêm das fotos
+e das observações anteriores, e a implementação da Corte é verificada separadamente.
+
 ## Avaliação
 
 O agente executa QA com navegador/Playwright e corrige defeitos antes de apresentar
@@ -134,3 +194,53 @@ foram corrigidos e verificados no navegador e Electron real. O Marco 2 passou na
 validação local documentada na migração e recebeu aceite visual humano em
 25/10/2026, após os ajustes de espaço, foco por clique e cenário com dez pessoas.
 O Marco 3 está autorizado para implementação e ainda depende de aceite próprio.
+
+### Revisão dos seletores e da área de voz
+
+Após novo feedback de 25/10, GIFs usam galeria compacta com alturas de miniatura
+consistentes, busca e fechamento fixos, créditos discretos e acesso por link em
+uma seção recolhível. A prévia não duplica a cena de fundo nem recorta seções.
+Interesses, links, créditos e data permanecem acessíveis no painel da prévia,
+com uma única rolagem quando o conteúdo exceder a altura disponível.
+
+Sidebar de 280px no desktop, com bloco de voz separado: conexão/sala à esquerda,
+áudio rápido e desconectar à direita; câmera/tela/soundboard na linha seguinte.
+Na faixa da conta ficam mic, fones e configurações. Sair fica no cartão da conta.
+Na chamada a ordem é mic, fones, soundboard, câmera, tela e sair;
+a configuração redundante de reticências foi retirada. Opções de cada participante
+continuam no próprio quadro.
+
+Soundboard tem busca local, cartões curtos com nomes limitados a duas linhas e
+prévia/exclusão discretas. Só a biblioteca rola; o editor de recorte tem sua
+própria área durante a edição. Hover não toma foco nem toca um som. A referência
+desta revisão são as oito fotos fornecidas pelo usuário; QA usa bibliotecas com
+24 itens e fontes ilustrativas identificadas, não conteúdo pessoal do Discord.
+
+A preferência Aparência também deve contemplar o chat: essa ampliação fica
+explicitamente adiada a pedido do usuário. A implementação atual de cores das
+mesas não deve ser tratada como conclusão dessa necessidade de produto.
+
+A revisão seguinte aplica preto/carvão neutro e dourado aos modais, campos e
+controles, retirando os tons de verde/oliva das superfícies. Cores semânticas de
+presença, fala e ações destrutivas continuam distinguindo estados.
+Fundos pessoais decoram os quadros dos participantes sem cobrir câmera ou tela.
+Capas decoram conta, minicartão, DMs e membros online; na lista de voz, usa-se a
+identidade de conta confirmada pelo roster da chamada atual. Identidades sem
+correspondência e convidados conservam a apresentação neutra, sem inferência por
+nome. Zoom/posição da capa e escurecimento/desfoque do fundo usam os dados atuais.
+Fora da voz, a conta tem contorno superior e cantos completos; conectada, integra
+um bloco com os controles de voz. Imagens decorativas não interceptam ações.
+
+DMs ficam num grupo recolhível da sidebar: seis conversas inicialmente, opção
+Mostrar todas/Mostrar menos e manutenção da conversa selecionada à vista. A
+sidebar conserva sua rolagem e os controles pessoais permanecem fora da lista.
+Avatares têm dimensão fixa e nomes possuem seu próprio espaço, sem seletores
+baseados na posição dos filhos.
+
+O perfil compacto usa capa de largura inteira, avatar sobreposto e ações num
+rodapé separado. Ver perfil completo abre uma composição maior, com identidade
+e detalhes em colunas no desktop, reunidas no telefone. Ambos preservam bio,
+interesses, links, créditos e data. Ausência de descrição recebe um estado vazio.
+Modais externos aos jogos permitem fechar pelo fundo usando o cancelamento
+nativo; clique interno ou arraste iniciado dentro não fecha. Apenas o modal de
+cima é dispensado. Salvar em andamento conserva seu bloqueio de fechamento.

@@ -134,7 +134,7 @@ test(
             await expect(page.locator('#creatorAccountsDialog')).toBeHidden();
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
             await expect(
-              page.locator(native ? '#desktopSettingsDialog' : '#profileDialog'),
+              page.getByRole('dialog', { name: 'Configurações da Corte' }),
             ).toBeVisible();
             await profileButton.click();
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(50);
@@ -153,17 +153,10 @@ test(
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
             await restoreAccount(page);
             await expect(profileButton).toBeVisible();
-            // The header launcher lives in a moved host and shares the same dialog/controller.
-            await page.evaluate(
-              (native) =>
-                native
-                  ? window.TronoDesktopSettings.close()
-                  : document.getElementById('profileDialog').close(),
-              native,
-            );
-            await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-            await page.locator('#workspaceTools summary').click();
-            await page.locator('#creatorAccountsBtn').click();
+            // Reopening uses the same owner and dialog after settings tabs change.
+            await page.locator('[data-settings-tab=appearance]').click();
+            await page.locator('[data-settings-tab=account]').click();
+            await profileButton.click();
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(50);
             assert.equal(await page.locator('#creatorAccountsDialog').count(), 1);
             await page.evaluate(() => window.TronoAuth.logout());
@@ -171,8 +164,8 @@ test(
             await expect(page.locator('#creatorAccountsDialog')).toBeHidden();
             await page.locator('#authEmail').fill(member);
             await page.locator('#authPassword').fill('Senha12!');
-            await page.locator('#authSubmitBtn').click();
-            await expect(page.locator('#authDialog')).toBeHidden();
+            await page.locator('#authSubmit').click();
+            await expect.poll(() => page.evaluate(() => window.TronoAuth.user?.email)).toBe(member);
             await page.evaluate(() => window.TronoProfile.open());
             await expect(profileButton).toBeHidden();
             assert.deepEqual(errors, []);

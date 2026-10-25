@@ -166,17 +166,13 @@ test(
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoAuth?.ready);
             await page.evaluate(() => window.TronoAuth.ready);
-            await expect
-              .poll(() => page.evaluate(() => window.TronoNetwork.connected))
-              .toBe(true);
+            await expect.poll(() => page.evaluate(() => window.TronoNetwork.connected)).toBe(true);
             await page.evaluate(() => window.TronoProfile.open({ inline: true }));
             async function openFiles() {
-              if (native) await page.evaluate(() => window.TronoDesktopSettings.open('files'));
-              else {
-                await page.evaluate(() => window.TronoProfile.open());
-                await page.locator('[data-profile-section="files"]').click();
-              }
-              await expect(page.locator('#profileFilesHost .profile-files-load')).toBeVisible();
+              await page.evaluate(() => window.TronoCallSettings.open('files'));
+              await expect(
+                page.getByRole('button', { name: 'Ver meus arquivos', exact: true }),
+              ).toBeVisible();
             }
             await openFiles();
             const refresh = page
@@ -197,19 +193,13 @@ test(
               row('Documento.bin').getByRole('button', { name: 'Documento.bin', exact: false }),
             ).toContainText('1.5 MB');
             await page.evaluate(() => {
-              window.__libraryNodes = ['profileFilesHost', 'storageUsage', 'profileFiles'].map(
-                (id) => document.getElementById(id),
+              window.__libraryNodes = ['storageUsage', 'profileFiles'].map((id) =>
+                document.getElementById(id),
               );
               window.__libraryOwner = window.TronoFileLibrary;
             });
-            await page.evaluate(() => window.TronoPersonal.set('appLayout', 'discord'));
-            if (native) {
-              await page.evaluate(() => window.TronoDesktopSettings.open('audio'));
-              await page.evaluate(() => window.TronoDesktopSettings.open('files'));
-            } else {
-              await page.locator('[data-profile-section="profile"]').click();
-              await page.locator('[data-profile-section="files"]').click();
-            }
+            await page.locator('[data-settings-tab=audio]').click();
+            await page.locator('[data-settings-tab=files]').click();
             assert.equal(
               await page.evaluate(
                 () =>
@@ -279,11 +269,13 @@ test(
             await refresh.click();
             await expect.poll(() => Boolean(held)).toBe(true);
             await page.evaluate(() => window.TronoAuth.logout());
-            await expect(page.locator('#authDialog')).toBeVisible();
+            await expect(page.locator('#authEmail')).toBeVisible();
             await page.locator('#authEmail').fill(emails[1]);
             await page.locator('#authPassword').fill('Senha12!');
-            await page.locator('#authSubmitBtn').click();
-            await expect(page.locator('#authDialog')).toBeHidden();
+            await page.locator('#authSubmit').click();
+            await expect
+              .poll(() => page.evaluate(() => window.TronoAuth.user?.email))
+              .toBe(emails[1]);
             await held.route.fulfill({ json: held.result });
             held = null;
             await openFiles();

@@ -16,7 +16,7 @@ interface Runtime extends Window {
   TronoSoundboard?: object;
 }
 const installed = new WeakMap<Window, () => void>();
-export function initializeSoundboard(target: Window) {
+export function initializeSoundboard(target: Window, { ready = false } = {}) {
   const previous = installed.get(target);
   if (previous) return previous;
   const runtime = target as Runtime,
@@ -52,13 +52,60 @@ export function initializeSoundboard(target: Window) {
     if (open && !wasOpen)
       focus = doc.activeElement instanceof HTMLElement ? doc.activeElement : null;
     toggle.setAttribute('aria-expanded', String(open));
+    doc.querySelector('[data-soundboard-open]')?.setAttribute('aria-expanded', String(open));
     if (!open && wasOpen && restoreFocus && focus?.isConnected)
       focus.focus({ preventScroll: true });
     wasOpen = open;
   });
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
   const open = () => client.open();
-  const clicked = () => {
-    void open();
+  const trigger = (event: Event) =>
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>('#soundboardToggle, [data-soundboard-open]')
+      : null;
+  const clicked = (event: Event) => {
+    const button = trigger(event);
+    if (!button) return;
+    clearTimeout(hoverTimer);
+    const pinned = host.dataset.hover === 'true';
+    host.dataset.anchor = button.id || 'soundboardToggle';
+    host.dataset.hover = 'false';
+    if (client.getSnapshot().open && !pinned) close();
+    else if (!client.getSnapshot().open) void open();
+  };
+  const over = (event: PointerEvent) => {
+    const button = trigger(event);
+    if (event.target instanceof Element && (button || event.target.closest('#soundboardDialog')))
+      clearTimeout(hoverTimer);
+    if (
+      !button ||
+      event.pointerType !== 'mouse' ||
+      client.getSnapshot().open ||
+      doc.querySelector('dialog:modal, [popover]:popover-open')
+    )
+      return;
+    hoverTimer = setTimeout(() => {
+      host.dataset.anchor = button.id || 'soundboardToggle';
+      host.dataset.hover = 'true';
+      void open();
+    }, 220);
+  };
+  const out = (event: PointerEvent) => {
+    if (
+      !(event.target instanceof Element) ||
+      !event.target.closest('#soundboardDialog, #soundboardToggle, [data-soundboard-open]')
+    )
+      return;
+    if (
+      event.relatedTarget instanceof Element &&
+      event.relatedTarget.closest('#soundboardDialog, #soundboardToggle, [data-soundboard-open]')
+    )
+      return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => {
+      if (host.dataset.hover === 'true' && !host.contains(doc.activeElement))
+        close({ restoreFocus: false });
+    }, 280);
   };
   const call = () =>
     client.callChanged({
@@ -76,7 +123,7 @@ export function initializeSoundboard(target: Window) {
     if (
       client.getSnapshot().open &&
       event.target instanceof Element &&
-      !event.target.closest('#soundboardDialog,#soundboardToggle')
+      !event.target.closest('#soundboardDialog,#soundboardToggle,[data-soundboard-open]')
     )
       close({ restoreFocus: false });
   };
@@ -88,7 +135,9 @@ export function initializeSoundboard(target: Window) {
     if (disposed) return;
     client.start();
     call();
-    toggle.addEventListener('click', clicked);
+    doc.addEventListener('click', clicked);
+    doc.addEventListener('pointerover', over);
+    doc.addEventListener('pointerout', out);
     doc.addEventListener('keydown', escape);
     doc.addEventListener('pointerdown', outside);
     target.addEventListener('trono-call-change', call);
@@ -102,7 +151,10 @@ export function initializeSoundboard(target: Window) {
     target.removeEventListener('trono:ready', bind);
     target.removeEventListener('pagehide', dispose);
     target.removeEventListener('trono-call-change', call);
-    toggle.removeEventListener('click', clicked);
+    clearTimeout(hoverTimer);
+    doc.removeEventListener('click', clicked);
+    doc.removeEventListener('pointerover', over);
+    doc.removeEventListener('pointerout', out);
     doc.removeEventListener('keydown', escape);
     doc.removeEventListener('pointerdown', outside);
     observer.disconnect();
@@ -114,7 +166,8 @@ export function initializeSoundboard(target: Window) {
     if (runtime.TronoSoundboard === facade) delete runtime.TronoSoundboard;
     if (installed.get(target) === dispose) installed.delete(target);
   };
-  target.addEventListener('trono:ready', bind, { once: true });
+  if (ready) bind();
+  else target.addEventListener('trono:ready', bind, { once: true });
   target.addEventListener('pagehide', dispose, { once: true });
   installed.set(target, dispose);
   return dispose;

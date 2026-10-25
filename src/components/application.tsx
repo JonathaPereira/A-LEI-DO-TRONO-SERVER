@@ -1,6 +1,7 @@
 'use client';
 import { ApplicationShell } from './application/shell';
 import { GameSurface } from './application/game-surface';
+import { AdvancedResources } from './application/resources';
 import { ApplicationRuntime } from '../app/application-runtime';
 import { AttachmentImageViewer } from './files/image-viewer';
 
@@ -11,6 +12,7 @@ export function Application() {
         {(active, screen) => <GameSurface active={active} screen={screen} />}
       </ApplicationShell>
       <AttachmentImageViewer />
+      <AdvancedResources />
       <ApplicationRuntime />
     </>
   );

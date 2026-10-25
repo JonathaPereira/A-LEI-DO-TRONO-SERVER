@@ -11,7 +11,10 @@ interface AccountsRuntime extends Window {
   TronoAuth: { readonly user: NetworkAccount | null };
 }
 const installed = new WeakMap<Window, RegisteredAccounts>();
-export function initializeRegisteredAccounts(target: Window): RegisteredAccounts {
+export function initializeRegisteredAccounts(
+  target: Window,
+  { mount = true } = {},
+): RegisteredAccounts {
   const existing = installed.get(target);
   if (existing) return existing;
   const runtime = target as AccountsRuntime;
@@ -20,6 +23,7 @@ export function initializeRegisteredAccounts(target: Window): RegisteredAccounts
     getAccount: () => runtime.TronoAuth.user,
   });
   installed.set(target, controller);
+  if (!mount) return controller;
   const host = target.document.createElement('div');
   host.id = 'registeredAccountsHost';
   target.document.body.append(host);

@@ -7,10 +7,23 @@ import {
 } from '../voice/settings-fields';
 import { VoiceAudioPreferences } from '../voice/audio-preferences';
 import { ConnectionSettings } from '../voice/diagnostics';
+import { NotificationFields } from '../modals/notification-fields';
+import { SettingsActivityFields } from '../modals/settings-activity-fields';
+import { ResourceSettings } from './resources';
+import { GameSettings } from './game-settings';
+import { AccountSettings } from './profile-settings';
 import { AppIcon as Icon } from './icons';
 import { useModel, type ApplicationServices } from './services';
 import styles from './media-dialog.module.css';
 const topics = [
+  ['account', 'Meu perfil', 'members'],
+  ['appearance', 'Aparência', 'eye'],
+  ['files', 'Meus arquivos', 'attach'],
+  ['resources', 'Recursos', 'grid'],
+  ['notifications', 'Notificações', 'bell'],
+  ['activity', 'Atividade', 'games'],
+  ['game', 'Jogos', 'games'],
+  ['privacy', 'Privacidade', 'eyeSlash'],
   ['audio', 'Áudio', 'headphones'],
   ['video', 'Vídeo', 'camera'],
   ['capture', 'Transmissão', 'screen'],
@@ -21,6 +34,10 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
     state = useModel(controller),
     dialog = useRef<HTMLDialogElement>(null);
   const desktop = !!runtime.TronoDesktop;
+  const editor = useModel(runtime.TronoProfileEditor);
+  const title = ['audio', 'video', 'capture', 'connection'].includes(state.topic)
+    ? 'Voz e vídeo'
+    : 'Configurações da Corte';
   const selected = topics.some(([id]) => id === state.topic) ? state.topic : 'audio';
   useLayoutEffect(() => {
     if (!state.open || selected !== 'connection') runtime.TronoConnectionDiagnostics.toggle(false);
@@ -31,12 +48,14 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
   }, [state.open]);
   return (
     <dialog
+      closedby="any"
       ref={dialog}
       className={styles.dialog + ' ' + styles.settings}
-      aria-label="Voz e vídeo"
+      aria-label={title}
+      data-topic={selected}
       onCancel={(event) => {
         event.preventDefault();
-        controller.close();
+        if (!editor.busy) controller.close();
       }}
       onClose={() => {
         if (!dialog.current?.open) controller.close();
@@ -45,20 +64,28 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
       <header className={styles.header}>
         <div>
           <small>PREFERÊNCIAS DA CORTE</small>
-          <h2>Voz e vídeo</h2>
+          <h2>{title}</h2>
         </div>
-        <button type="button" aria-label="Fechar configurações" onClick={controller.close}>
+        <button
+          type="button"
+          aria-label="Fechar configurações"
+          disabled={editor.busy}
+          onClick={controller.close}
+        >
           <Icon name="close" />
         </button>
       </header>
       <div className={styles.settingsLayout}>
-        <nav aria-label="Configurações de mídia" className={styles.tabs}>
+        <nav aria-label="Configurações da Corte" className={styles.tabs}>
           {topics
-            .filter(([id]) => desktop || id !== 'capture')
+            .filter(
+              ([id]) => desktop || (id !== 'capture' && id !== 'activity' && id !== 'privacy'),
+            )
             .map(([id, label, icon]) => (
               <button
                 type="button"
                 key={id}
+                data-settings-tab={id}
                 aria-current={selected === id ? 'page' : undefined}
                 onClick={() => controller.select(id)}
               >
@@ -67,11 +94,35 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
               </button>
             ))}
         </nav>
-        <div className={styles.fields}>
+        <div className={styles.fields} data-settings-fields>
+          <AccountSettings runtime={runtime} />
+          <section hidden={selected !== 'resources'} aria-label="Recursos">
+            <ResourceSettings />
+          </section>
+          <section hidden={selected !== 'game'} aria-label="Jogos">
+            <GameSettings runtime={runtime} />
+          </section>
+          {desktop && (
+            <section hidden={selected !== 'privacy'} aria-label="Privacidade">
+              <h2>Privacidade e permissões</h2>
+              <p>
+                Cada compartilhamento de tela exige escolher a fonte. A câmera só é ativada quando
+                você ligar seu vídeo.
+              </p>
+              <MediaPermissions runtime={runtime} open={state.open && selected === 'privacy'} />
+            </section>
+          )}
+          <section hidden={selected !== 'notifications'} aria-label="Notificações">
+            <NotificationFields client={runtime.TronoNotifications} />
+          </section>
+          {runtime.TronoDesktopActivity && (
+            <section hidden={selected !== 'activity'} aria-label="Atividade">
+              <SettingsActivityFields client={runtime.TronoDesktopActivity} />
+            </section>
+          )}
           <section hidden={selected !== 'audio'} aria-label="Áudio">
             <VoiceAudioSettings client={runtime.TronoVoiceSettings} desktop={desktop}>
               <VoiceAudioPreferences client={runtime.TronoAudioPreferences} />
-              {desktop && <MediaPermissions runtime={runtime} open={state.open} />}
             </VoiceAudioSettings>
           </section>
           <section hidden={selected !== 'video'} aria-label="Vídeo">

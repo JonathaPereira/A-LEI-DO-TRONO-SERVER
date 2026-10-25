@@ -1,6 +1,8 @@
 'use client';
 
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { AppIcon as Icon } from '../application/icons';
+import styles from './gif-picker.module.css';
 import type { GifPicker } from '../../lib/profiles/gif-picker';
 
 export function GifPickerDialog({ picker }: { picker: GifPicker }) {
@@ -24,9 +26,10 @@ export function GifPickerDialog({ picker }: { picker: GifPicker }) {
   }, [state.open]);
   return (
     <dialog
+      closedby="any"
       ref={dialog}
       id="profileGifDialog"
-      className="profile-gif-dialog"
+      className={styles.picker + ' profile-gif-dialog'}
       aria-labelledby="profileGifTitle"
       onCancel={(event) => {
         event.preventDefault();
@@ -51,7 +54,7 @@ export function GifPickerDialog({ picker }: { picker: GifPicker }) {
           disabled={state.busy}
           onClick={picker.close}
         >
-          ×
+          <Icon name="close" size={18} />
         </button>
       </header>
       <form
@@ -75,39 +78,42 @@ export function GifPickerDialog({ picker }: { picker: GifPicker }) {
           Buscar
         </button>
       </form>
-      <a
-        className="profile-gif-external"
-        href={
-          state.query.trim()
-            ? 'https://giphy.com/search/' + encodeURIComponent(state.query.trim())
-            : 'https://giphy.com/'
-        }
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Abrir busca no GIPHY ↗
-      </a>
-      <form
-        className="profile-gif-link"
-        onSubmit={(event) => {
-          event.preventDefault();
-          picker.previewLink();
-        }}
-      >
-        <input
-          type="url"
-          aria-label="Link do GIF no GIPHY"
-          placeholder="Cole o link do GIF no GIPHY"
-          maxLength={2048}
-          required
-          value={state.link}
-          disabled={state.busy}
-          onChange={(event) => picker.setLink(event.currentTarget.value)}
-        />
-        <button type="submit" disabled={state.busy}>
-          Pré-visualizar
-        </button>
-      </form>
+      <details className="profile-gif-alternative">
+        <summary>Usar um link do GIPHY</summary>
+        <a
+          className="profile-gif-external"
+          href={
+            state.query.trim()
+              ? 'https://giphy.com/search/' + encodeURIComponent(state.query.trim())
+              : 'https://giphy.com/'
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Abrir busca no GIPHY ↗
+        </a>
+        <form
+          className="profile-gif-link"
+          onSubmit={(event) => {
+            event.preventDefault();
+            picker.previewLink();
+          }}
+        >
+          <input
+            type="url"
+            aria-label="Link do GIF no GIPHY"
+            placeholder="Cole o link do GIF no GIPHY"
+            maxLength={2048}
+            required
+            value={state.link}
+            disabled={state.busy}
+            onChange={(event) => picker.setLink(event.currentTarget.value)}
+          />
+          <button type="submit" disabled={state.busy}>
+            Pré-visualizar
+          </button>
+        </form>
+      </details>
       <p className="profile-gif-message" role="status" aria-live="polite">
         {state.message}
       </p>
@@ -120,6 +126,7 @@ export function GifPickerDialog({ picker }: { picker: GifPicker }) {
                 aria-label={'Usar ' + item.credit.title}
                 disabled={state.busy || state.failed.includes(item.id)}
                 onClick={() => void picker.select(item.id)}
+                title={item.credit.title}
               >
                 <img
                   src={item.preview || item.url}
@@ -129,29 +136,36 @@ export function GifPickerDialog({ picker }: { picker: GifPicker }) {
                   onError={() => picker.imageFailed(item.id)}
                 />
               </button>
-              <a href={item.credit.source} target="_blank" rel="noopener noreferrer">
+              <a
+                href={item.credit.source}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={item.credit.author + ' · GIPHY'}
+              >
                 {item.credit.author} · GIPHY
               </a>
             </article>
           ))}
       </div>
-      <button
-        className="profile-gif-more"
-        type="button"
-        hidden={state.next === null || state.loading}
-        disabled={state.busy}
-        onClick={() => void picker.more()}
-      >
-        Carregar mais
-      </button>
-      <a
-        className="profile-gif-attribution"
-        href="https://giphy.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Powered by GIPHY
-      </a>
+      <footer className="profile-gif-footer">
+        <button
+          className="profile-gif-more"
+          type="button"
+          hidden={state.next === null || state.loading}
+          disabled={state.busy}
+          onClick={() => void picker.more()}
+        >
+          Carregar mais
+        </button>
+        <a
+          className="profile-gif-attribution"
+          href="https://giphy.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Powered by GIPHY
+        </a>
+      </footer>
     </dialog>
   );
 }

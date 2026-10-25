@@ -1,3 +1,5 @@
+import { AppIcon as Icon } from '../application/icons';
+import styles from './soundboard.module.css';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Soundboard, SoundboardSnapshot } from '../../lib/soundboard/controller';
 
@@ -104,22 +106,74 @@ function SoundWaveform({
 }
 export function SoundboardView({ client, close }: { client: Soundboard; close(): void }) {
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
-  const menu = useRef<HTMLElement>(null);
+  const menu = useRef<HTMLDialogElement>(null);
+  const [query, setQuery] = useState('');
+  const sounds = state.sounds.filter((file) =>
+    file.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+  );
+  useEffect(() => {
+    if (!state.open) setQuery('');
+  }, [state.open]);
   useLayoutEffect(() => {
-    if (state.open)
+    if (state.open && !menu.current?.open) {
+      const active = document.activeElement;
+      if (document.querySelector('dialog:modal')) menu.current?.showModal();
+      else menu.current?.show();
+      if (
+        menu.current?.closest<HTMLElement>('#soundboardRoot')?.dataset.hover === 'true' &&
+        active instanceof HTMLElement
+      )
+        active.focus({ preventScroll: true });
+    } else if (!state.open && menu.current?.open) menu.current.close();
+    const position = () => {
+      if (state.open && menu.current) {
+        const root = menu.current.closest<HTMLElement>('#soundboardRoot'),
+          anchor = document.getElementById(root?.dataset.anchor || 'soundboardToggle');
+        const box = anchor?.getBoundingClientRect();
+        if (box) {
+          const n = menu.current;
+          n.style.left =
+            Math.max(12, Math.min(box.left, window.innerWidth - n.offsetWidth - 12)) + 'px';
+          const modal = n.matches(':modal') || !anchor?.getClientRects().length;
+          const height = modal
+            ? Math.min(600, window.innerHeight - 32)
+            : Math.min(window.innerHeight - 32, Math.max(380, Math.min(520, box.top - 22)));
+          if (modal) n.style.left = Math.max(12, (window.innerWidth - n.offsetWidth) / 2) + 'px';
+          n.style.maxHeight = height + 'px';
+          n.style.top =
+            (modal
+              ? Math.max(16, (window.innerHeight - height) / 2)
+              : Math.max(12, box.top - height - 10)) + 'px';
+        }
+      }
+    };
+    position();
+    window.addEventListener('resize', position);
+    if (
+      state.open &&
+      menu.current?.closest<HTMLElement>('#soundboardRoot')?.dataset.hover !== 'true'
+    )
       menu.current
-        ?.querySelector<HTMLButtonElement>('#soundboardClose')
+        ?.querySelector<HTMLInputElement>('#soundboardSearch')
         ?.focus({ preventScroll: true });
+    return () => window.removeEventListener('resize', position);
   }, [state.open]);
   const disabled = state.uploading || state.loading || !state.clip;
   return (
-    <aside
+    <dialog
+      closedby="any"
       id="soundboardDialog"
       ref={menu}
-      className="feature-dialog soundboard-menu"
+      className={styles.menu + ' feature-dialog soundboard-menu'}
       aria-labelledby="soundboardTitle"
       role="dialog"
-      hidden={!state.open}
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
+      onClose={() => {
+        if (!menu.current?.open && state.open) close();
+      }}
     >
       <header className="soundboard-heading">
         <div>
@@ -133,9 +187,20 @@ export function SoundboardView({ client, close }: { client: Soundboard; close():
           aria-label="Fechar efeitos"
           onClick={close}
         >
-          ×
+          <Icon name="close" size={18} />
         </button>
       </header>
+      <label className="sound-search">
+        <Icon name="search" size={18} />
+        <input
+          id="soundboardSearch"
+          type="search"
+          aria-label="Buscar efeitos sonoros"
+          placeholder="Encontre um som…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
       <p id="soundboardCallHint">
         {state.accountId && state.joined
           ? 'Clique para tocar. Clique novamente para reiniciar na chamada.'
@@ -152,12 +217,19 @@ export function SoundboardView({ client, close }: { client: Soundboard; close():
           onChange={(event) => client.setVolume(Number(event.currentTarget.value))}
         />
         <output id="soundboardVolumeValue">{state.volume}%</output>
-        <button id="soundStop" className="secondary-button" type="button" onClick={client.stop}>
-          Parar áudio
+        <button
+          id="soundStop"
+          aria-label="Parar áudio"
+          title="Parar áudio"
+          className="secondary-button"
+          type="button"
+          onClick={client.stop}
+        >
+          <Icon name="stop" size={17} />
         </button>
       </div>
       <div id="soundboardList" className="soundboard-list">
-        {state.sounds.map((file, index) => {
+        {sounds.map((file) => {
           const label = file.name.replace(/\.wav$/i, '');
           return (
             <article className="sound-card" key={file.id}>
@@ -171,7 +243,7 @@ export function SoundboardView({ client, close }: { client: Soundboard; close():
                 onClick={() => client.play(file.id)}
               >
                 <span className="sound-thumbnail" aria-hidden="true">
-                  {['♫', '✦', '♪', '⚔'][index % 4]}
+                  <Icon name="music" size={17} />
                 </span>
                 <strong>{label}</strong>
                 <small>{(file.durationMs / 1000).toFixed(1)} s</small>
@@ -183,7 +255,7 @@ export function SoundboardView({ client, close }: { client: Soundboard; close():
                   aria-label={'Ouvir prévia de ' + file.name}
                   onClick={() => void client.preview(file.id)}
                 >
-                  Ouvir
+                  <Icon name="headphones" size={14} />
                 </button>
                 {(file.ownerId === state.accountId || state.moderateFiles) && (
                   <button
@@ -194,15 +266,17 @@ export function SoundboardView({ client, close }: { client: Soundboard; close():
                     disabled={state.deleting.includes(file.id)}
                     onClick={() => void client.remove(file.id)}
                   >
-                    ×
+                    <Icon name="close" size={18} />
                   </button>
                 )}
               </div>
             </article>
           );
         })}
-        {!state.sounds.length && (
-          <p className="sound-empty">Adicione um efeito para dar um som à conversa.</p>
+        {!sounds.length && (
+          <p className="sound-empty">
+            {query ? 'Nenhum som encontrado.' : 'Adicione seu primeiro efeito sonoro.'}
+          </p>
         )}
       </div>
       <details
@@ -321,6 +395,6 @@ export function SoundboardView({ client, close }: { client: Soundboard; close():
       <p id="soundboardMessage" className="feature-message" role="status" aria-live="polite">
         {state.message}
       </p>
-    </aside>
+    </dialog>
   );
 }

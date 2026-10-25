@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 import type { ChannelManagement } from '../../lib/channels/management';
 import type { ChannelFiles } from '../../lib/channels/files';
+import { AppIcon as Icon } from '../application/icons';
 import { AttachmentContent } from '../files/attachment';
 
 /** Native modality stays on the stable host; close/cancel always invalidate the owning model. */
@@ -46,7 +47,7 @@ export function ChannelManagerContents({ controller }: { controller: ChannelMana
         aria-label="Fechar gerenciamento"
         onClick={controller.closeManager}
       >
-        ×
+        <Icon name="close" />
       </button>
       <span className="section-eyebrow">SUA COMUNIDADE</span>
       <h2 id="channelManagerTitle">Organize os canais</h2>
@@ -158,7 +159,7 @@ export function RoleEditorContents({ controller }: { controller: ChannelManageme
         aria-label="Fechar cargo"
         onClick={controller.closeRole}
       >
-        ×
+        <Icon name="close" />
       </button>
       <span className="section-eyebrow">PERMISSÕES</span>
       <h2 id="roleTitle">
@@ -219,7 +220,7 @@ export function ChannelFilesContents({ controller }: { controller: ChannelFiles 
         aria-label="Fechar anexos"
         onClick={controller.close}
       >
-        ×
+        <Icon name="close" />
       </button>
       <span className="section-eyebrow">ARQUIVOS DO CANAL</span>
       <h2 id="channelFilesTitle">Fotos &amp; anexos</h2>

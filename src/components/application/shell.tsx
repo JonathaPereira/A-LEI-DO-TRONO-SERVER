@@ -5,7 +5,13 @@ import type { CallNavigationSnapshot } from '../../types/call-navigation';
 import type { PrimaryScreen, PortalSnapshot } from '../../lib/navigation/portal';
 import type { GameDestination } from '../../lib/games/library';
 import { Avatar } from '../profiles/avatar';
+import { DirectProfileBanner } from '../profiles/decorations';
 import { AccountForm, AccountOverlay } from './auth';
+import { QuickPanel } from './quick-panel';
+import panelStyles from './quick-panel.module.css';
+import { QuickAudio } from './quick-audio';
+import { CommunityActions, ChannelFilesAction, CommunityDialogs } from './community-settings';
+import { ProfileDialogs } from './profile-settings';
 import { MediaSettings } from './media-settings';
 import { CallSurface } from './call';
 import { Conversation } from './conversation';
@@ -86,46 +92,69 @@ const games: readonly {
 function CallSummary({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoCallToolbar),
     nav = useModel(runtime.TronoCallNavigation);
-  if (!runtime.TronoSocial.voiceJoined && !runtime.TronoSocial.voiceJoining) return null;
+  const joined = runtime.TronoSocial.voiceJoined || runtime.TronoSocial.voiceJoining;
   return (
-    <div className={styles.callSummary}>
-      <span className={styles.connection}>
-        <Icon name="voice" size={14} />{' '}
-        {runtime.TronoSocial.voiceJoining ? 'Conectando…' : 'Conectado à voz'}
-      </span>
-      <button
-        type="button"
-        aria-label="Voltar à chamada"
-        onClick={() => {
-          runtime.TronoDirectMessages.close();
-          runtime.TronoPortal.showOnly('chatOnlyScreen');
-          runtime.TronoCallNavigation.showCall();
-        }}
-      >
-        {nav.voiceRoom?.name || 'Sala de jogo'}
-      </button>
-      <div>
-        {(['muteMicBtn', 'deafenVoiceBtn', 'joinVoiceBtn'] as const).map((id) => (
+    <section className={styles.callSummary} hidden={!joined} aria-label="Conexão de voz">
+      <div className={styles.connectionRow}>
+        <button
+          type="button"
+          className={styles.connectionTarget}
+          aria-label="Voltar à chamada"
+          onClick={() => {
+            runtime.TronoDirectMessages.close();
+            runtime.TronoPortal.showOnly('chatOnlyScreen');
+            runtime.TronoCallNavigation.showCall();
+          }}
+        >
+          <Icon name="voice" size={22} />
+          <span>
+            <strong>{runtime.TronoSocial.voiceJoining ? 'Conectando…' : 'Voz conectada'}</strong>
+            <small>{nav.voiceRoom?.name || 'Sala de jogo'}</small>
+          </span>
+        </button>
+        <QuickAudio runtime={runtime} />
+        <button
+          type="button"
+          className={styles.disconnectVoice}
+          aria-label={state.buttons.joinVoiceBtn.label}
+          title={state.buttons.joinVoiceBtn.label}
+          disabled={state.buttons.joinVoiceBtn.disabled}
+          onClick={() => void runtime.TronoCallToolbar.activate('joinVoiceBtn')}
+        >
+          <Icon name="disconnect" size={19} />
+        </button>
+      </div>
+      <div className={styles.voiceActions}>
+        {(['cameraBtn', 'screenShareBtn'] as const).map((id) => (
           <button
-            type="button"
             key={id}
+            type="button"
             aria-label={state.buttons[id].label}
             title={state.buttons[id].label}
             aria-pressed={state.buttons[id].active}
             disabled={state.buttons[id].disabled}
             onClick={() => void runtime.TronoCallToolbar.activate(id)}
           >
-            {id === 'muteMicBtn' ? (
-              <Icon name={state.buttons[id].active ? 'microphoneSlash' : 'microphone'} />
-            ) : id === 'deafenVoiceBtn' ? (
-              <Icon name="headphones" />
-            ) : (
-              <Icon name="exit" />
-            )}
+            <Icon
+              name={
+                id === 'cameraBtn' ? (state.buttons[id].active ? 'camera' : 'cameraOff') : 'screen'
+              }
+              size={19}
+            />
           </button>
         ))}
+        <button
+          id="soundboardToggle"
+          type="button"
+          aria-label="Efeitos sonoros da sidebar"
+          title="Efeitos sonoros"
+          aria-expanded="false"
+          aria-controls="soundboardDialog"
+        >
+          <Icon name="music" size={19} />
+        </button>
       </div>
-    </div>
+    </section>
   );
 }
 function Navigation({
@@ -139,8 +168,16 @@ function Navigation({
 }) {
   const auth = useModel(runtime.TronoAuth),
     channels = useModel(runtime.TronoChannels),
-    dm = useModel(runtime.TronoDirectMessages);
+    dm = useModel(runtime.TronoDirectMessages),
+    call = useModel(runtime.TronoCallNavigation),
+    toolbar = useModel(runtime.TronoCallToolbar),
+    stage = useModel(runtime.TronoCallStage);
   const account = auth.user || auth.guest;
+  const [directExpanded, setDirectExpanded] = useState(false);
+  const visibleThreads = directExpanded
+    ? dm.threads
+    : dm.threads.filter((thread, index) => index < 6 || thread.peerId === dm.peerId);
+  useEffect(() => setDirectExpanded(false), [account?.id]);
   const open = async (id: string, voice = false) => {
     close();
     runtime.TronoDirectMessages.close();
@@ -182,7 +219,6 @@ function Navigation({
             <small>A LEI DO TRONO</small>
           </div>
         </button>
-        <Icon name="chevron" size={17} />
       </div>
       <div className={styles.sidebarScroll}>
         <div className={styles.primaryNavigation}>
@@ -201,13 +237,16 @@ function Navigation({
           </button>
           <button
             className={styles.friendsButton}
-            data-active={dm.open}
+            data-active={
+              screen === 'chatOnlyScreen' && call.page === 'chat' && dm.open && !dm.peerId
+            }
             onClick={() => {
               close();
               if (!auth.user) {
                 runtime.TronoAuth.open('login');
                 return;
               }
+              runtime.TronoCallNavigation.showChat();
               runtime.TronoPortal.showOnly('chatOnlyScreen');
               void runtime.TronoDirectMessages.openFriends();
             }}
@@ -216,6 +255,7 @@ function Navigation({
             <span>Pessoas da Corte</span>
           </button>
         </div>
+        <CommunityActions runtime={runtime} />
         <div className={styles.sectionLabel}>CANAIS DE TEXTO</div>
         {!auth.user && (
           <p className={styles.sidebarHint}>
@@ -233,17 +273,40 @@ function Navigation({
               <button
                 key={c.id}
                 className={styles.channel}
-                data-active={!dm.open && channels.selectedId === c.id}
-                aria-current={!dm.open && channels.selectedId === c.id ? 'page' : undefined}
+                data-active={
+                  screen === 'chatOnlyScreen' &&
+                  call.page === 'chat' &&
+                  !dm.open &&
+                  channels.selectedId === c.id
+                }
+                aria-current={
+                  screen === 'chatOnlyScreen' &&
+                  call.page === 'chat' &&
+                  !dm.open &&
+                  channels.selectedId === c.id
+                    ? 'page'
+                    : undefined
+                }
                 data-channel={c.id}
+                data-muted={!!channels.notices[c.id]?.muted}
+                title={
+                  channels.notices[c.id]?.muted ? 'Notificações silenciadas neste canal' : undefined
+                }
                 onClick={() => void open(c.id)}
               >
                 <span className={styles.hash}>
                   <Icon name="hash" />
                 </span>
-                <span>{c.name}</span>
+                <span className={styles.channelLabel}>{c.name}</span>
+                {channels.notices[c.id]?.muted && <Icon name="bellOff" size={14} />}
                 {!!channels.notices[c.id]?.unread && (
-                  <b className={styles.badge}>{channels.notices[c.id].unread}</b>
+                  <b
+                    className={styles.badge}
+                    data-channel-unread
+                    aria-label={channels.notices[c.id].unread + ' mensagens não lidas'}
+                  >
+                    {channels.notices[c.id].unread}
+                  </b>
                 )}
               </button>
             ))}
@@ -257,50 +320,168 @@ function Navigation({
                   className={styles.channel}
                   aria-label={'Entrar na voz de ' + c.name}
                   data-voice-channel={c.id}
+                  data-active={
+                    screen === 'chatOnlyScreen' &&
+                    call.page === 'call' &&
+                    call.voiceRoom?.id === c.id
+                  }
+                  data-connected={call.voiceRoom?.id === c.id}
+                  aria-pressed={call.voiceRoom?.id === c.id}
                   onClick={() => void open(c.id, true)}
                 >
                   <Icon name="voice" />
-                  <span>{c.name}</span>
+                  <span className={styles.channelLabel}>{c.name}</span>
                   <small>{c.players.filter((p) => p.inVoice).length || ''}</small>
                 </button>
                 {c.players
                   .filter((p) => p.inVoice)
                   .map((p) => (
-                    <div className={styles.voicePerson} key={p.id}>
+                    <div className={styles.voicePerson} key={p.id} data-voice-person={p.id}>
+                      <DirectProfileBanner
+                        accountId={
+                          stage.participants.find((person) => person.id === p.id)?.accountId ?? ''
+                        }
+                      />
                       <Avatar person={p} className={styles.tinyAvatar} />
-                      {p.name}
+                      <span>{p.name}</span>
                     </div>
                   ))}
               </div>
             ))}
         {!!dm.threads.length && (
-          <>
-            <div className={styles.sectionLabel}>MENSAGENS DIRETAS</div>
-            {dm.threads.map((p) => (
+          <details className={styles.directGroup} open aria-label="Mensagens diretas">
+            <summary>
+              <Icon name="chevron" size={13} />
+              <span>Mensagens diretas</span>
+              <small>{dm.threads.length}</small>
+            </summary>
+            {visibleThreads.map((p) => (
               <button
-                className={styles.channel}
+                className={styles.channel + ' ' + styles.directMessage}
+                data-direct-peer={p.peerId}
                 key={p.peerId}
+                data-active={
+                  screen === 'chatOnlyScreen' &&
+                  call.page === 'chat' &&
+                  dm.open &&
+                  dm.peerId === p.peerId
+                }
                 onClick={() => {
                   close();
+                  runtime.TronoCallNavigation.showChat();
                   runtime.TronoPortal.showOnly('chatOnlyScreen');
                   void runtime.TronoDirectMessages.open(p.peerId);
                 }}
               >
+                <DirectProfileBanner accountId={p.peerId} />
                 <Avatar person={p} className={styles.tinyAvatar} />
-                <span>{p.name}</span>
+                <span className={styles.channelLabel}>{p.name}</span>
                 {!!p.unread && <b className={styles.badge}>{p.unread}</b>}
               </button>
             ))}
-          </>
+            {dm.threads.length > 6 && (
+              <button
+                type="button"
+                className={styles.moreDirect}
+                onClick={() => setDirectExpanded(!directExpanded)}
+              >
+                {directExpanded
+                  ? 'Mostrar menos'
+                  : `Mostrar todas as conversas (${dm.threads.length})`}
+              </button>
+            )}
+          </details>
         )}
       </div>
       <CallSummary runtime={runtime} />
-      <footer className={styles.account}>
-        <span className={styles.initialAvatar}>{account?.nickname.slice(0, 1) || 'C'}</span>
+      <footer className={styles.account} data-account-card>
+        <DirectProfileBanner accountId={auth.user?.id ?? ''} />
+        {account ? (
+          <Avatar person={auth.user ?? { avatar_preset: 'person' }} className={styles.avatar} />
+        ) : (
+          <span className={styles.initialAvatar}>C</span>
+        )}
         <div>
-          <strong>{account?.nickname || 'Visitante'}</strong>
+          <QuickPanel
+            label="Meu perfil"
+            trigger={<strong>{account?.nickname || 'Visitante'}</strong>}
+          >
+            <div className={panelStyles.identity}>
+              <DirectProfileBanner accountId={auth.user?.id ?? ''} />
+              {account && (
+                <Avatar
+                  person={auth.user ?? { avatar_preset: 'person' }}
+                  className={styles.avatar}
+                />
+              )}
+              <strong>{account?.nickname || 'Visitante'}</strong>
+              <small>{auth.user ? 'Sua conta na Corte' : 'Convidado'}</small>
+            </div>
+            <button
+              type="button"
+              data-close-panel
+              onClick={() =>
+                auth.user
+                  ? runtime.TronoCallSettings.open('account')
+                  : runtime.TronoAuth.open('login')
+              }
+            >
+              <Icon name="members" size={18} />
+              Editar perfil
+            </button>
+            {auth.user && (
+              <button
+                type="button"
+                data-close-panel
+                onClick={() => void runtime.TronoProfileViewer.open(auth.user!.id)}
+              >
+                <Icon name="eye" size={18} />
+                Ver meu cartão
+              </button>
+            )}
+            <button
+              type="button"
+              data-close-panel
+              onClick={() => runtime.TronoCallSettings.open('account')}
+            >
+              <Icon name="settings" size={18} />
+              Configurações da Corte
+            </button>
+            <button
+              type="button"
+              data-close-panel
+              onClick={() =>
+                void (auth.user ? runtime.TronoAuth.logout() : runtime.TronoAuth.endGuest())
+              }
+            >
+              <Icon name="exit" size={18} />
+              Sair da conta
+            </button>
+          </QuickPanel>
           <small>{auth.user ? 'Sua conta' : auth.guest ? 'Convidado' : 'Bem-vindo ao M&N'}</small>
         </div>
+        {(['muteMicBtn', 'deafenVoiceBtn'] as const).map((id) => (
+          <button
+            type="button"
+            key={id}
+            aria-label={toolbar.buttons[id].label}
+            title={toolbar.buttons[id].label}
+            aria-pressed={toolbar.buttons[id].active}
+            disabled={toolbar.buttons[id].disabled}
+            onClick={() => void runtime.TronoCallToolbar.activate(id)}
+          >
+            <Icon
+              name={
+                id === 'muteMicBtn'
+                  ? toolbar.buttons[id].active
+                    ? 'microphoneSlash'
+                    : 'microphone'
+                  : 'headphones'
+              }
+              size={18}
+            />
+          </button>
+        ))}
         <button
           type="button"
           aria-label="Voz e vídeo"
@@ -309,48 +490,47 @@ function Navigation({
         >
           <Icon name="settings" size={18} />
         </button>
-        {account ? (
-          <button
-            aria-label="Sair da conta"
-            title="Sair da conta"
-            onClick={() =>
-              void (auth.user ? runtime.TronoAuth.logout() : runtime.TronoAuth.endGuest())
-            }
-          >
-            <Icon name="exit" />
-          </button>
-        ) : (
-          <button className={styles.link} onClick={() => runtime.TronoPortal.showPortal()}>
-            Entrar
-          </button>
-        )}
       </footer>
     </>
   );
 }
 function Members({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoCommunity),
-    members = state.presence?.members.filter((m) => m.online) ?? [];
+    members = state.presence?.members.filter((m) => m.online) ?? [],
+    management = useModel(runtime.TronoChannelManagement);
   return (
     <>
       <div className={styles.sectionLabel}>ONLINE — {members.length}</div>
       {members.map((person) => (
-        <button
-          key={person.id}
-          className={styles.member}
-          onClick={() => {
-            runtime.TronoPortal.showOnly('chatOnlyScreen');
-            void runtime.TronoDirectMessages.open(person.id);
-          }}
-          disabled={person.guest || person.id === runtime.TronoAuth.user?.id}
-        >
-          <Avatar person={person} className={styles.avatar} />
-          <span>
-            <strong>{person.name}</strong>
-            <small>{person.activity?.name || person.roomName || 'Disponível'}</small>
-          </span>
-          <i className={styles.onlineDot} />
-        </button>
+        <div key={person.id} className={styles.memberRow}>
+          <button
+            className={styles.member}
+            onClick={() => void runtime.TronoProfileViewer.open(person.id)}
+            title="Ver perfil"
+            disabled={person.guest}
+          >
+            <DirectProfileBanner accountId={person.guest ? '' : person.id} />
+            <Avatar person={person} className={styles.avatar} />
+            <span className={styles.memberIdentity}>
+              <strong>{person.name}</strong>
+              <small>{person.activity?.name || person.roomName || 'Disponível'}</small>
+            </span>
+            <i className={styles.onlineDot} />
+          </button>
+          {management.canManageRoles &&
+            !person.guest &&
+            person.id !== management.accountId &&
+            person.role !== 'creator' && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label={'Alterar cargo de ' + person.name}
+                onClick={() => runtime.TronoChannelManagement.editRole(person)}
+              >
+                <Icon name="settings" size={14} />
+              </button>
+            )}
+        </div>
       ))}
       {!members.length && (
         <p className={styles.sidebarHint}>
@@ -449,7 +629,24 @@ export function ApplicationShell({
     runtime?.TronoCallNavigation.getSnapshot ?? empty,
     empty,
   );
-  const screen = portal?.screen ?? 'portalScreen',
+  const session = useSyncExternalStore(
+    runtime?.TronoAuth.subscribe ?? noop,
+    runtime?.TronoAuth.getSnapshot ?? empty,
+    empty,
+  );
+  const [sessionReady, setSessionReady] = useState(false);
+  useEffect(() => {
+    let current = true;
+    if (runtime)
+      void runtime.TronoAuth.ready.then(() => {
+        if (current) setSessionReady(true);
+      });
+    return () => {
+      current = false;
+    };
+  }, [runtime]);
+  const entry = !session?.user && !session?.guest;
+  const screen = entry ? 'portalScreen' : (portal?.screen ?? 'portalScreen'),
     game = GAME_SCREENS.has(screen);
   const [drawer, setDrawer] = useState(false),
     [members, setMembers] = useState(true);
@@ -485,6 +682,7 @@ export function ApplicationShell({
       <div
         className={styles.app}
         data-game={game}
+        data-entry={entry}
         data-drawer={drawer}
         data-call={screen === 'chatOnlyScreen' && callNav?.page === 'call'}
       >
@@ -530,6 +728,7 @@ export function ApplicationShell({
             <span className={styles.headerStatus} data-connected={portal?.connected}>
               {portal?.connected ? 'Conectado' : 'Conectando…'}
             </span>
+            {runtime && screen === 'chatOnlyScreen' && <ChannelFilesAction runtime={runtime} />}
             {!(screen === 'chatOnlyScreen' && callNav?.page === 'call') && (
               <button
                 className={styles.iconButton}
@@ -548,7 +747,12 @@ export function ApplicationShell({
           >
             {runtime ? (
               <>
-                {screen === 'portalScreen' && <AccountForm runtime={runtime} />}
+                {screen === 'portalScreen' &&
+                  (entry && sessionReady ? (
+                    <AccountForm runtime={runtime} />
+                  ) : (
+                    <p role="status">Preparando sua sessão…</p>
+                  ))}
                 {portal?.entryStatus && (
                   <p role="status" className={styles.entryStatus}>
                     {portal.entryStatus}
@@ -581,6 +785,17 @@ export function ApplicationShell({
           </section>
         </main>
       </div>
+      <div id="gameResourceDock" className={styles.gameResources} hidden={!game}>
+        {runtime && (
+          <button
+            type="button"
+            aria-label="Recursos da Corte"
+            onClick={() => runtime.TronoCallSettings.open('resources')}
+          >
+            <Icon name="settings" size={18} />
+          </button>
+        )}
+      </div>
       <div className={styles.gameStage}>{children(game, screen)}</div>
       {game && runtime && (
         <button
@@ -592,8 +807,10 @@ export function ApplicationShell({
       )}
       {runtime && (
         <>
-          <AccountOverlay runtime={runtime} inline={screen === 'portalScreen'} />
+          <AccountOverlay runtime={runtime} inline={entry || screen === 'portalScreen'} />
           <MediaSettings runtime={runtime} />
+          <ProfileDialogs runtime={runtime} />
+          <CommunityDialogs runtime={runtime} />
         </>
       )}
     </>

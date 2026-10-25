@@ -32,8 +32,8 @@ A superfície dos jogos permanece montada durante a navegação. Telas podem ser
 ocultadas; prompts e efeitos pertencem ao mesmo escopo, inclusive hosts criados
 dinamicamente. Trocar tela não recria socket, partida, captura ou player.
 A apresentação da chamada está reintegrada no Marco 2, aprovado em 25/10/2026.
-Os recursos avançados do Marco 3 ainda aguardam reintegração; existência de fonte
-não significa que o recurso esteja montado. Consulte o checkpoint da migração.
+Os recursos avançados do Marco 3 estão em reintegração. Consulte o checkpoint
+da migração para disponibilidade e evidências; fonte existente não comprova QA.
 
 ## Navegação, conta e comunicação
 
@@ -192,3 +192,53 @@ não comprovam hardware, segundo plano, captura ou instalação reais.
 Contratos de distribuição estão em [ATUALIZACOES.md](ATUALIZACOES.md) e no guia
 de desenvolvimento. Instalação, commit, publicação e deploy obedecem à autorização
 do usuário; são operações separadas da implementação local.
+
+## Composição dos recursos do Marco 3
+
+`profiles/initialize.ts` prepara editor, GIFs, contas, aparência e biblioteca
+uma vez sobre a sessão e os clientes existentes. `application/profile-settings`
+apresenta esses donos; não cria outra sessão. Fechar configurações descarta o
+rascunho e invalida o seletor de GIF; trocar abas conserva os mesmos campos.
+Os diálogos aninhados usam modalidade nativa e fecham seu próprio controlador.
+
+`application/resources.tsx` mantém os hosts de soundboard, clipes, Remote PC e
+avisos de gravação montados. Depois da publicação dos serviços, prepara os
+consumidores uma vez. Gravação, clipes e Remote PC ficam permanentemente
+montados na aba Recursos das configurações, mesmo quando ela está fechada.
+Nos jogos, um acesso abre essa aba. Não há transferência de DOM entre sidebar
+e jogos. Sair de uma tela não encerra captura.
+Gravação possui sua captura; replay toma emprestada a transmissão e possui seus
+clones. O Electron conserva a suspensão de replay definida na ponte nativa.
+
+`channels/management-runtime` permite preparar os donos sem montar a antiga
+apresentação. `application/community-settings` apresenta canais, cargos e anexos
+usando os mesmos comandos e diálogos. Permissões vêm dos snapshots de conta;
+autoridade final permanece no servidor. Não há novo endpoint ou migração.
+
+`application/quick-panel.tsx` possui apenas ancoragem, hover e descarte do popover.
+`quick-audio.tsx` usa o mesmo VoiceSettings; os dois acessos não criam captura,
+AudioContext ou transporte. Os dois gatilhos do soundboard delegam ao mesmo dono;
+hover usa diálogo não modal sem mover foco. A aba Recursos preserva um único host de gravação. A tela de entrada espera Auth.ready e
+projeta a identidade atual, sem alterar o contrato de restauração da sessão.
+
+GIFs e soundboard possuem CSS próprio, sem a grade e os cartões do antigo dock.
+A galeria de GIFs rola entre cabeçalho/rodapé fixos. No soundboard, só a biblioteca
+rola; abrir o editor troca a região rolável pela edição, sem recriar seus campos.
+Hover usa painel não modal; abrir pelos Recursos usa um diálogo modal aninhado
+para continuar interativo sobre configurações. Busca e compactação pertencem à
+apresentação; reprodução, arquivo e autorização continuam nos donos existentes.
+
+A apresentação Corte reutiliza ParticipantBackground/DirectProfileBanner e o
+cache compartilhado de profiles/decorations para fundos da chamada e capas
+laterais. URLs continuam no cliente de arquivos, vinculadas à época da conta;
+nenhum novo dono de rede ou mídia. O roster privado fornece accountId para os
+participantes da voz; IDs públicos sem correspondência não são convertidos por
+nome. Decoração fica atrás dos controles e de qualquer vídeo emprestado.
+
+MemberCard possui estilos locais e variantes card/full; o editor e o viewer usam
+a mesma apresentação dos dados. O editor mantém campos/prévia em painéis irmãos,
+rodapé separado e alternância de apresentação em janelas estreitas, sem outro
+rascunho/controlador. Modais atuais externos aos jogos declaram closedby=any:
+o navegador encaminha clique externo ao cancelamento nativo já tratado pelos
+donos, conservando bloqueios, descarte e a ordem dos modais. Não há listener
+global novo para forçar fechamento nem alteração dos prompts protegidos dos jogos.

@@ -151,7 +151,8 @@ com precisão.
   o Marco 2. Nova inspeção autenticada de canais em rea-marco2-inspection.json.
   A chamada ativa foi observada depois; veja o checkpoint do Marco 2 abaixo.
 - A revisão automática recusou exclusão de views por checagem só de imports.
-  Nenhuma exclusão dessas views foi executada. Auditoria adicional de 11 views
+  Nenhuma exclusão foi executada naquela rodada; o Marco 3 registra as remoções
+  posteriores. Auditoria adicional de 11 views
   em 901 fontes cobre exports, IDs, eventos, fachadas, URLs, workers e IPC:
   artifacts/frontend-reset/presentation-audit.json. São indícios para revisão
   semântica; a remoção e o reset final das fontes continuam pendentes.
@@ -172,7 +173,7 @@ com precisão.
 Marco 1 aprovado pelo usuário com “agora sim”. O commit local e1070da registra
 esse marco. O usuário aprovou o resultado do Marco 2 após testar a interface e
 solicitou o commit de todas as alterações atuais na mesma branch, estabelecendo
-uma referência antes do Marco 3. Consultar o histórico Git para o hash do commit.
+uma referência antes do Marco 3. O commit local é `e170860`; não houve push.
 
 ### Referência e implementação
 
@@ -279,9 +280,8 @@ ajustes, o usuário confirmou o aceite final do Marco 2; Marco 3 ainda não apro
 
 ### Próximo passo e pendências
 
-1. Registrar as alterações aprovadas do Marco 2 no commit solicitado, antes de
-   introduzir alterações do Marco 3. Nenhuma publicação foi autorizada.
-2. Executar Marco 3: perfis, arquivos, soundboard, clipes, gravação, Remote PC
+1. Marco 2 registrado em `e170860`; nenhum commit do Marco 3 foi solicitado.
+2. Concluir Marco 3: perfis, arquivos, soundboard, clipes, gravação, Remote PC
    e administração, reutilizando os donos preservados.
 3. Atualizar regressões antigas que ainda dependem dos layouts retirados à medida
    que seus recursos forem reintegrados. Não retirar cobertura útil para obter CI
@@ -295,3 +295,168 @@ ajustes, o usuário confirmou o aceite final do Marco 2; Marco 3 ainda não apro
 
 Evidências temporárias ficam em artifacts/frontend-reset; plano, andamento e
 pendências continuam neste arquivo. Marcos 1 e 2 aprovados; Marco 3 pendente.
+
+## Marco 3 — em implementação
+
+Base local: `e170860`, branch `codex/frontend-rebuild`. Alterações sem commit.
+O ajuste prévio do usuário nos imports Phosphor (`*Icon`) foi preservado.
+Backend, banco e código nativo permanecem sem alterações nesta etapa.
+
+### Integração disponível
+
+- Perfil, rascunho, salvar/descartar, GIFs, viewer e diretório do criador usam os
+  donos existentes. Abas conservam campos/rascunhos; troca de conta invalida
+  respostas antigas. Biblioteca mantém proteção de mídias de perfil e isolamento.
+- Configurações incluem notificações, cores das mesas, áudio dos jogos, arquivos
+  e atividade no desktop. Lembrar sessão e permissões usam a sessão/ponte atuais.
+  O tema é aplicado à superfície delimitada dos jogos; a Corte conserva o dourado.
+- Soundboard, gravação, replay web e Remote PC têm acesso na sidebar e nos jogos.
+  A aba Recursos mantém os mesmos controles e hosts de gravação/clipes/Remote PC;
+  as mesas possuem acesso a essa aba, sem transferir os controles de DOM.
+  Foram retirados os controles/hosts duplicados do antigo painel dos jogos.
+- Replay automático continua suspenso no Windows, conforme política nativa.
+  A central explica essa disponibilidade. Não foi ativado replay nativo.
+- Canais, cargos e arquivos do canal reutilizam autorização e cancelamento dos
+  controladores atuais. Sidebar indica chamada ativa, não lidas e canais silenciados.
+- Cinco views retiradas: auth/dialogs, auth/host, navigation/portal-contents,
+  portal-parallax e portal-credits. Formulários/download estão em application/auth;
+  navegação em shell; música/créditos em game-settings sobre audio/catalog.
+  A matriz de preservação foi atualizada. A revisão semântica específica fica em
+  artifacts/frontend-reset/marco3-removal-review.json. Outras views não foram
+  excluídas por ausência de imports; a limpeza final ainda não terminou.
+
+### Gravação e isolamento das fixtures
+
+A fixture parava o MediaRecorder após 1.200 ms, antes do primeiro bloco codificado
+no Chrome. O helper compartilhado agora aguarda dados codificados também no
+Electron. A instrumentação temporária de eventos/contextos foi retirada; o
+observador necessário à sincronização fica somente nos testes. Não houve mudança
+de codec ou mixer de produção para contornar a fixture.
+
+O cenário Electron passou a escolher uma porta livre: a porta fixa 11994 estava
+ocupada por uma fixture de outro worktree. O processo desse outro trabalho foi
+preservado. O encerramento do helper de backend reconhece também signalCode.
+
+### Verificações concluídas nesta rodada
+
+| Verificação                                                                                   | Evidência em artifacts/frontend-reset                                                                             |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Core completo: 1.404/1.404                                                                    | marco3-core-final.log                                                                                             |
+| Aparência e perfil: 6/6, após falha reproduzida do tema das mesas                             | marco3-appearance-profile.log                                                                                     |
+| Arquivos, viewer e contas: 9 casos aprovados; o perfil falhou nessa rodada e passou depois    | marco3-account-browser.log; perfil final em marco3-games-cut.log                                                  |
+| Canais/anexos: 2/2, incluindo criar/excluir, mute, não lidas e continuidade de voz            | marco3-channels-green.log                                                                                         |
+| Chamada, navegação, Remote PC e soundboard: 11/11                                             | marco3-call-regression.log                                                                                        |
+| Replay web: dez aprovações e um skip externo                                                  | seção de clipes em marco3-resources-browser.log; outros recursos desse log falharam e tiveram rodadas posteriores |
+| Gravação Chrome: quatro aprovações e um skip externo                                          | marco3-recording-final.log                                                                                        |
+| Electron real: captura, configurações e gravação reproduzível preservando chamada/transmissão | marco3-electron-recording.log                                                                                     |
+| Azul, Splendor, Love Letter, Ticket to Ride, navegação e perfil: catorze aprovações           | marco3-games-cut.log; esse log também contém falhas antigas do Trono, corrigidas abaixo                           |
+| Trono: seis decretos e teste pai aprovados                                                    | marco3-throne-final.log; história/lobby falharam nessa rodada                                                     |
+| Trono: história completa e lobby/transferência rejeitada: 2/2                                 | marco3-throne-remainder.log                                                                                       |
+| Tipos, formatação e exportação estática                                                       | marco3-typecheck.log; marco3-format-check.log; marco3-build.log                                                   |
+
+Fixtures antigas do Trono passaram a entrar na voz pelo shell atual. Permutações
+original/discord retiradas foram substituídas pelo cenário Corte, mantendo tamanhos,
+regras, cartas privadas, confirmação, tooltips, histórico e identidade das tracks.
+A transferência rejeitada usa o comando público do lobby, pois retomar um jogo
+agora reabre o lobby corrente. Não foram atalhadas as partidas para obter aprovação.
+
+FFprobe/FFmpeg estão ausentes: as verificações externas aparecem como skip.
+Codificação/decodificação e frames/seek no Chrome continuam obrigatórios. Captura
+Electron usou uma BrowserWindow controlada real; microfone é sintético e permissões
+foram previamente concedidas apenas no perfil temporário. Remote PC teve vídeo
+WebRTC direto e entrada/consentimento numa ponte fixture; isso não comprova injeção
+nativa no Windows. Capturas ficam em marco3-qa/; não são snapshots visuais aceitos.
+
+### Pendências para continuar
+
+1. Concluir revisão semântica/corte das views/adaptadores/estilos restantes,
+   atualizando a matriz por arquivo. Não recriar uma árvore de frontend legado.
+2. Completar QA integrado de notificações/atividade e caminhos nativos pendentes,
+   declarando equipamento/serviço indisponível. Preservar cobertura ao adaptar
+   outras fixtures antigas; a suíte browser/desktop completa e a pipeline inteira
+   não foram declaradas aprovadas.
+3. O CI existente recebeu os filtros dos recursos reintegrados, sem novo alias npm.
+   Conferir o resultado remoto somente quando houver autorização para publicar.
+4. Revisar a entrega integrada e obter aceite visual do Marco 3. Não houve aceite,
+   commit, publicação ou deploy desta etapa; a migração continua aberta.
+
+### Polimento atual do Marco 3 — feedback de 25/10
+
+Entrada exclusiva e restauração sem login transitório; seleção de tela separada
+da participação em voz; Amigos/Convites/Comunidade; cartão da conta e remoção da
+seta decorativa permanecem da primeira revisão (`polish-*`).
+
+A segunda revisão substitui a composição inferior: sidebar de 280px, conexão e
+ações câmera/tela/soundboard separadas da faixa de conta (mic/fones/configurações).
+Na chamada, soundboard fica depois de mic/fones; a configuração redundante com
+reticências saiu. Gravação, clipes e Remote PC ficam em Configurações → Recursos,
+com controles permanentemente montados e acesso nos jogos. Sair está no cartão
+da conta. Não há transferência do dock entre sidebar e mesas.
+
+GIFs e soundboard possuem estilos próprios. Galeria com cabeçalho/rodapé fixos,
+miniaturas legíveis, atribuição e alternativa por link recolhível. Soundboard com
+busca local, cartões de 60px e prévia/exclusão discretas; só sua lista rola, ou o
+editor quando aberto. Prévia do perfil compacta sem scroll interno nem cena
+duplicada. A aparência também deve alcançar o chat; essa ampliação foi adiada
+explicitamente pelo usuário. Phosphor preservado.
+
+Validação em artifacts/frontend-reset:
+
+- `refine-core.log`: 1.405/1.405 contratos determinísticos, incluindo navegação
+  para Recursos em web/desktop.
+- `refine-final.log`: 11/11 — chamada, perfil, GIFs e soundboard, incluindo
+  bibliotecas preenchidas e contínua posse dos players/capturas.
+- `refine-desktop-final.log`: 2/2 no Electron real, captura/gravação/cancelamento
+  e sessão nativa criptografada; microfone sintético e janela controlada de QA.
+- `refine-resources.log`: 16 aprovações e um skip externo declarado; autenticação,
+  gravação e Remote PC com ponte de teste preservam chamadas. Não comprova input
+  de hardware ou transporte pela internet.
+- `refine-clips-final.log`: 10 aprovações e um skip externo (FFmpeg/FFprobe ausentes);
+  replay, áudio, busca temporal, exportação, quota e descarte passaram no Chrome.
+- `refine-types.log`, `refine-format-check.log`, `refine-build.log`: tipos,
+  formatação e exportação estática. `git diff --check` passou.
+
+Capturas revisadas em refine-qa: 24 itens em 1440×900, 1024×768, 768×1024 e 390×844;
+sons sintéticos e prévias ilustrativas com arte local dos jogos. Não são conteúdo
+do Discord nem prova de serviço GIPHY ao vivo. call-qa mostra sidebar/barra da
+chamada; marco3-qa mostra a prévia compacta. São evidências, não snapshots dourados
+ou aceite humano. Referência desta revisão: oito imagens fornecidas pelo usuário;
+REA autenticado e limites da observação anterior permanecem registrados no UX.
+
+Rodadas intermediárias com falhas estão preservadas em refine-red/settings-red,
+filled/first e clips/green; não apresentá-las como seleções integralmente verdes.
+Nenhuma instalação, commit, publicação ou alteração de contrato de backend.
+Continuam pendentes corte semântico restante, regressões legadas não adaptadas e
+aceite visual integrado do Marco 3.
+
+As revisões seguintes preservam preto/carvão neutro e dourado, áudio rápido só
+na sidebar, fundos pessoais na chamada, capas laterais e conta delimitada fora
+da voz. Os carregadores existentes respeitam accountId, época e URLs assinadas.
+Sem correspondência de conta, a linha fica neutra; não inferir identidade por nome.
+
+Checkpoint atual após as três últimas imagens: DMs recolhíveis com seis linhas
+e expansão, avatares sem distorção; editor com campos/prévia em painéis irmãos,
+rodapé próprio e Ver prévia em janelas estreitas; MemberCard com estilos locais,
+capa inteira e composição própria para perfil completo. Nenhuma seção é cortada.
+Clique no fundo dos modais externos aos jogos usa cancelamento nativo, fecha
+apenas o de cima e conserva bloqueio de salvar. O teste também cobre arraste
+iniciado dentro do diálogo e cancelamento de troca de fonte no Electron.
+
+As falhas reproduzidas e correções estão nos logs final-polish-dm-red/green,
+preview-red/green e dismiss-red/green em artifacts/frontend-reset. O primeiro
+ensaio de DM tinha nome acessível incompleto (não provava o defeito); corrigido
+antes do red definitivo, que detecta precisamente o avatar esticado. As rodadas
+contrast-* da revisão anterior continuam como evidência histórica nos artefatos.
+Capturas atuais: final-polish-qa (perfil compacto/completo), marco3-qa (editor,
+alternância em tela pequena) e auth-regression/direct-group.png (24 conversas).
+Arte local dos jogos ilustra perfis nas fixtures; não comprova GIPHY ao vivo.
+Sem novos snapshots permanentes, commit ou aceite do Marco 3. As pendências
+semânticas e de validação integrada acima continuam abertas.
+
+Validação final desta revisão (logs final-polish-*): ui-final 10/10;
+resources 31 aprovações e dois skips externos de FFmpeg/FFprobe ausentes;
+desktop 1/1 no Electron real; contracts 98/98. Tipos, format:check, build estático
+e diff --check passaram. QA inclui 1440×900, 1024×768, 768×1024 e 390×844.
+Captura nativa usa uma janela controlada e microfone sintético; a ponte de
+Remote PC não comprova injeção de hardware. A suíte completa e o CI remoto
+continuam sem declaração de aprovação.

@@ -155,10 +155,10 @@ jobs:
       - run: npm run build
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
-      - name: Verify call workspace and profile layouts
+      - name: Verify Corte navigation, calls and account resources
         shell: pwsh
         run: |
-          npm test -- --suite all --filter '(?:application-call-browser\.cjs|application-shell-browser\.cjs|chat-composer-browser\.cjs|channels-browser\.cjs|app-layout-browser\.js|profile-media-browser\.js|call-controls-browser\.js)$'
+          npm test -- --suite all --filter '(?:application-call-browser\.cjs|application-shell-browser\.cjs|chat-composer-browser\.cjs|channels-browser\.cjs|app-layout-browser\.js|profile-media-browser\.js|call-controls-browser\.js|profile-editor-browser\.cjs|file-library-browser\.cjs|member-profile-browser\.cjs|registered-accounts-browser\.cjs|appearance-preferences-browser\.cjs|channel-files-browser\.cjs|soundboard-browser\.cjs|manual-recording-browser\.cjs)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
           npm test -- --suite all --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'

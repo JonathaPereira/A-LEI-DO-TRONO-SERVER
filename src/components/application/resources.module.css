@@ -1,0 +1,345 @@
+.dock {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+}
+.dock > button,
+.dock > span > button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16px;
+  background: #2b2b2b;
+  color: #cecece;
+  border: 1px solid #474747;
+  border-radius: 9px;
+  width: 100%;
+  min-height: 56px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dock button:hover {
+  background: #303030;
+  color: #d6b779;
+}
+.dock button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.dock button:focus-visible {
+  outline: 1px solid #ab9d7d;
+  outline-offset: 2px;
+}
+.dock button:global(.recording),
+.dock button[data-active='true'] {
+  color: #ed9a90;
+  background: #56302e;
+}
+.surface {
+  color: #dfdfdf;
+  font:
+    13px/1.6 'Segoe UI',
+    sans-serif;
+  color-scheme: dark;
+}
+.surface,
+.surface * {
+  box-sizing: border-box;
+}
+.surface [hidden],
+.surface :global(.hidden) {
+  display: none !important;
+}
+.surface :global(dialog) {
+  width: 680px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 40px);
+  border: 1px solid #454545;
+  border-radius: 12px;
+  background: #1d1d1d;
+  color: #dfdfdf;
+  padding: 24px;
+  overflow: auto;
+  box-shadow: 0 24px 100px #0009;
+  font: inherit;
+  scrollbar-width: thin;
+}
+.surface :global(dialog::backdrop) {
+  background: #0b0b0bbb;
+  backdrop-filter: blur(4px);
+}
+.surface :global(dialog header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.surface h2 {
+  font:
+    500 27px/1.3 Georgia,
+    serif;
+  color: #ecdfc8;
+  margin: 4px 0 20px;
+}
+.surface h3 {
+  color: #d6b779;
+  font-size: 14px;
+}
+.surface p,
+.surface small {
+  color: #ababab;
+}
+.surface small {
+  display: block;
+  font-size: 11px;
+}
+.surface button,
+.surface input,
+.surface select {
+  font: inherit;
+}
+.surface button {
+  background: #303030;
+  color: #dfdfdf;
+  border: 1px solid #494949;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.surface button:hover {
+  background: #414141;
+}
+.surface button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.surface :is(button, input, select, summary):focus-visible {
+  outline: 1px solid #ab9d7d;
+  outline-offset: 3px;
+}
+.surface label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 15px 0;
+}
+.surface label:has(input[type='checkbox']) {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 9px;
+}
+.surface input[type='checkbox'],
+.surface input[type='range'] {
+  accent-color: #d6b779;
+}
+.surface input[type='range'] {
+  width: 100%;
+}
+.surface :is(input, select):not([type='checkbox'], [type='range'], [type='radio']) {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  background: #161616;
+  color: #dfdfdf;
+  padding: 9px 10px;
+}
+.surface :global(dialog footer),
+.surface :global(.clips-library-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.surface :global(.section-eyebrow) {
+  font-size: 9px;
+  color: #c7ad73;
+  letter-spacing: 1.6px;
+}
+.surface summary {
+  cursor: pointer;
+  color: #d6c7a7;
+}
+.surface :global(.sound-trim-editor) {
+  border: 1px solid #484848;
+  border-radius: 8px;
+  padding: 14px;
+}
+.surface canvas {
+  width: 100%;
+  height: 85px;
+  border-radius: 5px;
+}
+.surface :global(.trim-fields) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.surface :global(.trim-footer),
+.surface :global(.trim-heading) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.surface :global(.primary-button),
+.surface :global(.remote-primary) {
+  color: #1d1d1d;
+  background: #d6b779;
+  border-color: #d6b779;
+}
+.surface :global(.remote-danger) {
+  color: #edb3ab;
+  border-color: #71463c;
+  background: #313131;
+}
+.surface :global(.remote-pc-dialog video) {
+  width: 100%;
+  max-height: 50dvh;
+  background: #0c0c0c;
+  object-fit: contain;
+}
+.surface :global(.remote-beta) {
+  font:
+    10px 'Segoe UI',
+    sans-serif;
+  padding: 3px 6px;
+  color: #d6b779;
+  border: 1px solid #615438;
+  border-radius: 4px;
+}
+.surface :global(.remote-pc-warning) {
+  padding: 14px;
+  border-left: 2px solid #b89d66;
+  background: #d6b77909;
+}
+.surface :global(.remote-pc-note) {
+  border-bottom: 1px solid #353535;
+  padding-bottom: 10px;
+}
+.surface :global(.replay-summary) {
+  padding: 14px;
+  background: #2a2a2a;
+  border: 1px solid #454545;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.surface :global(.replay-summary > span:nth-child(2)) {
+  flex: 1;
+}
+.surface :global(.clips-tabs) {
+  display: flex;
+  gap: 6px;
+  padding: 20px 0 10px;
+  border-bottom: 1px solid #393939;
+}
+.surface :global(.clips-tabs .active) {
+  background: #434343;
+  color: #e2c68b;
+}
+.surface :global(.clip-card) {
+  padding: 16px;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+.surface video {
+  max-width: 100%;
+}
+.surface :global(.clip-list) {
+  max-height: 40dvh;
+  overflow: auto;
+}
+.surface :global(.clip-actions) {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.surface :global(.replay-dot) {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7c7c7c;
+}
+.surface :global(.is-ready) {
+  background: #8cc7a5;
+}
+.recording {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 14px;
+  z-index: 150;
+  max-width: calc(100vw - 32px);
+}
+.recording :global(.recording-notice) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: #222222;
+  border: 1px solid #825349;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px #0009;
+}
+.recording :global(.recording-dot) {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f29991;
+}
+.recording :global(.recording-notice small) {
+  display: none;
+}
+.recording :global(.recorder-toast) {
+  background: #2a2a2a;
+  padding: 10px 15px;
+  margin-top: 8px;
+  border: 1px solid #525252;
+  border-radius: 8px;
+}
+@media (max-width: 600px) {
+  .surface :global(dialog) {
+    padding: 18px;
+  }
+  .recording :global(.recording-notice) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.count:empty {
+  display: none;
+}
+.count {
+  font-size: 9px;
+  color: #d6b779;
+}
+.dock > span {
+  margin: 0 !important;
+}
+
+.dock :global(#recordMatchBtn)::after {
+  content: attr(aria-label);
+}
+
+@media (max-width: 600px) {
+  .dock {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

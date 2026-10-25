@@ -7,6 +7,7 @@ import { useNativeDialog } from './use-native-dialog';
 export function ScreenOptionsDialog() {
   return (
     <dialog
+      closedby="any"
       id="screenOptionsDialog"
       className={styles.dialog}
       aria-labelledby="screenOptionsTitle"

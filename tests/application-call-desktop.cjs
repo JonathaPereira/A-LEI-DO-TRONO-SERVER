@@ -4,7 +4,9 @@ const { test } = require('node:test'),
 const fs = require('node:fs/promises'),
   os = require('node:os'),
   path = require('node:path');
+const net = require('node:net');
 const { _electron, expect } = require('@playwright/test');
+const { exerciseManualRecording } = require('./manual-recording-flow.cjs');
 const { startFixture } = require('./auth-fixture');
 const { closeTestApp, killTestApp } = require('./desktop-test-close');
 
@@ -26,8 +28,17 @@ test(
       { once: true },
     );
     try {
+      // Other worktrees may run the same suite; never reuse their backend.
+      const port = await new Promise((resolve, reject) => {
+        const reservation = net.createServer();
+        reservation.once('error', reject);
+        reservation.listen(0, '127.0.0.1', () => {
+          const available = reservation.address().port;
+          reservation.close(() => resolve(available));
+        });
+      });
       fixture = await startFixture({
-        port: 11994,
+        port,
         allowedOrigins: ['https://a-lei-do-trono.surge.sh'],
       });
       const email = 'call-native@example.test',
@@ -79,6 +90,10 @@ test(
       await page.locator('#screenOptionsConfirm').click();
       const picker = page.getByRole('dialog', { name: 'Escolher tela ou janela', exact: true });
       await expect(picker).toBeVisible();
+      await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
+      await expect(picker.locator('[data-source-kind="window"]')).toHaveCount(0);
+      await picker.getByRole('tab', { name: 'Aplicativos', exact: true }).click();
+      await expect(picker.locator('[data-source-kind="screen"]')).toHaveCount(0);
       assert(
         (await picker.locator('button[aria-pressed]').count()) > 0,
         'OS enumerates real native sources',
@@ -131,6 +146,10 @@ test(
       });
       await expect(source).toBeVisible();
       await source.click();
+      await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
+      await expect(picker.locator('#desktopCaptureConfirm')).toBeDisabled();
+      await picker.getByRole('tab', { name: 'Aplicativos', exact: true }).click();
+      await expect(source).toHaveAttribute('aria-pressed', 'true');
       await picker.locator('#desktopCaptureConfirm').click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
       const screen = call.getByRole('article', { name: 'Tela de Corte QA', exact: true });
@@ -164,7 +183,7 @@ test(
         .toBe(true);
       await menu.getByRole('button', { name: 'Trocar tela ou janela', exact: true }).click();
       await expect(picker).toBeVisible();
-      await picker.getByRole('button', { name: 'Cancelar captura', exact: true }).click();
+      await page.mouse.click(8, 8);
       await expect(picker).toBeHidden();
       assert.equal(
         await page.evaluate(
@@ -189,10 +208,41 @@ test(
       await expect(screen).toHaveAttribute('data-focused', 'true');
       await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
       await page.getByRole('button', { name: 'Voltar à chamada', exact: true }).click();
-      await call.getByRole('button', { name: 'Configurações', exact: true }).click();
+      await page.getByRole('button', { name: 'Ajustes rápidos da chamada', exact: true }).click();
+      await page
+        .getByRole('button', { name: 'Todas as configurações de áudio', exact: true })
+        .click();
       const settings = page.getByRole('dialog', { name: 'Voz e vídeo', exact: true });
       await expect(settings).toBeVisible();
       await settings.getByRole('button', { name: 'Transmissão', exact: true }).click();
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Meu perfil', exact: true }).click();
+      await page.getByRole('button', { name: 'Editar perfil', exact: true }).click();
+      const account = page.getByRole('dialog', { name: 'Configurações da Corte', exact: true });
+      await expect(page.locator('#profileNickname')).toHaveValue('Corte QA');
+      await page.locator('#profile-bio').fill('Rascunho durante a transmissão');
+      await account.locator('[data-settings-tab=files]').click();
+      await expect(
+        account.getByRole('button', { name: 'Ver meus arquivos', exact: true }),
+      ).toBeVisible();
+      await account.locator('[data-settings-tab=account]').click();
+      await expect(page.locator('#profile-bio')).toHaveValue('Rascunho durante a transmissão');
+      await account.getByRole('button', { name: 'Descartar alterações', exact: true }).click();
+      await expect(page.locator('#profile-bio')).toHaveValue('');
+      await account.locator('[data-settings-tab=privacy]').click();
+      await expect(
+        account.getByRole('button', {
+          name: 'Redefinir permissões de microfone e câmera',
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.locator('#soundboardToggle').click();
+      await expect(page.locator('#soundboardDialog')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => window.TronoCallSettings.open('resources'));
+      await page.getByRole('button', { name: 'Seus clipes', exact: true }).click();
+      await expect(page.locator('#clipsDialog')).toContainText('suspenso');
       await page.keyboard.press('Escape');
       assert.equal(
         await page.evaluate(
@@ -204,6 +254,19 @@ test(
         ),
         true,
       );
+      // Native picker captures only the controlled BrowserWindow, never the user's desktop.
+      const recording = exerciseManualRecording(page, { desktop: true }).then(
+        (result) => ({ result }),
+        (error) => ({ error }),
+      );
+      await expect(picker).toBeVisible();
+      await picker
+        .getByRole('button', { name: 'Corte QA - captura controlada', exact: true })
+        .click();
+      await picker.locator('#desktopCaptureConfirm').click();
+      const saved = await recording;
+      if (saved.error) throw saved.error;
+      assert(saved.result.bytes > 0 && saved.result.micPreserved && saved.result.sourcePreserved);
       await fs.mkdir('artifacts/frontend-reset/call-qa', { recursive: true });
       await page.screenshot({ path: 'artifacts/frontend-reset/call-qa/electron-native-share.png' });
       await call.getByRole('button', { name: 'Parar tela', exact: true }).click();
@@ -232,6 +295,9 @@ test(
         .toBe(true);
       await app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id)?.destroy(), targetId);
       assert.deepEqual(errors, []);
+    } catch (error) {
+      console.error('Native QA failure:', error);
+      throw error;
     } finally {
       if (page) {
         await fs.mkdir('artifacts/frontend-reset/call-qa', { recursive: true });

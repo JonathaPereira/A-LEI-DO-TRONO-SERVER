@@ -1,0 +1,209 @@
+.picker:global(#profileGifDialog) {
+  width: 640px;
+  max-width: calc(100vw - 24px);
+  height: min(680px, calc(100dvh - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #454545;
+  border-radius: 14px;
+  background: #242424;
+  color: #e3e3e3;
+}
+.picker:global(#profileGifDialog)[open] {
+  display: flex;
+  flex-direction: column;
+}
+.picker:global(#profileGifDialog) > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 4px;
+  flex: 0 0 auto;
+}
+.picker:global(#profileGifDialog) > header h2 {
+  font:
+    600 18px/1.4 'Segoe UI',
+    sans-serif;
+  margin: 0;
+  color: #e9e9e9;
+}
+.picker:global(#profileGifDialog) > header p {
+  font-size: 11px;
+  color: #9c9c9c;
+  margin: 5px 0;
+}
+.picker button {
+  font: inherit;
+  cursor: pointer;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-close) {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  padding: 0;
+  background: #ffffff08;
+  border-radius: 7px;
+  color: #bebebe;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-search) {
+  display: flex;
+  gap: 8px;
+  margin: 12px 20px;
+  flex: 0 0 auto;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-search input) {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid #4b4b4b;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #191919;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-search button) {
+  border: 0;
+  background: #d6b779;
+  color: #1f1f1f;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-alternative) {
+  margin: 0 20px;
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-alternative summary) {
+  padding: 0;
+  color: #aaaaaa;
+  cursor: pointer;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-link) {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-link input) {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-link button) {
+  flex-shrink: 0;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-message) {
+  flex-shrink: 0;
+  margin: 8px 20px;
+  font-size: 11px;
+  color: #a9a9a9;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results) {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
+  padding: 0 12px 12px 20px;
+  margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #505050 transparent;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results article) {
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1b1b1b;
+  position: relative;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results article > button) {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  aspect-ratio: 1.3;
+  overflow: hidden;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results img) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  transition: transform 150ms;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results button:hover img) {
+  transform: scale(1.04);
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results article > a) {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 5px 8px;
+  font-size: 9px;
+  color: #a3a3a3;
+  text-decoration: none;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-footer) {
+  margin: 0;
+  padding: 10px 20px;
+  border-top: 1px solid #3e3e3e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-attribution) {
+  margin-left: auto;
+  font-size: 10px;
+  color: #aaaaaa;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-more) {
+  margin: 0;
+  padding: 7px 12px;
+}
+@media (max-width: 600px) {
+  .picker:global(#profileGifDialog) :global(.profile-gif-results) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 12px;
+  }
+  .picker:global(#profileGifDialog) > header {
+    padding: 16px 12px 4px;
+  }
+  .picker:global(#profileGifDialog) :global(.profile-gif-search) {
+    margin: 10px 12px;
+  }
+  .picker:global(#profileGifDialog) :global(.profile-gif-link) {
+    flex-wrap: wrap;
+  }
+}
+
+.picker:global(#profileGifDialog) :global(.profile-gif-results) {
+  grid-auto-rows: 160px;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results article) {
+  height: 160px;
+}
+.picker:global(#profileGifDialog) :global(.profile-gif-results article > button) {
+  height: 136px;
+  aspect-ratio: auto;
+}
+@media (max-width: 600px) {
+  .picker:global(#profileGifDialog) :global(.profile-gif-results) {
+    grid-auto-rows: 148px;
+  }
+  .picker:global(#profileGifDialog) :global(.profile-gif-results article) {
+    height: 148px;
+  }
+  .picker:global(#profileGifDialog) :global(.profile-gif-results article > button) {
+    height: 124px;
+  }
+}

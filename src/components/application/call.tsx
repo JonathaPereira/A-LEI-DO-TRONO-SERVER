@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import type { ParticipantView, StageSnapshot } from '../../lib/voice/stage';
 import type { CallControlId } from '../../lib/voice/toolbar';
 import { CallMenu } from './call-menu';
+import { ParticipantBackground } from '../profiles/decorations';
 import { Avatar } from '../profiles/avatar';
 import { AppIcon as Icon } from './icons';
 import { useModel, type ApplicationServices } from './services';
@@ -84,6 +85,7 @@ function CallCard({
           <Icon name={focused ? 'grid' : 'expand'} size={16} />
         </span>
       </button>
+      {!screen && <ParticipantBackground accountId={p.accountId} />}
       <div className={styles.video} data-call-video />
       <div className={styles.placeholder} hidden={!!live && !paused}>
         {screen ? (
@@ -166,6 +168,7 @@ export function CallSurface({
       | 'cameraOff'
       | 'screen'
       | 'settings'
+      | 'more'
       | 'disconnect'
     ),
   ][] = [
@@ -173,7 +176,6 @@ export function CallSurface({
     ['deafenVoiceBtn', 'headphones'],
     ['cameraBtn', toolbar.buttons.cameraBtn.active ? 'camera' : 'cameraOff'],
     ['screenShareBtn', 'screen'],
-    ['voiceSettingsBtn', 'settings'],
     ['joinVoiceBtn', 'disconnect'],
   ];
   return (
@@ -262,19 +264,32 @@ export function CallSurface({
       <footer className={styles.footer} data-status={toolbar.status.kind}>
         <div className={styles.controls}>
           {controls.map(([id, icon]) => (
-            <button
-              type="button"
-              key={id}
-              aria-label={toolbar.buttons[id].label}
-              title={toolbar.buttons[id].title}
-              aria-pressed={toolbar.buttons[id].active}
-              disabled={toolbar.buttons[id].disabled}
-              data-control={id}
-              data-danger={id === 'joinVoiceBtn'}
-              onClick={() => void runtime.TronoCallToolbar.activate(id)}
-            >
-              <Icon name={icon} />
-            </button>
+            <span className={styles.controlSlot} key={id}>
+              <button
+                type="button"
+                aria-label={toolbar.buttons[id].label}
+                title={toolbar.buttons[id].title}
+                aria-pressed={toolbar.buttons[id].active}
+                disabled={toolbar.buttons[id].disabled}
+                data-control={id}
+                data-danger={id === 'joinVoiceBtn'}
+                onClick={() => void runtime.TronoCallToolbar.activate(id)}
+              >
+                <Icon name={icon} />
+              </button>
+              {id === 'deafenVoiceBtn' && (
+                <button
+                  id="callSoundboardToggle"
+                  data-soundboard-open
+                  type="button"
+                  aria-label="Efeitos sonoros da chamada"
+                  title="Efeitos sonoros"
+                  aria-controls="soundboardDialog"
+                >
+                  <Icon name="music" />
+                </button>
+              )}
+            </span>
           ))}
         </div>
         <p role="status">{toolbar.status.text}</p>

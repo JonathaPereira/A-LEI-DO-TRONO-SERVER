@@ -78,3 +78,11 @@ mn-desktop-version e o empacotador confere o metadado sem editar chunks.
 Distribuição segue [ATUALIZACOES.md](ATUALIZACOES.md) e o workflow Windows.
 database:prepare somente gera SQL revisável; não aplica migrações remotas.
 Instalação em PGlite descartável não comprova instalação no serviço completo.
+
+A regressão application-call-desktop usa porta livre e perfil temporário, evitando
+conectar ao backend de outra execução/worktree. Ela captura somente a BrowserWindow
+de QA criada pelo próprio teste. O helper de gravação espera o primeiro bloco
+codificado em vez de assumir que 1.200 ms bastam; o destino de arquivo é adiado
+pela fixture para verificar que a captura já foi encerrada antes da persistência.
+FFmpeg/FFprobe ausentes aparecem como skip nas verificações externas de gravação e
+replay no navegador; isso não equivale a validar esses decodificadores.

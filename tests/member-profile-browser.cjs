@@ -4,6 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
 
@@ -101,15 +102,19 @@ test(
                 json: { url: origin + '/member-image/' + id, expiresAt: Date.now() + 3600000 },
               });
             });
-            await context.route('**/member-image/*', (route) =>
-              route.fulfill({
-                contentType: 'image/gif',
-                body: Buffer.from(
-                  'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                  'base64',
-                ),
-              }),
+            // Illustrative local art exercises real image geometry; it is not a live GIF provider.
+            const artwork = await Promise.all(
+              ['games/throne-cover.webp', 'azul/box-cover.webp', 'games/splendor-cover.webp'].map(
+                (name) => fs.readFile(path.resolve('out/assets', name)),
+              ),
             );
+            await context.route('**/member-image/*', (route) => {
+              const id = new URL(route.request().url()).pathname.split('/').at(-1);
+              return route.fulfill({
+                contentType: 'image/webp',
+                body: artwork[Math.max(0, ids.indexOf(id))],
+              });
+            });
             await context.route('**/community/profiles/*', (route) => {
               const id = new URL(route.request().url()).pathname.split('/').at(-1);
               if (hold && id === users[1].id) {
@@ -158,10 +163,7 @@ test(
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoAuth?.ready && window.TronoProfileViewer);
             await page.evaluate(() => window.TronoAuth.ready);
-            await expect
-              .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))
-              .toBe('chat-jogos');
-            assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
+            await page.locator('button[data-voice-channel]').first().click();
             await expect
               .poll(() => page.evaluate(() => !!window.TronoSocial.getLocalAudioTrack()))
               .toBe(true);
@@ -187,6 +189,18 @@ test(
                 users.find((user) => user.id === id).nickname,
               );
             }
+            await open(users[1].id);
+
+            await card.locator('.member-name').click();
+            await expect(dialog).toBeVisible();
+            const nameBox = await card.locator('.member-name').boundingBox();
+            await page.mouse.move(nameBox.x + 5, nameBox.y + 5);
+            await page.mouse.down();
+            await page.mouse.move(8, 8);
+            await page.mouse.up();
+            await expect(dialog).toBeVisible();
+            await page.mouse.click(8, 8);
+            await expect(dialog).toBeHidden();
             await open(users[1].id);
             await expect(card.locator('.member-handle')).toHaveText('@jogador_completo');
             await expect(card.locator('.member-status')).toHaveText('🎮 Na chamada com os amigos');
@@ -221,9 +235,55 @@ test(
               'href',
               'https://giphy.com/gifs/animation-abc123',
             );
+            await fs.mkdir('artifacts/frontend-reset/final-polish-qa', { recursive: true });
+            for (const [width, height] of [
+              [1440, 900],
+              [1024, 768],
+              [768, 1024],
+              [390, 844],
+            ]) {
+              await page.setViewportSize({ width, height });
+              assert(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+              assert(
+                await card
+                  .locator('.member-cover')
+                  .evaluate(
+                    (el) =>
+                      Math.abs(
+                        el.getBoundingClientRect().width - el.closest('dialog').clientWidth,
+                      ) <= 2,
+                  ),
+                'Cover spans the profile instead of being compressed by its close button',
+              );
+              await page.screenshot({
+                path:
+                  'artifacts/frontend-reset/final-polish-qa/member-card-' +
+                  (native ? 'bridge-' : 'web-') +
+                  width +
+                  '.png',
+              });
+            }
+            await page.setViewportSize({ width: 1440, height: 900 });
             await page.locator('#memberProfileExpand').click();
             await expect(dialog).toHaveClass(/member-full/);
             await expect(page.locator('#memberProfileExpand')).toBeHidden();
+            for (const [width, height] of [
+              [1440, 900],
+              [1024, 768],
+              [768, 1024],
+              [390, 844],
+            ]) {
+              await page.setViewportSize({ width, height });
+              assert(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+              await page.screenshot({
+                path:
+                  'artifacts/frontend-reset/final-polish-qa/member-full-' +
+                  (native ? 'bridge-' : 'web-') +
+                  width +
+                  '.png',
+              });
+            }
+
             await page.setViewportSize({ width: 390, height: 844 });
             assert.equal(
               await dialog.evaluate((element) => element.scrollWidth - element.clientWidth),
@@ -284,24 +344,42 @@ test(
             await page.keyboard.press('Escape');
             await expect(dialog).toBeHidden();
 
+            await page.evaluate(() => window.TronoCallSettings.open('account'));
+            const parentSettings = page.getByRole('dialog', { name: 'Configurações da Corte' });
+            await expect(parentSettings).toBeVisible();
+            await open(users[1].id);
+            await page.mouse.click(8, 8);
+            await expect(dialog).toBeHidden();
+            await expect(parentSettings).toBeVisible();
+            await page.mouse.click(8, 8);
+            await expect(parentSettings).toBeHidden();
+
             // Escape closes nested dialogs while retaining their desktop settings host.
             if (native) {
               await page.evaluate(() => window.TronoDesktopSettings.open('account'));
-              await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+              await expect(
+                page.getByRole('dialog', { name: 'Configurações da Corte' }),
+              ).toBeVisible();
               await page.locator('#profileEmojiBtn').click();
               await expect(page.locator('#profileEmojiPicker')).toBeVisible();
               await page.keyboard.press('Escape');
               await expect(page.locator('#profileEmojiPicker')).toBeHidden();
-              await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+              await expect(
+                page.getByRole('dialog', { name: 'Configurações da Corte' }),
+              ).toBeVisible();
               await page.locator('[data-profile-gif=avatar]').click();
               await expect(page.locator('#profileGifDialog')).toBeVisible();
               await page.keyboard.press('Escape');
               await expect(page.locator('#profileGifDialog')).toBeHidden();
-              await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+              await expect(
+                page.getByRole('dialog', { name: 'Configurações da Corte' }),
+              ).toBeVisible();
               await open(users[1].id);
               await page.keyboard.press('Escape');
               await expect(dialog).toBeHidden();
-              await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+              await expect(
+                page.getByRole('dialog', { name: 'Configurações da Corte' }),
+              ).toBeVisible();
               await page.evaluate(() => window.TronoDesktopSettings.close());
             }
             hold = true;

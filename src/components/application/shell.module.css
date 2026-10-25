@@ -1,12 +1,12 @@
 .app {
-  --shell-bg: #111315;
-  --shell-side: #17191b;
-  --shell-rail: #101214;
-  --shell-text: #e8e5df;
-  --shell-muted: #858b89;
+  --shell-bg: #131313;
+  --shell-side: #191919;
+  --shell-rail: #121212;
+  --shell-text: #e5e5e5;
+  --shell-muted: #8a8a8a;
   --shell-accent: #d6b779;
   display: grid;
-  grid-template-columns: 244px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   height: 100dvh;
   overflow: hidden;
   background: var(--shell-bg);
@@ -41,8 +41,8 @@
 .app input:focus-visible,
 .app textarea:focus-visible,
 .accountDialog :focus-visible {
-  outline: 2px solid #d6b779;
-  outline-offset: 3px;
+  outline: 1px solid #aa9b78;
+  outline-offset: 1px;
 }
 .app svg {
   flex-shrink: 0;
@@ -60,7 +60,7 @@
   align-items: center;
   justify-content: flex-start;
   padding: 0 18px;
-  border-bottom: 1px solid #202126;
+  border-bottom: 1px solid #212121;
   box-shadow: 0 1px 3px #0002;
   flex-shrink: 0;
 }
@@ -68,7 +68,7 @@
   font:
     600 21px/1.2 Georgia,
     serif;
-  color: #ece5d6;
+  color: #e5e5e5;
 }
 .brandHome > div {
   flex: 1;
@@ -87,7 +87,7 @@
   flex: 1;
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: #1a1b1e transparent;
+  scrollbar-color: #1b1b1b transparent;
 }
 .friendsButton,
 .channel {
@@ -99,25 +99,25 @@
   min-height: 38px;
   padding: 8px 10px;
   background: transparent;
-  color: #858b89;
+  color: #8a8a8a;
   border-radius: 4px;
 }
 .friendsButton {
   margin-bottom: 2px;
   min-height: 40px;
-  color: #a6ada9;
+  color: #ababab;
 }
 .channel:hover,
 .friendsButton:hover {
-  background: #212426;
-  color: #c4c7c3;
+  background: #242424;
+  color: #c6c6c6;
 }
 .channel[data-active='true'],
 .friendsButton[data-active='true'] {
-  background: #25271f;
+  background: #262626;
   color: #d6b779;
 }
-.channel > span:nth-child(2) {
+.channel > .channelLabel {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -133,18 +133,18 @@
   line-height: 20px;
   width: 22px;
   text-align: center;
-  color: #777e79;
+  color: #7c7c7c;
 }
 .sectionLabel {
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 1.8px;
-  color: #858b89;
+  color: #8a8a8a;
   padding: 16px 9px 6px;
 }
 .sidebarHint {
   padding: 0 10px;
-  color: #858b89;
+  color: #8a8a8a;
   font-size: 12px;
   line-height: 1.6;
 }
@@ -153,7 +153,7 @@
   gap: 8px;
   align-items: center;
   margin: 4px 0 4px 42px;
-  color: #a6ada9;
+  color: #ababab;
   font-size: 12px;
 }
 .tinyAvatar {
@@ -188,7 +188,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  background: #141a18;
+  background: #191919;
   min-height: 64px;
   padding: 8px;
   flex-shrink: 0;
@@ -201,7 +201,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #2c2d28;
+  background: #2c2c2c;
   border: 1px solid #d6b77933;
   flex-shrink: 0;
   overflow: hidden;
@@ -214,7 +214,7 @@
   display: flex;
   flex-direction: column;
 }
-.account strong {
+.account > div > span > button strong {
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -222,18 +222,18 @@
 }
 .account small {
   font-size: 11px;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .account > button {
   display: grid;
   place-items: center;
   background: transparent;
-  color: #a6ada9;
+  color: #ababab;
   padding: 5px;
   border-radius: 4px;
 }
 .account > button:hover {
-  background: #292c2d;
+  background: #2b2b2b;
 }
 .main {
   display: flex;
@@ -251,7 +251,7 @@
   border-bottom: 1px solid #ffffff09;
   flex-shrink: 0;
   z-index: 2;
-  background: #111315;
+  background: #131313;
 }
 .headerSymbol {
   color: #b69a64;
@@ -261,7 +261,7 @@
   font:
     600 18px/1.4 Georgia,
     serif;
-  color: #ece5d6;
+  color: #e5e5e5;
 }
 .headerStatus {
   margin-left: auto;
@@ -284,7 +284,7 @@
 .iconButton,
 .drawerButton {
   background: transparent;
-  color: #a6ada9;
+  color: #ababab;
   display: grid;
   place-items: center;
   min-width: 32px;
@@ -293,7 +293,7 @@
 }
 .iconButton:hover {
   color: #fff;
-  background: #292c2d;
+  background: #2b2b2b;
 }
 .drawerButton {
   display: none;
@@ -333,7 +333,7 @@
   overflow: auto;
   padding: 24px 0 10px;
   scrollbar-width: thin;
-  scrollbar-color: #1a1b1e transparent;
+  scrollbar-color: #1b1b1b transparent;
 }
 .message {
   padding: 4px 24px;
@@ -343,7 +343,7 @@
   position: relative;
 }
 .message:hover {
-  background: #171a1c;
+  background: #1a1a1a;
 }
 .message > div {
   min-width: 0;
@@ -360,17 +360,17 @@
 }
 .messageHeading time {
   font-size: 10px;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .messageHeading button {
   margin-left: auto;
-  color: #858b89;
+  color: #8a8a8a;
   background: transparent;
 }
 .message p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #c4c7c3;
+  color: #c6c6c6;
   margin: 3px 0;
   font-size: 14px;
   line-height: 1.55;
@@ -381,7 +381,7 @@
 }
 .emptyConversation {
   padding: 28px 24px;
-  color: #a6ada9;
+  color: #ababab;
 }
 .emptyConversation > span {
   width: 64px;
@@ -389,12 +389,12 @@
   display: grid;
   place-items: center;
   font-size: 40px;
-  background: #25292c;
+  background: #282828;
   border-radius: 50%;
   color: #fff;
 }
 .emptyConversation h2 {
-  color: #e8e5df;
+  color: #e5e5e5;
   font-size: 24px;
   margin: 16px 0 8px;
   line-height: 1.25;
@@ -412,13 +412,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #202325;
+  background: #232323;
   border-radius: 8px;
   padding: 9px 10px;
 }
 .composer textarea {
   background: transparent;
-  color: #c4c7c3;
+  color: #c6c6c6;
   resize: vertical;
   min-width: 0;
   min-height: 32px;
@@ -431,11 +431,11 @@
   outline: none;
 }
 .composer textarea::placeholder {
-  color: #858b89;
+  color: #8a8a8a;
 }
 .send {
   background: transparent;
-  color: #a6ada9;
+  color: #ababab;
   font-size: 20px;
   min-width: 32px;
   min-height: 32px;
@@ -446,12 +446,12 @@
   gap: 12px;
   min-height: 20px;
   padding: 5px 2px 0;
-  color: #a6ada9;
+  color: #ababab;
   font-size: 11px;
 }
 .composerStatus small {
   white-space: nowrap;
-  color: #858b89;
+  color: #8a8a8a;
   margin-left: auto;
   font-size: 10px;
 }
@@ -460,7 +460,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: #17191b;
+  background: #191919;
   padding: 12px;
   border-radius: 7px;
   margin-bottom: 8px;
@@ -492,8 +492,8 @@
 }
 .attachment button,
 .attachment a {
-  background: #17191b;
-  color: #a6ada9;
+  background: #191919;
+  color: #ababab;
   border-radius: 4px;
   padding: 5px;
   font-size: 12px;
@@ -509,7 +509,7 @@
   flex-wrap: wrap;
   gap: 5px;
   padding: 10px;
-  background: #141a18;
+  background: #191919;
   border-radius: 8px;
   box-shadow: 0 5px 20px #0006;
   max-width: 240px;
@@ -520,7 +520,7 @@
 }
 .members {
   width: 230px;
-  background: #17191b;
+  background: #191919;
   flex-shrink: 0;
   overflow: auto;
   padding: 12px 8px;
@@ -537,13 +537,13 @@
   text-align: left;
   padding: 9px 8px;
   background: transparent;
-  color: #a6ada9;
+  color: #ababab;
   border-radius: 4px;
 }
 .member:hover {
-  background: #212426;
+  background: #242424;
 }
-.member > span:nth-child(2) {
+.member > .memberIdentity {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -557,7 +557,7 @@
 }
 .member small {
   font-size: 11px;
-  color: #858b89;
+  color: #8a8a8a;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -569,39 +569,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.callSummary {
-  padding: 12px;
-  background: #141a18;
-  border-bottom: 1px solid #3c3e44;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
 .connection {
   color: #8cbaa5;
   font-weight: 600;
   font-size: 12px;
-}
-.callSummary small {
-  color: #858b89;
-  font-size: 11px;
-}
-.callSummary > div {
-  display: flex;
-  gap: 5px;
-  margin-top: 7px;
-}
-.callSummary button {
-  display: grid;
-  place-items: center;
-  flex: 1;
-  min-height: 32px;
-  border-radius: 5px;
-  background: #3a3c43;
-  color: #c4c7c3;
-}
-.callSummary button[aria-pressed='true'] {
-  color: #f23f43;
 }
 .authScreen {
   overflow: auto;
@@ -611,17 +582,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: safe center;
-  background: radial-gradient(ellipse at 70% 20%, #d6b77909, transparent 65%), #111315;
+  background: radial-gradient(ellipse at 70% 20%, #d6b77909, transparent 65%), #131313;
 }
 .authCard {
   width: 100%;
   max-width: 420px;
-  background: #17191b;
+  background: #191919;
   border: 1px solid #ffffff08;
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 10px 30px #0002;
-  color: #e8e5df;
+  color: #e5e5e5;
   font:
     14px/1.45 'Segoe UI',
     Arial,
@@ -642,14 +613,14 @@
 }
 .authCard > p {
   font-size: 13px;
-  color: #a6ada9;
+  color: #ababab;
   margin: 0 0 24px;
 }
 .authCard label {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #c4c7c3;
+  color: #c6c6c6;
   margin-top: 16px;
 }
 .authCard input:not([type='checkbox']),
@@ -659,8 +630,8 @@
   min-height: 42px;
   border: 1px solid transparent;
   border-radius: 4px;
-  background: #101214;
-  color: #c4c7c3;
+  background: #121212;
+  color: #c6c6c6;
   font: inherit;
   padding: 10px;
   margin-top: 7px;
@@ -679,13 +650,13 @@
   width: 36px;
   height: 36px;
   background: transparent;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .primary {
   display: block;
   width: 100%;
   background: #d6b779;
-  color: #17191b;
+  color: #191919;
   border-radius: 4px;
   min-height: 42px;
   padding: 10px 16px;
@@ -709,8 +680,8 @@
   text-decoration: underline;
 }
 .secondary {
-  background: #25282a;
-  color: #c4c7c3;
+  background: #282828;
+  color: #c6c6c6;
   border-radius: 4px;
   padding: 9px 12px;
   min-height: 36px;
@@ -724,7 +695,7 @@
   align-items: baseline;
   gap: 7px;
   font-size: 12px;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .authLinks .link {
   margin-top: 0;
@@ -743,7 +714,7 @@
   padding: 0;
   list-style: none;
   font-size: 10px;
-  color: #858b89;
+  color: #8a8a8a;
   margin: 10px 0;
 }
 .passwordRules [data-passed='true'] {
@@ -756,7 +727,7 @@
   font-weight: 400;
 }
 .download {
-  color: #858b89;
+  color: #8a8a8a;
   display: block;
   text-align: center;
   font-size: 11px;
@@ -769,7 +740,7 @@
   background: transparent;
   max-width: calc(100vw - 32px);
   max-height: calc(100dvh - 32px);
-  color: #e8e5df;
+  color: #e5e5e5;
   overflow: auto;
 }
 .accountDialog::backdrop,
@@ -786,13 +757,13 @@
   z-index: 1;
   font-size: 24px;
   background: transparent;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .confirmDialog {
-  border: 1px solid #45474d;
+  border: 1px solid #474747;
   border-radius: 8px;
-  background: #111315;
-  color: #e8e5df;
+  background: #131313;
+  color: #e5e5e5;
   padding: 24px;
   max-width: min(440px, calc(100vw - 32px));
   font:
@@ -812,7 +783,7 @@
 .confirmDialog button {
   padding: 8px 16px;
   border-radius: 4px;
-  background: #25282a;
+  background: #282828;
   color: #fff;
 }
 .confirmDialog .danger {
@@ -836,7 +807,7 @@
 }
 .search {
   display: block;
-  color: #a6ada9;
+  color: #ababab;
   font-size: 12px;
 }
 .search input {
@@ -862,11 +833,11 @@
 }
 .friend small {
   font-size: 11px;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .friend button {
-  background: #25262b;
-  color: #a6ada9;
+  background: #262626;
+  color: #ababab;
   padding: 8px 10px;
   font-size: 11px;
   border-radius: 5px;
@@ -874,8 +845,8 @@
 .older {
   padding: 8px 16px;
   margin: 10px auto 0;
-  background: #17191b;
-  color: #a6ada9;
+  background: #191919;
+  color: #ababab;
   border-radius: 4px;
   font-size: 12px;
 }
@@ -887,14 +858,14 @@
   font-size: 12px;
 }
 .invite select {
-  background: #101214;
-  color: #c4c7c3;
+  background: #121212;
+  color: #c6c6c6;
   border: 0;
   padding: 6px;
 }
 .invite > button:last-child {
   background: #d6b779;
-  color: #17191b;
+  color: #191919;
   border-radius: 4px;
   padding: 6px 10px;
 }
@@ -917,7 +888,7 @@
   color: #e5d3af;
 }
 .catalogHeading p {
-  color: #a6ada9;
+  color: #ababab;
   margin: 0 0 30px;
 }
 .catalogHeading .sectionLabel {
@@ -936,8 +907,8 @@
   padding: 0;
   overflow: hidden;
   border-radius: 8px;
-  background: #17191b;
-  color: #e8e5df;
+  background: #191919;
+  color: #e5e5e5;
   transition:
     transform 0.15s,
     box-shadow 0.15s;
@@ -950,7 +921,7 @@
   height: 180px;
   display: block;
   overflow: hidden;
-  background: linear-gradient(140deg, #41456a, #202126);
+  background: linear-gradient(140deg, #41456a, #212121);
   width: 100%;
   position: relative;
 }
@@ -977,7 +948,7 @@
 }
 .gameCard small {
   font-size: 9px;
-  color: #858b89;
+  color: #8a8a8a;
   letter-spacing: 0.6px;
 }
 .gameCard h2 {
@@ -986,7 +957,7 @@
 }
 .gameCard p {
   font-size: 12px;
-  color: #a6ada9;
+  color: #ababab;
   line-height: 1.6;
   margin: 0 0 20px;
 }
@@ -1020,8 +991,8 @@
   right: 12px;
   bottom: 10px;
   z-index: 1000;
-  background: #101214ed;
-  color: #c4c7c3;
+  background: #121212ed;
+  color: #c6c6c6;
   border: 1px solid #ffffff20 !important;
   border-radius: 6px;
   padding: 8px 12px;
@@ -1030,7 +1001,7 @@
 }
 .loading {
   margin: auto;
-  color: #858b89;
+  color: #8a8a8a;
 }
 .entryStatus {
   font-size: 12px;
@@ -1048,7 +1019,7 @@
     padding: 24px;
   }
   .app {
-    grid-template-columns: 224px minmax(0, 1fr);
+    grid-template-columns: 260px minmax(0, 1fr);
   }
   .message {
     padding-left: 18px;
@@ -1224,7 +1195,7 @@
 .primaryNavigation .friendsButton small {
   margin-left: auto;
   font-size: 10px;
-  color: #7d8580;
+  color: #838383;
 }
 .headerText {
   display: flex;
@@ -1233,7 +1204,7 @@
 }
 .headerText small {
   font-size: 11px;
-  color: #7f8882;
+  color: #868686;
 }
 .channel[data-active='true'] {
   border-left: 2px solid #b99a61;
@@ -1324,8 +1295,8 @@
 }
 .conversationLayout[data-call='true'] > .conversationPane {
   flex: 0 0 320px;
-  border-left: 1px solid #2d322d;
-  background: #1a1e20;
+  border-left: 1px solid #313131;
+  background: #1d1d1d;
 }
 .closeCallChat {
   position: absolute;
@@ -1334,8 +1305,8 @@
   z-index: 2;
   display: grid;
   place-items: center;
-  background: #202820;
-  color: #aebba9;
+  background: #262626;
+  color: #b7b7b7;
   padding: 6px;
   border-radius: 5px;
 }
@@ -1350,31 +1321,294 @@
   }
 }
 
-.callSummary > button {
-  width: 100%;
-  padding: 4px 0 !important;
-  color: #96b6a1;
-  background: transparent !important;
-  font-size: 11px;
-  text-align: left;
-}
-.callSummary > div > button {
-  background: #26302b;
-  color: #bdcbbd;
-  border: 1px solid #3a443a;
-  border-radius: 5px;
-}
-.callSummary > div > button[aria-pressed='true'] {
-  color: #d6b779;
-  background: #38382d;
-}
-.callSummary > div > button:last-child {
-  color: #e29a97;
-}
-
 .app[data-call='true'] .header {
   height: 56px;
 }
 .app[data-call='true'] .headerText small {
   display: none;
+}
+
+.gameResources {
+  position: fixed;
+  left: 12px;
+  bottom: 10px;
+  z-index: 1000;
+  border: 1px solid #444444;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.gameResources[hidden] {
+  display: none;
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.memberRow > .member {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel[data-muted='true'] {
+  color: #9a9a9a;
+}
+
+.app[data-entry='true'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app[data-entry='true'] > .sidebar,
+.app[data-entry='true'] .header {
+  display: none;
+}
+.app :is(button, input, textarea, select):focus:not(:focus-visible) {
+  outline: none;
+}
+.peopleTabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.peopleTabs button {
+  padding: 8px 16px;
+  border-radius: 7px;
+  background: #242424;
+  color: #b0b0b0;
+}
+.peopleTabs button[aria-pressed='true'] {
+  background: #333333;
+  color: #e0c791;
+}
+.channel[data-connected='true'] > svg {
+  color: #8dc5ae;
+}
+
+.account > div > span > button {
+  padding: 0 3px;
+  color: #d9d9d9;
+  background: transparent;
+}
+.app :is(input, textarea):focus,
+.accountDialog :is(input, textarea):focus {
+  outline: none;
+  border-color: #a18b60;
+}
+
+.callSummary {
+  background: #222222;
+  border: 1px solid #3f3f3f;
+  border-radius: 10px 10px 0 0;
+  padding: 10px;
+  margin: 0 8px;
+  flex: 0 0 auto;
+}
+.callSummary[hidden] {
+  display: none;
+}
+.connectionRow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.connectionTarget {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  color: #91c8ad;
+  text-align: left;
+  padding: 0;
+  background: transparent;
+}
+.connectionTarget > span {
+  min-width: 0;
+}
+.connectionTarget strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+}
+.connectionTarget small {
+  display: block;
+  font-size: 10px;
+  color: #8eaa98;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+.disconnectVoice {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: #bababa;
+  padding: 7px;
+  border-radius: 5px;
+}
+.disconnectVoice:hover {
+  background: #51332f;
+  color: #f0b3aa;
+}
+.voiceActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.voiceActions button {
+  display: grid;
+  place-items: center;
+  padding: 7px;
+  border-radius: 6px;
+  background: #383838;
+  color: #c2c2c2;
+}
+.voiceActions button:hover,
+.voiceActions button[aria-pressed='true'] {
+  background: #4c4c4c;
+  color: #dfcc97;
+}
+.account {
+  margin: 0 8px 8px;
+  padding: 9px 6px;
+  gap: 5px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+}
+.account > div {
+  min-width: 0;
+}
+.account > button {
+  width: 28px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.account > button[aria-pressed='true'] {
+  color: #e6ad9f;
+  background: #323232;
+}
+.account > div > span > button strong {
+  max-width: 100px;
+  display: block;
+}
+
+/* Covers decorate rows; every action and name remains above the shaded image. */
+.account,
+.voicePerson,
+.member,
+.channel:has(> :global(.direct-profile-banner)) {
+  position: relative;
+  isolation: isolate;
+}
+.account > :global(.direct-profile-banner),
+.voicePerson > :global(.direct-profile-banner),
+.member > :global(.direct-profile-banner),
+.channel > :global(.direct-profile-banner) {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.account > :global(.direct-profile-banner) img,
+.voicePerson > :global(.direct-profile-banner) img,
+.member > :global(.direct-profile-banner) img,
+.channel > :global(.direct-profile-banner) img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.account > :global(.direct-profile-banner)::after,
+.voicePerson > :global(.direct-profile-banner)::after,
+.member > :global(.direct-profile-banner)::after,
+.channel > :global(.direct-profile-banner)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #111111c9, #111111e8);
+}
+.account {
+  padding: 14px 8px;
+  margin-top: 8px;
+  box-shadow: 0 4px 16px #0003;
+}
+.callSummary:not([hidden]) + .account {
+  margin-top: 0;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+}
+.account > :global(.direct-profile-banner):has(img) + span {
+  border-color: #d6b77966;
+}
+.voicePerson {
+  padding: 5px 8px;
+  margin: 4px 10px 4px 38px;
+  border-radius: 6px;
+  min-width: 0;
+}
+.voicePerson > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.memberIdentity {
+  min-width: 0;
+}
+.member :is(strong, small),
+.voicePerson > span:last-child,
+.account > div > span > button strong {
+  text-shadow: 0 1px 4px #000;
+}
+@media (max-width: 760px) {
+  .app[data-drawer='true'] > .sidebar {
+    width: min(300px, calc(100vw - 32px));
+  }
+}
+
+.directGroup {
+  margin-top: 16px;
+}
+.directGroup > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  list-style: none;
+  cursor: pointer;
+  color: #a6a6a6;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.directGroup > summary::-webkit-details-marker {
+  display: none;
+}
+.directGroup > summary small {
+  margin-left: auto;
+}
+.directGroup:not([open]) > summary svg {
+  transform: rotate(-90deg);
+}
+.directGroup > summary:focus-visible {
+  outline: 1px solid #aa9b78;
+  outline-offset: -1px;
+}
+.moreDirect {
+  background: transparent;
+  color: #d6b779;
+  font-size: 11px !important;
+  padding: 10px;
+}
+.directMessage {
+  margin: 3px 0;
+  overflow: hidden;
+}
+.directMessage > .tinyAvatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
 }

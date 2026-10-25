@@ -54,6 +54,7 @@ export function RegisteredAccountsDialog({ controller }: { controller: Registere
   }, [state.open]);
   return (
     <dialog
+      closedby="any"
       ref={dialog}
       id="creatorAccountsDialog"
       className="creator-accounts-dialog"

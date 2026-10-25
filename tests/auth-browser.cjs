@@ -73,25 +73,28 @@ test(
         'content',
         version,
       );
-      await expect(page.locator('#authDesktopDownload')).toHaveAttribute('download', installer);
-      await expect(page.locator('#authDesktopDownload')).toHaveAttribute(
-        'href',
-        `https://a-lei-do-trono.surge.sh/downloads/${installer}`,
-      );
+      await expect(
+        page.getByRole('link', { name: 'Baixar para Windows', exact: true }),
+      ).toHaveAttribute('download', '');
+      await expect(
+        page.getByRole('link', { name: 'Baixar para Windows', exact: true }),
+      ).toHaveAttribute('href', `https://a-lei-do-trono.surge.sh/downloads/${installer}`);
       await t.test(
         'signup checks the password and requires email confirmation before login',
         async () => {
-          await page.locator('#authSignupBtn').click();
+          await page.getByRole('button', { name: 'Criar conta', exact: true }).click();
           await page.locator('#authNickname').fill('Conta Teste');
           await page.locator('#authEmail').fill(email);
           await page.locator('#authPassword').fill('Senha123');
           await page.locator('#authConfirm').fill('Senha123');
-          await page.locator('#authSubmitBtn').click();
+          await page.locator('#authSubmit').click();
           await expect(page.locator('#authMessage')).toContainText('todos os requisitos');
           await page.locator('#authPassword').fill('Senha12!');
           await page.locator('#authConfirm').fill('Senha12!');
-          await page.locator('#authSubmitBtn').click();
-          await expect(page.locator('#authTitle')).toHaveText('Bem-vindo de volta');
+          await page.locator('#authSubmit').click();
+          await expect(page.locator('#portalScreen h1, dialog[open] h1')).toHaveText(
+            'Bem-vindo de volta',
+          );
           await expect(page.locator('#authEmail')).toHaveValue(email);
           assert.equal(await page.evaluate(() => window.TronoAuth.user), null);
           assert.equal((await fixture.call('login', { email, password: 'Senha12!' })).status, 403);
@@ -109,7 +112,9 @@ test(
           );
           await ready();
           assert.equal(page.url(), origin + '/?keep=1');
-          await expect(page.locator('#authTitle')).toHaveText('Bem-vindo de volta');
+          await expect(page.locator('#portalScreen h1, dialog[open] h1')).toHaveText(
+            'Bem-vindo de volta',
+          );
           assert.equal(await page.evaluate(() => window.TronoAuthCallback), undefined);
           assert.equal(
             await page.evaluate(() => sessionStorage.getItem('mn-auth-session-v1')),
@@ -127,14 +132,14 @@ test(
         async () => {
           await page.locator('#authEmail').fill(email);
           await page.locator('#authPassword').fill('Senha12!');
-          await page.locator('#authSubmitBtn').click();
-          await expect(page.locator('#authDialog')).toBeHidden();
+          await page.locator('#authSubmit').click();
+          await expect(page.locator('#portalScreen')).toBeHidden();
           assert.equal(await page.evaluate(() => window.TronoAuth.user.nickname), 'Conta Teste');
           const saved = await page.evaluate(() =>
             JSON.parse(sessionStorage.getItem('mn-auth-session-v1')),
           );
           await page.evaluate(() => window.TronoAuth.logout());
-          await expect(page.locator('#authDialog')).toBeVisible();
+          await expect(page.locator('#portalScreen')).toBeVisible();
           assert.equal(await page.evaluate(() => window.TronoAuth.user), null);
           assert.equal(
             (await fixture.call('refresh', { refresh_token: saved.session.refresh_token })).status,
@@ -145,9 +150,9 @@ test(
       await t.test(
         'recovery link opens reset, clears credentials and accepts only the new password',
         async () => {
-          await page.locator('#authForgotBtn').click();
+          await page.getByRole('button', { name: 'Esqueci minha senha', exact: true }).click();
           await page.locator('#authEmail').fill(email);
-          await page.locator('#authSubmitBtn').click();
+          await page.locator('#authSubmit').click();
           await expect(page.locator('#authMessage')).not.toHaveText('Aguarde…');
           const token = [...fixture.links].find(
             ([, link]) => link.type === 'recovery' && link.user.email === email,
@@ -156,17 +161,21 @@ test(
           await page.goto(origin + '/?token_hash=' + encodeURIComponent(token) + '&type=recovery');
           await ready();
           assert.equal(page.url(), origin + '/');
-          await expect(page.locator('#authTitle')).toHaveText('Crie uma nova senha');
-          await expect(page.locator('#authEmail')).toBeDisabled();
+          await expect(page.locator('#portalScreen h1, dialog[open] h1')).toHaveText(
+            'Crie uma nova senha',
+          );
+          await expect(page.locator('#authEmail')).toHaveCount(0);
           await page.locator('#authPassword').fill('NovaSenha34!');
           await page.locator('#authConfirm').fill('NovaSenha34!');
-          await page.locator('#authSubmitBtn').click();
-          await expect(page.locator('#authTitle')).toHaveText('Bem-vindo de volta');
+          await page.locator('#authSubmit').click();
+          await expect(page.locator('#portalScreen h1, dialog[open] h1')).toHaveText(
+            'Bem-vindo de volta',
+          );
           assert.equal((await fixture.call('login', { email, password: 'Senha12!' })).status, 401);
           await page.locator('#authEmail').fill(email);
           await page.locator('#authPassword').fill('NovaSenha34!');
-          await page.locator('#authSubmitBtn').click();
-          await expect(page.locator('#authDialog')).toBeHidden();
+          await page.locator('#authSubmit').click();
+          await expect(page.locator('#portalScreen')).toBeHidden();
           await page.evaluate(() => window.TronoAuth.logout());
           assert.deepEqual(leaked, []);
         },
@@ -177,7 +186,9 @@ test(
           await page.goto(origin + '/?error=expired&error_code=fixture&error_description=private');
           await ready();
           assert.equal(page.url(), origin + '/');
-          await expect(page.locator('#authTitle')).toHaveText('Recupere sua senha');
+          await expect(page.locator('#portalScreen h1, dialog[open] h1')).toHaveText(
+            'Recupere sua senha',
+          );
           await expect(page.locator('#authMessage')).toContainText('link expirou');
           await page.goto(origin + '/#normal-navigation');
           await ready();
@@ -186,10 +197,10 @@ test(
       );
       await t.test('guest ticket survives reload without creating a member session', async () => {
         await page.evaluate(() => window.TronoAuth.open('login'));
-        await page.locator('#authGuestBtn').click();
+        await page.getByRole('button', { name: 'Jogar como convidado', exact: true }).click();
         await page.locator('#guestNickname').fill('Convidado Teste');
-        await page.locator('#guestSubmit').click();
-        await expect(page.locator('#guestDialog')).toBeHidden();
+        await page.getByRole('button', { name: 'Escolher um jogo', exact: true }).click();
+        await expect(page.locator('#guestNickname')).toBeHidden();
         await expect(page.locator('#gamesScreen')).toBeVisible();
         const guest = await page.evaluate(() => window.TronoAuth.guest);
         assert(guest.ticket && guest.id);

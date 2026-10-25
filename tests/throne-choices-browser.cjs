@@ -134,13 +134,9 @@ test(
                 ].map((id) => document.getElementById(id)),
               };
             });
-            await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
-            await expect
-              .poll(() => page.evaluate(() => window.TronoNetwork.primaryRoom))
-              .toBe('chat-jogos');
-            await page.locator('#joinVoiceBtn').click();
+            await page.locator('[data-voice-channel=chat-jogos]').click();
             await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-            await page.locator('#cameraBtn').click();
+            await page.locator('[data-control=cameraBtn]').click();
             await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
             await page.evaluate(() => window.TronoSocial.startScreenShare());
             await page.evaluate(() => {
@@ -232,8 +228,9 @@ test(
                   await expect(page.locator('#thronePrivateDialog')).toBeHidden();
                   await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
                   await expect(page.locator('#thronePrivateDialog')).toBeVisible();
-                  for (const layout of ['original', 'discord']) {
-                    await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+                  {
+                    // Current Corte presentation; retain viewport and interaction coverage.
+                    const layout = 'corte';
                     for (const [width, height] of [
                       [480, 800],
                       [1080, 1920],
@@ -269,7 +266,6 @@ test(
                     }
                   }
                   await page.setViewportSize({ width: 1440, height: 960 });
-                  await page.evaluate(() => window.TronoAppLayout.apply('original'));
                 }
                 privateKinds.add(disclosure.kind);
                 await expect(page.locator('#throneChoiceDialog')).toBeHidden();
@@ -289,8 +285,9 @@ test(
               } else if (snapshot.open && snapshot.prompt && !snapshot.pending) {
                 const p = snapshot.prompt;
                 if (!seen.has('responsive') && 'cardIds' in p) {
-                  for (const layout of ['original', 'discord']) {
-                    await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+                  {
+                    // Current Corte presentation; retain viewport and interaction coverage.
+                    const layout = 'corte';
                     for (const [width, height] of [
                       [480, 800],
                       [1080, 1920],
@@ -327,7 +324,6 @@ test(
                     }
                   }
                   await page.setViewportSize({ width: 1440, height: 960 });
-                  await page.evaluate(() => window.TronoAppLayout.apply('original'));
                   seen.add('responsive');
                 }
                 seen.add(p.kind);
@@ -401,8 +397,9 @@ test(
                       hand.hand.length,
                     );
                     await page.locator('#throneHandSort').click();
-                    for (const layout of ['original', 'discord']) {
-                      await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+                    {
+                      // Current Corte presentation; retain viewport and interaction coverage.
+                      const layout = 'corte';
                       for (const [width, height] of [
                         [480, 800],
                         [1080, 1920],
@@ -430,7 +427,6 @@ test(
                       }
                     }
                     await page.setViewportSize({ width: 1440, height: 960 });
-                    await page.evaluate(() => window.TronoAppLayout.apply('original'));
                     seen.add('hand-responsive');
                   }
                   if (

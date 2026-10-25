@@ -3,10 +3,10 @@
   max-width: calc(100vw - 32px);
   max-height: calc(100dvh - 40px);
   padding: 28px;
-  border: 1px solid #34382f;
+  border: 1px solid #363636;
   border-radius: 14px;
-  background: #1a1e20;
-  color: #e7e2d7;
+  background: #1d1d1d;
+  color: #e2e2e2;
   box-shadow: 0 24px 100px #0009;
   color-scheme: dark;
   font:
@@ -20,7 +20,7 @@
   box-sizing: border-box;
 }
 .dialog::backdrop {
-  background: #070a0cbb;
+  background: #0a0a0abb;
   backdrop-filter: blur(4px);
 }
 .dialog [hidden] {
@@ -35,7 +35,7 @@
 }
 .dialog p,
 .dialog small {
-  color: #9ca69e;
+  color: #a3a3a3;
 }
 .dialog small {
   display: block;
@@ -48,8 +48,8 @@
 }
 .dialog button {
   cursor: pointer;
-  border: 1px solid #3b413a;
-  background: #2b322d;
+  border: 1px solid #3f3f3f;
+  background: #303030;
   color: #ded6c5;
   border-radius: 6px;
   padding: 9px 14px;
@@ -61,8 +61,8 @@
 .dialog button:focus-visible,
 .dialog select:focus-visible,
 .dialog input:focus-visible {
-  outline: 2px solid #d6b779;
-  outline-offset: 3px;
+  outline: 1px solid #aa9b78;
+  outline-offset: 1px;
 }
 .dialog input[type='range'],
 .dialog input[type='checkbox'] {
@@ -77,7 +77,7 @@
   flex-direction: column;
   gap: 8px;
   margin: 16px 0;
-  color: #c7ccbf;
+  color: #cacaca;
 }
 .dialog label:has(input[type='checkbox']) {
   flex-direction: row;
@@ -85,9 +85,9 @@
   gap: 10px;
 }
 .dialog select {
-  border: 1px solid #3e453e;
-  background: #121719;
-  color: #e5dece;
+  border: 1px solid #434343;
+  background: #161616;
+  color: #dedede;
   border-radius: 6px;
   min-height: 40px;
   padding: 8px 10px;
@@ -113,11 +113,11 @@
 }
 .dialog :global(.settings-section-heading) > span {
   font-size: 11px;
-  color: #98a295;
+  color: #9f9f9f;
 }
 .dialog :global(.mn-gain-controls) {
   padding-bottom: 16px;
-  border-bottom: 1px solid #333a31;
+  border-bottom: 1px solid #383838;
   margin-bottom: 20px;
 }
 .dialog :global(.settings-context-help),
@@ -156,11 +156,11 @@
   gap: 10px;
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #33382f;
+  border-top: 1px solid #363636;
 }
 .dialog :global(.primary-button) {
   background: #d6b779;
-  color: #211d15;
+  color: #1d1d1d;
   border-color: #d6b779;
 }
 .header {
@@ -190,7 +190,7 @@
 .settings > .header {
   padding: 24px 28px 10px;
   margin: 0;
-  border-bottom: 1px solid #30362f;
+  border-bottom: 1px solid #343434;
 }
 .settingsLayout {
   display: flex;
@@ -200,7 +200,7 @@
 .tabs {
   width: 180px;
   flex-shrink: 0;
-  background: #171b1c;
+  background: #1a1a1a;
   padding: 22px 12px;
   display: flex;
   flex-direction: column;
@@ -214,10 +214,10 @@
   text-align: left;
   border: 0;
   background: transparent;
-  color: #a4afa4;
+  color: #acacac;
 }
 .tabs button[aria-current='page'] {
-  background: #30362c;
+  background: #343434;
   color: #dec48e;
 }
 .fields {
@@ -240,19 +240,19 @@
   padding: 6px;
   min-width: 0;
   text-align: left;
-  background: #141a1b;
+  background: #191919;
   border: 2px solid transparent;
 }
 .sources button[aria-pressed='true'] {
   border-color: #d6b779;
-  background: #30382c;
+  background: #353535;
 }
 .sources img {
   display: block;
   width: 100%;
   aspect-ratio: 16/9;
   object-fit: contain;
-  background: #0c1113;
+  background: #101010;
   border-radius: 4px;
 }
 .sources span {
@@ -309,12 +309,12 @@
 .permissions {
   padding-top: 20px;
   margin-top: 24px;
-  border-top: 1px solid #394033;
+  border-top: 1px solid #3e3e3e;
 }
 .diagnostics {
   padding-top: 20px;
   margin-top: 20px;
-  border-top: 1px solid #394033;
+  border-top: 1px solid #3e3e3e;
 }
 .diagnostics dl {
   display: grid;
@@ -322,13 +322,13 @@
   gap: 10px;
 }
 .diagnostics dl > div {
-  background: #151c1d;
+  background: #1b1b1b;
   padding: 12px;
   border-radius: 6px;
 }
 .diagnostics dt {
   font-size: 10px;
-  color: #92a18d;
+  color: #9c9c9c;
 }
 .diagnostics dd {
   margin: 6px 0 0;
@@ -344,4 +344,44 @@
   .diagnostics dl {
     grid-template-columns: 1fr;
   }
+}
+
+.settings[data-topic='account'] {
+  width: 1160px;
+}
+
+.dialog :is(button, input, textarea, select):focus:not(:focus-visible) {
+  outline: none;
+}
+.captureTabs {
+  display: flex;
+  gap: 6px;
+  background: #171717;
+  padding: 5px;
+  border-radius: 9px;
+}
+.captureTabs button {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+}
+.captureTabs button[aria-selected='true'] {
+  background: #333333;
+  color: #e4ca93;
+}
+
+.dialog :is(input, textarea, select):focus {
+  outline: none;
+  border-color: #a18b60;
+}
+
+.settings[data-topic='account'] .fields {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
 }

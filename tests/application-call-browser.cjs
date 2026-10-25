@@ -29,6 +29,17 @@ test(
         token_hash: [...fixture.links.keys()].at(-1),
         type: 'signup',
       });
+      const member = fixture.users.get(email);
+      const imageIds = [
+        '22000000-0000-4000-8000-000000000001',
+        '22000000-0000-4000-8000-000000000002',
+      ];
+      member.personalization = {
+        cover_file_id: imageIds[0],
+        background_file_id: imageIds[1],
+        cover_position: 30,
+        cover_zoom: 140,
+      };
       const data = (await fixture.call('login', { email, password })).data;
       browser = await chromium.launch({
         executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
@@ -58,16 +69,113 @@ test(
         },
         { base: fixture.base, data },
       );
+      await context.route('**/files/*/url', (route) => {
+        const id = new URL(route.request().url()).pathname.split('/')[2];
+        return route.fulfill({
+          json: {
+            url:
+              origin +
+              '/assets/' +
+              (id === imageIds[0] ? 'azul/box-cover.webp' : 'games/throne-cover.webp'),
+            expiresAt: Date.now() + 3600000,
+          },
+        });
+      });
       await context.addInitScript(installCanvasCamera);
       page = await context.newPage();
       page.setDefaultTimeout(7000);
       page.on('pageerror', (error) => errors.push(error.message));
       await page.goto(origin);
       await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+      await fs.mkdir('artifacts/frontend-reset/contrast-qa', { recursive: true });
+      await expect(
+        page
+          .getByRole('complementary', { name: 'Membros online' })
+          .locator('[data-direct-banner-slot] img'),
+      ).toBeVisible();
+      const accountCard = page.locator('[data-account-card]');
+      assert(
+        await accountCard.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return parseFloat(style.borderTopWidth) > 0 && parseFloat(style.borderTopLeftRadius) > 0;
+        }),
+        'Outside voice the account card has a complete upper border and rounded corners',
+      );
+      await page.screenshot({
+        path: 'artifacts/frontend-reset/contrast-qa/account-outside-voice.png',
+      });
+      await page.getByRole('button', { name: 'Meu perfil', exact: true }).click();
+      await expect(
+        page
+          .getByRole('dialog', { name: 'Meu perfil', exact: true })
+          .locator('[data-direct-banner-slot] img'),
+      ).toBeVisible();
+      assert(
+        await page
+          .getByRole('dialog', { name: 'Meu perfil', exact: true })
+          .locator('[data-direct-banner-slot]')
+          .evaluate((el) => el.clientWidth >= 260),
+        'Account cover spans the full card',
+      );
+      await page.screenshot({ path: 'artifacts/frontend-reset/contrast-qa/account-popover.png' });
+      await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
       const call = page.getByRole('region', { name: 'Chamada da Corte', exact: true });
       await expect(call).toBeVisible();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+      const sidebar = page.getByRole('complementary', { name: 'Canais e conversas', exact: true });
+      await expect(call.locator('[data-profile-background-slot] img')).toBeVisible();
+      await expect(
+        sidebar.locator('[data-account-card] > [data-direct-banner-slot] img'),
+      ).toBeVisible();
+      await expect(
+        sidebar.locator('[data-voice-person] [data-direct-banner-slot] img'),
+      ).toBeVisible();
+      assert.equal(
+        await call.getByRole('button', { name: 'Ajustes rápidos da chamada', exact: true }).count(),
+        0,
+        'Quick audio exists only in the sidebar',
+      );
+      async function openQuickAudio(hover = false) {
+        const trigger = sidebar.getByRole('button', {
+          name: 'Ajustes rápidos da chamada',
+          exact: true,
+        });
+        if (!(await trigger.isVisible()))
+          await page.getByRole('button', { name: 'Abrir canais', exact: true }).click();
+        if (hover) await trigger.hover();
+        else await trigger.click();
+      }
+      await fs.mkdir('artifacts/frontend-reset/call-qa', { recursive: true });
+      await page.evaluate(() => {
+        window.__quickFocus = document.activeElement;
+      });
+      await openQuickAudio(true);
+      const quick = page.getByRole('dialog', { name: 'Ajustes rápidos da chamada', exact: true });
+      await expect(quick).toBeVisible();
+      assert(
+        await page.evaluate(() => window.__quickFocus === document.activeElement),
+        'Hover does not steal focus',
+      );
+      await quick.getByRole('slider', { name: 'Volume rápido da chamada', exact: true }).fill('90');
+      await expect
+        .poll(() => page.evaluate(() => window.TronoVoiceSettings.getSnapshot().outputVolume))
+        .toBe(90);
+      await page.screenshot({ path: 'artifacts/frontend-reset/call-qa/quick-audio.png' });
+      await page.keyboard.press('Escape');
+      await expect(quick).toBeHidden();
+      await page.evaluate(() => {
+        window.__soundFocus = document.activeElement;
+      });
+      await call.getByRole('button', { name: 'Efeitos sonoros da chamada', exact: true }).hover();
+      await expect(page.locator('#soundboardDialog')).toBeVisible();
+      assert(
+        await page.evaluate(() => window.__soundFocus === document.activeElement),
+        'Soundboard hover never steals focus',
+      );
+      await page.screenshot({ path: 'artifacts/frontend-reset/call-qa/quick-soundboard.png' });
+      await page.mouse.move(700, 80);
+      await expect(page.locator('#soundboardDialog')).toBeHidden();
       await call.getByRole('button', { name: 'Ligar câmera', exact: true }).click();
       const person = call.locator('[data-call-person]').first(),
         video = person.locator('video');
@@ -124,7 +232,10 @@ test(
         ),
         true,
       );
-      await call.getByRole('button', { name: 'Configurações', exact: true }).click();
+      await openQuickAudio();
+      await page
+        .getByRole('button', { name: 'Todas as configurações de áudio', exact: true })
+        .click();
       const settings = page.getByRole('dialog', { name: 'Voz e vídeo', exact: true });
       await expect(settings).toBeVisible();
       await settings.getByRole('button', { name: 'Vídeo', exact: true }).click();
@@ -160,7 +271,24 @@ test(
         await page.setViewportSize({ width, height });
         assert.equal(await call.evaluate((n) => n.scrollWidth <= n.clientWidth + 1), true);
         await page.screenshot({ path: 'artifacts/frontend-reset/call-qa/call-' + width + '.png' });
-        await call.getByRole('button', { name: 'Configurações', exact: true }).click();
+        await openQuickAudio();
+        await expect(quick).toBeVisible();
+        const quickBox = await quick.boundingBox();
+        assert(
+          quickBox.x >= 0 &&
+            quickBox.y >= 0 &&
+            quickBox.x + quickBox.width <= width &&
+            quickBox.y + quickBox.height <= height,
+          JSON.stringify(quickBox),
+        );
+        await page.screenshot({
+          path: 'artifacts/frontend-reset/call-qa/quick-audio-' + width + '.png',
+        });
+        await page.keyboard.press('Escape');
+        await openQuickAudio();
+        await page
+          .getByRole('button', { name: 'Todas as configurações de áudio', exact: true })
+          .click();
         await expect(settings).toBeVisible();
         assert.equal(await settings.evaluate((n) => n.scrollWidth <= n.clientWidth + 1), true);
         await page.screenshot({

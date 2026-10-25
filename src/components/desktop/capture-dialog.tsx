@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppIcon as Icon } from '../application/icons';
 import styles from '../application/media-dialog.module.css';
 import type { DesktopCapture } from '../../lib/desktop/capture';
@@ -12,11 +12,14 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
   const dialog = useRef<HTMLDialogElement>(null),
     audio = useRef<HTMLSelectElement>(null),
     shown = useRef<string | null>(null);
+  const [category, setCategory] = useState<'window' | 'screen'>('window');
   const request = state.request,
     windowSource = !!state.source?.startsWith('window:');
   useLayoutEffect(() => {
     const element = dialog.current;
     if (!element) return;
+    if (request?.id !== shown.current)
+      setCategory(state.source?.startsWith('screen:') ? 'screen' : 'window');
     shown.current = request?.id ?? null;
     if (request && !element.open) element.showModal();
     else if (!request && element.open) element.close();
@@ -29,6 +32,7 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
         : 'Captura sem áudio. Áudio isolado por aplicativo requer Windows 11 ou Windows build 20348 ou superior.';
   return (
     <dialog
+      closedby="any"
       ref={dialog}
       className={styles.dialog + ' ' + styles.capture}
       aria-label="Escolher tela ou janela"
@@ -55,22 +59,70 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
           <Icon name="close" />
         </button>
       </header>
-      <div className={styles.sources}>
-        {request?.sources.map((source) => (
+      <div className={styles.captureTabs} role="tablist" aria-label="Tipo de captura">
+        {(
+          [
+            ['window', 'Aplicativos', 'pc'],
+            ['screen', 'Tela inteira', 'screen'],
+          ] as const
+        ).map(([id, label, icon]) => (
           <button
-            key={source.id}
+            key={id}
             type="button"
-            aria-pressed={state.source === source.id}
-            onClick={() => controller.selectSource(source.id)}
+            role="tab"
+            aria-selected={category === id}
+            tabIndex={category === id ? 0 : -1}
+            onClick={() => setCategory(id)}
+            onKeyDown={(e) => {
+              if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                e.preventDefault();
+                const next =
+                  e.key === 'Home'
+                    ? 'window'
+                    : e.key === 'End'
+                      ? 'screen'
+                      : category === 'window'
+                        ? 'screen'
+                        : 'window';
+                setCategory(next);
+                const buttons =
+                  e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]');
+                buttons?.[next === 'window' ? 0 : 1]?.focus();
+              }
+            }}
           >
-            {/* Native thumbnails are local previews, not public Next image assets. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={source.thumbnail || undefined} alt="" />
-            <span>{source.name}</span>
+            <Icon name={icon} size={18} />
+            {label}
           </button>
         ))}
-        {request && !request.sources.length && (
-          <p>Nenhuma tela ou janela disponível. Feche e tente novamente.</p>
+      </div>
+      <div
+        className={styles.sources}
+        role="tabpanel"
+        aria-label={category === 'window' ? 'Aplicativos' : 'Tela inteira'}
+      >
+        {request?.sources
+          .filter((source) => source.id.startsWith(category + ':'))
+          .map((source) => (
+            <button
+              key={source.id}
+              data-source-kind={category}
+              type="button"
+              aria-pressed={state.source === source.id}
+              onClick={() => controller.selectSource(source.id)}
+            >
+              {/* Native thumbnails are local previews, not public Next image assets. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={source.thumbnail || undefined} alt="" />
+              <span>{source.name}</span>
+            </button>
+          ))}
+        {request && !request.sources.some((source) => source.id.startsWith(category + ':')) && (
+          <p>
+            {category === 'window'
+              ? 'Nenhum aplicativo disponível. Você pode escolher Tela inteira.'
+              : 'Nenhuma tela disponível. Você pode escolher Aplicativos.'}
+          </p>
         )}
       </div>
       <div
@@ -131,8 +183,9 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
           id="desktopCaptureConfirm"
           type="button"
           className="primary-button"
-          disabled={!state.source}
+          disabled={!state.source?.startsWith(category + ':')}
           onClick={() => {
+            if (!state.source?.startsWith(category + ':')) return;
             if (!controller.confirm()) audio.current?.focus();
           }}
         >

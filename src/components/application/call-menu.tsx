@@ -201,6 +201,15 @@ export function CallMenu({
             </button>
           )
         )}
+        {!screen && p.accountId && (
+          <button
+            type="button"
+            onClick={() => run(() => runtime.TronoProfileViewer.open(p.accountId!))}
+          >
+            <Icon name="members" size={16} />
+            Ver perfil
+          </button>
+        )}
         {!screen && p.canModerate && (
           <div className={styles.moderation}>
             <small>MODERAÇÃO DA SALA</small>

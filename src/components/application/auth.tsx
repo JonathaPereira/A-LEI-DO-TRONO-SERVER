@@ -264,6 +264,7 @@ export function AccountOverlay({
   }, [open]);
   return (
     <dialog
+      closedby="any"
       className={styles.accountDialog}
       ref={dialog}
       aria-label="Acesso à conta"

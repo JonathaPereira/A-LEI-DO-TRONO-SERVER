@@ -156,10 +156,84 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await page.locator('#openVoicePortalBtn').click();
-      await expect(page.locator('#callWorkspace')).toBeVisible();
-      await page.locator('#soundboardToggle').click();
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+      await page.evaluate(() => window.TronoCallSettings.open('resources'));
+      await page.locator('#settingsSoundboardToggle').click();
       await expect(page.locator('.sound-card')).toHaveCount(1);
+      await page
+        .getByRole('searchbox', { name: 'Buscar efeitos sonoros', exact: true })
+        .fill('inexistente');
+      await expect(page.locator('.sound-card:visible')).toHaveCount(0);
+      await page.getByRole('searchbox', { name: 'Buscar efeitos sonoros', exact: true }).fill('');
+      await t.test(
+        'a populated library stays compact and searchable at desktop, tablet and phone sizes',
+        async () => {
+          const original = [...library];
+          library.push(
+            ...Array.from({ length: 23 }, (_, i) => ({
+              ...original[0],
+              id: '51000000-0000-4000-8000-' + String(i + 1).padStart(12, '0'),
+              name:
+                ['Uma salva de palmas bem longa', 'Risada surpresa', 'Som da vitória'][i % 3] +
+                ' ' +
+                i +
+                '.wav',
+            })),
+          );
+          await page.evaluate(async () => {
+            window.TronoSoundboard.close();
+            await window.TronoSoundboard.open();
+          });
+          await expect(page.locator('.sound-card')).toHaveCount(24);
+          const menu = page.locator('#soundboardDialog');
+          for (const [width, height] of [
+            [1440, 900],
+            [1024, 768],
+            [768, 1024],
+            [390, 844],
+          ]) {
+            await page.setViewportSize({ width, height });
+            const box = await menu.boundingBox();
+            assert(
+              box.x >= 0 &&
+                box.y >= 0 &&
+                box.x + box.width <= width &&
+                box.y + box.height <= height,
+              JSON.stringify(box),
+            );
+            assert(
+              await menu.evaluate((n) => n.scrollHeight <= n.clientHeight + 1),
+              'Soundboard scroll stays inside its library',
+            );
+            assert(
+              await page
+                .locator('.sound-card')
+                .first()
+                .evaluate((n) => n.getBoundingClientRect().height <= 64),
+            );
+            await require('node:fs/promises').mkdir('artifacts/frontend-reset/refine-qa', {
+              recursive: true,
+            });
+            await page.screenshot({
+              path: 'artifacts/frontend-reset/refine-qa/soundboard-' + width + '.png',
+            });
+          }
+          await page
+            .getByRole('searchbox', { name: 'Buscar efeitos sonoros', exact: true })
+            .fill('vitória');
+          await expect(page.locator('.sound-card:visible')).toHaveCount(7);
+          await page
+            .getByRole('searchbox', { name: 'Buscar efeitos sonoros', exact: true })
+            .fill('');
+          library.splice(0, library.length, ...original);
+          await page.evaluate(async () => {
+            window.TronoSoundboard.close();
+            await window.TronoSoundboard.open();
+          });
+          await page.setViewportSize({ width: 1440, height: 1000 });
+          await expect(page.locator('.sound-card')).toHaveCount(1);
+        },
+      );
       await t.test(
         'real decoding and a 15 second selection retain the focused editor and encode valid PCM',
         async () => {
@@ -200,8 +274,9 @@ test(
           await expect(page.locator('#soundboardMessage')).toContainText('somente para você');
           await page.locator('#soundboardClose').click();
           await expect(page.locator('#soundboardDialog')).toBeHidden();
-          await page.locator('#joinVoiceBtn').click();
-          await expect(page.locator('#joinVoiceBtn')).toHaveText(/Sair/);
+          await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
+          await page.locator('button[data-voice-channel]').first().click();
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
           await page.locator('#soundboardToggle').click();
           await page.locator('#soundboardVolume').fill('35');
           await expect(page.locator('#soundboardVolumeValue')).toHaveText('35%');
@@ -210,7 +285,7 @@ test(
             .poll(() => page.evaluate(() => window.__soundAudios.at(-1)?.volume))
             .toBe(0.35);
           await page.locator('#soundboardClose').click();
-          await page.locator('#deafenVoiceBtn').click();
+          await page.locator('[data-control=deafenVoiceBtn]').click();
           await page.locator('#soundboardToggle').click();
           await page.locator('[data-play-sound="' + fixture.soundId + '"]').click();
           await expect.poll(() => page.evaluate(() => window.__soundAudios.at(-1)?.volume)).toBe(0);
@@ -223,9 +298,59 @@ test(
         },
       );
       await t.test(
+        'the populated call panel remains compact from the sidebar and main call toolbar',
+        async () => {
+          const original = [...library];
+          library.push(
+            ...Array.from({ length: 22 }, (_, i) => ({
+              ...original[0],
+              id: '52000000-0000-4000-8000-' + String(i + 1).padStart(12, '0'),
+              name:
+                ['Chuva de aplausos', 'Risada surpresa', 'Vitória na Corte'][i % 3] +
+                ' ' +
+                i +
+                '.wav',
+            })),
+          );
+          await page.locator('#soundboardToggle').click();
+          await expect(page.locator('.sound-card')).toHaveCount(24);
+          await page.screenshot({
+            path: 'artifacts/frontend-reset/refine-qa/soundboard-sidebar-filled.png',
+          });
+          await page.keyboard.press('Escape');
+          await page.locator('#callSoundboardToggle').click();
+          await expect(page.locator('#soundboardDialog')).toBeVisible();
+          for (const [width, height] of [
+            [1440, 900],
+            [1024, 768],
+            [768, 1024],
+            [390, 844],
+          ]) {
+            await page.setViewportSize({ width, height });
+            await page.screenshot({
+              path: 'artifacts/frontend-reset/refine-qa/soundboard-call-' + width + '.png',
+            });
+            const b = await page.locator('#soundboardDialog').boundingBox();
+            assert(
+              b.x >= 0 && b.y >= 0 && b.x + b.width <= width && b.y + b.height <= height,
+              JSON.stringify(b),
+            );
+            assert(
+              await page
+                .locator('#soundboardDialog')
+                .evaluate((n) => n.scrollHeight <= n.clientHeight + 1),
+            );
+          }
+          await page.keyboard.press('Escape');
+          library.splice(0, library.length, ...original);
+          await page.setViewportSize({ width: 1440, height: 1000 });
+        },
+      );
+      await t.test(
         'mobile editor remains within the viewport and page disposal releases its own player and URL',
         async () => {
           await page.setViewportSize({ width: 390, height: 844 });
+          await page.getByRole('button', { name: 'Abrir canais', exact: true }).click();
           await page.locator('#soundboardToggle').click();
           const menu = await page.locator('#soundboardDialog').boundingBox();
           assert(menu.x >= 0 && menu.x + menu.width <= 391);

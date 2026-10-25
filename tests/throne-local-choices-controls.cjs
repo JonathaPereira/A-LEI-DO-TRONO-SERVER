@@ -60,8 +60,9 @@ async function exerciseLocalChoices(page, { responsive = true } = {}) {
   await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
   await expect(page.locator('#throneChoiceBack')).toBeVisible();
   if (responsive) {
-    for (const layout of ['original', 'discord']) {
-      await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+    {
+      // Current Corte shell, same responsive contracts.
+      const layout = 'corte';
       for (const [width, height] of [
         [480, 800],
         [1080, 1920],
@@ -86,7 +87,6 @@ async function exerciseLocalChoices(page, { responsive = true } = {}) {
       }
     }
     await page.setViewportSize({ width: 1440, height: 960 });
-    await page.evaluate(() => window.TronoAppLayout.apply('original'));
   }
   await page.locator('#throneChoiceBack').click();
   await page.locator('#throneChoiceDialog [data-law="estandarte"]').click();

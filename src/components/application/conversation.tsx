@@ -273,6 +273,7 @@ function Moderation({ runtime }: { runtime: ApplicationServices }) {
   }, [state.choice]);
   return (
     <dialog
+      closedby="any"
       ref={dialog}
       className={styles.confirmDialog}
       aria-labelledby="moderationTitle"
@@ -447,6 +448,7 @@ export function Conversation({ runtime }: { runtime: ApplicationServices }) {
 }
 export function Friends({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoDirectMessages);
+  const [tab, setTab] = useState<'friends' | 'pending' | 'community'>('friends');
   const people = [
     ...new Map(
       [...state.members, ...state.friends, ...directPeople(state)].map((person) => [
@@ -457,6 +459,11 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
   ].filter(
     (p) =>
       p.id !== state.accountId &&
+      (tab === 'community'
+        ? !state.friends.some((f) => f.id === p.id)
+        : state.friends.some(
+            (f) => f.id === p.id && f.state === (tab === 'friends' ? 'accepted' : 'pending'),
+          )) &&
       p.name.toLocaleLowerCase().includes(state.search.toLocaleLowerCase()),
   );
   return (
@@ -470,6 +477,19 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
           Atualizar
         </button>
       </div>
+      <nav className={styles.peopleTabs} aria-label="Pessoas da Corte">
+        {(
+          [
+            ['friends', 'Amigos'],
+            ['pending', 'Convites'],
+            ['community', 'Comunidade'],
+          ] as const
+        ).map(([id, label]) => (
+          <button type="button" key={id} aria-pressed={tab === id} onClick={() => setTab(id)}>
+            {label}
+          </button>
+        ))}
+      </nav>
       <label className={styles.search}>
         Buscar pessoas
         <input
@@ -479,7 +499,10 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
           onChange={(e) => runtime.TronoDirectMessages.setSearch(e.target.value)}
         />
       </label>
-      <p className={styles.sectionLabel}>PESSOAS · {people.length}</p>
+      <p className={styles.sectionLabel}>
+        {tab === 'friends' ? 'AMIGOS' : tab === 'pending' ? 'CONVITES' : 'COMUNIDADE'} ·{' '}
+        {people.length}
+      </p>
       {people.map((person) => {
         const friend = state.friends.find((f) => f.id === person.id),
           pending = state.actionPending.includes(person.id);
@@ -536,7 +559,7 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
                         void runtime.TronoDirectMessages.friendAction(person.id, 'remove');
                     }}
                   >
-                    ×
+                    <Icon name="close" size={15} />
                   </button>
                 ) : (
                   <button
@@ -556,7 +579,13 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
       {!people.length && (
         <div className={styles.emptyConversation}>
           <h2>Encontre sua próxima companhia</h2>
-          <p>Os membros da comunidade aparecem aqui quando estiverem disponíveis.</p>
+          <p>
+            {tab === 'friends'
+              ? 'Suas amizades aceitas aparecem aqui. Encontre outras pessoas na aba Comunidade.'
+              : tab === 'pending'
+                ? 'Nenhum convite pendente.'
+                : 'Nenhuma pessoa encontrada.'}
+          </p>
         </div>
       )}
       <p role="status">{state.status}</p>

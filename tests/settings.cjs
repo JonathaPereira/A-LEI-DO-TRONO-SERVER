@@ -7,7 +7,7 @@ test('web validates stored selection and cannot select desktop-only topics', asy
   const { createSettingsController } = await modulePromise;
   const saved = [];
   const controller = createSettingsController(false, {
-    getItem: () => 'files',
+    getItem: () => 'capture',
     setItem: (...args) => saved.push(args),
   });
   assert.equal(controller.getSnapshot().topic, 'audio');
@@ -47,4 +47,25 @@ test('one immutable snapshot is shared by navigation subscribers without duplica
   controller.close();
   assert.equal(states.length, 1);
   assert.deepEqual(states[0], { open: true, topic: 'connection' });
+});
+
+test('web account and file settings remain available while the selected pane changes', async () => {
+  const { createSettingsController } = await modulePromise;
+  const controller = createSettingsController(false, { getItem: () => 'account', setItem() {} });
+  assert.equal(controller.getSnapshot().topic, 'account');
+  controller.open('account');
+  controller.select('files');
+  assert.deepEqual(controller.getSnapshot(), { open: true, topic: 'files' });
+  controller.select('account');
+  controller.close();
+  assert.deepEqual(controller.getSnapshot(), { open: false, topic: 'account' });
+});
+
+test('resource actions have their own shared settings pane on web and desktop', async () => {
+  const { createSettingsController } = await modulePromise;
+  for (const desktop of [false, true]) {
+    const c = createSettingsController(desktop, { getItem: () => null, setItem() {} });
+    c.open('resources');
+    assert.deepEqual(c.getSnapshot(), { open: true, topic: 'resources' });
+  }
 });

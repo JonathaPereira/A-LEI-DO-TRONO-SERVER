@@ -56,6 +56,17 @@ test(
           localStorage.setItem('tronoSfxEnabled', '0');
           localStorage.setItem('tronoNoiseSuppression', '0');
           window.__manualCaptures = [];
+          window.__manualEncodedBytes = 0;
+          const Encoder = MediaRecorder;
+          window.MediaRecorder = class extends Encoder {
+            constructor(stream, options) {
+              super(stream, options);
+              window.__manualEncodedBytes = 0;
+              this.addEventListener('dataavailable', (event) => {
+                window.__manualEncodedBytes += event.data.size;
+              });
+            }
+          };
           navigator.mediaDevices.getDisplayMedia = async (options) => {
             const canvas = document.createElement('canvas');
             canvas.width = 640;
@@ -103,8 +114,8 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await page.locator('#openVoicePortalBtn').click();
-      await page.locator('#joinVoiceBtn').click();
+      await page.waitForFunction(() => window.TronoRecorder);
+      await page.locator('button[data-voice-channel]').first().click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
       await t.test(
         'cancelling an unresolved capture closes the late result without starting a recorder',
@@ -113,9 +124,14 @@ test(
             window.TronoPortal.showOnly('gameScreen');
             window.__manualDelay = true;
           });
+          await page.evaluate(() => window.TronoCallSettings.open('resources'));
           await page.locator('#recordMatchBtn').click();
           await expect.poll(() => page.evaluate(() => !!window.__manualRelease)).toBe(true);
-          await expect(page.locator('#recordMatchBtn')).toHaveText('Cancelar gravação');
+          await expect(page.locator('#recordMatchBtn')).toHaveAttribute(
+            'aria-label',
+            'Cancelar gravação',
+          );
+          await page.evaluate(() => window.TronoCallSettings.open('resources'));
           await page.locator('#recordMatchBtn').click();
           await page.evaluate(() => {
             window.__manualRelease();
@@ -135,40 +151,53 @@ test(
       );
       await t.test(
         'mixed video and audio decode and the destination remains pending after capture has stopped',
-        async () => {
+        async (t) => {
           const bytes = await exerciseManualRecording(page, { exportBytes: true }),
             filename = path.join(artifacts, 'manual-recording.webm');
           writeFileSync(filename, bytes);
-          const probe = spawnSync(
-            'ffprobe',
-            [
-              '-v',
-              'error',
-              '-show_entries',
-              'stream=codec_name,width,height',
-              '-of',
-              'json',
-              filename,
-            ],
-            { encoding: 'utf8' },
+          const missing = ['ffprobe', 'ffmpeg'].filter(
+            (tool) => spawnSync(tool, ['-version']).error?.code === 'ENOENT',
           );
-          assert.equal(probe.status, 0, probe.stderr);
-          const info = JSON.parse(probe.stdout);
-          assert(
-            info.streams.some(
-              (stream) =>
-                ['vp9', 'vp8'].includes(stream.codec_name) &&
-                stream.width === 640 &&
-                stream.height === 360,
-            ),
+          await t.test(
+            'external codec inspection and full decode',
+            {
+              skip: missing.length
+                ? 'Unavailable: ' + missing.join(', ') + '; Chrome decode passed'
+                : false,
+            },
+            () => {
+              const probe = spawnSync(
+                'ffprobe',
+                [
+                  '-v',
+                  'error',
+                  '-show_entries',
+                  'stream=codec_name,width,height',
+                  '-of',
+                  'json',
+                  filename,
+                ],
+                { encoding: 'utf8' },
+              );
+              assert.equal(probe.status, 0, probe.stderr);
+              const info = JSON.parse(probe.stdout);
+              assert(
+                info.streams.some(
+                  (stream) =>
+                    ['vp9', 'vp8'].includes(stream.codec_name) &&
+                    stream.width === 640 &&
+                    stream.height === 360,
+                ),
+              );
+              assert(info.streams.some((stream) => stream.codec_name === 'opus'));
+              const decode = spawnSync(
+                'ffmpeg',
+                ['-v', 'error', '-threads', '2', '-i', filename, '-f', 'null', '-'],
+                { encoding: 'utf8', timeout: 15000 },
+              );
+              assert.equal(decode.status, 0, decode.stderr);
+            },
           );
-          assert(info.streams.some((stream) => stream.codec_name === 'opus'));
-          const decode = spawnSync(
-            'ffmpeg',
-            ['-v', 'error', '-threads', '2', '-i', filename, '-f', 'null', '-'],
-            { encoding: 'utf8', timeout: 15000 },
-          );
-          assert.equal(decode.status, 0, decode.stderr);
         },
       );
       await t.test(
@@ -177,10 +206,14 @@ test(
           await page.evaluate(() => {
             window.showDirectoryPicker = undefined;
           });
+          await page.evaluate(() => window.TronoCallSettings.open('resources'));
           await page.locator('#recordMatchBtn').click();
           await expect.poll(() => page.evaluate(() => window.TronoRecorder.recording)).toBe(true);
-          await page.waitForTimeout(500);
+          await page.waitForFunction(() => window.__manualEncodedBytes > 0, null, {
+            timeout: 15000,
+          });
           const downloading = page.waitForEvent('download');
+          await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
           await page.locator('#recordingStopBtn').click();
           const download = await downloading;
           const filename = path.join(artifacts, 'manual-recording-download.webm');

@@ -82,16 +82,12 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
-      await expect
-        .poll(() => page.evaluate(() => window.TronoNetwork.primaryRoom))
-        .toBe('chat-jogos');
-      await page.locator('#joinVoiceBtn').click();
+      await page.locator('[data-voice-channel=chat-jogos]').click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-      await page.locator('#cameraBtn').click();
+      await page.locator('[data-control=cameraBtn]').click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
       await page.evaluate(() => window.TronoSocial.startScreenShare());
-      await page.locator('#muteMicBtn').click();
+      await page.locator('[data-control=muteMicBtn]').first().click();
       await page.evaluate(() => {
         window.__throneCall = {
           mic: window.TronoSocial.getLocalAudioTrack(),
@@ -174,17 +170,15 @@ test(
       await page.locator('#readyOnlineBtn').click();
       await expect(page.locator('#readyOnlineBtn')).toContainText('Retirar Pronto');
       await expect(page.locator('#startOnlineBtn')).toBeEnabled();
-      for (const layout of ['discord', 'original']) {
-        await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+      {
+        // Current Corte presentation; retain viewport and interaction coverage.
         await preserved();
         await expect(page.locator('#roomSeats .is-ready')).toHaveCount(2);
       }
       for (let i = 0; i < 4; i++) await guest('Ocupante ' + i, 'sala-mascara');
-      await page.evaluate(() => {
-        window.TronoPortal.openGame(true);
-        window.TronoSocial.showPanel(false);
-      });
-      await page.locator('.room-enter[data-room="sala-mascara"]').click();
+      // Resuming a lobby now returns to that lobby. Exercise the public transfer
+      // command to verify rejection preserves the previous seat and readiness.
+      await page.evaluate(() => window.TronoThroneLobby.enter('sala-mascara'));
       await expect(page.locator('#roomOnlineStatus')).toContainText('Mesa cheia');
       await expect(page.locator('#selectedRoomName')).toHaveText('Sala do Cetro');
       await expect(page.locator('#roomSeats')).toContainText('Casa Humana');
@@ -223,8 +217,8 @@ test(
       assert(
         await page.evaluate(() => !Object.isFrozen(window.__LeiDoTrono.getState().players[0].hand)),
       );
-      for (const layout of ['discord', 'original']) {
-        await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+      {
+        // Current Corte presentation; retain viewport and interaction coverage.
         await assertThroneSeats(page);
         await assertThroneTable(page);
       }

@@ -9,7 +9,7 @@ const { startFixture } = require('./auth-fixture');
 const { closeTestApp, killTestApp } = require('./desktop-test-close');
 
 test(
-  'real desktop keeps account modals usable, returns from the Court signed in, and restores encrypted sessions',
+  'real desktop keeps standalone account entry usable, returns from the Court signed in, and restores encrypted sessions',
   { timeout: 60000, skip: process.platform !== 'win32' },
   async (t) => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-auth-owner-'));
@@ -64,8 +64,8 @@ test(
       await ready();
       const login = async (remember) => {
         await expect(page.locator('#portalScreen')).toBeVisible();
-        await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
-        const modal = page.getByRole('dialog', { name: 'Acesso à conta', exact: true });
+        await expect(page.getByRole('complementary', { name: 'Canais e conversas' })).toBeHidden();
+        const modal = page.locator('#portalScreen > div');
         await expect(modal).toBeVisible();
         const bounds = await modal.evaluate((node) => {
           const input = node.querySelector('input[type=email]').getBoundingClientRect(),
@@ -131,6 +131,7 @@ test(
       assert.equal(await page.evaluate(() => window.TronoAuth.user), null);
       await login(false);
       assert.equal(await page.evaluate(() => window.TronoDesktop.readSession()), null);
+      await page.getByRole('button', { name: 'Meu perfil', exact: true }).click();
       await page.getByRole('button', { name: 'Sair da conta', exact: true }).click();
       await expect(page.locator('#portalScreen')).toBeVisible();
       assert.equal(await page.evaluate(() => window.TronoAuth.user), null);
