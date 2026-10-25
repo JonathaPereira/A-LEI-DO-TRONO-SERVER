@@ -350,7 +350,8 @@ test('hiding a docked screen delegates focus release before detaching its borrow
       calls.push('release');
     },
   }).hide('peer', 'screen');
-  assert.equal(selector, '#socialPanel .screen-share-tile');
+  assert(selector.includes('#socialPanel .screen-share-tile'));
+  assert(selector.includes('[data-call-video] .screen-share-tile'));
   assert.equal(video.srcObject, null);
   assert.deepEqual(calls, ['release', 'pause']);
 });

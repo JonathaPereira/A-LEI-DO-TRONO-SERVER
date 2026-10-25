@@ -31,7 +31,8 @@ escopo. Tokens do shell não dependem da cascata antiga.
 A superfície dos jogos permanece montada durante a navegação. Telas podem ser
 ocultadas; prompts e efeitos pertencem ao mesmo escopo, inclusive hosts criados
 dinamicamente. Trocar tela não recria socket, partida, captura ou player.
-As apresentações dos marcos 2/3 ainda aguardam reintegração; existência de fonte
+A apresentação da chamada está reintegrada no Marco 2, aprovado em 25/10/2026.
+Os recursos avançados do Marco 3 ainda aguardam reintegração; existência de fonte
 não significa que o recurso esteja montado. Consulte o checkpoint da migração.
 
 ## Navegação, conta e comunicação
@@ -109,6 +110,24 @@ Protocolos P2P/SFU validam SDP, ICE, respostas e catálogos antes de negociar.
 `voice/stage.ts` projeta grade/foco e preferências de exibição por participante.
 `voice/stream-controls.ts` controla cada transmissão. Projetores de configurações
 delegam aos donos de captura/reprodução; não abrem outra mídia.
+
+O foco manual pertence ao stage por par participante/tipo (pessoa ou tela).
+Abrir chat/chamada pertence à navegação; isso não entra nem sai da voz.
+O shell mantém uma única conversa/compositor e a superfície da chamada montados.
+Os cartões reservam slots; o mesmo MediaTile transfere seu contêiner entre esses
+slots e os hosts do Trono, conservando o BorrowedVideo e sua stream. O evento
+local trono:call-hosts apenas avisa que os slots estão disponíveis.
+Os artigos dos cartões também são permanentes: portais conservam seu conteúdo
+quando o host muda entre grade, quadro em foco e faixa de miniaturas. moveBefore
+preserva o estado DOM onde disponível; o fallback restaura o foco de teclado.
+A seleção chama os comandos existentes de interesse/foco no gesto original.
+
+settings/initialize.ts prepara o controlador antes da voz, sem montar a view
+antiga nem adquirir dispositivos. media-settings.tsx apresenta os controles dos
+donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
+getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
+Escape fecha primeiro o menu/diálogo ou a tela cheia; outro Escape pode retornar
+à grade. O dono media-focus também encerra explicitamente fullscreen nativo.
 
 Há um dono por recurso. Consumidores emprestados não param tracks ou fecham
 contextos. Saída, cancelamento e troca de identidade invalidam operações antigas;

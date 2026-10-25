@@ -13,6 +13,11 @@ import type { Messenger } from '../../lib/messenger/controller';
 import type { GameLibrary } from '../../lib/games/library';
 import type { CallToolbar } from '../../lib/voice/toolbar';
 import type { CallNavigation } from '../../lib/voice/navigation';
+import type { SettingsController } from '../../lib/settings/controller';
+import type { VoiceSettings } from '../../lib/voice/settings';
+import type { AudioPreferences } from '../../lib/voice/audio-preferences';
+import type { ConnectionDiagnostics } from '../../lib/voice/connection-diagnostics';
+import type { CallStage } from '../../lib/voice/stage';
 import type { VoiceRuntime } from '../../lib/voice/runtime';
 
 export type ApplicationServices = Window & {
@@ -32,12 +37,21 @@ export type ApplicationServices = Window & {
   TronoChatMessages: ChatMessagesController;
   TronoDirectMessages: Messenger;
   TronoGameLibrary: GameLibrary;
+  TronoCallSettings: SettingsController;
+  TronoVoiceSettings: VoiceSettings;
+  TronoAudioPreferences: AudioPreferences;
+  TronoConnectionDiagnostics: ConnectionDiagnostics;
+  TronoCallStage: CallStage;
   TronoCallToolbar: CallToolbar;
   TronoCallNavigation: CallNavigation;
   TronoSocial: VoiceRuntime;
   TronoChatHub: { switchChannel(id: string, options?: { connectVoice?: boolean }): Promise<void> };
   TronoMessenger: { joinChannel(id: string, options?: { showText?: boolean }): Promise<void> };
-  TronoDesktop?: { readonly version?: string };
+  TronoDesktop?: {
+    readonly version?: string;
+    getMediaPermissions?(): Promise<string[]>;
+    resetMediaPermissions?(): Promise<unknown>;
+  };
 };
 let current: ApplicationServices | null = null;
 const listeners = new Set<() => void>();

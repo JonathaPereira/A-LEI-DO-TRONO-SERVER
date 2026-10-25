@@ -1,13 +1,14 @@
 'use client';
 import { useSyncExternalStore } from 'react';
 import type { ScreenOptionsClient } from '../../lib/voice/screen-options';
+import styles from '../application/media-dialog.module.css';
 import { useNativeDialog } from './use-native-dialog';
 
 export function ScreenOptionsDialog() {
   return (
     <dialog
       id="screenOptionsDialog"
-      className="feature-dialog share-options-dialog"
+      className={styles.dialog}
       aria-labelledby="screenOptionsTitle"
     />
   );
@@ -30,7 +31,9 @@ export function ScreenOptionsContent({
       <p id="shareOptionsNote">
         {state.limited
           ? 'O limite de consumo atual permite até 720p / 30 FPS.'
-          : 'Escolha a qualidade; em seguida, o navegador perguntará qual tela ou aba compartilhar.'}
+          : desktop
+            ? 'Escolha a qualidade; em seguida, selecione a tela ou janela no aplicativo.'
+            : 'Escolha a qualidade; em seguida, o navegador perguntará qual tela ou aba compartilhar.'}
       </p>
       <form
         id={'screenOptionsForm'}

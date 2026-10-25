@@ -20,7 +20,25 @@ import { ArrowUpRight } from '@phosphor-icons/react/dist/csr/ArrowUpRight';
 import { ArrowLeft } from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import { X } from '@phosphor-icons/react/dist/csr/X';
 import { Check } from '@phosphor-icons/react/dist/csr/Check';
+import { VideoCamera } from '@phosphor-icons/react/dist/csr/VideoCamera';
+import { VideoCameraSlash } from '@phosphor-icons/react/dist/csr/VideoCameraSlash';
+import { MonitorArrowUp } from '@phosphor-icons/react/dist/csr/MonitorArrowUp';
+import { SquaresFour } from '@phosphor-icons/react/dist/csr/SquaresFour';
+import { ArrowsOut } from '@phosphor-icons/react/dist/csr/ArrowsOut';
+import { SlidersHorizontal } from '@phosphor-icons/react/dist/csr/SlidersHorizontal';
+import { DotsThree } from '@phosphor-icons/react/dist/csr/DotsThree';
+import { PhoneDisconnect } from '@phosphor-icons/react/dist/csr/PhoneDisconnect';
+import { ArrowsClockwise } from '@phosphor-icons/react/dist/csr/ArrowsClockwise';
 const icons = {
+  camera: VideoCamera,
+  cameraOff: VideoCameraSlash,
+  screen: MonitorArrowUp,
+  grid: SquaresFour,
+  expand: ArrowsOut,
+  settings: SlidersHorizontal,
+  more: DotsThree,
+  disconnect: PhoneDisconnect,
+  swap: ArrowsClockwise,
   crown: CrownSimple,
   chat: ChatsCircle,
   games: GameController,

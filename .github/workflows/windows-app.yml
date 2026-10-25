@@ -158,7 +158,7 @@ jobs:
       - name: Verify call workspace and profile layouts
         shell: pwsh
         run: |
-          npm test -- --suite all --filter '(?:application-shell-browser\.cjs|chat-composer-browser\.cjs|channels-browser\.cjs|app-layout-browser\.js|profile-media-browser\.js|call-controls-browser\.js)$'
+          npm test -- --suite all --filter '(?:application-call-browser\.cjs|application-shell-browser\.cjs|chat-composer-browser\.cjs|channels-browser\.cjs|app-layout-browser\.js|profile-media-browser\.js|call-controls-browser\.js)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
           npm test -- --suite all --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'
@@ -185,6 +185,7 @@ jobs:
             artifacts/splendor/*.png
             artifacts/love-letter/*.png
             artifacts/ticket-to-ride/*.png
+            artifacts/frontend-reset/call-qa
             artifacts/frontend-reset/auth-regression/*.png
   windows:
     name: Real Windows media and desktop
@@ -221,7 +222,7 @@ jobs:
           }
         working-directory: electron
       - name: Verify call controls preserve live desktop media across layouts
-        run: npm test -- --suite all --filter '(?:auth-desktop\.cjs|desktop-window-start\.cjs|throne-court-layout\.cjs|desktop-call-layout\.js)$'
+        run: npm test -- --suite all --filter '(?:application-call-desktop\.cjs|auth-desktop\.cjs|desktop-window-start\.cjs|throne-court-layout\.cjs|desktop-call-layout\.js)$'
       - name: Verify installed Electron updater contracts
         # GenericProvider is loaded from electron/node_modules, installed in this job.
         run: npm test -- --suite all --filter '(?:desktop-updates\.js)$'
@@ -343,6 +344,7 @@ jobs:
             artifacts/throne-private-hit-*.png
             artifacts/court-fullscreen-native-state.json
             artifacts/windows-*.log
+            artifacts/frontend-reset/call-qa
             artifacts/frontend-reset/auth-regression/*.png
             electron/artifacts/native-audio-build.log
   delivery:

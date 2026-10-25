@@ -41,6 +41,7 @@ import { initializeTicketToRide } from '../lib/games/ticket-to-ride';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
 import { initializeNexus } from '../lib/games/nexus';
 import { initializeGameLibrary } from '../components/games/library-runtime';
+import { prepareCallSettings } from '../lib/settings/initialize';
 import { initializeCallToolbar } from '../components/voice/call-toolbar-runtime';
 import { initializeCallNavigation } from '../components/navigation/call-navigation-runtime';
 import { initializeCallStage } from '../components/voice/call-stage-runtime';
@@ -67,6 +68,7 @@ export function ApplicationRuntime() {
       initializeCommunity(window);
       initializePortal(window);
       initializeNoiseProcessors(window);
+      prepareCallSettings(window);
       initializeVoiceRuntime(window);
       Object.assign(window, { TronoRules: throneRules });
       initializeThroneLobby(window);

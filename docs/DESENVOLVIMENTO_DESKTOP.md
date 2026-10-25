@@ -59,6 +59,15 @@ Declare equipamento, serviço ou runtime ausente. Não trate fixture como aceite
 do caminho nativo. Evidências da reconstrução ficam em artifacts/frontend-reset;
 MIGRACAO informa o que foi realmente concluído.
 
+Para a chamada reconstruída, selecione application-call-browser e
+application-call-desktop com --filter nas respectivas suítes. O primeiro usa
+contas descartáveis, áudio sintético e canvas transmitidos por WebRTC; o segundo
+usa main/preload reais e captura uma BrowserWindow controlada de QA. O microfone
+do teste desktop é sintético e suas permissões são pré-concedidas somente no
+perfil temporário. Não substitui teste com equipamento nem áudio por aplicativo.
+Capturas locais e logs ficam em artifacts/frontend-reset/call-qa e call-*.log.
+Os testes não encerram o Electron do usuário nem reutilizam seu perfil.
+
 ## Operações especiais
 
 desktop:build:native exige MSVC, Windows SDK e CMake; Remote Input pode exigir

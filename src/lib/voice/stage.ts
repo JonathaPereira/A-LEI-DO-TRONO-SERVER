@@ -79,8 +79,13 @@ export function createCallStage(options: StageOptions) {
       focused = null;
     }
     generation = source.generation;
-    const selected = source.participants.find(p => p.id === focused?.id);
-    if (!source.joined || !selected || (focused?.kind === "screen" && (!selected.screen || !selected.watching))) focused = null;
+    const selected = source.participants.find((p) => p.id === focused?.id);
+    if (
+      !source.joined ||
+      !selected ||
+      (focused?.kind === 'screen' && (!selected.screen || !selected.watching))
+    )
+      focused = null;
     const ids = new Set(source.participants.map((p) => p.id));
     for (const id of layouts.keys()) if (!ids.has(id)) layouts.delete(id);
     for (const id of collapsed)
@@ -231,7 +236,7 @@ export function createCallStage(options: StageOptions) {
     setLayout,
     focus(id: string, kind: 'person' | 'screen') {
       if (disposed) return;
-      const person = getSnapshot().participants.find(p => p.id === id);
+      const person = getSnapshot().participants.find((p) => p.id === id);
       if (!person || (kind === 'screen' && (!person.screen || !person.watching))) return;
       focused = Object.freeze({ id, kind });
       refresh();

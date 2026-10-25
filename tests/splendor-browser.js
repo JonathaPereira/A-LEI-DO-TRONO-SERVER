@@ -176,9 +176,8 @@ test(
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoAuth?.ready);
             await page.evaluate(() => window.TronoAuth.ready);
-            await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
-            if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-              await page.evaluate(() => window.TronoCallToolbar.activate('joinVoiceBtn'));
+            await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+            await page.getByRole('button', { name: 'Entrar na voz de Jogos', exact: true }).click();
             await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
             await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
             await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);

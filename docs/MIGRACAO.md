@@ -1,6 +1,6 @@
 # Reconstrução do frontend
 
-Atualizado em 24/10/2026. Este é o plano de execução e o checkpoint para qualquer
+Atualizado em 25/10/2026. Este é o plano de execução e o checkpoint para qualquer
 agente continuar sem o histórico do chat. Produto e referência visual ficam em
 [UX_COMUNICACAO.md](UX_COMUNICACAO.md); donos em
 [ARQUITETURA.md](ARQUITETURA.md); ambiente em
@@ -10,11 +10,12 @@ agente continuar sem o histórico do chat. Produto e referência visual ficam em
 
 - Reinício solicitado pelo usuário após perda das alterações anteriores.
 - Base: `f343049`. Contribuição: `codex/frontend-rebuild`; main permanece intacta.
-- Implementação local autorizada; commit, push, PR, instalações nativas e deploy não fazem
-  parte desta autorização.
+- Implementação local autorizada. Em 25/10/2026, o usuário aprovou o Marco 2 e
+  autorizou o commit de todas as alterações atuais para separar o Marco 3.
+  Push, PR, instalações nativas e deploy continuam fora desta autorização.
 - `package-lock.json` já tinha alterações ao iniciar: preservá-las.
-- O primeiro ponto de parada é o aceite humano do Marco 1. Marco 2 e Marco 3
-  exigem os aceites anteriores; não registrar aceites ainda não recebidos.
+- Marcos 1 e 2 receberam aceite. Marco 3 autorizado para implementação; seu
+  aceite visual e a verificação integrada final continuam pendentes.
 - O corte de apresentação é parcial. Estilos necessários foram extraídos; views
   antigas sem montagem permanecem até a revisão semântica de suas dependências.
 
@@ -148,7 +149,7 @@ com precisão.
   validados por esse cenário; permanecem no Marco 2.
 - REA CLI 6.7.0: registro alinhado, MCP ausente; janela isolada recuperada para
   o Marco 2. Nova inspeção autenticada de canais em rea-marco2-inspection.json.
-  Chamada ativa/grade/foco/compartilhamento ainda aguardam observação específica.
+  A chamada ativa foi observada depois; veja o checkpoint do Marco 2 abaixo.
 - A revisão automática recusou exclusão de views por checagem só de imports.
   Nenhuma exclusão dessas views foi executada. Auditoria adicional de 11 views
   em 901 fontes cobre exports, IDs, eventos, fachadas, URLs, workers e IPC:
@@ -162,28 +163,135 @@ com precisão.
   Electron; typecheck, format check e build passaram. Dois casos públicos novos
   em application-shell-browser; auth-desktop adaptado e ambos ligados ao CI.
   Logs/capturas em artifacts/frontend-reset/auth-*.log e auth-regression/.
-- Direção visual do Marco 1 aceita. Próximo marco: observar chamada ativa por REA
-  e validar mídia no Electron. Marcos 2/3 e corte final continuam pendentes.
+- Direção visual do Marco 1 aceita. Marco 2 implementado após observação da
+  chamada por REA, com captura nativa validada e aceite recebido em 25/10.
+  O corte final continua pendente no Marco 3.
 
-## Marco 2 — preparação em andamento
+## Marco 2 — aprovado em 25/10/2026
 
-O usuário confirmou o Marco 1 com “agora sim” após as correções. A janela isolada
-Discord/CDP 9333 está aberta e autenticada. Pedido pendente: o usuário preparar
-uma chamada de teste que controla, idealmente duas pessoas e uma transmissão,
-para observar o comportamento exigido antes da implementação visual.
+Marco 1 aprovado pelo usuário com “agora sim”. O commit local e1070da registra
+esse marco. O usuário aprovou o resultado do Marco 2 após testar a interface e
+solicitou o commit de todas as alterações atuais na mesma branch, estabelecendo
+uma referência antes do Marco 3. Consultar o histórico Git para o hash do commit.
 
-Baseline dos donos preservados: 56/56 casos de stage, toolbar, ciclo de vida,
-configurações e foco passaram; artifacts/frontend-reset/call-baseline.log.
-Nenhuma nova apresentação de chamada foi implementada antes da referência.
+### Referência e implementação
 
-| Integração existente               | Responsabilidade a preservar no novo desenho                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| voice/stage.ts                     | Participantes, streams emprestadas, interesse, volumes e moderação.                                                                      |
-| voice/toolbar.ts                   | Ações no gesto original, estado e capacidades reais da plataforma.                                                                       |
-| voice/settings.ts e screen-options | Dispositivos, saída, ganhos e preferências de transmissão.                                                                               |
-| desktop/capture.ts                 | Seleção/cancelamento e integração nativa; um único wrapper de captura.                                                                   |
-| components/voice/media-tile.tsx    | Players estáveis; destino DOM hoje depende de hosts por ID. Adaptar a apresentação sem duplicar vídeo ou interromper tracks emprestadas. |
+A chamada preparada pelo usuário foi observada com REA: quatro pessoas, duas
+telas, grade e foco em pessoa/transmissão. Playwright realizou as trocas de foco;
+REA inspecionou/capturou os estados. Os menus vieram das capturas do usuário.
+IDs, fatos, adaptações e lacunas estão no documento UX. Não há pedido pendente
+para repetir aquela preparação.
 
-Próximo passo: REA passivo na chamada preparada; separar fatos, inferências e
-lacunas na seção Discord do contrato UX. Depois, reconstruir grade/foco,
-controles, menus e seleção de captura com Phosphor e a identidade já aprovada.
+Em 25/10, a janela isolada havia sido fechada (CDP 9333 recusou conexão).
+Foi reaberta com o mesmo perfil e a sessão autenticada recuperada foi inspecionada
+com REA. Isso não substitui as evidências anteriores da chamada.
+
+- Grade responsiva com pessoa e tela separadas, foco manual e miniaturas, barra
+  Phosphor, conversa lateral recolhível e acesso às configurações.
+- Um único compositor/conversa e o mesmo player por mídia permanecem montados.
+  Os contêineres dos players passam entre shell e hosts dos jogos sem recaptura.
+- Menus de voz e transmissão têm volumes independentes, silenciar local,
+  assistir/parar, câmera, prévia local, troca de fonte e moderação existente.
+  Permissões exibidas continuam derivadas do stage e verificadas no servidor.
+- Configurações apresentam dispositivos, ganhos, processamento, qualidade,
+  áudio, permissões e diagnóstico. O seletor conserva o dono nativo existente.
+- Corrigidos: player da transmissão preso no host dos jogos; grade cortada com
+  seis cartões; miniaturas abaixo da área útil; Escape fechando menu e foco ao
+  mesmo tempo; saída explícita do fullscreen nativo; chaves de diagnóstico.
+- A regressão encontrou hover oscilante no resultado do Love Letter com movimento
+  reduzido: posições alternavam 34/36 px a cada frame. Um teste mínimo confirmou
+  a causa. CSS agora mantém esse botão imóvel somente nessa preferência; o
+  visual normal e as declarações anteriores dos jogos permanecem preservados.
+- Fixtures de Azul/Splendor/Love Letter passaram a entrar na voz pela navegação
+  pública, preservando jogadas, segredos, reconexão, placares e asserts de mídia.
+  Removida instrumentação temporária do resultado de Love Letter.
+
+| Dono                                                  | Responsabilidade                                                           |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| voice/stage.ts                                        | Participantes, foco pessoa/tela, streams emprestadas, volumes e moderação. |
+| voice/navigation.ts                                   | Página aberta independente da participação em voz.                         |
+| voice/toolbar.ts                                      | Ações no gesto original e capacidades reais da plataforma.                 |
+| voice/settings.ts e screen-options                    | Dispositivos, ganhos e preferências de transmissão.                        |
+| settings/initialize.ts                                | Preparação funcional sem montar a apresentação antiga.                     |
+| desktop/capture.ts                                    | Seleção/cancelamento nativo; único wrapper de captura.                     |
+| components/voice/media-tile.tsx                       | Player permanente transferido entre hosts do shell e jogos.                |
+| components/application/call*.tsx e media-settings.tsx | Nova apresentação, slots e assinaturas; sem novos donos de captura/rede.   |
+
+### Validação concluída
+
+| Verificação                                   | Resultado e evidência em artifacts/frontend-reset                     |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| Core determinístico completo                  | 1.403/1.403; call-core.log.                                           |
+| Chamada e autenticação no navegador           | 4/4; call-browser-regression.log.                                     |
+| Jogos integrados e hover reduzido             | 15/15; call-games-final.log.                                          |
+| Electron real: chamada/captura e autenticação | 2/2; call-desktop-regression.log.                                     |
+| Tipos, formatação e exportação estática       | Passaram; call-typecheck.log, call-format-check.log e call-build.log. |
+
+Playwright conferiu 1440×900, 1024×768, 768×1024 e 390×844. Conferiu também
+quatro contas e duas transmissões via WebRTC, foco, volumes separados, Escape,
+fullscreen e continuidade em chat/catálogo/Trono/configurações. Capturas em
+call-qa; não são snapshots visuais aprovados.
+
+No Electron, main/preload e captura de uma BrowserWindow controlada são reais.
+Cancelamento inicial e de troca de fonte, pausar/retomar prévia, fullscreen,
+navegação, parar tela e sair da voz preservam/liberam as tracks esperadas.
+Microfone é sintético; permissões são pré-concedidas apenas no perfil descartável.
+Não comprova equipamento físico, áudio por aplicativo ou qualidade pela internet.
+Os cenários dos jogos que simulam a ponte Windows continuam identificados como
+fixtures; não são os dois cenários de Electron real da tabela.
+
+Testes novos constam de tests/suites.json e das seleções existentes no CI; nenhuma
+nova entrada npm foi criada. Artefatos de falha do CI incluem call-qa. Pipeline
+remota não foi executada/publicada. Revisão local incluiu diff e arquivos novos;
+backend, preload, armazenamento e protocolos foram preservados.
+
+### Ajustes após o feedback visual de 25/10
+
+O usuário gostou da direção e pediu mais espaço para a transmissão, foco por
+clique no quadro e um cenário com dez pessoas. Ajustes incorporados sem avançar
+para o Marco 3:
+
+- Cabeçalhos compactos na chamada e miniaturas em faixa horizontal no foco.
+  A transmissão conserva sua proporção e não perde conteúdo por recorte.
+- O quadro inteiro é acionável por mouse, toque e teclado. Clicar no quadro
+  ampliado volta à grade; uma transmissão ainda não assistida abre e recebe foco.
+  Controles e menus continuam separados da área de seleção.
+- Cartões, vídeos e streams mantêm identidade ao passar entre grade/foco/faixa.
+  Recepção, socket, captura e volumes continuam nos donos anteriores.
+- Cenário descartável real da aplicação com dez contas, quatro câmeras
+  ilustradas e duas transmissões sintéticas via WebRTC local. Contas são
+  preparadas em duas levas antes de conectar clientes, sem alterar o limite de
+  cadastro da produção. Não é teste de capacidade de rede/hardware de dez pessoas.
+- QA em 1920×1080, 1440×900, 1024×768, 768×1024 e 390×844. Doze quadros cabem
+  em quatro colunas/três linhas no desktop; a faixa do foco rola sem mover o
+  quadro principal. Identidade do player e foco de teclado foram conferidos.
+- Validação desta rodada: 41/41 contratos pertinentes em call-space-models.log;
+  2/2 fluxos da chamada em call-ten-people.log; 8/8 verificações de autenticação
+  e navegação/Corte em call-space-navigation.log; 1/1 fluxo de captura no Electron
+  real em call-space-desktop.log. typecheck, format check e build passaram.
+  Não foi repetida a suíte core completa nesta rodada de apresentação.
+
+As imagens de demonstração ficam em artifacts/frontend-reset/call-qa:
+grid-ten-people.png, focus-ten-people.png, camera-focus-ten-people.png e versões
+com a largura no nome. Fontes e teste permanecem na aplicação; as imagens são
+evidência de QA, sem novos snapshots dourados ou comandos npm. Após esses
+ajustes, o usuário confirmou o aceite final do Marco 2; Marco 3 ainda não aprovado.
+
+### Próximo passo e pendências
+
+1. Registrar as alterações aprovadas do Marco 2 no commit solicitado, antes de
+   introduzir alterações do Marco 3. Nenhuma publicação foi autorizada.
+2. Executar Marco 3: perfis, arquivos, soundboard, clipes, gravação, Remote PC
+   e administração, reutilizando os donos preservados.
+3. Atualizar regressões antigas que ainda dependem dos layouts retirados à medida
+   que seus recursos forem reintegrados. Não retirar cobertura útil para obter CI
+   verde. A suíte completa browser/desktop e a pipeline inteira ainda não foram
+   declaradas aprovadas.
+4. Concluir revisão semântica e corte das views antigas fora dos jogos, mantendo
+   a matriz de preservação atualizada. A auditoria anterior é indício, não prova
+   suficiente para excluir fontes. Não recriar uma árvore de frontend legado.
+5. Registrar verificações de hardware/áudio nativo ainda ausentes quando houver
+   ambiente pertinente, e concluir a verificação integrada dos recursos do Marco 3.
+
+Evidências temporárias ficam em artifacts/frontend-reset; plano, andamento e
+pendências continuam neste arquivo. Marcos 1 e 2 aprovados; Marco 3 pendente.

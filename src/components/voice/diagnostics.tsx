@@ -228,9 +228,11 @@ export function ConnectionIndicator({ client }: { client: ConnectionDiagnostics 
 export function ConnectionSettings({
   client,
   desktop,
+  showLauncher = true,
 }: {
   client: ConnectionDiagnostics;
   desktop: boolean;
+  showLauncher?: boolean;
 }) {
   const state = useDiagnostics(client),
     infra = state.infrastructure;
@@ -255,7 +257,7 @@ export function ConnectionSettings({
       <small id="adaptiveQualityStatus" className="settings-context-help">
         {state.adaptation}
       </small>
-      {!desktop && (
+      {!desktop && showLauncher && (
         <div className="settings-action-grid">
           <DiagnosticLauncher client={client} />
         </div>

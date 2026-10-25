@@ -24,6 +24,7 @@ interface MessengerRuntime extends Window {
     switchChannel(id: string): Promise<unknown>;
   };
   TronoPortal: { showOnly(id: string): void };
+  TronoCallNavigation?: { showChat(): void };
   TronoMessenger?: {
     open: ReturnType<typeof createMessenger>['open'];
     openFriends: ReturnType<typeof createMessenger>['openFriends'];
@@ -54,6 +55,7 @@ export function initializeMessenger(target: Window): () => void {
     foreground: () => doc.hasFocus() && doc.visibilityState === 'visible',
     openLogin: () => runtime.TronoAuth.open('login'),
     beforeOpen() {
+      runtime.TronoCallNavigation?.showChat();
       runtime.TronoSocial.toggleTelemetry(false);
       if (doc.body.classList.contains('chat-only-active'))
         runtime.TronoSocial.toggleTextChat(false);

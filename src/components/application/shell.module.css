@@ -1297,3 +1297,84 @@
   flex-direction: column;
   gap: 5px;
 }
+
+.conversationLayout {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.conversationLayout[hidden] {
+  display: none;
+}
+
+.conversationLayout {
+  position: relative;
+  overflow: hidden;
+}
+.conversationPane {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+.conversationPane[hidden] {
+  display: none !important;
+}
+.conversationLayout[data-call='true'] > .conversationPane {
+  flex: 0 0 320px;
+  border-left: 1px solid #2d322d;
+  background: #1a1e20;
+}
+.closeCallChat {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: #202820;
+  color: #aebba9;
+  padding: 6px;
+  border-radius: 5px;
+}
+@media (max-width: 1050px) {
+  .conversationLayout[data-call='true'] > .conversationPane {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(360px, 100%);
+    max-width: 100%;
+    z-index: 4;
+    box-shadow: -12px 0 40px #0006;
+  }
+}
+
+.callSummary > button {
+  width: 100%;
+  padding: 4px 0 !important;
+  color: #96b6a1;
+  background: transparent !important;
+  font-size: 11px;
+  text-align: left;
+}
+.callSummary > div > button {
+  background: #26302b;
+  color: #bdcbbd;
+  border: 1px solid #3a443a;
+  border-radius: 5px;
+}
+.callSummary > div > button[aria-pressed='true'] {
+  color: #d6b779;
+  background: #38382d;
+}
+.callSummary > div > button:last-child {
+  color: #e29a97;
+}
+
+.app[data-call='true'] .header {
+  height: 56px;
+}
+.app[data-call='true'] .headerText small {
+  display: none;
+}

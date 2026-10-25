@@ -1,6 +1,7 @@
 'use client';
 import { useLayoutEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
+import type { Portal } from '../../lib/navigation/portal';
 import { ParticipantCard } from './participant-card';
 import { MediaTile } from './media-tile';
 import type { StageRuntime } from './media-tile';
@@ -16,6 +17,9 @@ export interface StageHosts {
 export function CallStageView({ runtime, hosts }: { runtime: StageRuntime; hosts: StageHosts }) {
   const client = runtime.TronoCallStage;
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
+  const portal = (runtime as StageRuntime & { TronoPortal: Portal }).TronoPortal;
+  const route = useSyncExternalStore(portal.subscribe, portal.getSnapshot, portal.getSnapshot);
+  const external = !['setupScreen', 'roomScreen', 'gameScreen'].includes(route.screen);
   useLayoutEffect(() => {
     for (const [name, on] of Object.entries({
       'has-camera': state.hasCamera,
@@ -89,6 +93,7 @@ export function CallStageView({ runtime, hosts }: { runtime: StageRuntime; hosts
           kind="camera"
           snapshot={state}
           runtime={runtime}
+          external={external}
         />
       ))}
       {state.screens.map((p) => (
@@ -98,6 +103,7 @@ export function CallStageView({ runtime, hosts }: { runtime: StageRuntime; hosts
           kind="screen"
           snapshot={state}
           runtime={runtime}
+          external={external}
         />
       ))}
     </>

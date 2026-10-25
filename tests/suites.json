@@ -236,7 +236,8 @@
     "tests/ticket-to-ride-browser.js",
     "tests/voice-moderation-browser.js",
     "tests/voice-reception-browser.js",
-    "tests/workspace-header-browser.cjs"
+    "tests/workspace-header-browser.cjs",
+    "tests/application-call-browser.cjs"
   ],
   "desktop": [
     "tests/application-audio-native.cjs",
@@ -258,6 +259,7 @@
     "tests/desktop-window-start.cjs",
     "tests/noise-processors-native.cjs",
     "tests/clips-buffer.js",
-    "tests/desktop-updates.js"
+    "tests/desktop-updates.js",
+    "tests/application-call-desktop.cjs"
   ]
 }

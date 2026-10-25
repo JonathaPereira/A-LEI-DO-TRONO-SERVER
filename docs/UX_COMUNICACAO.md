@@ -1,6 +1,6 @@
 # Produto e referência visual
 
-Atualizado em 24/10/2026. Contrato aprovado para a reconstrução. Plano e andamento:
+Atualizado em 25/10/2026. Contrato aprovado para a reconstrução. Plano e andamento:
 [MIGRACAO.md](MIGRACAO.md). Este arquivo substitui planos visuais separados.
 
 ## Experiência
@@ -25,6 +25,16 @@ Atualizado em 24/10/2026. Contrato aprovado para a reconstrução. Plano e andam
   e saída de voz são ações explícitas.
 - Grade/foco: grade inicial automática; quadro escolhido em destaque; demais em
   miniaturas; voltar restaura grade. Nova transmissão não toma o foco.
+- A conversa lateral pode ser recolhida sem sair da chamada; o compositor é o
+  mesmo da página de texto. Em telas estreitas ela ocupa um painel sobre a grade.
+  O destino do texto continua indicado no cabeçalho e respeita o canal selecionado.
+- Clicar no próprio quadro, usar Enter ou Espaço alterna seu foco; clicar no
+  quadro ampliado volta à grade. Menus e outros controles têm ações próprias.
+  Clicar numa transmissão ainda não assistida inicia a recepção e a coloca em foco.
+- No foco, miniaturas ocupam uma única faixa horizontal rolável. O cabeçalho
+  compacto deixa mais altura para a transmissão, mantendo sua imagem completa.
+  Com dez pessoas e duas telas, o desktop usa quatro colunas e três linhas na
+  grade; telas menores usam rolagem, mantendo os controles acessíveis.
 - Pessoa e transmissão têm quadros separados. Controles de microfone, áudio,
   câmera, compartilhar e sair permanecem acessíveis.
 - Desativar áudio silencia também o microfone efetivo; reativar respeita mute
@@ -71,10 +81,42 @@ A tentativa inicial de cenário encontrou a introdução do Chrome e falhou; ess
 resultado não é contado como captura concluída. A inspeção passiva posterior,
 já no alvo Discord, é a evidência bem-sucedida acima.
 
-Antes do Marco 2, observar especificamente chamada ativa, grade/foco e
-compartilhamento por REA. O material anterior não estabelece esses comportamentos
-nem qualidade de mídia. Registrar alvo, data, método, observações, inferências e
-lacunas nesta seção; capturas/relatórios ficam em artifacts.
+### Chamada ativa observada para o Marco 2
+
+Em 25/10/2026, Chrome Windows 156, Discord Web autenticado na janela isolada:
+o usuário preparou quatro participantes e duas telas. REA CLI inspecionou e
+capturou os estados; Playwright clicou nas superfícies para trocar o foco.
+Não houve recarga, entrada/saída de chamada ou alteração de volume pelo agente.
+
+| Evidência em artifacts/frontend-reset                                                                      | Fato observado                                                                                                |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| rea-call-focus.json — ev_ae13efbb331a217513e4d12ff0b43380f755397df52b20121a80a1bb723ab522                  | Grade com pessoas e transmissões como superfícies distintas; controles persistentes no rodapé.                |
+| rea-call-selected.json — ev_a82807579dfc6a41da32ad499f50b5629be91500d3fd7cd5085c7fadd8539e0d               | Tela em foco com proporção preservada e miniaturas; prévia local pode pausar enquanto a transmissão continua. |
+| rea-call-participant-screen.json — ev_8c6cd9afa93969bb9cbafecb49381682fde3f93f435a00558fda7605f90fa3e8     | Troca do foco para um participante.                                                                           |
+| rea-call-stream-restored-screen.json — ev_98a16f9d92b2ddd357dace81ead78d4e9b36c9be521bc624b49d211291f5be21 | Retorno à transmissão por clique.                                                                             |
+
+O usuário também forneceu duas capturas dos menus contextuais: pessoa tem
+volume da voz e ações locais separadas da moderação; transmissão tem volume
+próprio, silenciar e parar de assistir. Essas capturas são fornecidas pelo usuário,
+não uma inspeção REA dos menus. Não transportar nomes, mensagens ou imagens
+pessoais para fixtures ou assets do produto.
+
+Adaptações escolhidas para a Corte: cartões próprios em carvão/dourado,
+Phosphor, foco manual estável, pessoa e tela separadas, volumes independentes,
+acesso à conversa sem sair da voz. Escape retorna à grade no nosso produto.
+O experimento no Discord não demonstrou Escape como retorno à grade; essa é
+uma decisão nossa. Oferecer somente ações suportadas pelos contratos atuais.
+
+Lacunas: referência não comprova qualidade do transporte, captura física,
+cancelamento de seletor nativo, popout ou permissões do Electron. Não foi observado
+um novo início de compartilhamento pelo seletor do Discord. A integração nativa
+do projeto precisa de seu próprio teste real.
+
+Em 25/10, a janela já não respondia em CDP 9333; foi reaberta com o mesmo perfil.
+Inspeção autenticada atual: rea-resume-inspection.json —
+ev_ae32caf332c54b5c975b6744a81905e41b398a89f2922d17e3685546fd178044.
+Reabrir uma referência não equivale a reproduzir automaticamente a chamada
+anterior. As evidências acima permanecem a base observada do desenho.
 
 Use a skill reverse-engineer-anything para a referência distribuída/runtime.
 Código deste repositório é inspecionado por ferramentas normais. Ausência do MCP
@@ -88,5 +130,7 @@ cada marco. O usuário aprova Marco 1, depois Marco 2, depois Marco 3. Não avan
 o marco seguinte antes do aceite. Escolher poucas regressões visuais duráveis
 após aprovar o desenho. O usuário confirmou a direção visual do Marco 1 em
 24/10/2026; modal cortado e retorno indevido ao login apontados nessa avaliação
-foram corrigidos e verificados no navegador e Electron real. Marcos 2/3 ainda
-não receberam aceite.
+foram corrigidos e verificados no navegador e Electron real. O Marco 2 passou na
+validação local documentada na migração e recebeu aceite visual humano em
+25/10/2026, após os ajustes de espaço, foco por clique e cenário com dez pessoas.
+O Marco 3 está autorizado para implementação e ainda depende de aceite próprio.

@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
+import type { CallNavigationSnapshot } from '../../types/call-navigation';
 import type { PrimaryScreen, PortalSnapshot } from '../../lib/navigation/portal';
 import type { GameDestination } from '../../lib/games/library';
 import { Avatar } from '../profiles/avatar';
 import { AccountForm, AccountOverlay } from './auth';
+import { MediaSettings } from './media-settings';
+import { CallSurface } from './call';
 import { Conversation } from './conversation';
 import { useModel, useServices, type ApplicationServices } from './services';
 import { AppIcon as Icon } from './icons';
@@ -90,7 +93,17 @@ function CallSummary({ runtime }: { runtime: ApplicationServices }) {
         <Icon name="voice" size={14} />{' '}
         {runtime.TronoSocial.voiceJoining ? 'Conectando…' : 'Conectado à voz'}
       </span>
-      <small>{nav.voiceRoom?.name || 'Sala de jogo'}</small>
+      <button
+        type="button"
+        aria-label="Voltar à chamada"
+        onClick={() => {
+          runtime.TronoDirectMessages.close();
+          runtime.TronoPortal.showOnly('chatOnlyScreen');
+          runtime.TronoCallNavigation.showCall();
+        }}
+      >
+        {nav.voiceRoom?.name || 'Sala de jogo'}
+      </button>
       <div>
         {(['muteMicBtn', 'deafenVoiceBtn', 'joinVoiceBtn'] as const).map((id) => (
           <button
@@ -131,6 +144,8 @@ function Navigation({
   const open = async (id: string, voice = false) => {
     close();
     runtime.TronoDirectMessages.close();
+    if (voice) runtime.TronoCallNavigation.showCall();
+    else runtime.TronoCallNavigation.showChat();
     try {
       if (voice) runtime.TronoSocial.primeVoiceGesture();
       if (screen !== 'chatOnlyScreen') {
@@ -155,6 +170,7 @@ function Navigation({
           aria-label="Comunicação"
           onClick={() => {
             close();
+            runtime.TronoCallNavigation.showChat();
             void runtime.TronoPortal.openVoice();
           }}
         >
@@ -285,6 +301,14 @@ function Navigation({
           <strong>{account?.nickname || 'Visitante'}</strong>
           <small>{auth.user ? 'Sua conta' : auth.guest ? 'Convidado' : 'Bem-vindo ao M&N'}</small>
         </div>
+        <button
+          type="button"
+          aria-label="Voz e vídeo"
+          title="Voz e vídeo"
+          onClick={() => runtime.TronoCallSettings.open('audio')}
+        >
+          <Icon name="settings" size={18} />
+        </button>
         {account ? (
           <button
             aria-label="Sair da conta"
@@ -338,6 +362,43 @@ function Members({ runtime }: { runtime: ApplicationServices }) {
     </>
   );
 }
+function Communication({ runtime, members }: { runtime: ApplicationServices; members: boolean }) {
+  const nav = useModel(runtime.TronoCallNavigation),
+    route = useModel(runtime.TronoPortal);
+  const [chat, setChat] = useState(false);
+  return (
+    <>
+      <div className={styles.conversationLayout} data-call={nav.page === 'call'}>
+        <CallSurface
+          runtime={runtime}
+          visible={nav.page === 'call' && route.screen === 'chatOnlyScreen'}
+          chatOpen={chat}
+          toggleChat={() => setChat(!chat)}
+        />
+        <div className={styles.conversationPane} hidden={nav.page === 'call' && !chat}>
+          {nav.page === 'call' && (
+            <button
+              type="button"
+              className={styles.closeCallChat}
+              aria-label="Fechar conversa da chamada"
+              onClick={() => setChat(false)}
+            >
+              <Icon name="close" size={17} />
+            </button>
+          )}
+          <Conversation runtime={runtime} />
+        </div>
+        <aside
+          className={styles.members}
+          hidden={!members || nav.page === 'call'}
+          aria-label="Membros online"
+        >
+          <Members runtime={runtime} />
+        </aside>
+      </div>
+    </>
+  );
+}
 function Catalog({ runtime }: { runtime: ApplicationServices }) {
   return (
     <div className={styles.catalog}>
@@ -383,6 +444,11 @@ export function ApplicationShell({
     runtime?.TronoPortal.getSnapshot ?? empty,
     empty,
   );
+  const callNav = useSyncExternalStore<CallNavigationSnapshot | null>(
+    runtime?.TronoCallNavigation.subscribe ?? noop,
+    runtime?.TronoCallNavigation.getSnapshot ?? empty,
+    empty,
+  );
   const screen = portal?.screen ?? 'portalScreen',
     game = GAME_SCREENS.has(screen);
   const [drawer, setDrawer] = useState(false),
@@ -416,7 +482,12 @@ export function ApplicationShell({
   }, []);
   return (
     <>
-      <div className={styles.app} data-game={game} data-drawer={drawer}>
+      <div
+        className={styles.app}
+        data-game={game}
+        data-drawer={drawer}
+        data-call={screen === 'chatOnlyScreen' && callNav?.page === 'call'}
+      >
         <aside className={styles.sidebar} aria-label="Canais e conversas">
           {runtime && (
             <Navigation runtime={runtime} screen={screen} close={() => setDrawer(false)} />
@@ -459,14 +530,16 @@ export function ApplicationShell({
             <span className={styles.headerStatus} data-connected={portal?.connected}>
               {portal?.connected ? 'Conectado' : 'Conectando…'}
             </span>
-            <button
-              className={styles.iconButton}
-              aria-label={members ? 'Ocultar membros' : 'Mostrar membros'}
-              aria-expanded={members}
-              onClick={() => setMembers(!members)}
-            >
-              <Icon name="members" />
-            </button>
+            {!(screen === 'chatOnlyScreen' && callNav?.page === 'call') && (
+              <button
+                className={styles.iconButton}
+                aria-label={members ? 'Ocultar membros' : 'Mostrar membros'}
+                aria-expanded={members}
+                onClick={() => setMembers(!members)}
+              >
+                <Icon name="members" />
+              </button>
+            )}
           </header>
           <section
             id="portalScreen"
@@ -495,10 +568,7 @@ export function ApplicationShell({
           >
             {runtime && (
               <>
-                <Conversation runtime={runtime} />
-                <aside className={styles.members} hidden={!members} aria-label="Membros online">
-                  <Members runtime={runtime} />
-                </aside>
+                <Communication runtime={runtime} members={members} />
               </>
             )}
           </section>
@@ -520,7 +590,12 @@ export function ApplicationShell({
           <Icon name="back" size={15} /> Biblioteca de jogos
         </button>
       )}
-      {runtime && <AccountOverlay runtime={runtime} inline={screen === 'portalScreen'} />}
+      {runtime && (
+        <>
+          <AccountOverlay runtime={runtime} inline={screen === 'portalScreen'} />
+          <MediaSettings runtime={runtime} />
+        </>
+      )}
     </>
   );
 }

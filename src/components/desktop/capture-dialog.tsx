@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { AppIcon as Icon } from '../application/icons';
+import styles from '../application/media-dialog.module.css';
 import type { DesktopCapture } from '../../lib/desktop/capture';
 
 export function DesktopCaptureDialog({ controller }: { controller: DesktopCapture }) {
@@ -28,7 +30,7 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
   return (
     <dialog
       ref={dialog}
-      className="feature-dialog desktop-capture-dialog"
+      className={styles.dialog + ' ' + styles.capture}
       aria-label="Escolher tela ou janela"
       onCancel={(event) => {
         event.preventDefault();
@@ -39,7 +41,7 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
           controller.cancel();
       }}
     >
-      <header>
+      <header className={styles.header}>
         <div>
           <span className="section-eyebrow">CAPTURA LOCAL OU COMPARTILHAMENTO</span>
           <h2>Qual tela ou janela?</h2>
@@ -50,10 +52,10 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
           aria-label="Cancelar captura"
           onClick={() => controller.cancel()}
         >
-          ×
+          <Icon name="close" />
         </button>
       </header>
-      <div className="desktop-capture-sources">
+      <div className={styles.sources}>
         {request?.sources.map((source) => (
           <button
             key={source.id}
@@ -122,6 +124,9 @@ export function DesktopCaptureDialog({ controller }: { controller: DesktopCaptur
         {state.message}
       </p>
       <div className="dialog-actions">
+        <button type="button" onClick={() => controller.cancel()}>
+          Cancelar
+        </button>
         <button
           id="desktopCaptureConfirm"
           type="button"

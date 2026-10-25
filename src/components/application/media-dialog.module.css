@@ -1,0 +1,347 @@
+.dialog {
+  width: 620px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 40px);
+  padding: 28px;
+  border: 1px solid #34382f;
+  border-radius: 14px;
+  background: #1a1e20;
+  color: #e7e2d7;
+  box-shadow: 0 24px 100px #0009;
+  color-scheme: dark;
+  font:
+    13px/1.6 'Segoe UI',
+    Arial,
+    sans-serif;
+  overflow: auto;
+}
+.dialog,
+.dialog * {
+  box-sizing: border-box;
+}
+.dialog::backdrop {
+  background: #070a0cbb;
+  backdrop-filter: blur(4px);
+}
+.dialog [hidden] {
+  display: none !important;
+}
+.dialog h2 {
+  font:
+    500 26px/1.25 Georgia,
+    serif;
+  margin: 6px 0 16px;
+  color: #ecdfc8;
+}
+.dialog p,
+.dialog small {
+  color: #9ca69e;
+}
+.dialog small {
+  display: block;
+  font-size: 11px;
+}
+.dialog button,
+.dialog input,
+.dialog select {
+  font: inherit;
+}
+.dialog button {
+  cursor: pointer;
+  border: 1px solid #3b413a;
+  background: #2b322d;
+  color: #ded6c5;
+  border-radius: 6px;
+  padding: 9px 14px;
+}
+.dialog button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dialog button:focus-visible,
+.dialog select:focus-visible,
+.dialog input:focus-visible {
+  outline: 2px solid #d6b779;
+  outline-offset: 3px;
+}
+.dialog input[type='range'],
+.dialog input[type='checkbox'] {
+  accent-color: #d6b779;
+}
+.dialog input[type='range'] {
+  width: 100%;
+  cursor: pointer;
+}
+.dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  color: #c7ccbf;
+}
+.dialog label:has(input[type='checkbox']) {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+.dialog select {
+  border: 1px solid #3e453e;
+  background: #121719;
+  color: #e5dece;
+  border-radius: 6px;
+  min-height: 40px;
+  padding: 8px 10px;
+  max-width: 100%;
+  width: 100%;
+}
+.dialog select:disabled {
+  opacity: 0.55;
+}
+.dialog output {
+  color: #d6b779;
+  font-size: 12px;
+}
+.dialog :global(.settings-section-heading) {
+  margin-bottom: 20px;
+}
+.dialog :global(.settings-section-heading) strong {
+  display: block;
+  font:
+    500 22px/1.5 Georgia,
+    serif;
+  color: #e6d8bd;
+}
+.dialog :global(.settings-section-heading) > span {
+  font-size: 11px;
+  color: #98a295;
+}
+.dialog :global(.mn-gain-controls) {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333a31;
+  margin-bottom: 20px;
+}
+.dialog :global(.settings-context-help),
+.dialog :global(.noise-suppression-status) {
+  display: block;
+  margin: 12px 0 18px;
+}
+.dialog :global(.settings-action-grid) {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.dialog :global(.settings-secondary) {
+  margin: 8px 0;
+}
+.dialog :global(.voice-devices) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.dialog :global(.voice-devices) label {
+  min-width: 0;
+}
+.dialog :global(.voice-devices) label:only-child {
+  grid-column: 1/-1;
+}
+.dialog :global(.form-columns) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.dialog :global(.dialog-actions) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #33382f;
+}
+.dialog :global(.primary-button) {
+  background: #d6b779;
+  color: #211d15;
+  border-color: #d6b779;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+.header small {
+  letter-spacing: 1.6px;
+  color: #bfa46d;
+  font-size: 9px;
+}
+.header button {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  padding: 7px;
+  border: 0;
+}
+.settings {
+  width: 920px;
+  padding: 0;
+  overflow: hidden;
+}
+.settings > .header {
+  padding: 24px 28px 10px;
+  margin: 0;
+  border-bottom: 1px solid #30362f;
+}
+.settingsLayout {
+  display: flex;
+  min-height: 0;
+  height: min(620px, calc(100dvh - 165px));
+}
+.tabs {
+  width: 180px;
+  flex-shrink: 0;
+  background: #171b1c;
+  padding: 22px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+}
+.tabs button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: #a4afa4;
+}
+.tabs button[aria-current='page'] {
+  background: #30362c;
+  color: #dec48e;
+}
+.fields {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px 36px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-height: 44dvh;
+  overflow: auto;
+  margin: 16px 0;
+  padding: 4px;
+}
+.sources button {
+  padding: 6px;
+  min-width: 0;
+  text-align: left;
+  background: #141a1b;
+  border: 2px solid transparent;
+}
+.sources button[aria-pressed='true'] {
+  border-color: #d6b779;
+  background: #30382c;
+}
+.sources img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+  background: #0c1113;
+  border-radius: 4px;
+}
+.sources span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 6px 4px;
+}
+.capture {
+  width: 920px;
+}
+@media (max-width: 650px) {
+  .dialog {
+    padding: 20px;
+    max-height: calc(100dvh - 24px);
+  }
+  .settings {
+    padding: 0;
+  }
+  .settings > .header {
+    padding: 18px;
+  }
+  .settingsLayout {
+    flex-direction: column;
+    height: min(680px, calc(100dvh - 150px));
+  }
+  .tabs {
+    width: 100%;
+    flex-direction: row;
+    padding: 10px;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .tabs button {
+    padding: 8px;
+    font-size: 11px;
+    gap: 5px;
+  }
+  .fields {
+    padding: 20px;
+  }
+  .dialog :global(.voice-devices),
+  .dialog :global(.form-columns) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .sources {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.permissions {
+  padding-top: 20px;
+  margin-top: 24px;
+  border-top: 1px solid #394033;
+}
+.diagnostics {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid #394033;
+}
+.diagnostics dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.diagnostics dl > div {
+  background: #151c1d;
+  padding: 12px;
+  border-radius: 6px;
+}
+.diagnostics dt {
+  font-size: 10px;
+  color: #92a18d;
+}
+.diagnostics dd {
+  margin: 6px 0 0;
+  color: #e0d5bc;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.dialog :global(.settings-secondary) > svg {
+  vertical-align: middle;
+  margin-right: 5px;
+}
+@media (max-width: 500px) {
+  .diagnostics dl {
+    grid-template-columns: 1fr;
+  }
+}

@@ -240,3 +240,20 @@ test('reset clears viewport focus, keeps unrelated fullscreen and disposal remov
   await client.toggle(tile);
   assert.equal(tile.classList.contains('media-maximized'), false);
 });
+
+test('Escape exits native media fullscreen without detaching its borrowed video', async (t) => {
+  const { client, doc, tile, calls } = await setup(t);
+  tile.requestFullscreen = async () => {
+    doc.fullscreenElement = tile;
+    doc.dispatchEvent(new Event('fullscreenchange'));
+  };
+  await client.toggle(tile);
+  const event = new Event('keydown', { cancelable: true });
+  event.key = 'Escape';
+  doc.dispatchEvent(event);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(doc.fullscreenElement, null);
+  assert.equal(event.defaultPrevented, true);
+  assert.deepEqual(tile.video.srcObject, { borrowed: true });
+  assert(calls.includes('exit'));
+});

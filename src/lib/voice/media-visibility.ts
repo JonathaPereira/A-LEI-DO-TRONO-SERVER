@@ -8,7 +8,9 @@ export function createMediaVisibility(options: {
     async hide(id: string, kind: 'camera' | 'screen') {
       const tiles = [
         ...document.querySelectorAll<HTMLElement>(
-          kind === 'camera' ? '#socialPanel .camera-tile' : '#socialPanel .screen-share-tile',
+          kind === 'camera'
+            ? '#socialPanel .camera-tile, [data-call-video] .camera-tile'
+            : '#socialPanel .screen-share-tile, [data-call-video] .screen-share-tile',
         ),
       ].filter((tile) => tile.dataset.peer === id);
       const releases: Promise<void>[] = [];

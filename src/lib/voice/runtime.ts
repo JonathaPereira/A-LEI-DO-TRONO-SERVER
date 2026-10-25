@@ -847,7 +847,9 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
   }
   function fullscreenMedia(peerId: string, kind: 'screen' | 'camera' = 'screen') {
     const tiles = document.querySelectorAll<HTMLElement>(
-      kind === 'camera' ? '#socialPanel .camera-tile' : '#socialPanel .screen-share-tile',
+      kind === 'camera'
+        ? '#socialPanel .camera-tile, [data-call-video] .camera-tile'
+        : '#socialPanel .screen-share-tile, [data-call-video] .screen-share-tile',
     );
     const tile = [...tiles].find((t) => t.dataset.peer === peerId);
     if (tile) return callStage.fullscreen(tile);
@@ -1294,6 +1296,8 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     window.addEventListener('trono-auth-change', () => {
       if (volumeOwner !== window.TronoAuth.user?.id) {
         volumeOwner = window.TronoAuth.user?.id || null;
+        navigation.showChat();
+        toggleVoiceSettings(false);
         audioPlayback.clearVoiceGains();
       }
       renderVoiceRoster();
