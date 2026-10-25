@@ -27,6 +27,7 @@ export interface IdentityValidation {
   message?: string;
 }
 export interface PortalSnapshot {
+  readonly screen: PrimaryScreen;
   readonly name: string;
   readonly label: string;
   readonly readOnly: boolean;
@@ -40,6 +41,8 @@ export interface PortalSnapshot {
   readonly creditsOpen: boolean;
 }
 interface Options {
+  entry?: 'home' | 'community';
+  gameScreen?(): 'setupScreen' | 'roomScreen' | 'gameScreen';
   identity(): PortalIdentity;
   authReady: Promise<unknown>;
   subscribeIdentity(fn: () => void): () => void;
@@ -82,6 +85,7 @@ export function createPortal(options: Options) {
     promise: Promise<NameAvailability>;
   } | null = null;
   let state: PortalSnapshot = Object.freeze({
+    screen: 'portalScreen',
     name: '',
     label: 'Visitante',
     readOnly: true,
@@ -174,6 +178,10 @@ export function createPortal(options: Options) {
             : 'Entre ou jogue como convidado',
       }),
     });
+    if (options.entry === 'community') {
+      if (user) void openVoice();
+      else if (!guest) showPortal();
+    }
   }
   function queueNameCheck(value: unknown) {
     if (disposed) return;
@@ -298,6 +306,7 @@ export function createPortal(options: Options) {
   function present(screen: PrimaryScreen) {
     options.showScreen(screen);
     update({
+      screen,
       target: screen === 'portalScreen' ? 'home' : screen === 'chatOnlyScreen' ? 'voice' : 'game',
       ...(screen !== 'portalScreen' ? { creditsOpen: false } : {}),
     });
@@ -323,7 +332,7 @@ export function createPortal(options: Options) {
       return;
     }
     syncIdentity(state.name);
-    present('setupScreen');
+    present(options.gameScreen?.() ?? 'setupScreen');
     options.requestRooms();
     options.focusIdentity(true);
   }

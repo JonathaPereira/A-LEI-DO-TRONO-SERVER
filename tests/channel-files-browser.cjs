@@ -113,12 +113,13 @@ test(
       page.setDefaultTimeout(10000);
       page.on('pageerror', (error) => errors.push(error.message));
       await page.goto(origin);
-      await page.waitForFunction(() => window.TronoChannelFiles && window.TronoAuth.ready);
-      await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-livre' }));
+      await page.waitForFunction(() => window.TronoAuth?.ready);
+      await page.evaluate(() => window.TronoAuth.ready);
+      await page.locator('[data-channel=chat-livre]').click();
       await expect
         .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))
         .toBe('chat-livre');
-      await page.evaluate(() => window.TronoCommunityAdmin.openChannelFiles());
+      await page.getByRole('button', { name: 'Arquivos do canal', exact: true }).click();
       await expect(page.locator('#channelFileList .channel-file-card')).toHaveCount(2);
       await expect(page.locator('#channelFileList img')).toBeVisible();
       await expect(page.locator('#channelFileList')).toContainText('<img src=x onerror=alert(1)>');
@@ -156,7 +157,7 @@ test(
         .catch(() => {});
       held = null;
       await expect(page.locator('#channelFileList .channel-file-card')).toHaveCount(0);
-      await page.evaluate(() => window.TronoCommunityAdmin.openChannelFiles());
+      await page.getByRole('button', { name: 'Arquivos do canal', exact: true }).click();
       await expect(page.locator('#channelFileList .channel-file-card')).toHaveCount(2);
       await page.evaluate(() =>
         window.TronoChatHub.switchChannel('chat-jogos', { connectVoice: false }),

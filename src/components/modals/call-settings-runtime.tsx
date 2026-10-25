@@ -1,22 +1,13 @@
 'use client';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { createSettingsController } from '../../lib/settings/controller';
+import { prepareCallSettings } from '../../lib/settings/initialize';
+export { prepareCallSettings } from '../../lib/settings/initialize';
 import type { SettingsTopic } from '../../lib/settings/controller';
 import type { SettingsRuntime, Contents } from '../../lib/settings/runtime';
 import { CallSettings } from './call-settings';
 
 const installed = new WeakSet<Window>();
-export function prepareCallSettings(target: Window) {
-  const runtime = target as unknown as SettingsRuntime;
-  runtime.TronoCallSettings ??= createSettingsController(
-    !!runtime.TronoDesktop,
-    runtime.TronoStorage ?? localStorage,
-  );
-  if (runtime.TronoDesktop) runtime.TronoDesktopSettings = runtime.TronoCallSettings;
-  return runtime.TronoCallSettings;
-}
-
 /** Owns the settings shell; borrowed domain hosts never become React children. */
 export function initializeCallSettings(target: Window): void {
   const runtime = target as unknown as SettingsRuntime;

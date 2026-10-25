@@ -51,53 +51,6 @@ export function VoicePanel() {
               data-call-control-host="screenShareBtn"
               style={{ display: 'contents' }}
             />
-            <button
-              id="remotePcBtn"
-              className="royal-btn call-action"
-              type="button"
-              title="Compartilhar PC · Beta"
-            >
-              <span className="remote-hud-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  aria-hidden="true"
-                >
-                  <rect x="2" y="3" width="20" height="14" rx="2" />
-                  <path d="M8 22h8m-4-5v5m0-15v6m-3-3 3 3 3-3" />
-                </svg>
-              </span>
-              <span>Compartilhar PC</span>
-              <b className="remote-beta">Beta</b>
-            </button>
-          </div>
-          <div id="callReplayControls" className={'call-control-group call-control-clips'}>
-            <small>REPLAY</small>
-            <button
-              id={'clipToolbarNow'}
-              className={'royal-btn call-action'}
-              type={'button'}
-              disabled
-            >
-              <span className={'call-icon'}>✂</span>
-              <span id={'clipToolbarLabel'}>Clipar</span>
-            </button>
-            <button
-              className={'royal-btn call-action'}
-              data-open-clips={''}
-              type={'button'}
-              aria-label={'Abrir central de clipes'}
-            >
-              <span className={'call-icon'}>▦</span>
-              <span>
-                Meus clipes{' '}
-                <b id={'clipToolbarCount'} hidden>
-                  0
-                </b>
-              </span>
-            </button>
           </div>
           <div className={'call-control-group call-control-system'}>
             <small>SISTEMA</small>

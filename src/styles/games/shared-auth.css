@@ -1,0 +1,17 @@
+/* Game dependencies extracted from src/styles/auth/auth.css. */
+@scope (#gameSurface) {
+  .auth-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #becbd9;
+  }
+  .auth-check[hidden] {
+    display: none !important;
+  }
+  .auth-check input {
+    width: 16px;
+    height: 16px;
+  }
+}

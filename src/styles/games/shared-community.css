@@ -1,0 +1,59 @@
+/* Game dependencies extracted from src/styles/chat/community.css. */
+@scope (#gameSurface) {
+  :scope.guest-mode .chat-only-entry {
+    opacity: 0.8;
+  }
+  :scope.guest-mode #attachFileBtn {
+    display: none !important;
+  }
+  .community-call-notice.joined {
+    border-left-color: #63cfa0;
+  }
+  .community-call-notice.disconnected {
+    border-left-color: #e9a271;
+  }
+  .room-card > .room-presence-icons {
+    padding: 0 0 10px;
+  }
+  .call-alert-volume {
+    margin-top: 10px;
+  }
+  @media (min-width: 1280px) {
+    :scope.chat-only-active.community-open #socialPanel.social-chat-hub {
+      right: 260px !important;
+    }
+    :scope.chat-only-active .community-panel {
+      top: 72px;
+      right: 0;
+      bottom: 0;
+      width: 260px;
+      border: 0;
+      border-left: 1px solid #303b4d;
+      border-radius: 0;
+    }
+    :scope.chat-only-active.community-open .community-toggle {
+      right: 16px;
+      bottom: 15px;
+    }
+  }
+  @media (max-width: 1279px) {
+    :scope.chat-only-active .mn-channel .room-presence-icons {
+      display: none;
+    }
+  }
+  @media (max-width: 600px) {
+    .community-panel:not(.hidden) {
+      box-shadow: 0 0 0 100vmax #0008;
+    }
+  }
+  .room-seat .seat-num svg,
+  .room-seat .seat-num img {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .room-seat .seat-num svg {
+    color: #ddc382;
+  }
+}

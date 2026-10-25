@@ -350,7 +350,30 @@ test('hiding a docked screen delegates focus release before detaching its borrow
       calls.push('release');
     },
   }).hide('peer', 'screen');
-  assert.equal(selector, '#socialPanel .screen-share-tile');
+  assert(selector.includes('#socialPanel .screen-share-tile'));
+  assert(selector.includes('[data-call-video] .screen-share-tile'));
   assert.equal(video.srcObject, null);
   assert.deepEqual(calls, ['release', 'pause']);
+});
+
+test('manual focus keeps a person and their screen distinct, survives new streams and resets when its source leaves', async(t)=>{
+ const h=await setup(t);h.client.start();
+ assert.equal(h.client.getSnapshot().focused,null,'A call starts in the grid');
+ h.client.focus('peer','screen');
+ assert.deepEqual(h.client.getSnapshot().focused,{id:'peer',kind:'screen'});
+ h.state.participants.push({...h.person,id:'second',name:'Ana'});
+ h.client.refresh();
+ assert.deepEqual(h.client.getSnapshot().focused,{id:'peer',kind:'screen'},'A new stream must not steal focus');
+ assert.strictEqual(h.client.getSnapshot().screens[0].screenStream,h.screen);
+ h.client.focus('peer','person');
+ assert.deepEqual(h.client.getSnapshot().focused,{id:'peer',kind:'person'});
+ h.client.grid();
+ assert.equal(h.client.getSnapshot().focused,null);
+ h.client.focus('peer','screen');
+ h.person.watching=false;h.client.refresh();
+ assert.equal(h.client.getSnapshot().focused,null,'An unwatched stream cannot keep focus');
+ h.client.focus('peer','person');
+ h.state.generation++;h.client.refresh();
+ assert.equal(h.client.getSnapshot().focused,null,'A different call starts in the grid');
+ assert.deepEqual(h.calls,[],'Focus and grid must not operate on media resources');
 });

@@ -8,7 +8,7 @@ export function AppearanceFields({ client }: { client: AppearancePreferences }) 
   return (
     <>
       <fieldset className="theme-picker">
-        <legend>Cores do tema</legend>
+        <legend>Cores das mesas</legend>
         {THEMES.map((theme) => (
           <label
             key={theme.id}
@@ -28,22 +28,9 @@ export function AppearanceFields({ client }: { client: AppearancePreferences }) 
         ))}
       </fieldset>
       <p className="appearance-help">
-        Aplica na hora, só para você neste aparelho. Não muda o tema dos outros na chamada.
+        Personaliza as mesas compatíveis neste aparelho. Sua escolha é individual e não altera as
+        cores da Corte ou dos outros participantes.
       </p>
-      <div className="profile-layout">
-        <div>
-          <strong>Layout dos painéis</strong>
-          <p className="appearance-help">Restaure os tamanhos padrão dos painéis neste aparelho.</p>
-        </div>
-        <button
-          id="layoutResetBtn"
-          className="secondary-button"
-          type="button"
-          onClick={client.resetPanels}
-        >
-          ↺ Voltar ao padrão
-        </button>
-      </div>
       <p id="appearanceMessage" className="appearance-help" role="status" aria-live="polite">
         {state.message}
       </p>

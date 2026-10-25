@@ -28,7 +28,7 @@ interface ManagementRuntime extends Window {
   };
 }
 const installed = new WeakMap<Window, () => void>();
-export function initializeChannelManagement(target: Window): () => void {
+export function initializeChannelManagement(target: Window, { mount = true } = {}): () => void {
   const previous = installed.get(target);
   if (previous) return previous;
   const runtime = target as ManagementRuntime,
@@ -99,7 +99,7 @@ export function initializeChannelManagement(target: Window): () => void {
     cleanup.push(controller.subscribe(sync));
     sync();
   }
-  target.addEventListener('trono:ready', bind, { once: true });
+  if (mount) target.addEventListener('trono:ready', bind, { once: true });
   const dispose = () => {
     target.removeEventListener('trono:ready', bind);
     cleanup.forEach((remove) => remove());

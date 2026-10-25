@@ -1,0 +1,120 @@
+/* Game dependencies extracted from src/styles/profiles/profile-media.css. */
+@scope (#gameSurface) {
+  /* Profile media tools and call-card presentation. */
+  #voiceRoster .voice-person > .participant-background {
+    position: absolute !important;
+    inset: 0 !important;
+    overflow: hidden !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+  }
+  #voiceRoster .participant-background img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    filter: blur(var(--participant-blur, 0px));
+    transform: scale(1.05);
+  }
+  #voiceRoster .participant-background:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(0deg, #080e1dbd, transparent 80%),
+      rgb(0 0 0 / var(--participant-darkness, 0.6));
+  }
+  #voiceRoster .voice-person > :not(.participant-background) {
+    z-index: 1;
+  }
+  #callWorkspace #socialPanel #voiceRoster .voice-person > strong {
+    text-align: center !important;
+    justify-self: center !important;
+  }
+  #callWorkspace #socialPanel #voiceRoster .voice-person.media-in-profile > strong {
+    text-align: left !important;
+    justify-self: start !important;
+  }
+  :scope
+    :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start'] {
+    background: #18543e !important;
+    border-color: #2b9c70 !important;
+    color: #d9ffed !important;
+    box-shadow: none !important;
+  }
+  :scope
+    :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop'] {
+    background: #7b2936 !important;
+    border-color: #d85165 !important;
+    color: #fff0f2 !important;
+    box-shadow: none !important;
+  }
+  :scope
+    :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start']:hover:enabled {
+    background: #216e51 !important;
+  }
+  :scope
+    :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop']:hover:enabled {
+    background: #963447 !important;
+  }
+  :scope
+    :is(#callFocusDock, #layoutConnectionControls, #layoutCallActions, .call-toolbar)
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action]:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+  }
+  :scope
+    #callWorkspace
+    #socialPanel
+    #callFocusDock
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start'] {
+    background: #18543e !important;
+    border-color: #2b9c70 !important;
+    color: #d9ffed !important;
+    box-shadow: none !important;
+  }
+  :scope
+    #callWorkspace
+    #socialPanel
+    #callFocusDock
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop'] {
+    background: #7b2936 !important;
+    border-color: #d85165 !important;
+    color: #fff0f2 !important;
+    box-shadow: none !important;
+  }
+  :scope
+    #callWorkspace
+    #socialPanel
+    #callFocusDock
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='start']:hover:enabled {
+    background: #216e51 !important;
+  }
+  :scope
+    #callWorkspace
+    #socialPanel
+    #callFocusDock
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action='stop']:hover:enabled {
+    background: #963447 !important;
+  }
+  :scope
+    #callWorkspace
+    #socialPanel
+    #callFocusDock
+    :is(#joinVoiceBtn, #cameraBtn, #screenShareBtn)[data-call-action]:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+  } /* React owns the empty background slot; the profile controller owns its image. */
+  #voiceRoster .participant-background[data-profile-background-slot]:empty {
+    display: none;
+  }
+  .participant-avatar-image {
+    display: contents;
+  }
+}

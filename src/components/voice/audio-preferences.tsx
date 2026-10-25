@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { AppIcon as Icon } from '../application/icons';
 import type { AudioPreferences } from '../../lib/voice/audio-preferences';
 
 export function VoiceAudioPreferences({ client }: { client: AudioPreferences }) {
@@ -49,7 +50,8 @@ export function VoiceAudioPreferences({ client }: { client: AudioPreferences }) 
           aria-pressed={state.sfxEnabled}
           onClick={() => void client.toggleSfx()}
         >
-          {state.sfxEnabled ? '🔔 Efeitos: Ligados' : '🔕 Efeitos: Mutados'}
+          <Icon name="voice" size={15} />{' '}
+          {state.sfxEnabled ? 'Efeitos: Ligados' : 'Efeitos: Mutados'}
         </button>
         <button
           id="voiceMusicBtn"
@@ -59,7 +61,8 @@ export function VoiceAudioPreferences({ client }: { client: AudioPreferences }) 
           aria-pressed={state.musicEnabled}
           onClick={() => void client.toggleMusic()}
         >
-          {state.musicEnabled ? '♫ Música: Ligada' : '♫ Música: Mutada'}
+          <Icon name="headphones" size={15} />{' '}
+          {state.musicEnabled ? 'Música: Ligada' : 'Música: Mutada'}
         </button>
       </div>
       <label className="auth-check">

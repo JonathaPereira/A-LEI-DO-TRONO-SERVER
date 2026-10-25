@@ -19,6 +19,7 @@ interface NavigationOptions {
 /** Owns presentation and room metadata, never membership, messages, sockets or media. */
 export function createCallNavigation(options: NavigationOptions) {
   let state: CallNavigationSnapshot = Object.freeze({
+    page: 'chat',
     hub: false,
     panelAvailable: false,
     panelOpen: false,
@@ -125,6 +126,8 @@ export function createCallNavigation(options: NavigationOptions) {
   }
   return {
     getSnapshot: () => state,
+    showCall: () => update({ page: 'call' }),
+    showChat: () => update({ page: 'chat' }),
     showPanel,
     showForRoom,
     toggleTextChat,

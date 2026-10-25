@@ -70,8 +70,9 @@ async function exerciseLocalHand(page, { responsive = true } = {}) {
   await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
   await expect(page.locator('#throneLocalHandDialog')).toBeVisible();
   if (responsive) {
-    for (const layout of ['original', 'discord']) {
-      await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+    {
+      // Current Corte shell, same responsive contracts.
+      const layout = 'corte';
       for (const [width, height] of [
         [480, 800],
         [1080, 1920],
@@ -83,7 +84,6 @@ async function exerciseLocalHand(page, { responsive = true } = {}) {
       }
     }
     await page.setViewportSize({ width: 1440, height: 960 });
-    await page.evaluate(() => window.TronoAppLayout.apply('original'));
   }
   await page.locator('#throneLocalHandDialog [data-suit="cetro"]').click();
   await expect(page.locator('#humanHand [data-card="c12"]')).toBeDisabled();

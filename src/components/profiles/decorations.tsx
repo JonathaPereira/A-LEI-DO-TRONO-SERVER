@@ -4,7 +4,15 @@ import { useState, type CSSProperties } from 'react';
 import { useFileUrl } from '../files/use-files';
 import { useProfileDecoration } from './use-decoration';
 
-function DecorationImage({ fileId, position }: { fileId: string | null; position?: number }) {
+function DecorationImage({
+  fileId,
+  position,
+  zoom,
+}: {
+  fileId: string | null;
+  position?: number;
+  zoom?: number;
+}) {
   const source = useFileUrl(fileId);
   const [failed, setFailed] = useState<string | null>(null);
   const key = source?.url ? `${source.key}:${source.url}` : null;
@@ -14,7 +22,10 @@ function DecorationImage({ fileId, position }: { fileId: string | null; position
       src={source.url}
       alt=""
       loading="lazy"
-      style={position === undefined ? undefined : { objectPosition: `center ${position}%` }}
+      style={{
+        objectPosition: `center ${position ?? 50}%`,
+        transform: `scale(${(zoom ?? 100) / 100})`,
+      }}
       onError={() => setFailed(key)}
     />
   );
@@ -40,7 +51,11 @@ export function DirectProfileBanner({ accountId }: { accountId: string }) {
   const data = useProfileDecoration(accountId)?.personalization;
   return (
     <span data-direct-banner-slot="" className="direct-profile-banner" aria-hidden="true">
-      <DecorationImage fileId={data?.cover_file_id ?? null} position={data?.cover_position ?? 50} />
+      <DecorationImage
+        fileId={data?.cover_file_id ?? null}
+        position={data?.cover_position ?? 50}
+        zoom={data?.cover_zoom ?? 100}
+      />
     </span>
   );
 }

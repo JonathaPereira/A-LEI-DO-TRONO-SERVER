@@ -81,7 +81,7 @@ export function initializeThroneLobby(target: Window): () => void {
   const host = doc.createElement('div');
   host.id = 'throneLobbyHost';
   host.style.display = 'contents';
-  doc.body.append(host);
+  (doc.getElementById('gameSurface') ?? doc.body).append(host);
   const get = (id: string) => doc.getElementById(id)!;
   const hosts: ThroneLobbyHosts = {
     grid: get('roomGrid'),

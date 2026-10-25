@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const { expect } = require('@playwright/test');
 /** Real encoder/mixer, with a deferred destination picker. Used in Edge and Electron. */
 async function exerciseManualRecording(page, { desktop = false, exportBytes = false } = {}) {
-  let mediaWasOpen = false;
   await page.evaluate(() => {
     const media = navigator.mediaDevices;
     window.__manualBaseline = {
@@ -11,6 +10,17 @@ async function exerciseManualRecording(page, { desktop = false, exportBytes = fa
       picker: window.showDirectoryPicker,
       mic: window.TronoSocial.getLocalAudioTrack(),
       source: window.TronoSocial.getLocalDisplayStream(),
+      recorder: window.MediaRecorder,
+    };
+    window.__manualFlowBytes = 0;
+    const Encoder = window.MediaRecorder;
+    window.MediaRecorder = class extends Encoder {
+      constructor(stream, options) {
+        super(stream, options);
+        this.addEventListener('dataavailable', (event) => {
+          window.__manualFlowBytes += event.data.size;
+        });
+      }
     };
     media.getDisplayMedia = async (options) => {
       window.__manualCaptureGesture = navigator.userActivation.isActive;
@@ -26,20 +36,14 @@ async function exerciseManualRecording(page, { desktop = false, exportBytes = fa
     };
   });
   try {
-    if (desktop) {
-      await page.evaluate(() => window.TronoCallSettings.open('game'));
-      mediaWasOpen = await page.locator('[data-game-group="media"]').evaluate((node) => {
-        const previous = node.closest('details').open;
-        node.closest('details').open = true;
-        return previous;
-      });
-    } else await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
+    if (!desktop) await page.evaluate(() => window.TronoPortal.showOnly('gameScreen'));
+    await page.evaluate(() => window.TronoCallSettings.open('resources'));
     await page.locator('#recordMatchBtn').click();
     await expect
       .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
       .toBe('recording');
-    await page.waitForTimeout(1200);
-    await page.locator(desktop ? '#recordMatchBtn' : '#recordingStopBtn').click();
+    await page.waitForFunction(() => window.__manualFlowBytes > 0, null, { timeout: 15000 });
+    await page.locator('#recordMatchBtn').click();
     await expect
       .poll(() =>
         page.evaluate(() =>
@@ -77,6 +81,7 @@ async function exerciseManualRecording(page, { desktop = false, exportBytes = fa
     await expect
       .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
       .toBe('idle');
+    assert(await page.evaluate(() => window.__manualSavedBlob instanceof Blob));
     const result = await page.evaluate(async () => {
       const blob = window.__manualSavedBlob,
         video = document.createElement('video'),
@@ -135,8 +140,11 @@ async function exerciseManualRecording(page, { desktop = false, exportBytes = fa
         )
       : result;
   } finally {
+    await page.evaluate(() => window.TronoCallSettings.close());
     await page.evaluate(() => {
       navigator.mediaDevices.getDisplayMedia = window.__manualBaseline.capture;
+      window.MediaRecorder = window.__manualBaseline.recorder;
+      delete window.__manualFlowBytes;
       window.showDirectoryPicker = window.__manualBaseline.picker;
       void window.TronoRecorder.stop(false);
       delete window.__manualSavedBlob;
@@ -144,12 +152,6 @@ async function exerciseManualRecording(page, { desktop = false, exportBytes = fa
       delete window.__manualResolveDirectory;
       delete window.__manualBaseline;
     });
-    if (desktop) {
-      await page.locator('[data-game-group="media"]').evaluate((node, open) => {
-        node.closest('details').open = open;
-      }, mediaWasOpen);
-      await page.evaluate(() => window.TronoCallSettings.close());
-    }
   }
 }
 module.exports = { exerciseManualRecording };

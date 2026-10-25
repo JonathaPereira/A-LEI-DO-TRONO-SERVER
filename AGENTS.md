@@ -1,12 +1,48 @@
 # Working in this repository
 
-When interacting with Cloudflare, use the cf CLI unless the project has a Wrangler configuration file.
+Aplicativo web e Electron de comunicação e jogos. Explique no idioma do usuário.
+A instrução mais recente do usuário prevalece sobre convenções e skills.
 
-Read `docs/ARQUITETURA.md` for module ownership and `docs/MIGRACAO.md` for migration state.
+## Antes de alterar
 
-- Work on a contribution branch. Keep main unchanged and publish only on an explicit user request.
-- Preserve existing games, media, profiles, clips and soundboard features during migration.
-- Edit source in `src/`, `server/` and `electron/`. Root JS/CSS under `public/`, `out/` and `.next/` are generated.
-- Transfer state and listeners together when replacing a legacy controller. Keep one socket and one owner of each media resource.
-- Run typecheck, format check, static build and relevant behavior regressions. Interface tests consume `out/`; media changes also require real Electron checks.
-- Record completed conversions and remaining work in `docs/MIGRACAO.md` for human continuity without chat history.
+- Confira git status e branch. Use contribuição codex/; preserve alterações
+  existentes e mantenha main intacta. Commit, push, PR, deploy e instalação
+  exigem autorização compatível com a ação.
+- Leia [docs/MIGRACAO.md](docs/MIGRACAO.md) para plano/checkpoint e
+  [docs/agents/workflow.md](docs/agents/workflow.md) para implementação e revisão.
+- Consulte [docs/ARQUITETURA.md](docs/ARQUITETURA.md) para donos; para apresentação,
+  leia [docs/UX_COMUNICACAO.md](docs/UX_COMUNICACAO.md). Preserve aceites por marco.
+- Inspecione código/testes e explicite resultado esperado, invariantes e limite
+  público antes de implementar. Decisões já aprovadas dispensam reconfirmação.
+
+## Contratos permanentes
+
+- Novos comportamentos/correções seguem TDD nos limites aprovados. Use as skills
+  pertinentes conforme workflow; respeite invocação manual e ferramentas reais.
+- Edite fontes em src, server e electron. out, .next e JS/CSS gerados da raiz de
+  public são saídas. Confirme origem antes de remover assets, vendor, manual ou
+  roguelite. Jogos completos e recursos existentes devem ser preservados.
+- Um socket por cliente e um dono por recurso de mídia. Transfira estado,
+  listeners e descarte juntos. Consumidores emprestados não encerram tracks.
+- Reutilize controladores; React apresenta snapshots. Fachadas delegam ao mesmo
+  dono. Troca de conta/sala invalida operações antigas e libera seu escopo.
+- Next exporta a interface compartilhada com Electron; backend existente possui
+  conta, dados, WebSocket, validação e autorização. Mudanças nesses limites são
+  decisões arquiteturais explícitas.
+- Cloudflare: use CLI cf, exceto quando houver configuração Wrangler.
+
+## Verificação e documentação
+
+Após código: typecheck, format:check, build e regressões pertinentes dos scripts
+vigentes. Build antes das suítes de interface. Confira mídia no Electron real
+conforme [desenvolvimento](docs/DESENVOLVIMENTO_DESKTOP.md), declarando fixtures e
+limitações. Avalie manualmente e obtenha aceite antes de novos testes visuais.
+
+Revise o diff completo, incluindo novos arquivos e alterações sem commit. Use
+code-review com base compatível. Entregue somente evidências realmente concluídas.
+
+Atualize os documentos donos; não crie planos/relatórios Markdown por ajuste.
+MIGRACAO guarda execução; UX guarda produto/referência Discord; arquitetura guarda
+donos; desenvolvimento guarda operação; workflow guarda contribuição. Histórico
+fica no Git e evidências temporárias em artifacts. Preserve documentação de
+jogos, licenças e distribuição necessária.

@@ -89,6 +89,7 @@ interface RemotePcWindow extends Window {
     user?: { id?: string } | null;
   };
   TronoNetwork?: {
+    getSnapshot?(): { features: { remotePc: boolean; remotePcProtocol: number } };
     connected?: boolean;
     clientId?: string | null;
     remotePc(action: string, payload?: Record<string, unknown>): boolean;
@@ -112,7 +113,7 @@ interface RemotePcWindow extends Window {
 
 const installed = new WeakMap<Window, () => void>();
 
-export function initializeRemotePc(target: Window): () => void {
+export function initializeRemotePc(target: Window, { ready = false } = {}): () => void {
   const previous = installed.get(target);
   if (previous) return previous;
 
@@ -131,7 +132,8 @@ export function initializeRemotePc(target: Window): () => void {
   const gameKeys = new Set<string>();
   let current: RemoteSession | null = null;
   let roster: RemoteRosterPeer[] = [];
-  let supported = false;
+  const initialFeatures = runtime.TronoNetwork?.getSnapshot?.().features;
+  let supported = initialFeatures?.remotePc === true && initialFeatures.remotePcProtocol === 2;
   let capability: { host?: boolean; beta?: boolean; audio?: boolean; gamepad?: boolean } = {
     host: false,
   };
@@ -1162,7 +1164,7 @@ export function initializeRemotePc(target: Window): () => void {
   doc.addEventListener('visibilitychange', onVisibilityChange);
 
   bindDom();
-  target.addEventListener('trono:ready', bindDom, { once: true });
+  if (!ready) target.addEventListener('trono:ready', bindDom, { once: true });
 
   const facade = {
     open,

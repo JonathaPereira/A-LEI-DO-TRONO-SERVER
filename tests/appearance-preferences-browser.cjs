@@ -132,7 +132,6 @@ test(
               await expect
                 .poll(() => page.evaluate(() => window.TronoAuth.user?.id))
                 .toBe(accountId);
-              await expect(page.locator('body')).toHaveAttribute('data-call-workspace', 'true');
               await expect(page.locator('[data-panel-resize]')).toHaveCount(0);
               assert.deepEqual(
                 await page.evaluate(
@@ -147,23 +146,11 @@ test(
               );
             }
             async function openAppearance() {
-              if (native) {
-                await page.evaluate(() => window.TronoDesktopSettings.open('appearance'));
-                await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-                await expect(page.locator('[data-settings-panel="appearance"]')).toBeVisible();
-              } else {
-                await page.evaluate(() => window.TronoProfile.open());
-                await expect(page.locator('#profileDialog')).toBeVisible();
-                await page.locator('[data-profile-section="appearance"]').click();
-              }
+              await page.evaluate(() => window.TronoCallSettings.open('appearance'));
               await expect(page.locator('[name="profileTheme"][value="teal"]')).toBeVisible();
-              await expect(page.locator('[name="appLayout"][value="discord"]')).toBeVisible();
             }
             async function closeAppearance() {
-              await page.locator(native ? '#voiceSettingsClose' : '#profileClose').click();
-              await expect(
-                page.locator(native ? '#desktopSettingsDialog' : '#profileDialog'),
-              ).toBeHidden();
+              await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
             }
             async function storage() {
               return page.evaluate(
@@ -184,9 +171,7 @@ test(
             }
             await page.goto(origin);
             await ready(firstId);
-            await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-livre' }));
-            await expect(page.locator('#callWorkspace')).toBeVisible();
-            await page.locator('#joinVoiceBtn').click();
+            await page.locator('button[data-voice-channel]').first().click();
             await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
             await page.evaluate(() => {
               window.__appearanceCall = {
@@ -197,29 +182,25 @@ test(
             });
             await openAppearance();
             await page.evaluate(() => {
-              window.__appearanceControls = [
-                ...document.querySelectorAll('[name="profileTheme"], [name="appLayout"]'),
-              ];
+              window.__appearanceControls = [...document.querySelectorAll('[name="profileTheme"]')];
             });
             await page.locator('[name="profileTheme"][value="teal"]').check();
             await expect(page.locator('html')).toHaveAttribute('data-theme', 'teal');
             await expect(page.locator('#appearanceMessage')).toHaveText('Tema aplicado.');
-            await page.locator('[name="appLayout"][value="discord"]').check();
-            await expect(page.locator('body')).toHaveAttribute('data-app-layout', 'discord');
-            if (native) {
-              await page.locator('[data-settings-tab="audio"]').click();
-              await page.locator('[data-settings-tab="appearance"]').click();
-            } else {
-              await page.locator('[data-profile-section="profile"]').click();
-              await page.locator('[data-profile-section="appearance"]').click();
-            }
+            await expect(page.locator('#gameSurface')).toHaveAttribute('data-theme', 'teal');
+            assert.equal(
+              await page
+                .locator('#gameSurface')
+                .evaluate((el) => getComputedStyle(el).getPropertyValue('--theme-accent').trim()),
+              '#5fddcc',
+            );
+            await page.locator('[data-settings-tab=audio]').click();
+            await page.locator('[data-settings-tab=appearance]').click();
             await closeAppearance();
             await openAppearance();
             assert.equal(
               await page.evaluate(() => {
-                const current = [
-                  ...document.querySelectorAll('[name="profileTheme"], [name="appLayout"]'),
-                ];
+                const current = [...document.querySelectorAll('[name="profileTheme"]')];
                 return (
                   current.length === window.__appearanceControls.length &&
                   current.every((node, index) => node === window.__appearanceControls[index])
@@ -229,46 +210,8 @@ test(
               'theme and layout radios retain their nodes when settings move their containers',
             );
             await expect(page.locator('[name="profileTheme"][value="teal"]')).toBeChecked();
-            await expect(page.locator('[name="appLayout"][value="discord"]')).toBeChecked();
-            const beforeReset = await storage();
-            assert.equal(beforeReset['mnTheme:' + firstId], 'teal');
-            assert.equal(beforeReset['mnTheme:' + secondId], 'green');
-            await page.evaluate((names) => {
-              for (const name of names)
-                document.documentElement.style.setProperty('--layout-' + name, '333px');
-              document.documentElement.style.setProperty('--layout-unknown', 'keep-me');
-            }, dimensions);
-            await page.locator('#layoutResetBtn').click();
-            await expect(page.locator('#appearanceMessage')).toHaveText(
-              'Layout restaurado ao padrão.',
-            );
-            assert.deepEqual(
-              await storage(),
-              {
-                ...beforeReset,
-                ['mnPanelLayout:' + firstId]: null,
-              },
-              'reset must retain themes, app layout, other account settings and guest settings',
-            );
-            assert.deepEqual(
-              await page.evaluate(
-                (names) => ({
-                  old: names.map((name) =>
-                    document.documentElement.style.getPropertyValue('--layout-' + name),
-                  ),
-                  unknown: document.documentElement.style.getPropertyValue('--layout-unknown'),
-                  theme: document.documentElement.dataset.theme,
-                  layout: document.body.dataset.appLayout,
-                }),
-                dimensions,
-              ),
-              {
-                old: dimensions.map(() => ''),
-                unknown: 'keep-me',
-                theme: 'teal',
-                layout: 'discord',
-              },
-            );
+            assert.equal((await storage())['mnTheme:' + firstId], 'teal');
+            assert.equal((await storage())['mnTheme:' + secondId], 'green');
             assert.equal(
               await page.evaluate(() => {
                 const call = window.__appearanceCall;
@@ -288,19 +231,18 @@ test(
             await page.reload();
             await ready(firstId);
             await expect(page.locator('html')).toHaveAttribute('data-theme', 'teal');
-            await expect(page.locator('body')).toHaveAttribute('data-app-layout', 'discord');
             await page.evaluate(() => window.TronoAuth.logout());
-            await expect(page.locator('#authDialog')).toBeVisible();
+            await expect(page.locator('#authEmail')).toBeVisible();
             await page.locator('#authEmail').fill('appearance-second@example.test');
             await page.locator('#authPassword').fill('Senha12!');
-            await page.locator('#authSubmitBtn').click();
-            await expect(page.locator('#authDialog')).toBeHidden();
+            await page.locator('#authSubmit').click();
+            await expect
+              .poll(() => page.evaluate(() => window.TronoAuth.user?.email))
+              .toBe('appearance-second@example.test');
             await ready(secondId);
             await expect(page.locator('html')).toHaveAttribute('data-theme', 'green');
-            await expect(page.locator('body')).toHaveAttribute('data-app-layout', 'original');
             await openAppearance();
             await expect(page.locator('[name="profileTheme"][value="green"]')).toBeChecked();
-            await expect(page.locator('[name="appLayout"][value="original"]')).toBeChecked();
             assert.equal((await storage())['mnPanelLayout:' + secondId], legacyLayout);
             await page.locator('[name="profileTheme"][value="rose"]').check();
             assert.equal((await storage())['mnTheme:' + firstId], 'teal');
@@ -311,39 +253,11 @@ test(
             await expect(page.locator('html')).toHaveAttribute('data-theme', 'rose');
             assert.equal((await storage())['mnPanelLayout:' + secondId], legacyLayout);
             if (native) {
-              // Appearance remains available in desktop settings without a signed-in account.
               await page.evaluate(() => window.TronoAuth.logout());
-              await expect(page.locator('#authDialog')).toBeVisible();
-              await page.locator('#authCloseBtn').click();
-              await openAppearance();
+              await page.evaluate(() => window.TronoCallSettings.open('appearance'));
+              await expect(page.locator('[name="profileTheme"][value="purple"]')).toBeChecked();
               assert.equal(await page.evaluate(() => window.TronoAuth.user), null);
-              const guestBefore = await storage();
-              await page.evaluate((names) => {
-                for (const name of names)
-                  document.documentElement.style.setProperty('--layout-' + name, '222px');
-                document.documentElement.style.setProperty('--layout-unknown', 'guest-keep-me');
-              }, dimensions);
-              await page.locator('#layoutResetBtn').click();
-              await expect(page.locator('#appearanceMessage')).toHaveText(
-                'Layout restaurado ao padrão.',
-              );
-              assert.deepEqual(
-                await storage(),
-                { ...guestBefore, 'mnPanelLayout:guest': null },
-                'guest reset must not remove any signed-in account preference',
-              );
-              assert.deepEqual(
-                await page.evaluate(
-                  (names) => ({
-                    old: names.map((name) =>
-                      document.documentElement.style.getPropertyValue('--layout-' + name),
-                    ),
-                    unknown: document.documentElement.style.getPropertyValue('--layout-unknown'),
-                  }),
-                  dimensions,
-                ),
-                { old: dimensions.map(() => ''), unknown: 'guest-keep-me' },
-              );
+              assert.equal((await storage())['mnTheme:' + secondId], 'rose');
             }
             assert.deepEqual(errors, []);
           } finally {

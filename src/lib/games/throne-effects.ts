@@ -283,7 +283,7 @@ export function createThroneEffects(options: Options) {
         pointerEvents: 'none',
         willChange: 'transform,opacity',
       });
-      doc.body.append(ghost);
+      (doc.getElementById('gameSurface') ?? doc.body).append(ghost);
       task.own(() => ghost.remove());
       const animation = ghost.animate(
         [
@@ -428,7 +428,7 @@ export function createThroneEffects(options: Options) {
       img.src = asset(v.card);
       img.alt = label;
       el.append(element('div', 'challenge-bubble', '⚔ DESAFIO'), img, element('strong', '', label));
-      doc.body.append(el);
+      (doc.getElementById('gameSurface') ?? doc.body).append(el);
       task.own(() => el.remove());
       void expire(task, 3000);
     });

@@ -10,7 +10,7 @@ interface GifRuntime extends Window {
 }
 const installed = new WeakMap<Window, GifPicker>();
 
-export function initializeProfileGifs(target: Window): GifPicker {
+export function initializeProfileGifs(target: Window, { mount = true } = {}): GifPicker {
   const existing = installed.get(target);
   if (existing) return existing;
   const runtime = target as GifRuntime;
@@ -25,6 +25,7 @@ export function initializeProfileGifs(target: Window): GifPicker {
     },
   });
   installed.set(target, picker);
+  if (!mount) return picker;
   const host = target.document.createElement('div');
   host.id = 'profileGifHost';
   target.document.body.append(host);

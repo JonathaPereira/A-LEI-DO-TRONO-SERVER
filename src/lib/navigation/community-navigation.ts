@@ -7,6 +7,7 @@ import type { SocketMessage } from '../../types/socket';
 import { readNavigationRoom } from '../voice/navigation-protocol.ts';
 
 export interface CommunityEntry {
+  textOnly?: boolean;
   validatedIdentity?: IdentityValidation;
   channelId?: string;
   isCurrent?(): boolean;
@@ -273,7 +274,7 @@ export function createCommunityNavigation(options: Options) {
         }
         update({ status: 'Abrindo a comunidade...' });
         void options.ensureAudio().catch(() => {});
-        const text = preserveVoice || channels.get(channelId)?.type === 'text';
+        const text = entry.textOnly || preserveVoice || channels.get(channelId)?.type === 'text';
         if (!text && network.primaryRoom !== channelId && voice.voiceJoined)
           await voice.leaveVoice();
         if (!valid(op)) return false;

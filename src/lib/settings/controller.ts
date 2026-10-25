@@ -7,6 +7,7 @@ export const SETTINGS_TOPICS = {
   game: 'Jogo',
   activity: 'Atividade',
   files: 'Meus arquivos',
+  resources: 'Recursos',
   connection: '⌁ Conexão',
   privacy: 'Privacidade',
   notifications: 'Notificações',
@@ -24,7 +25,17 @@ export function createSettingsController(
 ) {
   const topics: readonly SettingsTopic[] = desktop
     ? (Object.keys(SETTINGS_TOPICS) as SettingsTopic[])
-    : ['audio', 'video', 'connection', 'notifications'];
+    : [
+        'account',
+        'appearance',
+        'files',
+        'resources',
+        'audio',
+        'video',
+        'game',
+        'connection',
+        'notifications',
+      ];
   const valid = (value: string): SettingsTopic =>
     topics.includes(value as SettingsTopic) ? (value as SettingsTopic) : 'audio';
   let snapshot: SettingsSnapshot = Object.freeze({

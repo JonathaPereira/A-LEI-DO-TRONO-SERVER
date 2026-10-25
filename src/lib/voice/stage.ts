@@ -63,6 +63,7 @@ export function createCallStage(options: StageOptions) {
     pendingModeration = new Map<string, { key: string; timer: ReturnType<typeof setTimeout> }>();
   const listeners = new Set<() => void>();
   const warn = options.warn ?? ((error: unknown) => console.warn('[CallStage]', error));
+  let focused: Readonly<{ id: string; kind: 'person' | 'screen' }> | null = null;
   let generation: number | undefined,
     switching: object | null = null,
     disposed = false;
@@ -75,8 +76,16 @@ export function createCallStage(options: StageOptions) {
       layouts.clear();
       collapsed.clear();
       switching = null;
+      focused = null;
     }
     generation = source.generation;
+    const selected = source.participants.find((p) => p.id === focused?.id);
+    if (
+      !source.joined ||
+      !selected ||
+      (focused?.kind === 'screen' && (!selected.screen || !selected.watching))
+    )
+      focused = null;
     const ids = new Set(source.participants.map((p) => p.id));
     for (const id of layouts.keys()) if (!ids.has(id)) layouts.delete(id);
     for (const id of collapsed)
@@ -128,6 +137,7 @@ export function createCallStage(options: StageOptions) {
     return Object.freeze({
       ...source,
       participants,
+      focused,
       cameras: Object.freeze(cameras),
       screens: Object.freeze(screens),
       switching: !!switching,
@@ -224,6 +234,18 @@ export function createCallStage(options: StageOptions) {
       refresh();
     },
     setLayout,
+    focus(id: string, kind: 'person' | 'screen') {
+      if (disposed) return;
+      const person = getSnapshot().participants.find((p) => p.id === id);
+      if (!person || (kind === 'screen' && (!person.screen || !person.watching))) return;
+      focused = Object.freeze({ id, kind });
+      refresh();
+    },
+    grid() {
+      if (disposed) return;
+      focused = null;
+      refresh();
+    },
     dockCamera(id: string) {
       const person = getSnapshot().participants.find((p) => p.id === id);
       if (person) setLayout(id, person.cameraDock ? 'stage' : 'camera');

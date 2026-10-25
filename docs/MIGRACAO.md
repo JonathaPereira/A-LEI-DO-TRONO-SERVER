@@ -1,443 +1,462 @@
-# Estado da migração
+# Reconstrução do frontend
 
-Atualizado em 22/10/2026. Este é o checkpoint para continuar sem o histórico do
-chat. Responsabilidades e ciclos de vida estão em [ARQUITETURA.md](ARQUITETURA.md);
-comandos e ambiente em [DESENVOLVIMENTO_DESKTOP.md](DESENVOLVIMENTO_DESKTOP.md).
-O histórico detalhado das conversões permanece no Git.
+Atualizado em 25/10/2026. Este é o plano de execução e o checkpoint para qualquer
+agente continuar sem o histórico do chat. Produto e referência visual ficam em
+[UX_COMUNICACAO.md](UX_COMUNICACAO.md); donos em
+[ARQUITETURA.md](ARQUITETURA.md); ambiente em
+[DESENVOLVIMENTO_DESKTOP.md](DESENVOLVIMENTO_DESKTOP.md).
 
-## Branch e limites
+## Estado e autorização
 
-- Contribuição atual em `codex/desktop-ci-parallel`, baseada na main `f3472cb`,
-  no clone novo sem worktrees adicionais nem upstream para main. Felipe autorizou
-  commit e push desta contribuição em 22/10/2026; a main não foi alterada.
-- Upstream incorporado cobrindo `8044ec4..6b9ae47`: desktop 0.2.11 a 0.3.2 e backend 0.14.0-alpha portados para a arquitetura migrada.
-- Não publicar, fazer deploy nem substituir o aplicativo instalado sem pedido
-  explícito. O pacote em `artifacts/windows-app/win-unpacked/` é só para conferência.
-- Preservar todos os jogos, mensagens, perfis, arquivos, chamadas, clipes e soundboard.
-- Continuar com um socket por cliente e um dono por recurso de mídia. Consumidores
-  emprestados não encerram o microfone, a tela ou o contexto de outro dono.
+- Reinício solicitado pelo usuário após perda das alterações anteriores.
+- Base: `f343049`. Contribuição: `codex/frontend-rebuild`; main permanece intacta.
+- Implementação local autorizada. Em 25/10/2026, o usuário aprovou o Marco 2 e
+  autorizou o commit de todas as alterações atuais para separar o Marco 3.
+  Push, PR, instalações nativas e deploy continuam fora desta autorização.
+- `package-lock.json` já tinha alterações ao iniciar: preservá-las.
+- Marcos 1 e 2 receberam aceite. Marco 3 autorizado para implementação; seu
+  aceite visual e a verificação integrada final continuam pendentes.
+- O corte de apresentação é parcial. Estilos necessários foram extraídos; views
+  antigas sem montagem permanecem até a revisão semântica de suas dependências.
 
-## Conversões concluídas
+## Resultado esperado
 
-| Área | Onde editar |
-| --- | --- |
-| Composição frontend | `src/app/`, `src/components/application.tsx` e `src/app/application-runtime.tsx`. Next App Router, React e TypeScript estrito; exportação estática compartilhada com Electron. |
-| Transporte, canais e chat | `src/lib/socket/`, `lib/channels/`, `lib/chat/`; interfaces nos componentes dos respectivos domínios. Transporte, identidade e participação únicos. |
-| Conta, arquivos e perfis | `lib/auth/`, `lib/files/`, `lib/profiles/`, `lib/community/`, `lib/messenger/`; formulários, editor, biblioteca e conversas em React. |
-| Chamadas e moderação | `lib/voice/` possui captura, publicação, P2P, SFU, recuperação, reprodução, diagnóstico e moderação de participantes (mutar, bloquear mídia, expulsar). Painéis e configurações em React. |
-| Jogos e lançador | `lib/games/` possui regras e controladores tipados de A Lei do Trono, Azul, Splendor, Love Letter, Ticket to Ride e hub Nexus; componentes em `components/games/`. Cinzas continua independente em `public/roguelite/`. |
-| Remote PC e Gamepad | `lib/voice/remote-*`, `components/voice/remote-pc-dialog.tsx`, `electron/remote-input.cjs` e `electron/native-audio/remote-input.cpp` para controle remoto WebRTC e injeção nativa de controle virtual Xbox (ViGEm). |
-| Clipes e gravação | `lib/clips/` e `lib/recording/` possuem buffer, worker, armazenamento, mixer, encoder, exportação e ponte Windows; controles/bibliotecas em React. |
-| Áudio e soundboard | `lib/audio/` e `lib/soundboard/` possuem efeitos, player, decode, recorte e envio. Worklets tipados em `lib/voice/worklets/`; recursos e ganhos anteriores preservados. |
-| Shell e preferências | `lib/desktop/`, `lib/preferences/`, `lib/settings/`, `lib/notifications/` e componentes dos domínios possuem layout, atividade, avisos e atualização. |
-| Backend | Todos os módulos de `server/` são TS estritos, sem DOM. `app.ts` compõe serviços; `index.ts` inicia o processo; `socket-gateway.ts` possui conexão, identidade, dispatch e heartbeat; serviços para Ticket to Ride, moderação e Remote PC. |
-| Estilos | `src/styles/index.css` explicita a cascata de domínio, importada pelo layout raiz após `globals.css`. Next compila e distribui o CSS. |
-| Electron | `electron/` possui janela, preload, permissões, arquivos, notificações, Nexus IPC e auxiliares nativos (ViGEm). Desenvolvimento e testes usam identidade/perfil separados da instalação. |
+Substituir toda a apresentação externa aos jogos, começando por uma base mínima
+compilável. Preservar backend, regras, protocolos, lógica cliente e todos os
+recursos atuais. Next/React/TypeScript e exportação estática compartilhada com
+Electron permanecem. A entrada após autenticação será a comunicação, com área
+própria de Jogos e visual próprio da Corte: preto/dourado sutil, sidebar única e Phosphor Icons.
+Discord permanece referência de interação.
 
-`src/legacy/`, o manifesto de scripts, `legacy-runtime.tsx` e `server/runtime.cjs`
-foram removidos. Não há controladores de domínio JS carregados pelo renderer nem
-módulos JS/CJS restantes em `server/`. As fachadas `Trono*` ainda consumidas apontam
-para os mesmos donos; não devem ganhar cópias de estado ou listeners.
+## Preparação e corte
 
-Os serviços do backend possuem validação de entrada, autorização, projeções
-privadas, cancelamento e descarte por instância. Filas capturam a identidade e
-revalidam operações quando necessário. Os adapters de testes são portas explícitas
-da composição; não alteram exports de produção. Conta continua obrigatória e os
-serviços externos não foram reconfigurados.
+1. Conferir branch, diff e recursos disponíveis. Registrar a referência visual
+   dos jogos e executar regressões relevantes antes da extração.
+2. Fechar o inventário por arquivo: preservar, desacoplar, substituir ou excluir.
+   Considerar imports, fachadas Trono*, eventos, IDs, CSS, URLs, workers e IPC.
+   Ausência de import estático não comprova que algo pode ser apagado.
+3. Isolar interfaces completas dos jogos, seus recursos e estilos necessários.
+   Separar catálogo/navegação geral dos lobbies e mesas preservados.
+4. Separar inicialização funcional da montagem das telas. Reutilizar os donos
+   existentes por comandos, snapshots e assinaturas.
+5. Substituir a composição por uma base mínima e retirar apresentação antiga
+   depois de extrair suas responsabilidades. Usar Git como histórico, sem criar
+   uma árvore paralela de frontend legado.
 
-`supabase/install.sql` ordena os 13 SQL existentes e recusa bases já instaladas.
-`database:prepare` gera um arquivo revisável; `test:database` instala o mesmo
-conteúdo em PGlite vazio. Isso não equivale a aplicar migrações num Supabase real.
+## Matriz de preservação
 
-## Últimos checkpoints
+| Área                                                                                    | Destino                                                                                                          |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| src/components/games, src/lib/games e src/styles/games                                  | Preservar fluxo completo: criação, lobby, mesa, regras, áudio, efeitos e resultados. Reconstruir catálogo geral. |
+| public/roguelite                                                                        | Preservar Cinzas, recursos, salvamento e integração.                                                             |
+| Artes, sons, fontes, manuais, vendor e licenças                                         | Preservar originais usados por jogos ou recursos existentes. Saídas compiladas não são fontes.                   |
+| Tipos, validações e protocolos em src usados pelo servidor                              | Preservar mesmo que estejam fora de server.                                                                      |
+| Avisos de turno/influência, cinemática e resultados em navigation                       | Incorporar à superfície preservada dos jogos.                                                                    |
+| CSS de base, navegação, perfis, voz e desktop                                           | Extrair dependências dos jogos, mantendo precedência; remover apresentação exclusiva substituída.                |
+| Sessão, socket, chat, arquivos, perfis, mídia, clipes, gravação, soundboard e Remote PC | Preservar lógica e posse dos recursos; desacoplar DOM e views.                                                   |
+| server e electron                                                                       | Preservar serviços, autorização, protocolos, persistência, preload e integrações nativas.                        |
+| Home, shell, comunicação e configurações antigas                                        | Substituir apresentação e posicionadores; retirar fontes quando suas responsabilidades estiverem extraídas.      |
 
-- `8f57f84`: remove o runtime JS do servidor e conclui composição/gateway tipados.
-- `33ea00e`: importa a cascata pelo Next, remove manifesto/cópias CSS estáticas e
-  divide o antigo `base/style.css` em 14 arquivos de domínio, sem reordenar declarações.
-  Oito regras exatamente repetidas foram removidas mantendo a última ocorrência
-  no mesmo contexto. Temas Original/Discord e URLs locais de imagens/fontes permanecem.
-- `259615c`: habilita `noUnusedLocals`/`noUnusedParameters` no frontend
-  e backend, remove argumentos/opções privados sem leitura e a fachada
-  `TronoAppearance` sem consumidores. Posições obrigatórias de callbacks usam `_`.
-  Títulos da chamada têm hosts React vazios e um único dono de conteúdo, sem
-  `replaceChildren()` para disputar texto com o componente estático.
-- A varredura estática de imports não encontrou módulos TS de `src/`/`server/`
-  fora do grafo das entradas de produção. Rotas, boot e worklets foram tratados
-  como entradas próprias. É evidência auxiliar; não autoriza apagar recursos
-  distribuídos ou APIs externas por ausência de um import estático.
-- `ae30757`: atualiza a suíte da Corte para participação explícita na voz, controles
-  visíveis, hosts de mão/diálogos React e o contrato de fullscreen do desktop.
-  A troca privada simulada agora usa cartas distintas e uma fase/participantes
-  coerentes; a validação de produção não foi afrouxada. Foram encontradas e
-  corrigidas duas falhas reais: `channelType: null` legítimo das salas de jogo
-  era recusado na navegação; o modo online permanecia após mudar/sair da sala,
-  impedindo iniciar uma partida local. Há regressões mínimas para ambos os casos.
-- A chamada agora guarda a identidade da sala da tentativa e a confirma após o
-  preparo. A saída/exclusão encerra os recursos mesmo se a navegação já tiver
-  consumido o evento e apagado seus metadados. Isso corrige captura que permanecia
-  ativa ao excluir um canal ocupado. Há regressões para chamadas ativas, preparo
-  pendente e anexação de sala durante o preparo, preservando saídas de outros jogos.
-- `f3784c7`: o botão do perfil tem espaço próprio no rodapé do
-  card com mídia; não cobre mais o fullscreen do vídeo. O popover acompanha o
-  tamanho do card por ResizeObserver, descartado junto dos listeners.
-  O soundboard considera as barras visíveis do workspace e aplica sua altura
-  disponível. Na mesa desktop de 480×520, o rótulo redundante “LEI ATUAL” fica
-  oculto para não sobrepor as cartas; nome, imagem, trunfo e tooltip permanecem.
-- **Port das novidades da `main` (0.2.11 a 0.3.2 / backend 0.14.0-alpha)**:
-  - **Ticket to Ride**: Motor de jogo completo (`src/lib/games/ticket-to-ride*`), tipos TypeScript (`src/types/ticket-to-ride.ts`), tela interativa com mapa SVG e seleções em React (`src/components/games/ticket-to-ride-screen.tsx`), estilos (`src/styles/games/ticket-to-ride.css`), serviço autoritativo (`server/ticket-to-ride-service.ts`) e protocolo (`server/ticket-to-ride-protocol.ts`). Suíte de regras, bot e isolamento de mãos públicas/privadas verificadas.
-  - **Nexus Hub & Launcher**: Launcher e isolamento de jogos web externos (`src/lib/games/nexus*`, `src/components/games/nexus-screen.tsx`, `src/styles/games/nexus-host.css`, `electron/nexus.cjs`) com sandbox estrito e token seguro.
-  - **Remote PC Beta & Gamepad Virtual**: Streaming de baixa latência e controle remoto via WebRTC (`src/lib/voice/remote-*`, `src/components/voice/remote-pc-dialog.tsx`, `src/styles/voice/remote-pc.css`, `server/remote-pc.ts`), telemetria em tempo real e injeção nativa de controle virtual Xbox 360 no Windows via ViGEmClient C++ addon (`electron/remote-input.cjs`, `electron/native-audio/remote-input.cpp`).
-  - **Moderação de Voz**: Ações de staff para mutar/desmutar forçado, bloquear/liberar mídias de vídeo/tela e expulsar da sala de voz no card de participantes (`src/components/voice/participant-card.tsx`), suportado pelo serviço de moderação do backend (`server/voice-moderation.ts`) com verificação rigorosa de cargos no servidor.
-  - **Regressões e testes**: 15 arquivos de testes novos cobrindo regras, protocolo WS, Nexus, Remote Input, Gamepad, e moderação. Todos os testes unitários (34/34 casos) passam com 100% de sucesso. Typecheck estrito (`npm run typecheck`), verificação de formatação (`npm run format:check`) e build estático do Next.js (`npm run build`) passam com código de saída 0.
+A matriz versionável por arquivo é [frontend-preservation.csv](frontend-preservation.csv),
+com decisões da base f343049, hashes e destinos. Ela não autoriza exclusões só por
+classificação. Imports, IDs, variáveis e URLs detalhados ficam em
+`artifacts/frontend-reset/inventory.json`; evidências temporárias ficam nesse diretório. Atualizar esta matriz quando a inspeção revelar uma
+dependência nova; não criar outro documento de plano.
 
-- **CI de lifecycle após o merge `21297fa`**: a fixture do gateway não fornecia
-  Ticket to Ride nem Remote PC. A reconexão lançava uma exceção antes de fechar o
-  socket antigo e o teste aguardava indefinidamente. As portas de teste agora
-  acompanham os serviços e verificam o descarte dos quatro jogos. As expectativas
-  de cargos incluem `moderateVoice`; fixtures SFU criam sua pasta temporária antes
-  de usá-la. O teste de autenticação conserva o token enviado e avança o relógio
-  explicitamente, eliminando a falha intermitente na virada de segundo.
-  Os 150 casos passaram em uma cópia limpa da main em cerca de 1,7 s, além do
-  comando final no checkout (cerca de 2,4 s com build em paralelo). Tipagem,
-  formatação e build estático passaram. Cada teste tem limite de 30 s; a etapa do
-  workflow tem limite de 2 minutos. Correção local, sem publicação ou novo deploy.
+## Entregas e aceites
 
-- **CI de Ticket to Ride**: o teste WebSocket enviava uma oferta sem
-  `data.type: 'offer'`, rejeitada pelo parser compartilhado de sinalização.
-  O cenário agora envia o contrato completo e confere remetente, tipo e SDP
-  recebidos após iniciar a partida. A suíte completa passou (14 casos, incluindo
-  navegador) e as regressões de canais/voz em jogos passaram (8 casos). A correção
-  altera somente o teste; captura, transporte e validação de produção permanecem
-  iguais. Tipagem, formatação e build estático também foram conferidos.
+| Marco                              | Implementação                                                                               | Critério de aceite                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Preparação                         | Inventário, referência dos jogos, separação de inicialização e base compilável.             | Cada remoção possui destino conhecido e os jogos continuam verificáveis.            |
+| 1 — Estrutura, comunicação e jogos | Autenticação, shell, canais, presença, chat, amigos/DMs, catálogo e jogos reintegrados.     | QA pelo agente, comunicação funcional, jogos preservados e aceite visual humano.    |
+| 2 — Chamada e compartilhamento     | Grade/foco, controles, participantes, seleção de compartilhamento e configurações de mídia. | REA da referência pertinente, continuidade de mídia, Electron real e aceite humano. |
+| 3 — Configurações e avançados      | Perfis, bibliotecas, soundboard, clipes, gravação, Remote PC e administração.               | Todos os recursos contemplados, corte final e aceite humano.                        |
 
-- **Etapas restantes dos Actions após Ticket to Ride**: o restante do job Windows
-  passou localmente: Love Letter (16 casos), runtime/áudio/políticas e
-  empacotamento (38, nenhum ignorado), chamada entre layouts (1) e executável
-  empacotado (1). Helpers C++, diretório do aplicativo e instalador NSIS 0.3.2
-  foram gerados. Preparo real e ZIP passaram, com um único EXE e hashes
-  correspondentes; frontend com instalador ocupa cerca de 188,9 MiB (limite 190).
-  Publicação e retenção foram executadas apenas com portas GitHub em memória,
-  inclusive usando os arquivos reais; não houve upload/deploy/exclusão remota.
-- **Contrato da entrega Next/Electron**: a execução revelou uma falha posterior
-  ao instalador. O empacotador procurava no HTML um link montado pelo React no
-  cliente. Layout e botão agora derivam a versão de `electron/package.json`;
-  o empacotador confere `mn-desktop-version` antes de substituir saídas, sem
-  editar chunks/HTML. Regressões cobrem HTML sem botão, versão ausente/divergente
-  e link no navegador (17 casos com publicação/retenção simuladas). Tipagem,
-  formatação e build passaram.
-- **Workflow independente de clipes**: `TronoClipTests.csproj` ainda referenciava
-  `../TronoClips/`. Os links agora usam `../clips-helper/`. Testes .NET da ponte
-  e atalho Windows passaram; publicação self-contained e montagem do pacote com
-  EXE e instruções passaram em `artifacts/`.
+## Contratos de implementação
 
-- **Intermitência dos controles no Electron (`39815922261`)**: a fixture usava um
-  contador global para alternar Reserva/Espionagem. Depois que os humanos saíam
-  da primeira sala, os bots continuavam jogando; uma rodada adicional consumia o
-  decreto reservado à segunda sala. O teste esperava informação privada de
-  Espionagem enquanto o servidor solicitava a escolha de Reserva.
-  O seletor injetado agora recebe a sala e a fixture fixa seu decreto por sala.
-  Uma regressão com serviço real e relógio controlado falhou antes da correção
-  e passou depois, cobrindo bots da sala anterior nas rodadas 1, 2 e 3.
-  Os 151 casos de backend, cinco de rodadas e sete de escolhas no navegador
-  passaram; o teste completo de controles passou duas vezes consecutivas no
-  Electron. Tipagem, formatação e build passaram. Logs específicos usam o prefixo
-  `artifacts/actions-controls-`; os timeouts e a captura de mídia não foram alterados.
+- Um socket por cliente e um dono por recurso de mídia. Consumidores de streams
+  emprestadas não encerram tracks. Troca de conta/sala invalida operações antigas.
+- Tela aberta, destino do compositor e participação em voz/jogo são estados
+  distintos. Navegar conserva chamada e players.
+- Jogos ficam delimitados visualmente, incluindo overlays. O shell novo não
+  depende da cascata antiga; preservar a aparência inicial dos jogos.
+- Integração entre jogos, navegação, identidade, rede e áudio tem dono único.
+  Fachadas de compatibilidade delegam ao mesmo dono.
+- Preservar HTTP, WebSocket, IPC, armazenamento e autorização. Não ampliar backend
+  nem executar migrações nesta reconstrução.
 
-- **Sobreposição dos controles da Corte (`39819723658`)**: a carta inferior
-  invadia o decreto quando o espaço útil diminuía. A regressão focal reproduziu
-  `tableCard0` sobre Espionagem em 1008 × 651 antes da correção. Cartas, centro
-  e moedas agora ocupam trilhas distintas da grade; a mesa tem rolagem quando necessário.
-  Foram retiradas as posições absolutas conflitantes e a regra antiga que
-  escondia a crônica entre 901 e 1100 px. `test:desktop:layout` começa com a
-  regressão focal e depois usa dois Electron em janela inicialmente pequena,
-  variando dimensões nos dois layouts e preservando as mesmas mídias/peers.
-  Não há cliques forçados nem aumento dos timeouts.
-  A etapa completa passou novamente após ajustar as moedas: regressão focal
-  em cerca de 11 s e chamada nativa em 85 s, sem casos ignorados. Depois do
-  ajuste final passaram também Corte/partidas locais/estilos (11 casos),
-  políticas/áudio/runtime/entrega (38) e o executável recém-compilado (1).
-  Tipagem, formatação e exportação estática passaram; YAML do workflow validado.
-  Instalador NSIS recompilado sem instalação. Preparo local e ZIP passaram:
-  frontend com instalador em 188,9 MiB (limite 190), 237 arquivos e um único EXE
-  com SHA-256 igual ao instalador gerado. Estes pacotes são de QA local 0.3.2;
-  não foram publicados nem substituíram a versão instalada.
-- **Grupo de interface do Windows**: uma execução local revelou outra corrida:
-  o teste de canais abria o texto antes da confirmação da troca de sala, que
-  fechava esse painel. O teste aguarda a confirmação e a seleção antes de abrir.
-  O grupo completo passou em 17 casos e a variante desktop em mais dois.
-  A falha de emoji do perfil em `39822368692` não foi reproduzida nessas
-  repetições, inclusive com CPU do renderer reduzida em quatro vezes; não há
-  correção presumida desse ponto. Falhas de perfil e Electron
-  agora salvam imagens; o workflow retém apenas essas evidências e logs por sete
-  dias, sem incluir perfis locais nem o diretório inteiro de artifacts.
-- **Diferença de versões conferida**: o registro do Windows informa 0.3.3,
-  originada do build bem-sucedido `39703076365`, commit `0f52f55a`, branch
-  `codex/desktop-installer-running-app`. Esse build usa a estrutura anterior à
-  migração e inclui um ajuste NSIS para fechar o aplicativo na bandeja. A main
-  migrada `588ad46` declara 0.3.2; não havia novos commits nela ao buscar o remoto.
-  O ajuste foi posteriormente portado para `electron/` na preparação da 0.3.4,
-  com preload, lockfile e instruções sincronizados. Não instalar
-  um pacote de QA com a identidade/registro do aplicativo real. A instalação do
-  usuário foi apenas consultada.
-- **Criação da janela no runner (`39832539204`)**: o teste focal da Corte passou,
-  mas o segundo Electron falhou antes do login. A linha de redimensionamento
-  consultava `BrowserWindow.getAllWindows()[0]` antes de criar a janela. O helper
-  de teste `desktop-first-window.cjs` aguarda `firstWindow()`, obtém a BrowserWindow
-  correspondente à página e só então define o tamanho. A regressão nativa
-  `desktop-window-start.cjs` controla a criação real da janela: reproduziu o mesmo
-  `undefined.setContentSize` com a ordem antiga e passou com a espera correta.
-  Ela integra `test:desktop:layout`. Não altera o aplicativo nem os timeouts.
-  Tipagem, formatação e build passaram. O comando completo passou nos três casos,
-  sem skips: janela adiada, geometria da Corte e chamada com dois Electron
-  (aproximadamente 77 s na etapa nativa). Evidência em
-  `artifacts/actions-window-layout-final.log`. A execução remota `39835581336`,
-  commit `f3472cb`, passou em 22/10/2026; o job Windows completo levou 13min48s.
+## Testes e comandos
 
-A antiga branch `codex/fix-backend-ci` acompanhava `origin/main` como upstream;
-esse vínculo explicava pushes da contribuição para a main pela sincronização.
-Felipe substituiu o clone. No clone novo há um único checkout; a contribuição
-`codex/desktop-ci-parallel` foi criada sem upstream, a partir de `f3472cb`.
-Main e origin/main permanecem nesse commit. Ao publicar a contribuição, usar o
-nome próprio da branch como destino, sem configurar origin/main como upstream.
+Os limites aprovados são controladores/HTTP/WebSocket, fluxos pelo Playwright e
+recursos nativos no Electron real. TDD para comportamentos novos e correções;
+reutilizar suítes e fixtures. Aceite visual manual antes de snapshots permanentes.
 
-Evidências locais: `artifacts/actions-*.log`, `actions-delivery-audit.json` e os
-pacotes gerados. Runner/permissões do GitHub dependem da próxima execução remota;
-as validações locais não publicaram o aplicativo.
+Consolidar os 101 scripts atuais: manter operações necessárias e apenas um
+comando de testes, `npm test`, com `--suite core|browser|desktop|all` e `--filter`.
+Default: core determinístico. Seleção inválida ou vazia deve falhar claramente.
+Atualizar CI e todos os consumidores junto da retirada dos aliases. Não diminuir
+cobertura útil para reduzir quantidade de comandos.
 
-## Organização da esteira Windows
+Prioridades: sessão/isolamento; permissões; envio/histórico/anexos/retry; partidas
+e reconexão; continuidade de chamada; cancelamento e descarte; perfis; soundboard;
+clipes/gravação; Remote PC; foco, teclado, Escape e responsividade.
 
-O workflow `Windows full app` separa a validação em três jobs independentes,
-todos em Windows e no mesmo commit:
+Após código: typecheck, format check, build e regressões afetadas. Build antes de
+testes que consomem out. Conferir desktop, janela reduzida, tablet e telefone.
+Mídia sintética não comprova hardware ou captura real. Falha de ambiente fica
+registrada como pendência, sem alegar validação concluída.
 
-- `checks`: tipagem, formatação, backend, regras, privacidade e contratos de entrega.
-- `interfaces`: interfaces em Chromium, nos modos web e desktop simulado, e jogos.
-- `windows`: helpers C++, Electron real, entrada remota, SFU e áudio. O teste
-  completo de layout/chamada executa logo após o build nativo. As medições de
-  áudio ficam neste runner, separadas da carga das interfaces; loopback e runtime
-  também executam sequencialmente entre si. Os contratos do atualizador real
-  (`desktop-updates.js`) pertencem a este job, que instala `electron/node_modules`.
+## Documentação e conclusão
 
-`delivery` depende do sucesso dos três. Só então gera o diretório do aplicativo,
-testa o binário empacotado, cria instalador/ZIP e publica o rascunho privado.
-O NSIS recebe `--prepackaged` com esse mesmo diretório: não recompõe a aplicação
-após seu teste. Na validação local, os 226 arquivos anteriores permaneceram
-idênticos; o NSIS acrescentou somente seu auxiliar normal `resources/elevate.exe`.
-O diretório final também passou novamente no teste de aplicativo empacotado.
-O fluxo especial de atualizar somente as instruções de um rascunho continua
-independente. O nome do workflow e a exigência de conclusão com sucesso, usados
-por `frontend-publish.yml`, permanecem iguais.
+README aponta as fontes; AGENTS roteia instruções; arquitetura registra donos;
+desenvolvimento cobre ambiente e operação; UX guarda produto/referência; este
+arquivo guarda execução; docs/agents/workflow.md guarda contribuição e skills.
+Atualizar essas fontes no lugar. Preservar documentação especializada necessária
+a jogos, licenças e distribuição. Detalhes históricos permanecem no Git.
 
-A comparação das listas na primeira etapa preservou os 94 arquivos de teste da
-esteira anterior. A preparação da 0.3.4 acrescenta o teste de instalação descrito
-abaixo. Apenas `desktop-notifications.js` e `call-stability.js` deixaram
-de executar duas vezes. Nenhuma asserção foi retirada nem tornou-se opcional.
-O teste grande `desktop-call-layout.js` permanece completo nesta etapa.
+Concluído somente com os três aceites, todos os recursos com destino/evidência,
+apresentação antiga retirada fora dos jogos, comandos e CI consolidados,
+documentação coerente e checks aprovados. Até lá, registrar entregas e pendências
+com precisão.
 
-Cada job usa cache de downloads npm e instala as dependências do seu lockfile.
-Interfaces, mídia nativa e entrega geram seu próprio frontend no mesmo commit;
-isso repete um build curto, evitando transferir a exportação e grandes pacotes
-entre runners. O único artefato de transferência contém os dois EXE C++ já
-validados (cerca de 650 KiB antes da compressão). A entrega restaura esses arquivos
-em `artifacts/native-audio/Release`, sem recompilar os helpers.
+## Checkpoint desta retomada
 
-O artefato `native-helpers-<run_id>` expira em um dia e é removido após a entrega
-bem-sucedida. Se outra validação ou a entrega falhar, continua disponível nesse
-prazo para repetir somente os jobs que falharam; o nome não muda entre tentativas.
-Depois de expirar, repetir a execução completa. Evidências de falha ficam em
-artefatos separados por domínio durante sete dias. Instalador e ZIP continuam
-armazenados na release privada, sem transferi-los por artefatos do Actions.
+- Branch criada. Build inicial e 67 regressões de regras/interface dos jogos passaram.
+- Inventário de 1.120 arquivos; matriz durável em docs/frontend-preservation.csv.
+  899 preservar, 147 desacoplar, 74 substituir; 25 compartilhados com servidor.
+- Shell, autenticação, canais, chat, presença, amigos/DMs e catálogo novos sobre os
+  donos existentes. Jogos ficam em superfície própria; fontes de áreas dos marcos
+  seguintes permanecem preservadas, sem montagem no shell novo.
+- 101 scripts consolidados em 19. Os 233 arquivos antes referenciados permanecem
+  classificados; a classificação inclui também testes antes fora desses aliases.
+- Phosphor 2.1.10 adicionado por solicitação do usuário; imports individuais.
+  O bump de body-parser já existente no lockfile foi preservado.
+- QA local passou: login direto, chat, amizade/aceite, DM, anexo privado, catálogo,
+  abertura dos jogos, logout com recarga, convidado no catálogo/mesa e viewports
+  1440, 1024 e 390; 12 verificações, sem erros JS nesse cenário.
+- Core passou em 1.400/1.400 casos; typecheck, format check e build passaram.
+- Regressão integrada final: 14/14 casos dos cinco jogos passaram, log em
+  artifacts/frontend-reset/games-complete.log. Corrigidos cálculos de espaço,
+  hosts de overlays fora do escopo e painel do Trono cobrindo Ticket to Ride.
+  As declarações dos 20 estilos dos jogos foram conferidas contra a base.
+- O teste de ordem de pacotes do Trono injeta uma fase sintética. Durante esse
+  trecho, snapshots reais do relógio da fixture são retidos para não sobrescrever
+  a fase; depois, retoma leitura autoritativa. Não é prova de um fluxo real de
+  Usurpação ponta a ponta. Outros cenários exercitam o backend descartável.
+- Electron está disponível nesta etapa. QA real de autenticação concluído com
+  perfil temporário: modal, retorno autenticado da Corte, sessão cifrada,
+  restauração, remoção de lembrar e logout. Captura/áudio nativos não foram
+  validados por esse cenário; permanecem no Marco 2.
+- REA CLI 6.7.0: registro alinhado, MCP ausente; janela isolada recuperada para
+  o Marco 2. Nova inspeção autenticada de canais em rea-marco2-inspection.json.
+  A chamada ativa foi observada depois; veja o checkpoint do Marco 2 abaixo.
+- A revisão automática recusou exclusão de views por checagem só de imports.
+  Nenhuma exclusão foi executada naquela rodada; o Marco 3 registra as remoções
+  posteriores. Auditoria adicional de 11 views
+  em 901 fontes cobre exports, IDs, eventos, fachadas, URLs, workers e IPC:
+  artifacts/frontend-reset/presentation-audit.json. São indícios para revisão
+  semântica; a remoção e o reset final das fontes continuam pendentes.
+- Em 24/10, o usuário confirmou a direção visual do Marco 1 e apontou modal
+  cortado e retorno ao login ao sair da Corte. Corrigidos: diálogo possui seu
+  dimensionamento fora do shell; voltar preserva a conta e abre comunicação,
+  ou catálogo quando convidado. A sessão não era encerrada: o destino era antigo.
+- Rodada dessas correções: 74/74 casos de autenticação, navegação, Corte e
+  Electron; typecheck, format check e build passaram. Dois casos públicos novos
+  em application-shell-browser; auth-desktop adaptado e ambos ligados ao CI.
+  Logs/capturas em artifacts/frontend-reset/auth-*.log e auth-regression/.
+- Direção visual do Marco 1 aceita. Marco 2 implementado após observação da
+  chamada por REA, com captura nativa validada e aceite recebido em 25/10.
+  O corte final continua pendente no Marco 3.
 
-Próximas decisões dependem dos tempos da primeira execução reorganizada: conferir
-o ganho real com a disponibilidade de runners, avaliar o custo total de minutos
-e só então selecionar suítes por domínio/arquivos alterados. Paralelismo reduz a
-espera quando há runners disponíveis, mas repete preparação e pode consumir mais
-minutos. Não mover cobertura crítica para uma execução opcional para obter verde.
-Desmembrar o teste grande de layout exige comparar as garantias específicas de
-continuidade de mídia com as suítes de domínio antes de retirar cenários dele.
+## Marco 2 — aprovado em 25/10/2026
 
-Validação local desta alteração: tipagem, formatação, build estático, actionlint
-1.7.12 e análise sintática dos comandos PowerShell passaram. Os comandos extraídos
-dos jobs reorganizados passaram em 268 testes de backend/contratos e 44 de
-interfaces, sem skips. A inicialização adiada da janela, geometria da Corte,
-chamada completa com dois Electron, loopback do Windows e runtime passaram em
-cinco testes, também sem skips. Helpers compilados e transferência local por ZIP
-conservaram seus hashes; os dois EXE incluídos no pacote são idênticos aos
-validados. O teste do aplicativo empacotado passou antes e depois do NSIS. O
-instalador foi gerado com `--prepackaged`, e o preparo dos downloads passou
-(site 188,9 MiB; instalador 135,5 MiB). Logs `artifacts/ci-parallel-*`.
+Marco 1 aprovado pelo usuário com “agora sim”. O commit local e1070da registra
+esse marco. O usuário aprovou o resultado do Marco 2 após testar a interface e
+solicitou o commit de todas as alterações atuais na mesma branch, estabelecendo
+uma referência antes do Marco 3. O commit local é `e170860`; não houve push.
 
-Na primeira execução reorganizada (`39845535930`, commit `2f56fd0`), interfaces
-e Windows nativo passaram. O backend falhou somente em dois contratos do
-atualizador: `GenericProvider` é importado de `electron/node_modules`, ausente
-naquele job. O teste local anterior tinha as dependências de ambos os projetos
-instaladas, o que mascarou essa dependência. A entrega ficou corretamente bloqueada.
+### Referência e implementação
 
-O mesmo grupo foi reproduzido em cópia temporária dos fontes sem dependências do
-Electron: 32 passaram e dois falharam com `MODULE_NOT_FOUND`. `desktop-updates.js`
-foi transferido inteiro para uma etapa própria no job Windows, após o preparo do
-Electron. O grupo de backend restante passou em 27 casos sem essa pasta; os sete
-contratos do atualizador passaram no ambiente com suas dependências. O inventário
-permanece com 95 arquivos de teste, sem eliminar nem duplicar casos. O backend
-completo passou em 261 testes numa instalação própria com `npm ci` somente na raiz,
-sem junction, worktree ou dependências do Electron. Tipagem, formatação, build e
-actionlint também passaram. Logs `artifacts/ci-checks-*` e `ci-updater-*`;
-conferir a execução remota após o push da correção.
+A chamada preparada pelo usuário foi observada com REA: quatro pessoas, duas
+telas, grade e foco em pessoa/transmissão. Playwright realizou as trocas de foco;
+REA inspecionou/capturou os estados. Os menus vieram das capturas do usuário.
+IDs, fatos, adaptações e lacunas estão no documento UX. Não há pedido pendente
+para repetir aquela preparação.
 
-A instalação do driver virtual do runner não foi executada no computador de Felipe.
-As validações locais não publicaram release nem instalaram o aplicativo.
-Commit e push da contribuição foram autorizados posteriormente por Felipe.
+Em 25/10, a janela isolada havia sido fechada (CDP 9333 recusou conexão).
+Foi reaberta com o mesmo perfil e a sessão autenticada recuperada foi inspecionada
+com REA. Isso não substitui as evidências anteriores da chamada.
 
-## Preparação da entrega Windows 0.3.4
+- Grade responsiva com pessoa e tela separadas, foco manual e miniaturas, barra
+  Phosphor, conversa lateral recolhível e acesso às configurações.
+- Um único compositor/conversa e o mesmo player por mídia permanecem montados.
+  Os contêineres dos players passam entre shell e hosts dos jogos sem recaptura.
+- Menus de voz e transmissão têm volumes independentes, silenciar local,
+  assistir/parar, câmera, prévia local, troca de fonte e moderação existente.
+  Permissões exibidas continuam derivadas do stage e verificadas no servidor.
+- Configurações apresentam dispositivos, ganhos, processamento, qualidade,
+  áudio, permissões e diagnóstico. O seletor conserva o dono nativo existente.
+- Corrigidos: player da transmissão preso no host dos jogos; grade cortada com
+  seis cartões; miniaturas abaixo da área útil; Escape fechando menu e foco ao
+  mesmo tempo; saída explícita do fullscreen nativo; chaves de diagnóstico.
+- A regressão encontrou hover oscilante no resultado do Love Letter com movimento
+  reduzido: posições alternavam 34/36 px a cada frame. Um teste mínimo confirmou
+  a causa. CSS agora mantém esse botão imóvel somente nessa preferência; o
+  visual normal e as declarações anteriores dos jogos permanecem preservados.
+- Fixtures de Azul/Splendor/Love Letter passaram a entrar na voz pela navegação
+  pública, preservando jogadas, segredos, reconexão, placares e asserts de mídia.
+  Removida instrumentação temporária do resultado de Love Letter.
 
-`electron/package.json`, as duas entradas de versão do lockfile, preload e
-instruções da distribuição estão sincronizados em 0.3.4. O backend conserva
-0.14.0-alpha. O build exporta essa versão no metadado do frontend e no botão de
-download. Os guias existentes foram atualizados, sem criar outro Markdown de
-notas de versão. O roteiro de publicação pelo workflow e a alternativa manual
-ficam em `PUBLICAR_SURGE_LEVE.md` e acompanham o ZIP.
+| Dono                                                  | Responsabilidade                                                           |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| voice/stage.ts                                        | Participantes, foco pessoa/tela, streams emprestadas, volumes e moderação. |
+| voice/navigation.ts                                   | Página aberta independente da participação em voz.                         |
+| voice/toolbar.ts                                      | Ações no gesto original e capacidades reais da plataforma.                 |
+| voice/settings.ts e screen-options                    | Dispositivos, ganhos e preferências de transmissão.                        |
+| settings/initialize.ts                                | Preparação funcional sem montar a apresentação antiga.                     |
+| desktop/capture.ts                                    | Seleção/cancelamento nativo; único wrapper de captura.                     |
+| components/voice/media-tile.tsx                       | Player permanente transferido entre hosts do shell e jogos.                |
+| components/application/call*.tsx e media-settings.tsx | Nova apresentação, slots e assinaturas; sem novos donos de captura/rede.   |
 
-`electron/installer.nsh` é o hook exato da 0.3.3 (`0f52f55a`), agora referenciado
-por `build.nsis.include`. Usa o plugin nativo nsProcess para localizar o nome
-exato do executável, pedir seu fechamento e, após autorização da instalação,
-encerrar a instância que continuar escondida na bandeja. Não interpola o caminho
-em PowerShell. Mantém a identidade do produto, conta e preferências.
+### Validação concluída
 
-O teste upstream `desktop-installer.js` foi adaptado para `electron/` e bloqueado
-fora de Windows GitHub-hosted descartável. Na entrega, executa depois do NSIS e
-antes de preparar/publicar downloads: instala em diretório com apóstrofo,
-simula a versão antiga que se esconde ao fechar, atualiza, verifica o perfil e
-reabre. Um skip nessa etapa reprova o job. Não executar esse instalador de QA
-no computador de Felipe; o teste usa a mesma identidade do produto instalado.
+| Verificação                                   | Resultado e evidência em artifacts/frontend-reset                     |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| Core determinístico completo                  | 1.403/1.403; call-core.log.                                           |
+| Chamada e autenticação no navegador           | 4/4; call-browser-regression.log.                                     |
+| Jogos integrados e hover reduzido             | 15/15; call-games-final.log.                                          |
+| Electron real: chamada/captura e autenticação | 2/2; call-desktop-regression.log.                                     |
+| Tipos, formatação e exportação estática       | Passaram; call-typecheck.log, call-format-check.log e call-build.log. |
 
-Tipagem, formatação, build e 17 testes de atualizador/distribuição passaram.
-Manifestos, preload executado em VM e metadado exportado concordam em 0.3.4.
-O diretório empacotado foi gerado e sua versão Windows, ASAR, preload e renderer
-também identificam 0.3.4. O teste de aplicativo empacotado agora compara essas
-versões durante sua execução real.
+Playwright conferiu 1440×900, 1024×768, 768×1024 e 390×844. Conferiu também
+quatro contas e duas transmissões via WebRTC, foco, volumes separados, Escape,
+fullscreen e continuidade em chat/catálogo/Trono/configurações. Capturas em
+call-qa; não são snapshots visuais aprovados.
 
-A abertura local do novo binário foi bloqueada antes de iniciar o aplicativo:
-duas tentativas, saída 4551 e stderr informando bloqueio pela política Device
-Guard da organização. Não foi alterada nem contornada a política. A abertura do
-pacote 0.3.4 e a instalação sobre a bandeja precisam passar no runner Windows;
-o sucesso local do pacote 0.3.2 não aprova automaticamente esta entrega.
-Evidências em `artifacts/release-034/`, especialmente `packaged-launch-debug.log`.
+No Electron, main/preload e captura de uma BrowserWindow controlada são reais.
+Cancelamento inicial e de troca de fonte, pausar/retomar prévia, fullscreen,
+navegação, parar tela e sair da voz preservam/liberam as tracks esperadas.
+Microfone é sintético; permissões são pré-concedidas apenas no perfil descartável.
+Não comprova equipamento físico, áudio por aplicativo ou qualidade pela internet.
+Os cenários dos jogos que simulam a ponte Windows continuam identificados como
+fixtures; não são os dois cenários de Electron real da tabela.
 
-O NSIS 0.3.4 foi gerado com o hook portado e `--prepackaged`. O preparo do site
-passou (188,9 MiB, instalador 135,5 MiB): `latest.yml` informa 0.3.4 e o SHA-512
-confere com o único EXE em downloads. O binário e os arquivos locais não são uma
-entrega aprovada enquanto as verificações de execução/instalação não passarem.
+Testes novos constam de tests/suites.json e das seleções existentes no CI; nenhuma
+nova entrada npm foi criada. Artefatos de falha do CI incluem call-qa. Pipeline
+remota não foi executada/publicada. Revisão local incluiu diff e arquivos novos;
+backend, preload, armazenamento e protocolos foram preservados.
 
-Após o push autorizado da contribuição, aguardar os três jobs de validação e o
-job de entrega do Windows full app; só
-depois copiar a tag `desktop-v0.3.4-run-<id>-attempt-<tentativa>` gerada e executar
-Publish approved frontend na branch correspondente. Não usar uma tag 0.3.2 ou
-0.3.3 para publicar o código 0.3.4. O destino do push é a própria contribuição,
-com upstream `origin/codex/desktop-ci-parallel`. Instalação do produto e publicação
-no Surge não foram executadas nem autorizadas nesta etapa.
+### Ajustes após o feedback visual de 25/10
 
-## Validação local
+O usuário gostou da direção e pediu mais espaço para a transmissão, foco por
+clique no quadro e um cenário com dez pessoas. Ajustes incorporados sem avançar
+para o Marco 3:
 
-| Verificação | Resultado / alcance |
-| --- | --- |
-| `npm run typecheck`, `format:check`, `build` | Passaram com TS estrito e detecção de código sem uso. |
-| `npm test` | Cadeia completa de backend, jogos e modelos passou; inclui os três contratos estáticos de estilos. |
-| `test:server:lifecycle` | 150 casos de composição, identidade, serviços, filas, cancelamento, privacidade e shutdown passaram no fechamento do backend. |
-| `test:database` | Seis casos com instalação dos 13 SQL, 12 tabelas com RLS, funções e privacidade em PGlite passaram. |
-| Estilos compilados | Comparação com a versão anterior e com o grafo atual passou em 14 estados, com cerca de 15,2 milhões de propriedades por execução. Layout/conta/portrait (10 casos), jogos (17), perfis/mensagens/soundboard e clipes (10) passaram. |
-| CSS em desenvolvimento | Alterar um estilo de domínio atualizou o Next dev sem recarregar a página, trocar a identidade da conexão ou encerrar o microfone sintético. Fonte temporário restaurado após o teste. |
-| Electron após CSS | Pacote Windows reconstruído, chamada completa com dois Electron e relay WebRTC real através do backend tipado passaram (três casos). Não houve instalação. |
-| Limpeza final | 30 modelos de motor local/escolhas/mãos/ciclo de vida/aparência e oito casos de layout/aparência/editor/chamada nativa passaram, além da cadeia completa `npm test`. Evidências em `artifacts/final-cleanup-*`. |
-| Transições de jogo/voz | 24 modelos de partida/navegação passaram. `test:court` passou nos 18 casos de regras, partidas, participação e interface, incluindo ida/volta do jogo, chamada na mesa, fullscreen, fila de revelação privada e local após online. A cadeia `npm test`, a chamada com dois Electron, o relay SFU e o pacote atual reconstruído também passaram. Logs `game-transition-*`/`game-transitions-*` e `court-final-regressions.log`. |
-| Saída do canal de voz | 19 modelos de ciclo de vida, tipagem, formatação, build e `npm test` passaram. A interface verifica que a chamada está conectada antes de excluir o canal e que depois não há microfone ativo. Chamada com dois Electron, relay SFU e pacote reconstruído passaram. A Corte passou em seis casos tanto no Chromium padrão quanto no Edge, emulando viewport sem tentar redimensionar a janela nativa fullscreen. Logs `call-room-exit-*` e `court-fullscreen-viewport*`. Uma execução agrupada falhou no idle dos controles de transmissão; a repetição nativa isolada passou com as mesmas asserções. |
-| Paridade | Jogos, efeitos, worklets, WAV, assinatura de arquivos e protocolos foram comparados durante cada conversão. Resultados detalhados e commits anteriores permanecem no Git; nenhuma qualidade de captura/codec/bitrate foi reduzida nesta limpeza. |
-| Suítes antes desatualizadas | `frontend-browser.js`: 25 testes (20 cenários + quatro subcenários de mídia + raiz); `desktop-browser.js`: 16 testes (15 cenários + raiz). Todos passaram, sem skips. Fontes formatados, participação explícita em voz, fixtures completas e falha inicial preservada. Logs `final-frontend-green.log` e `desktop-final-current-controls.log`. |
-| Fechamento visual | `test:ui` passou nos quatro domínios; `test:court`, 18 testes. Regressões isoladas de stream recebido/fullscreen e shell/soundboard passaram em sete testes. Electron real passou com dois clientes, relay SFU local e pacote final reconstruído, em três testes sequenciais, sem instalação. Logs `final-focused-players-shell.log`, `final-migration-electron.log` e `final-court-layout-regressions.log`. |
-| Áudio nativo e runtime | O teste original `desktop-audio.js` passou sem skip: capturou o tom do processo selecionado e excluiu outro processo, pelo helper C++ e API do Windows. `desktop-runtime.js` passou com áudio silenciado e habilitado, conservando as mesmas asserções de permissões, sessão, picker, arquivos e IPC. Os timeouts antigos não se reproduziram; sua causa não foi estabelecida. Logs `native-acceptance-current.log` (dois testes) e `native-runtime-unmuted-option.log` (um teste). |
-| Uso real entre computadores | Em 22/10/2026, Felipe testou na própria máquina e relatou que seus amigos conseguiram assistir à transmissão e ouvi-lo normalmente. Confirmou que usou a versão local deste projeto, aberta pelo fluxo `npm run desktop:start`. Aprova qualitativamente voz e recepção da tela na rede real; não registra taxa efetiva de quadros, áudio do jogo ou transporte usado. Checkout desta conferência: `29c0a93`. |
+- Cabeçalhos compactos na chamada e miniaturas em faixa horizontal no foco.
+  A transmissão conserva sua proporção e não perde conteúdo por recorte.
+- O quadro inteiro é acionável por mouse, toque e teclado. Clicar no quadro
+  ampliado volta à grade; uma transmissão ainda não assistida abre e recebe foco.
+  Controles e menus continuam separados da área de seleção.
+- Cartões, vídeos e streams mantêm identidade ao passar entre grade/foco/faixa.
+  Recepção, socket, captura e volumes continuam nos donos anteriores.
+- Cenário descartável real da aplicação com dez contas, quatro câmeras
+  ilustradas e duas transmissões sintéticas via WebRTC local. Contas são
+  preparadas em duas levas antes de conectar clientes, sem alterar o limite de
+  cadastro da produção. Não é teste de capacidade de rede/hardware de dez pessoas.
+- QA em 1920×1080, 1440×900, 1024×768, 768×1024 e 390×844. Doze quadros cabem
+  em quatro colunas/três linhas no desktop; a faixa do foco rola sem mover o
+  quadro principal. Identidade do player e foco de teclado foram conferidos.
+- Validação desta rodada: 41/41 contratos pertinentes em call-space-models.log;
+  2/2 fluxos da chamada em call-ten-people.log; 8/8 verificações de autenticação
+  e navegação/Corte em call-space-navigation.log; 1/1 fluxo de captura no Electron
+  real em call-space-desktop.log. typecheck, format check e build passaram.
+  Não foi repetida a suíte core completa nesta rodada de apresentação.
 
-Testes de interface consomem `out/`; execute build antes. Neste ambiente, Edge usa
-`CHROMIUM_EXECUTABLE_PATH` e as suítes antigas também `AUTH_TEST_CHROMIUM`.
-Exportação/decodificação requerem `ffmpeg` e `ffprobe` no PATH; a cópia portátil
-fica em `artifacts/ffmpeg/extracted/`. Clipes passaram após corrigir esse ambiente.
-Nesta rodada, a câmera oferecida pelo modo de captura falsa do Edge encerrou com
-evento nativo até numa página vazia, sem o projeto (`camera-browser-only.log`).
-`tests/synthetic-call-media.cjs` fornece fontes estáveis de câmera/microfone às
-suítes da Corte, frontend e desktop. A capacidade de supressão nativa é simulada
-explicitamente quando necessária; isso não executa DSP de um driver real.
-As asserções de preservação das mesmas trilhas continuam; o teste
-não aprova dispositivos físicos. Não houve alteração no dono da captura da câmera.
+As imagens de demonstração ficam em artifacts/frontend-reset/call-qa:
+grid-ten-people.png, focus-ten-people.png, camera-focus-ten-people.png e versões
+com a largura no nome. Fontes e teste permanecem na aplicação; as imagens são
+evidência de QA, sem novos snapshots dourados ou comandos npm. Após esses
+ajustes, o usuário confirmou o aceite final do Marco 2; Marco 3 ainda não aprovado.
 
-Evidências ignoradas: `artifacts/style-next-*`, `final-cleanup-*`,
-`final-source-imports.json`, `styles-before-next.json`, `style-foundation-split.json`
-e `style-deduplication.json`. Os logs antigos dos serviços usam os prefixos
-`storage-owner-*`, `realtime-manager-*`, `throne-service-*`, `channel-service-*`,
-`chat-service-*`, `voice-soundboard-*` e `socket-gateway-*`.
-Essas saídas podem ser apagadas quando não forem mais úteis. Código/testes e o
-checkpoint no Git permitem retomar; não depender de um arquivo de artifacts.
+### Próximo passo e pendências
 
-## Documentação de atualizações
+1. Marco 2 registrado em `e170860`; nenhum commit do Marco 3 foi solicitado.
+2. Concluir Marco 3: perfis, arquivos, soundboard, clipes, gravação, Remote PC
+   e administração, reutilizando os donos preservados.
+3. Atualizar regressões antigas que ainda dependem dos layouts retirados à medida
+   que seus recursos forem reintegrados. Não retirar cobertura útil para obter CI
+   verde. A suíte completa browser/desktop e a pipeline inteira ainda não foram
+   declaradas aprovadas.
+4. Concluir revisão semântica e corte das views antigas fora dos jogos, mantendo
+   a matriz de preservação atualizada. A auditoria anterior é indício, não prova
+   suficiente para excluir fontes. Não recriar uma árvore de frontend legado.
+5. Registrar verificações de hardware/áudio nativo ainda ausentes quando houver
+   ambiente pertinente, e concluir a verificação integrada dos recursos do Marco 3.
 
-As oito notas Windows de 0.2.3 a 0.2.10 foram consolidadas em
-`docs/ATUALIZACOES.md`, com requisitos operacionais e resumo das versões. O pacote
-usa esse nome fixo; não criar outro Markdown a cada atualização. O histórico
-detalhado continua no Git. O leia-me Windows deixou de repetir as notas antigas.
-As instruções do auxiliar de clipes ficam junto ao fonte em
-`electron/clips-helper/LEIA-ME-WINDOWS.txt`; o workflow acompanha esse caminho.
-`docs/archive/previews/` mantém os originais de arte, sem alterações.
+Evidências temporárias ficam em artifacts/frontend-reset; plano, andamento e
+pendências continuam neste arquivo. Marcos 1 e 2 aprovados; Marco 3 pendente.
 
-Tipagem, formatação, build estático e nove regressões de empacotamento/downloads
-passaram após a consolidação. Não houve alteração de mídia nem publicação.
+## Marco 3 — em implementação
 
-## O que ainda falta
+Base local: `e170860`, branch `codex/frontend-rebuild`. Alterações sem commit.
+O ajuste prévio do usuário nos imports Phosphor (`*Icon`) foi preservado.
+Backend, banco e código nativo permanecem sem alterações nesta etapa.
 
-A conversão do código e a atualização das suítes antigas estão concluídas.
-O teste básico de voz e transmissão entre computadores foi aprovado pelo usuário;
-as verificações complementares abaixo continuam abertas. Não há outra fila de arquivos
-legacy para converter; falhas encontradas nesse aceite devem ser tratadas como
-regressões específicas, com reprodução antes de alterar captura/codec/bitrate.
+### Integração disponível
 
-### Aceite físico e externo
+- Perfil, rascunho, salvar/descartar, GIFs, viewer e diretório do criador usam os
+  donos existentes. Abas conservam campos/rascunhos; troca de conta invalida
+  respostas antigas. Biblioteca mantém proteção de mídias de perfil e isolamento.
+- Configurações incluem notificações, cores das mesas, áudio dos jogos, arquivos
+  e atividade no desktop. Lembrar sessão e permissões usam a sessão/ponte atuais.
+  O tema é aplicado à superfície delimitada dos jogos; a Corte conserva o dourado.
+- Soundboard, gravação, replay web e Remote PC têm acesso na sidebar e nos jogos.
+  A aba Recursos mantém os mesmos controles e hosts de gravação/clipes/Remote PC;
+  as mesas possuem acesso a essa aba, sem transferir os controles de DOM.
+  Foram retirados os controles/hosts duplicados do antigo painel dos jogos.
+- Replay automático continua suspenso no Windows, conforme política nativa.
+  A central explica essa disponibilidade. Não foi ativado replay nativo.
+- Canais, cargos e arquivos do canal reutilizam autorização e cancelamento dos
+  controladores atuais. Sidebar indica chamada ativa, não lidas e canais silenciados.
+- Cinco views retiradas: auth/dialogs, auth/host, navigation/portal-contents,
+  portal-parallax e portal-credits. Formulários/download estão em application/auth;
+  navegação em shell; música/créditos em game-settings sobre audio/catalog.
+  A matriz de preservação foi atualizada. A revisão semântica específica fica em
+  artifacts/frontend-reset/marco3-removal-review.json. Outras views não foram
+  excluídas por ausência de imports; a limpeza final ainda não terminou.
 
-Felipe confirmou o uso da versão local migrada com amigos: voz e recepção da tela
-funcionaram normalmente. Esse relato não é uma medição de FPS nem confirma os
-demais fluxos abaixo; não repetir o aceite básico como se ainda não tivesse sido feito.
+### Gravação e isolamento das fixtures
 
-- Complementar o teste com áudio do jogo/loopback e jogo com efeitos a 60 fps.
-  A recepção de tela e voz na rede real já foi confirmada; a taxa efetiva de quadros,
-  recuperação e preservação da chamada ao navegar não foram relatadas nesse aceite.
-- Conferir TURN/SFU, confirmação/recuperação por e-mail e banco no ambiente de
-  desenvolvimento apropriado. Fixtures locais/PGlite não aprovam serviços reais.
-- Gravação usa mixer/encoder reais, mas simula o destino de arquivos; conferir
-  seletor e escrita no Windows. Parar explicitamente antes de fechar a janela:
-  o fechamento não garante exportação de uma gravação em andamento.
+A fixture parava o MediaRecorder após 1.200 ms, antes do primeiro bloco codificado
+no Chrome. O helper compartilhado agora aguarda dados codificados também no
+Electron. A instrumentação temporária de eventos/contextos foi retirada; o
+observador necessário à sincronização fica somente nos testes. Não houve mudança
+de codec ou mixer de produção para contornar a fixture.
 
-### Repetir a verificação nativa local
+O cenário Electron passou a escolher uma porta livre: a porta fixa 11994 estava
+ocupada por uma fixture de outro worktree. O processo desse outro trabalho foi
+preservado. O encerramento do helper de backend reconhece também signalCode.
 
-O helper deve estar compilado (`npm run desktop:build:native`). Com uma saída de
-áudio disponível, o primeiro comando gera dois tons para verificar isolamento;
-o segundo modo habilita áudio nas duas janelas do teste de runtime:
+### Verificações concluídas nesta rodada
 
-```powershell
-node --test --test-concurrency=1 tests/desktop-audio.js tests/desktop-runtime.js
-$env:QA_UNMUTED_AUDIO = '1'
-node --test tests/desktop-runtime.js
-Remove-Item Env:QA_UNMUTED_AUDIO
-```
+| Verificação                                                                                   | Evidência em artifacts/frontend-reset                                                                             |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Core completo: 1.404/1.404                                                                    | marco3-core-final.log                                                                                             |
+| Aparência e perfil: 6/6, após falha reproduzida do tema das mesas                             | marco3-appearance-profile.log                                                                                     |
+| Arquivos, viewer e contas: 9 casos aprovados; o perfil falhou nessa rodada e passou depois    | marco3-account-browser.log; perfil final em marco3-games-cut.log                                                  |
+| Canais/anexos: 2/2, incluindo criar/excluir, mute, não lidas e continuidade de voz            | marco3-channels-green.log                                                                                         |
+| Chamada, navegação, Remote PC e soundboard: 11/11                                             | marco3-call-regression.log                                                                                        |
+| Replay web: dez aprovações e um skip externo                                                  | seção de clipes em marco3-resources-browser.log; outros recursos desse log falharam e tiveram rodadas posteriores |
+| Gravação Chrome: quatro aprovações e um skip externo                                          | marco3-recording-final.log                                                                                        |
+| Electron real: captura, configurações e gravação reproduzível preservando chamada/transmissão | marco3-electron-recording.log                                                                                     |
+| Azul, Splendor, Love Letter, Ticket to Ride, navegação e perfil: catorze aprovações           | marco3-games-cut.log; esse log também contém falhas antigas do Trono, corrigidas abaixo                           |
+| Trono: seis decretos e teste pai aprovados                                                    | marco3-throne-final.log; história/lobby falharam nessa rodada                                                     |
+| Trono: história completa e lobby/transferência rejeitada: 2/2                                 | marco3-throne-remainder.log                                                                                       |
+| Tipos, formatação e exportação estática                                                       | marco3-typecheck.log; marco3-format-check.log; marco3-build.log                                                   |
 
-O runtime usa perfis descartáveis e dispositivos falsos do Chromium, inclusive
-sem `--mute-audio`. O loopback usa processos geradores de tom reais. Isso aprova
-esses caminhos locais, sem aprovar microfone físico, jogo, rede ou serviços reais.
+Fixtures antigas do Trono passaram a entrar na voz pelo shell atual. Permutações
+original/discord retiradas foram substituídas pelo cenário Corte, mantendo tamanhos,
+regras, cartas privadas, confirmação, tooltips, histórico e identidade das tracks.
+A transferência rejeitada usa o comando público do lobby, pois retomar um jogo
+agora reabre o lobby corrente. Não foram atalhadas as partidas para obter aprovação.
 
-## Como retomar
+FFprobe/FFmpeg estão ausentes: as verificações externas aparecem como skip.
+Codificação/decodificação e frames/seek no Chrome continuam obrigatórios. Captura
+Electron usou uma BrowserWindow controlada real; microfone é sintético e permissões
+foram previamente concedidas apenas no perfil temporário. Remote PC teve vídeo
+WebRTC direto e entrada/consentimento numa ponte fixture; isso não comprova injeção
+nativa no Windows. Capturas ficam em marco3-qa/; não são snapshots visuais aceitos.
 
-Confira branch/status e este documento. Voz e transmissão da versão local já
-foram testadas com amigos; o próximo passo é complementar o aceite descrito acima.
-Se houver falha, registre cenário, versão, transporte e diagnóstico local antes
-de ajustar o dono do recurso afetado. As suítes frontend/desktop já estão verdes;
-não reintroduzir entrada automática em voz, resizers retirados ou controladores JS.
+### Pendências para continuar
 
-Após mudanças: tipagem, formatação, build, regressões relevantes e Electron real
-quando houver mídia. Atualize este checkpoint e crie commit local assinado.
-Não editar `out/`, `.next/` nem JS/CSS gerados na raiz de `public/`. `public/assets`,
-`public/vendor`, `public/manual`, Cinzas, SQL, licenças e guias distribuídos são
-recursos originais e continuam necessários.
+1. Concluir revisão semântica/corte das views/adaptadores/estilos restantes,
+   atualizando a matriz por arquivo. Não recriar uma árvore de frontend legado.
+2. Completar QA integrado de notificações/atividade e caminhos nativos pendentes,
+   declarando equipamento/serviço indisponível. Preservar cobertura ao adaptar
+   outras fixtures antigas; a suíte browser/desktop completa e a pipeline inteira
+   não foram declaradas aprovadas.
+3. O CI existente recebeu os filtros dos recursos reintegrados, sem novo alias npm.
+   Conferir o resultado remoto somente quando houver autorização para publicar.
+4. Revisar a entrega integrada e obter aceite visual do Marco 3. Não houve aceite,
+   commit, publicação ou deploy desta etapa; a migração continua aberta.
+
+### Polimento atual do Marco 3 — feedback de 25/10
+
+Entrada exclusiva e restauração sem login transitório; seleção de tela separada
+da participação em voz; Amigos/Convites/Comunidade; cartão da conta e remoção da
+seta decorativa permanecem da primeira revisão (`polish-*`).
+
+A segunda revisão substitui a composição inferior: sidebar de 280px, conexão e
+ações câmera/tela/soundboard separadas da faixa de conta (mic/fones/configurações).
+Na chamada, soundboard fica depois de mic/fones; a configuração redundante com
+reticências saiu. Gravação, clipes e Remote PC ficam em Configurações → Recursos,
+com controles permanentemente montados e acesso nos jogos. Sair está no cartão
+da conta. Não há transferência do dock entre sidebar e mesas.
+
+GIFs e soundboard possuem estilos próprios. Galeria com cabeçalho/rodapé fixos,
+miniaturas legíveis, atribuição e alternativa por link recolhível. Soundboard com
+busca local, cartões de 60px e prévia/exclusão discretas; só sua lista rola, ou o
+editor quando aberto. Prévia do perfil compacta sem scroll interno nem cena
+duplicada. A aparência também deve alcançar o chat; essa ampliação foi adiada
+explicitamente pelo usuário. Phosphor preservado.
+
+Validação em artifacts/frontend-reset:
+
+- `refine-core.log`: 1.405/1.405 contratos determinísticos, incluindo navegação
+  para Recursos em web/desktop.
+- `refine-final.log`: 11/11 — chamada, perfil, GIFs e soundboard, incluindo
+  bibliotecas preenchidas e contínua posse dos players/capturas.
+- `refine-desktop-final.log`: 2/2 no Electron real, captura/gravação/cancelamento
+  e sessão nativa criptografada; microfone sintético e janela controlada de QA.
+- `refine-resources.log`: 16 aprovações e um skip externo declarado; autenticação,
+  gravação e Remote PC com ponte de teste preservam chamadas. Não comprova input
+  de hardware ou transporte pela internet.
+- `refine-clips-final.log`: 10 aprovações e um skip externo (FFmpeg/FFprobe ausentes);
+  replay, áudio, busca temporal, exportação, quota e descarte passaram no Chrome.
+- `refine-types.log`, `refine-format-check.log`, `refine-build.log`: tipos,
+  formatação e exportação estática. `git diff --check` passou.
+
+Capturas revisadas em refine-qa: 24 itens em 1440×900, 1024×768, 768×1024 e 390×844;
+sons sintéticos e prévias ilustrativas com arte local dos jogos. Não são conteúdo
+do Discord nem prova de serviço GIPHY ao vivo. call-qa mostra sidebar/barra da
+chamada; marco3-qa mostra a prévia compacta. São evidências, não snapshots dourados
+ou aceite humano. Referência desta revisão: oito imagens fornecidas pelo usuário;
+REA autenticado e limites da observação anterior permanecem registrados no UX.
+
+Rodadas intermediárias com falhas estão preservadas em refine-red/settings-red,
+filled/first e clips/green; não apresentá-las como seleções integralmente verdes.
+Nenhuma instalação, commit, publicação ou alteração de contrato de backend.
+Continuam pendentes corte semântico restante, regressões legadas não adaptadas e
+aceite visual integrado do Marco 3.
+
+As revisões seguintes preservam preto/carvão neutro e dourado, áudio rápido só
+na sidebar, fundos pessoais na chamada, capas laterais e conta delimitada fora
+da voz. Os carregadores existentes respeitam accountId, época e URLs assinadas.
+Sem correspondência de conta, a linha fica neutra; não inferir identidade por nome.
+
+Checkpoint atual após as três últimas imagens: DMs recolhíveis com seis linhas
+e expansão, avatares sem distorção; editor com campos/prévia em painéis irmãos,
+rodapé próprio e Ver prévia em janelas estreitas; MemberCard com estilos locais,
+capa inteira e composição própria para perfil completo. Nenhuma seção é cortada.
+Clique no fundo dos modais externos aos jogos usa cancelamento nativo, fecha
+apenas o de cima e conserva bloqueio de salvar. O teste também cobre arraste
+iniciado dentro do diálogo e cancelamento de troca de fonte no Electron.
+
+As falhas reproduzidas e correções estão nos logs final-polish-dm-red/green,
+preview-red/green e dismiss-red/green em artifacts/frontend-reset. O primeiro
+ensaio de DM tinha nome acessível incompleto (não provava o defeito); corrigido
+antes do red definitivo, que detecta precisamente o avatar esticado. As rodadas
+contrast-* da revisão anterior continuam como evidência histórica nos artefatos.
+Capturas atuais: final-polish-qa (perfil compacto/completo), marco3-qa (editor,
+alternância em tela pequena) e auth-regression/direct-group.png (24 conversas).
+Arte local dos jogos ilustra perfis nas fixtures; não comprova GIPHY ao vivo.
+Sem novos snapshots permanentes, commit ou aceite do Marco 3. As pendências
+semânticas e de validação integrada acima continuam abertas.
+
+Validação final desta revisão (logs final-polish-*): ui-final 10/10;
+resources 31 aprovações e dois skips externos de FFmpeg/FFprobe ausentes;
+desktop 1/1 no Electron real; contracts 98/98. Tipos, format:check, build estático
+e diff --check passaram. QA inclui 1440×900, 1024×768, 768×1024 e 390×844.
+Captura nativa usa uma janela controlada e microfone sintético; a ponte de
+Remote PC não comprova injeção de hardware. A suíte completa e o CI remoto
+continuam sem declaração de aprovação.

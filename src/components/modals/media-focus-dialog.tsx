@@ -7,6 +7,7 @@ import { useNativeDialog } from './use-native-dialog';
 export function MediaFocusDialog() {
   return (
     <dialog
+      closedby="any"
       id="mediaFocusDialog"
       className="media-focus-dialog"
       aria-labelledby="mediaFocusTitle"

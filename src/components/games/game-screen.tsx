@@ -18,7 +18,6 @@ export function GameScreen() {
             <MusicControlHost id="game-tracks" />
             <span id="courtFullscreenHost" style={{ display: 'contents' }} />
             <MusicControlHost id="game-toggle" />
-            <span id="recordMatchHost" style={{ display: 'contents' }} />
             <span id="throneLogToggleHost" style={{ display: 'contents' }}></span>
             <CallNavigationHost id="socialBtn" />
             <span id="throneSpeedHost" style={{ display: 'contents' }} />

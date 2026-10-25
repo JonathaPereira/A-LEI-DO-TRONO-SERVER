@@ -1,0 +1,446 @@
+/* Game dependencies extracted from src/styles/navigation/app-layout.css. */
+@scope (#gameSurface) {
+  /* A personal arrangement preference, independent of the color theme. */
+  :scope[data-app-layout='discord'] {
+    --discord-rail: 72px;
+    --discord-sidebar: 248px;
+    --discord-top: 52px;
+    --discord-controls: 0px;
+    --discord-panel-height: 164px;
+  }
+  :scope.desktop-app[data-app-layout='discord']
+    #desktopRail
+    button:is(:hover, :focus-visible, .active),
+  #webLayoutRail button:is(:hover, :focus-visible, .active) {
+    border-radius: 14px;
+    background: var(--theme-soft);
+    color: var(--theme-accent);
+  }
+  :scope[data-app-layout='discord'] :is(#desktopRail, #webLayoutRail) button.active:before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 13px;
+    bottom: 13px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--theme-accent);
+  } /* Connection, video controls and profile form one sidebar footer. */
+  :scope[data-app-layout='discord']
+    :is(#layoutUserControls, #layoutConnectionControls)
+    .call-action {
+    display: grid;
+    place-items: center;
+    width: 30px !important;
+    height: 34px;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 5px !important;
+    margin: 0;
+    border: 0 !important;
+    border-radius: 7px;
+    background: transparent !important;
+    color: var(--theme-muted) !important;
+    box-shadow: none !important;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+  :scope[data-app-layout='discord']
+    :is(#layoutUserControls, #layoutConnectionControls)
+    .call-action:hover:not(:disabled) {
+    background: var(--theme-soft) !important;
+    color: var(--theme-text) !important;
+  }
+  :scope[data-app-layout='discord'] #layoutUserControls .call-action:is(.danger-active) {
+    color: #ff8d9c !important;
+  }
+  :scope[data-app-layout='discord'] #layoutUserControls .settings-active {
+    color: var(--theme-accent) !important;
+  }
+  :scope[data-app-layout='discord'] #layoutConnectionControls #joinVoiceBtn:not(.call-active) {
+    color: #67d9a2 !important;
+  }
+  :scope[data-app-layout='discord'] #layoutConnectionControls #joinVoiceBtn.call-active:hover {
+    background: #642b38 !important;
+    color: #ffe6eb !important;
+  }
+  :scope[data-app-layout='discord'] #layoutCallActions .call-action {
+    display: grid;
+    place-items: center;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 32px;
+    min-height: 32px !important;
+    margin: 0;
+    padding: 6px !important;
+    border: 1px solid transparent !important;
+    border-radius: 7px;
+    background: var(--theme-card) !important;
+    color: var(--theme-text) !important;
+    box-shadow: none !important;
+    transition:
+      background 0.15s,
+      color 0.15s,
+      border-color 0.15s;
+  }
+  :scope[data-app-layout='discord'] #layoutCallActions .call-action:hover:not(:disabled) {
+    background: var(--theme-soft) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope[data-app-layout='discord'] #layoutCallActions :is(.camera-active, .screen-active) {
+    background: var(--theme-accent) !important;
+    color: var(--theme-bg) !important;
+  }
+  :scope[data-app-layout='discord'] #layoutVoicePanel .call-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  :scope[data-app-layout='discord'] #layoutVoicePanel .call-action > span:last-child {
+    display: none;
+  }
+  :scope[data-app-layout='discord'] #layoutVoicePanel .call-icon {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 0 !important;
+    background: none !important;
+  }
+  :scope[data-app-layout='discord'] #layoutVoicePanel .call-icon:before {
+    display: none !important;
+  }
+  :scope[data-app-layout='discord'] #layoutVoicePanel .call-icon:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    background: currentColor;
+    mask: var(--desktop-icon) center/contain no-repeat;
+    transform: none !important;
+  }
+  :scope[data-app-layout='discord'] #layoutUserControls .danger-active .call-icon:before {
+    content: '';
+    position: absolute;
+    display: block !important;
+    height: 2px;
+    width: 24px;
+    left: -2px;
+    top: 9px;
+    background: currentColor;
+    transform: rotate(-45deg);
+    z-index: 1;
+  }
+  :scope[data-app-layout='discord'] #layoutConnectionControls #joinVoiceBtn.call-active {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M3 12c5-5 13-5 18 0l-1 5-4-1v-4M3 12l1 5 4-1v-4'/%3E%3C/svg%3E");
+  }
+  :scope.desktop-app[data-app-layout='discord'].chat-only-active
+    #chatOnlyScreen
+    .mn-channel-sidebar {
+    bottom: var(--discord-panel-height) !important;
+    height: calc(100dvh - var(--desktop-top) - var(--discord-panel-height)) !important;
+    max-height: calc(100dvh - var(--desktop-top) - var(--discord-panel-height)) !important;
+  }
+  :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+    #chatOnlyScreen
+    .mn-channel-sidebar {
+    bottom: var(--discord-panel-height) !important;
+  }
+  :scope.desktop-app[data-app-layout='discord'] #desktopCallDock {
+    display: none !important;
+  }
+  :scope.desktop-app[data-app-layout='discord'] #gameScreen .hand-zone {
+    padding-left: calc(var(--discord-sidebar) + 12px) !important;
+    box-sizing: border-box;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-channel-sidebar {
+    padding: 0 10px !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-sidebar-heading {
+    min-height: 58px !important;
+    margin: 0 0 8px !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-channel {
+    min-height: 46px !important;
+    padding: 8px !important;
+    border-radius: 6px !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-channel-meta strong {
+    font-size: 12px !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-channel-list {
+    gap: 3px !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-sidebar-label {
+    padding-top: 16px !important;
+    font-size: 10px !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active .mn-sidebar-bottom {
+    min-height: 48px !important;
+    padding: 8px 4px !important;
+  }
+  :scope.desktop-app[data-app-layout='discord'].chat-only-active #chatOnlyScreen .mn-sidebar-bottom,
+  :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+    #chatOnlyScreen
+    .mn-sidebar-bottom {
+    display: none !important;
+  } /* Text channels get the familiar central conversation; voice stays connected. */
+  :scope[data-app-layout='discord'].chat-only-active.channel-text-active
+    #socialPanel.social-chat-hub {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: 42px minmax(0, 1fr) !important;
+    grid-template-areas: 'head' 'chat' !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active.channel-text-active
+    #socialPanel
+    > .voice-section {
+    display: none !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active.channel-text-active
+    #socialPanel
+    > .court-chat-section {
+    grid-area: chat;
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: none !important;
+    border-left: 0 !important;
+  }
+  :scope[data-app-layout='discord'].chat-only-active.channel-text-active
+    #socialPanel
+    .court-chat-title {
+    border-top: 0 !important;
+  } /* The browser uses the same arrangement, without native Windows controls. */
+  :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active {
+    --sidebar: var(--discord-sidebar) !important;
+    --header: 72px;
+    --layout-sidebar-width: var(--discord-sidebar) !important;
+  }
+  :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+    #chatOnlyScreen
+    .mn-channel-sidebar {
+    inset: 0 auto var(--discord-controls) var(--discord-rail) !important;
+    width: var(--discord-sidebar) !important;
+    height: auto !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+    #chatOnlyScreen
+    .chat-app-header {
+    inset: 0 0 auto calc(var(--discord-rail) + var(--discord-sidebar)) !important;
+  }
+  :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+    #socialPanel.social-chat-hub {
+    left: calc(var(--discord-rail) + var(--discord-sidebar)) !important;
+    top: 72px !important;
+    bottom: var(--discord-controls) !important;
+    height: auto !important;
+  }
+  :scope:not(.desktop-app)[data-app-layout='discord'] #voiceSettingsPanel {
+    position: fixed !important;
+    inset: 64px 16px auto auto !important;
+    width: min(700px, calc(100vw - var(--discord-rail) - 32px)) !important;
+    max-height: calc(100dvh - var(--discord-controls) - 80px) !important;
+    overflow: auto;
+    z-index: 1700;
+    background: var(--theme-panel);
+    border: 1px solid var(--theme-line);
+    border-radius: 14px;
+    color: var(--theme-text);
+  }
+  :scope:not(.desktop-app)[data-app-layout='discord'] #socialPanel .voice-section > .call-toolbar {
+    display: none !important;
+  }
+  :scope[data-app-layout='discord'] :is(#portalScreen, #setupScreen, #roomScreen) {
+    min-height: 0;
+    max-width: 100%;
+  }
+  :scope[data-app-layout='discord'].native-fullscreen-media :is(#layoutVoicePanel, #webLayoutRail) {
+    visibility: hidden;
+  }
+  @media (max-width: 900px), (max-aspect-ratio: 3/4) and (max-width: 1200px) {
+    :scope[data-app-layout='discord'] {
+      --discord-rail: 64px;
+      --discord-sidebar: 0px;
+      --discord-controls: 164px;
+    }
+    :scope.desktop-app[data-app-layout='discord'] #telemetryPanel {
+      max-height: calc(100dvh - var(--desktop-top) - var(--discord-panel-height) - 24px);
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #chatOnlyScreen
+      .mn-channel-sidebar {
+      inset: 72px 0 auto var(--discord-rail) !important;
+      width: calc(100vw - var(--discord-rail)) !important;
+      height: 76px !important;
+      display: block !important;
+      overflow: auto !important;
+      padding: 8px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #chatOnlyScreen
+      .mn-sidebar-scroll {
+      display: flex !important;
+      gap: 12px !important;
+      overflow-x: auto !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #chatOnlyScreen
+      .mn-channel-list {
+      flex-direction: row !important;
+      width: auto !important;
+      flex: none !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #chatOnlyScreen
+      .mn-channel {
+      width: auto !important;
+      min-width: 130px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #chatOnlyScreen
+      :is(.mn-sidebar-heading, .mn-sidebar-label, .mn-sidebar-bottom) {
+      display: none !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #socialPanel.social-chat-hub {
+      top: 148px !important;
+    }
+  }
+  @media (max-height: 650px) and (max-width: 900px) {
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active .chat-app-header {
+      height: 56px !important;
+      min-height: 56px !important;
+      padding: 8px 12px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #chatOnlyScreen
+      .mn-channel-sidebar {
+      top: 56px !important;
+      height: 62px !important;
+      padding: 5px 8px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active #chatOnlyScreen .mn-channel {
+      min-height: 48px !important;
+      padding: 6px 8px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active #socialPanel.social-chat-hub {
+      top: 56px !important;
+      bottom: 52px !important;
+      height: auto !important;
+      padding-bottom: 0 !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord'].chat-only-active
+      #socialPanel.social-chat-hub {
+      top: 118px !important;
+      bottom: var(--discord-controls) !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active #socialPanel .voice-section {
+      padding: 4px !important;
+      gap: 6px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active #socialPanel .call-toolbar {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      padding: 8px !important;
+      gap: 5px !important;
+      min-height: 0 !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active #socialPanel .call-action {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 5px !important;
+      height: 42px;
+      min-height: 42px !important;
+      min-width: 0 !important;
+      padding: 5px !important;
+      font-size: 9px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active
+      #socialPanel
+      .call-action
+      .call-icon {
+      width: 18px !important;
+      height: 18px !important;
+      flex: none;
+      font-size: 0 !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active
+      #socialPanel
+      .mn-media-stage.has-screen
+      .mosaic-toolbar {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      height: 22px !important;
+      min-height: 22px !important;
+      max-height: 22px;
+      padding: 0 !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active
+      #socialPanel
+      .mn-media-stage.has-screen
+      .mosaic-toolbar
+      strong {
+      font-size: 14px !important;
+      white-space: nowrap;
+    }
+    :scope:not(.desktop-app)[data-app-layout].chat-only-active
+      #socialPanel
+      .mn-media-stage.has-screen
+      .mosaic-toolbar
+      button {
+      min-height: 28px !important;
+      padding: 4px 6px !important;
+      font-size: 10px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='discord']
+      #socialPanel
+      .voice-section
+      > .call-toolbar {
+      display: none !important;
+    }
+  }
+  @media (max-height: 650px) and (max-width: 640px) {
+    :scope:not(.desktop-app)[data-app-layout='original'].chat-only-active
+      #chatOnlyScreen
+      .mn-channel-sidebar {
+      top: 56px !important;
+      height: 62px !important;
+      padding: 5px 8px !important;
+    }
+    :scope:not(.desktop-app)[data-app-layout='original'].chat-only-active
+      #socialPanel.social-chat-hub {
+      top: 118px !important;
+    }
+    :scope.desktop-app[data-app-layout='discord'].chat-only-active #socialPanel .voice-section {
+      padding: 4px !important;
+    }
+    :scope.desktop-app[data-app-layout='discord'].chat-only-active
+      #socialPanel
+      .mn-media-stage.has-screen
+      .mosaic-toolbar {
+      height: 32px !important;
+      min-height: 32px !important;
+      max-height: 32px;
+      padding: 0 !important;
+    }
+    :scope.desktop-app[data-app-layout='discord'].chat-only-active
+      #socialPanel
+      .mn-media-stage.has-screen
+      .mosaic-toolbar
+      button {
+      min-height: 30px !important;
+      padding: 5px 6px !important;
+      font-size: 10px !important;
+    }
+  }
+}

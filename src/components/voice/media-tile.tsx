@@ -2,6 +2,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CallStage, ParticipantView, StageSnapshot } from '../../lib/voice/stage';
+import presentation from '../application/call.module.css';
+import { AppIcon as Icon } from '../application/icons';
 import { BorrowedVideo } from './borrowed-video';
 import { bindMediaResize } from '../../lib/voice/media-resize';
 import { bindStreamControls, type StreamControls } from '../../lib/voice/stream-controls';
@@ -20,11 +22,13 @@ export function MediaTile({
   kind,
   snapshot,
   runtime,
+  external = false,
 }: {
   person: ParticipantView;
   kind: 'camera' | 'screen';
   snapshot: StageSnapshot;
   runtime: StageRuntime;
+  external?: boolean;
 }) {
   const client = runtime.TronoCallStage;
   const [tile] = useState(() => document.createElement('div'));
@@ -43,44 +47,64 @@ export function MediaTile({
     [tile, screen],
   );
   useLayoutEffect(() => {
-    tile.dataset.peer = p.id;
-    tile.style.order = String(
-      snapshot.participants.findIndex((person) => person.id === p.id) * 2 + (screen ? 0 : 1),
-    );
-    tile.classList.add(screen ? 'screen-share-tile' : 'camera-tile');
-    if (!screen) tile.classList.add('camera-live');
-    for (const [name, on] of Object.entries({
-      'has-video': live || paused,
-      speaking: !screen && p.speaking,
-      'stream-invitation': screen && !watching,
-      'local-preview-paused': paused,
-      'share-collapsed': screen && p.collapsed,
-    }))
-      tile.classList.toggle(name, on);
-    if (screen) tile.setAttribute('aria-label', 'Transmissão de ' + p.name);
-    const card = [...document.querySelectorAll<HTMLElement>('#voiceRoster .voice-person')].find(
-      (card) => card.dataset.peer === p.id,
-    );
-    const target =
-      docked && card
-        ? card.querySelector(screen ? '.participant-screen-slot' : '.participant-camera-slot')
-        : document.getElementById(host);
-    if (
-      target &&
-      tile.parentElement !== target &&
-      document.fullscreenElement !== tile &&
-      !tile.classList.contains('media-maximized')
-    )
-      target.append(tile);
+    const place = () => {
+      tile.dataset.peer = p.id;
+      tile.style.order = String(
+        snapshot.participants.findIndex((person) => person.id === p.id) * 2 + (screen ? 0 : 1),
+      );
+      tile.classList.add(screen ? 'screen-share-tile' : 'camera-tile');
+      if (!screen) tile.classList.add('camera-live');
+      for (const [name, on] of Object.entries({
+        'has-video': live || paused,
+        speaking: !screen && p.speaking,
+        'stream-invitation': screen && !watching,
+        'local-preview-paused': paused,
+        'share-collapsed': screen && p.collapsed,
+      }))
+        tile.classList.toggle(name, on);
+      if (screen) tile.setAttribute('aria-label', 'Transmissão de ' + p.name);
+      const card = [...document.querySelectorAll<HTMLElement>('#voiceRoster .voice-person')].find(
+        (card) => card.dataset.peer === p.id,
+      );
+      const slot = [
+        ...document.querySelectorAll<HTMLElement>(
+          screen ? '[data-call-screen]' : '[data-call-person]',
+        ),
+      ]
+        .find(
+          (card) => card.getAttribute(screen ? 'data-call-screen' : 'data-call-person') === p.id,
+        )
+        ?.querySelector('[data-call-video]');
+      const target = external
+        ? slot
+        : docked && card
+          ? card.querySelector(screen ? '.participant-screen-slot' : '.participant-camera-slot')
+          : document.getElementById(host);
+      if (
+        target &&
+        tile.parentElement !== target &&
+        document.fullscreenElement !== tile &&
+        !tile.classList.contains('media-maximized')
+      )
+        target.append(tile);
+    };
+    place();
+    window.addEventListener('trono:call-hosts', place);
     if (screen) {
       idle.current = bindStreamControls(tile);
-      idle.current.update(live && !p.collapsed && !paused);
+      idle.current.update(!external && live && !p.collapsed && !paused);
     }
+    return () => window.removeEventListener('trono:call-hosts', place);
   });
   useLayoutEffect(
     () =>
-      bindMediaResize(tile, kind, { storage: runtime.TronoStorage, inChatHub: () => snapshot.hub }),
-    [tile, kind, snapshot.hub, runtime],
+      external
+        ? undefined
+        : bindMediaResize(tile, kind, {
+            storage: runtime.TronoStorage,
+            inChatHub: () => snapshot.hub,
+          }),
+    [tile, kind, snapshot.hub, runtime, external],
   );
   useLayoutEffect(
     () => () => {
@@ -99,123 +123,134 @@ export function MediaTile({
         active={screen ? watching && !paused && live : live}
         onDoubleClick={fullscreen}
       />
-      {screen ? (
-        <>
-          <div className="screen-share-placeholder">
-            {paused ? (
-              <>
-                <strong>⚡ Economia local ativa</strong>
-                <small>Sua tela continua sendo transmitida.</small>
-              </>
-            ) : (
-              'Conectando compartilhamento…'
-            )}
-          </div>
-          <div className="mn-stream-invite">
-            <strong>{p.name} está transmitindo</strong>
-            <small>Escolha quando abrir a transmissão.</small>
-          </div>
-          <button
-            className="mn-watch-stream"
-            type="button"
-            hidden={p.self}
-            onClick={() => void client.toggleScreen(p.id)}
-          >
-            {watching ? 'Parar de assistir' : 'Assistir stream'}
-          </button>
-          <button
-            className="media-fullscreen-btn"
-            type="button"
-            title="Maximizar compartilhamento"
-            aria-label="Maximizar compartilhamento"
-            hidden={!watching}
-            onClick={fullscreen}
-          >
-            ⛶
-          </button>
-          <button
-            className="screen-collapse-btn"
-            type="button"
-            title={collapseTitle}
-            aria-label={p.collapsed ? 'Restaurar prévia' : 'Minimizar prévia'}
-            hidden={!watching}
-            onClick={() => void client.collapse(p.id, tile)}
-          >
-            {p.collapsed ? '▣' : '—'}
-          </button>
-          <button
-            className={'screen-resource-btn' + (p.self ? '' : ' hidden')}
-            type="button"
-            title="Ocultar apenas a prévia local sem interromper a transmissão"
-            onClick={() => void client.togglePreview()}
-          >
-            {paused ? '👁 Mostrar prévia' : '⚡ Economizar recursos'}
-          </button>
-          <button
-            className="screen-switch-btn"
-            type="button"
-            hidden={!p.self}
-            disabled={snapshot.switching}
-            title="Escolher outra tela ou janela sem encerrar o compartilhamento"
-            onClick={() => void client.switchSource()}
-          >
-            ⇄ Trocar tela
-          </button>
-          <label className="mn-stream-volume" hidden={p.self || !watching}>
-            <span>Áudio da stream</span>
-            <input
-              type="range"
-              min="0"
-              max="300"
-              step="5"
-              value={p.screenVolume}
-              disabled={!p.hasScreenAudio}
-              onInput={(event) => volume(event.currentTarget.value)}
-              onChange={(event) => volume(event.currentTarget.value)}
-            />
-            <output>{p.screenVolume}%</output>
-          </label>
-          <small className="mn-stream-audio-state" hidden={!watching}>
-            {p.hasScreenAudio
-              ? 'Áudio da stream disponível'
-              : 'Transmissão sem áudio compartilhado'}
-          </small>
-          <span className="mn-stream-name">
-            🖥 {p.name}
-            {p.self ? ' • você • transmitindo' : ''}
-          </span>
-        </>
-      ) : (
-        <>
-          <div className="camera-placeholder">Conectando vídeo…</div>
-          <button
-            type="button"
-            className="media-dock-btn"
-            title={p.cameraDock ? 'Ampliar câmera' : 'Minimizar câmera no perfil'}
-            aria-label={p.cameraDock ? 'Ampliar câmera' : 'Minimizar câmera no perfil'}
-            onClick={() => client.dockCamera(p.id)}
-          >
-            {p.cameraDock ? '↗' : '↙'}
-          </button>
-          <button
-            type="button"
-            className="media-fullscreen-btn"
-            title="Maximizar câmera"
-            aria-label="Maximizar câmera"
-            onClick={fullscreen}
-          >
-            ⛶
-          </button>
-          <span>
-            {p.name}
-            {p.self ? ' • você' : ''}
-          </span>
-        </>
+      {external && (
+        <button
+          type="button"
+          className={presentation.playerClose}
+          aria-label="Sair da tela cheia"
+          onClick={() => void client.releaseFocus(tile)}
+        >
+          <Icon name="close" />
+        </button>
       )}
+      {!external &&
+        (screen ? (
+          <>
+            <div className="screen-share-placeholder">
+              {paused ? (
+                <>
+                  <strong>⚡ Economia local ativa</strong>
+                  <small>Sua tela continua sendo transmitida.</small>
+                </>
+              ) : (
+                'Conectando compartilhamento…'
+              )}
+            </div>
+            <div className="mn-stream-invite">
+              <strong>{p.name} está transmitindo</strong>
+              <small>Escolha quando abrir a transmissão.</small>
+            </div>
+            <button
+              className="mn-watch-stream"
+              type="button"
+              hidden={p.self}
+              onClick={() => void client.toggleScreen(p.id)}
+            >
+              {watching ? 'Parar de assistir' : 'Assistir stream'}
+            </button>
+            <button
+              className="media-fullscreen-btn"
+              type="button"
+              title="Maximizar compartilhamento"
+              aria-label="Maximizar compartilhamento"
+              hidden={!watching}
+              onClick={fullscreen}
+            >
+              ⛶
+            </button>
+            <button
+              className="screen-collapse-btn"
+              type="button"
+              title={collapseTitle}
+              aria-label={p.collapsed ? 'Restaurar prévia' : 'Minimizar prévia'}
+              hidden={!watching}
+              onClick={() => void client.collapse(p.id, tile)}
+            >
+              {p.collapsed ? '▣' : '—'}
+            </button>
+            <button
+              className={'screen-resource-btn' + (p.self ? '' : ' hidden')}
+              type="button"
+              title="Ocultar apenas a prévia local sem interromper a transmissão"
+              onClick={() => void client.togglePreview()}
+            >
+              {paused ? '👁 Mostrar prévia' : '⚡ Economizar recursos'}
+            </button>
+            <button
+              className="screen-switch-btn"
+              type="button"
+              hidden={!p.self}
+              disabled={snapshot.switching}
+              title="Escolher outra tela ou janela sem encerrar o compartilhamento"
+              onClick={() => void client.switchSource()}
+            >
+              ⇄ Trocar tela
+            </button>
+            <label className="mn-stream-volume" hidden={p.self || !watching}>
+              <span>Áudio da stream</span>
+              <input
+                type="range"
+                min="0"
+                max="300"
+                step="5"
+                value={p.screenVolume}
+                disabled={!p.hasScreenAudio}
+                onInput={(event) => volume(event.currentTarget.value)}
+                onChange={(event) => volume(event.currentTarget.value)}
+              />
+              <output>{p.screenVolume}%</output>
+            </label>
+            <small className="mn-stream-audio-state" hidden={!watching}>
+              {p.hasScreenAudio
+                ? 'Áudio da stream disponível'
+                : 'Transmissão sem áudio compartilhado'}
+            </small>
+            <span className="mn-stream-name">
+              🖥 {p.name}
+              {p.self ? ' • você • transmitindo' : ''}
+            </span>
+          </>
+        ) : (
+          <>
+            <div className="camera-placeholder">Conectando vídeo…</div>
+            <button
+              type="button"
+              className="media-dock-btn"
+              title={p.cameraDock ? 'Ampliar câmera' : 'Minimizar câmera no perfil'}
+              aria-label={p.cameraDock ? 'Ampliar câmera' : 'Minimizar câmera no perfil'}
+              onClick={() => client.dockCamera(p.id)}
+            >
+              {p.cameraDock ? '↗' : '↙'}
+            </button>
+            <button
+              type="button"
+              className="media-fullscreen-btn"
+              title="Maximizar câmera"
+              aria-label="Maximizar câmera"
+              onClick={fullscreen}
+            >
+              ⛶
+            </button>
+            <span>
+              {p.name}
+              {p.self ? ' • você' : ''}
+            </span>
+          </>
+        ))}
       <button
         type="button"
         className="media-resize-grip"
-        hidden={snapshot.hub}
+        hidden={snapshot.hub || external}
         title="Redimensionar"
         aria-label="Redimensionar janela"
       >

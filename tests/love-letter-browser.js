@@ -28,7 +28,7 @@ async function peer(base, token) {
   return { ws, messages, send, wait };
 }
 test(
-  'Love Letter real controls complete a match, keep secrets, fit Original/Discord and preserve microphone/camera/share',
+  'Love Letter real controls complete a match, keep secrets, fit supported window sizes and preserve microphone/camera/share',
   { timeout: 180000 },
   async () => {
     const server = await new Promise((r) => {
@@ -127,19 +127,18 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
-      if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-        await page.locator('#joinVoiceBtn').click();
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+      await page.getByRole('button', { name: 'Entrar na voz de Jogos', exact: true }).click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-      await page.locator('#cameraBtn').click();
+      await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
       await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
       await page.evaluate(() => window.TronoSocial.startScreenShare());
       await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
       const before = await tracks();
       assert(before.mic && before.camera && before.screen);
-      await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-      await expect(page.locator('.games-card')).toHaveCount(7);
-      await page.locator('#playLoveLetter').click();
+      await page.evaluate(() => window.TronoGames.openLibrary());
+      await expect(page.locator('button[data-game]')).toHaveCount(7);
+      await page.locator('button[data-game="love-letter"]').click();
       await page.locator('#loveLetterPlayerCount').selectOption('2');
       await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();
       await expect(page.locator('.ll-seats')).toBeVisible();
@@ -149,8 +148,7 @@ test(
       await page.getByRole('button', { name: 'Começar com os presentes' }).click();
       await expect(page.locator('.ll-opponent')).toHaveCount(1);
       await expect(page.locator('.ll-court .ll-reference-card')).toHaveCount(10);
-      for (const layout of ['original', 'discord']) {
-        await page.evaluate((v) => window.TronoAppLayout.apply(v), layout);
+      for (const layout of ['original']) {
         for (const [width, height] of [
           [1536, 1024],
           [1280, 720],
@@ -188,7 +186,7 @@ test(
         }
       }
       await page.setViewportSize({ width: 1536, height: 1024 });
-      await page.evaluate(() => window.TronoAppLayout.apply('original'));
+
       const volume = page.locator('#loveLetterScreen [data-game-audio=love-letter]');
       await volume.locator('summary').click();
       await volume.locator('input').press('Home');
@@ -305,7 +303,7 @@ test(
             'Reconnect updates presence without replaying the move',
           );
           await page.screenshot({ path: 'artifacts/love-letter/stable-feedback.png' });
-          await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+          await page.evaluate(() => window.TronoPortal.openVoice());
           assert.deepEqual(await tracks(), before);
           await page.emulateMedia({ reducedMotion: 'reduce' });
           await page.evaluate(() => window.TronoLoveLetter.open());
@@ -392,6 +390,51 @@ test(
       await browser?.close();
       await f.stop();
       await new Promise((r) => server.close(r));
+    }
+  },
+);
+
+test(
+  'reduced motion keeps a Love Letter result button still at its hover edge',
+  { timeout: 15000 },
+  async () => {
+    const browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
+    });
+    try {
+      const page = await browser.newPage({
+        reducedMotion: 'reduce',
+        viewport: { width: 600, height: 400 },
+      });
+      await page.setContent(
+        '<div id="gameSurface"><section class="ll-screen"><section class="ll-result"><button type="button" class="ll-button ll-primary">Nova partida</button></section></section></div>',
+      );
+      await page.addStyleTag({
+        content: await fs.readFile('src/styles/games/love-letter.css', 'utf8'),
+      });
+      const button = page.getByRole('button', { name: 'Nova partida', exact: true }),
+        before = await button.boundingBox();
+      await page.mouse.move(before.x + before.width / 2, before.y + before.height - 1);
+      const samples = await button.evaluate(
+        (n) =>
+          new Promise((resolve) => {
+            const values = [];
+            let frames = 0;
+            const sample = () => {
+              values.push(n.getBoundingClientRect().y);
+              if (++frames < 30) requestAnimationFrame(sample);
+              else resolve(values);
+            };
+            requestAnimationFrame(sample);
+          }),
+      );
+      assert(
+        samples.every((y) => Math.abs(y - before.y) < 0.1),
+        'Reduced motion must not translate the result action: ' + JSON.stringify(samples),
+      );
+      await button.click();
+    } finally {
+      await browser.close();
     }
   },
 );

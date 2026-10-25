@@ -1,0 +1,76 @@
+.dialog:global(#memberProfileDialog) {
+  position: fixed;
+  width: 384px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #45413a;
+  border-radius: 14px;
+  background: #191919;
+  color: #e6dfd0;
+  box-shadow: 0 20px 80px #0009;
+  font:
+    13px/1.6 'Segoe UI',
+    sans-serif;
+}
+.dialog:global(#memberProfileDialog)[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialog:global(#memberProfileDialog)[data-full='true'] {
+  width: 720px;
+}
+.dialog:global(#memberProfileDialog) :global(#memberProfileContent) {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.dialog:global(#memberProfileDialog) :global(.member-card) {
+  border: 0;
+  border-radius: 0;
+}
+.dialog:global(#memberProfileDialog) :global(.member-close) {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  float: none;
+  border: 1px solid #ffffff24;
+  border-radius: 7px;
+  background: #111111d9;
+  color: #eee2cc;
+  cursor: pointer;
+}
+.dialog:global(#memberProfileDialog) footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 16px;
+  border-top: 1px solid #353535;
+}
+.dialog:global(#memberProfileDialog) footer button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+.dialog:global(#memberProfileDialog) :global(#memberProfileMessage) {
+  background: #d6b779;
+  color: #1a1712;
+  border-color: #d6b779;
+}
+.dialog:global(#memberProfileDialog) :global(#memberProfileContent[aria-busy='true']) {
+  padding: 48px 24px;
+  color: #bfb7a9;
+}

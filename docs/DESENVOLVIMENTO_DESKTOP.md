@@ -1,127 +1,88 @@
-# Desenvolvimento desktop
+# Desenvolvimento e validação
 
-O aplicativo Windows tem dois modos locais. Ambos usam um perfil de teste em
-`artifacts/desktop-profile`, separado do perfil da instalação do usuário.
+## Ambiente e execução
 
-## Interface compilada e backend existente
+Requer Node.js 24.12 ou superior. Next exporta out para web e Electron.
+Backend existente possui conta, dados e WebSocket; segredos ficam no servidor.
 
-```powershell
-npm ci
-npm run desktop:install
-npm run build
-npm run desktop:start
-```
+A instalação inicial é uma ação explícita: npm ci na raiz; desktop:install
+instala as dependências do Electron, sem substituir a aplicação distribuída.
 
-O Electron serve `out/` como a origem instalada, sem executar um servidor Next no
-computador do usuário. Esse modo usa o backend publicado e as contas existentes.
-Chat, arquivos e alterações de perfil afetam o serviço real. Após editar fontes,
-execute `npm run build` e recarregue a janela. Não precisa gerar instalador.
+Use npm run dev para Next. Para backend local, configure .env a partir de
+.env.example e execute npm run server:dev em outro terminal. APP_URL exige HTTPS
+fora de testes; origens locais entram em AUTH_ALLOWED_ORIGINS. Consulte os
+valores vigentes no exemplo e nos scripts; não grave credenciais em documentação.
 
-## Atualização ao salvar com backend local
+npm run desktop:dev inicia o modo de desenvolvimento. npm run build seguido de
+desktop:start usa a exportação estática. Conforme a configuração, esses modos
+acessam o backend publicado: mensagens, arquivos e perfis afetam dados reais.
+Desenvolvimento usa identidade/perfil separados da instalação do usuário.
 
-Prepare o ambiente local:
+Alterações em electron exigem reinício; alterações C++ exigem recompilar o
+helper. HMR não comprova continuidade de dispositivos após qualquer edição.
 
-```powershell
-Copy-Item .env.example .env
-```
+## Um comando de testes
 
-Configure as credenciais do ambiente de desenvolvimento em `.env`. O backend usa
-Supabase para contas e persistência; mantenha autenticação obrigatória. As chaves
-secretas ficam somente no backend. As migrações SQL estão em `supabase/`; esta
-reorganização não executa migrações nem altera serviços remotos.
+| Comando                     | Conteúdo e pré-requisitos                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| npm test                    | Contratos core de controladores, HTTP/WS, regras e banco local; dependências da raiz. |
+| npm test -- --suite browser | Build e Playwright com navegador; fluxos web e adaptadores sintéticos.                |
+| npm test -- --suite desktop | Windows e dependências nativas específicas dos testes selecionados.                   |
+| npm test -- --suite all     | Todos os pré-requisitos acima.                                                        |
 
-`APP_URL` identifica o frontend HTTPS usado nos links de autenticação. O backend
-exige HTTPS para essa variável fora dos testes. Para abrir a interface local,
-mantenha `http://127.0.0.1:3000` em `AUTH_ALLOWED_ORIGINS`; isso não exige trocar
-`APP_URL` para HTTP. Use a URL HTTPS do seu ambiente de desenvolvimento e confira
-os redirecionamentos permitidos na configuração de autenticação desse ambiente.
+Use --filter com regex sobre os caminhos; --list mostra a seleção sem executá-la.
+Exemplo: npm test -- --filter 'portal|community-navigation'. Seleção inválida ou
+vazia falha. tests/suites.json é a classificação única; helpers não são entradas.
 
-Em um terminal:
+A suíte desktop inclui updater que importa dependências do Electron e remux que
+exige ffmpeg/ffprobe no PATH. Modelos de mídia sem esses recursos ficam em core.
 
-```powershell
-npm run server:dev
-```
+O runner respeita CHROMIUM_EXECUTABLE_PATH. No Windows, quando o navegador do
+Playwright está ausente, aproveita o Chrome instalado no caminho padrão.
+Instalação não é feita automaticamente. Dependência ausente permanece pendência.
 
-Em outro:
+## Conferência
 
-```powershell
-npm run desktop:dev
-```
+Após código: typecheck, format:check, build e regressões afetadas. Build antes
+de suítes que consomem out. Confira desktop, janela reduzida, tablet e telefone.
+Aceite humano precede novos snapshots visuais permanentes.
 
-O segundo comando inicia Next em `http://127.0.0.1:3000` e abre o Electron nessa
-origem. A interface procura o backend em `http://127.0.0.1:10000`. A origem local
-precisa estar em `AUTH_ALLOWED_ORIGINS`, como no exemplo.
+Fixtures de conta, dados e arquivos são locais/descartáveis. Tracks sintéticas
+exercitam ciclo de vida e transporte; não provam captura física ou qualidade.
 
-Páginas, componentes e estilos globais usam a atualização do Next. Donos que
-duram pela página podem exigir recarga completa; mover um host deve preservar sua
-raiz React. `src/styles/index.css` importa os estilos de domínio pelo Next;
-edite os fontes em `src/styles/`, sem gerar cópias CSS em `public/`. O pacote
-continua exigindo `npm run build` para incorporar alterações. Entradas clássicas
-de callback/worklets usam a preparação de `predev`/`prebuild`. Mudanças em
-`electron/` exigem reabrir a aplicação; mudanças em C++ exigem recompilação.
+Mídia exige Electron real com perfis de QA e, quando pertinente, dispositivos,
+captura de tela/áudio reais. Confira dois clientes, mute/deafen, navegação sem
+recaptura, permissões, cancelamento e descarte pelo dono. Em recursos avançados,
+confira exportação de clipes/gravação, atalhos, ponte Windows e Remote PC.
 
-O fluxo de CSS foi conferido no Next em desenvolvimento: salvar um estilo de
-domínio atualizou a página sem recarga, troca da conexão ou parada de microfone
-sintético. Isso não significa que qualquer mudança no código de captura possa
-ser aplicada durante uma chamada sem reiniciar seus donos.
+Declare equipamento, serviço ou runtime ausente. Não trate fixture como aceite
+do caminho nativo. Evidências da reconstrução ficam em artifacts/frontend-reset;
+MIGRACAO informa o que foi realmente concluído.
 
-O modo de desenvolvimento aceita apenas uma origem HTTP em `127.0.0.1` com porta
-explícita e é desativado no aplicativo empacotado. O instalador serve somente seus
-arquivos e autoriza os scripts de bootstrap por hash.
+Para a chamada reconstruída, selecione application-call-browser e
+application-call-desktop com --filter nas respectivas suítes. O primeiro usa
+contas descartáveis, áudio sintético e canvas transmitidos por WebRTC; o segundo
+usa main/preload reais e captura uma BrowserWindow controlada de QA. O microfone
+do teste desktop é sintético e suas permissões são pré-concedidas somente no
+perfil temporário. Não substitui teste com equipamento nem áudio por aplicativo.
+Capturas locais e logs ficam em artifacts/frontend-reset/call-qa e call-*.log.
+Os testes não encerram o Electron do usuário nem reutilizam seu perfil.
 
-## Instalação nova do banco
+## Operações especiais
 
-`supabase/install.sql` é a ordem única dos 13 SQL existentes: base, upgrades e
-migrações datadas. Requer a infraestrutura de Auth do Supabase e recusa executar
-se alguma tabela da aplicação já existir. Para atualizar uma base existente,
-aplique somente os upgrades ainda necessários; não use esse instalador.
+desktop:build:native exige MSVC, Windows SDK e CMake; Remote Input pode exigir
+ViGEmBus. desktop:package gera pacote local, sem autorizar instalação ou upload.
+Versão e recursos estão em electron/package.json; o renderer publica
+mn-desktop-version e o empacotador confere o metadado sem editar chunks.
 
-```powershell
-npm run database:prepare
-npm run test:database
-```
+Distribuição segue [ATUALIZACOES.md](ATUALIZACOES.md) e o workflow Windows.
+database:prepare somente gera SQL revisável; não aplica migrações remotas.
+Instalação em PGlite descartável não comprova instalação no serviço completo.
 
-O primeiro comando somente gera `artifacts/database/fresh-install.sql`, pronto
-para revisar e executar no SQL Editor de um projeto de desenvolvimento novo.
-Não abre conexão nem lê credenciais. O segundo instala esse mesmo conteúdo em
-PGlite descartável e verifica RLS, permissões, perfis, e-mails privados e histórico.
-Não substitui a conferência num ambiente Supabase completo.
-
-Se usar psql, com a conexão do destino novo já configurada, a alternativa é
-`psql -f supabase/install.sql`. As inclusões são relativas ao próprio instalador,
-e ON_ERROR_STOP interrompe o processo no primeiro erro. Cada fonte conserva sua
-transação; se uma etapa falhar depois de outras confirmadas, corrija a causa e
-continue pelos arquivos pendentes, sem reaplicar o instalador inteiro.
-
-O roteiro não escreve no histórico interno do Supabase CLI nem transforma os
-SQL legados numa cadeia de `db reset`. Antes de adotar `db push`, confira
-`supabase migration list` e reconcilie as migrações datadas já executadas pelo
-[fluxo oficial de histórico](https://supabase.com/docs/reference/cli/supabase-migration-repair).
-Marcar uma migração como aplicada exige confirmar que seu SQL já foi executado;
-esse comando muda o histórico e não instala os objetos ausentes.
-
-## Helper C++
-
-Para áudio isolado de aplicativos e detecção de atividade, instale Visual Studio
-ou Build Tools com **Desenvolvimento para desktop com C++**, MSVC, Windows SDK e
-CMake. Depois:
-
-```powershell
-npm run desktop:build:native
-```
-
-O script detecta Visual Studio e CMake, escolhe o gerador disponível e produz
-`artifacts/native-audio/Release/MN-Application-Audio.exe`. Não configure NMake
-manualmente. A interface pode abrir sem o helper; as funções que dependem dele
-ficam indisponíveis.
-
-## Empacotar
-
-```powershell
-npm run desktop:build:native
-npm run desktop:package
-```
-
-O pacote inclui a saída estática em `resources/renderer`. Os recursos grandes de
-Cinzas mantêm a política de cache verificado. Valide as regressões Windows de
-`CONTRIBUTING.md` antes de distribuir.
+A regressão application-call-desktop usa porta livre e perfil temporário, evitando
+conectar ao backend de outra execução/worktree. Ela captura somente a BrowserWindow
+de QA criada pelo próprio teste. O helper de gravação espera o primeiro bloco
+codificado em vez de assumir que 1.200 ms bastam; o destino de arquivo é adiado
+pela fixture para verificar que a captura já foi encerrada antes da persistência.
+FFmpeg/FFprobe ausentes aparecem como skip nas verificações externas de gravação e
+replay no navegador; isso não equivale a validar esses decodificadores.

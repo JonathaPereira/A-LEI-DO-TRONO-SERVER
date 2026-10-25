@@ -1,5 +1,3 @@
-import { flushSync } from 'react-dom';
-import { createRoot } from 'react-dom/client';
 import {
   createCommunityNavigation,
   type CommunityNavigation,
@@ -11,7 +9,6 @@ import type { CallNavigation } from '../../lib/voice/navigation';
 import type { VoiceRuntime } from '../../lib/voice/runtime';
 import type { ThroneLobby } from '../../lib/games/throne-lobby';
 import type { ThroneNavigation } from '../../lib/games/throne-navigation';
-import { CommunityNavigationContents } from './community-navigation';
 interface Runtime extends Window {
   TronoNetwork: NetworkClient;
   TronoChannels: ChannelsController;
@@ -59,7 +56,7 @@ export function initializeCommunityNavigation(target: Window): () => void {
         const node = get(id);
         return node && !node.classList.contains('hidden');
       }) ?? null,
-    name: () => input('portalIdentity')?.value || input('playerIdentity')?.value || '',
+    name: () => runtime.TronoPortal.getSnapshot().name || input('playerIdentity')?.value || '',
     openLogin: () => runtime.TronoAuth.open('login'),
     validateIdentity: () => runtime.TronoPortal.validateIdentity(),
     refreshPermissions: () => runtime.TronoCommunityAdmin?.refresh() ?? Promise.resolve(),
@@ -111,26 +108,6 @@ export function initializeCommunityNavigation(target: Window): () => void {
     },
   };
   runtime.TronoChatHub = facade;
-  const host = doc.createElement('div');
-  host.id = 'communityNavigationHost';
-  host.style.display = 'contents';
-  doc.body.append(host);
-  const root = createRoot(host);
-  const hosts = {
-    status: get('chatOnlyStatus'),
-    count: get('chatOnlyCount'),
-    room: get('chatOnlyRoomName'),
-    title: get('communityChatTitle'),
-    enter: get('communityEnterHost'),
-    back: get('communityBackHost'),
-  };
-  flushSync(() =>
-    root.render(<CommunityNavigationContents controller={controller} hosts={hosts} />),
-  );
-  const sync = () =>
-    get('channelFilesBtn').classList.toggle('hidden', !controller.getSnapshot().filesAvailable);
-  const release = controller.subscribe(sync);
-  sync();
   controller.start();
   const ready = async () => {
     await runtime.TronoAuth.ready;
@@ -153,10 +130,7 @@ export function initializeCommunityNavigation(target: Window): () => void {
   const dispose = () => {
     disposed = true;
     target.removeEventListener('trono:ready', onReady);
-    release();
     controller.dispose();
-    flushSync(() => root.unmount());
-    host.remove();
     if (runtime.TronoChatHub === facade) delete runtime.TronoChatHub;
     if (runtime.TronoCommunityNavigation === controller) delete runtime.TronoCommunityNavigation;
     installed.delete(target);

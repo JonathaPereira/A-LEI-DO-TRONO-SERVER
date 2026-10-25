@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import type { VoiceSettings, VoiceSettingsSnapshot } from '../../lib/voice/settings';
+import { AppIcon as Icon } from '../application/icons';
 import { SCREEN_FORMATS, SCREEN_BITRATES } from '../../lib/voice/quality-policy';
 
 const screenFormats = Object.entries(SCREEN_FORMATS).sort(
@@ -391,7 +392,7 @@ export function VoiceVideoSettings({
             void client.enumerate();
           }}
         >
-          ↻ Atualizar dispositivos
+          <Icon name="swap" size={15} /> Atualizar dispositivos
         </button>
       </div>
       {!desktop && <QualityHint state={state} />}

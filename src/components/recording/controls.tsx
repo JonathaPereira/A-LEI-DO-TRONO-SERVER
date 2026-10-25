@@ -1,4 +1,5 @@
 'use client';
+import { AppIcon as Icon } from '../application/icons';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { ManualRecorder } from '../../lib/recording/recorder';
@@ -70,17 +71,20 @@ export function RecordingControls({
         <button
           id="recordMatchBtn"
           className={'icon-btn record-btn' + (active || finishing ? ' recording' : '')}
-          title="Gravar a partida exibida nesta aba"
+          title="Gravar tela"
+          aria-label={
+            active
+              ? 'Parar gravação'
+              : selecting
+                ? 'Cancelar gravação'
+                : finishing
+                  ? 'Finalizando gravação'
+                  : 'Gravar tela'
+          }
           disabled={finishing}
           onClick={controller.toggle}
         >
-          {finishing
-            ? '… Finalizando'
-            : active
-              ? '■ Parar gravação'
-              : selecting
-                ? 'Cancelar gravação'
-                : '⏺ Gravar'}
+          <Icon name={active || selecting ? 'stop' : 'record'} />
         </button>,
         buttonHost,
       )}
@@ -111,16 +115,20 @@ export function RecordingControls({
             disabled={finishing}
             onClick={controller.toggle}
           >
-            {finishing ? '…' : selecting ? 'Cancelar' : '■ Parar'}
+            <Icon name={finishing ? 'record' : 'stop'} size={14} />{' '}
+            {finishing ? 'Finalizando' : selecting ? 'Cancelar' : 'Parar'}
           </button>
         </div>,
         noticeHost,
       )}
-      <div aria-live="polite">
-        {notices.map((notice) => (
-          <RecordingToast key={notice.id} notice={notice} remove={remove} />
-        ))}
-      </div>
+      {createPortal(
+        <div aria-live="polite">
+          {notices.map((notice) => (
+            <RecordingToast key={notice.id} notice={notice} remove={remove} />
+          ))}
+        </div>,
+        noticeHost,
+      )}
     </>
   );
 }

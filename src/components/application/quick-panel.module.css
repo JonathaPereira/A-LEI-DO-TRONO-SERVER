@@ -1,0 +1,137 @@
+.host {
+  display: inline-flex;
+  min-width: 0;
+}
+.host > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 7px;
+  padding: 8px;
+  background: transparent;
+  color: #b0b0b0;
+  cursor: pointer;
+  font: inherit;
+}
+.host > button:hover {
+  background: #2e2e2e;
+  color: #dec38d;
+}
+.panel {
+  position: fixed;
+  inset: auto;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  max-height: min(580px, calc(100dvh - 24px));
+  overflow: auto;
+  padding: 16px;
+  margin: 0;
+  border: 1px solid #474747;
+  border-radius: 12px;
+  background: #252525;
+  color: #dfdfdf;
+  box-shadow: 0 14px 50px #0008;
+  font:
+    13px/1.6 'Segoe UI',
+    sans-serif;
+  color-scheme: dark;
+  z-index: 20;
+  box-sizing: border-box;
+}
+.panel *,
+.panel *::before {
+  box-sizing: border-box;
+}
+.panel::backdrop {
+  background: transparent;
+}
+.panel strong {
+  display: block;
+  color: #e6d8b9;
+}
+.panel p,
+.panel small {
+  color: #a6a6a6;
+}
+.panel button {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px;
+  background: transparent;
+  color: #d4d4d4;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.panel button:hover {
+  background: #3a3a3a;
+}
+.panel :is(button, select, input):focus-visible,
+.host > button:focus-visible {
+  outline: 1px solid #b4a17a;
+  outline-offset: 1px;
+}
+.panel label {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+}
+.panel input[type='range'] {
+  width: 100%;
+  accent-color: #d6b779;
+}
+.panel select {
+  width: 100%;
+  border: 1px solid #494949;
+  border-radius: 6px;
+  padding: 9px;
+  color: #dfdfdf;
+  background: #1b1b1b;
+}
+.identity strong {
+  font:
+    23px/1.4 Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.identity small {
+  display: block;
+}
+
+.identity {
+  position: relative;
+  isolation: isolate;
+  padding: 62px 16px 16px;
+  border-bottom: 1px solid #3f3f3f;
+  margin: -16px -16px 10px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+}
+.identity > :global(.direct-profile-banner) {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 110px;
+  z-index: -1;
+  overflow: hidden;
+  background: #141414;
+}
+.identity > :global(.direct-profile-banner) img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.identity > :global(.direct-profile-banner)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, #171717, #17171755);
+}
+.identity > span:not(:global(.direct-profile-banner)):has(img, svg) {
+  width: 44px;
+  height: 44px;
+}

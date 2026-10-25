@@ -1,6 +1,12 @@
+import { AppIcon as Icon } from '../application/icons';
 export function RemotePcDialog() {
   return (
-    <dialog id="remotePcDialog" className="remote-pc-dialog" aria-labelledby="remotePcTitle">
+    <dialog
+      closedby="any"
+      id="remotePcDialog"
+      className="remote-pc-dialog"
+      aria-labelledby="remotePcTitle"
+    >
       <header>
         <div>
           <span className="remote-pc-eyebrow">JOGUE JUNTO, NO MESMO PC</span>
@@ -9,7 +15,7 @@ export function RemotePcDialog() {
           </h2>
         </div>
         <button id="remotePcClose" type="button" aria-label="Fechar compartilhamento de PC">
-          ×
+          <Icon name="close" />
         </button>
       </header>
       <p className="remote-pc-warning">
@@ -19,7 +25,7 @@ export function RemotePcDialog() {
         chamada.
       </p>
       <p id="remotePcSupport" className="remote-pc-note">
-        Atualize o backend no Render para habilitar esta beta.
+        Verificando disponibilidade do compartilhamento…
       </p>
       <section id="remotePcSetup">
         <p id="remotePcHostNotice" className="remote-pc-note">

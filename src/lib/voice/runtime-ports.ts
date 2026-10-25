@@ -89,6 +89,7 @@ export type VoiceRuntimeWindow = Window & VoiceRuntimePorts;
 
 /** Compatibility surface for controllers still awaiting conversion. State stays with typed owners. */
 export interface SocialFacade {
+  primeVoiceGesture(): void;
   onChatActivity(activity: ChatActivity): void;
   diagnostics(): string;
   showPanel(show?: boolean): void;

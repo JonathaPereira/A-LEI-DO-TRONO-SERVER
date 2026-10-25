@@ -1,5 +1,3 @@
-import { flushSync } from 'react-dom';
-import { createRoot } from 'react-dom/client';
 import {
   createPortal,
   primaryScreens,
@@ -8,7 +6,6 @@ import {
   type IdentityValidation,
 } from '../../lib/navigation/portal';
 import type { NetworkClient } from '../../lib/socket/client';
-import { PortalContents } from './portal-contents';
 
 interface Runtime extends Window {
   TronoAuth: PortalIdentity & {
@@ -17,6 +14,8 @@ interface Runtime extends Window {
     openGuest(): void;
   };
   TronoNetwork: NetworkClient;
+  TronoThroneMatch?: { getSnapshot(): { match: unknown } };
+  TronoThroneLocalEngine?: { getState(): unknown };
   TronoStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   TronoPortal?: Portal;
   TronoGames?: { openLibrary(): unknown };
@@ -29,6 +28,7 @@ interface Runtime extends Window {
   TronoChatHub?: {
     enter(options: {
       validatedIdentity: IdentityValidation;
+      textOnly?: boolean;
       isCurrent(): boolean;
       showScreen(): void;
     }): Promise<boolean>;
@@ -42,12 +42,20 @@ export function initializePortal(target: Window): () => void {
   if (previous) return previous;
   const runtime = target as Runtime,
     doc = target.document;
-  const screen = doc.getElementById('portalScreen')!;
   const storage = runtime.TronoStorage ?? target.localStorage;
   let disposed = false,
     focusFrame = 0;
   const input = (id: string) => doc.getElementById(id) as HTMLInputElement | null;
   const controller = createPortal({
+    entry: 'community',
+    gameScreen: () =>
+      runtime.TronoNetwork.gameRoom
+        ? runtime.TronoThroneMatch?.getSnapshot().match
+          ? 'gameScreen'
+          : 'roomScreen'
+        : runtime.TronoThroneLocalEngine?.getState()
+          ? 'gameScreen'
+          : 'setupScreen',
     identity: () => runtime.TronoAuth,
     authReady: runtime.TronoAuth.ready,
     subscribeIdentity(fn) {
@@ -88,14 +96,19 @@ export function initializePortal(target: Window): () => void {
       target.cancelAnimationFrame(focusFrame);
       focusFrame = target.requestAnimationFrame(() => {
         if (!disposed)
-          input(lobby ? 'playerIdentity' : 'portalIdentity')?.focus({ preventScroll: true });
+          input(lobby ? 'playerIdentity' : 'authEmail')?.focus({ preventScroll: true });
       });
     },
     ensureAudio: () => runtime.TronoAudio?.ensureAudio() ?? Promise.resolve(false),
     enterCommunity: (validatedIdentity, isCurrent, showScreen) => {
       if (!runtime.TronoChatHub?.enter)
         throw new Error('O chat não terminou de carregar. Recarregue com Ctrl+F5.');
-      return runtime.TronoChatHub.enter({ validatedIdentity, isCurrent, showScreen });
+      return runtime.TronoChatHub.enter({
+        validatedIdentity,
+        isCurrent,
+        showScreen,
+        textOnly: true,
+      });
     },
     communityVisible: () => !doc.getElementById('chatOnlyScreen')?.classList.contains('hidden'),
     warn: (error) => console.warn('[Portal]', error),
@@ -129,8 +142,6 @@ export function initializePortal(target: Window): () => void {
         feedback.classList.toggle(style, enabled);
     }
   });
-  const root = createRoot(screen);
-  flushSync(() => root.render(<PortalContents controller={controller} />));
   function track(event?: Event) {
     const detail = (event as CustomEvent<{ id?: string }> | undefined)?.detail;
     let id = detail?.id;
@@ -149,7 +160,9 @@ export function initializePortal(target: Window): () => void {
     controller.queueNameCheck((event.target as HTMLInputElement).value);
   }
   function back() {
-    controller.showPortal();
+    if (runtime.TronoAuth.user) void controller.openVoice();
+    else if (runtime.TronoAuth.guest) void runtime.TronoGames?.openLibrary();
+    else controller.showPortal();
   }
   function bind() {
     if (disposed) return;
@@ -175,7 +188,6 @@ export function initializePortal(target: Window): () => void {
     doc.getElementById('backFromLobbyBtn')?.removeEventListener('click', back);
     releaseBridge();
     controller.dispose();
-    flushSync(() => root.unmount());
     if (runtime.TronoPortal === controller) delete runtime.TronoPortal;
     installed.delete(target);
   };

@@ -155,7 +155,17 @@ export function createMediaFocus(options: FocusOptions) {
     }
   }
   function keydown(event: KeyboardEvent) {
-    if (event.key !== 'Escape' || !fallback || event.defaultPrevented) return;
+    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    const active = doc.fullscreenElement;
+    if (
+      active instanceof doc.defaultView!.HTMLElement &&
+      active.matches('.camera-tile,.screen-share-tile')
+    ) {
+      event.preventDefault();
+      void release(active);
+      return;
+    }
+    if (!fallback) return;
     ++revision;
     clearFallback();
     event.preventDefault();

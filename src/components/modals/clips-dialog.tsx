@@ -1,7 +1,9 @@
+import { AppIcon as Icon } from '../application/icons';
 export function ClipsDialog() {
   return (
     <>
       <dialog
+        closedby="any"
         id={'clipsDialog'}
         className={'feature-dialog clips-dialog'}
         aria-labelledby={'clipsTitle'}
@@ -17,7 +19,7 @@ export function ClipsDialog() {
             type={'button'}
             aria-label={'Fechar central de clipes'}
           >
-            ×
+            <Icon name="close" />
           </button>
         </header>
         <div className={'replay-summary'}>

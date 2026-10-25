@@ -67,7 +67,7 @@ export function initializeThroneControls(target: Window): () => void {
   runtime.TronoThroneControls = controller;
   const host = doc.createElement('div');
   host.id = 'throneControlsHost';
-  doc.body.append(host);
+  (doc.getElementById('gameSurface') ?? doc.body).append(host);
   const root = createRoot(host);
   flushSync(() =>
     root.render(

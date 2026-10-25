@@ -163,10 +163,12 @@ export function ProfileEditor({
   controller,
   chooseGif,
   accounts,
+  onDiscard,
 }: {
   controller: ProfileEditorController;
   chooseGif: (media: ProfileMediaKind) => void;
   accounts: RegisteredAccounts;
+  onDiscard?: () => void;
 }) {
   const state = useSyncExternalStore(
     controller.subscribe,
@@ -179,6 +181,10 @@ export function ProfileEditor({
   const emojiPicker = useRef<HTMLDivElement>(null);
   const linksHost = useRef<HTMLDivElement>(null);
   const focusLink = useRef(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  useEffect(() => {
+    if (!state.loaded) setPreviewOpen(false);
+  }, [state.loaded, state.accountId]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [emojiPosition, setEmojiPosition] = useState<CSSProperties>({});
   useEffect(() => {
@@ -205,6 +211,7 @@ export function ProfileEditor({
     <form
       id="profileForm"
       className="profile-editor"
+      data-preview-open={previewOpen}
       onSubmit={(event) => {
         event.preventDefault();
         void controller.save();
@@ -549,6 +556,19 @@ export function ProfileEditor({
         >
           {state.message}
         </p>
+        <button
+          type="button"
+          className="profile-preview-toggle"
+          aria-pressed={previewOpen}
+          onClick={() => setPreviewOpen(!previewOpen)}
+        >
+          {previewOpen ? 'Voltar à edição' : 'Ver prévia'}
+        </button>
+        {onDiscard && (
+          <button type="button" className="profile-discard" disabled={disabled} onClick={onDiscard}>
+            Descartar alterações
+          </button>
+        )}
         <button id="profileSave" className="royal-btn primary" type="submit" disabled={disabled}>
           Salvar perfil
         </button>

@@ -20,7 +20,7 @@ interface ProfileRuntime extends Window {
 }
 
 /** Queries and the reader share the account-scoped client with the editor. */
-export function initializeProfileViewer(target: Window): ProfileViewer {
+export function initializeProfileViewer(target: Window, { mount = true } = {}): ProfileViewer {
   const runtime = target as ProfileRuntime;
   if (runtime.TronoProfileViewer) return runtime.TronoProfileViewer;
   const listen = (events: string[], listener: () => void) => {
@@ -43,6 +43,7 @@ export function initializeProfileViewer(target: Window): ProfileViewer {
     openMessage: (id) => runtime.TronoMessenger?.open(id),
   });
   runtime.TronoProfileViewer = viewer;
+  if (!mount) return viewer;
   const host = target.document.createElement('div');
   host.id = 'profileViewerHost';
   target.document.body.append(host);

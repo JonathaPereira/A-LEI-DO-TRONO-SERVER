@@ -58,7 +58,7 @@ export function initializeThronePrivate(target: Window): () => void {
   runtime.TronoThronePrivate = controller;
   const host = doc.createElement('div');
   host.id = 'thronePrivateHost';
-  doc.body.append(host);
+  (doc.getElementById('gameSurface') ?? doc.body).append(host);
   const root = createRoot(host);
   flushSync(() => root.render(<ThronePrivateDialog controller={controller} />));
   const open = () => {

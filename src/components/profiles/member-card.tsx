@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import type { MemberProfile, ProfileMediaKind } from '../../types/profiles';
 import { useFileUrl } from '../files/use-files';
 import { Avatar } from './avatar';
+import styles from './member-card.module.css';
 
 function clamp(value: number, minimum: number, maximum: number, fallback: number) {
   return Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback;
@@ -40,8 +41,10 @@ export function MemberCard({
   profile,
   localUrls,
   onCoverPositionChange,
+  variant = 'card',
 }: {
   profile: MemberProfile;
+  variant?: 'card' | 'full';
   localUrls?: Partial<Record<ProfileMediaKind, string>>;
   onCoverPositionChange?: (position: number) => void;
 }) {
@@ -49,6 +52,10 @@ export function MemberCard({
     null,
   );
   const data = profile.personalization;
+  const bio = data.bio
+    .trim()
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n(?:[ \t]*\n){2,}/g, '\n\n');
   const style: CSSProperties & Record<`--member-${string}`, string | number> = {
     '--member-accent': /^#[0-9a-f]{6}$/i.test(data.accent) ? data.accent : '#7865ff',
     '--member-darkness': clamp(data.darkness, 0, 90, 60) / 100,
@@ -76,101 +83,105 @@ export function MemberCard({
       : null;
 
   return (
-    <article className="member-card" style={style}>
+    <article className={styles.card + ' member-card'} data-layout={variant} style={style}>
       <div className="member-background">
         <ProfileImage fileId={data.background_file_id} localUrl={localUrls?.background} />
       </div>
       <div className="member-shade" />
+      <div
+        className="member-cover"
+        onPointerDown={(event) => {
+          if (!onCoverPositionChange) return;
+          event.preventDefault();
+          drag.current = {
+            pointer: event.pointerId,
+            y: event.clientY,
+            position: data.cover_position,
+            height: Math.max(100, event.currentTarget.clientHeight),
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const start = drag.current;
+          if (!start || start.pointer !== event.pointerId || !onCoverPositionChange) return;
+          onCoverPositionChange(
+            Math.round(
+              clamp(start.position - ((event.clientY - start.y) / start.height) * 100, 0, 100, 50),
+            ),
+          );
+        }}
+        onPointerUp={() => {
+          drag.current = null;
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+        }}
+        onLostPointerCapture={() => {
+          drag.current = null;
+        }}
+      >
+        <ProfileImage fileId={data.cover_file_id} localUrl={localUrls?.cover} />
+      </div>
       <div className="member-content">
-        <div
-          className="member-cover"
-          onPointerDown={(event) => {
-            if (!onCoverPositionChange) return;
-            event.preventDefault();
-            drag.current = {
-              pointer: event.pointerId,
-              y: event.clientY,
-              position: data.cover_position,
-              height: Math.max(100, event.currentTarget.clientHeight),
-            };
-            event.currentTarget.setPointerCapture(event.pointerId);
-          }}
-          onPointerMove={(event) => {
-            const start = drag.current;
-            if (!start || start.pointer !== event.pointerId || !onCoverPositionChange) return;
-            onCoverPositionChange(
-              Math.round(
-                clamp(
-                  start.position - ((event.clientY - start.y) / start.height) * 100,
-                  0,
-                  100,
-                  50,
-                ),
-              ),
-            );
-          }}
-          onPointerUp={() => {
-            drag.current = null;
-          }}
-          onPointerCancel={() => {
-            drag.current = null;
-          }}
-          onLostPointerCapture={() => {
-            drag.current = null;
-          }}
-        >
-          <ProfileImage fileId={data.cover_file_id} localUrl={localUrls?.cover} />
+        <div className="member-identity">
+          <Avatar person={profile} className="member-avatar" localUrl={localUrls?.avatar} />
+          <h2 className="member-name">{profile.nickname || 'Seu nome'}</h2>
+          {data.handle && <p className="member-handle">@{data.handle.replace(/^@/, '')}</p>}
+          {(data.status || data.emoji) && (
+            <p className="member-status">{[data.emoji, data.status].filter(Boolean).join(' ')}</p>
+          )}
         </div>
-        <Avatar person={profile} className="member-avatar" localUrl={localUrls?.avatar} />
-        <h2 className="member-name">{profile.nickname || 'Seu nome'}</h2>
-        {data.handle && <p className="member-handle">@{data.handle.replace(/^@/, '')}</p>}
-        {(data.status || data.emoji) && (
-          <p className="member-status">{[data.emoji, data.status].filter(Boolean).join(' ')}</p>
-        )}
-        {data.bio && (
-          <>
-            <h3>Sobre mim</h3>
-            <p className="member-bio">{data.bio}</p>
-          </>
-        )}
-        {data.tags.length > 0 && (
-          <>
-            <h3>Interesses</h3>
-            <div className="member-tags">
-              {data.tags.slice(0, 12).map((tag, index) => (
-                <span key={`${index}:${tag}`}>{tag}</span>
-              ))}
-            </div>
-          </>
-        )}
-        {data.links.length > 0 && (
-          <>
-            <h3>Links</h3>
-            <div className="member-links">
-              {links.map((link, index) => (
-                <a
-                  key={`${index}:${link.url}`}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {link.label}
+        <div className="member-details">
+          {!bio && !data.tags.length && !links.length && (
+            <p className="member-empty">
+              Este membro ainda não adicionou uma descrição, interesses ou links.
+            </p>
+          )}
+          {bio && (
+            <>
+              <h3>Sobre mim</h3>
+              <p className="member-bio">{bio}</p>
+            </>
+          )}
+          {data.tags.length > 0 && (
+            <>
+              <h3>Interesses</h3>
+              <div className="member-tags">
+                {data.tags.slice(0, 12).map((tag, index) => (
+                  <span key={`${index}:${tag}`}>{tag}</span>
+                ))}
+              </div>
+            </>
+          )}
+          {data.links.length > 0 && (
+            <>
+              <h3>Links</h3>
+              <div className="member-links">
+                {links.map((link, index) => (
+                  <a
+                    key={`${index}:${link.url}`}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
+          {credits.length > 0 && (
+            <details className="member-media-credits">
+              <summary>Créditos das imagens</summary>
+              {credits.map((credit) => (
+                <a key={credit.key} href={credit.url} target="_blank" rel="noopener noreferrer">
+                  {credit.label}: {credit.title} · {credit.author} · {credit.license}
                 </a>
               ))}
-            </div>
-          </>
-        )}
-        {credits.length > 0 && (
-          <details className="member-media-credits">
-            <summary>Créditos das imagens</summary>
-            {credits.map((credit) => (
-              <a key={credit.key} href={credit.url} target="_blank" rel="noopener noreferrer">
-                {credit.label}: {credit.title} · {credit.author} · {credit.license}
-              </a>
-            ))}
-          </details>
-        )}
-        {since && <small className="member-since">Membro desde {since}</small>}
+            </details>
+          )}
+          {since && <small className="member-since">Membro desde {since}</small>}
+        </div>
       </div>
     </article>
   );

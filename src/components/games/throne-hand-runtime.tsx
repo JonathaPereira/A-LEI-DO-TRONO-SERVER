@@ -78,7 +78,7 @@ export function initializeThroneHand(target: Window): () => void {
   runtime.TronoThroneHand = controller;
   const dialogHost = doc.createElement('div');
   dialogHost.id = 'throneHandDialogHost';
-  doc.body.append(dialogHost);
+  (doc.getElementById('gameSurface') ?? doc.body).append(dialogHost);
   const root = createRoot(host),
     localRoot = createRoot(local);
   flushSync(() =>

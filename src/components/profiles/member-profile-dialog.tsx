@@ -3,6 +3,8 @@
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { ProfileViewer } from '../../lib/profiles/viewer';
 import { MemberCard } from './member-card';
+import { AppIcon as Icon } from '../application/icons';
+import styles from './member-profile.module.css';
 
 /** React owns the dialog tree; the viewer owns requests and account boundaries. */
 export function MemberProfileDialog({ viewer }: { viewer: ProfileViewer }) {
@@ -18,9 +20,11 @@ export function MemberProfileDialog({ viewer }: { viewer: ProfileViewer }) {
 
   return (
     <dialog
+      closedby="any"
       ref={dialog}
       id="memberProfileDialog"
-      className={`member-profile-dialog${state.full ? ' member-full' : ''}`}
+      className={`${styles.dialog} member-profile-dialog${state.full ? ' member-full' : ''}`}
+      data-full={state.full}
       aria-label="Perfil do participante"
       onCancel={(event) => {
         event.preventDefault();
@@ -37,12 +41,16 @@ export function MemberProfileDialog({ viewer }: { viewer: ProfileViewer }) {
         aria-label="Fechar perfil"
         onClick={() => viewer.close()}
       >
-        ×
+        <Icon name="close" size={18} />
       </button>
       <div id="memberProfileContent" aria-busy={state.loading}>
         {state.open &&
           (state.profile ? (
-            <MemberCard key={state.profile.id} profile={state.profile} />
+            <MemberCard
+              key={state.profile.id}
+              profile={state.profile}
+              variant={state.full ? 'full' : 'card'}
+            />
           ) : (
             state.message || (state.loading ? 'Carregando perfil…' : '')
           ))}
@@ -54,7 +62,7 @@ export function MemberProfileDialog({ viewer }: { viewer: ProfileViewer }) {
           hidden={!state.canMessage}
           onClick={() => viewer.message()}
         >
-          Mensagem direta
+          <Icon name="chat" size={16} /> Mensagem direta
         </button>
         <button
           id="memberProfileExpand"
@@ -62,7 +70,7 @@ export function MemberProfileDialog({ viewer }: { viewer: ProfileViewer }) {
           hidden={state.full}
           onClick={() => viewer.expand()}
         >
-          Ver perfil completo
+          <Icon name="expand" size={16} /> Ver perfil completo
         </button>
       </footer>
     </dialog>
