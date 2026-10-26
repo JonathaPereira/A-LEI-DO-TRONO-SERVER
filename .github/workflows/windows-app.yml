@@ -373,7 +373,7 @@ jobs:
         run: |
           npm test -- --suite all --filter '(?:desktop-installer\.js)$' 2>&1 | Tee-Object artifacts/windows-installer.log
           $testExit = $LASTEXITCODE
-          if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP') { $testExit = 1 }
+          if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP\b') { $testExit = 1 }
           if ($testExit -ne 0) {
             $details = ((Get-Content artifacts/windows-installer.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
             Write-Output "::error title=Windows installer upgrade::$details"

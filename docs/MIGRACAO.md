@@ -22,12 +22,11 @@ Branch: codex/frontend-rebuild. Base original: f343049. Marcos 1 e 2:
 e1070da e e170860. Último checkpoint anterior ao fechamento: edb8450.
 Preservar alterações existentes e AGENTS/docs de agentes.
 
-Os três marcos receberam aceite visual humano na conversa em 25/10/2026.
-O usuário desistiu de preparar distribuição intermediária: finalizar o Marco 3
-primeiro. O fechamento original ficou local. Em 26/10, o usuário autorizou executar a
-pipeline Windows e automatizar/publicar no Surge. Commit/push da contribuição
-são necessários para executar o código atual no runner; main continua intacta.
-Não instalar ferramentas/driver neste host; compilação será conferida no runner.
+Os três marcos receberam aceite visual humano em 25/10/2026. Em 26/10, o
+usuário autorizou commit/push desta contribuição, execução de Windows full app e
+publicação automática da versão 0.3.5 no Surge após pipeline e instalador
+aprovados. Main e PR ficam fora desta execução. Não instalar drivers/aplicativo
+neste host; a aceitação do instalador pertence ao runner Windows descartável.
 
 ## Plano e entregas
 
@@ -97,145 +96,93 @@ de transporte, mídia, identidade, gestos do painel dos jogos e controles.
 Mapeamentos ficam em artifacts/frontend-reset/finish-test-consolidation.json
 e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde.
 
-### Evidência de fechamento
+### Evidência vigente
 
-Logs e imagens em artifacts/frontend-reset, sem novo Markdown por rodada.
+Logs e imagens ficam em artifacts/frontend-reset. A rodada remota atual é
+[40402075694](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40402075694),
+commit aa254a9. Core, quatro grupos browser, job Windows, executável empacotado e NSIS aprovados.
+A entrega foi bloqueada por falso positivo do filtro PowerShell (# skipped 0),
+corrigido com regressão que também exige rejeição de skips reais. Nova rodada
+necessária; a publicação permanece bloqueada até aprovação integral.
 
-| Verificação                             | Evidência atual                                                                                                                                                          |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Core                                    | 1.408/1.408 em finish-core-verified.log, incluindo cancelamento em cinco fronteiras de persistência.                                                                     |
-| Dono de fullscreen e contratos da Corte | 19/19 em finish-native-window-core.log.                                                                                                                                  |
-| Navegador completo                      | 164 aprovados, zero falhas e dois skips de codec externo em finish-browser-approved.log (166 casos). Clipes portátil revalidado em finish-clips-portable.log.            |
-| Electron: chamada/captura e sessão      | 10/10 em finish-desktop-final.log: sessão, chamada/captura, janela e contratos de atualização. Microfone sintético; captura real de BrowserWindow controlada.            |
-| Dois Electron reais                     | finish-native-peers-restored.log: frames/peers/players, navegação, troca de fonte, fullscreen, mãos privadas/Reserva e permissões tardias. Fontes sintéticas animadas.   |
-| Tipos/build/formatação                  | Tipos, formatação de fontes e exportação estática aprovados no código final: finish-types.log, finish-format-check.log e finish-build.log.                               |
-| Cinzas e smoke de runtime               | Cinzas/Splendor/Love Letter com backend descartável em finish-native-extra.log; permissões, IPC, HTTPS, filesystem, PCM e bandeja em finish-native-runtime-verified.log. |
-| Auxiliares nativos                      | finish-native-build.log: compilação indisponível sem Visual Studio/MSVC. Atividade nativa falhou por helper ausente, não foi aprovada.                                   |
+| Limite | Evidência concluída |
+| --- | --- |
+| Core, tipos e formatação | 1.411/1.411 no job Types, formatting and backend da rodada atual; tipos e formatação aprovados. |
+| Navegador completo | 164 aprovados, zero falhas e dois skips de codec externo nos quatro grupos da rodada atual; mais duas variações da ponte desktop aprovadas. |
+| Mídia e recursos Windows | Job Real Windows media and desktop aprovado na rodada atual: helpers MSVC, chamada/captura, sessão, atualização, XInput/SendInput, PCM em segundo plano, Cinzas e runtime. Loopback sem endpoint de saída foi pulado no runner. |
+| Compilação nativa local | Visual Studio Community 2026/SDK instalados pelo usuário; windows-native-local-installed.log aprovado. |
+| Aplicativo empacotado local | windows-packaged-local-approved.log aprovado; não comprova aceitação do instalador. |
+| Fixtures ajustadas | windows-call-arrival-budget.log: oito casos aprovados com dois núcleos, incluindo dez clientes e ciclo de vida da mídia. |
+| Pacote, instalação e Surge | Executável e atualização NSIS aprovados em 40402075694; publicação aguarda a correção do filtro de skips do workflow. Última versão pública confirmada: 0.3.4. |
 
-Fixtures não comprovam microfone físico, loopback por aplicativo, driver de
-controle remoto, qualidade em produção ou instalador. FFmpeg/FFprobe também
-não estão disponíveis. Não instalar ferramentas/driver para esconder pendências.
-Pacote, instalação, assinatura e pipeline remoto não foram executados nesta etapa.
+Capturas aceitas: artifacts/workspace/corte-*.png, final-polish-qa e call-qa.
+Os dois skips de codec externo decorrem de FFmpeg/FFprobe ausentes; decode,
+replay e seek pelo Chromium passaram. Loopback por aplicativo passou localmente
+em windows-native-local-final.log, sem alegar sucesso desse caso no CI.
+Navegador com ponte simulada não comprova Electron real. Câmeras, microfones e
+transmissões sintéticos não comprovam equipamento físico, qualidade em produção
+ou o serviço SFU de destino. Assinatura de distribuição não foi declarada aprovada.
 
-## Fechamento e pré-distribuição
+## Distribuição automática e tempo de CI
 
-Implementação do Marco 3 encerrada, com os aceites visuais preservados. Build,
-tipos, formatação, core, navegador completo e regressões Electron compatíveis
-com este ambiente passaram. Matriz de destinos, links canônicos e sintaxe das
-fixtures foram conferidos; revisão final tratou os achados. O CI agora executa
-core e browser completos, sem aliases por cenário. O pipeline remoto não foi rodado.
+Windows full app divide os mesmos 56 arquivos browser em quatro grupos por
+--shard. O dispatcher verifica partição completa sem duplicatas; a agregação
+obrigatória falha se qualquer grupo falhar. Core e browser não são repetidos no
+job nativo; permanecem os limites reais de captura, XInput, SendInput e PCM.
+O navegador serial anteriormente atingiu 15 minutos. Registrar o tempo completo
+apenas após pacote, instalação e publicação concluídos.
 
-Antes da distribuição, continuam os pré-requisitos de ambiente:
+A entrega reutiliza os helpers validados na mesma execução, testa o executável
+empacotado, gera NSIS e verifica instalação/atualização com o app na bandeja em
+runner descartável. Só depois gera EXE/ZIP/hashes e passa a tag à publicação.
+O publicador exige o mesmo commit e os quatro jobs aprovados, verifica hashes e
+manifesto e confere o site publicado. Publish approved frontend pode repetir
+somente o envio, resolvendo a entrega aprovada sem seleção manual de tag.
+Operação: [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md).
 
-1. Em Windows com MSVC/SDK e helpers compilados, executar a suíte desktop completa
-   e o pipeline de pacote/instalador. Atividade nativa segue pendente neste host;
-   a detecção dedicada conserva a falha por helper ausente. Pacote, instalação e
-   assinatura ainda precisam de sua própria evidência.
-2. Conferir equipamento, loopback por aplicativo, driver de controle remoto e
-   serviço SFU no ambiente pertinente. Fixtures não substituem essa verificação.
-3. Publicação fica com o usuário. Nenhum commit, push, PR, pacote, instalação ou
-   deploy foi feito neste fechamento.
+## Correções e limites das fixtures
 
-As lacunas encontradas na revisão foram tratadas: o aviso de atualização conserva
-clique; somente avisos passivos ignoram ponteiro; logout aborta gravação ainda não
-confirmada e impede download. Regressões preservam soundboard entre dois clientes,
-permissões tardias e mãos/decisões privadas entre dois Electron. A limpeza do teste
-de cache usa repetição limitada para ENOTEMPTY transitório do Windows, sem alterar
-o cache de produção. Trinta rodadas passaram após reproduzir a falha.
+- Lobby usa alinhamento seguro em janela curta. QuickPanel mantém dimensões
+  fracionárias e limites do viewport; ResizeObserver é liberado na desmontagem.
+- Preload recebe a versão de app.getVersion; não mantém número fixo independente.
+- Captura silenciosa de BrowserWindow não exige loopback; áudio por aplicativo
+  conserva sua verificação própria. Os seletores usam as telas atuais da Corte.
+- Restauração da conta/sala e operações de captura aguardam conclusão pública;
+  a primeira entrada em voz termina antes da navegação seguinte.
+- Ganho é medido por PCM no AudioWorklet por meio segundo, sem depender de picos
+  amostrados por requestAnimationFrame.
+- Dez clientes conservam contextos e peers reais, quatro câmeras e duas telas.
+  Fontes sintéticas são 320×180/640×360 a 5 FPS; um falante e nove ouvintes são
+  mutados pelos controles reais. Só a interface observada é renderizada. É
+  regressão de comportamento/layout, não benchmark HD ou dez falantes simultâneos.
+- Entrega remota das telas aguarda até 15s, como a chegada de frames. A primeira
+  ativação fria do supressor por clique aguarda até 20s e captura diagnóstico se
+  falhar; asserções de processamento, tracks, cancelamento e descarte permanecem.
 
-Capturas inspecionadas: artifacts/workspace/corte-*.png (desktop, tablet, telefone e
-paisagem curta), final-polish-qa (perfis) e call-qa (dez pessoas/duas telas). Os nomes
-web/bridge identificam navegador e ponte simulada; somente os logs declarados
-Electron comprovam execução no runtime nativo.
+## Revisão e próximos passos
 
-A aparência geral do chat e maior diferenciação estética do Discord foram
-adiadas pelo usuário; não reabrir esses escopos durante o fechamento.
+Implementação e corte do Marco 3 concluídos. Revisão de padrões/especificação
+corrigiu clique do atualizador e cancelamento de persistência ao sair. Regressões
+conservam permissões tardias, mãos/decisões privadas da Corte e soundboard entre
+clientes. O teste de cache tolera ENOTEMPTY transitório sem mudar produção.
 
-## Revisão do fechamento
+1. Conferir os quatro grupos browser e limites nativos da rodada atual. Falha
+   concreta exige diagnóstico e regressão; não retirar cobertura para obter CI verde.
+2. Após aprovação, conferir pacote, aceitação NSIS e publicação automática. Confirmar
+   downloads/latest.yml, metadado da página e instalador da mesma entrega.
+3. Registrar resultado/tempo reais neste checkpoint e retirar pendências resolvidas.
+   Hardware físico e SFU no ambiente de destino continuam verificações próprias.
 
-| Eixo          | Resultado                                                                                                                                                                                                                   |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Padrões       | Corrigidos clique do atualizador e cancelamento da persistência; nova leitura não encontrou defeito concreto nesses limites.                                                                                                |
-| Especificação | Recuperadas permissões tardias, fluxos privados da Corte e soundboard entre clientes; startup nativo migrou da rail retirada para a Corte. Regressões locais passaram; pacote/instalador aguardam ambiente de distribuição. |
+A aparência geral do chat e maior diferenciação estética do Discord foram adiadas
+pelo usuário. Preservar os aceites; não reabrir esses escopos no fechamento.
 
 ## Documentação e conclusão
 
 README é a entrada; AGENTS roteia; arquitetura guarda donos; desenvolvimento
-guarda operação; UX guarda comportamento/referência/aceites; este arquivo guarda
-execução; workflow guarda contribuição. Atualizar a fonte dona e consumidores,
-sem criar MD por ajuste. Preservar docs de jogos, licenças e distribuição.
+operação; UX comportamento/referência/aceites; este arquivo execução; workflow
+contribuição. Atualizar a fonte dona e consumidores, sem criar MD por ajuste.
+Preservar docs de jogos, licenças e distribuição; histórico detalhado fica no Git.
 
 Encerrar com três aceites, recursos com destino/evidência, corte concluído,
 comandos/CI consolidados, docs coerentes e checks pertinentes concluídos com
 limitações reais declaradas. Aceite visual não comprova hardware ou CI remoto.
-
-## Distribuição automática — em execução
-
-Nova autorização: rodar Windows full app no GitHub e encadear Surge sem seleção
-manual de tag. Versão preparada: 0.3.5 (Surge ainda servia 0.3.4 na inspeção).
-O atualizador precisa de incremento para oferecer o novo instalador. A publicação
-reutiliza o pacote do mesmo commit/tentativa com os quatro jobs aprovados. A
-reexecução independente de Publish approved frontend resolve a tag automaticamente.
-Resultado remoto será registrado aqui após concluir; checks locais anteriores não
-substituem o runner nem comprovam publicação. Ferramentas nativas existem no
-ambiente de destino segundo o usuário; sua ausência local não invalida esse host.
-
-A primeira rodada Windows confirmou compilação MSVC/helpers, tipos e core, mas
-revelou lobby inacessível em 1024×680, seletor antigo no teste de Remote PC e
-seleção implícita de loopback numa janela QA silenciosa. Corrigidos: alinhamento
-seguro do lobby com reprodução antes/depois, seletor semântico/aba correta e
-captura QA com vídeo real/microfone emprestado (loopback conserva teste próprio).
-
-O navegador serial atingiu 15 minutos no runner. A pedido do usuário, a pipeline
-agora divide os mesmos 56 arquivos em quatro grupos paralelos por --shard, com
-agregação obrigatória antes da entrega. Teste do dispatcher verifica partição
-completa, estável e sem duplicatas; não foram retirados cenários. TAP expõe erros
-antes do resumo final. Tempo efetivo e resultado remoto ainda aguardam execução.
-
-O usuário instalou Visual Studio Community 2026/SDK. Build nativo local agora
-aprovado: windows-native-local-installed.log. Atividade nativa, loopback real
-isolado entre processos e Cinzas passaram em windows-native-local-final.log;
-o runtime foi revalidado separadamente em windows-native-runtime-final.log após
-corrigir a versão fixa do preload. A versão agora vem de app.getVersion por
-argumento do renderer e acompanha electron/package.json automaticamente.
-
-Reproduções com o Chromium empacotado do Playwright revelaram diferença real de
-foco no headless Windows e posição assíncrona de popovers. A fixture de atalho
-usa janelas Windows reais; posições aguardam layout concluído, mantendo limites.
-QuickPanel usa dimensões fracionárias e limita ambas as bordas; ResizeObserver
-acompanha tamanho do conteúdo e é liberado na desmontagem. Regressões locais:
-windows-bundled-browser-green.log (16 aprovados/1 codec skip),
-windows-bundled-call-final.log (2/2, incluindo dez clientes reais),
-windows-background-final.log (PCM e mute nos controles atuais). O CI conserva
-atividade nativa dedicada, além de áudio, runtime e teste de instalação.
-
-Executável Windows empacotado local aprovado em windows-packaged-local-approved.log.
-A fixture usa as telas atuais de voz/vídeo e áudio dos jogos. O instalador ainda
-aguarda aceitação no runner descartável. O usuário autorizou explicitamente
-enviar commits e publicar 0.3.5 no Surge após pipeline/instalador aprovados.
-
-A rodada 40375284608 aprovou o job nativo completo, core e grupos 1/2. Duas
-fixtures restantes foram corrigidas sem alterar transporte: aguardar a primeira
-entrada em voz antes de abrir o jogo (sem segundo toggle) e limitar rede/navegação
-ao backend local no cenário de dez clientes. Regressões locais passaram.
-O job nativo deixou de repetir cenários core/browser já obrigatórios nos jobs
-respectivos; não foram removidos arquivos/casos, XInput, SendInput ou PCM real.
-
-Estabilização do runner: a fixture de captura aguarda a parada antes de reiniciar;
-o teste de ganho integra PCM no AudioWorklet por meio segundo, sem depender de
-requestAnimationFrame para detectar picos (quatro rodadas locais aprovadas).
-O cenário de dez clientes conserva dez contextos/peers reais, quatro câmeras e
-duas telas; só a interface observada é renderizada, reduzindo carga do runner.
-Os clientes de fundo continuam usando os donos reais por comandos públicos.
-
-A rodada 40381244595 aprovou nativo, core e grupos 1/3. O cancelamento de troca
-passou a aguardar a Promise pública antes de conferir status e tracks. A fixture
-de dez pessoas usa fontes sintéticas de 320×180/640×360 a 5 FPS, um falante e
-nove ouvintes mutados pelos controles reais; não é um benchmark de HD ou de
-dez falantes simultâneos. PCM nativo permanece coberto separadamente.
-
-Na rodada 40400665168, dez clientes chegaram à conferência em 25s (antes havia
-timeout de 180s). A chegada remota das duas telas usa agora o mesmo orçamento de
-15s da validação de frames. A ativação fria do supressor por clique aguarda até
-20s, compatível com o carregamento local do modelo/worklet, com diagnóstico em
-caso de falha. Asserções de tracks, PCM e mídia recebida permanecem obrigatórias.

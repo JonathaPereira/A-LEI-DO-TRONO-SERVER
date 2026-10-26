@@ -47,3 +47,15 @@ test('Surge accepts a failed-jobs retry only when the latest required jobs up to
   jobs=[...jobs,{...prior[1],run_attempt:2,conclusion:'failure'}];
   await assert.rejects(findApprovedBuild(options),/Nenhuma entrega/);
 });
+
+// Exercise the actual workflow pattern with TAP output, including PowerShell's
+// case-insensitive matching. The summary is not itself a skipped test.
+test('installer delivery rejects skipped tests but accepts a zero-skips TAP summary', async () => {
+  const workflow = await fs.readFile(path.join(__dirname, '../.github/workflows/windows-app.yml'), 'utf8');
+  const source = workflow.match(/-Path artifacts\/windows-installer\.log -Pattern '([^']+)'/)[1];
+  const pattern = new RegExp(source, 'i');
+  assert.equal(pattern.test('# skipped 0'), false);
+  assert.equal(pattern.test('ok 1 - installer'), false);
+  assert.equal(pattern.test('# skipped 1'), true);
+  assert.equal(pattern.test('ok 1 - installer # SKIP runner unavailable'), true);
+});
