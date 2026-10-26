@@ -263,6 +263,10 @@ test(
       await picker
         .getByRole('button', { name: 'Corte QA - captura controlada', exact: true })
         .click();
+      // This controlled BrowserWindow is silent and shares the app process.
+      // Record real window video plus the call microphone, independent of the
+      // native loopback capability covered by the dedicated audio fixture.
+      await picker.locator('#desktopAudioMode').selectOption('none');
       await picker.locator('#desktopCaptureConfirm').click();
       const saved = await recording;
       if (saved.error) throw saved.error;
@@ -297,6 +301,7 @@ test(
       assert.deepEqual(errors, []);
     } catch (error) {
       console.error('Native QA failure:', error);
+      console.error('Native recording state:', await page?.evaluate(() => window.TronoRecorder?.getSnapshot()).catch(() => null));
       throw error;
     } finally {
       if (page) {
