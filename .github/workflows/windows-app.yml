@@ -159,11 +159,15 @@ jobs:
             artifacts/frontend-reset/auth-regression/*.png
   interfaces:
     name: Browser interfaces and games
+    if: ${{ always() && !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     needs: [browser]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
-      - run: echo 'All four browser groups passed; the complete suite remains required.'
+      - name: Require all four browser groups
+        env:
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: test "$BROWSER_RESULT" = success
   windows:
     name: Real Windows media and desktop
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
