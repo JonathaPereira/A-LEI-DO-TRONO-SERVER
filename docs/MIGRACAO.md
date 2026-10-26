@@ -233,3 +233,9 @@ passou a aguardar a Promise pública antes de conferir status e tracks. A fixtur
 de dez pessoas usa fontes sintéticas de 320×180/640×360 a 5 FPS, um falante e
 nove ouvintes mutados pelos controles reais; não é um benchmark de HD ou de
 dez falantes simultâneos. PCM nativo permanece coberto separadamente.
+
+Na rodada 40400665168, dez clientes chegaram à conferência em 25s (antes havia
+timeout de 180s). A chegada remota das duas telas usa agora o mesmo orçamento de
+15s da validação de frames. A ativação fria do supressor por clique aguarda até
+20s, compatível com o carregamento local do modelo/worklet, com diagnóstico em
+caso de falha. Asserções de tracks, PCM e mídia recebida permanecem obrigatórias.

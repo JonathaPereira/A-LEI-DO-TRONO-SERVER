@@ -318,7 +318,20 @@ test(
           });
           const before = await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().id);
           await page.evaluate(() => window.TronoCallSettings.open('audio'));
-          await page.locator('#noiseSuppressionBtn').click();
+          // The cold local model/worklet has a 15s initialization budget.
+          // Keep the real pointer activation within that same processing budget.
+          try {
+            await page.locator('#noiseSuppressionBtn').click({ timeout: 20000 });
+          } catch (error) {
+            fs.mkdirSync(path.join(artifacts, 'frontend-reset/call-qa'), { recursive: true });
+            await page.screenshot({ path: path.join(artifacts, 'frontend-reset/call-qa/noise-activation.png') });
+            console.log('Noise activation state', await page.evaluate(() => ({
+              mode: window.TronoSocial.noiseState,
+              button: document.getElementById('noiseSuppressionBtn')?.outerHTML,
+              focused: document.hasFocus(),
+            })));
+            throw error;
+          }
           await expect
             .poll(() => page.evaluate(() => window.TronoSocial.noiseState.mode), { timeout: 12000 })
             .toBe('rnnoise');

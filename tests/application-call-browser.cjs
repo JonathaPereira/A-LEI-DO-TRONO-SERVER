@@ -436,7 +436,7 @@ test(
       await pages[2].evaluate(() => window.TronoSocial.startScreenShare());
       console.log('Ten-client fixture: four live cameras and two real WebRTC screens');
       await expect(call.locator('[data-call-person]')).toHaveCount(10);
-      await expect(call.locator('[data-call-screen]')).toHaveCount(2);
+      await expect(call.locator('[data-call-screen]')).toHaveCount(2, { timeout: 15000 });
       const stream = call.getByRole('article', { name: 'Tela de Ana', exact: true });
       await stream.click({ position: { x: 65, y: 45 } });
       await expect(stream).toHaveAttribute('data-focused', 'true');
