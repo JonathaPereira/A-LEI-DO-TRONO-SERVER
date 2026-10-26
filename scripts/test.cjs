@@ -7,21 +7,31 @@ const suites = require('../tests/suites.json');
 function select(args) {
   let suite = 'core',
     filter = '',
+    shard = '',
     list = false;
   for (let i = 0; i < args.length; i++) {
     const option = args[i];
     if (option === '--list') list = true;
-    else if (option === '--suite' || option === '--filter') {
+    else if (option === '--suite' || option === '--filter' || option === '--shard') {
       const value = args[++i];
       if (!value || value.startsWith('--')) throw new Error('Valor obrigatório: ' + option);
       if (option === '--suite') suite = value;
-      else filter = value;
+      else if (option === '--filter') filter = value;
+      else shard = value;
     } else throw new Error('Opção desconhecida: ' + option);
   }
   const selected = suite === 'all' ? Object.values(suites).flat() : suites[suite];
   if (!selected) throw new Error('Suíte desconhecida: ' + suite);
   const pattern = filter ? new RegExp(filter, 'i') : null;
-  const files = selected.filter((file) => !pattern || pattern.test(file));
+  let files = selected.filter((file) => !pattern || pattern.test(file));
+  if (shard) {
+    const match = /^([1-9]\d*)\/([1-9]\d*)$/.exec(shard);
+    const index = Number(match?.[1]),
+      total = Number(match?.[2]);
+    if (!match || !Number.isSafeInteger(total) || index > total)
+      throw new Error('Grupo inválido: use --shard índice/total.');
+    files = files.filter((_, position) => position % total === index - 1);
+  }
   if (!files.length) throw new Error('Nenhum teste corresponde à seleção.');
   return { files, list, suite };
 }

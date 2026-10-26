@@ -106,11 +106,15 @@ jobs:
           if-no-files-found: ignore
           path: |
             artifacts/windows-*.log
-  interfaces:
-    name: Browser interfaces and games
+  browser:
+    name: Browser group ${{ matrix.shard }}/4
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,17 +132,20 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite browser 2>&1 | Tee-Object artifacts/windows-browser.log
+          npm test -- --suite browser --shard "${{ matrix.shard }}/4" 2>&1 | Tee-Object artifacts/windows-browser.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:QA_NATIVE = '1'
+      - name: Verify desktop bridge variations once
+        if: matrix.shard == 1
+        env:
+          QA_NATIVE: '1'
+        run: |
           npm test -- --suite browser --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Remove-Item Env:QA_NATIVE
       - name: Save interfaces failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: interfaces-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          name: interfaces-failure-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
@@ -150,6 +157,13 @@ jobs:
             artifacts/ticket-to-ride/*.png
             artifacts/frontend-reset/call-qa
             artifacts/frontend-reset/auth-regression/*.png
+  interfaces:
+    name: Browser interfaces and games
+    needs: [browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - run: echo 'All four browser groups passed; the complete suite remains required.'
   windows:
     name: Real Windows media and desktop
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}

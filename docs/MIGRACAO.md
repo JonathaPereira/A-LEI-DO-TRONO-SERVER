@@ -179,3 +179,15 @@ reexecução independente de Publish approved frontend resolve a tag automaticam
 Resultado remoto será registrado aqui após concluir; checks locais anteriores não
 substituem o runner nem comprovam publicação. Ferramentas nativas existem no
 ambiente de destino segundo o usuário; sua ausência local não invalida esse host.
+
+A primeira rodada Windows confirmou compilação MSVC/helpers, tipos e core, mas
+revelou lobby inacessível em 1024×680, seletor antigo no teste de Remote PC e
+seleção implícita de loopback numa janela QA silenciosa. Corrigidos: alinhamento
+seguro do lobby com reprodução antes/depois, seletor semântico/aba correta e
+captura QA com vídeo real/microfone emprestado (loopback conserva teste próprio).
+
+O navegador serial atingiu 15 minutos no runner. A pedido do usuário, a pipeline
+agora divide os mesmos 56 arquivos em quatro grupos paralelos por --shard, com
+agregação obrigatória antes da entrega. Teste do dispatcher verifica partição
+completa, estável e sem duplicatas; não foram retirados cenários. TAP expõe erros
+antes do resumo final. Tempo efetivo e resultado remoto ainda aguardam execução.

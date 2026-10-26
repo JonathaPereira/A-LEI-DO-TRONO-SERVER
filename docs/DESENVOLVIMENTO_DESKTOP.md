@@ -32,7 +32,12 @@ helper. HMR não comprova continuidade de dispositivos após qualquer edição.
 
 Use --filter com regex sobre os caminhos; --list mostra a seleção sem executá-la.
 Exemplo: npm test -- --filter 'portal|community-navigation'. Seleção inválida ou
-vazia falha. tests/suites.json é a classificação única; helpers não são entradas. No CI, o job de contratos executa npm test e o job de interfaces executa --suite browser completo; cenários nativos ficam no runner Windows com seus pré-requisitos.
+vazia falha. tests/suites.json é a classificação única; helpers não são entradas. No CI, contratos executam npm test. A suíte browser completa é dividida em quatro
+runners isolados com --shard 1/4 até 4/4; cada arquivo pertence a um único grupo.
+O job Browser interfaces and games só passa após todos os grupos; nenhum deles
+é opcional para distribuir. --list --suite browser --shard 1/4 permite conferir
+a seleção. O reporter TAP no CI expõe falhas imediatamente, antes do resumo.
+Cenários nativos ficam no runner Windows com seus pré-requisitos.
 
 A suíte desktop inclui updater que importa dependências do Electron e remux que
 exige ffmpeg/ffprobe no PATH. Modelos de mídia sem esses recursos ficam em core.
