@@ -37,7 +37,10 @@ runners isolados com --shard 1/4 até 4/4; cada arquivo pertence a um único gru
 O job Browser interfaces and games só passa após todos os grupos; nenhum deles
 é opcional para distribuir. --list --suite browser --shard 1/4 permite conferir
 a seleção. O reporter TAP no CI expõe falhas imediatamente, antes do resumo.
-Cenários nativos ficam no runner Windows com seus pré-requisitos.
+Cenários nativos ficam no runner Windows com seus pré-requisitos. Regras, SFU,
+Remote PC no navegador, controle flutuante e DSP do navegador são verificados
+uma vez em checks/browser; o job nativo conserva XInput, SendInput, captura,
+PCM em segundo plano, gate de recepção sem skips, runtime e atividade nativa.
 
 A suíte desktop inclui updater que importa dependências do Electron e remux que
 exige ffmpeg/ffprobe no PATH. Modelos de mídia sem esses recursos ficam em core.

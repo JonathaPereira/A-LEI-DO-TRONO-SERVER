@@ -203,7 +203,7 @@ jobs:
           }
         working-directory: electron
       - name: Verify call controls preserve live desktop media across layouts
-        run: npm test -- --suite all --filter '(?:application-call-desktop\.cjs|auth-desktop\.cjs|desktop-window-start\.cjs|throne-court-layout\.cjs|desktop-call-layout\.js)$'
+        run: npm test -- --suite all --filter '(?:application-call-desktop\.cjs|auth-desktop\.cjs|desktop-window-start\.cjs|desktop-call-layout\.js)$'
       - name: Verify installed Electron updater contracts
         # GenericProvider is loaded from electron/node_modules, installed in this job.
         run: npm test -- --suite all --filter '(?:desktop-updates\.js)$'
@@ -239,7 +239,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite all --filter '(?:remote-pc\.js|remote-coop\.js|desktop-remote-input\.js|desktop-remote-gamepad\.js|remote-pc-browser\.js|desktop-remote-native\.js|voice-moderation\.js|voice-moderation-browser\.js)$' 2>&1 | Tee-Object artifacts/windows-remote-pc.log
+          npm test -- --suite all --filter '(?:desktop-remote-gamepad\.js|desktop-remote-native\.js)$' 2>&1 | Tee-Object artifacts/windows-remote-pc.log
           $testExit = $LASTEXITCODE
           if ($testExit -ne 0) {
             Get-PnpDevice | Where-Object { $_.FriendlyName -match 'Xbox|ViGEm|Virtual Gamepad' } | Format-List Status,Class,FriendlyName,InstanceId,Problem
@@ -247,11 +247,8 @@ jobs:
             Write-Output "::error title=Remote PC beta::$details"
             exit $testExit
           }
-      - name: Verify SFU recovery and floating call layout
-        shell: pwsh
-        run: |
-          npm test -- --suite all --filter '(?:voice-roster\.cjs|voice-quality\.cjs|call-stability\.js|voice-transport\.cjs|call-lifecycle\.cjs|realtime-configuration\.cjs|sfu-recovery\.js|sfu-session\.cjs|sfu-browser\.js|floating-call-browser\.js)$'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # SFU, floating layout and microphone browser regressions run once in
+      # checks/browser; only the native boundaries and reception skip gate stay here.
       - name: Verify outgoing microphone PCM with real Windows background windows
         shell: pwsh
         run: |
@@ -287,8 +284,6 @@ jobs:
             Write-Output "::error title=Voice reception under load::$details"
             exit $testExit
           }
-      - name: Verify microphone PCM and native processing
-        run: npm test -- --suite all --filter '(?:native-microphone-browser\.js|light-noise-processing\.js)$'
       - name: Verify native Windows audio and runtime
         shell: pwsh
         run: |

@@ -69,6 +69,7 @@ test(
         },
         { base: fixture.base, data },
       );
+      await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
       await context.route('**/files/*/url', (route) => {
         const id = new URL(route.request().url()).pathname.split('/')[2];
         return route.fulfill({
@@ -85,7 +86,7 @@ test(
       page = await context.newPage();
       page.setDefaultTimeout(7000);
       page.on('pageerror', (error) => errors.push(error.message));
-      await page.goto(origin);
+      await page.goto(origin, { waitUntil: 'domcontentloaded' });
       await expect(page.locator('#chatOnlyScreen')).toBeVisible();
       await fs.mkdir('artifacts/frontend-reset/contrast-qa', { recursive: true });
       await expect(
@@ -364,6 +365,7 @@ test(
           viewport: { width: 1440, height: 900 },
           permissions: ['camera', 'microphone'],
         });
+        await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
         await context.addInitScript(
           ({ base, data }) => {
             window.TRONO_BACKEND_URL = base;
@@ -402,7 +404,7 @@ test(
         pages.push(page);
         page.setDefaultTimeout(10000);
         page.on('pageerror', (e) => errors.push(e.message));
-        await page.goto(origin);
+        await page.goto(origin, { waitUntil: 'domcontentloaded' });
         await expect(page.locator('#chatOnlyScreen')).toBeVisible();
         await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);

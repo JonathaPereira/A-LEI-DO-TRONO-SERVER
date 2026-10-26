@@ -73,13 +73,12 @@ test(
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
         await page.locator('[data-voice-channel=chat-livre]').click();
+        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
         await page.evaluate(() => {
           window.TronoPortal.openGame(true);
           window.TronoSocial.showForRoom(true);
         });
         await expect(page.locator('#setupScreen')).toBeVisible();
-        if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-          await page.evaluate(() => window.TronoSocial.joinVoice());
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
         return page;
       }

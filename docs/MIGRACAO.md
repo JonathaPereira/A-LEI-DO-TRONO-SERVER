@@ -213,3 +213,10 @@ Executável Windows empacotado local aprovado em windows-packaged-local-approved
 A fixture usa as telas atuais de voz/vídeo e áudio dos jogos. O instalador ainda
 aguarda aceitação no runner descartável. O usuário autorizou explicitamente
 enviar commits e publicar 0.3.5 no Surge após pipeline/instalador aprovados.
+
+A rodada 40375284608 aprovou o job nativo completo, core e grupos 1/2. Duas
+fixtures restantes foram corrigidas sem alterar transporte: aguardar a primeira
+entrada em voz antes de abrir o jogo (sem segundo toggle) e limitar rede/navegação
+ao backend local no cenário de dez clientes. Regressões locais passaram.
+O job nativo deixou de repetir cenários core/browser já obrigatórios nos jobs
+respectivos; não foram removidos arquivos/casos, XInput, SendInput ou PCM real.
