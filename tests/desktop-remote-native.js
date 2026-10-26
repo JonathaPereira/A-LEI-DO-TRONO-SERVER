@@ -71,8 +71,10 @@ test(
         document.body.append(button);
       });
       await page.locator('#nativeRemoteCapture').click();
-      await expect(page.locator('.desktop-capture-dialog')).toBeVisible();
-      await page.locator('.desktop-capture-sources button').first().click();
+      const picker = page.getByRole('dialog', { name: 'Escolher tela ou janela', exact: true });
+      await expect(picker).toBeVisible();
+      await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
+      await picker.locator('[data-source-kind=screen]').first().click();
       await page.locator('#desktopCaptureConfirm').click();
       await expect
         .poll(() =>

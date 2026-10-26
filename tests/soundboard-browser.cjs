@@ -195,14 +195,12 @@ test(
             [390, 844],
           ]) {
             await page.setViewportSize({ width, height });
-            const box = await menu.boundingBox();
-            assert(
-              box.x >= 0 &&
-                box.y >= 0 &&
-                box.x + box.width <= width &&
-                box.y + box.height <= height,
-              JSON.stringify(box),
-            );
+            // Resize schedules the anchored popover's next layout frame.
+            await expect.poll(async () => {
+              const box = await menu.boundingBox();
+              return box.x >= 0 && box.y >= 0 &&
+                box.x + box.width <= width && box.y + box.height <= height;
+            }, { message: `Soundboard must settle inside ${width}x${height}` }).toBe(true);
             assert(
               await menu.evaluate((n) => n.scrollHeight <= n.clientHeight + 1),
               'Soundboard scroll stays inside its library',

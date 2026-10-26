@@ -48,7 +48,12 @@ function run(args) {
     env.AUTH_TEST_CHROMIUM = env.CHROMIUM_EXECUTABLE_PATH;
   const result = spawnSync(
     process.execPath,
-    ['--test', '--test-concurrency=1', ...selection.files],
+    [
+      '--test',
+      '--test-concurrency=1',
+      ...(env.CI ? ['--test-reporter=tap'] : []),
+      ...selection.files,
+    ],
     {
       cwd: resolve(__dirname, '..'),
       env,
