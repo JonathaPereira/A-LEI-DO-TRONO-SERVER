@@ -61,7 +61,7 @@ test('Windows microphone sends continuous PCM with the real app minimized, cover
     evidence.push({mode,gain,state,pcm,visual});console.log('Windows background outgoing PCM:',JSON.stringify(evidence.at(-1)));
    }
   }
-  await windowMode('foreground');await page.locator('#muteMicBtn').click();assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),false);await page.locator('#muteMicBtn').click();assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),true);
+  await windowMode('foreground');await page.getByRole('complementary',{name:'Canais e conversas',exact:true}).getByRole('button',{name:'Mutar microfone',exact:true}).click();assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),false);await page.getByRole('complementary',{name:'Canais e conversas',exact:true}).getByRole('button',{name:'Ativar microfone',exact:true}).click();assert.equal(await page.evaluate(()=>window.TronoSocial.getLocalAudioTrack().enabled),true);
   assert.deepEqual(errors,[]);await fs.mkdir(path.join(root,'artifacts'),{recursive:true});await fs.writeFile(path.join(root,'artifacts/windows-background-voice.json'),JSON.stringify(evidence,null,2));
  }catch(error){error.message='Background voice phase '+phase+': '+error.message;throw error;}
  finally{finished=true;await closeTestApp(app);await browser?.close();await fixture?.stop();if(server)await new Promise(r=>server.close(r));await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
