@@ -123,6 +123,10 @@ test(
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       await setLayout(page, 'original');
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+      // Auth restoration enters its default community asynchronously. Wait for
+      // that acknowledgement before selecting this fixture's independent voice room.
+      await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-livre');
       await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
       await expect
         .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))

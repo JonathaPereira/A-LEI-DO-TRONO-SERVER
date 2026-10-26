@@ -405,9 +405,14 @@ test(
         page.setDefaultTimeout(10000);
         page.on('pageerror', (e) => errors.push(e.message));
         await page.goto(origin, { waitUntil: 'domcontentloaded' });
-        await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        await expect(page.locator('#chatOnlyScreen')).toBeVisible({ timeout: 15000 });
+      }
+      // Initialize all account views before connecting the ten-way media mesh.
+      for (const page of pages) {
         await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
-        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), { timeout: 15000 }).toBe(true);
       }
       const [host, viewer] = pages,
         call = viewer.getByRole('region', { name: 'Chamada da Corte', exact: true });
