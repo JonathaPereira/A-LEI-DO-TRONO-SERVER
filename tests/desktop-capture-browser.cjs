@@ -149,7 +149,7 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await expect(page.locator('#desktopFullscreen')).toBeVisible();
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
       const picker = page.getByRole('dialog', { name: 'Escolher tela ou janela' });
       await t.test(
         'screen and application are explicit; window selection bypasses the second dropdown',
@@ -158,6 +158,7 @@ test(
           await expect(picker).toBeVisible();
           await expect(page.locator('#desktopCaptureConfirm')).toBeDisabled();
           assert.equal(await picker.locator('img').first().getAttribute('src'), null);
+          await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
           await picker.getByRole('button', { name: 'Tela principal' }).click();
           await page.locator('#desktopCaptureConfirm').click();
           await expect(page.locator('#desktopCaptureMessage')).toContainText(
@@ -177,6 +178,7 @@ test(
             window.__picker.stream.getTracks().forEach((track) => track.stop()),
           );
           await page.evaluate(() => window.__picker.start());
+          await picker.getByRole('tab', { name: 'Aplicativos', exact: true }).click();
           await picker.getByRole('button', { name: '<Jogo & efeitos>' }).click();
           await expect(page.locator('#desktopAudioSourceLabel')).toBeHidden();
           await page.locator('#desktopCaptureConfirm').click();
@@ -190,6 +192,7 @@ test(
         await page.evaluate(() => window.__picker.start());
         await page.locator('#desktopAudioMode').selectOption('system');
         await expect(picker.locator('.desktop-capture-help')).toContainText('causar eco');
+        await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
         await picker.getByRole('button', { name: 'Tela principal' }).click();
         await page.locator('#desktopCaptureConfirm').click();
         assert.equal(await page.evaluate(() => window.__picker.result), 'active');
@@ -217,13 +220,14 @@ test(
           await page.evaluate(() => window.__picker.start({ audio: false, sources: [] }));
           await expect(picker).toBeVisible();
           await expect(picker.locator('.desktop-audio-options')).toBeHidden();
-          await expect(picker).toContainText('Nenhuma tela ou janela disponível');
+          await expect(picker).toContainText('Nenhum aplicativo disponível');
           await page.keyboard.press('Escape');
           assert.equal(await page.evaluate(() => window.__picker.result), 'NotAllowedError');
           await page.evaluate(() => window.__picker.start({ audio: false }));
           await expect(picker).toBeVisible();
           await page.evaluate(() => window.__picker.cancel('request-5'));
           await expect(picker).toBeVisible();
+          await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
           await picker.getByRole('button', { name: 'Tela principal' }).click();
           await page.locator('#desktopCaptureConfirm').click();
           assert.equal(await page.evaluate(() => window.__picker.result), 'active');
@@ -254,7 +258,7 @@ test(
             window.__picker.stream.getTracks().forEach((track) => track.stop()),
           );
           await page.reload();
-          await expect(page.locator('#desktopFullscreen')).toBeVisible();
+          await expect(page.locator('#chatOnlyScreen')).toBeVisible();
           assert.equal(
             await page.evaluate(() => {
               const replacement = async () => new MediaStream();

@@ -2,7 +2,7 @@ import { CallNavigationHost } from '@/components/navigation/call-navigation';
 import { ChatComposer } from './chat-composer';
 import { ChatClearButton, ChatMessages, ChatModerationDialog } from './chat-messages';
 
-export function ChatPanel() {
+export function ChatPanel({ active = true }: { active?: boolean }) {
   return (
     <>
       <section className={'court-chat-section'} aria-label={'Mensagens de texto'}>
@@ -30,7 +30,7 @@ export function ChatPanel() {
         <small className={'chat-help'}>
           Enter envia • 10 MB por arquivo • 100 MB por vídeo MP4/WebM • 300 caracteres
         </small>
-        <ChatModerationDialog />
+        <ChatModerationDialog active={active} />
       </section>
     </>
   );

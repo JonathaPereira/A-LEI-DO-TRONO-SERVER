@@ -13,6 +13,7 @@ import { QuickAudio } from './quick-audio';
 import { CommunityActions, ChannelFilesAction, CommunityDialogs } from './community-settings';
 import { ProfileDialogs } from './profile-settings';
 import { MediaSettings } from './media-settings';
+import { ApplicationNotices } from './notices';
 import { CallSurface } from './call';
 import { Conversation } from './conversation';
 import { useModel, useServices, type ApplicationServices } from './services';
@@ -811,6 +812,7 @@ export function ApplicationShell({
           <MediaSettings runtime={runtime} />
           <ProfileDialogs runtime={runtime} />
           <CommunityDialogs runtime={runtime} />
+          <ApplicationNotices runtime={runtime} />
         </>
       )}
     </>

@@ -21,6 +21,7 @@ test(
       );
     let app,
       page,
+      guestFixture,
       phase = 'prepare cache';
     const diagnostics = [];
     const watchdog = setTimeout(() => {
@@ -70,13 +71,17 @@ test(
       });
       phase = 'desktop rail';
       await page.waitForLoadState('domcontentloaded', { timeout: 30000 });
-      await expect(page.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       phase = 'auth ready';
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      phase = 'close auth';
-      if (await page.locator('#authDialog').isVisible())
-        await page.locator('#authCloseBtn').click();
+      phase = 'local guest entry';
+      guestFixture = await require('./desktop-guest-fixture.cjs').enterNativeGuest({
+        app,
+        page,
+        port: 10845,
+        nickname: 'Explorador nativo',
+      });
       phase = 'prepare layouts';
       await page.evaluate(() => {
         window.addEventListener('message', (e) => {
@@ -90,12 +95,10 @@ test(
                 }),
             );
         });
-        window.TronoAppLayout.apply('discord');
-        window.TronoAppLayout.apply('original');
         window.TronoGames.openLibrary();
       });
       phase = 'open game';
-      await page.locator('#playRoguelite').click();
+      await page.locator('#gamesScreen [data-game=roguelite]').click();
       phase = 'child start button';
       await expect(page.frameLocator('#rogueliteFrame').locator('#startBtn')).toBeVisible({
         timeout: 10000,
@@ -112,7 +115,10 @@ test(
         app,
         page,
         frontend: path.resolve(__dirname, '../out'),
-        onPhase: (label) => { phase = label; console.log('Native session ' + label); },
+        onPhase: (label) => {
+          phase = label;
+          console.log('Native session ' + label);
+        },
       });
     } catch (error) {
       const state = page
@@ -213,6 +219,7 @@ test(
     } finally {
       clearTimeout(watchdog);
       await closeTestApp(app);
+      await guestFixture?.stop();
       await fs.rm(directory, { recursive: true, force: true }).catch(() => {});
     }
   },

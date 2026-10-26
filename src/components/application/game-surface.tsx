@@ -1,3 +1,4 @@
+import { CallNavigationHost } from '../navigation/call-navigation';
 import type { PrimaryScreen } from '../../lib/navigation/portal';
 import { SetupScreen } from '../games/setup-screen';
 import { RoomScreen } from '../games/room-screen';
@@ -35,7 +36,10 @@ export function GameSurface({ active, screen }: { active: boolean; screen: Prima
         <RogueliteScreen />
         <NexusScreen />
         <div hidden={!['setupScreen', 'roomScreen', 'gameScreen'].includes(screen)}>
-          <CommunicationPanel />
+          <CommunicationPanel
+            active={active && ['setupScreen', 'roomScreen', 'gameScreen'].includes(screen)}
+          />
+          <CallNavigationHost id="socialMiniDock" />
         </div>
       </div>
       <ExchangeCinematic />

@@ -72,60 +72,30 @@ test(
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoAuth?.ready);
             await page.evaluate(() => window.TronoAuth.ready);
-            await page.evaluate(() => window.TronoPortal.showPortal());
-            await expect(page.locator('#portalIdentity')).toHaveValue('Portal Humano');
-            await expect(page.locator('#portalIdentity')).toHaveAttribute('readonly', '');
-            await expect(page.locator('#portalPlayerLabel')).toHaveText('Portal Humano');
+            await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+            assert.equal(
+              await page.evaluate(() => window.TronoAuth.user.nickname),
+              'Portal Humano',
+            );
             await page.evaluate(() => {
-              window.__portalHosts = [
-                'portalScreen',
-                'portalIdentity',
-                'portalMusicVolume',
-                'portalMusicBtn',
-                'portalCreditsDialog',
-              ].map((id) => document.getElementById(id));
               window.__portalOwner = window.TronoPortal;
+              window.__networkOwner = window.TronoNetwork;
             });
-            if (!desktop) await page.locator('#portalScreen .track-btn[data-track="rock"]').click();
-            else
-              await page.evaluate(() =>
-                document.querySelector('#portalScreen .track-btn[data-track=rock]').click(),
-              );
-            await expect(page.locator('#portalNowPlaying')).toContainText('Kistol');
-            if (!desktop) await page.locator('#portalMusicVolume').fill('17');
-            else
-              await page.evaluate(() => {
-                // Use the native setter so React observes the synthetic range change,
-                // matching the browser's own value update before its input event.
-                const input = document.getElementById('portalMusicVolume');
-                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(
-                  input,
-                  '17',
-                );
-              });
-            await page.locator('#portalMusicVolume').dispatchEvent('input');
-            await expect(page.locator('#portalMusicVolumeValue')).toHaveText('17%');
-            for (const key of ['Escape', 'button']) {
-              if (!desktop) await page.locator('#portalCreditsBtn').click();
-              else await page.evaluate(() => window.TronoPortal.setCredits(true));
-              await expect(page.locator('#portalCreditsDialog')).toBeVisible();
-              if (key === 'Escape') await page.keyboard.press('Escape');
-              else await page.locator('#portalCreditsDialog button').click();
-              await expect(page.locator('#portalCreditsDialog')).toBeHidden();
-            }
-            await page.locator('#gamePortalCard').focus();
-            await page.keyboard.press('Enter');
-            await expect(page.locator('#gamesScreen')).toBeVisible();
-            await page.evaluate(() => window.TronoPortal.openGame(true));
+            await page.getByRole('button', { name: 'Biblioteca de jogos', exact: false }).click();
+            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(7);
+            await page.locator('[data-game=throne]').click();
             await expect(page.locator('#setupScreen')).toBeVisible();
             await expect(page.locator('#playerIdentity')).toHaveValue('Portal Humano');
             await page.locator('#backFromLobbyBtn').click();
-            await expect(page.locator('#portalScreen')).toBeVisible();
-            await page.locator('#openVoicePortalBtn').click();
-            await expect(page.locator('body')).toHaveClass(/chat-only-active/);
-            await expect(page.locator('#callWorkspace')).toBeVisible();
-            await page.evaluate(() => window.TronoPortal.showPortal());
-            // Cancel the real chat entry while its channel refresh is still waiting.
+            await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+            assert.equal(
+              await page.evaluate(() => window.TronoAuth.user.nickname),
+              'Portal Humano',
+            );
+            await page.evaluate(() => window.TronoCallSettings.open('game'));
+            await page.getByLabel('Trilha sonora').selectOption('rock');
+            await expect(page.getByLabel('Trilha sonora')).toHaveValue('rock');
+            await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
             await page.evaluate(() => {
               const original = window.TronoCommunityAdmin.refresh;
               window.TronoCommunityAdmin.refresh = () =>
@@ -147,37 +117,26 @@ test(
               false,
             );
             await expect(page.locator('#gamesScreen')).toBeVisible();
-            assert(
+            assert.equal(
               await page.evaluate(
                 () =>
-                  window.TronoPortal === window.__portalOwner &&
-                  window.__portalHosts.every(
-                    (node) =>
-                      node.isConnected &&
-                      document.getElementById(node.id) === node &&
-                      document.querySelectorAll('#' + node.id).length === 1,
-                  ),
+                  window.__portalOwner === window.TronoPortal &&
+                  window.__networkOwner === window.TronoNetwork,
               ),
+              true,
             );
-            await page.evaluate(() => window.TronoPortal.showPortal());
-            await expect(page.locator('#portalMusicVolume')).toHaveValue('17');
-            await expect(page.locator('#portalNowPlaying')).toContainText('Kistol');
-            await require('./community-navigation-controls.cjs').exerciseCommunityNavigation(page);
             await page.evaluate(() => window.TronoAuth.logout());
-            await expect(page.locator('#authDialog')).toBeVisible();
-            await page.locator('#authCloseBtn').click();
-            await expect(page.locator('#portalPlayerLabel')).toHaveText('Visitante');
-            await page.locator('#openGuestGameBtn').click();
-            await expect(page.locator('#guestDialog')).toBeVisible();
+            await expect(page.locator('#portalScreen')).toBeVisible();
+            await expect(page.locator('#authEmail')).toBeVisible();
+            await page.getByRole('button', { name: 'Jogar como convidado' }).click();
             await page.locator('#guestNickname').fill(desktop ? 'Visita Desktop' : 'Visita Web');
-            await page.locator('#guestSubmit').click();
-            await expect(page.locator('#guestDialog')).toBeHidden();
+            await page.getByRole('button', { name: 'Escolher um jogo', exact: true }).click();
             await expect(page.locator('#gamesScreen')).toBeVisible();
-            await page.evaluate(() => window.TronoPortal.showPortal());
-            await expect(page.locator('#portalPlayerLabel')).toContainText('Convidado');
-            await expect(page.locator('#portalIdentity')).not.toHaveAttribute('readonly', '');
-            await page.locator('#openVoicePortalBtn').click();
-            await expect(page.locator('#authDialog')).toBeVisible();
+            assert.equal(await page.evaluate(() => !!window.TronoAuth.guest), true);
+            await page.evaluate(() => window.TronoPortal.openVoice());
+            await expect(page.getByRole('dialog', { name: 'Acesso à conta' })).toBeVisible();
+            await page.keyboard.press('Escape');
+            await expect(page.locator('#gamesScreen')).toBeVisible();
           } finally {
             await context.close();
           }

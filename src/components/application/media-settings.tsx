@@ -9,6 +9,7 @@ import { VoiceAudioPreferences } from '../voice/audio-preferences';
 import { ConnectionSettings } from '../voice/diagnostics';
 import { NotificationFields } from '../modals/notification-fields';
 import { SettingsActivityFields } from '../modals/settings-activity-fields';
+import { DesktopApplicationSettings } from './desktop-updates';
 import { ResourceSettings } from './resources';
 import { GameSettings } from './game-settings';
 import { AccountSettings } from './profile-settings';
@@ -28,6 +29,7 @@ const topics = [
   ['video', 'Vídeo', 'camera'],
   ['capture', 'Transmissão', 'screen'],
   ['connection', 'Conexão', 'voice'],
+  ['application', 'Aplicativo', 'settings'],
 ] as const;
 export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
   const controller = runtime.TronoCallSettings,
@@ -79,7 +81,9 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
         <nav aria-label="Configurações da Corte" className={styles.tabs}>
           {topics
             .filter(
-              ([id]) => desktop || (id !== 'capture' && id !== 'activity' && id !== 'privacy'),
+              ([id]) =>
+                desktop ||
+                (id !== 'capture' && id !== 'activity' && id !== 'privacy' && id !== 'application'),
             )
             .map(([id, label, icon]) => (
               <button
@@ -96,6 +100,11 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
         </nav>
         <div className={styles.fields} data-settings-fields>
           <AccountSettings runtime={runtime} />
+          {desktop && (
+            <section hidden={selected !== 'application'} aria-label="Aplicativo">
+              <DesktopApplicationSettings client={runtime.TronoDesktopUpdates} />
+            </section>
+          )}
           <section hidden={selected !== 'resources'} aria-label="Recursos">
             <ResourceSettings />
           </section>

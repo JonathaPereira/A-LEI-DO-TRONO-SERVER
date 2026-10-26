@@ -1,10 +1,10 @@
-M&N · A Lei do Trono — Windows 0.3.4
+M&N · A Lei do Trono — Windows 0.3.5
 
 Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.3.3.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-0.3.4-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.5-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.

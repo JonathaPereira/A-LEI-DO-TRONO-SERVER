@@ -1,4 +1,5 @@
 'use client';
+import type { DesktopUpdates } from '../../lib/desktop/updates';
 import { useSyncExternalStore } from 'react';
 import type { AccountSession, SessionSnapshot } from '../../lib/auth/session';
 import type { AuthForms } from '../../lib/auth/forms';
@@ -69,6 +70,7 @@ export type ApplicationServices = Window & {
   TronoChannelManagement: ChannelManagement;
   TronoChannelFiles: ChannelFiles;
   TronoDesktopActivity?: DesktopActivityController;
+  TronoDesktopUpdates?: DesktopUpdates;
   TronoNotifications: NotificationsController;
   TronoChatHub: { switchChannel(id: string, options?: { connectVoice?: boolean }): Promise<void> };
   TronoMessenger: { joinChannel(id: string, options?: { showText?: boolean }): Promise<void> };

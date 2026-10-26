@@ -8,6 +8,7 @@ import type { ClipDirectory } from '../../types/clips';
 import { RecordingControls } from './controls';
 interface Runtime extends Window {
   TronoRecorder?: ManualRecorder;
+  TronoAuth?: { readonly user: { id: string } | null; readonly guest: { id: string } | null };
   TronoSocial?: { getLocalAudioTrack(): MediaStreamTrack | null };
   webkitAudioContext?: typeof AudioContext;
   showDirectoryPicker?: (options: {
@@ -68,7 +69,8 @@ export function initializeRecorder(target: Window): ManualRecorder {
         return null;
       }
     },
-    save: (blob, directory, filename) => saveRecording(blob, directory, filename, files.download),
+    save: (blob, directory, filename, signal) =>
+      saveRecording(blob, directory, filename, files.download, signal),
     now: Date.now,
   });
   runtime.TronoRecorder = controller;
@@ -89,6 +91,20 @@ export function initializeRecorder(target: Window): ManualRecorder {
       void controller.stop(false);
       files.dispose();
     };
+  const identity = () =>
+    runtime.TronoAuth?.user
+      ? `account:${runtime.TronoAuth.user.id}`
+      : runtime.TronoAuth?.guest
+        ? `guest:${runtime.TronoAuth.guest.id}`
+        : null;
+  let owner = identity();
+  const accountChanged = () => {
+    const next = identity();
+    if (owner === next) return;
+    owner = next;
+    controller.cancel();
+  };
+  target.addEventListener('trono-auth-change', accountChanged);
   target.addEventListener('beforeunload', unload);
   target.addEventListener('pagehide', hide);
   const dispose = controller.dispose;
@@ -96,6 +112,7 @@ export function initializeRecorder(target: Window): ManualRecorder {
   controller.dispose = () => {
     if (disposed) return;
     disposed = true;
+    target.removeEventListener('trono-auth-change', accountChanged);
     target.removeEventListener('beforeunload', unload);
     target.removeEventListener('pagehide', hide);
     dispose();

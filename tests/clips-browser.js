@@ -32,7 +32,8 @@ test(
       await fixture.call('verify', { token_hash: [...fixture.links][0][0], type: 'signup' });
       const data = (await fixture.call('login', { email, password: 'Senha12!' })).data;
       browser = await chromium.launch({
-        executablePath: process.env.AUTH_TEST_CHROMIUM || '/usr/bin/chromium',
+        executablePath:
+          process.env.AUTH_TEST_CHROMIUM || process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
         headless: true,
         args: [
           '--no-sandbox',

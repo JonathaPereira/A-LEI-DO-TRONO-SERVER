@@ -243,6 +243,121 @@ test(
           );
         },
       );
+
+      await t.test(
+        'account changes cancel pending and active captures without exporting across identities',
+        async () => {
+          await page.reload();
+          await page.waitForFunction(() => window.TronoRecorder && window.TronoAuth?.user);
+          await page.evaluate(() => {
+            window.__manualDelay = true;
+            window.__manualRelease = null;
+            window.__downloadsAfterAccountChange = 0;
+          });
+          const countDownload = () => page.evaluate(() => window.__downloadsAfterAccountChange++);
+          page.on('download', countDownload);
+          await page.evaluate(() => window.TronoCallSettings.open('resources'));
+          await page.locator('#recordMatchBtn').click();
+          await expect.poll(() => page.evaluate(() => !!window.__manualRelease)).toBe(true);
+          await page.evaluate(() => window.TronoAuth.logout());
+          await expect
+            .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
+            .toBe('idle');
+          await expect(page.getByRole('dialog', { name: 'Configurações da Corte' })).toBeHidden();
+          await page.evaluate(() => {
+            window.__manualRelease();
+            window.__manualDelay = false;
+          });
+          await expect
+            .poll(() =>
+              page.evaluate(() =>
+                window.__manualCaptures.every((s) =>
+                  s.getTracks().every((t) => t.readyState === 'ended'),
+                ),
+              ),
+            )
+            .toBe(true);
+          await page.locator('#authEmail').fill(email);
+          await page.locator('#authPassword').fill('Senha12!');
+          await page.locator('#authSubmit').click();
+          await expect.poll(() => page.evaluate(() => !!window.TronoAuth.user)).toBe(true);
+          await page.evaluate(() => window.TronoCallSettings.open('resources'));
+          await page.locator('#recordMatchBtn').click();
+          await expect
+            .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
+            .toBe('recording');
+          await page.evaluate(() => window.TronoAuth.logout());
+          await expect
+            .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
+            .toBe('idle');
+          assert(
+            await page.evaluate(() =>
+              window.__manualCaptures.every((s) =>
+                s.getTracks().every((t) => t.readyState === 'ended'),
+              ),
+            ),
+          );
+          await page.locator('#authEmail').fill(email);
+          await page.locator('#authPassword').fill('Senha12!');
+          await page.locator('#authSubmit').click();
+          await expect.poll(() => page.evaluate(() => !!window.TronoAuth.user)).toBe(true);
+          await page.evaluate(() => {
+            window.__pendingRecordingWrite = { bytes: 0, aborts: 0, closes: 0 };
+            const Encoder = MediaRecorder;
+            window.MediaRecorder = class extends Encoder {
+              constructor(...args) {
+                super(...args);
+                this.addEventListener(
+                  'dataavailable',
+                  (e) => (window.__pendingRecordingWrite.bytes += e.data.size),
+                );
+              }
+            };
+            window.showDirectoryPicker = async () => ({
+              async getDirectoryHandle() {
+                return {
+                  async getFileHandle() {
+                    return {
+                      async createWritable() {
+                        return {
+                          write: () =>
+                            new Promise((resolve) => {
+                              window.__releaseRecordingWrite = resolve;
+                            }),
+                          async close() {
+                            window.__pendingRecordingWrite.closes++;
+                          },
+                          async abort() {
+                            window.__pendingRecordingWrite.aborts++;
+                          },
+                        };
+                      },
+                    };
+                  },
+                };
+              },
+            });
+          });
+          await page.evaluate(() => window.TronoCallSettings.open('resources'));
+          await page.locator('#recordMatchBtn').click();
+          await page.waitForFunction(() => window.__pendingRecordingWrite.bytes > 0, null, {
+            timeout: 15000,
+          });
+          await page.locator('#recordMatchBtn').click();
+          await page.waitForFunction(() => !!window.__releaseRecordingWrite);
+          await page.evaluate(() => window.TronoAuth.logout());
+          await expect
+            .poll(() => page.evaluate(() => window.__pendingRecordingWrite.aborts))
+            .toBe(1);
+          await page.evaluate(() => window.__releaseRecordingWrite());
+          await expect
+            .poll(() => page.evaluate(() => window.TronoRecorder.getSnapshot().phase))
+            .toBe('idle');
+          assert.equal(await page.evaluate(() => window.__pendingRecordingWrite.closes), 0);
+          assert.equal(await page.evaluate(() => window.__downloadsAfterAccountChange), 0);
+          page.removeListener('download', countDownload);
+        },
+      );
       assert.deepEqual(errors, []);
     } finally {
       await browser?.close();

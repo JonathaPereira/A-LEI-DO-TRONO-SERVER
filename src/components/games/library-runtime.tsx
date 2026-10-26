@@ -10,8 +10,6 @@ interface LibraryRuntime extends Window {
     showPortal(): void;
   };
   TronoSocial: { showForRoom(show: boolean): void };
-  TronoAppLayout: { navigate(route: 'home' | 'community' | 'throne'): Promise<unknown> };
-  TronoDesktopShell?: { navigate(route: 'throne'): Promise<unknown> };
   TronoAzul: {
     open(): void;
     leaveView(): void;

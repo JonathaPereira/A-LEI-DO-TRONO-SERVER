@@ -55,6 +55,17 @@ test(
             sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
             localStorage.setItem('tronoMusicEnabled', '0');
             localStorage.setItem('tronoSfxEnabled', '0');
+            const NativeSocket = window.WebSocket;
+            window.WebSocket = class extends NativeSocket {
+              constructor(...args) {
+                super(...args);
+                this.addEventListener('message', (event) => {
+                  const data = JSON.parse(event.data);
+                  if (data.type === 'chat-notice')
+                    window.__lastChannelNotice = { socket: this, data };
+                });
+              }
+            };
             window.__captureCount = 0;
             const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
             navigator.mediaDevices.getUserMedia = (constraints) => {
@@ -162,6 +173,19 @@ test(
       await page.getByRole('textbox', { name: 'Mensagem no canal', exact: true }).click();
       await expect(row('chat-livre').locator('[data-channel-unread]')).toHaveCount(0);
       await expect(row('chat-livre')).toHaveAttribute('data-muted', 'true');
+      await page.bringToFront();
+      await page.evaluate(() => {
+        const notice = window.__lastChannelNotice;
+        if (!notice) throw Error('The real off-channel notice was not captured');
+        // A delayed notice can reach the socket after the user has opened its room.
+        notice.socket.dispatchEvent(
+          new MessageEvent('message', {
+            data: JSON.stringify({ ...notice.data, id: crypto.randomUUID() }),
+          }),
+        );
+      });
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      await expect(row('chat-livre').locator('[data-channel-unread]')).toHaveCount(0);
       assert.deepEqual(errors, []);
     } finally {
       await browser?.close();

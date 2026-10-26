@@ -45,21 +45,18 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      if (!(await page.locator('#authDialog').isVisible()))
-        await page.locator('#accountLoginBtn').click();
       await page.locator('#authEmail').fill('react@example.test');
       await page.locator('#authPassword').fill('Senha12!');
-      await page.locator('#authSubmitBtn').click();
-      await expect(page.locator('#authDialog')).not.toBeVisible();
-      await page.locator('#openVoicePortalBtn').click();
+      await page.locator('#authSubmit').click();
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+      await page.locator('[data-channel="chat-livre"]').click();
       await expect
         .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
         .toBe('chat-livre');
-      await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
-      const input = page.locator('#courtChatInput');
-      const messages = page.locator('#courtChatMessages');
+      const input = page.locator('#channelMessageInput');
+      const messages = page.getByRole('log', { name: 'Mensagens' });
       await input.fill('Mensagem pelo botão');
-      await page.locator('#courtChatSend').click();
+      await page.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
       await expect(messages).toContainText('Mensagem pelo botão');
       await expect(input).toHaveValue('');
       // Respect the backend's 450 ms anti-spam window between distinct submissions.
@@ -74,11 +71,15 @@ test(
       await expect(input).toHaveValue('Duas\nl');
       await input.fill('Olá mundo');
       await input.evaluate((node) => node.setSelectionRange(4, 9));
-      await page.locator('#emojiBtn').click();
-      await page.locator('#emojiPicker [data-emoji="👑"]').click();
+      await page.getByRole('button', { name: 'Escolher emoji' }).click();
+      await page.evaluate(() => window.TronoCallSettings.open('audio'));
+      await page.keyboard.press('Escape');
+      await expect(page.locator('dialog[data-topic]')).toBeHidden();
+      await expect(page.getByRole('group', { name: 'Seletor de emojis' })).toBeVisible();
+      await page.getByRole('button', { name: '👑', exact: true }).click();
       await expect(input).toHaveValue('Olá 👑');
       await input.press('Escape');
-      await expect(page.locator('#emojiPicker')).toBeHidden();
+      await expect(page.getByRole('group', { name: 'Seletor de emojis' })).toBeHidden();
       await expect(input).toBeVisible();
       await input.evaluate((node) =>
         node.dispatchEvent(
@@ -86,17 +87,17 @@ test(
         ),
       );
       await expect(input).toHaveValue('Olá 👑');
-      await expect(messages.locator('.court-chat-msg')).toHaveCount(2);
+      await expect(messages.locator('[data-message-id]')).toHaveCount(2);
 
       const pdf = {
         name: 'documento.pdf',
         mimeType: 'application/pdf',
         buffer: Buffer.from('%PDF-1.7'),
       };
-      await page.locator('#chatFileInput').setInputFiles(pdf);
-      await expect(page.locator('#attachmentStatus')).toContainText('documento.pdf');
-      await page.locator('#attachmentStatus button').click();
-      await expect(page.locator('#attachmentStatus')).toHaveText('');
+      await page.locator('#chatOnlyScreen input[type=file]').setInputFiles(pdf);
+      await expect(page.getByRole('button', { name: 'Remover anexo' })).toBeVisible();
+      await page.getByRole('button', { name: 'Remover anexo' }).click();
+      await expect(page.getByRole('button', { name: 'Remover anexo' })).toHaveCount(0);
       await expect(input).toHaveValue('Olá 👑');
 
       let heldUpload;
@@ -107,24 +108,28 @@ test(
         },
         { times: 1 },
       );
-      await page.locator('#chatFileInput').setInputFiles(pdf);
-      await page.locator('#courtChatSend').click();
+      await page.locator('#chatOnlyScreen input[type=file]').setInputFiles(pdf);
+      await page.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
       await expect.poll(() => !!heldUpload).toBe(true);
       await expect(input).toBeDisabled();
-      await expect(page.locator('#courtChatSend')).toBeDisabled();
-      await page.locator('#attachmentStatus button').click();
+      await expect(
+        page.getByRole('button', { name: 'Enviar mensagem', exact: true }),
+      ).toBeDisabled();
+      await page.getByRole('button', { name: 'Remover anexo' }).click();
       await expect(input).toBeEnabled();
       await expect(input).toHaveValue('Olá 👑');
       await heldUpload.abort().catch(() => {});
       await page.unroute('**/files/upload');
 
-      await page.locator('#chatFileInput').setInputFiles(pdf);
+      await page.locator('#chatOnlyScreen input[type=file]').setInputFiles(pdf);
       await input.fill('Documento anexado');
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await page.locator('#courtChatSend').click();
+      await page.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
       await expect(messages.locator('.file-download')).toContainText('documento.pdf');
       await expect(input).toHaveValue('');
-      await expect(page.locator('#attachmentStatus')).toContainText('Arquivo enviado.');
+      await expect(page.locator('#chatOnlyScreen span[role=status]')).toContainText(
+        'Arquivo enviado.',
+      );
       assert.equal(fixture.files.size, 1);
       assert.equal([...fixture.files.values()][0].room_id, 'chat-livre');
 
@@ -132,8 +137,10 @@ test(
       fixture.historyState.fail = true;
       try {
         await input.fill('Rascunho recuperado');
-        await page.locator('#courtChatSend').click();
-        await expect(page.locator('#attachmentStatus')).toContainText('Não foi possível salvar');
+        await page.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+        await expect(page.locator('#chatOnlyScreen span[role=status]')).toContainText(
+          'Não foi possível salvar',
+        );
         await expect(input).toHaveValue('Rascunho recuperado');
       } finally {
         fixture.historyState.fail = false;
@@ -159,18 +166,17 @@ test(
       await expect
         .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
         .toBe('chat-livre');
-      await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
-      await expect(messages.locator('.court-chat-msg')).toHaveCount(50);
+      await expect(messages.locator('[data-message-id]')).toHaveCount(50);
       const anchor = await messages.evaluate((element) => {
         element.scrollTop = 0;
-        const first = element.firstElementChild;
+        const first = element.querySelector('[data-message-id]');
         return {
           id: first.dataset.messageId,
           y: first.getBoundingClientRect().top - element.getBoundingClientRect().top,
         };
       });
-      await page.locator('#olderChatMessages').click();
-      await expect(messages.locator('.court-chat-msg')).toHaveCount(55);
+      await page.getByRole('button', { name: 'Carregar mensagens anteriores' }).click();
+      await expect(messages.locator('[data-message-id]')).toHaveCount(55);
       await expect(messages.locator('.file-download')).toContainText('documento.pdf');
       const anchorY = await messages
         .locator('[data-message-id="' + anchor.id + '"]')
@@ -185,7 +191,7 @@ test(
 
       assert.equal(
         await messages
-          .locator('.court-chat-msg')
+          .locator('[data-message-id]')
           .evaluateAll((rows) => new Set(rows.map((row) => row.dataset.messageId)).size),
         55,
       );

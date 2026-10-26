@@ -18,6 +18,7 @@ test(
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-runtime-'));
     let app,
       api,
+      guestFixture,
       phase = 'launch',
       finished = false;
     t.signal.addEventListener(
@@ -50,7 +51,7 @@ test(
           if (line.startsWith('[desktop]')) console.log(line);
       });
       let page = await app.firstWindow();
-      await expect(page.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       assert.equal(page.url(), 'https://a-lei-do-trono.surge.sh/');
       assert.equal(
         await page.evaluate(async () => (await fetch('/')).headers.get('referrer-policy')),
@@ -96,25 +97,27 @@ test(
         false,
       );
       phase = 'native fullscreen';
-      await page.locator('#desktopFullscreen').click();
+      await page.evaluate(() => window.TronoDesktopWindow.toggleFullscreen());
       await expect
         .poll(() =>
           app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFullScreen()),
         )
         .toBe(true);
-      await page.locator('#desktopFullscreen').click();
+      await page.evaluate(() => window.TronoDesktopWindow.toggleFullscreen());
       await expect
         .poll(() =>
           app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFullScreen()),
         )
         .toBe(false);
       phase = 'navigation';
-      await expect(page.locator('[data-desktop-route="clips"]')).toBeDisabled();
-      await page.locator('#voiceSettingsBtn').click();
-      await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+      await page.evaluate(() => window.TronoCallSettings.open('privacy'));
+      await expect(page.locator('dialog[data-topic]')).toBeVisible();
       await page.locator('[data-settings-tab="privacy"]').click();
-      await expect(page.locator('#desktopPermissionsStatus')).toBeVisible();
-      await page.locator('#voiceSettingsClose').click();
+      await expect(
+        page.getByRole('region', { name: 'Privacidade', exact: true }).getByRole('status'),
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
       await expect(page.locator('#portalScreen')).toBeVisible();
       // The installed bundle never falls back to remote Surge files.
       assert.equal(
@@ -160,8 +163,7 @@ test(
         path.resolve(__dirname, '../electron/preload.cjs'),
       );
       assert(denied);
-      phase = 'native Windows activity';
-      await require('./desktop-activity-flow.cjs').exerciseNativeActivity(page);
+      // Native process detection is exercised separately by desktop-activity-native.cjs.
       phase = 'native file export';
       await app.evaluate(({ dialog }, directory) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
@@ -230,7 +232,7 @@ test(
         .poll(
           () =>
             page.evaluate(() =>
-              document.querySelector('.desktop-capture-dialog').open
+              document.querySelector('dialog[aria-label="Escolher tela ou janela"]')?.open
                 ? 'picker'
                 : window.__captureError || 'pending',
             ),
@@ -238,16 +240,37 @@ test(
         )
         .not.toBe('pending');
       assert.equal(await page.evaluate(() => window.__captureError), undefined);
-      await expect(page.locator('.desktop-capture-dialog')).toBeVisible({ timeout: 30000 });
-      await page.locator('.desktop-capture-dialog .dialog-close').click();
+      await expect(
+        page.getByRole('dialog', { name: 'Escolher tela ou janela', exact: true }),
+      ).toBeVisible({ timeout: 30000 });
+      await page.getByRole('button', { name: 'Cancelar captura', exact: true }).click();
       assert(
         ['NotAllowedError', 'AbortError'].includes(
           await page.evaluate(() => window.__captureResult),
         ),
       );
+      // Select only this controlled fixture window, never another application or monitor.
+      const captureTarget = await app.evaluate(async ({ BrowserWindow }) => {
+        const target = new BrowserWindow({
+          width: 640,
+          height: 420,
+          show: true,
+          webPreferences: { contextIsolation: true, nodeIntegration: false },
+        });
+        await target.loadURL(
+          'data:text/html,' +
+            encodeURIComponent(
+              '<!doctype html><title>Corte QA - runtime</title><body style="background:#222;color:#d6b779">Captura controlada</body>',
+            ),
+        );
+        return target.id;
+      });
       await page.locator('#runtimeShare').click();
-      await expect(page.locator('.desktop-capture-sources button').first()).toBeVisible();
-      await page.locator('.desktop-capture-sources button').first().click();
+      const nativeSource = page
+        .getByRole('dialog', { name: 'Escolher tela ou janela', exact: true })
+        .getByRole('button', { name: 'Corte QA - runtime', exact: true });
+      await expect(nativeSource).toBeVisible();
+      await nativeSource.click();
       await page.locator('#desktopCaptureConfirm').click();
       assert.equal(await page.evaluate(() => window.__captureResult), 'active');
       assert.equal(
@@ -255,6 +278,10 @@ test(
         'live',
       );
       await page.evaluate(() => window.__nativeStream.getTracks().forEach((track) => track.stop()));
+      await app.evaluate(
+        ({ BrowserWindow }, id) => BrowserWindow.fromId(id)?.destroy(),
+        captureTarget,
+      );
       phase = 'soundboard PCM in native renderer';
       const soundboardPCM = await page.evaluate(async () => {
         const input = new AudioBuffer({
@@ -311,8 +338,14 @@ test(
       }
       await page.evaluate(() => window.TronoDesktop.saveSession(null));
       assert.equal(await page.evaluate(() => window.TronoDesktop.readSession()), null);
-      phase = 'native court fullscreen';
+      phase = 'local guest for native court fullscreen';
+      guestFixture = await require('./desktop-guest-fixture.cjs').enterNativeGuest({
+        app,
+        page,
+        port: 10847,
+      });
       await require('./desktop-court-display-flow').exerciseCourtFullscreen({ app, page });
+      await page.evaluate(() => window.TronoAuth.logout());
       phase = 'RNNoise in installed bundle';
       assert(
         await page.evaluate(async () => {
@@ -364,7 +397,7 @@ test(
         timeout: 40000,
       });
       page = await app.firstWindow();
-      await expect(page.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       if (await page.locator('#authDialog').isVisible())
@@ -470,6 +503,7 @@ test(
       finished = true;
       await closeTestApp(app);
       await api?.stop();
+      await guestFixture?.stop();
       await fs.rm(directory, { recursive: true, force: true }).catch(() => {});
     }
   },

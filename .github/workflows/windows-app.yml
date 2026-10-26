@@ -18,6 +18,10 @@ on:
       ]
   workflow_dispatch:
     inputs:
+      publish_surge:
+        description: Publish the validated delivery to Surge automatically
+        type: boolean
+        default: true
       refresh_instructions:
         description: Refresh only instructions and hashes in an existing draft release
         type: boolean
@@ -86,48 +90,13 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run format:check
-      - name: Verify backend lifecycle and service integration
-        timeout-minutes: 2
-        run: npm test -- --suite all --filter '(?:server-lifecycle\.cjs|server-modules\.cjs|backend-services\.cjs|server-community\.cjs|community-management-models\.cjs|provider-cancellation\.cjs|server-social\.cjs|server-auth\.cjs|server-files\.cjs|storage-r2\.cjs|love-letter-service\.cjs|azul-service\.cjs|splendor-service\.cjs|realtime-policy\.cjs|server-realtime\.cjs|throne-service\.cjs|channel-service\.cjs|chat-service\.cjs|voice-soundboard\.cjs|socket-gateway\.cjs)$'
-      - name: Verify profile validation and persistence
-        run: npm test -- --suite all --filter '(?:member-profiles\.js|profile-media\.js|giphy-provider\.js)$'
-      - name: Verify revised game rules and independent voice
-        run: npm test -- --suite all --filter '(?:game-rules\.js|game-voice-membership\.js|game-rounds\.js|azul-rules\.js|azul-presentation\.js|azul-sql\.js|azul-ws\.js)$'
-      - name: Verify private attachments and creator moderation
+      - name: Verify deterministic contracts, game rules and local database
+        timeout-minutes: 4
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite all --filter '(?:chat-moderation-sql\.js|chat-moderation-ws\.js|direct-attachments-sql\.js|direct-attachments-http\.js)$' 2>&1 | Tee-Object artifacts/windows-messaging.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-messaging.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows messaging validation::$details"
-            exit $testExit
-          }
-      - name: Verify Cinzas v0.5 gameplay and verified offline media cache
-        run: npm test -- --suite all --filter '(?:cinzas-upstream\.js|game-assets\.js)$'
-      - name: Verify Splendor classic rules, private tables and persistent records
-        shell: pwsh
-        run: |
-          npm test -- --suite all --filter '(?:splendor-rules\.js|splendor-sql\.js|splendor-ws\.js)$' 2>&1 | Tee-Object artifacts/windows-splendor.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-splendor.log | Select-Object -Last 65) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Splendor validation::$details"
-            exit $testExit
-          }
-      - name: Verify Love Letter second edition and private hands
-        shell: pwsh
-        run: |
-          npm test -- --suite all --filter '(?:love-letter-rules\.js|love-letter-ws\.js|bot-names\.js)$' 2>&1 | Tee-Object artifacts/windows-love-letter.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-love-letter.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Love Letter validation::$details"
-            exit $testExit
-          }
-      - name: Verify desktop policies and distribution contracts
-        run: npm test -- --suite all --filter '(?:desktop-policy\.js|desktop-preferences\.js|desktop-activity\.js|desktop-notifications\.js|voice-reception\.js|desktop-audio-priority\.js|site-package\.js|download-retention\.js|build-downloads\.js)$'
+          npm test 2>&1 | Tee-Object artifacts/windows-core.log
+          exit $LASTEXITCODE
       - name: Save backend failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -141,7 +110,7 @@ jobs:
     name: Browser interfaces and games
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -155,23 +124,16 @@ jobs:
       - run: npm run build
       - name: Install Chromium for integration tests
         run: npx playwright install chromium
-      - name: Verify Corte navigation, calls and account resources
+      - name: Verify browser communication, resources and complete games
         shell: pwsh
         run: |
-          npm test -- --suite all --filter '(?:application-call-browser\.cjs|application-shell-browser\.cjs|chat-composer-browser\.cjs|channels-browser\.cjs|app-layout-browser\.js|profile-media-browser\.js|call-controls-browser\.js|profile-editor-browser\.cjs|file-library-browser\.cjs|member-profile-browser\.cjs|registered-accounts-browser\.cjs|appearance-preferences-browser\.cjs|channel-files-browser\.cjs|soundboard-browser\.cjs|manual-recording-browser\.cjs)$'
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm test -- --suite browser 2>&1 | Tee-Object artifacts/windows-browser.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:QA_NATIVE = '1'
-          npm test -- --suite all --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'
+          npm test -- --suite browser --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Remove-Item Env:QA_NATIVE
-      - name: Verify Nexus integration and isolated game window
-        run: npm test -- --suite all --filter '(?:nexus\.js|nexus-browser\.js)$'
-      - name: Verify Windows notices, call alert settings and PC control alignment
-        run: npm test -- --suite all --filter '(?:desktop-notices-controls-browser\.js)$'
-      - name: Verify Splendor player visibility and stable Love Letter logs
-        run: npm test -- --suite all --filter '(?:splendor-browser\.js|love-letter-browser\.js)$'
-      - name: Verify Ticket to Ride USA rules, private tables and browser
-        run: npm test -- --suite all --filter '(?:ticket-to-ride-rules\.js|ticket-to-ride-ws\.js|ticket-to-ride-browser\.js)$'
       - name: Save interfaces failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -180,6 +142,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
           path: |
+            artifacts/windows-browser.log
             artifacts/profile-media*/failure-*.png
             artifacts/nexus/*.png
             artifacts/splendor/*.png
@@ -353,6 +316,8 @@ jobs:
     needs: [checks, interfaces, windows]
     runs-on: windows-latest
     timeout-minutes: 10
+    outputs:
+      release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -412,11 +377,13 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
       - name: Publish validated downloads in a private draft release
+        id: distribution
         uses: actions/github-script@v7
         with:
           script: |
             const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
-            await publishBuild({github,context,core});
+            const result=await publishBuild({github,context,core});
+            core.setOutput('tag',result.tag);
       - name: Retain only current and previous distribution artifacts
         uses: actions/github-script@v7
         with:
@@ -443,3 +410,13 @@ jobs:
           path: |
             artifacts/windows-packaged.log
             artifacts/windows-installer.log
+
+  publish-surge:
+    name: Publish validated delivery to Surge
+    needs: [checks, interfaces, windows, delivery]
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.publish_surge)
+    uses: ./.github/workflows/frontend-publish.yml
+    with:
+      release_tag: ${{ needs.delivery.outputs.release_tag }}
+    secrets:
+      SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}

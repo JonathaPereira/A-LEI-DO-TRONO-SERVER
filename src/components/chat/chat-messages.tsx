@@ -172,17 +172,17 @@ export function ChatClearButton() {
     </button>
   );
 }
-export function ChatModerationDialog() {
+export function ChatModerationDialog({ active = true }: { active?: boolean }) {
   const { state, controller } = useMessages();
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   const clear = state.choice?.action === 'clear';
   useEffect(() => {
-    if (state.choice) {
+    if (active && state.choice) {
       dialog.current?.showModal();
       cancel.current?.focus();
     } else dialog.current?.close();
-  }, [state.choice]);
+  }, [state.choice, active]);
   return (
     <dialog
       ref={dialog}

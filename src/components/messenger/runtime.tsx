@@ -56,6 +56,7 @@ export function initializeMessenger(target: Window): () => void {
     openLogin: () => runtime.TronoAuth.open('login'),
     beforeOpen() {
       runtime.TronoCallNavigation?.showChat();
+      runtime.TronoPortal.showOnly('chatOnlyScreen');
       runtime.TronoSocial.toggleTelemetry(false);
       if (doc.body.classList.contains('chat-only-active'))
         runtime.TronoSocial.toggleTextChat(false);

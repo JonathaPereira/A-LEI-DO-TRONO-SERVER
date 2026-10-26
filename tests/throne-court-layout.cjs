@@ -14,6 +14,19 @@ test(
       .listen(0, '127.0.0.1');
     await new Promise((resolve) => server.once('listening', resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
+    const fixture = await require('./auth-fixture').startFixture({
+      port: 11959,
+      appOrigin: origin,
+    });
+    await fixture.call('signup', {
+      email: 'court-layout@example.test',
+      nickname: 'Casa Layout',
+      password: 'Senha12!',
+    });
+    await fixture.call('verify', { token_hash: [...fixture.links.keys()].at(-1), type: 'signup' });
+    const data = (
+      await fixture.call('login', { email: 'court-layout@example.test', password: 'Senha12!' })
+    ).data;
     let browser;
     t.signal.addEventListener(
       'abort',
@@ -30,10 +43,14 @@ test(
       await page.route('**/*', (route) =>
         new URL(route.request().url()).origin === origin ? route.continue() : route.abort(),
       );
-      await page.addInitScript((base) => {
-        window.TRONO_BACKEND_URL = base;
-        localStorage.setItem('tronoMusicEnabled', '0');
-      }, origin);
+      await page.addInitScript(
+        ({ base, data }) => {
+          window.TRONO_BACKEND_URL = base;
+          sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+          localStorage.setItem('tronoMusicEnabled', '0');
+        },
+        { base: fixture.base, data },
+      );
       await page.goto(origin);
       await page.waitForFunction(
         () =>
@@ -41,7 +58,6 @@ test(
           window.TronoThronePrivate &&
           window.TronoThroneSeats &&
           window.TronoThroneHistory &&
-          window.TronoAppLayout &&
           window.TronoAuth?.ready,
       );
       await page.evaluate(() => window.TronoAuth.ready);
@@ -101,8 +117,7 @@ test(
         });
       });
       await page.locator('#thronePrivateContinue').click();
-      for (const layout of ['original', 'discord']) {
-        await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+      for (const layout of ['corte']) {
         for (const [width, height] of [
           [1440, 900],
           [1280, 720],
@@ -142,6 +157,7 @@ test(
       await expect(page.locator('#eventLogPanel')).toBeVisible();
     } finally {
       await browser?.close();
+      await fixture.stop();
       await new Promise((resolve) => server.close(resolve));
     }
   },

@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { initializeDesktopWindow } from '../lib/desktop/window';
+import { initializeDesktopUpdates } from '../components/desktop/update-runtime';
 import { publishServices } from '../components/application/services';
 import { throneRules } from '../lib/games/throne-rules';
 import { initializeAudio } from '../components/audio/runtime';
@@ -75,6 +77,8 @@ export function ApplicationRuntime() {
       initializeAccountResources(window);
       initializeChannelManagement(window, { mount: false });
       initializeDesktopActivity(window);
+      initializeDesktopUpdates(window);
+      initializeDesktopWindow(window);
       initializeVoiceRuntime(window);
       Object.assign(window, { TronoRules: throneRules });
       initializeThroneLobby(window);

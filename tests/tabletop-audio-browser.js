@@ -13,6 +13,11 @@ test(
         .use(express.static(path.resolve('out')))
         .listen(0, '127.0.0.1', () => r(s));
     });
+    const origin = 'http://127.0.0.1:' + server.address().port;
+    const fixture = await require('./auth-fixture').startFixture({
+      port: 11958,
+      appOrigin: origin,
+    });
     let browser;
     try {
       browser = await chromium.launch({
@@ -25,7 +30,8 @@ test(
       await page.route('**/*', (r) =>
         new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort(),
       );
-      await page.addInitScript(() => {
+      await page.addInitScript((base) => {
+        window.TRONO_BACKEND_URL = base;
         localStorage.setItem('tronoMusicEnabled', '0');
         const Native = AudioContext;
         window.AudioContext = class extends Native {
@@ -42,12 +48,14 @@ test(
           }
         };
         window.__NativeAudio = Native;
-      });
+      }, fixture.base);
       await page.goto('http://127.0.0.1:' + server.address().port);
       await page.waitForFunction(() => window.TronoAudio && window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
       await page.waitForSelector('[data-game-audio="love-letter"]', { state: 'attached' });
-      await page.locator('#authCloseBtn').click();
+      await page.getByRole('button', { name: 'Jogar como convidado' }).click();
+      await page.locator('#guestNickname').fill('Teste Mesa');
+      await page.getByRole('button', { name: 'Escolher um jogo', exact: true }).click();
       await require('./tabletop-audio-controls.cjs').exerciseTabletopAudio(page);
       await page.evaluate(async () => {
         window.TronoAudio.setSfxEnabled(true);
@@ -108,23 +116,22 @@ test(
         state,
       );
       assert.deepEqual(errors, []);
-      // All three music panels project one owner, including real keyboard range events.
-      if (await page.locator('#authDialog').isVisible())
-        await page.locator('#authCloseBtn').click();
+      // The retained game controls and Corte settings project the same audio owner.
       await page.evaluate(() => {
         window.TronoAudio.setMusicVolume(23);
         window.TronoAudio.setMusicTrack('rock', { play: false });
+        window.TronoCallSettings.open('game');
       });
-      await expect(page.locator('#portalScreen')).toBeVisible();
-      await page.locator('#portalMusicVolume').focus();
-      await page.locator('#portalMusicVolume').press('End');
-      await page.locator('#portalMusicVolume').press('ArrowLeft');
-      for (const id of ['musicVolumeValue', 'lobbyMusicVolumeValue', 'portalMusicVolumeValue'])
+      const volume = page.getByRole('slider', { name: 'Volume da música', exact: true });
+      await volume.focus();
+      await volume.press('End');
+      await volume.press('ArrowLeft');
+      await expect(volume).toHaveValue('99');
+      for (const id of ['musicVolumeValue', 'lobbyMusicVolumeValue'])
         await expect(page.locator('#' + id)).toHaveText('99%');
-      for (const id of ['gameScreen', 'setupScreen', 'portalScreen'])
-        await expect(page.locator('#' + id + ' .track-btn[data-track="rock"]')).toHaveClass(
-          /active/,
-        );
+      for (const id of ['gameScreen', 'setupScreen'])
+        await expect(page.locator('#' + id + ' .track-btn[data-track=rock]')).toHaveClass(/active/);
+      await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
       const cleanup = await page.evaluate(async () => {
         const audio = window.TronoAudio;
         await audio.ensureAudio();
@@ -162,6 +169,7 @@ test(
       console.log('Actual Splendor waveform RMS ' + JSON.stringify({ high, low, mute }));
     } finally {
       await browser?.close();
+      await fixture.stop();
       await new Promise((r) => server.close(r));
     }
   },

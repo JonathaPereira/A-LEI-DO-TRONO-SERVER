@@ -17,7 +17,8 @@ export interface SettingsRuntime {
     resetMediaPermissions(): Promise<unknown>;
   };
   TronoAuth: {
-    user: { nickname: string; email: string } | null;
+    user: { id: string; nickname: string; email: string } | null;
+    guest?: { id: string } | null;
     remembered: boolean;
     rememberError?: string;
     ready: Promise<unknown>;

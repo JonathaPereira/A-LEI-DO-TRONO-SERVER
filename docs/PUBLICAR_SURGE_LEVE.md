@@ -16,32 +16,42 @@ distribuição.
 
 ## Publicar pelo GitHub
 
-1. Suba a contribuição para sua própria branch e aguarde o workflow
-   **Windows full app** terminar com sucesso. Uma alteração apenas local não gera
-   um pacote remoto. Para a entrega atual, o desktop deve declarar **0.3.4**.
-2. Na execução aprovada, abra o resumo **Downloads Windows 0.3.4** e copie a tag
-   exata da release privada: `desktop-v0.3.4-run-<id>-attempt-<tentativa>`.
-3. Em **Actions → Publish approved frontend → Run workflow**, selecione a branch
-   cujo código corresponde à entrega aprovada e cole a tag em `release_tag`.
-   Se a contribuição já estiver integrada e corresponder ao pacote, use `main`.
-   O repositório precisa ter o secret `SURGE_TOKEN` configurado.
-4. Execute e confira as etapas **Publish the verified directory to Surge** e
-   **Verify published version**. Esse workflow reutiliza os pacotes aprovados e
-   verifica seus hashes, sem repetir a suíte Windows nem gerar outro instalador.
-5. Confira `version: 0.3.4` em
-   <https://a-lei-do-trono.surge.sh/downloads/latest.yml>. No aplicativo instalado,
-   busque a atualização pelo rodapé e reinicie quando o download estiver pronto.
+Execute **Actions → Windows full app → Run workflow** na branch desejada.
+`publish_surge` vem ligado: após tipos/core, navegador, mídia Windows, aplicativo
+empacotado e instalação passarem, a própria execução publica a entrega no Surge.
+Pushes em `main` também publicam automaticamente. Contribuições disparadas apenas
+por push continuam como validação; para publicá-las, use o disparo manual.
 
-Para publicação manual, baixe `MN-Trono-Frontend-0.3.4.zip` da mesma release,
-extraia numa pasta nova e abra um terminal dentro de `frontend/`:
+A versão vem de `electron/package.json`; a tag exata passa diretamente do pacote
+para a publicação, sem copiar IDs ou procurar versões. O repositório precisa do
+secret `SURGE_TOKEN`. A release privada mantém EXE, ZIP e hashes da mesma entrega.
+A publicação confere o commit e os quatro jobs aprovados da tentativa de origem,
+os hashes do ZIP/EXE e o manifesto. Depois confere o manifesto publicado e o
+metadado de versão da página. Falhas de validação bloqueiam publicação.
+
+Se somente o envio ao Surge falhar, execute **Publish approved frontend** na mesma
+branch/commit. Deixe `release_tag` vazio para selecionar automaticamente a entrega
+Windows validada correspondente. Isso não recompila nem repete os testes Windows.
+Uma tag explícita continua disponível para escolher outra tentativa aprovada do
+mesmo commit. A ausência de `SURGE_TOKEN` aparece como falha, não como publicação
+bem-sucedida.
+
+Cada alteração distribuída ao desktop precisa de uma versão superior à instalada.
+A versão atual está em `electron/package.json`; atualize também seu lockfile e o
+cabeçalho de `LEIA-ME-WINDOWS.txt` ao preparar uma nova entrega. A automação elimina
+a seleção manual do pacote, mas não modifica versões nem publica código por conta
+própria. No aplicativo, **Configurações → Aplicativo** busca a atualização e permite
+reiniciar quando pronta.
+
+Como alternativa manual, baixe o ZIP `MN-Trono-Frontend-<versão>.zip` da release
+validada, extraia numa pasta nova e abra um terminal dentro de `frontend/`:
 
 ```powershell
 npx --yes surge@0.46.0 . a-lei-do-trono.surge.sh
 ```
 
-Autentique-se na conta que pode publicar nesse domínio. Envie a pasta `frontend/`
-inteira, inclusive `downloads/`; preserve o EXE e `latest.yml` da mesma entrega.
-Publicar o pacote 0.3.2 não atualiza automaticamente uma instalação 0.3.3.
+Autentique-se na conta do domínio e envie `frontend/` inteira, inclusive
+`downloads/`; preserve o EXE e `latest.yml` da mesma entrega.
 
 O layout exporta essa versão no metadado `mn-desktop-version`, e o botão de download
 usa a mesma fonte. O empacotador verifica a versão antes de substituir saídas;

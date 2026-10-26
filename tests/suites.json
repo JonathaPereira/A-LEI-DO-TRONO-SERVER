@@ -185,6 +185,7 @@
     "tests/app-layout-browser.js",
     "tests/appearance-preferences-browser.cjs",
     "tests/application-audio-worklet-browser.cjs",
+    "tests/application-call-browser.cjs",
     "tests/application-shell-browser.cjs",
     "tests/auth-browser.cjs",
     "tests/azul-browser.js",
@@ -199,6 +200,7 @@
     "tests/community-browser.cjs",
     "tests/court-browser.js",
     "tests/desktop-activity-browser.cjs",
+    "tests/desktop-browser.js",
     "tests/desktop-capture-browser.cjs",
     "tests/desktop-download.js",
     "tests/desktop-notices-controls-browser.js",
@@ -235,9 +237,7 @@
     "tests/throne-lobby-browser.cjs",
     "tests/ticket-to-ride-browser.js",
     "tests/voice-moderation-browser.js",
-    "tests/voice-reception-browser.js",
-    "tests/workspace-header-browser.cjs",
-    "tests/application-call-browser.cjs"
+    "tests/voice-reception-browser.js"
   ],
   "desktop": [
     "tests/application-audio-native.cjs",
@@ -246,7 +246,6 @@
     "tests/desktop-activity-native.cjs",
     "tests/desktop-audio.js",
     "tests/desktop-background-voice.js",
-    "tests/desktop-browser.js",
     "tests/desktop-call-audio.cjs",
     "tests/desktop-call-layout.js",
     "tests/desktop-cinzas-runtime.js",

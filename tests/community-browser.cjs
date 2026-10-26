@@ -95,79 +95,95 @@ test(
           try {
             await page.goto(origin);
             await page.waitForFunction(() => window.TronoCommunity?.getSnapshot().presence);
-            await page.locator('#communityToggle').click();
-            await expect(page.locator('#communityPanel')).toBeVisible();
-            await expect(page.locator('#communitySummary')).toHaveText('2 online · 24 offline');
-            await expect(page.locator('#communityScope')).toHaveText(
-              'Comunidade · contas confirmadas',
+            assert.deepEqual(
+              await page.evaluate(() => {
+                const s = window.TronoCommunity.getSnapshot();
+                return {
+                  online: s.presence.members.filter((p) => p.online).length,
+                  offline: s.presence.members.filter((p) => !p.online).length,
+                  scope: s.presence.scope,
+                };
+              }),
+              { online: 2, offline: 24, scope: 'community' },
             );
-            const row = page.locator('[data-person-id="' + peerId + '"]');
-            await expect(row.locator('strong')).toHaveText('Participante');
-            await expect(row.locator('.role-edit-btn')).toBeVisible();
-            await row.locator('.profile-avatar-clickable').focus();
+            await page.getByRole('button', { name: 'Pessoas da Corte', exact: true }).click();
+            await page.getByRole('button', { name: 'Comunidade', exact: true }).click();
+            const row = page.locator('[data-person="' + peerId + '"]');
+            await expect(
+              row.getByRole('button', { name: 'Ver perfil de Participante', exact: true }),
+            ).toBeVisible();
+            await row
+              .getByRole('button', { name: 'Ver perfil de Participante', exact: true })
+              .focus();
             await page.keyboard.press('Enter');
             await expect(page.locator('#memberProfileDialog')).toBeVisible();
             await page.keyboard.press('Escape');
-            await page.locator('#communityToggle').click();
-            await row.locator('.community-message-btn').click();
-            await expect(page.locator('#messengerPanel')).toBeVisible();
-            await page.evaluate(() => window.TronoMessenger.close());
-            await row.locator('.role-edit-btn').click();
+            await row.getByRole('button', { name: 'Alterar cargo de Participante' }).click();
             await expect(page.locator('#roleDialog')).toBeVisible();
-            await expect(page.locator('#rolePersonId')).toHaveValue(peerId);
             await page.locator('#roleSelect').selectOption('admin');
             await page.locator('#roleSave').click();
-            await expect(row.locator('.role-badge')).toHaveText('Admin');
-            await row.locator('.role-edit-btn').click();
+            await expect
+              .poll(() =>
+                page.evaluate(
+                  (id) =>
+                    window.TronoCommunity.getSnapshot().presence.members.find((p) => p.id === id)
+                      .role,
+                  peerId,
+                ),
+              )
+              .toBe('admin');
+            await row.getByRole('button', { name: 'Alterar cargo de Participante' }).click();
             await page.locator('#roleSelect').selectOption('member');
             await page.locator('#roleSave').click();
-            await expect(row.locator('.role-badge')).toHaveText('Membro');
-            await page.locator('#communityMembers summary').click();
-            await expect(page.locator('#communityMembers details strong').first()).toHaveText(
-              '<img src=x onerror=alert(1)>',
+            await expect
+              .poll(() =>
+                page.evaluate(
+                  (id) =>
+                    window.TronoCommunity.getSnapshot().presence.members.find((p) => p.id === id)
+                      .role,
+                  peerId,
+                ),
+              )
+              .toBe('member');
+            await expect(page.locator('[data-person]')).toContainText(
+              Array(1).fill('<img src=x onerror=alert(1)>'),
             );
-            await expect(page.locator('#communityMembers details img')).toHaveCount(0);
+            assert.equal(await page.locator('[data-person] img[src=x]').count(), 0);
             await page.evaluate(() => {
-              const members = document.getElementById('communityMembers');
-              members.scrollTop = 160;
-              window.__communityBefore = {
-                members,
-                toggle: document.getElementById('communityToggle'),
-                panel: document.getElementById('communityPanel'),
-                owner: window.TronoCommunity,
-                scroll: members.scrollTop,
-              };
+              window.__communityOwner = window.TronoCommunity;
+              window.TronoMessenger.close();
+              window.TronoCallNavigation.showChat();
             });
+            const online = page
+              .getByRole('complementary', { name: 'Membros online' })
+              .getByRole('button')
+              .filter({ hasText: 'Participante' });
             await peer.evaluate(() => window.TronoNetwork.setActivity({ name: 'Jogo de efeitos' }));
-            await expect(row.locator('.community-game-activity')).toContainText('Jogo de efeitos');
-            assert.equal(
-              await page.evaluate(() => {
-                const before = window.__communityBefore;
-                return (
-                  before.members === document.getElementById('communityMembers') &&
-                  before.members.scrollTop === before.scroll &&
-                  before.members.querySelector('details').open
-                );
-              }),
-              true,
-            );
+            await expect(online).toContainText('Jogo de efeitos');
             await peer.evaluate(() => window.TronoNetwork.setActivity(null));
-            await expect(row.locator('.community-game-activity')).toHaveCount(0);
-            await peer.evaluate(() => window.TronoNetwork.joinRoom('sala-cetro'));
-            const gameIcons = page.locator(
-              'article.room-card[data-room="sala-cetro"] .room-presence-icons',
-            );
-            await expect(gameIcons.locator('.community-avatar')).toHaveCount(1);
-            await expect(gameIcons.locator('.community-avatar')).toHaveAttribute(
-              'title',
-              'Participante',
-            );
-            await peer.evaluate(() => window.TronoNetwork.leaveGameRoom());
-            await expect(gameIcons.locator('.community-avatar')).toHaveCount(0);
+            await expect(online).not.toContainText('Jogo de efeitos');
             await peer.evaluate(() => window.TronoNetwork.disconnect());
-            await expect(row).toHaveClass('community-person is-offline');
+            await expect
+              .poll(() =>
+                page.evaluate(
+                  (id) =>
+                    window.TronoCommunity.getSnapshot().presence.members.find((p) => p.id === id)
+                      ?.online,
+                  peerId,
+                ),
+              )
+              .toBe(false);
             await peer.evaluate(() => window.TronoNetwork.connect());
-            await expect(row).toHaveClass('community-person is-online');
+            await expect
+              .poll(() =>
+                page.evaluate(
+                  (id) =>
+                    window.TronoCommunity.getSnapshot().presence.members.find((p) => p.id === id)
+                      ?.online,
+                  peerId,
+                ),
+              )
+              .toBe(true);
             await page.evaluate(() => {
               for (let i = 0; i < 10; i++)
                 window.TronoCommunity.voiceNotice({
@@ -181,44 +197,38 @@ test(
                 name: 'Duplicate',
               });
             });
-            await expect(page.locator('#communityActivity li')).toHaveCount(8);
-            await expect(page.locator('#callNoticeHost > div')).toHaveCount(3);
-            await expect(page.locator('#callNoticeHost')).not.toContainText('Duplicate');
+            assert.equal(
+              await page.evaluate(() => window.TronoCommunity.getSnapshot().activities.length),
+              8,
+            );
+            await expect(
+              page.getByRole('region', { name: 'Avisos da Corte' }).getByRole('status'),
+            ).toHaveCount(3);
+            await expect(page.getByRole('region', { name: 'Avisos da Corte' })).not.toContainText(
+              'Duplicate',
+            );
             if (native)
-              for (const layout of ['discord', 'original']) {
-                await page.evaluate((layout) => window.TronoAppLayout.apply(layout), layout);
+              for (const topic of ['audio', 'account', 'audio']) {
+                await page.evaluate((topic) => window.TronoCallSettings.open(topic), topic);
                 assert.equal(
-                  await page.evaluate(() => {
-                    const before = window.__communityBefore;
-                    return (
-                      before.members === document.getElementById('communityMembers') &&
-                      before.toggle === document.getElementById('communityToggle') &&
-                      before.panel === document.getElementById('communityPanel') &&
-                      before.owner === window.TronoCommunity
-                    );
-                  }),
+                  await page.evaluate(() => window.__communityOwner === window.TronoCommunity),
                   true,
                 );
               }
-            await fs.mkdir(path.resolve(__dirname, '../artifacts'), { recursive: true });
-            await page.screenshot({
-              path: path.resolve(
-                __dirname,
-                '../artifacts/community-' + (native ? 'desktop' : 'web') + '.png',
-              ),
-            });
+            await page.evaluate(() => window.TronoCallSettings.close());
             await presentAccount(page, { permissions: { manageRoles: false } });
-            await expect(page.locator('#communityMembers .role-edit-btn')).toHaveCount(0);
-            await page.setViewportSize({ width: 900, height: 700 });
-            await expect(page.locator('#communityPanel')).toBeHidden();
-            await page.locator('#communityToggle').click();
-            await page.keyboard.press('Escape');
-            await expect(page.locator('#communityPanel')).toBeHidden();
+            await page.getByRole('button', { name: 'Pessoas da Corte', exact: true }).click();
+            await page.getByRole('button', { name: 'Comunidade', exact: true }).click();
+            await expect(page.getByRole('button', { name: /Alterar cargo de/ })).toHaveCount(0);
             await page.evaluate(() => window.TronoAuth.logout());
-            await expect(page.locator('#communityToggle')).toBeHidden();
-            await expect(page.locator('#communityMembers .community-person')).toHaveCount(0);
-            await expect(page.locator('#communityActivity li')).toHaveCount(0);
-            await expect(page.locator('#callNoticeHost > div')).toHaveCount(0);
+            await expect(page.locator('#portalScreen')).toBeVisible();
+            assert.equal(
+              await page.evaluate(() => window.TronoCommunity.getSnapshot().presence),
+              null,
+            );
+            await expect(
+              page.getByRole('region', { name: 'Avisos da Corte' }).getByRole('status'),
+            ).toHaveCount(0);
             assert.deepEqual(errors, []);
           } finally {
             await mainContext.close();
@@ -242,26 +252,33 @@ test(
           await page.goto(origin);
           await page.waitForFunction(() => window.TronoCommunity && window.TronoAuth?.ready);
           await page.evaluate(() => window.TronoAuth.ready);
-          await expect(page.locator('#communityToggle')).toBeHidden();
-          await page.evaluate(() => window.TronoAuth.openGuest());
+          await page.getByRole('button', { name: 'Jogar como convidado' }).click();
           await page.locator('#guestNickname').fill('Convidado teste');
-          await page.locator('#guestSubmit').click();
-          await expect(page.locator('#guestDialog')).toBeHidden();
+          await page.getByRole('button', { name: 'Escolher um jogo', exact: true }).click();
+          await expect(page.locator('#gamesScreen')).toBeVisible();
           await peer.evaluate(() => window.TronoNetwork.joinRoom('sala-cetro'));
           await page.evaluate(() => window.TronoNetwork.joinRoom('sala-cetro'));
-          await page.locator('#communityToggle').click();
-          await expect(page.locator('#communityScope')).toHaveText(
-            'Convidado: participantes das salas do jogo',
+          await expect
+            .poll(() =>
+              page.evaluate(() => window.TronoCommunity.getSnapshot().presence?.members.length),
+            )
+            .toBe(2);
+          const presence = await page.evaluate(() => window.TronoCommunity.getSnapshot().presence);
+          assert.equal(presence.scope, 'game');
+          assert(presence.members.some((p) => p.name === 'Participante'));
+          assert.equal(presence.members.filter((p) => p.guest).length, 1);
+          assert.equal(
+            await page.evaluate(() => window.TronoCommunity.getSnapshot().identity.manageRoles),
+            false,
           );
-          await expect(page.locator('#communityMembers .community-person')).toHaveCount(2);
-          await expect(page.locator('#communityMembers')).toContainText('Participante');
-          await expect(page.locator('#communityMembers')).toContainText('Convidado teste');
-          await expect(page.locator('#communityMembers details')).toHaveCount(0);
-          await expect(page.locator('#communityMembers .role-edit-btn')).toHaveCount(0);
-          await expect(page.locator('#communityMembers .community-guest-tag')).toHaveCount(1);
-          await page.evaluate(() => document.getElementById('accountGuestExitBtn').click());
-          await expect(page.locator('#communityToggle')).toBeHidden();
-          await expect(page.locator('#communityMembers .community-person')).toHaveCount(0);
+          await page.evaluate(() => window.TronoAuth.endGuest());
+          await expect(page.locator('#portalScreen')).toBeVisible();
+          assert.equal(
+            await page.evaluate(
+              () => window.TronoCommunity.getSnapshot().presence?.members.length ?? 0,
+            ),
+            0,
+          );
         } finally {
           await guestContext.close();
         }

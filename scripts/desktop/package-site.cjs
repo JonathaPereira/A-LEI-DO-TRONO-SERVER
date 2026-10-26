@@ -42,8 +42,8 @@ async function prepareSite({
   const artifacts = outputRoot || path.join(root, 'artifacts'),
     direct = path.join(artifacts, 'windows-download'),
     site = path.join(artifacts, 'site-download');
-  await fs.rm(direct, { recursive: true, force: true });
-  await fs.rm(site, { recursive: true, force: true });
+  await fs.rm(direct, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  await fs.rm(site, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   await fs.mkdir(direct, { recursive: true });
   await fs.copyFile(source, path.join(direct, filename));
   await fs.copyFile(

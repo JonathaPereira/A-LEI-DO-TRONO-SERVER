@@ -2,7 +2,7 @@ import { CallNavigationHost } from '@/components/navigation/call-navigation';
 import { ChatPanel } from '@/components/chat/chat-panel';
 import { VoicePanel } from '@/components/voice/voice-panel';
 
-export function CommunicationPanel() {
+export function CommunicationPanel({ active = true }: { active?: boolean }) {
   return (
     <>
       <aside
@@ -22,7 +22,7 @@ export function CommunicationPanel() {
             <CallNavigationHost id="socialCloseBtn" />
           </div>
         </div>
-        <ChatPanel />
+        <ChatPanel active={active} />
         <VoicePanel />
         <div
           id={'socialResizeGrip'}

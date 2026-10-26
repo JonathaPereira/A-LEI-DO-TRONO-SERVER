@@ -7,7 +7,7 @@ import {
 } from '../../lib/games/court-fullscreen';
 import { CourtFullscreenButton } from './court-fullscreen';
 interface Runtime extends Window {
-  TronoDesktopShell?: CourtNativeFullscreen;
+  TronoDesktopWindow?: CourtNativeFullscreen;
   TronoCourtFullscreen?: CourtFullscreen;
 }
 const installed = new WeakMap<Window, () => void>();
@@ -35,7 +35,7 @@ export function initializeCourtFullscreen(target: Window): () => void {
     },
     requestDocument: () => doc.documentElement.requestFullscreen(),
     exitDocument: () => doc.exitFullscreen(),
-    native: runtime.TronoDesktopShell,
+    native: runtime.TronoDesktopWindow,
   });
   const root = createRoot(host);
   flushSync(() => root.render(<CourtFullscreenButton controller={controller} />));

@@ -23,8 +23,8 @@ npm test
 
 `npm test` executa core. Use `--suite browser|desktop|all`, `--filter` com uma
 expressão regular sobre caminhos e `--list` para conferir a seleção. Suítes de
-interface consomem o build de out. A adaptação de expectativas antigas acompanha
-os marcos; confira as pendências antes de interpretar testes como aceite visual.
+interface consomem o build de out. A migração conserva as regressões úteis e os aceites visuais registrados no checkpoint.
+Confira ali os resultados e os pré-requisitos nativos ainda pendentes.
 
 Para Electron, serviços locais, dependências e fixtures, leia o guia de
 desenvolvimento. Operações no backend publicado afetam dados reais.

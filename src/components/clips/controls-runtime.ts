@@ -88,17 +88,18 @@ export function createClipControls(target: Window, preferences: ClipPreferences)
       }
       pip = window;
       const doc = window.document;
-      doc.title = 'Clipes M&N';
+      doc.title = 'Clipes · A Corte';
+      doc.documentElement.lang = 'pt-BR';
       const style = doc.createElement('style');
       style.textContent =
-        'body{margin:0;padding:16px;background:#141727;color:#eef0ff;font:14px system-ui}button{padding:12px;width:100%;border:1px solid #8d7ec0;border-radius:10px;background:#453764;color:white;margin:8px 0;cursor:pointer}button:disabled{opacity:.5}small{display:block;color:#b5b8d2;margin:6px 0}';
+        'body{margin:0;padding:16px;background:#161616;color:#e6dfd0;font:14px/1.5 system-ui}*{box-sizing:border-box}strong{color:#dfc691}button{padding:12px;width:100%;border:1px solid #514536;border-radius:8px;background:#292929;color:#e6dfd0;margin:8px 0;cursor:pointer;font:inherit}button:first-of-type{background:#d6b779;color:#191919}button:hover{filter:brightness(1.1)}button:focus-visible{outline:1px solid #d6b779;outline-offset:2px}button:disabled{opacity:.5;cursor:not-allowed}small{display:block;color:#b0b0b0;margin:6px 0}';
       doc.head.appendChild(style);
       const title = doc.createElement('strong'),
         status = doc.createElement('small'),
         button = doc.createElement('button'),
         count = doc.createElement('small'),
         back = doc.createElement('button');
-      title.textContent = 'Clipes · M&N';
+      title.textContent = 'Clipes · A Corte';
       status.id = 'pipStatus';
       button.id = 'pipClip';
       count.id = 'pipCount';

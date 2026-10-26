@@ -129,8 +129,8 @@ test(
               await expect
                 .poll(() => page.evaluate(() => window.TronoNetwork.connected))
                 .toBe(true);
-              await page.locator('#openVoicePortalBtn').click();
-              await expect(page.locator('#callWorkspace')).toBeVisible();
+              await page.evaluate(() => window.TronoPortal.openVoice());
+              await expect(page.locator('#chatOnlyScreen')).toBeVisible();
               await expect
                 .poll(() => page.evaluate(() => window.TronoNetwork.currentRoom))
                 .toBe('chat-livre');
@@ -138,18 +138,22 @@ test(
               async function openSettings() {
                 if (native) {
                   await page.evaluate(() => window.TronoDesktopSettings.open('notifications'));
-                  await expect(page.locator('[data-settings-panel="notifications"]')).toBeVisible();
+                  await expect(
+                    page.getByRole('region', { name: 'Notificações', exact: true }),
+                  ).toBeVisible();
                 } else {
-                  if (!(await page.locator('#callWorkspace').isVisible())) {
-                    await page.locator('#openVoicePortalBtn').click();
-                    await expect(page.locator('#callWorkspace')).toBeVisible();
+                  if (!(await page.locator('#chatOnlyScreen').isVisible())) {
+                    await page.evaluate(() => window.TronoPortal.openVoice());
+                    await expect(page.locator('#chatOnlyScreen')).toBeVisible();
                   }
                   await page.evaluate(() => window.TronoCallSettings.open('notifications'));
                 }
                 await expect(page.locator('#notificationMode')).toBeVisible();
               }
               async function closeSettings() {
-                await page.locator('#voiceSettingsClose').click();
+                await page
+                  .getByRole('button', { name: 'Fechar configurações', exact: true })
+                  .click();
               }
               await openSettings();
               await expect(page.locator('#notificationMode')).toHaveValue('mentions');
@@ -178,7 +182,8 @@ test(
                 true,
               );
               await page.evaluate(() => window.TronoPersonal.set('appLayout', 'discord'));
-              await expect(page.locator('body')).toHaveAttribute('data-app-layout', 'discord');
+              await page.evaluate(() => window.TronoCallSettings.select('audio'));
+              await page.evaluate(() => window.TronoCallSettings.select('notifications'));
               await closeSettings();
               await openSettings();
               await expect(page.locator('#notificationChannel')).toHaveValue('chat-jogos');
@@ -275,8 +280,8 @@ test(
                   window.__focused = true;
                   window.TronoSocial.toggleTextChat(true);
                 });
-                await expect(page.locator('#courtChatInput')).toBeVisible();
-                await page.locator('#courtChatInput').click();
+                await expect(page.locator('#channelMessageInput')).toBeVisible();
+                await page.locator('#channelMessageInput').click();
                 await expect
                   .poll(() =>
                     page.evaluate(
@@ -363,11 +368,11 @@ test(
                 assert.equal(await page.evaluate(() => window.__notices.at(-1).closed), true);
 
               await page.evaluate(() => window.TronoAuth.logout());
-              await expect(page.locator('#authDialog')).toBeVisible();
+              await expect(page.locator('#portalScreen')).toBeVisible();
               await page.locator('#authEmail').fill(emails[1]);
               await page.locator('#authPassword').fill('Senha12!');
-              await page.locator('#authSubmitBtn').click();
-              await expect(page.locator('#authDialog')).toBeHidden();
+              await page.locator('#authSubmit').click();
+              await expect(page.locator('#portalScreen')).toBeHidden();
               await expect
                 .poll(() => page.evaluate(() => window.TronoAuth.user?.id))
                 .toBe(accounts[1].user.id);

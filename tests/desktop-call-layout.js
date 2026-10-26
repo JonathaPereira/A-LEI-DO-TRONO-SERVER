@@ -1,919 +1,640 @@
 'use strict';
 
-const {test} = require('node:test');
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const {_electron, expect} = require('@playwright/test');
-const {startFixture} = require('./auth-fixture');
-const {closeTestApp, killTestApp} = require('./desktop-test-close');
-const {firstSizedWindow} = require('./desktop-first-window.cjs');
-const {presentAccount, restoreAccount} = require('./auth-presentation-fixture.cjs');
+const { _electron, expect } = require('@playwright/test');
+const { startFixture } = require('./auth-fixture');
+const { closeTestApp, killTestApp } = require('./desktop-test-close');
+const { firstSizedWindow } = require('./desktop-first-window.cjs');
+const { presentAccount, restoreAccount } = require('./auth-presentation-fixture.cjs');
 
 const root = path.resolve(__dirname, '..');
 const origin = 'https://a-lei-do-trono.surge.sh';
-const controls = ['muteMicBtn', 'deafenVoiceBtn', 'cameraBtn', 'screenShareBtn', 'remotePcBtn', 'soundboardToggle', 'voiceSettingsBtn', 'joinVoiceBtn'];
+const controls = [
+  'muteMicBtn',
+  'deafenVoiceBtn',
+  'cameraBtn',
+  'screenShareBtn',
+  'remotePcBtn',
+  'soundboardToggle',
+  'voiceSettingsBtn',
+  'joinVoiceBtn',
+];
 
-test('real desktop keeps the same controls, tracks and connected peers across layouts and navigation', {
-  timeout: 180000,
-  skip: process.platform !== 'win32' && 'Windows desktop regression'
-}, async t => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-call-layout-'));
-  const apps = [];
-  const errors = [];
-  let fixture, finished = false;
-  t.signal.addEventListener('abort', () => { if (!finished) apps.forEach(killTestApp); }, {once: true});
-  try {
-    fixture = await startFixture({port: 10743, allowedOrigins: [origin], directAttachments: true, gameDecree: 'reserva,espionagem'});
-    async function launch(email, nickname, layout = 'original') {
-      await fixture.call('signup', {email, nickname, password: 'LayoutTest12!'});
-      await fixture.call('verify', {token_hash: [...fixture.links.keys()].at(-1), type: 'signup'});
-      const login = await fixture.call('login', {email, password: 'LayoutTest12!'});
-      assert.equal(login.status, 200);
-      const {data} = login;
-      const app = await _electron.launch({
-        executablePath: require('../electron/node_modules/electron'),
-        args: [path.join(root, 'electron'), '--user-data-dir=' + path.join(directory, nickname),
-          '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
-          '--autoplay-policy=no-user-gesture-required', '--mute-audio'],
-        timeout: 30000
+test(
+  'real Electron preserves connected peers, borrowed players and capture ownership across Corte navigation',
+  {
+    timeout: 180000,
+    skip: process.platform !== 'win32' && 'Windows desktop regression',
+  },
+  async (t) => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-call-layout-'));
+    const apps = [];
+    const errors = [];
+    let fixture,
+      finished = false;
+    t.signal.addEventListener(
+      'abort',
+      () => {
+        if (!finished) apps.forEach(killTestApp);
+      },
+      { once: true },
+    );
+    try {
+      fixture = await startFixture({
+        port: 10743,
+        allowedOrigins: [origin],
+        directAttachments: true,
+        gameDecree: 'reserva,espionagem',
       });
-      apps.push(app);
-      assert.deepEqual(await app.evaluate(({app}) => ({packaged: app.isPackaged, name: app.getName()})), {packaged: false, name: 'MN Trono Desenvolvimento'});
-      // These dialogs concern synthetic devices in disposable test profiles only.
-      await app.evaluate(({dialog}) => { dialog.showMessageBox = async () => ({response: 0}); });
-      const page = await firstSizedWindow(app, {width: 1024, height: 740});
-      await page.route('https://a-lei-do-trono-server.onrender.com/**', async route => { try { await route.abort(); } catch {} });
-      // BrowserWindow uses a persistent session partition. Bind setup to this
-      // page, rather than ElectronApplication's default browser context.
-      await page.addInitScript(({base, accountId, layout}) => {
-        window.TRONO_BACKEND_URL = base;
-        localStorage.setItem('tronoSfxEnabled', '0');
-        localStorage.setItem('tronoMusicEnabled', '0');
-        localStorage.setItem('mnDesktopNoiseMode', 'off');
-        if (localStorage.getItem('mn-personal:' + accountId) === null)
-          localStorage.setItem('mn-personal:' + accountId, JSON.stringify({appLayout: layout}));
-        window.__layoutPeers = [];
-        window.__layoutDescriptions = [];
-        const trackListeners = new WeakMap();
-        window.__receiveListenerCount = track => [...(trackListeners.get(track)?.values() || [])].reduce((n, listeners) => n + listeners.size, 0);
-        const addTrackListener = MediaStreamTrack.prototype.addEventListener;
-        const removeTrackListener = MediaStreamTrack.prototype.removeEventListener;
-        MediaStreamTrack.prototype.addEventListener = function(type, listener, options) {
-          if (['ended', 'mute', 'unmute'].includes(type)) {
-            if (!trackListeners.has(this)) trackListeners.set(this, new Map());
-            const types = trackListeners.get(this);
-            if (!types.has(type)) types.set(type, new Set());
-            types.get(type).add(listener);
-          }
-          return addTrackListener.call(this, type, listener, options);
-        };
-        MediaStreamTrack.prototype.removeEventListener = function(type, listener, options) {
-          trackListeners.get(this)?.get(type)?.delete(listener);
-          return removeTrackListener.call(this, type, listener, options);
-        };
-        const Peer = window.RTCPeerConnection;
-        window.RTCPeerConnection = class extends Peer {
-          constructor(config) { super({...config, iceServers: [], iceCandidatePoolSize: 0}); window.__layoutPeers.push(this); }
-          async setLocalDescription(description) {
-            await super.setLocalDescription(description);
-            window.__layoutDescriptions.push(this.localDescription?.type);
-          }
-        };
-        window.__layoutCanvases = [];
-        const canvasStream = (fps = 10) => {
-          const canvas = document.createElement('canvas');
-          canvas.width = 640; canvas.height = 360;
-          const draw = canvas.getContext('2d');
-          draw.fillStyle = '#384460'; draw.fillRect(0, 0, 640, 360);
-          window.__layoutCanvases.push(canvas);
-          const stream = canvas.captureStream(fps);
-          let frame = 0;
-          const timer = setInterval(() => {
-            draw.fillStyle = frame++ % 2 ? '#384460' : '#486480';
-            draw.fillRect(0, 0, 640, 360);
-          }, 1000 / fps);
-          const track = stream.getVideoTracks()[0], stop = track.stop.bind(track);
-          track.stop = () => { clearInterval(timer); stop(); };
-          return stream;
-        };
-        const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-        navigator.mediaDevices.getUserMedia = async constraints => {
-          if (!constraints.video) return capture(constraints);
-          const stream = canvasStream();
-          if (constraints.audio) for (const track of (await capture({audio: constraints.audio})).getTracks()) stream.addTrack(track);
-          return stream;
-        };
-        window.__displayRequests = [];
-        navigator.mediaDevices.getDisplayMedia = async options => {
-          window.__displayRequests.push(options);
-          window.__displayGesture = {active: navigator.userActivation.isActive, dialogClosed: !document.getElementById('screenOptionsDialog').open};
-          if (window.__denyDisplay) throw new DOMException('Canceled', 'NotAllowedError');
-          const source = canvasStream(options.video.frameRate.ideal);
-          if (window.__delayDisplay) await new Promise(resolve => {
-            window.__releaseDisplay = () => { window.__lateDisplay = source; resolve(); };
-          });
-          return source;
-        };
-      }, {base: fixture.base, accountId: data.user.id, layout});
-      const authResponses = [];
-      page.on('response', response => { if (response.url().startsWith(fixture.base + '/auth/')) authResponses.push({path: new URL(response.url()).pathname, status: response.status()}); });
-      page.setDefaultTimeout(10000);
-      await page.waitForURL(origin + '/');
-      await page.waitForLoadState('load');
-      await page.waitForFunction(() => window.TronoAuth?.ready);
-      await page.evaluate(() => window.TronoAuth.ready);
-      page.on('pageerror', error => errors.push(error.message));
-      await page.reload();await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);
-      await page.evaluate(() => window.TronoAuth.ready);
-      assert.equal(await page.evaluate(() => window.TronoNetwork.BACKEND_HTTP), fixture.base);
-      assert.deepEqual(await page.evaluate(() => ({engine: typeof window.TronoClips, controls: typeof window.TronoClipControls})), {engine: 'undefined', controls: 'undefined'});
-      await expect(page.locator('#authDialog')).toBeVisible();
-      await page.locator('#authEmail').fill(email);
-      await page.locator('#authPassword').fill('LayoutTest12!');
-      await page.locator('#authSubmitBtn').click();
-      try { await expect(page.locator('#authDialog')).not.toBeVisible(); }
-      catch (error) { console.error('Login fixture:', {nickname, authResponses, message: await page.locator('#authMessage').textContent(), backend: await page.evaluate(() => window.TronoNetwork.BACKEND_HTTP)}); throw error; }
-      try { await expect.poll(() => page.evaluate(() => window.TronoAuth.user?.nickname)).toBe(nickname); }
-      catch (error) { console.error('Auth fixture:', {nickname, authResponses, message: await page.locator('#authMessage').textContent()}); throw error; }
-      await expect(page.locator('#desktopRail')).toBeVisible();
-      await expect(page.locator('body')).toHaveAttribute('data-app-layout', layout);
-      await page.evaluate(() => window.TronoChatHub.enter({channelId: 'chat-jogos'}));
-      await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe('chat-jogos');
-      assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
-      await page.locator('#joinVoiceBtn').click();
-      try {
-        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), {timeout: 15000}).toBe(true);
-      } catch (error) {
-        console.error('Voice fixture:', nickname, await page.evaluate(() => ({user: window.TronoAuth.user?.nickname, connected: window.TronoNetwork.connected, room: window.TronoNetwork?.currentRoom, voiceRoom: window.TronoSocial.voiceRoom, status: document.getElementById('voiceStatus').textContent, errors: document.getElementById('chatOnlyStatus').textContent})));
-        throw error;
-      }
-      return {app, page};
-    }
-
-    const {app, page} = await launch('layout-main@example.test', 'Layout Principal');
-    const {page: receiver} = await launch('layout-peer@example.test', 'Layout Amigo', 'discord');
-    await expect.poll(() => page.evaluate(() => window.__layoutPeers.some(peer => peer.connectionState === 'connected')), {timeout: 20000}).toBe(true);
-    await page.locator('#cameraBtn').click();
-    await expect(page.locator('#cameraBtn')).toBeEnabled();
-    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-    await page.locator('#screenShareBtn').click();
-    await page.locator('#shareResolution').selectOption('1080');
-    await page.locator('#shareFps').selectOption('60');
-    await page.screenshot({path: path.join(root, 'artifacts/mosaic-react-share-options.png')});
-    await page.locator('#screenOptionsCancel').click();
-    assert.equal(await page.evaluate(() => window.__displayRequests.length), 0);
-    assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
-    await page.locator('#screenShareBtn').click();
-    await page.locator('#shareResolution').selectOption('1080');
-    await page.locator('#shareFps').selectOption('60');
-    await page.locator('#screenOptionsConfirm').click();
-    await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
-    assert.deepEqual(await page.evaluate(() => window.__displayGesture), {active: true, dialogClosed: true});
-    assert.deepEqual(await page.evaluate(() => ({width: window.TronoSocial.screenSettings.width, fps: window.TronoSocial.screenSettings.fps})), {width: 1920, fps: 60});
-    const senderId = await page.evaluate(() => window.TronoNetwork.clientId);
-    await expect(receiver.locator('#screenShareGrid .mn-watch-stream')).toBeVisible();
-    await receiver.evaluate(id => window.TronoSocial.toggleWatchStream(id), senderId);
-    const remoteScreen = receiver.locator('#screenShareGrid .screen-share-tile[data-peer="' + senderId + '"] video');
-    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(0);
-    await require('./clip-worker-flow.cjs').exerciseClipWorker(page);
-    await require('./clip-worker-flow.cjs').exerciseReplaySession(page);
-    await require('./stream-controls-flow.cjs').exerciseStreamControls(receiver, remoteScreen.locator('..'));
-    // The local preview may pause without replacing capture or interrupting received frames.
-    const localScreen = page.locator('.screen-share-tile[data-peer="' + senderId + '"]');
-    await page.evaluate(() => { window.__previewSource = window.TronoSocial.getLocalDisplayStream(); });
-    const framesBeforePause = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
-    await localScreen.hover();
-    await localScreen.locator('.screen-resource-btn').click();
-    await expect(localScreen).toHaveClass(/local-preview-paused/);
-    assert.equal(await localScreen.locator('video').evaluate(video => video.srcObject), null);
-    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforePause);
-    await localScreen.locator('.screen-resource-btn').click();
-    await expect(localScreen).not.toHaveClass(/local-preview-paused/);
-    await localScreen.locator('.screen-collapse-btn').click();
-    await expect(localScreen).not.toHaveClass(/share-collapsed/);
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream() === window.__previewSource && window.__previewSource.getTracks().every(track => track.readyState === 'live') && window.__displayRequests.length === 1), true);
-    await require('./manual-recording-flow.cjs').exerciseManualRecording(page, {desktop: true});
-    await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({page, receiver});
-    await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({page, receiver, apps});
-    await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);
-    await require('./community-navigation-controls.cjs').exerciseCommunityNavigation(page);
-    await require('./desktop-court-display-flow').exerciseCourtFullscreen({app:apps[0],page});
-    await require('./tabletop-audio-controls.cjs').exerciseTabletopAudio(page);
-    await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page, {responsive: false});
-    await require('./throne-tooltip-controls.cjs').exerciseThroneTooltips(page, {responsive: false});
-    await require('./throne-history-controls.cjs').exerciseThroneHistory(page, {responsive: false});
-    await require('./throne-effects-controls.cjs').exerciseThroneEffects(page);
-    await require('./throne-local-hand-controls.cjs').exerciseLocalHand(page, {responsive: false});
-    await require('./throne-local-choices-controls.cjs').exerciseLocalChoices(page, {responsive: false});
-    await page.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
-    await expect(page.locator('#roomSeats')).toContainText('Layout Principal');
-    await expect(page.locator('#roomSeats .room-seat')).toHaveCount(4);
-    await page.locator('#readyOnlineBtn').click();
-    await expect(page.locator('#readyOnlineBtn')).toContainText('Retirar Pronto');
-    await expect.poll(() => page.evaluate(() => window.TronoNetwork.gameRoom)).toBe('sala-cetro');
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await expect(page.locator('#callFocusDock #joinVoiceBtn')).toBeVisible();
-
-    await page.evaluate(ids => {
-      window.__layoutBaseline = {
-        controls: ids.map(id => document.getElementById(id)),
-        notifications: ['notificationMode','notificationChannel','notificationChannelMute','notificationPermission'].map(id => document.getElementById(id)),
-        notificationOwner: window.TronoNotifications,
-        activity: ['desktopActivityEnabled','desktopActivityApp','desktopActivityName','desktopActivityStatus'].map(id => document.getElementById(id)),
-        activityOwner: window.TronoDesktopActivity,
-        libraryOwner: window.TronoFileLibrary,
-        library: ['profileFilesHost','profileFiles','storageUsage','profileFilesMessage'].map(id => document.getElementById(id)),
-        profileEditorOwner: window.TronoProfileEditor,
-        profileEditor: ['profileEditorHost','profileForm','profileNickname','profile-bio','profile-cover_zoom'].map(id => document.getElementById(id)),
-        gifDialog: document.getElementById('profileGifDialog'),
-        directory: ['creatorAccountsButtonHost','creatorAccountsBtn','creatorAccountsDialog'].map(id => document.getElementById(id)),
-        community: ['communityToggle','communityPanel','communityMembers','communityActivity','callNoticeHost'].map(id => document.getElementById(id)),
-        communityOwner: window.TronoCommunity,
-        management: ['channelManagerDialog','roleDialog','channelFilesDialog','channelName','roleSelect','channelFileList'].map(id => document.getElementById(id)),
-        managementOwner: window.TronoChannelManagement,
-        channelFilesOwner: window.TronoChannelFiles,
-        messenger: ['messengerToggle','messengerPanel','messengerNotices','messengerInput','messengerMessages'].map(id => document.getElementById(id)),
-        messengerOwner: window.TronoDirectMessages,
-        games: ['gamesSideNav','rogueliteScreen','rogueliteBack','rogueliteFullscreen','azulBack','azulFullscreen','azulRulesDialog','azulContent','azulRanking'].map(id => document.getElementById(id)),
-        privateOwner: window.TronoThronePrivate,
-        privateHosts: ['thronePrivateHost','thronePrivateDialog'].map(id => document.getElementById(id)),
-        matchOwner: window.TronoThroneMatch,
-        matchHosts: ['throneStatusHost','roundBadge','trickBadge','turnBadge','turnTimer','turnNoticeClock'].map(id => document.getElementById(id)),
-        handOwner: window.TronoThroneHand,
-        handHosts: ['throneOnlineHand','throneOnlineHandCards','throneHandDialogHost','throneHandDialog'].map(id => document.getElementById(id)),
-        choiceOwner: window.TronoThroneChoices,
-        choiceHosts: ['throneChoiceHost','throneChoiceDialog'].map(id => document.getElementById(id)),
-        throneOwner: window.TronoThroneLobby,
-        throne: ['roomGrid','roomSeats','readyOnlineBtn','startOnlineBtn','backToLobbyBtn','roomSocialBtn','throneLobbyHost'].map(id => document.getElementById(id)),
-        portalOwner: window.TronoPortal,
-        portal: ['portalScreen','portalIdentity','portalMusicBtn','portalMusicVolume','portalCreditsDialog'].map(id => document.getElementById(id)),
-        gameOwners: [window.TronoGameLibrary, window.TronoRogueliteHost, window.TronoAzul, window.TronoSplendor, window.TronoLoveLetter],
-        loveLetter: ['loveLetterBack','loveLetterPlayDialog','loveLetterPrivateDialog','loveLetterRulesDialog','loveLetterContent'].map(id => document.getElementById(id)),
-        splendor: ['splendorBack','splendorCardDialog','splendorReturnDialog','splendorCollectionDialog','splendorRulesDialog','splendorContent','splendorRanking'].map(id => document.getElementById(id)),
-        gameAudio: [...document.querySelectorAll('.tt-audio')],
-        runtime: Object.fromEntries(['TronoSocial','TronoCallToolbar','TronoCallStage','TronoCallNavigation','TronoVoiceSettings','TronoConnectionDiagnostics','TronoAudioPreferences','TronoScreenOptions'].map(name => [name, window[name]])),
-        navigation: ['chatOnlyTextBtn','socialCloseBtn','socialMiniDock','returnToVoiceRoom','chatDrawerCloseBtn','muteTextBtn','roomSocialBtn','workspaceDirectOpen','workspaceHeaderToggle','workspaceSidebarBtn','workspaceSidebarShade','workspaceLayoutToggle','workspaceAreaTabs','callFocusDock','layoutProfile','layoutVoiceLocation','layoutUserAvatar'].map(id => document.getElementById(id)),
-        mic: window.TronoSocial.getLocalAudioTrack(),
-        camera: window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0],
-        screen: window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0],
-        peers: [...window.__layoutPeers],
-        clientId: window.TronoNetwork.clientId,
-        gameRoom: window.TronoNetwork.gameRoom,
-        voiceRoom: window.TronoNetwork.primaryRoom
-      };
-    }, controls);
-    async function preserved() {
-      const result = await page.evaluate(() => {
-        const before = window.__layoutBaseline, call = window.TronoSocial;
-        return {
-          runtime: Object.entries(before.runtime).every(([name, owner]) => owner && window[name] === owner),
-          factoriesRemoved: typeof window.TronoVoiceCapture === 'undefined',
-          decorationAdaptersRemoved: typeof window.TronoProfile.callBackgrounds === 'undefined' && typeof window.TronoProfile.directBanners === 'undefined',
-          notifications: window.TronoNotifications === before.notificationOwner && before.notifications.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          activity: window.TronoDesktopActivity === before.activityOwner && !!before.activityOwner && before.activity.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          library: window.TronoFileLibrary === before.libraryOwner && !!before.libraryOwner && before.library.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          profileEditor: window.TronoProfileEditor === before.profileEditorOwner && !!before.profileEditorOwner && before.profileEditor.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          gifPicker: !!before.gifDialog && before.gifDialog === document.getElementById('profileGifDialog') && document.querySelectorAll('#profileGifDialog').length === 1 && typeof window.TronoProfileGifs === 'undefined',
-          directory: before.directory.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          community: window.TronoCommunity === before.communityOwner && before.community.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          management: window.TronoChannelManagement === before.managementOwner && window.TronoChannelFiles === before.channelFilesOwner && before.management.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          messenger: window.TronoDirectMessages === before.messengerOwner && before.messenger.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          choices: window.TronoThronePrivate === before.privateOwner && before.privateHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneMatch === before.matchOwner && before.matchHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneHand === before.handOwner && before.handHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node) && window.TronoThroneChoices === before.choiceOwner && before.choiceHosts.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          throne: window.TronoThroneLobby === before.throneOwner && before.throne.every(node => node && node.isConnected && document.getElementById(node.id) === node) && !window.TronoAvatars && !window.TronoAvatarIcons && !window.TronoProfile.avatarHtml && !window.TronoProfile.hydrate,
-          portal: window.TronoPortal === before.portalOwner && before.portal.every(node => node && node.isConnected && document.getElementById(node.id) === node),
-          games: window.TronoGameLibrary === before.gameOwners[0] && window.TronoRogueliteHost === before.gameOwners[1] && window.TronoAzul === before.gameOwners[2] && before.games.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          splendor: window.TronoSplendor === before.gameOwners[3] && before.splendor.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          loveLetter: window.TronoLoveLetter === before.gameOwners[4] && before.loveLetter.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          gameAudio: before.gameAudio.length === 4 && before.gameAudio.every(node => node.isConnected && document.querySelectorAll('[data-game-audio="'+node.dataset.gameAudio+'"]').length === 1),
-          controls: before.controls.every(node => node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#' + node.id).length === 1),
-          navigation: before.navigation.every(node => node && node.isConnected && document.getElementById(node.id) === node && document.querySelectorAll('#'+node.id).length === 1),
-          mic: call.getLocalAudioTrack() === before.mic && before.mic.readyState === 'live',
-          camera: call.getMediaSources().find(source => source.self)?.camera?.getVideoTracks()[0] === before.camera && before.camera.readyState === 'live',
-          screen: call.getLocalDisplayStream()?.getVideoTracks()[0] === before.screen && before.screen.readyState === 'live',
-          peers: window.__layoutPeers.length === before.peers.length && before.peers.every((peer, i) => peer === window.__layoutPeers[i] && peer.connectionState === 'connected'),
-          socket: window.TronoNetwork.connected && window.TronoNetwork.clientId === before.clientId,
-          game: window.TronoNetwork.gameRoom === before.gameRoom,
-          voice: call.voiceJoined && window.TronoNetwork.primaryRoom === before.voiceRoom
-        };
-      });
-      assert.deepEqual(result, Object.fromEntries(Object.keys(result).map(key => [key, true])));
-    }
-    // The game host keeps the same iframe/run and leaves the native call intact.
-    await page.evaluate(() => window.TronoGames.openLibrary());
-    await page.locator('#playRoguelite').click();
-    const embeddedGame = page.frameLocator('#rogueliteFrame');
-    // A cold desktop cache prepares the complete asset manifest before boot.
-    await expect(page.locator('#rogueliteFrame')).toBeAttached({timeout: 65000});
-    await expect(embeddedGame.locator('#startBtn')).toBeVisible({timeout: 20000});
-    await expect.poll(() => page.evaluate(() => window.TronoRogueliteHost.getSnapshot().ready)).toBe(true);
-    await page.locator('#rogueliteFrame').evaluate(frame => { window.__gameFrame = frame; frame.contentWindow.__migrationMarker = 'same-run'; });
-    await preserved();
-    await page.locator('#rogueliteBack').click();
-    await expect(page.locator('#gamesScreen')).toBeVisible();
-    await expect.poll(() => embeddedGame.locator('html').getAttribute('data-host-active')).toBe('false');
-    await preserved();
-    await page.locator('#playRoguelite').click();
-    assert.equal(await page.locator('#rogueliteFrame').evaluate(frame => frame === window.__gameFrame && frame.contentWindow.__migrationMarker === 'same-run'), true);
-    for (const layout of ['discord', 'original']) {
-      await page.evaluate(value => window.TronoAppLayout.apply(value), layout);
-      await preserved();
-    }
-    await page.locator('#rogueliteBack').click();
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await preserved();
-    // React Azul controls retain their hosts and native media across table/layout changes.
-    await page.evaluate(() => window.TronoGames.openLibrary());
-    await page.locator('#playAzul').click();
-    await page.getByRole('button', {name:'Criar mesa',exact:true}).click();
-    await page.getByRole('button', {name:'Completar com bots e iniciar'}).click();
-    await expect(page.locator('.az-board')).toHaveCount(2);
-    assert.equal(await page.evaluate(() => Object.isFrozen(window.TronoGames.room.state.players[0].wall)), true);
-    await preserved();
-    await page.locator('#azulRulesButton').click();
-    await expect(page.locator('#azulRulesDialog')).toBeVisible();
-    await page.locator('#azulRulesClose').click();
-    for (const layout of ['discord','original']) {
-      await page.evaluate(value => window.TronoAppLayout.apply(value),layout);
-      await preserved();
-    }
-    await page.getByRole('button',{name:'Sair da mesa',exact:true}).click();
-    await expect(page.getByRole('button',{name:'Criar mesa',exact:true})).toBeVisible();
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await preserved();
-    // Splendor's modal choices and immutable table retain the same native call.
-    await page.evaluate(() => window.TronoGames.openLibrary());
-    await page.locator('#playSplendor').click();
-    await page.getByRole('button',{name:'Criar mesa',exact:true}).click();
-    await page.getByRole('button',{name:'Completar com bots e começar'}).click();
-    await expect(page.locator('.sp-player')).toHaveCount(2);
-    await expect.poll(() => page.evaluate(() => { const s=window.TronoSplendor.room.state; return s.players[s.turn].id === window.TronoAuth.user.id; }),{timeout:15000}).toBe(true);
-    assert.equal(await page.evaluate(() => Object.isFrozen(window.TronoSplendor.room.state.players[0].tokens)),true);
-    await expect.poll(() => page.evaluate(() => !window.TronoSplendor.animating),{timeout:15000}).toBe(true);
-    await page.locator('.sp-market .sp-card').first().click();
-    await expect(page.locator('#splendorCardDialog')).toBeVisible();
-    await preserved();
-    await page.locator('#splendorReserve').click();
-    await expect(page.locator('#splendorCardDialog')).not.toBeVisible();
-    await expect.poll(() => page.evaluate(() => window.TronoSplendor.room.state.revision)).toBeGreaterThan(0);
-    for (const layout of ['discord','original']) {
-      await page.evaluate(value => window.TronoAppLayout.apply(value),layout);
-      await preserved();
-    }
-    await page.locator('#splendorRulesButton').click();
-    await expect(page.locator('#splendorRulesDialog')).toBeVisible();
-    await page.locator('#splendorRulesDialog [data-close]').click();
-    await page.getByRole('button',{name:'Sair da mesa',exact:true}).click();
-    await expect(page.locator('#splendorPlayerCount')).toBeVisible();
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await preserved();
-    // The private-card game retains its controller, dialogs and native call.
-    await page.evaluate(() => window.TronoGames.openLibrary());
-    await page.locator('#playLoveLetter').click();
-    await page.getByRole('button',{name:'Criar mesa',exact:true}).click();
-    await page.getByRole('button',{name:'Completar com bots e começar'}).click();
-    await expect(page.locator('.ll-opponent')).toHaveCount(3);
-    assert.equal(await page.evaluate(() => Object.isFrozen(window.TronoLoveLetter.room.state.players[0].hand)),true);
-    assert.equal(await page.evaluate(() => window.TronoLoveLetter.room.state.players.filter(p => p.id !== window.TronoAuth.user.id).every(p => p.hand.every(c => c.hidden && !('id' in c) && !('rank' in c)))),true);
-    await preserved();
-    await page.locator('#loveLetterRulesButton').click();
-    await expect(page.locator('#loveLetterRulesDialog')).toBeVisible();
-    await page.locator('#loveLetterRulesDialog [data-close]').click();
-    for (const layout of ['discord','original']) {
-      await page.evaluate(value => window.TronoAppLayout.apply(value),layout);
-      await preserved();
-    }
-    await page.getByRole('button',{name:'Sair da mesa',exact:true}).click();
-    await expect(page.locator('#loveLetterPlayerCount')).toBeVisible();
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await preserved();
-    // Community UI moves independently while all native sources stay live.
-    const directPeer = await receiver.evaluate(() => window.TronoAuth.user.id);
-    const directOwner = await page.evaluate(() => window.TronoAuth.user.id);
-    async function friendAction(target, peerId, action) {
-      return target.evaluate(async ({peerId,action}) => {
-        const response = await fetch(window.TronoNetwork.BACKEND_HTTP + '/social/friend', {method:'POST',headers:{Authorization:'Bearer '+await window.TronoAuth.getAccessToken(),'Content-Type':'application/json'},body:JSON.stringify({peerId,action})});
-        return response.status;
-      }, {peerId,action});
-    }
-    assert.equal(await friendAction(page, directPeer, 'request'), 200);
-    assert.equal(await friendAction(receiver, directOwner, 'accept'), 200);
-    await page.evaluate(() => window.TronoDirectMessages.refresh());
-    await page.evaluate(id => window.TronoMessenger.open(id), directPeer);
-    await expect(page.locator('#messengerInput')).toBeEnabled();
-    await page.locator('#messengerInput').fill('Mensagem privada com câmera e tela ativas');
-    await page.locator('#messengerSend').click();
-    await expect(page.locator('#messengerMessages')).toContainText('Mensagem privada com câmera e tela ativas');
-    await preserved();
-    await page.locator('#messengerFile').setInputFiles({name:'desktop-direct.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlYQAAAAASUVORK5CYII=','base64')});
-    await expect(page.locator('#messengerAttachmentDraft img')).toBeVisible();
-    await page.locator('#messengerSend').click();
-    await expect(page.locator('#messengerMessages .direct-attachment img')).toBeVisible();
-    await preserved();
-    await page.locator('#messengerInput').fill('Rascunho mantido na navegação');
-    await page.locator('#messengerClose').click();
-    await page.evaluate(id => window.TronoMessenger.open(id), directPeer);
-    await expect(page.locator('#messengerInput')).toHaveValue('Rascunho mantido na navegação');
-    await page.locator('#messengerClose').click();
-    await preserved();
-    await page.locator('#communityToggle').click();
-    await expect(page.locator('#communityPanel')).toBeVisible();
-    await expect(page.locator('#communityMembers')).toContainText('Layout Principal');
-    await page.evaluate(() => window.TronoCommunity.voiceNotice({id: 'community-layout-check', kind: 'joined', name: 'Layout Check'}));
-    await expect(page.locator('#communityActivity')).toContainText('Layout Check entrou na chamada.');
-    await preserved();
-    await page.locator('#communityClose').click();
-    await expect(page.locator('#communityPanel')).toBeHidden();
-    await preserved();
-    // Fixture UI permissions only: mutation authorization remains enforced by the server.
-    await presentAccount(page, {permissions: {manageChannels: true, manageRoles: true}});
-    await page.evaluate(() => window.TronoChannelManagement.openManager());
-    await expect(page.locator('#channelManagerDialog')).toBeVisible();
-    await page.locator('#channelName').fill('Rascunho com chamada ativa');
-    await preserved();
-    await page.keyboard.press('Escape');
-    await page.evaluate(() => window.TronoChannelManagement.openManager());
-    await expect(page.locator('#channelName')).toHaveValue('Rascunho com chamada ativa');
-    await page.locator('#channelManagerClose').click();
-    await page.evaluate(() => window.TronoChannelManagement.editRole({id: '24000000-0000-4000-8000-000000000002', name: 'Cargo durante chamada', role: 'member', guest: false}));
-    await expect(page.locator('#roleDialog')).toBeVisible();
-    await page.locator('#roleSelect').selectOption('admin');
-    await preserved();
-    await page.keyboard.press('Escape');
-    await restoreAccount(page);
-    await page.evaluate(() => window.TronoCommunityAdmin.openChannelFiles());
-    await expect(page.locator('#channelFilesDialog')).toBeVisible();
-    await preserved();
-    await page.keyboard.press('Escape');
-    await preserved();
-    // Decoration changes affect only the background child while all native sources stay live.
-    const decorationAccount = await page.evaluate(() => window.TronoAuth.user.id);
-    let decoration = {background_file_id: '22000000-0000-4000-8000-000000000001', darkness: 35, blur: 3};
-    await page.route('**/community/profiles/' + decorationAccount, route => route.fulfill({json: {profile: {id: decorationAccount, nickname: 'Layout Principal', personalization: decoration}}}));
-    await page.route('**/files/22000000-0000-4000-8000-000000000001/url', route => route.fulfill({json: {url: origin + '/assets/throne.png', expiresAt: Date.now() + 60000}}));
-    const decorationCard = page.locator('#voiceRoster .voice-person[data-account-id="' + decorationAccount + '"]');
-    await page.evaluate(() => window.dispatchEvent(new Event('trono-profile-change')));
-    await expect(decorationCard.locator('.participant-background img')).toBeVisible();
-    await preserved();
-    decoration = {};
-    await page.evaluate(() => window.dispatchEvent(new Event('trono-profile-change')));
-    await expect(decorationCard.locator('.participant-background img')).toHaveCount(0);
-    await preserved();
-    // Moving both portal targets must preserve the native players, streams and senders.
-    await page.evaluate(() => {
-      const self=window.TronoNetwork.clientId;
-      const tiles=[...document.querySelectorAll('#socialPanel [data-peer]')].filter(tile=>tile.dataset.peer===self);
-      window.__dockPlayers=tiles.filter(tile=>tile.matches('.camera-tile,.screen-share-tile')).map(tile=>({tile,video:tile.querySelector('video'),stream:tile.querySelector('video').srcObject}));
-    });
-    const selfCard=page.locator('#voiceRoster .voice-person[data-peer="'+senderId+'"]');
-    await selfCard.locator('.participant-expand').click();
-    for(const mode of ['stage','screen','camera','auto']){
-      await selfCard.locator('.participant-media-layout select').selectOption(mode);
-      await expect.poll(()=>page.evaluate(mode=>{
-        const rows=window.__dockPlayers;
-        return rows.length===2 && rows.every(({tile,video,stream})=>tile.querySelector('video')===video && video.srcObject===stream && stream.getVideoTracks().every(track=>track.readyState==='live') && tile.parentElement.classList.contains(tile.matches('.camera-tile') ? (mode==='auto'||mode==='camera'?'participant-camera-slot':'camera-grid') : mode==='screen'?'participant-screen-slot':'screen-share-grid'));
-      },mode)).toBe(true);
-      await preserved();
-    }
-    await selfCard.locator('.participant-expand').click();
-    // Secondary mosaic players borrow the same streams; closing/Escape must detach, never stop them.
-    await page.bringToFront();
-    await page.locator('#expandMosaicBtn').click();
-    await expect(page.locator('#mediaFocusDialog')).toBeVisible();
-    await expect(page.locator('#mediaFocusGrid .focus-person')).toHaveCount(1);
-    await page.waitForFunction(() => [...document.querySelectorAll('#mediaFocusGrid video')].every(video => video.srcObject && video.getVideoPlaybackQuality().totalVideoFrames > 0));
-    await page.evaluate(() => {window.__mosaicPlayers = [...document.querySelectorAll('#mediaFocusGrid video')];});
-    await page.screenshot({path: path.join(root, 'artifacts/mosaic-react-desktop.png')});
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#mediaFocusDialog')).toBeHidden();
-    await expect(page.locator('#mediaFocusGrid video')).toHaveCount(0);
-    assert.equal(await page.evaluate(() => window.__mosaicPlayers.every(video => !video.srcObject && !video.isConnected) && window.__dockPlayers.every(({tile,video,stream}) => tile.querySelector('video') === video && video.srcObject === stream && stream.getTracks().every(track => track.readyState === 'live'))), true);
-    await preserved();
-    // Closing the top layer happens before fullscreen, on the original stable tile.
-    await page.locator('#expandMosaicBtn').click();
-    await page.locator('#mediaFocusFullscreen').click();
-    await expect(page.locator('#mediaFocusDialog')).toBeHidden();
-    await expect(page.locator('#mediaFocusGrid video')).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => document.fullscreenElement?.classList.contains('screen-share-tile') || !!document.querySelector('.screen-share-tile.media-maximized'))).toBe(true);
-    await page.evaluate(async () => {if(document.fullscreenElement) await document.exitFullscreen(); else await window.TronoSocial.fullscreenMedia(window.TronoNetwork.clientId, 'screen');});
-    await preserved();
-    // Denied native fullscreen uses the same player; Escape restores its original docking.
-    await page.evaluate(() => {
-      const tile=window.__dockPlayers.find(row=>row.tile.matches('.screen-share-tile')).tile;
-      window.__nativeTileRequest=tile.requestFullscreen;
-      tile.requestFullscreen=()=>Promise.reject(new DOMException('Denied for fallback regression','NotAllowedError'));
-    });
-    await page.locator('#expandMosaicBtn').click();await page.locator('#mediaFocusFullscreen').click();
-    await expect(page.locator('.screen-share-tile.media-maximized')).toBeVisible();
-    assert.equal(await page.evaluate(()=>window.__dockPlayers.every(({tile,video,stream})=>tile.querySelector('video')===video && video.srcObject===stream)),true);
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.media-maximized')).toHaveCount(0);
-    await expect(page.locator('body')).not.toHaveClass(/media-focus-open/);
-    await page.evaluate(()=>{const tile=window.__dockPlayers.find(row=>row.tile.matches('.screen-share-tile')).tile;tile.requestFullscreen=window.__nativeTileRequest;});
-    await preserved();
-    // React diagnostics share their state with the desktop launcher and preserve every live source.
-    await page.bringToFront();
-    await page.evaluate(() => window.TronoSocial.toggleTelemetry(true));
-    await expect(page.locator('#telemetryPanel')).toBeVisible();
-    await expect(page.locator('#telemetryOpenBtn')).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('#telemetryPlayback')).toContainText('Reproduzindo');
-    await page.locator('#copyDiagnostics').click();
-    await expect(page.locator('#copyDiagnosticsStatus')).toContainText('Copiado');
-    const report = await app.evaluate(({clipboard}) => clipboard.readText());
-    assert.equal(JSON.parse(report).app, 'M&N');
-    assert(!report.includes('Layout Principal'));
-    assert(!report.includes('Layout Amigo'));
-    await page.locator('#telemetryCloseBtn').click();
-    await expect(page.locator('#telemetryPanel')).toBeHidden();
-    await expect(page.locator('#telemetryOpenBtn')).toHaveAttribute('aria-expanded', 'false');
-    await preserved();
-    const artifacts = path.join(root, 'artifacts/call-layout');
-    // Exercise real ICE restart/offer/answer while camera, screen and audio are live.
-    const receiverId = await receiver.evaluate(() => window.TronoNetwork.clientId);
-    const initiator = senderId < receiverId ? page : receiver;
-    const answerer = senderId < receiverId ? receiver : page;
-    const initiatorId = senderId < receiverId ? senderId : receiverId;
-    const offersBefore = await initiator.evaluate(() => window.__layoutDescriptions.filter(type => type === 'offer').length);
-    const framesBeforeRestart = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
-    await answerer.evaluate(id => window.TronoNetwork.sendVoiceSignal(id, 'renegotiate-request', {iceRestart: true}), initiatorId);
-    await expect.poll(() => initiator.evaluate(() => window.__layoutDescriptions.filter(type => type === 'offer').length)).toBeGreaterThan(offersBefore);
-    await expect.poll(() => page.evaluate(() => window.__layoutPeers.every(peer => peer.connectionState === 'connected'))).toBe(true);
-    await expect.poll(() => receiver.evaluate(() => window.__layoutPeers.every(peer => peer.connectionState === 'connected'))).toBe(true);
-    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforeRestart);
-    await preserved();
-    await fs.mkdir(artifacts, {recursive: true});
-    const capture = process.env.LAYOUT_CAPTURE_PREFIX || 'after';
-    async function communityControls(layout) {
-      const sidebar=layout==='discord'&&await page.evaluate(()=>innerWidth>=1100);
-      for(const id of controls){
-        const host=!sidebar?'callFocusDock':id==='soundboardToggle'?'desktopRail':id==='joinVoiceBtn'?'layoutConnectionControls':['cameraBtn','screenShareBtn','remotePcBtn'].includes(id)?'layoutCallActions':'layoutUserControls';
-        await expect(page.locator('#'+host+' #'+id)).toHaveCount(1);
-        await expect(page.locator('#'+id)).toBeVisible();
-      }
-    }
-    for (const layout of ['original', 'discord', 'original', 'discord']) {
-      await page.evaluate(layout => window.TronoAppLayout.apply(layout, {save: true}), layout);
-      await communityControls(layout);
-      await preserved();
-      await page.screenshot({path: path.join(artifacts, `${capture}-community-${layout}.png`)});
-
-      await page.evaluate(() => window.TronoAppLayout.navigate('home'));
-      await expect(page.locator('#portalScreen')).toBeVisible();
-      await expect(page.locator('#portalIdentity')).toHaveValue('Layout Principal');
-      await page.evaluate(() => window.TronoPortal.setCredits(true));
-      await expect(page.locator('#portalCreditsDialog')).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(page.locator('#portalCreditsDialog')).toBeHidden();
-      await expect(page.locator('#desktopTopBar #communityToggle')).toHaveCount(1);
-      await expect(page.locator('#desktopRail #soundboardToggle')).toHaveCount(1);
-      if (layout === 'original') {
-        for (const id of controls.filter(id => id !== 'soundboardToggle')) await expect(page.locator('#desktopCallDock #' + id)).toHaveCount(1);
-      } else {
-        for (const id of ['muteMicBtn', 'deafenVoiceBtn', 'voiceSettingsBtn']) await expect(page.locator('#layoutUserControls #' + id)).toHaveCount(1);
-        for (const id of ['cameraBtn', 'screenShareBtn', 'remotePcBtn']) await expect(page.locator('#layoutCallActions #' + id)).toHaveCount(1);
-        await expect(page.locator('#layoutConnectionControls #joinVoiceBtn')).toHaveCount(1);
-      }
-      await preserved();
-      await page.evaluate(() => window.TronoAppLayout.navigate('throne'));
-      await expect(page.locator('#roomScreen')).toBeVisible();
-      await preserved();
-      await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-      await communityControls(layout);
-      await preserved();
-    }
-
-    await page.locator('#voiceSettingsBtn').click();
-    await page.locator('[data-settings-tab="account"]').click();
-    await expect(page.locator('#profile-bio')).toBeEnabled();
-    await page.locator('#profile-bio').fill('Rascunho durante a chamada');
-    await expect(page.locator('#profileLivePreview .member-bio')).toHaveText('Rascunho durante a chamada');
-    // Exercise the private dialog with fixture permissions; backend authorization has separate tests.
-    await page.route('**/community/registered-accounts?*', route => route.fulfill({json: {accounts:[{id:'24000000-0000-4000-8000-000000000001',nickname:'Conta de teste',email:'desktop-private@example.test',confirmed:true}],hasMore:false,nextOffset:1}}));
-    await presentAccount(page, {role: 'creator', permissions: {viewEmails: true}});
-    await page.locator('#profileCreatorHost button').click();
-    await expect(page.locator('#creatorAccountsList')).toContainText('desktop-private@example.test');
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
-    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-    await restoreAccount(page);
-    await expect(page.locator('#profileCreatorHost button')).toBeHidden();
-    await preserved();
-    await page.route('**/community/gif-provider', route => route.fulfill({json: {provider: 'giphy', configured: false}}));
-    await page.route('https://media.giphy.com/**', route => route.fulfill({contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')}));
-    await page.locator('[data-profile-gif=avatar]').click();
-    await expect(page.locator('.profile-gif-message')).toContainText('cole o link');
-    await page.getByRole('textbox', {name: 'Link do GIF no GIPHY'}).fill('https://giphy.com/gifs/abc123');
-    await page.getByRole('button', {name: 'Pré-visualizar', exact: true}).click();
-    await page.locator('.profile-gif-results article > button').click();
-    await expect(page.locator('#profileGifDialog')).toBeHidden();
-    await expect(page.locator('#profilePreview img')).toHaveAttribute('src', /^blob:/);
-    await page.locator('[data-profile-gif=background]').click();
-    await expect(page.locator('#profileGifDialog')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#profileGifDialog')).toBeHidden();
-    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-    await preserved();
-    await page.locator('[data-settings-tab="appearance"]').click();
-    await page.locator('[data-settings-tab="account"]').click();
-    await expect(page.locator('#profile-bio')).toHaveValue('Rascunho durante a chamada');
-    await page.locator('[data-settings-tab="appearance"]').click();
-    await page.locator('[name="profileTheme"][value="teal"]').check();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'teal');
-    await page.locator('#layoutResetBtn').click();
-    await expect(page.locator('#appearanceMessage')).toHaveText('Layout restaurado ao padrão.');
-    await expect(page.locator('[data-panel-resize]')).toHaveCount(0);
-    await preserved();
-    await page.locator('[name="profileTheme"][value="purple"]').check();
-    await page.locator('[data-settings-tab="notifications"]').click();
-    await page.locator('#notificationMode').selectOption('all');
-    await page.locator('#notificationChannel').selectOption('chat-jogos');
-    await page.locator('#notificationChannelMute').check();
-    await expect(page.locator('#notificationPermission')).toBeHidden();
-    assert.equal(await page.evaluate(() => window.TronoNotifications.muted('chat-jogos')), true);
-    await preserved();
-    await page.locator('#notificationChannelMute').uncheck();
-    await page.locator('#notificationMode').selectOption('mentions');
-    await page.locator('[data-settings-tab="activity"]').click();
-    await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();
-    await expect(page.locator('#desktopActivityApp')).toBeDisabled();
-    await expect(page.locator('#desktopActivityNameLabel')).toBeHidden();
-    await expect(page.locator('#desktopActivityStatus')).not.toBeEmpty();
-    await preserved();
-    await page.locator('[data-settings-tab="files"]').click();
-    await expect(page.locator('#profileFilesHost .profile-files-load')).toBeVisible();
-    await expect(page.locator('#profileFilesHost #profileFiles')).toBeAttached();
-    await page.evaluate(() => window.TronoProfile.openMini(window.TronoAuth.user.id));
-    await expect(page.locator('#memberProfileDialog .member-name')).not.toBeEmpty();
-    await expect(page.locator('#memberProfileMessage')).toBeHidden();
-    await page.locator('#memberProfileExpand').click();
-    await expect(page.locator('#memberProfileDialog')).toHaveClass(/member-full/);
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#memberProfileDialog')).toBeHidden();
-    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-    await preserved();
-    await page.locator('#voiceSettingsClose').click();
-
-    for (const [width, height] of [[1280, 720], [480, 800], [480, 520]]) {
-      await app.evaluate(({BrowserWindow}, {width, height}) => BrowserWindow.getAllWindows()[0].setContentSize(width, height), {width, height});
-      for (const layout of ['original', 'discord']) {
-        await page.evaluate(value => window.TronoAppLayout.apply(value), layout);
-        for (const id of controls) {
-          await expect(page.locator('#' + id)).toBeVisible();
-          await expect(page.locator('#' + id)).toBeInViewport();
-        }
-        await preserved();
-        await page.screenshot({path: path.join(artifacts, `${capture}-${layout}-${width}x${height}.png`)});
-      }
-    }
-    await app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0].setContentSize(1280, 720));
-
-    // Move to a real text-only channel without leaving the call or the game.
-    const creator = await fixture.call('signup', {email: 'jonathapereira.jj@gmail.com', nickname: 'Layout Criador', password: 'LayoutTest12!'});
-    assert.equal(creator.status, 200);
-    await fixture.call('verify', {token_hash: [...fixture.links.keys()].at(-1), type: 'signup'});
-    const owner = (await fixture.call('login', {email: 'jonathapereira.jj@gmail.com', password: 'LayoutTest12!'})).data;
-    const created = await fetch(fixture.base + '/community/channels', {method: 'POST', headers: {
-      Origin: fixture.appOrigin, Authorization: 'Bearer ' + owner.session.access_token, 'Content-Type': 'application/json'
-    }, body: JSON.stringify({name: 'Layout texto', type: 'text', description: ''})});
-    assert.equal(created.status, 200);
-    const {channel} = await created.json();
-    await expect(page.locator('[data-chat-channel="' + channel.id + '"]')).toBeVisible();
-    await page.locator('[data-chat-channel="' + channel.id + '"]').click();
-    await expect(page.locator('[data-chat-channel="' + channel.id + '"]')).toHaveAttribute('aria-current', 'page');
-    await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe(channel.id);
-    await page.locator('#courtChatInput').fill('Compositor React com voz e jogo ativos');
-    await page.locator('#courtChatSend').click();
-    await expect(page.locator('#courtChatMessages')).toContainText('Compositor React com voz e jogo ativos');
-    await expect(page.locator('#courtChatInput')).toHaveValue('');
-    await preserved();
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await page.locator('#chatFileInput').setInputFiles({name: 'desktop.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7 desktop fixture')});
-    await page.locator('#courtChatInput').fill('Anexo React no Electron');
-    await page.locator('#courtChatSend').click();
-    await expect(page.locator('#courtChatMessages .file-download')).toContainText('desktop.pdf');
-    await preserved();
-    // Electron's native confirmation is already accepted by this fixture's dialog adapter.
-    await page.locator('#courtChatMessages .file-delete').click();
-    await expect(page.locator('#courtChatMessages .chat-attachment')).toContainText('Arquivo excluído.');
-    await preserved();
-    await page.locator('[data-chat-channel="chat-jogos"]').click();
-    await expect(page.locator('[data-chat-channel="chat-jogos"]')).toHaveAttribute('aria-current', 'page');
-    await expect.poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom)).toBe('chat-jogos');
-    await preserved();
-
-    await page.locator('#muteMicBtn').click();
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled), false);
-    await page.locator('#muteMicBtn').click();
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled), true);
-    await page.locator('#voiceSettingsBtn').click();
-    await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-    await page.locator('[data-settings-tab="game"]').click();
-    await page.getByText('Comunicação e gravação manual',{exact:true}).click();
-    await page.locator('#socialBtn').click();
-    await expect.poll(()=>page.evaluate(()=>window.TronoCallNavigation.getSnapshot().gameCommunicationOpen)).toBe(true);
-    await expect(page.locator('#socialBtn')).toHaveClass(/music-active/);
-    await page.locator('#voiceSettingsClose').click();
-    await preserved();
-
-    // Switching cameras replaces only video; an obsolete ended event cannot stop it.
-    await page.evaluate(() => {
-      const select = document.getElementById('cameraInputSelect');
-      select.add(new Option('Fixture second camera', 'fixture-second'));
-      select.value = 'fixture-second';
-      select.dispatchEvent(new Event('change', {bubbles: true}));
-    });
-    await expect.poll(() => page.evaluate(() => {
-      const track = window.TronoSocial.getMediaSources().find(source => source.self)?.camera?.getVideoTracks()[0];
-      return track && track !== window.__layoutBaseline.camera && track.readyState === 'live';
-    })).toBe(true);
-    await expect(page.locator('#cameraInputSelect')).toBeEnabled();
-    await page.evaluate(() => {
-      const before = window.__layoutBaseline.camera;
-      if (before.readyState !== 'ended') throw new Error('Previous camera was not released');
-      before.dispatchEvent(new Event('ended'));
-      window.__layoutBaseline.camera = window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0];
-    });
-    await preserved();
-    // Native device removal announces camera-off without disturbing screen or audio.
-    await page.evaluate(() => {
-      const track = window.__layoutBaseline.camera;
-      track.stop(); track.dispatchEvent(new Event('ended'));
-    });
-    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(false);
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack() === window.__layoutBaseline.mic && window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0] === window.__layoutBaseline.screen), true);
-    await page.locator('#cameraBtn').click();
-    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-    await page.evaluate(() => { window.__layoutBaseline.camera = window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0]; });
-    await preserved();
-
-    // Canceling a source change must leave the original capture and call intact.
-    await page.evaluate(() => { window.__denyDisplay = true; });
-    await localScreen.hover();
-    await localScreen.locator('.screen-switch-btn').click();
-    await expect(localScreen.locator('.screen-switch-btn')).toBeEnabled();
-    await expect(page.locator('#voiceStatus')).toContainText('anterior continua');
-    await preserved();
-    await page.evaluate(() => { window.__denyDisplay = false; });
-    const request = await page.evaluate(() => window.__displayRequests[0]);
-    assert.equal(request.audio.restrictOwnAudio, true);
-    assert.equal(request.windowAudio, 'window');
-    assert.equal(request.video.frameRate.max, undefined);
-
-    // A successful source change releases the old source and keeps the peers/socket.
-    const framesBeforeSwitch = await remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames);
-    await localScreen.hover();
-    await localScreen.locator('.screen-switch-btn').click();
-    await expect(localScreen.locator('.screen-switch-btn')).toBeEnabled();
-    await expect.poll(() => remoteScreen.evaluate(video => video.getVideoPlaybackQuality().totalVideoFrames), {timeout: 15000}).toBeGreaterThan(framesBeforeSwitch);
-    assert.equal(await page.evaluate(() => window.__layoutBaseline.screen.readyState), 'ended');
-    await page.evaluate(() => {
-      window.__layoutBaseline.screen = window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0];
-    });
-    await preserved();
-    await page.evaluate(() => {
-      const track = window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0];
-      track.stop(); track.dispatchEvent(new Event('ended'));
-    });
-    await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(false);
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalDisplayStream()), null);
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack() === window.__layoutBaseline.mic), true);
-
-    // Leaving while a display picker is pending releases the late native track.
-    await receiver.evaluate(() => {
-      window.__retiredReceiveTracks = window.__layoutPeers.flatMap(pc => pc.getReceivers().map(r => r.track)).filter(track => window.__receiveListenerCount(track) > 0);
-      if (window.__retiredReceiveTracks.length < 2) throw new Error('Receiver fixture did not bind media listeners');
-    });
-    await page.evaluate(() => {
-      window.__delayDisplay = true;
-      window.__pendingDisplay = window.TronoSocial.startScreenShare();
-    });
-    await page.waitForFunction(() => !!window.__releaseDisplay);
-    await page.evaluate(async () => {
-      await window.TronoSocial.leaveVoice();
-      window.__delayDisplay = false;
-      window.__releaseDisplay();
-    });
-    assert.equal(await page.evaluate(() => window.__pendingDisplay), false);
-    assert.equal(await page.evaluate(() => window.__lateDisplay.getTracks().every(track => track.readyState === 'ended')), true);
-    assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
-    await expect.poll(() => receiver.evaluate(() => window.__retiredReceiveTracks.every(track => window.__receiveListenerCount(track) === 0))).toBe(true);
-    assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
-
-    // A late camera permission cannot replace a camera from a newer call.
-    await page.evaluate(() => {
-      window.__normalCameraCapture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-      navigator.mediaDevices.getUserMedia = constraints => {
-        if (!constraints.video) return window.__normalCameraCapture(constraints);
-        return new Promise(resolve => {
-          window.__releaseCamera = async () => {
-            const stream = await window.__normalCameraCapture(constraints);
-            window.__lateCameraTracks = stream.getTracks();
-            resolve(stream);
-          };
+      async function launch(email, nickname, layout = 'original') {
+        await fixture.call('signup', { email, nickname, password: 'LayoutTest12!' });
+        await fixture.call('verify', {
+          token_hash: [...fixture.links.keys()].at(-1),
+          type: 'signup',
         });
-      };
-      document.getElementById('cameraBtn').click();
-    });
-    await page.waitForFunction(() => !!window.__releaseCamera);
-    await page.evaluate(async () => {
-      window.TronoSocial.leaveVoice();
-      navigator.mediaDevices.getUserMedia = window.__normalCameraCapture;
-      await window.TronoSocial.joinVoice();
-      document.getElementById('cameraBtn').click();
-    });
-    await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-    await page.evaluate(async () => {
-      window.__newCallCamera = window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0];
-      await window.__releaseCamera();
-    });
-    await expect.poll(() => page.evaluate(() => window.__lateCameraTracks.every(track => track.readyState === 'ended') && window.TronoSocial.cameraOn && window.__newCallCamera.readyState === 'live' && window.TronoSocial.getMediaSources().find(source => source.self).camera.getVideoTracks()[0] === window.__newCallCamera)).toBe(true);
-    await expect.poll(() => receiver.evaluate(id => {
-      const track = window.TronoSocial.getMediaSources().find(source => source.id === id)?.camera?.getVideoTracks()[0];
-      return track?.readyState === 'live' && !track.muted && window.__receiveListenerCount(track) === 3;
-    }, senderId)).toBe(true);
-    await receiver.evaluate(id => {
-      window.__currentReceiveCamera = window.TronoSocial.getMediaSources().find(source => source.id === id).camera.getVideoTracks()[0];
-      for (const track of window.__retiredReceiveTracks)
-        for (const type of ['mute', 'unmute', 'ended']) track.dispatchEvent(new Event(type));
-    }, senderId);
-    await expect.poll(() => receiver.evaluate(id => {
-      const track = window.TronoSocial.getMediaSources().find(source => source.id === id)?.camera?.getVideoTracks()[0];
-      const video = [...document.querySelectorAll('video')].find(v => v.srcObject?.getVideoTracks().includes(track));
-      return track === window.__currentReceiveCamera && track?.readyState === 'live' && video?.getVideoPlaybackQuality().totalVideoFrames > 0;
-    }, senderId)).toBe(true);
+        const login = await fixture.call('login', { email, password: 'LayoutTest12!' });
+        assert.equal(login.status, 200);
+        const { data } = login;
+        const app = await _electron.launch({
+          executablePath: require('../electron/node_modules/electron'),
+          args: [
+            path.join(root, 'electron'),
+            '--user-data-dir=' + path.join(directory, nickname),
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            '--autoplay-policy=no-user-gesture-required',
+            '--mute-audio',
+          ],
+          timeout: 30000,
+        });
+        apps.push(app);
+        assert.deepEqual(
+          await app.evaluate(({ app }) => ({ packaged: app.isPackaged, name: app.getName() })),
+          { packaged: false, name: 'MN Trono Desenvolvimento' },
+        );
+        // These dialogs concern synthetic devices in disposable test profiles only.
+        await app.evaluate(({ dialog }) => {
+          dialog.showMessageBox = async () => ({ response: 0 });
+        });
+        const page = await firstSizedWindow(app, { width: 1024, height: 740 });
+        await page.route('https://a-lei-do-trono-server.onrender.com/**', async (route) => {
+          try {
+            await route.abort();
+          } catch {}
+        });
+        // BrowserWindow uses a persistent session partition. Bind setup to this
+        // page, rather than ElectronApplication's default browser context.
+        await page.addInitScript(
+          ({ base, accountId, layout }) => {
+            window.TRONO_BACKEND_URL = base;
+            localStorage.setItem('tronoSfxEnabled', '0');
+            localStorage.setItem('tronoMusicEnabled', '0');
+            localStorage.setItem('mnDesktopNoiseMode', 'off');
+            if (localStorage.getItem('mn-personal:' + accountId) === null)
+              localStorage.setItem(
+                'mn-personal:' + accountId,
+                JSON.stringify({ appLayout: layout }),
+              );
+            window.__layoutPeers = [];
+            window.__layoutDescriptions = [];
+            const trackListeners = new WeakMap();
+            window.__receiveListenerCount = (track) =>
+              [...(trackListeners.get(track)?.values() || [])].reduce(
+                (n, listeners) => n + listeners.size,
+                0,
+              );
+            const addTrackListener = MediaStreamTrack.prototype.addEventListener;
+            const removeTrackListener = MediaStreamTrack.prototype.removeEventListener;
+            MediaStreamTrack.prototype.addEventListener = function (type, listener, options) {
+              if (['ended', 'mute', 'unmute'].includes(type)) {
+                if (!trackListeners.has(this)) trackListeners.set(this, new Map());
+                const types = trackListeners.get(this);
+                if (!types.has(type)) types.set(type, new Set());
+                types.get(type).add(listener);
+              }
+              return addTrackListener.call(this, type, listener, options);
+            };
+            MediaStreamTrack.prototype.removeEventListener = function (type, listener, options) {
+              trackListeners.get(this)?.get(type)?.delete(listener);
+              return removeTrackListener.call(this, type, listener, options);
+            };
+            const Peer = window.RTCPeerConnection;
+            window.RTCPeerConnection = class extends Peer {
+              constructor(config) {
+                super({ ...config, iceServers: [], iceCandidatePoolSize: 0 });
+                window.__layoutPeers.push(this);
+              }
+              async setLocalDescription(description) {
+                await super.setLocalDescription(description);
+                window.__layoutDescriptions.push(this.localDescription?.type);
+              }
+            };
+            window.__layoutCanvases = [];
+            const canvasStream = (fps = 10) => {
+              const canvas = document.createElement('canvas');
+              canvas.width = 640;
+              canvas.height = 360;
+              const draw = canvas.getContext('2d');
+              draw.fillStyle = '#384460';
+              draw.fillRect(0, 0, 640, 360);
+              window.__layoutCanvases.push(canvas);
+              const stream = canvas.captureStream(fps);
+              let frame = 0;
+              const timer = setInterval(() => {
+                draw.fillStyle = frame++ % 2 ? '#384460' : '#486480';
+                draw.fillRect(0, 0, 640, 360);
+              }, 1000 / fps);
+              const track = stream.getVideoTracks()[0],
+                stop = track.stop.bind(track);
+              track.stop = () => {
+                clearInterval(timer);
+                stop();
+              };
+              return stream;
+            };
+            const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+            navigator.mediaDevices.getUserMedia = async (constraints) => {
+              if (!constraints.video) return capture(constraints);
+              const stream = canvasStream();
+              if (constraints.audio)
+                for (const track of (await capture({ audio: constraints.audio })).getTracks())
+                  stream.addTrack(track);
+              return stream;
+            };
+            window.__displayRequests = [];
+            navigator.mediaDevices.getDisplayMedia = async (options) => {
+              window.__displayRequests.push(options);
+              window.__displayGesture = {
+                active: navigator.userActivation.isActive,
+                dialogClosed: !document.getElementById('screenOptionsDialog').open,
+              };
+              if (window.__denyDisplay) throw new DOMException('Canceled', 'NotAllowedError');
+              const source = canvasStream(options.video.frameRate.ideal);
+              if (window.__delayDisplay)
+                await new Promise((resolve) => {
+                  window.__releaseDisplay = () => {
+                    window.__lateDisplay = source;
+                    resolve();
+                  };
+                });
+              return source;
+            };
+          },
+          { base: fixture.base, accountId: data.user.id, layout },
+        );
+        const authResponses = [];
+        page.on('response', (response) => {
+          if (response.url().startsWith(fixture.base + '/auth/'))
+            authResponses.push({
+              path: new URL(response.url()).pathname,
+              status: response.status(),
+            });
+        });
+        page.setDefaultTimeout(10000);
+        await page.waitForURL(origin + '/');
+        await page.waitForLoadState('load');
+        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        page.on('pageerror', (error) => errors.push(error.message));
+        await page.reload();
+        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        assert.equal(await page.evaluate(() => window.TronoNetwork.BACKEND_HTTP), fixture.base);
+        assert.deepEqual(
+          await page.evaluate(() => ({
+            engine: typeof window.TronoClips,
+            controls: typeof window.TronoClipControls,
+          })),
+          { engine: 'undefined', controls: 'undefined' },
+        );
+        await expect(page.locator('#portalScreen')).toBeVisible();
+        await page.locator('#authEmail').fill(email);
+        await page.locator('#authPassword').fill('LayoutTest12!');
+        await page.locator('#authSubmit').click();
+        try {
+          await expect(page.locator('#portalScreen')).not.toBeVisible();
+        } catch (error) {
+          console.error('Login fixture:', {
+            nickname,
+            authResponses,
+            message: await page.locator('#authMessage').textContent(),
+            backend: await page.evaluate(() => window.TronoNetwork.BACKEND_HTTP),
+          });
+          throw error;
+        }
+        try {
+          await expect
+            .poll(() => page.evaluate(() => window.TronoAuth.user?.nickname))
+            .toBe(nickname);
+        } catch (error) {
+          console.error('Auth fixture:', {
+            nickname,
+            authResponses,
+            message: await page.locator('#authMessage').textContent(),
+          });
+          throw error;
+        }
+        await expect(page.getByRole('complementary', { name: 'Canais e conversas' })).toBeVisible();
 
-    // A permission result arriving after leave must release its device and never rejoin.
-    await page.evaluate(async () => {
-      window.__releasedMicrophone = window.TronoSocial.getLocalAudioTrack();
-      await window.TronoSocial.leaveVoice();
-      window.__normalCapture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-      navigator.mediaDevices.getUserMedia = constraints => new Promise(resolve => {
-        window.__releaseDelayedCapture = async () => {
-          const stream = await window.__normalCapture(constraints);
-          window.__delayedCaptureTracks = stream.getTracks();
-          resolve(stream);
+        await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-jogos' }));
+        await expect
+          .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
+          .toBe('chat-jogos');
+        assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+        await page.locator('[data-voice-channel=chat-jogos]').click();
+        try {
+          await expect
+            .poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), { timeout: 15000 })
+            .toBe(true);
+        } catch (error) {
+          console.error(
+            'Voice fixture:',
+            nickname,
+            await page.evaluate(() => ({
+              user: window.TronoAuth.user?.nickname,
+              connected: window.TronoNetwork.connected,
+              room: window.TronoNetwork?.currentRoom,
+              voiceRoom: window.TronoSocial.voiceRoom,
+              status: document.getElementById('voiceStatus').textContent,
+              errors: document.getElementById('chatOnlyStatus').textContent,
+            })),
+          );
+          throw error;
+        }
+        return { app, page };
+      }
+
+      const { app, page } = await launch('layout-main@example.test', 'Layout Principal');
+      const { page: receiver } = await launch('layout-peer@example.test', 'Layout Amigo');
+      await expect
+        .poll(
+          () =>
+            page.evaluate(() =>
+              window.__layoutPeers.some((p) => p.connectionState === 'connected'),
+            ),
+          { timeout: 20000 },
+        )
+        .toBe(true);
+      await page.locator('[data-control=cameraBtn]').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+      await page.locator('[data-control=screenShareBtn]').click();
+      await page.locator('#shareResolution').selectOption('1080');
+      await page.locator('#shareFps').selectOption('60');
+      await page.locator('#screenOptionsCancel').click();
+      assert.equal(await page.evaluate(() => window.__displayRequests.length), 0);
+      await page.locator('[data-control=screenShareBtn]').click();
+      await page.locator('#screenOptionsConfirm').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
+      assert.deepEqual(await page.evaluate(() => window.__displayGesture), {
+        active: true,
+        dialogClosed: true,
+      });
+      const id = await page.evaluate(() => window.TronoNetwork.clientId);
+      const remote = receiver.locator('[data-call-screen="' + id + '"]');
+      await remote.getByRole('button', { name: 'Assistir transmissão', exact: true }).click();
+      const video = remote.locator('video');
+      await expect
+        .poll(() => video.evaluate((v) => v.getVideoPlaybackQuality().totalVideoFrames), {
+          timeout: 15000,
+        })
+        .toBeGreaterThan(0);
+      await page.evaluate(() => {
+        window.__kept = {
+          network: window.TronoNetwork,
+          client: window.TronoNetwork.clientId,
+          mic: window.TronoSocial.getLocalAudioTrack(),
+          camera: window.TronoSocial.getMediaSources()
+            .find((p) => p.self)
+            .camera.getVideoTracks()[0],
+          screen: window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0],
+          peers: window.__layoutPeers.filter((p) => p.connectionState === 'connected'),
+          stage: window.TronoCallStage,
+          toolbar: window.TronoCallToolbar,
+          input: document.getElementById('voiceInputSelect'),
         };
       });
-      window.__cancelledJoin = window.TronoSocial.joinVoice();
-    });
-    await page.waitForFunction(() => !!window.__releaseDelayedCapture);
-    await page.evaluate(async () => {
-      await window.TronoSocial.leaveVoice();
-      navigator.mediaDevices.getUserMedia = window.__normalCapture;
-      await window.__releaseDelayedCapture();
-    });
-    assert.equal(await page.evaluate(() => window.__cancelledJoin), false);
-    assert(await page.evaluate(() => window.__releasedMicrophone.readyState === 'ended' && window.__delayedCaptureTracks.every(track => track.readyState === 'ended')));
-    assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack()), null);
-    assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
-    assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().readyState), 'live');
-    // The converted desktop hand observer must measure real cards after local play starts.
-    const peerMic = await receiver.evaluate(() => window.TronoSocial.getLocalAudioTrack().id);
-    await receiver.evaluate(() => window.TronoThroneLobby.enter('sala-cetro'));
-    await expect(receiver.locator('#roomScreen')).toBeVisible();
-    await receiver.locator('#roomScreen details').evaluate(node => { node.open = true; });
-    await receiver.locator('#startHumanBtn').click();
-    await expect(receiver.locator('#gameScreen')).toBeVisible();
-    await expect.poll(() => receiver.locator('#humanHand .hand-card').count()).toBeGreaterThan(0);
-    for (const [width, height] of [[1280, 720], [480, 800], [480, 520]]) {
-      await apps[1].evaluate(({BrowserWindow}, size) => BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height), {width, height});
-      for (const layout of ['original', 'discord']) {
-        await receiver.evaluate(value => window.TronoAppLayout.apply(value), layout);
-        await expect.poll(() => receiver.evaluate(() => {
-          const hand = document.getElementById('humanHand'), style = getComputedStyle(hand);
-          const height = parseFloat(style.getPropertyValue('--hand-card-height'));
-          const overlap = parseFloat(style.getPropertyValue('--hand-overlap'));
-          const room = Math.max(24, hand.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0));
-          return Number.isFinite(height) && Number.isFinite(overlap) && height >= 24 && height <= Math.min(126, room) + 0.02 && overlap <= 0;
-        })).toBe(true);
-        assert.equal(await receiver.evaluate(() => window.TronoSocial.getLocalAudioTrack().id), peerMic);
+      await receiver.evaluate((id) => {
+        const video = document.querySelector('[data-call-screen="' + id + '"] video');
+        window.__keptRemote = { video, stream: video.srcObject };
+      }, id);
+      const preserved = async () => {
+        assert(
+          await page.evaluate(() => {
+            const k = window.__kept;
+            return (
+              k.network === window.TronoNetwork &&
+              k.client === window.TronoNetwork.clientId &&
+              k.mic === window.TronoSocial.getLocalAudioTrack() &&
+              k.mic.readyState === 'live' &&
+              k.camera ===
+                window.TronoSocial.getMediaSources()
+                  .find((p) => p.self)
+                  .camera.getVideoTracks()[0] &&
+              k.camera.readyState === 'live' &&
+              k.screen === window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0] &&
+              k.screen.readyState === 'live' &&
+              k.peers.length > 0 &&
+              k.peers.every((p) => p.connectionState === 'connected') &&
+              k.stage === window.TronoCallStage &&
+              k.toolbar === window.TronoCallToolbar &&
+              k.input === document.getElementById('voiceInputSelect')
+            );
+          }),
+        );
+        assert(
+          await receiver.evaluate(
+            () =>
+              window.__keptRemote.video.isConnected &&
+              window.__keptRemote.video.srcObject === window.__keptRemote.stream,
+          ),
+        );
+      };
+      for (const route of ['games', 'throne', 'call']) {
+        await page.evaluate((route) => {
+          if (route === 'games') window.TronoGames.openLibrary();
+          else if (route === 'throne') window.TronoPortal.openGame(true);
+          else {
+            window.TronoPortal.showOnly('chatOnlyScreen');
+            window.TronoCallNavigation.showCall();
+          }
+        }, route);
+        await preserved();
       }
+      for (const topic of ['audio', 'video', 'account', 'resources', 'connection']) {
+        await page.evaluate((topic) => window.TronoCallSettings.open(topic), topic);
+        await expect(page.locator('dialog[data-topic]')).toHaveAttribute('data-topic', topic);
+        await preserved();
+      }
+      await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
+      // Both native clients play through the preserved online choices and private dialogs.
+      await require('./desktop-throne-choices-flow.cjs').exerciseThroneChoices({ page, receiver });
+      await preserved();
+      await require('./desktop-throne-private-flow.cjs').exerciseThronePrivate({
+        page,
+        receiver,
+        apps,
+      });
+      await preserved();
+      for (const client of [page, receiver])
+        await client.evaluate(() => {
+          window.TronoPortal.showOnly('chatOnlyScreen');
+          window.TronoCallNavigation.showCall();
+        });
+      await preserved();
+      const frames = () => video.evaluate((v) => v.getVideoPlaybackQuality().totalVideoFrames);
+      let before = await frames();
+      await page.evaluate(() => window.TronoCallStage.togglePreview());
+      await expect
+        .poll(() => page.evaluate(() => window.TronoCallStage.getSnapshot().previewPaused))
+        .toBe(true);
+      await expect.poll(frames, { timeout: 15000 }).toBeGreaterThan(before);
+      await page.evaluate(() => window.TronoCallStage.togglePreview());
+      await preserved();
+      await page.evaluate(() => (window.__denyDisplay = true));
+      await page.evaluate(() => window.TronoCallStage.switchSource());
+      await preserved();
+      await page.evaluate(() => (window.__denyDisplay = false));
+      before = await frames();
+      await page.evaluate(() => window.TronoCallStage.switchSource());
+      assert(await page.evaluate(() => window.__kept.screen.readyState === 'ended'));
+      await page.evaluate(
+        () =>
+          (window.__kept.screen = window.TronoSocial.getLocalDisplayStream().getVideoTracks()[0]),
+      );
+      await expect.poll(frames, { timeout: 15000 }).toBeGreaterThan(before);
+      await preserved();
+      // Device removal affects only the owned camera, never microphone or screen.
+      await page.evaluate(() => {
+        const t = window.__kept.camera;
+        t.stop();
+        t.dispatchEvent(new Event('ended'));
+      });
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(false);
+      assert(
+        await page.evaluate(
+          () =>
+            window.__kept.mic.readyState === 'live' && window.__kept.screen.readyState === 'live',
+        ),
+      );
+      await page.locator('[data-control=cameraBtn]').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+      await page.evaluate(
+        () =>
+          (window.__kept.camera = window.TronoSocial.getMediaSources()
+            .find((p) => p.self)
+            .camera.getVideoTracks()[0]),
+      );
+      await preserved();
+      // Native fullscreen is shared with the game, without restoring a legacy shell facade.
+      await require('./desktop-court-display-flow').exerciseCourtFullscreen({ app, page });
+      await page.evaluate(() => {
+        window.TronoPortal.showOnly('chatOnlyScreen');
+        window.TronoCallNavigation.showCall();
+      });
+      await preserved();
+      await page.evaluate(() => window.TronoSocial.stopScreenShare());
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(false);
+      await receiver.evaluate(() => {
+        window.__retiredReceiveTracks = window.__layoutPeers
+          .flatMap((pc) => pc.getReceivers().map((r) => r.track))
+          .filter((track) => window.__receiveListenerCount(track) > 0);
+        if (window.__retiredReceiveTracks.length < 2)
+          throw new Error('Receiver fixture did not bind media listeners');
+      });
+      await page.evaluate(() => {
+        window.__delayDisplay = true;
+        window.__pendingDisplay = window.TronoSocial.startScreenShare();
+      });
+      await page.waitForFunction(() => !!window.__releaseDisplay);
+      await page.evaluate(async () => {
+        await window.TronoSocial.leaveVoice();
+        window.__delayDisplay = false;
+        window.__releaseDisplay();
+      });
+      await page.evaluate(() => window.__pendingDisplay);
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            window.__lateDisplay.getTracks().every((t) => t.readyState === 'ended'),
+          ),
+        )
+        .toBe(true);
+      assert(
+        await page.evaluate(
+          () =>
+            window.__kept.mic.readyState === 'ended' && window.__kept.camera.readyState === 'ended',
+        ),
+      );
+      assert(await receiver.evaluate(() => window.TronoSocial.voiceJoined));
+      await expect
+        .poll(() =>
+          receiver.evaluate(() =>
+            window.__retiredReceiveTracks.every(
+              (track) => window.__receiveListenerCount(track) === 0,
+            ),
+          ),
+        )
+        .toBe(true);
+      assert.equal(await page.evaluate(() => window.__pendingDisplay), false);
+      assert.equal(await page.evaluate(() => window.TronoSocial.screenSharing), false);
+      assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
+
+      // A camera permission from the departed call must not replace the newer call's capture.
+      await page.evaluate(() => {
+        window.__normalCameraCapture = navigator.mediaDevices.getUserMedia.bind(
+          navigator.mediaDevices,
+        );
+        navigator.mediaDevices.getUserMedia = (constraints) => {
+          if (!constraints.video) return window.__normalCameraCapture(constraints);
+          return new Promise((resolve) => {
+            window.__releaseCamera = async () => {
+              const stream = await window.__normalCameraCapture(constraints);
+              window.__lateCameraTracks = stream.getTracks();
+              resolve(stream);
+            };
+          });
+        };
+      });
+      await page.locator('[data-control=cameraBtn]').click();
+      await page.waitForFunction(() => !!window.__releaseCamera);
+      assert.equal(
+        await page.evaluate(async () => {
+          await window.TronoSocial.leaveVoice();
+          navigator.mediaDevices.getUserMedia = window.__normalCameraCapture;
+          return window.TronoSocial.joinVoice();
+        }),
+        true,
+      );
+      await page.locator('[data-control=cameraBtn]').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+      await page.evaluate(async () => {
+        window.__newCallCamera = window.TronoSocial.getMediaSources()
+          .find((source) => source.self)
+          .camera.getVideoTracks()[0];
+        window.__newCallMicrophone = window.TronoSocial.getLocalAudioTrack();
+        await window.__releaseCamera();
+      });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              window.__lateCameraTracks.every((track) => track.readyState === 'ended') &&
+              window.TronoSocial.voiceJoined &&
+              window.TronoSocial.cameraOn &&
+              window.__newCallCamera.readyState === 'live' &&
+              window.TronoSocial.getMediaSources()
+                .find((source) => source.self)
+                .camera.getVideoTracks()[0] === window.__newCallCamera &&
+              window.TronoSocial.getLocalAudioTrack() === window.__newCallMicrophone &&
+              window.__newCallMicrophone.readyState === 'live' &&
+              window.TronoNetwork.clientId === window.__kept.client,
+          ),
+        )
+        .toBe(true);
+      await expect
+        .poll(() =>
+          receiver.evaluate((id) => {
+            const track = window.TronoSocial.getMediaSources()
+              .find((source) => source.id === id)
+              ?.camera?.getVideoTracks()[0];
+            return (
+              track?.readyState === 'live' &&
+              !track.muted &&
+              window.__receiveListenerCount(track) === 3
+            );
+          }, id),
+        )
+        .toBe(true);
+      await receiver.evaluate((id) => {
+        window.__currentReceiveCamera = window.TronoSocial.getMediaSources()
+          .find((source) => source.id === id)
+          .camera.getVideoTracks()[0];
+        for (const track of window.__retiredReceiveTracks)
+          for (const type of ['mute', 'unmute', 'ended']) track.dispatchEvent(new Event(type));
+      }, id);
+      await expect
+        .poll(() =>
+          receiver.evaluate((id) => {
+            const track = window.TronoSocial.getMediaSources()
+                .find((source) => source.id === id)
+                ?.camera?.getVideoTracks()[0],
+              video = document.querySelector('[data-call-person="' + id + '"] video');
+            return (
+              track === window.__currentReceiveCamera &&
+              track?.readyState === 'live' &&
+              video?.srcObject?.getVideoTracks().includes(track) &&
+              video.getVideoPlaybackQuality().totalVideoFrames > 0
+            );
+          }, id),
+        )
+        .toBe(true);
+
+      // Leaving during microphone permission cancels entry and disposes the late device.
+      await page.evaluate(async () => {
+        window.__releasedMicrophone = window.TronoSocial.getLocalAudioTrack();
+        await window.TronoSocial.leaveVoice();
+        window.__normalCapture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        navigator.mediaDevices.getUserMedia = (constraints) => {
+          if (!constraints.audio) return window.__normalCapture(constraints);
+          return new Promise((resolve) => {
+            window.__releaseDelayedCapture = async () => {
+              const stream = await window.__normalCapture(constraints);
+              window.__delayedCaptureTracks = stream.getTracks();
+              resolve(stream);
+            };
+          });
+        };
+        window.__cancelledJoin = window.TronoSocial.joinVoice();
+      });
+      await page.waitForFunction(() => !!window.__releaseDelayedCapture);
+      await page.evaluate(async () => {
+        await window.TronoSocial.leaveVoice();
+        navigator.mediaDevices.getUserMedia = window.__normalCapture;
+        await window.__releaseDelayedCapture();
+      });
+      assert.equal(await page.evaluate(() => window.__cancelledJoin), false);
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              window.__releasedMicrophone.readyState === 'ended' &&
+              window.__delayedCaptureTracks.every((track) => track.readyState === 'ended'),
+          ),
+        )
+        .toBe(true);
+      assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
+      assert.equal(await page.evaluate(() => window.TronoSocial.getLocalAudioTrack()), null);
+      assert.equal(await page.evaluate(() => window.TronoSocial.cameraOn), false);
+      assert.equal(await page.evaluate(() => window.__newCallCamera.readyState), 'ended');
+      assert(await receiver.evaluate(() => window.TronoSocial.voiceJoined));
+      assert.equal(await page.evaluate(() => window.TronoNetwork.clientId), id);
+      assert.equal(await page.evaluate(() => window.TronoSocial.joinVoice()), true);
+      assert.equal(
+        await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().readyState),
+        'live',
+      );
+      assert.deepEqual(errors, []);
+    } catch (error) {
+      await Promise.allSettled(
+        apps.map(async (app, index) => {
+          const page = await app.firstWindow({ timeout: 1000 });
+          await page.screenshot({
+            path: `artifacts/desktop-layout-failure-${index}.png`,
+            timeout: 3000,
+          });
+        }),
+      );
+      throw error;
+    } finally {
+      finished = true;
+      for (const app of apps.reverse()) await closeTestApp(app);
+      if (fixture) await fixture.stop();
+      await fs.rm(directory, { recursive: true, force: true });
     }
-    // Reload is the final step: it ends the disposable call, then restores the collapsed header.
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await expect(page.locator('#workspaceHeaderToggle')).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#workspaceHeaderToggle').click();
-    await expect(page.locator('#workspaceHeader')).toBeHidden();
-    await page.reload();
-    await page.waitForFunction(() => window.TronoAuth?.ready);
-    await page.evaluate(() => window.TronoAuth.ready);
-    await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-    await expect(page.locator('#workspaceHeaderToggle')).toHaveAttribute('aria-expanded', 'false');
-    await page.locator('#workspaceHeaderToggle').click();
-    await expect(page.locator('#workspaceHeader')).toBeVisible();
-    assert.deepEqual(errors, []);
-  } catch (error) {
-    await Promise.allSettled(apps.map(async (app, index) => {
-      const page = await app.firstWindow({timeout: 1000});
-      await page.screenshot({path: `artifacts/desktop-layout-failure-${index}.png`, timeout: 3000});
-    }));
-    throw error;
-  } finally {
-    finished = true;
-    for (const app of apps.reverse()) await closeTestApp(app);
-    if (fixture) await fixture.stop();
-    await fs.rm(directory, {recursive: true, force: true});
-  }
-});
+  },
+);

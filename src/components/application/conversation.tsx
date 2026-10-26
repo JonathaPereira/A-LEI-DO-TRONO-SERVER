@@ -1,6 +1,7 @@
 'use client';
-import { Component, useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { EMOJIS } from '../../lib/chat/emojis';
 import { Avatar } from '../profiles/avatar';
 import { Attachment } from '../files/attachment';
 import type { ChatMessage } from '../../types/domain';
@@ -63,6 +64,7 @@ function DateLabel({ value }: { value: string | number }) {
         : date.toLocaleString('pt-BR', {
             day: '2-digit',
             month: '2-digit',
+            year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
           })}
@@ -111,12 +113,19 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
     dm = useModel(runtime.TronoDirectMessages);
   const room = useModel(runtime.TronoChatMessages),
     catalog = useModel(runtime.TronoChannels);
-  const file = useRef<HTMLInputElement>(null),
+  const input = useRef<HTMLTextAreaElement>(null),
+    caret = useRef<number | null>(null),
+    picker = useRef<HTMLDivElement>(null),
+    emojiButton = useRef<HTMLButtonElement>(null),
+    file = useRef<HTMLInputElement>(null),
     text = direct ? dm.draft.text : channel.draft;
   const attachment = direct ? dm.draft.file : channel.file,
     busy = direct ? !!dm.sending : channel.uploading;
   const selected = catalog.channels.find((c) => c.id === room.roomId);
-  const allowed = direct ? !!dm.peerId : !!room.roomId && selected?.type !== 'voice';
+  const allowed = direct
+    ? !!dm.peerId &&
+      dm.friends.some((friend) => friend.id === dm.peerId && friend.state === 'accepted')
+    : !!room.roomId && selected?.type !== 'voice';
   const setText = (value: string) =>
     direct ? runtime.TronoDirectMessages.setText(value) : runtime.TronoChatComposer.setDraft(value);
   const select = (value: File) =>
@@ -128,6 +137,62 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
       void (direct ? runtime.TronoDirectMessages.submit() : runtime.TronoChatComposer.send());
   };
   const [emoji, setEmoji] = useState(false);
+  const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
+  useEffect(() => {
+    if (!attachment || !attachment.type.startsWith('image/')) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(attachment);
+    setPreview({ file: attachment, url });
+    return () => URL.revokeObjectURL(url);
+  }, [attachment]);
+  useLayoutEffect(() => {
+    if (caret.current === null) return;
+    input.current?.focus();
+    input.current?.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [text]);
+  useEffect(() => {
+    setEmoji(false);
+  }, [direct, dm.peerId, room.roomId]);
+  useEffect(() => {
+    if (!emoji) return;
+    const outside = (event: MouseEvent) => {
+      if (
+        event.target instanceof Node &&
+        !picker.current?.contains(event.target) &&
+        !emojiButton.current?.contains(event.target)
+      )
+        setEmoji(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key !== 'Escape' ||
+        document.querySelector('dialog:modal, [popover]:popover-open, .media-maximized')
+      )
+        return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setEmoji(false);
+      input.current?.focus();
+    };
+    document.addEventListener('click', outside);
+    document.addEventListener('keydown', escape, true);
+    return () => {
+      document.removeEventListener('click', outside);
+      document.removeEventListener('keydown', escape, true);
+    };
+  }, [emoji]);
+  function insertEmoji(value: string) {
+    if (!allowed || busy) return;
+    const start = input.current?.selectionStart ?? text.length,
+      end = input.current?.selectionEnd ?? start;
+    const next = text.slice(0, start) + value + text.slice(end);
+    if (next.length > (direct ? 2000 : 300)) return;
+    caret.current = start + value.length;
+    setText(next);
+  }
   return (
     <div
       className={styles.composerArea}
@@ -141,7 +206,10 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
     >
       {attachment && (
         <div className={styles.attachmentPreview}>
-          <span>▧ {attachment.name}</span>
+          {preview?.file === attachment && (
+            <img className={styles.draftImage} alt="Prévia da imagem" src={preview.url} />
+          )}
+          {!attachment.type.startsWith('image/') && <span>▧ {attachment.name}</span>}
           <button
             type="button"
             disabled={direct && dm.sending === 'send'}
@@ -179,6 +247,7 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
           }}
         />
         <textarea
+          ref={input}
           id={direct ? 'directMessageInput' : 'channelMessageInput'}
           aria-label={direct ? 'Mensagem privada' : 'Mensagem no canal'}
           placeholder={
@@ -210,6 +279,7 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
         <button
           type="button"
           className={styles.iconButton}
+          ref={emojiButton}
           aria-label="Escolher emoji"
           aria-expanded={emoji}
           disabled={busy || !allowed}
@@ -227,25 +297,9 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
         </button>
       </form>
       {emoji && (
-        <div
-          className={styles.emojis}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setEmoji(false);
-              e.stopPropagation();
-            }
-          }}
-        >
-          {['😀', '😂', '❤️', '🔥', '👍', '🎮', '👑', '🎉'].map((value) => (
-            <button
-              type="button"
-              aria-label={value}
-              key={value}
-              onClick={() => {
-                if (text.length + value.length <= (direct ? 2000 : 300)) setText(text + value);
-                setEmoji(false);
-              }}
-            >
+        <div ref={picker} className={styles.emojis} role="group" aria-label="Seletor de emojis">
+          {EMOJIS.map((value) => (
+            <button type="button" aria-label={value} key={value} onClick={() => insertEmoji(value)}>
               {value}
             </button>
           ))}
@@ -260,17 +314,19 @@ function Composer({ runtime, direct }: { runtime: ApplicationServices; direct: b
 }
 function Moderation({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoChatMessages),
+    route = useModel(runtime.TronoPortal),
     dialog = useRef<HTMLDialogElement>(null),
     trigger = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (state.choice && !dialog.current?.open) {
+    const active = route.screen === 'chatOnlyScreen';
+    if (active && state.choice && !dialog.current?.open) {
       trigger.current = document.activeElement as HTMLElement;
       dialog.current?.showModal();
-    } else if (!state.choice && dialog.current?.open) {
+    } else if ((!active || !state.choice) && dialog.current?.open) {
       dialog.current.close();
       trigger.current?.focus();
     }
-  }, [state.choice]);
+  }, [state.choice, route.screen]);
   return (
     <dialog
       closedby="any"
@@ -304,23 +360,53 @@ export function Conversation({ runtime }: { runtime: ApplicationServices }) {
   const messages = useModel(runtime.TronoChatMessages),
     dm = useModel(runtime.TronoDirectMessages),
     nav = useModel(runtime.TronoCommunityNavigation);
+  useModel(runtime.TronoNotifications);
   const direct = dm.open;
   const peer = directPerson(dm, dm.peerId ?? '');
   return (
-    <div className={styles.conversation}>
+    <div className={styles.conversation} data-chat-room={direct ? undefined : messages.roomId}>
       {direct && !dm.peerId ? (
         <Friends runtime={runtime} />
       ) : (
         <>
           <div className={styles.conversationHeading}>
-            <strong>{direct ? peer?.name || 'Conversa privada' : '# ' + nav.roomName}</strong>
-            {direct ? (
+            {direct && peer ? (
               <button
-                className={styles.link}
-                onClick={() => void runtime.TronoDirectMessages.openFriends()}
+                className={styles.profileLink}
+                type="button"
+                aria-label={'Ver perfil de ' + peer.name}
+                onClick={() => void runtime.TronoProfileViewer.open(peer.id)}
               >
-                Ver amigos
+                {peer.name}
               </button>
+            ) : (
+              <strong>{'# ' + nav.roomName}</strong>
+            )}
+            {direct ? (
+              <div className={styles.directActions}>
+                <button
+                  type="button"
+                  className={styles.link}
+                  aria-pressed={runtime.TronoNotifications.muted(dm.peerId!)}
+                  onClick={() =>
+                    runtime.TronoNotifications.mute(
+                      dm.peerId!,
+                      !runtime.TronoNotifications.muted(dm.peerId!),
+                    )
+                  }
+                >
+                  {runtime.TronoNotifications.muted(dm.peerId!)
+                    ? 'Ativar avisos da conversa'
+                    : 'Silenciar avisos da conversa'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.link}
+                  onClick={() => void runtime.TronoDirectMessages.openFriends()}
+                >
+                  Ver amigos
+                </button>
+              </div>
             ) : (
               messages.canModerate && (
                 <button
@@ -448,6 +534,8 @@ export function Conversation({ runtime }: { runtime: ApplicationServices }) {
 }
 export function Friends({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoDirectMessages);
+  const community = useModel(runtime.TronoCommunity),
+    management = useModel(runtime.TronoChannelManagement);
   const [tab, setTab] = useState<'friends' | 'pending' | 'community'>('friends');
   const people = [
     ...new Map(
@@ -460,7 +548,7 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
     (p) =>
       p.id !== state.accountId &&
       (tab === 'community'
-        ? !state.friends.some((f) => f.id === p.id)
+        ? true
         : state.friends.some(
             (f) => f.id === p.id && f.state === (tab === 'friends' ? 'accepted' : 'pending'),
           )) &&
@@ -510,7 +598,14 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
           <div className={styles.friend} data-person={person.id} key={person.id}>
             <Avatar person={person} className={styles.avatar} />
             <div>
-              <strong>{person.name}</strong>
+              <button
+                className={styles.profileLink}
+                type="button"
+                aria-label={'Ver perfil de ' + person.name}
+                onClick={() => void runtime.TronoProfileViewer.open(person.id)}
+              >
+                {person.name}
+              </button>
               <small>
                 {friend?.state === 'pending'
                   ? friend.incoming
@@ -521,6 +616,24 @@ export function Friends({ runtime }: { runtime: ApplicationServices }) {
                     : 'Offline'}
               </small>
             </div>
+            {tab === 'community' &&
+              management.canManageRoles &&
+              community.presence?.members.find(
+                (member) => member.id === person.id && !member.guest && member.role !== 'creator',
+              ) && (
+                <button
+                  type="button"
+                  aria-label={'Alterar cargo de ' + person.name}
+                  onClick={() => {
+                    const member = community.presence?.members.find(
+                      (item) => item.id === person.id,
+                    );
+                    if (member) runtime.TronoChannelManagement.editRole(member);
+                  }}
+                >
+                  Cargo
+                </button>
+              )}
             {friend?.state === 'pending' ? (
               <>
                 {friend.incoming && (

@@ -1,32 +1,274 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),express=require('express'),{chromium,expect}=require('@playwright/test'),{startFixture}=require('./auth-fixture');
-const {contentSecurityPolicy}=require('../electron/content-security.cjs');
-const {installCanvasCamera}=require('./camera-fixture');
-test('Cinzas v0.5 runs inside both layouts without disconnecting media; hidden game stops rendering and horde resumes',{timeout:180000},async t=>{
- const policy=contentSecurityPolicy(await fs.readFile(path.resolve('out/index.html'),'utf8'));
- const server=await new Promise(r=>{const s=express().use((req,res,next)=>{res.setHeader('Content-Security-Policy',policy);next();}).use(express.static(path.resolve('out'))).listen(0,'127.0.0.1',()=>r(s));}),origin='http://127.0.0.1:'+server.address().port,f=await startFixture({port:10851,appOrigin:origin});let browser;
- try{
-  await fs.mkdir('artifacts/cinzas',{recursive:true});browser=await chromium.launch({executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,args:['--no-sandbox','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio','--autoplay-policy=no-user-gesture-required']});
-  for(const native of [true,false])await t.test(native?'Windows integration':'Website integration',async()=>{
-   const email='cinzas-'+native+'@example.test';await f.call('signup',{email,nickname:'Andarilho '+native,password:'Senha12!'});await f.call('verify',{token_hash:[...f.links.keys()].at(-1),type:'signup'});const data=(await f.call('login',{email,password:'Senha12!'})).data;
-   let failAsset=native;const context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:960},permissions:['microphone','camera']});await context.route('**/*',r=>{if(failAsset&&r.request().url().endsWith('/roguelite/assets/creatures.webp')){failAsset=false;return r.fulfill({status:503,body:'Expected preparation failure'});}return new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort();});
-   await context.addInitScript(installCanvasCamera,{display:true});await context.addInitScript(({base,data,native})=>{
-    window.__rafTicks=0;const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=fn=>raf(t=>{window.__rafTicks++;fn(t);});
-    if(window.top!==window)return;window.TRONO_BACKEND_URL=base;sessionStorage.setItem('mn-auth-session-v1',JSON.stringify(data));localStorage.setItem('tronoMusicEnabled','0');localStorage.setItem('tronoSfxEnabled','0');localStorage.setItem('mnDesktopNoiseMode','native');
-    if(native)window.TronoDesktop={version:'0.2.1',clipsSuspended:true,readSession:async()=>null,saveSession:async()=>{},getMediaPermissions:async()=>['audio','video'],onCapture:()=>{},onCaptureCancel:()=>{},getWindowState:async()=>({fullscreen:false}),onWindowState:()=>{},onUpdateState:()=>{},getUpdateState:async()=>({status:'idle'}),onApplicationAudio:()=>{},configureClips:async()=>({suspended:true})};
-   },{base:f.base,data,native});
-   const page=await context.newPage(),errors=[],missing=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/roguelite/')&&r.status()>=400)missing.push(r.url()+':'+r.status());});page.setDefaultTimeout(12000);
-   try{
-    await page.goto(origin);await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);await page.evaluate(()=>window.TronoChatHub.enter({channelId:'chat-jogos'}));if(!await page.evaluate(()=>window.TronoSocial.voiceJoined))await page.locator('#joinVoiceBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.voiceJoined)).toBe(true);await page.locator('#cameraBtn').click();await expect.poll(()=>page.evaluate(()=>window.TronoSocial.cameraOn)).toBe(true);await page.evaluate(()=>window.TronoSocial.startScreenShare());await expect.poll(()=>page.evaluate(()=>window.TronoSocial.screenSharing)).toBe(true);
-    const snapshot=()=>page.evaluate(()=>({socket:window.TronoNetwork.clientId,voice:window.TronoNetwork.primaryRoom,track:window.TronoSocial.getLocalAudioTrack()?.id,camera:window.TronoSocial.getMediaSources().find(s=>s.self)?.camera?.getVideoTracks()[0]?.id,screen:window.TronoSocial.getLocalDisplayStream()?.getVideoTracks()[0]?.id,joined:window.TronoSocial.voiceJoined}));const before=await snapshot();assert(before.track&&before.camera&&before.screen);
-    await page.evaluate(()=>window.TronoAppLayout.navigate('game'));await expect(page.locator('.games-card')).toHaveCount(7);await expect.poll(()=>page.locator('.games-cinzas-art').evaluate(n=>n.complete&&n.naturalWidth>0)).toBe(true);await page.locator('#playRoguelite').hover();assert.equal(await page.locator('.games-cinzas-art').evaluate(n=>getComputedStyle(n).animationPlayState),'running');await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.games-cinzas-art').evaluate(n=>getComputedStyle(n).animationName),'none');await page.screenshot({path:'artifacts/cinzas/'+(native?'windows':'web')+'-catalogue.png'});
-    await page.locator('#playRoguelite').click();if(native){await expect(page.locator('#rogueliteRetry')).toBeVisible();assert.equal(missing.length,1);missing.length=0;await page.locator('#rogueliteRetry').click();}const game=page.frameLocator('#rogueliteFrame');await expect(game.locator('#startBtn')).toBeVisible();assert.equal(await game.locator('body').evaluate(()=>typeof window.TronoDesktop),'undefined');assert.equal(await game.locator('#quality').inputValue(),'low');assert.equal(await game.locator('#musicVolume').inputValue(),'0');await game.locator('#nameInput').fill('Explorador M&N');await game.locator('#startBtn').click();await expect(game.locator('#upgradeCards button')).toHaveCount(3);await game.locator('#upgradeCards button').first().click();await expect(game.locator('#hud')).toBeVisible();await expect(game.locator('#timeLabel')).not.toHaveText('00:00');
-    const child=page.frames().find(f=>f.url().includes('/roguelite/index.html'));await child.evaluate(()=>window.__runMarker='preserved');await page.screenshot({path:'artifacts/cinzas/'+(native?'windows':'web')+'-game.png'});
-    await page.locator('#rogueliteBack').click();await expect(page.locator('#gamesScreen')).toBeVisible();await expect.poll(()=>child.evaluate(()=>document.documentElement.dataset.hostActive)).toBe('false');const ticks=await child.evaluate(()=>window.__rafTicks);await page.waitForTimeout(350);assert.equal(await child.evaluate(()=>window.__rafTicks),ticks);assert.deepEqual(await snapshot(),before);
-    await page.locator('#playRoguelite').click();assert.equal(await child.evaluate(()=>window.__runMarker),'preserved');await expect(game.locator('#pauseScreen')).toBeVisible();await game.locator('#resumeBtn').click();await page.locator('#rogueliteFullscreen').click();await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.id)).toBe('rogueliteScreen');await page.locator('#rogueliteFullscreen').click();await game.locator('#fullBtn').click();await expect.poll(()=>page.evaluate(()=>document.fullscreenElement?.id)).toBe('rogueliteFrame');await page.evaluate(()=>document.exitFullscreen());assert.deepEqual(await snapshot(),before);
-    for(const layout of ['original','discord']){await page.evaluate(v=>window.TronoAppLayout.apply(v),layout);for(const [width,height]of [[1440,960],[1280,720],[1080,1920],[720,1280],[480,800],[360,740]]){if(native&&width<480)continue;await page.setViewportSize({width,height});const bounds=await page.locator('#rogueliteScreen').evaluate(n=>({scroll:n.scrollWidth,width:n.clientWidth}));assert(bounds.scroll<=bounds.width+1);if(width>=1280){const arena=await game.locator('#gameframe').evaluate(n=>({bottom:n.getBoundingClientRect().bottom,viewport:innerHeight}));assert(arena.bottom<=arena.viewport+2,'Full arena fits above the call dock');}assert.equal(await child.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),true);assert.deepEqual(await snapshot(),before);if(width===1080||width===480)await page.screenshot({path:'artifacts/cinzas/'+(native?'windows':'web')+'-'+layout+'-'+width+'.png'});}}
-    await page.setViewportSize({width:1440,height:960});if(!await game.locator('#pauseScreen').isVisible())await game.locator('#pauseBtn').click();await game.locator('#exitBtn').click();await game.locator('#menuBtn').click();await game.locator('[data-mode=horde]').click();await game.locator('#startBtn').click();await game.locator('#upgradeCards button').first().click();await game.locator('#pauseBtn').click();await game.locator('#suspendBtn').click();await expect(game.locator('#continueHorde')).toBeVisible();const save=await child.evaluate(()=>JSON.parse(localStorage.getItem('cinzas-demo-v1')).hordeSave);assert(save);const downloadEvent=page.waitForEvent('download');await game.locator('#exportSave').click();const backup=await downloadEvent;assert.equal(backup.suggestedFilename(),'cinzas-horda-backup.json');const bytes=await fs.readFile(await backup.path());assert(bytes.toString().includes('Explorador M&N'));await game.locator('#saveFile').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:bytes});await expect(game.locator('#toast')).toHaveText('Recordes e horda importados.');await game.locator('#continueHorde').click();await expect(game.locator('#hud')).toBeVisible();assert.deepEqual(await snapshot(),before);assert.deepEqual(missing,[]);assert.deepEqual(errors,[]);
-   }finally{await context.close();}
-  });
- }finally{await browser?.close();await f.stop();await new Promise(r=>server.close(r));}
-});
+const { test } = require('node:test'),
+  assert = require('node:assert/strict'),
+  path = require('node:path'),
+  fs = require('node:fs/promises'),
+  express = require('express'),
+  { chromium, expect } = require('@playwright/test'),
+  { startFixture } = require('./auth-fixture');
+const { contentSecurityPolicy } = require('../electron/content-security.cjs');
+const { installCanvasCamera } = require('./camera-fixture');
+test(
+  'Cinzas v0.5 runs inside both layouts without disconnecting media; hidden game stops rendering and horde resumes',
+  { timeout: 180000 },
+  async (t) => {
+    const policy = contentSecurityPolicy(await fs.readFile(path.resolve('out/index.html'), 'utf8'));
+    const server = await new Promise((r) => {
+        const s = express()
+          .use((req, res, next) => {
+            res.setHeader('Content-Security-Policy', policy);
+            next();
+          })
+          .use(express.static(path.resolve('out')))
+          .listen(0, '127.0.0.1', () => r(s));
+      }),
+      origin = 'http://127.0.0.1:' + server.address().port,
+      f = await startFixture({ port: 10851, appOrigin: origin });
+    let browser;
+    try {
+      await fs.mkdir('artifacts/cinzas', { recursive: true });
+      browser = await chromium.launch({
+        executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
+        args: [
+          '--no-sandbox',
+          '--use-fake-device-for-media-stream',
+          '--use-fake-ui-for-media-stream',
+          '--mute-audio',
+          '--autoplay-policy=no-user-gesture-required',
+        ],
+      });
+      for (const native of [true, false])
+        await t.test(native ? 'Windows integration' : 'Website integration', async () => {
+          const email = 'cinzas-' + native + '@example.test';
+          await f.call('signup', { email, nickname: 'Andarilho ' + native, password: 'Senha12!' });
+          await f.call('verify', { token_hash: [...f.links.keys()].at(-1), type: 'signup' });
+          const data = (await f.call('login', { email, password: 'Senha12!' })).data;
+          let failAsset = native;
+          const context = await browser.newContext({
+            acceptDownloads: true,
+            viewport: { width: 1440, height: 960 },
+            permissions: ['microphone', 'camera'],
+          });
+          await context.route('**/*', (r) => {
+            if (failAsset && r.request().url().endsWith('/roguelite/assets/creatures.webp')) {
+              failAsset = false;
+              return r.fulfill({ status: 503, body: 'Expected preparation failure' });
+            }
+            return new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort();
+          });
+          await context.addInitScript(installCanvasCamera, { display: true });
+          await context.addInitScript(
+            ({ base, data, native }) => {
+              window.__rafTicks = 0;
+              const raf = window.requestAnimationFrame.bind(window);
+              window.requestAnimationFrame = (fn) =>
+                raf((t) => {
+                  window.__rafTicks++;
+                  fn(t);
+                });
+              if (window.top !== window) return;
+              window.TRONO_BACKEND_URL = base;
+              sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(data));
+              localStorage.setItem('tronoMusicEnabled', '0');
+              localStorage.setItem('tronoSfxEnabled', '0');
+              localStorage.setItem('mnDesktopNoiseMode', 'native');
+              if (native)
+                window.TronoDesktop = {
+                  version: '0.2.1',
+                  clipsSuspended: true,
+                  readSession: async () => null,
+                  saveSession: async () => {},
+                  getMediaPermissions: async () => ['audio', 'video'],
+                  onCapture: () => {},
+                  onCaptureCancel: () => {},
+                  getWindowState: async () => ({ fullscreen: false }),
+                  onWindowState: () => {},
+                  onUpdateState: () => {},
+                  getUpdateState: async () => ({ status: 'idle' }),
+                  onApplicationAudio: () => {},
+                  configureClips: async () => ({ suspended: true }),
+                };
+            },
+            { base: f.base, data, native },
+          );
+          const page = await context.newPage(),
+            errors = [],
+            missing = [];
+          page.on('pageerror', (e) => errors.push(e.message));
+          page.on('response', (r) => {
+            if (r.url().includes('/roguelite/') && r.status() >= 400)
+              missing.push(r.url() + ':' + r.status());
+          });
+          page.setDefaultTimeout(12000);
+          try {
+            await page.goto(origin);
+            await page.waitForFunction(() => window.TronoAuth?.ready);
+            await page.evaluate(() => window.TronoAuth.ready);
+            await page.getByRole('button', { name: 'Entrar na voz de Jogos', exact: true }).click();
+            await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+            await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
+            await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+            await page.evaluate(() => window.TronoSocial.startScreenShare());
+            await expect
+              .poll(() => page.evaluate(() => window.TronoSocial.screenSharing))
+              .toBe(true);
+            const snapshot = () =>
+              page.evaluate(() => ({
+                socket: window.TronoNetwork.clientId,
+                voice: window.TronoNetwork.primaryRoom,
+                track: window.TronoSocial.getLocalAudioTrack()?.id,
+                camera: window.TronoSocial.getMediaSources()
+                  .find((s) => s.self)
+                  ?.camera?.getVideoTracks()[0]?.id,
+                screen: window.TronoSocial.getLocalDisplayStream()?.getVideoTracks()[0]?.id,
+                joined: window.TronoSocial.voiceJoined,
+              }));
+            const before = await snapshot();
+            assert(before.track && before.camera && before.screen);
+            await page.evaluate(() => window.TronoGames.openLibrary());
+            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(7);
+            await expect
+              .poll(() =>
+                page
+                  .locator('#gamesScreen [data-game=roguelite] img')
+                  .evaluate((n) => n.complete && n.naturalWidth > 0),
+              )
+              .toBe(true);
+            await page.screenshot({
+              path: 'artifacts/cinzas/' + (native ? 'windows' : 'web') + '-catalogue.png',
+            });
+            await page.locator('#gamesScreen [data-game=roguelite]').click();
+            if (native) {
+              await expect(page.locator('#rogueliteRetry')).toBeVisible();
+              assert.equal(missing.length, 1);
+              missing.length = 0;
+              await page.locator('#rogueliteRetry').click();
+            }
+            const game = page.frameLocator('#rogueliteFrame');
+            await expect(game.locator('#startBtn')).toBeVisible();
+            assert.equal(
+              await game.locator('body').evaluate(() => typeof window.TronoDesktop),
+              'undefined',
+            );
+            assert.equal(await game.locator('#quality').inputValue(), 'low');
+            assert.equal(await game.locator('#musicVolume').inputValue(), '0');
+            await game.locator('#nameInput').fill('Explorador M&N');
+            await game.locator('#startBtn').click();
+            await expect(game.locator('#upgradeCards button')).toHaveCount(3);
+            await game.locator('#upgradeCards button').first().click();
+            await expect(game.locator('#hud')).toBeVisible();
+            await expect(game.locator('#timeLabel')).not.toHaveText('00:00');
+            const child = page.frames().find((f) => f.url().includes('/roguelite/index.html'));
+            await child.evaluate(() => (window.__runMarker = 'preserved'));
+            await page.screenshot({
+              path: 'artifacts/cinzas/' + (native ? 'windows' : 'web') + '-game.png',
+            });
+            await page.locator('#rogueliteBack').click();
+            await expect(page.locator('#gamesScreen')).toBeVisible();
+            await expect
+              .poll(() => child.evaluate(() => document.documentElement.dataset.hostActive))
+              .toBe('false');
+            const ticks = await child.evaluate(() => window.__rafTicks);
+            await page.waitForTimeout(350);
+            assert.equal(await child.evaluate(() => window.__rafTicks), ticks);
+            assert.deepEqual(await snapshot(), before);
+            await page.locator('#gamesScreen [data-game=roguelite]').click();
+            assert.equal(await child.evaluate(() => window.__runMarker), 'preserved');
+            await expect(game.locator('#pauseScreen')).toBeVisible();
+            await game.locator('#resumeBtn').click();
+            await page.locator('#rogueliteFullscreen').click();
+            await expect
+              .poll(() => page.evaluate(() => document.fullscreenElement?.id))
+              .toBe('rogueliteScreen');
+            await page.locator('#rogueliteFullscreen').click();
+            await game.locator('#fullBtn').click();
+            await expect
+              .poll(() => page.evaluate(() => document.fullscreenElement?.id))
+              .toBe('rogueliteFrame');
+            await page.evaluate(() => document.exitFullscreen());
+            assert.deepEqual(await snapshot(), before);
+            for (const layout of ['corte']) {
+              for (const [width, height] of [
+                [1440, 960],
+                [1280, 720],
+                [1080, 1920],
+                [720, 1280],
+                [480, 800],
+                [360, 740],
+              ]) {
+                if (native && width < 480) continue;
+                await page.setViewportSize({ width, height });
+                const bounds = await page
+                  .locator('#rogueliteScreen')
+                  .evaluate((n) => ({ scroll: n.scrollWidth, width: n.clientWidth }));
+                assert(bounds.scroll <= bounds.width + 1);
+                if (width >= 1280) {
+                  const arena = await game.locator('#gameframe').evaluate((n) => ({
+                    bottom: n.getBoundingClientRect().bottom,
+                    viewport: innerHeight,
+                  }));
+                  assert(arena.bottom <= arena.viewport + 2, 'Full arena fits above the call dock');
+                }
+                assert.equal(
+                  await child.evaluate(
+                    () =>
+                      document.documentElement.scrollWidth <=
+                      document.documentElement.clientWidth + 1,
+                  ),
+                  true,
+                );
+                assert.deepEqual(await snapshot(), before);
+                if (width === 1080 || width === 480)
+                  await page.screenshot({
+                    path:
+                      'artifacts/cinzas/' +
+                      (native ? 'windows' : 'web') +
+                      '-' +
+                      layout +
+                      '-' +
+                      width +
+                      '.png',
+                  });
+              }
+            }
+            await page.setViewportSize({ width: 1440, height: 960 });
+            if (!(await game.locator('#pauseScreen').isVisible()))
+              await game.locator('#pauseBtn').click();
+            await game.locator('#exitBtn').click();
+            await game.locator('#menuBtn').click();
+            await game.locator('[data-mode=horde]').click();
+            await game.locator('#startBtn').click();
+            await game.locator('#upgradeCards button').first().click();
+            await game.locator('#pauseBtn').click();
+            await game.locator('#suspendBtn').click();
+            await expect(game.locator('#continueHorde')).toBeVisible();
+            const save = await child.evaluate(
+              () => JSON.parse(localStorage.getItem('cinzas-demo-v1')).hordeSave,
+            );
+            assert(save);
+            const downloadEvent = page.waitForEvent('download');
+            await game.locator('#exportSave').click();
+            const backup = await downloadEvent;
+            assert.equal(backup.suggestedFilename(), 'cinzas-horda-backup.json');
+            const bytes = await fs.readFile(await backup.path());
+            assert(bytes.toString().includes('Explorador M&N'));
+            await game
+              .locator('#saveFile')
+              .setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: bytes });
+            await expect(game.locator('#toast')).toHaveText('Recordes e horda importados.');
+            await game.locator('#continueHorde').click();
+            await expect(game.locator('#hud')).toBeVisible();
+            assert.deepEqual(await snapshot(), before);
+            assert.deepEqual(missing, []);
+            assert.deepEqual(errors, []);
+          } finally {
+            await context.close();
+          }
+        });
+    } finally {
+      await browser?.close();
+      await f.stop();
+      await new Promise((r) => server.close(r));
+    }
+  },
+);

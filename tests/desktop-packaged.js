@@ -20,6 +20,7 @@ test(
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-packaged-'));
     let app,
       page,
+      guestFixture,
       finished = false,
       phase = 'launch';
     const diagnostics = [];
@@ -98,7 +99,7 @@ test(
           diagnostics.push(m.text().slice(0, 600));
       });
       page.on('pageerror', (e) => diagnostics.push(e.message));
-      await expect(page.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       assert.equal(page.url(), 'https://a-lei-do-trono.surge.sh/');
       assert.equal(await page.evaluate(() => typeof require), 'undefined');
       assert.equal(
@@ -183,42 +184,30 @@ test(
         assert.equal(resource.status, 200, resource.url);
         assert(resource.bytes > 0, resource.url);
       }
-      phase = 'account initialization';
-      await page.waitForFunction(() => window.TronoAuth?.ready);
-      await page.evaluate(() => window.TronoAuth.ready);
-      if (await page.locator('#authDialog').isVisible())
-        await page.locator('#authCloseBtn').click();
-      await expect(page.locator('[data-desktop-route="clips"]')).toBeDisabled();
+      phase = 'local guest initialization';
+      guestFixture = await require('./desktop-guest-fixture.cjs').enterNativeGuest({
+        app,
+        page,
+        port: 10846,
+      });
       assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
-      await page.locator('#voiceSettingsBtn').click();
-      await expect(page.locator('#desktopSettingsDialog')).toBeVisible();
-      await page.locator('[data-settings-tab="capture"]').click();
+      await page.evaluate(() => window.TronoCallSettings.open('capture'));
+      await expect(page.getByRole('dialog', { name: 'Configurações da Corte' })).toBeVisible();
       await expect(page.locator('#screenFormatSelect')).toBeVisible();
-      await page.locator('#voiceSettingsClose').click();
-      await expect(page.locator('#portalScreen')).toBeVisible();
-      phase = 'installed layouts';
-      await page.locator('#voiceSettingsBtn').click();
-      await page.locator('[data-settings-tab=appearance]').click();
-      await expect(page.locator('[name=appLayout]')).toHaveCount(2);
-      await page.locator('[name=appLayout][value=discord]').check();
-      await page.locator('#voiceSettingsClose').click();
-      await expect(page.locator('#layoutUserBar')).toBeVisible();
-      await expect(page.locator('#layoutUserControls #voiceSettingsBtn')).toBeVisible();
-      await expect(page.locator('#layoutConnectionControls #joinVoiceBtn')).toBeVisible();
-      await expect(page.locator('#layoutCallActions #cameraBtn')).toBeVisible();
-      await expect(page.locator('#layoutCallActions #screenShareBtn')).toBeVisible();
-      await expect(page.locator('#layoutVoiceLabel')).toHaveText('Fora da chamada');
-      await expect(page.locator('#layoutCallActions #cameraBtn')).toBeDisabled();
-      const panelBounds = await page.locator('#layoutVoicePanel').boundingBox();
+      await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
+      await expect(page.locator('#gamesScreen')).toBeVisible();
+      phase = 'installed Corte sidebar';
+      await expect(
+        page.getByRole('complementary', { name: 'Canais e conversas', exact: true }),
+      ).toBeVisible();
+      await expect(page.locator('[name=appLayout]')).toHaveCount(0);
+      const panelBounds = await page
+        .getByRole('complementary', { name: 'Canais e conversas', exact: true })
+        .boundingBox();
       assert(panelBounds.x < 100 && panelBounds.width < 350);
       await page.screenshot({
-        path: path.resolve(__dirname, '../artifacts/windows-discord-voice-panel.png'),
+        path: path.resolve(__dirname, '../artifacts/windows-corte-sidebar.png'),
       });
-      await page.locator('#voiceSettingsBtn').click();
-      await page.locator('[name=appLayout][value=original]').check();
-      await page.locator('#voiceSettingsClose').click();
-      await expect(page.locator('#desktopCallDock #voiceSettingsBtn')).toBeVisible();
-      await expect(page.locator('#desktopHome')).toBeVisible();
       phase = 'installed games';
       assert.equal(await page.evaluate(() => window.TicketToRideData.routes.length), 100);
       assert.equal(
@@ -231,28 +220,33 @@ test(
         ),
         45,
       );
-      await page.locator('[data-desktop-route=game]').click();
+      await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
       await expect(page.locator('#gamesScreen')).toBeVisible();
-      await expect(page.locator('.games-card')).toHaveCount(7);
+      await expect(page.locator('#gamesScreen button[data-game]')).toHaveCount(7);
       await expect
         .poll(() =>
-          page.locator('.games-box-art').evaluate((n) => n.complete && n.naturalWidth > 0),
+          page
+            .locator('#gamesScreen [data-game=throne] img')
+            .evaluate((n) => n.complete && n.naturalWidth > 0),
         )
         .toBe(true);
       await expect
         .poll(() =>
-          page.locator('.games-cinzas-art').evaluate((n) => n.complete && n.naturalWidth > 0),
+          page
+            .locator('#gamesScreen [data-game=roguelite] img')
+            .evaluate((n) => n.complete && n.naturalWidth > 0),
         )
         .toBe(true);
       await page.screenshot({
         path: path.resolve(__dirname, '../artifacts/windows-games-catalogue.png'),
       });
-      await page.locator('#playAzul').click();
+      await page.locator('#gamesScreen [data-game=azul]').click();
       await expect(page.locator('#azulScreen')).toBeVisible();
-      // A fresh packaged profile has no account: opening a network game requests login.
-      await expect(page.locator('#authDialog')).toBeVisible();
-      await page.locator('#authCloseBtn').click();
-      await expect(page.locator('#authDialog')).toBeHidden();
+      // Account-only games still request authentication for a local guest.
+      assert(await page.evaluate(() => !!window.TronoAuth.guest));
+      await expect(page.getByRole('dialog', { name: 'Acesso à conta', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Fechar acesso à conta', exact: true }).click();
+      await expect(page.getByRole('dialog', { name: 'Acesso à conta', exact: true })).toBeHidden();
       await expect(page.locator('#azulTurnStatus')).toHaveText('Escolha sua mesa');
       await page.locator('#azulRulesButton').click();
       await expect(page.locator('#azulRulesDialog')).toBeVisible();
@@ -282,7 +276,7 @@ test(
             );
         }),
       );
-      await page.locator('#playRoguelite').click();
+      await page.locator('#gamesScreen [data-game=roguelite]').click();
       const cinzas = page.frameLocator('#rogueliteFrame');
       await expect(cinzas.locator('#startBtn')).toBeVisible({ timeout: 30000 });
       await expect(page.locator('#rogueliteLoading')).toBeHidden();
@@ -307,18 +301,18 @@ test(
         'Prepared game works without network downloads',
       );
       phase = 'installed roguelite leave';
-      await page.locator('#desktopHome').click();
+      await page.locator('#rogueliteBack').click();
       phase = 'installed activity';
       assert.equal(
         (await page.evaluate(() => window.TronoDesktop.getActivityState())).enabled,
         false,
       );
-      await page.locator('#voiceSettingsBtn').click();
+      await page.evaluate(() => window.TronoCallSettings.open('game'));
       await page.locator('[data-settings-tab=game]').click();
       await expect(page.locator('#speedBtn')).toBeVisible();
       await page.locator('[data-settings-tab=activity]').click();
       await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();
-      await page.locator('#voiceSettingsClose').click();
+      await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
       phase = 'installed handbook';
       const openedManual = app.waitForEvent('window');
       await page.evaluate(() => window.TronoDesktop.openManual());
@@ -425,6 +419,7 @@ test(
       finished = true;
       phase = 'test cleanup';
       await closeTestApp(app);
+      await guestFixture?.stop();
       clearTimeout(watchdog);
       await fs.rm(directory, { recursive: true, force: true }).catch(() => {});
     }

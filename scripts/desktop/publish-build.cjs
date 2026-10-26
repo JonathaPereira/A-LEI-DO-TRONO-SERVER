@@ -59,7 +59,7 @@ async function publishBuild({ github, context, core, root = path.resolve(__dirna
   if (!Number.isSafeInteger(attempt) || attempt < 1) throw Error('Tentativa do build inválida.');
   const tag = `desktop-v${version}-run-${context.runId}-attempt-${attempt}`,
     runURL = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${context.runId}`;
-  const body = `${MARKER}\nPacotes validados de Windows ${version}. Empacotamento: ${context.sha}. Fonte do instalador: ${process.env.MN_SOURCE_TAG || context.sha}.\n\nBaixe o EXE e o ZIP do site desta mesma entrega. O ZIP contém frontend/ com somente o instalador atual em downloads/, o manifesto e o guia de publicação.\n\nPublique a pasta frontend/ do ZIP no Surge. Não é preciso enviar o EXE separadamente para outro repositório. Consulte ATUALIZACOES.md e PUBLICAR_SURGE_LEVE.md na raiz do ZIP para as instruções de backend e SQL.\n\nBuild: ${runURL}\n\nSomente a versão atual e uma anterior são conservadas nestes downloads automáticos. Esta release é um rascunho privado para revisão e distribuição ao proprietário.`;
+  const body = `${MARKER}\nPacotes validados de Windows ${version}. Empacotamento: ${context.sha}. Fonte do instalador: ${process.env.MN_SOURCE_TAG || context.sha}.\n\nBaixe o EXE e o ZIP do site desta mesma entrega. O ZIP contém frontend/ com somente o instalador atual em downloads/, o manifesto e o guia de publicação.\n\nA etapa final de Windows full app publica esta mesma entrega no Surge quando habilitada. Para repetir somente a publicação, execute Publish approved frontend no mesmo commit e deixe release_tag vazio. Não é preciso copiar tags nem enviar o EXE separadamente. Consulte ATUALIZACOES.md e PUBLICAR_SURGE_LEVE.md na raiz do ZIP para as instruções de backend e SQL.\n\nBuild: ${runURL}\n\nSomente a versão atual e uma anterior são conservadas nestes downloads automáticos. Esta release é um rascunho privado para revisão e distribuição ao proprietário.`;
   const { data: release } = await github.rest.repos.createRelease({
     ...repo,
     tag_name: tag,
@@ -102,6 +102,6 @@ async function publishBuild({ github, context, core, root = path.resolve(__dirna
       `[Abrir os pacotes validados](${release.html_url})\n\nInstalador atual e frontend completo juntos nesta release privada; não usam a cota de artefatos dos Actions.\n`,
     )
     .write();
-  return { url: release.html_url, id: release.id, removed: plan.remove };
+  return { tag, url: release.html_url, id: release.id, removed: plan.remove };
 }
 module.exports = { publishBuild, planBuildRetention, MARKER };

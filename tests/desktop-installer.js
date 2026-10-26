@@ -63,7 +63,7 @@ test(
         timeout: 40000,
       });
       const page = await app.firstWindow();
-      await expect(page.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
+      await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       const oldProcess = app.process(),
         exited = new Promise((resolve) => oldProcess.once('exit', resolve));
       await app.evaluate(({ BrowserWindow }) => {
@@ -99,7 +99,7 @@ test(
         timeout: 40000,
       });
       const updated = await app.firstWindow();
-      await expect(updated.locator('#desktopRail')).toBeVisible({ timeout: 30000 });
+      await expect(updated.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       assert.equal(await updated.evaluate(() => window.TronoDesktop.version), version);
     } finally {
       await closeTestApp(app);
