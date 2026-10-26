@@ -383,7 +383,8 @@ test(
         );
         await context.addInitScript(installCanvasCamera, {
           display: true,
-          demo: { name: data.user.nickname, index: accounts.indexOf(data) },
+          // Layout coverage needs live tracks, not HD encoding on ninety peer links.
+          demo: { name: data.user.nickname, index: accounts.indexOf(data), scale: 0.5, fps: 5 },
         });
         await context.addInitScript(() => {
           const display = navigator.mediaDevices.getDisplayMedia;
@@ -418,6 +419,9 @@ test(
         else await page.evaluate(() => window.TronoChatHub.switchChannel('chat-livre', { connectVoice: true }));
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), { timeout: 15000 }).toBe(true);
       }
+      // Keep one speaker and nine listeners, preserving each live microphone track.
+      for (const page of pages.slice(1))
+        await page.evaluate(() => window.TronoCallToolbar.activate('muteMicBtn'));
       console.log('Ten-client fixture: all ten real clients joined');
       const [host, viewer] = pages,
         call = viewer.getByRole('region', { name: 'Chamada da Corte', exact: true });

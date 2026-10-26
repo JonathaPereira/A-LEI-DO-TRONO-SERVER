@@ -177,7 +177,7 @@ test(
           const switchButton = {
             click: () =>
               page.evaluate(() => {
-                void window.TronoCallStage.switchSource();
+                window.__pendingSwitch = window.TronoCallStage.switchSource();
               }),
           };
           await switchButton.click();
@@ -193,6 +193,7 @@ test(
             window.__releaseCapture();
             window.__captureGate = null;
           });
+          await page.evaluate(() => window.__pendingSwitch);
           await expect
             .poll(() => page.evaluate(() => window.TronoCallStage.getSnapshot().switching), { timeout: 15000 })
             .toBe(false);
@@ -213,6 +214,7 @@ test(
             window.__denyCapture = true;
           });
           await switchButton.click();
+          await page.evaluate(() => window.__pendingSwitch);
           await expect
             .poll(() => page.evaluate(() => window.TronoCallToolbar.getSnapshot().status.text))
             .toContain('A tela anterior continua');

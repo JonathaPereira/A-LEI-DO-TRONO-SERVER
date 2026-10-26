@@ -227,3 +227,9 @@ requestAnimationFrame para detectar picos (quatro rodadas locais aprovadas).
 O cenário de dez clientes conserva dez contextos/peers reais, quatro câmeras e
 duas telas; só a interface observada é renderizada, reduzindo carga do runner.
 Os clientes de fundo continuam usando os donos reais por comandos públicos.
+
+A rodada 40381244595 aprovou nativo, core e grupos 1/3. O cancelamento de troca
+passou a aguardar a Promise pública antes de conferir status e tracks. A fixture
+de dez pessoas usa fontes sintéticas de 320×180/640×360 a 5 FPS, um falante e
+nove ouvintes mutados pelos controles reais; não é um benchmark de HD ou de
+dez falantes simultâneos. PCM nativo permanece coberto separadamente.
