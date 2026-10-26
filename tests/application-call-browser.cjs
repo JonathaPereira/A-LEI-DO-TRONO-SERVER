@@ -408,34 +408,29 @@ test(
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
         await expect(page.locator('#chatOnlyScreen')).toBeVisible({ timeout: 15000 });
+        await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-livre');
+        // Nine background clients keep real media but do not render nine duplicate UIs.
+        if (pages.length !== 2) await page.evaluate(() => document.body.style.visibility = 'hidden');
       }
       // Initialize all account views before connecting the ten-way media mesh.
       for (const page of pages) {
-        await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
+        if (page === pages[1]) await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
+        else await page.evaluate(() => window.TronoChatHub.switchChannel('chat-livre', { connectVoice: true }));
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), { timeout: 15000 }).toBe(true);
       }
+      console.log('Ten-client fixture: all ten real clients joined');
       const [host, viewer] = pages,
         call = viewer.getByRole('region', { name: 'Chamada da Corte', exact: true });
       for (const index of [0, 2, 4, 7]) {
-        await pages[index]
-          .getByRole('region', { name: 'Chamada da Corte', exact: true })
-          .getByRole('button', { name: 'Ligar câmera', exact: true })
-          .click();
+        await pages[index].evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
         await expect
           .poll(() => pages[index].evaluate(() => window.TronoSocial.cameraOn))
           .toBe(true);
       }
-      await host
-        .getByRole('region', { name: 'Chamada da Corte', exact: true })
-        .getByRole('button', { name: 'Compartilhar tela', exact: true })
-        .click();
-      await host.locator('#screenOptionsConfirm').click();
+      await host.evaluate(() => window.TronoSocial.startScreenShare());
       await expect.poll(() => host.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
-      await pages[2]
-        .getByRole('region', { name: 'Chamada da Corte', exact: true })
-        .getByRole('button', { name: 'Compartilhar tela', exact: true })
-        .click();
-      await pages[2].locator('#screenOptionsConfirm').click();
+      await pages[2].evaluate(() => window.TronoSocial.startScreenShare());
+      console.log('Ten-client fixture: four live cameras and two real WebRTC screens');
       await expect(call.locator('[data-call-person]')).toHaveCount(10);
       await expect(call.locator('[data-call-screen]')).toHaveCount(2);
       const stream = call.getByRole('article', { name: 'Tela de Ana', exact: true });
@@ -641,8 +636,8 @@ test(
       assert.deepEqual(errors, []);
     } finally {
       await fs.mkdir('artifacts/frontend-reset/call-qa', { recursive: true });
-      for (let i = 0; i < pages.length; i++)
-        await pages[i]
+      for (const i of [1])
+        if (pages[i]) await pages[i]
           .screenshot({ path: 'artifacts/frontend-reset/call-qa/stream-current-' + i + '.png' })
           .catch(() => {});
       await browser?.close();

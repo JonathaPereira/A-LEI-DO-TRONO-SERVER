@@ -41,6 +41,8 @@ test(
             this.__meter.fftSize = 2048;
             this.__meter.connect(super.destination);
             window.__gameMeter = this.__meter;
+            window.__gameContext = this;
+            window.__gameOutput = super.destination;
             (window.__gameContexts ??= []).push(this);
           }
           get destination() {
@@ -56,26 +58,34 @@ test(
       await page.getByRole('button', { name: 'Jogar como convidado' }).click();
       await page.locator('#guestNickname').fill('Teste Mesa');
       await page.getByRole('button', { name: 'Escolher um jogo', exact: true }).click();
+      await expect(page.locator('#gamesScreen')).toBeVisible();
       await require('./tabletop-audio-controls.cjs').exerciseTabletopAudio(page);
       await page.evaluate(async () => {
         window.TronoAudio.setSfxEnabled(true);
         await window.TronoAudio.ensureAudio();
       });
-      const measure = async (value) =>
-        page.evaluate(async (value) => {
-          window.TronoAudio.setGameVolume('splendor', value);
-          await new Promise((r) => setTimeout(r, 450));
-          window.TronoAudio.playSfx('splendor-card');
-          const data = new Float32Array(window.__gameMeter.fftSize);
-          let peak = 0;
-          const until = performance.now() + 400;
-          while (performance.now() < until) {
-            window.__gameMeter.getFloatTimeDomainData(data);
-            peak = Math.max(peak, Math.sqrt(data.reduce((n, v) => n + v * v, 0) / data.length));
-            await new Promise((r) => requestAnimationFrame(r));
-          }
-          return peak;
-        }, value);
+      // The audio thread integrates the complete sound independently of UI frames.
+      await page.evaluate(async () => {
+        const context=window.__gameContext;
+        const code=`class GameWave extends AudioWorkletProcessor {
+          constructor(){super();this.zero=new Float32Array(128);this.active=false;this.port.onmessage=e=>{this.frames=0;this.energy=0;this.started=e.data==='silence';this.active=true;this.port.postMessage({armed:true});};}
+          process(inputs){if(!this.active)return true;for(const value of inputs[0]?.[0]||this.zero){if(!this.started&&Math.abs(value)>0.000001)this.started=true;if(this.started){this.frames++;this.energy+=value*value;if(this.frames>=sampleRate/2){this.active=false;this.port.postMessage({rms:Math.sqrt(this.energy/this.frames)});break;}}}return true;}
+        }registerProcessor('game-wave',GameWave);`;
+        const url=URL.createObjectURL(new Blob([code],{type:'application/javascript'}));
+        try{await context.audioWorklet.addModule(url);}finally{URL.revokeObjectURL(url);}
+        const meter=new AudioWorkletNode(context,'game-wave'),silent=context.createGain();
+        silent.gain.value=0;window.__gameMeter.connect(meter);meter.connect(silent);silent.connect(window.__gameOutput);
+        window.__measureGameWave=(muted)=>new Promise((resolve,reject)=>{
+          const timer=setTimeout(()=>reject(Error('Game waveform did not arrive from the audio thread')),5000);
+          meter.port.onmessage=({data})=>{if(data.armed)window.TronoAudio.playSfx('splendor-card');else{clearTimeout(timer);resolve(data.rms);}};
+          meter.port.postMessage(muted?'silence':'signal');
+        });
+      });
+      const measure = async (value) => page.evaluate(async value => {
+        window.TronoAudio.setGameVolume('splendor',value);
+        await new Promise(resolve=>setTimeout(resolve,450));
+        return window.__measureGameWave(value===0);
+      },value);
       const high = await measure(100),
         low = await measure(20),
         mute = await measure(0);

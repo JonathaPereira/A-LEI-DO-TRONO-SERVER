@@ -220,3 +220,10 @@ entrada em voz antes de abrir o jogo (sem segundo toggle) e limitar rede/navega�
 ao backend local no cenário de dez clientes. Regressões locais passaram.
 O job nativo deixou de repetir cenários core/browser já obrigatórios nos jobs
 respectivos; não foram removidos arquivos/casos, XInput, SendInput ou PCM real.
+
+Estabilização do runner: a fixture de captura aguarda a parada antes de reiniciar;
+o teste de ganho integra PCM no AudioWorklet por meio segundo, sem depender de
+requestAnimationFrame para detectar picos (quatro rodadas locais aprovadas).
+O cenário de dez clientes conserva dez contextos/peers reais, quatro câmeras e
+duas telas; só a interface observada é renderizada, reduzindo carga do runner.
+Os clientes de fundo continuam usando os donos reais por comandos públicos.

@@ -261,18 +261,16 @@ test(
             await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled),
             true,
           );
-          await page.evaluate(() => {
-            void window.TronoCallToolbar.activate('screenShareBtn');
-          });
+          await page.evaluate(() => window.TronoCallToolbar.activate('screenShareBtn'));
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(false);
           await page.evaluate(() => {
             void window.TronoCallToolbar.activate('screenShareBtn');
           });
           await page.locator('#shareAudio').check();
           await page.locator('#screenOptionsConfirm').click();
           await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
-          await page.evaluate(() => {
-            void window.TronoCallToolbar.activate('screenShareBtn');
-          });
+          await page.evaluate(() => window.TronoCallToolbar.activate('screenShareBtn'));
+          await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(false);
         },
       );
       await step(
