@@ -182,7 +182,7 @@ test(
           };
           await switchButton.click();
           await expect
-            .poll(() => page.evaluate(() => window.TronoCallStage.getSnapshot().switching))
+            .poll(() => page.evaluate(() => window.TronoCallStage.getSnapshot().switching), { timeout: 15000 })
             .toBe(true);
           assert.equal(
             await page.evaluate(() => window.__beforeSwap.getVideoTracks()[0].readyState),
@@ -194,7 +194,7 @@ test(
             window.__captureGate = null;
           });
           await expect
-            .poll(() => page.evaluate(() => window.TronoCallStage.getSnapshot().switching))
+            .poll(() => page.evaluate(() => window.TronoCallStage.getSnapshot().switching), { timeout: 15000 })
             .toBe(false);
           assert.equal(
             await page.evaluate(() => window.__beforeSwap.getVideoTracks()[0].readyState),

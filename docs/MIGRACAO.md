@@ -191,3 +191,25 @@ agora divide os mesmos 56 arquivos em quatro grupos paralelos por --shard, com
 agregação obrigatória antes da entrega. Teste do dispatcher verifica partição
 completa, estável e sem duplicatas; não foram retirados cenários. TAP expõe erros
 antes do resumo final. Tempo efetivo e resultado remoto ainda aguardam execução.
+
+O usuário instalou Visual Studio Community 2026/SDK. Build nativo local agora
+aprovado: windows-native-local-installed.log. Atividade nativa, loopback real
+isolado entre processos e Cinzas passaram em windows-native-local-final.log;
+o runtime foi revalidado separadamente em windows-native-runtime-final.log após
+corrigir a versão fixa do preload. A versão agora vem de app.getVersion por
+argumento do renderer e acompanha electron/package.json automaticamente.
+
+Reproduções com o Chromium empacotado do Playwright revelaram diferença real de
+foco no headless Windows e posição assíncrona de popovers. A fixture de atalho
+usa janelas Windows reais; posições aguardam layout concluído, mantendo limites.
+QuickPanel usa dimensões fracionárias e limita ambas as bordas; ResizeObserver
+acompanha tamanho do conteúdo e é liberado na desmontagem. Regressões locais:
+windows-bundled-browser-green.log (16 aprovados/1 codec skip),
+windows-bundled-call-final.log (2/2, incluindo dez clientes reais),
+windows-background-final.log (PCM e mute nos controles atuais). O CI conserva
+atividade nativa dedicada, além de áudio, runtime e teste de instalação.
+
+Executável Windows empacotado local aprovado em windows-packaged-local-approved.log.
+A fixture usa as telas atuais de voz/vídeo e áudio dos jogos. O instalador ainda
+aguarda aceitação no runner descartável. O usuário autorizou explicitamente
+enviar commits e publicar 0.3.5 no Surge após pipeline/instalador aprovados.

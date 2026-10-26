@@ -273,14 +273,11 @@ test(
         await page.screenshot({ path: 'artifacts/frontend-reset/call-qa/call-' + width + '.png' });
         await openQuickAudio();
         await expect(quick).toBeVisible();
-        const quickBox = await quick.boundingBox();
-        assert(
-          quickBox.x >= 0 &&
-            quickBox.y >= 0 &&
-            quickBox.x + quickBox.width <= width &&
-            quickBox.y + quickBox.height <= height,
-          JSON.stringify(quickBox),
-        );
+        await expect.poll(async () => {
+          const box = await quick.boundingBox();
+          return { within: box.x >= 0 && box.y >= 0 &&
+            box.x + box.width <= width && box.y + box.height <= height, box };
+        }, { message: `Quick audio must settle inside ${width}x${height}` }).toMatchObject({ within: true });
         await page.screenshot({
           path: 'artifacts/frontend-reset/call-qa/quick-audio-' + width + '.png',
         });
@@ -313,7 +310,8 @@ test(
 
 test(
   'voice and stream menus keep independent volumes and stop watching without leaving the call',
-  { timeout: 90000 },
+  // Ten real WebRTC clients create a full mesh on the hosted Windows runner.
+  { timeout: 180000 },
   async () => {
     const server = await new Promise((resolve) => {
       const s = express()

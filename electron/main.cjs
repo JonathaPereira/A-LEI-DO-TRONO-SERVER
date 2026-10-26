@@ -279,6 +279,7 @@ async function start() {
     webPreferences: {
       session: browserSession,
       preload: path.join(__dirname, 'preload.cjs'),
+      additionalArguments: ['--mn-desktop-version=' + app.getVersion()],
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,

@@ -192,7 +192,7 @@ test(
       });
       assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
       await page.evaluate(() => window.TronoCallSettings.open('capture'));
-      await expect(page.getByRole('dialog', { name: 'Configurações da Corte' })).toBeVisible();
+      await expect(page.getByRole('dialog', { name: 'Voz e vídeo', exact: true })).toBeVisible();
       await expect(page.locator('#screenFormatSelect')).toBeVisible();
       await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
       await expect(page.locator('#gamesScreen')).toBeVisible();
@@ -309,7 +309,7 @@ test(
       );
       await page.evaluate(() => window.TronoCallSettings.open('game'));
       await page.locator('[data-settings-tab=game]').click();
-      await expect(page.locator('#speedBtn')).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Jogos', exact: true }).getByRole('slider', { name: 'Volume da música', exact: true })).toBeVisible();
       await page.locator('[data-settings-tab=activity]').click();
       await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();
       await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();

@@ -25,8 +25,10 @@ export function QuickPanel({
     const n = panel.current,
       b = button.current?.getBoundingClientRect();
     if (!n || !b) return;
-    n.style.left = Math.max(12, Math.min(b.left, window.innerWidth - n.offsetWidth - 12)) + 'px';
-    n.style.top = Math.max(12, b.top - n.offsetHeight - 10) + 'px';
+    const box = n.getBoundingClientRect();
+    n.style.left = Math.max(12, Math.min(b.left, window.innerWidth - box.width - 12)) + 'px';
+    n.style.top =
+      Math.max(12, Math.min(b.top - box.height - 10, window.innerHeight - box.height - 12)) + 'px';
   };
   const show = () => {
     clear();
@@ -42,8 +44,13 @@ export function QuickPanel({
   };
   useEffect(() => {
     const close = () => panel.current?.hidePopover();
+    const resize = new ResizeObserver(() => {
+      if (panel.current?.matches(':popover-open')) position();
+    });
+    if (panel.current) resize.observe(panel.current);
     window.addEventListener('resize', close);
     return () => {
+      resize.disconnect();
       clear();
       window.removeEventListener('resize', close);
     };
