@@ -23,6 +23,8 @@ test(
           JSON.parse(await fs.readFile('/etc/chromium/policies/managed/misc.json', 'utf8'))
             .WebRtcIPHandling === 'disable_non_proxied_udp';
       } catch {}
+    if (process.env.MN_TEST_PROFILE === 'release')
+      assert.equal(restricted, false, 'Release requires actual received PCM; managed policy cannot skip it');
     const fixture = await startFixture({ port: 10867, appOrigin: origin });
     let browser;
     const errors = [];

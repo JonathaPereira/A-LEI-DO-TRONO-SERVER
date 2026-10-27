@@ -17,15 +17,16 @@ distribuição.
 ## Publicar pelo GitHub
 
 Execute **Actions → Windows full app → Run workflow** na branch desejada.
-`publish_surge` vem ligado: após tipos/core, navegador, mídia Windows, aplicativo
-empacotado e instalação passarem, a própria execução publica a entrega no Surge.
+`publish_surge` vem ligado: um único runner Windows verifica tipos/core e os
+fluxos essenciais web/Electron, compila e empacota uma vez e aceita a instalação.
+Depois a própria execução publica a entrega no Surge.
 Pushes em `main` também publicam automaticamente. Contribuições disparadas apenas
 por push continuam como validação; para publicá-las, use o disparo manual.
 
 A versão vem de `electron/package.json`; a tag exata passa diretamente do pacote
 para a publicação, sem copiar IDs ou procurar versões. O repositório precisa do
 secret `SURGE_TOKEN`. A release privada mantém EXE, ZIP e hashes da mesma entrega.
-A publicação confere o commit e os quatro jobs aprovados da tentativa de origem,
+A publicação confere o commit e o job Validate and package Windows aprovado na tentativa de origem,
 os hashes do ZIP/EXE e o manifesto. Depois confere o manifesto publicado e o
 metadado de versão da página. Falhas de validação bloqueiam publicação.
 
@@ -35,6 +36,13 @@ Windows validada correspondente. Isso não recompila nem repete os testes Window
 Uma tag explícita continua disponível para escolher outra tentativa aprovada do
 mesmo commit. A ausência de `SURGE_TOKEN` aparece como falha, não como publicação
 bem-sucedida.
+
+O perfil de entrega está em tests/release.json e pode ser reproduzido com
+npm test -- --suite browser --profile release e --suite desktop --profile release.
+Contratos de regras, backend e autorização continuam completos. Matrizes visuais,
+estresse de dez pessoas e regressões extensas permanecem nas suítes completas;
+marque extended_browser para incluí-las. Testes de driver/hardware exigem o ambiente
+específico do guia de desenvolvimento e não são substituídos por fixtures.
 
 Cada alteração distribuída ao desktop precisa de uma versão superior à instalada.
 A versão atual está em `electron/package.json`; atualize também seu lockfile e o

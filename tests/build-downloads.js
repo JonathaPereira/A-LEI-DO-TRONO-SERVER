@@ -21,11 +21,11 @@ test('private delivery uploads a matched EXE, site and checksums before retiring
 
 test('Surge automatically selects the newest complete Windows delivery from this exact commit and validated attempt', async () => {
   const {findApprovedBuild}=require('../scripts/desktop/approved-build.cjs');
-  const sha='a'.repeat(40),required=['Types, formatting and backend','Browser interfaces and games','Real Windows media and desktop','Package and deliver after all checks'];
+  const sha='a'.repeat(40),required=['Validate and package Windows'];
   const candidate=(run,attempt=1,extra={})=>release('0.1.12',run,{tag_name:`desktop-v0.1.12-run-${run}-attempt-${attempt}`,target_commitish:sha,assets:['MN-Trono-0.1.12-Windows.exe','MN-Trono-Frontend-0.1.12.zip','SHA256SUMS-0.1.12.txt'].map(name=>({name,state:'uploaded'})),...extra});
   const rows=[candidate(8),candidate(10,1),candidate(10,2),candidate(12,1,{target_commitish:'b'.repeat(40)}),candidate(13,1,{assets:[]})];
   let rejectedJob='',wrongRun=false;
-  const github={rest:{repos:{listReleases(){}},actions:{getWorkflowRun:async({run_id})=>({data:{id:run_id,name:'Windows full app',path:'.github/workflows/windows-app.yml',head_sha:wrongRun?'b'.repeat(40):sha}}),listJobsForWorkflowRun(){}}},paginate:async(fn)=>fn===github.rest.repos.listReleases?rows:required.map(name=>({name,conclusion:name===rejectedJob?'failure':'success'}))};
+  const github={rest:{repos:{listReleases(){}},actions:{getWorkflowRun:async({run_id})=>({data:{id:run_id,name:'Windows full app',path:'.github/workflows/windows-app.yml',head_sha:wrongRun?'b'.repeat(40):sha}}),listJobsForWorkflowRun(){}}},paginate:async(fn)=>fn===github.rest.repos.listReleases?rows:required.flatMap(name=>[1,2].map(run_attempt=>({name,run_attempt,conclusion:name===rejectedJob?'failure':'success'})))};
   const options={github,context:{repo:{owner:'owner',repo:'private'},sha},version:'0.1.12'};
   assert.deepEqual(await findApprovedBuild(options),{tag:'desktop-v0.1.12-run-10-attempt-2',version:'0.1.12',sha});
   assert.equal((await findApprovedBuild({...options,requested:'desktop-v0.1.12-run-8-attempt-1'})).tag,'desktop-v0.1.12-run-8-attempt-1');
@@ -35,16 +35,18 @@ test('Surge automatically selects the newest complete Windows delivery from this
 });
 
 
-test('Surge accepts a failed-jobs retry only when the latest required jobs up to the source attempt succeeded', async () => {
+test('Surge requires validation from the exact artifact-producing attempt, never an earlier success', async () => {
   const {findApprovedBuild}=require('../scripts/desktop/approved-build.cjs'),sha='a'.repeat(40);
   const row=release('0.1.12',10,{tag_name:'desktop-v0.1.12-run-10-attempt-2',target_commitish:sha,assets:['MN-Trono-0.1.12-Windows.exe','MN-Trono-Frontend-0.1.12.zip','SHA256SUMS-0.1.12.txt'].map(name=>({name,state:'uploaded'}))});
-  const prior=['Types, formatting and backend','Browser interfaces and games','Real Windows media and desktop'].map(name=>({name,run_attempt:1,conclusion:'success'}));
-  const delivery={name:'Package and deliver after all checks',run_attempt:2,conclusion:'success'};
+  const prior=[];
+  const delivery={name:'Validate and package Windows',run_attempt:2,conclusion:'success'};
   let jobs=[...prior,{...delivery,run_attempt:1,conclusion:'failure'},delivery,{...delivery,run_attempt:3,conclusion:'in_progress'}];
   const github={rest:{repos:{listReleases(){}},actions:{getWorkflowRun:async()=>({data:{path:'.github/workflows/windows-app.yml',head_sha:sha}}),listJobsForWorkflowRunAttempt(){},listJobsForWorkflowRun(){}}},paginate:async fn=>fn===github.rest.repos.listReleases?[row]:fn===github.rest.actions.listJobsForWorkflowRunAttempt?[delivery]:jobs};
   const options={github,context:{repo:{owner:'owner',repo:'private'},sha},version:'0.1.12'};
   assert.equal((await findApprovedBuild(options)).tag,row.tag_name);
-  jobs=[...jobs,{...prior[1],run_attempt:2,conclusion:'failure'}];
+  jobs=jobs.map(job => job.name===delivery.name && job.run_attempt===2 ? {...job,conclusion:'failure'} : job);
+  await assert.rejects(findApprovedBuild(options),/Nenhuma entrega/);
+  jobs=[{...delivery,run_attempt:1}];
   await assert.rejects(findApprovedBuild(options),/Nenhuma entrega/);
 });
 

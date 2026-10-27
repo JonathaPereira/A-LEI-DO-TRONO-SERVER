@@ -1,12 +1,7 @@
 'use strict';
 const { MARKER } = require('./publish-build.cjs');
-const REQUIRED_JOBS = [
-  'Types, formatting and backend',
-  'Browser interfaces and games',
-  'Real Windows media and desktop',
-  'Package and deliver after all checks',
-];
-// Approval belongs to the source attempt's completed validation jobs. The parent
+const REQUIRED_JOBS = ['Validate and package Windows'];
+// Approval belongs to the exact artifact-producing attempt's completed validation job. The parent
 // run is still in progress while its final, reusable Surge job is executing.
 async function findApprovedBuild({ github, context, version, requested = '' }) {
   const pattern = /^desktop-v(\d+\.\d+\.\d+)-run-(\d+)(?:-attempt-(\d+))?$/;
@@ -52,14 +47,18 @@ async function findApprovedBuild({ github, context, version, requested = '' }) {
       filter: 'all',
       per_page: 100,
     });
-    const latest = new Map();
-    for (const job of jobs) {
-      const jobAttempt = Number(job.run_attempt || 1);
-      if (jobAttempt > attempt) continue;
-      const previous = latest.get(job.name);
-      if (!previous || jobAttempt > Number(previous.run_attempt || 1)) latest.set(job.name, job);
-    }
-    if (!REQUIRED_JOBS.every((name) => latest.get(name)?.conclusion === 'success')) continue;
+    // The same consolidated job both validates and creates this attempt's artifacts.
+    if (
+      !REQUIRED_JOBS.every((name) =>
+        jobs.some(
+          (job) =>
+            job.name === name &&
+            Number(job.run_attempt || 1) === attempt &&
+            job.conclusion === 'success',
+        ),
+      )
+    )
+      continue;
     return { tag: release.tag_name, version, sha: context.sha };
   }
   throw Error('Nenhuma entrega Windows aprovada corresponde a este commit.');

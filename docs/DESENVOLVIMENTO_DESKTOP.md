@@ -32,15 +32,24 @@ helper. HMR não comprova continuidade de dispositivos após qualquer edição.
 
 Use --filter com regex sobre os caminhos; --list mostra a seleção sem executá-la.
 Exemplo: npm test -- --filter 'portal|community-navigation'. Seleção inválida ou
-vazia falha. tests/suites.json é a classificação única; helpers não são entradas. No CI, contratos executam npm test. A suíte browser completa é dividida em quatro
-runners isolados com --shard 1/4 até 4/4; cada arquivo pertence a um único grupo.
-O job Browser interfaces and games só passa após todos os grupos; nenhum deles
-é opcional para distribuir. --list --suite browser --shard 1/4 permite conferir
-a seleção. O reporter TAP no CI expõe falhas imediatamente, antes do resumo.
-Cenários nativos ficam no runner Windows com seus pré-requisitos. Regras, SFU,
-Remote PC no navegador, controle flutuante e DSP do navegador são verificados
-uma vez em checks/browser; o job nativo conserva XInput, SendInput, captura,
-PCM em segundo plano, gate de recepção sem skips, runtime e atividade nativa.
+vazia falha. tests/suites.json classifica os testes; tests/release.json seleciona
+os fluxos que bloqueiam uma entrega. Sem perfil, cada suíte continua completa.
+Use npm test -- --suite browser --profile release e o equivalente --suite desktop
+para reproduzir a seleção da pipeline; --list mostra os arquivos antes de rodar.
+O perfil preserva todos os contratos core e não transforma falhas em retries.
+
+Windows full app usa um runner Windows para instalar/compilar uma vez, conferir
+contratos, fluxos essenciais web/Electron, empacotar e aceitar o instalador.
+Depois o job de publicação verifica a entrega e envia ao Surge. extended_browser
+inclui a suíte browser inteira quando necessário, especialmente após mudanças
+nos jogos ou na cascata compartilhada. A seleção antiga por --shard foi retirada
+junto da matriz; não há outro comando de teste por cenário.
+
+Antes de enviar alterações de validação, execute a seleção afetada em pelo menos
+duas rodadas consecutivas locais com o Chromium do Playwright. Uma falha invalida
+a sequência: diagnostique/corrija e reinicie as rodadas, sem retry oculto. Use o
+mesmo build entre rodadas se os fontes não mudaram. Limites exclusivos de runner,
+como aceitação NSIS, permanecem explícitos; não instalar no computador do usuário.
 
 A suíte desktop inclui updater que importa dependências do Electron e remux que
 exige ffmpeg/ffprobe no PATH. Modelos de mídia sem esses recursos ficam em core.

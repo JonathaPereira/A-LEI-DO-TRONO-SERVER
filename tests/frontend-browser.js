@@ -286,12 +286,12 @@ test(
               const stream = await window.__nativeMic(constraints);
               if (constraints.audio) {
                 const track = stream.getAudioTracks()[0],
-                  settings = track.getSettings.bind(track),
-                  apply = track.applyConstraints.bind(track);
+                  settings = track.getSettings.bind(track);
                 let native = !!constraints.audio.noiseSuppression;
                 track.getSettings = () => ({ ...settings(), noiseSuppression: native });
+                // This oscillator has no hardware DSP. Simulate the declared native
+                // capability entirely, rather than applying it to a synthetic track.
                 track.applyConstraints = async (options) => {
-                  await apply(options);
                   if ('noiseSuppression' in options) native = !!options.noiseSuppression;
                 };
                 window.__rawMicrophone = track;
@@ -318,20 +318,7 @@ test(
           });
           const before = await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().id);
           await page.evaluate(() => window.TronoCallSettings.open('audio'));
-          // The cold local model/worklet has a 15s initialization budget.
-          // Keep the real pointer activation within that same processing budget.
-          try {
-            await page.locator('#noiseSuppressionBtn').click({ timeout: 20000 });
-          } catch (error) {
-            fs.mkdirSync(path.join(artifacts, 'frontend-reset/call-qa'), { recursive: true });
-            await page.screenshot({ path: path.join(artifacts, 'frontend-reset/call-qa/noise-activation.png') });
-            console.log('Noise activation state', await page.evaluate(() => ({
-              mode: window.TronoSocial.noiseState,
-              button: document.getElementById('noiseSuppressionBtn')?.outerHTML,
-              focused: document.hasFocus(),
-            })));
-            throw error;
-          }
+          await page.locator('#noiseSuppressionBtn').click();
           await expect
             .poll(() => page.evaluate(() => window.TronoSocial.noiseState.mode), { timeout: 12000 })
             .toBe('rnnoise');

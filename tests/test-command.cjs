@@ -20,20 +20,21 @@ test('test command selects only the requested public regression and rejects an e
 });
 
 
-test('parallel CI groups partition the complete browser suite without dropping or duplicating any test file', () => {
-  const complete=list('--suite','browser');
-  assert.equal(complete.status,0,complete.stderr);
-  const files=complete.stdout.trim().split(/\r?\n/),groups=[];
-  for(let index=1;index<=4;index++){
-    const group=list('--suite','browser','--shard',`${index}/4`);
-    assert.equal(group.status,0,group.stderr);
-    const selected=group.stdout.trim().split(/\r?\n/);
-    assert(selected.length>0 && selected.length<files.length);
-    assert.equal(list('--suite','browser','--shard',`${index}/4`).stdout,group.stdout);
-    groups.push(...selected);
+test('release profile selects the documented user journeys while keeping every core contract', () => {
+  const fs = require('node:fs');
+  const selection = list('--suite', 'browser', '--profile', 'release');
+  assert.equal(selection.status, 0, selection.stderr);
+  const release = JSON.parse(fs.readFileSync(path.join(root, 'tests/release.json'), 'utf8'));
+  const suites = require('./suites.json');
+  for (const suite of ['browser', 'desktop']) {
+    const result = list('--suite', suite, '--profile', 'release');
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.stdout.trim().split(/\r?\n/).sort(), [...release[suite]].sort());
+    assert.equal(new Set(release[suite]).size, release[suite].length);
+    assert(release[suite].length < suites[suite].length);
+    assert(release[suite].every(file => suites[suite].includes(file)));
   }
-  assert.equal(new Set(groups).size,groups.length);
-  assert.deepEqual(groups.sort(),files.sort());
-  for(const invalid of ['0/4','5/4','1/0','1/1.5','oops'])
-    assert.notEqual(list('--suite','browser','--shard',invalid).status,0,invalid);
+  assert.equal(list('--suite', 'core', '--profile', 'release').stdout, list('--suite', 'core').stdout);
+  assert.notEqual(list('--profile', 'unknown').status, 0);
+  assert.notEqual(list('--suite', 'browser', '--profile', 'release', '--filter', 'application-call-browser').status, 0);
 });

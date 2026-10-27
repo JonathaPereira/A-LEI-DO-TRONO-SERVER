@@ -69,6 +69,10 @@ test(
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
+      // These helpers issue controller commands rather than clicking visible UI.
+      // Account restoration finishes before the initial communication navigation.
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-livre');
       await require('./throne-local-lifecycle-controls.cjs').exerciseLocalLifecycle(page);
       await require('./court-fullscreen-controls.cjs').exerciseWebCourtFullscreen(page);
       await require('./throne-controls-browser-helper.cjs').exerciseThroneControls(page);

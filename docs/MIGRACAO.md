@@ -98,47 +98,72 @@ e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde
 
 ### Evidência vigente
 
-Logs e imagens ficam em artifacts/frontend-reset. A rodada remota atual é
-[40402075694](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40402075694),
-commit aa254a9. Core, quatro grupos browser, job Windows, executável empacotado e NSIS aprovados.
-A entrega foi bloqueada por falso positivo do filtro PowerShell (# skipped 0),
-corrigido com regressão que também exige rejeição de skips reais. Nova rodada
-necessária; a publicação permanece bloqueada até aprovação integral.
+Logs e imagens ficam em artifacts/frontend-reset. A rodada 40402075694 aprovou
+1.411 contratos, quatro grupos browser (164 aprovados, dois skips de codec),
+mídia Windows, executável e atualização NSIS real. A entrega foi bloqueada por
+falso positivo do filtro PowerShell (# skipped 0), reproduzido e corrigido.
+A rodada 40403634984 revelou instabilidade na simulação de fallback do RNNoise;
+os outros grupos passaram. Nenhuma delas publicou a versão 0.3.5.
 
-| Limite | Evidência concluída |
+A pedido do usuário, a entrega foi simplificada e estabilizada localmente antes
+de novo envio. As repetições encontraram erros de fixture que uma rodada isolada
+não mostrava: constraints de hardware aplicadas a um oscilador, prazo de resposta
+da UI confundido com continuidade PCM, teclado enviado antes do foco pelo clique
+nativo e comandos de jogo antes da navegação inicial. Foram corrigidos mantendo
+tracks, frames, energia/RTP, injeção real e partida completa.
+
+### Conferência local anterior ao envio
+
+| Limite | Resultado e evidência em artifacts/frontend-reset |
 | --- | --- |
-| Core, tipos e formatação | 1.411/1.411 no job Types, formatting and backend da rodada atual; tipos e formatação aprovados. |
-| Navegador completo | 164 aprovados, zero falhas e dois skips de codec externo nos quatro grupos da rodada atual; mais duas variações da ponte desktop aprovadas. |
-| Mídia e recursos Windows | Job Real Windows media and desktop aprovado na rodada atual: helpers MSVC, chamada/captura, sessão, atualização, XInput/SendInput, PCM em segundo plano, Cinzas e runtime. Loopback sem endpoint de saída foi pulado no runner. |
-| Compilação nativa local | Visual Studio Community 2026/SDK instalados pelo usuário; windows-native-local-installed.log aprovado. |
-| Aplicativo empacotado local | windows-packaged-local-approved.log aprovado; não comprova aceitação do instalador. |
-| Fixtures ajustadas | windows-call-arrival-budget.log: oito casos aprovados com dois núcleos, incluindo dez clientes e ciclo de vida da mídia. |
-| Pacote, instalação e Surge | Executável e atualização NSIS aprovados em 40402075694; publicação aguarda a correção do filtro de skips do workflow. Última versão pública confirmada: 0.3.4. |
+| Fontes e compilação | typecheck e format:check aprovados; local-release-build.log e local-release-native-build.log. |
+| Core completo | 1.412/1.412, zero skips, 45,8s em local-release-core-final.log. |
+| Perfil browser | Duas rodadas consecutivas: 42 aprovados, zero falhas e um skip externo de FFmpeg por rodada; local-release-v3-browser-1/2.log. Decode pelo Chromium aprovado. |
+| Perfil Electron | Duas rodadas consecutivas: 15/15, zero skips; local-release-v3-desktop-1/2.log. |
+| Repetição web + Electron | 252,0s e 252,4s por rodada completa; inclui partida, PCM de envio/recepção, foco e Remote PC. |
+| RNNoise que falhava | Três rodadas de seis casos, sem falhas/skips, com dois núcleos e o timeout de clique original; local-noise-final-1/2/3.log. |
+| Glue PowerShell real | 21 casos de sucesso, propagação de falhas, argumentos e skips; check-workflow-gates.cjs. |
+| Integridade do publicador | Sete casos, rejeitando ZIP/EXE/manifesto/versão adulterados e caminhos extras; check-publish-integrity.cjs. |
+| Executável e instalador | Smoke real aprovado em local-delivery-packaged.log; NSIS gerado em local-delivery-installer.log. Sem instalação no computador do usuário. |
+| Pacote distribuível | Site de 188,7 MiB, com um instalador de 135,5 MiB; local-delivery-downloads.log. ZIP/EXE/manifesto reais passaram pelo mesmo verificador do workflow em local-release-real/. |
 
-Capturas aceitas: artifacts/workspace/corte-*.png, final-polish-qa e call-qa.
-Os dois skips de codec externo decorrem de FFmpeg/FFprobe ausentes; decode,
-replay e seek pelo Chromium passaram. Loopback por aplicativo passou localmente
-em windows-native-local-final.log, sem alegar sucesso desse caso no CI.
-Navegador com ponte simulada não comprova Electron real. Câmeras, microfones e
-transmissões sintéticos não comprovam equipamento físico, qualidade em produção
-ou o serviço SFU de destino. Assinatura de distribuição não foi declarada aprovada.
+Este checkpoint registra a preparação local. A aprovação remota de cada entrega
+fica na [execução Windows full app](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/workflows/windows-app.yml)
+do mesmo commit e na release privada correspondente. A versão efetivamente
+publicada é a de [downloads/latest.yml](https://a-lei-do-trono.surge.sh/downloads/latest.yml).
+Confira esses resultados antes de repetir qualquer disparo; CI não é o loop de
+depuração local. A instalação/atualização NSIS real continua obrigatória no runner
+descartável, sem forjar esse ambiente neste host.
 
-## Distribuição automática e tempo de CI
+Loopback por aplicativo passou localmente; no runner sem saída de áudio, esse caso
+pode ser pulado com limitação explícita. FFmpeg/FFprobe externos não substituem a
+decodificação real do Chromium. Equipamento físico, driver de gamepad e SFU do
+ambiente de destino têm verificação própria.
 
-Windows full app divide os mesmos 56 arquivos browser em quatro grupos por
---shard. O dispatcher verifica partição completa sem duplicatas; a agregação
-obrigatória falha se qualquer grupo falhar. Core e browser não são repetidos no
-job nativo; permanecem os limites reais de captura, XInput, SendInput e PCM.
-O navegador serial anteriormente atingiu 15 minutos. Registrar o tempo completo
-apenas após pacote, instalação e publicação concluídos.
+## Entrega simplificada
 
-A entrega reutiliza os helpers validados na mesma execução, testa o executável
-empacotado, gera NSIS e verifica instalação/atualização com o app na bandeja em
-runner descartável. Só depois gera EXE/ZIP/hashes e passa a tag à publicação.
-O publicador exige o mesmo commit e os quatro jobs aprovados, verifica hashes e
-manifesto e confere o site publicado. Publish approved frontend pode repetir
-somente o envio, resolvendo a entrega aprovada sem seleção manual de tag.
-Operação: [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md).
+Windows full app usa um job de validação/empacotamento Windows e um de publicação,
+além da opção existente de atualizar somente instruções. Dependências, frontend e
+helpers são instalados/compilados uma vez. Foram retirados a matriz de quatro
+runners, sua agregação, --shard e a transferência de helpers entre máquinas.
+
+Todos os contratos core permanecem. tests/release.json seleciona 13 arquivos
+browser e nove desktop de fluxos essenciais: conta, chat/DM, perfil, arquivos,
+gravação, soundboard, partida da Corte, permissões, voz/captura, sessão criptografada,
+PCM de envio/recepção sob carga, controle remoto nativo, runtime e atualização.
+Recepção PCM não pode ser pulada no perfil de entrega. Executável empacotado e
+instalador têm aceitação posterior obrigatória. Não há retry automático.
+
+As suítes completas continuam no mesmo npm test. extended_browser inclui os 56
+arquivos browser quando jogos/cascata ou escopo amplo exigirem. Estresse de dez
+pessoas, combinações extensas de viewport, DSP especializado e drivers não
+bloqueiam toda publicação rotineira; declarar resultado/capacidade ao executá-los.
+
+O publicador exige o mesmo commit e a tentativa exata que validou e produziu os
+artefatos. A regressão rejeita aprovação emprestada de tentativa anterior.
+Confere hashes de ZIP/EXE, manifesto e versão publicada. A aprovação pertence ao
+job Validate and package Windows; mudar o nome exige atualizar o resolver e seu
+teste. Operação: [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md).
 
 ## Correções e limites das fixtures
 
@@ -155,9 +180,9 @@ Operação: [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md).
   Fontes sintéticas são 320×180/640×360 a 5 FPS; um falante e nove ouvintes são
   mutados pelos controles reais. Só a interface observada é renderizada. É
   regressão de comportamento/layout, não benchmark HD ou dez falantes simultâneos.
-- Entrega remota das telas aguarda até 15s, como a chegada de frames. A primeira
-  ativação fria do supressor por clique aguarda até 20s e captura diagnóstico se
-  falhar; asserções de processamento, tracks, cancelamento e descarte permanecem.
+- Entrega remota das telas aguarda até 15s, como a chegada de frames. A fixture
+  de redução nativa não aplica constraints reais a áudio sintético. Asserções de
+  processamento, tracks, cancelamento e descarte permanecem.
 
 ## Revisão e próximos passos
 
@@ -166,12 +191,11 @@ corrigiu clique do atualizador e cancelamento de persistência ao sair. Regress�
 conservam permissões tardias, mãos/decisões privadas da Corte e soundboard entre
 clientes. O teste de cache tolera ENOTEMPTY transitório sem mudar produção.
 
-1. Conferir os quatro grupos browser e limites nativos da rodada atual. Falha
-   concreta exige diagnóstico e regressão; não retirar cobertura para obter CI verde.
-2. Após aprovação, conferir pacote, aceitação NSIS e publicação automática. Confirmar
-   downloads/latest.yml, metadado da página e instalador da mesma entrega.
-3. Registrar resultado/tempo reais neste checkpoint e retirar pendências resolvidas.
-   Hardware físico e SFU no ambiente de destino continuam verificações próprias.
+Para a próxima entrega: reproduzir localmente a seleção afetada em pelo menos
+duas rodadas consecutivas, diagnosticar falhas antes de enviar e conferir os
+blocos reais do workflow. Depois executar uma vez no runner para aceitar NSIS e
+publicar. Confirmar manifesto, metadado e hashes da mesma entrega. Registrar
+novos resultados no documento dono, mantendo histórico detalhado no Git.
 
 A aparência geral do chat e maior diferenciação estética do Discord foram adiadas
 pelo usuário. Preservar os aceites; não reabrir esses escopos no fechamento.

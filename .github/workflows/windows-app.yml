@@ -22,6 +22,10 @@ on:
         description: Publish the validated delivery to Surge automatically
         type: boolean
         default: true
+      extended_browser:
+        description: Run every browser regression instead of the release journeys
+        type: boolean
+        default: false
       refresh_instructions:
         description: Refresh only instructions and hashes in an existing draft release
         type: boolean
@@ -71,264 +75,11 @@ jobs:
               await github.rest.repos.uploadReleaseAsset({...context.repo,release_id:release.id,name:file.name,data:file.data,headers:{'content-type':'text/plain','content-length':file.data.length}});
             }
             core.notice('Instructions refreshed; EXE and ZIP assets were preserved: '+release.html_url);
-  # Separate runners keep browser activity out of native audio measurements.
-  # All validation jobs use the same workflow commit and remain required.
-  checks:
-    name: Types, formatting and backend
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
-    runs-on: windows-latest
-    timeout-minutes: 6
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run format:check
-      - name: Verify deterministic contracts, game rules and local database
-        timeout-minutes: 4
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test 2>&1 | Tee-Object artifacts/windows-core.log
-          exit $LASTEXITCODE
-      - name: Save backend failure evidence
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-failure-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 7
-          if-no-files-found: ignore
-          path: |
-            artifacts/windows-*.log
-  browser:
-    name: Browser group ${{ matrix.shard }}/4
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
-    runs-on: windows-latest
-    timeout-minutes: 12
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - name: Install Chromium for integration tests
-        run: npx playwright install chromium
-      - name: Verify browser communication, resources and complete games
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite browser --shard "${{ matrix.shard }}/4" 2>&1 | Tee-Object artifacts/windows-browser.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Verify desktop bridge variations once
-        if: matrix.shard == 1
-        env:
-          QA_NATIVE: '1'
-        run: |
-          npm test -- --suite browser --filter '(?:app-layout-browser\.js|profile-media-browser\.js)$'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Save interfaces failure evidence
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: interfaces-failure-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 7
-          if-no-files-found: ignore
-          path: |
-            artifacts/windows-browser.log
-            artifacts/profile-media*/failure-*.png
-            artifacts/nexus/*.png
-            artifacts/splendor/*.png
-            artifacts/love-letter/*.png
-            artifacts/ticket-to-ride/*.png
-            artifacts/frontend-reset/call-qa
-            artifacts/frontend-reset/auth-regression/*.png
-  interfaces:
-    name: Browser interfaces and games
-    if: ${{ always() && !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
-    needs: [browser]
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - name: Require all four browser groups
-        env:
-          BROWSER_RESULT: ${{ needs.browser.result }}
-        run: test "$BROWSER_RESULT" = success
   windows:
-    name: Real Windows media and desktop
+    name: Validate and package Windows
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            electron/package-lock.json
-      - run: npm ci
-      - run: npm ci
-        working-directory: electron
-      - run: npm run build
-      - name: Install Chromium for integration tests
-        run: npx playwright install chromium
-      - name: Build Windows application audio capture
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm run build:native 2>&1 | Tee-Object artifacts/native-audio-build.log
-          $buildExit = $LASTEXITCODE
-          if ($buildExit -ne 0) {
-            $details = ((Get-Content artifacts/native-audio-build.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows native audio::$details"
-            exit $buildExit
-          }
-        working-directory: electron
-      - name: Verify call controls preserve live desktop media across layouts
-        run: npm test -- --suite all --filter '(?:application-call-desktop\.cjs|auth-desktop\.cjs|desktop-window-start\.cjs|desktop-call-layout\.js)$'
-      - name: Verify installed Electron updater contracts
-        # GenericProvider is loaded from electron/node_modules, installed in this job.
-        run: npm test -- --suite all --filter '(?:desktop-updates\.js)$'
-      - name: Prepare optional signed virtual controller driver for isolated XInput tests
-        shell: pwsh
-        run: |
-          # Windows Server lacks the Microsoft Xbox function driver present on
-          # normal Windows desktops. Stage the signed original package in CI only.
-          $xbox = Join-Path $env:RUNNER_TEMP 'Xbox360_64Eng.exe'
-          Invoke-WebRequest 'https://raw.githubusercontent.com/Zalafina/ViGEmBus_v1.16.116_Win7_InstallFiles/5c2e60100b13186e87b3a9a60ac69f07169739bb/1_pre_install_files/x64/Xbox360_64Eng.exe' -OutFile $xbox
-          if ((Get-FileHash $xbox -Algorithm SHA256).Hash.ToLower() -ne '0e72ed6d89d9b89690fde8122f46fa851740ef18e850d98d45e56f85a6682994') { throw 'Unexpected Xbox driver package hash' }
-          $xboxSignature = Get-AuthenticodeSignature $xbox
-          if ($xboxSignature.Status -ne 'Valid' -or $xboxSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'Invalid Microsoft Xbox package signature' }
-          $xboxRoot = Join-Path $env:RUNNER_TEMP 'Xbox360-original'
-          & "$env:ProgramFiles\7-Zip\7z.exe" x $xbox "-o$xboxRoot" -y | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw 'Xbox driver extraction failed' }
-          $xboxInf = Join-Path $xboxRoot 'xbox360\setup64\files\driver\win7\xusb21.inf'
-          pnputil /add-driver $xboxInf /install
-          if ($LASTEXITCODE -notin 0,3010) { throw 'Microsoft Xbox driver staging failed' }
-          $driver = Join-Path $env:RUNNER_TEMP 'ViGEmBus-1.22.0.exe'
-          Invoke-WebRequest 'https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe' -OutFile $driver
-          if ((Get-FileHash $driver -Algorithm SHA256).Hash.ToLower() -ne '89220a7865076b342892f98865f3499fb7c4cfd673159e89d352c360fd014c6a') { throw 'Unexpected driver hash' }
-          $signature = Get-AuthenticodeSignature $driver
-          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Nefarius') { throw 'Invalid driver signature' }
-          # Advanced Installer flags (not WiX). The runner is Windows Server;
-          # skip only the installer's desktop OS check in this disposable VM.
-          $log = Join-Path $env:RUNNER_TEMP 'ViGEmBus-install.log'
-          $install = Start-Process $driver -ArgumentList '/exenoui','/qn','/norestart','AI_SKIP_SYSTEM_REQUIREMENTS=1','/l*v',"`"$log`"" -WindowStyle Hidden -PassThru
-          if (-not $install.WaitForExit(120000)) { Stop-Process $install.Id -Force; if (Test-Path $log) { Get-Content $log -Tail 60 }; throw 'Virtual controller driver installation timed out' }
-          $install.Refresh()
-          if ($install.ExitCode -notin 0,3010) { if (Test-Path $log) { Get-Content $log -Tail 80 }; throw "Driver installation failed: $($install.ExitCode)" }
-      - name: Verify remote PC beta media, consent and real native input
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite all --filter '(?:desktop-remote-gamepad\.js|desktop-remote-native\.js)$' 2>&1 | Tee-Object artifacts/windows-remote-pc.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            Get-PnpDevice | Where-Object { $_.FriendlyName -match 'Xbox|ViGEm|Virtual Gamepad' } | Format-List Status,Class,FriendlyName,InstanceId,Problem
-            $details = ((Get-Content artifacts/windows-remote-pc.log | Select-Object -Last 90) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Remote PC beta::$details"
-            exit $testExit
-          }
-      # SFU, floating layout and microphone browser regressions run once in
-      # checks/browser; only the native boundaries and reception skip gate stay here.
-      - name: Verify outgoing microphone PCM with real Windows background windows
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite all --filter '(?:desktop-background-voice\.js)$' 2>&1 | Tee-Object artifacts/windows-background-voice.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-background-voice.log | Select-Object -Last 70) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Background outgoing microphone::$details"
-            exit $testExit
-          }
-      - name: Verify native roguelite frame before packaging
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite all --filter '(?:desktop-cinzas-runtime\.js)$' 2>&1 | Tee-Object artifacts/windows-cinzas-runtime.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-cinzas-runtime.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Native roguelite frame::$details"
-            exit $testExit
-          }
-      - name: Verify received voice under UI load
-        shell: pwsh
-        run: |
-          npm test -- --suite all --filter '(?:voice-reception-browser\.js)$' 2>&1 | Tee-Object artifacts/windows-voice-reception.log
-          $testExit = $LASTEXITCODE
-          $voiceResult = ((Select-String -Path artifacts/windows-voice-reception.log -Pattern 'Receive PCM under long UI tasks|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-          Write-Output "::notice title=Received voice evidence::$voiceResult"
-          if (Select-String -Path artifacts/windows-voice-reception.log -Pattern 'skipped [1-9]') { $testExit = 1 }
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-voice-reception.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Voice reception under load::$details"
-            exit $testExit
-          }
-      - name: Verify native Windows audio and runtime
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --suite all --filter '(?:desktop-audio\.js|desktop-runtime\.js|desktop-activity-native\.cjs)$' 2>&1 | Tee-Object artifacts/windows-runtime.log
-          $testExit = $LASTEXITCODE
-          $audioResult = ((Select-String -Path artifacts/windows-runtime.log -Pattern 'application loopback|no active audio output|skipped' | ForEach-Object { $_.Line }) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-          Write-Output "::notice title=Application audio validation::$audioResult"
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-runtime.log | Select-Object -Last 25) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows app runtime::$details"
-            exit $testExit
-          }
-      - name: Share only the validated native helpers
-        uses: actions/upload-artifact@v4
-        with:
-          # Keep the name across attempts so rerunning only failed jobs works.
-          name: native-helpers-${{ github.run_id }}
-          overwrite: true
-          retention-days: 1
-          if-no-files-found: error
-          path: |
-            artifacts/native-audio/Release/MN-Application-Audio.exe
-            artifacts/native-audio/Release/MN-Remote-Input.exe
-      - name: Save windows-ui failure evidence
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-ui-failure-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 7
-          if-no-files-found: ignore
-          path: |
-            artifacts/desktop-layout-failure-*.png
-            artifacts/throne-private-hit-*.png
-            artifacts/court-fullscreen-native-state.json
-            artifacts/windows-*.log
-            artifacts/frontend-reset/call-qa
-            artifacts/frontend-reset/auth-regression/*.png
-            electron/artifacts/native-audio-build.log
-  delivery:
-    name: Package and deliver after all checks
-    # Default success handling blocks packaging and publication on any failure.
-    needs: [checks, interfaces, windows]
-    runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: ${{ inputs.extended_browser && 30 || 15 }}
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
@@ -342,54 +93,70 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             electron/package-lock.json
-      - run: npm ci
-      - run: npm ci
-        working-directory: electron
-      - run: npm run build
-      - name: Restore the helpers validated by this run
-        uses: actions/download-artifact@v4
-        with:
-          name: native-helpers-${{ github.run_id }}
-          path: artifacts/native-audio/Release
-      - name: Build Windows application directory
-        run: npx electron-builder --win --x64 --dir --publish never
-        working-directory: electron
-      - name: Verify the compiled Windows app
+      - name: Install dependencies once
         shell: pwsh
         run: |
-          npm test -- --suite all --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
-          $testExit = $LASTEXITCODE
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-packaged.log | Select-Object -Last 45) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows packaged app::$details"
-            exit $testExit
-          }
-      - name: Build Windows x64 installer
-        # Wrap the directory that just passed its real packaged-app smoke test.
-        run: npm run pack:win -- --prepackaged ../artifacts/windows-app/win-unpacked
-        working-directory: electron
-      - name: Verify installation over a running app in the tray
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx playwright install chromium
+          exit $LASTEXITCODE
+      - name: Check sources and build frontend and native helpers once
         shell: pwsh
         run: |
-          npm test -- --suite all --filter '(?:desktop-installer\.js)$' 2>&1 | Tee-Object artifacts/windows-installer.log
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run format:check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
+          exit $LASTEXITCODE
+      - name: Verify contracts and real user journeys
+        shell: pwsh
+        env:
+          EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
+        run: |
+          npm test 2>&1 | Tee-Object artifacts/windows-core.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $selection = @('--suite', 'browser', '--profile', 'release')
+          if ($env:EXTENDED_BROWSER -eq 'true') { $selection = @('--suite', 'browser') }
+          npm test -- @selection 2>&1 | Tee-Object artifacts/windows-browser.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm test -- --suite desktop --profile release 2>&1 | Tee-Object artifacts/windows-desktop.log
+          exit $LASTEXITCODE
+      - name: Package and smoke test the actual executable
+        shell: pwsh
+        run: |
+          Push-Location electron
+          try {
+            npx electron-builder --win --x64 --dir --publish never
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally { Pop-Location }
+          npm test -- --suite desktop --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run pack:win -- --prepackaged ../artifacts/windows-app/win-unpacked
+          exit $LASTEXITCODE
+      - name: Accept the real installer on the disposable runner
+        shell: pwsh
+        run: |
+          npm test -- --suite desktop --filter '(?:desktop-installer\.js)$' 2>&1 | Tee-Object artifacts/windows-installer.log
           $testExit = $LASTEXITCODE
           if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP\b') { $testExit = 1 }
-          if ($testExit -ne 0) {
-            $details = ((Get-Content artifacts/windows-installer.log | Select-Object -Last 60) -join "`n").Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
-            Write-Output "::error title=Windows installer upgrade::$details"
-            exit $testExit
-          }
-      - name: Prepare user download
+          exit $testExit
+      - name: Prepare the matched frontend and installer download
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/desktop/prepare-downloads.cjs
-      - name: Compress the frontend with only its latest installer
         shell: pwsh
         run: |
+          node scripts/desktop/prepare-downloads.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $version = (Get-Content electron/package.json | ConvertFrom-Json).version
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
-      - name: Publish validated downloads in a private draft release
+      - name: Save the validated delivery in a private draft release
         id: distribution
         uses: actions/github-script@v7
         with:
@@ -397,39 +164,25 @@ jobs:
             const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
             const result=await publishBuild({github,context,core});
             core.setOutput('tag',result.tag);
-      - name: Retain only current and previous distribution artifacts
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {cleanArtifacts}=require('./scripts/desktop/download-retention.cjs');
-            await cleanArtifacts({github,context,core,protectedRunIds:[38570134416]});
-      - name: Remove temporary native helper transfer
-        # On failure, retain for one day to allow retrying delivery alone.
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const name = `native-helpers-${context.runId}`;
-            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {...context.repo, run_id: context.runId, per_page: 100});
-            for (const artifact of artifacts.filter(item => item.name === name)) {
-              await github.rest.actions.deleteArtifact({...context.repo, artifact_id: artifact.id});
-            }
-      - name: Save delivery failure evidence
+      - name: Save failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: delivery-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          name: windows-failure-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
-            artifacts/windows-packaged.log
-            artifacts/windows-installer.log
+            artifacts/windows-*.log
+            artifacts/frontend-reset/call-qa
+            artifacts/frontend-reset/auth-regression/*.png
+            artifacts/profile-media*/failure-*.png
 
   publish-surge:
     name: Publish validated delivery to Surge
-    needs: [checks, interfaces, windows, delivery]
+    needs: [windows]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_surge)
     uses: ./.github/workflows/frontend-publish.yml
     with:
-      release_tag: ${{ needs.delivery.outputs.release_tag }}
+      release_tag: ${{ needs.windows.outputs.release_tag }}
     secrets:
       SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}

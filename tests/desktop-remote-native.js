@@ -126,6 +126,8 @@ test(
       });
       const target = await opened;
       await expect(target.locator('#field')).toBeVisible();
+      await target.bringToFront();
+      await expect.poll(() => app.evaluate(() => global.__remoteTarget.isFocused())).toBe(true);
       const r = await target.locator('#field').boundingBox(),
         coords = await app.evaluate((_, r) => {
           const b = global.__remoteTarget.getContentBounds(),
@@ -141,9 +143,15 @@ test(
         send({ type: 'move', ...coords });
         send({ type: 'button', button: 0, down: true });
         send({ type: 'button', button: 0, down: false });
+      }, coords);
+      // Windows dispatches activation from the native mouse click asynchronously.
+      // Confirm it reached the real target before injecting keyboard events.
+      await expect(target.locator('#field')).toBeFocused();
+      await page.evaluate(() => {
+        const send = (e) => window.TronoDesktop.remoteInput(window.__nativeGrant.token, e);
         send({ type: 'key', code: 'KeyA', down: true });
         send({ type: 'key', code: 'KeyA', down: false });
-      }, coords);
+      });
       await expect(target.locator('#field')).toHaveValue('a');
       await page.evaluate(() =>
         window.TronoDesktop.remoteInput(window.__nativeGrant.token, {
