@@ -1,4 +1,4 @@
-name: Recheck the publicly shared Atalaia web reference
+name: Read the playable Atalaia 0.6.1 reference
 on:
   push:
     branches: [codex/desktop-atalaia-visual-refresh]
@@ -14,8 +14,12 @@ jobs:
       - name: Read the user supplied public reference
         shell: bash
         run: |
+          git fetch origin codex/atalaia-reference-cache
+          git checkout -B codex/atalaia-reference-cache FETCH_HEAD
           mkdir -p artifacts/reference-cache
           curl --location --silent --show-error --max-time 45 --max-filesize 15000000 --output artifacts/reference-cache/index.html --write-out '%{http_code}\n' https://bastiao-eterno-demo.richlotus33.chatgpt.site/ > artifacts/reference-cache/status.txt || true
-          git add -f artifacts/reference-cache/index.html artifacts/reference-cache/status.txt
+          curl --location --fail --silent --show-error --max-time 45 --max-filesize 15000000 https://bastiao-eterno-demo.richlotus33.chatgpt.site/app.mjs?v=0.6.1 -o artifacts/reference-cache/app.mjs
+          curl --location --fail --silent --show-error --max-time 45 --max-filesize 15000000 https://bastiao-eterno-demo.richlotus33.chatgpt.site/style.css?v=0.6.1 -o artifacts/reference-cache/style.css
+          git add -f artifacts/reference-cache
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Capture user supplied web reference for Atalaia comparison'
           git push origin HEAD:refs/heads/codex/atalaia-reference-cache
