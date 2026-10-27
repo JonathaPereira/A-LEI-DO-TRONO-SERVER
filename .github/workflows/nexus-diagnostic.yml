@@ -15,7 +15,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import urllib.request, urllib.error, re, json
-          for url in ['https://semchakra10.itch.io/nexus-mn', 'https://itch.io/embed-upload/19926871?color=333333']:
+          for url in ['https://semchakra10.itch.io/nexus-mn', 'https://itch.io/embed-upload/19926871?color=333333', 'https://html-classic.itch.zone/html/19926871/index.html?v=1792595608']:
               try:
                   response=urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=40)
               except urllib.error.HTTPError as error:
@@ -24,7 +24,7 @@ jobs:
               sources=re.findall(r'(?:src|data-iframe)=["\']([^"\']+)',html)
               sources=[s for s in sources if 'embed-upload' in s or 'html-classic.itch.zone' in s]
               title=re.search(r'<title>(.*?)</title>',html,re.S)
-              result={'url':url,'status':response.status,'final_url':response.url,'title':title.group(1) if title else '', 'embeds':sources, 'body_start':re.sub('<[^>]+>',' ',html)[:150]}
+              result={'url':url,'status':response.status,'final_url':response.url,'title':title.group(1) if title else '', 'embeds':sources, 'body_start':re.sub('<[^>]+>',' ',html)[:150], 'headers':{k:v for k,v in response.headers.items() if k.lower() in ['content-security-policy','x-frame-options','cross-origin-embedder-policy','cross-origin-opener-policy']}, 'engine_flags':re.findall(r'GODOT_(?:THREADS|SIMD)_ENABLED[^;]*',html), 'config':re.findall(r'const GODOT_CONFIG\s*=\s*(.*?);',html)}
               message=json.dumps(result).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
               print('::notice title=Nexus public HTTP::'+message)
           PY
