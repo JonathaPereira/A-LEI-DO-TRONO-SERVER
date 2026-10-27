@@ -1,0 +1,52 @@
+name: Downloadable web frontend
+on:
+  push:
+    branches: [codex/automatic-frontend-publication]
+    paths: [.github/workflows/frontend-web-package.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Validated Love Letter source requested for this download.
+          ref: e9ccdd6ae37c633b7050922ba1728013142594b1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package the compiled web frontend
+        shell: bash
+        run: |
+          mkdir -p artifacts/web-download
+          python3 <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib
+          root=Path('artifacts/web-download'); name='MN-Trono-Frontend-Web-Love-Letter.zip'
+          guide='Frontend web compilado do Love Letter (e9ccdd6, PR #51).\nPublique a pasta frontend/. Este ZIP nao inclui instalador Windows nem latest.yml.\nPreserve downloads/ da entrega Windows aprovada ao substituir o site completo.\n'
+          with ZipFile(root/name,'w',ZIP_DEFLATED) as z:
+              for p in sorted(Path('out').rglob('*')):
+                  if p.is_file(): z.write(p,'frontend/'+p.relative_to('out').as_posix())
+              z.writestr('LEIA-ME.txt',guide)
+          with ZipFile(root/name) as z:
+              assert z.testzip() is None
+              assert 'frontend/index.html' in z.namelist()
+          digest=hashlib.file_digest((root/name).open('rb'),'sha256').hexdigest()
+          (root/(name+'.sha256')).write_text(digest+'  '+name+'\n')
+          (root/'release-notes.txt').write_text(guide+'\nBaixe o ZIP nos Assets abaixo.\n\nSHA-256: '+digest+'\n')
+          PY
+      - name: Attach the ZIP and checksum to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release upload web-love-letter-e9ccdd6 artifacts/web-download/*.zip artifacts/web-download/*.sha256 --clobber
+          gh release edit web-love-letter-e9ccdd6 --notes-file artifacts/web-download/release-notes.txt

@@ -16,21 +16,20 @@ distribuição.
 
 ## Publicar pelo GitHub
 
-1. Suba a contribuição para sua própria branch e aguarde o workflow
-   **Windows full app** terminar com sucesso. Uma alteração apenas local não gera
-   um pacote remoto. Para a entrega atual, o desktop deve declarar **0.3.4**.
-2. Na execução aprovada, abra o resumo **Downloads Windows 0.3.4** e copie a tag
-   exata da release privada: `desktop-v0.3.4-run-<id>-attempt-<tentativa>`.
-3. Em **Actions → Publish approved frontend → Run workflow**, selecione a branch
-   cujo código corresponde à entrega aprovada e cole a tag em `release_tag`.
-   Se a contribuição já estiver integrada e corresponder ao pacote, use `main`.
-   O repositório precisa ter o secret `SURGE_TOKEN` configurado.
-4. Execute e confira as etapas **Publish the verified directory to Surge** e
-   **Verify published version**. Esse workflow reutiliza os pacotes aprovados e
-   verifica seus hashes, sem repetir a suíte Windows nem gerar outro instalador.
-5. Confira `version: 0.3.4` em
-   <https://a-lei-do-trono.surge.sh/downloads/latest.yml>. No aplicativo instalado,
-   busque a atualização pelo rodapé e reinicie quando o download estiver pronto.
+Após integrar uma atualização na `main`, o workflow **Windows full app** executa
+as verificações e gera os pacotes. Ao terminar com sucesso, **Publish approved
+frontend** publica automaticamente no Surge a entrega daquela execução e tentativa,
+incluindo o instalador atual e `latest.yml`. O secret `SURGE_TOKEN` deve estar
+configurado; sua ausência faz a publicação falhar de forma explícita.
+
+Branches de contribuição, builds com falha e execuções substituídas por commits
+mais recentes na `main` não são publicados automaticamente. A publicação conserva
+a verificação dos hashes e confere o manifesto e o HTML servidos após o envio.
+Não é necessário iniciar o workflow manualmente nas atualizações seguintes.
+
+Para reenviar uma entrega aprovada, use **Actions → Publish approved frontend →
+Run workflow**: selecione o código correspondente e informe a tag exata
+`desktop-v<versão>-run-<id>-attempt-<tentativa>` em `release_tag`.
 
 Para publicação manual, baixe `MN-Trono-Frontend-0.3.4.zip` da mesma release,
 extraia numa pasta nova e abra um terminal dentro de `frontend/`:

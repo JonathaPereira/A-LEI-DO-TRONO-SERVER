@@ -1,8 +1,9 @@
 name: Publish approved frontend
 on:
-  push:
-    branches: [codex/desktop-ticket-to-ride-art]
-    paths: [.github/workflows/frontend-publish.yml]
+  workflow_run:
+    workflows: [Windows full app]
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
     inputs:
       release_tag:
@@ -18,11 +19,17 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Check existing Surge credential without exposing it
@@ -34,9 +41,8 @@ jobs:
           if [ -n "$SURGE_TOKEN" ]; then
             echo 'configured=true' >> "$GITHUB_OUTPUT"
           else
-            echo 'configured=false' >> "$GITHUB_OUTPUT"
-            echo '::notice::Surge publication was not executed: repository secret SURGE_TOKEN is not configured.'
-            echo 'Frontend publication was not executed. Add the repository secret SURGE_TOKEN, then run this workflow with an approved desktop build tag.' >> "$GITHUB_STEP_SUMMARY"
+            echo '::error::Repository secret SURGE_TOKEN is required for frontend publication.'
+            exit 1
           fi
       - uses: actions/setup-node@v4
         if: steps.auth.outputs.configured == 'true'
@@ -48,14 +54,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_TAG: ${{ inputs.release_tag }}
+          AUTOMATIC_SOURCE: ${{ github.event_name == 'workflow_run' && toJSON(github.event.workflow_run) || '' }}
         shell: bash
         run: |
           node <<'NODE'
           const fs=require('node:fs'),{execFileSync}=require('node:child_process');
-          const {version}=require('./electron/package.json'),requested=process.env.REQUESTED_TAG;
+          const {version}=require('./electron/package.json');
+          let requested=process.env.REQUESTED_TAG;
           const api=path=>JSON.parse(execFileSync('gh',['api',path],{encoding:'utf8',maxBuffer:4*1024*1024}));
           if(requested&&!/^desktop-v\d+\.\d+\.\d+-run-\d+(?:-attempt-\d+)?$/.test(requested))throw Error('Invalid build tag.');
           (async()=>{
+            if(process.env.AUTOMATIC_SOURCE){
+              const source=JSON.parse(process.env.AUTOMATIC_SOURCE);
+              if(source.conclusion!=='success'||source.event!=='push'||source.head_branch!=='main'||source.head_repository?.full_name!==process.env.GITHUB_REPOSITORY||!Number.isSafeInteger(source.id)||!Number.isSafeInteger(source.run_attempt)||!/^[a-f0-9]{40}$/.test(source.head_sha))throw Error('Automatic publication requires a successful trusted main build.');
+              if(api(`repos/${process.env.GITHUB_REPOSITORY}/branches/main`).commit.sha!==source.head_sha)throw Error('This build was superseded on main.');
+              requested=`desktop-v${version}-run-${source.id}-attempt-${source.run_attempt}`;
+            }
             for(let attempt=0;attempt<45;attempt++){
               const releases=api(`repos/${process.env.GITHUB_REPOSITORY}/releases?per_page=100`);
               for(const release of releases){
@@ -115,7 +129,14 @@ jobs:
         if: steps.auth.outputs.configured == 'true'
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
-        run: npx --yes surge@0.46.0 artifacts/surge-delivery/verified/frontend a-lei-do-trono.surge.sh
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ -n "$SOURCE_SHA" ]; then
+            current=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq .commit.sha)
+            test "$current" = "$SOURCE_SHA" || { echo 'Build superseded before publication.'; exit 1; }
+          fi
+          npx --yes surge@0.46.0 artifacts/surge-delivery/verified/frontend a-lei-do-trono.surge.sh
       - name: Verify published version
         if: steps.auth.outputs.configured == 'true'
         env:
@@ -124,4 +145,7 @@ jobs:
         run: |
           curl --fail --silent --show-error --retry 3 https://a-lei-do-trono.surge.sh/downloads/latest.yml -o artifacts/surge-delivery/published-latest.yml
           grep -Fx "version: $APP_VERSION" artifacts/surge-delivery/published-latest.yml
+          cmp artifacts/surge-delivery/verified/frontend/downloads/latest.yml artifacts/surge-delivery/published-latest.yml
+          curl --fail --silent --show-error --retry 3 https://a-lei-do-trono.surge.sh/ -o artifacts/surge-delivery/published-index.html
+          cmp artifacts/surge-delivery/verified/frontend/index.html artifacts/surge-delivery/published-index.html
           echo "Published and verified frontend $APP_VERSION at https://a-lei-do-trono.surge.sh/." >> "$GITHUB_STEP_SUMMARY"
