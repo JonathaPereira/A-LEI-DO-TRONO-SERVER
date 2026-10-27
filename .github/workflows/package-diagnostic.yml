@@ -1,0 +1,30 @@
+name: Inspect packaged Windows failure
+on:
+  push:
+    branches: [codex/games-polish-integration]
+    paths: [.github/workflows/package-diagnostic.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 40519804723
+          name: windows-failure-40519804723-1
+          path: evidence
+      - name: Report the packaged test failure
+        run: |
+          python3 - <<'PY'
+          import pathlib,re
+          for path in pathlib.Path('evidence').rglob('windows-packaged.log'):
+              text='\n'.join(path.read_text(encoding='utf-8-sig',errors='replace').splitlines()[-95:])
+              text=re.sub(r'(?i)(access_token|refresh_token|authorization)[^\n]*', '[credential omitted]',text)
+              print('::notice title=Packaged Windows failure::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PY
