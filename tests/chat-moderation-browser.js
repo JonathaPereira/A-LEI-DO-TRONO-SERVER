@@ -65,15 +65,15 @@ test(
         await page.goto(origin);
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
-        await page.locator('#openVoicePortalBtn').click();
+        await page.evaluate(() => window.TronoPortal.openVoice());
         await expect
           .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
           .toBe('chat-livre');
         if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-          await page.locator('#joinVoiceBtn').click();
+          await page.locator('[data-voice-channel=chat-livre]').click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
         await page.evaluate(() => {
-          window.TronoSocial.toggleTextChat(true);
+          window.TronoCallNavigation.showChat(true);
           window.__mic = window.TronoSocial.getLocalAudioTrack();
           window.__primary = window.TronoNetwork.primaryRoom;
         });
@@ -81,52 +81,66 @@ test(
       }
       const a = await client(owner),
         b = await client(member);
-      await expect(a.locator('#clearChatHistoryBtn')).toBeVisible();
-      await expect(b.locator('#clearChatHistoryBtn')).toBeHidden();
+      await expect(a.getByRole('button', { name: 'Limpar histórico' })).toBeVisible();
+      await expect(b.getByRole('button', { name: 'Limpar histórico' })).toBeHidden();
       await a.evaluate(() => window.TronoNetwork.sendChat('Mensagem com data completa'));
-      await expect(b.locator('#courtChatMessages')).toContainText('Mensagem com data completa');
+      await expect(b.locator('#chatOnlyScreen [role=log]')).toContainText(
+        'Mensagem com data completa',
+      );
       const row = a
-        .locator('#courtChatMessages .court-chat-msg')
+        .locator('#chatOnlyScreen [data-message-id]')
         .filter({ hasText: 'Mensagem com data completa' });
       await expect(row.locator('time')).toHaveText(/\d{2}\/\d{2}\/\d{4},? \d{2}:\d{2}/);
       assert.match(await row.locator('time').getAttribute('datetime'), /^\d{4}-\d{2}-\d{2}T/);
-      await expect(row.locator('.chat-message-delete')).toBeVisible();
-      assert.equal(await b.locator('.chat-message-delete').count(), 0);
-      await row.locator('.chat-message-delete').click();
-      await expect(a.locator('#chatModerationDialog')).toBeVisible();
-      await a.locator('#chatModerationCancel').click();
+      await expect(row.getByRole('button', { name: /Apagar mensagem de/ })).toBeVisible();
+      assert.equal(await b.getByRole('button', { name: /Apagar mensagem de/ }).count(), 0);
+      await row.getByRole('button', { name: /Apagar mensagem de/ }).click();
+      await expect(
+        a.getByRole('dialog', { name: /Apagar esta mensagem|Limpar o histórico/ }),
+      ).toBeVisible();
+      await expect(a.locator('dialog:modal')).toHaveCount(1);
+      await a.getByRole('button', { name: 'Cancelar', exact: true }).click();
       await expect(row).toBeVisible();
-      await row.locator('.chat-message-delete').click();
-      await a.locator('#chatModerationConfirm').click();
+      await row.getByRole('button', { name: /Apagar mensagem de/ }).click();
+      await a.getByRole('button', { name: 'Apagar', exact: true }).click();
       await expect(row).toHaveCount(0);
-      await expect(b.locator('#courtChatMessages .court-chat-msg')).toHaveCount(0);
+      await expect(b.locator('#chatOnlyScreen [data-message-id]')).toHaveCount(0);
       await b.evaluate(() => window.TronoNetwork.sendChat('Limpar para todos'));
-      await expect(a.locator('#courtChatMessages')).toContainText('Limpar para todos');
-      await a.locator('#clearChatHistoryBtn').click();
-      await expect(a.locator('#chatModerationTitle')).toHaveText('Apagar o histórico do canal?');
-      await a.locator('#chatModerationConfirm').click();
-      await expect(a.locator('#courtChatMessages .court-chat-msg')).toHaveCount(0);
-      await expect(b.locator('#courtChatMessages .court-chat-msg')).toHaveCount(0);
+      await expect(a.locator('#chatOnlyScreen [role=log]')).toContainText('Limpar para todos');
+      await a.getByRole('button', { name: 'Limpar histórico' }).click();
+      await expect(a.getByRole('heading', { name: 'Limpar o histórico do canal?' })).toHaveText(
+        'Limpar o histórico do canal?',
+      );
+      await a.getByRole('button', { name: 'Apagar', exact: true }).click();
+      await expect(a.locator('#chatOnlyScreen [data-message-id]')).toHaveCount(0);
+      await expect(b.locator('#chatOnlyScreen [data-message-id]')).toHaveCount(0);
       await new Promise((resolve) => setTimeout(resolve, 500));
       await b.evaluate(() => window.TronoNetwork.sendChat('Confirmação vinculada ao canal'));
       const scoped = a
-        .locator('#courtChatMessages .court-chat-msg')
+        .locator('#chatOnlyScreen [data-message-id]')
         .filter({ hasText: 'Confirmação vinculada ao canal' });
       await expect(scoped).toBeVisible();
-      await scoped.locator('.chat-message-delete').click();
-      await expect(a.locator('#chatModerationDialog')).toBeVisible();
+      await scoped.getByRole('button', { name: /Apagar mensagem de/ }).click();
+      await expect(
+        a.getByRole('dialog', { name: /Apagar esta mensagem|Limpar o histórico/ }),
+      ).toBeVisible();
+      await expect(a.locator('dialog:modal')).toHaveCount(1);
       await a.evaluate(() => window.TronoNetwork.joinTextChannel('chat-conversa'));
-      await expect(a.locator('#chatModerationDialog')).not.toBeVisible();
+      await expect(
+        a.getByRole('dialog', { name: /Apagar esta mensagem|Limpar o histórico/ }),
+      ).not.toBeVisible();
       await expect
         .poll(() => a.evaluate(() => window.TronoNetwork.currentRoom))
         .toBe('chat-conversa');
       await a.evaluate(() => window.TronoNetwork.joinTextChannel('chat-livre'));
       // A transport-only room change does not open the drawer; use the visible chat action.
-      await a.getByRole('button', { name: 'Abrir chat de Geral', exact: true }).click();
+      await a.locator('[data-channel=chat-livre]').click();
       await expect(scoped).toBeVisible();
-      await expect(b.locator('#courtChatMessages')).toContainText('Confirmação vinculada ao canal');
-      await scoped.locator('.chat-message-delete').click();
-      await a.locator('#chatModerationConfirm').click();
+      await expect(b.locator('#chatOnlyScreen [role=log]')).toContainText(
+        'Confirmação vinculada ao canal',
+      );
+      await scoped.getByRole('button', { name: /Apagar mensagem de/ }).click();
+      await a.getByRole('button', { name: 'Apagar', exact: true }).click();
       await expect(scoped).toHaveCount(0);
       for (const page of [a, b])
         assert(
@@ -146,7 +160,7 @@ test(
       await expect
         .poll(() => a.evaluate(() => window.TronoNetwork?.currentRoom))
         .toBe('chat-livre');
-      await expect(a.locator('#courtChatMessages .court-chat-msg')).toHaveCount(0);
+      await expect(a.locator('#chatOnlyScreen [data-message-id]')).toHaveCount(0);
       assert.deepEqual(errors, []);
     } finally {
       await browser?.close();

@@ -158,14 +158,19 @@ test(
           await target.waitForFunction(() => window.TronoAuth?.ready);
           await target.evaluate(() => window.TronoAuth.ready);
         }
-        await web.locator('#communityToggle').click();
-        await page.locator('#voiceSettingsBtn').click();
+        await expect(web.getByRole('complementary', { name: 'Membros online' })).toBeVisible();
+        await page.evaluate(() => window.TronoCallSettings.open('activity'));
         await page.locator('[data-settings-tab="activity"]').click();
         const enabled = page.locator('#desktopActivityEnabled');
         const app = page.locator('#desktopActivityApp');
         const name = page.locator('#desktopActivityName');
         const status = page.locator('#desktopActivityStatus');
-        const presence = web.locator('.community-game-activity');
+        const presence = web
+          .getByRole('complementary', { name: 'Membros online' })
+          .getByRole('button')
+          .filter({
+            hasText: /Counter-Strike 2|Meu jogo|Jogo escolhido|Resposta antiga|Evento sem conta/,
+          });
 
         await t.test(
           'a native event supersedes the pending initial read and starting remains idempotent',
@@ -235,8 +240,9 @@ test(
                 ),
               };
             });
-            for (const layout of ['discord', 'original', 'discord', 'original']) {
-              await page.evaluate((value) => window.TronoAppLayout.apply(value), layout);
+            for (const topic of ['audio', 'activity', 'notifications', 'activity']) {
+              await page.evaluate((value) => window.TronoCallSettings.select(value), topic);
+              await page.evaluate(() => window.TronoCallSettings.select('activity'));
               await expect(enabled).toBeChecked();
               await expect(name).toHaveValue('Jogo escolhido');
               assert.equal(
@@ -271,8 +277,8 @@ test(
             .poll(() => page.evaluate(() => window.__activityFixture.pending.length))
             .toBe(1);
           await page.locator('[data-settings-tab="account"]').click();
-          await page.locator('#accountLogoutBtn').click();
-          await expect(page.locator('#authDialog')).toBeVisible();
+          await page.evaluate(() => window.TronoAuth.logout());
+          await expect(page.locator('#portalScreen')).toBeVisible();
           await expect(presence).toHaveCount(0);
           await page.evaluate(() => {
             const native = window.__activityFixture;

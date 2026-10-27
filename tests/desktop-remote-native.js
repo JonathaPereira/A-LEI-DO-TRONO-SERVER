@@ -1,17 +1,216 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs/promises'),os=require('node:os'),{_electron,expect}=require('@playwright/test'),{closeTestApp,killTestApp}=require('./desktop-test-close');
-test('Windows PC beta captures a real monitor, asks native consent and injects/revokes real mouse and keyboard',{timeout:90000,skip:process.platform!=='win32'&&'Requires Windows SendInput and a visible desktop'},async t=>{
- const root=path.resolve(__dirname,'..'),directory=await fs.mkdtemp(path.join(os.tmpdir(),'mn-remote-native-'));let app,finished=false,phase='launch';t.signal.addEventListener('abort',()=>{if(!finished){console.error('Remote native stalled at '+phase);killTestApp(app);}},{once:true});
- try{
-  app=await _electron.launch({executablePath:require('../electron/node_modules/electron'),args:[path.join(root,'electron'),'--user-data-dir='+directory],timeout:30000});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForLoadState('load');await page.waitForFunction(()=>window.TronoAuth?.ready);await page.evaluate(()=>window.TronoAuth.ready);if(await page.locator('#authDialog').isVisible())await page.locator('#authCloseBtn').click();assert.equal((await page.evaluate(()=>window.TronoDesktop.remoteCapability())).host,true);
-  await app.evaluate(({dialog})=>{global.__remoteDecision=1;global.__remotePrompts=[];dialog.showMessageBox=async(_window,options)=>{global.__remotePrompts.push(options.message);return {response:global.__remoteDecision};};});
-  phase='monitor permission and capture';await page.evaluate(()=>{const button=document.createElement('button');button.id='nativeRemoteCapture';button.style.cssText='position:fixed;left:50px;top:50px;z-index:999999';button.textContent='Native test capture';button.onclick=async()=>{try{const permit=await window.TronoDesktop.prepareRemoteCapture('Native test');if(!permit.allowed)throw Error('Capture declined');window.__nativeStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});}catch(e){window.__nativeError=e.message;}};document.body.append(button);});await page.locator('#nativeRemoteCapture').click();await expect(page.locator('.desktop-capture-dialog')).toBeVisible();await page.locator('.desktop-capture-sources button').first().click();await page.locator('#desktopCaptureConfirm').click();await expect.poll(()=>page.evaluate(()=>window.__nativeError||window.__nativeStream?.getVideoTracks()[0]?.readyState)).toBe('live');
-  assert.equal(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+Shift+F12')),true);
-  phase='native control consent denied';await app.evaluate(()=>global.__remoteDecision=0);assert.equal((await page.evaluate(()=>window.TronoDesktop.allowRemoteControl())).allowed,false);
-  phase='native control consent allowed';await app.evaluate(()=>global.__remoteDecision=1);await page.evaluate(async()=>{window.__nativeGrant=await window.TronoDesktop.allowRemoteControl();window.__nativePulse=setInterval(()=>window.TronoDesktop.remoteInput(window.__nativeGrant.token,{type:'pulse'}),1000);});assert.equal(await page.evaluate(()=>window.__nativeGrant.allowed),true);
-  const opened=app.waitForEvent('window');await app.evaluate(async({BrowserWindow,screen})=>{global.__remoteTarget=new BrowserWindow({x:90,y:90,width:640,height:400,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true}});await global.__remoteTarget.loadURL('data:text/html,'+encodeURIComponent('<!doctype html><input id="field" style="margin:60px;width:300px;height:50px"><div id="released"></div><script>document.onkeyup=e=>document.getElementById("released").textContent=e.code</script>'));global.__remoteTarget.show();global.__remoteTarget.focus();global.__remoteDisplay=screen.getDisplayMatching(global.__remoteTarget.getBounds());});const target=await opened;await expect(target.locator('#field')).toBeVisible();const r=await target.locator('#field').boundingBox(),coords=await app.evaluate((_,r)=>{const b=global.__remoteTarget.getContentBounds(),d=global.__remoteDisplay.bounds;return {x:(b.x+r.x+r.width/2-d.x)/(d.width-1),y:(b.y+r.y+r.height/2-d.y)/(d.height-1)};},r);
-  phase='real native input';await page.evaluate(coords=>{const send=e=>window.TronoDesktop.remoteInput(window.__nativeGrant.token,e);send({type:'move',...coords});send({type:'button',button:0,down:true});send({type:'button',button:0,down:false});send({type:'key',code:'KeyA',down:true});send({type:'key',code:'KeyA',down:false});},coords);await expect(target.locator('#field')).toHaveValue('a');
-  await page.evaluate(()=>window.TronoDesktop.remoteInput(window.__nativeGrant.token,{type:'key',code:'KeyX',down:true}));await expect(target.locator('#field')).toHaveValue('ax');phase='revoke releases held keys';await page.evaluate(()=>window.TronoDesktop.revokeRemoteControl());await expect(target.locator('#released')).toHaveText('KeyX');await page.evaluate(()=>window.TronoDesktop.remoteInput(window.__nativeGrant.token,{type:'key',code:'KeyZ',down:true}));await new Promise(r=>setTimeout(r,100));await expect(target.locator('#field')).toHaveValue('ax');
-  phase='stop session';await page.evaluate(async()=>{clearInterval(window.__nativePulse);await window.TronoDesktop.stopRemote();window.__nativeStream.getTracks().forEach(t=>t.stop());});assert.equal(await app.evaluate(({globalShortcut})=>globalShortcut.isRegistered('Control+Alt+Shift+F12')),false);assert.equal(await app.evaluate(()=>global.__remotePrompts.filter(s=>s.includes('quer controlar')).length),2);phase='reload after remote session';await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('#desktopRail')).toBeVisible();
- }catch(err){console.error('Remote native phase: '+phase);throw err;}finally{finished=true;if(app){const windows=await app.windows();for(const p of windows)await p.evaluate(()=>{window.__nativeStream?.getTracks().forEach(t=>t.stop());}).catch(()=>{});await app.evaluate(()=>global.__remoteTarget?.destroy()).catch(()=>{});await closeTestApp(app);}await fs.rm(directory,{recursive:true,force:true,maxRetries:8,retryDelay:300});}
-});
+const { test } = require('node:test'),
+  assert = require('node:assert/strict'),
+  path = require('node:path'),
+  fs = require('node:fs/promises'),
+  os = require('node:os'),
+  { _electron, expect } = require('@playwright/test'),
+  { closeTestApp, killTestApp } = require('./desktop-test-close');
+test(
+  'Windows PC beta captures a real monitor, asks native consent and injects/revokes real mouse and keyboard',
+  {
+    timeout: 90000,
+    skip: process.platform !== 'win32' && 'Requires Windows SendInput and a visible desktop',
+  },
+  async (t) => {
+    const root = path.resolve(__dirname, '..'),
+      directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-remote-native-'));
+    let app,
+      finished = false,
+      phase = 'launch';
+    t.signal.addEventListener(
+      'abort',
+      () => {
+        if (!finished) {
+          console.error('Remote native stalled at ' + phase);
+          killTestApp(app);
+        }
+      },
+      { once: true },
+    );
+    try {
+      app = await _electron.launch({
+        executablePath: require('../electron/node_modules/electron'),
+        args: [path.join(root, 'electron'), '--user-data-dir=' + directory],
+        timeout: 30000,
+      });
+      const page = await app.firstWindow();
+      page.setDefaultTimeout(15000);
+      await page.waitForLoadState('load');
+      await page.waitForFunction(() => window.TronoAuth?.ready);
+      await page.evaluate(() => window.TronoAuth.ready);
+      if (await page.locator('#authDialog').isVisible())
+        await page.locator('#authCloseBtn').click();
+      assert.equal((await page.evaluate(() => window.TronoDesktop.remoteCapability())).host, true);
+      await app.evaluate(({ dialog }) => {
+        global.__remoteDecision = 1;
+        global.__remotePrompts = [];
+        dialog.showMessageBox = async (_window, options) => {
+          global.__remotePrompts.push(options.message);
+          return { response: global.__remoteDecision };
+        };
+      });
+      phase = 'monitor permission and capture';
+      await page.evaluate(() => {
+        const button = document.createElement('button');
+        button.id = 'nativeRemoteCapture';
+        button.style.cssText = 'position:fixed;left:50px;top:50px;z-index:999999';
+        button.textContent = 'Native test capture';
+        button.onclick = async () => {
+          try {
+            const permit = await window.TronoDesktop.prepareRemoteCapture('Native test');
+            if (!permit.allowed) throw Error('Capture declined');
+            window.__nativeStream = await navigator.mediaDevices.getDisplayMedia({
+              video: true,
+              audio: false,
+            });
+          } catch (e) {
+            window.__nativeError = e.message;
+          }
+        };
+        document.body.append(button);
+      });
+      await page.locator('#nativeRemoteCapture').click();
+      const picker = page.getByRole('dialog', { name: 'Escolher tela ou janela', exact: true });
+      await expect(picker).toBeVisible();
+      await picker.getByRole('tab', { name: 'Tela inteira', exact: true }).click();
+      await picker.locator('[data-source-kind=screen]').first().click();
+      await page.locator('#desktopCaptureConfirm').click();
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => window.__nativeError || window.__nativeStream?.getVideoTracks()[0]?.readyState,
+          ),
+        )
+        .toBe('live');
+      assert.equal(
+        await app.evaluate(({ globalShortcut }) =>
+          globalShortcut.isRegistered('Control+Alt+Shift+F12'),
+        ),
+        true,
+      );
+      phase = 'native control consent denied';
+      await app.evaluate(() => (global.__remoteDecision = 0));
+      assert.equal(
+        (await page.evaluate(() => window.TronoDesktop.allowRemoteControl())).allowed,
+        false,
+      );
+      phase = 'native control consent allowed';
+      await app.evaluate(() => (global.__remoteDecision = 1));
+      await page.evaluate(async () => {
+        window.__nativeGrant = await window.TronoDesktop.allowRemoteControl();
+        window.__nativePulse = setInterval(
+          () => window.TronoDesktop.remoteInput(window.__nativeGrant.token, { type: 'pulse' }),
+          1000,
+        );
+      });
+      assert.equal(await page.evaluate(() => window.__nativeGrant.allowed), true);
+      const opened = app.waitForEvent('window');
+      await app.evaluate(async ({ BrowserWindow, screen }) => {
+        global.__remoteTarget = new BrowserWindow({
+          x: 90,
+          y: 90,
+          width: 640,
+          height: 400,
+          webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
+        });
+        await global.__remoteTarget.loadURL(
+          'data:text/html,' +
+            encodeURIComponent(
+              '<!doctype html><input id="field" style="margin:60px;width:300px;height:50px"><div id="released"></div><script>document.onkeyup=e=>document.getElementById("released").textContent=e.code</script>',
+            ),
+        );
+        global.__remoteTarget.show();
+        global.__remoteTarget.focus();
+        global.__remoteDisplay = screen.getDisplayMatching(global.__remoteTarget.getBounds());
+      });
+      const target = await opened;
+      await expect(target.locator('#field')).toBeVisible();
+      await target.bringToFront();
+      await expect.poll(() => app.evaluate(() => global.__remoteTarget.isFocused())).toBe(true);
+      const r = await target.locator('#field').boundingBox(),
+        coords = await app.evaluate((_, r) => {
+          const b = global.__remoteTarget.getContentBounds(),
+            d = global.__remoteDisplay.bounds;
+          return {
+            x: (b.x + r.x + r.width / 2 - d.x) / (d.width - 1),
+            y: (b.y + r.y + r.height / 2 - d.y) / (d.height - 1),
+          };
+        }, r);
+      phase = 'real native input';
+      await page.evaluate((coords) => {
+        const send = (e) => window.TronoDesktop.remoteInput(window.__nativeGrant.token, e);
+        send({ type: 'move', ...coords });
+        send({ type: 'button', button: 0, down: true });
+        send({ type: 'button', button: 0, down: false });
+      }, coords);
+      // Windows dispatches activation from the native mouse click asynchronously.
+      // Confirm it reached the real target before injecting keyboard events.
+      await expect(target.locator('#field')).toBeFocused();
+      await page.evaluate(() => {
+        const send = (e) => window.TronoDesktop.remoteInput(window.__nativeGrant.token, e);
+        send({ type: 'key', code: 'KeyA', down: true });
+        send({ type: 'key', code: 'KeyA', down: false });
+      });
+      await expect(target.locator('#field')).toHaveValue('a');
+      await page.evaluate(() =>
+        window.TronoDesktop.remoteInput(window.__nativeGrant.token, {
+          type: 'key',
+          code: 'KeyX',
+          down: true,
+        }),
+      );
+      await expect(target.locator('#field')).toHaveValue('ax');
+      phase = 'revoke releases held keys';
+      await page.evaluate(() => window.TronoDesktop.revokeRemoteControl());
+      await expect(target.locator('#released')).toHaveText('KeyX');
+      await page.evaluate(() =>
+        window.TronoDesktop.remoteInput(window.__nativeGrant.token, {
+          type: 'key',
+          code: 'KeyZ',
+          down: true,
+        }),
+      );
+      await new Promise((r) => setTimeout(r, 100));
+      await expect(target.locator('#field')).toHaveValue('ax');
+      phase = 'stop session';
+      await page.evaluate(async () => {
+        clearInterval(window.__nativePulse);
+        await window.TronoDesktop.stopRemote();
+        window.__nativeStream.getTracks().forEach((t) => t.stop());
+      });
+      assert.equal(
+        await app.evaluate(({ globalShortcut }) =>
+          globalShortcut.isRegistered('Control+Alt+Shift+F12'),
+        ),
+        false,
+      );
+      assert.equal(
+        await app.evaluate(
+          () => global.__remotePrompts.filter((s) => s.includes('quer controlar')).length,
+        ),
+        2,
+      );
+      phase = 'reload after remote session';
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('[data-entry]')).toBeVisible();
+    } catch (err) {
+      console.error('Remote native phase: ' + phase);
+      throw err;
+    } finally {
+      finished = true;
+      if (app) {
+        const windows = await app.windows();
+        for (const p of windows)
+          await p
+            .evaluate(() => {
+              window.__nativeStream?.getTracks().forEach((t) => t.stop());
+            })
+            .catch(() => {});
+        await app.evaluate(() => global.__remoteTarget?.destroy()).catch(() => {});
+        await closeTestApp(app);
+      }
+      await fs.rm(directory, { recursive: true, force: true, maxRetries: 8, retryDelay: 300 });
+    }
+  },
+);

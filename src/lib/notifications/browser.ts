@@ -44,11 +44,20 @@ export function initializeNotifications(target: Window): NotificationsController
     network: runtime.TronoNetwork,
     getCurrentRoom: () => runtime.TronoNetwork.currentRoom,
     isForeground: foreground,
-    isChannelVisible: (id) =>
-      foreground() &&
-      runtime.TronoNetwork.currentRoom === id &&
-      !document.getElementById('courtChatForm')?.closest('[hidden]') &&
-      !!document.getElementById('courtChatInput')?.getClientRects().length,
+    isChannelVisible: (id) => {
+      if (!foreground()) return false;
+      const input = document.getElementById('channelMessageInput');
+      if (
+        input?.closest<HTMLElement>('[data-chat-room]')?.dataset.chatRoom === id &&
+        input.getClientRects().length
+      )
+        return true;
+      return (
+        runtime.TronoNetwork.currentRoom === id &&
+        !document.getElementById('courtChatForm')?.closest('[hidden]') &&
+        !!document.getElementById('courtChatInput')?.getClientRects().length
+      );
+    },
     desktop: !!runtime.TronoDesktop,
     desktopNotify: runtime.TronoDesktop?.notify
       ? (payload) => runtime.TronoDesktop!.notify!(payload)

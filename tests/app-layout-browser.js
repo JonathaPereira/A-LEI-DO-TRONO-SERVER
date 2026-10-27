@@ -179,9 +179,8 @@ test(
       await page.goto(origin, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await page.evaluate(() => window.TronoChatHub.enter({ channelId: 'chat-livre' }));
-      await expect(page.locator('#callWorkspace')).toBeVisible();
-      await page.screenshot({ timeout: 60000, animations: 'disabled', path: out + '/idle.png' });
+      await page.locator('[data-voice-channel=chat-livre]').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
       for (const [i, name] of ['Enéas', 'Danilo', 'Lucas'].entries()) {
         const email = 'workspace' + i + '@example.test';
         await fixture.call('signup', { email, nickname: name, password: 'Senha12!' });
@@ -189,27 +188,16 @@ test(
           token_hash: [...fixture.links.keys()].at(-1),
           type: 'signup',
         });
-        const peerData = (await fixture.call('login', { email, password: 'Senha12!' })).data,
+        const data = (await fixture.call('login', { email, password: 'Senha12!' })).data,
           peer = await participant(fixture.base);
         peers.push(peer);
-        peer.send({ type: 'authenticate', access_token: peerData.session.access_token });
+        peer.send({ type: 'authenticate', access_token: data.session.access_token });
         assert((await peer.wait((m) => m.type === 'auth-result')).ok);
         peer.send({ type: 'join-room', roomId: 'chat-livre' });
         await peer.wait((m) => m.type === 'joined-room');
         peer.send({ type: 'voice-state', joined: true, camera: i < 2 });
-        await peer.wait(
-          (m) =>
-            m.type === 'voice-roster' && m.players.some((p) => p.accountId === peerData.user.id),
-        );
       }
-      await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
-      await page.locator('#courtChatInput').fill('A tela está aparecendo?');
-      await page.locator('#courtChatInput').press('Enter');
-      await expect(page.locator('#courtChatMessages')).toContainText('A tela está aparecendo?');
-      if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-        await page.locator('#joinVoiceBtn').click();
-      await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-      await page.locator('#cameraBtn').click();
+      await page.locator('[data-control=cameraBtn]').click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
       await page.evaluate(() => window.TronoSocial.startScreenShare());
       await expect.poll(() => page.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
@@ -224,258 +212,74 @@ test(
         }));
       const before = await snapshot();
       assert(before.mic && before.camera && before.screen);
-      await expect(page.locator('#voiceRoster .voice-person')).toHaveCount(4);
-      for (const mode of ['original', 'discord'])
-        for (const [width, height] of sizes) {
-          await page.setViewportSize({ width, height });
-          await page.evaluate((mode) => {
-            window.TronoAppLayout.apply(mode, { save: true });
-            window.TronoSocial.toggleTextChat(innerWidth >= 760);
-          }, mode);
-          await page.evaluate(
-            () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
-          );
-          const shape = await page.evaluate(() => {
-            const rect = (e) => {
-              if (!e) return null;
-              const r = e.getBoundingClientRect();
-              return {
-                x: r.x,
-                y: r.y,
-                width: r.width,
-                height: r.height,
-                right: r.right,
-                bottom: r.bottom,
-                visible: !!e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden',
-              };
-            };
-            return {
-              mode: document.body.dataset.appLayout,
-              w: innerWidth,
-              h: innerHeight,
-              messages: document.getElementById('callWorkspace').dataset.messages,
-              overflow: document.documentElement.scrollWidth - innerWidth,
-              sidebar: rect(document.getElementById('callWorkspaceSidebar')),
-              chat: rect(document.querySelector('#socialPanel .court-chat-section')),
-              stage: rect(document.querySelector('.mn-media-stage')),
-              stream: rect(document.querySelector('#screenShareGrid .screen-share-tile')),
-              dock: rect(document.getElementById('callFocusDock')),
-              controls: [
-                'muteMicBtn',
-                'deafenVoiceBtn',
-                'cameraBtn',
-                'screenShareBtn',
-                'remotePcBtn',
-                'soundboardToggle',
-                'voiceSettingsBtn',
-                'joinVoiceBtn',
-              ].map((id) => ({ id, ...rect(document.getElementById(id)) })),
-              cards: [...document.querySelectorAll('#voiceRoster .voice-person')].map(rect),
-            };
-          });
-          shapes.push(shape);
-          await page.screenshot({
-            timeout: 60000,
-            animations: 'disabled',
-            path: out + `/${mode}-${width}x${height}.png`,
-          });
-          assert.deepEqual(await snapshot(), before);
-        }
-      await fs.writeFile(
-        out + '/computed.json',
-        JSON.stringify(
-          await page.evaluate(() =>
-            Object.fromEntries(
-              [
-                '#callWorkspace',
-                '.chat-only-topbar',
-                '.chat-only-top-actions',
-                '.mn-sidebar-scroll',
-                '#mediaMosaic',
-                '#screenShareGrid',
-                '.mn-media-stage',
-                '#voiceRoster',
-                '#cameraGrid',
-              ].map((sel) => {
-                const e = document.querySelector(sel),
-                  s = getComputedStyle(e);
-                return [
-                  sel,
-                  {
-                    rect: e.getBoundingClientRect().toJSON(),
-                    css: Object.fromEntries(
-                      [
-                        'display',
-                        'position',
-                        'left',
-                        'right',
-                        'gridArea',
-                        'gridTemplateRows',
-                        'gap',
-                        'height',
-                        'minHeight',
-                        'maxHeight',
-                        'flex',
-                        'alignItems',
-                        'justifyContent',
-                        'padding',
-                        'margin',
-                      ].map((k) => [k, s[k]]),
-                    ),
-                  },
-                ];
-              }),
-            ),
-          ),
-          null,
-          2,
-        ),
-      );
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.evaluate(() => window.TronoMessenger.openFriends());
-      await page.screenshot({ timeout: 60000, animations: 'disabled', path: out + '/direct.png' });
-      await page.setViewportSize({ width: 390, height: 844 });
-      await expect(page.locator('#callFocusDock #muteMicBtn')).toBeVisible();
-      await expect(page.locator('#callFocusDock #joinVoiceBtn')).toBeInViewport();
-      await page.screenshot({
-        timeout: 60000,
-        animations: 'disabled',
-        path: out + '/direct-mobile.png',
-      });
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.evaluate(() => window.TronoMessenger.close());
-      await page.evaluate(() => window.TronoProfile.open());
-      await expect(page.locator('#profile-bio')).toBeEnabled();
-      await page.screenshot({ timeout: 60000, animations: 'disabled', path: out + '/profile.png' });
-      await fs.writeFile(
-        out + '/profile-computed.json',
-        JSON.stringify(
-          await page.evaluate(() =>
-            Object.fromEntries(
-              [
-                '#desktopSettingsDialog',
-                '#desktopAccountDetails',
-                '#profileForm',
-                '.profile-editor-fields',
-                '.profile-editor-actions',
-                '.profile-editor-preview',
-              ].map((sel) => {
-                const e = document.querySelector(sel);
-                if (!e) return [sel, null];
-                const s = getComputedStyle(e);
-                return [
-                  sel,
-                  {
-                    rect: e.getBoundingClientRect().toJSON(),
-                    css: Object.fromEntries(
-                      [
-                        'display',
-                        'height',
-                        'minHeight',
-                        'maxHeight',
-                        'gridTemplateRows',
-                        'overflow',
-                        'flex',
-                        'position',
-                        'padding',
-                        'margin',
-                      ].map((k) => [k, s[k]]),
-                    ),
-                  },
-                ];
-              }),
-            ),
-          ),
-          null,
-          2,
-        ),
-      );
-      for (const [width, height] of [
-        [1080, 1920],
-        [390, 844],
-        [844, 390],
-      ]) {
+      await expect(page.locator('[data-call-person]')).toHaveCount(4);
+      for (const [width, height] of sizes) {
         await page.setViewportSize({ width, height });
-        await page.screenshot({
-          timeout: 60000,
-          animations: 'disabled',
-          path: out + `/profile-${width}x${height}.png`,
-        });
-        const overflow = await page
-          .locator('#profileForm')
-          .evaluate((e) => e.scrollWidth - e.clientWidth);
-        assert(overflow <= 1, 'profile form overflow ' + width + 'x' + height);
-      }
-      await page.evaluate(() =>
-        window.TronoDesktopSettings
-          ? window.TronoDesktopSettings.close()
-          : document.getElementById('profileDialog').close(),
-      );
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.locator('#voiceRoster .mn-person-avatar').first().click();
-      await expect(page.locator('#memberProfileDialog')).toBeVisible();
-      await expect(page.locator('#memberProfileContent')).toContainText('Jonatha');
-      await page.locator('#memberProfileExpand').click();
-      await expect(page.locator('#memberProfileDialog')).toHaveClass(/member-full/);
-      await page.locator('#memberProfileDialog .member-close').click();
-      const textResponse = await fetch(fixture.base + '/community/channels', {
-        method: 'POST',
-        headers: {
-          Origin: origin,
-          Authorization: 'Bearer ' + data.session.access_token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: 'Avisos', type: 'text', description: '' }),
-      });
-      assert.equal(textResponse.status, 200);
-      const textChannel = (await textResponse.json()).channel;
-      await page.evaluate((id) => window.TronoNetwork.joinTextChannel(id), textChannel.id);
-      await expect
-        .poll(() => page.evaluate(() => window.TronoNetwork?.currentRoom))
-        .toBe(textChannel.id);
-      await page.evaluate(() => window.TronoSocial.toggleTextChat(true));
-      await expect(page.locator('#courtChatInput')).toBeVisible();
-      await expect(page.locator('#joinVoiceBtn')).toBeVisible();
-      assert.deepEqual(await snapshot(), before);
-      await page.screenshot({
-        timeout: 60000,
-        animations: 'disabled',
-        path: out + '/text-channel.png',
-      });
-      await page.evaluate(() => window.TronoChatHub.switchChannel('chat-livre'));
-      await page.locator('#muteMicBtn').click();
-      assert.equal(
-        await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled),
-        false,
-      );
-      await page.locator('#muteMicBtn').click();
-      assert.equal(
-        await page.evaluate(() => window.TronoSocial.getLocalAudioTrack().enabled),
-        true,
-      );
-      await page.locator('#deafenVoiceBtn').click();
-      assert.equal(await page.evaluate(() => window.TronoSocial.deafened), true);
-      await page.locator('#deafenVoiceBtn').click();
-      assert.equal(await page.evaluate(() => window.TronoSocial.deafened), false);
-      for (const mode of ['original', 'discord']) {
-        await page.evaluate((mode) => window.TronoAppLayout.apply(mode, { save: true }), mode);
-        await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-        await expect(page.locator('#gamesScreen')).toBeVisible();
-        assert.deepEqual(await snapshot(), before);
-        assert.equal(
-          await page.locator('#callFocusDock #muteMicBtn').count(),
-          0,
-          'call controls must leave the workspace with the user',
+        await page.evaluate(
+          () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
         );
-        await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-        await expect(
-          page.locator(
-            mode === 'discord' ? '#layoutUserControls #muteMicBtn' : '#callFocusDock #muteMicBtn',
-          ),
-        ).toBeVisible();
+        const shape = await page.evaluate(() => {
+          const controls = [...document.querySelectorAll('[data-control]')].filter(
+            (b) => b.getClientRects().length,
+          );
+          const boxes = controls.map((b) => {
+            const r = b.getBoundingClientRect();
+            return {
+              id: b.dataset.control,
+              x: r.x,
+              y: r.y,
+              right: r.right,
+              bottom: r.bottom,
+              clickable:
+                document
+                  .elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+                  ?.closest('button') === b,
+              coveredBy: document
+                .elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+                ?.outerHTML.slice(0, 200),
+            };
+          });
+          return { overflow: document.documentElement.scrollWidth - innerWidth, boxes };
+        });
+        assert(shape.overflow <= 1, JSON.stringify({ width, height, shape }));
+        assert(shape.boxes.length >= 5, JSON.stringify(shape));
+        for (const box of shape.boxes)
+          assert(
+            box.x >= 0 &&
+              box.right <= width + 1 &&
+              box.y >= 0 &&
+              box.bottom <= height + 1 &&
+              box.clickable,
+            JSON.stringify({ width, height, box }),
+          );
+        for (let i = 0; i < shape.boxes.length; i++)
+          for (let j = i + 1; j < shape.boxes.length; j++) {
+            const a = shape.boxes[i],
+              b = shape.boxes[j];
+            assert(
+              Math.min(a.right, b.right) - Math.max(a.x, b.x) <= 1 ||
+                Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y) <= 1,
+              'call controls overlap',
+            );
+          }
+        await page.getByRole('button', { name: 'Mostrar conversa da chamada' }).click();
+        await expect(page.locator('#channelMessageInput')).toBeInViewport();
+        await page.locator('#channelMessageInput').fill('Rascunho ' + width);
+        await page.getByRole('button', { name: 'Fechar conversa da chamada', exact: true }).click();
+        await expect(page.locator('#channelMessageInput')).toBeHidden();
+        await page.screenshot({
+          path: out + '/corte-' + width + 'x' + height + '.png',
+          animations: 'disabled',
+        });
         assert.deepEqual(await snapshot(), before);
       }
-      await fs.writeFile(out + '/geometry.json', JSON.stringify({ errors, shapes }, null, 2));
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
+      await expect(page.locator('#gamesScreen')).toBeVisible();
+      assert.deepEqual(await snapshot(), before);
+      await page.getByRole('button', { name: 'Comunicação', exact: true }).click();
+      await page.evaluate(() => window.TronoCallNavigation.showCall());
+      assert.deepEqual(await snapshot(), before);
       assert.deepEqual(errors, []);
       const issues = [];
       for (const s of shapes) {

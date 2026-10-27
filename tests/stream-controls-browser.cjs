@@ -72,16 +72,19 @@ test(
         await page.goto(origin);
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
-        await page.locator('#openVoicePortalBtn').click();
-        await expect(page.locator('#callWorkspace')).toBeVisible();
-        if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-          await page.locator('#joinVoiceBtn').click();
+        await page.locator('[data-voice-channel=chat-livre]').click();
+        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+        await page.evaluate(() => {
+          window.TronoPortal.openGame(true);
+          window.TronoSocial.showForRoom(true);
+        });
+        await expect(page.locator('#setupScreen')).toBeVisible();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
         return page;
       }
       const owner = await client(1),
         viewer = await client(2);
-      await owner.locator('#screenShareBtn').click();
+      await owner.evaluate(() => window.TronoCallToolbar.activate('screenShareBtn'));
       await owner.locator('#screenOptionsConfirm').click();
       await expect.poll(() => owner.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
       const id = await owner.evaluate(() => window.TronoNetwork.clientId);

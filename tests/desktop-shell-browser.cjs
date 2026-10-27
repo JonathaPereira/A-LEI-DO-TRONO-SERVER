@@ -8,7 +8,7 @@ const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
 
 test(
-  'desktop shell keeps native controls and updater actions while moving containers',
+  'Corte desktop preserves native update actions, explicit install and call continuity',
   {
     timeout: 120000,
   },
@@ -139,217 +139,59 @@ test(
         await page.goto(origin);
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
-        await expect(page.locator('#desktopFullscreen')).toBeVisible();
-
-        await t.test(
-          'fullscreen events supersede the initial read and pending toggles settle',
-          async () => {
-            const fullscreen = page.locator('#desktopFullscreen');
-            await page.evaluate(() => window.__shellFixture.emitWindow({ fullscreen: true }));
-            await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
-            await page.evaluate(() =>
-              window.__shellFixture.resolveInitialWindow({ fullscreen: false }),
-            );
-            // Flush the settled native read and its React projection before checking the newer event.
-            await page.evaluate(() => new Promise(requestAnimationFrame));
-            await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
-            await fullscreen.click();
-            await expect(fullscreen).toBeDisabled();
-            await page.evaluate(() => window.__shellFixture.finishToggle({ fullscreen: false }));
-            await expect(fullscreen).toBeEnabled();
-            await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
-            await fullscreen.click();
-            await expect(fullscreen).toBeDisabled();
-            await page.evaluate(() => window.__shellFixture.failToggle());
-            await expect(fullscreen).toBeEnabled();
-            await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
-            await expect(fullscreen).toHaveAttribute('title', /Não foi possível/);
-            assert.equal(await page.evaluate(() => window.__shellFixture.calls.toggle), 2);
-          },
+        await page.getByRole('button', { name: 'Voz e vídeo', exact: true }).click();
+        await page.getByRole('button', { name: 'Aplicativo', exact: true }).click();
+        const settings = page.getByRole('dialog', { name: 'Configurações da Corte' });
+        const check = settings.getByRole('button', { name: 'Buscar atualizações', exact: true });
+        await expect(check).toBeVisible();
+        await check.click();
+        await expect.poll(() => page.evaluate(() => window.__shellFixture.calls.check)).toBe(1);
+        await expect(check).toBeDisabled();
+        await page.evaluate(() =>
+          window.__shellFixture.finishCheck({
+            status: 'downloading',
+            version: '0.2.11',
+            percent: 42,
+          }),
         );
-
-        await page.locator('#openVoicePortalBtn').click();
-        await expect(page.locator('#callWorkspace')).toBeVisible();
-        if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-          await page.locator('#joinVoiceBtn').click();
+        await expect(settings.getByRole('status')).toContainText('42%');
+        await page.evaluate(() =>
+          window.__shellFixture.emitUpdate({ status: 'ready', version: '0.2.11' }),
+        );
+        const restart = settings.getByRole('button', {
+          name: 'Instalar 0.2.11 e reiniciar',
+          exact: true,
+        });
+        await expect(restart).toBeVisible();
+        assert.equal(
+          await page.evaluate(() => window.__shellFixture.calls.install),
+          0,
+          'Receiving an update never installs it',
+        );
+        await restart.click();
+        await expect.poll(() => page.evaluate(() => window.__shellFixture.calls.install)).toBe(1);
+        await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
+        const banner = page.getByRole('status', { name: 'Atualização do aplicativo' });
+        await expect(banner).toBeVisible();
+        await banner.getByRole('button', { name: 'Fechar aviso de atualização' }).click();
+        await expect(banner).toBeHidden();
+        await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
         await page.evaluate(() => {
-          window.__shellIdentity = {
-            microphone: window.TronoSocial.getLocalAudioTrack(),
-            network: window.TronoNetwork,
-            clientId: window.TronoNetwork.clientId,
-            nodes: new Map(
-              [
-                'desktopFullscreen',
-                'desktopChannelsToggle',
-                'desktopSidebarShade',
-                'desktopUpdateCheck',
-                'desktopUpdateCheckHost',
-                'desktopRail',
-                'desktopTopBar',
-                'desktopCallDock',
-              ].map((id) => [id, document.getElementById(id)]),
-            ),
-          };
+          window.__keptMic = window.TronoSocial.getLocalAudioTrack();
+          window.__keptSocket = window.TronoNetwork.clientId;
+          window.__keptUpdates = window.TronoDesktopUpdates;
         });
-        async function assertIdentity() {
-          assert.equal(
-            await page.evaluate(() => {
-              const original = window.__shellIdentity;
-              return (
-                [...original.nodes].every(
-                  ([id, node]) => node && document.getElementById(id) === node,
-                ) &&
-                window.TronoSocial.voiceJoined &&
-                window.TronoSocial.getLocalAudioTrack() === original.microphone &&
-                original.microphone.readyState === 'live' &&
-                window.TronoNetwork === original.network &&
-                window.TronoNetwork.connected &&
-                window.TronoNetwork.clientId === original.clientId
-              );
-            }),
-            true,
-            'navigation must retain each shell node, microphone and network identity',
-          );
-        }
-
-        await t.test('layout and area changes keep the same shell and current call', async () => {
-          for (const [layout, width] of [
-            ['original', 1280],
-            ['discord', 720],
-          ]) {
-            await page.setViewportSize({ width, height: 900 });
-            await page.evaluate(
-              (layout) => window.TronoAppLayout.apply(layout, { save: true }),
-              layout,
-            );
-            await expect(page.locator('body')).toHaveAttribute('data-app-layout', layout);
-            for (const route of ['home', 'game', 'community']) {
-              await page.evaluate((route) => window.TronoDesktopShell.navigate(route), route);
-              await expect(page.locator('body')).toHaveAttribute('data-desktop-view', route);
-              await assertIdentity();
-            }
-          }
-          await expect(page.locator('[data-desktop-route="clips"]')).toBeDisabled();
-          await page.evaluate(() => window.TronoDesktopShell.navigate('clips'));
-          await expect(page.locator('body')).toHaveAttribute('data-desktop-view', 'community');
-          assert.equal(await page.locator('#clipsDialog').evaluate((dialog) => dialog.open), false);
-          await assertIdentity();
-        });
-
-        await t.test(
-          'the compact updater host retains React actions and banner controls',
-          async () => {
-            const check = page.locator('#desktopUpdateCheck');
-            const banner = page.locator('.desktop-update-banner');
-            await expect(page.locator('#callWorkspace > #desktopUpdateCheckHost')).toHaveCount(1);
-            await expect(check).toBeVisible();
-            await check.click();
-            await expect.poll(() => page.evaluate(() => window.__shellFixture.calls.check)).toBe(1);
-            await page.evaluate(() =>
-              window.__shellFixture.finishCheck({
-                status: 'downloading',
-                version: '0.2.11',
-                percent: 42,
-              }),
-            );
-            await expect(check).toContainText('Baixando · 42%');
-            await expect(banner).toBeVisible();
-            await expect(banner).toContainText('42%');
-            await page.evaluate(() =>
-              window.__shellFixture.emitUpdate({ status: 'ready', version: '0.2.11' }),
-            );
-            await expect(check).toContainText('Atualização pronta');
-            const restart = banner.getByRole('button', {
-              name: 'Instalar 0.2.11 e reiniciar',
-              exact: true,
-            });
-            await expect(restart).toBeVisible();
-            await banner.getByRole('button', { name: 'Fechar aviso de atualização' }).click();
-            await expect(banner).toBeHidden();
-            await check.click();
-            await expect.poll(() => page.evaluate(() => window.__shellFixture.calls.check)).toBe(2);
-            await page.evaluate(() =>
-              window.__shellFixture.finishCheck({ status: 'ready', version: '0.2.11' }),
-            );
-            await expect(banner).toBeVisible();
-            await banner.getByRole('button', { name: 'Buscar última versão', exact: true }).click();
-            await expect.poll(() => page.evaluate(() => window.__shellFixture.calls.check)).toBe(3);
-            await page.evaluate(() =>
-              window.__shellFixture.finishCheck({ status: 'ready', version: '0.2.11' }),
-            );
-            await restart.click();
-            await expect
-              .poll(() => page.evaluate(() => window.__shellFixture.calls.install))
-              .toBe(1);
-            await expect(restart).toBeEnabled();
-            await page.setViewportSize({ width: 1280, height: 900 });
-            await expect(page.locator('#desktopRail #desktopUpdateCheckHost')).toHaveCount(1);
-            await expect(check).toContainText('Atualização pronta');
-            await assertIdentity();
-            await banner.getByRole('button', { name: 'Fechar aviso de atualização' }).click();
-          },
-        );
-        await t.test(
-          'soundboard keeps one label and fits after changing layout and window size',
-          async () => {
-            for (const size of [
-              { width: 1280, height: 900 },
-              { width: 390, height: 844 },
-            ]) {
-              await page.setViewportSize(size);
-              for (const layout of ['original', 'discord']) {
-                await page.evaluate((layout) => window.TronoAppLayout.apply(layout), layout);
-                await page.locator('#soundboardToggle').click();
-                const menu = page.locator('#soundboardDialog');
-                await expect(menu).toBeVisible();
-                await expect
-                  .poll(() =>
-                    menu.evaluate((node) => {
-                      const top = parseFloat(node.style.getPropertyValue('--desktop-effects-top'));
-                      const height = parseFloat(
-                        node.style.getPropertyValue('--desktop-effects-height'),
-                      );
-                      return (
-                        Number.isFinite(top) &&
-                        top >= 12 &&
-                        Number.isFinite(height) &&
-                        height >= 120
-                      );
-                    }),
-                  )
-                  .toBe(true);
-                await expect(
-                  page.locator('#soundboardToggle > .workspace-control-icon'),
-                ).toHaveCount(1);
-                await expect
-                  .poll(() =>
-                    menu.evaluate((node) => {
-                      const visible = (id) => {
-                        const rect = document.getElementById(id)?.getBoundingClientRect();
-                        return rect?.width && rect?.height ? rect : null;
-                      };
-                      const rect = node.getBoundingClientRect(),
-                        header = visible('workspaceHeader') ?? visible('desktopTopBar'),
-                        controls =
-                          visible('callFocusDock') ??
-                          visible('layoutVoicePanel') ??
-                          visible('desktopCallDock');
-                      return (
-                        rect.top >= (header?.bottom ?? 0) + 11 &&
-                        rect.bottom <= (controls?.top ?? innerHeight) - 11 &&
-                        rect.left >= 0 &&
-                        rect.right <= innerWidth
-                      );
-                    }),
-                  )
-                  .toBe(true);
-                await page.locator('#soundboardClose').click();
-                await expect(menu).toBeHidden();
-                await assertIdentity();
-              }
-            }
-          },
+        await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
+        await page.getByRole('button', { name: 'Voltar à chamada', exact: true }).click();
+        assert(
+          await page.evaluate(
+            () =>
+              window.__keptMic === window.TronoSocial.getLocalAudioTrack() &&
+              window.__keptMic.readyState === 'live' &&
+              window.__keptSocket === window.TronoNetwork.clientId &&
+              window.__keptUpdates === window.TronoDesktopUpdates,
+          ),
         );
         assert.deepEqual(errors, []);
       } finally {

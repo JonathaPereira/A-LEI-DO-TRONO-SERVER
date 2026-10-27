@@ -69,6 +69,7 @@ test(
         },
         { base: fixture.base, data },
       );
+      await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
       await context.route('**/files/*/url', (route) => {
         const id = new URL(route.request().url()).pathname.split('/')[2];
         return route.fulfill({
@@ -85,7 +86,7 @@ test(
       page = await context.newPage();
       page.setDefaultTimeout(7000);
       page.on('pageerror', (error) => errors.push(error.message));
-      await page.goto(origin);
+      await page.goto(origin, { waitUntil: 'domcontentloaded' });
       await expect(page.locator('#chatOnlyScreen')).toBeVisible();
       await fs.mkdir('artifacts/frontend-reset/contrast-qa', { recursive: true });
       await expect(
@@ -273,14 +274,11 @@ test(
         await page.screenshot({ path: 'artifacts/frontend-reset/call-qa/call-' + width + '.png' });
         await openQuickAudio();
         await expect(quick).toBeVisible();
-        const quickBox = await quick.boundingBox();
-        assert(
-          quickBox.x >= 0 &&
-            quickBox.y >= 0 &&
-            quickBox.x + quickBox.width <= width &&
-            quickBox.y + quickBox.height <= height,
-          JSON.stringify(quickBox),
-        );
+        await expect.poll(async () => {
+          const box = await quick.boundingBox();
+          return { within: box.x >= 0 && box.y >= 0 &&
+            box.x + box.width <= width && box.y + box.height <= height, box };
+        }, { message: `Quick audio must settle inside ${width}x${height}` }).toMatchObject({ within: true });
         await page.screenshot({
           path: 'artifacts/frontend-reset/call-qa/quick-audio-' + width + '.png',
         });
@@ -313,7 +311,8 @@ test(
 
 test(
   'voice and stream menus keep independent volumes and stop watching without leaving the call',
-  { timeout: 90000 },
+  // Ten real WebRTC clients create a full mesh on the hosted Windows runner.
+  { timeout: 180000 },
   async () => {
     const server = await new Promise((resolve) => {
       const s = express()
@@ -366,6 +365,7 @@ test(
           viewport: { width: 1440, height: 900 },
           permissions: ['camera', 'microphone'],
         });
+        await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
         await context.addInitScript(
           ({ base, data }) => {
             window.TRONO_BACKEND_URL = base;
@@ -383,7 +383,8 @@ test(
         );
         await context.addInitScript(installCanvasCamera, {
           display: true,
-          demo: { name: data.user.nickname, index: accounts.indexOf(data) },
+          // Layout coverage needs live tracks, not HD encoding on ninety peer links.
+          demo: { name: data.user.nickname, index: accounts.indexOf(data), scale: 0.5, fps: 5 },
         });
         await context.addInitScript(() => {
           const display = navigator.mediaDevices.getDisplayMedia;
@@ -404,35 +405,38 @@ test(
         pages.push(page);
         page.setDefaultTimeout(10000);
         page.on('pageerror', (e) => errors.push(e.message));
-        await page.goto(origin);
-        await expect(page.locator('#chatOnlyScreen')).toBeVisible();
-        await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
-        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+        await page.goto(origin, { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(() => window.TronoAuth?.ready);
+        await page.evaluate(() => window.TronoAuth.ready);
+        await expect(page.locator('#chatOnlyScreen')).toBeVisible({ timeout: 15000 });
+        await expect.poll(() => page.evaluate(() => window.TronoNetwork.currentRoom)).toBe('chat-livre');
+        // Nine background clients keep real media but do not render nine duplicate UIs.
+        if (pages.length !== 2) await page.evaluate(() => document.body.style.visibility = 'hidden');
       }
+      // Initialize all account views before connecting the ten-way media mesh.
+      for (const page of pages) {
+        if (page === pages[1]) await page.getByRole('button', { name: 'Entrar na voz de Geral', exact: true }).click();
+        else await page.evaluate(() => window.TronoChatHub.switchChannel('chat-livre', { connectVoice: true }));
+        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined), { timeout: 15000 }).toBe(true);
+      }
+      // Keep one speaker and nine listeners, preserving each live microphone track.
+      for (const page of pages.slice(1))
+        await page.evaluate(() => window.TronoCallToolbar.activate('muteMicBtn'));
+      console.log('Ten-client fixture: all ten real clients joined');
       const [host, viewer] = pages,
         call = viewer.getByRole('region', { name: 'Chamada da Corte', exact: true });
       for (const index of [0, 2, 4, 7]) {
-        await pages[index]
-          .getByRole('region', { name: 'Chamada da Corte', exact: true })
-          .getByRole('button', { name: 'Ligar câmera', exact: true })
-          .click();
+        await pages[index].evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
         await expect
           .poll(() => pages[index].evaluate(() => window.TronoSocial.cameraOn))
           .toBe(true);
       }
-      await host
-        .getByRole('region', { name: 'Chamada da Corte', exact: true })
-        .getByRole('button', { name: 'Compartilhar tela', exact: true })
-        .click();
-      await host.locator('#screenOptionsConfirm').click();
+      await host.evaluate(() => window.TronoSocial.startScreenShare());
       await expect.poll(() => host.evaluate(() => window.TronoSocial.screenSharing)).toBe(true);
-      await pages[2]
-        .getByRole('region', { name: 'Chamada da Corte', exact: true })
-        .getByRole('button', { name: 'Compartilhar tela', exact: true })
-        .click();
-      await pages[2].locator('#screenOptionsConfirm').click();
+      await pages[2].evaluate(() => window.TronoSocial.startScreenShare());
+      console.log('Ten-client fixture: four live cameras and two real WebRTC screens');
       await expect(call.locator('[data-call-person]')).toHaveCount(10);
-      await expect(call.locator('[data-call-screen]')).toHaveCount(2);
+      await expect(call.locator('[data-call-screen]')).toHaveCount(2, { timeout: 15000 });
       const stream = call.getByRole('article', { name: 'Tela de Ana', exact: true });
       await stream.click({ position: { x: 65, y: 45 } });
       await expect(stream).toHaveAttribute('data-focused', 'true');
@@ -636,8 +640,8 @@ test(
       assert.deepEqual(errors, []);
     } finally {
       await fs.mkdir('artifacts/frontend-reset/call-qa', { recursive: true });
-      for (let i = 0; i < pages.length; i++)
-        await pages[i]
+      for (const i of [1])
+        if (pages[i]) await pages[i]
           .screenshot({ path: 'artifacts/frontend-reset/call-qa/stream-current-' + i + '.png' })
           .catch(() => {});
       await browser?.close();

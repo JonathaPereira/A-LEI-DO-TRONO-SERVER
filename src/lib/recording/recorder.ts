@@ -11,13 +11,19 @@ interface RecorderOptions {
   capture(isCurrent: () => boolean): Promise<RecordingCapture | null>;
   createRecorder(stream: MediaStream): MediaRecorder;
   chooseDirectory(): Promise<ClipDirectory | null>;
-  save(blob: Blob, directory: ClipDirectory | null, filename: string): Promise<RecordingNotice>;
+  save(
+    blob: Blob,
+    directory: ClipDirectory | null,
+    filename: string,
+    signal: AbortSignal,
+  ): Promise<RecordingNotice>;
   now(): number;
 }
 interface RecordingSession {
   capture: RecordingCapture;
   recorder: MediaRecorder;
   chunks: Blob[];
+  persistence: AbortController;
   directory: Promise<ClipDirectory | null> | null;
   ended: () => void;
 }
@@ -71,7 +77,12 @@ export function createRecorder(options: RecorderOptions) {
         .replace(/[:.]/g, '-')
         .replace('T', '_')
         .slice(0, 19);
-      const notice = await options.save(blob, directory, `A_Lei_do_Trono_${stamp}.webm`);
+      const notice = await options.save(
+        blob,
+        directory,
+        `A_Lei_do_Trono_${stamp}.webm`,
+        session.persistence.signal,
+      );
       if (!disposed && ticket === generation) publish({}, notice);
     } catch (error) {
       if (!disposed && ticket === generation)
@@ -114,6 +125,7 @@ export function createRecorder(options: RecorderOptions) {
         capture,
         recorder,
         chunks: [],
+        persistence: new AbortController(),
         directory: null,
         ended: () => {
           if (active === session) void stop(false);
@@ -211,6 +223,23 @@ export function createRecorder(options: RecorderOptions) {
     if (state.phase === 'recording' || state.phase === 'selecting') void stop(true);
     else void start();
   }
+  /** Invalidate the current account scope without replacing the page owner. */
+  function cancel() {
+    if (disposed) return;
+    generation++;
+    if (active) {
+      const previous = active;
+      active = null;
+      previous.persistence.abort();
+      detach(previous);
+      try {
+        if (previous.recorder.state !== 'inactive') previous.recorder.stop();
+      } catch {}
+      release(previous);
+      previous.chunks.length = 0;
+    }
+    publish({ phase: 'idle', startedAt: null, notice: null });
+  }
   return {
     getSnapshot: () => state,
     subscribe(listener: () => void) {
@@ -221,24 +250,14 @@ export function createRecorder(options: RecorderOptions) {
     },
     start,
     stop,
+    cancel,
     toggle,
     get recording() {
       return state.phase === 'recording';
     },
     dispose() {
       if (disposed) return;
-      generation++;
-      if (active) {
-        const previous = active;
-        active = null;
-        detach(previous);
-        try {
-          if (previous.recorder.state !== 'inactive') previous.recorder.stop();
-        } catch {}
-        release(previous);
-        previous.chunks.length = 0;
-      }
-      publish({ phase: 'idle', startedAt: null });
+      cancel();
       disposed = true;
       listeners.clear();
     },

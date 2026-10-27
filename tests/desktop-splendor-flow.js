@@ -64,7 +64,11 @@ async function exerciseSplendor({ app, page, frontend, screenshot, onPhase = () 
       localStorage.setItem('tronoMusicEnabled', '0');
       localStorage.setItem('tronoSfxEnabled', '0');
     }, data);
-    await step('reload local document', () => page.reload({ waitUntil: 'domcontentloaded' }), 25000);
+    await step(
+      'reload local document',
+      () => page.reload({ waitUntil: 'domcontentloaded' }),
+      25000,
+    );
     await step('load local controllers', () => page.waitForFunction(() => window.TronoAuth?.ready));
     await step('restore local test session', () => page.evaluate(() => window.TronoAuth.ready));
     if (!(await page.evaluate(() => !!window.TronoAuth.user)))
@@ -79,8 +83,8 @@ async function exerciseSplendor({ app, page, frontend, screenshot, onPhase = () 
           ),
       );
     onPhase('Splendor: open native game');
-    await page.locator('[data-desktop-route=game]').click();
-    await page.locator('#playSplendor').click();
+    await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
+    await page.locator('#gamesScreen [data-game=splendor]').click();
     await page.locator('#splendorPlayerCount').selectOption('4');
     await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();
     await expect(page.locator('.sp-seats')).toBeVisible();

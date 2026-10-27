@@ -114,15 +114,14 @@ test(
         },
         { base: fixture.base, data },
       );
+      await context.addInitScript(require('./camera-fixture').installCanvasCamera);
       const page = await context.newPage();
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto(origin);
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
-      await page.evaluate(async () => {
-        await window.TronoChatHub.enter({ channelId: 'chat-jogos' });
-        await window.TronoSocial.joinVoice();
-      });
+      await page.getByRole('button', { name: 'Entrar na voz de Jogos', exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
       for (const i of [2, 3]) {
         const data = await account(i),
           p = await socket(fixture.base);
@@ -146,10 +145,9 @@ test(
             room: window.TronoNetwork.primaryRoom,
           })),
         before = await snapshot();
-      for (const mode of ['original', 'discord']) {
-        await page.evaluate((mode) => window.TronoAppLayout.apply(mode, { save: true }), mode);
+      for (const mode of ['corte']) {
         await page.evaluate(async () => {
-          await window.TronoAppLayout.navigate('throne');
+          await window.TronoPortal.openGame(true);
           window.TronoSocial.showForRoom(true);
         });
         await expect(page.locator('#socialPanel')).toHaveClass(/social-floating/);
@@ -254,7 +252,7 @@ test(
       const savedBeforeHub = await page.evaluate(() =>
         window.TronoStorage.getItem('tronoSocialFloatingRectV3'),
       );
-      await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+      await page.evaluate(() => window.TronoPortal.showOnly('chatOnlyScreen'));
       await page.mouse.move(200, 200);
       await page.mouse.up();
       await expect(panel).not.toHaveClass(/resizing/);
@@ -262,7 +260,7 @@ test(
         await page.evaluate(() => window.TronoStorage.getItem('tronoSocialFloatingRectV3')),
         savedBeforeHub,
       );
-      await page.evaluate(() => window.TronoAppLayout.navigate('throne'));
+      await page.evaluate(() => window.TronoPortal.openGame(true));
       await page.locator('#socialResizeGrip').dblclick();
       assert.equal(
         await page.evaluate(() => window.TronoStorage.getItem('tronoSocialFloatingRectV3')),

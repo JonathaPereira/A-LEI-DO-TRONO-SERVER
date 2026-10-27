@@ -1,21 +1,22 @@
-M&N — frontend com instalador Windows 0.3.4
+M&N — publicação automática do frontend e instalador Windows
 
-1. Aguarde Windows full app terminar com sucesso e abra a release privada
-   indicada no resumo Downloads Windows 0.3.4.
-2. Copie sua tag exata: desktop-v0.3.4-run-<id>-attempt-<tentativa>.
-3. Em Actions → Publish approved frontend → Run workflow, selecione a branch
-   que corresponde ao pacote aprovado e cole a tag em release_tag.
-   O repositório precisa ter SURGE_TOKEN configurado.
-4. Aguarde a publicação e a verificação de downloads/latest.yml com version: 0.3.4.
-5. No aplicativo instalado, busque a atualização e reinicie quando solicitado.
+1. Em Actions → Windows full app → Run workflow, selecione a branch desejada.
+   publish_surge vem ligado; após os checks e o instalador passarem, a execução
+   publica no Surge usando a versão de electron/package.json e a tag do pacote.
+   Push em main também publica automaticamente. SURGE_TOKEN deve estar configurado.
+2. Confira a etapa final de publicação e a verificação de downloads/latest.yml.
+3. Se só o Surge falhar, execute Publish approved frontend na mesma branch/commit,
+   deixando release_tag vazio. A entrega aprovada é localizada automaticamente;
+   não é preciso procurar versão/tag nem recompilar o instalador.
+4. No aplicativo, abra Configurações → Aplicativo e reinicie quando a atualização
+   estiver pronta. Uma nova distribuição exige incrementar a versão do desktop.
 
-Publicação manual: baixe MN-Trono-Frontend-0.3.4.zip da mesma release,
+Publicação manual alternativa: baixe o ZIP MN-Trono-Frontend da entrega aprovada,
 extraia numa pasta nova e abra um terminal dentro de frontend/. Execute:
    npx --yes surge@0.46.0 . a-lei-do-trono.surge.sh
 
-O instalador MN-Trono-0.3.4-Windows.exe já acompanha frontend/downloads/.
+O instalador atual já acompanha frontend/downloads/.
 Preserve latest.yml e seu SHA-512. Não misture arquivos de entregas diferentes.
 Contas e preferências são mantidas. Clipes automáticos continuam suspensos.
 Consulte ATUALIZACOES.md e PUBLICAR_SURGE_LEVE.md, incluídos na raiz do ZIP.
-
 Nexus continua hospedado no itch.io; não envie ZIP/PCK/WASM dele ao Surge.

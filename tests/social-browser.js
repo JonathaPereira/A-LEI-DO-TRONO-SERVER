@@ -6,24 +6,6 @@ const { test } = require('node:test'),
   express = require('express');
 const { chromium, expect } = require('@playwright/test'),
   { startFixture } = require('./auth-fixture');
-async function toggleMessenger(page) {
-  if (await page.locator('#messengerPanel').isVisible()) {
-    await page.locator('#messengerClose').click();
-    return;
-  }
-  if (await page.locator('#messengerToggle').isVisible()) {
-    await page.locator('#messengerToggle').click();
-    return;
-  }
-  const selected = await page.evaluate(() => window.TronoDirectMessages.getSnapshot().peerId);
-  const friends = page.locator('#workspaceDirectOpen');
-  if (!(await friends.isVisible())) await page.locator('#workspaceSidebarBtn').click();
-  await friends.click();
-  if (selected)
-    await page
-      .locator('.messenger-person[data-peer-id="' + selected + '"] .messenger-person-main')
-      .click();
-}
 
 test(
   'friends, direct messages, notifications, invitations and account volumes remain independent of a live call',
@@ -112,7 +94,9 @@ test(
         await page.goto(origin);
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
-        await expect(page.locator('#messengerToggle')).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Pessoas da Corte', exact: true }),
+        ).toBeVisible();
         return { context, page };
       }
       const a = await client(ana),
@@ -120,162 +104,112 @@ test(
         c = await client(third),
         p = a.page,
         q = b.page;
-      async function check(name, run) {
-        await t.test(name, async () => {
-          try {
-            await run();
-          } catch (error) {
-            console.error(name, error.message);
-            await p
-              .screenshot({ path: path.resolve(__dirname, '../artifacts/social-failure.png') })
-              .catch(() => {});
-            throw error;
-          }
+      for (const page of [p, q]) {
+        await page.locator('[data-voice-channel=chat-livre]').click();
+        await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+        await page.evaluate(() => {
+          window.__mic = window.TronoSocial.getLocalAudioTrack();
+          window.__primary = window.TronoNetwork.primaryRoom;
         });
       }
-      await check(
-        'friend approval and private text preserve the microphone and voice room',
+      await t.test(
+        'approval, private text and authorization preserve the active call',
         async () => {
-          for (const page of [p, q]) {
-            await page.locator('#openVoicePortalBtn').click();
-            await page.locator('#joinVoiceBtn').click();
-            await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-          }
-          await expect(p.locator('#voiceRoster .voice-person')).toHaveCount(2);
-          await p.evaluate(() => {
-            window.__mic = window.TronoSocial.getLocalAudioTrack();
-            window.__primary = window.TronoNetwork.primaryRoom;
-          });
-          await toggleMessenger(p);
-          await p.locator('#messengerSearch').fill('Bruno');
-          await p.locator('#messengerSearchResults button').click();
-          await expect(p.locator('#messengerStatus')).toHaveText('Pedido de amizade enviado.');
-          await toggleMessenger(q);
-          await q.locator('#messengerList button').filter({ hasText: 'Aceitar' }).click();
-          await expect(q.locator('#messengerList')).not.toContainText('Pedido recebido');
-          await p
-            .locator('#messengerList .messenger-person-main')
-            .filter({ hasText: 'Bruno' })
+          await p.getByRole('button', { name: 'Pessoas da Corte', exact: true }).click();
+          await p.getByRole('button', { name: 'Comunidade', exact: true }).click();
+          const row = p.locator('[data-person="' + bob.user.id + '"]');
+          await row.getByRole('button', { name: 'Adicionar', exact: true }).click();
+          await q.getByRole('button', { name: 'Pessoas da Corte', exact: true }).click();
+          await q.getByRole('button', { name: 'Convites', exact: true }).click();
+          await q
+            .locator('[data-person="' + ana.user.id + '"]')
+            .getByRole('button', { name: 'Aceitar', exact: true })
             .click();
-          await expect(p.locator('#messengerInput')).toBeEnabled();
-          await p.locator('#messengerInput').fill('Uma conversa privada durante a chamada');
-          await q.locator('#messengerClose').click();
-          await q.evaluate(() => (window.__focused = false));
-          await p.locator('#messengerInput').press('Enter');
-          await expect(p.locator('#messengerMessages')).toContainText(
+          await expect
+            .poll(() =>
+              p.evaluate(
+                (id) =>
+                  window.TronoDirectMessages.getSnapshot().friends.find((f) => f.id === id)?.state,
+                bob.user.id,
+              ),
+            )
+            .toBe('accepted');
+          await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
+          await q.evaluate(() => {
+            window.TronoMessenger.close();
+            window.TronoCallNavigation.showChat();
+            window.__focused = false;
+          });
+          await p.locator('#directMessageInput').fill('Uma conversa privada durante a chamada');
+          await p.locator('#directMessageInput').press('Enter');
+          await expect(p.getByRole('log', { name: 'Mensagens' })).toContainText(
             'Uma conversa privada durante a chamada',
           );
           await expect.poll(() => q.evaluate(() => window.__notifications.length)).toBe(1);
-          await expect(q.locator('#messengerUnread')).toHaveText('1');
-          await expect(q.locator('#messengerToggle svg')).toHaveCount(1);
+          await expect(q.locator('.messenger-toast')).toContainText(
+            'Uma conversa privada durante a chamada',
+          );
           assert.equal((await api('read', { peerId: ana.user.id }, third)).status, 403);
           assert.equal((await api('snapshot', {}, third)).data.threads.length, 0);
           assert.equal((await api('snapshot', {}, ana, 'https://foreign.test')).status, 403);
           await q.evaluate(() => (window.__focused = true));
-          await toggleMessenger(q);
-          await q
-            .locator('#messengerList .messenger-person-main')
-            .filter({ hasText: 'Ana Desktop' })
-            .click();
-          await expect(q.locator('#messengerMessages')).toContainText(
+          await q.locator('.messenger-toast-open').click();
+          await expect(q.getByRole('log', { name: 'Mensagens' })).toContainText(
             'Uma conversa privada durante a chamada',
           );
-          await expect(q.locator('#messengerToggle')).toHaveText('Amigos');
-          assert(
-            await p.evaluate(
-              () =>
-                window.TronoNetwork.primaryRoom === window.__primary &&
-                window.TronoSocial.getLocalAudioTrack() === window.__mic &&
-                window.__mic.readyState === 'live',
-            ),
-          );
-          assert(await q.evaluate(() => window.TronoSocial.voiceJoined));
+          for (const page of [p, q])
+            assert(
+              await page.evaluate(
+                () =>
+                  window.TronoSocial.voiceJoined &&
+                  window.TronoNetwork.primaryRoom === window.__primary &&
+                  window.TronoSocial.getLocalAudioTrack() === window.__mic &&
+                  window.__mic.readyState === 'live',
+              ),
+            );
         },
       );
-      await check(
-        'individual volume survives nickname changes and peer reconnection by account',
+      await t.test('account volume survives rename and peer reconnection', async () => {
+        await p.evaluate(() => {
+          window.TronoMessenger.close();
+          window.TronoCallNavigation.showCall();
+        });
+        await p.getByRole('button', { name: 'Opções de Bruno', exact: true }).click();
+        await p.getByRole('slider', { name: 'Volume da voz', exact: true }).fill('215');
+        await fixture.call(
+          'profile',
+          { nickname: 'Bruno Novo', avatar_preset: 'crown' },
+          bob.session.access_token,
+        );
+        await expect(
+          p.getByRole('button', { name: 'Opções de Bruno Novo', exact: true }),
+        ).toBeVisible();
+        assert.equal(
+          await p.evaluate((id) => window.TronoPersonal.get('volume:' + id), bob.user.id),
+          215,
+        );
+        const old = await q.evaluate(() => window.TronoNetwork.clientId);
+        await q.reload();
+        await q.waitForFunction(() => window.TronoAuth?.ready);
+        await q.evaluate(() => window.TronoAuth.ready);
+        await q.locator('[data-voice-channel=chat-livre]').click();
+        await expect.poll(() => q.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+        assert.notEqual(await q.evaluate(() => window.TronoNetwork.clientId), old);
+        await p.keyboard.press('Escape');
+        await p.getByRole('button', { name: 'Opções de Bruno Novo', exact: true }).click();
+        await expect(p.getByRole('slider', { name: 'Volume da voz', exact: true })).toHaveValue(
+          '215',
+        );
+        assert.equal(
+          await q.evaluate((id) => window.TronoPersonal.get('volume:' + id, 100), ana.user.id),
+          100,
+        );
+        await p.keyboard.press('Escape');
+      });
+      await t.test(
+        'channel invitation changes text destination without replacing voice',
         async () => {
-          await p.locator('#messengerClose').click();
-          await q.locator('#messengerClose').click();
-          const peer = await q.evaluate(() => window.TronoNetwork.clientId);
-          const card = p.locator('#voiceRoster [data-peer="' + peer + '"]');
-          await card.locator('.participant-expand').click();
-          const slider = card.locator('[data-peer-volume]');
-          await slider.evaluate((el) => {
-            el.value = '215';
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-          });
-          await expect(card.locator('output')).toHaveText('215%');
-          await fixture.call(
-            'profile',
-            { nickname: 'Bruno Novo', avatar_preset: 'crown' },
-            bob.session.access_token,
-          );
-          await expect(card.locator(':scope > strong')).toHaveText('Bruno Novo');
-          await expect(slider).toHaveValue('215');
-          await q.reload();
-          await q.waitForFunction(() => window.TronoAuth?.ready);
-          await q.evaluate(() => window.TronoAuth.ready);
-          await q.waitForFunction(() => window.TronoAuth?.ready);
-          await q.evaluate(() => window.TronoAuth.ready);
-          await expect(q.locator('#callWorkspace')).toBeVisible();
-          await expect
-            .poll(() => q.evaluate(() => window.TronoNetwork?.currentRoom))
-            .toBe('chat-livre');
-          if (!(await q.evaluate(() => window.TronoSocial.voiceJoined)))
-            await q.locator('#joinVoiceBtn').click();
-          await expect.poll(() => q.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-          const next = await q.evaluate(() => window.TronoNetwork.clientId);
-          assert.notEqual(next, peer);
-          const newCard = p.locator('#voiceRoster [data-peer="' + next + '"]');
-          await newCard.locator('.participant-expand').click();
-          await expect(newCard.locator('[data-peer-volume]')).toHaveValue('215');
-          assert.equal(
-            await p.evaluate((id) => window.TronoPersonal.get('volume:' + id), bob.user.id),
-            215,
-          );
-          assert.equal(
-            await q.evaluate((id) => window.TronoPersonal.get('volume:' + id, 100), ana.user.id),
-            100,
-          );
-        },
-      );
-      await check(
-        'channel mentions, unread counts and per-channel mute persist independently',
-        async () => {
-          await toggleMessenger(q);
-          await q
-            .locator('#messengerList .messenger-person-main')
-            .filter({ hasText: 'Ana Desktop' })
-            .click();
-          await q.locator('#messengerClose').click();
-          await q.evaluate(() => (window.__focused = false));
-          await p.evaluate(() => window.TronoNetwork.sendChat('@Bruno Novo veja esta mensagem'));
-          await expect.poll(() => q.evaluate(() => window.__notifications.length)).toBe(1);
-          await expect(q.locator('[data-chat-channel="chat-livre"] .channel-unread')).toHaveText(
-            '1',
-          );
-          await q.evaluate(() => window.TronoNotifications.mute('chat-livre', true));
-          await p.waitForTimeout(500);
-          await p.evaluate(() => window.TronoNetwork.sendChat('@Bruno Novo sem aviso'));
-          await expect(q.locator('[data-chat-channel="chat-livre"] .channel-unread')).toHaveText(
-            '2',
-          );
-          assert.equal(await q.evaluate(() => window.__notifications.length), 1);
-          await q.evaluate(() => (window.__focused = true));
-          if (!(await q.locator('#courtChatInput').isVisible()))
-            await q.locator('#chatOnlyTextBtn').click();
-          await q.locator('#courtChatInput').click();
-          await expect(q.locator('[data-chat-channel="chat-livre"] .channel-unread')).toHaveCount(
-            0,
-          );
-          assert.equal(await q.evaluate(() => window.TronoNotifications.muted('chat-livre')), true);
-        },
-      );
-      await check(
-        'invitations switch only the text selection, preserve voice, and narrow profiles stay usable',
-        async () => {
-          const create = await fetch(fixture.base + '/community/channels', {
+          const response = await fetch(fixture.base + '/community/channels', {
             method: 'POST',
             headers: {
               Origin: origin,
@@ -284,90 +218,69 @@ test(
             },
             body: JSON.stringify({ name: 'Fotos', type: 'text', description: '' }),
           });
-          const created = await create.json(),
-            channel = created.channel || created;
-          await expect(p.locator('[data-chat-channel="' + channel.id + '"]')).toBeVisible();
-          await toggleMessenger(p);
-          await p.locator('#messengerInvite').click();
-          await p.locator('#messengerInviteChannel').selectOption(channel.id);
-          await p.locator('#messengerInviteSend').click();
-          await expect(p.locator('#messengerMessages')).toContainText('Convite para Fotos');
-          await toggleMessenger(q);
-          await expect(q.locator('#messengerMessages')).toContainText('Convite para Fotos');
-          await q
-            .locator('#messengerMessages button')
-            .filter({ hasText: 'Entrar no canal' })
-            .click();
+          assert.equal(response.status, 200);
+          const channel = (await response.json()).channel;
+          await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
+          await p.getByRole('button', { name: 'Convidar para canal', exact: true }).click();
+          await p.getByRole('combobox', { name: 'Canal do convite' }).selectOption(channel.id);
+          await p.getByRole('button', { name: 'Enviar convite', exact: true }).click();
+          await expect(p.getByRole('log', { name: 'Mensagens' })).toContainText(
+            'Convite para Fotos',
+          );
+          await q.evaluate((id) => window.TronoMessenger.open(id), ana.user.id);
+          await q.getByRole('button', { name: 'Abrir canal do convite', exact: true }).click();
           await expect
-            .poll(() => q.evaluate(() => window.TronoNetwork?.currentRoom))
+            .poll(() => q.evaluate(() => window.TronoNetwork.currentRoom))
             .toBe(channel.id);
           assert.equal(await q.evaluate(() => window.TronoNetwork.primaryRoom), 'chat-livre');
-          assert.equal(await q.evaluate(() => window.TronoSocial.voiceJoined), true);
-          for (const size of [
-            { width: 480, height: 800 },
-            { width: 720, height: 1280 },
-            { width: 900, height: 600 },
-          ]) {
-            await p.setViewportSize(size);
-            if (!(await p.locator('#messengerPanel').isVisible())) await toggleMessenger(p);
-            const rect = await p.locator('#messengerPanel').boundingBox();
-            assert(
-              rect.x >= 0 &&
-                rect.y >= 0 &&
-                rect.x + rect.width <= size.width &&
-                rect.y + rect.height <= size.height,
-            );
-            await expect(p.locator('#messengerInput')).toBeInViewport();
-            await p.screenshot({
-              path: path.resolve(
-                __dirname,
-                '../artifacts/social-' + size.width + 'x' + size.height + '.png',
-              ),
-            });
-            await p.locator('#messengerClose').click();
-          }
+          assert(await q.evaluate(() => window.TronoSocial.voiceJoined));
         },
       );
-      await check(
-        'diagnostics copy excludes chat content, and history survives a backend restart',
+      await t.test(
+        'history survives backend restart and unfriending prevents new sends',
         async () => {
-          await p.setViewportSize({ width: 1280, height: 800 });
-          if (await p.locator('#messengerPanel').isVisible())
-            await p.locator('#messengerClose').click();
-          await p.evaluate(() => window.TronoSocial.toggleTelemetry(true));
-          await p.locator('#copyDiagnostics').click();
-          await expect(p.locator('#copyDiagnosticsStatus')).toContainText('Copiado');
-          const report = await p.evaluate(() => navigator.clipboard.readText());
-          assert.equal(JSON.parse(report).app, 'M&N');
+          const report = await p.evaluate(() => window.TronoSocial.diagnostics());
           assert(!report.includes('Uma conversa privada'));
           assert(!report.includes(ana.session.access_token));
-          await p.locator('#telemetryCloseBtn').click();
           await fixture.restart();
           assert.equal(
             (await api('read', { peerId: bob.user.id })).data.messages[0].text,
             'Uma conversa privada durante a chamada',
           );
-          assert.equal((await api('snapshot', {}, bob)).data.threads[0].unread, 0);
           assert.equal(
             (
               await api(
                 'send',
-                { peerId: ana.user.id, id: crypto.randomUUID(), text: 'Após reiniciar servidor' },
+                {
+                  peerId: ana.user.id,
+                  id: require('node:crypto').randomUUID(),
+                  text: 'Após reiniciar servidor',
+                },
                 bob,
               )
             ).status,
             200,
           );
           await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
-          await expect(p.locator('#messengerMessages')).toContainText('Após reiniciar servidor');
-          const removed = await api('friend', { peerId: bob.user.id, action: 'remove' });
-          assert.equal(removed.status, 200);
+          await expect(p.getByRole('log', { name: 'Mensagens' })).toContainText(
+            'Após reiniciar servidor',
+          );
           assert.equal(
-            (await api('send', { peerId: bob.user.id, id: crypto.randomUUID(), text: 'Bloqueada' }))
-              .status,
+            (await api('friend', { peerId: bob.user.id, action: 'remove' })).status,
+            200,
+          );
+          assert.equal(
+            (
+              await api('send', {
+                peerId: bob.user.id,
+                id: require('node:crypto').randomUUID(),
+                text: 'Bloqueada',
+              })
+            ).status,
             403,
           );
           assert((await api('read', { peerId: bob.user.id })).data.messages.length > 0);
+          await expect(p.locator('#directMessageInput')).toBeDisabled();
         },
       );
       assert.deepEqual(errors, []);

@@ -3,6 +3,9 @@
 Atualizado em 25/10/2026. Contrato aprovado para a reconstrução. Plano e andamento:
 [MIGRACAO.md](MIGRACAO.md). Este arquivo substitui planos visuais separados.
 
+Os três marcos receberam aceite visual humano na conversa em 25/10/2026.
+O aceite não substitui as verificações técnicas registradas na migração.
+
 ## Experiência
 
 - Após autenticação, abrir comunicação diretamente. Jogos têm área própria.

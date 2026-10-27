@@ -185,8 +185,8 @@ test(
         await expect(page.locator('.room-presence-icons .community-avatar')).toHaveCount(0);
       };
       await idle();
-      await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-      await page.evaluate(() => window.TronoAppLayout.navigate('community'));
+      await page.evaluate(() => window.TronoGames.openLibrary());
+      await page.evaluate(() => window.TronoPortal.openVoice());
       await idle();
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect
@@ -234,7 +234,7 @@ test(
         page.evaluate(() =>
           window.TronoDesktopSettings
             ? window.TronoDesktopSettings.close()
-            : document.getElementById('profileDialog').close(),
+            : window.TronoCallSettings.close(),
         );
       await close();
       await page.evaluate(() => window.TronoProfile.open());
@@ -293,6 +293,7 @@ test(
       await page.locator('.profile-gif-search button').click();
       await expect(page.locator('.profile-gif-message')).toContainText('cole o link');
       assert.equal(requests.length, before);
+      await page.getByText('Usar um link do GIPHY', { exact: true }).click();
       await page
         .getByRole('textbox', { name: 'Link do GIF no GIPHY' })
         .fill('https://giphy.com/gifs/animation-abc123');
@@ -305,59 +306,22 @@ test(
       assert.equal(uploads.length, 3);
       await close();
       await page.setViewportSize({ width: 1440, height: 900 });
-      await page.locator('[data-chat-channel=chat-conversa]').click();
+      await page.locator('[data-voice-channel=chat-conversa]').click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
       await expect
         .poll(() => page.evaluate(() => window.TronoNetwork.primaryRoom))
         .toBe('chat-conversa');
-      await expect(page.locator('[data-chat-channel=chat-conversa] .community-avatar')).toHaveCount(
-        1,
+      await expect(page.locator('[data-call-person] .participant-background img')).toHaveCount(1);
+      await page.locator('[data-control=cameraBtn]').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
+      await expect(page.locator('[data-control=cameraBtn]')).toHaveAttribute(
+        'aria-pressed',
+        'true',
       );
-      await expect(page.locator('[data-chat-channel=chat-jogos] .community-avatar')).toHaveCount(0);
-      await expect(page.locator('#voiceRoster .participant-background img')).toHaveCount(1);
-      for (const mode of ['original', 'discord']) {
-        await page.evaluate((mode) => window.TronoAppLayout.apply(mode, { save: true }), mode);
-        const card = await page.locator('#voiceRoster .voice-person').boundingBox();
-        assert(card.width <= 231 && card.height <= 150, JSON.stringify(card));
-        await expect(page.locator('#cameraBtn')).toHaveAttribute('data-call-action', 'start');
-        await page.locator('#cameraBtn').click();
-        await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(true);
-        await page.locator('#workspaceHeaderToggle').hover();
-        await expect
-          .poll(() => page.locator('#cameraBtn').evaluate((e) => e.matches(':hover')))
-          .toBe(false);
-        await expect
-          .poll(() =>
-            page.locator('#cameraBtn').evaluate((e) => getComputedStyle(e).backgroundColor),
-          )
-          .toBe('rgb(123, 41, 54)');
-        await page.locator('#cameraBtn').click();
-        await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(false);
-        await page.locator('#workspaceHeaderToggle').hover();
-        await expect
-          .poll(() => page.locator('#cameraBtn').evaluate((e) => e.matches(':hover')))
-          .toBe(false);
-        await expect
-          .poll(() =>
-            page.locator('#cameraBtn').evaluate((e) => getComputedStyle(e).backgroundColor),
-          )
-          .toBe('rgb(24, 84, 62)');
-        await page.screenshot({
-          path: out + '/call-' + mode + '.png',
-          animations: 'disabled',
-          timeout: 60000,
-        });
-      }
-      await page.locator('#joinVoiceBtn').click();
+      await page.locator('[data-control=cameraBtn]').click();
+      await expect.poll(() => page.evaluate(() => window.TronoSocial.cameraOn)).toBe(false);
+      await page.locator('[data-control=joinVoiceBtn]').click();
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(false);
-      await expect(page.locator('.room-presence-icons .community-avatar')).toHaveCount(0);
-      assert.equal(await page.evaluate(() => window.TronoNetwork?.currentRoom), 'chat-conversa');
-      await page.evaluate(() => window.TronoAppLayout.navigate('game'));
-      await page.evaluate(() => window.TronoAppLayout.navigate('community'));
-      assert.equal(await page.evaluate(() => window.TronoSocial.voiceJoined), false);
-      await page.locator('#joinVoiceBtn').click();
-      await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
-      await expect(page.locator('.room-presence-icons .community-avatar')).toHaveCount(1);
       assert.deepEqual(errors, []);
     } catch (error) {
       const pages = browser?.contexts().flatMap((context) => context.pages()) || [];

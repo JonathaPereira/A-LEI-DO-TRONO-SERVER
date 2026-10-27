@@ -32,8 +32,11 @@ test(
       await fixture.call('verify', { token_hash: [...fixture.links][0][0], type: 'signup' });
       const data = (await fixture.call('login', { email, password: 'Senha12!' })).data;
       browser = await chromium.launch({
-        executablePath: process.env.AUTH_TEST_CHROMIUM || '/usr/bin/chromium',
-        headless: true,
+        executablePath:
+          process.env.AUTH_TEST_CHROMIUM || process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
+        // Windows focus assertions need actual browser windows; new headless
+        // Chromium keeps each page focused independently of bringToFront().
+        headless: process.platform !== 'win32',
         args: [
           '--no-sandbox',
           '--use-fake-device-for-media-stream',
@@ -383,7 +386,7 @@ test(
           await game.goto(origin + '/game-test');
           await game.bringToFront();
           await game.locator('button').click();
-          assert.equal(await page.evaluate(() => document.hasFocus()), false);
+          await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(false);
           const message = JSON.stringify({ type: 'clip', id: 'native-hotkey-1' });
           client.send(message);
           client.send(message);

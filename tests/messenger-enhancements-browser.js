@@ -108,7 +108,9 @@ test(
         await page.goto(origin);
         await page.waitForFunction(() => window.TronoAuth?.ready);
         await page.evaluate(() => window.TronoAuth.ready);
-        await expect(page.locator('#messengerToggle')).toBeVisible();
+        await expect(
+          page.getByRole('button', { name: 'Pessoas da Corte', exact: true }),
+        ).toBeVisible();
         return { context, page };
       }
       const a = await client(ana),
@@ -116,60 +118,74 @@ test(
         p = a.page,
         q = b.page;
       for (const page of [p, q]) {
-        await page.locator('#openVoicePortalBtn').click();
+        await page.evaluate(() => window.TronoPortal.openVoice());
         if (!(await page.evaluate(() => window.TronoSocial.voiceJoined)))
-          await page.locator('#joinVoiceBtn').click();
+          await page.locator('[data-voice-channel=chat-livre]').click();
         await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
         await page.evaluate(() => {
           window.__mic = window.TronoSocial.getLocalAudioTrack();
           window.__primary = window.TronoNetwork.primaryRoom;
         });
       }
-      await expect(p.locator('#messengerToggle')).toHaveClass(/messenger-sidebar-button/);
+      await expect(p.getByRole('button', { name: 'Pessoas da Corte', exact: true })).toBeVisible();
       await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
-      await expect(p.locator('#messengerInput')).toBeEnabled();
+      await expect(p.locator('#directMessageInput')).toBeEnabled();
       let sentId;
       await t.test(
         'attachment-only upload previews for the two participants and dates include year',
         async () => {
           await q.evaluate(() => (window.__focused = false));
           await p
-            .locator('#messengerFile')
+            .locator('#chatOnlyScreen input[type=file]')
             .setInputFiles({ name: 'imagem-privada.png', mimeType: 'image/png', buffer: png });
-          await expect(p.locator('#messengerAttachmentDraft img')).toBeVisible();
-          await expect(p.locator('#messengerAttachmentDraft')).not.toContainText(
+          await expect(p.getByAltText('Prévia da imagem')).toBeVisible();
+          await expect(p.locator('[class*="attachmentPreview"]')).not.toContainText(
             'imagem-privada.png',
           );
-          await p.locator('#messengerSend').click();
-          await expect(p.locator('#messengerMessages .direct-attachment')).toHaveCount(1);
-          await expect(p.locator('#messengerMessages img')).toBeVisible();
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect(p.locator('#chatOnlyScreen [role=log] .chat-attachment')).toHaveCount(1);
+          await expect(p.locator('#chatOnlyScreen [role=log] img')).toBeVisible();
           await expect
-            .poll(() => p.locator('#messengerMessages img').evaluate((img) => img.naturalWidth))
+            .poll(() =>
+              p.locator('#chatOnlyScreen [role=log] img').evaluate((img) => img.naturalWidth),
+            )
             .toBe(1);
-          await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
-          sentId = await p.locator('.direct-attachment').getAttribute('data-attachment');
+          await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();
+          sentId = await p
+            .locator('#chatOnlyScreen [role=log] .chat-attachment')
+            .getAttribute('data-attachment');
           const data = (await api('read', { peerId: bob.user.id })).data.messages[0];
           assert.equal(data.text, '');
           assert.equal(data.attachment.id, sentId);
           assert.equal(data.attachment.kind, 'direct');
           assert.equal(data.attachment.peerId, bob.user.id);
           await expect(q.locator('.messenger-toast')).toHaveCount(1);
-          await expect(q.locator('.messenger-toast .community-avatar')).toBeVisible();
+          await expect(
+            q.locator('.messenger-toast img, .messenger-toast [class*="avatar"]').first(),
+          ).toBeVisible();
           await expect(q.locator('.messenger-toast')).toContainText('Ana');
           await expect(q.locator('.messenger-toast')).toContainText('Enviou um anexo');
-          await expect(q.locator('#messengerUnread')).toHaveText('1');
+          await expect
+            .poll(() =>
+              q.evaluate(() =>
+                window.TronoDirectMessages.getSnapshot().threads.reduce((n, t) => n + t.unread, 0),
+              ),
+            )
+            .toBe(1);
           await expect.poll(() => q.evaluate(() => window.__notifications.length)).toBe(1);
           await q.evaluate(() => (window.__focused = true));
           await q.locator('.messenger-toast-open').click();
-          await expect(q.locator('#messengerMessages .direct-attachment')).toHaveCount(1);
-          await expect(q.locator('#messengerMessages .file-delete')).toHaveCount(0);
+          await expect(q.locator('#chatOnlyScreen [role=log] .chat-attachment')).toHaveCount(1);
+          await expect(q.locator('#chatOnlyScreen [role=log] .file-delete')).toHaveCount(0);
           await expect(q.locator('.messenger-toast')).toHaveCount(0);
           for (const page of [p, q]) {
-            await expect(page.locator('#messengerMessages')).not.toContainText(
+            await expect(page.locator('#chatOnlyScreen [role=log]')).not.toContainText(
               'imagem-privada.png',
             );
-            await expect(page.locator('#messengerMessages .file-download')).toHaveCount(0);
-            await expect(page.locator('#messengerMessages .file-image-open img')).toBeVisible();
+            await expect(page.locator('#chatOnlyScreen [role=log] .file-download')).toHaveCount(0);
+            await expect(
+              page.locator('#chatOnlyScreen [role=log] .file-image-open img'),
+            ).toBeVisible();
           }
           await q.locator('.file-image-open').click();
           await expect(q.locator('.attachment-image-viewer img')).toBeVisible();
@@ -177,7 +193,7 @@ test(
             'imagem-privada.png',
           );
           await q.getByRole('button', { name: 'Fechar imagem' }).click();
-          const time = q.locator('.direct-message time').first();
+          const time = q.locator('#chatOnlyScreen [data-message-id] time').first();
           await expect(time).toHaveText(/\d{2}\/\d{2}\/\d{4}/);
           assert(Number.isFinite(Date.parse(await time.getAttribute('datetime'))));
           for (const page of [p, q])
@@ -198,33 +214,50 @@ test(
       await t.test(
         'same focused thread, mute and disabled notifications suppress avatar notices',
         async () => {
-          await p.locator('#messengerInput').fill('Sem aviso na conversa em foco');
-          await p.locator('#messengerSend').click();
-          await expect(q.locator('#messengerMessages')).toContainText(
+          await p.locator('#directMessageInput').fill('Sem aviso na conversa em foco');
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect(q.locator('#chatOnlyScreen [role=log]')).toContainText(
             'Sem aviso na conversa em foco',
           );
           assert.equal(await q.locator('.messenger-toast').count(), 0);
           assert.equal(await q.evaluate(() => window.__notifications.length), 1);
-          await q.locator('#messengerClose').click();
+          await q.evaluate(() => {
+            window.TronoMessenger.close();
+            window.TronoCallNavigation.showChat(true);
+          });
           await q.evaluate((id) => window.TronoNotifications.mute(id, true), ana.user.id);
-          await p.locator('#messengerInput').fill('Amigo silenciado');
-          await p.locator('#messengerSend').click();
-          await expect(q.locator('#messengerUnread')).toHaveText('1');
+          await p.locator('#directMessageInput').fill('Amigo silenciado');
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect
+            .poll(() =>
+              q.evaluate(() =>
+                window.TronoDirectMessages.getSnapshot().threads.reduce((n, t) => n + t.unread, 0),
+              ),
+            )
+            .toBe(1);
           assert.equal(await q.locator('.messenger-toast').count(), 0);
           await q.evaluate((id) => {
             window.TronoNotifications.mute(id, false);
             window.TronoPersonal.set('notifications', 'off');
           }, ana.user.id);
-          await p.locator('#messengerInput').fill('Notificações desligadas');
-          await p.locator('#messengerSend').click();
-          await expect(q.locator('#messengerUnread')).toHaveText('2');
+          await p.locator('#directMessageInput').fill('Notificações desligadas');
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect
+            .poll(() =>
+              q.evaluate(() =>
+                window.TronoDirectMessages.getSnapshot().threads.reduce((n, t) => n + t.unread, 0),
+              ),
+            )
+            .toBe(2);
           assert.equal(await q.locator('.messenger-toast').count(), 0);
           await q.evaluate(() => window.TronoPersonal.set('notifications', 'mentions'));
-          await p.locator('#messengerInput').fill('Aviso com ícone novamente');
-          await p.locator('#messengerSend').click();
+          await p.locator('#directMessageInput').fill('Aviso com ícone novamente');
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
           await expect(q.locator('.messenger-toast')).toHaveCount(1);
           await expect(q.locator('.messenger-toast')).toContainText('Aviso com ícone novamente');
-          await expect(q.locator('#messengerToggle svg')).toHaveCount(1);
+          await expect(
+            q.getByRole('button', { name: 'Pessoas da Corte', exact: true }).locator('svg'),
+          ).toHaveCount(1);
           await q.evaluate(() => window.TronoPersonal.set('notifications', 'off'));
           await expect(q.locator('.messenger-toast')).toHaveCount(0);
           await q.evaluate(() => window.TronoPersonal.set('notifications', 'mentions'));
@@ -289,18 +322,18 @@ test(
               await route.abort();
             } else await route.continue();
           });
-          await p.locator('#messengerInput').fill('Texto mantido na falha');
+          await p.locator('#directMessageInput').fill('Texto mantido na falha');
           await p
-            .locator('#messengerFile')
+            .locator('#chatOnlyScreen input[type=file]')
             .setInputFiles({ name: 'retry.png', mimeType: 'image/png', buffer: png });
-          await p.locator('#messengerSend').click();
-          await expect(p.locator('#messengerStatus')).toContainText('mantidos');
-          await expect(p.locator('#messengerInput')).toHaveValue('Texto mantido na falha');
-          await expect(p.locator('#messengerAttachmentDraft img')).toBeVisible();
-          await expect(p.locator('#messengerAttachmentDraft')).not.toContainText('retry.png');
-          await p.locator('#messengerSend').click();
-          await expect(p.locator('#messengerInput')).toHaveValue('');
-          await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect(p.locator('#chatOnlyScreen span[role=status]')).toContainText('mantidos');
+          await expect(p.locator('#directMessageInput')).toHaveValue('Texto mantido na falha');
+          await expect(p.getByAltText('Prévia da imagem')).toBeVisible();
+          await expect(p.locator('[class*="attachmentPreview"]')).not.toContainText('retry.png');
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect(p.locator('#directMessageInput')).toHaveValue('');
+          await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();
           assert.equal(uploads, 1);
           assert.equal(
             (await api('read', { peerId: bob.user.id })).data.messages.filter(
@@ -321,50 +354,52 @@ test(
             intercepted = route;
             resolveIntercept();
           });
-          await p.locator('#messengerInput').fill('Arquivo só para Bruno');
+          await p.locator('#directMessageInput').fill('Arquivo só para Bruno');
           await p
-            .locator('#messengerFile')
+            .locator('#chatOnlyScreen input[type=file]')
             .setInputFiles({ name: 'apenas-bruno.png', mimeType: 'image/png', buffer: png });
-          await p.locator('#messengerSend').click();
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
           await reached;
           await p.evaluate((id) => window.TronoMessenger.open(id), dani.user.id);
-          await expect(p.locator('#messengerInput')).toHaveValue('');
-          await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
+          await expect(p.locator('#directMessageInput')).toHaveValue('');
+          await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();
           await intercepted.abort().catch(() => {});
           await p.unroute(fixture.base + '/files/upload');
-          await p.locator('#messengerInput').fill('Só texto para Dani');
-          await p.locator('#messengerSend').click();
-          await expect(p.locator('#messengerMessages')).toContainText('Só texto para Dani');
+          await p.locator('#directMessageInput').fill('Só texto para Dani');
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect(p.locator('#chatOnlyScreen [role=log]')).toContainText('Só texto para Dani');
           const sent = (await api('read', { peerId: dani.user.id })).data.messages;
           assert.equal(sent.length, 1);
           assert(!sent[0].attachment);
           await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
-          await expect(p.locator('#messengerInput')).toHaveValue('Arquivo só para Bruno');
-          await expect(p.locator('#messengerAttachmentDraft img')).toBeVisible();
-          await expect(p.locator('#messengerAttachmentDraft')).not.toContainText(
+          await expect(p.locator('#directMessageInput')).toHaveValue('Arquivo só para Bruno');
+          await expect(p.getByAltText('Prévia da imagem')).toBeVisible();
+          await expect(p.locator('[class*="attachmentPreview"]')).not.toContainText(
             'apenas-bruno.png',
           );
-          await p.locator('#messengerSend').click();
-          await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
-          await expect(p.locator('#messengerMessages')).toContainText('Arquivo só para Bruno');
-          await p.locator('#messengerFile').setInputFiles({
+          await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
+          await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();
+          await expect(p.locator('#chatOnlyScreen [role=log]')).toContainText(
+            'Arquivo só para Bruno',
+          );
+          await p.locator('#chatOnlyScreen input[type=file]').setInputFiles({
             name: 'grande.png',
             mimeType: 'image/png',
             buffer: Buffer.alloc(10_000_001),
           });
-          await expect(p.locator('#messengerStatus')).toContainText('10.0 MB');
-          await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
+          await expect(p.locator('#chatOnlyScreen span[role=status]')).toContainText('10.0 MB');
+          await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();
         },
       );
       await t.test(
         'creator cannot moderate someone else’s private file; deleting as sender creates a tombstone',
         async () => {
           await q.evaluate((id) => window.TronoMessenger.open(id), ana.user.id);
-          await expect(q.locator('#messengerInput')).toBeEnabled();
+          await expect(q.locator('#directMessageInput')).toBeEnabled();
           await q
-            .locator('#messengerFile')
+            .locator('#chatOnlyScreen input[type=file]')
             .setInputFiles({ name: 'arquivo-do-amigo.png', mimeType: 'image/png', buffer: png });
-          await q.locator('#messengerSend').click();
+          await q.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
           await expect
             .poll(
               async () =>
@@ -377,16 +412,16 @@ test(
             (m) => m.attachment?.name === 'arquivo-do-amigo.png',
           ).attachment.id;
           const row = p
-            .locator('.direct-message')
+            .locator('#chatOnlyScreen [data-message-id]')
             .filter({ has: p.locator('[data-attachment="' + attachment + '"]') });
           await expect(row).toBeVisible();
           await expect(row.locator('.file-delete')).toHaveCount(0);
           const messageId = await row.getAttribute('data-message-id'),
             deleted = p.locator('[data-message-id="' + messageId + '"]');
           const own = q
-            .locator('.direct-message')
+            .locator('#chatOnlyScreen [data-message-id]')
             .filter({ has: q.locator('[data-attachment="' + attachment + '"]') });
-          await own.locator('.direct-attachment').hover();
+          await own.locator('.chat-attachment').hover();
           await own.locator('.file-delete').click();
           await expect(deleted).toContainText('Arquivo excluído.');
           await expect(deleted.locator('.file-download')).toHaveCount(0);
@@ -396,11 +431,15 @@ test(
             { width: 480, height: 520 },
           ]) {
             await p.setViewportSize(size);
-            await expect(p.locator('#messengerAttach')).toBeInViewport();
-            await expect(p.locator('#messengerSend')).toBeInViewport();
+            await expect(
+              p.getByRole('button', { name: 'Anexar arquivo', exact: true }),
+            ).toBeInViewport();
+            await expect(
+              p.getByRole('button', { name: 'Enviar mensagem', exact: true }),
+            ).toBeInViewport();
             assert(
               await p
-                .locator('#messengerPanel')
+                .locator('#chatOnlyScreen')
                 .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
             );
           }
@@ -419,11 +458,12 @@ test(
       await t.test(
         'friends remain reachable through the workspace sidebar across wide and portrait screens',
         async () => {
-          await p.locator('#messengerClose').click();
-          await p.evaluate(
-            () => (window.__friendsButton = document.getElementById('workspaceDirectOpen')),
-          );
-          const friends = p.locator('#workspaceDirectOpen');
+          await p.evaluate(() => {
+            window.TronoMessenger.close();
+            window.TronoCallNavigation.showChat();
+          });
+          const friends = p.getByRole('button', { name: 'Pessoas da Corte', exact: true });
+          const node = await friends.elementHandle();
           for (const size of [
             { width: 720, height: 1280 },
             { width: 480, height: 800 },
@@ -431,36 +471,20 @@ test(
             { width: 1280, height: 900 },
           ]) {
             await p.setViewportSize(size);
-            const friends = p.locator('#workspaceDirectOpen');
-            if (!(await friends.isVisible())) await p.locator('#workspaceSidebarBtn').click();
-            await expect(friends).toBeVisible();
+            if (!(await friends.isVisible()))
+              await p.getByRole('button', { name: 'Abrir canais' }).click();
             await expect(friends).toBeInViewport();
-            assert(
-              await p.evaluate(
-                () => window.__friendsButton === document.getElementById('workspaceDirectOpen'),
-              ),
-            );
-            const bounds = await friends.boundingBox(),
-              nav = await p.locator('.mn-channel-sidebar').boundingBox();
-            assert(
-              bounds.x >= nav.x - 1 &&
-                bounds.x + bounds.width <= nav.x + nav.width + 1 &&
-                bounds.y >= nav.y - 1 &&
-                bounds.y + bounds.height <= nav.y + nav.height + 1,
-              JSON.stringify({ size, bounds, nav }),
-            );
-            assert(
-              await friends.evaluate((el) => {
-                const b = el.getBoundingClientRect();
-                return el.contains(
-                  document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2),
-                );
-              }),
-            );
+            assert.equal(await friends.evaluate((e, old) => e === old, node), true);
             await friends.click();
-            await expect(p.locator('#messengerPanel')).toBeVisible();
-            await p.locator('#messengerClose').click();
+            await expect(
+              p.getByRole('navigation', { name: 'Pessoas da Corte', exact: true }),
+            ).toBeVisible();
+            await p.evaluate(() => {
+              window.TronoMessenger.close();
+              window.TronoCallNavigation.showChat();
+            });
           }
+          await node.dispose();
         },
       );
       await t.test(
@@ -468,10 +492,10 @@ test(
         async () => {
           await p.setViewportSize({ width: 1280, height: 900 });
           await p.evaluate((id) => window.TronoMessenger.open(id), bob.user.id);
-          await expect(p.locator('#messengerInput')).toBeEnabled();
-          await p.locator('#messengerInput').fill('Rascunho exclusivo de Ana');
+          await expect(p.locator('#directMessageInput')).toBeEnabled();
+          await p.locator('#directMessageInput').fill('Rascunho exclusivo de Ana');
           await p
-            .locator('#messengerFile')
+            .locator('#chatOnlyScreen input[type=file]')
             .setInputFiles({ name: 'rascunho-ana.png', mimeType: 'image/png', buffer: png });
           let release, resolveIntercept;
           const reached = new Promise((resolve) => (resolveIntercept = resolve));
@@ -488,12 +512,12 @@ test(
           }, sentId);
           await reached;
           await p.evaluate(() => window.TronoAuth.logout());
-          await expect(p.locator('#messengerPanel')).toBeHidden();
+          await expect(p.locator('#chatOnlyScreen')).toBeHidden();
           await expect(p.locator('.messenger-toast')).toHaveCount(0);
           await p.locator('#authEmail').fill('files-third@example.test');
           await p.locator('#authPassword').fill('Senha12!');
-          await p.locator('#authSubmitBtn').click();
-          await expect(p.locator('#authDialog')).toBeHidden();
+          await p.locator('#authSubmit').click();
+          await expect(p.locator('#portalScreen')).toBeHidden();
           assert.equal(await p.evaluate(() => window.TronoAuth.user.id), dani.user.id);
           await release();
           assert.match((await p.evaluate(() => window.__pendingPrivateURL)).error, /conta mudou/);
@@ -508,8 +532,8 @@ test(
           );
           assert.equal(denied, true);
           await p.evaluate((id) => window.TronoMessenger.open(id), ana.user.id);
-          await expect(p.locator('#messengerInput')).toHaveValue('');
-          await expect(p.locator('#messengerAttachmentDraft')).toBeHidden();
+          await expect(p.locator('#directMessageInput')).toHaveValue('');
+          await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();
         },
       );
       assert.deepEqual(errors, []);

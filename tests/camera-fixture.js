@@ -8,10 +8,12 @@ function installCanvasCamera({ display = false, demo } = {}) {
   const sources = new Set();
   function videoSource(kind = 'camera') {
     const canvas = document.createElement('canvas');
-    canvas.width = demo && kind === 'camera' ? 640 : 1280;
-    canvas.height = demo && kind === 'camera' ? 360 : 720;
+    const scale = demo?.scale || 1;
+    canvas.width = (demo && kind === 'camera' ? 640 : 1280) * scale;
+    canvas.height = (demo && kind === 'camera' ? 360 : 720) * scale;
     const context = canvas.getContext('2d');
-    if (demo && kind === 'screen') context.scale(2, 2);
+    const drawingScale = scale * (demo && kind === 'screen' ? 2 : 1);
+    context.scale(drawingScale, drawingScale);
     let frame = 0;
     const paint = () => {
       context.fillStyle = frame++ % 2 ? '#284668' : '#456886';
@@ -121,9 +123,9 @@ function installCanvasCamera({ display = false, demo } = {}) {
       }
     };
     paint();
-    const stream = canvas.captureStream(demo ? 8 : 30),
+    const stream = canvas.captureStream(demo ? demo.fps || 8 : 30),
       video = stream.getVideoTracks()[0];
-    const timer = setInterval(paint, 1000 / (demo ? 8 : 30)),
+    const timer = setInterval(paint, 1000 / (demo ? demo.fps || 8 : 30)),
       stop = video.stop.bind(video);
     sources.add(canvas);
     video.stop = () => {

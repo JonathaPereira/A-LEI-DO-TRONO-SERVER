@@ -32,7 +32,7 @@ A superfície dos jogos permanece montada durante a navegação. Telas podem ser
 ocultadas; prompts e efeitos pertencem ao mesmo escopo, inclusive hosts criados
 dinamicamente. Trocar tela não recria socket, partida, captura ou player.
 A apresentação da chamada está reintegrada no Marco 2, aprovado em 25/10/2026.
-Os recursos avançados do Marco 3 estão em reintegração. Consulte o checkpoint
+Os recursos avançados do Marco 3 usam os mesmos donos na composição nova. Consulte o checkpoint
 da migração para disponibilidade e evidências; fonte existente não comprova QA.
 
 ## Navegação, conta e comunicação
@@ -155,8 +155,20 @@ mn-personal:<id>. Troca de conta limpa a projeção e invalida trabalhos anterio
 
 Gravação manual e replay possuem seus próprios recursos; bibliotecas e janelas
 flutuantes emprestam comandos/streams. A gravação só confirma no commit da
-persistência. Não criar recorder, buffer ou captura adicional ao navegar.
+persistência. Não criar recorder, buffer ou captura adicional ao navegar. Troca de conta ou saída de convidado cancela seleção, encoder ativo e persistência ainda não confirmada da gravação, sem encerrar o microfone emprestado da chamada. O sinal de cancelamento atravessa o salvamento: após cada operação de pasta/arquivo a identidade é revalidada; um writable aberto é abortado e o fallback de download é suprimido. Um arquivo já confirmado não é apagado.
 Remote PC conserva transporte, autorização de controle e ponte nativa existentes.
+
+desktop/window.ts possui a assinatura nativa da janela e deduplica fullscreen
+pendente. O botão da Corte delega a esse dono; F11/menu atualizam o mesmo
+snapshot. Sua inicialização independe do shell. desktop/update-runtime.tsx
+prepara o controlador de atualização sem montar views. Aplicativo apresenta
+buscar/status; o aviso oferece reinício somente após prontidão e ação explícita.
+
+application/notices.tsx observa os donos de mensagens/comunidade. Expiração,
+pausa, mute, unread e isolamento permanecem nos donos. Visibilidade de canal usa
+o compositor atual e seu destino: aviso atrasado do canal em foco não adiciona
+unread. Moderação compartilha controller entre chat e jogo; somente a superfície
+ativa abre o diálogo. Emoji respeita Escape de modal/popover sobreposto.
 
 ## Backend e persistência
 

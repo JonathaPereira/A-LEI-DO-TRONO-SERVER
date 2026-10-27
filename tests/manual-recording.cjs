@@ -359,3 +359,103 @@ test('successful folder export closes the file and never invokes download', asyn
   assert.equal(closed, true);
   assert.equal(notice.kind, 'ok');
 });
+
+test('cancelling the recording scope releases captures, rejects a late picker and prevents pending saves', async () => {
+  const pending = deferred();
+  const f = fixture();
+  f.options.capture = () => pending.promise;
+  const started = f.controller.start();
+  f.controller.cancel();
+  pending.resolve(f.capture);
+  await started;
+  assert.equal(f.controller.getSnapshot().phase, 'idle');
+  assert.equal(f.releases(), 1);
+  assert.equal(f.saved.length, 0);
+  const active = fixture();
+  await active.controller.start();
+  active.controller.cancel();
+  await tick();
+  assert.equal(active.video.readyState, 'ended');
+  assert.equal(active.saved.length, 0);
+  const finishing = fixture(),
+    directory = deferred();
+  finishing.options.chooseDirectory = () => directory.promise;
+  await finishing.controller.start();
+  await finishing.controller.stop();
+  await tick();
+  finishing.controller.cancel();
+  directory.resolve(null);
+  await tick();
+  assert.equal(finishing.saved.length, 0);
+  assert.equal(finishing.controller.getSnapshot().phase, 'idle');
+});
+
+test('account cancellation aborts uncommitted recordings at every persistence boundary without a fallback download', async () => {
+  for (const boundary of ['folder', 'file', 'writable', 'write', 'failure']) {
+    const f = fixture(),
+      gate = deferred();
+    let reached = false,
+      writes = 0,
+      closes = 0,
+      aborts = 0,
+      downloads = 0;
+    async function pause(at) {
+      if (boundary === at) {
+        reached = true;
+        await gate.promise;
+      }
+    }
+    const writable = {
+      async write() {
+        writes++;
+        await pause('write');
+        if (boundary === 'failure') {
+          reached = true;
+          await gate.promise;
+          throw Error('disk full');
+        }
+      },
+      async close() {
+        closes++;
+      },
+      async abort() {
+        aborts++;
+      },
+    };
+    const directory = {
+      async getDirectoryHandle() {
+        await pause('folder');
+        return {
+          async getFileHandle() {
+            await pause('file');
+            return {
+              async createWritable() {
+                await pause('writable');
+                return writable;
+              },
+            };
+          },
+        };
+      },
+    };
+    f.options.chooseDirectory = async () => directory;
+    f.options.save = (blob, selected, filename, signal) =>
+      saveRecording(blob, selected, filename, () => downloads++, signal);
+    await f.controller.start();
+    await f.controller.stop();
+    await tick();
+    assert.equal(reached, true, boundary);
+    f.controller.cancel();
+    if (['write', 'failure'].includes(boundary))
+      assert.equal(aborts, 1, boundary + ' must abort without waiting for IO');
+    gate.resolve();
+    await tick();
+    assert.equal(writes, ['write', 'failure'].includes(boundary) ? 1 : 0, boundary);
+    assert.equal(closes, 0, boundary);
+    assert.equal(downloads, 0, boundary);
+    assert.equal(f.controller.getSnapshot().phase, 'idle');
+    assert.equal(f.controller.getSnapshot().notice, null);
+    assert.equal(aborts, ['folder', 'file'].includes(boundary) ? 0 : 1, boundary);
+    f.controller.dispose();
+  }
+});

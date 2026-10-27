@@ -62,6 +62,8 @@ test(
       await ready();
       await page.reload({ waitUntil: 'domcontentloaded' });
       await ready();
+      // Match a reduced Windows work area, independent of the developer monitor.
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1024, 680));
       const login = async (remember) => {
         await expect(page.locator('#portalScreen')).toBeVisible();
         await expect(page.getByRole('complementary', { name: 'Canais e conversas' })).toBeHidden();
@@ -106,6 +108,7 @@ test(
       await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
       await page.locator('button[data-game="throne"]').click();
       await expect(page.locator('#setupScreen')).toBeVisible();
+      await page.screenshot({ path: 'artifacts/frontend-reset/auth-regression/lobby-small-electron.png' });
       await page.locator('#backFromLobbyBtn').click();
       await expect(page.locator('#chatOnlyScreen')).toBeVisible();
       assert.equal(await page.evaluate(() => window.TronoAuth.user.nickname), 'Conta Nativa');

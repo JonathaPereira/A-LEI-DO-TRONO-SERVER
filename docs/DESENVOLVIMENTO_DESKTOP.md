@@ -32,7 +32,24 @@ helper. HMR não comprova continuidade de dispositivos após qualquer edição.
 
 Use --filter com regex sobre os caminhos; --list mostra a seleção sem executá-la.
 Exemplo: npm test -- --filter 'portal|community-navigation'. Seleção inválida ou
-vazia falha. tests/suites.json é a classificação única; helpers não são entradas.
+vazia falha. tests/suites.json classifica os testes; tests/release.json seleciona
+os fluxos que bloqueiam uma entrega. Sem perfil, cada suíte continua completa.
+Use npm test -- --suite browser --profile release e o equivalente --suite desktop
+para reproduzir a seleção da pipeline; --list mostra os arquivos antes de rodar.
+O perfil preserva todos os contratos core e não transforma falhas em retries.
+
+Windows full app usa um runner Windows para instalar/compilar uma vez, conferir
+contratos, fluxos essenciais web/Electron, empacotar e aceitar o instalador.
+Depois o job de publicação verifica a entrega e envia ao Surge. extended_browser
+inclui a suíte browser inteira quando necessário, especialmente após mudanças
+nos jogos ou na cascata compartilhada. A seleção antiga por --shard foi retirada
+junto da matriz; não há outro comando de teste por cenário.
+
+Antes de enviar alterações de validação, execute a seleção afetada em pelo menos
+duas rodadas consecutivas locais com o Chromium do Playwright. Uma falha invalida
+a sequência: diagnostique/corrija e reinicie as rodadas, sem retry oculto. Use o
+mesmo build entre rodadas se os fontes não mudaram. Limites exclusivos de runner,
+como aceitação NSIS, permanecem explícitos; não instalar no computador do usuário.
 
 A suíte desktop inclui updater que importa dependências do Electron e remux que
 exige ffmpeg/ffprobe no PATH. Modelos de mídia sem esses recursos ficam em core.
@@ -67,6 +84,10 @@ do teste desktop é sintético e suas permissões são pré-concedidas somente n
 perfil temporário. Não substitui teste com equipamento nem áudio por aplicativo.
 Capturas locais e logs ficam em artifacts/frontend-reset/call-qa e call-*.log.
 Os testes não encerram o Electron do usuário nem reutilizam seu perfil.
+desktop-call-layout usa dois Electron reais com fontes de câmera/tela sintéticas
+animadas: verifica frames WebRTC, peers/players, fullscreen nativo e descarte
+atrasado. desktop-browser usa Chromium e bridge Windows simulada; pertence à
+suíte browser e não comprova IPC/hardware real.
 
 ## Operações especiais
 
@@ -86,3 +107,15 @@ codificado em vez de assumir que 1.200 ms bastam; o destino de arquivo é adiado
 pela fixture para verificar que a captura já foi encerrada antes da persistência.
 FFmpeg/FFprobe ausentes aparecem como skip nas verificações externas de gravação e
 replay no navegador; isso não equivale a validar esses decodificadores.
+
+O smoke desktop-runtime conserva permissões, isolamento IPC, HTTPS com corpo/CORS,
+exportação, PCM de soundboard, fullscreen e bandeja. A detecção de processos nativos
+fica em desktop-activity-native, que depende do helper compilado e falha se ele
+estiver ausente; não é substituída por um mock nesse teste. desktop-cinzas-runtime
+prepara o cache local e usa backend descartável para convidado/Splendor/Love Letter.
+A captura do smoke seleciona uma BrowserWindow de QA criada pelo próprio teste.
+
+Na gravação manual, logout invalida também operações de diretório/arquivo: aborta
+um writable ainda não confirmado e impede download de fallback. Arquivos já
+confirmados não são apagados. Core cobre cada fronteira de IO; navegador confere
+logout enquanto write está pendente, além de seleção/captura pendentes.

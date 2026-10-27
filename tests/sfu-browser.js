@@ -226,10 +226,7 @@ test(
           return { ok: true };
         };
       });
-      await page.evaluate(async () => {
-        await window.TronoChatHub.enter({ channelId: 'chat-jogos' });
-        await window.TronoSocial.joinVoice();
-      });
+      await page.getByRole('button', { name: 'Entrar na voz de Jogos', exact: true }).click();
       await expect
         .poll(() =>
           page.evaluate(() => window.__sfu.requests.some((r) => r.action === 'publication-ready')),
@@ -241,7 +238,7 @@ test(
         window.__voiceBaseline = window.TronoSocial.getLocalAudioTrack();
         window.__sfu.failures.camera = 10;
       });
-      await page.locator('#cameraBtn').click();
+      await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
       await expect
         .poll(() =>
           page.evaluate(
@@ -258,7 +255,7 @@ test(
           () => window.TronoSocial.getLocalAudioTrack() === window.__voiceBaseline,
         ),
       );
-      await page.locator('#cameraBtn').click();
+      await page.evaluate(() => window.TronoCallToolbar.activate('cameraBtn'));
       const cameraAttempts = await page.evaluate(
         () =>
           window.__sfu.requests.filter((r) => r.action === 'publish-track' && r.kind === 'camera')

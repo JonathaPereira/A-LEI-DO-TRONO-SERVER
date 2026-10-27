@@ -89,10 +89,12 @@ test(
             constructor(...args) {
               super(...args);
               this.__plays = 0;
+              this.__starts = [];
               audios.push(this);
             }
             play() {
               this.__plays++;
+              this.__starts.push(this.currentTime);
               return super.play();
             }
           };
@@ -193,14 +195,12 @@ test(
             [390, 844],
           ]) {
             await page.setViewportSize({ width, height });
-            const box = await menu.boundingBox();
-            assert(
-              box.x >= 0 &&
-                box.y >= 0 &&
-                box.x + box.width <= width &&
-                box.y + box.height <= height,
-              JSON.stringify(box),
-            );
+            // Resize schedules the anchored popover's next layout frame.
+            await expect.poll(async () => {
+              const box = await menu.boundingBox();
+              return box.x >= 0 && box.y >= 0 &&
+                box.x + box.width <= width && box.y + box.height <= height;
+            }, { message: `Soundboard must settle inside ${width}x${height}` }).toBe(true);
             assert(
               await menu.evaluate((n) => n.scrollHeight <= n.clientHeight + 1),
               'Soundboard scroll stays inside its library',
@@ -295,6 +295,164 @@ test(
             .toBe(0.35);
           await page.keyboard.press('Escape');
           await expect(page.locator('#soundboardDialog')).toBeHidden();
+        },
+      );
+      await t.test(
+        'two browser clients receive room effects, restart the same players and deafen only the receiver',
+        async () => {
+          const email = 'soundboard-receiver@example.test';
+          await fixture.call('signup', { email, nickname: 'Ouvinte', password: 'Senha12!' });
+          await fixture.call('verify', {
+            token_hash: [...fixture.links.keys()].at(-1),
+            type: 'signup',
+          });
+          const receiver = (await fixture.call('login', { email, password: 'Senha12!' })).data;
+          const receiverContext = await browser.newContext({
+            permissions: ['microphone'],
+            viewport: { width: 1440, height: 1000 },
+          });
+          const wasDeafened = await page.evaluate(() => window.TronoSocial.deafened);
+          try {
+            await receiverContext.route('**/*', (route) =>
+              new URL(route.request().url()).hostname === '127.0.0.1'
+                ? route.continue()
+                : route.abort(),
+            );
+            await receiverContext.addInitScript(
+              ({ base, receiver }) => {
+                window.TRONO_BACKEND_URL = base;
+                sessionStorage.setItem('mn-auth-session-v1', JSON.stringify(receiver));
+                localStorage.setItem('tronoSfxEnabled', '0');
+                localStorage.setItem('tronoMusicEnabled', '0');
+                const NativeAudio = Audio;
+                window.__soundAudios = [];
+                // Observe playback while forwarding every play to Chromium and keeping production owners.
+                window.Audio = class extends NativeAudio {
+                  constructor(...args) {
+                    super(...args);
+                    this.__plays = 0;
+                    this.__starts = [];
+                    window.__soundAudios.push(this);
+                  }
+                  play() {
+                    this.__plays++;
+                    this.__starts.push(this.currentTime);
+                    return super.play();
+                  }
+                };
+              },
+              { base: fixture.base, receiver },
+            );
+            const receiverPage = await receiverContext.newPage();
+            receiverPage.setDefaultTimeout(10000);
+            receiverPage.on('pageerror', (error) => errors.push(error.message));
+            // Only signed-file delivery is a fixture boundary; room messages use the real WS server.
+            await receiverPage.route(fixture.base + '/files/' + fixture.soundId + '/url', (route) =>
+              route.fulfill({
+                json: { url: origin + '/test-sound.wav', expiresAt: Date.now() + 300000 },
+              }),
+            );
+            await receiverPage.route(origin + '/test-sound.wav', (route) =>
+              route.fulfill({ body: wave(1), contentType: 'audio/wav' }),
+            );
+            await receiverPage.goto(origin);
+            await receiverPage.waitForFunction(() => window.TronoAuth?.ready);
+            await receiverPage.evaluate(() => window.TronoAuth.ready);
+            await receiverPage.waitForFunction(() => !!window.TronoSoundboard);
+            const roomId = await page.evaluate(() => window.TronoNetwork.currentRoom);
+            assert(roomId, 'The sender must already belong to a voice room');
+            await receiverPage.locator('button[data-voice-channel="' + roomId + '"]').click();
+            await expect
+              .poll(() => receiverPage.evaluate(() => window.TronoSocial.voiceJoined))
+              .toBe(true);
+            await expect
+              .poll(() => receiverPage.evaluate(() => window.TronoNetwork.currentRoom))
+              .toBe(roomId);
+            assert.notEqual(
+              await receiverPage.evaluate(() => window.TronoNetwork.clientId),
+              await page.evaluate(() => window.TronoNetwork.clientId),
+              'Delivery must cross two independently connected browser clients',
+            );
+            if (wasDeafened) await page.locator('[data-control=deafenVoiceBtn]').click();
+            await page.evaluate(() => window.TronoSoundboard.stop());
+            const clients = [page, receiverPage];
+            for (const client of clients) {
+              await client.evaluate(() => {
+                window.__roomSoundOwner = window.TronoSoundboard;
+                window.__roomSoundSocket = window.TronoNetwork.clientId;
+                window.__roomSoundMic = window.TronoSocial.getLocalAudioTrack();
+                window.__roomSoundCount = window.__soundAudios.length;
+              });
+            }
+            await page.locator('#soundboardToggle').click();
+            const play = page.locator('[data-play-sound="' + fixture.soundId + '"]');
+            await play.click();
+            for (const client of clients) {
+              await expect
+                .poll(() =>
+                  client.evaluate(() => window.__soundAudios.length - window.__roomSoundCount),
+                )
+                .toBe(1);
+              await expect
+                .poll(() => client.evaluate(() => window.__soundAudios.at(-1)?.currentTime))
+                .toBeGreaterThan(0.25);
+              await client.evaluate(() => {
+                window.__roomSoundPlayer = window.__soundAudios.at(-1);
+              });
+            }
+            const expectPlayer = (client, plays, volume) =>
+              expect
+                .poll(() =>
+                  client.evaluate(() => ({
+                    sameOwner: window.TronoSoundboard === window.__roomSoundOwner,
+                    sameSocket: window.TronoNetwork.clientId === window.__roomSoundSocket,
+                    sameMicrophone:
+                      window.TronoSocial.getLocalAudioTrack() === window.__roomSoundMic &&
+                      window.__roomSoundMic?.readyState === 'live',
+                    samePlayer: window.__soundAudios.at(-1) === window.__roomSoundPlayer,
+                    newPlayers: window.__soundAudios.length - window.__roomSoundCount,
+                    plays: window.__roomSoundPlayer.__plays,
+                    start: window.__roomSoundPlayer.__starts.at(-1),
+                    volume: window.__roomSoundPlayer.volume,
+                    source: new URL(window.__roomSoundPlayer.src).pathname,
+                  })),
+                )
+                .toEqual({
+                  sameOwner: true,
+                  sameSocket: true,
+                  sameMicrophone: true,
+                  samePlayer: true,
+                  newPlayers: 1,
+                  plays,
+                  start: 0,
+                  volume,
+                  source: '/test-sound.wav',
+                });
+            await expectPlayer(page, 1, 0.35);
+            await expectPlayer(receiverPage, 1, 0.7);
+            await receiverPage.locator('[data-control=deafenVoiceBtn]').click();
+            await expect
+              .poll(() => receiverPage.evaluate(() => window.__roomSoundPlayer.volume))
+              .toBe(0);
+            await play.click();
+            await expectPlayer(page, 2, 0.35);
+            await expectPlayer(receiverPage, 2, 0);
+            for (const client of clients)
+              await expect
+                .poll(() => client.evaluate(() => window.__roomSoundPlayer.currentTime))
+                .toBeGreaterThan(0.25);
+            await receiverPage.locator('[data-control=deafenVoiceBtn]').click();
+            await expectPlayer(receiverPage, 2, 0.7);
+            await expectPlayer(page, 2, 0.35);
+          } finally {
+            await receiverContext.close();
+            await page.evaluate(() => {
+              window.TronoSoundboard.close();
+              window.TronoSoundboard.stop();
+            });
+            if ((await page.evaluate(() => window.TronoSocial.deafened)) !== wasDeafened)
+              await page.locator('[data-control=deafenVoiceBtn]').click();
+          }
         },
       );
       await t.test(

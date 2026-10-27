@@ -31,7 +31,7 @@ async function exerciseCourtFullscreen({ app, page }) {
         JSON.stringify(
           await page.evaluate(async () => ({
             court: window.TronoCourtFullscreen.getSnapshot(),
-            shell: window.TronoDesktopShell.getSnapshot(),
+            navigation: window.TronoPortal.getSnapshot(),
             native: await window.TronoDesktop.getWindowState(),
             hidden: document.getElementById('gameScreen').classList.contains('hidden'),
           })),
@@ -41,8 +41,7 @@ async function exerciseCourtFullscreen({ app, page }) {
       );
       throw error;
     }
-    await expect(page.locator('#desktopTopBar')).toBeHidden();
-    await expect(page.locator('#desktopCallDock')).toBeHidden();
+    await expect(page.locator('#courtFullscreen')).toBeVisible();
     assert.equal(
       await page.evaluate(() => document.fullscreenElement),
       null,
@@ -67,10 +66,7 @@ async function exerciseCourtFullscreen({ app, page }) {
     await expect(page.locator('body')).not.toHaveClass(/court-fullscreen/);
     // The table and shell share the pending IPC, so this requests one transition.
     await page.evaluate(() =>
-      Promise.all([
-        window.TronoCourtFullscreen.toggle(),
-        window.TronoDesktopShell.toggleFullscreen(),
-      ]),
+      Promise.all([window.TronoCourtFullscreen.toggle(), window.TronoCourtFullscreen.toggle()]),
     );
     await expect
       .poll(() =>

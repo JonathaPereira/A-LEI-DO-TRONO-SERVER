@@ -1,24 +1,30 @@
 # Atualizações do aplicativo
 
-Este é o guia mantido para atualizar instalações existentes. A branch migrada
-prepara o desktop **0.3.4** e backend **0.14.0-alpha**, portando as atualizações
-da `main` (0.2.11 a 0.3.2) e a correção do instalador da 0.3.3. A versão de cada pacote é identificada pelo
-instalador e pelo manifesto `downloads/latest.yml` daquela entrega.
+Este é o guia mantido para atualizar instalações existentes. A entrega prepara
+Windows **0.3.5** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+`downloads/latest.yml` identificam a versão efetivamente distribuída.
 
-## Windows 0.3.4
+## Windows 0.3.5
 
-Entrega da arquitetura migrada para Next.js, React e TypeScript. Preserva jogos,
-chamadas, transmissão de tela, perfis, arquivos e soundboard. A atualização do
-instalador incorporada da 0.3.3 fecha também o aplicativo escondido na bandeja e
-aceita diretórios com apóstrofo. Contas, sessão lembrada e preferências são mantidas.
-Ao autorizar a instalação, a chamada é encerrada; escolha um momento conveniente.
+Entrega da reconstrução A Corte: comunicação, chamada com grade/foco, perfis,
+arquivos, soundboard, clipes e gravação na interface Next.js, React e TypeScript.
+Jogos completos, contratos do backend e recursos existentes são preservados.
+Inclui cancelamento de gravação pendente ao trocar conta, inicialização do
+atualizador e fullscreen independentes da apresentação antiga.
 
-A 0.3.4 é posterior às instalações 0.3.3 e pode ser oferecida pelo atualizador,
-que não aceita downgrade. A entrega permanece pendente até o workflow Windows
-aprovar o pacote e sua publicação no Surge ser concluída. Esta preparação não
-introduz SQL nem muda a versão do backend em relação à 0.3.2/0.14.0-alpha.
+A versão 0.3.5 permite atualizar instalações 0.3.4 e anteriores. Preserva contas,
+sessão lembrada e preferências. A instalação conserva as correções que encerram
+o aplicativo na bandeja e aceitam diretórios com apóstrofo. Reiniciar encerra a
+chamada: escolha um momento conveniente.
+
+Windows full app encadeia publicação no Surge após validar e empacotar a entrega.
+A distribuição só está concluída quando a verificação do site passa; uma versão
+preparada no código não comprova publicação. Veja o fluxo automático e a repetição
+sem tag em [Distribuição web e Windows](PUBLICAR_SURGE_LEVE.md).
+Esta entrega não introduz SQL nem altera a versão do backend.
 
 ### Novidades incorporadas (0.2.11 a 0.3.2 / 0.14.0-alpha)
+
 - **Ticket to Ride**: Novo jogo de tabuleiro ferroviário com mapa interativo, cartas de vagão e bilhetes de destino, pontuação dinâmica e bots.
 - **Nexus Hub & Launcher**: Gerenciador de jogos web independentes em iframe seguro com tokens temporários de autenticação.
 - **Remote PC Beta & Gamepad Virtual**: Controle remoto e coop de PC em baixa latência via WebRTC com injeção nativa de controle virtual Xbox no Windows (ViGEm).
@@ -27,7 +33,7 @@ introduz SQL nem muda a versão do backend em relação à 0.3.2/0.14.0-alpha.
 ## Instalar ou atualizar no Windows
 
 Use o EXE da entrega aprovada no repositório oficial. Quem já usa o atualizador
-pode verificar a versão pelo rodapé e seguir a atualização; a instalação manual
+pode verificar a versão em **Configurações → Aplicativo** e seguir a atualização; a instalação manual
 usa o EXE da mesma entrega. Reiniciar encerra a chamada: escolha um momento
 conveniente. Contas, preferências e sessão lembrada são preservadas.
 
@@ -36,7 +42,7 @@ pelo atualizador ou manualmente. Publicar somente a interface web não substitui
 os arquivos incorporados à instalação. O desenvolvimento local não atualiza o
 aplicativo instalado.
 
-## Preparar uma entrega
+## Conferir uma entrega
 
 1. Use o build aprovado em Releases: `MN-Trono-Frontend-<versão>.zip`,
    `MN-Trono-<versão>-Windows.exe` e `SHA256SUMS-<versão>.txt` da mesma entrega.
@@ -44,7 +50,8 @@ aplicativo instalado.
 2. Confira os hashes e extraia o ZIP numa pasta nova. Ele contém `frontend/`,
    com um único instalador em `downloads/`, o manifesto e os guias na raiz.
    Não misture EXE e manifesto de builds diferentes, mesmo com a mesma versão.
-3. Publique a pasta `frontend/` inteira, incluindo `downloads/`, seguindo
+3. A pipeline publica automaticamente quando habilitada. Para envio manual
+   alternativo, publique `frontend/` inteira, incluindo `downloads/`, seguindo
    [Distribuição web e Windows](PUBLICAR_SURGE_LEVE.md). Confira a versão e o
    hash em `downloads/latest.yml`. Sincronizar fontes ou gerar um pacote local
    não publica o aplicativo.

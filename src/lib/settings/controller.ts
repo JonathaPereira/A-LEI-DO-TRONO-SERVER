@@ -11,6 +11,7 @@ export const SETTINGS_TOPICS = {
   connection: '⌁ Conexão',
   privacy: 'Privacidade',
   notifications: 'Notificações',
+  application: 'Aplicativo',
 } as const;
 export type SettingsTopic = keyof typeof SETTINGS_TOPICS;
 export interface SettingsSnapshot {

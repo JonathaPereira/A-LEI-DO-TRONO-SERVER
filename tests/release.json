@@ -1,0 +1,28 @@
+{
+  "browser": [
+    "tests/application-shell-browser.cjs",
+    "tests/auth-browser.cjs",
+    "tests/chat-composer-browser.cjs",
+    "tests/social-browser.js",
+    "tests/profile-editor-browser.cjs",
+    "tests/file-library-browser.cjs",
+    "tests/manual-recording-browser.cjs",
+    "tests/soundboard-browser.cjs",
+    "tests/throne-lobby-browser.cjs",
+    "tests/throne-history-browser.cjs",
+    "tests/voice-moderation-browser.js",
+    "tests/noise-processing.js",
+    "tests/voice-reception-browser.js"
+  ],
+  "desktop": [
+    "tests/auth-desktop.cjs",
+    "tests/application-call-desktop.cjs",
+    "tests/desktop-background-voice.js",
+    "tests/desktop-remote-native.js",
+    "tests/desktop-runtime.js",
+    "tests/desktop-audio.js",
+    "tests/desktop-activity-native.cjs",
+    "tests/desktop-cinzas-runtime.js",
+    "tests/desktop-updates.js"
+  ]
+}

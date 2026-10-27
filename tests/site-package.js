@@ -143,7 +143,7 @@ test('Surge package contains the entire frontend and exactly the latest installe
     await prepareSite({ ...f, version: '0.1.11' });
     await assert.rejects(fs.stat(path.join(result.frontend, 'downloads/forgotten.exe')));
   } finally {
-    await fs.rm(f.root, { recursive: true, force: true });
+    await fs.rm(f.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 test('a missing or mismatched frontend version cannot replace distribution outputs', async () => {
@@ -162,7 +162,7 @@ test('a missing or mismatched frontend version cannot replace distribution outpu
       assert.equal(await fs.readFile(sentinel, 'utf8'), 'previous delivery');
     }
   } finally {
-    await fs.rm(f.root, { recursive: true, force: true });
+    await fs.rm(f.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 
@@ -177,7 +177,7 @@ test('an invalid executable or oversized frontend prevents a ready-to-publish re
     await large.close();
     await assert.rejects(prepareSite({ ...f, version: '0.1.11' }), /limite preventivo/);
   } finally {
-    await fs.rm(f.root, { recursive: true, force: true });
+    await fs.rm(f.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 test('a published version reuses its exact release installer when a rebuild has different bytes', async () => {
@@ -229,7 +229,7 @@ test('a published version reuses its exact release installer when a rebuild has 
       crypto.createHash('sha512').update(published).digest('base64'),
     );
   } finally {
-    await fs.rm(f.root, { recursive: true, force: true });
+    await fs.rm(f.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 test('a new release uses the approved local installer and a mismatched public download fails closed', async () => {

@@ -1,4 +1,4 @@
-/** The desktop shell is the only owner of native IPC and window events. */
+/** The desktop window controller is the only owner of native IPC and window events. */
 export interface CourtNativeFullscreen {
   getSnapshot(): {
     readonly fullscreen: boolean;
