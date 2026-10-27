@@ -9,7 +9,7 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 6
     steps:
       - name: Inspect public itch page and configured embed
         run: |
@@ -28,3 +28,35 @@ jobs:
               message=json.dumps(result).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
               print('::notice title=Nexus public HTTP::'+message)
           PY
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - name: Exercise the real export in an iframe and a standalone window
+        run: |
+          node <<'JS'
+          const {chromium}=require('@playwright/test'),http=require('node:http');
+          (async()=>{
+            const server=http.createServer((req,res)=>res.end('<iframe sandbox="allow-scripts allow-same-origin allow-pointer-lock" allow="fullscreen; gamepad" style="width:100vw;height:100vh" src="https://itch.io/embed-upload/19926871?color=333333"></iframe>'));
+            await new Promise(r=>server.listen(0,'127.0.0.1',r));
+            const browser=await chromium.launch({args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+            try{
+              await Promise.all(['embedded','standalone'].map(async mode=>{
+                const page=await browser.newPage(),errors=[],failed=[];
+                page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text().slice(0,350));});
+                page.on('pageerror',e=>errors.push(e.message));
+                page.on('requestfailed',r=>failed.push({url:r.url(),reason:r.failure()}));
+                const url=mode==='embedded'?'http://127.0.0.1:'+server.address().port:'https://itch.io/embed-upload/19926871?color=333333';
+                await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+                await page.waitForTimeout(60000);
+                const frames=await Promise.all(page.frames().map(async f=>({url:f.url(),...await f.evaluate(()=>({text:document.body.innerText.slice(-700),canvas:!!document.querySelector('canvas'),engine:typeof Engine,isolated:crossOriginIsolated})).catch(e=>({error:e.message}))})));
+                console.log('::notice title=Nexus live browser::'+JSON.stringify({mode,frames,errors:errors.slice(-18),failed:failed.slice(-8)}).replaceAll('%','%25').replaceAll('\n','%0A').replaceAll('\r','%0D'));
+                await page.close();
+              }));
+            }finally{await browser.close();server.close();}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
