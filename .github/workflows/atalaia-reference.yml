@@ -1,4 +1,4 @@
-name: Inspect supplied Atalaia web reference
+name: Recheck the publicly shared Atalaia web reference
 on:
   push:
     branches: [codex/desktop-atalaia-visual-refresh]
