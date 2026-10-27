@@ -131,6 +131,14 @@ A preparação agora aguarda o reconhecimento da sala e usa o botão público de
 entrada na voz. As medições PCM/RTP e as verificações de janela minimizada,
 coberta e oculta permanecem, sem relaxar limites nem adicionar retries.
 
+`40596193806` aprovou também Electron/mídia; o smoke empacotado parou na
+conferência de uma capa do catálogo, antes de abrir o Cinzas. Capas usam
+`loading="lazy"` e, com a coluna de membros, as últimas linhas podem ficar fora
+da área de rolagem visível. O smoke agora traz cada capa à área visível antes
+de exigir carregamento e registra a URL de requisições locais que falharem.
+Permanecem cache verificado, isolamento do iframe, partida e zero downloads
+remotos na aceitação offline do Cinzas.
+
 Logs e imagens ficam em artifacts/frontend-reset. A rodada 40402075694 aprovou
 1.411 contratos, quatro grupos browser (164 aprovados, dois skips de codec),
 mídia Windows, executável e atualização NSIS real. A entrega foi bloqueada por

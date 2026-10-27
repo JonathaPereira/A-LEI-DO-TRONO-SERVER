@@ -108,6 +108,10 @@ test(
           diagnostics.push(m.text().slice(0, 600));
       });
       page.on('pageerror', (e) => diagnostics.push(e.message));
+      page.on('requestfailed', (request) => {
+        if (request.url().startsWith('https://a-lei-do-trono.surge.sh/'))
+          diagnostics.push(request.url() + ' ' + request.failure()?.errorText);
+      });
       await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       assert.equal(page.url(), 'https://a-lei-do-trono.surge.sh/');
       assert.equal(await page.evaluate(() => typeof require), 'undefined');
@@ -233,20 +237,15 @@ test(
       await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
       await expect(page.locator('#gamesScreen')).toBeVisible();
       await expect(page.locator('#gamesScreen button[data-game]')).toHaveCount(8);
-      await expect
-        .poll(() =>
-          page
-            .locator('#gamesScreen [data-game=throne] img')
-            .evaluate((n) => n.complete && n.naturalWidth > 0),
-        )
-        .toBe(true);
-      await expect
-        .poll(() =>
-          page
-            .locator('#gamesScreen [data-game=roguelite] img')
-            .evaluate((n) => n.complete && n.naturalWidth > 0),
-        )
-        .toBe(true);
+      for (const game of ['throne', 'roguelite']) {
+        phase = 'installed catalogue artwork ' + game;
+        const artwork = page.locator('#gamesScreen [data-game=' + game + '] img');
+        // Covers load lazily. With members visible, later rows can be below
+        // the scroll viewport; bring the actual card into view before loading.
+        await artwork.scrollIntoViewIfNeeded();
+        await expect.poll(() => artwork.evaluate((n) => n.complete && n.naturalWidth > 0)).toBe(true);
+      }
+      phase = 'installed games';
       await page.screenshot({
         path: path.resolve(__dirname, '../artifacts/windows-games-catalogue.png'),
       });
