@@ -14,3 +14,23 @@ test('King swaps exactly; Countess is forced only by King/Prince, not Chancellor
 test('round ties award all highest surviving hands, no discard-sum tie breaker; Spy gives one extra favor only to unique surviving spy user',()=>{let s=setup([0,9],9,[2,3]);s.deck=[];s.players[1].discards=[{rank:8,id:'old'}];s=play(s,0);assert.deepEqual(s.roundWinners,['p0','p1']);assert.equal(s.players[0].score,2);assert.equal(s.players[1].score,1);assert.equal(s.spyWinner,'p0');s=setup([0,9],9);s.deck=[];s.players[1].discards=[{rank:0,id:'spy2'}];s=play(s,0);assert.equal(s.spyWinner,null);s=setup([0,9],2);s.players[1].eliminated=true;s.players[2].eliminated=true;s.players[3].eliminated=true;s.players[0].score=3;s=play(s,0);assert.equal(s.phase,'finished');assert.equal(s.players[0].score,5);assert.deepEqual(s.winners,['p0']);});
 test('next round clears protection, discards, secrets and eliminated state, but preserves favor totals and winner starts',()=>{let s=setup([0,9],2);s.deck=[];s=play(s,0);const scores=s.players.map(p=>p.score);s=R.nextRound(s,()=>0);assert.equal(s.round,2);assert.equal(s.turn,0);assert.deepEqual(s.players.map(p=>p.score),scores);assert(s.players.every(p=>!p.protected&&!p.eliminated&&!p.discards.length));assert.deepEqual(s.private,{});assert.throws(()=>R.nextRound(s));});
 test('seeded full matches for every player count conserve all 21 cards and terminate without impossible hands',()=>{for(let n=2;n<=6;n++)for(let seed=1;seed<=5;seed++){let x=seed,rng=()=>((x=Math.imul(x,1664525)+1013904223>>>0)/4294967296),s=R.create(players(n),rng),turns=0;while(s.phase!=='finished'){const before=JSON.stringify(s);s=s.phase==='round-over'?R.nextRound(s,rng):R.move(s,s.players[s.turn].id,R.botMove(R.publicState(s,s.players[s.turn].id),rng));assert.notEqual(JSON.stringify(s),before);const all=[...s.deck,...(s.removed?[s.removed]:[]),...s.faceUpRemoved,...s.players.flatMap(p=>[...p.hand,...p.discards])];assert.equal(all.length,21);assert.equal(new Set(all.map(c=>c.id)).size,21);for(const p of s.players){assert(Number.isInteger(p.score)&&p.score>=0);if(p.eliminated)assert.equal(p.hand.length,0);else assert(p.hand.length>=1&&p.hand.length<=3);}assert(++turns<1500);}assert(s.winners.every(id=>s.players.find(p=>p.id===id).score>=s.target));}});
+
+test('Spy awards the unique survivor at deck exhaustion even when another player wins the comparison',()=>{
+ const s=setup([0,2],9,[4,4]);s.deck=[];
+ const next=play(s,0);
+ assert.equal(next.roundResult.reason,'deck-empty');
+ assert.deepEqual(next.roundWinners,['p1']);
+ assert.equal(next.spyWinner,'p0');
+ assert.deepEqual(next.players.map(p=>p.score),[1,1,0,0]);
+});
+test('two surviving Spy users cancel the bonus; both Spies by the same survivor still give only one favor',()=>{
+ let s=setup([0,2],9,[4,4]);s.deck=[];s.players[1].discards=[{id:'other-spy',rank:0}];
+ let next=play(s,0);assert.equal(next.spyWinner,null);assert.deepEqual(next.players.map(p=>p.score),[0,1,0,0]);
+ s=setup([0,2],9,[4,4]);s.deck=[];s.players[0].discards=[{id:'same-spy',rank:0}];
+ next=play(s,0);assert.equal(next.spyWinner,'p0');assert.equal(next.players[0].score,1);
+});
+test('an eliminated Spy user does not block the unique surviving Spy; simply holding a Spy grants no bonus',()=>{
+ let s=setup([0,2],9,[4,4]);s.deck=[];s.players[1].discards=[{id:'eliminated-spy',rank:0}];s.players[1].eliminated=true;s.players[1].hand=[];
+ let next=play(s,0);assert.equal(next.spyWinner,'p0');assert.equal(next.players[1].score,0);
+ s=setup([4,0],9,[2,2]);s.deck=[];next=play(s,4);assert.equal(next.spyWinner,null);assert.equal(next.players[0].score,0);
+});

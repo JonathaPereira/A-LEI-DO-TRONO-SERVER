@@ -5,6 +5,8 @@ import type {
   LoveLetterMove,
   LoveLetterRules,
   LoveLetterCard,
+  LoveLetterState,
+  LoveLetterEvent,
 } from '../../types/love-letter';
 import { readLoveLetterRoom, readLoveLetterRooms } from './love-letter-protocol.ts';
 import { freezeGame } from './freeze.ts';
@@ -37,6 +39,8 @@ const initial: LoveLetterSnapshot = freezeGame({
   privateOpen: false,
   rulesOpen: false,
   effectTarget: null,
+  displayState: null,
+  presentation: null,
 });
 /** Owns the current viewer's table and choices. Server rules retain all authority. */
 export function createLoveLetter(options: Options) {
@@ -49,6 +53,11 @@ export function createLoveLetter(options: Options) {
     effectVersion = 0,
     seenPrivate = 0;
   let cancelPending: (() => void) | undefined, cancelEffect: (() => void) | undefined;
+  const presentations: {
+    before: LoveLetterState;
+    after: LoveLetterState;
+    event: LoveLetterEvent;
+  }[] = [];
   const listeners = new Set<() => void>(),
     subscriptions: (() => void)[] = [],
     R = options.rules;
@@ -63,7 +72,7 @@ export function createLoveLetter(options: Options) {
     state = freezeGame({ ...state, ...patch });
     listeners.forEach((fn) => fn());
   }
-  const locked = () => disposed || state.pending || !state.connected;
+  const locked = () => disposed || state.pending || !state.connected || !!state.presentation;
   const own = () => state.room?.state?.players.find((p) => p.id === state.accountId);
   const turn = () => {
     const s = state.room?.state;
@@ -88,11 +97,49 @@ export function createLoveLetter(options: Options) {
   }
   function stopEffects() {
     clearEffect();
-    update({ effectTarget: null });
+    presentations.length = 0;
+    update({ effectTarget: null, presentation: null, displayState: state.room?.state ?? null });
+  }
+  function presentNext() {
+    if (disposed) return;
+    clearEffect();
+    const next = presentations.shift();
+    if (!next) {
+      update({ presentation: null, effectTarget: null, displayState: state.room?.state ?? null });
+      checkPrivate();
+      return;
+    }
+    if (next.event.kind === 'round-start') {
+      presentNext();
+      return;
+    }
+    update({
+      displayState: next.before,
+      presentation: { event: next.event, phase: 'announce' },
+      effectTarget: next.event.targetId ?? null,
+      privateOpen: false,
+    });
+    if (disposed) return;
+    options.sound?.('love-letter-card');
+    const ticket = effectVersion;
+    cancelEffect = schedule(
+      () => {
+        if (disposed || ticket !== effectVersion) return;
+        clearEffect();
+        update({ displayState: next.after, presentation: { event: next.event, phase: 'result' } });
+        if (disposed) return;
+        if (next.event.roundResult) options.sound?.('love-letter-score');
+        const resultTicket = effectVersion;
+        cancelEffect = schedule(() => {
+          if (!disposed && resultTicket === effectVersion) presentNext();
+        }, 1600);
+      },
+      next.event.card?.rank === 1 && next.event.targetId ? 1000 : 700,
+    );
   }
   function checkPrivate() {
     const s = state.room?.state;
-    if (!s || !options.visible()) return;
+    if (!s || !options.visible() || state.presentation) return;
     const unread = s.private.filter((p) => p.revision > seenPrivate);
     if (unread.length) {
       seenPrivate = Math.max(...s.private.map((p) => p.revision));
@@ -133,12 +180,18 @@ export function createLoveLetter(options: Options) {
     if (before?.id === next.id && before.state && (!s || s.revision < before.state.revision))
       return;
     const changed = before?.id !== next.id || before?.state?.revision !== s?.revision,
-      newRound = before?.id !== next.id || before?.state?.round !== s?.round;
+      newTable = before?.id !== next.id,
+      newRound = newTable || before?.state?.round !== s?.round,
+      continuous = !newTable && !!before?.state && !!s && s.revision === before.state.revision + 1,
+      animate = continuous && options.visible() && !!s?.last;
     if (changed) {
       clearPending();
-      stopEffects();
+      if (!animate) {
+        clearEffect();
+        presentations.length = 0;
+      }
     }
-    if (newRound) seenPrivate = 0;
+    if (newTable) seenPrivate = 0;
     let chancellor = state.chancellor;
     if (s?.phase === 'chancellor' && s.players[s.turn].id === state.accountId) {
       const hand = s.players[s.turn].hand.filter((c): c is LoveLetterCard => !c.hidden);
@@ -159,21 +212,14 @@ export function createLoveLetter(options: Options) {
       notice: '',
       chancellor,
       ...(changed ? { pending: false, selected: null } : {}),
+      ...((changed && !animate) || (!changed && !state.presentation) ? { displayState: s } : {}),
+      ...(changed && !animate ? { presentation: null, effectTarget: null } : {}),
       ...(newRound ? { privateOpen: false } : {}),
     });
-    if (changed && s?.last && options.visible()) {
-      options.sound?.('love-letter-' + (s.last.roundResult ? 'score' : 'card'));
-      const target = s.last.targetId;
-      if (target && !options.reduced()) {
-        const ticket = effectVersion;
-        update({ effectTarget: target });
-        cancelEffect = schedule(() => {
-          if (!disposed && ticket === effectVersion) {
-            cancelEffect = undefined;
-            update({ effectTarget: null });
-          }
-        }, 1100);
-      }
+    if (disposed) return;
+    if (changed && animate && s?.last && before?.state) {
+      presentations.push({ before: before.state, after: s, event: s.last });
+      if (!state.presentation) presentNext();
     }
     checkPrivate();
   }
@@ -185,6 +231,7 @@ export function createLoveLetter(options: Options) {
     seenPrivate = 0;
     clearPending();
     clearEffect();
+    presentations.length = 0;
     update({ ...initial, accountId: id, connected: options.connected() });
     if (id && options.visible()) void request('list');
   }
@@ -405,7 +452,7 @@ export function createLoveLetter(options: Options) {
         return commit({ kind: 'chancellor', keep: c.keep, bottom: [...c.bottom] });
     },
     showPrivate() {
-      if (state.room?.state?.private.length) update({ privateOpen: true });
+      if (!state.presentation && state.room?.state?.private.length) update({ privateOpen: true });
     },
     closePrivate() {
       update({ privateOpen: false });
@@ -418,7 +465,6 @@ export function createLoveLetter(options: Options) {
         dismiss();
         stopEffects();
       } else {
-        if (options.reduced()) stopEffects();
         checkPrivate();
       }
     },

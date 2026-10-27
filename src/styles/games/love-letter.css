@@ -1782,4 +1782,260 @@
     border-top: 0;
     border-bottom: 1px solid #b69c5a55;
   }
+
+  .ll-presentation-host {
+    position: sticky;
+    top: 12px;
+    height: 0;
+    z-index: 40;
+    display: grid;
+    justify-items: center;
+    pointer-events: none;
+  }
+  .ll-presentation {
+    box-sizing: border-box;
+    width: min(620px, 100%);
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    align-items: center;
+    gap: 22px;
+    padding: 22px;
+    border: 1px solid #edc879;
+    border-radius: 20px;
+    background: radial-gradient(ellipse at top left, #542c45, #21121ff5 75%);
+    box-shadow:
+      0 12px 60px #000d,
+      0 0 0 5px #d4af6320;
+    color: #f9e5c5;
+    transform: translateY(28px);
+  }
+  .ll-presentation-card {
+    perspective: 500px;
+    animation: llPlayArrival 0.55s ease-out both;
+  }
+  .ll-presentation-card > .ll-card {
+    width: 100%;
+  }
+  .ll-presentation-copy {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .ll-presentation h2 {
+    margin: 5px 0 12px;
+    color: #ffe0a5;
+    font:
+      500 clamp(17px, 2vw, 25px)/1.35 Georgia,
+      serif;
+  }
+  .ll-presentation p {
+    font: 12px/1.65 var(--ui-font);
+    margin: 8px 0;
+  }
+  .ll-effect-path {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font: 600 11px/1.4 var(--ui-font);
+  }
+  .ll-effect-path > span {
+    min-width: 0;
+    border: 1px solid #d1a3db66;
+    border-radius: 8px;
+    padding: 5px 9px;
+    background: #d1a3db15;
+  }
+  .ll-effect-path > span:last-child {
+    border-color: #e6bb6466;
+    background: #e6bb6415;
+  }
+  .ll-effect-path b {
+    font-size: 22px;
+    color: #e6bb64;
+    animation: llTargetArrow 0.7s ease-out both;
+  }
+  .ll-effect-suspense {
+    color: #f4d49c;
+  }
+  .ll-effect-progress {
+    display: block;
+    height: 3px;
+    margin-top: 12px;
+    border-radius: 3px;
+    background: #e6bb64;
+    transform-origin: left;
+    animation: llSuspense 0.7s linear both;
+  }
+  .ll-effect-rank-1 .ll-effect-progress {
+    animation-duration: 1s;
+  }
+  .ll-effect-outcome {
+    animation: llOutcome 0.3s ease-out both;
+  }
+  .ll-effect-hands {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .ll-effect-hands > .ll-card {
+    width: 37px;
+    flex: none;
+  }
+  .ll-effect-rank-7 .ll-effect-hands > .ll-card:first-child {
+    animation: llSwap 0.8s ease-in-out both;
+  }
+  .ll-effect-rank-7 .ll-effect-hands > .ll-card:last-child {
+    animation: llSwapBack 0.8s ease-in-out both;
+  }
+  .ll-effect-rank-3 .ll-effect-hands {
+    animation: llCompare 0.6s ease-out both;
+  }
+  .ll-effect-rank-5 .ll-effect-hands > .ll-card:first-child {
+    animation: llDiscard 0.8s ease-out both;
+  }
+  .ll-effect-rank-5 .ll-effect-hands > .ll-card:last-child {
+    animation: llPlayArrival 0.7s ease-out both;
+  }
+  .ll-effect-actor {
+    outline: 2px solid #c7a3ee;
+    outline-offset: 3px;
+  }
+  .ll-table-center {
+    flex-wrap: wrap;
+    column-gap: clamp(12px, 2vw, 30px);
+  }
+  .ll-last-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 250px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #d3ac6055;
+    border-radius: 12px;
+    background: #21121fcc;
+    overflow-wrap: anywhere;
+  }
+  .ll-last-card > .ll-card {
+    width: 52px;
+    flex: none;
+  }
+  .ll-last-card strong {
+    display: block;
+    color: #f7dba5;
+    font:
+      600 15px/1.5 Georgia,
+      serif;
+  }
+  .ll-last-card p {
+    font: 10px/1.5 var(--ui-font);
+    margin: 4px 0 0;
+  }
+  .ll-score-breakdown {
+    border-block: 1px solid #d3ac6055;
+    padding-block: 8px;
+    margin-block: 12px;
+  }
+  @keyframes llPlayArrival {
+    from {
+      opacity: 0;
+      transform: translate(-35px, -20px) rotateY(-35deg) rotate(-8deg) scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes llTargetArrow {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes llSuspense {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes llOutcome {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes llSwap {
+    from {
+      transform: translateX(0) rotate(-5deg);
+    }
+    to {
+      transform: translateX(65px) rotate(5deg);
+    }
+  }
+  @keyframes llCompare {
+    50% {
+      transform: scale(1.12);
+    }
+  }
+  @keyframes llSwapBack {
+    from {
+      transform: translateX(0) rotate(5deg);
+    }
+    to {
+      transform: translateX(-65px) rotate(-5deg);
+    }
+  }
+  @keyframes llDiscard {
+    to {
+      transform: translateX(-12px) rotate(-15deg);
+      opacity: 0.55;
+    }
+  }
+  @media (max-height: 800px) and (orientation: landscape) {
+    .ll-last-card {
+      padding: 5px 8px;
+    }
+    .ll-last-card > .ll-card {
+      width: 36px;
+    }
+  }
+  @container love-letter (max-width:560px) {
+    .ll-presentation {
+      grid-template-columns: 65px minmax(0, 1fr);
+      gap: 12px;
+      padding: 14px;
+      transform: translateY(8px);
+    }
+    .ll-presentation p {
+      font-size: 11px;
+    }
+    .ll-effect-path {
+      font-size: 10px;
+      gap: 5px;
+    }
+    .ll-effect-path > span {
+      padding: 4px;
+    }
+    .ll-last-card {
+      max-width: 100%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ll-presentation *,
+    .ll-effect-actor {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 }

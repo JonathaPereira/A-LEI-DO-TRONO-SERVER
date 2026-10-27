@@ -52,6 +52,18 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 ## Capacidades atuais
 
+No Love Letter, toda a mesa acompanha carta, autor, alvo e resultado em uma
+apresentação sobre a mesa, sem precisar consultar o histórico. O Guarda mostra
+também o palpite e aguarda um segundo antes de revelar se acertou. Rei, Príncipe,
+Barão e Padre identificam os envolvidos; mãos trocadas/comparadas e informações
+privadas continuam ocultas aos demais. A última carta fica ilustrada no centro.
+Movimento reduzido preserva as mensagens e o suspense, com transições estáticas.
+
+O resultado da rodada distingue favor por vitória e bônus da Espiã. Este bônus
+não exige vencer a comparação de cartas: somente uma pessoa ainda na rodada pode
+ter jogado ou descartado Espiã. Duas sobreviventes que a usaram anulam o bônus;
+usar ambas as Espiãs pela mesma pessoa concede no máximo um favor extra.
+
 Manter contratos existentes: chat de canal com 300 caracteres, DM com 2.000 e
 um anexo por envio. O servidor rejeita mensagens em canal exclusivamente de voz.
 Qualquer expansão desses contratos é outra entrega. Histórico, IDs, arquivos,
