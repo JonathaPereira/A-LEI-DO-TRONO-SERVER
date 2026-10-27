@@ -1,8 +1,26 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.9** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.10** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 0.3.10
+
+Corrige os avatares das mensagens diretas: cada mensagem usa a foto ou o ícone
+do remetente, inclusive a própria conta, e o cabeçalho identifica o destinatário.
+Reutiliza o carregamento de arquivos e a proteção por conta já existentes.
+
+A lista de membros fica aberta por padrão nas telas autenticadas de chamada,
+texto, DMs, catálogo e jogos. Ela mostra online e offline com os dados de presença
+já autorizados. O botão do cabeçalho e o X da lista permitem recolher; a escolha
+permanece durante a navegação e volta a aberta ao trocar de conta ou reiniciar.
+No desktop, a lista reserva uma coluna. Em telas menores, usa uma lateral
+sobreposta, que também fecha com Esc depois dos diálogos/popovers superiores.
+O fullscreen próprio de um jogo conserva sua apresentação imersiva.
+
+Mantém Atalaia Godot 0.2 e as correções anteriores do instalador/atualizador.
+Não há SQL nem alteração do backend nesta entrega. Frontend e instalador seguem
+a publicação conjunta e automática no Surge após aprovação da pipeline.
 
 ## Windows 0.3.9
 

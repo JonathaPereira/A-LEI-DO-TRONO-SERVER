@@ -1,6 +1,7 @@
 {
   "browser": [
     "tests/application-shell-browser.cjs",
+    "tests/dm-members-browser.cjs",
     "tests/auth-browser.cjs",
     "tests/chat-composer-browser.cjs",
     "tests/social-browser.js",

@@ -359,6 +359,7 @@ function Moderation({ runtime }: { runtime: ApplicationServices }) {
 export function Conversation({ runtime }: { runtime: ApplicationServices }) {
   const messages = useModel(runtime.TronoChatMessages),
     dm = useModel(runtime.TronoDirectMessages),
+    auth = useModel(runtime.TronoAuth),
     nav = useModel(runtime.TronoCommunityNavigation);
   useModel(runtime.TronoNotifications);
   const direct = dm.open;
@@ -372,12 +373,17 @@ export function Conversation({ runtime }: { runtime: ApplicationServices }) {
           <div className={styles.conversationHeading}>
             {direct && peer ? (
               <button
-                className={styles.profileLink}
+                className={`${styles.profileLink} ${styles.directPeer}`}
                 type="button"
                 aria-label={'Ver perfil de ' + peer.name}
                 onClick={() => void runtime.TronoProfileViewer.open(peer.id)}
               >
-                {peer.name}
+                <Avatar
+                  person={peer}
+                  className={styles.tinyAvatar}
+                  title={'Avatar de ' + peer.name}
+                />
+                <span>{peer.name}</span>
               </button>
             ) : (
               <strong>{'# ' + nav.roomName}</strong>
@@ -452,43 +458,56 @@ export function Conversation({ runtime }: { runtime: ApplicationServices }) {
               </div>
             )}
             {direct
-              ? dm.messages.map((message) => (
-                  <article className={styles.message} key={message.id} data-message-id={message.id}>
-                    <span className={styles.initialAvatar}>
-                      {message.senderId === dm.accountId
-                        ? runtime.TronoAuth.user?.nickname.slice(0, 1)
-                        : peer?.name.slice(0, 1)}
-                    </span>
-                    <div>
-                      <div className={styles.messageHeading}>
-                        <strong>
-                          {message.senderId === dm.accountId
-                            ? runtime.TronoAuth.user?.nickname
-                            : peer?.name || 'Jogador'}
-                        </strong>
-                        <DateLabel value={message.ts} />
-                      </div>
-                      <p>{message.text}</p>
-                      {message.attachment && (
-                        <div className={styles.attachment}>
-                          <Attachment file={message.attachment} privateMessage />
+              ? dm.messages.map((message) => {
+                  const own = message.senderId === dm.accountId;
+                  const author = own
+                    ? auth.user?.id === dm.accountId
+                      ? auth.user
+                      : undefined
+                    : peer;
+                  const name = own
+                    ? auth.user?.id === message.senderId
+                      ? auth.user.nickname
+                      : 'Você'
+                    : peer?.name || 'Jogador';
+                  return (
+                    <article
+                      className={styles.message}
+                      key={message.id}
+                      data-message-id={message.id}
+                    >
+                      <Avatar
+                        person={author ?? {}}
+                        className={styles.avatar}
+                        title={'Avatar de ' + name}
+                      />
+                      <div>
+                        <div className={styles.messageHeading}>
+                          <strong>{name}</strong>
+                          <DateLabel value={message.ts} />
                         </div>
-                      )}
-                      {message.roomId && (
-                        <button
-                          className={styles.link}
-                          onClick={() =>
-                            void runtime.TronoMessenger.joinChannel(message.roomId!, {
-                              showText: true,
-                            })
-                          }
-                        >
-                          Abrir canal do convite
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                ))
+                        <p>{message.text}</p>
+                        {message.attachment && (
+                          <div className={styles.attachment}>
+                            <Attachment file={message.attachment} privateMessage />
+                          </div>
+                        )}
+                        {message.roomId && (
+                          <button
+                            className={styles.link}
+                            onClick={() =>
+                              void runtime.TronoMessenger.joinChannel(message.roomId!, {
+                                showText: true,
+                              })
+                            }
+                          >
+                            Abrir canal do convite
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })
               : messages.messages.map((message) => (
                   <ChannelMessage runtime={runtime} message={message} key={message.id} />
                 ))}

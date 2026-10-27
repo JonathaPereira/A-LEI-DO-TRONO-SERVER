@@ -31,6 +31,14 @@ escopo. Tokens do shell não dependem da cascata antiga.
 A superfície dos jogos permanece montada durante a navegação. Telas podem ser
 ocultadas; prompts e efeitos pertencem ao mesmo escopo, inclusive hosts criados
 dinamicamente. Trocar tela não recria socket, partida, captura ou player.
+
+O shell mantém um único painel de membros fora da navegação chamada/conversa.
+O desktop reserva uma coluna e as telas menores usam uma lateral sobreposta.
+Visibilidade é estado local de apresentação, aberta por padrão e restaurada ao
+trocar de identidade; os dados vêm somente de `TronoCommunity`. Grupos online e
+offline conservam o escopo autorizado do snapshot, inclusive para convidados.
+Avatares de DMs reutilizam `Avatar`/`useFileUrl`, observando a conta atual para
+mensagens próprias e o contato para as recebidas, sem outro cache ou transporte.
 A apresentação da chamada está reintegrada no Marco 2, aprovado em 25/10/2026.
 Os recursos avançados do Marco 3 usam os mesmos donos na composição nova. Consulte o checkpoint
 da migração para disponibilidade e evidências; fonte existente não comprova QA.

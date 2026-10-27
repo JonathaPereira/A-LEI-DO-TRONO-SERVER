@@ -98,6 +98,26 @@ e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde
 
 ### Evidência vigente
 
+Entrega de avatares de DMs e membros, Windows 0.3.10, sobre main `6badf3c`:
+mensagens próprias/recebidas usam o perfil existente; painel único abre por
+padrão e acompanha chamada, texto, DMs, catálogo e jogos, com online/offline e
+controle de visibilidade. Preserva mídia, conta, regras e Atalaia 0.2. Sem SQL.
+
+Reprodução funcional falhou na base pela ausência dos avatares/painel e passou
+após a correção. Typecheck, format:check, build e 1.430 testes core aprovados.
+Regressões de conta, presença/visitantes, atividade, perfis, anexos/isolamento,
+Ticket to Ride e chamada com navegação aprovadas. A conferência dos alvos da
+Corte passou, recolhendo a lateral pelo botão público nas telas pequenas.
+Logs/imagens temporários em `artifacts/dm-members*`; retratos e microfones desses
+cenários são fixtures. Imagens foram inspecionadas, sem novos snapshots visuais.
+
+Estresse opcional com dez clientes não aprovou vídeo remoto neste host: o
+timeout em `application-call-browser.cjs:448` também foi reproduzido em checkout
+separado da main `6badf3c`, sem as alterações. Evidências em
+`dm-members-regression-recheck.log` e `dm-members-baseline-call-stress.log`.
+Isso não comprova captura física. Aceitação Electron/NSIS real e publicação
+dependem da execução Windows do mesmo commit, como descrito abaixo.
+
 Logs e imagens ficam em artifacts/frontend-reset. A rodada 40402075694 aprovou
 1.411 contratos, quatro grupos browser (164 aprovados, dois skips de codec),
 mídia Windows, executável e atualização NSIS real. A entrega foi bloqueada por

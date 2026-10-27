@@ -144,10 +144,10 @@ test(
           );
           await p.getByRole('button', { name: 'Enviar mensagem', exact: true }).click();
           await expect(p.locator('#chatOnlyScreen [role=log] .chat-attachment')).toHaveCount(1);
-          await expect(p.locator('#chatOnlyScreen [role=log] img')).toBeVisible();
+          await expect(p.locator('#chatOnlyScreen [role=log] .chat-attachment img')).toBeVisible();
           await expect
             .poll(() =>
-              p.locator('#chatOnlyScreen [role=log] img').evaluate((img) => img.naturalWidth),
+              p.locator('#chatOnlyScreen [role=log] .chat-attachment img').evaluate((img) => img.naturalWidth),
             )
             .toBe(1);
           await expect(p.locator('[class*="attachmentPreview"]')).toBeHidden();

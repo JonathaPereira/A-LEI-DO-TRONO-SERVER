@@ -505,53 +505,81 @@ function Navigation({
 }
 function Members({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoCommunity),
-    members = state.presence?.members.filter((m) => m.online) ?? [],
     management = useModel(runtime.TronoChannelManagement);
+  const people = state.presence?.members ?? [];
   return (
     <>
-      <div className={styles.sectionLabel}>ONLINE — {members.length}</div>
-      {members.map((person) => (
-        <div key={person.id} className={styles.memberRow}>
-          <button
-            className={styles.member}
-            onClick={() => void runtime.TronoProfileViewer.open(person.id)}
-            title="Ver perfil"
-            disabled={person.guest}
-          >
-            <DirectProfileBanner accountId={person.guest ? '' : person.id} />
-            <Avatar person={person} className={styles.avatar} />
-            <span className={styles.memberIdentity}>
-              <strong>{person.name}</strong>
-              <small>{person.activity?.name || person.roomName || 'Disponível'}</small>
-            </span>
-            <i className={styles.onlineDot} />
-          </button>
-          {management.canManageRoles &&
-            !person.guest &&
-            person.id !== management.accountId &&
-            person.role !== 'creator' && (
-              <button
-                type="button"
-                className={styles.iconButton}
-                aria-label={'Alterar cargo de ' + person.name}
-                onClick={() => runtime.TronoChannelManagement.editRole(person)}
-              >
-                <Icon name="settings" size={14} />
-              </button>
-            )}
-        </div>
-      ))}
-      {!members.length && (
-        <p className={styles.sidebarHint}>
-          {state.connected
-            ? 'Nenhum membro online no momento.'
+      {!state.connected && (
+        <p className={styles.sidebarHint} role="status">
+          {state.presence
+            ? 'Reconectando… Exibindo a última presença recebida.'
             : 'Aguardando presença da comunidade…'}
         </p>
       )}
+      {state.presence?.scope === 'community' && !state.presence.directoryReady && (
+        <p className={styles.sidebarHint} role="status">
+          Carregando membros…
+        </p>
+      )}
+      {[true, false].map((online) => {
+        const members = people.filter((person) => person.online === online);
+        const label = online ? 'Online' : 'Offline';
+        return (
+          <section key={label} aria-label={label}>
+            <h2 className={styles.sectionLabel}>
+              {label.toUpperCase()} — {members.length}
+            </h2>
+            {members.map((person) => (
+              <div key={person.id} className={styles.memberRow}>
+                <button
+                  type="button"
+                  className={styles.member}
+                  data-online={person.online}
+                  onClick={() => void runtime.TronoProfileViewer.open(person.id)}
+                  aria-label={'Ver perfil de ' + person.name}
+                  disabled={person.guest}
+                >
+                  {person.online && (
+                    <DirectProfileBanner accountId={person.guest ? '' : person.id} />
+                  )}
+                  <Avatar person={person} className={styles.avatar} />
+                  <span className={styles.memberIdentity}>
+                    <strong>{person.name}</strong>
+                    <small>
+                      {person.online
+                        ? person.activity?.name || person.roomName || 'Disponível'
+                        : 'Offline'}
+                    </small>
+                  </span>
+                  <i className={styles.onlineDot} data-online={person.online} aria-hidden="true" />
+                </button>
+                {management.canManageRoles &&
+                  !person.guest &&
+                  person.id !== management.accountId &&
+                  person.role !== 'creator' && (
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      aria-label={'Alterar cargo de ' + person.name}
+                      onClick={() => runtime.TronoChannelManagement.editRole(person)}
+                    >
+                      <Icon name="settings" size={14} />
+                    </button>
+                  )}
+              </div>
+            ))}
+            {!members.length && (
+              <p className={styles.sidebarHint}>
+                {online ? 'Nenhum membro online no momento.' : 'Nenhum membro offline nesta lista.'}
+              </p>
+            )}
+          </section>
+        );
+      })}
     </>
   );
 }
-function Communication({ runtime, members }: { runtime: ApplicationServices; members: boolean }) {
+function Communication({ runtime }: { runtime: ApplicationServices }) {
   const nav = useModel(runtime.TronoCallNavigation),
     route = useModel(runtime.TronoPortal);
   const [chat, setChat] = useState(false);
@@ -577,13 +605,6 @@ function Communication({ runtime, members }: { runtime: ApplicationServices; mem
           )}
           <Conversation runtime={runtime} />
         </div>
-        <aside
-          className={styles.members}
-          hidden={!members || nav.page === 'call'}
-          aria-label="Membros online"
-        >
-          <Members runtime={runtime} />
-        </aside>
       </div>
     </>
   );
@@ -659,6 +680,8 @@ export function ApplicationShell({
     game = GAME_SCREENS.has(screen);
   const [drawer, setDrawer] = useState(false),
     [members, setMembers] = useState(true);
+  const memberIdentity = session?.user?.id ?? session?.guest?.id ?? null;
+  useEffect(() => setMembers(true), [memberIdentity]);
   useEffect(() => {
     const surface = document.getElementById('gameSurface');
     if (!surface) return;
@@ -679,141 +702,192 @@ export function ApplicationShell({
   }, []);
   useEffect(() => {
     const close = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (
+        e.key !== 'Escape' ||
+        e.defaultPrevented ||
+        document.fullscreenElement ||
+        document.querySelector('dialog:modal, [popover]:popover-open, .media-maximized')
+      )
+        return;
+      if (drawer) {
         setDrawer(false);
+        return;
       }
+      if (window.matchMedia('(max-width: 1000px)').matches) setMembers(false);
     };
     document.addEventListener('keydown', close);
     return () => document.removeEventListener('keydown', close);
-  }, []);
+  }, [drawer]);
   return (
     <>
       <div
-        className={styles.app}
-        data-game={game}
-        data-entry={entry}
-        data-drawer={drawer}
+        className={styles.workspace}
+        data-members={members && !entry}
         data-call={screen === 'chatOnlyScreen' && callNav?.page === 'call'}
       >
-        <aside className={styles.sidebar} aria-label="Canais e conversas">
-          {runtime && (
-            <Navigation runtime={runtime} screen={screen} close={() => setDrawer(false)} />
-          )}
-        </aside>
-        {drawer && (
-          <button
-            className={styles.shade}
-            aria-label="Fechar canais"
-            onClick={() => setDrawer(false)}
-          />
-        )}
-        <main className={styles.main}>
-          <header className={styles.header}>
-            <button
-              className={styles.drawerButton}
-              aria-label="Abrir canais"
-              aria-expanded={drawer}
-              onClick={() => setDrawer(!drawer)}
-            >
-              <Icon name="menu" />
-            </button>
-            <span className={styles.headerSymbol}>
-              {screen === 'gamesScreen' ? <Icon name="games" /> : <Icon name="chat" />}
-            </span>
-            <div className={styles.headerText}>
-              <strong>
-                {screen === 'gamesScreen'
-                  ? 'Biblioteca de jogos'
-                  : screen === 'portalScreen'
-                    ? 'Seu lugar à mesa'
-                    : 'A Corte'}
-              </strong>
-              <small>
-                {screen === 'gamesScreen'
-                  ? 'Escolha sua próxima história.'
-                  : 'A mesa está aberta. Puxe uma cadeira.'}
-              </small>
-            </div>
-            <span className={styles.headerStatus} data-connected={portal?.connected}>
-              {portal?.connected ? 'Conectado' : 'Conectando…'}
-            </span>
-            {runtime && screen === 'chatOnlyScreen' && <ChannelFilesAction runtime={runtime} />}
-            {!(screen === 'chatOnlyScreen' && callNav?.page === 'call') && (
-              <button
-                className={styles.iconButton}
-                aria-label={members ? 'Ocultar membros' : 'Mostrar membros'}
-                aria-expanded={members}
-                onClick={() => setMembers(!members)}
-              >
-                <Icon name="members" />
-              </button>
-            )}
-          </header>
-          <section
-            id="portalScreen"
-            className={screen === 'portalScreen' ? styles.authScreen : 'hidden'}
-            aria-label="Acesso ao M&N"
+        <div className={styles.workspaceContent}>
+          <div
+            className={styles.app}
+            data-game={game}
+            data-entry={entry}
+            data-drawer={drawer}
+            data-call={screen === 'chatOnlyScreen' && callNav?.page === 'call'}
           >
-            {runtime ? (
-              <>
-                {screen === 'portalScreen' &&
-                  (entry && sessionReady ? (
-                    <AccountForm runtime={runtime} />
-                  ) : (
-                    <p role="status">Preparando sua sessão…</p>
-                  ))}
-                {portal?.entryStatus && (
-                  <p role="status" className={styles.entryStatus}>
-                    {portal.entryStatus}
+            <aside className={styles.sidebar} aria-label="Canais e conversas">
+              {runtime && (
+                <Navigation runtime={runtime} screen={screen} close={() => setDrawer(false)} />
+              )}
+            </aside>
+            {drawer && (
+              <button
+                className={styles.shade}
+                aria-label="Fechar canais"
+                onClick={() => setDrawer(false)}
+              />
+            )}
+            <main className={styles.main}>
+              <header className={styles.header}>
+                <button
+                  className={styles.drawerButton}
+                  aria-label="Abrir canais"
+                  aria-expanded={drawer}
+                  onClick={() => setDrawer(!drawer)}
+                >
+                  <Icon name="menu" />
+                </button>
+                <span className={styles.headerSymbol}>
+                  {screen === 'gamesScreen' ? <Icon name="games" /> : <Icon name="chat" />}
+                </span>
+                <div className={styles.headerText}>
+                  <strong>
+                    {screen === 'gamesScreen'
+                      ? 'Biblioteca de jogos'
+                      : screen === 'portalScreen'
+                        ? 'Seu lugar à mesa'
+                        : 'A Corte'}
+                  </strong>
+                  <small>
+                    {screen === 'gamesScreen'
+                      ? 'Escolha sua próxima história.'
+                      : 'A mesa está aberta. Puxe uma cadeira.'}
+                  </small>
+                </div>
+                <span className={styles.headerStatus} data-connected={portal?.connected}>
+                  {portal?.connected ? 'Conectado' : 'Conectando…'}
+                </span>
+                {runtime && screen === 'chatOnlyScreen' && <ChannelFilesAction runtime={runtime} />}
+                <button
+                  className={styles.iconButton}
+                  aria-label={members ? 'Ocultar membros' : 'Mostrar membros'}
+                  aria-expanded={members}
+                  aria-controls="communityMembers"
+                  onClick={() => setMembers(!members)}
+                >
+                  <Icon name="members" />
+                </button>
+              </header>
+              <section
+                id="portalScreen"
+                className={screen === 'portalScreen' ? styles.authScreen : 'hidden'}
+                aria-label="Acesso ao M&N"
+              >
+                {runtime ? (
+                  <>
+                    {screen === 'portalScreen' &&
+                      (entry && sessionReady ? (
+                        <AccountForm runtime={runtime} />
+                      ) : (
+                        <p role="status">Preparando sua sessão…</p>
+                      ))}
+                    {portal?.entryStatus && (
+                      <p role="status" className={styles.entryStatus}>
+                        {portal.entryStatus}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className={styles.loading} role="status">
+                    Preparando seu ponto de encontro…
                   </p>
                 )}
-              </>
-            ) : (
-              <p className={styles.loading} role="status">
-                Preparando seu ponto de encontro…
-              </p>
-            )}
-          </section>
-          <section
-            id="chatOnlyScreen"
-            className={screen === 'chatOnlyScreen' ? styles.communityScreen : 'hidden'}
-            aria-label="Comunicação M&N"
-          >
+              </section>
+              <section
+                id="chatOnlyScreen"
+                className={screen === 'chatOnlyScreen' ? styles.communityScreen : 'hidden'}
+                aria-label="Comunicação M&N"
+              >
+                {runtime && (
+                  <>
+                    <Communication runtime={runtime} />
+                  </>
+                )}
+              </section>
+              <section
+                id="gamesScreen"
+                className={screen === 'gamesScreen' ? styles.gamesScreen : 'hidden'}
+                aria-label="Catálogo de jogos"
+              >
+                {runtime && <Catalog runtime={runtime} />}
+              </section>
+            </main>
+          </div>
+          <div id="gameResourceDock" className={styles.gameResources} hidden={!game}>
             {runtime && (
-              <>
-                <Communication runtime={runtime} members={members} />
-              </>
+              <button
+                type="button"
+                aria-label="Recursos da Corte"
+                onClick={() => runtime.TronoCallSettings.open('resources')}
+              >
+                <Icon name="settings" size={18} />
+              </button>
             )}
-          </section>
-          <section
-            id="gamesScreen"
-            className={screen === 'gamesScreen' ? styles.gamesScreen : 'hidden'}
-            aria-label="Catálogo de jogos"
-          >
-            {runtime && <Catalog runtime={runtime} />}
-          </section>
-        </main>
-      </div>
-      <div id="gameResourceDock" className={styles.gameResources} hidden={!game}>
+          </div>
+          <div className={styles.gameStage}>{children(game, screen)}</div>
+          {game && runtime && (
+            <button
+              className={styles.gameReturn}
+              onClick={() => void runtime.TronoGameLibrary.open('library')}
+            >
+              <Icon name="back" size={15} /> Biblioteca de jogos
+            </button>
+          )}
+          {game && !members && (
+            <button
+              type="button"
+              className={styles.gameMembersToggle}
+              aria-label="Mostrar membros"
+              aria-expanded="false"
+              aria-controls="communityMembers"
+              onClick={() => setMembers(true)}
+            >
+              <Icon name="members" size={18} /> Membros
+            </button>
+          )}
+        </div>
         {runtime && (
-          <button
-            type="button"
-            aria-label="Recursos da Corte"
-            onClick={() => runtime.TronoCallSettings.open('resources')}
+          <aside
+            id="communityMembers"
+            className={styles.members}
+            hidden={entry || !members}
+            aria-label="Membros da Corte"
           >
-            <Icon name="settings" size={18} />
-          </button>
+            <header className={styles.membersHeader}>
+              <h2>Membros da Corte</h2>
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Ocultar lista de membros"
+                onClick={() => setMembers(false)}
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </header>
+            <div className={styles.membersScroll}>
+              <Members runtime={runtime} />
+            </div>
+          </aside>
         )}
       </div>
-      <div className={styles.gameStage}>{children(game, screen)}</div>
-      {game && runtime && (
-        <button
-          className={styles.gameReturn}
-          onClick={() => void runtime.TronoGameLibrary.open('library')}
-        >
-          <Icon name="back" size={15} /> Biblioteca de jogos
-        </button>
-      )}
       {runtime && (
         <>
           <AccountOverlay runtime={runtime} inline={entry || screen === 'portalScreen'} />

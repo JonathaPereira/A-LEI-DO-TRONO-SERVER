@@ -158,7 +158,7 @@ test(
           await target.waitForFunction(() => window.TronoAuth?.ready);
           await target.evaluate(() => window.TronoAuth.ready);
         }
-        await expect(web.getByRole('complementary', { name: 'Membros online' })).toBeVisible();
+        await expect(web.getByRole('complementary', { name: 'Membros da Corte' })).toBeVisible();
         await page.evaluate(() => window.TronoCallSettings.open('activity'));
         await page.locator('[data-settings-tab="activity"]').click();
         const enabled = page.locator('#desktopActivityEnabled');
@@ -166,7 +166,7 @@ test(
         const name = page.locator('#desktopActivityName');
         const status = page.locator('#desktopActivityStatus');
         const presence = web
-          .getByRole('complementary', { name: 'Membros online' })
+          .getByRole('complementary', { name: 'Membros da Corte' })
           .getByRole('button')
           .filter({
             hasText: /Counter-Strike 2|Meu jogo|Jogo escolhido|Resposta antiga|Evento sem conta/,

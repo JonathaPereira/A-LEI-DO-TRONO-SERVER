@@ -155,7 +155,7 @@ test(
               window.TronoCallNavigation.showChat();
             });
             const online = page
-              .getByRole('complementary', { name: 'Membros online' })
+              .getByRole('complementary', { name: 'Membros da Corte' })
               .getByRole('button')
               .filter({ hasText: 'Participante' });
             await peer.evaluate(() => window.TronoNetwork.setActivity({ name: 'Jogo de efeitos' }));

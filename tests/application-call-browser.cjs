@@ -91,7 +91,7 @@ test(
       await fs.mkdir('artifacts/frontend-reset/contrast-qa', { recursive: true });
       await expect(
         page
-          .getByRole('complementary', { name: 'Membros online' })
+          .getByRole('complementary', { name: 'Membros da Corte' })
           .locator('[data-direct-banner-slot] img'),
       ).toBeVisible();
       const accountCard = page.locator('[data-account-card]');

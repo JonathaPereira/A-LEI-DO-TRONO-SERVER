@@ -130,6 +130,13 @@ test(
           [480, 520],
         ]) {
           await page.setViewportSize({ width, height });
+          if (width <= 1000) {
+            const closeMembers = page.getByRole('button', {
+              name: 'Ocultar lista de membros',
+              exact: true,
+            });
+            if (await closeMembers.isVisible()) await closeMembers.click();
+          }
           await page.locator('#decreeBadge').scrollIntoViewIfNeeded();
           const overlap = await page.locator('#decreeBadge').evaluate((badge) => {
             const b = badge.getBoundingClientRect();
