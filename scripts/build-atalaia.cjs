@@ -15,6 +15,13 @@ if (runtime.data) {
 }
 const game = path.join(root, 'games/atalaia'),
   web = path.join(root, 'artifacts/atalaia/web');
+const gameVersion = /^config\/version="([^"]+)"/m.exec(
+    fs.readFileSync(path.join(game, 'project.godot'), 'utf8'),
+  )[1],
+  source = process.env.GITHUB_SHA || 'local';
+if (!/^\d+\.\d+\.\d+$/.test(gameVersion) || !/^(?:local|[a-f0-9]{40})$/.test(source))
+  throw Error('Invalid Atalaia export identity.');
+const executable = `atalaia-${gameVersion}-${source.slice(0, 12)}`;
 fs.rmSync(web, { recursive: true, force: true });
 fs.mkdirSync(web, { recursive: true });
 const run = (args) =>
@@ -25,18 +32,19 @@ const run = (args) =>
   });
 run(['--editor', '--import']);
 run(['--script', 'res://tests/verify.gd']);
-run(['--export-release', 'Web', path.join(web, 'index.html')]);
+run(['--script', 'res://tests/runtime_verify.gd', '--', '--qa']);
+run(['--export-release', 'Web', path.join(web, executable + '.html')]);
+fs.renameSync(path.join(web, executable + '.html'), path.join(web, 'index.html'));
 for (const file of ['FONT-LICENSES.txt', 'GODOT-LICENSE.txt', 'GODOT-COPYRIGHT.txt'])
   fs.copyFileSync(path.join(game, file), path.join(web, file));
 fs.writeFileSync(
   path.join(web, 'version.json'),
   JSON.stringify({
     game: 'atalaia',
-    gameVersion: /^config\/version="([^"]+)"/m.exec(
-      fs.readFileSync(path.join(game, 'project.godot'), 'utf8'),
-    )[1],
+    gameVersion,
+    executable,
     desktopVersion: require('../electron/package.json').version,
-    source: process.env.GITHUB_SHA || 'local',
+    source,
   }) + '\n',
 );
 console.log('Atalaia web export ready at ' + web);

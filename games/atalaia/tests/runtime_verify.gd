@@ -6,19 +6,31 @@ func check(ok: bool,label: String):
  if not ok:failures+=1;push_error("UI FAIL: "+label)
  else:print("UI PASS: "+label)
 func verify():
+ var save_path="user://atalaia_campaign_v1.json"
+ var original_save=FileAccess.get_file_as_string(save_path) if FileAccess.file_exists(save_path) else ""
  app=load("res://scenes/main.tscn").instantiate();root.add_child(app)
  app.qa_mode=true
  await process_frame
  check(app.in_menu,"Tela de título inicial")
  app.start_game()
+ check(is_equal_approx(app.board.scale.x,app.board.scale.y),"Campo preserva proporções de cenário, unidades e cliques")
+ check(app.board.get_parent().clip_contents,"Atores e caminhos ficam dentro dos limites do campo")
+ check(app.stats_label.text=="360" and app.stats_label.get_parent().get_children().any(func(n):return n is Label and n.text=="OURO"),"Ouro inicial tem nome legível e valor real")
+ check(app.life_meter.size.y<=5 and app.wave_meter.size.y<=5,"Barras finas não encobrem valores nem controles")
  app.arsenal_buttons.ballista.pressed.emit()
  app.board.pad_clicked.emit(4)
  check(app.run.towers.size()==1 and app.selected==app.run.towers[0].id,"Arsenal e seleção de espaço constroem e selecionam")
  app.upgrade_button.pressed.emit()
- check(app.run.towers[0].level==2,"Botão de evolução acima do campo")
+ check(app.run.towers[0].level==2,"Painel da torreta evolui a seleção")
  app.run.gold=400
+ app.refresh_hud()
+ await create_timer(0.4).timeout
+ check(app.stats_label.text.contains("400"),"Contador animado converge para o ouro real")
  app.arsenal_buttons.poison.pressed.emit();app.board.pad_clicked.emit(6)
  var second=app.selected
+ var report_button=app.rows.get_child(0).get_children().filter(func(n):return n is Button)[0]
+ report_button.grab_focus();app.refresh_hud();await process_frame
+ check(is_instance_valid(report_button) and app.get_viewport().gui_get_focus_owner()==report_button,"Atualizar dano preserva foco no relatório")
  app.wave_button.pressed.emit()
  check(app.run.phase=="wave","Botão iniciar onda")
  await create_timer(0.2).timeout
@@ -54,6 +66,9 @@ func verify():
  app.saved=saved;app.continue_game()
  check(app.run.stage==1 and app.run.towers[1].mods==["power"] and app.run.doctrines.size()==1,"Salvar/continuar preserva fase, carta e doutrina")
  DirAccess.remove_absolute(app.SAVE_PATH)
+ if original_save!="":
+  var file=FileAccess.open(save_path,FileAccess.WRITE)
+  if file:file.store_string(original_save);file.close()
  app.sound.shutdown();await create_timer(0.15).timeout
  app.queue_free();await process_frame
  print("UI RESULTADO: %d falha(s)"%failures)

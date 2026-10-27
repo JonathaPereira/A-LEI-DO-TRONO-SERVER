@@ -1,6 +1,10 @@
-# Atalaia: Guardiões do Cristal — Godot 0.1
+# Atalaia: Guardiões do Cristal — Godot 0.2
 
-Primeira versão nativa jogável do conceito aprovado. Projeto 2D em GDScript para **Godot 4.5.2 Standard** (não exige .NET), com renderer Compatibility / OpenGL 3.3. Código e arte ficam locais; não precisa de login, internet, Node ou Python para jogar.
+Projeto 2D em GDScript, com exportação atual em **Godot 4.6.3 Standard** (não exige .NET), renderer Compatibility e Web sem threads. A versão 0.2 melhora a apresentação do projeto Godot 0.1 enviado: HUD nomeado, campo sem esticar, fundos das três regiões e animações. Campanhas Godot existentes continuam compatíveis.
+
+A versão web 0.6.1 compartilhada como referência tem seis regiões, 30 ondas,
+cristais e oficina. O Godot conserva a campanha de três regiões e 15 ondas do
+ZIP; essa referência não foi apresentada como equivalência de conteúdo.
 
 ## Abrir e jogar
 
@@ -20,7 +24,9 @@ Para a versão pronta de Windows, extraia o pacote de Windows e abra `Atalaia.ex
 - Caminhada de quatro quadros por distância para esqueletos, lobos, aranhas e golens; fungos e chefes usam duas poses, espíritos flutuam intencionalmente. Sombras e alinhamento pela base dos pés.
 - Cabeças mecânicas com giro, recuo, projéteis na boca da arma, arco balístico e fumaça de morteiro, jato contínuo de fogo, raios em cadeia, congelamento e poças animadas de veneno.
 - Terrenos detalhados, movimento discreto da água/neblina por shader, partículas ambientais e cristal com levitação, halo e fragmentos orbitais.
-- Evolução fixada acima do campo; relatório lateral por torreta ou tipo, campanha/onda, dano efetivo, DPS e exportação CSV.
+- HUD de núcleo, ouro e onda com ícones vetoriais, números separados e barras de avanço. Ouro conta suavemente e mostra ganhos sobre os inimigos derrotados.
+- Campo com escala uniforme e recorte nas bordas; novos terrenos de floresta, pântano e cidadela, preservando as estradas e os espaços das regras. Construção, movimento e evolução animados.
+- Evolução e detalhes da torre na lateral; relatório por torreta ou tipo, campanha/onda, dano efetivo, DPS e exportação CSV.
 - Construção e reposicionamento grátis entre ondas; mover para um local ocupado troca as torretas. IDs, níveis e cartas acompanham cada unidade nas mudanças de mapa. Os 48 espaços foram validados junto às estradas.
 - Pausa, velocidade 1×/2×, mixer separado e salvamento automático da campanha, inclusive durante uma onda ou escolha de carta.
 
@@ -31,7 +37,7 @@ Para a versão pronta de Windows, extraia o pacote de Windows e abra `Atalaia.ex
 | Escolher arma | Botões inferiores ou 1–6 |
 | Construir | Escolha a arma e clique em um círculo livre |
 | Selecionar torreta | Clique nela ou na linha do relatório |
-| Evoluir | Botão superior ou U |
+| Evoluir | Painel da torre na lateral ou U |
 | Próxima onda | Botão lateral ou Espaço |
 | Mover/trocar | Selecione a torreta, clique em Mover e no destino |
 | Pausar/retomar | P, Esc ou botão Ⅱ |
@@ -53,8 +59,8 @@ Paleta original de **19 arquivos estéreo a 48 kHz**: ambiência úmida de flore
 - `scripts/run.gd`: regras de combate, cartas, progressão, autoria de dano, serialização. Sem dependência do HUD.
 - `scripts/catalog.gd`: números das armas, monstros e cartas.
 - `data/maps.json`: estradas e espaços de construção das três fases.
-- `scripts/board.gd`, `effects.gd`, `smoke.gd`, `core.gd`: cenário, efeitos e cristal.
-- `scripts/main.gd`, `ui.gd`, `card_view.gd`, `card_art.gd`: interface construída com Controls nativos e animações por Tween.
+- `scripts/board.gd`, `terrain.gd`, `effects.gd`, `smoke.gd`, `core.gd`: cenário, estradas, efeitos e cristal.
+- `scripts/main.gd`, `ui.gd`, `hud_icon.gd`, `card_view.gd`, `card_art.gd`: interface construída com Controls nativos, ícones vetoriais e animações por Tween.
 - `scripts/sound.gd`: reprodução, espacialização e mixer.
 - `assets/`: arte, fontes, shader e áudio, sem downloads em execução.
 
@@ -95,7 +101,7 @@ As builds não são assinadas. Os scripts de teste e o gerador de áudio ficam f
 
 ## Créditos
 
-Arte reaproveitada do projeto Atalaia aprovado nesta conversa, gerada com imagegen. Código, ícones vetoriais e áudio criados para esta versão. Caladea e Carlito sob SIL Open Font License; avisos em `FONT-LICENSES.txt`. Godot é distribuído sob MIT; o motor e bibliotecas incluídas estão documentados em `GODOT-LICENSE.txt` e `GODOT-COPYRIGHT.txt`. Nenhum asset de Nexus ou Cinzas do Abismo foi copiado.
+Arte original do projeto enviado e novos fundos da edição 0.2 gerados com imagegen. Código, ícones vetoriais e áudio criados para este projeto. Caladea e Carlito sob SIL Open Font License; avisos em `FONT-LICENSES.txt`. Godot é distribuído sob MIT; o motor e bibliotecas incluídas estão documentados em `GODOT-LICENSE.txt` e `GODOT-COPYRIGHT.txt`. Nenhum asset de Nexus ou Cinzas do Abismo foi copiado.
 
 
 ## Integração ao Trono
@@ -115,6 +121,7 @@ node --test tests/atalaia.cjs tests/atalaia-browser.cjs
 ```
 
 O primeiro comando baixa o editor e os templates oficiais com SHA-512 fixado.
+O build executa as verificações de regras e de interface Godot antes da exportação.
 Quem já tem o Godot 4.6.3 e seus templates pode usar `GODOT_BIN=godot` no segundo.
 A saída fica em `artifacts/atalaia/web`, separada do frontend principal. O teste
 browser usa esse jogo real e contas/mídia descartáveis; o acesso remoto é servido

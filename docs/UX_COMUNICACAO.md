@@ -52,6 +52,14 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 ## Capacidades atuais
 
+Atalaia Godot 0.2 apresenta núcleo, ouro e onda em blocos nomeados, com ícones
+vetoriais e barras finas. A geometria do cenário usa escala uniforme; atores
+e caminhos ficam recortados pelo campo. Detalhes/evolução da torre e relatório
+ficam na lateral; o arsenal continua abaixo do mapa. Ouro e dano têm transições
+legíveis, sem substituir os valores autoritativos usados nas compras. Os saves
+e as regras da campanha Godot são preservados. A referência web 0.6.1 possui
+mais conteúdo; a mudança visual não implica paridade com essa versão.
+
 No Love Letter, toda a mesa acompanha carta, autor, alvo e resultado em uma
 apresentação sobre a mesa, sem precisar consultar o histórico. O Guarda mostra
 também o palpite e aguarda dois segundos antes de revelar se acertou. Rei, Príncipe,
