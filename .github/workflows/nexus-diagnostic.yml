@@ -60,3 +60,43 @@ jobs:
             }finally{await browser.close();server.close();}
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm --prefix electron ci
+      - name: Open the actual Electron Nexus launcher
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/nexus | Out-Null
+          @'
+          const {app,BrowserWindow,session,screen,dialog}=require('../../electron/node_modules/electron');
+          const {createNexusLauncher}=require('../../electron/nexus.cjs');
+          app.commandLine.appendSwitch('use-angle','swiftshader');
+          app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+          app.setPath('userData',require('path').join(require('os').tmpdir(),'nexus-live-'+process.pid));
+          app.whenReady().then(async()=>{
+            const errors=[],failed=[];
+            app.on('web-contents-created',(_,c)=>{
+              c.on('console-message',(_,level,message)=>{if(level>=2)errors.push(message.slice(0,350));});
+              c.on('did-fail-load',(_,code,description,url)=>failed.push({code,description,url}));
+            });
+            session.fromPartition('persist:mn-nexus').webRequest.onErrorOccurred(d=>failed.push({url:d.url,error:d.error}));
+            const parent=new BrowserWindow({show:false});
+            const launcher=createNexusLauncher({BrowserWindow,session,screen,dialog,parent,isQuitting:()=>true});
+            let launch;
+            try{launch=await launcher.open();}catch(e){launch={error:e.message};}
+            await new Promise(r=>setTimeout(r,90000));
+            const game=BrowserWindow.getAllWindows().find(w=>w!==parent);
+            const frames=game?await Promise.all([game.webContents.mainFrame,...game.webContents.mainFrame.frames].map(async f=>({url:f.url,...await f.executeJavaScript('({text:document.body.innerText.slice(-1000),canvas:!!document.querySelector("canvas"),engine:typeof Engine,isolated:crossOriginIsolated})').catch(e=>({error:e.message}))}))):[];
+            console.log('::notice title=Nexus native startup::'+JSON.stringify({launch,frames,errors:errors.slice(-18),failed:failed.slice(-8)}).replaceAll('%','%25').replaceAll('\n','%0A').replaceAll('\r','%0D'));
+            app.quit();
+          }).catch(e=>{console.error(e);app.exit(1)});
+          '@ | Set-Content -Encoding utf8 artifacts/nexus/native-probe.cjs
+          node electron/node_modules/electron/cli.js artifacts/nexus/native-probe.cjs
