@@ -105,6 +105,11 @@ export interface LoveLetterSnapshot {
   privateOpen: boolean;
   rulesOpen: boolean;
   effectTarget: string | null;
+  displayState: LoveLetterState | null;
+  presentation: {
+    event: LoveLetterEvent;
+    phase: 'announce' | 'result';
+  } | null;
 }
 export interface LoveLetterRules {
   cards: { rank: number; name: string; count: number; effect: string }[];

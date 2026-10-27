@@ -1,4 +1,5 @@
 import type { LoveLetterPlayer, LoveLetterCard } from '../../types/love-letter';
+import { LastPlayedCard } from './love-letter-effects';
 import {
   Card,
   Favor,
@@ -29,6 +30,7 @@ function Station({
           ? ' ll-active'
           : '') +
         (isTarget(props, p.id) ? ' ll-valid-target' : '') +
+        (s.presentation?.event.playerId === p.id ? ' ll-effect-actor' : '') +
         (s.effectTarget === p.id ? ' ll-effect-target' : '')
       }
       data-ll-player={p.id}
@@ -142,9 +144,25 @@ function RoundResult({ snapshot: s, controller, rules }: LoveLetterView) {
           </div>
         ))}
       </div>
-      {state.spyWinner && (
-        <p>Espiã: {personName(state, state.spyWinner)} recebe +1 favor adicional.</p>
-      )}
+      <div className="ll-score-breakdown" aria-label="Favores desta rodada">
+        {state.roundWinners.map((id) => (
+          <p key={id}>
+            <strong>{personName(state, id)}</strong> · +1 favor por vencer a rodada.
+          </p>
+        ))}
+        {state.spyWinner ? (
+          <p>
+            <strong>{personName(state, state.spyWinner)}</strong> · +1 favor pela Espiã: única
+            pessoa sobrevivente que a jogou ou descartou.
+          </p>
+        ) : (
+          <p>
+            Espiã: nenhum favor extra nesta rodada.
+            {state.players.filter((p) => !p.eliminated && p.discards.some((c) => c.rank === 0))
+              .length > 1 && ' Mais de uma pessoa sobrevivente usou Espiã.'}
+          </p>
+        )}
+      </div>
       <p>
         {state.roundResult!.reason === 'last-survivor'
           ? 'Uma pessoa permaneceu na rodada.'
@@ -242,6 +260,7 @@ function Hand(props: LoveLetterView) {
       className={
         'll-self' +
         (isTarget(props, me.id) ? ' ll-valid-target' : '') +
+        (s.presentation?.event.playerId === me.id ? ' ll-effect-actor' : '') +
         (s.effectTarget === me.id ? ' ll-effect-target' : '')
       }
     >
@@ -290,17 +309,19 @@ function Hand(props: LoveLetterView) {
         })}
       </div>
       <p className="ll-hand-instruction">
-        {me.eliminated
-          ? 'Você retorna na próxima rodada.'
-          : state.phase === 'chancellor'
-            ? myTurn(s)
-              ? 'Escolha do Chanceler acima.'
-              : 'Aguardando a escolha do Chanceler.'
-            : myTurn(s)
-              ? rules.forced(me)
-                ? 'Você precisa jogar a Condessa.'
-                : 'Clique na carta que deseja usar.'
-              : 'Sua mão é secreta. Aguarde sua vez.'}
+        {s.presentation
+          ? 'Acompanhe o efeito da carta antes da próxima jogada.'
+          : me.eliminated
+            ? 'Você retorna na próxima rodada.'
+            : state.phase === 'chancellor'
+              ? myTurn(s)
+                ? 'Escolha do Chanceler acima.'
+                : 'Aguardando a escolha do Chanceler.'
+              : myTurn(s)
+                ? rules.forced(me)
+                  ? 'Você precisa jogar a Condessa.'
+                  : 'Clique na carta que deseja usar.'
+                : 'Sua mão é secreta. Aguarde sua vez.'}
       </p>
       <details className="ll-my-discards">
         <summary>Seus descartes · {me.discards.length}</summary>
@@ -385,6 +406,7 @@ export function LoveLetterTable(props: LoveLetterView) {
           )}
         </div>
         <div className="ll-table-center">
+          <LastPlayedCard {...props} />
           <div className="ll-deck">
             <Card card={{ hidden: true }} rules={rules} />
             <small>Baralho · {state.deckCount} cartas</small>
