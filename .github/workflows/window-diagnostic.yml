@@ -55,6 +55,15 @@ jobs:
               await app.evaluate(()=>{global.game.webContents.sendInputEvent({type:'keyDown',keyCode:'F11'});global.game.webContents.sendInputEvent({type:'keyUp',keyCode:'F11'});});
               await new Promise(r=>setTimeout(r,700));
               const native=await app.evaluate(()=>({full:global.game.isFullScreen(),events:global.events,focused:global.game.isFocused()}));
+              if(!native.full||cdp.events.length)throw Error('Unexpected keyboard diagnosis');
+              const transitions=[];
+              for(let turn=0;turn<3;turn++){
+                await app.evaluate(()=>{global.game.focus();global.game.webContents.sendInputEvent({type:'keyDown',keyCode:'F11'});global.game.webContents.sendInputEvent({type:'keyUp',keyCode:'F11'});});
+                await new Promise(r=>setTimeout(r,400));
+                transitions.push(await app.evaluate(()=>global.game.isFullScreen()));
+              }
+              if(JSON.stringify(transitions)!=='[false,true,false]')throw Error('Native fullscreen did not toggle reliably: '+JSON.stringify(transitions));
+              console.log('::notice title=Native fullscreen cycles::'+JSON.stringify(transitions));
               console.log('::notice title=Fullscreen paths::'+JSON.stringify({cdp,native}));
             } finally {await app.close();}
           })().catch(e=>{console.error(e);process.exit(1)});

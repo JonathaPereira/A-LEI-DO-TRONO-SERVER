@@ -31,9 +31,20 @@ async function exerciseAtalaia({app,page}) {
  assert.deepEqual({...policy,count:undefined},{isolated:true,node:false,sandbox:true,preload:null,count:undefined});
  await page.evaluate(()=>window.TronoDesktop.openAtalaia());
  assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().length),policy.count);
- await game.keyboard.press('F11');
+ await app.evaluate(({BrowserWindow})=>{
+  const viewer=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('atalaia-mn.surge.sh'));
+  viewer.focus();
+  viewer.webContents.sendInputEvent({type:'keyDown',keyCode:'F11'});
+  viewer.webContents.sendInputEvent({type:'keyUp',keyCode:'F11'});
+ });
  await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('atalaia-mn.surge.sh')).isFullScreen())).toBe(true);
- await game.keyboard.press('F11');
+ await app.evaluate(({BrowserWindow})=>{
+  const viewer=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('atalaia-mn.surge.sh'));
+  viewer.focus();
+  viewer.webContents.sendInputEvent({type:'keyDown',keyCode:'F11'});
+  viewer.webContents.sendInputEvent({type:'keyUp',keyCode:'F11'});
+ });
+ await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('atalaia-mn.surge.sh')).isFullScreen())).toBe(false);
  await fs.mkdir('artifacts/atalaia',{recursive:true});await game.screenshot({path:'artifacts/atalaia/windows-game.png'});
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().includes('atalaia-mn.surge.sh')).destroy());
  await page.locator('#atalaiaScreen').getByRole('button',{name:'‹ Jogos',exact:true}).click();
