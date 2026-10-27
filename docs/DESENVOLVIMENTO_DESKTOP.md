@@ -129,3 +129,9 @@ e baixa um CSV, preservando a chamada sintética no Trono. A aceitação do paco
 Windows carrega a mesma exportação na sessão isolada real, com WebGL por software
 no runner; isso não mede desempenho em uma GPU física. Detalhes de edição e
 publicação ficam no [README do jogo](../games/atalaia/README.md).
+
+Os atalhos das janelas de jogos são exercitados com
+`webContents.sendInputEvent`, incluindo entrada e saída de tela cheia. O teclado
+injetado na página pelo CDP percorre outro caminho do Chromium e não aciona o
+`before-input-event` do Electron. A verificação Windows 40526544387 confirmou
+os dois estados de tela cheia pela entrada nativa antes da aceitação completa.
