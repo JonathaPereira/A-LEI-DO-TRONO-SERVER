@@ -41,7 +41,7 @@ export const cards = [
     name: 'Espiã',
     count: 2,
     effect:
-      'No fim da rodada, ganhe 1 favor se só você, entre os sobreviventes, jogou ou descartou uma Espiã.',
+      'No fim da rodada, ganhe 1 favor se só você, entre os sobreviventes, jogou ou descartou Espiã. Não precisa vencer a rodada; no máximo 1 favor, mesmo usando as duas.',
   },
   {
     rank: 1,

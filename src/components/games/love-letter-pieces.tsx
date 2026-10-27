@@ -29,7 +29,7 @@ export const myTurn = (s: LoveLetterSnapshot) =>
   !!s.room?.state &&
   ['action', 'chancellor'].includes(s.room.state.phase) &&
   s.room.state.players[s.room.state.turn].id === s.accountId;
-export const locked = (s: LoveLetterSnapshot) => s.pending || !s.connected;
+export const locked = (s: LoveLetterSnapshot) => s.pending || !s.connected || !!s.presentation;
 export function Portrait({
   rank,
   className = 'll-portrait',

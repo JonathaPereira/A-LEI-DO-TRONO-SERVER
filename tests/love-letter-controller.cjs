@@ -62,9 +62,9 @@ function endRound(s) {
   }
   return s;
 }
-async function setup(t) {
+async function setup(t, viewer = 'a') {
   const { createLoveLetter } = await moduleReady;
-  let account = 'a',
+  let account = viewer,
     connected = true,
     visible = true,
     reduced = false,
@@ -374,7 +374,8 @@ test('effect timers do not replay on roster delivery and disposal detaches every
   wire.players[1].online = false;
   f.emit({ type: 'love-letter-state', room: wire });
   assert.equal(f.sounds.length, count);
-  await f.advance(1100);
+  await f.advance(1000);
+  await f.advance(1600);
   assert.equal(f.owner.getSnapshot().effectTarget, null);
   const snapshot = f.owner.getSnapshot();
   f.emit({ type: 'love-letter-state', room: room(s) });
@@ -384,4 +385,184 @@ test('effect timers do not replay on roster delivery and disposal detaches every
   assert.equal(f.identities.size, 0);
   assert.equal(f.messages.size, 0);
   assert(f.jobs.every((j) => j.canceled));
+});
+
+test('every viewer sees the Guard announcement for one second before elimination, scores and the next round', async (t) => {
+  const s = game(),
+    after = R.move(s, 'a', {
+      kind: 'play',
+      cardId: s.players[0].hand[0].id,
+      targetId: 'b',
+      guess: 2,
+    });
+  for (const viewer of ['a', 'b']) {
+    const f = await setup(t, viewer);
+    f.emit({ type: 'love-letter-state', room: room(s, 'mesa', viewer) });
+    f.emit({ type: 'love-letter-state', room: room(after, 'mesa', viewer) });
+    const snapshot = f.owner.getSnapshot();
+    assert.equal(snapshot.presentation?.phase, 'announce');
+    assert.equal(snapshot.presentation.event.playerId, 'a');
+    assert.equal(snapshot.presentation.event.targetId, 'b');
+    assert.equal(snapshot.presentation.event.guess, 2);
+    assert.equal(snapshot.displayState.players[1].eliminated, false);
+    assert.equal(snapshot.displayState.roundResult, null);
+    assert.equal(snapshot.room.state.phase, 'round-over', 'authoritative state is never delayed');
+    assert(snapshot.displayState.players.find((p) => p.id !== viewer).hand.every((c) => c.hidden));
+    await f.owner.nextRound();
+    assert.equal(f.calls.length, 0, 'round actions wait for the presentation');
+    await f.advance(1000);
+    assert.equal(f.owner.getSnapshot().presentation.phase, 'result');
+    assert.equal(f.owner.getSnapshot().displayState.players[1].eliminated, true);
+    await f.advance(1600);
+    assert.equal(f.owner.getSnapshot().presentation, null);
+    assert.equal(f.owner.getSnapshot().displayState.revision, after.revision);
+    assert.equal(f.errors.length, 0);
+  }
+});
+
+test('consecutive plays queue in order and roster delivery never restarts their presentation', async (t) => {
+  const f = await setup(t),
+    s = game(),
+    first = R.move(s, 'a', {
+      kind: 'play',
+      cardId: s.players[0].hand[0].id,
+      targetId: 'b',
+      guess: 0,
+    }),
+    second = R.move(
+      first,
+      'b',
+      R.botMove(R.publicState(first, 'b'), () => 0),
+    );
+  f.emit({ type: 'love-letter-state', room: room(s) });
+  f.emit({ type: 'love-letter-state', room: room(first) });
+  const old = f.jobs.at(-1);
+  f.emit({ type: 'love-letter-state', room: room(second) });
+  assert.equal(f.owner.getSnapshot().presentation?.event.revision, first.revision);
+  const jobs = f.jobs.length,
+    soundCount = f.sounds.length;
+  f.emit({ type: 'love-letter-state', room: room(second) });
+  assert.equal(f.jobs.length, jobs);
+  assert.equal(f.sounds.length, soundCount);
+  await f.advance(1000);
+  await f.advance(1600);
+  assert.equal(f.owner.getSnapshot().presentation.event.revision, second.revision);
+  old.fn();
+  assert.equal(f.owner.getSnapshot().presentation.phase, 'announce');
+  f.visible(false);
+  assert.equal(f.owner.getSnapshot().presentation, null);
+  assert.equal(f.owner.getSnapshot().displayState.revision, second.revision);
+  f.visible(true);
+  assert.equal(
+    f.owner.getSnapshot().presentation,
+    null,
+    'returning to the table does not replay history',
+  );
+});
+
+test('reduced motion keeps the Guard suspense and clear announcements, while account changes cancel queued results', async (t) => {
+  const f = await setup(t),
+    s = game(),
+    next = R.move(s, 'a', {
+      kind: 'play',
+      cardId: s.players[0].hand[0].id,
+      targetId: 'b',
+      guess: 0,
+    });
+  f.reduce();
+  f.emit({ type: 'love-letter-state', room: room(s) });
+  f.emit({ type: 'love-letter-state', room: room(next) });
+  assert.equal(f.owner.getSnapshot().presentation?.phase, 'announce');
+  const old = f.jobs.at(-1);
+  await f.advance(1000);
+  assert.equal(f.owner.getSnapshot().presentation.phase, 'result');
+  f.account(null);
+  old.fn();
+  assert.equal(f.owner.getSnapshot().presentation, null);
+  assert.equal(f.owner.getSnapshot().displayState, null);
+  assert.equal(f.owner.getSnapshot().room, null);
+});
+
+test('Padre, Baron, Prince and King announce their actor and target without exposing secret hands', async (t) => {
+  for (const rank of [2, 3, 5, 7]) {
+    const f = await setup(t),
+      s = game([rank, 4], [7 === rank ? 2 : 7]),
+      next = R.move(s, 'a', { kind: 'play', cardId: s.players[0].hand[0].id, targetId: 'b' });
+    f.emit({ type: 'love-letter-state', room: room(s) });
+    f.emit({ type: 'love-letter-state', room: room(next) });
+    assert.equal(f.owner.getSnapshot().presentation.event.card.rank, rank);
+    assert.equal(f.owner.getSnapshot().presentation.event.targetId, 'b');
+    assert.equal(f.owner.getSnapshot().privateOpen, false);
+    assert(!('hand' in f.owner.getSnapshot().presentation.event));
+    assert(!('private' in f.owner.getSnapshot().presentation.event));
+    await f.advance(700);
+    const result = f.owner.getSnapshot();
+    assert.equal(result.presentation.phase, 'result');
+    assert(result.displayState.players[1].hand.every((c) => c.hidden));
+    await f.advance(1600);
+    assert.equal(f.owner.getSnapshot().privateOpen, rank === 2);
+  }
+});
+
+test('no-target effects and round transitions remain readable without replaying after a reconnect', async (t) => {
+  const f = await setup(t),
+    s = game([7, 4], [2]);
+  s.players[1].protected = true;
+  const next = R.move(s, 'a', { kind: 'play', cardId: s.players[0].hand[0].id });
+  f.emit({ type: 'love-letter-state', room: room(s) });
+  f.emit({ type: 'love-letter-state', room: room(next) });
+  assert.equal(f.owner.getSnapshot().presentation.event.noTarget, true);
+  await f.advance(700);
+  assert.equal(f.owner.getSnapshot().presentation.phase, 'result');
+  f.emit({ type: 'connection', connected: false });
+  assert.equal(f.owner.getSnapshot().presentation, null);
+  f.emit({ type: 'connection', connected: true });
+  await f.owner.refreshRooms();
+  f.emit({ type: 'love-letter-state', room: room(next) });
+  assert.equal(f.owner.getSnapshot().presentation, null);
+});
+
+test('disposing from a presentation subscriber cannot start orphaned timers or sounds', async (t) => {
+  const f = await setup(t),
+    s = game(),
+    next = R.move(s, 'a', {
+      kind: 'play',
+      cardId: s.players[0].hand[0].id,
+      targetId: 'b',
+      guess: 0,
+    });
+  f.emit({ type: 'love-letter-state', room: room(s) });
+  f.owner.subscribe(() => {
+    if (f.owner.getSnapshot().presentation) f.owner.dispose();
+  });
+  f.emit({ type: 'love-letter-state', room: room(next) });
+  assert(f.jobs.every((j) => j.canceled));
+  assert.equal(f.sounds.length, 0);
+  assert.equal(f.identities.size, 0);
+  assert.equal(f.messages.size, 0);
+});
+
+test('a round started by another host closes the previous round private dialog', async (t) => {
+  const f = await setup(t),
+    s = game([2, 4], [7]),
+    peek = R.move(s, 'a', { kind: 'play', cardId: s.players[0].hand[0].id, targetId: 'b' });
+  f.emit({ type: 'love-letter-state', room: room(peek) });
+  assert.equal(f.owner.getSnapshot().privateOpen, true);
+  const ended = endRound(peek);
+  f.emit({ type: 'love-letter-state', room: room(ended) });
+  f.emit({ type: 'love-letter-state', room: room(R.nextRound(ended, () => 0)) });
+  assert.equal(f.owner.getSnapshot().privateOpen, false);
+});
+
+test('same-revision account updates refresh the idle table without replaying a card', async (t) => {
+  const f = await setup(t),
+    s = game();
+  f.emit({ type: 'love-letter-state', room: room(s) });
+  const wire = room(s);
+  wire.state.players[1].name = 'Novo nome';
+  wire.players[1].name = 'Novo nome';
+  f.emit({ type: 'love-letter-state', room: wire });
+  assert.equal(f.owner.getSnapshot().displayState.players[1].name, 'Novo nome');
+  assert.equal(f.owner.getSnapshot().presentation, null);
+  assert.equal(f.jobs.length, 0);
 });

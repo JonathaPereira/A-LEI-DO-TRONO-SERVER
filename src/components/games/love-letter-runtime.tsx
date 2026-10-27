@@ -62,7 +62,7 @@ export function initializeLoveLetter(target: Window): () => void {
       return controller.getSnapshot().room;
     },
     get animating() {
-      return false;
+      return !!controller.getSnapshot().presentation;
     },
   };
   runtime.TronoLoveLetter = facade;

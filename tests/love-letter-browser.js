@@ -29,7 +29,7 @@ async function peer(base, token) {
 }
 test(
   'Love Letter real controls complete a match, keep secrets, fit supported window sizes and preserve microphone/camera/share',
-  { timeout: 180000 },
+  { timeout: 300000 },
   async () => {
     const server = await new Promise((r) => {
         const s = express()
@@ -78,6 +78,29 @@ test(
           localStorage.setItem('tronoMusicEnabled', '0');
           localStorage.setItem('tronoSfxEnabled', '0');
           localStorage.setItem('mnDesktopNoiseMode', 'native');
+          window.__lovePresentations = [];
+          document.addEventListener('DOMContentLoaded', () => {
+            new MutationObserver(() => {
+              const n = document.querySelector('.ll-presentation');
+              if (!n) return;
+              const key = n.dataset.revision + ':' + n.dataset.phase;
+              if (window.__lovePresentations.at(-1)?.key === key) return;
+              window.__lovePresentations.push({
+                key,
+                revision: n.dataset.revision,
+                phase: n.dataset.phase,
+                time: performance.now(),
+                heading: n.querySelector('h2').textContent,
+                guard: n.textContent.includes('Será que acertou?'),
+                outcome: !!n.querySelector('.ll-effect-outcome'),
+              });
+            }).observe(document.body, {
+              subtree: true,
+              childList: true,
+              attributes: true,
+              attributeFilter: ['data-phase'],
+            });
+          });
           navigator.mediaDevices.getDisplayMedia = async () => {
             const c = document.createElement('canvas');
             c.width = 1280;
@@ -216,6 +239,7 @@ test(
         chancellorSeen = false,
         feedbackChecked = false;
       while (true) {
+        await expect.poll(() => page.evaluate(() => window.TronoLoveLetter.animating)).toBe(false);
         const s = await page.evaluate(() => window.TronoLoveLetter.room.state);
         if (s.phase === 'finished') break;
         const revision = s.revision;
@@ -271,7 +295,13 @@ test(
           .toBeGreaterThan(revision);
         if (!feedbackChecked) {
           feedbackChecked = true;
-          await expect(page.locator('.ll-presentation')).toHaveCount(0);
+          await expect(page.locator('.ll-presentation')).toBeVisible();
+          await expect(page.locator('.ll-presentation h2')).not.toBeEmpty();
+          await page.screenshot({ path: 'artifacts/love-letter/play-announcement.png' });
+          await expect
+            .poll(() => page.evaluate(() => window.TronoLoveLetter.animating))
+            .toBe(false);
+          await expect(page.locator('.ll-last-card')).toBeVisible();
           await expect(page.locator('.ll-last p')).not.toBeEmpty();
           await expect(page.locator('.ll-history')).toHaveAttribute('open', '');
           await expect(page.locator('.ll-history .ll-log-entry strong').first()).not.toBeEmpty();
@@ -318,6 +348,26 @@ test(
         assert(++turns < 1000);
       }
       assert(feedbackChecked);
+      const presentations = await page.evaluate(() => window.__lovePresentations),
+        guards = presentations.filter((p) => p.guard && p.phase === 'announce');
+      await fs.writeFile(
+        'artifacts/love-letter/presentations.json',
+        JSON.stringify(presentations, null, 2),
+      );
+      assert(guards.length > 0, 'a real Guard play must exercise suspense');
+      for (const announcement of guards) {
+        const result = presentations.find(
+          (p) => p.revision === announcement.revision && p.phase === 'result',
+        );
+        assert(result, 'each announcement resolves visibly');
+        assert(result.time - announcement.time >= 950, 'Guard suspense lasts one second');
+        assert.equal(
+          announcement.outcome,
+          false,
+          'Guard does not reveal the outcome during suspense',
+        );
+        assert.match(announcement.heading, /jogou Guarda em/);
+      }
       await expect(page.locator('.ll-result')).toContainText('conquistou a corte');
       assert.deepEqual(await tracks(), before);
       await page.screenshot({ path: 'artifacts/love-letter/result.png' });

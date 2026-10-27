@@ -6,6 +6,7 @@ import { LoveLetterTable, ActionGuide, History } from './love-letter-table';
 import { GuessContent, PrivateContent } from './love-letter-dialogs';
 import { myTurn, personName, type LoveLetterView } from './love-letter-pieces';
 import { GameAction } from './library-controls';
+import { PlayPresentation } from './love-letter-effects';
 export function LoveLetterContents({
   controller,
   rules,
@@ -15,7 +16,7 @@ export function LoveLetterContents({
   rules: LoveLetterView['rules'];
   fullscreen: GameFullscreen;
 }) {
-  const snapshot = useSyncExternalStore(
+  const current = useSyncExternalStore(
     controller.subscribe,
     controller.getSnapshot,
     controller.getSnapshot,
@@ -25,17 +26,23 @@ export function LoveLetterContents({
     fullscreen.getSnapshot,
     fullscreen.getSnapshot,
   );
+  const snapshot = {
+    ...current,
+    room: current.room ? { ...current.room, state: current.displayState } : null,
+  };
   const props = { snapshot, controller, rules },
     state = snapshot.room?.state;
-  const status = !state
-    ? '2–6 jogadores · blefe e dedução'
-    : state.phase === 'finished'
-      ? 'Partida encerrada'
-      : state.phase === 'round-over'
-        ? 'Rodada encerrada'
-        : myTurn(snapshot)
-          ? 'Sua vez · escolha uma carta'
-          : 'Vez de ' + personName(state, state.players[state.turn].id);
+  const status = snapshot.presentation
+    ? 'Jogada em andamento · acompanhe a mesa'
+    : !state
+      ? '2–6 jogadores · blefe e dedução'
+      : state.phase === 'finished'
+        ? 'Partida encerrada'
+        : state.phase === 'round-over'
+          ? 'Rodada encerrada'
+          : myTurn(snapshot)
+            ? 'Sua vez · escolha uma carta'
+            : 'Vez de ' + personName(state, state.players[state.turn].id);
   function leave() {
     if (
       !state ||
@@ -90,6 +97,7 @@ export function LoveLetterContents({
       <p id={'loveLetterNotice'} className={'ll-notice'} role={'status'} aria-live={'polite'}>
         {snapshot.notice}
       </p>
+      <PlayPresentation {...props} />
       <div id={'loveLetterContent'}>
         {snapshot.room && (
           <div className="ll-room-tools">
@@ -190,7 +198,9 @@ export function LoveLetterContents({
           <li>
             <b>Espiã (2):</b> no fim da rodada, se só você, entre os sobreviventes, jogou ou
             descartou Espiã, ganhe 1 favor extra. Não conta como vitória da rodada e no máximo uma
-            ficha é recebida, mesmo com duas Espiãs.
+            ficha é recebida, mesmo com duas Espiãs. Não precisa vencer a rodada: o bônus também
+            vale quando o baralho acaba e outra pessoa vence pela maior carta. Se duas pessoas que
+            usaram Espiã continuarem na rodada até o fim, ninguém recebe esse bônus.
           </li>
           <li>
             <b>Guarda (6):</b> escolha outra pessoa e adivinhe sua carta, exceto Guarda. Se acertar,
