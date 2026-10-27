@@ -169,6 +169,7 @@
     "tests/throne-seats.cjs",
     "tests/throne-service.cjs",
     "tests/throne-table.cjs",
+    "tests/ticket-to-ride-art.cjs",
     "tests/ticket-to-ride-rules.js",
     "tests/ticket-to-ride-ws.js",
     "tests/voice-controls.cjs",

@@ -524,14 +524,22 @@ export function initializeTicketToRide(target: Window): () => void {
     });
     const defs = svg('defs');
     for (const color of A.playerPieces) {
-      const box =
-        (A.pieces as Record<string, readonly [number, number, number, number] | undefined>)[
-          color
-        ] || A.pieces.blue;
-      const symbol = svg('symbol', { id: 'tr-piece-' + color, viewBox: box.join(' ') });
-      const image = svg('image', { href: A.wagons, width: 1536, height: 1024 });
+      const frame = A.pieceFrames[color === 'purple' ? 'blue' : color];
+      const clipId = 'tr-piece-clip-' + color;
+      const clip = svg('clipPath', { id: clipId, clipPathUnits: 'userSpaceOnUse' });
+      const [x, y, width, height] = frame.clip;
+      clip.append(svg('rect', { x, y, width, height }));
+      defs.append(clip);
+      const symbol = svg('symbol', { id: 'tr-piece-' + color, viewBox: frame.bounds.join(' ') });
+      const level = svg('g', {
+        transform: `rotate(${frame.rotation}) translate(${-frame.center[0]} ${-frame.center[1]})`,
+      });
+      const crop = svg('g', { 'clip-path': `url(#${clipId})` });
+      const image = svg('image', { href: A.wagons, width: 768, height: 512 });
       if (color === 'purple') image.style.filter = 'hue-rotate(65deg)';
-      symbol.append(image);
+      crop.append(image);
+      level.append(crop);
+      symbol.append(level);
       defs.append(symbol);
     }
     canvas.append(defs);
@@ -567,16 +575,16 @@ export function initializeTicketToRide(target: Window): () => void {
       if (owner) {
         for (const wagon of geometry.wagons) {
           const slot = svg('g', {
-            transform: `translate(${wagon.x} ${wagon.y}) rotate(${wagon.angle + 14})`,
+            transform: `translate(${wagon.x} ${wagon.y}) rotate(${wagon.angle})`,
           });
           const art = svg('g', { class: 'tr-wagon-art' });
           art.append(
             svg('use', {
               href: '#tr-piece-' + A.playerPieces[player],
               x: -wagon.width / 2,
-              y: -wagon.width / 3,
+              y: -wagon.width * 0.21,
               width: wagon.width,
-              height: (wagon.width * 2) / 3,
+              height: wagon.width * 0.42,
               'aria-hidden': 'true',
             }),
           );

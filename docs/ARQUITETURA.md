@@ -100,6 +100,12 @@ rodada. Presença não repete efeitos; desconexão, troca de conta/mesa, navega�
 descarte cancelam a fila. As animações usam somente a projeção pública do jogador;
 trocas e comparações não revelam as mãos, e o Padre conserva sua revelação privada.
 
+Ticket to Ride usa `ticket-to-ride-track-layout.ts` como calibração da arte:
+309 centros, tangentes e comprimentos dos espaços impressos, separados por via.
+O SVG normaliza a inclinação e o enquadramento das peças antes de aplicar a rotação
+do trilho. Cliques e vagões usam a mesma geometria; cidades, regras e pagamentos
+continuam no grafo autoritativo, independente da imagem.
+
 Cinzas do Abismo conserva o aplicativo em `public/roguelite/`, sua persistência,
 assets, áudio e ponte de integração. Nexus conserva a integração com
 `electron/nexus.cjs`. URLs públicas, manuais, cartas, mapas, fontes, sons,
