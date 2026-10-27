@@ -54,7 +54,7 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 No Love Letter, toda a mesa acompanha carta, autor, alvo e resultado em uma
 apresentação sobre a mesa, sem precisar consultar o histórico. O Guarda mostra
-também o palpite e aguarda um segundo antes de revelar se acertou. Rei, Príncipe,
+também o palpite e aguarda dois segundos antes de revelar se acertou. Rei, Príncipe,
 Barão e Padre identificam os envolvidos; mãos trocadas/comparadas e informações
 privadas continuam ocultas aos demais. A última carta fica ilustrada no centro.
 Movimento reduzido preserva as mensagens e o suspense, com transições estáticas.

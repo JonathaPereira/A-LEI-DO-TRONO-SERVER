@@ -95,7 +95,7 @@ ranking usa identidade idempotente da partida e resultados calculados pelo motor
 Love Letter mantém o estado autoritativo recebido em `room` e uma projeção temporal
 em `displayState`. O controlador enfileira anúncios e resultados de revisões
 consecutivas; React só apresenta esses snapshots. O Guarda anuncia ator, alvo e
-palpite por um segundo antes de mostrar eliminação, placar ou encerramento da
+palpite por dois segundos antes de mostrar eliminação, placar ou encerramento da
 rodada. Presença não repete efeitos; desconexão, troca de conta/mesa, navegação e
 descarte cancelam a fila. As animações usam somente a projeção pública do jogador;
 trocas e comparações não revelam as mãos, e o Padre conserva sua revelação privada.

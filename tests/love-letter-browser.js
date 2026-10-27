@@ -29,7 +29,7 @@ async function peer(base, token) {
 }
 test(
   'Love Letter real controls complete a match, keep secrets, fit supported window sizes and preserve microphone/camera/share',
-  { timeout: 300000 },
+  { timeout: 600000 },
   async () => {
     const server = await new Promise((r) => {
         const s = express()
@@ -239,7 +239,9 @@ test(
         chancellorSeen = false,
         feedbackChecked = false;
       while (true) {
-        await expect.poll(() => page.evaluate(() => window.TronoLoveLetter.animating)).toBe(false);
+        await expect
+          .poll(() => page.evaluate(() => window.TronoLoveLetter.animating), { timeout: 15000 })
+          .toBe(false);
         const s = await page.evaluate(() => window.TronoLoveLetter.room.state);
         if (s.phase === 'finished') break;
         const revision = s.revision;
@@ -299,7 +301,7 @@ test(
           await expect(page.locator('.ll-presentation h2')).not.toBeEmpty();
           await page.screenshot({ path: 'artifacts/love-letter/play-announcement.png' });
           await expect
-            .poll(() => page.evaluate(() => window.TronoLoveLetter.animating))
+            .poll(() => page.evaluate(() => window.TronoLoveLetter.animating), { timeout: 15000 })
             .toBe(false);
           await expect(page.locator('.ll-last-card')).toBeVisible();
           await expect(page.locator('.ll-last p')).not.toBeEmpty();
@@ -360,7 +362,7 @@ test(
           (p) => p.revision === announcement.revision && p.phase === 'result',
         );
         assert(result, 'each announcement resolves visibly');
-        assert(result.time - announcement.time >= 950, 'Guard suspense lasts one second');
+        assert(result.time - announcement.time >= 1900, 'Guard suspense lasts two seconds');
         assert.equal(
           announcement.outcome,
           false,

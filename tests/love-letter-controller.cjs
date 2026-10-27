@@ -374,8 +374,8 @@ test('effect timers do not replay on roster delivery and disposal detaches every
   wire.players[1].online = false;
   f.emit({ type: 'love-letter-state', room: wire });
   assert.equal(f.sounds.length, count);
-  await f.advance(1000);
-  await f.advance(1600);
+  await f.advance(2000);
+  await f.advance(2800);
   assert.equal(f.owner.getSnapshot().effectTarget, null);
   const snapshot = f.owner.getSnapshot();
   f.emit({ type: 'love-letter-state', room: room(s) });
@@ -387,7 +387,7 @@ test('effect timers do not replay on roster delivery and disposal detaches every
   assert(f.jobs.every((j) => j.canceled));
 });
 
-test('every viewer sees the Guard announcement for one second before elimination, scores and the next round', async (t) => {
+test('every viewer sees the Guard announcement for two seconds before elimination, scores and the next round', async (t) => {
   const s = game(),
     after = R.move(s, 'a', {
       kind: 'play',
@@ -410,10 +410,10 @@ test('every viewer sees the Guard announcement for one second before elimination
     assert(snapshot.displayState.players.find((p) => p.id !== viewer).hand.every((c) => c.hidden));
     await f.owner.nextRound();
     assert.equal(f.calls.length, 0, 'round actions wait for the presentation');
-    await f.advance(1000);
+    await f.advance(2000);
     assert.equal(f.owner.getSnapshot().presentation.phase, 'result');
     assert.equal(f.owner.getSnapshot().displayState.players[1].eliminated, true);
-    await f.advance(1600);
+    await f.advance(2800);
     assert.equal(f.owner.getSnapshot().presentation, null);
     assert.equal(f.owner.getSnapshot().displayState.revision, after.revision);
     assert.equal(f.errors.length, 0);
@@ -444,8 +444,8 @@ test('consecutive plays queue in order and roster delivery never restarts their 
   f.emit({ type: 'love-letter-state', room: room(second) });
   assert.equal(f.jobs.length, jobs);
   assert.equal(f.sounds.length, soundCount);
-  await f.advance(1000);
-  await f.advance(1600);
+  await f.advance(2000);
+  await f.advance(2800);
   assert.equal(f.owner.getSnapshot().presentation.event.revision, second.revision);
   old.fn();
   assert.equal(f.owner.getSnapshot().presentation.phase, 'announce');
@@ -474,7 +474,7 @@ test('reduced motion keeps the Guard suspense and clear announcements, while acc
   f.emit({ type: 'love-letter-state', room: room(next) });
   assert.equal(f.owner.getSnapshot().presentation?.phase, 'announce');
   const old = f.jobs.at(-1);
-  await f.advance(1000);
+  await f.advance(2000);
   assert.equal(f.owner.getSnapshot().presentation.phase, 'result');
   f.account(null);
   old.fn();
@@ -495,11 +495,11 @@ test('Padre, Baron, Prince and King announce their actor and target without expo
     assert.equal(f.owner.getSnapshot().privateOpen, false);
     assert(!('hand' in f.owner.getSnapshot().presentation.event));
     assert(!('private' in f.owner.getSnapshot().presentation.event));
-    await f.advance(700);
+    await f.advance(1200);
     const result = f.owner.getSnapshot();
     assert.equal(result.presentation.phase, 'result');
     assert(result.displayState.players[1].hand.every((c) => c.hidden));
-    await f.advance(1600);
+    await f.advance(2800);
     assert.equal(f.owner.getSnapshot().privateOpen, rank === 2);
   }
 });
@@ -512,7 +512,7 @@ test('no-target effects and round transitions remain readable without replaying 
   f.emit({ type: 'love-letter-state', room: room(s) });
   f.emit({ type: 'love-letter-state', room: room(next) });
   assert.equal(f.owner.getSnapshot().presentation.event.noTarget, true);
-  await f.advance(700);
+  await f.advance(1200);
   assert.equal(f.owner.getSnapshot().presentation.phase, 'result');
   f.emit({ type: 'connection', connected: false });
   assert.equal(f.owner.getSnapshot().presentation, null);
