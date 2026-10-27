@@ -79,7 +79,7 @@ jobs:
     name: Validate and package Windows
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: ${{ inputs.extended_browser && 30 || 15 }}
+    timeout-minutes: ${{ inputs.extended_browser && 30 || 18 }}
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:

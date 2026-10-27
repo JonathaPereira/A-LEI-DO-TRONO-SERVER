@@ -1,10 +1,15 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.5** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.6** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
 
-## Windows 0.3.5
+## Windows 0.3.6
+
+Inclui as animações públicas do Love Letter: carta, autor, alvo e resultado;
+o Guarda aguarda um segundo antes de revelar acerto ou erro. A última carta
+permanece ilustrada na mesa, e os favores por vitória e pela Espiã aparecem
+separados. Movimento reduzido e informações secretas são preservados.
 
 Entrega da reconstrução A Corte: comunicação, chamada com grade/foco, perfis,
 arquivos, soundboard, clipes e gravação na interface Next.js, React e TypeScript.
@@ -12,7 +17,7 @@ Jogos completos, contratos do backend e recursos existentes são preservados.
 Inclui cancelamento de gravação pendente ao trocar conta, inicialização do
 atualizador e fullscreen independentes da apresentação antiga.
 
-A versão 0.3.5 permite atualizar instalações 0.3.4 e anteriores. Preserva contas,
+A versão 0.3.6 permite atualizar instalações 0.3.5 e anteriores. Preserva contas,
 sessão lembrada e preferências. A instalação conserva as correções que encerram
 o aplicativo na bandeja e aceitam diretórios com apóstrofo. Reiniciar encerra a
 chamada: escolha um momento conveniente.

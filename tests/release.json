@@ -12,7 +12,8 @@
     "tests/throne-history-browser.cjs",
     "tests/voice-moderation-browser.js",
     "tests/noise-processing.js",
-    "tests/voice-reception-browser.js"
+    "tests/voice-reception-browser.js",
+    "tests/love-letter-browser.js"
   ],
   "desktop": [
     "tests/auth-desktop.cjs",
