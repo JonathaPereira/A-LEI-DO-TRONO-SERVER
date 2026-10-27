@@ -208,6 +208,7 @@
     "tests/desktop-download.js",
     "tests/desktop-notices-controls-browser.js",
     "tests/desktop-shell-browser.cjs",
+    "tests/dm-members-browser.cjs",
     "tests/file-library-browser.cjs",
     "tests/floating-call-browser.js",
     "tests/frontend-browser.js",

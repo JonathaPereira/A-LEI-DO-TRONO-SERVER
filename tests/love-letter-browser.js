@@ -414,6 +414,13 @@ test(
         }
         await page.screenshot({ path: 'artifacts/love-letter/four-' + width + '.png' });
       }
+      // The member drawer opens by default on small screens; close it through
+      // its public control before interacting with the table behind it.
+      const closeMembers = page.getByRole('button', {
+        name: 'Ocultar lista de membros',
+        exact: true,
+      });
+      if (await closeMembers.isVisible()) await closeMembers.click();
       await page.getByRole('button', { name: 'Sair da mesa', exact: true }).click();
       await expect(page.locator('#loveLetterPlayerCount')).toBeVisible();
       await page.locator('#loveLetterPlayerCount').selectOption('6');

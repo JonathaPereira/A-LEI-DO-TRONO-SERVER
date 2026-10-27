@@ -1,4 +1,10 @@
-M&N · A Lei do Trono — Windows 0.3.9
+M&N · A Lei do Trono — Windows 0.3.10
+
+Mensagens diretas mostram a foto ou o ícone de perfil de quem enviou cada
+mensagem, incluindo sua própria conta. A lista de membros fica aberta por
+padrão nas chamadas, conversas, catálogo e jogos, com grupos online e offline.
+Use o botão de membros ou o X da lista para recolher; sua escolha acompanha
+a navegação. Em telas menores, a lista abre sobre a lateral e Esc a recolhe.
 
 Atalaia Godot 0.2: novo HUD com ouro, integridade e avanço da campanha separados,
 mapas sem deformação horizontal, novos fundos para as três regiões e animações
@@ -15,7 +21,7 @@ Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-0.3.9-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.10-Windows.exe.
    Instalações 0.3.5/0.3.6 com falha ao baixar atualizações precisam instalar
    esta versão manualmente uma vez. Versões anteriores sem a falha podem usar
    o atualizador interno após a publicação do site completo.

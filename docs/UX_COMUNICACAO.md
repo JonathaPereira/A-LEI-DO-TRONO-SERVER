@@ -52,6 +52,20 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 ## Capacidades atuais
 
+A lista de membros fica aberta por padrão e é independente da tela de chamada.
+O mesmo painel acompanha texto, mensagens diretas, catálogo e jogos, separando
+online/offline conforme a presença recebida. Pode ser recolhido pelo botão do
+cabeçalho ou da própria lista; a escolha acompanha a navegação. Trocar de conta
+ou reiniciar restaura o padrão aberto. Em telas menores, é uma lateral
+sobreposta com fechamento por botão ou Esc; modais, popovers e fullscreen têm
+prioridade. O fullscreen próprio dos jogos permanece imersivo. A navegação e a
+visibilidade do painel não entram/saem da voz nem recriam mídia.
+
+Mensagens diretas e seu cabeçalho usam os avatares de perfil existentes: foto
+enviada ou ícone predefinido. Mensagens próprias observam o perfil da conta atual;
+as recebidas usam o perfil do interlocutor. Permissões e cache de arquivos
+permanecem associados à conta.
+
 Atalaia Godot 0.2 apresenta núcleo, ouro e onda em blocos nomeados, com ícones
 vetoriais e barras finas. A geometria do cenário usa escala uniforme; atores
 e caminhos ficam recortados pelo campo. Detalhes/evolução da torre e relatório

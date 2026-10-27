@@ -98,6 +98,47 @@ e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde
 
 ### Evidência vigente
 
+Entrega de avatares de DMs e membros, Windows 0.3.10, sobre main `6badf3c`:
+mensagens próprias/recebidas usam o perfil existente; painel único abre por
+padrão e acompanha chamada, texto, DMs, catálogo e jogos, com online/offline e
+controle de visibilidade. Preserva mídia, conta, regras e Atalaia 0.2. Sem SQL.
+
+Reprodução funcional falhou na base pela ausência dos avatares/painel e passou
+após a correção. Typecheck, format:check, build e 1.430 testes core aprovados.
+Regressões de conta, presença/visitantes, atividade, perfis, anexos/isolamento,
+Ticket to Ride e chamada com navegação aprovadas. A conferência dos alvos da
+Corte passou, recolhendo a lateral pelo botão público nas telas pequenas.
+O cenário do Love Letter também recolhe esse painel antes de sair da mesa
+pela tela estreita; a abertura padrão e as verificações da partida permanecem.
+Sua repetição completa aprovou os dois testes, sem skips, em
+`dm-members-love-letter-recheck.log`.
+Logs/imagens temporários em `artifacts/dm-members*`; retratos e microfones desses
+cenários são fixtures. Imagens foram inspecionadas, sem novos snapshots visuais.
+
+Estresse opcional com dez clientes não aprovou vídeo remoto neste host: o
+timeout em `application-call-browser.cjs:448` também foi reproduzido em checkout
+separado da main `6badf3c`, sem as alterações. Evidências em
+`dm-members-regression-recheck.log` e `dm-members-baseline-call-stress.log`.
+O Chromium gerenciado exige `disable_non_proxied_udp`; a recepção PCM do perfil
+release reprova explicitamente essa política, sem relaxar o gate de entrega.
+Isso não comprova captura física. Aceitação Electron/NSIS real e publicação
+dependem da execução Windows do mesmo commit, como descrito abaixo.
+
+A execução Windows `40594109750` aprovou core e browser, mas a fixture
+`desktop-background-voice` tentou entrar na voz durante a restauração automática
+do canal inicial (`joined:false`, zero capturas, “Entre em um canal primeiro”).
+A preparação agora aguarda o reconhecimento da sala e usa o botão público de
+entrada na voz. As medições PCM/RTP e as verificações de janela minimizada,
+coberta e oculta permanecem, sem relaxar limites nem adicionar retries.
+
+`40596193806` aprovou também Electron/mídia; o smoke empacotado parou na
+conferência de uma capa do catálogo, antes de abrir o Cinzas. Capas usam
+`loading="lazy"` e, com a coluna de membros, as últimas linhas podem ficar fora
+da área de rolagem visível. O smoke agora traz cada capa à área visível antes
+de exigir carregamento e registra a URL de requisições locais que falharem.
+Permanecem cache verificado, isolamento do iframe, partida e zero downloads
+remotos na aceitação offline do Cinzas.
+
 Logs e imagens ficam em artifacts/frontend-reset. A rodada 40402075694 aprovou
 1.411 contratos, quatro grupos browser (164 aprovados, dois skips de codec),
 mídia Windows, executável e atualização NSIS real. A entrega foi bloqueada por
