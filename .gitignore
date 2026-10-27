@@ -14,3 +14,7 @@ electron/**/bin/
 electron/**/obj/
 
 supabase/.temp/
+
+# Godot sources are tracked; imports and exports are generated.
+.godot/
+games/**/builds/

@@ -35,7 +35,7 @@ test(
         ],
       });
       await fs.mkdir('artifacts/nexus', { recursive: true });
-      for (const mode of ['website', 'embedded', 'desktop'])
+      for (const mode of ['website', 'embedded', 'desktop', 'desktop-error', 'desktop-old'])
         await t.test(mode, async () => {
           const email = `nexus-${mode}@example.test`;
           await fixture.call('signup', { email, nickname: 'Nexus ' + mode, password: 'Senha12!' });
@@ -73,11 +73,12 @@ test(
               localStorage.setItem('tronoSfxEnabled', '0');
               localStorage.setItem('mnDesktopNoiseMode', 'native');
               if (mode === 'website') window.TronoNexusConfig = { embedUrl: '' };
-              if (mode === 'desktop')
+              if (mode.startsWith('desktop'))
                 window.TronoDesktop = {
                   version: '0.2.15',
                   clipsSuspended: true,
-                  openNexus: async () => {
+                  openNexus: mode === 'desktop-old' ? undefined : async () => {
+                    if (mode === 'desktop-error') throw new Error('ERR_CONNECTION_RESET');
                     window.__nexusOpened = (window.__nexusOpened || 0) + 1;
                     return { opened: true };
                   },
@@ -126,7 +127,7 @@ test(
             const before = await snapshot();
             assert(before.audio && before.camera && before.screen);
             await page.evaluate(() => window.TronoGames.openLibrary());
-            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(7);
+            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(8);
             await page.locator('#gamesScreen [data-game=nexus]').click();
             await expect(page.locator('#nexusScreen')).toBeVisible();
             assert.equal(remoteRequests, 0);
@@ -139,6 +140,16 @@ test(
               assert.equal(popup.url(), config.pageUrl);
               assert.equal(await popup.evaluate(() => window.opener), null);
               await popup.close();
+            } else if (mode === 'desktop-old') {
+              await page.locator('#nexusLaunch').click();
+              await expect(page.locator('#nexusStatus')).toContainText('Atualize o MN Trono');
+              await expect(page.locator('#nexusFrame')).toHaveCount(0);
+              assert.equal(remoteRequests, 0);
+            } else if (mode === 'desktop-error') {
+              await page.locator('#nexusLaunch').click();
+              await expect(page.locator('#nexusStatus')).toContainText('ERR_CONNECTION_RESET');
+              await expect(page.locator('#nexusLaunch')).toBeEnabled();
+              assert.equal(remoteRequests, 0);
             } else if (mode === 'desktop') {
               await page.locator('#nexusLaunch').click();
               await expect(page.locator('#nexusStatus')).toContainText('janela do jogo');
@@ -171,7 +182,7 @@ test(
               await expect(page.locator('#nexusFrame')).toHaveCount(0);
             }
             for (const layout of ['corte']) {
-              for (const width of [1440, 1024, 720, 480, ...(mode === 'desktop' ? [] : [360])]) {
+              for (const width of [1440, 1024, 720, 480, ...(mode.startsWith('desktop') ? [] : [360])]) {
                 await page.setViewportSize({ width, height: 960 });
                 assert(
                   await page

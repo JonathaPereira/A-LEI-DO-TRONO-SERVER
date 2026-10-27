@@ -72,16 +72,26 @@ export function initializeNexus(target: Window): () => void {
     if (typeof runtime.TronoDesktop?.openNexus === 'function') {
       const launchBtn = $<HTMLButtonElement>('nexusLaunch');
       if (launchBtn) launchBtn.disabled = true;
+      status('Abrindo a janela do Nexus… Aguarde o carregamento do jogo.');
       try {
         await runtime.TronoDesktop.openNexus();
         status(
           'Nexus aberto na janela do jogo. Sua chamada continua no Trono. Clique em Jogar para voltar à janela.',
         );
-      } catch {
-        status('Não foi possível abrir a janela. Use “Abrir no itch.io” ou tente novamente.');
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        status(
+          `Não foi possível abrir o Nexus: ${detail}. Tente novamente ou use “Abrir no itch.io”.`,
+        );
       } finally {
         if (launchBtn) launchBtn.disabled = false;
       }
+      return;
+    }
+    if (runtime.TronoDesktop) {
+      status(
+        'Atualize o MN Trono para abrir a janela do Nexus. Enquanto isso, use “Abrir no itch.io”.',
+      );
       return;
     }
     if (!cfg.embedUrl) {
@@ -98,7 +108,7 @@ export function initializeNexus(target: Window): () => void {
     frame = doc.createElement('iframe');
     frame.id = 'nexusFrame';
     frame.title = 'Nexus · Ecos do Crepúsculo';
-    frame.allow = 'fullscreen; gamepad';
+    frame.allow = 'autoplay; fullscreen; gamepad';
     frame.allowFullscreen = true;
     frame.referrerPolicy = 'no-referrer';
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-pointer-lock');

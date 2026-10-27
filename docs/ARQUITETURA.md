@@ -95,14 +95,22 @@ ranking usa identidade idempotente da partida e resultados calculados pelo motor
 Love Letter mantém o estado autoritativo recebido em `room` e uma projeção temporal
 em `displayState`. O controlador enfileira anúncios e resultados de revisões
 consecutivas; React só apresenta esses snapshots. O Guarda anuncia ator, alvo e
-palpite por um segundo antes de mostrar eliminação, placar ou encerramento da
+palpite por dois segundos antes de mostrar eliminação, placar ou encerramento da
 rodada. Presença não repete efeitos; desconexão, troca de conta/mesa, navegação e
 descarte cancelam a fila. As animações usam somente a projeção pública do jogador;
 trocas e comparações não revelam as mãos, e o Padre conserva sua revelação privada.
 
+Ticket to Ride usa `ticket-to-ride-track-layout.ts` como calibração da arte:
+309 centros, tangentes e comprimentos dos espaços impressos, separados por via.
+O SVG normaliza a inclinação e o enquadramento das peças antes de aplicar a rotação
+do trilho. Cliques e vagões usam a mesma geometria; cidades, regras e pagamentos
+continuam no grafo autoritativo, independente da imagem.
+
 Cinzas do Abismo conserva o aplicativo em `public/roguelite/`, sua persistência,
 assets, áudio e ponte de integração. Nexus conserva a integração com
-`electron/nexus.cjs`. URLs públicas, manuais, cartas, mapas, fontes, sons,
+`electron/nexus.cjs`; a configuração pública única fica em `electron/nexus-config.cjs`
+e é importada também pelo frontend. O Windows abre o jogo
+na sessão isolada do jogo; o site mantém o iframe sob demanda. URLs públicas, manuais, cartas, mapas, fontes, sons,
 licenças e créditos não são saídas descartáveis do build.
 
 ## Voz, captura e recursos avançados
@@ -262,3 +270,17 @@ rascunho/controlador. Modais atuais externos aos jogos declaram closedby=any:
 o navegador encaminha clique externo ao cancelamento nativo já tratado pelos
 donos, conservando bloqueios, descarte e a ordem dos modais. Não há listener
 global novo para forçar fechamento nem alteração dos prompts protegidos dos jogos.
+
+
+Atalaia tem o projeto original em `games/atalaia`; `scripts/build-atalaia.cjs`
+exporta o jogo com o toolchain fixado por `scripts/prepare-godot.cjs`.
+`src/lib/games/atalaia.ts` possui apenas estado/comandos de abertura, e a tela
+React apresenta seu snapshot. O catálogo delega ao mesmo dono. No navegador,
+uma aba própria preserva o armazenamento do jogo sem depender de permissões de
+terceiros. O Electron reutiliza o lançador isolado de `electron/nexus.cjs`, com
+partição, origem, título e confirmação exclusivos; somente Atalaia permite os
+CSVs de relatório. URLs públicas ficam em `electron/atalaia-config.cjs`.
+Os bytes Godot ficam em um pacote próprio da entrega e em `atalaia-mn.surge.sh`,
+separados do site principal/EXE. A publicação confere hash, commit e versão dos
+dois pacotes; falha no jogo impede a atualização do catálogo. Nenhum recurso de
+chamada, conta ou socket pertence ao jogo.

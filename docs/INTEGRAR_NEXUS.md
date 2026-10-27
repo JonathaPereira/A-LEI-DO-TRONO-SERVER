@@ -1,8 +1,6 @@
-# Nexus no Trono — Windows 0.2.15 e site
+# Nexus no Trono — site e aplicativo Windows
 
-A versão Windows 0.2.15 atualiza a integração 0.2.14 já mesclada na `main` para o novo upload do Nexus 0.15 no itch.io. Mantém os jogos, o compartilhamento de PC e a chamada existentes.
-
-O catálogo ganhou **Jogos → Nexus** com capa, instruções de PvP e carregamento sob demanda. O jogo fica em https://semchakra10.itch.io/nexus-mn. ZIP, PCK e WASM não são copiados para o Trono. A integração acrescenta aproximadamente 140 KB de capa e código, antes de compressão HTTP.
+O catálogo **Jogos → Nexus** carrega o jogo sob demanda a partir do itch.io. O site usa o iframe jogável; o Windows abre o jogo em uma janela isolada, preservando a chamada no Trono. ZIP, PCK e WASM do Nexus não são copiados para o frontend.
 
 ## Publicar
 
@@ -20,15 +18,20 @@ O catálogo ganhou **Jogos → Nexus** com capa, instruções de PvP e carregame
 
 A integração não exige mudança no backend do Trono, SQL ou novas chaves. Para quem ainda não publicou o backend da 0.2.12+, o requisito anterior de redeploy para Compartilhar PC Beta e Ticket to Ride continua válido.
 
-## Abrir dentro da página do site
+## Recolocar o jogo no itch.io e atualizar a integração
 
 O iframe fornecido pelo proprietário já está configurado: `https://itch.io/embed-upload/19926871?color=333333`. Se uma nova publicação alterar o upload, atualize da seguinte forma.
 
-1. Entre na sua conta do itch.io e abra as opções de incorporação **Embed game** do Nexus. Copie o código `<iframe ...>` do jogo HTML5. Não use o widget de compra ou download.
-2. Copie somente o valor de `src` para `embedUrl` em `src/lib/games/nexus-config.ts` (e sincronize `electron/nexus.cjs`). São aceitos HTTPS em `itch.io/embed-upload/ID` ou `html-classic.itch.zone/html/ID/index.html`.
-3. Suba a alteração, aguarde a compilação validada e publique o novo pacote. Caso a versão atual já tenha sido distribuída, incremente a versão Windows ao gerar outro instalador.
+1. No Godot, abra o projeto da versão do Nexus que você deseja publicar. Para o Nexus 0.15, use a branch `codex/nexus-015` do PROJETO-NEXUS; a `main` desse repositório ainda identifica outra versão. Instale os templates da mesma versão do editor.
+2. Em **Projeto → Exportar → Web**, use o renderizador **Compatibility** e deixe **Thread Support** desativado. Exporte a versão de lançamento como `index.html` em uma pasta vazia. Compacte os arquivos exportados juntos, com `index.html` na raiz do ZIP. Não envie o ZIP do projeto Godot.
+3. Entre no itch.io, abra **Edit game** do Nexus e envie esse ZIP em **Uploads**. Selecione o tipo **HTML** e marque **This file will be played in the browser**. Salve e teste a página oficial, incluindo áudio, tela cheia e PvP. Preserve a página `https://semchakra10.itch.io/nexus-mn`.
+4. Abra as opções de incorporação **Embed game** do Nexus. Copie o código `<iframe ...>` do jogo HTML5. Não use o widget de compra ou download.
+5. Copie somente o valor de `src` para `embedUrl` em **`electron/nexus-config.cjs`**. Esse é o único arquivo de URLs públicas: o Next e o Electron usam a mesma configuração. São aceitos HTTPS em `itch.io/embed-upload/ID` ou `html-classic.itch.zone/html/ID/index.html`.
+6. Suba a alteração, aguarde a compilação validada e publique o novo pacote. Caso a versão atual já tenha sido distribuída, incremente a versão Windows ao gerar outro instalador.
 
 Com `embedUrl` vazio, o botão continua funcionando pela página oficial. Com um endereço válido, o site cria o iframe somente após o clique em Jogar. O botão **Abrir no itch.io** continua disponível na tela inicial do Nexus. Não insira chaves Supabase nem a URL WebSocket como endereço de iframe.
+
+Em um aplicativo antigo sem a função de abertura, a interface orienta atualizar ou usar a página oficial, evitando tentar um iframe bloqueado pela política da janela principal. Erros de abertura mostram o detalhe retornado pelo Electron e permitem tentar novamente.
 
 O aplicativo usa uma sessão exclusiva `persist:mn-nexus`, sem o bridge do Trono, sem microfone/câmera/captura e sem acesso às credenciais da sessão principal. A política de frames da janela principal permanece restrita a conteúdo local. O jogo possui seus próprios controles de áudio.
 
@@ -50,4 +53,4 @@ O progresso local do Nexus é separado da conta do Trono e depende do navegador,
 
 ## Validação
 
-`node --test tests/nexus.js tests/nexus-browser.js` verifica a abertura sob demanda, navegação, preservação da chamada e o isolamento da janela. O teste de incorporação usa uma página remota simulada; a publicação real no itch.io deve ser conferida no navegador, pois o acesso a esse domínio está bloqueado no ambiente de desenvolvimento.
+`node --test tests/nexus.js tests/nexus-browser.js` verifica a abertura sob demanda, navegação, preservação da chamada e o isolamento da janela. Os testes permanentes de incorporação usam uma página remota simulada, incluindo falha de abertura e aplicativo antigo. A verificação Windows ao vivo do upload real confirmou a criação da janela, o canvas Godot e a ausência de falhas de rede. O usuário identificou um erro transitório da Cloudflare e confirmou que voltou a abrir; isso não exigiu trocar o upload. Essa verificação não substitui uma partida completa de campanha/PvP. O acesso local ao itch.io está bloqueado neste ambiente de desenvolvimento.

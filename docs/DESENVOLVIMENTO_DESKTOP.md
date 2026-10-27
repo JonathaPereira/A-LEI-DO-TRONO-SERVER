@@ -119,3 +119,19 @@ Na gravação manual, logout invalida também operações de diretório/arquivo:
 um writable ainda não confirmado e impede download de fallback. Arquivos já
 confirmados não são apagados. Core cobre cada fronteira de IO; navegador confere
 logout enquanto write está pendente, além de seleção/captura pendentes.
+
+
+Atalaia tem fontes Godot em `games/atalaia`. Antes das regressões de Atalaia e
+do executável empacotado, execute `node scripts/prepare-godot.cjs` e
+`node scripts/build-atalaia.cjs`. O workflow faz essa preparação. O teste browser
+inicia a campanha real, constrói, começa uma onda, confere o save após recarregar
+e baixa um CSV, preservando a chamada sintética no Trono. A aceitação do pacote
+Windows carrega a mesma exportação na sessão isolada real, com WebGL por software
+no runner; isso não mede desempenho em uma GPU física. Detalhes de edição e
+publicação ficam no [README do jogo](../games/atalaia/README.md).
+
+Os atalhos das janelas de jogos são exercitados com
+`webContents.sendInputEvent`, incluindo entrada e saída de tela cheia. O teclado
+injetado na página pelo CDP percorre outro caminho do Chromium e não aciona o
+`before-input-event` do Electron. A verificação Windows 40526544387 confirmou
+os dois estados de tela cheia pela entrada nativa antes da aceitação completa.

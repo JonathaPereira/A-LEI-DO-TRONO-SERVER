@@ -34,6 +34,7 @@ test('library navigation delegates to the existing owners and reflects external 
     'roguelite',
     'splendor',
     'love-letter',
+    'atalaia',
     'community',
     'home',
   ]) {
@@ -44,10 +45,10 @@ test('library navigation delegates to the existing owners and reflects external 
   listeners.forEach((fn) => fn());
   assert.equal(controller.getSnapshot().destination, 'azul');
   await controller.open('unknown');
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 9);
   controller.dispose();
   await controller.open('library');
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 9);
   assert.equal(listeners.size, 0);
   assert.deepEqual(errors, []);
 });

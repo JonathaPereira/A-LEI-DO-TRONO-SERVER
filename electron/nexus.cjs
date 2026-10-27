@@ -1,29 +1,6 @@
 'use strict';
 
-const pageUrl = 'https://semchakra10.itch.io/nexus-mn';
-const embedUrl = 'https://itch.io/embed-upload/19926871?color=333333';
-function isEmbedURL(value) {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === 'https:' &&
-      !url.username &&
-      !url.password &&
-      !url.port &&
-      ((url.hostname === 'itch.io' && /^\/embed-upload\/\d+\/?$/.test(url.pathname)) ||
-        (url.hostname === 'html-classic.itch.zone' &&
-          /^\/html\/\d+\/index\.html$/.test(url.pathname)))
-    );
-  } catch {
-    return false;
-  }
-}
-const nexusConfig = Object.freeze({
-  pageUrl,
-  embedUrl: isEmbedURL(embedUrl) ? embedUrl : '',
-  pvpUrl: 'wss://nexus-pvp.onrender.com/pvp',
-  isEmbedURL,
-});
+const { nexusConfig } = require('./nexus-config.cjs');
 
 function allowedGameURL(value, config = nexusConfig) {
   try {
@@ -34,7 +11,8 @@ function allowedGameURL(value, config = nexusConfig) {
       !url.password &&
       !url.port &&
       url.protocol === 'https:' &&
-      ((url.origin === page.origin && url.pathname.replace(/\/$/, '') === page.pathname) ||
+      ((url.origin === page.origin &&
+        url.pathname.replace(/\/$/, '') === page.pathname.replace(/\/$/, '')) ||
         config.isEmbedURL(value))
     );
   } catch {
@@ -52,15 +30,17 @@ function createNexusLauncher({
   icon,
   config = nexusConfig,
   isQuitting = () => false,
+  partition = 'persist:mn-nexus',
+  windowTitle = 'Nexus · Ecos do Crepúsculo',
+  closeMessage = 'Fechar o Nexus?',
+  closeDetail = 'Uma partida PvP em andamento pode terminar por desconexão. A chamada do Trono continua.',
+  allowDownload = () => false,
+  extraOrigins = ['https://itch.io', 'https://html-classic.itch.zone'],
 }) {
-  const gameSession = session.fromPartition('persist:mn-nexus');
+  const gameSession = session.fromPartition(partition);
   const gameOrigin = (value) => {
     try {
-      return [
-        new URL(config.pageUrl).origin,
-        'https://itch.io',
-        'https://html-classic.itch.zone',
-      ].includes(new URL(value).origin);
+      return [new URL(config.pageUrl).origin, ...extraOrigins].includes(new URL(value).origin);
     } catch {
       return false;
     }
@@ -71,7 +51,9 @@ function createNexusLauncher({
   gameSession.setPermissionRequestHandler((contents, permission, callback, details) =>
     callback(permission === 'fullscreen' && gameOrigin(details.requestingUrl || contents.getURL())),
   );
-  gameSession.on('will-download', (event) => event.preventDefault());
+  gameSession.on('will-download', (event, item) => {
+    if (!allowDownload(item)) event.preventDefault();
+  });
   let viewer = null;
   async function open() {
     if (viewer && !viewer.isDestroyed()) {
@@ -82,7 +64,7 @@ function createNexusLauncher({
     }
     const area = screen.getDisplayMatching(parent.getBounds()).workAreaSize;
     viewer = new BrowserWindow({
-      title: 'Nexus · Ecos do Crepúsculo',
+      title: windowTitle,
       icon,
       width: Math.min(1280, area.width),
       height: Math.min(900, area.height),
@@ -102,6 +84,12 @@ function createNexusLauncher({
     current.setMenu(null);
     // The game needs no popups, app IPC, camera, microphone or screen capture.
     current.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    current.webContents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown' && input.key === 'F11' && !input.isAutoRepeat) {
+        event.preventDefault();
+        current.setFullScreen(!current.isFullScreen());
+      }
+    });
     current.webContents.on('will-attach-webview', (event) => event.preventDefault());
     current.webContents.on('will-navigate', (event, url) => {
       if (!allowedGameURL(url, config)) event.preventDefault();
@@ -114,12 +102,11 @@ function createNexusLauncher({
         !isQuitting() &&
         dialog.showMessageBoxSync(current, {
           type: 'question',
-          buttons: ['Continuar jogando', 'Fechar Nexus'],
+          buttons: ['Continuar jogando', 'Fechar jogo'],
           defaultId: 0,
           cancelId: 0,
-          message: 'Fechar o Nexus?',
-          detail:
-            'Uma partida PvP em andamento pode terminar por desconexão. A chamada do Trono continua.',
+          message: closeMessage,
+          detail: closeDetail,
         }) === 0
       )
         event.preventDefault();

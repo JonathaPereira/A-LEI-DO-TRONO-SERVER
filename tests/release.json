@@ -13,7 +13,8 @@
     "tests/voice-moderation-browser.js",
     "tests/noise-processing.js",
     "tests/voice-reception-browser.js",
-    "tests/love-letter-browser.js"
+    "tests/love-letter-browser.js",
+    "tests/atalaia-browser.cjs"
   ],
   "desktop": [
     "tests/auth-desktop.cjs",

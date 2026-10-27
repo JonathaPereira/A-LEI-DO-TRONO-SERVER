@@ -1,19 +1,24 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.7** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.8** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
 
-## Windows 0.3.7
+## Windows 0.3.8
 
 O instalador volta a incluir a configuração necessária para baixar atualizações.
 Instalações afetadas precisam instalar esta versão manualmente uma vez; as
 próximas versões poderão ser obtidas pelo atualizador interno.
 
 Inclui as animações públicas do Love Letter: carta, autor, alvo e resultado;
-o Guarda aguarda um segundo antes de revelar acerto ou erro. A última carta
+o Guarda aguarda dois segundos antes de revelar acerto ou erro. A última carta
 permanece ilustrada na mesa, e os favores por vitória e pela Espiã aparecem
 separados. Movimento reduzido e informações secretas são preservados.
+
+A 0.3.8 também alinha os vagões às posições impressas do Ticket to Ride e integra
+Atalaia: Guardiões do Cristal, com o projeto Godot e as artes enviados. O catálogo
+abre o jogo em aba própria na web e janela isolada no Windows; a publicação
+automática inclui o jogo antes de atualizar o frontend.
 
 Entrega da reconstrução A Corte: comunicação, chamada com grade/foco, perfis,
 arquivos, soundboard, clipes e gravação na interface Next.js, React e TypeScript.
@@ -21,7 +26,7 @@ Jogos completos, contratos do backend e recursos existentes são preservados.
 Inclui cancelamento de gravação pendente ao trocar conta, inicialização do
 atualizador e fullscreen independentes da apresentação antiga.
 
-A versão 0.3.7 preserva contas,
+A versão 0.3.8 preserva contas,
 sessão lembrada e preferências. A instalação conserva as correções que encerram
 o aplicativo na bandeja e aceitam diretórios com apóstrofo. Reiniciar encerra a
 chamada: escolha um momento conveniente.

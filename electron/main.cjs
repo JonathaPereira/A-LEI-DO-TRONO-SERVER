@@ -33,6 +33,7 @@ const { DesktopPreferences } = require('./preferences.cjs');
 const { DesktopActivity } = require('./activity.cjs');
 const { createNotifications } = require('./notifications.cjs');
 const { GameAssets } = require('./game-assets.cjs');
+const atalaiaConfig = require('./atalaia-config.cjs');
 const { createNexusLauncher, nexusConfig } = require('./nexus.cjs');
 const { AudioPriority } = require('./audio-priority.cjs');
 const { RemoteInput } = require('./remote-input.cjs');
@@ -300,6 +301,29 @@ async function start() {
   ipcMain.handle('mn:nexus', (event) => {
     trusted(event);
     return nexus.open();
+  });
+  const atalaia = createNexusLauncher({
+    BrowserWindow,
+    session,
+    screen,
+    dialog,
+    parent: window,
+    icon: path.join(__dirname, 'assets/icon.png'),
+    config: { pageUrl: atalaiaConfig.url, embedUrl: '', isEmbedURL: () => false },
+    partition: 'persist:mn-atalaia',
+    windowTitle: 'Atalaia · Guardiões do Cristal',
+    closeMessage: 'Fechar Atalaia?',
+    closeDetail:
+      'O jogo salva automaticamente a cada poucos segundos. A chamada continua no Trono.',
+    allowDownload: (item) =>
+      /^atalaia-dano-onda-\d+\.csv$/.test(item.getFilename()) &&
+      item.getMimeType().startsWith('text/csv'),
+    extraOrigins: [],
+    isQuitting: () => quitting,
+  });
+  ipcMain.handle('mn:atalaia', (event) => {
+    trusted(event);
+    return atalaia.open();
   });
   const notifications = createNotifications({
     Notification,

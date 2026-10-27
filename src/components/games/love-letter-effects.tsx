@@ -1,4 +1,5 @@
 import { Card, eventText, personName, type LoveLetterView } from './love-letter-pieces';
+import { loveLetterTimings } from '../../lib/games/love-letter';
 
 export function PlayPresentation({ snapshot: s, rules }: LoveLetterView) {
   const effect = s.presentation,
@@ -52,7 +53,15 @@ export function PlayPresentation({ snapshot: s, rules }: LoveLetterView) {
               <p className="ll-effect-suspense">
                 {rank === 1 && target ? 'Será que acertou?' : 'Resolvendo o efeito…'}
               </p>
-              <span className="ll-effect-progress" aria-hidden="true" />
+              <span
+                className="ll-effect-progress"
+                style={{
+                  animationDuration:
+                    (rank === 1 && target ? loveLetterTimings.guard : loveLetterTimings.announce) +
+                    'ms',
+                }}
+                aria-hidden="true"
+              />
             </>
           ) : (
             <p className="ll-effect-outcome">{eventText(event, state, rules)}</p>

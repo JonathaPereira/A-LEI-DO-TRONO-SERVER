@@ -262,6 +262,25 @@ test(
           );
         });
         await expect(page.locator('.tr-owned .tr-wagon-art use')).toHaveCount(pieces);
+        assert(
+          await page.evaluate(() => {
+            const A = window.TicketToRideArt,
+              D = window.TicketToRideData;
+            return [...document.querySelectorAll('.tr-owned')].every((node) => {
+              const slots = A.geometry(D.routes.find((r) => r.id === node.dataset.route)).wagons;
+              return [...node.querySelectorAll('.tr-wagon-art')].every((piece, i) => {
+                const p = slots[i],
+                  use = piece.querySelector('use');
+                return (
+                  piece.parentElement.getAttribute('transform') ===
+                    `translate(${p.x} ${p.y}) rotate(${p.angle})` &&
+                  Number(use.getAttribute('height')) < p.width / 2
+                );
+              });
+            });
+          }),
+          'train artwork must be levelled first and then use the printed slot tangent',
+        );
       }
       assert(
         (await a.evaluate(() => window.__railEffects.includes('card'))) ||

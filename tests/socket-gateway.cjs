@@ -458,10 +458,12 @@ test('heartbeat expires an account and terminates a dead peer without leaving it
     a.server.account.expiresAt = 0;
     b.server.isAlive = false;
     const closedA = new Promise((r) => a.ws.once('close', (code) => r(code))),
-      closedB = new Promise((r) => b.ws.once('close', r));
+      closedB = new Promise((r) => b.ws.once('close', r)),
+      serverClosedA = new Promise((r) => a.server.once('close', r)),
+      serverClosedB = new Promise((r) => b.server.once('close', r));
     t.mock.timers.tick(30000);
     assert.equal(await closedA, 4001);
-    await closedB;
+    await Promise.all([closedB, serverClosedA, serverClosedB]);
     assert.equal(a.server.identityScope.signal.aborted, true);
     assert.equal(b.server.identityScope.signal.aborted, true);
   } finally {

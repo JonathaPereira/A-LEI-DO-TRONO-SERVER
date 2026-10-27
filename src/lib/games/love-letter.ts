@@ -12,6 +12,7 @@ import { readLoveLetterRoom, readLoveLetterRooms } from './love-letter-protocol.
 import { freezeGame } from './freeze.ts';
 type Action =
   'list' | 'create' | 'join' | 'resume' | 'start' | 'leave' | 'move' | 'state' | 'next-round';
+export const loveLetterTimings = { guard: 2000, announce: 1200, result: 2800 } as const;
 interface Options {
   getAccountId(): string | null;
   connected(): boolean;
@@ -132,9 +133,11 @@ export function createLoveLetter(options: Options) {
         const resultTicket = effectVersion;
         cancelEffect = schedule(() => {
           if (!disposed && resultTicket === effectVersion) presentNext();
-        }, 1600);
+        }, loveLetterTimings.result);
       },
-      next.event.card?.rank === 1 && next.event.targetId ? 1000 : 700,
+      next.event.card?.rank === 1 && next.event.targetId
+        ? loveLetterTimings.guard
+        : loveLetterTimings.announce,
     );
   }
   function checkPrivate() {

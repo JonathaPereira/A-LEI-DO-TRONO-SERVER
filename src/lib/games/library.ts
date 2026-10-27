@@ -7,6 +7,7 @@ export type GameDestination =
   | 'ticket-to-ride'
   | 'love-letter'
   | 'nexus'
+  | 'atalaia'
   | 'community'
   | 'home';
 export const GAME_LINKS = Object.freeze([
@@ -16,6 +17,7 @@ export const GAME_LINKS = Object.freeze([
   { id: 'roguelite', label: '✦ Cinzas do Abismo' },
   { id: 'splendor', label: '◇ Splendor' },
   { id: 'love-letter', label: '✉ Love Letter' },
+  { id: 'atalaia', label: '✦ Atalaia' },
   { id: 'nexus', label: '✧ Nexus' },
   { id: 'community', label: '🎙 Comunidade' },
 ] as const);

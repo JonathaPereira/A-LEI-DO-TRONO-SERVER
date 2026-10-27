@@ -1,3 +1,5 @@
+import { trackSlots, pieceFrames } from './ticket-to-ride-track-layout.ts';
+
 import type { TicketToRideCardColor, TicketToRideRoute } from '../../types/ticket-to-ride';
 
 export const base = 'assets/ticket-to-ride/';
@@ -40,115 +42,6 @@ export const cities: Record<string, readonly [number, number]> = {
   'New York': [914, 216],
   Boston: [967, 142],
   Montreal: [896, 83],
-};
-
-// Intermediate points follow the printed bends; parallel lanes remain separately clickable.
-const bends: Record<number, readonly (readonly [number, number])[]> = {
-  2: [
-    [160, 151],
-    [203, 129],
-  ],
-  3: [
-    [196, 186],
-    [269, 205],
-  ],
-  5: [
-    [160, 233],
-    [217, 277],
-  ],
-  6: [
-    [62, 272],
-    [56, 338],
-  ],
-  8: [
-    [95, 462],
-    [128, 494],
-  ],
-  11: [
-    [183, 540],
-    [232, 561],
-    [287, 571],
-    [341, 567],
-  ],
-  12: [[252, 407]],
-  15: [
-    [279, 66],
-    [328, 52],
-    [375, 53],
-    [421, 72],
-  ],
-  18: [[458, 218]],
-  21: [
-    [550, 113],
-    [632, 131],
-  ],
-  23: [
-    [618, 179],
-    [665, 159],
-  ],
-  24: [[685, 202]],
-  26: [[552, 258]],
-  27: [
-    [588, 278],
-    [618, 263],
-    [665, 271],
-  ],
-  30: [
-    [448, 383],
-    [497, 376],
-    [544, 364],
-  ],
-  33: [
-    [354, 423],
-    [309, 475],
-  ],
-  40: [
-    [425, 585],
-    [475, 599],
-    [526, 597],
-    [574, 587],
-  ],
-  47: [
-    [595, 357],
-    [626, 357],
-  ],
-  48: [[675, 315]],
-  49: [
-    [716, 322],
-    [772, 291],
-  ],
-  54: [
-    [724, 515],
-    [758, 470],
-  ],
-  55: [
-    [760, 539],
-    [818, 535],
-    [867, 555],
-  ],
-  58: [
-    [784, 372],
-    [824, 363],
-  ],
-  61: [
-    [827, 478],
-    [871, 541],
-  ],
-  63: [
-    [898, 487],
-    [910, 545],
-  ],
-  67: [[921, 260]],
-  72: [
-    [768, 255],
-    [735, 261],
-  ],
-  73: [
-    [738, 238],
-    [775, 201],
-  ],
-  76: [[802, 109]],
-  77: [[936, 100]],
 };
 
 export const cards: Record<TicketToRideCardColor, readonly [number, number, number, number]> = {
@@ -204,52 +97,30 @@ export interface TicketToRideRouteGeometry {
 export function geometry(
   route: Pick<TicketToRideRoute, 'a' | 'b' | 'group' | 'double' | 'lane' | 'length'>,
 ): TicketToRideRouteGeometry {
-  const center = [cities[route.a]!, ...(bends[route.group] || []), cities[route.b]!];
-  const offset = route.double ? (route.lane ? 6 : -6) : 0;
-  const points = center.map(([x, y], i) => {
-    const a = center[Math.max(0, i - 1)]!;
-    const b = center[Math.min(center.length - 1, i + 1)]!;
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-    const length = Math.hypot(dx, dy);
-    return [x - (dy / length) * offset, y + (dx / length) * offset] as const;
+  const slots = trackSlots['r' + route.group + '-' + route.lane];
+  if (!slots || slots.length !== route.length)
+    throw new Error('Route missing from the supplied board calibration.');
+  const wagons = slots.map(([x, y, angle, width], i) => {
+    const before = slots[i - 1] ?? cities[route.a];
+    const after = slots[i + 1] ?? cities[route.b];
+    const radians = (angle * Math.PI) / 180;
+    if (Math.cos(radians) * (after[0] - before[0]) + Math.sin(radians) * (after[1] - before[1]) < 0)
+      angle += 180;
+    return { x, y, angle, width: Math.max(28, Math.min(34, width - 2)) };
   });
-  const segments = points.slice(1).map((b, i) => {
-    const a = points[i]!;
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-    return { a, b, dx, dy, length: Math.hypot(dx, dy) };
-  });
-  const length = segments.reduce((n, s) => n + s.length, 0);
-  function at(distance: number): TicketToRideRoutePoint {
-    let left = distance;
-    for (const segment of segments) {
-      if (left <= segment.length) {
-        return {
-          x: segment.a[0] + (segment.dx * left) / segment.length,
-          y: segment.a[1] + (segment.dy * left) / segment.length,
-          angle: (Math.atan2(segment.dy, segment.dx) * 180) / Math.PI,
-        };
-      }
-      left -= segment.length;
-    }
-    const last = segments.at(-1)!;
-    return {
-      x: last.b[0],
-      y: last.b[1],
-      angle: (Math.atan2(last.dy, last.dx) * 180) / Math.PI,
-    };
-  }
-  const inset = 12;
-  const spacing = (length - inset * 2) / route.length;
-  return {
-    path: points.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2)).join(' '),
-    middle: at(length / 2),
-    wagons: Array.from({ length: route.length }, (_, i) => ({
-      ...at(inset + spacing * (i + 0.5)),
-      width: Math.min(29, spacing - 2),
-    })),
-  };
+  const path = wagons
+    .flatMap((w, i) => {
+      const radians = (w.angle * Math.PI) / 180;
+      const dx = (Math.cos(radians) * w.width) / 2;
+      const dy = (Math.sin(radians) * w.width) / 2;
+      return [
+        (i ? 'L' : 'M') + (w.x - dx).toFixed(2) + ' ' + (w.y - dy).toFixed(2),
+        'L' + (w.x + dx).toFixed(2) + ' ' + (w.y + dy).toFixed(2),
+      ];
+    })
+    .join(' ');
+  const middle = wagons[Math.floor(wagons.length / 2)];
+  return { path, middle, wagons };
 }
 
 export const TicketToRideArt = {
@@ -264,6 +135,7 @@ export const TicketToRideArt = {
   pieces,
   playerColors,
   playerPieces,
+  pieceFrames,
   geometry,
 };
 

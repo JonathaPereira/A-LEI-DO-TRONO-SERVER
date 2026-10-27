@@ -8,6 +8,7 @@ import { SplendorScreen } from '../games/splendor-screen';
 import { LoveLetterScreen } from '../games/love-letter-screen';
 import { TicketToRideScreen } from '../games/ticket-to-ride-screen';
 import { RogueliteScreen } from '../games/roguelite-screen';
+import { AtalaiaScreen } from '../games/atalaia-screen';
 import { NexusScreen } from '../games/nexus-screen';
 import { CommunicationPanel } from '../chat/communication-panel';
 import { ExchangeCinematic } from '../navigation/exchange-cinematic';
@@ -35,6 +36,7 @@ export function GameSurface({ active, screen }: { active: boolean; screen: Prima
         <TicketToRideScreen />
         <RogueliteScreen />
         <NexusScreen />
+        <AtalaiaScreen />
         <div hidden={!['setupScreen', 'roomScreen', 'gameScreen'].includes(screen)}>
           <CommunicationPanel
             active={active && ['setupScreen', 'roomScreen', 'gameScreen'].includes(screen)}

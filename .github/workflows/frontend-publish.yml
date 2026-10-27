@@ -53,7 +53,7 @@ jobs:
           script: |
             const {findApprovedBuild}=require('./scripts/desktop/approved-build.cjs');
             const {version}=require('./electron/package.json');
-            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG});
+            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG,additionalAssets:[`Atalaia-Web-${version}.zip`]});
             core.setOutput('tag',approved.tag);
             core.setOutput('version',approved.version);
             core.notice('Approved delivery: '+approved.tag+' '+approved.sha);
@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts/surge-delivery
-          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --dir artifacts/surge-delivery
+          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --pattern "Atalaia-Web-$APP_VERSION.zip" --dir artifacts/surge-delivery
           python3 <<'PY'
           from pathlib import Path, PurePosixPath
           import base64, hashlib, os, re, zipfile
@@ -87,8 +87,28 @@ jobs:
               assert re.search(r'^version: '+re.escape(version)+r'$',manifest,re.M)
               assert set(re.findall(r'sha512: (\S+)',manifest))=={base64.b64encode(sha512.digest()).decode()}
               z.extractall(root/'verified')
+          game=root/f'Atalaia-Web-{version}.zip'
+          assert hashlib.file_digest(game.open('rb'),'sha256').hexdigest()==sums[game.name]
+          with zipfile.ZipFile(game) as z:
+              for entry in z.infolist():
+                  path=PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts
+              import json
+              metadata=json.loads(z.read('version.json'))
+              assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
+              assert all(name in z.namelist() for name in ['index.html','index.js','index.wasm','index.pck'])
+              z.extractall(root/'atalaia')
           print('Frontend, installer and update manifest verified.')
           PY
+      - name: Publish and verify Atalaia before updating the catalog
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          npx --yes surge@0.46.0 artifacts/surge-delivery/atalaia atalaia-mn.surge.sh
+          curl --fail --silent --show-error --retry 3 https://atalaia-mn.surge.sh/version.json -o artifacts/surge-delivery/atalaia-published.json
+          cmp artifacts/surge-delivery/atalaia/version.json artifacts/surge-delivery/atalaia-published.json
       - name: Publish the verified directory to Surge
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}

@@ -54,7 +54,7 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 No Love Letter, toda a mesa acompanha carta, autor, alvo e resultado em uma
 apresentação sobre a mesa, sem precisar consultar o histórico. O Guarda mostra
-também o palpite e aguarda um segundo antes de revelar se acertou. Rei, Príncipe,
+também o palpite e aguarda dois segundos antes de revelar se acertou. Rei, Príncipe,
 Barão e Padre identificam os envolvidos; mãos trocadas/comparadas e informações
 privadas continuam ocultas aos demais. A última carta fica ilustrada no centro.
 Movimento reduzido preserva as mensagens e o suspense, com transições estáticas.
@@ -259,3 +259,10 @@ interesses, links, créditos e data. Ausência de descrição recebe um estado v
 Modais externos aos jogos permitem fechar pelo fundo usando o cancelamento
 nativo; clique interno ou arraste iniciado dentro não fecha. Apenas o modal de
 cima é dispensado. Salvar em andamento conserva seu bloqueio de fechamento.
+
+
+Atalaia aparece no catálogo com captura do próprio jogo e indicação de tower
+defense solo para mouse/teclado. A tela apresenta controles e salvamento local.
+Jogar só carrega o Godot após o clique: abre aba própria na web e janela própria
+no Windows, onde F11 alterna tela cheia. Navegar pelo Trono mantém a chamada.
+A campanha é separada da conta do Trono e não é sincronizada entre dispositivos.

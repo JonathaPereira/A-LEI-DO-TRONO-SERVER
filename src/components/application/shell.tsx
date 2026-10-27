@@ -32,6 +32,7 @@ const GAME_SCREENS = new Set<PrimaryScreen>([
   'ticketToRideScreen',
   'rogueliteScreen',
   'nexusScreen',
+  'atalaiaScreen',
 ]);
 const games: readonly {
   id: GameDestination;
@@ -81,6 +82,13 @@ const games: readonly {
     tag: 'AÇÃO · SOLO',
     description: 'Uma nova jornada a cada tentativa.',
     image: '/roguelite/assets/catalogue-cover.png',
+  },
+  {
+    id: 'atalaia',
+    title: 'Atalaia',
+    tag: 'TOWER DEFENSE · SOLO',
+    description: 'Quinze ondas para defender o cristal.',
+    image: '/assets/games/atalaia-cover.jpg',
   },
   {
     id: 'nexus',

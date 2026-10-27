@@ -41,6 +41,7 @@ import { initializeSplendor } from '../components/games/splendor-runtime';
 import { initializeLoveLetter } from '../components/games/love-letter-runtime';
 import { initializeTicketToRide } from '../lib/games/ticket-to-ride';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
+import { initializeAtalaia } from '../lib/games/atalaia';
 import { initializeNexus } from '../lib/games/nexus';
 import { initializeGameLibrary } from '../components/games/library-runtime';
 import { initializeDesktopActivity } from '../lib/desktop/activity-runtime';
@@ -104,6 +105,7 @@ export function ApplicationRuntime() {
       initializeTabletopAudio(window);
       initializeRoguelite(window);
       initializeNexus(window);
+      initializeAtalaia(window);
       initializeGameLibrary(window);
       initializeMessenger(window);
       initializeCallToolbar(window);

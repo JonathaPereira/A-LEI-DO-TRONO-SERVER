@@ -211,6 +211,7 @@ Encerrar com três aceites, recursos com destino/evidência, corte concluído,
 comandos/CI consolidados, docs coerentes e checks pertinentes concluídos com
 limitações reais declaradas. Aceite visual não comprova hardware ou CI remoto.
 
+
 ## Reparo do atualizador Windows 0.3.7
 
 A preparação da 0.3.7 parte de `6f9c2bc` (base Windows 0.3.6). O manifesto
@@ -232,3 +233,59 @@ passou; `downloads/latest.yml` e o metadado da página anunciam 0.3.7. O EXE
 público respondeu a HEAD e faixa parcial, e seu download completo teve o
 mesmo SHA-256 da release aprovada. Instalações afetadas ainda precisam
 instalar manualmente a 0.3.7 uma vez para recuperar atualizações futuras.
+
+
+## Ajustes de jogos e Atalaia — 0.3.8
+
+Branch `codex/games-polish-integration`, sobre os fontes refatorados da entrega
+0.3.6 e a reconstrução já integrada à main. Incorpora o reparo do atualizador
+da main `3707647`, com NSIS direto e verificação de `app-update.yml` no pacote
+e na instalação. A entrega de jogos passou a 0.3.8 para avançar a versão publicada.
+As etapas ficaram em commits separados:
+Love Letter, Ticket to Ride, Nexus e Atalaia.
+
+- Love Letter: suspense do Guarda de 2 s, anúncio geral de 1,2 s e resultado de
+  2,8 s; transições visuais acompanham esses tempos.
+- Ticket to Ride: centros e ângulos dos 309 espaços impressos calibrados para
+  as 100 rotas; sprites normalizados sem alterar a arte original. A captura
+  `artifacts/rail-calibration/all-309-wagons.png` usa todas as rotas ocupadas
+  artificialmente apenas para conferir o alinhamento.
+- Nexus: usuário identificou erro transitório da Cloudflare e confirmou retorno
+  ao funcionamento no Windows. O upload existente foi preservado. Configuração
+  compartilhada, erros detalhados e guia de recolocação atualizados. A execução
+  Windows 40511295663 abriu o upload real, com canvas Godot e sem falha de rede;
+  não é uma validação de campanha/PvP completo.
+- Atalaia: projeto do ZIP preservado em `games/atalaia`, incluindo artes, áudio,
+  licenças, regras e testes. Exportação Web real em Godot 4.6.3, Compatibility,
+  sem threads; CSV adaptado ao navegador. Catálogo carrega somente após Jogar,
+  em aba própria na web e sessão isolada no Windows. O pacote Godot é separado
+  do frontend/EXE para manter o limite do site. O publicador valida e envia o
+  jogo antes de atualizar o catálogo; a chamada mantém seus donos.
+
+Evidência local concluída: typecheck, format:check e build; 1.430 contratos core,
+zero falhas/skips (`artifacts/atalaia/all-core-final.log`); duas rodadas da seleção
+Love Letter/Nexus/Ticket/Atalaia com 10 aprovados por rodada
+(`affected-browser-final-1/2.log`). Depois, o teste de Atalaia passou mais duas
+vezes com espelho HTTP real, incluindo módulos de áudio, ausência de erros JS,
+construção, onda, persistência após recarregar, CSV e chamada preservada
+(`mirror-browser-final-1/2.log`). As 24 verificações Godot passaram na exportação
+reproduzível. Os bytes externos são locais nas regressões; disponibilidade do
+novo domínio depende da publicação.
+
+Uma corrida preexistente no teste do heartbeat foi corrigida em commit separado:
+o teste aguardava somente o cliente fechar antes de conferir o descarte do
+servidor. Agora aguarda também o fechamento dos dois sockets no servidor, sem
+alterar o backend. Dois ciclos focados e o core completo passaram depois.
+
+A aceitação do EXE/NSIS e da janela Atalaia empacotada pertence ao workflow Windows
+full app do mesmo commit. A versão 0.3.8 preparada localmente não comprova sua
+publicação: o manifesto de produção continua sendo a referência. Aprovação
+visual anterior do frontend não implica aceite dos novos ajustes de jogos.
+
+
+Após incorporar o reparo do atualizador na 0.3.8: typecheck, format:check e build
+aprovados; 1.430 contratos core (`artifacts/atalaia/v038-core.log`) e duas rodadas
+Atalaia/Nexus, com sete casos por rodada e zero falhas/skips
+(`v038-browser-1/2.log`). Os fontes de apresentação de Love Letter e do tabuleiro
+não mudaram nessa integração; a nova entrega Windows confirma também a configuração
+do atualizador incorporada ao NSIS.

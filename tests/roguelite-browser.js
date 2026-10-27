@@ -126,7 +126,7 @@ test(
             const before = await snapshot();
             assert(before.track && before.camera && before.screen);
             await page.evaluate(() => window.TronoGames.openLibrary());
-            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(7);
+            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(8);
             await expect
               .poll(() =>
                 page
