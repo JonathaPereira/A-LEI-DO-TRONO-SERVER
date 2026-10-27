@@ -48,3 +48,10 @@ test('native launcher reuses an isolated game window and never grants media or a
   assert(close()); answer = 1; assert(!close()); answer = 0; quitting = true; assert(!close());
   viewer.destroy(); await launcher.open(); assert.equal(windows.length, 2);
 });
+
+test('Windows and browser share one Nexus upload configuration', () => {
+  const native = require('../electron/nexus.cjs').nexusConfig;
+  assert.equal(native.embedUrl, config.embedUrl);
+  assert.equal(native.pageUrl, config.pageUrl);
+  assert.equal(native.pvpUrl, config.pvpUrl);
+});

@@ -108,7 +108,9 @@ continuam no grafo autoritativo, independente da imagem.
 
 Cinzas do Abismo conserva o aplicativo em `public/roguelite/`, sua persistência,
 assets, áudio e ponte de integração. Nexus conserva a integração com
-`electron/nexus.cjs`. URLs públicas, manuais, cartas, mapas, fontes, sons,
+`electron/nexus.cjs`; a configuração pública única fica em `electron/nexus-config.cjs`
+e é importada também pelo frontend. O Windows abre o jogo
+na sessão isolada do jogo; o site mantém o iframe sob demanda. URLs públicas, manuais, cartas, mapas, fontes, sons,
 licenças e créditos não são saídas descartáveis do build.
 
 ## Voz, captura e recursos avançados
