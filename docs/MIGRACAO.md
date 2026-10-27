@@ -212,10 +212,36 @@ comandos/CI consolidados, docs coerentes e checks pertinentes concluídos com
 limitações reais declaradas. Aceite visual não comprova hardware ou CI remoto.
 
 
-## Ajustes de jogos e Atalaia — 0.3.7
+## Reparo do atualizador Windows 0.3.7
+
+A preparação da 0.3.7 parte de `6f9c2bc` (base Windows 0.3.6). O manifesto
+público anunciava 0.3.6 e o EXE respondia com tamanho e faixa corretos. O
+`electron-updater` 0.3.5 consultou e baixou esse EXE em perfil descartável
+quando recebeu configuração válida. O pacote gerado pelo fluxo anterior, porém,
+não continha `resources/app-update.yml`: `--dir` não gera esse arquivo e
+`--prepackaged` não repete o empacotamento. A ausência reproduziu o erro do
+download.
+
+O fluxo agora gera NSIS diretamente. A regressão falhou no pacote antigo e
+passou no novo; o instalador 0.3.7 local contém `app-update.yml` também no
+payload NSIS. Typecheck, format:check, build, compilação nativa, sete contratos
+do atualizador, 1.423 contratos core e duas rodadas do smoke empacotado passaram.
+A [execução Windows 40517015220](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40517015220)
+passou no commit `d61f60d`, incluindo jornadas web/Electron, aplicativo
+empacotado e instalação NSIS no runner descartável. A publicação no Surge
+passou; `downloads/latest.yml` e o metadado da página anunciam 0.3.7. O EXE
+público respondeu a HEAD e faixa parcial, e seu download completo teve o
+mesmo SHA-256 da release aprovada. Instalações afetadas ainda precisam
+instalar manualmente a 0.3.7 uma vez para recuperar atualizações futuras.
+
+
+## Ajustes de jogos e Atalaia — 0.3.8
 
 Branch `codex/games-polish-integration`, sobre os fontes refatorados da entrega
-0.3.6 e a reconstrução já integrada à main. As etapas ficaram em commits separados:
+0.3.6 e a reconstrução já integrada à main. Incorpora o reparo do atualizador
+da main `3707647`, com NSIS direto e verificação de `app-update.yml` no pacote
+e na instalação. A entrega de jogos passou a 0.3.8 para avançar a versão publicada.
+As etapas ficaram em commits separados:
 Love Letter, Ticket to Ride, Nexus e Atalaia.
 
 - Love Letter: suspense do Guarda de 2 s, anúncio geral de 1,2 s e resultado de
@@ -252,6 +278,14 @@ servidor. Agora aguarda também o fechamento dos dois sockets no servidor, sem
 alterar o backend. Dois ciclos focados e o core completo passaram depois.
 
 A aceitação do EXE/NSIS e da janela Atalaia empacotada pertence ao workflow Windows
-full app do mesmo commit. A versão 0.3.7 preparada localmente não comprova sua
+full app do mesmo commit. A versão 0.3.8 preparada localmente não comprova sua
 publicação: o manifesto de produção continua sendo a referência. Aprovação
 visual anterior do frontend não implica aceite dos novos ajustes de jogos.
+
+
+Após incorporar o reparo do atualizador na 0.3.8: typecheck, format:check e build
+aprovados; 1.430 contratos core (`artifacts/atalaia/v038-core.log`) e duas rodadas
+Atalaia/Nexus, com sete casos por rodada e zero falhas/skips
+(`v038-browser-1/2.log`). Os fontes de apresentação de Love Letter e do tabuleiro
+não mudaram nessa integração; a nova entrega Windows confirma também a configuração
+do atualizador incorporada ao NSIS.

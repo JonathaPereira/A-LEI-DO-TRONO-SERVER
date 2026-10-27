@@ -64,7 +64,13 @@ test(
         executablePath: executable,
         // Resource/UI acceptance does not depend on a physical playback endpoint.
         // Native process-loopback audio has its own unmuted regression.
-        args: ['--user-data-dir=' + directory, '--mute-audio', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+        args: [
+          '--user-data-dir=' + directory,
+          '--mute-audio',
+          '--proxy-server=127.0.0.1:9',
+          '--use-angle=swiftshader',
+          '--enable-unsafe-swiftshader',
+        ],
         timeout: 40000,
       });
       assert.equal(await app.evaluate(({ app }) => app.isPackaged), true);
@@ -81,6 +87,9 @@ test(
         };
       });
       const resourceRoot = await app.evaluate(() => process.resourcesPath);
+      const updateConfig = await fs.readFile(path.join(resourceRoot, 'app-update.yml'), 'utf8');
+      assert.match(updateConfig, /provider:\s*generic/);
+      assert.match(updateConfig, /url:\s*https:\/\/a-lei-do-trono\.surge\.sh\/downloads\//);
       await assert.rejects(
         fs.access(path.join(resourceRoot, 'renderer/roguelite/assets/catalogue-cover.png')),
       );
@@ -312,7 +321,11 @@ test(
       );
       await page.evaluate(() => window.TronoCallSettings.open('game'));
       await page.locator('[data-settings-tab=game]').click();
-      await expect(page.getByRole('region', { name: 'Jogos', exact: true }).getByRole('slider', { name: 'Volume da música', exact: true })).toBeVisible();
+      await expect(
+        page
+          .getByRole('region', { name: 'Jogos', exact: true })
+          .getByRole('slider', { name: 'Volume da música', exact: true }),
+      ).toBeVisible();
       await page.locator('[data-settings-tab=activity]').click();
       await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();
       await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
