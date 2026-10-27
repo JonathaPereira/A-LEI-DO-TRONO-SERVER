@@ -55,6 +55,9 @@ test(
       await run(installer, ['/S', '/currentuser', '/D=' + target]);
       const executable = path.join(target, 'MN Trono.exe');
       await fs.access(executable);
+      const updateConfig = await fs.readFile(path.join(target, 'resources/app-update.yml'), 'utf8');
+      assert.match(updateConfig, /provider:\s*generic/);
+      assert.match(updateConfig, /url:\s*https:\/\/a-lei-do-trono\.surge\.sh\/downloads\//);
       await fs.mkdir(profile, { recursive: true });
       await fs.writeFile(path.join(profile, 'preserved-account.txt'), 'remembered profile');
       app = await _electron.launch({

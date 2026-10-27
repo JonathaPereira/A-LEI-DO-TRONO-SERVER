@@ -1,6 +1,6 @@
 # Reconstrução do frontend
 
-Checkpoint atualizado em 26/10/2026.
+Checkpoint atualizado em 27/10/2026.
 
 Fonte única do plano e checkpoint. Produto/REA:
 [UX_COMUNICACAO.md](UX_COMUNICACAO.md); donos:
@@ -210,3 +210,22 @@ Preservar docs de jogos, licenças e distribuição; histórico detalhado fica n
 Encerrar com três aceites, recursos com destino/evidência, corte concluído,
 comandos/CI consolidados, docs coerentes e checks pertinentes concluídos com
 limitações reais declaradas. Aceite visual não comprova hardware ou CI remoto.
+
+## Reparo do atualizador Windows 0.3.7
+
+A preparação da 0.3.7 parte de `6f9c2bc` (base Windows 0.3.6). O manifesto
+público anunciava 0.3.6 e o EXE respondia com tamanho e faixa corretos. O
+`electron-updater` 0.3.5 consultou e baixou esse EXE em perfil descartável
+quando recebeu configuração válida. O pacote gerado pelo fluxo anterior, porém,
+não continha `resources/app-update.yml`: `--dir` não gera esse arquivo e
+`--prepackaged` não repete o empacotamento. A ausência reproduziu o erro do
+download.
+
+O fluxo agora gera NSIS diretamente. A regressão falhou no pacote antigo e
+passou no novo; o instalador 0.3.7 local contém `app-update.yml` também no
+payload NSIS. Typecheck, format:check, build, compilação nativa, sete contratos
+do atualizador, 1.423 contratos core e duas rodadas do smoke empacotado passaram.
+O teste de instalação real permanece para o runner Windows descartável. A
+entrega ainda não foi enviada nem publicada. Instalações afetadas precisam
+instalar manualmente a primeira versão corrigida para recuperar atualizações
+futuras.

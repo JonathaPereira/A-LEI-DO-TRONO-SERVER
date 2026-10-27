@@ -1,10 +1,14 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.6** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.7** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
 
-## Windows 0.3.6
+## Windows 0.3.7
+
+O instalador volta a incluir a configuração necessária para baixar atualizações.
+Instalações afetadas precisam instalar esta versão manualmente uma vez; as
+próximas versões poderão ser obtidas pelo atualizador interno.
 
 Inclui as animações públicas do Love Letter: carta, autor, alvo e resultado;
 o Guarda aguarda um segundo antes de revelar acerto ou erro. A última carta
@@ -17,7 +21,7 @@ Jogos completos, contratos do backend e recursos existentes são preservados.
 Inclui cancelamento de gravação pendente ao trocar conta, inicialização do
 atualizador e fullscreen independentes da apresentação antiga.
 
-A versão 0.3.6 permite atualizar instalações 0.3.5 e anteriores. Preserva contas,
+A versão 0.3.7 preserva contas,
 sessão lembrada e preferências. A instalação conserva as correções que encerram
 o aplicativo na bandeja e aceitam diretórios com apóstrofo. Reiniciar encerra a
 chamada: escolha um momento conveniente.
@@ -46,6 +50,19 @@ Mudanças no Electron ou no helper nativo exigem instalar o aplicativo atualizad
 pelo atualizador ou manualmente. Publicar somente a interface web não substitui
 os arquivos incorporados à instalação. O desenvolvimento local não atualiza o
 aplicativo instalado.
+
+### Recuperação do atualizador Windows
+
+Pacotes gerados com `electron-builder --dir` e depois NSIS com `--prepackaged`
+ficaram sem `resources/app-update.yml`. Nessa condição, o aplicativo pode
+encontrar uma versão mais recente, mas falha ao iniciar o download e mostra o
+erro genérico em Configurações → Aplicativo. O fluxo de entrega agora gera o
+pacote NSIS diretamente e confere esse arquivo no executável e após a instalação.
+Uma instalação já afetada precisa receber manualmente o EXE da versão
+**0.3.7 ou posterior**, após sua aprovação e publicação. Publicar o site
+ou clicar novamente em Buscar atualizações não adiciona o arquivo ausente ao
+aplicativo instalado. Preserve a
+mesma conta e o perfil ao reinstalar.
 
 ## Conferir uma entrega
 

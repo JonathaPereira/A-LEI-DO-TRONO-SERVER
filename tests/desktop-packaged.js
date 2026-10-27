@@ -64,7 +64,7 @@ test(
         executablePath: executable,
         // Resource/UI acceptance does not depend on a physical playback endpoint.
         // Native process-loopback audio has its own unmuted regression.
-        args: ['--user-data-dir=' + directory, '--mute-audio'],
+        args: ['--user-data-dir=' + directory, '--mute-audio', '--proxy-server=127.0.0.1:9'],
         timeout: 40000,
       });
       assert.equal(await app.evaluate(({ app }) => app.isPackaged), true);
@@ -81,6 +81,9 @@ test(
         };
       });
       const resourceRoot = await app.evaluate(() => process.resourcesPath);
+      const updateConfig = await fs.readFile(path.join(resourceRoot, 'app-update.yml'), 'utf8');
+      assert.match(updateConfig, /provider:\s*generic/);
+      assert.match(updateConfig, /url:\s*https:\/\/a-lei-do-trono\.surge\.sh\/downloads\//);
       await assert.rejects(
         fs.access(path.join(resourceRoot, 'renderer/roguelite/assets/catalogue-cover.png')),
       );
