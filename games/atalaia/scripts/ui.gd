@@ -3,18 +3,21 @@ extends RefCounted
 
 static var normal: Font = preload("res://assets/fonts/Interface.ttf")
 static var title: Font = preload("res://assets/fonts/Title.ttf")
-const GOLD = Color("e8c489")
-const WHITE = Color("e5edf0")
-const MUTED = Color("91aebb")
+const GOLD = Color("edc98c")
+const WHITE = Color("eef2ef")
+const MUTED = Color("9fb4b5")
 
 static func font() -> Font: return normal
 
-static func box(bg: Color = Color("091e29"), border: Color = Color("355465"), radius: int = 6) -> StyleBoxFlat:
+static func box(bg: Color = Color("0c191e"), border: Color = Color("34464a"), radius: int = 10) -> StyleBoxFlat:
  var b=StyleBoxFlat.new()
  b.bg_color=bg
  b.border_color=border
  b.set_border_width_all(1)
  b.set_corner_radius_all(radius)
+ b.shadow_color=Color(0.0,0.01,0.015,0.24)
+ b.shadow_size=5
+ b.shadow_offset=Vector2(0,3)
  b.content_margin_left=14
  b.content_margin_right=14
  b.content_margin_top=8
@@ -68,8 +71,32 @@ static func image(parent: Node, texture: Texture2D, rect: Rect2) -> TextureRect:
  i.mouse_filter=Control.MOUSE_FILTER_IGNORE
  return i
 
+static func icon(parent: Node, kind: String, rect: Rect2, color: Color = GOLD) -> Control:
+ var node=Control.new()
+ node.set_script(preload("res://scripts/hud_icon.gd"))
+ node.kind=kind;node.tint=color
+ parent.add_child(node)
+ node.position=rect.position;node.size=rect.size
+ return node
+
+static func meter(parent: Node, rect: Rect2, color: Color) -> ProgressBar:
+ var bar=ProgressBar.new()
+ parent.add_child(bar)
+ bar.position=rect.position;bar.size=rect.size
+ bar.show_percentage=false;bar.max_value=1.0
+ bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
+ var track=StyleBoxFlat.new()
+ track.bg_color=Color("1a2c2e");track.set_corner_radius_all(2)
+ bar.add_theme_stylebox_override("background",track)
+ var fill=StyleBoxFlat.new()
+ fill.bg_color=color;fill.set_corner_radius_all(2)
+ bar.add_theme_stylebox_override("fill",fill)
+ bar.size=rect.size
+ return bar
+
 static func line(parent: Node, from: Vector2, to: Vector2, color: Color):
  var n=ColorRect.new()
  parent.add_child(n)
  n.position=from; n.size=to-from; n.color=color
  n.mouse_filter=Control.MOUSE_FILTER_IGNORE
+ return n

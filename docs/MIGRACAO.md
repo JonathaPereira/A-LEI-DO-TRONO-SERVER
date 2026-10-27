@@ -237,6 +237,26 @@ instalar manualmente a 0.3.7 uma vez para recuperar atualizações futuras.
 
 ## Ajustes de jogos e Atalaia — 0.3.8
 
+A atualização visual seguinte está na branch `codex/desktop-atalaia-visual-refresh`,
+Atalaia Godot 0.2 / Windows 0.3.9. A referência web 0.6.1 foi consultada após
+o usuário liberar seu acesso público. Ela possui mais conteúdo do que o projeto
+Godot recebido; a atualização conserva as regras, três regiões, 15 ondas e o
+formato do save desse projeto.
+
+O HUD usa ícones vetoriais e indicadores separados de núcleo, ouro e onda; o
+campo deixa de esticar na horizontal e recorta objetos nas bordas. Novos fundos
+preservam as estradas pintadas por uma malha sobre as rotas existentes. Transições
+de construção, movimento, evolução, dano e ouro não alteram os números das regras.
+Relatório e doutrinas conservam os nós enquanto atualizam, preservando o foco.
+
+O exportador executa 24 verificações de regras e 21 de interface antes de gerar
+o jogo. Recursos JS/WASM/PCK têm versão/commit nos nomes, conferidos no navegador
+e na publicação. Typecheck, format:check, build do frontend e 1.430 contratos core
+passaram localmente. A política determinística original concluiu a campanha na
+onda 15 com 22/30 de integridade. Evidências locais ficam em
+`artifacts/atalaia/visual-*`; aceitação do EXE/NSIS e publicação pertencem à
+execução Windows/Surge do mesmo commit, não ao preparo local.
+
 Branch `codex/games-polish-integration`, sobre os fontes refatorados da entrega
 0.3.6 e a reconstrução já integrada à main. Incorpora o reparo do atualizador
 da main `3707647`, com NSIS direto e verificação de `app-update.yml` no pacote

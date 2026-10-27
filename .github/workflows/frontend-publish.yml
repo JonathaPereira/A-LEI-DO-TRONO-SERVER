@@ -96,7 +96,10 @@ jobs:
               import json
               metadata=json.loads(z.read('version.json'))
               assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
-              assert all(name in z.namelist() for name in ['index.html','index.js','index.wasm','index.pck'])
+              assert re.fullmatch(r'\d+\.\d+\.\d+',metadata['gameVersion'])
+              executable='atalaia-'+metadata['gameVersion']+'-'+os.environ['GITHUB_SHA'][:12]
+              assert metadata['executable']==executable
+              assert all(name in z.namelist() for name in ['index.html']+[executable+'.'+ext for ext in ['js','wasm','pck']])
               z.extractall(root/'atalaia')
           print('Frontend, installer and update manifest verified.')
           PY

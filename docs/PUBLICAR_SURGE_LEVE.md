@@ -33,6 +33,10 @@ Os arquivos Godot ficam nesse domínio separado, preservando o limite de tamanho
 do site com instalador. Consulte o [README de Atalaia](../games/atalaia/README.md)
 para edição ou publicação manual do jogo.
 
+JS, WASM e PCK do Atalaia incluem versão e commit nos nomes. A página de entrada
+continua `index.html`; cada entrega carrega seus próprios arquivos, evitando que
+o cache reaproveite o pacote de uma versão anterior.
+
 A publicação confere o commit e o job Validate and package Windows aprovado na tentativa de origem,
 os hashes do ZIP/EXE e o manifesto. Depois confere o manifesto publicado e o
 metadado de versão da página. Falhas de validação bloqueiam publicação.

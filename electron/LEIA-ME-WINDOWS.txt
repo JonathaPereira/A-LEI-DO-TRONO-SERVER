@@ -1,6 +1,11 @@
-M&N · A Lei do Trono — Windows 0.3.8
+M&N · A Lei do Trono — Windows 0.3.9
 
-Esta entrega deixa as animações do Love Letter mais lentas e alinha os vagões
+Atalaia Godot 0.2: novo HUD com ouro, integridade e avanço da campanha separados,
+mapas sem deformação horizontal, novos fundos para as três regiões e animações
+de construção, movimento, evolução, dano e ganho de ouro. Campanhas salvas no
+Godot 0.1 continuam compatíveis.
+
+Esta entrega preserva as animações mais lentas do Love Letter e alinha os vagões
 às 309 posições impressas do Ticket to Ride. Atalaia: Guardiões do Cristal entra
 no catálogo, com as artes e as três fases do projeto Godot enviado. O Windows
 abre Atalaia em janela isolada; F11 alterna a tela cheia. O jogo precisa de
@@ -10,7 +15,7 @@ Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-0.3.8-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.9-Windows.exe.
    Instalações 0.3.5/0.3.6 com falha ao baixar atualizações precisam instalar
    esta versão manualmente uma vez. Versões anteriores sem a falha podem usar
    o atualizador interno após a publicação do site completo.

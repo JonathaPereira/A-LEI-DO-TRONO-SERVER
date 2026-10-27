@@ -284,3 +284,10 @@ Os bytes Godot ficam em um pacote próprio da entrega e em `atalaia-mn.surge.sh`
 separados do site principal/EXE. A publicação confere hash, commit e versão dos
 dois pacotes; falha no jogo impede a atualização do catálogo. Nenhum recurso de
 chamada, conta ou socket pertence ao jogo.
+
+No projeto Godot, `main.gd` projeta os recursos e o painel da torre; ícones
+vetoriais ficam em `hud_icon.gd`. `board.gd` mantém atores/efeitos e recorta o
+campo por um Control com escala uniforme. `terrain.gd` compõe os fundos com
+as estradas pintadas, usando a mesma geometria das rotas, sem reamostrar as
+regras de movimento. A camada do terreno só é reconstruída na troca de região.
+A contagem animada de ouro é apresentação; compras usam o saldo em `run.gd`.

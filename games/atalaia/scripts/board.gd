@@ -17,10 +17,12 @@ var bolts: Array=[]
 var rings: Array=[]
 var ground_material: ShaderMaterial
 var background: Sprite2D
+var terrain: Node2D
 var shown_stage=-1
 var core_flash=0.0
 var smoke: Array=[]
 var smoke_clock=0.0
+var floaters: Array=[]
 
 func _ready():
  background=Sprite2D.new()
@@ -30,6 +32,8 @@ func _ready():
  ground_material=ShaderMaterial.new()
  ground_material.shader=preload("res://assets/atmosphere.gdshader")
  background.material=ground_material
+ terrain=Node2D.new();terrain.set_script(preload("res://scripts/terrain.gd"));add_child(terrain)
+ terrain.z_index=-1
  actors=Node2D.new(); actors.y_sort_enabled=true; add_child(actors)
  var haze=Node2D.new();haze.set_script(preload("res://scripts/smoke.gd"));haze.board=self;add_child(haze)
  effects=Node2D.new(); effects.set_script(preload("res://scripts/effects.gd")); effects.board=self; add_child(effects)
@@ -51,7 +55,7 @@ func _unhandled_input(event):
 func reset_visuals():
  for node in tower_nodes.values(): node.queue_free()
  for node in enemy_nodes.values(): node.queue_free()
- tower_nodes.clear(); enemy_nodes.clear(); bursts.clear(); bolts.clear(); rings.clear();smoke.clear()
+ tower_nodes.clear(); enemy_nodes.clear(); bursts.clear(); bolts.clear(); rings.clear();smoke.clear();floaters.clear()
  shown_stage=-1
 
 func _process(dt):
@@ -65,19 +69,22 @@ func _process(dt):
   for p in run.projectiles:
    if p.t.type=="mortar" and smoke.size()<80:smoke.append({"pos":p.pos,"vel":Vector2(randf_range(-7,7),-12),"age":0.0,"life":0.65,"size":7.0})
  core_flash=maxf(0.0,core_flash-dt)
+ for f in floaters:f.age+=dt
+ floaters=floaters.filter(func(f):return f.age<1.1)
  if shown_stage!=int(run.stage):
   shown_stage=int(run.stage)
-  var asset=run.maps[run.stage].asset.get_file()
+  var asset="terrain-%s-v7.png"%["forest","marsh","ruins"][run.stage]
   background.texture=AtalaiaArt.texture(asset)
   background.scale=Vector2(1000,620)/background.texture.get_size()
   ground_material.set_shader_parameter("wet",0.0 if run.stage==2 else 1.0)
+  terrain.run=run;terrain.queue_redraw()
  var active: Array=[]
  for t in run.towers:
   var id=int(t.id); active.append(id)
   if not tower_nodes.has(id):
    var node=TOWER_SCENE.instantiate(); actors.add_child(node); node.configure(t); tower_nodes[id]=node
   tower_nodes[id].data=t
-  tower_nodes[id].position=run.pads[int(t.pad)]
+  tower_nodes[id].place_at(run.pads[int(t.pad)])
   tower_nodes[id].selected=id==selected
  for id in tower_nodes.keys():
   if id not in active: tower_nodes[id].queue_free(); tower_nodes.erase(id)
@@ -123,7 +130,9 @@ func event(e: Dictionary):
    var col=Color(AtalaiaCatalog.TOWERS[e.type].color)
    burst(e.pos-Vector2(0,25),col,22,55.0,-50.0)
    rings.append({"pos":e.pos,"color":col,"age":0.0,"life":0.75,"size":55.0})
-  "death": burst(e.pos-Vector2(0,14),Color("b7c5b9"),7,30.0)
+  "death":
+   burst(e.pos-Vector2(0,14),Color("b7c5b9"),7,30.0)
+   floaters.append({"pos":e.pos-Vector2(0,40),"value":AtalaiaCatalog.ENEMIES[e.type].gold,"age":0.0})
   "leak": core_flash=0.5; burst(e.pos-Vector2(0,55),Color("ff725f"),18,95.0)
 
 func _draw():
@@ -162,6 +171,11 @@ func _draw():
  elif hover>=0 and build_type!="":
   var radius=AtalaiaCatalog.TOWERS[build_type].range
   draw_arc(run.pads[hover],radius,0,TAU,96,Color(0.86,0.8,0.5,0.35),1.0,true)
+ for f in floaters:
+  var alpha=clampf((1.1-f.age)*2.5,0,1)
+  var pos: Vector2=f.pos-Vector2(0,f.age*31)
+  draw_string_outline(AtalaiaUI.font(),pos,"+%d"%f.value,HORIZONTAL_ALIGNMENT_CENTER,40,16,3,Color(0.03,0.05,0.03,alpha))
+  draw_string(AtalaiaUI.font(),pos,"+%d"%f.value,HORIZONTAL_ALIGNMENT_CENTER,40,16,Color(1.0,0.84,0.45,alpha))
 
 func draw_effects(c: Node2D):
  if not is_instance_valid(run): return
@@ -229,6 +243,7 @@ func draw_effects(c: Node2D):
  # The core uses a separate pedestal and floating, faceted crystal.
  var last: Vector2=run.routes[0].points[-1]
  var center=last+Vector2(-4,20)
+ center.x=minf(center.x,938.0)
  c.draw_texture_rect(AtalaiaArt.glow(),Rect2(center-Vector2(90,170),Vector2(180,230)),false,Color(0.15,0.65,1,0.65+sin(time*2)*0.08))
  # Restore ordinary alpha for opaque artwork inside an additive effect layer.
  # Opaque pedestal/crystal are drawn by the sibling Core node instead.
@@ -243,11 +258,12 @@ func draw_effects(c: Node2D):
   if count>0:
    var pos: Vector2=run.pads[t.pad]+Vector2(31,-15)
    var color=Color(AtalaiaCatalog.TOWERS[t.type].color)
-   c.draw_string(AtalaiaUI.font(),pos,"✦%d"%count,HORIZONTAL_ALIGNMENT_LEFT,-1,12,color)
+   c.draw_string(AtalaiaUI.font(),pos,"D%d"%count,HORIZONTAL_ALIGNMENT_LEFT,-1,12,color)
 
 func draw_core(c: Node2D):
  if not is_instance_valid(run): return
  var center: Vector2=run.routes[0].points[-1]+Vector2(-4,20)
+ center.x=minf(center.x,938.0)
  var atlas=AtalaiaArt.texture("crystal-core-v5.webp")
  var s=atlas.get_size()/Vector2(2,1)
  c.draw_texture_rect_region(atlas,Rect2(center-Vector2(60,51),Vector2(120,90)),Rect2(Vector2.ZERO,s))

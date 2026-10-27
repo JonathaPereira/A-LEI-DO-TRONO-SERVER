@@ -1,8 +1,25 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.8** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.9** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 0.3.9
+
+Atualiza Atalaia para Godot 0.2: HUD com indicadores nomeados, contagem animada
+de ouro e barras de integridade/onda/campanha. O campo usa proporção uniforme,
+com recorte dos objetos nos limites do cenário. As três regiões recebem novos
+fundos; as estradas preservam a textura e a geometria aprovadas. Construções,
+reposicionamentos e evoluções têm transições; inimigos mostram dano suavizado
+e recompensas de ouro. Mantém as regras e os saves da campanha Godot existente.
+
+O jogo web 0.6.1 fornecido como referência possui conteúdo adicional (seis
+regiões, 30 ondas, cristais e oficina). Esta entrega visual do Godot conserva
+suas três regiões e 15 ondas; não migra o save da versão web anterior.
+
+Frontend, instalador e Atalaia são preparados pela mesma entrega e publicados
+automaticamente no Surge após aprovação dos testes. A correção do atualizador
+das versões 0.3.7/0.3.8 permanece incluída.
 
 ## Windows 0.3.8
 
