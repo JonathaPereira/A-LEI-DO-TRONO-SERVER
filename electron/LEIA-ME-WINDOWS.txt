@@ -1,12 +1,13 @@
-M&N · A Lei do Trono — Windows 0.3.5
+M&N · A Lei do Trono — Windows 0.3.7
 
 Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.3.3.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-0.3.5-Windows.exe.
-   Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
-   completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
+1. Instalação nova: instale MN-Trono-0.3.7-Windows.exe.
+   Instalações 0.3.5/0.3.6 com falha ao baixar atualizações precisam instalar
+   esta versão manualmente uma vez. Versões anteriores sem a falha podem usar
+   o atualizador interno após a publicação do site completo.
    Contas, permissões e preferências lembradas são mantidas.
 2. Entre com a conta do site. Lembre de mim restaura a sessão ao reabrir.
    A sessão é protegida pelo Windows; sua senha não fica salva.
@@ -89,3 +90,10 @@ Ticket to Ride (mapa clássico dos EUA): mesas online para 2–5 pessoas e bots,
 Tabuleiro original, nove frentes de cartas, versos e peças coloridas aplicados,
 com rotas clicáveis e vagões animados respeitando movimento reduzido.
 Requer backend 0.14.0-alpha; sem SQL novo.
+
+Windows 0.3.6: animações do Love Letter com autor, alvo e resultado para toda
+a mesa. Guarda com um segundo de suspense. Última carta ilustrada e favores
+por vitória e pela Espiã separados. Preserva a reconstrução completa da 0.3.5.
+
+Windows 0.3.7: o pacote NSIS inclui a configuração do atualizador.
+Após instalar esta versão, novos downloads automáticos voltam a funcionar.

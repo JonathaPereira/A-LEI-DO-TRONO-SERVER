@@ -79,7 +79,7 @@ jobs:
     name: Validate and package Windows
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: ${{ inputs.extended_browser && 30 || 15 }}
+    timeout-minutes: ${{ inputs.extended_browser && 30 || 18 }}
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
@@ -130,14 +130,9 @@ jobs:
       - name: Package and smoke test the actual executable
         shell: pwsh
         run: |
-          Push-Location electron
-          try {
-            npx electron-builder --win --x64 --dir --publish never
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } finally { Pop-Location }
-          npm test -- --suite desktop --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
+          npm --prefix electron run pack:win
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix electron run pack:win -- --prepackaged ../artifacts/windows-app/win-unpacked
+          npm test -- --suite desktop --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
           exit $LASTEXITCODE
       - name: Accept the real installer on the disposable runner
         shell: pwsh
