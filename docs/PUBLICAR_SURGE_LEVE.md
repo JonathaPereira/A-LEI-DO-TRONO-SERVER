@@ -26,6 +26,13 @@ por push continuam como validação; para publicá-las, use o disparo manual.
 A versão vem de `electron/package.json`; a tag exata passa diretamente do pacote
 para a publicação, sem copiar IDs ou procurar versões. O repositório precisa do
 secret `SURGE_TOKEN`. A release privada mantém EXE, ZIP e hashes da mesma entrega.
+A release inclui também `Atalaia-Web-<versão>.zip`, exportado e testado pelo mesmo
+workflow. O publicador valida seu hash e o commit, envia primeiro o jogo para
+`atalaia-mn.surge.sh` e confere a versão antes de atualizar o catálogo principal.
+Os arquivos Godot ficam nesse domínio separado, preservando o limite de tamanho
+do site com instalador. Consulte o [README de Atalaia](../games/atalaia/README.md)
+para edição ou publicação manual do jogo.
+
 A publicação confere o commit e o job Validate and package Windows aprovado na tentativa de origem,
 os hashes do ZIP/EXE e o manifesto. Depois confere o manifesto publicado e o
 metadado de versão da página. Falhas de validação bloqueiam publicação.

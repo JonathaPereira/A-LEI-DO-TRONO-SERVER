@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('TronoDesktop', {
   onCaptureCancel: (fn) => listen('mn:capture-cancel', fn),
   selectCapture: (choice) => ipcRenderer.invoke('mn:capture-select', choice),
   chooseFolder: () => ipcRenderer.invoke('mn:folder'),
+  openAtalaia: () => ipcRenderer.invoke('mn:atalaia'),
   openNexus: () => ipcRenderer.invoke('mn:nexus'),
   openManual: () => ipcRenderer.invoke('mn:manual'),
   openAttachment: (choice) => ipcRenderer.invoke('mn:attachment', choice),

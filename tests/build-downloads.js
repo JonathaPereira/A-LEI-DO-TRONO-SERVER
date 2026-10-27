@@ -9,11 +9,11 @@ test('private delivery uploads a matched EXE, site and checksums before retiring
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'mn-build-downloads-'));
   try{
     for(const dir of ['electron','artifacts/windows-download'])await fs.mkdir(path.join(root,dir),{recursive:true});
-    await fs.writeFile(path.join(root,'electron/package.json'),'{"version":"0.1.12"}');await fs.writeFile(path.join(root,'electron/LEIA-ME-WINDOWS.txt'),'Instructions');await fs.writeFile(path.join(root,'artifacts/windows-download/MN-Trono-0.1.12-Windows.exe'),'MZ exe');await fs.writeFile(path.join(root,'artifacts/MN-Trono-Frontend-0.1.12.zip'),'PK site');
+    await fs.writeFile(path.join(root,'electron/package.json'),'{"version":"0.1.12"}');await fs.writeFile(path.join(root,'electron/LEIA-ME-WINDOWS.txt'),'Instructions');await fs.writeFile(path.join(root,'artifacts/windows-download/MN-Trono-0.1.12-Windows.exe'),'MZ exe');await fs.writeFile(path.join(root,'artifacts/MN-Trono-Frontend-0.1.12.zip'),'PK site');await fs.writeFile(path.join(root,'artifacts/Atalaia-Web-0.1.12.zip'),'PK game');
     const uploads=[],deleted=[],events=[];let fail=false;
     const github={paginate:async()=>[release('0.1.9',9),release('0.1.11',11),release('0.1.12',12)],rest:{repos:{listReleases(){},createRelease:async args=>{assert.equal(args.draft,true);assert.equal(args.target_commitish,'commit');return {data:{id:12,html_url:'https://github.com/owner/private/releases/12'}};},uploadReleaseAsset:async args=>{events.push('upload');if(fail)throw Error('Network failed');uploads.push(args);},deleteRelease:async args=>{events.push('delete');deleted.push(args.release_id);}}}};
-    const summary={addHeading(){return this;},addRaw(){return this;},async write(){}},options={root,github,context:{repo:{owner:'owner',repo:'private'},sha:'commit',runId:12},core:{notice(){},summary}};
-    const delivered=await publishBuild(options);assert.equal(delivered.tag,'desktop-v0.1.12-run-12-attempt-'+(process.env.GITHUB_RUN_ATTEMPT||'1'));assert.equal(uploads.length,4);assert.match(uploads[3].data.toString(),/^[a-f0-9]{64}  MN-Trono-0\.1\.12-Windows\.exe/m);assert.deepEqual(deleted,[9]);assert.deepEqual(events,['upload','upload','upload','upload','delete']);
+    const summary={addHeading(){return this;},addRaw(){return this;},async write(){}},options={root,additionalFiles:['artifacts/Atalaia-Web-0.1.12.zip'],github,context:{repo:{owner:'owner',repo:'private'},sha:'commit',runId:12},core:{notice(){},summary}};
+    const delivered=await publishBuild(options);assert.equal(delivered.tag,'desktop-v0.1.12-run-12-attempt-'+(process.env.GITHUB_RUN_ATTEMPT||'1'));assert.equal(uploads.length,5);assert.equal(uploads[3].name,'Atalaia-Web-0.1.12.zip');assert.match(uploads[4].data.toString(),/^[a-f0-9]{64}  MN-Trono-0\.1\.12-Windows\.exe/m);assert.deepEqual(deleted,[9]);assert.deepEqual(events,['upload','upload','upload','upload','upload','delete']);
     fail=true;deleted.length=0;await assert.rejects(publishBuild(options),/Network failed/);assert.deepEqual(deleted,[12]);
   }finally{await fs.rm(root,{recursive:true,force:true});}
 });
@@ -27,6 +27,7 @@ test('Surge automatically selects the newest complete Windows delivery from this
   let rejectedJob='',wrongRun=false;
   const github={rest:{repos:{listReleases(){}},actions:{getWorkflowRun:async({run_id})=>({data:{id:run_id,name:'Windows full app',path:'.github/workflows/windows-app.yml',head_sha:wrongRun?'b'.repeat(40):sha}}),listJobsForWorkflowRun(){}}},paginate:async(fn)=>fn===github.rest.repos.listReleases?rows:required.flatMap(name=>[1,2].map(run_attempt=>({name,run_attempt,conclusion:name===rejectedJob?'failure':'success'})))};
   const options={github,context:{repo:{owner:'owner',repo:'private'},sha},version:'0.1.12'};
+  await assert.rejects(findApprovedBuild({...options,additionalAssets:['Atalaia-Web-0.1.12.zip']}),/Nenhuma entrega/);
   assert.deepEqual(await findApprovedBuild(options),{tag:'desktop-v0.1.12-run-10-attempt-2',version:'0.1.12',sha});
   assert.equal((await findApprovedBuild({...options,requested:'desktop-v0.1.12-run-8-attempt-1'})).tag,'desktop-v0.1.12-run-8-attempt-1');
   for(const name of required){rejectedJob=name;await assert.rejects(findApprovedBuild(options),/Nenhuma entrega/);}

@@ -127,7 +127,7 @@ test(
             const before = await snapshot();
             assert(before.audio && before.camera && before.screen);
             await page.evaluate(() => window.TronoGames.openLibrary());
-            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(7);
+            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(8);
             await page.locator('#gamesScreen [data-game=nexus]').click();
             await expect(page.locator('#nexusScreen')).toBeVisible();
             assert.equal(remoteRequests, 0);

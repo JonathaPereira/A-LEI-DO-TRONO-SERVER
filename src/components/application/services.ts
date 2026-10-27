@@ -11,6 +11,7 @@ import type { CommunityNavigation } from '../../lib/navigation/community-navigat
 import type { ChatComposerController } from '../../lib/chat/composer';
 import type { ChatMessagesController } from '../../lib/chat/messages';
 import type { Messenger } from '../../lib/messenger/controller';
+import type { Atalaia } from '../../lib/games/atalaia';
 import type { GameLibrary } from '../../lib/games/library';
 import type { CallToolbar } from '../../lib/voice/toolbar';
 import type { CallNavigation } from '../../lib/voice/navigation';
@@ -52,6 +53,7 @@ export type ApplicationServices = Window & {
   TronoChatMessages: ChatMessagesController;
   TronoDirectMessages: Messenger;
   TronoGameLibrary: GameLibrary;
+  TronoAtalaia: Atalaia;
   TronoCallSettings: SettingsController;
   TronoVoiceSettings: VoiceSettings;
   TronoAudioPreferences: AudioPreferences;

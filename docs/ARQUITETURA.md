@@ -270,3 +270,17 @@ rascunho/controlador. Modais atuais externos aos jogos declaram closedby=any:
 o navegador encaminha clique externo ao cancelamento nativo já tratado pelos
 donos, conservando bloqueios, descarte e a ordem dos modais. Não há listener
 global novo para forçar fechamento nem alteração dos prompts protegidos dos jogos.
+
+
+Atalaia tem o projeto original em `games/atalaia`; `scripts/build-atalaia.cjs`
+exporta o jogo com o toolchain fixado por `scripts/prepare-godot.cjs`.
+`src/lib/games/atalaia.ts` possui apenas estado/comandos de abertura, e a tela
+React apresenta seu snapshot. O catálogo delega ao mesmo dono. No navegador,
+uma aba própria preserva o armazenamento do jogo sem depender de permissões de
+terceiros. O Electron reutiliza o lançador isolado de `electron/nexus.cjs`, com
+partição, origem, título e confirmação exclusivos; somente Atalaia permite os
+CSVs de relatório. URLs públicas ficam em `electron/atalaia-config.cjs`.
+Os bytes Godot ficam em um pacote próprio da entrega e em `atalaia-mn.surge.sh`,
+separados do site principal/EXE. A publicação confere hash, commit e versão dos
+dois pacotes; falha no jogo impede a atualização do catálogo. Nenhum recurso de
+chamada, conta ou socket pertence ao jogo.

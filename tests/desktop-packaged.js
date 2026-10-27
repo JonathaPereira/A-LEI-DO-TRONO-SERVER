@@ -64,7 +64,7 @@ test(
         executablePath: executable,
         // Resource/UI acceptance does not depend on a physical playback endpoint.
         // Native process-loopback audio has its own unmuted regression.
-        args: ['--user-data-dir=' + directory, '--mute-audio'],
+        args: ['--user-data-dir=' + directory, '--mute-audio', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
         timeout: 40000,
       });
       assert.equal(await app.evaluate(({ app }) => app.isPackaged), true);
@@ -141,6 +141,7 @@ test(
               '/assets/games/throne-cover.webp',
               '/assets/games/splendor-cover.webp',
               '/assets/games/nexus-cover.webp',
+              '/assets/games/atalaia-cover.jpg',
               '/assets/splendor/developments.webp',
               '/assets/splendor/nobles.webp',
               '/assets/ticket-to-ride/board-usa.jpg',
@@ -222,7 +223,7 @@ test(
       );
       await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
       await expect(page.locator('#gamesScreen')).toBeVisible();
-      await expect(page.locator('#gamesScreen button[data-game]')).toHaveCount(7);
+      await expect(page.locator('#gamesScreen button[data-game]')).toHaveCount(8);
       await expect
         .poll(() =>
           page
@@ -262,6 +263,8 @@ test(
       await page.locator('#azulBack').click();
       phase = 'installed Nexus isolation';
       await require('./desktop-nexus-flow').exerciseNexus({ app, page });
+      phase = 'installed Atalaia export';
+      await require('./desktop-atalaia-flow.cjs').exerciseAtalaia({ app, page });
       phase = 'installed roguelite preparation';
       await page.evaluate(() =>
         window.addEventListener('message', (e) => {

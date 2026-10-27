@@ -1,10 +1,16 @@
-M&N · A Lei do Trono — Windows 0.3.6
+M&N · A Lei do Trono — Windows 0.3.7
+
+Esta entrega deixa as animações do Love Letter mais lentas e alinha os vagões
+às 309 posições impressas do Ticket to Ride. Atalaia: Guardiões do Cristal entra
+no catálogo, com as artes e as três fases do projeto Godot enviado. O Windows
+abre Atalaia em janela isolada; F11 alterna a tela cheia. O jogo precisa de
+internet no primeiro carregamento e salva a campanha neste dispositivo.
 
 Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.3.3.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-0.3.6-Windows.exe.
+1. Instalação nova: instale MN-Trono-0.3.7-Windows.exe.
    Quem usa 0.1.1 ou posterior recebe a atualização internamente quando o site
    completo é publicado. Quem usa 0.1.0 instala a versão atual uma única vez.
    Contas, permissões e preferências lembradas são mantidas.
@@ -90,6 +96,6 @@ Tabuleiro original, nove frentes de cartas, versos e peças coloridas aplicados,
 com rotas clicáveis e vagões animados respeitando movimento reduzido.
 Requer backend 0.14.0-alpha; sem SQL novo.
 
-Windows 0.3.6: animações do Love Letter com autor, alvo e resultado para toda
+Windows 0.3.7: animações do Love Letter com autor, alvo e resultado para toda
 a mesa. Guarda com um segundo de suspense. Última carta ilustrada e favores
 por vitória e pela Espiã separados. Preserva a reconstrução completa da 0.3.5.

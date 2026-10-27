@@ -140,7 +140,7 @@ test(
             assert(before.track && before.camera && before.screen);
             await page.evaluate(() => window.TronoGames.openLibrary());
             await expect(page.locator('#gamesScreen')).toBeVisible();
-            await expect(page.locator('button[data-game]')).toHaveCount(7);
+            await expect(page.locator('button[data-game]')).toHaveCount(8);
             await page.evaluate(() => document.fonts.ready);
             await expect
               .poll(() =>

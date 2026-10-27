@@ -21,6 +21,7 @@ interface LibraryRuntime extends Window {
   TronoTicketToRide: { open(): void };
   TronoLoveLetter: { open(): void };
   TronoRoguelite: { open(): void };
+  TronoAtalaia: { open(): void };
   TronoNexus: { open(): void };
   TronoGameLibrary?: GameLibrary;
   TronoGames?: {
@@ -42,6 +43,7 @@ const screenRoutes: Readonly<Record<string, GameDestination>> = Object.freeze({
   ticketToRideScreen: 'ticket-to-ride',
   loveLetterScreen: 'love-letter',
   nexusScreen: 'nexus',
+  atalaiaScreen: 'atalaia',
 });
 const installed = new WeakMap<Window, () => void>();
 export function initializeGameLibrary(target: Window): () => void {
@@ -84,6 +86,8 @@ export function initializeGameLibrary(target: Window): () => void {
           return runtime.TronoTicketToRide.open();
         case 'love-letter':
           return runtime.TronoLoveLetter.open();
+        case 'atalaia':
+          return runtime.TronoAtalaia.open();
         case 'nexus':
           return runtime.TronoNexus.open();
         default:

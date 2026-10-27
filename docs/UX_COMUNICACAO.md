@@ -259,3 +259,10 @@ interesses, links, créditos e data. Ausência de descrição recebe um estado v
 Modais externos aos jogos permitem fechar pelo fundo usando o cancelamento
 nativo; clique interno ou arraste iniciado dentro não fecha. Apenas o modal de
 cima é dispensado. Salvar em andamento conserva seu bloqueio de fechamento.
+
+
+Atalaia aparece no catálogo com captura do próprio jogo e indicação de tower
+defense solo para mouse/teclado. A tela apresenta controles e salvamento local.
+Jogar só carrega o Godot após o clique: abre aba própria na web e janela própria
+no Windows, onde F11 alterna tela cheia. Navegar pelo Trono mantém a chamada.
+A campanha é separada da conta do Trono e não é sincronizada entre dispositivos.

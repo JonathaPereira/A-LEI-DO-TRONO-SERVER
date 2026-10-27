@@ -10,6 +10,7 @@ export const primaryScreens = [
   'gamesScreen',
   'azulScreen',
   'nexusScreen',
+  'atalaiaScreen',
   'rogueliteScreen',
   'splendorScreen',
   'ticketToRideScreen',

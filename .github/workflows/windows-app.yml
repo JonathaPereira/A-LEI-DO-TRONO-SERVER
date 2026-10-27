@@ -8,6 +8,7 @@ on:
         'electron/**',
         'src/**',
         'public/**',
+        'games/atalaia/**',
         'server/**',
         'scripts/**',
         'tests/**',
@@ -59,7 +60,7 @@ jobs:
             const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
             const release=releases.find(r=>r.tag_name===tag);
             if(!release?.draft)throw Error('Only a draft release can have its instructions refreshed.');
-            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`];
+            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`,`Atalaia-Web-${version}.zip`];
             const lines=names.map(name=>{
               const asset=release.assets.find(a=>a.name===name);
               if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
@@ -79,7 +80,7 @@ jobs:
     name: Validate and package Windows
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: ${{ inputs.extended_browser && 30 || 18 }}
+    timeout-minutes: ${{ inputs.extended_browser && 35 || 25 }}
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
@@ -101,6 +102,13 @@ jobs:
           npm --prefix electron ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npx playwright install chromium
+          exit $LASTEXITCODE
+      - name: Export the complete Atalaia game for the web
+        shell: pwsh
+        run: |
+          node scripts/prepare-godot.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/build-atalaia.cjs 2>&1 | Tee-Object artifacts/atalaia-build.log
           exit $LASTEXITCODE
       - name: Check sources and build frontend and native helpers once
         shell: pwsh
@@ -156,13 +164,15 @@ jobs:
           $version = (Get-Content electron/package.json | ConvertFrom-Json).version
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/atalaia/web), (Join-Path (Resolve-Path artifacts) "Atalaia-Web-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
       - name: Save the validated delivery in a private draft release
         id: distribution
         uses: actions/github-script@v7
         with:
           script: |
             const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
-            const result=await publishBuild({github,context,core});
+            const version=require('./electron/package.json').version;
+            const result=await publishBuild({github,context,core,additionalFiles:[`artifacts/Atalaia-Web-${version}.zip`]});
             core.setOutput('tag',result.tag);
       - name: Save failure evidence
         if: failure()

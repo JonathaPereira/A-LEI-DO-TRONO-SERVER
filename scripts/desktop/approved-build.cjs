@@ -3,7 +3,13 @@ const { MARKER } = require('./publish-build.cjs');
 const REQUIRED_JOBS = ['Validate and package Windows'];
 // Approval belongs to the exact artifact-producing attempt's completed validation job. The parent
 // run is still in progress while its final, reusable Surge job is executing.
-async function findApprovedBuild({ github, context, version, requested = '' }) {
+async function findApprovedBuild({
+  github,
+  context,
+  version,
+  requested = '',
+  additionalAssets = [],
+}) {
   const pattern = /^desktop-v(\d+\.\d+\.\d+)-run-(\d+)(?:-attempt-(\d+))?$/;
   if (!/^\d+\.\d+\.\d+$/.test(version) || !/^[a-f0-9]{40}$/.test(context.sha))
     throw Error('Identidade do checkout inválida.');
@@ -17,6 +23,7 @@ async function findApprovedBuild({ github, context, version, requested = '' }) {
     `MN-Trono-Frontend-${version}.zip`,
     `MN-Trono-${version}-Windows.exe`,
     `SHA256SUMS-${version}.txt`,
+    ...additionalAssets,
   ];
   const candidates = releases
     .flatMap((release) => {

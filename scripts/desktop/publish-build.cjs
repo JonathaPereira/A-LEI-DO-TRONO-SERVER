@@ -37,7 +37,13 @@ function planBuildRetention(releases) {
     );
   return { keep, remove: builds.filter((b) => !keep.includes(b.id)).map((b) => b.id) };
 }
-async function publishBuild({ github, context, core, root = path.resolve(__dirname, '../..') }) {
+async function publishBuild({
+  github,
+  context,
+  core,
+  additionalFiles = [],
+  root = path.resolve(__dirname, '../..'),
+}) {
   const repo = context.repo,
     { version } = JSON.parse(await fs.readFile(path.join(root, 'electron/package.json'), 'utf8'));
   if (!/^\d+\.\d+\.\d+$/.test(version) || !Number.isSafeInteger(Number(context.runId)))
@@ -46,6 +52,7 @@ async function publishBuild({ github, context, core, root = path.resolve(__dirna
     path.join(root, 'artifacts/windows-download', `MN-Trono-${version}-Windows.exe`),
     path.join(root, 'artifacts', `MN-Trono-Frontend-${version}.zip`),
     path.join(root, 'electron/LEIA-ME-WINDOWS.txt'),
+    ...additionalFiles.map((file) => path.join(root, file)),
   ];
   const bytes = await Promise.all(files.map((file) => fs.readFile(file))),
     sums =
