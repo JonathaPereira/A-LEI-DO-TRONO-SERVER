@@ -124,6 +124,13 @@ release reprova explicitamente essa política, sem relaxar o gate de entrega.
 Isso não comprova captura física. Aceitação Electron/NSIS real e publicação
 dependem da execução Windows do mesmo commit, como descrito abaixo.
 
+A execução Windows `40594109750` aprovou core e browser, mas a fixture
+`desktop-background-voice` tentou entrar na voz durante a restauração automática
+do canal inicial (`joined:false`, zero capturas, “Entre em um canal primeiro”).
+A preparação agora aguarda o reconhecimento da sala e usa o botão público de
+entrada na voz. As medições PCM/RTP e as verificações de janela minimizada,
+coberta e oculta permanecem, sem relaxar limites nem adicionar retries.
+
 Logs e imagens ficam em artifacts/frontend-reset. A rodada 40402075694 aprovou
 1.411 contratos, quatro grupos browser (164 aprovados, dois skips de codec),
 mídia Windows, executável e atualização NSIS real. A entrega foi bloqueada por
