@@ -6,7 +6,7 @@ const {url}=require('../electron/atalaia-config.cjs');
 async function exerciseAtalaia({app,page}) {
  const exportRoot=path.resolve('artifacts/atalaia/web');
  await app.evaluate(async({session},{exportRoot})=>{
-  const fs=require('node:fs/promises'),path=require('node:path');
+  const fs=process.getBuiltinModule('node:fs').promises,path=process.getBuiltinModule('node:path');
   await session.fromPartition('persist:mn-atalaia').protocol.handle('https',async request=>{
    const pathname=new URL(request.url).pathname;
    const name=pathname==='/'?'index.html':pathname.slice(1);
@@ -19,7 +19,8 @@ async function exerciseAtalaia({app,page}) {
  const opened=app.waitForEvent('window');await page.getByRole('button',{name:'Jogar Atalaia',exact:true}).click();
  const game=await opened;await game.waitForURL(url,{waitUntil:'load',timeout:60000});
  await expect(game.locator('canvas')).toBeVisible();
- await expect(game.locator('#status')).toHaveCount(0,{timeout:60000});
+ try { await expect(game.locator('#status')).toHaveCount(0,{timeout:60000}); }
+ catch(error) { const detail=await game.locator('#status-notice').innerText().catch(()=>game.url());throw new Error('Atalaia did not initialize: '+detail,{cause:error}); }
  assert.equal(game.url(),url);
  assert.deepEqual(await game.evaluate(()=>[typeof window.TronoDesktop,typeof require,window.opener]),['undefined','undefined',null]);
  const policy=await app.evaluate(({BrowserWindow,session})=>{
