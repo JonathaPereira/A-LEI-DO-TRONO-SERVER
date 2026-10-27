@@ -225,7 +225,10 @@ O fluxo agora gera NSIS diretamente. A regressão falhou no pacote antigo e
 passou no novo; o instalador 0.3.7 local contém `app-update.yml` também no
 payload NSIS. Typecheck, format:check, build, compilação nativa, sete contratos
 do atualizador, 1.423 contratos core e duas rodadas do smoke empacotado passaram.
-O teste de instalação real permanece para o runner Windows descartável. A
-entrega ainda não foi enviada nem publicada. Instalações afetadas precisam
-instalar manualmente a primeira versão corrigida para recuperar atualizações
-futuras.
+A [execução Windows 40517015220](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40517015220)
+passou no commit `d61f60d`, incluindo jornadas web/Electron, aplicativo
+empacotado e instalação NSIS no runner descartável. A publicação no Surge
+passou; `downloads/latest.yml` e o metadado da página anunciam 0.3.7. O EXE
+público respondeu a HEAD e faixa parcial, e seu download completo teve o
+mesmo SHA-256 da release aprovada. Instalações afetadas ainda precisam
+instalar manualmente a 0.3.7 uma vez para recuperar atualizações futuras.
