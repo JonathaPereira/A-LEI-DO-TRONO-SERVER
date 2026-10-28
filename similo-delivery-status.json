@@ -37,17 +37,17 @@
           },
           {
             "name": "Export the complete Atalaia game for the web",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Prepare Similo art for its separate static domain",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Check sources and build frontend and native helpers once",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -109,5 +109,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/voice-reconnect-grace?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T13:51:34.487Z"
+  "updatedAt": "2026-10-28T13:51:56.036Z"
 }
