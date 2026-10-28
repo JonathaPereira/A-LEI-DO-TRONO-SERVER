@@ -2,10 +2,112 @@
   "source": "3aaf232147bf4c837b2d599d5441b9558ec58966",
   "ref": "codex/similo-online",
   "version": "0.3.11",
-  "status": "dispatching",
-  "workflow": null,
+  "status": "in_progress",
+  "workflow": {
+    "id": 40612206178,
+    "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40612206178",
+    "status": "in_progress",
+    "conclusion": null,
+    "jobs": [
+      {
+        "id": 122566217915,
+        "name": "Validate and package Windows",
+        "status": "in_progress",
+        "conclusion": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-node@v4",
+            "status": "in_progress",
+            "conclusion": null
+          },
+          {
+            "name": "Install dependencies once",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Export the complete Atalaia game for the web",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Prepare Similo art for its separate static domain",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Check sources and build frontend and native helpers once",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Verify contracts and real user journeys",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Package and smoke test the actual executable",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Accept the real installer on the disposable runner",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Prepare the matched frontend and installer download",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Save the validated delivery in a private draft release",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Report failed test summaries",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Save failure evidence",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Post Run actions/setup-node@v4",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "pending",
+            "conclusion": null
+          }
+        ]
+      },
+      {
+        "id": 122566219233,
+        "name": "refresh-instructions",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T00:58:53.245Z"
+  "updatedAt": "2026-10-28T00:59:16.102Z"
 }
