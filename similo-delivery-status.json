@@ -2,12 +2,12 @@
   "source": "e04eb793a8ff0ae20d46fd2225d31e9cc68a3b89",
   "ref": "codex/similo-online",
   "version": "0.3.11",
-  "status": "in_progress",
+  "status": "completed",
   "workflow": {
     "id": 40615361058,
     "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40615361058",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "jobs": [
       {
         "id": 122576476652,
@@ -112,8 +112,8 @@
       {
         "id": 122582087300,
         "name": "Publish validated delivery to Surge / publish",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "steps": [
           {
             "name": "Set up job",
@@ -152,28 +152,33 @@
           },
           {
             "name": "Publish and verify Similo portraits before updating the catalog",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Publish the verified directory to Surge",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Verify published version",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/setup-node@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/checkout@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
           }
         ]
       }
@@ -182,5 +187,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T01:48:00.437Z"
+  "updatedAt": "2026-10-28T01:48:22.019Z"
 }
