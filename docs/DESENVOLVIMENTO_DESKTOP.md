@@ -43,6 +43,14 @@ Use npm test -- --suite browser --profile release e o equivalente --suite deskto
 para reproduzir a seleção da pipeline; --list mostra os arquivos antes de rodar.
 O perfil preserva todos os contratos core e não transforma falhas em retries.
 
+Na voz em segundo plano, o perfil release mede cinco combinações: nativo a 100%
+com janela coberta, minimizada e oculta; nativo a 180% com janela oculta; RNNoise
+a 100% com janela oculta. Cada configuração de áudio conserva seu baseline e
+amostras PCM de cinco segundos, com as mesmas verificações de RTP e recursos.
+Sem perfil, `npm test -- --suite desktop --filter desktop-background-voice`
+executa as nove combinações. A matriz completa continua necessária ao alterar
+processamento, ganho ou comportamento de segundo plano.
+
 Windows full app usa um runner Windows para instalar/compilar uma vez, conferir
 contratos, fluxos essenciais web/Electron, empacotar e aceitar o instalador.
 Depois o job de publicação verifica a entrega e envia ao Surge. extended_browser
@@ -55,6 +63,15 @@ duas rodadas consecutivas locais com o Chromium do Playwright. Uma falha invalid
 a sequência: diagnostique/corrija e reinicie as rodadas, sem retry oculto. Use o
 mesmo build entre rodadas se os fontes não mudaram. Limites exclusivos de runner,
 como aceitação NSIS, permanecem explícitos; não instalar no computador do usuário.
+
+Para medições e aceite final, execute as suítes em sequência: fixtures de arquivos
+distintos ainda podem usar a mesma porta, inclusive Love Letter e o smoke empacotado.
+Uma colisão pode responder com a conta/backend de outro cenário e invalida a execução.
+Portas diferentes também não isolam disputa de CPU, captura e janelas nativas.
+O teste `desktop-remote-native` injeta mouse/teclado na janela de QA e exige o
+desktop sem interação durante esse trecho. Não mover o mouse, digitar ou trocar
+de janela: o Windows pode entregar o clique à janela sobreposta mesmo quando
+Electron informa foco na janela do teste. Não substituir esse gate por foco via DOM.
 
 A suíte desktop inclui updater que importa dependências do Electron e remux que
 exige ffmpeg/ffprobe no PATH. Modelos de mídia sem esses recursos ficam em core.

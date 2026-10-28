@@ -5,10 +5,9 @@ O frontend oferece quatro gêneros modernos/contemporâneos por meio de faixas C
 Lo-fi, EDM, Rock e Eletrônica. Consulte TRILHAS_CC0.md para autores, fontes e URLs.
 
 FALLBACK LOCAL
-Os quatro arquivos MP3 locais abaixo foram compostos/sintetizados especificamente para o protótipo,
+Os três arquivos MP3 locais abaixo foram compostos/sintetizados especificamente para o protótipo,
 sem gravações ou samples de terceiros. Eles permanecem empacotados como fallback caso a fonte CC0
 externa esteja indisponível:
-- tavern_scottish_dance.mp3
 - classical_piano_nocturne.mp3
 - rock_guitar_solo.mp3
 - electronic_summer_nights.mp3

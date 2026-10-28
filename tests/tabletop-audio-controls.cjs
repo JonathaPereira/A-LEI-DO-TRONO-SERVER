@@ -6,11 +6,12 @@ const games = [
   ['azul', 'azulScreen', 24],
   ['splendor', 'splendorScreen', 35],
   ['love-letter', 'loveLetterScreen', 46],
+  ['similo', 'similoScreen', 57],
 ];
 
 /** Shared by the exported web UI and the real Electron call regression. */
 async function exerciseTabletopAudio(page) {
-  const previous = await page.evaluate(() => {
+  const previous = await page.evaluate((keys) => {
     const source = window.TronoAudio;
     window.__tabletopBaseline = {
       source,
@@ -25,20 +26,21 @@ async function exerciseTabletopAudio(page) {
         ?.id,
       enabled: source.sfxEnabled,
       volumes: Object.fromEntries(
-        ['throne', 'azul', 'splendor', 'love-letter'].map((key) => [key, source.gameVolume(key)]),
+        keys.map((key) => [key, source.gameVolume(key)]),
       ),
     };
-  });
+  }, games.map(([key]) => key));
   try {
-    await expect(page.locator('[data-game-audio]')).toHaveCount(4);
     assert.equal(await page.evaluate(() => window.TronoTabletopAudio), undefined);
     for (const [key, screen, value] of games) {
       await page.evaluate((id) => window.TronoPortal.showOnly(id), screen);
       const panel = page.locator(`[data-game-audio="${key}"]`),
         summary = panel.locator('summary');
+      await expect(panel).toHaveCount(1);
       await expect(summary).toBeVisible();
       await summary.click();
       await expect(summary).toHaveAttribute('aria-expanded', 'true');
+      await expect(panel.locator('.tt-audio-panel')).toBeInViewport({ ratio: 1 });
       const input = panel.locator('input');
       await input.fill(String(value));
       await expect(panel.locator('output')).toHaveText(value + '%');
@@ -76,13 +78,9 @@ async function exerciseTabletopAudio(page) {
       await expect(page.locator('.tt-audio[open]')).toHaveCount(0);
     }
     assert.deepEqual(
-      await page.evaluate(() =>
-        Object.fromEntries(
-          ['throne', 'azul', 'splendor', 'love-letter'].map((key) => [
-            key,
-            window.TronoAudio.gameVolume(key),
-          ]),
-        ),
+      await page.evaluate(
+        (keys) => Object.fromEntries(keys.map((key) => [key, window.TronoAudio.gameVolume(key)])),
+        games.map(([key]) => key),
       ),
       Object.fromEntries(games.map(([key, , value]) => [key, value])),
     );

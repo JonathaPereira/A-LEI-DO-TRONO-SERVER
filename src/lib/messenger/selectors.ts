@@ -6,12 +6,6 @@ export function directPerson(state: MessengerSnapshot, id: string | null) {
     state.threads.find((row) => row.id === id)
   );
 }
-export function directUnread(state: MessengerSnapshot) {
-  return (
-    state.threads.reduce((sum, row) => sum + row.unread, 0) +
-    state.friends.filter((row) => row.state === 'pending' && row.incoming).length
-  );
-}
 export function directPeople(state: MessengerSnapshot) {
   const peers = new Map<string, DirectPerson & { readonly unread: number }>();
   for (const entry of [

@@ -16,4 +16,4 @@ A interface oferece quatro faixas modernas/contemporâneas publicadas em **CC0 /
 - https://opengameart.org/sites/default/files/Codename%20Granny%20II_0.ogg
 - https://opengameart.org/sites/default/files/claimed_by_the_void_loop.mp3
 
-As quatro faixas locais antigas continuam no diretório `assets/audio/` apenas como fallback offline/técnico. Elas foram compostas/sintetizadas especificamente para o protótipo e não incorporam gravações ou samples de terceiros.
+As três faixas locais continuam no diretório `assets/audio/` apenas como fallback offline/técnico. Elas foram compostas/sintetizadas especificamente para o protótipo e não incorporam gravações ou samples de terceiros.

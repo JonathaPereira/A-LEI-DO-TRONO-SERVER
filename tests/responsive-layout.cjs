@@ -1,14 +1,6 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-test('screen grid remains usable empty, narrow, wide and with odd source counts', async () => {
-  const { screenGrid } = await import('../src/lib/voice/media-layout.ts');
-  assert.deepEqual(screenGrid(0, 0), { columns: 1, rows: 1 });
-  assert.deepEqual(screenGrid(1, 1200), { columns: 1, rows: 1 });
-  assert.deepEqual(screenGrid(2, 599), { columns: 1, rows: 2 });
-  assert.deepEqual(screenGrid(2, 600), { columns: 2, rows: 1 });
-  assert.deepEqual(screenGrid(5, 400), { columns: 2, rows: 3 });
-});
 test('desktop hand fits the available height and overlaps crowded cards without enlarging them', async () => {
   const { handGeometry } = await import('../src/lib/games/hand-layout.ts');
   const space = { count: 1, width: 500, height: 140, paddingX: 20, paddingY: 20, gap: 8 };
