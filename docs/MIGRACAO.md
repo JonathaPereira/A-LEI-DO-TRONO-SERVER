@@ -119,8 +119,18 @@ movimento normal/reduzido e ampliação. Typecheck, format:check e build aprovad
 de voz passaram com seis verificações cada, sem falhas/skips. Inspeção manual
 conferiu seletores desktop/telefone e ampliação horizontal; sem golden snapshots.
 Capturas/mídia são fixtures e WebSockets/contas de teste são reais/descartáveis.
-Evidências em artifacts/similo-repair. Aceitação Windows/NSIS e publicação da
-1.0.0 ainda pertencem à pipeline do mesmo código; não são comprovadas por Linux.
+Evidências em artifacts/similo-repair. A execução Windows
+[40707264219](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40707264219)
+aprovou jornadas web/Electron, executável, NSIS e publicação no commit de código
+`da447ba`. O site e latest.yml anunciam 1.0.0. O EXE público foi baixado por
+inteiro (142.234.607 bytes) e teve SHA-512 conferido; hashes das cinco folhas de
+arte também passaram. Evidência pública em
+`codex/similo-delivery-control:similo-1.0-production-check.json`.
+
+Backend respondeu HTTP 200 com Similo e recuperação de voz habilitados. Este
+reparo não exige novo backend. Actions não pôde criar o PR pela política do
+repositório: contribuição enviada em `codex/similo-clue-layout`, main preservada,
+compare disponível para criação e merge pelo usuário.
 
 
 Recuperação de voz preparada em `codex/voice-reconnect-grace`, Windows 0.3.12,
