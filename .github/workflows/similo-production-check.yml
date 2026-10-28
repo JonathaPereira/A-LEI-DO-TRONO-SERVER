@@ -1,4 +1,4 @@
-name: Verify published voice recovery delivery
+name: Verify published Trono 1.0 Similo repair
 on:
   push:
     branches: [codex/similo-delivery-control]
@@ -30,9 +30,9 @@ jobs:
             await check('repository',async()=>{
               const main=(await github.rest.git.getRef({...repo,ref:'heads/main'})).data.object.sha;
               const pulls=[];
-              const found=(await github.rest.pulls.list({...repo,head:repo.owner+':codex/voice-reconnect-grace',state:'all'})).data;
+              const found=(await github.rest.pulls.list({...repo,head:repo.owner+':codex/similo-clue-layout',state:'all'})).data;
               for(const p of found) pulls.push({number:p.number,url:p.html_url,state:p.state,mergedAt:p.merged_at,mergeCommit:p.merge_commit_sha});
-              const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:'windows-app.yml',branch:'codex/voice-reconnect-grace',per_page:3})).data.workflow_runs;
+              const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:'windows-app.yml',branch:'codex/similo-clue-layout',per_page:3})).data.workflow_runs;
               const latest=runs[0];
               const jobs=latest?(await github.rest.actions.listJobsForWorkflowRun({...repo,run_id:latest.id})).data.jobs:[];
               return {main,pulls,windows:latest?{url:latest.html_url,source:latest.head_sha,status:latest.status,conclusion:latest.conclusion,jobs:jobs.map(j=>({name:j.name,conclusion:j.conclusion}))}:null};
@@ -74,9 +74,9 @@ jobs:
               }
               return {version:metadata.desktopVersion,source:metadata.source,verified};
             });
-            report.complete=report.errors.length===0&&report.checks.backend?.similo===true&&report.checks.frontend?.version==='0.3.12'&&report.checks.installer?.version==='0.3.12'&&report.checks.art?.version==='0.3.12';
+            report.complete=report.errors.length===0&&report.checks.backend?.similo===true&&report.checks.frontend?.version==='1.0.0'&&report.checks.installer?.version==='1.0.0'&&report.checks.art?.version==='1.0.0';
             report.voiceRecoveryActivated=report.checks.backend?.voiceResume===true;
-            const path='voice-recovery-production-check.json';let sha;
+            const path='similo-1.0-production-check.json';let sha;
             try{sha=(await github.rest.repos.getContent({...repo,path,ref:branch})).data.sha;}catch(e){if(e.status!==404)throw e;}
             await github.rest.repos.createOrUpdateFileContents({...repo,branch,path,sha,message:'chore: record current production verification',content:Buffer.from(JSON.stringify(report,null,2)+'\n').toString('base64')});
             core.summary.addRaw(JSON.stringify(report,null,2),true);await core.summary.write();
