@@ -2,12 +2,12 @@
   "source": "da447baa2df5fe631a8bc3b9890e681538070a1d",
   "ref": "codex/similo-clue-layout",
   "version": "1.0.0",
-  "status": "in_progress",
+  "status": "completed",
   "workflow": {
     "id": 40707264219,
     "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40707264219",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "jobs": [
       {
         "id": 122882633748,
@@ -112,8 +112,8 @@
       {
         "id": 122893593801,
         "name": "Publish validated delivery to Surge / publish",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "steps": [
           {
             "name": "Set up job",
@@ -157,23 +157,28 @@
           },
           {
             "name": "Publish the verified directory to Surge",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Verify published version",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/setup-node@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/checkout@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
           }
         ]
       }
@@ -182,5 +187,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-clue-layout?expand=1",
   "backendRequired": false,
-  "updatedAt": "2026-10-28T14:53:37.767Z"
+  "updatedAt": "2026-10-28T14:53:59.372Z"
 }
