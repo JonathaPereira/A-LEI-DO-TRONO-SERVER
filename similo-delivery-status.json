@@ -2,10 +2,107 @@
   "source": "da447baa2df5fe631a8bc3b9890e681538070a1d",
   "ref": "codex/similo-clue-layout",
   "version": "1.0.0",
-  "status": "dispatching",
-  "workflow": null,
+  "status": "in_progress",
+  "workflow": {
+    "id": 40707264219,
+    "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40707264219",
+    "status": "in_progress",
+    "conclusion": null,
+    "jobs": [
+      {
+        "id": 122882633748,
+        "name": "Validate and package Windows",
+        "status": "in_progress",
+        "conclusion": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "in_progress",
+            "conclusion": null
+          },
+          {
+            "name": "Run actions/setup-node@v4",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Install dependencies once",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Export the complete Atalaia game for the web",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Prepare Similo art for its separate static domain",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Check sources and build frontend and native helpers once",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Verify contracts and real user journeys",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Package and smoke test the actual executable",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Accept the real installer on the disposable runner",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Prepare the matched frontend and installer download",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Save the validated delivery in a private draft release",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Report failed test summaries",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Save failure evidence",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "pending",
+            "conclusion": null
+          }
+        ]
+      },
+      {
+        "id": 122882635870,
+        "name": "refresh-instructions",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-clue-layout?expand=1",
   "backendRequired": false,
-  "updatedAt": "2026-10-28T14:34:22.087Z"
+  "updatedAt": "2026-10-28T14:34:45.615Z"
 }
