@@ -22,17 +22,17 @@
           },
           {
             "name": "Run actions/checkout@v4",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Run actions/setup-node@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Install dependencies once",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -86,6 +86,11 @@
             "conclusion": null
           },
           {
+            "name": "Post Run actions/setup-node@v4",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
             "name": "Post Run actions/checkout@v4",
             "status": "pending",
             "conclusion": null
@@ -104,5 +109,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/voice-reconnect-grace?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T13:50:09.748Z"
+  "updatedAt": "2026-10-28T13:50:31.548Z"
 }
