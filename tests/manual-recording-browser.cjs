@@ -25,8 +25,7 @@ test(
     mkdirSync(artifacts, { recursive: true });
     try {
       const email = 'manual-recording@example.test';
-      await fixture.call('signup', { email, nickname: 'Gravador', password: 'Senha12!' });
-      await fixture.call('verify', { token_hash: [...fixture.links][0][0], type: 'signup' });
+      await fixture.registerAccount({ email, nickname: 'Gravador', password: 'Senha12!' });
       const data = (await fixture.call('login', { email, password: 'Senha12!' })).data;
       browser = await chromium.launch({
         executablePath: process.env.CHROMIUM_EXECUTABLE_PATH,

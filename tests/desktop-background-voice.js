@@ -58,7 +58,10 @@ test('Windows microphone sends continuous PCM with the real app minimized, cover
    else await expect.poll(()=>page.evaluate(()=>window.TronoSocial.noiseState.mode)).toBe('native');
    const before=await page.evaluate(()=>{window.__beforeBackground={track:window.TronoSocial.getLocalAudioTrack(),peers:window.__voicePeers.filter(pc=>pc.connectionState==='connected'),captures:window.__microphoneCaptures.length};return {direct:window.TronoSocial.getLocalAudioTrack()===window.__microphoneCaptures.at(-1).getAudioTracks()[0]};});assert.equal(before.direct,mode==='native'&&gain===100);
    const baseline=await listener.evaluate(()=>window.__sampleReceive());assert(baseline.rms>.003,JSON.stringify({mode,gain,baseline}));
-   for(const visibility of ['covered','minimized','hidden']){
+   // Release samples every window state and audio path; the full suite crosses all nine pairs.
+   const visibilityModes = process.env.MN_TEST_PROFILE === 'release' && !(mode === 'native' && gain === 100)
+     ? ['hidden'] : ['covered', 'minimized', 'hidden'];
+   for(const visibility of visibilityModes){
     phase=mode+' '+gain+' '+visibility;const state=await windowMode(visibility),pcm=await listener.evaluate(()=>window.__sampleReceive());
     const same=await page.evaluate(()=>{const before=window.__beforeBackground;return window.TronoSocial.voiceJoined&&window.TronoSocial.getLocalAudioTrack()===before.track&&before.track.enabled&&before.track.readyState==='live'&&before.captures===window.__microphoneCaptures.length&&before.peers.every(pc=>pc.connectionState==='connected');});assert(same,'Background must not reopen the microphone or reconnect');// Audio continuity is measured by worklet frames and RTP loss.
     // elapsed also includes main-thread message delivery and is diagnostic only.

@@ -44,8 +44,9 @@ de frontend legado: recuperação pelo Git.
 
 ## Preservação e destinos
 
-Matriz por arquivo: [frontend-preservation.csv](frontend-preservation.csv).
-Conserva caminhos/hashes da base e registra decisões/destinos após inspeção.
+O inventário por arquivo da migração foi aposentado. Seu histórico e as decisões
+de destino permanecem no Git; os contratos vigentes estão nesta tabela e na
+arquitetura.
 Assets, vendor, licenças, créditos e documentos distribuídos são fontes protegidas.
 out e .next são saídas.
 
@@ -58,7 +59,7 @@ out e .next são saídas.
 | Conta/rede/chat/arquivos/perfis/mídia                 | Donos existentes observados por snapshots; views novas delegam comandos.                                                                                                                  |
 | Clipes/gravação/soundboard/Remote PC                  | Mesmos armazenamento, autorização e transportes; apresentação reintegrada. Replay Windows continua suspenso conforme capacidade existente.                                                |
 | Backend/Electron/tipos compartilhados                 | Serviços, HTTP/WS/IPC, autorização e persistência preservados. Helpers exigem ambiente nativo.                                                                                            |
-| Apresentação externa antiga                           | 30 views/posicionadores finais retirados após revisão individual, além dos cortes anteriores. Destinos reais na matriz; nenhuma árvore legada paralela.                                   |
+| Apresentação externa antiga                           | 30 views/posicionadores finais retirados após revisão individual, além dos cortes anteriores. Destinos registrados no Git; nenhuma árvore legada paralela.                                   |
 
 Revisão do corte: artifacts/frontend-reset/finish-removal-review.json.
 Inventários e evidências anteriores são artefatos auxiliares, não outra fonte
@@ -304,14 +305,15 @@ além da opção existente de atualizar somente instruções. Dependências, fro
 helpers são instalados/compilados uma vez. Foram retirados a matriz de quatro
 runners, sua agregação, --shard e a transferência de helpers entre máquinas.
 
-Todos os contratos core permanecem. tests/release.json seleciona 13 arquivos
+Todos os contratos core ativos permanecem. tests/release.json seleciona 19 arquivos
 browser e nove desktop de fluxos essenciais: conta, chat/DM, perfil, arquivos,
 gravação, soundboard, partida da Corte, permissões, voz/captura, sessão criptografada,
-PCM de envio/recepção sob carga, controle remoto nativo, runtime e atualização.
+PCM de envio/recepção sob carga, controle remoto nativo, runtime e atualização,
+além de Similo, Atalaia, membros/DMs e recuperação da sinalização de voz.
 Recepção PCM não pode ser pulada no perfil de entrega. Executável empacotado e
 instalador têm aceitação posterior obrigatória. Não há retry automático.
 
-As suítes completas continuam no mesmo npm test. extended_browser inclui os 56
+As suítes completas continuam no mesmo npm test. extended_browser inclui os 60
 arquivos browser quando jogos/cascata ou escopo amplo exigirem. Estresse de dez
 pessoas, combinações extensas de viewport, DSP especializado e drivers não
 bloqueiam toda publicação rotineira; declarar resultado/capacidade ao executá-los.
@@ -321,6 +323,167 @@ artefatos. A regressão rejeita aprovação emprestada de tentativa anterior.
 Confere hashes de ZIP/EXE, manifesto e versão publicada. A aprovação pertence ao
 job Validate and package Windows; mudar o nome exige atualizar o resolver e seu
 teste. Operação: [PUBLICAR_SURGE_LEVE.md](PUBLICAR_SURGE_LEVE.md).
+
+## Enxugamento dos testes
+
+Em 27/10/2026, revisão contra 75340bf retirou os controladores aposentados de
+escolha Original/Discord e da grade antiga de telas, seus casos exclusivos,
+dois helpers sem chamadores e duas verificações da organização de imports CSS.
+Assets, cascata renderizada dos jogos e contratos ativos foram preservados.
+Justificativas por remoção, inventário, revisão e logs ficam em
+`artifacts/test-trim`.
+
+A árvore de testes passou de 309 para 306 arquivos, com 576 linhas a menos.
+As suítes passaram de 180/56/20 para 179/56/20 arquivos core/browser/desktop.
+Dez blocos de cadastro/confirmação usam a fixture HTTP existente; os fluxos de
+autenticação continuam verificando suas etapas explicitamente.
+
+O perfil de entrega mede cinco combinações reais de voz em segundo plano:
+nativo a 100% nos três estados de janela, nativo a 180% oculto e RNNoise a 100%
+oculto. Sem perfil, permanecem as nove combinações. Baseline por configuração,
+amostras de cinco segundos, limiares PCM/RTP e identidade dos recursos continuam
+iguais. Partida completa, rodada humana e gates de distribuição permanecem.
+
+Verificação local contra a base 75340bf, antes da atualização de main, com logs
+em `artifacts/test-trim`:
+
+| Limite | Resultado |
+| --- | --- |
+| Fontes | typecheck, format:check e build aprovados; build de referência 2,8s e posterior 3,9s. |
+| Core | 1.398 aprovados, zero falhas/skips; 44,8s, contra 1.412 em 46,8s antes do corte. Os 14 casos retirados pertenciam aos contratos aposentados e à organização dos imports. |
+| Browser completo | 164 aprovados, zero falhas e dois skips externos de FFmpeg/FFprobe; 544,6s. Reprodução/decodificação Chromium aprovadas. |
+| Browser release | Duas rodadas: 42 aprovados e um skip externo por rodada; 151,4s e 148,2s. Referência anterior: 149,0s. |
+| Electron release | Duas rodadas: 14 aprovados e uma falha de foco do Remote PC em cada; 96,8s e 110,1s. Referência anterior: 14 aprovados e a mesma falha, em 133,6s. Nenhum skip. |
+| Voz em segundo plano | Cinco combinações comprovadas em cada rodada release; 57,4s e 58,7s, contra 80,8s antes. Matriz completa sem perfil aprovada com nove combinações e zero skips, em 92,5s. |
+| Empacotamento local | Executável gerado sem instalação; 7,3s antes e 7,6s depois, sem ganho atribuído ao corte de testes. |
+| Executável real | Smoke do pacote atual aprovado: um teste, zero falhas/skips, em 31,5s. |
+| Revisão | Padrões e especificação: zero achados de implementação. |
+
+Naquela execução, o perfil desktop não ficou integralmente aprovado: o clique nativo do Remote PC
+não foca o campo da janela de QA. A falha ocorreu antes das alterações, repetiu
+isoladamente e permaneceu nas duas rodadas posteriores. O diagnóstico descartável
+confirmou janela focada e comandos aceitos pela ponte RemoteInput, sem estabelecer
+a causa do clique incorreto. O teste e suas asserções permanecem; não há retry ou skip
+para ocultar a falha. Essas duas rodadas não receberam aceite. A revalidação
+sobre a versão 1.0, abaixo, registra o diagnóstico posterior e as rodadas aprovadas.
+
+As medições usam Electron real, WebRTC e PCM recebido por outro cliente, com
+fala WAV alimentando o dispositivo de captura de teste do Chromium. Não comprovam
+microfone físico nem equipamentos do usuário. O bloqueio inicial de HTTP local
+por EACCES foi separado em `blocked-core.log`; as medições válidas usaram acesso
+ao loopback. NSIS não foi instalado neste host e não houve publicação.
+
+Depois dessas medições, a pedido do usuário, main foi atualizada por fast-forward
+para `3707647` (Windows 0.3.7, reparo do atualizador e animações de Love Letter).
+O corte foi reaplicado sem conflitos na branch `codex/test-suite-trim`, criada
+sobre essa base. O perfil release agora inclui os 14 arquivos browser de main.
+Typecheck, format:check, build, 1.409 contratos core e os dois testes browser
+de Love Letter passaram na nova base, sem skips. A primeira execução core teve
+ENOTEMPTY na limpeza temporária de um teste inalterado de empacotamento; os cinco
+casos desse arquivo passaram isoladamente e a nova execução core inteira passou.
+Os logs `main-update-*` preservam ambas as execuções. Essa revalidação cobre esses
+limites; as medições completas browser/Electron acima pertencem à base anterior.
+
+Na continuação, o usuário autorizou aposentar o inventário da migração junto dos
+trechos sem uso comprovado. O CSV e suas referências foram retirados; o histórico
+permanece no Git. Saíram seis módulos aposentados de catálogo, shell e
+posicionamento, além do export LibraryNavigation sem consumidores. O catálogo
+atual e GameAction permanecem. Os testes válidos de janela foram movidos para
+`tests/desktop-window.cjs`, e a integração da Corte passou a testar o dono atual
+`desktop/window`; os casos exclusivos dos modelos aposentados foram retirados.
+
+Foram removidos sete assets sem uso atual, somando 2.983.000 bytes: cinco PNGs de
+leis substituídos pelos SVGs atuais, a antiga faixa de taverna e um ícone de volume.
+Os três fallbacks de áudio e seus créditos permanecem, com a documentação ajustada.
+Conferência local preservou as 48 cartas dinâmicas, todas as leis SVG e referências
+locais do manual, além dos 73 arquivos do manifesto Cinzas com tamanho/hash iguais.
+RNNoise, licenças, recursos ativos e dependências de desenvolvimento permanecem.
+
+Após este corte, as suítes têm 178/55/20 arquivos core/browser/desktop. Typecheck,
+format:check, build, 1.391 casos core, dez casos browser afetados e dois testes
+Electron reais passaram sem falhas ou skips. A seleção browser cobriu catálogo,
+continuidade da chamada, shell, cascata dos jogos, áudio real e a partida completa
+da Corte; Electron cobriu criação/dimensionamento da janela e captura sem perder a voz.
+Revisões de padrões e especificação não encontraram pendências. Justificativas e
+logs estão em `artifacts/unused-audit`. Nessa etapa, a entrada nativa do Remote PC
+ainda estava sem aceite; o corte não alterou nem repetiu esse teste. A continuação
+1.0 abaixo registra sua revalidação.
+
+## Continuação sobre Windows 1.0.0
+
+Em 28/10/2026, a contribuição `codex/test-suite-trim` incorporou por fast-forward
+a main `3c39d82`, preservando a main local e o corte sem commit. Similo, Atalaia
+e a recuperação de voz foram mantidos. O usuário autorizou commit/push desta
+contribuição após a verificação; publicação e instalação não fazem parte da etapa.
+
+A auditoria renovada confirmou os órfãos anteriores e retirou três exports sem
+consumidores: `DiagnosticPanel`, `ConnectionIndicator` e `directUnread`. O
+diagnóstico vigente permanece em `ConnectionDetails`, com o mesmo controlador e
+cópia do relatório; as projeções atuais de mensagens não lidas permanecem. Saíram
+também dois workflows temporários de despacho/cancelamento do Similo 0.3.11 e oito
+arquivos de status, logs e capturas dessa entrega na raiz, somando 3.610.631 bytes.
+Os workflows ativos e os gates de executável, NSIS e publicação foram preservados.
+Razões por remoção, backups temporários e verificações ficam em `artifacts/v1-cleanup`.
+
+A conferência de recursos preservou 48 cartas WebP, cinco leis SVG, três fallbacks
+de música, os links locais do manual e os 73 hashes de Cinzas. Árvores de Atalaia,
+Similo, Cinzas e RNNoise não tiveram alterações. Os terrenos antigos de Atalaia
+continuam usados pelas estradas através de `data/maps.json`, apesar dos fundos novos.
+
+As suítes da base 1.0 passaram de 185/61/20 para 183/60/20 arquivos
+core/browser/desktop, sem alterar comandos, perfis ou formato dos manifestos.
+A árvore de testes/helpers passou de 320 para 315 arquivos e de 68.183 para
+66.976 linhas pelo mesmo inventário, uma redução de 1.207 linhas.
+Dois cenários de chamada agora fecham a gaveta de membros pelo controle público
+nas larguras estreitas; a abertura por padrão continua coberta pelo cenário de
+DMs/membros. Um array nunca preenchido e suas verificações inoperantes foram
+retirados. A fixture de áudio deixou de exigir quatro painéis e passou a exercitar
+também Similo, conservando volume, mute, restauração e persistência por jogo.
+
+No Similo, a verificação das animações esperava a fase de revelação no cliente A,
+mas lia os estilos do cliente B antes de sua atualização. O teste agora aguarda
+a fase pública no próprio B. Uma sonda descartável atrasando somente esse pacote
+em 600 ms reproduziu o vermelho e confirmou o verde após a correção, sem mudar
+animações, timeouts ou asserções.
+
+Essa verificação expôs o menu Som da Corte parcialmente fora da tela em 1280 px:
+o cabeçalho quebrava a linha e o botão voltava à esquerda, com o painel em x=-160,5.
+`margin-left: auto` conserva o alinhamento à direita. O teste existente exige o
+painel inteiro no viewport; PCM real de Splendor e os cinco jogos passaram depois
+da correção. Inspeção descartável conferiu seis larguras entre 390 e 1910 px,
+sem criar golden snapshots ou atribuir aceite visual humano.
+
+O Remote PC original passou sem alterações após reservar o desktop sem interação.
+A sonda Win32 identificou outra janela sobre a posição de QA durante as falhas,
+e o usuário confirmou estar usando o computador. No build final, após o browser
+encerrar e com o desktop reservado, duas rodadas desktop release consecutivas
+passaram com 15 casos cada, zero falhas/skips, em 90,1/97,1 s. O subteste de voz
+levou 50,8 s em cada, com cinco combinações, contra 92,2 s na main antes do corte.
+A matriz sem perfil passou novamente com nove combinações em 92,4 s. O ajuste
+do Som passou no navegador e no executável atualizado, cujo smoke completo levou
+60,6 s, incluindo recursos próprios e a integração Atalaia.
+
+Medição core da mesma main: 1.454 casos em 48,9 s antes; após o corte, 1.422 casos
+em 51,6 s e 48,1 s na rodada final, sem falhas/skips. A variação não comprova ganho
+de duração core. O build levou 7,2/5,3 s com caches locais; o pacote NSIS final
+levou 30,8 s, medido separadamente. Essas
+variações não são atribuídas ao corte de testes. Fontes sintéticas, Chrome
+instalado 156 como fallback do executor e Electron real foram usados. O Chromium
+empacotado do Playwright não está disponível; FFmpeg/FFprobe externos também não.
+Não houve instalação neste Windows nem publicação.
+
+Uma queda de energia interrompeu a segunda rodada browser sem resultado final;
+os fontes e hashes foram conferidos após a retomada. Duas novas rodadas browser
+release consecutivas passaram: 51 aprovados, zero falhas e um skip externo de
+FFmpeg/FFprobe em cada, em 420,4/333,2 s. O browser completo final teve 172
+aprovados, zero falhas e dois skips externos, em 804,9 s, com a partida local de
+três rodadas e a recuperação de voz preservadas. As execuções interrompidas e as falhas
+de carregamento da rodada desktop concorrente permanecem nos logs; não recebem
+aceite nem são tratadas como retries automáticos.
+
+Typecheck, format:check, build, core completo, browser completo, duas rodadas
+release em cada ambiente, matriz completa de voz e smoke empacotado concluídos.
+Revisão do diff completo contra `3c39d82`: padrões e especificação sem achados.
 
 ## Correções e limites das fixtures
 

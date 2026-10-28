@@ -22,14 +22,10 @@ test(
       fixture = await startFixture({ port: 10941, appOrigin: origin });
       const emails = ['library-first@example.test', 'library-second@example.test'];
       for (const [index, email] of emails.entries()) {
-        await fixture.call('signup', {
+        await fixture.registerAccount({
           email,
           nickname: 'Biblioteca ' + index,
           password: 'Senha12!',
-        });
-        await fixture.call('verify', {
-          token_hash: [...fixture.links.keys()].at(-1),
-          type: 'signup',
         });
       }
       const ids = ['avatar', 'cover', 'background', 'download', 'expired', 'stale'].map(

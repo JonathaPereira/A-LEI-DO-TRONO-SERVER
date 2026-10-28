@@ -690,6 +690,11 @@ async function startFixture({
     });
     return { status: r.status, data: await r.json(), headers: r.headers };
   }
+  // Setup only: UI/HTTP authentication regressions still exercise each step explicitly.
+  async function registerAccount(details) {
+    await call('signup', details);
+    await call('verify', { token_hash: [...links.keys()].at(-1), type: 'signup' });
+  }
   async function stop() {
     await stopBackend();
     await new Promise((resolve) => provider.close(resolve));
@@ -701,6 +706,7 @@ async function startFixture({
   return {
     base,
     call,
+    registerAccount,
     users,
     links,
     stop,

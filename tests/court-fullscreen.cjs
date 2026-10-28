@@ -2,7 +2,7 @@
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const { createCourtFullscreen } = require('../src/lib/games/court-fullscreen.ts');
-const { createDesktopShell } = require('../src/lib/desktop/shell.ts');
+const { createDesktopWindow } = require('../src/lib/desktop/window.ts');
 const deferred = () => {
   let resolve, reject;
   const promise = new Promise((a, b) => {
@@ -176,47 +176,25 @@ test('automatic exit rejection is contained and a reentrant disposal cannot issu
   assert.equal(g.requests, 0);
   assert.equal(g.sources.size, 0);
 });
-test('native court and shell controls share one IPC, authoritative window events and pending state, preserving native fullscreen off the board', async () => {
+test('native court and window controls share one IPC, authoritative window events and pending state, preserving native fullscreen off the board', async () => {
   const windows = new Set(),
     initial = deferred(),
     toggle = deferred(),
     source = new Set();
   let requests = 0,
     playing = true;
-  const shell = createDesktopShell({
-    read: () => ({
-      visibleScreen: 'gameScreen',
-      gameRoom: 'sala-cetro',
-      currentRoom: null,
-      independentGameVoice: true,
-      hasIdentity: true,
-      joined: true,
-      status: 'Conectado',
-    }),
-    subscribeSource: () => () => {},
-    events: new EventTarget(),
-    hasChannel: () => true,
-    showScreen() {},
-    showCommunity() {},
-    openLibrary() {},
-    openGame() {},
-    openVoice: async () => true,
-    requestRooms() {},
-    openSettings() {},
-    confirmLeave: () => true,
-    native: {
-      getWindowState: () => initial.promise,
-      onWindowState(fn) {
-        windows.add(fn);
-        return () => windows.delete(fn);
-      },
-      toggleFullscreen() {
-        requests++;
-        return toggle.promise;
-      },
+  const nativeWindow = createDesktopWindow({
+    getWindowState: () => initial.promise,
+    onWindowState(fn) {
+      windows.add(fn);
+      return () => windows.delete(fn);
+    },
+    toggleFullscreen() {
+      requests++;
+      return toggle.promise;
     },
   });
-  shell.start();
+  nativeWindow.start();
   const court = createCourtFullscreen({
     read: () => ({ playing, rootFullscreen: false, hasFullscreen: false }),
     subscribeSource(fn) {
@@ -229,11 +207,11 @@ test('native court and shell controls share one IPC, authoritative window events
     exitDocument() {
       throw Error('Native must never exit a DOM fullscreen');
     },
-    native: shell,
+    native: nativeWindow,
   });
   court.start();
   const pending = court.toggle();
-  void shell.toggleFullscreen();
+  void nativeWindow.toggleFullscreen();
   assert.equal(requests, 1);
   assert.equal(court.getSnapshot().pending, true);
   for (const fn of windows) fn({ fullscreen: true });
@@ -247,13 +225,13 @@ test('native court and shell controls share one IPC, authoritative window events
   playing = false;
   source.forEach((fn) => fn());
   assert.equal(court.getSnapshot().active, false);
-  assert.equal(shell.getSnapshot().fullscreen, true);
+  assert.equal(nativeWindow.getSnapshot().fullscreen, true);
   assert.equal(requests, 1);
   court.dispose();
   const snapshot = court.getSnapshot();
   for (const fn of windows) fn({ fullscreen: false });
   assert.equal(court.getSnapshot(), snapshot);
   assert.equal(source.size, 0);
-  shell.dispose();
+  nativeWindow.dispose();
   assert.equal(windows.size, 0);
 });

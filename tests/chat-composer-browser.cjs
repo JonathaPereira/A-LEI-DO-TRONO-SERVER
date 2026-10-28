@@ -20,14 +20,10 @@ test(
     const fixture = await startFixture({ port: 11973, appOrigin: origin, directAttachments: true });
     let browser;
     try {
-      await fixture.call('signup', {
+      await fixture.registerAccount({
         email: 'react@example.test',
         nickname: 'Compositor',
         password: 'Senha12!',
-      });
-      await fixture.call('verify', {
-        token_hash: [...fixture.links.keys()].at(-1),
-        type: 'signup',
       });
       browser = await chromium.launch({
         executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,

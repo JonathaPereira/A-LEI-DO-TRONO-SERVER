@@ -339,6 +339,7 @@ test(
           .click();
         await expect(screen(a).locator('[data-phase="resolving"]')).toBeVisible();
         if (round === 0) {
+          await expect(screen(b).locator('[data-phase="resolving"]')).toBeVisible();
           const animations = await screen(b)
             .locator('[data-testid="similo-board"] [data-card-id]')
             .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).animationName));

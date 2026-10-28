@@ -29,14 +29,10 @@ test(
       errors = [];
     try {
       fixture = await startFixture({ port: 10933, appOrigin: origin });
-      await fixture.call('signup', {
+      await fixture.registerAccount({
         email: 'throne@example.test',
         nickname: 'Casa Humana',
         password: 'Senha12!',
-      });
-      await fixture.call('verify', {
-        token_hash: [...fixture.links.keys()].at(-1),
-        type: 'signup',
       });
       const data = (
         await fixture.call('login', { email: 'throne@example.test', password: 'Senha12!' })

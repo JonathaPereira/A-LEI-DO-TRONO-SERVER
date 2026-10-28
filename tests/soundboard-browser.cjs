@@ -39,11 +39,7 @@ test(
     try {
       fixture = await startFixture({ port: 10922, appOrigin: origin, soundboard: true });
       const email = 'soundboard@example.test';
-      await fixture.call('signup', { email, nickname: 'Efeitos', password: 'Senha12!' });
-      await fixture.call('verify', {
-        token_hash: [...fixture.links.keys()].at(-1),
-        type: 'signup',
-      });
+      await fixture.registerAccount({ email, nickname: 'Efeitos', password: 'Senha12!' });
       const account = (await fixture.call('login', { email, password: 'Senha12!' })).data;
       const library = [
         {
@@ -301,11 +297,7 @@ test(
         'two browser clients receive room effects, restart the same players and deafen only the receiver',
         async () => {
           const email = 'soundboard-receiver@example.test';
-          await fixture.call('signup', { email, nickname: 'Ouvinte', password: 'Senha12!' });
-          await fixture.call('verify', {
-            token_hash: [...fixture.links.keys()].at(-1),
-            type: 'signup',
-          });
+          await fixture.registerAccount({ email, nickname: 'Ouvinte', password: 'Senha12!' });
           const receiver = (await fixture.call('login', { email, password: 'Senha12!' })).data;
           const receiverContext = await browser.newContext({
             permissions: ['microphone'],

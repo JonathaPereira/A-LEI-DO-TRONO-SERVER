@@ -523,6 +523,10 @@ test(
         [390, 844],
       ]) {
         await viewer.setViewportSize({ width, height });
+        if (width <= 1000 && (await viewer.locator('#communityMembers').isVisible())) {
+          await viewer.getByRole('button', { name: 'Ocultar lista de membros', exact: true }).click();
+          await expect(viewer.locator('#communityMembers')).toBeHidden();
+        }
         const focusBox = await stream.boundingBox(),
           head = await call.locator(':scope > header').boundingBox(),
           controls = await call.locator('footer').boundingBox();

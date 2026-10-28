@@ -98,16 +98,17 @@ test(
           ['azul', 24],
           ['splendor', 35],
           ['love-letter', 46],
+          ['similo', 57],
         ])
           window.TronoAudio.setGameVolume(key, v);
         return Object.fromEntries(
-          ['throne', 'azul', 'splendor', 'love-letter'].map((k) => [
+          ['throne', 'azul', 'splendor', 'love-letter', 'similo'].map((k) => [
             k,
             window.TronoAudio.gameVolume(k),
           ]),
         );
       });
-      assert.deepEqual(state, { throne: 13, azul: 24, splendor: 35, 'love-letter': 46 });
+      assert.deepEqual(state, { throne: 13, azul: 24, splendor: 35, 'love-letter': 46, similo: 57 });
       await page.reload();
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);
@@ -117,7 +118,7 @@ test(
       assert.deepEqual(
         await page.evaluate(() =>
           Object.fromEntries(
-            ['throne', 'azul', 'splendor', 'love-letter'].map((k) => [
+            ['throne', 'azul', 'splendor', 'love-letter', 'similo'].map((k) => [
               k,
               window.TronoAudio.gameVolume(k),
             ]),

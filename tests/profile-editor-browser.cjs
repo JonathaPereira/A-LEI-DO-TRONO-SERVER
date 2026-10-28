@@ -22,11 +22,7 @@ test(
       fixture = await startFixture({ port: 10945, appOrigin: origin });
       const emails = ['editor-first@example.test', 'editor-second@example.test'];
       for (const [index, email] of emails.entries()) {
-        await fixture.call('signup', { email, nickname: 'Editor ' + index, password: 'Senha12!' });
-        await fixture.call('verify', {
-          token_hash: [...fixture.links.keys()].at(-1),
-          type: 'signup',
-        });
+        await fixture.registerAccount({ email, nickname: 'Editor ' + index, password: 'Senha12!' });
       }
       const ids = [1, 2, 3, 4].map((n) => '21000000-0000-4000-8000-' + String(n).padStart(12, '0'));
       const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');

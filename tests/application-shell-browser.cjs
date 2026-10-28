@@ -93,19 +93,11 @@ test(
     try {
       const email = 'court-return@example.test',
         password = 'Senha12!';
-      await fixture.call('signup', { email, nickname: 'Conta da Corte', password });
-      await fixture.call('verify', {
-        token_hash: [...fixture.links.keys()].at(-1),
-        type: 'signup',
-      });
-      await fixture.call('signup', {
+      await fixture.registerAccount({ email, nickname: 'Conta da Corte', password });
+      await fixture.registerAccount({
         email: 'community-only@example.test',
         nickname: 'Só Comunidade',
         password,
-      });
-      await fixture.call('verify', {
-        token_hash: [...fixture.links.keys()].at(-1),
-        type: 'signup',
       });
       browser = await chromium.launch({
         executablePath: process.env.CHROMIUM_EXECUTABLE_PATH || undefined,
