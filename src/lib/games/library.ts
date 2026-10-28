@@ -5,6 +5,7 @@ export type GameDestination =
   | 'roguelite'
   | 'splendor'
   | 'ticket-to-ride'
+  | 'similo'
   | 'love-letter'
   | 'nexus'
   | 'atalaia'
@@ -16,6 +17,7 @@ export const GAME_LINKS = Object.freeze([
   { id: 'azul', label: '✥ Azul' },
   { id: 'roguelite', label: '✦ Cinzas do Abismo' },
   { id: 'splendor', label: '◇ Splendor' },
+  { id: 'similo', label: '◈ Similo' },
   { id: 'love-letter', label: '✉ Love Letter' },
   { id: 'atalaia', label: '✦ Atalaia' },
   { id: 'nexus', label: '✧ Nexus' },

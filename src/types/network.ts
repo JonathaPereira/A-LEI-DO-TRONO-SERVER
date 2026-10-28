@@ -28,6 +28,7 @@ export interface NetworkFeatures {
   readonly azul: boolean;
   readonly splendor: boolean;
   readonly loveLetter: boolean;
+  readonly similo?: boolean;
   readonly ticketToRide: boolean;
   readonly remotePc: boolean;
   readonly remotePcProtocol: number;

@@ -16,6 +16,7 @@ import type { createChannelService } from './channel-service';
 import type { createThroneService } from './throne-service';
 import type { createAzulService } from './azul-service';
 import type { createSplendorService } from './splendor-service';
+import type { createSimiloService } from './similo-service';
 import type { createLoveLetterService } from './love-letter-service';
 import type { createTicketToRideService } from './ticket-to-ride-service';
 import type { createCommunity } from './community';
@@ -53,6 +54,7 @@ interface Options {
   throne: ReturnType<typeof createThroneService>;
   azul: ReturnType<typeof createAzulService>;
   splendor: ReturnType<typeof createSplendorService>;
+  similo: ReturnType<typeof createSimiloService>;
   loveLetter: ReturnType<typeof createLoveLetterService>;
   ticketToRide: ReturnType<typeof createTicketToRideService>;
   remotePc: RemotePc;
@@ -73,6 +75,7 @@ export function createSocketGateway({
   azul: azulService,
   splendor: splendorService,
   loveLetter: loveLetterService,
+  similo: similoService,
   ticketToRide: ticketToRideService,
   remotePc,
   community,
@@ -166,6 +169,7 @@ export function createSocketGateway({
               azulService.disconnect(ws);
               splendorService.disconnect(ws);
               loveLetterService.disconnect(ws);
+              similoService.disconnect(ws);
               ticketToRideService.disconnect(ws);
             }
             if (ws.guest?.id !== identity.id) channels.leaveRoom(ws, 'guest-change');
@@ -226,6 +230,7 @@ export function createSocketGateway({
               azulService.disconnect(ws);
               splendorService.disconnect(ws);
               loveLetterService.disconnect(ws);
+              similoService.disconnect(ws);
               ticketToRideService.disconnect(ws);
               channels.leaveRoom(ws, 'account-change');
             }
@@ -240,6 +245,7 @@ export function createSocketGateway({
                   azulService.disconnect(other);
                   splendorService.disconnect(other);
                   loveLetterService.disconnect(other);
+                  similoService.disconnect(other);
                   ticketToRideService.disconnect(other);
                   other.account = null;
                   other.identityScope.abort();
@@ -277,6 +283,7 @@ export function createSocketGateway({
               azulService.disconnect(ws);
               splendorService.disconnect(ws);
               loveLetterService.disconnect(ws);
+              similoService.disconnect(ws);
               ticketToRideService.disconnect(ws);
               ws.account = null;
               channels.leaveRoom(ws, 'auth-expired');
@@ -349,6 +356,9 @@ export function createSocketGateway({
           break;
         case 'splendor':
           splendorService.handle(ws, message);
+          break;
+        case 'similo':
+          similoService.handle(ws, message);
           break;
         case 'love-letter':
           loveLetterService.handle(ws, message);
@@ -472,6 +482,7 @@ export function createSocketGateway({
       azulService.disconnect(ws);
       splendorService.disconnect(ws);
       loveLetterService.disconnect(ws);
+      similoService.disconnect(ws);
       ticketToRideService.disconnect(ws);
       community.note(ws);
       channels.leaveRoom(ws, 'disconnect');
@@ -513,6 +524,7 @@ export function createSocketGateway({
           azulService.disconnect(ws);
           splendorService.disconnect(ws);
           loveLetterService.disconnect(ws);
+          similoService.disconnect(ws);
           ticketToRideService.disconnect(ws);
           ws.account = null;
           ws.identityScope.abort();
@@ -531,6 +543,7 @@ export function createSocketGateway({
       azulService.updateAccount(account);
       splendorService.updateAccount(account);
       loveLetterService.updateAccount(account);
+      similoService.updateAccount(account);
       ticketToRideService.updateAccount(account);
       for (const ws of wss.clients)
         if (ws.account?.id === account.id) {

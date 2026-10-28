@@ -53,7 +53,7 @@ jobs:
           script: |
             const {findApprovedBuild}=require('./scripts/desktop/approved-build.cjs');
             const {version}=require('./electron/package.json');
-            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG,additionalAssets:[`Atalaia-Web-${version}.zip`]});
+            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG,additionalAssets:[`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`]});
             core.setOutput('tag',approved.tag);
             core.setOutput('version',approved.version);
             core.notice('Approved delivery: '+approved.tag+' '+approved.sha);
@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts/surge-delivery
-          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --pattern "Atalaia-Web-$APP_VERSION.zip" --dir artifacts/surge-delivery
+          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --pattern "Atalaia-Web-$APP_VERSION.zip" --pattern "Similo-Art-$APP_VERSION.zip" --dir artifacts/surge-delivery
           python3 <<'PY'
           from pathlib import Path, PurePosixPath
           import base64, hashlib, os, re, zipfile
@@ -101,7 +101,18 @@ jobs:
               assert metadata['executable']==executable
               assert all(name in z.namelist() for name in ['index.html']+[executable+'.'+ext for ext in ['js','wasm','pck']])
               z.extractall(root/'atalaia')
-          print('Frontend, installer and update manifest verified.')
+          art=root/f'Similo-Art-{version}.zip'
+          assert hashlib.file_digest(art.open('rb'),'sha256').hexdigest()==sums[art.name]
+          with zipfile.ZipFile(art) as z:
+              expected={'v1/'+theme+'.webp' for theme in ['animals','history','tales','monsters','myths']}
+              assert {p for p in z.namelist() if not p.endswith('/')}==expected|{'version.json'}
+              metadata=json.loads(z.read('version.json'))
+              assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
+              assert set(metadata['files'])==expected
+              for file,digest in metadata['files'].items():
+                  assert hashlib.sha256(z.read(file)).hexdigest()==digest
+              z.extractall(root/'similo-art')
+          print('Frontend, installer, art and update manifest verified.')
           PY
       - name: Publish and verify Atalaia before updating the catalog
         env:
@@ -112,6 +123,22 @@ jobs:
           npx --yes surge@0.46.0 artifacts/surge-delivery/atalaia atalaia-mn.surge.sh
           curl --fail --silent --show-error --retry 3 https://atalaia-mn.surge.sh/version.json -o artifacts/surge-delivery/atalaia-published.json
           cmp artifacts/surge-delivery/atalaia/version.json artifacts/surge-delivery/atalaia-published.json
+      - name: Publish and verify Similo portraits before updating the catalog
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        shell: bash
+        run: |
+          npx --yes surge@0.46.0 artifacts/surge-delivery/similo-art similo-mn.surge.sh
+          curl --fail --silent --show-error --retry 3 https://similo-mn.surge.sh/version.json -o artifacts/surge-delivery/similo-published.json
+          cmp artifacts/surge-delivery/similo-art/version.json artifacts/surge-delivery/similo-published.json
+          python3 <<'PYART'
+          import json,hashlib,urllib.request
+          from pathlib import Path
+          metadata=json.loads(Path('artifacts/surge-delivery/similo-published.json').read_text())
+          for file,digest in metadata['files'].items():
+              with urllib.request.urlopen('https://similo-mn.surge.sh/'+file, timeout=60) as response:
+                  assert hashlib.sha256(response.read()).hexdigest()==digest
+          PYART
       - name: Publish the verified directory to Surge
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}

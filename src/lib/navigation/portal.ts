@@ -15,6 +15,7 @@ export const primaryScreens = [
   'splendorScreen',
   'ticketToRideScreen',
   'loveLetterScreen',
+  'similoScreen',
 ] as const;
 export type PrimaryScreen = (typeof primaryScreens)[number];
 export interface PortalIdentity {

@@ -236,7 +236,7 @@ test(
       );
       await page.getByRole('button', { name: 'Biblioteca de jogos', exact: true }).click();
       await expect(page.locator('#gamesScreen')).toBeVisible();
-      await expect(page.locator('#gamesScreen button[data-game]')).toHaveCount(8);
+      await expect(page.locator('#gamesScreen button[data-game]')).toHaveCount(9);
       for (const game of ['throne', 'roguelite']) {
         phase = 'installed catalogue artwork ' + game;
         const artwork = page.locator('#gamesScreen [data-game=' + game + '] img');

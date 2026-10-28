@@ -19,6 +19,7 @@ interface LibraryRuntime extends Window {
   };
   TronoSplendor: { open(): void };
   TronoTicketToRide: { open(): void };
+  TronoSimilo: { open(): void };
   TronoLoveLetter: { open(): void };
   TronoRoguelite: { open(): void };
   TronoAtalaia: { open(): void };
@@ -42,6 +43,7 @@ const screenRoutes: Readonly<Record<string, GameDestination>> = Object.freeze({
   splendorScreen: 'splendor',
   ticketToRideScreen: 'ticket-to-ride',
   loveLetterScreen: 'love-letter',
+  similoScreen: 'similo',
   nexusScreen: 'nexus',
   atalaiaScreen: 'atalaia',
 });
@@ -84,6 +86,8 @@ export function initializeGameLibrary(target: Window): () => void {
           return runtime.TronoSplendor.open();
         case 'ticket-to-ride':
           return runtime.TronoTicketToRide.open();
+        case 'similo':
+          return runtime.TronoSimilo.open();
         case 'love-letter':
           return runtime.TronoLoveLetter.open();
         case 'atalaia':

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { CallNavigationSnapshot } from '../../types/call-navigation';
 import type { PrimaryScreen, PortalSnapshot } from '../../lib/navigation/portal';
@@ -29,6 +30,7 @@ const GAME_SCREENS = new Set<PrimaryScreen>([
   'azulScreen',
   'splendorScreen',
   'loveLetterScreen',
+  'similoScreen',
   'ticketToRideScreen',
   'rogueliteScreen',
   'nexusScreen',
@@ -61,6 +63,13 @@ const games: readonly {
     tag: 'ESTRATÉGIA · 2–4 JOGADORES',
     description: 'Gemas, prestígio e uma boa oportunidade.',
     image: '/assets/games/splendor-cover.webp',
+  },
+  {
+    id: 'similo',
+    title: 'Similo',
+    tag: 'DEDUÇÃO COOPERATIVA · 2–8 JOGADORES',
+    description: 'Uma pista, mil conexões. Misture temas e descubra o segredo.',
+    image: '/assets/similo/cover.svg',
   },
   {
     id: 'love-letter',
@@ -678,6 +687,12 @@ export function ApplicationShell({
   const entry = !session?.user && !session?.guest;
   const screen = entry ? 'portalScreen' : (portal?.screen ?? 'portalScreen'),
     game = GAME_SCREENS.has(screen);
+  const [similoControls, setSimiloControls] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setSimiloControls(
+      screen === 'similoScreen' ? document.getElementById('similoShellControls') : null,
+    );
+  }, [screen]);
   const [drawer, setDrawer] = useState(false),
     [members, setMembers] = useState(true);
   const memberIdentity = session?.user?.id ?? session?.guest?.id ?? null;
@@ -831,7 +846,11 @@ export function ApplicationShell({
               </section>
             </main>
           </div>
-          <div id="gameResourceDock" className={styles.gameResources} hidden={!game}>
+          <div
+            id="gameResourceDock"
+            className={styles.gameResources}
+            hidden={!game || screen === 'similoScreen'}
+          >
             {runtime && (
               <button
                 type="button"
@@ -843,7 +862,30 @@ export function ApplicationShell({
             )}
           </div>
           <div className={styles.gameStage}>{children(game, screen)}</div>
-          {game && runtime && (
+          {similoControls &&
+            runtime &&
+            createPortal(
+              <>
+                <button
+                  type="button"
+                  aria-label={members ? 'Ocultar membros' : 'Mostrar membros'}
+                  aria-expanded={members}
+                  aria-controls="communityMembers"
+                  onClick={() => setMembers(!members)}
+                >
+                  <Icon name="members" size={18} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Recursos da Corte"
+                  onClick={() => runtime.TronoCallSettings.open('resources')}
+                >
+                  <Icon name="settings" size={18} />
+                </button>
+              </>,
+              similoControls,
+            )}
+          {game && screen !== 'similoScreen' && runtime && (
             <button
               className={styles.gameReturn}
               onClick={() => void runtime.TronoGameLibrary.open('library')}
@@ -851,7 +893,7 @@ export function ApplicationShell({
               <Icon name="back" size={15} /> Biblioteca de jogos
             </button>
           )}
-          {game && !members && (
+          {game && screen !== 'similoScreen' && !members && (
             <button
               type="button"
               className={styles.gameMembersToggle}

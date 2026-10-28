@@ -5,6 +5,7 @@ import { RoomScreen } from '../games/room-screen';
 import { GameScreen } from '../games/game-screen';
 import { AzulScreen } from '../games/azul-screen';
 import { SplendorScreen } from '../games/splendor-screen';
+import { SimiloScreen } from '../games/similo-screen';
 import { LoveLetterScreen } from '../games/love-letter-screen';
 import { TicketToRideScreen } from '../games/ticket-to-ride-screen';
 import { RogueliteScreen } from '../games/roguelite-screen';
@@ -33,6 +34,7 @@ export function GameSurface({ active, screen }: { active: boolean; screen: Prima
         <AzulScreen />
         <SplendorScreen />
         <LoveLetterScreen />
+        <SimiloScreen />
         <TicketToRideScreen />
         <RogueliteScreen />
         <NexusScreen />

@@ -98,6 +98,42 @@ e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde
 
 ### Evidência vigente
 
+Similo integrado na contribuição `codex/similo-online`, sobre a main `9149a52`,
+preparando Windows 0.3.11. O usuário aprovou o protótipo e solicitou integração
+com mesa escura, capitão alternado, HUD ajustado e informações flutuantes nas
+120 cartas. Conta, backend, socket, áudio, voz e membros mantêm seus donos.
+O serviço autoritativo valida ator/revisão e projeta segredo/mão somente para o
+informante. Todos votam antes da decisão do capitão. Sem SQL ou ranking novo.
+
+Typecheck, format:check, build e 1.441 contratos core passaram localmente, sem
+falhas/skips. Fluxo Similo com três clientes reais completou vitória/derrota,
+baralhos misturados, privacidade, divergência, informações, dimensões de janela
+e continuidade de microfone/câmera/tela. Imagens e mídia são fixtures explícitas
+conforme `games/similo/README.md`; evidências em `artifacts/similo`.
+O fluxo final do Similo passou duas vezes consecutivas, incluindo animação normal,
+movimento reduzido e suspense autoritativo de 2,2 segundos. DMs, membros e shell
+e Love Letter passaram nas duas rodadas da seleção afetada: oito verificações
+por rodada, sem falhas/skips, incluindo as partidas completas. Windows/NSIS e
+publicação pertencem ao workflow do mesmo commit. Fontes não comprovam deploy.
+O backend precisa ser atualizado com a contribuição e anunciar `features.similo`.
+As artes são entregues separadamente em `similo-mn.surge.sh`, com hashes da mesma
+execução, antes do frontend/instalador; isso conserva o limite do pacote Surge.
+
+
+A primeira execução Windows `40612206178`, no commit `3aaf232`, aprovou os
+contratos e as jornadas do Similo, mas encerrou a jornada do Atalaia por timeout.
+As evidências retiveram combate e campanha recarregada; nenhuma entrega foi
+publicada. O fixture agora traz a aba Godot à frente nos gestos, limita esperas,
+registra fases e encerra contexto e conexões dos servidores estáticos. Mantém
+120 s globais e as verificações de jogo, CSV, save e mídia.
+
+Uma conferência com oito participantes reproduziu sete votos invadindo outras
+cartas em janela baixa. A apresentação agrupa votos após os três primeiros num
+marcador com contagem e nomes acessíveis. A regressão usa oito contas de fixture,
+login e WebSocket reais e três dimensões de tela. As duas rodadas finais de
+Similo (três/oito pessoas) e Atalaia passaram com três cenários por rodada,
+sem falhas/skips, em `artifacts/similo/release-fix-round1/2.log`.
+
 Entrega de avatares de DMs e membros, Windows 0.3.10, sobre main `6badf3c`:
 mensagens próprias/recebidas usam o perfil existente; painel único abre por
 padrão e acompanha chamada, texto, DMs, catálogo e jogos, com online/offline e

@@ -9,6 +9,7 @@ on:
         'src/**',
         'public/**',
         'games/atalaia/**',
+        'games/similo/**',
         'server/**',
         'scripts/**',
         'tests/**',
@@ -60,7 +61,7 @@ jobs:
             const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
             const release=releases.find(r=>r.tag_name===tag);
             if(!release?.draft)throw Error('Only a draft release can have its instructions refreshed.');
-            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`,`Atalaia-Web-${version}.zip`];
+            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`,`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`];
             const lines=names.map(name=>{
               const asset=release.assets.find(a=>a.name===name);
               if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
@@ -110,6 +111,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/build-atalaia.cjs 2>&1 | Tee-Object artifacts/atalaia-build.log
           exit $LASTEXITCODE
+      - name: Prepare Similo art for its separate static domain
+        run: node scripts/build-similo-art.cjs
       - name: Check sources and build frontend and native helpers once
         shell: pwsh
         run: |
@@ -160,6 +163,7 @@ jobs:
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/atalaia/web), (Join-Path (Resolve-Path artifacts) "Atalaia-Web-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/similo-art), (Join-Path (Resolve-Path artifacts) "Similo-Art-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
       - name: Save the validated delivery in a private draft release
         id: distribution
         uses: actions/github-script@v7
@@ -167,7 +171,7 @@ jobs:
           script: |
             const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
             const version=require('./electron/package.json').version;
-            const result=await publishBuild({github,context,core,additionalFiles:[`artifacts/Atalaia-Web-${version}.zip`]});
+            const result=await publishBuild({github,context,core,additionalFiles:[`artifacts/Atalaia-Web-${version}.zip`,`artifacts/Similo-Art-${version}.zip`]});
             core.setOutput('tag',result.tag);
       - name: Report failed test summaries
         if: failure()
@@ -193,6 +197,7 @@ jobs:
             artifacts/windows-*.log
             artifacts/atalaia-build.log
             artifacts/atalaia/*.png
+            artifacts/similo/screens/*.png
             artifacts/frontend-reset/call-qa
             artifacts/frontend-reset/auth-regression/*.png
             artifacts/profile-media*/failure-*.png

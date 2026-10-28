@@ -27,7 +27,7 @@ test('Atalaia runs its actual Godot export, saves combat, downloads CSV and pres
  const gameServer=express().use((req,res,next)=>{gameRequests++;gameFiles.add(req.path);if(req.path.endsWith('.audio.position.worklet.js'))workletRequests++;next();}).use(express.static(path.resolve('artifacts/atalaia/web'))).listen(0,'127.0.0.1');
  await new Promise(r=>gameServer.on('listening',r));
  const mirror='http://127.0.0.1:'+gameServer.address().port+'/';
- const fixture=await startFixture({port:10863,appOrigin:origin});let browser,game;const gameErrors=[];
+ const fixture=await startFixture({port:10863,appOrigin:origin});let browser,game,context;const gameErrors=[];const started=Date.now();const checkpoint=phase=>console.info('Atalaia QA:',JSON.stringify({phase,elapsedMs:Date.now()-started}));
  try{
   const metadata=JSON.parse(await fs.readFile('artifacts/atalaia/web/version.json','utf8'));
   assert.match(metadata.executable,/^atalaia-\d+\.\d+\.\d+-(?:local|[a-f0-9]{12})$/);
@@ -37,7 +37,7 @@ test('Atalaia runs its actual Godot export, saves combat, downloads CSV and pres
   await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});
   const {data}=await fixture.call('login',{email,password:'Senha12!'});
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||(process.platform==='linux'?'/usr/bin/chromium':undefined),args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio']});
-  const context=await browser.newContext({viewport:{width:1600,height:1050},permissions:['microphone','camera']});
+  context=await browser.newContext({viewport:{width:1600,height:1050},permissions:['microphone','camera']});
   context.on('page',p=>{
    p.on('pageerror',e=>{if(p.url().startsWith(mirror))gameErrors.push(e.message);});
    p.on('console',m=>{if(m.type()==='error'&&m.location().url.startsWith(mirror))gameErrors.push(m.text());});
@@ -57,19 +57,23 @@ test('Atalaia runs its actual Godot export, saves combat, downloads CSV and pres
   await page.evaluate(()=>window.TronoGames.openLibrary());
   await page.locator('#gamesScreen [data-game=atalaia]').click();
   const screen=page.locator('#atalaiaScreen');await expect(screen).toBeVisible();assert.equal(gameRequests,0);
-  const popupPromise=context.waitForEvent('page');
+  checkpoint('launch');
+  const popupPromise=context.waitForEvent('page',{timeout:15000});
   await screen.getByRole('button',{name:'Jogar Atalaia',exact:true}).click();
   game=await popupPromise;
+  game.setDefaultTimeout(15000);
   await game.waitForLoadState();
+  checkpoint('popup-loaded');
   assert.equal(game.url(),mirror);assert.equal(await page.evaluate(()=>window.__atalaiaRequestedURL),gameURL);
   assert.equal(await game.evaluate(()=>window.opener),null);assert.equal(await game.evaluate(()=>sessionStorage.getItem('mn-auth-session-v1')),null);
   const frame=game.mainFrame();
   await expect(frame.locator('#status')).toHaveCount(0,{timeout:60000});
+  checkpoint('godot-ready');
   for(const extension of ['js','wasm','pck'])assert(gameFiles.has('/'+metadata.executable+'.'+extension),'Game loads the versioned '+extension+' artifact');
   assert.equal(await frame.evaluate(()=>typeof window.TronoDesktop),'undefined');
   // Godot consumes canvas input on its frames; wait for the scene/layout to
   // process each gesture before sending the next one, including on slow GPUs.
-  const painted=()=>game.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const painted=async()=>{await game.bringToFront();return game.evaluate(()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Atalaia frame wait expired: '+JSON.stringify({visibility:document.visibilityState,focus:document.hasFocus()}))),5000);requestAnimationFrame(()=>requestAnimationFrame(()=>{clearTimeout(timer);resolve();}));}));};
   const click=async(x,y)=>{const box=await frame.locator('canvas').boundingBox();const scale=Math.min(box.width/1600,box.height/900);await game.mouse.click(box.x+(box.width-1600*scale)/2+x*scale,box.y+(box.height-900*scale)/2+y*scale);await painted();};
   await painted();
   await click(800,545);await click(120,850);await click(115,440);
@@ -77,16 +81,19 @@ test('Atalaia runs its actual Godot export, saves combat, downloads CSV and pres
   await expect.poll(async()=>{const save=await readSave(frame);return save?.wave;},{timeout:20000}).toBe(1);
   const saved=await readSave(frame);assert.equal(saved.towers.length,1);
   await game.screenshot({path:'artifacts/atalaia/integrated-wave.png'});
-  const downloadPromise=game.waitForEvent('download');await click(1390,788);const download=await downloadPromise;
+  checkpoint('wave-saved');
+  const downloadPromise=game.waitForEvent('download',{timeout:15000});await click(1390,788);const download=await downloadPromise;
   assert.match(download.suggestedFilename(),/^atalaia-dano-onda-01\.csv$/);
   await download.saveAs('artifacts/atalaia/damage.csv');assert.match(await fs.readFile('artifacts/atalaia/damage.csv','utf8'),/Dano campanha/);
   await screen.getByRole('button',{name:'‹ Jogos',exact:true}).click();
   await page.locator('#gamesScreen [data-game=atalaia]').click();
   assert.deepEqual(await media(),before);
+  checkpoint('csv-downloaded');
   await game.reload();await expect(game.locator('#status')).toHaveCount(0,{timeout:60000});
   assert.equal((await readSave(game.mainFrame())).towers.length,1);
   await game.screenshot({path:'artifacts/atalaia/saved-campaign-menu.png'});
   assert.deepEqual(await media(),before);assert.deepEqual(errors,[]);assert(workletRequests>0);assert.deepEqual(gameErrors,[]);
+  checkpoint('all-checks-passed');
  }catch(error){
   if(game){
    await game.screenshot({path:'artifacts/atalaia/browser-failure.png'}).catch(()=>{});
@@ -94,5 +101,15 @@ test('Atalaia runs its actual Godot export, saves combat, downloads CSV and pres
    console.error('Atalaia failure:',JSON.stringify({wave:save?.wave,phase:save?.phase,towers:save?.towers?.length,errors:gameErrors}));
   }
   throw error;
- }finally{await browser?.close();await fixture.stop();await Promise.all([new Promise(r=>server.close(r)),new Promise(r=>gameServer.close(r))]);}
+ }finally{
+  checkpoint('cleanup-start');
+  await context?.close();
+  await browser?.close();
+  await fixture.stop();
+  // These static servers belong only to this fixture; no active asset socket
+  // should keep a finished Godot check alive, particularly after a reload.
+  const closeStatic=s=>new Promise((resolve,reject)=>{s.close(error=>error?reject(error):resolve());s.closeAllConnections();});
+  await Promise.all([closeStatic(server),closeStatic(gameServer)]);
+  checkpoint('cleanup-finished');
+ }
 });

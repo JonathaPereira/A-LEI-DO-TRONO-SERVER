@@ -15,6 +15,7 @@ async function startFixture({
   gameDecree = null,
   allowedOrigins = [],
   loveLetterSeed = null,
+  similoSeed = null,
 } = {}) {
   const users = new Map(),
     access = new Map(),
@@ -620,7 +621,7 @@ async function startFixture({
       [
         path.resolve(
           __dirname,
-          loveLetterSeed !== null || directAttachments || gameDecree
+          loveLetterSeed !== null || similoSeed !== null || directAttachments || gameDecree
             ? 'server-fixture-entry.cjs'
             : '../server/index.ts',
         ),
@@ -629,6 +630,7 @@ async function startFixture({
         env: {
           ...process.env,
           PORT: String(port),
+          ...(similoSeed !== null ? { MN_TEST_SIMILO_SEED: String(similoSeed) } : {}),
           MN_TEST_DIRECT_ATTACHMENTS: String(directAttachments),
           ...(loveLetterSeed !== null ? { MN_TEST_LOVE_LETTER_SEED: String(loveLetterSeed) } : {}),
           ...(gameDecree ? { TRONO_TEST_DECREE: gameDecree } : {}),

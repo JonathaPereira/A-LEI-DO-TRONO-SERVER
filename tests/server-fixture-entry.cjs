@@ -9,5 +9,6 @@ if (storage) options.objectStorage = storage.objectStorage;
 if (process.env.TRONO_TEST_DECREE) Object.assign(options, require('./game-test-clock.cjs')());
 if (process.env.MN_TEST_LOVE_LETTER_SEED)
   options.loveLetterRandom = require('./love-letter-seed.cjs');
+if (process.env.MN_TEST_SIMILO_SEED) options.similoRandom = () => () => 0.45;
 const backend = require('../server/index.ts').startApplication(options);
 storage?.install(backend.app);

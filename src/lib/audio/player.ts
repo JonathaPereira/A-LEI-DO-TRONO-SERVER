@@ -213,15 +213,17 @@ export function createAudioPlayer(options: Options) {
     if (disposed || !state.sfxEnabled || !context || context.state !== 'running' || !sfx) return;
     const key =
       override ||
-      (kind.startsWith('love-letter-')
-        ? 'love-letter'
-        : kind.startsWith('splendor-')
-          ? 'splendor'
-          : kind.startsWith('azul-')
-            ? 'azul'
-            : ['card', 'crown', 'shadow', 'influence', 'decree', 'turn'].includes(kind)
-              ? 'throne'
-              : null);
+      (kind.startsWith('similo-')
+        ? 'similo'
+        : kind.startsWith('love-letter-')
+          ? 'love-letter'
+          : kind.startsWith('splendor-')
+            ? 'splendor'
+            : kind.startsWith('azul-')
+              ? 'azul'
+              : ['card', 'crown', 'shadow', 'influence', 'decree', 'turn'].includes(kind)
+                ? 'throne'
+                : null);
     if (key && gameVolume(key) === 0) return;
     let destination: AudioNode = sfx;
     if (game(key)) {

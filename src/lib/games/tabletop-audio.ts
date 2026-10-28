@@ -2,6 +2,7 @@ export const tabletopGames = {
   throne: { label: 'A Lei do Trono', sample: 'card' },
   azul: { label: 'Azul', sample: 'azul-place' },
   splendor: { label: 'Splendor', sample: 'splendor-card' },
+  similo: { label: 'Similo', sample: 'similo-card' },
   'love-letter': { label: 'Love Letter', sample: 'love-letter-card' },
 } as const;
 export type TabletopGame = keyof typeof tabletopGames;

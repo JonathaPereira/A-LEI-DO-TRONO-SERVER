@@ -100,6 +100,17 @@ ator, turno e jogada; projeções por espectador escondem cartas e escolhas priv
 Reconexão atualiza presença sem repetir jogadas ou resultados. Persistência de
 ranking usa identidade idempotente da partida e resultados calculados pelo motor.
 
+Similo usa o mesmo socket com serviço autoritativo independente. `similo/rules.ts`
+possui distribuição, pistas, votos, capitão alternado e projeção por conta;
+`similo-service.ts` possui membros e prazo de revelação/reconexão. Adivinhadores
+não recebem segredo/mão e nenhum cliente recebe a pilha. A revisão da sala
+serializa configurações e jogadas; a do motor protege conclusões atrasadas.
+O capitão confirma unanimidade ou resolve divergência depois de todos votarem.
+React observa o controlador; estado local limita-se a seleções ainda não enviadas,
+inspeção e HUD. Controles de membros/recursos são portais do shell no cabeçalho,
+conservando seus donos e a chamada. As cinco folhas originais são publicadas num
+domínio estático separado antes do catálogo, com hashes da mesma entrega.
+
 Love Letter mantém o estado autoritativo recebido em `room` e uma projeção temporal
 em `displayState`. O controlador enfileira anúncios e resultados de revisões
 consecutivas; React só apresenta esses snapshots. O Guarda anuncia ator, alvo e

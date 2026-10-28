@@ -288,3 +288,18 @@ defense solo para mouse/teclado. A tela apresenta controles e salvamento local.
 Jogar só carrega o Godot após o clique: abre aba própria na web e janela própria
 no Windows, onde F11 alterna tela cheia. Navegar pelo Trono mantém a chamada.
 A campanha é separada da conta do Trono e não é sincronizada entre dispositivos.
+
+## Similo
+
+O protótipo local recebeu aceite visual do usuário. A integração solicitada usa
+mesa escura, baralhos de adivinhadores/pistas independentes com até dois temas
+cada e capitão alternado por rodada. Todos confirmam votos antes da decisão;
+o capitão resolve divergência ou confirma unanimidade. O informante não vota.
+Pistas ficam numa faixa separada, sem cobrir a mesa. Membros/recursos da Corte
+ficam no cabeçalho do jogo, conservando a abertura padrão da lateral.
+
+Informações de época, trama e características ficam num texto flutuante por
+mouse/foco, com expansão pelo “i” para teclado e toque. As informações são
+públicas e não mudam conforme o segredo. Layout estreito usa rolagem vertical,
+sem cortar os controles; movimento reduzido desativa animações. O aceite do
+protótipo não substitui a revisão humana desses ajustes integrados.
