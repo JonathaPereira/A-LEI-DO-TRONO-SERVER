@@ -19,6 +19,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // Retry the corrected HUD and Godot fixture, after two local passes.
             const ref='codex/similo-online',branch='codex/similo-delivery-control';
             const repo=context.repo,path='similo-delivery-status.json';
             const {data:head}=await github.rest.git.getRef({...repo,ref:'heads/'+ref});
@@ -66,7 +67,7 @@ jobs:
                 '- Cinco temas com até dois misturados, independentemente, na mesa e no baralho de pistas.',
                 '- Visual escuro, HUD adaptável e controles da Corte no cabeçalho, preservando a chamada e a lista de membros aberta por padrão.',
                 '- Capitão alternado por rodada: todos votam antes da decisão; unanimidade é confirmada e divergências são resolvidas pelo capitão.',
-                '- Informações flutuantes nas 120 cartas, ampliação por toque/teclado, votos animados e efeitos no dono de áudio existente.',
+                '- Informações flutuantes nas 120 cartas, ampliação por toque/teclado, votos animados (com agrupamento para oito pessoas) e efeitos no dono de áudio existente.',
                 '- Windows 0.3.11, frontend e arte publicados pela mesma entrega validada. As folhas ficam em domínio separado para conservar o limite do site.',
                 '',
                 'Validação local: typecheck, format:check, build e 1.441 testes core aprovados. Partidas web reais de três clientes até vitória/derrota, privacidade, capitão, informações, layouts e continuidade de mídia; regressões de DMs/membros e Love Letter.',
