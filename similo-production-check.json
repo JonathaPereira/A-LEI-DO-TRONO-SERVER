@@ -1,0 +1,89 @@
+{
+  "checkedAt": "2026-10-28T12:32:50.359Z",
+  "checks": {
+    "repository": {
+      "main": "51bf24552ac02f9242c8192034f43ec438ff7d0a",
+      "pulls": [
+        {
+          "number": 59,
+          "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/pull/59",
+          "merged": true,
+          "mergedAt": "2026-10-28T02:21:58Z",
+          "mergeCommit": "52210d154fec34c2120ed50637507a1bf977b496"
+        },
+        {
+          "number": 60,
+          "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/pull/60",
+          "merged": true,
+          "mergedAt": "2026-10-28T02:23:17Z",
+          "mergeCommit": "51bf24552ac02f9242c8192034f43ec438ff7d0a"
+        }
+      ],
+      "windows": {
+        "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40620493982",
+        "source": "52210d154fec34c2120ed50637507a1bf977b496",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "Validate and package Windows",
+            "conclusion": "success"
+          },
+          {
+            "name": "refresh-instructions",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Publish validated delivery to Surge / publish",
+            "conclusion": "success"
+          }
+        ]
+      }
+    },
+    "backend": {
+      "http": 200,
+      "version": "0.14.0-alpha",
+      "features": {
+        "remotePc": true,
+        "remotePcProtocol": 2,
+        "ticketToRide": true,
+        "loveLetter": true,
+        "similo": true,
+        "splendor": true,
+        "azul": true,
+        "soundboardRestart": true,
+        "voiceProfileActivity": true,
+        "independentGameVoice": true,
+        "gameRulesVersion": "0.9.0",
+        "socialMessaging": true,
+        "chatModeration": true,
+        "channelNotifications": true
+      },
+      "similo": true
+    },
+    "frontend": {
+      "http": 200,
+      "version": "0.3.11"
+    },
+    "installer": {
+      "version": "0.3.11",
+      "filename": "MN-Trono-0.3.11-Windows.exe",
+      "http": 206,
+      "contentRange": "bytes 0-1023/142233284",
+      "windowsHeader": true
+    },
+    "art": {
+      "version": "0.3.11",
+      "source": "52210d154fec34c2120ed50637507a1bf977b496",
+      "verified": [
+        "v1/animals.webp",
+        "v1/history.webp",
+        "v1/tales.webp",
+        "v1/monsters.webp",
+        "v1/myths.webp"
+      ]
+    }
+  },
+  "errors": [],
+  "complete": true
+}
