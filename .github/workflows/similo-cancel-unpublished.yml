@@ -22,6 +22,7 @@ jobs:
         with:
           script: |
             const job_id=122566217915;
+            try{await github.rest.repos.getContent({...context.repo,path:'similo-diagnosis-40612206178.log',ref:'codex/similo-delivery-control'});return;}catch(e){if(e.status!==404)throw e;}
             const result=await github.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs',{...context.repo,job_id});
             const text=typeof result.data==='string'?result.data:Buffer.from(result.data).toString('utf8');
             const lines=text.split('\n'),indices=new Set();
