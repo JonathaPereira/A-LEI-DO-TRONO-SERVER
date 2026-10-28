@@ -127,9 +127,20 @@ saída efetiva durante a quarta. As contas e capturas são fixtures explícitas.
 
 A aceitação Electron real inclui interromper o socket durante captura nativa de
 uma janela QA e conferir identidade, microfone, stream e player conservados.
-Essa nova conferência, o NSIS e a publicação pertencem à execução Windows do
-mesmo commit; não são comprovados pelos testes Linux. A indisponibilidade
-anterior do ambiente não publicou mudanças. A entrega 0.3.12 aguarda essa pipeline.
+A execução Windows
+[40700039990](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40700039990)
+aprovou essa conferência Electron, jornadas de mídia, executável e NSIS real no
+commit de código `d729181`. Publicação conjunta no Surge aprovada. A conferência
+pública baixou os 142.234.453 bytes do EXE, verificou SHA-512 contra `latest.yml`,
+confirmou frontend 0.3.12 e os cinco hashes de arte. Evidência:
+`codex/similo-delivery-control:voice-recovery-production-check.json`.
+
+Backend público respondeu HTTP 200, mas ainda sem `features.voiceResume`: falta
+incorporar e fazer deploy da contribuição para ativar a recuperação. TURN continua
+sem configuração. A política do repositório impediu Actions de criar o PR; código
+está enviado em `codex/voice-reconnect-grace`, com compare para criação manual.
+Main foi preservada nesta execução. A indisponibilidade anterior do ambiente
+não publicou mudanças; a entrega acima foi retomada e validada depois.
 
 
 Similo integrado na contribuição `codex/similo-online`, sobre a main `9149a52`,

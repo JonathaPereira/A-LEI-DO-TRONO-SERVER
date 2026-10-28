@@ -1,6 +1,6 @@
 # Atualizações do aplicativo
 
-Este é o guia mantido para atualizar instalações existentes. A entrega prepara
+Este é o guia mantido para atualizar instalações existentes. A entrega publica
 Windows **0.3.12** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
 
