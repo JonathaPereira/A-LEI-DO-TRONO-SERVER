@@ -52,12 +52,12 @@
           },
           {
             "name": "Verify contracts and real user journeys",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Package and smoke test the actual executable",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -109,5 +109,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/voice-reconnect-grace?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T13:52:59.145Z"
+  "updatedAt": "2026-10-28T14:05:23.366Z"
 }
