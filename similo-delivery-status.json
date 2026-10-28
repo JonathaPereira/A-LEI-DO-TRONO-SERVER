@@ -2,10 +2,107 @@
   "source": "d72918195529b8fd0c160d1868b38ac5e04abc10",
   "ref": "codex/voice-reconnect-grace",
   "version": "0.3.12",
-  "status": "dispatching",
-  "workflow": null,
+  "status": "in_progress",
+  "workflow": {
+    "id": 40700039990,
+    "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40700039990",
+    "status": "in_progress",
+    "conclusion": null,
+    "jobs": [
+      {
+        "id": 122857059630,
+        "name": "Validate and package Windows",
+        "status": "in_progress",
+        "conclusion": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "in_progress",
+            "conclusion": null
+          },
+          {
+            "name": "Run actions/setup-node@v4",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Install dependencies once",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Export the complete Atalaia game for the web",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Prepare Similo art for its separate static domain",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Check sources and build frontend and native helpers once",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Verify contracts and real user journeys",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Package and smoke test the actual executable",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Accept the real installer on the disposable runner",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Prepare the matched frontend and installer download",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Save the validated delivery in a private draft release",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Report failed test summaries",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Save failure evidence",
+            "status": "pending",
+            "conclusion": null
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "pending",
+            "conclusion": null
+          }
+        ]
+      },
+      {
+        "id": 122857062894,
+        "name": "refresh-instructions",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
+      }
+    ]
+  },
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/voice-reconnect-grace?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T13:49:46.898Z"
+  "updatedAt": "2026-10-28T13:50:09.748Z"
 }
