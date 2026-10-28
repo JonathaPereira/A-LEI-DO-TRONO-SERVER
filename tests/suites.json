@@ -187,6 +187,7 @@
     "tests/voice-transport.cjs"
   ],
   "browser": [
+    "tests/voice-recovery-browser.cjs",
     "tests/similo-browser.cjs",
     "tests/similo-crowd-browser.cjs",
     "tests/app-layout-browser.js",

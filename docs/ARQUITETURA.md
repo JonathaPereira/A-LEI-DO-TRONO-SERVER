@@ -142,6 +142,26 @@ aplicativo; `noise-processors.ts` carrega os processadores locais.
 Protocolos P2P/SFU validam SDP, ICE, respostas e catálogos antes de negociar.
 
 `voice/navigation.ts` possui apresentação/rota da chamada e atividade de texto.
+`socket/voice-recovery.ts` possui somente a tentativa de reconexão por até
+45 segundos sobre o transport existente. `socket/client.ts` fornece a identidade
+atual, reautentica e reaplica o último estado de voz, inclusive uma saída durante
+a queda. O welcome e os eventos recebidos antes da confirmação ficam retidos até
+restaurar o ID original. Não existe segundo socket nem nova captura de mídia.
+
+`server/socket-gateway.ts` reserva conexões autenticadas que perderam o transporte
+inesperadamente enquanto estavam na voz. `channel-service.ts` transfere os membros
+para o novo socket, conservando ID, assento, mute, moderação e sessões SFU. A
+capacidade aleatória de retomada fica só em memória, requer a mesma conta/sessão
+ou o ticket de convidado validado e é renovada após a retomada. Respostas perdidas
+podem repetir a confirmação antes do primeiro voice-state, sem duplicar membros.
+Revogação inclui reservas; expiração, saída normal e moderação continuam efetivas.
+Controle remoto não é retomado automaticamente.
+
+`voice/call-lifecycle.ts` mantém a geração/captura durante `reconnecting` e
+`voice/roster.ts` conserva peers e lista de voz. Falha definitiva segue o descarte
+existente. O protocolo é anunciado por `voiceResume`; servidores antigos não são
+tratados como capazes de retomar. Reservas são voláteis e não sobrevivem a restart.
+
 `voice/stage.ts` projeta grade/foco e preferências de exibição por participante.
 `voice/stream-controls.ts` controla cada transmissão. Projetores de configurações
 delegam aos donos de captura/reprodução; não abrem outra mídia.

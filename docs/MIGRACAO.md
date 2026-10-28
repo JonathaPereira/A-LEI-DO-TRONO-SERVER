@@ -1,6 +1,6 @@
 # Reconstrução do frontend
 
-Checkpoint atualizado em 27/10/2026.
+Checkpoint atualizado em 28/10/2026.
 
 Fonte única do plano e checkpoint. Produto/REA:
 [UX_COMUNICACAO.md](UX_COMUNICACAO.md); donos:
@@ -97,6 +97,51 @@ Mapeamentos ficam em artifacts/frontend-reset/finish-test-consolidation.json
 e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde.
 
 ### Evidência vigente
+
+Recuperação de voz preparada em `codex/voice-reconnect-grace`, Windows 0.3.12,
+sobre main `51bf245`. A atualização 0.3.11/Similo foi incorporada (#59) e publicada
+pela execução Windows `40620493982`; a checagem pública posterior confirmou site,
+instalador e os hashes dos cinco temas, além de `features.similo=true` no backend.
+
+A correção de voz mantém chamada, geração, captura e peers por até 45 segundos
+na perda temporária de sinalização. O servidor reserva a participação, revalida
+conta/sessão ou convidado e transfere a mesma identidade/assento para o socket
+novo. Confirmação repetida/resposta perdida não duplica membros. Não reabre voz
+após saída manual; revogação, sessão substituída, moderação e prazo final encerram
+a participação. Sem SQL; depende de deploy do backend com `features.voiceResume`.
+
+A auditoria pública de produção retornou três HTTP 200 e cinco pongs consecutivos.
+Primeira resposta: 22,6 s; seguintes: 95/107 ms. SFU habilitado/configurado e sem
+bloqueio por limite; TURN desabilitado/não configurado. Isso identifica uma lacuna
+para redes P2P restritivas, sem comprovar a causa da queda relatada. Evidência
+pública em `codex/similo-delivery-control:voice-server-audit.json`; não houve
+login, entrada em sala ou alteração de chamada em produção nessa auditoria.
+
+Typecheck, format:check, build e 1.454 contratos core passaram na versão final,
+sem falhas/skips (`artifacts/voice-recovery/core-final.log`). Duas rodadas locais
+da seleção shell/DMs/Similo/moderação/recepção/recuperação tiveram 11 aprovados e
+dois skips de RTP/PCM por política Chromium gerenciada; esses dois checks seguem
+obrigatórios no Windows. Após o ajuste final de cancelamento, duas rodadas focadas
+de recuperação passaram com mic/câmera/tela/peers preservados em três quedas e
+saída efetiva durante a quarta. As contas e capturas são fixtures explícitas.
+
+A aceitação Electron real inclui interromper o socket durante captura nativa de
+uma janela QA e conferir identidade, microfone, stream e player conservados.
+A execução Windows
+[40700039990](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40700039990)
+aprovou essa conferência Electron, jornadas de mídia, executável e NSIS real no
+commit de código `d729181`. Publicação conjunta no Surge aprovada. A conferência
+pública baixou os 142.234.453 bytes do EXE, verificou SHA-512 contra `latest.yml`,
+confirmou frontend 0.3.12 e os cinco hashes de arte. Evidência:
+`codex/similo-delivery-control:voice-recovery-production-check.json`.
+
+Backend público respondeu HTTP 200, mas ainda sem `features.voiceResume`: falta
+incorporar e fazer deploy da contribuição para ativar a recuperação. TURN continua
+sem configuração. A política do repositório impediu Actions de criar o PR; código
+está enviado em `codex/voice-reconnect-grace`, com compare para criação manual.
+Main foi preservada nesta execução. A indisponibilidade anterior do ambiente
+não publicou mudanças; a entrega acima foi retomada e validada depois.
+
 
 Similo integrado na contribuição `codex/similo-online`, sobre a main `9149a52`,
 preparando Windows 0.3.11. O usuário aprovou o protótipo e solicitou integração

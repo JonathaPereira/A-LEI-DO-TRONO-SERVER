@@ -174,8 +174,13 @@ export function createVoiceCall(options: CallOptions) {
     start() {
       if (disposed || unsubscribe) return;
       unsubscribe = options.onMessage((message) => {
-        if (message.type === 'connection' && message.connected === false) end('disconnect');
-        else if (
+        if (message.type === 'connection') {
+          if (message.connected === false) {
+            if (message.recovering === true && snapshot.joined) update({ phase: 'reconnecting' });
+            else end('disconnect');
+          } else if (message.resumed === true && snapshot.phase === 'reconnecting')
+            update({ phase: 'joined' });
+        } else if (
           ['left-game-room', 'left-voice-room', 'channel-deleted'].includes(message.type) &&
           typeof message.roomId === 'string' &&
           message.roomId === activeRoomId

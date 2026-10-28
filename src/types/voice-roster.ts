@@ -11,6 +11,7 @@ export interface VoiceParticipant {
   readonly role?: string;
   readonly seat?: number;
   readonly joined: true;
+  readonly reconnecting?: boolean;
   readonly muted: boolean;
   readonly serverMuted?: boolean;
   readonly mediaBlocked?: boolean;

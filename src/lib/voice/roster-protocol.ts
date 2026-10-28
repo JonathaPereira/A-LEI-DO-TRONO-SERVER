@@ -11,7 +11,7 @@ const optionalId = (value: unknown) => value == null || isParticipantId(value);
 const optionalSeat = (value: unknown) =>
   value === undefined || (Number.isInteger(value) && Number(value) >= 0);
 const flags = (value: Record<string, unknown>) =>
-  ['muted', 'serverMuted', 'mediaBlocked', 'deafened', 'camera', 'screen'].every(
+  ['reconnecting', 'muted', 'serverMuted', 'mediaBlocked', 'deafened', 'camera', 'screen'].every(
     (key) => value[key] === undefined || typeof value[key] === 'boolean',
   );
 const transport = (value: unknown) =>
@@ -56,6 +56,7 @@ export function parseVoiceParticipants(value: unknown): readonly VoiceParticipan
         role: typeof row.role === 'string' && row.role ? row.role : undefined,
         seat: row.seat as number | undefined,
         joined: true,
+        ...(row.reconnecting === undefined ? {} : { reconnecting: row.reconnecting === true }),
         muted: row.muted === true || serverMuted,
         serverMuted,
         mediaBlocked,

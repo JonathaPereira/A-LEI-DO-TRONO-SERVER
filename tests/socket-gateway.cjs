@@ -32,7 +32,8 @@ async function fixture({ identity = async (token) => account(token), required = 
     rooms = createChannelRooms(),
     calls = [],
     requests = [],
-    clients = [];
+    clients = [],
+    sfuCleanups = [];
   const games = Object.fromEntries(
     ['azul', 'splendor', 'loveLetter', 'ticketToRide', 'similo'].map((name) => [
       name,
@@ -67,7 +68,7 @@ async function fixture({ identity = async (token) => account(token), required = 
     handle: () => {},
   };
   const sfu = {
-    cleanupClient: async () => {},
+    cleanupClient: async (...args) => { sfuCleanups.push(args); },
     statusPayload: () => ({
       enabled: false,
       configured: false,
@@ -162,6 +163,7 @@ async function fixture({ identity = async (token) => account(token), required = 
     rooms,
     calls,
     requests,
+    sfuCleanups,
     gateway,
     channels,
     client,
@@ -469,4 +471,150 @@ test('heartbeat expires an account and terminates a dead peer without leaving it
   } finally {
     await f.close();
   }
+});
+
+async function voiceClient(f, token = 'recovery-user') {
+  const c = await f.client();
+  c.send({ type: 'authenticate', access_token: token, requestId: 'auth' });
+  const auth = await c.wait(m => m.type === 'auth-result');
+  c.send({ type: 'join-room', roomId: 'chat-livre' });
+  await c.wait(m => m.type === 'joined-room');
+  c.send({ type: 'voice-state', joined: true, muted: true, camera: false, screen: false });
+  await c.wait(m => m.type === 'voice-roster' && m.players.some(p => p.id === c.server.clientId));
+  return { c, auth };
+}
+test('a brief broken socket reserves voice and authenticated resume transfers the same seat without leave/join events', async (t) => {
+  const f = await fixture(); t.after(() => f.close());
+  const { c, auth } = await voiceClient(f);
+  const observer = (await voiceClient(f, 'observer')).c;
+  const id = c.server.clientId;
+  const player = f.rooms.get('chat-livre').players.get(id);
+  const before = observer.messages.length;
+  const cleanups = f.sfuCleanups.length;
+  player.mediaTransport = 'sfu'; f.rooms.get('chat-livre').voiceMode = 'sfu';
+  const closed = new Promise(r => c.server.once('close', r));
+  c.ws.terminate(); await closed;
+  assert.equal(f.rooms.get('chat-livre').players.get(id), player, 'a short outage must not remove the participant');
+  assert.equal(player.voiceJoined, true);
+  assert.equal(typeof auth.resumeToken, 'string');
+  const next = await f.client();
+  next.send({ type: 'authenticate', access_token: 'recovery-user', resumeToken: auth.resumeToken, requestId: 'resume' });
+  const result = await next.wait(m => m.type === 'auth-result');
+  assert.equal(result.resumed, true);
+  assert.equal(result.clientId, id);
+  assert.notEqual(result.resumeToken, auth.resumeToken, 'resume capability rotates');
+  assert.equal(player.ws, next.server);
+  assert.equal(player.voiceMuted, true);
+  assert.equal(player.mediaTransport, 'sfu');
+  assert.equal(f.sfuCleanups.length, cleanups, 'established SFU media must not be cleaned up for a signaling outage');
+  assert.equal(next.server.clientId, id);
+  assert.equal(f.rooms.get('chat-livre').players.size, 2);
+  assert(!observer.messages.slice(before).some(m => m.type === 'voice-event' && m.playerId === id));
+});
+test('resume credentials cannot transfer a different account and revocation removes suspended voice immediately', async (t) => {
+  const f = await fixture(); t.after(() => f.close());
+  const { c, auth } = await voiceClient(f);
+  const id = c.server.clientId;
+  const closed = new Promise(r => c.server.once('close', r)); c.ws.terminate(); await closed;
+  const attacker = await f.client();
+  attacker.send({ type: 'authenticate', access_token: 'other-account', resumeToken: auth.resumeToken, requestId: 'steal' });
+  const result = await attacker.wait(m => m.type === 'auth-result');
+  assert.equal(result.resumed, false);
+  assert.notEqual(attacker.server.clientId, id);
+  assert.equal(f.rooms.get('chat-livre').players.get(id).ws, c.server);
+  f.gateway.revoke({ userId: 'recovery-user', all: true });
+  assert.equal(f.rooms.get('chat-livre').players.has(id), false);
+});
+
+test('the real network client reconnects one socket and resumes voice automatically with its original identity', async (t) => {
+  const f = await fixture(); t.after(() => f.close());
+  const { createSocketTransport } = await import('../src/lib/socket/transport.ts');
+  const { createNetworkClient } = await import('../src/lib/socket/client.ts');
+  const sockets = [], events = [];
+  let queuedSfu;
+  const transport = createSocketTransport({
+    url: `ws://127.0.0.1:${f.server.address().port}`,
+    createSocket(url) { const socket = new WebSocket(url); sockets.push(socket); return socket; },
+  });
+  const user = { id: 'automatic', nickname: 'automatic', role: 'member', permissions: {} };
+  const network = createNetworkClient({ backendHttp: '', transport, getIdentity: () => ({user, getAccessToken: async () => 'automatic'}) });
+  t.after(() => network.disconnect());
+  network.onMessage(m => { events.push(m); if(m.recovering && !queuedSfu) { queuedSfu = network.requestSfu('status'); queuedSfu.catch(() => {}); } });
+  await network.connect(); await network.authenticate('automatic');
+  await network.joinRoom('chat-livre');
+  const until = async (predicate) => {
+    const deadline = Date.now() + 5000;
+    while (!predicate()) { if (Date.now() > deadline) assert.fail('Recovery did not complete'); await new Promise(r => setTimeout(r, 10)); }
+  };
+  await until(() => network.primaryRoom === 'chat-livre');
+  await network.prepareVoice(); network.setVoiceState(true, true);
+  const id = network.clientId;
+  await until(() => f.rooms.get('chat-livre').players.get(id)?.voiceJoined);
+  const old = [...f.wss.clients].find(s => s.clientId === id);
+  old.terminate();
+  await until(() => events.some(m => m.type === 'connection' && m.resumed));
+  assert.deepEqual(await queuedSfu, {}, 'SFU requests wait for authentication to recover');
+  assert.equal(network.clientId, id);
+  assert.equal(network.primaryRoom, 'chat-livre');
+  assert.equal(sockets.length, 2);
+  assert.equal([...f.wss.clients].length, 1);
+  assert(events.some(m => m.type === 'connection' && m.recovering));
+  assert.equal(f.rooms.get('chat-livre').players.get(id).voiceJoined, true);
+  assert.equal(f.rooms.get('chat-livre').players.get(id).voiceMuted, true);
+});
+
+test('suspended voice expires after the grace deadline and explicit close never reserves a ghost', async (t) => {
+  const f = await fixture();
+  try {
+    const {c} = await voiceClient(f);
+    const id = c.server.clientId;
+    t.mock.timers.enable({apis:['setTimeout']});
+    const closed = new Promise(r => c.server.once('close',r)); c.ws.terminate(); await closed;
+    assert(f.rooms.get('chat-livre').players.has(id));
+    t.mock.timers.tick(44999); assert(f.rooms.get('chat-livre').players.has(id));
+    t.mock.timers.tick(1); assert.equal(f.rooms.get('chat-livre').players.has(id),false);
+    t.mock.timers.reset();
+    const other = (await voiceClient(f,'normal')).c;
+    const closedOther = new Promise(r => other.server.once('close',r)); other.ws.close(1000); await closedOther;
+    assert.equal(f.rooms.get('chat-livre').players.has(other.server.clientId),false);
+  } finally { t.mock.timers.reset(); await f.close(); }
+});
+
+test('lost resume replies can be retried on the same socket or its replacement without losing the reserved voice', async (t) => {
+  const f = await fixture(); t.after(() => f.close());
+  const {c,auth} = await voiceClient(f);
+  const id = c.server.clientId;
+  const closed = new Promise(r => c.server.once('close',r)); c.ws.terminate(); await closed;
+  const next = await f.client();
+  next.send({type:'authenticate',access_token:'recovery-user',resumeToken:auth.resumeToken,requestId:'first'});
+  assert.equal((await next.wait(m => m.requestId === 'first')).resumed,true);
+  next.send({type:'authenticate',access_token:'recovery-user',resumeToken:auth.resumeToken,requestId:'retry'});
+  assert.equal((await next.wait(m => m.requestId === 'retry')).resumed,true);
+  const secondClose = new Promise(r => next.server.once('close',r)); next.ws.terminate(); await secondClose;
+  const last = await f.client();
+  last.send({type:'authenticate',access_token:'recovery-user',resumeToken:auth.resumeToken,requestId:'lost-reply'});
+  assert.equal((await last.wait(m => m.requestId === 'lost-reply')).resumed,true);
+  assert.equal(last.server.clientId,id);
+  assert.equal(f.rooms.get('chat-livre').players.get(id).ws,last.server);
+});
+
+test('a different login session cannot claim a reserved call even with its resume capability', async (t) => {
+  const f = await fixture({identity:async token=>({...account('same-user'),sessionId:token})}); t.after(()=>f.close());
+  const {c,auth} = await voiceClient(f,'session-one');
+  const id=c.server.clientId;
+  const closed=new Promise(r=>c.server.once('close',r)); c.ws.terminate();await closed;
+  const next=await f.client();next.send({type:'authenticate',access_token:'session-two',resumeToken:auth.resumeToken,requestId:'wrong-session'});
+  assert.equal((await next.wait(m=>m.requestId==='wrong-session')).resumed,false);
+  assert.equal(f.rooms.get('chat-livre').players.get(id).ws,c.server);
+});
+test('moderation can remove a suspended participant and resume cannot undo the removal', async (t) => {
+  const f=await fixture();t.after(()=>f.close());
+  const {c,auth}=await voiceClient(f), operator=(await voiceClient(f,'operator')).c;
+  operator.server.account.role='creator';
+  const id=c.server.clientId,closed=new Promise(r=>c.server.once('close',r));c.ws.terminate();await closed;
+  f.channels.moderateVoice(operator.server,{action:'kick',targetId:id,requestId:'kick-offline'});
+  assert.equal(f.rooms.get('chat-livre').players.get(id).voiceJoined,false);
+  const next=await f.client();next.send({type:'authenticate',access_token:'recovery-user',resumeToken:auth.resumeToken,requestId:'blocked'});
+  assert.equal((await next.wait(m=>m.requestId==='blocked')).resumed,false);
+  assert.equal(f.rooms.get('chat-livre').players.get(id).voiceJoined,false);
 });

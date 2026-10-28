@@ -7,6 +7,7 @@ import type {
   VoiceContext,
 } from '../../types/network';
 import type { SocketIdentityConnection, SocketMessage, SocketTransport } from '../../types/socket';
+import { createVoiceRecovery } from './voice-recovery.ts';
 import { createNetworkState } from './state.ts';
 import {
   parseStateEvent,
@@ -29,6 +30,7 @@ interface NetworkClientOptions {
   getIdentity?: () => NetworkIdentity | null;
   getVoiceContext?: () => VoiceContext;
   warn?: (error: unknown) => void;
+  recoveryWindowMs?: number;
 }
 
 function errorCode(error: unknown): string {
@@ -43,6 +45,7 @@ export function createNetworkClient({
   transport,
   getIdentity = () => null,
   getVoiceContext = () => ({}),
+  recoveryWindowMs,
   warn = (error) => console.warn('[TronoNetwork]', error),
 }: NetworkClientOptions) {
   const BACKEND_HTTP = backendHttp;
@@ -53,6 +56,75 @@ export function createNetworkClient({
   let authenticatedGuest: GuestIdentity | null = null;
   const listeners = new Set<(message: SocketMessage) => void>();
   const { connect, send } = transport;
+  let resumeToken: string | null = null;
+  let voiceState: Record<string, unknown> | null = null;
+  let pendingDeparture: 'all' | 'voice' | null = null;
+  let identityRevision = 0;
+  const recovery = createVoiceRecovery({
+    transport,
+    windowMs: recoveryWindowMs,
+    identity: () => {
+      if (!voiceState?.joined || !resumeToken || !state.getSnapshot().features.voiceResume)
+        return null;
+      if (authenticatedAccount) return { resumeToken, accountId: authenticatedAccount.id };
+      if (authenticatedGuest) return { resumeToken, guest: authenticatedGuest };
+      return null;
+    },
+    restore: async (identity, current) => {
+      let token: string | null = null;
+      if (identity.accountId) token = (await getIdentity()?.getAccessToken()) ?? null;
+      if (
+        !current() ||
+        (identity.accountId
+          ? !token || getIdentity()?.user?.id !== identity.accountId
+          : !!getIdentity()?.user)
+      )
+        throw Object.assign(new Error('A identidade da chamada mudou.'), {
+          code: 'RECOVERY_IDENTITY_CHANGED',
+        });
+      const result = await transport.serializeIdentity((connection) =>
+        connection.request(
+          identity.accountId ? 'authenticate' : 'guest-authenticate',
+          {
+            ...(identity.accountId
+              ? { access_token: token }
+              : { name: identity.guest?.nickname, ticket: identity.guest?.ticket }),
+            resumeToken: identity.resumeToken,
+          },
+          {
+            responseType: identity.accountId ? 'auth-result' : 'guest-result',
+            timeoutMs: 10000,
+            timeoutMessage: 'Tentando recuperar a chamada…',
+          },
+        ),
+      );
+      if (
+        !current() ||
+        (identity.accountId
+          ? getIdentity()?.user?.id !== identity.accountId
+          : !!getIdentity()?.user)
+      )
+        throw Object.assign(new Error('A identidade da chamada mudou.'), {
+          code: 'RECOVERY_IDENTITY_CHANGED',
+        });
+      if (result.ok !== true)
+        throw responseError(result, 'Não foi possível recuperar a sessão.', 'AUTH_UNAVAILABLE');
+      if (identity.accountId) readAccount(result.user);
+      else readGuest(result.guest);
+      return { ...result, authToken: token };
+    },
+    restored: (result) => {
+      resumeToken = result.resumeToken as string;
+      if (result.user) {
+        authenticatedAccount = readAccount(result.user);
+        authenticatedToken = result.authToken as string;
+      } else authenticatedGuest = readGuest(result.guest);
+      if (voiceState) send('voice-state', voiceState);
+      if (pendingDeparture) send(pendingDeparture === 'all' ? 'leave-room' : 'leave-voice-room');
+      pendingDeparture = null;
+    },
+    deliver: (message) => receive(message),
+  });
   const emit = (message: SocketMessage) => {
     for (const listener of listeners) {
       try {
@@ -62,7 +134,7 @@ export function createNetworkClient({
       }
     }
   };
-  transport.onMessage((message) => {
+  function receive(message: SocketMessage) {
     try {
       const event = parseStateEvent(message);
       if (event) state.apply(event);
@@ -70,6 +142,11 @@ export function createNetworkClient({
         authenticatedToken = null;
         authenticatedAccount = null;
         authenticatedGuest = null;
+        if (event.recovering !== true) {
+          pendingDeparture = null;
+          resumeToken = null;
+          voiceState = null;
+        }
       }
       if (
         event?.type === 'welcome' &&
@@ -87,8 +164,16 @@ export function createNetworkClient({
     }
     // Keep full payloads (including other negotiated capabilities) for unconverted consumers.
     emit(message);
+  }
+  transport.onMessage((message) => {
+    const filtered = recovery.filter(message);
+    if (filtered) receive(filtered);
   });
-  function authenticate(token: string) {
+  async function authenticate(token: string) {
+    const revision = identityRevision;
+    if (recovery.pending) await recovery.pending;
+    if (revision !== identityRevision)
+      throw Object.assign(new Error('Conexão encerrada.'), { code: 'NETWORK_CLOSED' });
     return transport.serializeIdentity((connection) => authenticateNow(token, connection));
   }
   async function authenticateNow(
@@ -121,6 +206,7 @@ export function createNetworkClient({
     }
     const account = readAccount(msg.user);
     authenticatedAccount = account;
+    resumeToken = typeof msg.resumeToken === 'string' ? msg.resumeToken : null;
     authenticatedToken = token;
     authenticatedGuest = null;
     return account;
@@ -142,7 +228,11 @@ export function createNetworkClient({
       throw err;
     }
   }
-  function authenticateGuest(name: string, ticket?: string): Promise<GuestIdentity> {
+  async function authenticateGuest(name: string, ticket?: string): Promise<GuestIdentity> {
+    const revision = identityRevision;
+    if (recovery.pending) await recovery.pending;
+    if (revision !== identityRevision)
+      throw Object.assign(new Error('Conexão encerrada.'), { code: 'NETWORK_CLOSED' });
     return transport.serializeIdentity(async (connection) => {
       if (!connection.connected) await connection.connect();
       if (!connection.connected) throw new Error('Servidor indisponível.');
@@ -167,6 +257,7 @@ export function createNetworkClient({
       authenticatedToken = null;
       authenticatedGuest = null;
       authenticatedGuest = readGuest(msg.guest);
+      resumeToken = typeof msg.resumeToken === 'string' ? msg.resumeToken : null;
       return authenticatedGuest;
     });
   }
@@ -176,6 +267,11 @@ export function createNetworkClient({
     return ensureAuthenticated();
   }
   function disconnect() {
+    identityRevision++;
+    recovery.cancel();
+    resumeToken = null;
+    voiceState = null;
+    pendingDeparture = null;
     state.clearMembership();
     transport.disconnect();
   }
@@ -184,6 +280,10 @@ export function createNetworkClient({
     payload: Record<string, unknown> = {},
     timeoutMs = 18000,
   ): Promise<unknown> {
+    const revision = identityRevision;
+    if (recovery.pending) await recovery.pending;
+    if (revision !== identityRevision)
+      throw Object.assign(new Error('Conexão encerrada.'), { code: 'NETWORK_CLOSED' });
     const msg = await transport.request(
       'sfu-request',
       { action, payload },
@@ -257,6 +357,10 @@ export function createNetworkClient({
     return send('join-text-channel', { roomId, name });
   }
   function leaveRoom() {
+    if (recovery.pending) {
+      pendingDeparture = 'all';
+      if (voiceState) voiceState = { ...voiceState, joined: false };
+    }
     if (
       state.getSnapshot().currentRoom ||
       state.getSnapshot().primaryRoom ||
@@ -271,6 +375,10 @@ export function createNetworkClient({
       : leaveRoom();
   }
   function leaveVoiceRoom() {
+    if (recovery.pending) {
+      pendingDeparture = 'voice';
+      if (voiceState) voiceState = { ...voiceState, joined: false };
+    }
     return state.getSnapshot().features.independentGameVoice
       ? send('leave-voice-room')
       : leaveRoom();
@@ -390,8 +498,8 @@ export function createNetworkClient({
       screen = false,
       quality = 'balanced',
       mediaTransport: MediaTransport = 'p2p',
-    ) =>
-      send('voice-state', {
+    ) => {
+      voiceState = {
         joined: !!joined,
         muted: !!muted,
         deafened: !!joined && !!getVoiceContext().deafened,
@@ -400,10 +508,12 @@ export function createNetworkClient({
         quality,
         transport: mediaTransport,
         screenFps: getVoiceContext().screenSettings?.fps || 30,
-      }),
+      };
+      return !recovery.pending && send('voice-state', voiceState);
+    },
     playSound: (fileId: string) => send('soundboard-play', { fileId }),
     sendVoiceSignal: (targetId: string, signalType: string, data: unknown) =>
-      send('voice-signal', { targetId, signalType, data }),
+      !recovery.pending && send('voice-signal', { targetId, signalType, data }),
     requestSfu,
     getRealtimeStatus: () => requestSfu('status', {}, 8000),
     checkName,

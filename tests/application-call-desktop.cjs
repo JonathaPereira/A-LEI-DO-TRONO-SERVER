@@ -70,6 +70,11 @@ test(
       await page.route('https://a-lei-do-trono-server.onrender.com/**', (route) => route.abort());
       await page.addInitScript((base) => {
         window.TRONO_BACKEND_URL = base;
+        const Socket = window.WebSocket;
+        window.__nativeRecoverySockets = [];
+        window.WebSocket = class extends Socket {
+          constructor(...args) { super(...args); window.__nativeRecoverySockets.push(this); }
+        };
         localStorage.setItem('tronoMusicEnabled', '0');
         localStorage.setItem('tronoNoiseSuppression', '0');
       }, fixture.base);
@@ -85,6 +90,11 @@ test(
       await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
       await page.evaluate(() => {
         window.__nativeMic = window.TronoSocial.getLocalAudioTrack();
+        window.__nativeVoiceId = window.TronoNetwork.clientId;
+        window.__nativeResumes = 0;
+        window.TronoNetwork.onMessage(message => {
+          if (message.type === 'connection' && message.resumed) window.__nativeResumes++;
+        });
       });
       await call.getByRole('button', { name: 'Compartilhar tela', exact: true }).click();
       await page.locator('#screenOptionsConfirm').click();
@@ -160,6 +170,15 @@ test(
         window.__nativeDisplay = window.TronoSocial.getLocalDisplayStream();
         window.__nativePlayer = document.querySelector('[data-call-screen] video');
       });
+      await page.evaluate(() => window.__nativeRecoverySockets.at(-1).close(4000, 'QA temporary signaling loss'));
+      await expect.poll(() => page.evaluate(() => window.__nativeResumes)).toBe(1);
+      assert.equal(await page.evaluate(() =>
+        window.TronoSocial.voiceJoined && window.TronoNetwork.clientId === window.__nativeVoiceId &&
+        window.TronoSocial.getLocalAudioTrack() === window.__nativeMic && window.__nativeMic.readyState === 'live' &&
+        window.TronoSocial.getLocalDisplayStream() === window.__nativeDisplay &&
+        window.__nativeDisplay.getTracks().every(track => track.readyState === 'live') &&
+        document.querySelector('[data-call-screen] video') === window.__nativePlayer
+      ), true, 'real Electron preserves its microphone, native window capture and borrowed player through recovery');
       const menu = page.getByRole('dialog', {
         name: 'Opções da transmissão de Corte QA',
         exact: true,

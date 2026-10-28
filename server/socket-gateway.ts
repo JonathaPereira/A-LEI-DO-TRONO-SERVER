@@ -34,6 +34,9 @@ export class BackendSocket extends WebSocket implements ChannelConnection {
   account: BackendAccount | null = null;
   guest: GuestIdentity | null = null;
   isAlive = true;
+  resumeToken = randomUUID();
+  resumeFromToken: string | null = null;
+  voiceTransferred = false;
   activity: { name: string; startedAt: number; seenAt: number } | null = null;
   authAttempts = 0;
   authQueue?: Promise<void>;
@@ -86,6 +89,49 @@ export function createSocketGateway({
   version: VERSION,
 }: Options) {
   let closed = false;
+  const suspended = new Map<string, { ws: BackendSocket; timer: ReturnType<typeof setTimeout> }>();
+  const allConnections = () =>
+    new Set([...wss.clients, ...[...suspended.values()].map((s) => s.ws)]);
+  function forget(ws: BackendSocket) {
+    const entry = suspended.get(ws.resumeToken);
+    if (entry?.ws === ws) {
+      clearTimeout(entry.timer);
+      suspended.delete(ws.resumeToken);
+    }
+  }
+  function resume(ws: BackendSocket, token: unknown) {
+    if (typeof token !== 'string' || token.length > 80) return false;
+    if (ws.resumeFromToken === token && channels.voiceParticipation(ws)) return true;
+    const old = [...allConnections()].find(
+      (p) => p !== ws && (p.resumeToken === token || p.resumeFromToken === token),
+    );
+    if (
+      !old ||
+      old.voiceTransferred ||
+      (old.account?.expiresAt ?? old.guest?.expiresAt ?? 0) <= Date.now()
+    )
+      return false;
+    const sameAccount =
+      ws.account &&
+      old.account &&
+      ws.account.id === old.account.id &&
+      !!ws.account.sessionId &&
+      ws.account.sessionId === old.account.sessionId;
+    const sameGuest = ws.guest && old.guest && ws.guest.id === old.guest.id;
+    if (!(sameAccount || sameGuest) || !channels.resumeVoice(old, ws)) return false;
+    forget(old);
+    ws.resumeFromToken = token;
+    old.voiceTransferred = true;
+    azulService.disconnect(old);
+    splendorService.disconnect(old);
+    loveLetterService.disconnect(old);
+    similoService.disconnect(old);
+    ticketToRideService.disconnect(old);
+    old.identityScope.abort();
+    remotePc.disconnect(old);
+    if (old.readyState === WebSocket.OPEN) old.close(4002, 'Conexão recuperada');
+    return true;
+  }
   const send = sendSocket;
   function queueIdentity(ws: BackendSocket, operation: () => void | Promise<void>) {
     const task = (ws.authQueue || Promise.resolve())
@@ -173,8 +219,14 @@ export function createSocketGateway({
               ticketToRideService.disconnect(ws);
             }
             if (ws.guest?.id !== identity.id) channels.leaveRoom(ws, 'guest-change');
-            for (const other of wss.clients)
-              if (other !== ws && other.guest?.id === identity.id) {
+            for (const other of allConnections())
+              if (
+                other !== ws &&
+                other.guest?.id === identity.id &&
+                other.resumeToken !== message.resumeToken &&
+                other.resumeFromToken !== message.resumeToken
+              ) {
+                forget(other);
                 channels.leaveRoom(other, 'session-reconnected');
                 other.guest = null;
                 other.identityScope.abort();
@@ -183,11 +235,15 @@ export function createSocketGateway({
             ws.account = null;
             ws.activity = null;
             ws.guest = identity;
+            const resumed = resume(ws, message.resumeToken);
             community.note(ws);
             send(ws, {
               type: 'guest-result',
               requestId: message.requestId,
               ok: true,
+              resumed,
+              clientId: ws.clientId,
+              resumeToken: ws.resumeToken,
               guest: {
                 id: identity.id,
                 nickname: identity.nickname,
@@ -195,6 +251,7 @@ export function createSocketGateway({
                 expiresAt: identity.expiresAt,
               },
             });
+            if (resumed) channels.sendResumedVoice(ws);
             community.broadcast();
           } catch (err) {
             send(ws, {
@@ -235,12 +292,15 @@ export function createSocketGateway({
               channels.leaveRoom(ws, 'account-change');
             }
             if (!priorAccount && account.sessionId)
-              for (const other of wss.clients)
+              for (const other of allConnections())
                 if (
                   other !== ws &&
+                  other.resumeToken !== message.resumeToken &&
+                  other.resumeFromToken !== message.resumeToken &&
                   other.account?.id === account.id &&
                   other.account.sessionId === account.sessionId
                 ) {
+                  forget(other);
                   channels.leaveRoom(other, 'session-reconnected');
                   azulService.disconnect(other);
                   splendorService.disconnect(other);
@@ -254,6 +314,7 @@ export function createSocketGateway({
             if (priorAccount?.id !== account.id) ws.activity = null;
             ws.guest = null;
             ws.account = account;
+            const resumed = resume(ws, message.resumeToken);
             ws.authAttempts = 0;
             send(ws, {
               type: 'auth-result',
@@ -266,7 +327,11 @@ export function createSocketGateway({
                 permissions: permissions(account.role),
               },
               expiresAt: account.expiresAt,
+              resumed,
+              clientId: ws.clientId,
+              resumeToken: ws.resumeToken,
             });
+            if (resumed) channels.sendResumedVoice(ws);
             community.note(ws);
             community.broadcast();
             void community.refreshDirectory();
@@ -444,6 +509,7 @@ export function createSocketGateway({
           channels.moderateVoice(ws, message);
           break;
         case 'voice-state':
+          ws.resumeFromToken = null;
           channels.handleVoiceState(ws, message);
           break;
         case 'voice-signal':
@@ -476,8 +542,8 @@ export function createSocketGateway({
           });
       }
     });
-    ws.on('close', () => {
-      if (closed) return;
+    ws.on('close', (code) => {
+      if (closed || ws.voiceTransferred) return;
       ws.identityScope.abort();
       azulService.disconnect(ws);
       splendorService.disconnect(ws);
@@ -485,7 +551,23 @@ export function createSocketGateway({
       similoService.disconnect(ws);
       ticketToRideService.disconnect(ws);
       community.note(ws);
-      channels.leaveRoom(ws, 'disconnect');
+      const identityExpiry = ws.account?.expiresAt ?? ws.guest?.expiresAt ?? 0;
+      if (
+        ![1000, 1001, 4001, 4002].includes(code) &&
+        identityExpiry > Date.now() &&
+        channels.suspendVoice(ws)
+      ) {
+        const timer = setTimeout(
+          () => {
+            forget(ws);
+            channels.leaveRoom(ws, 'disconnect');
+            community.broadcast();
+          },
+          Math.min(45000, identityExpiry - Date.now()),
+        );
+        timer.unref?.();
+        suspended.set(ws.resumeToken, { ws, timer });
+      } else channels.leaveRoom(ws, 'disconnect');
       community.broadcast();
     });
     ws.on('error', () => {});
@@ -516,7 +598,7 @@ export function createSocketGateway({
   return {
     revoke(event: { userId: string; sessionId?: string; all: boolean }) {
       if (closed) return;
-      for (const ws of wss.clients)
+      for (const ws of allConnections())
         if (
           ws.account?.id === event.userId &&
           (event.all || ws.account.sessionId === event.sessionId)
@@ -526,6 +608,7 @@ export function createSocketGateway({
           loveLetterService.disconnect(ws);
           similoService.disconnect(ws);
           ticketToRideService.disconnect(ws);
+          forget(ws);
           ws.account = null;
           ws.identityScope.abort();
           channels.leaveRoom(ws, 'auth-expired');
@@ -545,7 +628,7 @@ export function createSocketGateway({
       loveLetterService.updateAccount(account);
       similoService.updateAccount(account);
       ticketToRideService.updateAccount(account);
-      for (const ws of wss.clients)
+      for (const ws of allConnections())
         if (ws.account?.id === account.id) {
           ws.account = { ...ws.account, ...account };
           channels.updateProfile(ws, account);
@@ -560,6 +643,8 @@ export function createSocketGateway({
       if (closed) return;
       closed = true;
       clearInterval(heartbeat);
+      for (const { timer } of suspended.values()) clearTimeout(timer);
+      suspended.clear();
       wss.removeListener('connection', onConnection);
       for (const ws of wss.clients) {
         ws.identityScope.abort();

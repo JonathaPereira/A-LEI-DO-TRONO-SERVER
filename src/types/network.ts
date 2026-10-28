@@ -25,6 +25,7 @@ export interface NetworkIdentity {
 }
 
 export interface NetworkFeatures {
+  readonly voiceResume?: boolean;
   readonly azul: boolean;
   readonly splendor: boolean;
   readonly loveLetter: boolean;
