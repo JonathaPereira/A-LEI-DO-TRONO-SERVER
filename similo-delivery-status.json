@@ -57,12 +57,12 @@
           },
           {
             "name": "Package and smoke test the actual executable",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Accept the real installer on the disposable runner",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -109,5 +109,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T01:44:28.439Z"
+  "updatedAt": "2026-10-28T01:46:33.722Z"
 }
