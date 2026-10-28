@@ -1,0 +1,11 @@
+{
+  "source": "3aaf232147bf4c837b2d599d5441b9558ec58966",
+  "ref": "codex/similo-online",
+  "version": "0.3.11",
+  "status": "dispatching",
+  "workflow": null,
+  "pullRequest": null,
+  "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
+  "backendRequired": true,
+  "updatedAt": "2026-10-28T00:58:53.245Z"
+}
