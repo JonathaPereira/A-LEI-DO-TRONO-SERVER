@@ -2,12 +2,12 @@
   "source": "d72918195529b8fd0c160d1868b38ac5e04abc10",
   "ref": "codex/voice-reconnect-grace",
   "version": "0.3.12",
-  "status": "in_progress",
+  "status": "completed",
   "workflow": {
     "id": 40700039990,
     "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40700039990",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "jobs": [
       {
         "id": 122857059630,
@@ -112,8 +112,8 @@
       {
         "id": 122867534837,
         "name": "Publish validated delivery to Surge / publish",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "success",
         "steps": [
           {
             "name": "Set up job",
@@ -157,23 +157,28 @@
           },
           {
             "name": "Publish the verified directory to Surge",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Verify published version",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/setup-node@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/checkout@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
           }
         ]
       }
@@ -182,5 +187,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/voice-reconnect-grace?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T14:08:54.541Z"
+  "updatedAt": "2026-10-28T14:09:16.259Z"
 }
