@@ -48,6 +48,8 @@ oral. Mitos e monstros indicam a tradição correspondente. Essas informações 
 públicas e iguais para todos, sem referências ao segredo sorteado.
 
 Votos e eliminações têm animações; movimento reduzido remove as transições.
+Após os três primeiros votos numa carta, os demais aparecem num marcador com
+contagem, nomes acessíveis e título, preservando a área da ilustração e do nome.
 Efeitos procedurais usam o dono de áudio do Trono, seu mute global e ganho
 independente do Similo. O botão da mesa pode silenciar só essa apresentação.
 

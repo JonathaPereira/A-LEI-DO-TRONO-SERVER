@@ -188,6 +188,7 @@
   ],
   "browser": [
     "tests/similo-browser.cjs",
+    "tests/similo-crowd-browser.cjs",
     "tests/app-layout-browser.js",
     "tests/appearance-preferences-browser.cjs",
     "tests/application-audio-worklet-browser.cjs",

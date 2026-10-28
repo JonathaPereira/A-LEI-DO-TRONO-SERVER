@@ -505,13 +505,13 @@
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 23px;
-  height: 23px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--voter);
   color: #14251c;
   font-weight: 900;
-  font-size: 11px;
+  font-size: 9px;
   border: 2px solid #16231b;
   box-shadow: 0 2px 7px #0006;
   animation: voteIn 0.45s cubic-bezier(0.17, 0.89, 0.32, 1.5) both;
@@ -1192,10 +1192,10 @@
   .header nav {
     margin-left: auto;
   }
-  .header nav .help {
+  .similo .header nav .help {
     font-size: 0;
   }
-  .header nav .help:before {
+  .similo .header nav .help:before {
     content: '?';
     font-size: 16px;
     font-weight: 700;

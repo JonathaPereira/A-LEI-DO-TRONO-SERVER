@@ -1,6 +1,7 @@
 {
   "browser": [
     "tests/similo-browser.cjs",
+    "tests/similo-crowd-browser.cjs",
     "tests/application-shell-browser.cjs",
     "tests/dm-members-browser.cjs",
     "tests/auth-browser.cjs",

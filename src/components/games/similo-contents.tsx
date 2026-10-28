@@ -266,6 +266,9 @@ export function SimiloContents({
                       !locked &&
                       !eliminated &&
                       (!vote?.confirmed || (allConfirmed && isCaptain && agreement?.disagreement));
+                  const voters = g.config.guessers
+                    .map((person, index) => ({ person, index }))
+                    .filter(({ index }) => g.votes[index]?.selected.includes(id));
                   return (
                     <CardSlot
                       key={id}
@@ -293,21 +296,36 @@ export function SimiloContents({
                         {eliminated && <span className={styles.eliminatedMark}>Eliminada</span>}
                       </button>
                       <div className={styles.tokens}>
-                        {g.config.guessers.map(
-                          (person, index) =>
-                            g.votes[index]?.selected.includes(id) && (
-                              <span
-                                key={person}
-                                className={styles.token}
-                                style={{ '--voter': COLORS[index] } as CSSProperties}
-                                title={`${name(person)}${g.votes[index].confirmed ? ' confirmou' : ''}`}
-                                aria-label={`Voto de ${name(person)}`}
-                                data-confirmed={g.votes[index].confirmed}
-                              >
-                                {name(person).slice(0, 1).toUpperCase()}
-                                {g.votes[index].confirmed && <b>✓</b>}
-                              </span>
-                            ),
+                        {voters.slice(0, 3).map(({ person, index }) => (
+                          <span
+                            key={person}
+                            className={styles.token}
+                            role="img"
+                            style={{ '--voter': COLORS[index] } as CSSProperties}
+                            title={`${name(person)}${g.votes[index].confirmed ? ' confirmou' : ''}`}
+                            aria-label={`Voto de ${name(person)}`}
+                            data-confirmed={g.votes[index].confirmed}
+                          >
+                            {name(person).slice(0, 1).toUpperCase()}
+                            {g.votes[index].confirmed && <b>✓</b>}
+                          </span>
+                        ))}
+                        {voters.length > 3 && (
+                          <span
+                            className={styles.token}
+                            role="img"
+                            style={{ '--voter': '#e1ce9a' } as CSSProperties}
+                            title={voters
+                              .slice(3)
+                              .map((v) => name(v.person))
+                              .join(', ')}
+                            aria-label={`Mais ${voters.length - 3} votos: ${voters
+                              .slice(3)
+                              .map((v) => name(v.person))
+                              .join(', ')}`}
+                          >
+                            +{voters.length - 3}
+                          </span>
                         )}
                       </div>
                     </CardSlot>

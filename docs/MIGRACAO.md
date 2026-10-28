@@ -120,6 +120,20 @@ As artes são entregues separadamente em `similo-mn.surge.sh`, com hashes da mes
 execução, antes do frontend/instalador; isso conserva o limite do pacote Surge.
 
 
+A primeira execução Windows `40612206178`, no commit `3aaf232`, aprovou os
+contratos e as jornadas do Similo, mas encerrou a jornada do Atalaia por timeout.
+As evidências retiveram combate e campanha recarregada; nenhuma entrega foi
+publicada. O fixture agora traz a aba Godot à frente nos gestos, limita esperas,
+registra fases e encerra contexto e conexões dos servidores estáticos. Mantém
+120 s globais e as verificações de jogo, CSV, save e mídia.
+
+Uma conferência com oito participantes reproduziu sete votos invadindo outras
+cartas em janela baixa. A apresentação agrupa votos após os três primeiros num
+marcador com contagem e nomes acessíveis. A regressão usa oito contas de fixture,
+login e WebSocket reais e três dimensões de tela. As duas rodadas finais de
+Similo (três/oito pessoas) e Atalaia passaram com três cenários por rodada,
+sem falhas/skips, em `artifacts/similo/release-fix-round1/2.log`.
+
 Entrega de avatares de DMs e membros, Windows 0.3.10, sobre main `6badf3c`:
 mensagens próprias/recebidas usam o perfil existente; painel único abre por
 padrão e acompanha chamada, texto, DMs, catálogo e jogos, com online/offline e

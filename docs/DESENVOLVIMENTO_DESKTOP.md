@@ -21,6 +21,11 @@ Desenvolvimento usa identidade/perfil separados da instalação do usuário.
 Alterações em electron exigem reinício; alterações C++ exigem recompilar o
 helper. HMR não comprova continuidade de dispositivos após qualquer edição.
 
+O fixture web de Atalaia espelha a exportação real Godot em servidores estáticos
+próprios. Traz a aba à frente antes de gestos que dependem de frames, limita as
+esperas e registra fases; encerra contexto e conexões HTTP após as verificações.
+Isso pertence à preparação/limpeza do teste, não ao comportamento do jogo.
+
 ## Um comando de testes
 
 | Comando                     | Conteúdo e pré-requisitos                                                             |
