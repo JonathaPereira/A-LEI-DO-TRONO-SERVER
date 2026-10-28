@@ -1,4 +1,4 @@
-name: Verify current Similo production
+name: Verify published voice recovery delivery
 on:
   push:
     branches: [codex/similo-delivery-control]
@@ -30,11 +30,9 @@ jobs:
             await check('repository',async()=>{
               const main=(await github.rest.git.getRef({...repo,ref:'heads/main'})).data.object.sha;
               const pulls=[];
-              for(const number of [59,60]){
-                const p=(await github.rest.pulls.get({...repo,pull_number:number})).data;
-                pulls.push({number,url:p.html_url,merged:p.merged,mergedAt:p.merged_at,mergeCommit:p.merge_commit_sha});
-              }
-              const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:'windows-app.yml',branch:'main',per_page:3})).data.workflow_runs;
+              const found=(await github.rest.pulls.list({...repo,head:repo.owner+':codex/voice-reconnect-grace',state:'all'})).data;
+              for(const p of found) pulls.push({number:p.number,url:p.html_url,state:p.state,mergedAt:p.merged_at,mergeCommit:p.merge_commit_sha});
+              const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:'windows-app.yml',branch:'codex/voice-reconnect-grace',per_page:3})).data.workflow_runs;
               const latest=runs[0];
               const jobs=latest?(await github.rest.actions.listJobsForWorkflowRun({...repo,run_id:latest.id})).data.jobs:[];
               return {main,pulls,windows:latest?{url:latest.html_url,source:latest.head_sha,status:latest.status,conclusion:latest.conclusion,jobs:jobs.map(j=>({name:j.name,conclusion:j.conclusion}))}:null};
@@ -42,7 +40,7 @@ jobs:
             await check('backend',async()=>{
               const response=await request('https://a-lei-do-trono-server.onrender.com/health');
               const data=await response.json();
-              return {http:response.status,version:data.version,features:data.features,similo:data.features?.similo===true};
+              return {http:response.status,version:data.version,features:data.features,realtime:data.realtime,voiceResume:data.features?.voiceResume===true,similo:data.features?.similo===true};
             });
             await check('frontend',async()=>{
               const response=await request('https://a-lei-do-trono.surge.sh/');
@@ -56,10 +54,14 @@ jobs:
               const version=manifest.match(/^version:\s*(.+)$/m)?.[1]?.trim();
               const filename=manifest.match(/^path:\s*(.+)$/m)?.[1]?.trim();
               if(!/^MN-Trono-[\d.]+-Windows\.exe$/.test(filename||''))throw Error('Unexpected installer path');
-              const response=await request('https://a-lei-do-trono.surge.sh/downloads/'+filename,{headers:{Range:'bytes=0-1023'}});
+              const digest=manifest.match(/^sha512:\s*(.+)$/m)?.[1]?.trim();
+              if(!digest)throw Error('Published installer digest not found');
+              const response=await request('https://a-lei-do-trono.surge.sh/downloads/'+filename);
               const bytes=new Uint8Array(await response.arrayBuffer());
               if(bytes[0]!==0x4d||bytes[1]!==0x5a)throw Error('Download is not a Windows executable');
-              return {version,filename,http:response.status,contentRange:response.headers.get('content-range'),windowsHeader:true};
+              const actual=crypto.createHash('sha512').update(bytes).digest('base64');
+              if(actual!==digest)throw Error('Published installer SHA-512 does not match latest.yml');
+              return {version,filename,http:response.status,bytes:bytes.length,sha512Verified:true,windowsHeader:true};
             });
             await check('art',async()=>{
               const metadata=await (await request('https://similo-mn.surge.sh/version.json')).json();
@@ -72,8 +74,9 @@ jobs:
               }
               return {version:metadata.desktopVersion,source:metadata.source,verified};
             });
-            report.complete=report.errors.length===0&&report.checks.backend?.similo===true&&report.checks.frontend?.version==='0.3.11'&&report.checks.installer?.version==='0.3.11'&&report.checks.art?.version==='0.3.11';
-            const path='similo-production-check.json';let sha;
+            report.complete=report.errors.length===0&&report.checks.backend?.similo===true&&report.checks.frontend?.version==='0.3.12'&&report.checks.installer?.version==='0.3.12'&&report.checks.art?.version==='0.3.12';
+            report.voiceRecoveryActivated=report.checks.backend?.voiceResume===true;
+            const path='voice-recovery-production-check.json';let sha;
             try{sha=(await github.rest.repos.getContent({...repo,path,ref:branch})).data.sha;}catch(e){if(e.status!==404)throw e;}
             await github.rest.repos.createOrUpdateFileContents({...repo,branch,path,sha,message:'chore: record current production verification',content:Buffer.from(JSON.stringify(report,null,2)+'\n').toString('base64')});
             core.summary.addRaw(JSON.stringify(report,null,2),true);await core.summary.write();
