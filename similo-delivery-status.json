@@ -137,27 +137,27 @@
           },
           {
             "name": "Find the matching successful Windows delivery",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Download and verify the frontend and installer",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Publish and verify Atalaia before updating the catalog",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Publish and verify Similo portraits before updating the catalog",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Publish the verified directory to Surge",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -182,5 +182,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-clue-layout?expand=1",
   "backendRequired": false,
-  "updatedAt": "2026-10-28T14:53:16.077Z"
+  "updatedAt": "2026-10-28T14:53:37.767Z"
 }
