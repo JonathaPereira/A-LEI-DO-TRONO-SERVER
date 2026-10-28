@@ -47,12 +47,12 @@
           },
           {
             "name": "Check sources and build frontend and native helpers once",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Verify contracts and real user journeys",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -109,5 +109,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-clue-layout?expand=1",
   "backendRequired": false,
-  "updatedAt": "2026-10-28T14:36:32.955Z"
+  "updatedAt": "2026-10-28T14:37:15.541Z"
 }
