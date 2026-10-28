@@ -166,49 +166,60 @@ export function Modal({
 }
 export function DeckPicker({
   label,
+  description,
   selected,
   onChange,
   disabled = false,
 }: {
   label: string;
+  description: string;
   selected: ThemeId[];
   onChange: (v: ThemeId[]) => void;
   disabled?: boolean;
 }) {
+  const primary = selected[0] || 'animals';
+  const secondary = selected[1] || '';
   return (
     <fieldset className={styles.deckPicker} disabled={disabled}>
-      <legend>
-        {label}
-        <small>Escolha 1 ou misture 2 temas</small>
-      </legend>
-      <div className={styles.themeGrid}>
-        {THEME_IDS.map((theme) => (
-          <button
-            key={theme}
-            type="button"
-            aria-label={`${THEMES[theme].name} — ${label}`}
-            aria-pressed={selected.includes(theme)}
-            disabled={disabled || (!selected.includes(theme) && selected.length === 2)}
-            onClick={() =>
-              onChange(
-                selected.includes(theme)
-                  ? selected.filter((t) => t !== theme)
-                  : [...selected, theme],
-              )
+      <legend>{label}</legend>
+      <p>{description}</p>
+      <div className={styles.deckFields}>
+        <label>
+          Tema principal
+          <select
+            value={primary}
+            onChange={(event) => {
+              const next = event.target.value as ThemeId;
+              onChange(secondary && secondary !== next ? [next, secondary] : [next]);
+            }}
+          >
+            {THEME_IDS.map((theme) => (
+              <option key={theme} value={theme}>
+                {THEMES[theme].name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Misturar com (opcional)
+          <select
+            value={secondary}
+            onChange={(event) =>
+              onChange(event.target.value ? [primary, event.target.value as ThemeId] : [primary])
             }
           >
-            <Portrait id={`${theme}-0`} />
-            <span>
-              {THEMES[theme].name}
-              {selected.includes(theme) && ' ✓'}
-            </span>
-          </button>
-        ))}
+            <option value="">Sem mistura</option>
+            {THEME_IDS.filter((theme) => theme !== primary).map((theme) => (
+              <option key={theme} value={theme}>
+                {THEMES[theme].name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <p>
-        {selected.map((t) => THEMES[t].name).join(' + ') || 'Selecione pelo menos um tema.'} ·{' '}
-        {selected.length * 24} cartas
-      </p>
+      <output className={styles.deckSummary}>
+        {selected.map((theme) => THEMES[theme].name).join(' + ')}
+      </output>
     </fieldset>
   );
 }

@@ -1,8 +1,27 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **0.3.12** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.0** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.0
+
+Inicia a numeração pública 1.0 do Trono. Aplicativo, frontend, instalador e
+manifesto de atualização usam 1.0.0; o protocolo do backend permanece compatível.
+
+Similo conserva a orientação da pista também na ampliação. A relação recebida do
+servidor controla tanto a carta quanto a descrição vertical/semelhança ou
+horizontal/diferença, em qualquer tamanho de tela e com movimento reduzido.
+
+A seleção separa “12 cartas da mesa” de “Baralho do informante”. Cada grupo tem
+um tema principal e uma mistura opcional, com resumo dos temas escolhidos. Não
+mostra mais o tamanho do conjunto de temas como se fosse o número de cartas na
+mesa. Mudanças do anfitrião continuam compartilhadas; demais participantes só
+consultam as escolhas. A seleção não permite temas duplicados.
+
+Sem SQL, mudança de regras ou novo requisito de backend para este reparo visual.
+Preserva a recuperação de voz e os demais jogos. Publicação conjunta de frontend
+e instalador continua condicionada à aceitação Windows do mesmo código.
 
 ## Windows 0.3.12
 

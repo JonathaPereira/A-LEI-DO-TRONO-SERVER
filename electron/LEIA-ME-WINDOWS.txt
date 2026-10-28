@@ -1,4 +1,8 @@
-M&N · A Lei do Trono — Windows 0.3.12
+M&N · A Lei do Trono — Windows 1.0.0
+
+Trono 1.0: pistas do Similo mantêm a orientação também ao ampliar. Configurações
+separam as 12 cartas da mesa do baralho do informante, com tema principal e
+mistura opcional. As regras e a recuperação de voz continuam preservadas.
 
 A chamada tolera quedas temporárias da conexão por até 45 segundos e tenta
 reconectar automaticamente, conservando a captura. Sair durante a recuperação
@@ -31,7 +35,7 @@ Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-0.3.12-Windows.exe.
+1. Instalação nova: instale MN-Trono-1.0.0-Windows.exe.
    Instalações 0.3.5/0.3.6 com falha ao baixar atualizações precisam instalar
    esta versão manualmente uma vez. Versões anteriores sem a falha podem usar
    o atualizador interno após a publicação do site completo.

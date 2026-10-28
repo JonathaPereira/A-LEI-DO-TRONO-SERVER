@@ -68,22 +68,26 @@ export function SimiloLobby({
         <div className={styles.setupTitle}>
           <div>
             <span className={styles.eyebrow}>{room ? 'LOBBY COMPARTILHADO' : 'CRIE SUA MESA'}</span>
-            <h2>{room ? 'Todos prontos?' : 'Baralhos que se conectam'}</h2>
+            <h2>Escolha os baralhos</h2>
           </div>
-          <span className={styles.pill}>120 cartas ilustradas</span>
+          <span className={styles.pill}>Até 2 temas por grupo</span>
         </div>
-        <DeckPicker
-          label="Cartas dos adivinhadores"
-          selected={settings.boardThemes}
-          onChange={(v) => themes('boardThemes', v)}
-          disabled={!!room && (!host || locked)}
-        />
-        <DeckPicker
-          label="Cartas do informante"
-          selected={settings.clueThemes}
-          onChange={(v) => themes('clueThemes', v)}
-          disabled={!!room && (!host || locked)}
-        />
+        <div className={styles.deckChoices}>
+          <DeckPicker
+            label="12 cartas da mesa"
+            description="Doze cartas sorteadas destes temas, visíveis para todos."
+            selected={settings.boardThemes}
+            onChange={(v) => themes('boardThemes', v)}
+            disabled={!!room && (!host || locked)}
+          />
+          <DeckPicker
+            label="Baralho do informante"
+            description="Cartas usadas para dar pistas. O informante tem 5 na mão."
+            selected={settings.clueThemes}
+            onChange={(v) => themes('clueThemes', v)}
+            disabled={!!room && (!host || locked)}
+          />
+        </div>
         <div className={styles.lobbyActions}>
           <label>
             Vagas na mesa
