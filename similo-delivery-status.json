@@ -2,18 +2,18 @@
   "source": "3aaf232147bf4c837b2d599d5441b9558ec58966",
   "ref": "codex/similo-online",
   "version": "0.3.11",
-  "status": "in_progress",
+  "status": "completed",
   "workflow": {
     "id": 40612206178,
     "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40612206178",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "failure",
     "jobs": [
       {
         "id": 122566217915,
         "name": "Validate and package Windows",
-        "status": "in_progress",
-        "conclusion": null,
+        "status": "completed",
+        "conclusion": "failure",
         "steps": [
           {
             "name": "Set up job",
@@ -52,48 +52,53 @@
           },
           {
             "name": "Verify contracts and real user journeys",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "failure"
           },
           {
             "name": "Package and smoke test the actual executable",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "skipped"
           },
           {
             "name": "Accept the real installer on the disposable runner",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "skipped"
           },
           {
             "name": "Prepare the matched frontend and installer download",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "skipped"
           },
           {
             "name": "Save the validated delivery in a private draft release",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "skipped"
           },
           {
             "name": "Report failed test summaries",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Save failure evidence",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Post Run actions/setup-node@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "skipped"
           },
           {
             "name": "Post Run actions/checkout@v4",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
           }
         ]
       },
@@ -103,11 +108,18 @@
         "status": "completed",
         "conclusion": "skipped",
         "steps": []
+      },
+      {
+        "id": 122571096623,
+        "name": "Publish validated delivery to Surge",
+        "status": "completed",
+        "conclusion": "skipped",
+        "steps": []
       }
     ]
   },
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T01:02:04.298Z"
+  "updatedAt": "2026-10-28T01:13:23.082Z"
 }
