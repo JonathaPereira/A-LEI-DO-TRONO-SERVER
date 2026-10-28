@@ -187,5 +187,16 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T01:48:22.019Z"
+  "pullRequestError": "GitHub Actions is not permitted to create or approve pull requests.",
+  "publication": {
+    "frontend": "https://a-lei-do-trono.surge.sh/",
+    "installer": "https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.3.11-Windows.exe",
+    "art": "https://similo-mn.surge.sh/version.json"
+  },
+  "backend": {
+    "http": 200,
+    "similo": false,
+    "version": "0.14.0-alpha"
+  },
+  "updatedAt": "2026-10-28T01:48:23.513Z"
 }
