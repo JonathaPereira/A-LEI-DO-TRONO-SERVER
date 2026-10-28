@@ -57,12 +57,12 @@
           },
           {
             "name": "Package and smoke test the actual executable",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Accept the real installer on the disposable runner",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -109,5 +109,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/voice-reconnect-grace?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T14:05:23.366Z"
+  "updatedAt": "2026-10-28T14:07:08.136Z"
 }
