@@ -1,4 +1,4 @@
-name: Deliver voice reconnection recovery
+name: Deliver Trono 1.0 Similo repair
 on:
   push:
     branches: [codex/similo-delivery-control]
@@ -19,12 +19,12 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Validate and publish the reviewed voice recovery on the existing delivery pipeline.
-            const ref='codex/voice-reconnect-grace',branch='codex/similo-delivery-control';
+            // Publish Trono 1.0 after the Similo presentation regressions pass.
+            const ref='codex/similo-clue-layout',branch='codex/similo-delivery-control';
             const repo=context.repo,path='similo-delivery-status.json';
             const {data:head}=await github.rest.git.getRef({...repo,ref:'heads/'+ref});
             const source=head.object.sha;
-            const report={source,ref,version:'0.3.12',status:'dispatching',workflow:null,pullRequest:null,compare:`https://github.com/${repo.owner}/${repo.repo}/compare/main...${ref}?expand=1`,backendRequired:true};
+            const report={source,ref,version:'1.0.0',status:'dispatching',workflow:null,pullRequest:null,compare:`https://github.com/${repo.owner}/${repo.repo}/compare/main...${ref}?expand=1`,backendRequired:false};
             let fileSha;
             async function save(){
               const result=await github.rest.repos.createOrUpdateFileContents({...repo,branch,path,sha:fileSha,message:'chore: record Similo delivery status',content:Buffer.from(JSON.stringify({...report,updatedAt:new Date().toISOString()},null,2)+'\n').toString('base64')});
@@ -60,29 +60,29 @@ jobs:
               await save();core.setFailed('Windows or publication failed. Inspect the recorded steps and logs.');return;
             }
             try{
-              const title='Mantém a chamada durante quedas temporárias e reconecta automaticamente';
+              const title='Trono 1.0: corrige pistas ampliadas do Similo e simplifica a escolha de baralhos';
               const body=[
-                'Uma perda breve do WebSocket encerrava a chamada e exigia entrada manual. Agora cliente e servidor reservam até 45 segundos para reautenticar e retomar a mesma identidade, sem recapturar microfone/câmera/tela nem recriar mídia estabelecida.',
+                'Uma pista horizontal voltava a aparecer na vertical ao abrir os detalhes. O inspetor agora preserva a relação autoritativa e mostra explicitamente horizontal/diferença ou vertical/semelhança. A faixa reserva a área da carta e usa rotação independente das transformações transitórias.',
                 '',
-                '- Recuperação sobre o único transport existente, com tentativas sequenciais, prazo global e eventos retidos até a confirmação.',
-                '- Reserva de voz no servidor, ID/assento estáveis, capacidade aleatória validada pela mesma conta/sessão ou convidado e confirmação repetível quando a resposta se perde.',
-                '- Sair durante a recuperação libera os dispositivos e não reativa a voz. Logout invalida comandos antigos; moderação, sessão substituída e expiração mantêm seus efeitos.',
-                '- Rótulo de reconexão, preservação de mute, peers e sessões SFU, e operações SFU aguardando reautenticação. Controle remoto não é retomado.',
-                '- Windows 0.3.12; sem migração SQL. Frontend e instalador publicados pela mesma execução aprovada.',
+                'A reprodução com três clientes confirmou a mesma relação nos pacotes e a posição correta na faixa; não comprovou falha de sincronização no servidor. O caso reproduzido foi a ampliação vertical de uma pista horizontal (190×285).',
                 '',
-                'Validação local: typecheck, format:check, build e contratos core aprovados. Duas rodadas afetadas de navegador (11 aprovados, dois checks RTP/PCM bloqueados pela política Chromium gerenciada) e duas rodadas finais de recuperação com contas/sockets reais. Três quedas preservam mic/câmera/tela/peers; saída durante a quarta não volta à voz. Capturas e contas são fixtures explícitas.',
-                'Windows valida também a perda de sinalização no Electron real, conservando microfone e captura nativa de janela. Aceitação completa/NSIS e publicação: '+run.html_url,
+                'A configuração separa 12 cartas da mesa de Baralho do informante, com tema principal e mistura opcional em cada grupo. Remove o total de cartas do conjunto que podia ser confundido com a mesa de 12. A seleção evita temas duplicados e mantém escolhas compartilhadas e permissões do anfitrião.',
                 '',
-                'Auditoria de produção: três HTTP 200 e cinco pongs; SFU habilitado/configurado, sem limite bloqueado. TURN desativado/não configurado; primeira resposta de 22,6 s seguida de 95/107 ms. Isso não comprova a causa da queda relatada. Evidência pública: branch codex/similo-delivery-control, voice-server-audit.json.',
+                'A versão pública passa a 1.0.0, conforme solicitado, no frontend, aplicativo Windows e manifesto do atualizador. Protocolo e regras continuam compatíveis; não há SQL nem novo requisito de backend.',
                 '',
-                '**Ativação:** incorporar e fazer deploy do backend; `/health` deve anunciar `features.voiceResume=true`. Servidor antigo mantém o comportamento anterior. Reservas são voláteis: restart do servidor e prazo esgotado ainda exigem entrar novamente.',
-                'Operação e limites em docs/ATUALIZACOES.md e docs/ARQUITETURA.md. Não altera Godot, regras dos jogos ou configurações de produção.'
+                'Validação local: typecheck, format:check, build e 1.454 contratos core. Duas rodadas Similo/mesa cheia/DMs/recuperação de voz passaram com seis verificações por rodada, sem falhas/skips. Três clientes verificam as cinco pistas, modos de movimento diferentes, larguras 1536/1280/390, ampliação horizontal, escolhas compartilhadas e limites dos seletores. Mídia e contas são fixtures explícitas; screenshots foram inspecionadas sem golden snapshots.',
+                'Windows/NSIS e publicação aprovados: '+run.html_url,
+                '',
+                '![Seleção compacta](https://raw.githubusercontent.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/codex/similo-delivery-control/similo-preview-decks.png)',
+                '![Pista horizontal ampliada](https://raw.githubusercontent.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/codex/similo-delivery-control/similo-preview-horizontal.png)',
+                '',
+                'Operação, versão e limites em docs/ATUALIZACOES.md, docs/UX_COMUNICACAO.md e games/similo/README.md. Preserva jogos, chamada e captura existentes.'
               ].join('\n');
               const existing=(await github.rest.pulls.list({...repo,state:'open',head:repo.owner+':'+ref})).data[0];
               const pr=existing||(await github.rest.pulls.create({...repo,head:ref,base:'main',title,body,draft:false})).data;
               report.pullRequest={number:pr.number,url:pr.html_url};
             }catch(e){report.pullRequestError=e.message;}
-            report.publication={frontend:'https://a-lei-do-trono.surge.sh/',installer:'https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.3.12-Windows.exe',art:'https://similo-mn.surge.sh/version.json'};
+            report.publication={frontend:'https://a-lei-do-trono.surge.sh/',installer:'https://a-lei-do-trono.surge.sh/downloads/MN-Trono-1.0.0-Windows.exe',art:'https://similo-mn.surge.sh/version.json'};
             try{
               const response=await fetch('https://a-lei-do-trono-server.onrender.com/health',{signal:AbortSignal.timeout(45000)});
               const data=await response.json();report.backend={http:response.status,voiceResume:data.features?.voiceResume===true,similo:data.features?.similo===true,version:data.version};
