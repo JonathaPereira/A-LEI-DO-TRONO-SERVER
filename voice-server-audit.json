@@ -1,0 +1,189 @@
+{
+  "checkedAt": "2026-10-28T13:15:50.285Z",
+  "health": [
+    {
+      "http": 200,
+      "elapsedMs": 22562,
+      "version": "0.14.0-alpha",
+      "features": {
+        "remotePc": true,
+        "remotePcProtocol": 2,
+        "ticketToRide": true,
+        "loveLetter": true,
+        "similo": true,
+        "splendor": true,
+        "azul": true,
+        "soundboardRestart": true,
+        "voiceProfileActivity": true,
+        "independentGameVoice": true,
+        "gameRulesVersion": "0.9.0",
+        "socialMessaging": true,
+        "chatModeration": true,
+        "channelNotifications": true
+      },
+      "realtime": {
+        "configured": true,
+        "enabled": true,
+        "hardBlocked": false,
+        "estimatedGb": 0,
+        "maxQuality": "high",
+        "screenAllowed": true,
+        "thresholds": {
+          "soft": 800,
+          "ultra": 800,
+          "high": 850,
+          "screen": 900,
+          "hard": 950
+        },
+        "month": "2026-10",
+        "maxParticipants": 8,
+        "estimateSafetyFactor": 1.5,
+        "turnConfigured": false,
+        "turnEnabled": false
+      },
+      "auth": {
+        "configured": true,
+        "required": true
+      }
+    },
+    {
+      "http": 200,
+      "elapsedMs": 95,
+      "version": "0.14.0-alpha",
+      "features": {
+        "remotePc": true,
+        "remotePcProtocol": 2,
+        "ticketToRide": true,
+        "loveLetter": true,
+        "similo": true,
+        "splendor": true,
+        "azul": true,
+        "soundboardRestart": true,
+        "voiceProfileActivity": true,
+        "independentGameVoice": true,
+        "gameRulesVersion": "0.9.0",
+        "socialMessaging": true,
+        "chatModeration": true,
+        "channelNotifications": true
+      },
+      "realtime": {
+        "configured": true,
+        "enabled": true,
+        "hardBlocked": false,
+        "estimatedGb": 0,
+        "maxQuality": "high",
+        "screenAllowed": true,
+        "thresholds": {
+          "soft": 800,
+          "ultra": 800,
+          "high": 850,
+          "screen": 900,
+          "hard": 950
+        },
+        "month": "2026-10",
+        "maxParticipants": 8,
+        "estimateSafetyFactor": 1.5,
+        "turnConfigured": false,
+        "turnEnabled": false
+      },
+      "auth": {
+        "configured": true,
+        "required": true
+      }
+    },
+    {
+      "http": 200,
+      "elapsedMs": 107,
+      "version": "0.14.0-alpha",
+      "features": {
+        "remotePc": true,
+        "remotePcProtocol": 2,
+        "ticketToRide": true,
+        "loveLetter": true,
+        "similo": true,
+        "splendor": true,
+        "azul": true,
+        "soundboardRestart": true,
+        "voiceProfileActivity": true,
+        "independentGameVoice": true,
+        "gameRulesVersion": "0.9.0",
+        "socialMessaging": true,
+        "chatModeration": true,
+        "channelNotifications": true
+      },
+      "realtime": {
+        "configured": true,
+        "enabled": true,
+        "hardBlocked": false,
+        "estimatedGb": 0,
+        "maxQuality": "high",
+        "screenAllowed": true,
+        "thresholds": {
+          "soft": 800,
+          "ultra": 800,
+          "high": 850,
+          "screen": 900,
+          "hard": 950
+        },
+        "month": "2026-10",
+        "maxParticipants": 8,
+        "estimateSafetyFactor": 1.5,
+        "turnConfigured": false,
+        "turnEnabled": false
+      },
+      "auth": {
+        "configured": true,
+        "required": true
+      }
+    }
+  ],
+  "signaling": [
+    {
+      "type": "welcome",
+      "version": "0.14.0-alpha",
+      "voiceResume": false,
+      "realtime": {
+        "configured": true,
+        "enabled": true,
+        "hardBlocked": false,
+        "estimatedGb": 0,
+        "maxQuality": "high",
+        "screenAllowed": true,
+        "thresholds": {
+          "soft": 800,
+          "ultra": 800,
+          "high": 850,
+          "screen": 900,
+          "hard": 950
+        },
+        "month": "2026-10",
+        "maxParticipants": 8,
+        "estimateSafetyFactor": 1.5,
+        "turnConfigured": false,
+        "turnEnabled": false
+      }
+    },
+    {
+      "type": "pong",
+      "receivedAt": "2026-10-28T13:16:16.127Z"
+    },
+    {
+      "type": "pong",
+      "receivedAt": "2026-10-28T13:16:19.130Z"
+    },
+    {
+      "type": "pong",
+      "receivedAt": "2026-10-28T13:16:22.128Z"
+    },
+    {
+      "type": "pong",
+      "receivedAt": "2026-10-28T13:16:25.131Z"
+    },
+    {
+      "type": "pong",
+      "receivedAt": "2026-10-28T13:16:28.132Z"
+    }
+  ],
+  "errors": [],
+  "healthy": true
+}
