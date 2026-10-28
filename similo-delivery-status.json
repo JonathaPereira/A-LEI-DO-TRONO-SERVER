@@ -142,17 +142,17 @@
           },
           {
             "name": "Download and verify the frontend and installer",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Publish and verify Atalaia before updating the catalog",
-            "status": "pending",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Publish and verify Similo portraits before updating the catalog",
-            "status": "pending",
+            "status": "in_progress",
             "conclusion": null
           },
           {
@@ -182,5 +182,5 @@
   "pullRequest": null,
   "compare": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/similo-online?expand=1",
   "backendRequired": true,
-  "updatedAt": "2026-10-28T01:47:38.734Z"
+  "updatedAt": "2026-10-28T01:48:00.437Z"
 }
