@@ -14,7 +14,7 @@ interface NavigationOptions {
   closeSettings(): void;
   focusComposer(): void;
   playTextSound(): void;
-  onDisconnected(): void;
+  onDisconnected(recovering?: boolean): void;
 }
 /** Owns presentation and room metadata, never membership, messages, sockets or media. */
 export function createCallNavigation(options: NavigationOptions) {
@@ -120,7 +120,7 @@ export function createCallNavigation(options: NavigationOptions) {
         }
         break;
       case 'connection':
-        if (message.connected === false) options.onDisconnected();
+        if (message.connected === false) options.onDisconnected(message.recovering === true);
         break;
     }
   }

@@ -244,6 +244,7 @@ export function createChannelService({
         role: p.guest ? 'guest' : p.ws.account?.role || 'member',
         serverMuted: !!p.serverMuted,
         mediaBlocked: !!p.mediaBlocked,
+        reconnecting: !!p.reconnecting,
         muted: !!p.voiceMuted,
         deafened: !!p.voiceDeafened,
         camera: !!p.cameraOn,
@@ -842,6 +843,55 @@ export function createChannelService({
   }
 
   return {
+    suspendVoice(ws: ChannelConnection) {
+      const room = roomFor(ws.roomId),
+        player = room?.players.get(ws.clientId);
+      if (closed || !room || !player?.voiceJoined || player.ws !== ws) return false;
+      player.reconnecting = true;
+      remotePc?.disconnect(ws);
+      broadcastVoiceRoster(room);
+      return true;
+    },
+    resumeVoice(previous: ChannelConnection, ws: ChannelConnection) {
+      const room = roomFor(previous.roomId),
+        player = room?.players.get(previous.clientId);
+      if (
+        closed ||
+        !room ||
+        !player?.voiceJoined ||
+        player.ws !== previous ||
+        !voiceModeration.mayJoin(room, previous)
+      )
+        return false;
+      ws.clientId = previous.clientId;
+      ws.roomId = previous.roomId;
+      ws.textRoomId = previous.textRoomId;
+      ws.gameRoomId = previous.gameRoomId;
+      ws.independentGames = previous.independentGames;
+      for (const id of new Set([ws.roomId, ws.textRoomId, ws.gameRoomId])) {
+        const member = roomFor(id)?.players.get(ws.clientId);
+        if (member?.ws === previous) {
+          member.ws = ws;
+          member.reconnecting = false;
+        }
+      }
+      previous.roomId = previous.textRoomId = previous.gameRoomId = null;
+      return true;
+    },
+    sendResumedVoice(ws: ChannelConnection) {
+      const room = roomFor(ws.roomId);
+      if (!room || room.players.get(ws.clientId)?.ws !== ws) return;
+      send(ws, { type: 'voice-room-attached', room: safeRoom(room) });
+      if (ws.textRoomId) {
+        const text = roomFor(ws.textRoomId);
+        if (text)
+          send(ws, { type: 'joined-text-channel', room: safeRoom(text), primaryRoomId: ws.roomId });
+      }
+      sendVoiceMode(room);
+      broadcastVoiceRoster(room);
+      realtimeSfu.broadcastPublications(room);
+      presenceChanged();
+    },
     voiceParticipation(ws: ChannelConnection) {
       if (closed) return null;
       const room = roomFor(ws.roomId),

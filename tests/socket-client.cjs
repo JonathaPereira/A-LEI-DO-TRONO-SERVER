@@ -357,3 +357,91 @@ test('chat and text joins cannot send after their account preparation loses the 
     assert.deepEqual(h.sent, []);
   }
 });
+
+test('bounded voice recovery retries sequentially and releases its deadline after success', async (t) => {
+  const { createVoiceRecovery } = await import('../src/lib/socket/voice-recovery.ts');
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const delivered = [], restored = [], attempts = [];
+  let reject, resolve, connections = 0, closes = 0;
+  const recovery = createVoiceRecovery({
+    identity: () => ({ resumeToken: 'secret', accountId: 'a' }),
+    transport: { connect: async () => { connections++; return true; }, disconnect: () => closes++ },
+    restore: async () => { attempts.push(connections); return new Promise((yes, no) => { resolve = yes; reject = no; }); },
+    deliver: m => delivered.push(m), restored: m => restored.push(m),
+  });
+  assert.equal(recovery.filter({type:'connection',connected:false,code:1006}).recovering, true);
+  t.mock.timers.tick(300); await new Promise(r => setImmediate(r));
+  t.mock.timers.tick(1000); assert.equal(connections, 1, 'an in-flight attempt cannot overlap another');
+  reject(Error('temporary')); await new Promise(r => setImmediate(r));
+  t.mock.timers.tick(500); await new Promise(r => setImmediate(r));
+  assert.equal(connections, 2);
+  assert.equal(recovery.filter({type:'welcome',clientId:'unconfirmed'}), null);
+  recovery.filter({type:'voice-roster',players:[]});
+  resolve({type:'auth-result',ok:true,resumed:true,clientId:'original',resumeToken:'rotated',authToken:'private-token'});
+  await new Promise(r => setImmediate(r));
+  assert.equal(restored.length, 1);
+  assert(delivered.some(m => m.type === 'welcome' && m.clientId === 'original'));
+  assert(delivered.some(m => m.type === 'connection' && m.resumed));
+  assert(!JSON.stringify(delivered).includes('private-token'), 'access tokens stay private to the identity owner');
+  t.mock.timers.tick(45000); assert.equal(closes, 0); assert.equal(recovery.pending, undefined);
+});
+test('voice recovery expires once, ignores late authentication and never retries an explicit session replacement', async (t) => {
+  const { createVoiceRecovery } = await import('../src/lib/socket/voice-recovery.ts');
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const delivered = [], restored = [];
+  let resolve, closes = 0;
+  const recovery = createVoiceRecovery({
+    identity: () => ({resumeToken:'secret',accountId:'a'}),
+    transport: {connect: async () => true, disconnect: () => closes++},
+    restore: () => new Promise(r => { resolve = r; }),
+    deliver: m => delivered.push(m), restored: m => restored.push(m),
+  });
+  recovery.filter({type:'connection',connected:false,code:1006});
+  t.mock.timers.tick(300); await new Promise(r => setImmediate(r));
+  t.mock.timers.tick(44700);
+  assert.equal(closes, 1);
+  assert.equal(delivered.filter(m => m.recoveryFailed).length, 1);
+  resolve({resumed:true,clientId:'old',resumeToken:'next'}); await new Promise(r => setImmediate(r));
+  assert.equal(restored.length, 0);
+  for(const code of [1000,1001,4001,4002]) {
+    assert.equal(recovery.filter({type:'connection',connected:false,code}).recovering, undefined);
+    assert.equal(recovery.pending, undefined);
+  }
+});
+
+test('logout cancels identity commands already waiting for voice recovery', async () => {
+  const h = await setup({ getIdentity: () => ({user:{id:'a'},getAccessToken:async ()=>'token'}) });
+  let requests = 0;
+  h.transport.request = async () => {
+    requests++;
+    return {type:'auth-result',ok:true,user:{id:'a',nickname:'Ana',role:'member',permissions:{}},resumeToken:'recovery-token'};
+  };
+  h.transport.connect = async () => { h.transport.connected = true; return true; };
+  h.receive({type:'welcome',clientId:'old',features:{voiceResume:true}});
+  await h.client.authenticate('token');
+  h.client.setVoiceState(true);
+  h.receive({type:'connection',connected:false,code:1006});
+  const stale = h.client.authenticate('old-account-token');
+  h.client.disconnect();
+  await assert.rejects(stale,/Conexão encerrada/);
+  assert.equal(requests,1,'a command submitted before logout cannot authenticate again');
+});
+
+test('a leave queued during an expired recovery cannot detach a later call', async (t) => {
+  t.mock.timers.enable({apis:['setTimeout']});
+  const h = await setup({recoveryWindowMs:1000,getIdentity:()=>({user:{id:'a'},getAccessToken:async()=>'token'})});
+  let resumed=false;
+  h.transport.request=async()=>({type:'auth-result',ok:true,user:{id:'a',nickname:'Ana',role:'member',permissions:{}},resumeToken:'capability',clientId:'original',resumed});
+  h.transport.connect=async()=>{h.transport.connected=true;return true;};
+  h.receive({type:'welcome',clientId:'original',features:{voiceResume:true,independentGameVoice:true}});
+  await h.client.authenticate('token'); h.client.setVoiceState(true);
+  h.receive({type:'connection',connected:false,code:1006});h.client.leaveVoiceRoom();
+  t.mock.timers.tick(1000);
+  await h.client.authenticate('token');h.client.setVoiceState(true);
+  h.sent.length=0;resumed=true;
+  h.receive({type:'connection',connected:false,code:1006});t.mock.timers.tick(300);
+  await new Promise(r=>setImmediate(r));
+  assert(!h.sent.some(m=>m.type==='leave-voice-room'||m.type==='leave-room'));
+  assert(h.sent.some(m=>m.type==='voice-state'&&m.joined));
+  h.client.disconnect();
+});

@@ -30,6 +30,7 @@ function isRoom(value: unknown): value is RoomReference {
 }
 
 export const NO_NETWORK_FEATURES: NetworkFeatures = Object.freeze({
+  voiceResume: false,
   azul: false,
   splendor: false,
   loveLetter: false,
@@ -57,6 +58,7 @@ function readFeatures(value: unknown): NetworkFeatures {
     }
   }
   return Object.freeze({
+    voiceResume: value.voiceResume === true,
     azul: value.azul === true,
     splendor: value.splendor === true,
     loveLetter: value.loveLetter === true,

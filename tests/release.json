@@ -1,5 +1,6 @@
 {
   "browser": [
+    "tests/voice-recovery-browser.cjs",
     "tests/similo-browser.cjs",
     "tests/similo-crowd-browser.cjs",
     "tests/application-shell-browser.cjs",

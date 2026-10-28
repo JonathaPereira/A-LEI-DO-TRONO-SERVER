@@ -52,6 +52,14 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 ## Capacidades atuais
 
+Uma interrupção temporária de sinalização mantém a chamada aberta, com aviso de
+reconexão e estado “Reconectando…” no participante. O cliente tenta retomar por
+até 45 segundos, sem pedir outro acesso ao microfone nem tocar sons de saída e
+entrada. O botão de sair continua efetivo. Recuperação não garante áudio durante
+a falta de rede; não reproduz fala antiga. Logout, remoção por moderação, sessão
+substituída e expiração da janela encerram a participação. Reinício do backend
+perde as reservas em memória. Requer backend com `voiceResume` anunciado.
+
 A lista de membros fica aberta por padrão e é independente da tela de chamada.
 O mesmo painel acompanha texto, mensagens diretas, catálogo e jogos, separando
 online/offline conforme a presença recebida. Pode ser recolhido pelo botão do

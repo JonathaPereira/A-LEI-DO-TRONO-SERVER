@@ -154,13 +154,19 @@ export function ParticipantCard({
       </span>
       <strong title={p.name + (p.self ? ' (você)' : '')}>{p.name}</strong>
       <div className="participant-meta">
-        <small className="participant-caption" hidden={!!p.activity}>
+        <small className="participant-caption" hidden={!!p.activity && !p.reconnecting}>
           {(p.self ? 'Você · ' : '') +
-            (p.deafened ? 'Áudio silenciado' : p.muted ? 'Mic mutado' : 'Na voz')}
+            (p.reconnecting
+              ? 'Reconectando…'
+              : p.deafened
+                ? 'Áudio silenciado'
+                : p.muted
+                  ? 'Mic mutado'
+                  : 'Na voz')}
         </small>
         <small
           className="participant-activity"
-          hidden={!p.activity}
+          hidden={!p.activity || p.reconnecting}
           title={p.activity ? 'Atividade: ' + p.activity : ''}
         >
           <svg

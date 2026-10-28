@@ -449,3 +449,16 @@ test('protocol accepts legacy defaults and strips unrelated payload fields', asy
   assert.equal('sdp' in row, false);
   assert.equal('screenFps' in row, false);
 });
+
+test('a reconnecting signaling channel retains the roster and established peers', async (t) => {
+  const h = await setup(t);
+  h.replace([person('me'), person('other')]);
+  const peer = h.connections.get('other');
+  h.emit({type:'connection',connected:false,recovering:true});
+  assert.equal(h.roster.getSnapshot().participants.length,2);
+  assert.equal(h.connections.get('other'),peer);
+  assert.deepEqual(h.closed,[]);
+  h.emit({type:'connection',connected:false,recoveryFailed:true});
+  assert.equal(h.roster.getSnapshot().participants.length,0);
+  assert.deepEqual(h.closed,['other']);
+});

@@ -1303,6 +1303,11 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       renderVoiceRoster();
     });
     window.TronoNetwork?.onMessage((msg) => {
+      if (msg.type === 'connection' && msg.resumed === true && voiceCall.getSnapshot().joined) {
+        setStatus('Conexão recuperada. A chamada continua.', 'ok');
+        syncPeers();
+        if (transportIsSfu()) void syncSfuSubscriptions().catch(() => {});
+      }
       if (msg.type === 'voice-moderated' && msg.roomId === currentVoiceRoom()?.id) {
         const message =
           typeof msg.message === 'string' && msg.message ? msg.message : 'Moderação aplicada.';
@@ -1506,6 +1511,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
                 ...p,
                 accountId: p.accountId || (self ? (window.TronoAuth?.user?.id ?? null) : null),
                 self,
+                reconnecting: self ? call.phase === 'reconnecting' : p.reconnecting,
                 muted: self ? controlState().micMuted : !!p.muted || !!p.serverMuted,
                 serverMuted: self ? controlState().serverMuted : !!p.serverMuted,
                 mediaBlocked: self ? controlState().mediaBlocked : !!p.mediaBlocked,
@@ -1604,10 +1610,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     closeSettings: () => toggleVoiceSettings(false),
     focusComposer: () => navigationView.focusComposer(),
     playTextSound: () => playCallSound('message', 'text'),
-    onDisconnected: () =>
+    onDisconnected: (recovering) =>
       setStatus(
-        'Servidor desconectado. Recarregue a página para entrar na voz novamente.',
-        'error',
+        recovering
+          ? 'Conexão instável. Mantendo a chamada e tentando reconectar por até 45 segundos…'
+          : 'A conexão não foi recuperada. Entre na chamada novamente.',
+        recovering ? 'warn' : 'error',
       ),
   });
   window.TronoCallNavigation = navigation;

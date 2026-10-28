@@ -164,7 +164,11 @@ export function createVoiceRoster(options: RosterOptions) {
         );
       return;
     }
-    if (message.type === 'connection' && message.connected === false) {
+    if (
+      message.type === 'connection' &&
+      message.connected === false &&
+      message.recovering !== true
+    ) {
       reset();
       update(false, false);
       closePeers();

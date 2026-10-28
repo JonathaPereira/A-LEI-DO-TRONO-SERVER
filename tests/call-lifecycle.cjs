@@ -481,3 +481,26 @@ check(
     assert.deepEqual(h.errors, []);
   },
 );
+
+check('temporary signaling loss preserves the call generation, capture and release owners until resume or final failure', async (t) => {
+  const h = await setup(t);
+  h.call.start();
+  assert(await h.call.toggle());
+  const generation = h.call.getSnapshot().generation;
+  h.emit({ type: 'connection', connected: false, recovering: true });
+  assert.equal(h.call.getSnapshot().joined, true);
+  assert.equal(h.call.getSnapshot().phase, 'reconnecting');
+  assert.equal(h.call.getSnapshot().generation, generation);
+  assert.equal(h.state.stops, 0);
+  assert(h.operations[0].isCurrent());
+  h.emit({ type: 'connection', connected: true, resumed: true });
+  assert.equal(h.call.getSnapshot().phase, 'joined');
+  assert.equal(h.state.captures, 1);
+  assert.equal(h.state.prepares, 1);
+  assert.equal(h.state.stops, 0);
+  h.emit({ type: 'connection', connected: false, recovering: true });
+  await h.call.leave();
+  h.emit({ type: 'connection', connected: true, resumed: true });
+  assert.equal(h.call.getSnapshot().joined, false, 'a late resume cannot undo an explicit leave');
+  assert.equal(h.state.stops, 1);
+});

@@ -25,6 +25,7 @@ export interface ChannelMember {
   joinedAt: number;
   ws: ChannelConnection;
   voiceJoined: boolean;
+  reconnecting?: boolean;
   voiceMuted: boolean;
   voiceDeafened: boolean;
   cameraOn: boolean;

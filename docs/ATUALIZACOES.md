@@ -1,8 +1,26 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.11** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.12** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 0.3.12
+
+Quedas temporárias da conexão de controle mantêm a chamada por até 45 segundos.
+O cliente reconecta automaticamente, autentica a mesma sessão e retoma a mesma
+identidade/assento. Microfone, câmera, compartilhamento e conexões de mídia já
+estabelecidas permanecem com seus donos. A mesa mostra “Reconectando…”; pacotes
+de áudio perdidos não são gravados nem reproduzidos depois.
+
+Sair durante a recuperação libera os dispositivos e não reativa a voz ao voltar.
+Logout, sessão substituída, moderação e prazo esgotado continuam encerrando a
+participação. O servidor preserva a cadeira somente nesse intervalo; reinício do
+processo perde essa reserva em memória e exige entrar novamente.
+
+**Requer também atualizar o backend**: `/health` e o welcome do WebSocket devem
+anunciar `features.voiceResume=true`. Backend antigo mantém o comportamento
+anterior; publicar só o frontend/EXE não habilita a recuperação. Sem SQL novo.
+O instalador e o site continuam sendo publicados juntos após aceitação Windows.
 
 ## Windows 0.3.11
 
