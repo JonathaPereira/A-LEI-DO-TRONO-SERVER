@@ -1,8 +1,26 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega prepara
-Windows **0.3.10** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **0.3.11** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 0.3.11
+
+Adiciona Similo online ao catálogo: visual escuro, cinco temas com misturas
+independentes para mesa/pistas, capitão alternado para resolver divergências,
+votos animados e informações flutuantes nas 120 cartas. Controles da Corte
+ficam no cabeçalho desse jogo para liberar o HUD.
+
+**Requer atualizar o backend com esta contribuição**, mantendo as variáveis
+existentes. Confira `/health`: `features.similo` deve ser `true`. Não há SQL.
+O frontend informa quando o servidor ainda não oferece o jogo; publicar somente
+o site ou instalar o EXE não adiciona o serviço de partidas ao backend.
+
+O pipeline entrega também `Similo-Art-0.3.11.zip` e publica suas folhas em
+`similo-mn.surge.sh` antes do catálogo. Os hashes do ZIP e de cada folha são
+conferidos. As imagens precisam de rede e ficam fora do EXE para conservar o
+limite de tamanho do site. Regras e operação em [Similo](../games/similo/README.md).
+Preserva avatares, lista de membros aberta por padrão e jogos existentes.
 
 ## Windows 0.3.10
 

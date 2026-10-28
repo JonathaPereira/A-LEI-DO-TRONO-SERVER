@@ -5,6 +5,7 @@ export const serverFeatures = Object.freeze({
   remotePcProtocol: 2,
   ticketToRide: true,
   loveLetter: true,
+  similo: true,
   splendor: true,
   azul: true,
   soundboardRestart: true,

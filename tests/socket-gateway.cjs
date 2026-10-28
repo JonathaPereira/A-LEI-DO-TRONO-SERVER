@@ -34,7 +34,7 @@ async function fixture({ identity = async (token) => account(token), required = 
     requests = [],
     clients = [];
   const games = Object.fromEntries(
-    ['azul', 'splendor', 'loveLetter', 'ticketToRide'].map((name) => [
+    ['azul', 'splendor', 'loveLetter', 'ticketToRide', 'similo'].map((name) => [
       name,
       {
         handle: (ws, message) => calls.push([name, 'handle', ws.clientId, message]),
@@ -397,7 +397,7 @@ test('reconnecting an account session closes its older socket and preserves the 
     assert.equal(await closed, 4002);
     assert.equal(a.server.account, null);
     assert.equal(b.server.account.id, 'same');
-    for (const game of ['azul', 'splendor', 'loveLetter', 'ticketToRide'])
+    for (const game of ['azul', 'splendor', 'loveLetter', 'ticketToRide', 'similo'])
       assert(
         f.calls.some(
           ([name, action, id]) =>

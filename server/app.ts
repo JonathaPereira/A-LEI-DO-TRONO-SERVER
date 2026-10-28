@@ -10,6 +10,7 @@ import { createChatHistory } from './chat-history.ts';
 import { createSocialService } from './social-service.ts';
 import { createAzulService } from './azul-service.ts';
 import { createSplendorService } from './splendor-service.ts';
+import { createSimiloService } from './similo-service.ts';
 import { createLoveLetterService } from './love-letter-service.ts';
 import { createTicketToRideService } from './ticket-to-ride-service.ts';
 import { RemotePc } from './remote-pc.ts';
@@ -32,6 +33,7 @@ export interface ApplicationOptions {
   chooseDecrees?: Parameters<typeof createThroneService>[0]['chooseDecrees'];
   throneRandom?(): number;
   objectStorage?: ObjectStorage;
+  similoRandom?: Parameters<typeof createSimiloService>[0]['createRandom'];
   loveLetterRandom?: Parameters<typeof createLoveLetterService>[0]['createRandom'];
 }
 export interface BackendApplication {
@@ -46,6 +48,7 @@ export function createApplication({
   throneRandom,
   objectStorage,
   loveLetterRandom,
+  similoRandom,
 }: ApplicationOptions = {}): BackendApplication {
   const app = express();
   app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
@@ -162,6 +165,7 @@ export function createApplication({
   const azulService = createAzulService({ auth: accountAuth, wss, send });
   const splendorService = createSplendorService({ auth: accountAuth, wss, send });
   const loveLetterService = createLoveLetterService({ wss, send, createRandom: loveLetterRandom });
+  const similoService = createSimiloService({ wss, send, createRandom: similoRandom });
   const ticketToRideService = createTicketToRideService({ wss, send });
   const socialService = createSocialService({
     auth: accountAuth,
@@ -217,6 +221,7 @@ export function createApplication({
       azul: azulService.health(),
       splendor: splendorService.health(),
       loveLetter: loveLetterService.health(),
+      similo: similoService.health(),
       ticketToRide: ticketToRideService.health(),
       community: communityManagement.health(),
       rooms: channels.safeRooms(),
@@ -240,6 +245,7 @@ export function createApplication({
     azul: azulService,
     splendor: splendorService,
     loveLetter: loveLetterService,
+    similo: similoService,
     ticketToRide: ticketToRideService,
     remotePc,
     community,
@@ -259,6 +265,7 @@ export function createApplication({
     azulService.stop();
     splendorService.stop();
     loveLetterService.stop();
+    similoService.stop();
     ticketToRideService.stop();
     socialService.stop();
     community.stop();

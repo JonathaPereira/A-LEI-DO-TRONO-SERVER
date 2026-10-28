@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { createTabletopAudio } = require('../src/lib/games/tabletop-audio.ts');
 function fixture() {
   const events = new EventTarget(),
-    volumes = { throne: 80, azul: 80, splendor: 90, 'love-letter': 80 },
+    volumes = { throne: 80, azul: 80, splendor: 90, 'love-letter': 80, similo: 80 },
     played = [],
     warnings = [];
   let enabled = true,
@@ -79,13 +79,20 @@ test('independent gains project the existing source, with immutable stable snaps
     azul: 80,
     splendor: 37,
     'love-letter': 80,
+    similo: 80,
   });
   assert.equal(changes, 1);
   f.events.dispatchEvent(new Event('trono-game-volume'));
   assert.equal(changes, 1);
   f.controller.setVolume('azul', 24);
   assert.equal(changes, 2);
-  assert.deepEqual(initial.volumes, { throne: 80, azul: 80, splendor: 90, 'love-letter': 80 });
+  assert.deepEqual(initial.volumes, {
+    throne: 80,
+    azul: 80,
+    splendor: 90,
+    'love-letter': 80,
+    similo: 80,
+  });
   assert.deepEqual([...counts.values()], [1, 1]);
   f.controller.dispose();
   f.controller.dispose();

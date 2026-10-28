@@ -286,6 +286,16 @@ export function createNetworkClient({
     },
     ticketToRide: (action: string, payload: Record<string, unknown> = {}) =>
       state.getSnapshot().features.ticketToRide && send('ticket-to-ride', { action, ...payload }),
+    async ensureSimilo() {
+      if (!(await ensureAuthenticated())) return false;
+      if (!state.getSnapshot().features.similo)
+        throw new Error(
+          'Similo aguarda a atualização do servidor. Tente novamente após o deploy do backend.',
+        );
+      return true;
+    },
+    similo: (action: string, payload: Record<string, unknown> = {}) =>
+      !!state.getSnapshot().features.similo && send('similo', { action, ...payload }),
     async ensureLoveLetter() {
       if (!(await ensureAuthenticated())) return false;
       if (!state.getSnapshot().features.loveLetter)

@@ -1,5 +1,8 @@
 {
   "core": [
+    "tests/similo-rules.cjs",
+    "tests/similo-service.cjs",
+    "tests/similo-controller.cjs",
     "tests/activity-presence.js",
     "tests/app-audio.cjs",
     "tests/app-layout.cjs",
@@ -184,6 +187,7 @@
     "tests/voice-transport.cjs"
   ],
   "browser": [
+    "tests/similo-browser.cjs",
     "tests/app-layout-browser.js",
     "tests/appearance-preferences-browser.cjs",
     "tests/application-audio-worklet-browser.cjs",

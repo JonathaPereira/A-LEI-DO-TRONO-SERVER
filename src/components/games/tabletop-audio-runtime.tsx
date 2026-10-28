@@ -22,6 +22,7 @@ export function initializeTabletopAudio(target: Window): () => void {
       ['azul', 'azulScreen'],
       ['splendor', 'splendorScreen'],
       ['love-letter', 'loveLetterScreen'],
+      ['similo', 'similoScreen'],
     ] as const
   ).map(([key, id]) => {
     const screen = doc.getElementById(id)!;

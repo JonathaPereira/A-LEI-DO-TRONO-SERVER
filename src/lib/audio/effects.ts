@@ -63,7 +63,22 @@ export function createGameEffects() {
     }
 
     const t = audioCtx.currentTime + 0.01;
-    if (kind === 'splendor-card' || kind === 'love-letter-card') {
+    if (kind === 'similo-tap') {
+      tone(620, t, 0.08, 0.025, 'sine', destination);
+    } else if (kind === 'similo-vote') {
+      tone(660, t, 0.13, 0.04, 'sine', destination);
+      tone(880, t + 0.07, 0.2, 0.035, 'sine', destination);
+    } else if (kind === 'similo-card' || kind === 'similo-resolve') {
+      noiseHit(t, 0.17, 0.05, destination, kind === 'similo-card' ? 2300 : 1000);
+      tone(kind === 'similo-card' ? 523 : 392, t + 0.04, 0.2, 0.035, 'triangle', destination);
+    } else if (kind === 'similo-win') {
+      [523, 659, 784, 1047].forEach((f, i) =>
+        tone(f, t + i * 0.13, 0.6, 0.035, 'sine', destination),
+      );
+    } else if (kind === 'similo-lose') {
+      tone(220, t, 0.5, 0.04, 'triangle', destination);
+      tone(174, t + 0.18, 0.7, 0.035, 'triangle', destination);
+    } else if (kind === 'splendor-card' || kind === 'love-letter-card') {
       noiseHit(t, 0.16, 0.095, destination, 4200);
       noiseHit(t + 0.11, 0.12, 0.065, destination, 3000);
       noiseHit(t + 0.23, 0.065, 0.035, destination, 1900);

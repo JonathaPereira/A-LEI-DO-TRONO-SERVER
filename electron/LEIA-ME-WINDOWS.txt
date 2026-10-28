@@ -1,4 +1,9 @@
-M&N · A Lei do Trono — Windows 0.3.10
+M&N · A Lei do Trono — Windows 0.3.11
+
+Similo online: visual escuro, cinco temas combináveis e capitão alternado por
+rodada para resolver divergências. As cartas têm informações flutuantes e
+detalhes ampliáveis. Requer o backend com features.similo=true e acesso à arte
+em similo-mn.surge.sh. Não exige SQL.
 
 Mensagens diretas mostram a foto ou o ícone de perfil de quem enviou cada
 mensagem, incluindo sua própria conta. A lista de membros fica aberta por

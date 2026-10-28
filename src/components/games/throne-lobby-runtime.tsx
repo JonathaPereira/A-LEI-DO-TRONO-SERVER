@@ -36,6 +36,7 @@ export function initializeThroneLobby(target: Window): () => void {
       'azulScreen',
       'splendorScreen',
       'loveLetterScreen',
+      'similoScreen',
       'rogueliteScreen',
     ].find((id) => {
       const node = doc.getElementById(id);

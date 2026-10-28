@@ -336,3 +336,31 @@ test('finished effects disconnect their graph and are not stopped or disconnecte
   assert.equal(source.stops.length, stops);
   assert.equal(source.disconnects, 1);
 });
+test('Similo effects use the shared context, honor global/per-game mute and release their own sources', async () => {
+  const f = fixture();
+  await f.owner.ensureAudio();
+  const context = f.contexts[0];
+  f.owner.setGameVolume('similo', 0);
+  f.owner.playSfx('similo-vote');
+  assert.equal(context.sources.length, 0);
+  f.owner.setGameVolume('similo', 65);
+  for (const kind of [
+    'similo-tap',
+    'similo-vote',
+    'similo-card',
+    'similo-resolve',
+    'similo-win',
+    'similo-lose',
+  ]) {
+    const before = context.sources.length;
+    f.owner.playSfx(kind);
+    assert(context.sources.length > before, kind);
+  }
+  assert.equal(f.contexts.length, 1);
+  const count = context.sources.length;
+  f.owner.setSfxEnabled(false);
+  f.owner.playSfx('similo-card');
+  assert.equal(context.sources.length, count);
+  await f.owner.dispose();
+  assert(context.sources.every((s) => s.disconnects === 1));
+});

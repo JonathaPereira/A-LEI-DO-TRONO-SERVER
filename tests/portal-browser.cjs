@@ -82,7 +82,7 @@ test(
               window.__networkOwner = window.TronoNetwork;
             });
             await page.getByRole('button', { name: 'Biblioteca de jogos', exact: false }).click();
-            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(8);
+            await expect(page.locator('#gamesScreen [data-game]')).toHaveCount(9);
             await page.locator('[data-game=throne]').click();
             await expect(page.locator('#setupScreen')).toBeVisible();
             await expect(page.locator('#playerIdentity')).toHaveValue('Portal Humano');

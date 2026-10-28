@@ -38,6 +38,7 @@ import { initializeCourtFullscreen } from '../components/games/court-fullscreen-
 import { initializeTabletopAudio } from '../components/games/tabletop-audio-runtime';
 import { initializeAzul } from '../components/games/azul-runtime';
 import { initializeSplendor } from '../components/games/splendor-runtime';
+import { initializeSimilo } from '../components/games/similo-runtime';
 import { initializeLoveLetter } from '../components/games/love-letter-runtime';
 import { initializeTicketToRide } from '../lib/games/ticket-to-ride';
 import { initializeRoguelite } from '../components/games/roguelite-runtime';
@@ -101,6 +102,7 @@ export function ApplicationRuntime() {
       initializeAzul(window);
       initializeSplendor(window);
       initializeLoveLetter(window);
+      initializeSimilo(window);
       initializeTicketToRide(window);
       initializeTabletopAudio(window);
       initializeRoguelite(window);

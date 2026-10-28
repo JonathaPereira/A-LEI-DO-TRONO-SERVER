@@ -160,7 +160,7 @@ test(
       const before = await tracks();
       assert(before.mic && before.camera && before.screen);
       await page.evaluate(() => window.TronoGames.openLibrary());
-      await expect(page.locator('button[data-game]')).toHaveCount(8);
+      await expect(page.locator('button[data-game]')).toHaveCount(9);
       await page.locator('button[data-game="love-letter"]').click();
       await page.locator('#loveLetterPlayerCount').selectOption('2');
       await page.getByRole('button', { name: 'Criar mesa', exact: true }).click();

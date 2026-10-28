@@ -14,6 +14,7 @@
       #azulScreen,
       #splendorScreen,
       #loveLetterScreen,
+      #similoScreen,
       #ticketToRideScreen,
       #rogueliteScreen,
       #nexusScreen
@@ -25,6 +26,25 @@
     max-width: none !important;
     height: 100dvh !important;
     min-height: 100dvh !important;
+    overflow: auto;
+  }
+}
+
+@scope (#gameSurface) {
+  #similoScreen.similo-immersive {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1500;
+    overflow: auto;
+  }
+}
+@scope (#gameSurface) {
+  #similoScreen {
+    padding: 0 !important;
+  }
+  #similoScreen:fullscreen {
+    width: 100vw !important;
+    height: 100dvh !important;
     overflow: auto;
   }
 }

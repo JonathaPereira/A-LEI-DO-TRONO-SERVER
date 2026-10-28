@@ -27,7 +27,12 @@ A versão vem de `electron/package.json`; a tag exata passa diretamente do pacot
 para a publicação, sem copiar IDs ou procurar versões. O repositório precisa do
 secret `SURGE_TOKEN`. A release privada mantém EXE, ZIP e hashes da mesma entrega.
 A release inclui também `Atalaia-Web-<versão>.zip`, exportado e testado pelo mesmo
-workflow. O publicador valida seu hash e o commit, envia primeiro o jogo para
+workflow. O pipeline também entrega `Similo-Art-<versão>.zip`; publica e confere as cinco
+folhas em `similo-mn.surge.sh` antes de atualizar o catálogo. O Similo requer
+backend com `features.similo=true`, sem novo SQL. Consulte o
+[README de Similo](../games/similo/README.md).
+
+O publicador valida seu hash e o commit, envia primeiro o jogo para
 `atalaia-mn.surge.sh` e confere a versão antes de atualizar o catálogo principal.
 Os arquivos Godot ficam nesse domínio separado, preservando o limite de tamanho
 do site com instalador. Consulte o [README de Atalaia](../games/atalaia/README.md)
