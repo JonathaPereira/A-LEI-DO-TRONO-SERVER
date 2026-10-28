@@ -51,6 +51,7 @@ export function SimiloContents({
   const scope = `${s.accountId}:${room?.id}:${g?.id}`;
   const inspect = inspection?.scope === scope ? inspection.id : null;
   const setInspect = (id: string | null) => setInspection(id ? { id, scope } : null);
+  const inspectedClue = g?.clues.find((c) => c.cardId === inspect);
   const active = !!s.visible,
     host = room?.hostId === s.accountId,
     narrator = g?.config.narrator === s.accountId,
@@ -529,7 +530,7 @@ export function SimiloContents({
                       if (clue) void controller.move({ kind: 'clue', cardId: clue, relation });
                     }}
                   >
-                    Jogar pista
+                    Jogar pista {relation === 'like' ? 'vertical' : 'horizontal'}
                   </button>
                   <p>{clue ? getCard(clue).name : 'Selecione uma carta da sua mão.'}</p>
                 </div>
@@ -538,10 +539,16 @@ export function SimiloContents({
               <div className={styles.history}>
                 {g.clues.length ? (
                   g.clues.map((c) => (
-                    <div key={c.round} className={styles.clueHistory}>
+                    <div
+                      key={c.round}
+                      className={styles.clueHistory}
+                      data-clue-relation={c.relation}
+                    >
                       <span>
                         {c.round + 1}ª pista ·{' '}
-                        {c.relation === 'like' ? 'Parece com' : 'É diferente'}
+                        {c.relation === 'like'
+                          ? 'Vertical · Parece com'
+                          : 'Horizontal · É diferente'}
                       </span>
                       <CardSlot
                         id={c.cardId}
@@ -609,9 +616,18 @@ export function SimiloContents({
       )}
       {active && inspect && (
         <Modal title={getCard(inspect).name} close={() => setInspect(null)}>
-          <div className={styles.inspection}>
-            <Portrait id={inspect} />
+          <div className={styles.inspection} data-clue-relation={inspectedClue?.relation}>
+            <div className={styles.inspectionCard}>
+              <Portrait id={inspect} />
+            </div>
             <div>
+              {inspectedClue && (
+                <p className={styles.clueMeaning}>
+                  {inspectedClue.relation === 'like'
+                    ? 'Pista vertical · Parece com'
+                    : 'Pista horizontal · É diferente'}
+                </p>
+              )}
               <InfoText id={inspect} />
             </div>
           </div>

@@ -126,18 +126,27 @@ test(
         await p.locator('[data-game="similo"]').click();
         await expect(screen(p)).toBeVisible();
       }
-      await screen(a)
-        .getByRole('button', { name: 'História — Cartas dos adivinhadores', exact: true })
-        .click();
-      await screen(a)
-        .getByRole('button', { name: 'Animais — Cartas do informante', exact: true })
-        .click();
-      await screen(a)
-        .getByRole('button', { name: 'Contos — Cartas do informante', exact: true })
-        .click();
-      await screen(a)
-        .getByRole('button', { name: 'Mitos — Cartas do informante', exact: true })
-        .click();
+      const boardDeck = screen(a).getByRole('group', { name: '12 cartas da mesa', exact: true });
+      const informantDeck = screen(a).getByRole('group', { name: 'Baralho do informante', exact: true });
+      await boardDeck.getByRole('combobox', { name: 'Misturar com (opcional)', exact: true }).selectOption('history');
+      await boardDeck.getByRole('combobox', { name: 'Tema principal', exact: true }).selectOption('history');
+      await expect(boardDeck.getByRole('combobox', { name: 'Misturar com (opcional)', exact: true })).toHaveValue('');
+      await boardDeck.getByRole('combobox', { name: 'Tema principal', exact: true }).selectOption('animals');
+      await boardDeck.getByRole('combobox', { name: 'Misturar com (opcional)', exact: true }).selectOption('history');
+      await informantDeck.getByRole('combobox', { name: 'Tema principal', exact: true }).selectOption('tales');
+      await informantDeck.getByRole('combobox', { name: 'Misturar com (opcional)', exact: true }).selectOption('myths');
+      for(const width of [1536,390]) {
+        await a.setViewportSize({width,height:width===390?844:1024});
+        const hide=a.getByRole('button',{name:'Ocultar lista de membros',exact:true});
+        if(width===390 && await hide.isVisible()) await hide.click();
+        for(const group of [boardDeck,informantDeck]) {
+          const sizes=await group.getByRole('combobox').evaluateAll(nodes=>nodes.map(n=>{const b=n.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,height:b.height};}));
+          assert(sizes.every(b=>b.left>=0&&b.right<=width&&b.width>=140&&b.height>=40),JSON.stringify(sizes));
+        }
+        assert.equal(await a.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+        await a.screenshot({path:`artifacts/similo/screens/decks-${width}.png`});
+      }
+      await a.setViewportSize({width:1536,height:1024});
       await screen(a).getByRole('button', { name: 'Criar mesa online' }).click();
       await expect(screen(a).getByRole('heading', { name: /Mesa [A-F0-9]{10}/ })).toBeVisible();
       const roomId = await a.evaluate(() => window.TronoSimilo.room.id);
@@ -148,6 +157,17 @@ test(
           .click();
         await expect(screen(p).getByRole('heading', { name: 'Mesa ' + roomId })).toBeVisible();
       }
+      for (const p of pages) {
+        await expect.poll(() => p.evaluate(() => window.TronoSimilo.room.settings.boardThemes)).toEqual(['animals','history']);
+        await expect.poll(() => p.evaluate(() => window.TronoSimilo.room.settings.clueThemes)).toEqual(['tales','myths']);
+        if (p !== a) {
+          await expect(screen(p).getByRole('group',{name:'12 cartas da mesa',exact:true}).getByRole('combobox',{name:'Tema principal',exact:true})).toBeDisabled();
+        }
+      }
+      await boardDeck.getByRole('combobox',{name:'Misturar com (opcional)',exact:true}).selectOption('');
+      for(const p of pages) await expect.poll(() => p.evaluate(() => window.TronoSimilo.room.settings.boardThemes)).toEqual(['animals']);
+      await boardDeck.getByRole('combobox',{name:'Misturar com (opcional)',exact:true}).selectOption('history');
+      for(const p of pages) await expect.poll(() => p.evaluate(() => window.TronoSimilo.room.settings.boardThemes)).toEqual(['animals','history']);
       await a.screenshot({ path: 'artifacts/similo/screens/lobby.png' });
       await screen(a).getByRole('button', { name: 'Começar partida' }).click();
       await expect(screen(a).locator('[data-phase="clue"]')).toBeVisible();
@@ -195,7 +215,37 @@ test(
           await screen(a)
             .getByRole('button', { name: /Parece com/ })
             .click();
-        await screen(a).getByRole('button', { name: 'Jogar pista', exact: true }).click();
+        await screen(a).getByRole('button', { name: /^Jogar pista (vertical|horizontal)$/ }).click();
+        const relation = round % 2 ? 'unlike' : 'like';
+        for (const [client, p] of pages.entries()) {
+          const size = [{width:1536,height:1024},{width:1280,height:720},{width:390,height:844}][client];
+          await p.setViewportSize(size);
+          const hide=p.getByRole('button',{name:'Ocultar lista de membros',exact:true});
+          if(client === 2 && await hide.isVisible()) await hide.click();
+          await expect(screen(p).locator('[data-phase="vote"]')).toBeVisible();
+          const received = await p.evaluate(() => window.TronoSimilo.room.state.clues);
+          assert.equal(received.at(-1).relation, relation, 'all clients receive the authoritative relation');
+          const card = screen(p).getByRole('button', { name: 'Ver pista ' + require('../src/lib/games/similo/catalog.ts').getCard(g.hand[0]).name, exact: true });
+          const layout = await card.evaluate(node => {
+            const box=node.getBoundingClientRect(),style=getComputedStyle(node);
+            const matrix=new DOMMatrixReadOnly(style.transform);
+            return {width:box.width,height:box.height,a:matrix.a,b:matrix.b,transform:style.transform,animation:style.animationName,rotate:style.rotate};
+          });
+          assert.equal(received.length,round+1);
+          assert.equal(received.at(-1).cardId,g.hand[0]);
+          assert.equal(layout.width > layout.height, relation === 'unlike', `client ${client}, round ${round}: ${JSON.stringify(layout)}`);
+          if (relation === 'unlike') {
+            await card.click();
+            const dialog=screen(p).getByRole('dialog');
+            await expect(dialog).toBeVisible();
+            await expect(dialog.getByText('Pista horizontal · É diferente',{exact:true})).toBeVisible();
+            const zoom=await dialog.locator('svg').first().evaluate(node=>{const r=node.getBoundingClientRect();return {width:r.width,height:r.height};});
+            assert(zoom.width > zoom.height, `a horizontal clue must remain horizontal when inspected: ${JSON.stringify(zoom)}`);
+            if(round===1) await p.screenshot({path:`artifacts/similo/screens/horizontal-inspection-${client}.png`});
+            await p.keyboard.press('Escape');
+          }
+          await p.setViewportSize({width:1536,height:1024});
+        }
         for (const [i, p] of [b, c].entries()) {
           await expect(screen(p).locator('[data-phase="vote"]')).toBeVisible();
           const offset = safe.length > quota ? i : 0;
@@ -310,7 +360,7 @@ test(
         .getByRole('button', { name: /Escolher pista/ })
         .first()
         .click();
-      await screen(a).getByRole('button', { name: 'Jogar pista', exact: true }).click();
+      await screen(a).getByRole('button', { name: /^Jogar pista (vertical|horizontal)$/ }).click();
       for (const p of [b, c]) {
         await expect(screen(p).locator('[data-phase="vote"]')).toBeVisible();
         await screen(p)

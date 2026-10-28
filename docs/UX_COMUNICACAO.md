@@ -52,6 +52,12 @@ O aceite não substitui as verificações técnicas registradas na migração.
 
 ## Capacidades atuais
 
+No Similo, as configurações mostram dois grupos compactos: “12 cartas da mesa”
+(cartas abertas) e “Baralho do informante” (mão de cinco pistas). Cada um usa tema
+principal e segundo tema opcional; o segundo não pode repetir o primeiro. A
+orientação e o rótulo da pista vêm da mesma relação autoritativa, inclusive na
+janela de detalhes. Movimento reduzido e tamanho da tela não mudam seu sentido.
+
 Uma interrupção temporária de sinalização mantém a chamada aberta, com aviso de
 reconexão e estado “Reconectando…” no participante. O cliente tenta retomar por
 até 45 segundos, sem pedir outro acesso ao microfone nem tocar sons de saída e

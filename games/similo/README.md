@@ -5,7 +5,10 @@ adivinhadores. O catálogo abre a mesa sem encerrar chamadas, câmera ou tela.
 
 ## Mesa e capitão
 
-O anfitrião escolhe o informante e os baralhos no lobby. Mesa e pistas têm
+O anfitrião escolhe o informante e os baralhos no lobby. “12 cartas da mesa”
+seleciona a origem das cartas abertas; “Baralho do informante” seleciona a origem
+das pistas. Cada grupo tem um tema principal e uma mistura opcional, sem repetir
+o tema principal. Mesa e pistas têm
 seleções independentes de um ou dois temas: Animais, História, Contos, Monstros
 e Mitos. São 24 cartas por tema, com ilustrações originais aprovadas no protótipo.
 Cartas da mesa são retiradas do baralho de pistas quando os temas coincidem.
@@ -38,6 +41,12 @@ A mesa usa fundo escuro, controles no cabeçalho e pistas numa faixa própria.
 Telas pequenas permitem rolagem vertical; fullscreen usa o controlador comum.
 A lista de membros conserva a abertura padrão e pode ser recolhida pelo próprio
 controle da Corte, integrado ao cabeçalho do Similo.
+
+A relação de uma pista jogada é a enviada pelo servidor. A faixa de pistas e
+a janela de ampliação preservam sua orientação e identificam “Vertical · Parece
+com” ou “Horizontal · É diferente”. Cartas ainda não jogadas e cartas da mesa
+continuam em pé. O layout reserva a área horizontal da pista sem depender de uma
+animação; reflow e movimento reduzido não alteram sua relação.
 
 Mouse e teclado abrem informações flutuantes; o “i” também amplia por toque.
 Todas as 120 cartas têm contexto, resumo e três características. Animais indicam

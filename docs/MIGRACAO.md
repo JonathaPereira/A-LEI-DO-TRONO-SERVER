@@ -98,6 +98,41 @@ e finish-desktop-consolidation.json. Não retirar cobertura para deixar CI verde
 
 ### Evidência vigente
 
+Similo — contribuição `codex/similo-clue-layout`, sobre main `0b1cc40` (#61 já
+incorporado), preparando Windows 1.0.0 por solicitação do usuário. Não alterar a
+main; preservar a recuperação de voz. A numeração pública passa a 1.x; protocolo
+do backend continua compatível e este reparo não exige SQL/deploy de servidor.
+
+O teste inicial confirmou a mesma relação nas três projeções e a orientação
+correta na faixa; não reproduziu uma divergência de pacotes. Reproduziu a pista
+horizontal voltando a ficar vertical na ampliação (190×285). O inspetor agora usa
+a relação autoritativa e preserva posição e legenda. A rotação fixa foi separada
+de transformações transitórias; espaço horizontal é reservado explicitamente.
+
+Configurações trocam dez botões grandes por dois grupos: 12 cartas da mesa e
+baralho do informante. Tema principal e mistura opcional não permitem duplicação;
+os valores compartilhados e permissões permanecem com o controlador existente.
+As novas verificações cobrem escolha independente, alteração compartilhada,
+bloqueio dos demais participantes e orientação em três clientes, três larguras,
+movimento normal/reduzido e ampliação. Typecheck, format:check e build aprovados;
+1.454 testes core sem falhas/skips. Duas rodadas Similo/mesa cheia/DMs/recuperação
+de voz passaram com seis verificações cada, sem falhas/skips. Inspeção manual
+conferiu seletores desktop/telefone e ampliação horizontal; sem golden snapshots.
+Capturas/mídia são fixtures e WebSockets/contas de teste são reais/descartáveis.
+Evidências em artifacts/similo-repair. A execução Windows
+[40707264219](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40707264219)
+aprovou jornadas web/Electron, executável, NSIS e publicação no commit de código
+`da447ba`. O site e latest.yml anunciam 1.0.0. O EXE público foi baixado por
+inteiro (142.234.607 bytes) e teve SHA-512 conferido; hashes das cinco folhas de
+arte também passaram. Evidência pública em
+`codex/similo-delivery-control:similo-1.0-production-check.json`.
+
+Backend respondeu HTTP 200 com Similo e recuperação de voz habilitados. Este
+reparo não exige novo backend. Actions não pôde criar o PR pela política do
+repositório: contribuição enviada em `codex/similo-clue-layout`, main preservada,
+compare disponível para criação e merge pelo usuário.
+
+
 Recuperação de voz preparada em `codex/voice-reconnect-grace`, Windows 0.3.12,
 sobre main `51bf245`. A atualização 0.3.11/Similo foi incorporada (#59) e publicada
 pela execução Windows `40620493982`; a checagem pública posterior confirmou site,

@@ -112,7 +112,7 @@ test(
         .getByRole('button', { name: /Escolher pista/ })
         .first()
         .click();
-      await screen.getByRole('button', { name: 'Jogar pista', exact: true }).click();
+      await screen.getByRole('button', { name: 'Jogar pista vertical', exact: true }).click();
       await expect(screen.locator('[data-phase="vote"]')).toBeVisible();
       const room = await page.evaluate(() => window.TronoSimilo.room),
         safe = room.state.board.find((id) => id !== room.state.secretId);
