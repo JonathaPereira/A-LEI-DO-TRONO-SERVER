@@ -1,9 +1,9 @@
 # A Corte · A Lei do Trono
 
-Comunicação, jogos e chamadas na web e no Electron. Interface Next.js/React com
+Comunicação, jogos e chamadas na web e no Electron, com host Android em preparação. Interface Next.js/React com
 TypeScript e exportação estática; backend Express/WebSocket existente.
 
-A reconstrução está na branch `codex/frontend-rebuild`.
+A reconstrução está incorporada à main. A contribuição Android fica em `codex/android-app`.
 [Plano e checkpoint](docs/MIGRACAO.md) ·
 [Produto e visual](docs/UX_COMUNICACAO.md) ·
 [Arquitetura](docs/ARQUITETURA.md) ·
@@ -38,6 +38,16 @@ desenvolvimento. Operações no backend publicado afetam dados reais.
 - [Desenvolvimento](docs/DESENVOLVIMENTO_DESKTOP.md): ambiente e verificações.
 - [Atualizações](docs/ATUALIZACOES.md): contrato de distribuição.
 
-Fontes em src, server e electron; testes em tests; operações em scripts.
+Fontes em src, server, electron e android; testes em tests; operações em scripts.
 Recursos originais de public são preservados. Saídas e evidências ficam nos
 diretórios ignorados. Histórico detalhado permanece no Git.
+
+
+## Android
+
+A prévia 1.0.1 usa o mesmo backend e os mesmos donos, com navegação para celular,
+Android Keystore, permissões próprias e foreground service durante chamadas.
+Não declara paridade de todos os recursos nativos do Windows. Firebase, SQL,
+assinatura permanente e aceite em aparelho continuam requisitos separados da
+compilação. Consulte [gerar e configurar Android](docs/DESENVOLVIMENTO_DESKTOP.md#android-gerar-e-configurar),
+incluindo o passo a passo do Firebase e os secrets do pipeline automático.

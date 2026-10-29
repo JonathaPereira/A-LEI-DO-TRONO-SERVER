@@ -4,6 +4,30 @@ Este é o guia mantido para atualizar instalações existentes. A entrega public
 Windows **1.0.0** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
 
+## Preparação Android e composição mobile — 1.0.1
+
+A contribuição `codex/android-app` adiciona o host Android e a composição para
+celular. Essa seção descreve fontes preparadas: publicação efetiva depende dos
+workflows aprovados e do manifesto público, preservando o histórico 1.0.0 abaixo.
+
+A barra inferior separa conversa, jogos, amigos, membros e menu; campos e controles
+respeitam toque/teclado. Navegar conserva a chamada e oferece retorno aos controles.
+O APK Android 8+ usa sessão protegida pelo Keystore e serviço de primeiro plano
+somente durante chamada explícita. Encerrar a tarefa/processo não restaura a chamada.
+
+Firebase não está configurado inicialmente. O código prepara avisos genéricos de
+DMs/pedidos com app fechado, bloqueio por conta/mutes e preferência desligada.
+Ativação exige Firebase no APK, segredo de envio no backend, SQL aditivo
+`supabase/upgrade-android-push.sql` e backend atualizado para a origem Android.
+**Não execute install.sql em banco existente.** Passos e assinatura em
+[Android](DESENVOLVIMENTO_DESKTOP.md#android-gerar-e-configurar).
+
+Sem chave permanente, o workflow publica APK de teste; não é o pacote definitivo
+para futuras atualizações. Windows/Surge continuam automáticos depois da aceitação
+Windows do código incorporado à main. Nada deste preparo comprova nova publicação
+no Surge. Captura nativa da tela/áudio de outros apps, host de Remote PC e push de
+canais não estão implementados no APK. Web/Windows conservam os recursos vigentes.
+
 ## Windows 1.0.0
 
 Inicia a numeração pública 1.0 do Trono. Aplicativo, frontend, instalador e

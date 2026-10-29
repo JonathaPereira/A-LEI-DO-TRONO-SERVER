@@ -1,6 +1,6 @@
 # Working in this repository
 
-Aplicativo web e Electron de comunicação e jogos. Explique no idioma do usuário.
+Aplicativo web, Electron e host Android de comunicação e jogos. Explique no idioma do usuário.
 A instrução mais recente do usuário prevalece sobre convenções e skills.
 
 ## Antes de alterar
@@ -19,14 +19,15 @@ A instrução mais recente do usuário prevalece sobre convenções e skills.
 
 - Novos comportamentos/correções seguem TDD nos limites aprovados. Use as skills
   pertinentes conforme workflow; respeite invocação manual e ferramentas reais.
-- Edite fontes em src, server e electron. out, .next e JS/CSS gerados da raiz de
+- Edite fontes em src, server, electron e android. Assets copiados em
+  android/app/src/main/assets/public e configs Capacitor gerados são saídas. out, .next e JS/CSS gerados da raiz de
   public são saídas. Confirme origem antes de remover assets, vendor, manual ou
   roguelite. Jogos completos e recursos existentes devem ser preservados.
 - Um socket por cliente e um dono por recurso de mídia. Transfira estado,
   listeners e descarte juntos. Consumidores emprestados não encerram tracks.
 - Reutilize controladores; React apresenta snapshots. Fachadas delegam ao mesmo
   dono. Troca de conta/sala invalida operações antigas e libera seu escopo.
-- Next exporta a interface compartilhada com Electron; backend existente possui
+- Next exporta a interface compartilhada com Electron e Android; backend existente possui
   conta, dados, WebSocket, validação e autorização. Mudanças nesses limites são
   decisões arquiteturais explícitas.
 - Cloudflare: use CLI cf, exceto quando houver configuração Wrangler.
