@@ -16,6 +16,7 @@ jobs:
           script: |
             const repo=context.repo, branch='codex/android-delivery-control', ref='codex/android-app';
             const source=(await github.rest.git.getRef({...repo,ref:'heads/'+ref})).data.object.sha;
+            if(source!=='2858e6688df095331e6119c10bd4d87bd8a49dce')throw Error('Review the source before dispatching a different delivery.');
             const since=Date.now()-10000;
             await github.rest.actions.createWorkflowDispatch({...repo,workflow_id:'windows-app.yml',ref,inputs:{publish_surge:'true',extended_browser:'false'}});
             let previous='';

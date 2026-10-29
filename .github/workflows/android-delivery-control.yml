@@ -26,7 +26,7 @@ jobs:
             let previous='';
             for(let attempt=0;attempt<60;attempt++){
               const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:'android-app.yml',branch:'codex/android-app',per_page:5})).data.workflow_runs;
-              const run=runs.find(r=>r.head_sha.startsWith('28c1ad6'));
+              const run=runs.find(r=>r.head_sha.startsWith('2858e6688df095331e6119c10bd4d87bd8a49dce'));
               if(!run){await new Promise(r=>setTimeout(r,15000));continue;}
               const jobs=(await github.rest.actions.listJobsForWorkflowRun({...repo,run_id:run.id,per_page:100})).data.jobs;
               const report={checkedAt:new Date().toISOString(),runId:run.id,source:run.head_sha,status:run.status,conclusion:run.conclusion,url:run.html_url,jobs:jobs.map(j=>({id:j.id,name:j.name,status:j.status,conclusion:j.conclusion,steps:j.steps.map(s=>({name:s.name,status:s.status,conclusion:s.conclusion}))})),failures:[]};

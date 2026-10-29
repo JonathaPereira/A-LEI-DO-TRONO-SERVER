@@ -19,13 +19,17 @@ jobs:
             const crypto = require('node:crypto');
             const repo=context.repo,branch='codex/android-delivery-control';
             const report={checkedAt:new Date().toISOString(),checks:{},errors:[]};
+            const expectedSource='2858e6688df095331e6119c10bd4d87bd8a49dce';
             for(let attempt=0;attempt<75;attempt++){
-              const run=(await github.rest.actions.getWorkflowRun({...repo,run_id:40937471474})).data;
-              if(run.status==='completed'){
-                if(run.conclusion!=='success')throw Error('Windows delivery failed; publication verification must wait.');
-                break;
+              let complete=true;
+              for(const workflow of ['windows-app.yml','android-app.yml']){
+                const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:workflow,branch:'codex/android-app',per_page:10})).data.workflow_runs;
+                const run=runs.find(r=>r.head_sha===expectedSource);
+                if(!run||run.status!=='completed')complete=false;
+                else if(run.conclusion!=='success')throw Error(workflow+' failed; publication verification must wait.');
               }
-              if(attempt===74)throw Error('Windows delivery is still running.');
+              if(complete)break;
+              if(attempt===74)throw Error('Delivery is still running.');
               await new Promise(r=>setTimeout(r,20000));
             }
             async function request(url,options={}) {
@@ -85,14 +89,15 @@ jobs:
               return {version:metadata.desktopVersion,source:metadata.source,verified};
             });
             await check('android',async()=>{
-              const url='https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/android-preview-v1.0.1-run-40935914610/MN-Trono-1.0.1-Android-teste.apk';
-              const response=await request(url);
+              const contents=(await github.rest.repos.getContent({...repo,path:'android-delivery-status.json',ref:'codex/android-delivery-status'})).data;
+              const metadata=JSON.parse(Buffer.from(contents.content,'base64').toString('utf8'));
+              if(metadata.source!==expectedSource||metadata.published!=='success'||!/[a-f0-9]{64}/.test(metadata.sha256)||!metadata.apkUrl?.startsWith('https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/android-preview-v1.0.1-'))throw Error('Android publication metadata is stale or invalid.');
+              const response=await request(metadata.apkUrl);
               const bytes=Buffer.from(await response.arrayBuffer());
-              const sha256=crypto.createHash('sha256').update(bytes).digest('hex');
-              if(sha256!=='cf0b9c02382ad3498c8172e20a0ba48500fa991da87248b5452abca3e4112eb2')throw Error('Android APK hash mismatch');
-              const run=(await github.rest.actions.getWorkflowRun({...repo,run_id:40935914610})).data;
+              if(crypto.createHash('sha256').update(bytes).digest('hex')!==metadata.sha256)throw Error('Android APK hash mismatch');
+              const run=(await github.rest.actions.getWorkflowRun({...repo,run_id:metadata.runId})).data;
               if(run.conclusion!=='success')throw Error('Android emulator acceptance failed');
-              return {url,bytes:bytes.length,sha256Verified:true,emulatorAccepted:true,permanentSigningConfigured:false,firebaseConfigured:false};
+              return {url:metadata.apkUrl,bytes:bytes.length,sha256Verified:true,emulatorAccepted:true,permanentSigningConfigured:metadata.signed,firebaseConfigured:metadata.firebaseConfigured};
             });
             report.complete=report.errors.length===0&&report.checks.backend?.similo===true&&report.checks.frontend?.version==='1.0.1'&&report.checks.installer?.version==='1.0.1'&&report.checks.art?.version==='1.0.1'&&report.checks.android?.sha256Verified===true;
             report.androidBackendReady=report.checks.backend?.androidOriginAllowed===true;
