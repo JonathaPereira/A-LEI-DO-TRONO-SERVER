@@ -1,16 +1,16 @@
 {
-  "checkedAt": "2026-10-29T19:07:13.769Z",
-  "runId": 40935914610,
-  "source": "28c1ad622d5fe7f071310f262e71abc18b7a6320",
-  "status": "completed",
-  "conclusion": "success",
-  "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40935914610",
+  "checkedAt": "2026-10-29T19:39:12.633Z",
+  "runId": 40941960824,
+  "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
+  "status": "in_progress",
+  "conclusion": null,
+  "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40941960824",
   "jobs": [
     {
-      "id": 123666295288,
+      "id": 123687364406,
       "name": "android",
-      "status": "completed",
-      "conclusion": "success",
+      "status": "in_progress",
+      "conclusion": null,
       "steps": [
         {
           "name": "Set up job",
@@ -24,98 +24,83 @@
         },
         {
           "name": "Run actions/setup-node@v4",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "in_progress",
+          "conclusion": null
         },
         {
           "name": "Run actions/setup-java@v4",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Run android-actions/setup-android@v3",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Run gradle/actions/setup-gradle@v4",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Install dependencies and Android SDK",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Validate shared source",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Prepare optional Firebase and permanent signing",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Prepare actual WebView fixture",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Enable emulator KVM",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Validate native Android microphone, background call and notifications",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Package production backend without test fixture",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Publish verified Android preview or signed release",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Preserve test evidence",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Publish delivery status without changing source branch",
-          "status": "completed",
-          "conclusion": "success"
-        },
-        {
-          "name": "Post Run gradle/actions/setup-gradle@v4",
-          "status": "completed",
-          "conclusion": "success"
-        },
-        {
-          "name": "Post Run actions/setup-java@v4",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Post Run actions/setup-node@v4",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         },
         {
           "name": "Post Run actions/checkout@v4",
-          "status": "completed",
-          "conclusion": "success"
-        },
-        {
-          "name": "Complete job",
-          "status": "completed",
-          "conclusion": "success"
+          "status": "pending",
+          "conclusion": null
         }
       ]
     }
