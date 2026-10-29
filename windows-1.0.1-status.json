@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-29T19:11:30.453Z",
+  "checkedAt": "2026-10-29T19:12:14.286Z",
   "version": "1.0.1",
   "source": "c3aa6b8e8b6a41cd2aa521aced54147ff0f0cc95",
   "runId": 40937471474,
@@ -45,12 +45,12 @@
         },
         {
           "name": "Check sources and build frontend and native helpers once",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Verify contracts and real user journeys",
-          "status": "pending",
+          "status": "in_progress",
           "conclusion": null
         },
         {
