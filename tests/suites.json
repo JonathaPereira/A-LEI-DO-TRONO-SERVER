@@ -1,5 +1,7 @@
 {
   "core": [
+    "tests/android-host.cjs",
+    "tests/mobile-push.cjs",
     "tests/similo-rules.cjs",
     "tests/similo-service.cjs",
     "tests/similo-controller.cjs",
@@ -185,6 +187,7 @@
     "tests/voice-transport.cjs"
   ],
   "browser": [
+    "tests/mobile-browser.cjs",
     "tests/voice-recovery-browser.cjs",
     "tests/similo-browser.cjs",
     "tests/similo-crowd-browser.cjs",

@@ -6,16 +6,18 @@ import { createSocketTransport } from './transport.ts';
 export interface NetworkRuntime {
   location: { hostname: string };
   TRONO_BACKEND_URL?: string;
+  TronoAndroid?: unknown;
   TronoAuth?: NetworkIdentity;
   TronoSocial?: VoiceContext;
   TronoNetwork?: NetworkClient;
 }
 
-export function resolveBackendHttp(hostname: string, override?: string): string {
+export function resolveBackendHttp(hostname: string, override?: string, native = false): string {
   const local = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(hostname);
   const host = hostname.includes(':') && !hostname.startsWith('[') ? `[${hostname}]` : hostname;
   const address =
-    override || (local ? `http://${host}:10000` : 'https://a-lei-do-trono-server.onrender.com');
+    override ||
+    (local && !native ? `http://${host}:10000` : 'https://a-lei-do-trono-server.onrender.com');
   const url = new URL(address);
   if (
     !['http:', 'https:'].includes(url.protocol) ||
@@ -33,7 +35,11 @@ export function resolveBackendHttp(hostname: string, override?: string): string 
 /** Installs one client per page; old controllers only retain its existing public name. */
 export function initializeNetwork(runtime: NetworkRuntime): NetworkClient {
   if (runtime.TronoNetwork) return runtime.TronoNetwork;
-  const backendHttp = resolveBackendHttp(runtime.location.hostname, runtime.TRONO_BACKEND_URL);
+  const backendHttp = resolveBackendHttp(
+    runtime.location.hostname,
+    runtime.TRONO_BACKEND_URL,
+    !!runtime.TronoAndroid,
+  );
   const transport = createSocketTransport({ url: backendWebSocketUrl(backendHttp) });
   const client = createNetworkClient({
     backendHttp,

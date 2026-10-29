@@ -60,13 +60,15 @@ export function initializeAuth(target: Window) {
     api,
     storage: createPreferenceStorage(() => target.sessionStorage),
     preferences: runtime.TronoStorage,
-    native: runtime.TronoDesktop
-      ? {
-          readSession: () => runtime.TronoDesktop?.readSession?.() ?? Promise.resolve(null),
-          saveSession: (value) =>
-            runtime.TronoDesktop?.saveSession?.(value) ?? Promise.resolve(undefined),
-        }
-      : undefined,
+    native:
+      runtime.TronoAndroid ??
+      (runtime.TronoDesktop
+        ? {
+            readSession: () => runtime.TronoDesktop?.readSession?.() ?? Promise.resolve(null),
+            saveSession: (value) =>
+              runtime.TronoDesktop?.saveSession?.(value) ?? Promise.resolve(undefined),
+          }
+        : undefined),
     authenticate: network.authenticate,
     authenticateGuest: network.authenticateGuest,
     disconnect: network.disconnect,

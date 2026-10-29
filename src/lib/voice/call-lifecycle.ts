@@ -10,7 +10,7 @@ import { voiceCancelled } from './microphone.ts';
 import { abortable } from './peer-wait.ts';
 
 interface CallOptions {
-  prepare(): Promise<PreparedVoice>;
+  prepare(operation: VoiceCallOperation): Promise<PreparedVoice>;
   microphone: Pick<Microphone, 'acquire' | 'stop'>;
   roomId(): string | null | undefined;
   onMessage(listener: (message: SocketMessage) => void): () => void;
@@ -124,7 +124,7 @@ export function createVoiceCall(options: CallOptions) {
         const choice = await abortable(
           Promise.resolve().then(() => {
             ensure();
-            return options.prepare();
+            return options.prepare(operation);
           }),
           job.controller.signal,
         );

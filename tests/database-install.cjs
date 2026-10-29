@@ -52,7 +52,7 @@ test(
               "select c.relname,c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' order by c.relname",
             )
           ).rows;
-          assert.equal(tables.length, 12);
+          assert.equal(tables.length, 13);
           assert(
             tables.every((table) => table.relrowsecurity),
             JSON.stringify(tables),
@@ -106,6 +106,7 @@ test(
           );
           for (const table of [
             'chat_files',
+            'mobile_push_devices',
             'chat_messages',
             'social_links',
             'social_threads',

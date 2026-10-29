@@ -18,3 +18,8 @@ supabase/.temp/
 # Godot sources are tracked; imports and exports are generated.
 .godot/
 games/**/builds/
+
+# Native Android distribution inputs are supplied securely by CI.
+android/app/google-services.json
+*.jks
+*.keystore

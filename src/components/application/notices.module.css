@@ -97,3 +97,12 @@
   height: 100%;
   object-fit: cover;
 }
+@media (max-width: 760px) {
+  .notices {
+    top: 68px;
+    bottom: auto;
+    max-height: 28dvh;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+}

@@ -629,3 +629,21 @@ Atalaia/Nexus, com sete casos por rodada e zero falhas/skips
 (`v038-browser-1/2.log`). Os fontes de apresentação de Love Letter e do tabuleiro
 não mudaram nessa integração; a nova entrega Windows confirma também a configuração
 do atualizador incorporada ao NSIS.
+
+
+## Android — preparação da 1.0.1 (29/10/2026)
+
+Branch `codex/android-app`, base main `6b9a283`. Usuário pediu Android com
+composição responsiva, notificações e segundo plano; autorizou preparar Firebase
+e instruções pois ainda não possui projeto. A entrega é incremental: host
+Capacitor, UI de celular, Keystore, serviço de chamada e FCM de DMs/pedidos.
+Web e Windows preservam seus donos e recursos. Não declarar paridade nativa
+completa: captura da tela/áudio de outros apps, host de Remote PC e push de canais
+não estão implementados no APK. Firebase, SQL aditivo, backend publicado e chave
+permanente são requisitos operacionais descritos no guia de desenvolvimento.
+
+Regressões específicas reproduziram cancelamento tardio da concessão e endereço
+localhost incorreto antes da correção; contratos locais passaram depois. Layout
+mobile usa navegador com microfone virtual; teste Android em emulador pertence ao
+workflow do mesmo commit. Resultados finais e links de entrega serão registrados
+após sua execução. Nenhuma aprovação visual ou de hardware é presumida.

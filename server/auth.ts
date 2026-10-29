@@ -67,6 +67,7 @@ export function createAuth({
   const allowedOrigins = new Set(
     [
       origin,
+      'https://localhost', // Bundled Android origin; requests still require an authenticated account.
       ...String(env.AUTH_ALLOWED_ORIGINS || '')
         .split(',')
         .map((v) => v.trim())

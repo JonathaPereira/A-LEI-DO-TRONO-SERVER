@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { initializeAndroid } from '../lib/mobile/android';
+import { initializeAndroidPush } from '../lib/mobile/push';
 import { initializeDesktopWindow } from '../lib/desktop/window';
 import { initializeDesktopUpdates } from '../components/desktop/update-runtime';
 import { publishServices } from '../components/application/services';
@@ -61,6 +63,7 @@ export function ApplicationRuntime() {
   const [error, setError] = useState<string>();
   useEffect(() => {
     startup ??= Promise.resolve().then(() => {
+      initializeAndroid(window);
       initializeAudio(window);
       initializePersonalPreferences(window);
       initializeNetwork(window);
@@ -99,6 +102,7 @@ export function ApplicationRuntime() {
       initializeCommunityNavigation(window);
       initializeCourtFullscreen(window);
       initializeNotifications(window);
+      initializeAndroidPush(window);
       initializeAzul(window);
       initializeSplendor(window);
       initializeLoveLetter(window);

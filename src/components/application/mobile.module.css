@@ -1,0 +1,75 @@
+.dock {
+  display: none;
+}
+@media (max-width: 760px) {
+  .dock {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 18;
+    background: #151920f5;
+    border-top: 1px solid #d6b77924;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    color: #dce0e7;
+    font:
+      12px/1.3 'Segoe UI',
+      sans-serif;
+  }
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: 64px;
+  }
+  .tabs button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: transparent;
+    color: #9aabba;
+    border: 0;
+    padding: 9px 2px;
+    min-height: 56px;
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+  }
+  .tabs button[aria-current='page'],
+  .tabs button[aria-expanded='true'] {
+    color: #ecd29b;
+    background: #d6b7790d;
+  }
+  .tabs button:focus-visible,
+  .activeCall:focus-visible {
+    outline: 2px solid #d6b779;
+    outline-offset: -3px;
+  }
+  .activeCall {
+    border: 0;
+    border-bottom: 1px solid #82c8ae22;
+    color: #a8dfc5;
+    background: #17342e;
+    padding: 9px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    text-align: left;
+    cursor: pointer;
+    min-height: 48px;
+    font: inherit;
+  }
+  .activeCall span {
+    flex: 1;
+  }
+  .activeCall small {
+    display: block;
+    font-size: 10px;
+    color: #91b7a7;
+    margin-top: 2px;
+  }
+}
+:global(html[data-keyboard='true']) .dock {
+  display: none;
+}

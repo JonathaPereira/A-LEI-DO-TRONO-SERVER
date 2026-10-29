@@ -20,6 +20,7 @@ import { Conversation } from './conversation';
 import { useModel, useServices, type ApplicationServices } from './services';
 import { AppIcon as Icon } from './icons';
 import styles from './shell.module.css';
+import { MobileNavigation } from './mobile-navigation';
 
 const noop = () => () => {};
 const empty = () => null;
@@ -251,7 +252,7 @@ function Navigation({
           >
             <Icon name="games" />
             <span>Biblioteca de jogos</span>
-            <small>7</small>
+            <small>{games.length}</small>
           </button>
           <button
             className={styles.friendsButton}
@@ -733,10 +734,50 @@ export function ApplicationShell({
     document.addEventListener('keydown', close);
     return () => document.removeEventListener('keydown', close);
   }, [drawer]);
+  useEffect(() => {
+    const back = () => {
+      const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+      if (dialog) {
+        dialog.requestClose();
+        return;
+      }
+      const popover = document.querySelector<HTMLElement>('[popover]:popover-open');
+      if (popover) {
+        popover.hidePopover();
+        return;
+      }
+      if (document.fullscreenElement) {
+        void document.exitFullscreen();
+        return;
+      }
+      if (drawer) {
+        setDrawer(false);
+        return;
+      }
+      if (members && !entry) {
+        setMembers(false);
+        return;
+      }
+      if (!entry && runtime && (screen !== 'chatOnlyScreen' || callNav?.page !== 'chat')) {
+        runtime.TronoDirectMessages.close();
+        runtime.TronoPortal.showOnly('chatOnlyScreen');
+        runtime.TronoCallNavigation.showChat();
+        return;
+      }
+      void window.TronoAndroid?.minimize();
+    };
+    window.addEventListener('trono-android-back', back);
+    return () => window.removeEventListener('trono-android-back', back);
+  }, [runtime, screen, drawer, members, entry, callNav?.page]);
   return (
     <>
       <div
         className={styles.workspace}
+        data-mobile-entry={entry}
+        data-mobile-call={
+          runtime?.TronoSocial.voiceJoined &&
+          !(screen === 'chatOnlyScreen' && callNav?.page === 'call')
+        }
         data-members={members && !entry}
         data-call={screen === 'chatOnlyScreen' && callNav?.page === 'call'}
       >
@@ -930,6 +971,15 @@ export function ApplicationShell({
           </aside>
         )}
       </div>
+      {runtime && !entry && (
+        <MobileNavigation
+          runtime={runtime}
+          screen={screen}
+          members={members}
+          toggleMembers={() => setMembers(!members)}
+          openChannels={() => setDrawer(!drawer)}
+        />
+      )}
       {runtime && (
         <>
           <AccountOverlay runtime={runtime} inline={entry || screen === 'portalScreen'} />

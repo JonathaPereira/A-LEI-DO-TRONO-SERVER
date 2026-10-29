@@ -330,3 +330,34 @@ campo por um Control com escala uniforme. `terrain.gd` compõe os fundos com
 as estradas pintadas, usando a mesma geometria das rotas, sem reamostrar as
 regras de movimento. A camada do terreno só é reconstruída na troca de região.
 A contagem animada de ouro é apresentação; compras usam o saldo em `run.gd`.
+
+
+## Host Android
+
+`android/` é o host Capacitor 8, Java 21, SDK 36 e Android 8+ (API 26).
+Empacota a mesma exportação Next localmente, com origem `https://localhost` e
+backend de produção explícito. Não carrega código remoto com a ponte nativa.
+`src/lib/mobile/android.ts` adapta permissões, avisos e sessão AES-GCM no
+Android Keystore; `android-host.ts` possui somente a concessão do serviço, sem
+socket, captura ou estado paralelo de chamada. O ciclo da voz aguarda a permissão
+nativa antes de adquirir seu microfone existente. Cancelamento envia a concessão
+correta e callbacks de permissão cancelados não podem iniciar o serviço.
+
+`CallService` usa foreground service de microfone/reprodução, aviso permanente e
+wake lock apenas durante a chamada. Não reinicia chamadas ao morrer o processo.
+Minimizar conserva a WebView; sair da voz/conta, encerrar a tarefa ou destruir o
+host libera o serviço. Reinício forçado do Android não equivale à reconexão de
+socket já implementada. Câmera, Bluetooth, Doze e áudio físico exigem aceite em
+aparelhos; o serviço não promete imunidade às políticas dos fabricantes.
+
+`server/mobile-push.ts` autentica registro de dispositivos pelo mesmo gateway e
+envia avisos genéricos via FCM HTTP v1 após mensagens privadas/pedidos de amizade
+confirmados. Falha de push não desfaz mensagem confirmada. Tokens ficam na tabela
+privada `mobile_push_devices`, sem acesso anon/authenticated, com registro por RPC
+restrita à service_role. A conta vem do JWT validado, nunca do corpo. Registros
+expiram da seleção após 30 dias; endpoint inválido é removido. Preferência desligada
+é sincronizada. O Android confere a conta local antes de exibir e limpa avisos na
+troca/logout. O payload FCM não contém texto nem anexos da conversa. Menções de
+canais continuam pelo socket enquanto o processo está ativo; push de canais ainda
+não está integrado. Firebase e assinatura são configuração operacional, não
+credenciais embarcadas no frontend. O segredo de serviço fica só no backend.
