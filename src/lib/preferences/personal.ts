@@ -26,6 +26,17 @@ export function createPersonalPreferences(options: PersonalOptions) {
     get(key: string, fallback?: unknown): unknown {
       return current()[key] ?? fallback;
     },
+    mutedTargets(): readonly string[] {
+      return Object.freeze(
+        Object.entries(current())
+          .filter(
+            ([key, value]) =>
+              key.startsWith('mute:') && key.length > 5 && key.length <= 133 && value === true,
+          )
+          .map(([key]) => key.slice(5))
+          .slice(0, 1000),
+      );
+    },
     set(key: string, value: unknown) {
       current();
       if (!owner) return;

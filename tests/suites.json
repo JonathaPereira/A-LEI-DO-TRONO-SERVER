@@ -1,5 +1,6 @@
 {
   "core": [
+    "tests/android-push-registration.cjs",
     "tests/android-host.cjs",
     "tests/mobile-push.cjs",
     "tests/similo-rules.cjs",

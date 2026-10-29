@@ -144,9 +144,18 @@ public class TronoAndroidPlugin extends Plugin {
   public void setAccount(PluginCall call) {
     String account = call.getString("accountId");
     String previous = device().getString("account", null);
-    device().edit().putString("account", account).apply();
-    if (!Objects.equals(previous, account)) {
-      pendingTarget = null;
+    boolean enabled = call.getBoolean("enabled", true);
+    JSArray input = call.getArray("muted", new JSArray());
+    Set<String> muted = new HashSet<>();
+    for (int i = 0; i < Math.min(input.length(), 1000); i++) muted.add(input.optString(i));
+    device()
+        .edit()
+        .putString("account", account)
+        .putBoolean("notices_enabled", enabled)
+        .putStringSet("muted", muted)
+        .apply();
+    if (!Objects.equals(previous, account)) pendingTarget = null;
+    if (!Objects.equals(previous, account) || !enabled) {
       NativeNotices.clear(getContext());
     }
     call.resolve();

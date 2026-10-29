@@ -8,14 +8,16 @@ export function initializeAndroidPush(target: Window) {
   const runtime = target as Window & {
     TronoAuth: Pick<AccountSession, 'getSnapshot' | 'getAccessToken' | 'ready'>;
     TronoNetwork: NetworkClient;
-    TronoPersonal: { get(key: string, fallback: unknown): unknown };
+    TronoPersonal: {
+      get(key: string, fallback: unknown): unknown;
+      mutedTargets(): readonly string[];
+    };
   };
   let generation = 0;
-  const sync = async () => {
-    const expected = ++generation;
-    const id = runtime.TronoAuth.getSnapshot().user?.id ?? null;
-    await host.setAccount(id);
-    if (!id) return;
+  let sessionReady = false;
+  let registrations = Promise.resolve();
+  const sync = async (expected: number, id: string | null) => {
+    if (!id || expected !== generation) return;
     const registration = await host.pushRegistration();
     if (!registration.configured || !registration.token || expected !== generation) return;
     const token = await runtime.TronoAuth.getAccessToken();
@@ -40,10 +42,22 @@ export function initializeAndroidPush(target: Window) {
       throw Error('Não foi possível ativar as notificações push.');
   };
   const refresh = () => {
-    void sync().catch((error) => console.warn('[Android] Avisos:', error));
+    if (!sessionReady) return;
+    const expected = ++generation;
+    const id = runtime.TronoAuth.getSnapshot().user?.id ?? null;
+    const enabled =
+      host.getPermission() === 'granted' &&
+      runtime.TronoPersonal.get('notifications', 'mentions') !== 'off';
+    void host.setAccount(id, enabled, runtime.TronoPersonal.mutedTargets()).catch(console.warn);
+    // A replacement must not race an already committed registration from the previous account.
+    registrations = registrations.catch(() => {}).then(() => sync(expected, id));
+    void registrations.catch((error) => console.warn('[Android] Avisos:', error));
   };
   target.addEventListener('trono-auth-change', refresh);
-  target.addEventListener('trono-personal-change', refresh);
+  target.addEventListener('trono-personal-change', (event) => {
+    const key: unknown = (event as CustomEvent<{ key?: unknown }>).detail?.key;
+    if (key === 'notifications' || (typeof key === 'string' && key.startsWith('mute:'))) refresh();
+  });
   target.addEventListener('trono-android-permission', refresh);
   target.document.addEventListener('visibilitychange', () => {
     if (target.document.visibilityState === 'visible') refresh();
@@ -51,7 +65,10 @@ export function initializeAndroidPush(target: Window) {
   target.addEventListener(
     'trono:ready',
     () => {
-      void runtime.TronoAuth.ready.then(refresh);
+      void runtime.TronoAuth.ready.then(() => {
+        sessionReady = true;
+        refresh();
+      });
     },
     { once: true },
   );

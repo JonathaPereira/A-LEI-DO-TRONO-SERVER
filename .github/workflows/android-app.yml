@@ -38,6 +38,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - name: Install dependencies and Android SDK
         run: |
@@ -108,7 +110,7 @@ jobs:
           script: |
             adb reverse tcp:10000 tcp:10000
             chmod +x android/gradlew
-            android/gradlew -p android connectedDebugAndroidTest --no-daemon --console=plain
+            android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon --console=plain
       - name: Package production backend without test fixture
         id: package
         env:
@@ -119,9 +121,9 @@ jobs:
         run: |
           npm run android:sync
           if [ "$SIGNED" = true ]; then
-            android/gradlew -p android assembleRelease bundleRelease --no-daemon --console=plain
+            android/gradlew -p android :app:assembleRelease :app:bundleRelease --no-daemon --console=plain
           else
-            android/gradlew -p android assembleDebug --no-daemon --console=plain
+            android/gradlew -p android :app:assembleDebug --no-daemon --console=plain
           fi
           node - <<'JS'
           const fs=require('node:fs'), crypto=require('node:crypto');

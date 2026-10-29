@@ -356,7 +356,7 @@ confirmados. Falha de push não desfaz mensagem confirmada. Tokens ficam na tabe
 privada `mobile_push_devices`, sem acesso anon/authenticated, com registro por RPC
 restrita à service_role. A conta vem do JWT validado, nunca do corpo. Registros
 expiram da seleção após 30 dias; endpoint inválido é removido. Preferência desligada
-é sincronizada. O Android confere a conta local antes de exibir e limpa avisos na
+é sincronizada. Mutes e desligamento também são aplicados imediatamente no nativo; registros HTTP são serializados na troca de conta, e a identidade lembrada é restaurada antes de consumir um clique de notificação. O Android confere a conta local antes de exibir e limpa avisos na
 troca/logout. O payload FCM não contém texto nem anexos da conversa. Menções de
 canais continuam pelo socket enquanto o processo está ativo; push de canais ainda
 não está integrado. Firebase e assinatura são configuração operacional, não

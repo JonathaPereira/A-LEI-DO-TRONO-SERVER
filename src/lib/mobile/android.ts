@@ -12,7 +12,11 @@ interface NativeAndroid {
   notify(options: NotificationPayload): Promise<void>;
   readSession(): Promise<{ value: AuthSessionData | null }>;
   saveSession(options: { value: AuthSessionData | null }): Promise<void>;
-  setAccount(options: { accountId: string | null }): Promise<void>;
+  setAccount(options: {
+    accountId: string | null;
+    enabled: boolean;
+    muted: readonly string[];
+  }): Promise<void>;
   pushRegistration(): Promise<{ configured: boolean; token?: string; deviceId: string }>;
   minimize(): Promise<void>;
   consumeNotification(): Promise<{ target?: unknown }>;
@@ -48,14 +52,19 @@ export function initializeAndroid(target: Window) {
     saveSession: (value: AuthSessionData | null) => native.saveSession({ value }),
     onNotificationClick(listener: (value: unknown) => void) {
       listeners.add(listener);
-      void native.consumeNotification().then((value) => {
-        if (value.target) emit(value.target);
-      });
+      const authentication = (target as Window & { TronoAuth?: { ready: Promise<void> } })
+        .TronoAuth;
+      void (authentication?.ready ?? Promise.resolve())
+        .then(() => native.consumeNotification())
+        .then((value) => {
+          if (value.target) emit(value.target);
+        });
       return () => {
         listeners.delete(listener);
       };
     },
-    setAccount: (accountId: string | null) => native.setAccount({ accountId }),
+    setAccount: (accountId: string | null, enabled: boolean, muted: readonly string[]) =>
+      native.setAccount({ accountId, enabled, muted }),
     pushRegistration: () => native.pushRegistration(),
   };
   target.TronoAndroid = host;
@@ -77,6 +86,6 @@ export type AndroidHost = ReturnType<typeof createAndroidHost> & {
   readSession(): Promise<AuthSessionData | null>;
   saveSession(value: AuthSessionData | null): Promise<void>;
   onNotificationClick(listener: (value: unknown) => void): () => void;
-  setAccount(id: string | null): Promise<void>;
+  setAccount(id: string | null, enabled: boolean, muted: readonly string[]): Promise<void>;
   pushRegistration(): Promise<{ configured: boolean; token?: string; deviceId: string }>;
 };

@@ -18,6 +18,11 @@ final class NativeNotices {
     if (Build.VERSION.SDK_INT >= 33
         && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED) return;
+    android.content.SharedPreferences policy = context.getSharedPreferences("trono_device", 0);
+    if (!policy.getBoolean("notices_enabled", true)
+        || policy
+            .getStringSet("muted", java.util.Collections.emptySet())
+            .contains(target.optString("id"))) return;
     String kind = target.optString("type");
     if (!kind.equals("direct") && !kind.equals("channel") && !kind.equals("friends")) return;
     NotificationManager manager = context.getSystemService(NotificationManager.class);
