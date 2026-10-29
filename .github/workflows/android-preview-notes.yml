@@ -1,0 +1,32 @@
+name: Finalize verified Android preview links
+on:
+  push:
+    branches: [codex/android-delivery-control]
+    paths: [.github/workflows/android-preview-notes.yml]
+permissions:
+  contents: write
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const repo=context.repo,branch='codex/android-delivery-control';
+            const current=(await github.rest.repos.getReleaseByTag({...repo,tag:'android-preview-v1.0.1-run-40941960824'})).data;
+            const previous=(await github.rest.repos.getReleaseByTag({...repo,tag:'android-preview-v1.0.1-run-40935914610'})).data;
+            const note=`\n\n**Prévia anterior substituída:** use a [prévia corrigida](${current.html_url}). Os arquivos antigos foram preservados apenas como histórico.`;
+            await github.rest.repos.updateRelease({...repo,release_id:previous.id,name:'MN Trono Android 1.0.1 — prévia anterior',body:previous.body.includes('Prévia anterior substituída')?previous.body:previous.body+note});
+            const setup='https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/blob/codex/android-app/docs/DESENVOLVIMENTO_DESKTOP.md#android-gerar-e-configurar';
+            const body=[`Prévia Android 1.0.1 com a largura corrigida e interface para celular. Fonte validada: 2858e6688df095331e6119c10bd4d87bd8a49dce.`, `Passaram os testes compartilhados, a WebView Android API35 (geometria, microfone virtual após minimizar e avisos) e a entrega Windows/Surge 1.0.1. Ainda requer teste em aparelho, incluindo tela bloqueada prolongada.`, `**Antes de usar a conta no APK:** incorpore/deploy o backend desta contribuição para aceitar https://localhost. O servidor publicado ainda recusava essa origem na verificação final.`, `Firebase e chave permanente ainda não estão configurados. Avisos com app fechado não estão ativos. Este APK tem assinatura de teste; se instalou a primeira prévia, desinstale-a antes de instalar esta.`, `[Passo a passo do Firebase, assinatura e instalação](${setup}). Captura nativa da tela/áudio de outros apps, host de Remote PC e push de canais não estão portados neste APK.`, `<img width="280" alt="Conversa e membros no celular" src="https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/mobile-preview-chat.png" /> <img width="280" alt="Catálogo no celular" src="https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/mobile-preview-games.png" />`].join('\n\n');
+            await github.rest.repos.updateRelease({...repo,release_id:current.id,body});
+            const path='android-1.0.1-production-check.json';
+            const file=(await github.rest.repos.getContent({...repo,path,ref:branch})).data;
+            const report=JSON.parse(Buffer.from(file.content,'base64').toString());
+            if(!report.startedAt){
+              const commits=(await github.rest.repos.listCommits({...repo,sha:branch,path,per_page:1})).data;
+              report.startedAt=report.checkedAt;
+              report.checkedAt=commits[0].commit.committer.date;
+              await github.rest.repos.createOrUpdateFileContents({...repo,branch,path,sha:file.sha,message:'ci: distinguish verification start from recorded result time',content:Buffer.from(JSON.stringify(report,null,2)+'\n').toString('base64')});
+            }
+            core.notice('The corrected preview is current; the initial download is marked as superseded.');
