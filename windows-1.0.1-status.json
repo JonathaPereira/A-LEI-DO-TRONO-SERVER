@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-29T19:57:06.714Z",
+  "checkedAt": "2026-10-29T19:57:29.723Z",
   "version": "1.0.1",
   "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
   "runId": 40942027782,
@@ -70,27 +70,27 @@
         },
         {
           "name": "Save the validated delivery in a private draft release",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Report failed test summaries",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Save failure evidence",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Post Run actions/setup-node@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/checkout@v4",
-          "status": "pending",
+          "status": "in_progress",
           "conclusion": null
         }
       ]
