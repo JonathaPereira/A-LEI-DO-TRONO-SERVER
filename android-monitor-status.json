@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-29T19:43:28.620Z",
+  "checkedAt": "2026-10-29T19:43:46.091Z",
   "runId": 40941960824,
   "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
   "status": "in_progress",
@@ -59,17 +59,17 @@
         },
         {
           "name": "Prepare actual WebView fixture",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Enable emulator KVM",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Validate native Android microphone, background call and notifications",
-          "status": "pending",
+          "status": "in_progress",
           "conclusion": null
         },
         {
