@@ -1,0 +1,124 @@
+{
+  "checkedAt": "2026-10-29T18:52:24.079Z",
+  "runId": 40934470859,
+  "source": "bcf5a9b82135c04421fc55cb78d5d08b5bd0d806",
+  "status": "completed",
+  "conclusion": "failure",
+  "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40934470859",
+  "jobs": [
+    {
+      "id": 123661242852,
+      "name": "android",
+      "status": "completed",
+      "conclusion": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-java@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run android-actions/setup-android@v3",
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Run gradle/actions/setup-gradle@v4",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Install dependencies and Android SDK",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Validate shared source",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Prepare optional Firebase and permanent signing",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Prepare actual WebView fixture",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Enable emulator KVM",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Validate native Android microphone, background call and notifications",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Package production backend without test fixture",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Publish verified Android preview or signed release",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Preserve test evidence",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish delivery status without changing source branch",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-java@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "job": "android",
+      "tail": "2026-10-29T18:50:15.5439222Z [                                       ] 3% Fetch remote repository...         \n2026-10-29T18:50:15.8289379Z [=                                      ] 3% Fetch remote repository...         \n2026-10-29T18:50:15.8902438Z [=                                      ] 4% Fetch remote repository...         \n2026-10-29T18:50:15.9334935Z [=                                      ] 5% Fetch remote repository...         \n2026-10-29T18:50:15.9810902Z [==                                     ] 5% Fetch remote repository...         \n2026-10-29T18:50:16.0523932Z [==                                     ] 6% Fetch remote repository...         \n2026-10-29T18:50:16.1246863Z [==                                     ] 7% Fetch remote repository...         \n2026-10-29T18:50:16.1255579Z [==                                     ] 7% Computing updates...               \n2026-10-29T18:50:16.1324570Z [===                                    ] 8% Computing updates...               \n2026-10-29T18:50:16.1337609Z [===                                    ] 10% Computing updates...              \n2026-10-29T18:50:16.1338559Z                                                                                 \n2026-10-29T18:50:16.1339366Z Warning: Failed to find package 'tools'\n2026-10-29T18:50:16.1541321Z /home/runner/work/_actions/android-actions/setup-android/v3/dist/index.js:1823\n2026-10-29T18:50:16.1542316Z                 error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);\n2026-10-29T18:50:16.1543432Z                         ^\n2026-10-29T18:50:16.1543824Z \n2026-10-29T18:50:16.1544302Z Error: The process '/usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager' failed with exit code 1\n2026-10-29T18:50:16.1544989Z     at ExecState._setResult (/home/runner/work/_actions/android-actions/setup-android/v3/dist/index.js:1823:25)\n2026-10-29T18:50:16.1545966Z     at ExecState.CheckComplete (/home/runner/work/_actions/android-actions/setup-android/v3/dist/index.js:1806:18)\n2026-10-29T18:50:16.1546936Z     at ChildProcess.<anonymous> (/home/runner/work/_actions/android-actions/setup-android/v3/dist/index.js:1700:27)\n2026-10-29T18:50:16.1547492Z     at ChildProcess.emit (node:events:514:28)\n2026-10-29T18:50:16.1547810Z     at maybeClose (node:internal/child_process:1172:16)\n2026-10-29T18:50:16.1548391Z     at ChildProcess._handle.onexit (node:internal/child_process:335:5)\n2026-10-29T18:50:16.1548739Z \n2026-10-29T18:50:16.1548854Z Node.js v24.22.1\n2026-10-29T18:50:16.1646155Z [===                                    ] 10% Computing updates...              \n2026-10-29T18:50:16.1743686Z ##[group]Run actions/upload-artifact@v4\n2026-10-29T18:50:16.1743958Z with:\n2026-10-29T18:50:16.1744148Z   name: android-40934470859\n2026-10-29T18:50:16.1744549Z   path: artifacts/android*\nandroid/app/build/outputs/androidTest-results\nandroid/app/build/reports/androidTests\n\n2026-10-29T18:50:16.1744965Z   if-no-files-found: ignore\n2026-10-29T18:50:16.1745160Z   compression-level: 6\n2026-10-29T18:50:16.1745340Z   overwrite: false\n2026-10-29T18:50:16.1745528Z   include-hidden-files: false\n2026-10-29T18:50:16.1745717Z env:\n2026-10-29T18:50:16.1745966Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.13-9/x64\n2026-10-29T18:50:16.1746348Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.13-9/x64\n2026-10-29T18:50:16.1746640Z ##[endgroup]\n2026-10-29T18:50:16.3097404Z (node:2436) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.\n2026-10-29T18:50:16.3098287Z (Use `node --trace-deprecation ...` to show where the warning was created)\n2026-10-29T18:50:16.3138801Z Multiple search paths detected. Calculating the least common ancestor of all paths\n2026-10-29T18:50:16.3141356Z The least common ancestor is /home/runner/work/A-LEI-DO-TRONO-SERVER/A-LEI-DO-TRONO-SERVER. This will be the root directory of the artifact\n2026-10-29T18:50:16.3146423Z No files were found with the provided path: artifacts/android*\n2026-10-29T18:50:16.3154764Z android/app/build/outputs/androidTest-results\n2026-10-29T18:50:16.3155294Z android/app/build/reports/androidTests. No artifacts will be uploaded.\n2026-10-29T18:50:16.3312335Z ##[group]Run actions/github-script@v7\n2026-10-29T18:50:16.3312572Z with:\n2026-10-29T18:50:16.3316775Z   script: const report={checkedAt:new Date().toISOString(),source:context.sha,runId:context.runId,runUrl:`https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,shared:process.env.SHARED,device:process.env.DEVICE,package:process.env.PACKAGE,published:process.env.PUBLISHED,apkUrl:process.env.APK_URL,releaseUrl:process.env.RELEASE_URL,apkName:process.env.APK_NAME,sha256:process.env.SHA256,signed:process.env.SIGNED==='true',firebaseConfigured:process.env.FIREBASE_CONFIGURED==='true',mainPreserved:context.ref!=='refs/heads/main'};\nconst branch='codex/android-delivery-status';\nlet head;\ntry {head=(await github.rest.git.getRef({...context.repo,ref:'heads/'+branch})).data.object.sha;}\ncatch(error){if(error.status!==404)throw error;head=(await github.rest.git.getRef({...context.repo,ref:'heads/main'})).data.object.sha;await github.rest.git.createRef({...context.repo,ref:'refs/heads/'+branch,sha:head});}\nconst commit=(await github.rest.git.getCommit({...context.repo,commit_sha:head})).data;\nconst blob=(await github.rest.git.createBlob({...context.repo,content:JSON.stringify(report,null,2)+'\\n',encoding:'utf-8'})).data;\nconst tree=(await github.rest.git.createTree({...context.repo,base_tree:commit.tree.sha,tree:[{path:'android-delivery-status.json',mode:'100644',type:'blob',sha:blob.sha}]})).data;\nconst next=(await github.rest.git.createCommit({...context.repo,message:'ci: report Android delivery',tree:tree.sha,parents:[head]})).data;\nawait github.rest.git.updateRef({...context.repo,ref:'heads/'+branch,sha:next.sha});\nawait core.summary.addHeading('Android delivery').addCodeBlock(JSON.stringify(report,null,2),'json').write();\n\n2026-10-29T18:50:16.3323560Z   github-token: ***\n2026-10-29T18:50:16.3323745Z   debug: false\n2026-10-29T18:50:16.3323930Z   user-agent: actions/github-script\n2026-10-29T18:50:16.3324148Z   result-encoding: json\n2026-10-29T18:50:16.3324330Z   retries: 0\n2026-10-29T18:50:16.3324518Z   retry-exempt-status-codes: 400,401,403,404,422\n2026-10-29T18:50:16.3324748Z env:\n2026-10-29T18:50:16.3324984Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.13-9/x64\n2026-10-29T18:50:16.3325358Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.13-9/x64\n2026-10-29T18:50:16.3325658Z   SHARED: skipped\n2026-10-29T18:50:16.3325826Z   DEVICE: skipped\n2026-10-29T18:50:16.3325984Z   PACKAGE: skipped\n2026-10-29T18:50:16.3326161Z   PUBLISHED: skipped\n2026-10-29T18:50:16.3326329Z   APK_URL: \n2026-10-29T18:50:16.3326480Z   RELEASE_URL: \n2026-10-29T18:50:16.3326637Z   APK_NAME: \n2026-10-29T18:50:16.3326787Z   SHA256: \n2026-10-29T18:50:16.3326930Z   SIGNED: \n2026-10-29T18:50:16.3327080Z   FIREBASE_CONFIGURED: \n2026-10-29T18:50:16.3327255Z ##[endgroup]\n2026-10-29T18:50:19.5064162Z Post job cleanup.\n2026-10-29T18:50:19.6204982Z (node:2463) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.\n2026-10-29T18:50:19.6205634Z (Use `node --trace-deprecation ...` to show where the warning was created)\n2026-10-29T18:50:19.6415004Z Post job cleanup.\n2026-10-29T18:50:19.7141360Z [command]/usr/bin/git version\n2026-10-29T18:50:19.7179994Z git version 2.56.0\n2026-10-29T18:50:19.7213723Z Temporarily overriding HOME='/home/runner/work/_temp/da73050f-0fe7-49c7-b764-ceb84d1b095a' before making global git config changes\n2026-10-29T18:50:19.7214846Z Adding repository directory to the temporary git global config as a safe directory\n2026-10-29T18:50:19.7218853Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/A-LEI-DO-TRONO-SERVER/A-LEI-DO-TRONO-SERVER\n2026-10-29T18:50:19.7255037Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\n2026-10-29T18:50:19.7313605Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\n2026-10-29T18:50:19.7550741Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\n2026-10-29T18:50:19.7582980Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\n2026-10-29T18:50:19.7810440Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\n2026-10-29T18:50:19.7851631Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\n2026-10-29T18:50:19.8213216Z Cleaning up orphan processes\n2026-10-29T18:50:19.8515107Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/github-script@v7, actions/setup-java@v4, actions/setup-node@v4, actions/upload-artifact@v4, android-actions/setup-android@v3. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/\n"
+    }
+  ]
+}
