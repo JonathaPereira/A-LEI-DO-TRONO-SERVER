@@ -1,16 +1,16 @@
 {
-  "checkedAt": "2026-10-29T19:48:16.110Z",
+  "checkedAt": "2026-10-29T19:48:33.842Z",
   "runId": 40941960824,
   "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
-  "status": "in_progress",
-  "conclusion": null,
+  "status": "completed",
+  "conclusion": "success",
   "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40941960824",
   "jobs": [
     {
       "id": 123687364406,
       "name": "android",
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "steps": [
         {
           "name": "Set up job",
@@ -109,8 +109,13 @@
         },
         {
           "name": "Post Run actions/checkout@v4",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
         }
       ]
     }
