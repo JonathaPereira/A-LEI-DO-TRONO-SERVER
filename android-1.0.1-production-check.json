@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-29T19:39:12.452Z",
+  "checks": {
+    "repository": {
+      "main": "6b9a283dee1178f41111697e4729236fcd49f0e8",
+      "pulls": [],
+      "windows": {
+        "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40942027782",
+        "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "Validate and package Windows",
+            "conclusion": "success"
+          },
+          {
+            "name": "refresh-instructions",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Publish validated delivery to Surge / publish",
+            "conclusion": "success"
+          }
+        ]
+      }
+    },
+    "backend": {
+      "http": 200,
+      "version": "0.14.0-alpha",
+      "features": {
+        "voiceResume": true,
+        "remotePc": true,
+        "remotePcProtocol": 2,
+        "ticketToRide": true,
+        "loveLetter": true,
+        "similo": true,
+        "splendor": true,
+        "azul": true,
+        "soundboardRestart": true,
+        "voiceProfileActivity": true,
+        "independentGameVoice": true,
+        "gameRulesVersion": "0.9.0",
+        "socialMessaging": true,
+        "chatModeration": true,
+        "channelNotifications": true
+      },
+      "voiceResume": true,
+      "similo": true,
+      "androidOriginStatus": 403,
+      "androidOriginAllowed": false,
+      "androidPush": null
+    },
+    "frontend": {
+      "http": 200,
+      "version": "1.0.1"
+    },
+    "installer": {
+      "version": "1.0.1",
+      "filename": "MN-Trono-1.0.1-Windows.exe",
+      "http": 200,
+      "bytes": 139263180,
+      "sha512Verified": true,
+      "windowsHeader": true
+    },
+    "art": {
+      "version": "1.0.1",
+      "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
+      "verified": [
+        "v1/animals.webp",
+        "v1/history.webp",
+        "v1/tales.webp",
+        "v1/monsters.webp",
+        "v1/myths.webp"
+      ]
+    },
+    "android": {
+      "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/android-preview-v1.0.1-run-40941960824/MN-Trono-1.0.1-Android-teste.apk",
+      "bytes": 55762267,
+      "sha256Verified": true,
+      "emulatorAccepted": true,
+      "permanentSigningConfigured": false,
+      "firebaseConfigured": false
+    }
+  },
+  "errors": [],
+  "complete": true,
+  "androidBackendReady": false,
+  "androidPushConfigured": false,
+  "voiceRecoveryActivated": true
+}
