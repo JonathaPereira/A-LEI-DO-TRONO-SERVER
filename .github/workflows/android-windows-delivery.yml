@@ -1,0 +1,49 @@
+name: Deliver shared Trono 1.0.1 frontend and Windows
+on:
+  push:
+    branches: [codex/android-delivery-control]
+    paths: [.github/workflows/android-windows-delivery.yml]
+permissions:
+  contents: write
+  actions: write
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const repo=context.repo, branch='codex/android-delivery-control', ref='codex/android-app';
+            const source=(await github.rest.git.getRef({...repo,ref:'heads/'+ref})).data.object.sha;
+            const since=Date.now()-10000;
+            await github.rest.actions.createWorkflowDispatch({...repo,workflow_id:'windows-app.yml',ref,inputs:{publish_surge:'true',extended_browser:'false'}});
+            let previous='';
+            const save=async report=>{
+              const head=(await github.rest.git.getRef({...repo,ref:'heads/'+branch})).data.object.sha;
+              const parent=(await github.rest.git.getCommit({...repo,commit_sha:head})).data;
+              const blob=(await github.rest.git.createBlob({...repo,content:JSON.stringify(report,null,2)+'\n',encoding:'utf-8'})).data;
+              const tree=(await github.rest.git.createTree({...repo,base_tree:parent.tree.sha,tree:[{path:'windows-1.0.1-status.json',mode:'100644',type:'blob',sha:blob.sha}]})).data;
+              const commit=(await github.rest.git.createCommit({...repo,message:'ci: record Windows 1.0.1 delivery',tree:tree.sha,parents:[head]})).data;
+              await github.rest.git.updateRef({...repo,ref:'heads/'+branch,sha:commit.sha});
+            };
+            for(let attempt=0;attempt<84;attempt++){
+              const runs=(await github.rest.actions.listWorkflowRuns({...repo,workflow_id:'windows-app.yml',branch:ref,per_page:10})).data.workflow_runs;
+              const run=runs.find(r=>r.head_sha===source&&r.event==='workflow_dispatch'&&Date.parse(r.created_at)>=since);
+              if(!run){await new Promise(r=>setTimeout(r,20000));continue;}
+              const jobs=(await github.rest.actions.listJobsForWorkflowRun({...repo,run_id:run.id,per_page:100})).data.jobs;
+              const report={checkedAt:new Date().toISOString(),version:'1.0.1',source,runId:run.id,url:run.html_url,status:run.status,conclusion:run.conclusion,jobs:jobs.map(j=>({id:j.id,name:j.name,status:j.status,conclusion:j.conclusion,steps:j.steps.map(s=>({name:s.name,status:s.status,conclusion:s.conclusion}))})),failures:[]};
+              if(run.status==='completed'&&run.conclusion!=='success')for(const job of jobs.filter(j=>j.conclusion==='failure')){
+                const log=await github.request('GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs',{...repo,job_id:job.id});
+                const content=typeof log.data==='string'?log.data:Buffer.from(log.data).toString('utf8');
+                report.failures.push({job:job.name,tail:content.split('\n').slice(-180).join('\n').replace(/[A-Za-z0-9_-]{70,}/g,'[long value omitted]')});
+              }
+              const signature=JSON.stringify([report.status,report.conclusion,report.jobs]);
+              if(signature!==previous){await save(report);previous=signature;}
+              if(run.status==='completed'){
+                if(run.conclusion!=='success')core.setFailed('Windows or Surge delivery failed.');
+                return;
+              }
+              await new Promise(r=>setTimeout(r,20000));
+            }
+            core.setFailed('Windows delivery is still running; inspect the recorded workflow.');
