@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-29T19:00:33.093Z",
+  "checkedAt": "2026-10-29T19:02:24.694Z",
   "runId": 40935914610,
   "source": "28c1ad622d5fe7f071310f262e71abc18b7a6320",
   "status": "in_progress",
@@ -49,27 +49,27 @@
         },
         {
           "name": "Validate shared source",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Prepare optional Firebase and permanent signing",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Prepare actual WebView fixture",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Enable emulator KVM",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Validate native Android microphone, background call and notifications",
-          "status": "pending",
+          "status": "in_progress",
           "conclusion": null
         },
         {
