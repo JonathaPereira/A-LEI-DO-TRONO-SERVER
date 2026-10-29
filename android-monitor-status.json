@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-29T19:06:37.799Z",
+  "checkedAt": "2026-10-29T19:06:55.764Z",
   "runId": 40935914610,
   "source": "28c1ad622d5fe7f071310f262e71abc18b7a6320",
   "status": "in_progress",
@@ -74,22 +74,22 @@
         },
         {
           "name": "Package production backend without test fixture",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Publish verified Android preview or signed release",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Preserve test evidence",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Publish delivery status without changing source branch",
-          "status": "pending",
+          "status": "in_progress",
           "conclusion": null
         },
         {
