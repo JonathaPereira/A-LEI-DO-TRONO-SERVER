@@ -1,17 +1,17 @@
 {
-  "checkedAt": "2026-10-29T19:12:14.286Z",
+  "checkedAt": "2026-10-29T19:18:50.512Z",
   "version": "1.0.1",
   "source": "c3aa6b8e8b6a41cd2aa521aced54147ff0f0cc95",
   "runId": 40937471474,
   "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40937471474",
-  "status": "in_progress",
-  "conclusion": null,
+  "status": "completed",
+  "conclusion": "failure",
   "jobs": [
     {
       "id": 123671736688,
       "name": "Validate and package Windows",
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "failure",
       "steps": [
         {
           "name": "Set up job",
@@ -50,48 +50,53 @@
         },
         {
           "name": "Verify contracts and real user journeys",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "failure"
         },
         {
           "name": "Package and smoke test the actual executable",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Accept the real installer on the disposable runner",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Prepare the matched frontend and installer download",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Save the validated delivery in a private draft release",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Report failed test summaries",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Save failure evidence",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/setup-node@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "skipped"
         },
         {
           "name": "Post Run actions/checkout@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
         }
       ]
     },
@@ -101,7 +106,19 @@
       "status": "completed",
       "conclusion": "skipped",
       "steps": []
+    },
+    {
+      "id": 123676804088,
+      "name": "Publish validated delivery to Surge",
+      "status": "completed",
+      "conclusion": "skipped",
+      "steps": []
     }
   ],
-  "failures": []
+  "failures": [
+    {
+      "job": "Validate and package Windows",
+      "tail": "2026-10-29T19:18:25.5535309Z     ok 2 - background suspends visual meters, not voice; receive PCM remains continuous across long main-thread tasks\r\n2026-10-29T19:18:25.5536923Z       ---\r\n2026-10-29T19:18:25.5537383Z       duration_ms: 5021.0539\r\n2026-10-29T19:18:25.5537901Z       type: 'test'\r\n2026-10-29T19:18:25.5538337Z       ...\r\n2026-10-29T19:18:25.9683846Z     # Subtest: protection toggle restores native target without changing call or microphone; amplified output uses its own context\r\n2026-10-29T19:18:25.9686227Z     ok 3 - protection toggle restores native target without changing call or microphone; amplified output uses its own context\r\n2026-10-29T19:18:25.9688068Z       ---\r\n2026-10-29T19:18:25.9688808Z       duration_ms: 416.3707\r\n2026-10-29T19:18:25.9689373Z       type: 'test'\r\n2026-10-29T19:18:25.9690268Z       ...\r\n2026-10-29T19:18:26.9987616Z     # Subtest: receive diagnostics fit portrait and smaller screens in both layouts; leave releases protection\r\n2026-10-29T19:18:26.9991106Z     ok 4 - receive diagnostics fit portrait and smaller screens in both layouts; leave releases protection\r\n2026-10-29T19:18:26.9993517Z       ---\r\n2026-10-29T19:18:26.9995565Z       duration_ms: 987.0909\r\n2026-10-29T19:18:26.9997289Z       type: 'test'\r\n2026-10-29T19:18:26.9998466Z       ...\r\n2026-10-29T19:18:30.4277549Z     1..4\r\n2026-10-29T19:18:30.4281850Z ok 21 - received voice keeps its tracks and audio through focus changes, long UI tasks, volume and protection changes\r\n2026-10-29T19:18:30.4283018Z   ---\r\n2026-10-29T19:18:30.4283494Z   duration_ms: 25147.6178\r\n2026-10-29T19:18:30.4283990Z   type: 'test'\r\n2026-10-29T19:18:30.4284402Z   ...\r\n2026-10-29T19:18:36.5320688Z # Subtest: two live accounts keep voice identity, captures and peers through repeated signaling outages and can leave during recovery\r\n2026-10-29T19:18:36.5324960Z ok 22 - two live accounts keep voice identity, captures and peers through repeated signaling outages and can leave during recovery\r\n2026-10-29T19:18:36.5328053Z   ---\r\n2026-10-29T19:18:36.5328812Z   duration_ms: 5464.1234\r\n2026-10-29T19:18:36.5329388Z   type: 'test'\r\n2026-10-29T19:18:36.5330031Z   ...\r\n2026-10-29T19:18:36.5601893Z 1..22\r\n2026-10-29T19:18:36.5603198Z # tests 53\r\n2026-10-29T19:18:36.5604469Z # suites 0\r\n2026-10-29T19:18:36.5605197Z # pass 51\r\n2026-10-29T19:18:36.5606299Z # fail 1\r\n2026-10-29T19:18:36.5607673Z # cancelled 0\r\n2026-10-29T19:18:36.5609295Z # skipped 1\r\n2026-10-29T19:18:36.5610590Z # todo 0\r\n2026-10-29T19:18:36.5611962Z # duration_ms 300828.8064\r\n2026-10-29T19:18:36.6458970Z ##[error]Process completed with exit code 1.\r\n2026-10-29T19:18:36.6769643Z ##[group]Run Get-ChildItem artifacts -Filter 'windows-*.log' | ForEach-Object {\r\n2026-10-29T19:18:36.6770940Z \u001b[36;1mGet-ChildItem artifacts -Filter 'windows-*.log' | ForEach-Object {\u001b[0m\r\n2026-10-29T19:18:36.6771911Z \u001b[36;1m  $text = Get-Content $_.FullName -Raw\u001b[0m\r\n2026-10-29T19:18:36.6772644Z \u001b[36;1m  if ($text -match 'not ok [0-9]+|testCodeFailure') {\u001b[0m\r\n2026-10-29T19:18:36.6773468Z \u001b[36;1m    $tail = (Get-Content $_.FullName -Tail 80) -join \"`n\"\u001b[0m\r\n2026-10-29T19:18:36.6774616Z \u001b[36;1m    $tail = $tail -replace '(?im)(access_token|refresh_token|authorization)[^\\r\\n]*', '[credential omitted]'\u001b[0m\r\n2026-10-29T19:18:36.6775917Z \u001b[36;1m    $tail = $tail.Replace('%', '%25').Replace(\"`r\", '%0D').Replace(\"`n\", '%0A')\u001b[0m\r\n2026-10-29T19:18:36.6776865Z \u001b[36;1m    Write-Output \"::notice title=$($_.Name)::$tail\"\u001b[0m\r\n2026-10-29T19:18:36.6777518Z \u001b[36;1m  }\u001b[0m\r\n2026-10-29T19:18:36.6777918Z \u001b[36;1m}\u001b[0m\r\n2026-10-29T19:18:36.6877795Z shell: C:\\Program Files\\PowerShell\\7\\pwsh.EXE -command \". '{0}'\"\r\n2026-10-29T19:18:36.6878554Z ##[endgroup]\r\n2026-10-29T19:18:37.1553322Z ##[notice]      duration_ms: 619.158\n      type: 'test'\n      ...\n    # Subtest: mobile editor remains within the viewport and page disposal releases its own player and URL\n    ok 6 - mobile editor remains within the viewport and page disposal releases its own player and URL\n      ---\n      duration_ms: 528.5505\n      type: 'test'\n      ...\n    1..6\nok 17 - React soundboard crops, previews, uploads, plays through the room and releases local resources\n  ---\n  duration_ms: 8417.459\n  type: 'test'\n  ...\n# Subtest: the real local simulation completes three rounds and final standings through React confirmations\nok 18 - the real local simulation completes three rounds and final standings through React confirmations\n  ---\n  duration_ms: 69326.2113\n  type: 'test'\n  ...\n# Subtest: throne React lobby handles seats, rejected transfers, online/local games and preserves live call resources\nok 19 - throne React lobby handles seats, rejected transfers, online/local games and preserves live call resources\n  ---\n  duration_ms: 5607.8779\n  type: 'test'\n  ...\n# Subtest: staff call controls enforce mute, media blocking and kick without leaving text/game membership\nok 20 - staff call controls enforce mute, media blocking and kick without leaving text/game membership\n  ---\n  duration_ms: 3993.5563\n  type: 'test'\n  ...\n# Subtest: received voice keeps its tracks and audio through focus changes, long UI tasks, volume and protection changes\n    # Subtest: normal volume stays direct; native receiver buffer and per-voice interval metrics are real\n    ok 1 - normal volume stays direct; native receiver buffer and per-voice interval metrics are real\n      ---\n      duration_ms: 9157.4758\n      type: 'test'\n      ...\n# Receive PCM under long UI tasks: {\"background\":{\"enabled\":true,\"rows\":[{\"voice\":1,\"lossPct\":0,\"jitterMs\":1,\"concealedPct\":0,\"bufferMs\":47.31999999999999,\"packets\":250,\"supported\":true,\"targetMs\":60}],\"background\":true,\"meterMode\":\"paused\",\"metersRunning\":0,\"playbackContext\":null,\"microphoneContext\":\"running\",\"priority\":\"managed\"},\"pcm\":{\"frames\":240000,\"rms\":0.07070209573885321,\"quietMs\":0.020833333333333332},\"joined\":true}\n    # Subtest: background suspends visual meters, not voice; receive PCM remains continuous across long main-thread tasks\n    ok 2 - background suspends visual meters, not voice; receive PCM remains continuous across long main-thread tasks\n      ---\n      duration_ms: 5021.0539\n      type: 'test'\n      ...\n    # Subtest: protection toggle restores native target without changing call or microphone; amplified output uses its own context\n    ok 3 - protection toggle restores native target without changing call or microphone; amplified output uses its own context\n      ---\n      duration_ms: 416.3707\n      type: 'test'\n      ...\n    # Subtest: receive diagnostics fit portrait and smaller screens in both layouts; leave releases protection\n    ok 4 - receive diagnostics fit portrait and smaller screens in both layouts; leave releases protection\n      ---\n      duration_ms: 987.0909\n      type: 'test'\n      ...\n    1..4\nok 21 - received voice keeps its tracks and audio through focus changes, long UI tasks, volume and protection changes\n  ---\n  duration_ms: 25147.6178\n  type: 'test'\n  ...\n# Subtest: two live accounts keep voice identity, captures and peers through repeated signaling outages and can leave during recovery\nok 22 - two live accounts keep voice identity, captures and peers through repeated signaling outages and can leave during recovery\n  ---\n  duration_ms: 5464.1234\n  type: 'test'\n  ...\n1..22\n# tests 53\n# suites 0\n# pass 51\n# fail 1\n# cancelled 0\n# skipped 1\n# todo 0\n# duration_ms 300828.8064\r\n2026-10-29T19:18:37.2442177Z ##[group]Run actions/upload-artifact@v4\r\n2026-10-29T19:18:37.2442572Z with:\r\n2026-10-29T19:18:37.2442794Z   name: windows-failure-40937471474-1\r\n2026-10-29T19:18:37.2443080Z   retention-days: 7\r\n2026-10-29T19:18:37.2443310Z   if-no-files-found: ignore\r\n2026-10-29T19:18:37.2444389Z   path: artifacts/windows-*.log\nartifacts/atalaia-build.log\nartifacts/atalaia/*.png\nartifacts/similo/screens/*.png\nartifacts/frontend-reset/call-qa\nartifacts/frontend-reset/auth-regression/*.png\nartifacts/profile-media*/failure-*.png\n\r\n2026-10-29T19:18:37.2445519Z   compression-level: 6\r\n2026-10-29T19:18:37.2445755Z   overwrite: false\r\n2026-10-29T19:18:37.2445971Z   include-hidden-files: false\r\n2026-10-29T19:18:37.2446219Z ##[endgroup]\r\n2026-10-29T19:18:37.4820967Z (node:8084) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.\r\n2026-10-29T19:18:37.4825141Z (Use `node --trace-deprecation ...` to show where the warning was created)\r\n2026-10-29T19:18:37.5151081Z With the provided path, there will be 28 files uploaded\r\n2026-10-29T19:18:37.5158685Z Artifact name is valid!\r\n2026-10-29T19:18:37.5161377Z Root directory input is valid!\r\n2026-10-29T19:18:37.9324098Z Beginning upload of artifact content to blob storage\r\n2026-10-29T19:18:38.3285578Z (node:8084) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.\r\n2026-10-29T19:18:39.5026772Z Uploaded bytes 8388608\r\n2026-10-29T19:18:39.6673344Z Uploaded bytes 11125186\r\n2026-10-29T19:18:39.7435583Z Finished uploading artifact content to blob storage!\r\n2026-10-29T19:18:39.7437365Z SHA256 digest of uploaded artifact zip is 42853b185dbf8aebc5de78655e4615665be168a94e7bfe3858172a0a075415c1\r\n2026-10-29T19:18:39.7440248Z Finalizing artifact upload\r\n2026-10-29T19:18:40.2095161Z Artifact windows-failure-40937471474-1.zip successfully finalized. Artifact ID 12926471175\r\n2026-10-29T19:18:40.2097228Z Artifact windows-failure-40937471474-1 has been successfully uploaded! Final size is 11125186 bytes. Artifact ID is 12926471175\r\n2026-10-29T19:18:40.2109775Z Artifact download URL: https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40937471474/artifacts/12926471175\r\n2026-10-29T19:18:40.2641846Z Post job cleanup.\r\n2026-10-29T19:18:40.6186452Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" version\r\n2026-10-29T19:18:40.6632840Z git version 2.56.0.windows.2\r\n2026-10-29T19:18:40.6717813Z Temporarily overriding HOME='D:\\a\\_temp\\7f9b21e7-e3f3-4ccd-ae05-f62549d3ca46' before making global git config changes\r\n2026-10-29T19:18:40.6719795Z Adding repository directory to the temporary git global config as a safe directory\r\n2026-10-29T19:18:40.6732235Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" config --global --add safe.directory D:\\a\\A-LEI-DO-TRONO-SERVER\\A-LEI-DO-TRONO-SERVER\r\n2026-10-29T19:18:40.7299526Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" config --local --name-only --get-regexp core\\.sshCommand\r\n2026-10-29T19:18:40.7894873Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" submodule foreach --recursive \"sh -c \\\"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\\\"\"\r\n2026-10-29T19:18:41.5122923Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\r\n2026-10-29T19:18:41.5574203Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" submodule foreach --recursive \"sh -c \\\"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\\\"\"\r\n2026-10-29T19:18:42.2601468Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" config --local --name-only --get-regexp ^includeIf\\.gitdir:\r\n2026-10-29T19:18:42.3121557Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" submodule foreach --recursive \"git config --local --show-origin --name-only --get-regexp remote.origin.url\"\r\n2026-10-29T19:18:42.9496110Z Evaluate and set job outputs\r\n2026-10-29T19:18:42.9502199Z Cleaning up orphan processes\r\n2026-10-29T19:18:42.9801878Z Terminate orphan process: pid (512) (vctip)\r\n2026-10-29T19:18:43.0380925Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/\r\n"
+    }
+  ]
 }
