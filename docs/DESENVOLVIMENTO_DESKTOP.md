@@ -190,7 +190,8 @@ O pipeline sincroniza novamente sem esse valor antes de empacotar a publicação
 1. Abra <https://console.firebase.google.com/>, crie o projeto **MN Trono**;
    Analytics é opcional e não é exigido pelo aplicativo.
 2. Adicione um aplicativo **Android** com pacote exato `br.com.mntrono.app`.
-   Baixe `google-services.json`; não baixe nem envie a chave privada pelo chat.
+   Baixe `google-services.json`. Esse é o arquivo de configuração Android; não o
+   confunda com a chave privada do serviço, que nunca deve ser enviada pelo chat.
 3. No GitHub do repositório, Settings → Secrets and variables → Actions → New
    repository secret: `FIREBASE_ANDROID_CONFIG_JSON`, com o conteúdo completo
    desse `google-services.json`. Localmente, o arquivo pode ficar em
@@ -212,6 +213,8 @@ O pipeline sincroniza novamente sem esse valor antes de empacotar a publicação
    notificações no Android**. Envie uma DM de outra conta com o app minimizado
    e depois com o processo encerrado normalmente. Confirme o destino ao tocar.
    Forçar parada nas configurações do Android bloqueia push até abrir o app de novo.
+
+Push FCM requer os Serviços Google Play no aparelho.
 
 Sem Firebase, o APK ainda abre e usa conta/chat/jogos/chamada; push com o processo
 encerrado fica desativado. Avisos do socket dependem do processo ativo, e o serviço

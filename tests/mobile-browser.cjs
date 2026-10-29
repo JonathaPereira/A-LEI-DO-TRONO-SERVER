@@ -38,6 +38,8 @@ test('phone navigation keeps account, community, one socket and microphone while
     const nav = page.getByRole('navigation', { name: 'Navegação do celular' });
     await expect(nav).toBeVisible();
     await expect(page.getByRole('complementary', { name: 'Membros da Corte' })).toBeVisible();
+    const initialWidth = (await page.locator('#chatOnlyScreen').boundingBox()).width;
+    assert(initialWidth >= 388, 'Default member panel must not create a second column: ' + initialWidth);
     await fs.mkdir('artifacts/android/screens', { recursive: true });
     await page.screenshot({ path: 'artifacts/android/screens/mobile-chat.png' });
     await nav.getByRole('button', { name: 'Recolher membros no celular', exact: true }).click();

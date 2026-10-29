@@ -75,6 +75,9 @@ public class TronoAndroidTest {
     await(
         "window.TronoAuth.user && window.TronoNetwork.connected &&"
             + " document.querySelector('[data-voice-channel=\"chat-jogos\"]')");
+    await(
+        "document.querySelector('#chatOnlyScreen').getBoundingClientRect().width >= innerWidth -"
+            + " 2");
     js("document.querySelector('[data-voice-channel=\"chat-jogos\"]').click()");
     await(
         "window.TronoSocial.voiceJoined && window.TronoSocial.getLocalAudioTrack()?.readyState ==="
