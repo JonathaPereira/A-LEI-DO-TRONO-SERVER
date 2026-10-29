@@ -647,3 +647,37 @@ localhost incorreto antes da correção; contratos locais passaram depois. Layou
 mobile usa navegador com microfone virtual; teste Android em emulador pertence ao
 workflow do mesmo commit. Resultados finais e links de entrega serão registrados
 após sua execução. Nenhuma aprovação visual ou de hardware é presumida.
+
+
+Fechamento Android/1.0.1: código validado `2858e66`. A revisão Windows detectou
+que o painel mobile herdava a coluna 2 do desktop e criava uma coluna implícita,
+espremendo o Love Letter a 75px em 480px de viewport. O painel agora ocupa a
+coluna 1; novos checks conferem a largura com membros abertos no navegador e na
+WebView Android. Nenhuma regra/animação de jogo foi alterada. Duas rodadas locais
+Love Letter/Similo/DMs/mobile passaram com sete casos por rodada, além de
+compilação do APK e checks de tipo/formato/build. O core completo e as jornadas
+foram repetidos nas execuções abaixo.
+
+- [Android API35, 40941960824](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40941960824):
+  passou login em backend real descartável/Supabase simulado, geometria da tela,
+  mesma track do microfone virtual após cinco segundos minimizado, aviso nativo,
+  saída e logout. Publicou a prévia corrigida 1.0.1, 55.762.267 bytes. Download
+  completo conferido com SHA-256 `f608d9acdb488a098513d479b9bf0b06eb225227c36872c63ca846f74a0faba9`,
+  assinatura APK v2 de teste válida e nenhum backend de fixture embutido.
+- [Windows/Electron/NSIS/Surge, 40942027782](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40942027782):
+  passou jornadas, executável empacotado, instalador real em runner descartável e
+  publicação conjunta. Verificação externa confirmou frontend/latest.yml 1.0.1,
+  EXE de 139.263.180 bytes com SHA-512 completo igual ao manifesto e as cinco
+  folhas de Similo com SHA-256 correto. Relatório operacional fica na branch de
+  controle, fora desta contribuição.
+
+Main permaneceu em `6b9a283`, sem PR criado automaticamente. Backend respondeu
+HTTP200 e preserva Similo/voiceResume; a origem Android respondeu 403 no preflight.
+**Login no APK exige incorporar/deploy o backend desta branch** (ou autorizar
+`https://localhost` no servidor existente). Firebase e chave permanente continuam
+não configurados: avisos com processo encerrado não estão ativos, e este APK é de
+teste. SQL aditivo é necessário ao ativar push; não foi executado no banco real.
+Hardware, áudio físico, Bluetooth, câmera e tela bloqueada prolongada continuam
+sem aceite. Captura nativa da tela/áudio de outros apps, host de Remote PC e push
+de canais não foram portados; web/Windows conservam seus recursos. As execuções
+não significam paridade nativa completa nem aceite visual do usuário.

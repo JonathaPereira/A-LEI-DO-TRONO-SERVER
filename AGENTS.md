@@ -20,7 +20,8 @@ A instrução mais recente do usuário prevalece sobre convenções e skills.
 - Novos comportamentos/correções seguem TDD nos limites aprovados. Use as skills
   pertinentes conforme workflow; respeite invocação manual e ferramentas reais.
 - Edite fontes em src, server, electron e android. Assets copiados em
-  android/app/src/main/assets/public e configs Capacitor gerados são saídas. out, .next e JS/CSS gerados da raiz de
+  android/app/src/main/assets/public e JSON gerados em
+  android/app/src/main/assets são saídas. out, .next e JS/CSS gerados da raiz de
   public são saídas. Confirme origem antes de remover assets, vendor, manual ou
   roguelite. Jogos completos e recursos existentes devem ser preservados.
 - Um socket por cliente e um dono por recurso de mídia. Transfira estado,
