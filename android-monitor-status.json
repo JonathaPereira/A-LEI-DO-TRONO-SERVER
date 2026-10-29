@@ -1,16 +1,16 @@
 {
-  "checkedAt": "2026-10-29T19:06:55.764Z",
+  "checkedAt": "2026-10-29T19:07:13.769Z",
   "runId": 40935914610,
   "source": "28c1ad622d5fe7f071310f262e71abc18b7a6320",
-  "status": "in_progress",
-  "conclusion": null,
+  "status": "completed",
+  "conclusion": "success",
   "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40935914610",
   "jobs": [
     {
       "id": 123666295288,
       "name": "android",
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "steps": [
         {
           "name": "Set up job",
@@ -89,28 +89,33 @@
         },
         {
           "name": "Publish delivery status without changing source branch",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run gradle/actions/setup-gradle@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/setup-java@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/setup-node@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/checkout@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
         }
       ]
     }
