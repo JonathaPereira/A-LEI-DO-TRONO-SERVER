@@ -1,11 +1,11 @@
 {
-  "checkedAt": "2026-10-29T19:58:15.745Z",
+  "checkedAt": "2026-10-29T19:58:38.676Z",
   "version": "1.0.1",
   "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
   "runId": 40942027782,
   "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40942027782",
-  "status": "in_progress",
-  "conclusion": null,
+  "status": "completed",
+  "conclusion": "success",
   "jobs": [
     {
       "id": 123687606421,
@@ -110,8 +110,8 @@
     {
       "id": 123696916318,
       "name": "Publish validated delivery to Surge / publish",
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "steps": [
         {
           "name": "Set up job",
@@ -155,23 +155,28 @@
         },
         {
           "name": "Publish the verified directory to Surge",
-          "status": "in_progress",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Verify published version",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/setup-node@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
         },
         {
           "name": "Post Run actions/checkout@v4",
-          "status": "pending",
-          "conclusion": null
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
         }
       ]
     }
