@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-30T13:09:06.811Z",
+  "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
+  "sourceRun": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40942027782",
+  "version": "1.0.1",
+  "name": "MN-Trono-Frontend-1.0.1.zip",
+  "url": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/frontend-v1.0.1-run-40942027782/MN-Trono-Frontend-1.0.1.zip",
+  "releaseUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/frontend-v1.0.1-run-40942027782",
+  "bytes": 188732204,
+  "sha256": "def8cf1f1f019751b368554d636dd07ce6a821a0ddf7af91451c806487228719",
+  "validation": {
+    "version": "1.0.1",
+    "frontend": true,
+    "installerBytes": 139263180,
+    "installerSha512Verified": true
+  }
+}
