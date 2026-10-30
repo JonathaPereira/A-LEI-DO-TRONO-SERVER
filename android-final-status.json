@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-30T12:59:30.368Z",
+  "checks": {
+    "installer": {
+      "http": 200,
+      "version": "1.0.1",
+      "filename": "MN-Trono-1.0.1-Windows.exe"
+    },
+    "frontend": {
+      "http": 200,
+      "version": "1.0.1"
+    },
+    "backend": {
+      "http": 200,
+      "version": "0.14.0-alpha",
+      "similo": true,
+      "voiceResume": true,
+      "androidOriginStatus": 403,
+      "androidOriginAllowed": false,
+      "androidPush": null
+    },
+    "apk": {
+      "http": 200,
+      "bytes": 55762267
+    },
+    "review": {
+      "main": "6b9a283dee1178f41111697e4729236fcd49f0e8",
+      "source": "d813b1f5da778a49b2b732ab0b6d97b5340d1cbf",
+      "created": false,
+      "blocked": "GitHub Actions is not permitted to create or approve pull requests.",
+      "compareUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/compare/main...codex/android-app?expand=1"
+    }
+  },
+  "errors": [],
+  "recordedAt": "2026-10-30T12:59:32.223Z"
+}
