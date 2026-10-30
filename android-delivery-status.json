@@ -1,17 +1,17 @@
 {
-  "checkedAt": "2026-10-29T19:48:10.931Z",
-  "source": "2858e6688df095331e6119c10bd4d87bd8a49dce",
-  "runId": 40941960824,
-  "runUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/40941960824",
+  "checkedAt": "2026-10-30T13:13:59.649Z",
+  "source": "2fd2c63bc322d7f0b6439405121d6a4b68885bcd",
+  "runId": 41060413038,
+  "runUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/41060413038",
   "shared": "success",
   "device": "success",
   "package": "success",
   "published": "success",
-  "apkUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/android-preview-v1.0.1-run-40941960824/MN-Trono-1.0.1-Android-teste.apk",
-  "releaseUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/android-preview-v1.0.1-run-40941960824",
+  "apkUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/android-preview-v1.0.1-run-41060413038/MN-Trono-1.0.1-Android-teste.apk",
+  "releaseUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/android-preview-v1.0.1-run-41060413038",
   "apkName": "MN-Trono-1.0.1-Android-teste.apk",
-  "sha256": "f608d9acdb488a098513d479b9bf0b06eb225227c36872c63ca846f74a0faba9",
+  "sha256": "97cd31bba0482a25ad018e6e6d7d7278a7267bad55a772cf42a8bc61d78c5919",
   "signed": false,
   "firebaseConfigured": false,
-  "mainPreserved": true
+  "mainPreserved": false
 }
