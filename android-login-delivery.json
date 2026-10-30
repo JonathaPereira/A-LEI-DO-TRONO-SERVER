@@ -1,8 +1,8 @@
 {
-  "source": "15873a4535ce427b57624de64d6186381dd38f0c",
-  "runId": 41064480687,
-  "published": "skipped",
-  "apkUrl": "",
-  "releaseUrl": "",
-  "sha256": ""
+  "source": "9ea130c103bfab588b786f02204fefe35f79e826",
+  "runId": 41064670654,
+  "published": "success",
+  "apkUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/android-login-fix-41064670654/MN-Trono-1.0.1-Android-login-teste.apk",
+  "releaseUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/android-login-fix-41064670654",
+  "sha256": "f6c8f8e35a65419751572b6f8368ae7889063369a92f208b9a6b9e0df9644dcf"
 }
