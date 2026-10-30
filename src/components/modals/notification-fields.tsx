@@ -1,13 +1,32 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { NotificationsController } from '../../lib/notifications/controller';
 
 export function NotificationFields({ client }: { client: NotificationsController }) {
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
+  const [pushConfigured, setPushConfigured] = useState<boolean | null>(null);
+  useEffect(() => {
+    let current = true;
+    void window.TronoAndroid?.pushRegistration()
+      .then((value) => {
+        if (current) setPushConfigured(value.configured);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [client]);
   return (
     <div id="notificationSettings">
       <h2>Notificações</h2>
+      {pushConfigured !== null && (
+        <p className="appearance-help" role="status">
+          {pushConfigured
+            ? 'Mensagens privadas e pedidos de amizade com o app fechado dependem também da ativação no servidor. Avisos de canais precisam do processo ativo. Permita as notificações deste aparelho abaixo.'
+            : 'Avisos com o app fechado ainda não estão ativos nesta versão. Durante uma chamada, os avisos podem chegar com o Trono minimizado.'}
+        </p>
+      )}
       <label className="social-setting">
         Avisos de mensagens
         <select
@@ -60,7 +79,9 @@ export function NotificationFields({ client }: { client: NotificationsController
           void client.requestPermission();
         }}
       >
-        Ativar avisos neste navegador
+        {typeof window !== 'undefined' && window.TronoAndroid
+          ? 'Ativar notificações no Android'
+          : 'Ativar avisos neste navegador'}
       </button>
       <p id="notificationPermissionStatus" role="status" className="appearance-help">
         {state.permissionStatus}

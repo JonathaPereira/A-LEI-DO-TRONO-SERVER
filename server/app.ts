@@ -1,4 +1,5 @@
 import express from 'express';
+import { createMobilePush } from './mobile-push.ts';
 import http from 'node:http';
 import { WebSocketServer, type Server as SocketServer } from 'ws';
 import { BackendSocket, createSocketGateway, sendSocket as send } from './socket-gateway.ts';
@@ -167,12 +168,21 @@ export function createApplication({
   const loveLetterService = createLoveLetterService({ wss, send, createRandom: loveLetterRandom });
   const similoService = createSimiloService({ wss, send, createRandom: similoRandom });
   const ticketToRideService = createTicketToRideService({ wss, send });
+  const mobilePush = createMobilePush({
+    auth: accountAuth,
+    db:
+      process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+        ? fileStorage.db
+        : null,
+  });
+  mobilePush.install(app, express);
   const socialService = createSocialService({
     auth: accountAuth,
     wss,
     send,
     rooms,
     files: fileStorage,
+    push: mobilePush.deliver,
   });
   const communityManagement = createCommunityManagement({
     auth: accountAuth,
@@ -218,6 +228,7 @@ export function createApplication({
       presence: community.health(),
       chatHistory: chatHistory.health(),
       social: socialService.health(),
+      androidPush: mobilePush.health(),
       azul: azulService.health(),
       splendor: splendorService.health(),
       loveLetter: loveLetterService.health(),
@@ -268,6 +279,7 @@ export function createApplication({
     similoService.stop();
     ticketToRideService.stop();
     socialService.stop();
+    mobilePush.stop();
     community.stop();
     communityManagement.stop();
     soundboard.stop();

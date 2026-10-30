@@ -31,6 +31,7 @@ interface Options {
       signal?: AbortSignal,
     ): Promise<unknown>;
   };
+  push?(accountId: string, type: 'direct' | 'friends', id: string, key: string): Promise<void>;
   now?(): number;
 }
 const limits = { snapshot: 120, friend: 120, read: 120, 'mark-read': 120, send: 60 } as const;
@@ -43,7 +44,15 @@ function readAction(value: unknown): Action {
 }
 
 /** Persistent friend/conversation commands share the existing account and socket owners. */
-export function createSocialService({ auth, wss, send, rooms, files, now = Date.now }: Options) {
+export function createSocialService({
+  auth,
+  wss,
+  send,
+  rooms,
+  files,
+  push,
+  now = Date.now,
+}: Options) {
   const rates = new Map<string, { count: number; until: number }>(),
     scope = new AbortController();
   let ready = false,
@@ -118,6 +127,8 @@ export function createSocialService({ auth, wss, send, rooms, files, now = Date.
         await rpc('friend', { p_target: peer, p_action: intent });
         available();
         data = { ok: true };
+        if (intent === 'request')
+          void push?.(peer, 'friends', account.id, 'friend:' + account.id).catch(() => {});
         publish([account.id, peer], {
           type: 'social-changed',
           kind: 'friend',
@@ -172,6 +183,7 @@ export function createSocialService({ auth, wss, send, rooms, files, now = Date.
           roomId: room?.id || null,
           attachmentId,
         });
+        void push?.(peer, 'direct', account.id, id).catch(() => {});
         publish([account.id, peer], {
           type: 'direct-message',
           peerId: peer,

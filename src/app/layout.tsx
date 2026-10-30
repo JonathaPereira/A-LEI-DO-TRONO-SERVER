@@ -1,8 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { version as desktopVersion } from '../../electron/package.json';
 import './globals.css';
 import '@/styles/index.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
+  themeColor: '#101217',
+};
 
 export const metadata: Metadata = {
   title: 'M&N · A Lei do Trono',

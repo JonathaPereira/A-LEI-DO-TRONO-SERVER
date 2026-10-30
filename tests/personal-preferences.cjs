@@ -93,3 +93,12 @@ test('dictionary keys cannot mutate prototypes or leak inherited values into pre
   assert.equal({}.injected, undefined);
   assert.deepEqual(JSON.parse(f.rows.get('mn-personal:alice')).__proto__, { injected: true });
 });
+
+test('native notification mute projection follows the account and exposes no other preferences', () => {
+  const f = fixture();
+  f.account('alice');
+  f.preferences.set('mute:peer', true); f.preferences.set('mute:unmuted', false); f.preferences.set('volume:peer', 140);
+  assert.deepEqual(f.preferences.mutedTargets(), ['peer']);
+  f.account('bob'); assert.deepEqual(f.preferences.mutedTargets(), []);
+  f.account('alice'); assert.deepEqual(f.preferences.mutedTargets(), ['peer']);
+});

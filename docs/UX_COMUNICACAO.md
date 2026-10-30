@@ -317,3 +317,25 @@ mouse/foco, com expansão pelo “i” para teclado e toque. As informações s�
 públicas e não mudam conforme o segredo. Layout estreito usa rolagem vertical,
 sem cortar os controles; movimento reduzido desativa animações. O aceite do
 protótipo não substitui a revisão humana desses ajustes integrados.
+
+
+## Composição para celular / Android
+
+Até 760px, navegação inferior oferece Conversas, Jogos, Amigos, Membros e Menu.
+O catálogo usa duas colunas (uma abaixo de 360px), controles principais de pelo
+menos 44px e tipografia sem zoom automático nos campos. Canais/configurações
+ficam no drawer. A lista de membros abre por padrão como painel inferior,
+recolhível, com espaço reservado; mantém online/offline. Chamada continua montada
+ao mudar de tela e uma faixa leva de volta aos controles. Avisos passam ao topo
+para não cobrir o microfone. Configurações conservam suas abas responsivas.
+
+Voltar no Android fecha diálogo/popover/tela cheia, depois canais/membros,
+retorna à conversa e por fim minimiza, sem sair da voz. Notificação permanente
+informa a chamada ativa. A permissão de notificações é solicitada por ação do
+usuário; não há leitura das notificações de outros aplicativos. A tela informa
+quando avisos com o app fechado ainda não estão configurados. Dispensar a tarefa
+ou forçar parada não garante continuidade; não há retorno automático a uma chamada
+encerrada. Recursos nativos exclusivos do Windows continuam nas plataformas
+existentes. Captura da tela do Android/áudio de outros apps e host de Remote PC
+não estão implementados neste APK; assistir transmissões usa o receptor existente.
+A adaptação não declara paridade nativa completa ou aceite visual humano.

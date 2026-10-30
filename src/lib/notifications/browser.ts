@@ -63,6 +63,10 @@ export function initializeNotifications(target: Window): NotificationsController
       ? (payload) => runtime.TronoDesktop!.notify!(payload)
       : undefined,
     showBrowserNotification(payload, onClick) {
+      if (runtime.TronoAndroid) {
+        void runtime.TronoAndroid.notify(payload).catch(console.warn);
+        return;
+      }
       const Constructor = runtime.Notification;
       if (!Constructor) return;
       const notice = new Constructor(payload.title, {
@@ -76,8 +80,12 @@ export function initializeNotifications(target: Window): NotificationsController
         notice.close();
       };
     },
-    getPermission: () => runtime.Notification?.permission ?? 'unsupported',
-    requestPermission: () => runtime.Notification?.requestPermission() ?? Promise.resolve('denied'),
+    getPermission: () =>
+      runtime.TronoAndroid?.getPermission() ?? runtime.Notification?.permission ?? 'unsupported',
+    requestPermission: () =>
+      runtime.TronoAndroid?.requestPermission() ??
+      runtime.Notification?.requestPermission() ??
+      Promise.resolve('denied'),
     navigate: async (destination: ScopedNotificationTarget) => {
       if (destination.type === 'direct') runtime.TronoMessenger.open(destination.id);
       else if (destination.type === 'channel')
@@ -103,7 +111,9 @@ export function initializeNotifications(target: Window): NotificationsController
       }),
     subscribeAttention: (listener) => listen(['focus', 'pointerdown'], listener),
     subscribeNotificationClick: (listener) =>
-      runtime.TronoDesktop?.onNotificationClick?.(listener) ?? (() => {}),
+      runtime.TronoAndroid?.onNotificationClick(listener) ??
+      runtime.TronoDesktop?.onNotificationClick?.(listener) ??
+      (() => {}),
     onNoticesChanged: () => target.dispatchEvent(new Event('trono-channel-notifications-change')),
   });
   runtime.TronoNotifications = client;

@@ -538,7 +538,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
   const { fallback: fallbackToP2p } = voiceTransport;
 
   const voiceCall: ReturnType<typeof createVoiceCall> = createVoiceCall({
-    prepare: () => window.TronoNetwork.prepareVoice(),
+    prepare: async (operation) => {
+      const choice = await window.TronoNetwork.prepareVoice();
+      if (!operation.isCurrent()) throw new DOMException('A chamada foi cancelada.', 'AbortError');
+      await window.TronoAndroid?.prepareVoice(operation);
+      return choice;
+    },
     microphone,
     roomId: () => currentVoiceRoom()?.id,
     onMessage: (listener) => window.TronoNetwork.onMessage(listener),
@@ -555,6 +560,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     connect: voiceTransport.connect,
     onLeaving: prepareLeaveUi,
     release: [
+      () => window.TronoAndroid?.stopVoice(),
       realtime.cancelIce,
       speakingIndicators.reset,
       voiceTelemetry.reset,

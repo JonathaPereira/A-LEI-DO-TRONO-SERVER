@@ -1,8 +1,33 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.0** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.1** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Android em prévia e composição mobile — 1.0.1
+
+A contribuição `codex/android-app` adiciona o host Android e a composição para
+celular. A prévia Android corrigida foi publicada no GitHub; frontend e
+instalador Windows 1.0.1 foram publicados no Surge após aprovação dos workflows,
+com hashes dos downloads completos conferidos. Main/backend ainda aguardam merge.
+
+A barra inferior separa conversa, jogos, amigos, membros e menu; campos e controles
+respeitam toque/teclado. Navegar conserva a chamada e oferece retorno aos controles.
+O APK Android 8+ usa sessão protegida pelo Keystore e serviço de primeiro plano
+somente durante chamada explícita. Encerrar a tarefa/processo não restaura a chamada.
+
+Firebase não está configurado inicialmente. O código prepara avisos genéricos de
+DMs/pedidos com app fechado, bloqueio por conta/mutes e preferência desligada.
+Ativação exige Firebase no APK, segredo de envio no backend, SQL aditivo
+`supabase/upgrade-android-push.sql` e backend atualizado para a origem Android.
+**Não execute install.sql em banco existente.** Passos e assinatura em
+[Android](DESENVOLVIMENTO_DESKTOP.md#android-gerar-e-configurar).
+
+Sem chave permanente, o workflow publica APK de teste; não é o pacote definitivo
+para futuras atualizações. Windows/Surge continuam automáticos depois da aceitação
+Windows do código incorporado à main. A publicação 1.0.1 no Surge foi conferida; publicar o frontend não atualiza
+o backend nem configura o Firebase. Captura nativa da tela/áudio de outros apps, host de Remote PC e push de
+canais não estão implementados no APK. Web/Windows conservam os recursos vigentes.
 
 ## Windows 1.0.0
 

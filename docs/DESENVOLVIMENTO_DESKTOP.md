@@ -157,3 +157,86 @@ Os atalhos das janelas de jogos são exercitados com
 injetado na página pelo CDP percorre outro caminho do Chromium e não aciona o
 `before-input-event` do Electron. A verificação Windows 40526544387 confirmou
 os dois estados de tela cheia pela entrada nativa antes da aceitação completa.
+
+
+## Android: gerar e configurar
+
+A versão do app é a de `electron/package.json` (agora 1.0.1); Gradle deriva
+`versionCode = major*1000000 + minor*1000 + patch`. O protocolo backend mantém sua
+versão interna. Use Node 24.12+, JDK 21 completo e Android SDK 36/build-tools 35.
+
+1. `npm ci`, `npm run build`, `npm run android:sync`.
+2. `npm run android:open` abre Android Studio; ou execute
+   `android/gradlew -p android assembleDebug` para um APK de teste.
+3. O arquivo é `android/app/build/outputs/apk/debug/app-debug.apk`. Habilite a
+   instalação da origem usada para abrir o APK no aparelho. Debug não é a entrega
+   permanente: sua chave pode mudar e exigir desinstalar antes de outro build.
+4. Incorpore/deploy o backend desta branch para aceitar `https://localhost`.
+   Para um servidor anterior, adicione essa origem a `AUTH_ALLOWED_ORIGINS`, sem
+   remover as origens existentes. Senha, contas, dados e autorização são os mesmos.
+
+O workflow `Android app` valida fontes, core/browser e uma WebView Android API35
+real em emulador antes de publicar APK. A fixture é Supabase simulado e backend
+real descartável. O teste faz login, usa o microfone virtual do emulador, minimiza
+por cinco segundos, verifica a mesma track, aviso nativo e descarte ao sair.
+Isso não comprova voz audível, tela bloqueada prolongada, Bluetooth, câmera ou
+Doze em hardware. O host local desta sessão não tem KVM; execução em dispositivo
+pertence ao runner/emulador ou aparelho, não aos testes Chromium de layout.
+`TRONO_ANDROID_TEST_BACKEND` só aceita loopback no sync; nunca usar na distribuição.
+O pipeline sincroniza novamente sem esse valor antes de empacotar a publicação.
+
+### Firebase — configuração inicial
+
+1. Abra <https://console.firebase.google.com/>, crie o projeto **MN Trono**;
+   Analytics é opcional e não é exigido pelo aplicativo.
+2. Adicione um aplicativo **Android** com pacote exato `br.com.mntrono.app`.
+   Baixe `google-services.json`. Esse é o arquivo de configuração Android; não o
+   confunda com a chave privada do serviço, que nunca deve ser enviada pelo chat.
+3. No GitHub do repositório, Settings → Secrets and variables → Actions → New
+   repository secret: `FIREBASE_ANDROID_CONFIG_JSON`, com o conteúdo completo
+   desse `google-services.json`. Localmente, o arquivo pode ficar em
+   `android/app/google-services.json` (ignorado pelo Git).
+4. No Google Cloud do mesmo projeto, confirme a **Firebase Cloud Messaging API
+   (HTTP v1)** habilitada. Firebase → Configurações do projeto → Contas de serviço:
+   gere uma chave privada para o serviço autorizado a enviar mensagens FCM.
+   Guarde-a como variável secreta `FIREBASE_SERVICE_ACCOUNT_JSON` somente no
+   serviço backend do Render. Nunca use NEXT_PUBLIC, variável de frontend,
+   Surge, APK ou commit para esse JSON privado. Restrinja a conta à permissão de
+   envio do Firebase Cloud Messaging; proteja e rotacione a chave.
+5. No SQL Editor do Supabase existente, execute somente
+   `supabase/upgrade-android-push.sql`, que é aditivo. Não rode `install.sql` no
+   banco existente. Faça backup conforme sua rotina de banco.
+6. Incorpore/deploy esta branch no backend. `/health` deve informar
+   `androidPush.configured: true`; esse sinal verifica configuração, não entrega
+   física. Reconstrua o APK pelo workflow com o secret do passo 3.
+7. Instale, entre na conta, Menu → Voz e vídeo → Notificações → **Ativar
+   notificações no Android**. Envie uma DM de outra conta com o app minimizado
+   e depois com o processo encerrado normalmente. Confirme o destino ao tocar.
+   Forçar parada nas configurações do Android bloqueia push até abrir o app de novo.
+
+Push FCM requer os Serviços Google Play no aparelho.
+
+Sem Firebase, o APK ainda abre e usa conta/chat/jogos/chamada; push com o processo
+encerrado fica desativado. Avisos do socket dependem do processo ativo, e o serviço
+só mantém essa atividade durante chamadas iniciadas explicitamente. DMs/pedidos
+usam push genérico quando configurado; push de menções de canal é pendência.
+
+### Assinatura e futuras atualizações Android
+
+Crie uma chave permanente no Android Studio, Build → Generate Signed App Bundle /
+APK → Create new. Guarde o JKS e as senhas fora do Git em local seguro; perder a
+chave impede atualizar instalações distribuídas diretamente. No GitHub configure:
+
+- `ANDROID_KEYSTORE_BASE64`: conteúdo binário do JKS convertido em Base64.
+- `ANDROID_STORE_PASSWORD`: senha do JKS.
+- `ANDROID_KEY_ALIAS`: alias escolhido.
+- `ANDROID_KEY_PASSWORD`: senha da chave.
+
+Localmente os nomes usados pelo Gradle são `TRONO_ANDROID_KEYSTORE_PATH`,
+`TRONO_ANDROID_STORE_PASSWORD`, `TRONO_ANDROID_KEY_ALIAS`,
+`TRONO_ANDROID_KEY_PASSWORD`. `assembleRelease bundleRelease` recusa configuração
+incompleta. No GitHub, com os quatro secrets, a execução gera APK/AAB assinados;
+sem eles publica somente um APK identificado como teste. Uma execução da main
+com chave permanente publica `android-v<versão>`; branches publicam prévias.
+Isso não publica na Play Store nem instala uma atualização sem consentimento.
+A distribuição Windows/Surge existente continua com seus próprios checks.

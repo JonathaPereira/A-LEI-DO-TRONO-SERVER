@@ -1,0 +1,8 @@
+{
+  "appId": "br.com.mntrono.app",
+  "appName": "MN Trono",
+  "webDir": "out",
+  "server": { "hostname": "localhost", "androidScheme": "https" },
+  "android": { "backgroundColor": "#101217", "allowMixedContent": false, "captureInput": true },
+  "plugins": { "CapacitorHttp": { "enabled": false } }
+}
