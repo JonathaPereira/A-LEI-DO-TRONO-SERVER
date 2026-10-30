@@ -171,9 +171,11 @@ versão interna. Use Node 24.12+, JDK 21 completo e Android SDK 36/build-tools 3
 3. O arquivo é `android/app/build/outputs/apk/debug/app-debug.apk`. Habilite a
    instalação da origem usada para abrir o APK no aparelho. Debug não é a entrega
    permanente: sua chave pode mudar e exigir desinstalar antes de outro build.
-4. Incorpore/deploy o backend desta branch para aceitar `https://localhost`.
-   Para um servidor anterior, adicione essa origem a `AUTH_ALLOWED_ORIGINS`, sem
-   remover as origens existentes. Senha, contas, dados e autorização são os mesmos.
+4. O APK serve os arquivos incorporados usando a origem HTTPS do site,
+   `https://a-lei-do-trono.surge.sh`, já autorizada pelo backend. Não configure
+   `server.url`: o frontend continua dentro do APK. Instalações antigas com origem
+   `https://localhost` precisam dessa origem em `AUTH_ALLOWED_ORIGINS` ou do backend
+   que já a permite. Senha, contas, dados e autorização são os mesmos.
 
 O workflow `Android app` valida fontes, core/browser e uma WebView Android API35
 real em emulador antes de publicar APK. A fixture é Supabase simulado e backend
@@ -184,6 +186,15 @@ Doze em hardware. O host local desta sessão não tem KVM; execução em disposi
 pertence ao runner/emulador ou aparelho, não aos testes Chromium de layout.
 `TRONO_ANDROID_TEST_BACKEND` só aceita loopback no sync; nunca usar na distribuição.
 O pipeline sincroniza novamente sem esse valor antes de empacotar a publicação.
+
+Mantenha `android.captureInput: false` em `capacitor.config.json`: os formulários
+usam a edição nativa do WebView para teclado, cursor, senha e preenchimento
+automático. O modo `true` substitui essa conexão por `BaseInputConnection`.
+O teste de chamada acima preenche o formulário por JavaScript; ele não valida
+digitação com o teclado Android. Confira essa interação no aparelho antes da entrega.
+`plugins.SystemBars.insetsHandling` deve permanecer `disable`: `MainActivity`
+já aplica as margens das barras e do teclado. Ativar os dois tratamentos reserva
+a altura do teclado duas vezes e encobre a tela de login.
 
 ### Firebase — configuração inicial
 

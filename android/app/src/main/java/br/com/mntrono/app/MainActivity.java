@@ -17,6 +17,8 @@ public class MainActivity extends BridgeActivity {
         .setAppearanceLightStatusBars(false);
     WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
         .setAppearanceLightNavigationBars(false);
+    // This activity owns safe-area and IME sizing. SystemBars insets handling is disabled
+    // in capacitor.config.json to avoid subtracting the keyboard height twice.
     ViewCompat.setOnApplyWindowInsetsListener(
         bridge.getWebView(),
         (view, insets) -> {
