@@ -1,0 +1,60 @@
+name: Provide verified frontend ZIP download
+on:
+  push:
+    branches: [codex/android-delivery-control]
+    paths: [.github/workflows/frontend-download-link.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          script: |
+            const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),{execFileSync}=require('node:child_process');
+            const repo=context.repo,branch='codex/android-delivery-control';
+            const run=(await github.rest.actions.getWorkflowRun({...repo,run_id:40942027782})).data;
+            if(run.conclusion!=='success'||run.head_sha!=='2858e6688df095331e6119c10bd4d87bd8a49dce')throw Error('Only the approved 1.0.1 delivery can be copied.');
+            const originalTag='desktop-v1.0.1-run-40942027782-attempt-1';
+            const name='MN-Trono-Frontend-1.0.1.zip';
+            const folder=fs.mkdtempSync(path.join(os.tmpdir(),'trono-frontend-download-'));
+            execFileSync('gh',['release','download',originalTag,'--repo',repo.owner+'/'+repo.repo,'--pattern',name,'--pattern','SHA256SUMS-1.0.1.txt','--dir',folder],{stdio:'pipe'});
+            const bytes=fs.readFileSync(path.join(folder,name));
+            const sha256=crypto.createHash('sha256').update(bytes).digest('hex');
+            const sums=fs.readFileSync(path.join(folder,'SHA256SUMS-1.0.1.txt'),'utf8');
+            const line=sums.split(/\r?\n/).find(line=>line.endsWith('  '+name));
+            if(!line||line.split(/\s+/)[0]!==sha256)throw Error('Approved frontend archive digest mismatch.');
+            const validation=JSON.parse(execFileSync('python3',['-c',[
+              'import zipfile,sys,re,json,hashlib,base64',
+              'with zipfile.ZipFile(sys.argv[1]) as z:',
+              ' html=z.read("frontend/index.html").decode("utf-8")',
+              ' assert re.search(r\'name="mn-desktop-version"[^>]*content="1\\.0\\.1"\',html)',
+              ' manifest=z.read("frontend/downloads/latest.yml").decode("utf-8")',
+              ' assert re.search(r"^version: 1\\.0\\.1\\s*$",manifest,re.M)',
+              ' installer=z.read("frontend/downloads/MN-Trono-1.0.1-Windows.exe")',
+              ' expected=re.search(r"^sha512:\\s*(.+)$",manifest,re.M).group(1).strip()',
+              ' assert base64.b64encode(hashlib.sha512(installer).digest()).decode()==expected',
+              ' assert installer[:2]==b"MZ"',
+              ' print(json.dumps({"version":"1.0.1","frontend":True,"installerBytes":len(installer),"installerSha512Verified":True}))'
+            ].join('\n'),path.join(folder,name)],{encoding:'utf8'}));
+            const tag='frontend-v1.0.1-run-40942027782';
+            const releases=await github.paginate(github.rest.repos.listReleases,{...repo,per_page:100});
+            let release=releases.find(r=>r.tag_name===tag);
+            if(!release)release=(await github.rest.repos.createRelease({...repo,tag_name:tag,target_commitish:run.head_sha,name:'Frontend e instalador Windows 1.0.1',prerelease:true,draft:false,body:'ZIP exato da entrega Windows validada 40942027782, com hash conferido. Inclui frontend/ com o instalador atual e latest.yml. Extraia numa pasta nova e publique somente frontend/ no Surge.\n\nComando dentro de frontend/: npx --yes surge@0.46.0 . a-lei-do-trono.surge.sh\n\nEssa versão já foi publicada automaticamente nesse domínio; o ZIP fica disponível para publicação manual.'})).data;
+            let asset=release.assets.find(a=>a.name===name);
+            if(asset&&asset.digest!=='sha256:'+sha256)throw Error('An existing archive has a different digest; preserve it.');
+            if(!asset)asset=(await github.rest.repos.uploadReleaseAsset({...repo,release_id:release.id,name,data:bytes,headers:{'content-type':'application/zip','content-length':bytes.length}})).data;
+            if(!release.assets.some(a=>a.name==='SHA256SUMS-frontend.txt')){
+              const data=Buffer.from(sha256+'  '+name+'\n');
+              await github.rest.repos.uploadReleaseAsset({...repo,release_id:release.id,name:'SHA256SUMS-frontend.txt',data,headers:{'content-type':'text/plain','content-length':data.length}});
+            }
+            const report={checkedAt:new Date().toISOString(),source:run.head_sha,sourceRun:run.html_url,version:'1.0.1',name,url:asset.browser_download_url,releaseUrl:release.html_url,bytes:bytes.length,sha256,validation};
+            const output='frontend-1.0.1-download.json';let sha;
+            try{sha=(await github.rest.repos.getContent({...repo,path:output,ref:branch})).data.sha}catch(error){if(error.status!==404)throw error}
+            await github.rest.repos.createOrUpdateFileContents({...repo,branch,path:output,sha,message:'ci: record the public verified frontend ZIP',content:Buffer.from(JSON.stringify(report,null,2)+'\n').toString('base64')});
+            await core.summary.addCodeBlock(JSON.stringify(report,null,2),'json').write();
