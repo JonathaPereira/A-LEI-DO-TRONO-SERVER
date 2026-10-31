@@ -1,5 +1,6 @@
 {
   "core": [
+    "tests/clip-local-capture.cjs",
     "tests/android-push-registration.cjs",
     "tests/android-host.cjs",
     "tests/mobile-push.cjs",
@@ -188,6 +189,7 @@
     "tests/voice-transport.cjs"
   ],
   "browser": [
+    "tests/clip-local-browser.cjs",
     "tests/mobile-browser.cjs",
     "tests/voice-recovery-browser.cjs",
     "tests/similo-browser.cjs",
@@ -251,6 +253,7 @@
     "tests/voice-reception-browser.js"
   ],
   "desktop": [
+    "tests/clip-local-desktop.cjs",
     "tests/application-audio-native.cjs",
     "tests/audio-worklets-native.cjs",
     "tests/auth-desktop.cjs",

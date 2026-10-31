@@ -342,3 +342,14 @@ encerrada. Recursos nativos exclusivos do Windows continuam nas plataformas
 existentes. Captura da tela do Android/áudio de outros apps e host de Remote PC
 não estão implementados neste APK; assistir transmissões usa o receptor existente.
 A adaptação não declara paridade nativa completa ou aceite visual humano.
+
+
+Clipes têm acesso direto no rodapé da conta e nos controles inferiores da
+chamada; a central conserva biblioteca e submenu de configurações. Os campos
+usam Qualidade do clipe, Fluidez do vídeo, Quanto tempo salvar e Atalho para
+salvar clipe. Captura local é separada de transmitir a tela: o botão Ativar
+captura local abre o seletor de tela/janela e não entra na voz. É desligada ao
+abrir/recarregar e nunca retoma uma preferência antiga silenciosamente. Enquanto
+ativa, o acesso fica destacado e a central oferece Desligar captura local.
+Desligar libera a fonte e mantém os clipes criados; pausar o buffer não apaga a
+biblioteca. Captura/áudio continuam sujeitos ao seletor e às capacidades do host.

@@ -10,7 +10,7 @@ export function ClipsDialog() {
       >
         <header className={'clips-heading'}>
           <div>
-            <small>REPLAY LOCAL</small>
+            <small>CLIPES LOCAIS</small>
             <h2 id={'clipsTitle'}>Seus clipes</h2>
           </div>
           <button
@@ -24,14 +24,29 @@ export function ClipsDialog() {
         </header>
         <div className={'replay-summary'}>
           <span id={'clipReplayDot'} className={'replay-dot'} aria-hidden={'true'}></span>
-          <span id={'clipSource'}>Compartilhe sua tela para habilitar o replay</span>
+          <span id={'clipSource'}>Escolha uma tela para preparar clipes</span>
           <button id={'clipNow'} type={'button'} disabled>
             Clipar últimos 30 s
           </button>
         </div>
+        <section aria-label="Captura local de clipes">
+          <button id="clipLocalStart" type="button">
+            Ativar captura local…
+          </button>
+          <button id="clipLocalStop" type="button" hidden>
+            Desligar captura local
+          </button>
+          <p id="clipLocalStatus" role="status">
+            Captura local desligada
+          </p>
+          <p>
+            Escolha uma tela ou janela para guardar os últimos segundos, sem entrar em chamada ou
+            transmitir. Desligada ao abrir o aplicativo; ative apenas quando quiser capturar.
+          </p>
+        </section>
         <label className="clip-audio">
-          <input id="clipAuto" type="checkbox" defaultChecked /> Gravação temporária de clipes
-          durante a transmissão
+          <input id="clipAuto" type="checkbox" defaultChecked /> Preparar clipes ao transmitir a
+          tela
         </label>
         <nav className={'clips-tabs'} role={'tablist'} aria-label={'Central de clipes'}>
           <button
@@ -51,16 +66,16 @@ export function ClipsDialog() {
             aria-controls={'clipsPreferences'}
             aria-selected={'false'}
           >
-            Qualidade, atalhos e pasta
+            Configurações dos clipes
           </button>
         </nav>
         <p id={'clipsStatus'} className={'clips-status'} role={'status'} aria-live={'polite'}>
-          Ao compartilhar a tela, o replay fica pronto automaticamente.
+          Ative a captura local ou use a tela que você está transmitindo.
         </p>
         <section id={'clipsLibrary'} role={'tabpanel'}>
           <div className={'clips-library-actions'}>
             <button id={'clipShare'} type={'button'}>
-              Compartilhar tela
+              Transmitir tela na chamada…
             </button>
             <button id={'clipResume'} type={'button'} hidden>
               Retomar replay

@@ -676,3 +676,9 @@
     border-radius: 18px;
   }
 }
+
+.controls button[data-capturing='true'] {
+  color: #8cc7a5;
+  background: #233b30;
+  box-shadow: inset 0 0 0 1px #8cc7a5;
+}

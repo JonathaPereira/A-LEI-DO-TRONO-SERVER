@@ -33,6 +33,7 @@ export function createReplayController(options: ReplayOptions) {
     disposed = false;
   let source: MediaStream | null = null,
     session: ReplaySession | null = null;
+  let sourceForced = false;
   let settings = preferences.getSnapshot().settings;
   const listeners = new Set<() => void>();
   let state: ReplaySnapshot = Object.freeze({
@@ -102,6 +103,7 @@ export function createReplayController(options: ReplayOptions) {
     if (disposed) return;
     stopSession();
     source = next;
+    sourceForced = force;
     publish();
     if (!settings.auto && !force) return;
     if (library.hasUnsavedMemory(owner)) {
@@ -204,7 +206,7 @@ export function createReplayController(options: ReplayOptions) {
     const changed = (['quality', 'fps', 'seconds', 'auto'] as const).some(
       (key) => previous[key] !== settings[key],
     );
-    if (source && changed) void sharedStarted(source);
+    if (source && changed) void sharedStarted(source, { force: sourceForced });
   });
   return {
     getSnapshot: () => state,

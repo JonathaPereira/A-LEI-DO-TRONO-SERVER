@@ -754,3 +754,18 @@ manifesto do pacote e lockfile conferidos em 1.0.2. Os 21 testes existentes de
 empacotamento/relatório/atualizador passaram após instalar as dependências do
 Electron sem seus scripts de runtime. Nenhum teste ou código de comportamento
 foi alterado para esta numeração.
+
+
+Contribuição `codex/clipes-locais`: acessos inferiores para clipes, rótulos de
+configuração simplificados e captura local optativa sem chamada/transmissão.
+Captura desligada por sessão; permissões tardias, conta e descarte ficam com o
+dono local. Replay continua emprestando somente clones. Avaliação dos encoders
+NVENC/AMF/QSV e pré-requisitos de um backend nativo registrados em ARQUITETURA;
+o caminho MediaRecorder/VP8 permanece identificado corretamente, sem promessa
+de uso de um encoder específico. Versão mantida em 1.0.2 nesta contribuição.
+
+Tipos, formato e build passaram; 57 contratos focados de captura/replay e duas
+rodadas consecutivas do navegador passaram (12 testes por rodada, nenhum skip).
+Workflow `Local clips on Windows` valida os dois cenários nativos sem empacotar,
+publicar ou substituir o instalador 1.0.2. Teste novo seleciona apenas uma janela
+QA criada pelo próprio Electron, com áudio desligado no seletor nativo.

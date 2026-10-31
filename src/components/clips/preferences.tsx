@@ -32,7 +32,7 @@ export function ClipPreferenceFields({
       </div>
       <div className="clips-settings">
         <label>
-          Qualidade do arquivo
+          Qualidade do clipe
           <select
             id="clipQuality"
             value={settings.quality}
@@ -44,18 +44,18 @@ export function ClipPreferenceFields({
           </select>
         </label>
         <label>
-          FPS
+          Fluidez do vídeo
           <select
             id="clipFps"
             value={settings.fps}
             onChange={(event) => preferences.setSetting('fps', Number(event.target.value))}
           >
-            <option value="30">30 FPS</option>
-            <option value="60">60 FPS</option>
+            <option value="30">30 FPS · menor consumo</option>
+            <option value="60">60 FPS · mais fluido</option>
           </select>
         </label>
         <label>
-          Trecho recente
+          Quanto tempo salvar
           <select
             id="clipSeconds"
             value={settings.seconds}
@@ -68,7 +68,7 @@ export function ClipPreferenceFields({
           </select>
         </label>
         <label>
-          Atalho
+          Atalho para salvar clipe
           <button
             id="clipShortcut"
             type="button"

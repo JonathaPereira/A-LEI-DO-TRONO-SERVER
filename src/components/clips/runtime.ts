@@ -1,3 +1,4 @@
+import { createLocalClipCapture } from '../../lib/clips/local-capture';
 import { createReplayController, type ReplayController } from '../../lib/clips/replay';
 import type { ClipLibrary } from '../../lib/clips/library';
 import type { ClipPreferences } from '../../lib/clips/preferences';
@@ -31,7 +32,7 @@ interface Runtime extends Window {
   TronoClips?: ClipsClient;
 }
 const installed = new WeakMap<Window, ClipsClient>();
-/** Reuses only the shared source; never captures a separate desktop replay. */
+/** Coordinates borrowed screen replay and explicitly selected local capture. */
 export function initializeClips(
   target: Window,
   { ready: alreadyReady = false } = {},
@@ -50,14 +51,45 @@ export function initializeClips(
     now: Date.now,
     saved: (count) => runtime.TronoClipDesktop?.saved(count),
   });
+  const local = createLocalClipCapture({
+    capture: () => {
+      const quality = preferences.getQuality(),
+        settings = preferences.getSnapshot().settings;
+      if (!target.navigator.mediaDevices?.getDisplayMedia)
+        throw Error('Captura local indisponível neste dispositivo.');
+      return target.navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: quality.width },
+          height: { ideal: quality.height },
+          frameRate: { ideal: settings.fps },
+        },
+        audio: true,
+      });
+    },
+    started: async (source) => {
+      await replay.sharedStarted(source, { force: true });
+      if (!replay.getSnapshot().active)
+        throw Error(replay.getSnapshot().message || 'Não foi possível preparar os clipes.');
+    },
+    stopped: (source) => replay.sharedStopped(source),
+  });
+  const unsubscribeLocalReplay = replay.subscribe(() =>
+    queueMicrotask(() => {
+      const state = replay.getSnapshot();
+      if (local.getSnapshot().active && !state.active && !state.preparing) local.stop();
+    }),
+  );
   const controls = createClipControls(target, preferences),
-    view = createReplayView(target, replay, preferences, library, controls);
+    view = createReplayView(target, replay, preferences, library, controls, local);
   runtime.TronoClipControls = controls;
   let disposed = false,
     ready = false;
   const syncAccount = () => {
     const owner = runtime.TronoAuth?.user?.id || 'local';
-    if (owner !== replay.getSnapshot().owner) void replay.setOwner(owner);
+    if (owner !== replay.getSnapshot().owner) {
+      local.stop();
+      void replay.setOwner(owner);
+    }
   };
   const beforeUnload = (event: BeforeUnloadEvent) => {
     if (replay.hasUnsavedWork()) {
@@ -65,7 +97,10 @@ export function initializeClips(
       event.returnValue = '';
     }
   };
-  const pageHide = () => replay.stop();
+  const pageHide = () => {
+    local.stop();
+    replay.stop();
+  };
   const bind = () => {
     if (ready || disposed) return;
     ready = true;
@@ -79,7 +114,10 @@ export function initializeClips(
     open: view.open,
     clip: replay.clip,
     stop: replay.stop,
-    sharedStarted: replay.sharedStarted,
+    sharedStarted: (source, options) => {
+      if (local.getSnapshot().active || local.getSnapshot().pending) return Promise.resolve();
+      return replay.sharedStarted(source, options);
+    },
     sharedStopped: replay.sharedStopped,
     captureProfile: replay.captureProfile,
     get preferences() {
@@ -99,6 +137,8 @@ export function initializeClips(
       target.removeEventListener('trono-auth-change', syncAccount);
       target.removeEventListener('beforeunload', beforeUnload);
       target.removeEventListener('pagehide', pageHide);
+      unsubscribeLocalReplay();
+      local.dispose();
       view.dispose();
       replay.dispose();
       controls.dispose();

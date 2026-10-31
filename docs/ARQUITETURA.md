@@ -367,3 +367,44 @@ troca/logout. O payload FCM não contém texto nem anexos da conversa. Menções
 canais continuam pelo socket enquanto o processo está ativo; push de canais ainda
 não está integrado. Firebase e assinatura são configuração operacional, não
 credenciais embarcadas no frontend. O segredo de serviço fica só no backend.
+
+
+### Captura local de clipes e avaliação dos encoders
+
+`clips/local-capture.ts` possui somente a fonte escolhida explicitamente para
+clipes locais; o replay continua possuindo seus clones/recorder/worker. A captura
+não participa da chamada nem publica tracks. Inicia desligada em cada sessão,
+sem restaurar `desktopAuto` antigo. Cancelamento, troca de conta, pagehide,
+encerramento da fonte e falha de preparação invalidam permissões tardias e
+liberam somente a fonte própria. Durante uma captura local, notificações de nova
+transmissão não substituem sua fonte. Desligar a captura não inicia outra fonte
+implicitamente; para mudar o modo, o usuário escolhe/inicia uma nova captura.
+
+O modo local mantém a gravação comprimida no buffer do replay existente: ainda
+não há seleção explícita de NVENC/AMF/Quick Sync. MediaRecorder/VP8 não oferece uma
+API para escolher o encoder por fabricante. Não se deve rotular esse caminho
+como NVENC ou garantir baixo consumo sem medição.
+
+Para um backend nativo, os encoders H.264 existentes no FFmpeg são:
+
+| Hardware | Encoder | Pré-requisito para elegibilidade |
+| --- | --- | --- |
+| NVIDIA | `h264_nvenc` | Inicialização/codificação real com driver e GPU compatíveis. |
+| AMD | `h264_amf` | Runtime AMF e codificação real bem-sucedida. |
+| Intel | `h264_qsv` | Dispositivo Quick Sync acessível e codificação real bem-sucedida. |
+
+Fontes oficiais inspecionadas: [NVENC](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/nvenc_h264.c),
+[AMF](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/amfenc_h264.c) e
+[QSV](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/qsvenc_h264.c).
+Listar o encoder compilado ou identificar a GPU não comprova disponibilidade.
+A escolha automática deve comparar probes reais na mesma resolução/FPS, medir
+frames perdidos, latência e consumo sob jogo, e tentar o próximo candidato se o
+dispositivo falhar. Não existe ordem universal NVIDIA > AMD > Intel: em um PC
+com duas GPUs, o encoder integrado pode aliviar a GPU ocupada pelo jogo.
+
+Recomendação para o primeiro perfil nativo: 1080p/30 FPS, segmentos curtos com
+keyframes regulares e retenção limitada a 30 s, memória/disco com teto e troca
+atômica do arquivo salvo. H.264/MP4 exige outro muxer/buffer: o parser WebM atual
+não deve receber H.264 como se fosse VP8. A integração demanda um binário nativo
+verificado, política de distribuição/licenças e medições num Windows com GPU;
+nenhuma aceleração específica foi habilitada ou medida neste ambiente Linux.

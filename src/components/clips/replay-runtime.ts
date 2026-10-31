@@ -1,3 +1,4 @@
+import type { LocalClipCapture } from '../../lib/clips/local-capture';
 import type { ClipLibrary } from '../../lib/clips/library';
 import type { ClipPreferences } from '../../lib/clips/preferences';
 import type { ReplayController } from '../../lib/clips/replay';
@@ -20,6 +21,7 @@ export function createReplayView(
   preferences: ClipPreferences,
   library: ClipLibrary,
   controls: ClipControls,
+  local: LocalClipCapture,
 ) {
   const runtime = target as Runtime,
     doc = target.document,
@@ -39,6 +41,16 @@ export function createReplayView(
   };
   function render() {
     if (disposed) return;
+    const capture = local.getSnapshot();
+    element<HTMLButtonElement>('clipLocalStart').disabled = capture.pending || capture.active;
+    element('clipLocalStop').hidden = !capture.pending && !capture.active;
+    element('clipLocalStatus').textContent = capture.pending
+      ? 'Escolhendo tela…'
+      : capture.message || 'Captura local desligada';
+    doc.querySelectorAll<HTMLElement>('[data-open-clips]').forEach((button) => {
+      button.dataset.capturing = String(capture.active);
+      button.title = capture.active ? 'Clipes · captura local ativa' : 'Clipes';
+    });
     const state = replay.getSnapshot(),
       settings = preferences.getSnapshot().settings,
       count = library.getSnapshot().pendingCount;
@@ -56,7 +68,7 @@ export function createReplayView(
         : 'Clipar';
     toolbar.title = state.ready
       ? 'Guardar o replay · ' + preferences.shortcutLabel()
-      : 'Compartilhe sua tela para preparar o replay';
+      : 'Ative a captura local ou prepare clipes durante a transmissão';
     toolbar.classList.toggle('replay-ready', state.ready);
     const source = state.ready
       ? 'Replay pronto · ' +
@@ -64,10 +76,10 @@ export function createReplayView(
         ' s disponíveis · ' +
         (state.hasAudio ? 'áudio incluído' : 'sem áudio')
       : state.active || state.preparing
-        ? 'Preparando replay da tela compartilhada…'
+        ? 'Preparando clipes da tela selecionada…'
         : state.shared
           ? 'Replay pausado'
-          : 'Compartilhe sua tela para habilitar o replay';
+          : 'Escolha uma tela para começar a preparar clipes';
     element('clipSource').textContent = source;
     element('clipReplayDot').classList.toggle('is-ready', state.ready);
     element('clipShare').hidden = state.shared;
@@ -136,10 +148,13 @@ export function createReplayView(
         replay.subscribe(render),
         preferences.subscribe(render),
         library.subscribe(render),
+        local.subscribe(render),
       );
-      doc
-        .querySelectorAll('[data-open-clips]')
-        .forEach((button) => listen(button, 'click', () => open()));
+      listen(doc, 'click', (event) => {
+        if ((event.target as Element | null)?.closest?.('[data-open-clips]')) open();
+      });
+      listen(element('clipLocalStart'), 'click', () => void local.start());
+      listen(element('clipLocalStop'), 'click', () => local.stop());
       listen(element('clipClose'), 'click', () => dialog.close());
       listen(element('clipAuto'), 'change', () =>
         preferences.setSetting('auto', element<HTMLInputElement>('clipAuto').checked),

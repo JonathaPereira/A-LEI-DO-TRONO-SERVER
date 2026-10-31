@@ -1,0 +1,50 @@
+name: Local clips on Windows
+on:
+  push:
+    branches: [codex/clipes-locais]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  clips:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install fixed dependencies
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron ci
+          exit $LASTEXITCODE
+      - name: Check sources and build renderer
+        run: |
+          npm run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run format:check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          exit $LASTEXITCODE
+      - name: Verify capture owners
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm test -- --filter 'clip-|screen-capture.cjs' 2>&1 | Tee-Object artifacts/windows-local-core.log
+          exit $LASTEXITCODE
+      - name: Verify real Electron local capture and call coexistence
+        run: |
+          npm test -- --suite desktop --filter 'clip-local-desktop.cjs|application-call-desktop.cjs' 2>&1 | Tee-Object artifacts/windows-local-desktop.log
+          exit $LASTEXITCODE
+      - name: Report failure details
+        if: failure()
+        run: node scripts/desktop/failure-summary.cjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: clips-local-failure-${{ github.run_id }}
+          path: artifacts/windows-local-*.log
+          retention-days: 7

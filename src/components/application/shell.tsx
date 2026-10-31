@@ -509,6 +509,15 @@ function Navigation({
         >
           <Icon name="settings" size={18} />
         </button>
+        <button
+          type="button"
+          data-open-clips
+          aria-label="Clipes"
+          title="Clipes"
+          aria-controls="clipsDialog"
+        >
+          <Icon name="clips" />
+        </button>
       </footer>
     </>
   );
