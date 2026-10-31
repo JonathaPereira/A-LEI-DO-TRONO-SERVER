@@ -22,6 +22,7 @@
     "tests/atalaia-browser.cjs"
   ],
   "desktop": [
+    "tests/clip-native-pipeline.cjs",
     "tests/clip-local-desktop.cjs",
     "tests/auth-desktop.cjs",
     "tests/application-call-desktop.cjs",

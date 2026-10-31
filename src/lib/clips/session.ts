@@ -13,10 +13,13 @@ export interface ReplaySessionOptions {
   quality: ReplayQuality;
   fps: number;
   seconds: number;
+  audio?: 'on' | 'none';
+  encoder?: 'auto' | 'nvenc' | 'compatible';
+  signal?: AbortSignal;
   isCurrent(): boolean;
   onStatus(): void;
   onClip(session: ReplaySession, clip: ClipSnapshot & { id: string }): Promise<void>;
-  onError(message: string): void;
+  onError(message: string, fatal?: boolean): void;
   onEnded(): void;
 }
 export type ReplayRecorderOptions = MediaRecorderOptions & {
@@ -27,6 +30,18 @@ export interface ReplayEnvironment {
   createRecorder(stream: MediaStream, options: ReplayRecorderOptions): MediaRecorder;
   isTypeSupported(mime: string): boolean;
   createWorker(): Worker;
+  prepareAudio?(
+    stream: MediaStream,
+    source: MediaStream,
+    isCurrent: () => boolean,
+    signal?: AbortSignal,
+    onFailure?: (message: string) => void,
+  ): Promise<{ dispose(): void; microphone: boolean }>;
+  createNativeSession?(
+    options: ReplaySessionOptions,
+    stream: MediaStream,
+    releaseAudio: () => void,
+  ): Promise<ReplaySession | null>;
 }
 export interface ReplaySession {
   readonly stream: MediaStream;
@@ -36,6 +51,9 @@ export interface ReplaySession {
   readonly fps: number;
   readonly maxBytes: number;
   readonly hasAudio: boolean;
+  readonly encoder?: string;
+  readonly extension?: 'webm' | 'mp4';
+  readonly audioDescription?: string;
   readonly status: ClipBufferStatus | null;
   readonly stopping: boolean;
   readonly pendingCount: number;
@@ -56,6 +74,19 @@ export async function createReplaySession(
       .map((track) => track.clone()),
   );
   let worker: Worker | undefined;
+  let audioResource: { dispose(): void } | undefined,
+    audioReleased = false;
+  const releaseAudio = () => {
+    options.signal?.removeEventListener('abort', abort);
+    if (audioReleased) return;
+    audioReleased = true;
+    audioResource?.dispose();
+  };
+  const abort = () => {
+    releaseAudio();
+    stream.getTracks().forEach((track) => track.stop());
+  };
+  options.signal?.addEventListener('abort', abort, { once: true });
   try {
     const video = stream.getVideoTracks()[0];
     if (!video) throw Error('A tela compartilhada não está mais disponível.');
@@ -74,6 +105,38 @@ export async function createReplaySession(
       stream.getTracks().forEach((track) => track.stop());
       return null;
     }
+    if (options.audio === 'none') {
+      stream.getAudioTracks().forEach((track) => {
+        stream.removeTrack(track);
+        track.stop();
+      });
+    }
+    if (environment.prepareAudio) {
+      const audio = await environment.prepareAudio(
+        stream,
+        source,
+        options.isCurrent,
+        options.signal,
+        (message) => options.onError(message, true),
+      );
+      audioResource = audio;
+      if (audioReleased) audio.dispose();
+    }
+    if (!options.isCurrent()) {
+      releaseAudio();
+      stream.getTracks().forEach((track) => track.stop());
+      return null;
+    }
+    if (environment.createNativeSession && options.encoder !== 'compatible') {
+      const native = await environment.createNativeSession(options, stream, releaseAudio);
+      if (native) return native;
+      if (!options.isCurrent()) {
+        releaseAudio();
+        stream.getTracks().forEach((track) => track.stop());
+        return null;
+      }
+    } else if (options.encoder === 'nvenc')
+      throw Error('NVENC requer o aplicativo Windows atualizado.');
     const mime = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm'].find(
       (value) => environment.isTypeSupported(value),
     );
@@ -95,13 +158,25 @@ export async function createReplaySession(
       recorder = environment.createRecorder(stream, recorderOptions);
     }
     worker = environment.createWorker();
-    return ownSession(options, stream, recorder, worker, {
-      quality: actual.width && actual.height ? actual.width + '×' + actual.height : quality.label,
-      fps: Math.round(actual.frameRate || fps),
-      maxBytes,
-      owner,
-    });
+    return ownSession(
+      options,
+      stream,
+      recorder,
+      worker,
+      {
+        quality: actual.width && actual.height ? actual.width + '×' + actual.height : quality.label,
+        fps: Math.round(actual.frameRate || fps),
+        maxBytes,
+        owner,
+        encoder: (recorder.mimeType || mime).includes('vp8')
+          ? 'Compatível (VP8)'
+          : 'Compatível (WebM)',
+      },
+      releaseAudio,
+    );
   } catch (error) {
+    options.signal?.removeEventListener('abort', abort);
+    releaseAudio();
     stream.getTracks().forEach((track) => track.stop());
     worker?.terminate();
     throw error;
@@ -113,7 +188,8 @@ function ownSession(
   stream: MediaStream,
   recorder: MediaRecorder,
   worker: Worker,
-  metadata: Pick<ReplaySession, 'quality' | 'fps' | 'maxBytes' | 'owner'>,
+  metadata: Pick<ReplaySession, 'quality' | 'fps' | 'maxBytes' | 'owner' | 'encoder'>,
+  releaseAudio: () => void,
 ): ReplaySession {
   let status: ClipBufferStatus | null = null,
     stopping = false,
@@ -147,6 +223,7 @@ function ownSession(
     stream,
     source: options.source,
     hasAudio: stream.getAudioTracks().length > 0,
+    extension: 'webm',
     get status() {
       return status;
     },
@@ -198,6 +275,7 @@ function ownSession(
         closed = true;
       }
       stream.getTracks().forEach((track) => track.stop());
+      releaseAudio();
       dispose();
     },
   };

@@ -235,6 +235,21 @@
 .surface :global(.replay-summary > span:nth-child(2)) {
   flex: 1;
 }
+.surface :global(.replay-summary[data-active='true']) {
+  border-color: #79b89c;
+  background: #79b89c13;
+}
+.surface :global(.replay-summary[data-active='true'] .replay-dot) {
+  background: #91d9b4;
+  box-shadow: 0 0 0 4px #91d9b419;
+}
+.surface :global(.clip-audio-choice) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+}
 .surface :global(.clips-tabs) {
   display: flex;
   gap: 6px;

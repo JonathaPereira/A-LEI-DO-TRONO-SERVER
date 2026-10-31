@@ -353,3 +353,14 @@ abrir/recarregar e nunca retoma uma preferência antiga silenciosamente. Enquant
 ativa, o acesso fica destacado e a central oferece Desligar captura local.
 Desligar libera a fonte e mantém os clipes criados; pausar o buffer não apaga a
 biblioteca. Captura/áudio continuam sujeitos ao seletor e às capacidades do host.
+
+
+Atualização de clipes: o destaque mostra Captura desligada, Iniciando captura
+ou Capturando clipes; segundos, som e encoder efetivo aparecem abaixo. Som dos
+clipes oferece Microfone + áudio da captura e Sem som. Sem áudio no seletor
+nativo impede incluir microfone nessa fonte. O submenu mantém qualidade, atalho
+e pasta e adiciona Automático, NVIDIA NVENC e Compatível. O rótulo ativo só
+aparece após vídeo codificado recebido; erros não fingem captura pronta.
+Captura local continua desligada ao abrir. Banners da sala usam apenas estados
+privados da própria chamada: microfone cortado em mute, microfone + headset
+cortados em deafen. Não se divulga estado detalhado de outras salas no catálogo.

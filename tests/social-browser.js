@@ -112,6 +112,13 @@ test(
           window.__primary = window.TronoNetwork.primaryRoom;
         });
       }
+      await t.test('voice room banners follow microphone mute and deafen for both call participants',async()=>{
+        const id=await p.evaluate(()=>window.TronoNetwork.clientId),row=q.locator('[data-voice-person="'+id+'"]');await expect(row).toBeVisible();await expect(row.locator('[data-voice-status]')).toHaveCount(0);
+        await p.evaluate(()=>window.TronoCallToolbar.activate('muteMicBtn'));await expect(row.locator('[data-voice-mic-muted]')).toHaveCount(1);await expect(row.locator('[data-voice-deafened]')).toHaveCount(0);
+        await p.evaluate(()=>window.TronoCallToolbar.activate('deafenVoiceBtn'));await expect(row.locator('[data-voice-deafened]')).toHaveCount(1);await expect(row.locator('[data-voice-mic-muted]')).toHaveCount(1);
+        await p.evaluate(()=>window.TronoCallToolbar.activate('deafenVoiceBtn'));await expect(row.locator('[data-voice-deafened]')).toHaveCount(0);await expect(row.locator('[data-voice-mic-muted]')).toHaveCount(1);
+        await p.evaluate(()=>window.TronoCallToolbar.activate('muteMicBtn'));await expect(row.locator('[data-voice-status]')).toHaveCount(0);assert.equal(await p.evaluate(()=>window.__mic===window.TronoSocial.getLocalAudioTrack()&&window.__mic.readyState==='live'),true);
+      });
       await t.test(
         'approval, private text and authorization preserve the active call',
         async () => {

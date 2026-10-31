@@ -354,17 +354,44 @@ function Navigation({
                 </button>
                 {c.players
                   .filter((p) => p.inVoice)
-                  .map((p) => (
-                    <div className={styles.voicePerson} key={p.id} data-voice-person={p.id}>
-                      <DirectProfileBanner
-                        accountId={
-                          stage.participants.find((person) => person.id === p.id)?.accountId ?? ''
-                        }
-                      />
-                      <Avatar person={p} className={styles.tinyAvatar} />
-                      <span>{p.name}</span>
-                    </div>
-                  ))}
+                  .map((p) => {
+                    const participant = stage.participants.find((person) => person.id === p.id);
+                    const deafened = participant?.deafened === true;
+                    const muted =
+                      deafened || participant?.muted === true || participant?.serverMuted === true;
+                    const status = deafened
+                      ? 'Microfone e áudio silenciados'
+                      : 'Microfone silenciado';
+                    return (
+                      <div className={styles.voicePerson} key={p.id} data-voice-person={p.id}>
+                        <DirectProfileBanner
+                          accountId={
+                            stage.participants.find((person) => person.id === p.id)?.accountId ?? ''
+                          }
+                        />
+                        <Avatar person={p} className={styles.tinyAvatar} />
+                        <span className={styles.voiceName}>{p.name}</span>
+                        {muted && (
+                          <span
+                            className={styles.voiceMuteState}
+                            data-voice-status
+                            role="img"
+                            aria-label={status}
+                            title={status}
+                          >
+                            <span data-voice-mic-muted>
+                              <Icon name="microphoneSlash" size={14} />
+                            </span>
+                            {deafened && (
+                              <span data-voice-deafened className={styles.mutedHeadset}>
+                                <Icon name="headphones" size={14} />
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             ))}
         {!!dm.threads.length && (

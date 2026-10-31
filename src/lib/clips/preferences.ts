@@ -56,6 +56,8 @@ export function readClipSettings(value: unknown): ClipSettings {
     seconds: seconds === 15 || seconds === 60 || seconds === 120 ? seconds : 30,
     auto: data.auto !== false,
     desktopAuto: data.desktopAuto !== false,
+    audio: data.audio === 'none' ? 'none' : 'on',
+    encoder: data.encoder === 'nvenc' || data.encoder === 'compatible' ? data.encoder : 'auto',
     shortcut: readShortcut(data.shortcut),
   });
 }
@@ -116,16 +118,23 @@ export function createClipPreferences(storage: () => Pick<Storage, 'getItem' | '
       } catch {}
       publish({ owner, settings: readClipSettings(saved), choosingShortcut: false }, '');
     },
-    setSetting(key: 'quality' | 'fps' | 'seconds' | 'auto' | 'desktopAuto', value: unknown) {
+    setSetting(
+      key: 'quality' | 'fps' | 'seconds' | 'auto' | 'desktopAuto' | 'audio' | 'encoder',
+      value: unknown,
+    ) {
       if (disposed) return;
       const valid =
-        key === 'quality'
-          ? typeof value === 'string' && ['light', 'balanced', 'high'].includes(value)
-          : key === 'fps'
-            ? value === 30 || value === 60
-            : key === 'seconds'
-              ? [15, 30, 60, 120].includes(value as number)
-              : typeof value === 'boolean';
+        key === 'audio'
+          ? value === 'on' || value === 'none'
+          : key === 'encoder'
+            ? ['auto', 'nvenc', 'compatible'].includes(value as string)
+            : key === 'quality'
+              ? typeof value === 'string' && ['light', 'balanced', 'high'].includes(value)
+              : key === 'fps'
+                ? value === 30 || value === 60
+                : key === 'seconds'
+                  ? [15, 30, 60, 120].includes(value as number)
+                  : typeof value === 'boolean';
       if (!valid || state.settings[key] === value) return;
       save(readClipSettings({ ...state.settings, [key]: value }));
     },

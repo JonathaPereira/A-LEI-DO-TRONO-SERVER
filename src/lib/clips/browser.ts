@@ -3,8 +3,13 @@ import { createReplaySession, type ReplaySessionOptions } from './session';
 import { createClipLibrary, type ClipLibrary } from './library';
 import { createBrowserClipFiles } from './export';
 import { createClipPreferences, type ClipPreferences } from './preferences';
+import { prepareClipAudio } from './audio';
+import { createNativeReplaySession, type NativeReplayBridge } from './native-session';
 
 interface Runtime extends Window {
+  TronoDesktop?: NativeReplayBridge;
+  TronoSocial?: { getLocalAudioTrack(): MediaStreamTrack | null };
+  TronoVoiceSettings?: { getSnapshot(): { controls: { selectedInput: string } } };
   TronoClipStore?: ClipStore;
   TronoClipLibrary?: ClipLibrary;
   TronoClipPreferences?: ClipPreferences;
@@ -40,6 +45,46 @@ export function initializeClipStore(target: Window): () => void {
       createRecorder: (stream, config) => new MediaRecorder(stream, config),
       isTypeSupported: (mime) => MediaRecorder.isTypeSupported(mime),
       createWorker,
+      createNativeSession: (options, stream, releaseAudio) =>
+        createNativeReplaySession(
+          target,
+          runtime.TronoDesktop?.startNativeReplay ? runtime.TronoDesktop : undefined,
+          options,
+          stream,
+          releaseAudio,
+        ),
+      prepareAudio: (stream, source, isCurrent, signal, onFailure) =>
+        prepareClipAudio({
+          stream,
+          isCurrent,
+          signal,
+          onFailure,
+          subscribeMicrophone: (listener) => {
+            target.addEventListener('trono-call-change', listener);
+            target.addEventListener('trono-media-change', listener);
+            return () => {
+              target.removeEventListener('trono-call-change', listener);
+              target.removeEventListener('trono-media-change', listener);
+            };
+          },
+          enabled:
+            preferences.getSnapshot().settings.audio !== 'none' &&
+            (source as MediaStream & { tronoAudioAllowed?: boolean }).tronoAudioAllowed !== false,
+          borrowMicrophone: () => runtime.TronoSocial?.getLocalAudioTrack() ?? null,
+          getMicrophone: () => {
+            const device = runtime.TronoVoiceSettings?.getSnapshot().controls.selectedInput;
+            return target.navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                ...(device ? { deviceId: { exact: device } } : {}),
+              },
+              video: false,
+            });
+          },
+          createStream: (tracks) => new MediaStream(tracks),
+          createContext: () => new AudioContext({ sampleRate: 48000 }),
+        }),
     });
   runtime.TronoCreateReplaySession = createSession;
   let disposed = false;

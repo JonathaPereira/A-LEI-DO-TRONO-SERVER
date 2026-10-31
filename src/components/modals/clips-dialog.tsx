@@ -22,13 +22,14 @@ export function ClipsDialog() {
             <Icon name="close" />
           </button>
         </header>
-        <div className={'replay-summary'}>
+        <div className={'replay-summary'} id="clipCaptureIndicator" data-active="false">
           <span id={'clipReplayDot'} className={'replay-dot'} aria-hidden={'true'}></span>
-          <span id={'clipSource'}>Escolha uma tela para preparar clipes</span>
+          <span id={'clipSource'}>Captura desligada</span>
           <button id={'clipNow'} type={'button'} disabled>
             Clipar últimos 30 s
           </button>
         </div>
+        <p id="clipCaptureDetails" className="clips-help" />
         <section aria-label="Captura local de clipes">
           <button id="clipLocalStart" type="button">
             Ativar captura local…
@@ -44,6 +45,13 @@ export function ClipsDialog() {
             transmitir. Desligada ao abrir o aplicativo; ative apenas quando quiser capturar.
           </p>
         </section>
+        <label className="clip-audio-choice">
+          Som dos clipes
+          <select id="clipAudioMode" defaultValue="on">
+            <option value="on">Microfone + áudio da captura</option>
+            <option value="none">Sem som</option>
+          </select>
+        </label>
         <label className="clip-audio">
           <input id="clipAuto" type="checkbox" defaultChecked /> Preparar clipes ao transmitir a
           tela

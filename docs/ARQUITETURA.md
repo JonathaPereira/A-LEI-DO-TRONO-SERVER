@@ -380,10 +380,33 @@ liberam somente a fonte própria. Durante uma captura local, notificações de n
 transmissão não substituem sua fonte. Desligar a captura não inicia outra fonte
 implicitamente; para mudar o modo, o usuário escolhe/inicia uma nova captura.
 
-O modo local mantém a gravação comprimida no buffer do replay existente: ainda
-não há seleção explícita de NVENC/AMF/Quick Sync. MediaRecorder/VP8 não oferece uma
-API para escolher o encoder por fabricante. Não se deve rotular esse caminho
-como NVENC ou garantir baixo consumo sem medição.
+O replay possui dois caminhos. Compatível usa MediaRecorder/WebM e o worker
+existente. Automático prefere NVENC após codificação real de teste; NVENC
+explícito falha com mensagem se indisponível. `clips/native-session.ts` envia
+somente clones da fonte escolhida como BGRA/PCM, com um frame em trânsito e
+backpressure. Não inicia outra captura de monitor. O main valida origem, ID,
+dimensões, tamanho e timestamps de cada pacote. `electron/replay-native.cjs`
+possui processos FFmpeg, buffer fMP4 limitado a 256 MiB e até dois exports MP4
+por remux sem recodificação. H.264 nunca passa pelo parser WebM. Temporários
+são privados, apagados após exportar e limpos na abertura após falha. Navegação
+ou crash para o encoder ativo; encerrar o app termina seus processos.
+
+`clips/audio.ts` possui contexto, mistura e microfone adquirido fora da chamada.
+Na chamada, empresta diretamente o track disponível sem clonar/habilitar/parar,
+respeitando mute. Eventos de chamada/mídia trocam a entrada mantendo a saída
+misturada. Sair da chamada adquire uma entrada própria enquanto houver captura
+autorizada; falha encerra o replay com mensagem. Sem som não pede microfone,
+remove somente clones de áudio e respeita Sem áudio do seletor nativo. O sinal
+de cancelamento libera clones/microfone imediatamente durante a preparação;
+permissões tardias são descartadas. O dispositivo preferido é lido do dono das
+configurações de voz, sem recriar outro armazenamento de preferências.
+
+FFmpeg LGPL compartilhado é distribuído separado com DLLs substituíveis,
+licenças e fontes/receita referenciados. `prepare-ffmpeg.cjs` fixa release e
+SHA-256; não há download de binário em runtime. O rótulo ativo depende de vídeo
+codificado recebido. Não se garante consumo irrisório: cópia/conversão de
+frames e competição com o jogo ainda exigem medição no PC. AMF/QSV permanecem
+avaliados, sem integração nesta entrega.
 
 Para um backend nativo, os encoders H.264 existentes no FFmpeg são:
 
@@ -402,17 +425,17 @@ frames perdidos, latência e consumo sob jogo, e tentar o próximo candidato se 
 dispositivo falhar. Não existe ordem universal NVIDIA > AMD > Intel: em um PC
 com duas GPUs, o encoder integrado pode aliviar a GPU ocupada pelo jogo.
 
-Recomendação para o primeiro perfil nativo: 1080p/30 FPS, segmentos curtos com
-keyframes regulares e retenção limitada a 30 s, memória/disco com teto e troca
-atômica do arquivo salvo. H.264/MP4 exige outro muxer/buffer: o parser WebM atual
-não deve receber H.264 como se fosse VP8. A integração demanda um binário nativo
-verificado, política de distribuição/licenças e medições num Windows com GPU;
-nenhuma aceleração específica foi habilitada ou medida neste ambiente Linux.
+Perfil inicial recomendado para comparar: 1080p/30 FPS, 30 s e keyframes
+regulares. O nativo mantém teto de memória e exports MP4 reproduzíveis/seekable.
+No Linux, contratos reais usam FFmpeg local. O teste Windows sem NVIDIA usa
+Media Foundation, identificado como teste e permitido apenas no Electron não
+empacotado com fixture local; isso não comprova NVENC físico. O pacote final
+mantém o probe NVENC real e verifica a presença do binário/DLLs/licenças.
 
 Equipamento informado para a avaliação: Windows 11, Ryzen 7 5700X3D,
 RTX 3060 Ti e 32 GB de RAM. Nesse equipamento o candidato nativo é NVENC H.264;
 Quick Sync requer uma GPU Intel compatível, e AMF requer GPU AMD compatível.
 O processador AMD sozinho não habilita AMF. A escolha desse candidato não é
-evidência de integração, uso efetivo ou medição. A próxima prova deve comparar
+evidência de desempenho ou medição no equipamento. A próxima prova deve comparar
 1080p/30 e 1080p/60 no equipamento, com jogo aberto, verificar frames perdidos e
 impacto no jogo, exportação reproduzível com áudio e liberação da captura.

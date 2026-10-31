@@ -31,5 +31,7 @@ export interface ClipSettings {
   readonly seconds: 15 | 30 | 60 | 120;
   readonly auto: boolean;
   readonly desktopAuto: boolean;
+  readonly audio: 'on' | 'none';
+  readonly encoder: 'auto' | 'nvenc' | 'compatible';
   readonly shortcut: ClipShortcut;
 }

@@ -124,6 +124,8 @@ jobs:
           npm run build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm --prefix electron run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/desktop/prepare-ffmpeg.cjs
           exit $LASTEXITCODE
       - name: Verify contracts and real user journeys
         shell: pwsh

@@ -807,3 +807,16 @@ Registro final mantido na contribuição para não disparar outra publicação d
 mesma versão. NVENC continua pendente; nenhum SQL ou código do backend mudou.
 O workflow Android automático `41245224031` falhou separadamente, com mensagem
 pública genérica de exit 1; não se afirma entrega Android nesta publicação.
+
+
+Contribuição `codex/clipes-nvenc`, com publicação autorizada após testes:
+HUD simplificado, microfone com Sem som, continuidade em transições da chamada,
+ícones mute/deafen nos banners e NVENC H.264/MP4 com probe real, buffer e
+processos limitados. AbortSignal preserva fontes emprestadas. FFmpeg LGPL
+compartilhado fixado por SHA-256 acompanha licenças e referência dos fontes.
+Compatível conserva WebM. Dois contratos reais do pipeline H.264 e 93 contratos
+focados passaram; primeira rodada browser aprovou 18 testes. Após reforçar
+cancelamento/transições de microfone, os 13 testes áudio/sessão passaram.
+Browser será repetido no build final; Windows validará Electron e exportação.
+O runner sem NVIDIA usa Media Foundation em QA, identificado como teste; não
+comprova aceleração física na 3060 Ti. O pacote mantém o probe NVENC real.

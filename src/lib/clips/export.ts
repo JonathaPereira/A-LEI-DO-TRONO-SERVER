@@ -76,7 +76,9 @@ export function createBrowserClipFiles(target: Window) {
       runtime.showSaveFilePicker?.({
         id: 'trono-clips',
         suggestedName: filename,
-        types: [{ description: 'Vídeo WebM', accept: { 'video/webm': ['.webm'] } }],
+        types: filename.endsWith('.mp4')
+          ? [{ description: 'Vídeo MP4', accept: { 'video/mp4': ['.mp4'] } }]
+          : [{ description: 'Vídeo WebM', accept: { 'video/webm': ['.webm'] } }],
       }),
     download(blob: Blob, filename: string) {
       const url = URL.createObjectURL(blob),

@@ -14,6 +14,7 @@ interface Options {
   warn?(error: unknown): void;
 }
 interface Operation {
+  audioAllowed?: boolean;
   requestId: string | null;
   selection: Promise<DesktopCaptureSelection> | null;
   result: DesktopCaptureSelection | null;
@@ -198,6 +199,7 @@ export function createDesktopCapture(options: Options) {
       audioMode: current.audio ? state.audioMode : ('none' as const),
       audioSource: state.audioSource,
     };
+    active.audioAllowed = current.audio && state.audioMode !== 'none';
     update({ request: null, source: null, message: '' });
     active.selection = Promise.resolve()
       .then(() => options.native.selectCapture(choice))
@@ -304,6 +306,9 @@ export function createDesktopCapture(options: Options) {
       operation = active;
       try {
         active.stream = await options.getDisplayMedia(settings);
+        Object.defineProperty(active.stream, 'tronoAudioAllowed', {
+          value: active.audioAllowed !== false,
+        });
         if (disposed) throw aborted();
         const chosen = active.selection ? await active.selection : null;
         if (chosen?.error) throw new Error(chosen.error);

@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createReplaySession } = require('../src/lib/clips/session.ts');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+test('cancellation during hardware probing releases replay clones and prepared audio immediately, preserving the shared source',async()=>{const waiting=deferred(),controller=new AbortController();let current=true,clones,released=0;const f=fixture({signal:controller.signal,isCurrent:()=>current},{createStream(tracks){clones=stream(tracks);return clones;},prepareAudio:async()=>({dispose(){released++;},microphone:true}),createNativeSession:()=>waiting.promise});const pending=f.create();await tick();current=false;controller.abort();assert.equal(released,1);assert(clones.getTracks().every(t=>t.readyState==='ended'));assert(f.source.getTracks().every(t=>t.readyState==='live'));waiting.resolve(null);assert.equal(await pending,null);assert.equal(released,1);});
 function deferred() {
   let resolve, reject;
   const promise = new Promise((yes, no) => {

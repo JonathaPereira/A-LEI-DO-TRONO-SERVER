@@ -11,6 +11,10 @@ const target = path.join(root, 'public');
 const outputs = new Map();
 outputs.set('auth-boot.js', path.join(root, 'artifacts/renderer/lib/auth/callback-boot.js'));
 outputs.set(
+  'clips-pcm-worklet.js',
+  path.join(root, 'artifacts/renderer/lib/clips/worklets/pcm.js'),
+);
+outputs.set(
   'application-audio-worklet.js',
   path.join(root, 'artifacts/renderer/lib/voice/worklets/application-audio.js'),
 );

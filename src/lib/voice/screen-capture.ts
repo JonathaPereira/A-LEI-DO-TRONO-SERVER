@@ -117,6 +117,8 @@ export function createScreenCapture({
         selfBrowserSurface: 'exclude',
       };
       source = await mediaDevices.getDisplayMedia(constraints);
+      if (!settings.audio && !Object.hasOwn(source, 'tronoAudioAllowed'))
+        Object.defineProperty(source, 'tronoAudioAllowed', { value: false });
       if (!current()) return false;
       outgoing = source.clone();
       const video = outgoing.getVideoTracks()[0];

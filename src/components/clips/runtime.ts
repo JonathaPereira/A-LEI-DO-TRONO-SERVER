@@ -63,7 +63,7 @@ export function initializeClips(
           height: { ideal: quality.height },
           frameRate: { ideal: settings.fps },
         },
-        audio: true,
+        audio: settings.audio !== 'none',
       });
     },
     started: async (source) => {

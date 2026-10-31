@@ -45,7 +45,7 @@ export function createReplayView(
     element<HTMLButtonElement>('clipLocalStart').disabled = capture.pending || capture.active;
     element('clipLocalStop').hidden = !capture.pending && !capture.active;
     element('clipLocalStatus').textContent = capture.pending
-      ? 'Escolhendo tela…'
+      ? 'Iniciando captura…'
       : capture.message || 'Captura local desligada';
     doc.querySelectorAll<HTMLElement>('[data-open-clips]').forEach((button) => {
       button.dataset.capturing = String(capture.active);
@@ -55,6 +55,14 @@ export function createReplayView(
       settings = preferences.getSnapshot().settings,
       count = library.getSnapshot().pendingCount;
     element<HTMLInputElement>('clipAuto').checked = settings.auto;
+    element<HTMLSelectElement>('clipAudioMode').value = settings.audio;
+    element('clipCaptureIndicator').dataset.active = String(state.active);
+    element('clipCaptureDetails').textContent = state.active
+      ? Math.floor(state.seconds) +
+        ' s disponíveis · ' +
+        (state.hasAudio ? 'Com som' : 'Sem som') +
+        (state.encoder ? ' · ' + state.encoder : '')
+      : 'Inicie uma captura para guardar os últimos segundos.';
     const available = Math.min(settings.seconds, Math.max(1, Math.floor(state.seconds)));
     const now = element<HTMLButtonElement>('clipNow'),
       toolbar = element<HTMLButtonElement>('clipToolbarNow');
@@ -70,16 +78,13 @@ export function createReplayView(
       ? 'Guardar o replay · ' + preferences.shortcutLabel()
       : 'Ative a captura local ou prepare clipes durante a transmissão';
     toolbar.classList.toggle('replay-ready', state.ready);
-    const source = state.ready
-      ? 'Clipes prontos · ' +
-        Math.floor(state.seconds) +
-        ' s disponíveis · ' +
-        (state.hasAudio ? 'áudio incluído' : 'sem áudio')
-      : state.active || state.preparing
-        ? 'Preparando clipes da tela selecionada…'
+    const source = state.active
+      ? 'Capturando clipes'
+      : state.preparing || capture.pending
+        ? 'Iniciando captura…'
         : state.shared
-          ? 'Preparação de clipes pausada'
-          : 'Escolha uma tela para começar a preparar clipes';
+          ? 'Captura pausada'
+          : 'Captura desligada';
     element('clipSource').textContent = source;
     element('clipReplayDot').classList.toggle('is-ready', state.ready);
     element('clipShare').hidden = state.shared;
@@ -158,6 +163,9 @@ export function createReplayView(
       listen(element('clipClose'), 'click', () => dialog.close());
       listen(element('clipAuto'), 'change', () =>
         preferences.setSetting('auto', element<HTMLInputElement>('clipAuto').checked),
+      );
+      listen(element('clipAudioMode'), 'change', () =>
+        preferences.setSetting('audio', element<HTMLSelectElement>('clipAudioMode').value),
       );
       listen(element('clipNow'), 'click', replay.clip);
       listen(element('clipToolbarNow'), 'click', replay.clip);

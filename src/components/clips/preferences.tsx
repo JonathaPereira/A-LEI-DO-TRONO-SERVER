@@ -32,6 +32,18 @@ export function ClipPreferenceFields({
       </div>
       <div className="clips-settings">
         <label>
+          Codificador
+          <select
+            id="clipEncoder"
+            value={settings.encoder}
+            onChange={(event) => preferences.setSetting('encoder', event.target.value)}
+          >
+            <option value="auto">Automático · prefere NVENC disponível</option>
+            <option value="nvenc">NVIDIA NVENC · aplicativo Windows</option>
+            <option value="compatible">Compatível · navegador</option>
+          </select>
+        </label>
+        <label>
           Qualidade do clipe
           <select
             id="clipQuality"
@@ -82,7 +94,12 @@ export function ClipPreferenceFields({
       <p className="clips-help">
         O áudio depende da permissão e da fonte selecionada. Configure a qualidade antes de ativar a
         captura ou transmitir a tela. Mudar estas opções reinicia a preparação dos clipes e descarta
-        os segundos temporários anteriores.
+        os segundos temporários anteriores. Para mudar o áudio escolhido no seletor de tela,
+        desligue e inicie uma nova captura.
+      </p>
+      <p className="clips-help">
+        NVENC usa o codificador da placa NVIDIA no aplicativo Windows. Automático testa a
+        disponibilidade e usa Compatível quando não puder ativá-lo.
       </p>
       <div className="clip-destination">
         <div>

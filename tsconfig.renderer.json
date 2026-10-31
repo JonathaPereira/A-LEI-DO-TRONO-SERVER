@@ -13,6 +13,7 @@
   "include": [
     "src/lib/auth/callback-boot.ts",
     "src/lib/voice/worklets/*.ts",
+    "src/lib/clips/worklets/*.ts",
     "src/types/audio-worklet.d.ts"
   ],
   "exclude": ["node_modules"]

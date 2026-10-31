@@ -30,6 +30,17 @@
     ],
     "extraResources": [
       {
+        "from": "../artifacts/ffmpeg",
+        "to": "ffmpeg",
+        "filter": [
+          "bin/ffmpeg.exe",
+          "bin/*.dll",
+          "LICENSE*.txt",
+          "UPSTREAM.txt",
+          "VERSION.json"
+        ]
+      },
+      {
         "from": "../out",
         "to": "renderer",
         "filter": [

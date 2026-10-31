@@ -41,6 +41,7 @@ const { ApplicationAudio } = require('./application-audio.cjs'),
   { createUpdates } = require('./updates.cjs');
 const { contentSecurityPolicy } = require('./content-security.cjs');
 const { developmentOrigin } = require('./development.cjs');
+const { createNativeReplay } = require('./replay-native.cjs');
 const devOrigin = developmentOrigin({
   packaged: app.isPackaged,
   value: app.commandLine.getSwitchValue('desktop-dev-url'),
@@ -68,6 +69,7 @@ let window,
   installingUpdate = false,
   preferences,
   activity;
+let nativeReplay;
 const folders = new Map();
 let remoteInput,
   remotePermit = null,
@@ -137,6 +139,7 @@ else {
     quitting = true;
   });
   app.on('will-quit', () => {
+    void nativeReplay?.dispose();
     stopRemote();
     globalShortcut.unregisterAll();
     applicationAudio?.stopAll();
@@ -463,6 +466,34 @@ async function start() {
     trusted(event);
     return { active: false, suspended: true };
   });
+  const replayDirectory = path.join(app.getPath('userData'), 'replay-temporary');
+  await fs.rm(replayDirectory, { recursive: true, force: true });
+  nativeReplay = createNativeReplay({
+    executable: app.isPackaged
+      ? path.join(process.resourcesPath, 'ffmpeg/bin/ffmpeg.exe')
+      : path.resolve(__dirname, '../artifacts/ffmpeg/bin/ffmpeg.exe'),
+    directory: replayDirectory,
+    publish: (value) => {
+      if (!window?.isDestroyed()) window?.webContents.send('mn:replay-status', value);
+    },
+    ...(!app.isPackaged &&
+    testAPI &&
+    app.commandLine.getSwitchValue('desktop-replay-test-encoder') === 'h264_mf'
+      ? { encoder: 'h264_mf', encoderLabel: 'Media Foundation (teste)' }
+      : {}),
+  });
+  for (const [channel, method] of [
+    ['mn:replay-capability', 'capability'],
+    ['mn:replay-start', 'start'],
+    ['mn:replay-packet', 'packet'],
+    ['mn:replay-clip', 'clip'],
+    ['mn:replay-stop', 'stop'],
+  ]) {
+    ipcMain.handle(channel, (event, value) => {
+      trusted(event);
+      return nativeReplay[method](value);
+    });
+  }
   ipcMain.handle('mn:session-read', (event) => {
     trusted(event);
     return preferences.readSession();
@@ -572,6 +603,7 @@ async function start() {
     else quitting = false;
   });
   window.webContents.on('render-process-gone', () => {
+    nativeReplay?.stopActive();
     voicePriority.setActive(false);
     stopRemote();
     clearHotkey();
@@ -581,6 +613,7 @@ async function start() {
   });
   window.webContents.on('did-start-navigation', (_, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
+      nativeReplay?.stopActive?.();
       voicePriority.setActive(false);
       stopRemote();
       cancelCapture();

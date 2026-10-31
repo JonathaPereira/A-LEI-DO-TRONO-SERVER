@@ -1,7 +1,7 @@
 name: Local clips on Windows
 on:
   push:
-    branches: [codex/clipes-locais]
+    branches: [codex/clipes-locais, codex/clipes-nvenc]
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,6 +29,10 @@ jobs:
           npm run format:check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run build:native
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/desktop/prepare-ffmpeg.cjs
           exit $LASTEXITCODE
       - name: Verify capture owners
         run: |
@@ -37,7 +41,7 @@ jobs:
           exit $LASTEXITCODE
       - name: Verify real Electron local capture and call coexistence
         run: |
-          npm test -- --suite desktop --filter 'clip-local-desktop.cjs|application-call-desktop.cjs' 2>&1 | Tee-Object artifacts/windows-local-desktop.log
+          npm test -- --suite desktop --filter 'clip-local-desktop.cjs|clip-native-pipeline.cjs|application-call-desktop.cjs' 2>&1 | Tee-Object artifacts/windows-local-desktop.log
           exit $LASTEXITCODE
       - name: Report failure details
         if: failure()

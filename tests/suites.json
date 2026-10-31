@@ -1,5 +1,6 @@
 {
   "core": [
+    "tests/clip-audio.cjs",
     "tests/clip-local-capture.cjs",
     "tests/android-push-registration.cjs",
     "tests/android-host.cjs",
@@ -253,6 +254,7 @@
     "tests/voice-reception-browser.js"
   ],
   "desktop": [
+    "tests/clip-native-pipeline.cjs",
     "tests/clip-local-desktop.cjs",
     "tests/application-audio-native.cjs",
     "tests/audio-worklets-native.cjs",

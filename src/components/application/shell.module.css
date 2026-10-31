@@ -1641,7 +1641,9 @@
   border-radius: 6px;
   min-width: 0;
 }
-.voicePerson > span:last-child {
+.voiceName {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1650,9 +1652,31 @@
   min-width: 0;
 }
 .member :is(strong, small),
-.voicePerson > span:last-child,
+.voiceName,
 .account > div > span > button strong {
   text-shadow: 0 1px 4px #000;
+}
+.voiceMuteState {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+  color: #dfb1ac;
+  margin-left: auto;
+}
+.voiceMuteState > span {
+  display: inline-flex;
+  position: relative;
+}
+.mutedHeadset::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 16px;
+  height: 1.5px;
+  background: currentColor;
+  transform: rotate(-45deg);
+  box-shadow: 0 0 1px #191919;
 }
 @media (max-width: 760px) {
   .app[data-drawer='true'] > .sidebar {

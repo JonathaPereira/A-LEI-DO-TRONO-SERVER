@@ -12,6 +12,7 @@ export interface ReplaySnapshot {
   readonly shared: boolean;
   readonly seconds: number;
   readonly hasAudio: boolean;
+  readonly encoder?: string;
   readonly message: string;
   readonly messageVersion: number;
 }
@@ -34,6 +35,7 @@ export function createReplayController(options: ReplayOptions) {
   let source: MediaStream | null = null,
     session: ReplaySession | null = null;
   let sourceForced = false;
+  let preparation: AbortController | null = null;
   let settings = preferences.getSnapshot().settings;
   const listeners = new Set<() => void>();
   let state: ReplaySnapshot = Object.freeze({
@@ -59,6 +61,7 @@ export function createReplayController(options: ReplayOptions) {
       shared: source !== null,
       seconds: session?.status?.seconds ?? 0,
       hasAudio: session?.hasAudio ?? false,
+      encoder: session?.encoder,
       ...(message === undefined ? {} : { message, messageVersion: state.messageVersion + 1 }),
     });
     for (const listener of listeners) listener();
@@ -66,6 +69,8 @@ export function createReplayController(options: ReplayOptions) {
   function stopSession(target = session) {
     const current = target === session;
     if (current || !target) {
+      preparation?.abort();
+      preparation = null;
       generation++;
       starting = false;
     }
@@ -85,7 +90,8 @@ export function createReplayController(options: ReplayOptions) {
       id: result.id,
       owner: target.owner,
       name: 'Clipe ' + new Date(createdAt).toLocaleString('pt-BR'),
-      filename: 'Trono_Clipe_' + stamp + '_' + result.id.slice(0, 8) + '.webm',
+      filename:
+        'Trono_Clipe_' + stamp + '_' + result.id.slice(0, 8) + '.' + (target.extension || 'webm'),
       createdAt,
       quality: target.quality,
       fps: target.fps,
@@ -121,6 +127,7 @@ export function createReplayController(options: ReplayOptions) {
     const current = () =>
       !disposed && request === generation && account === owner && source === next;
     starting = true;
+    preparation = new AbortController();
     publish();
     try {
       let prepared: ReplaySession | null = null;
@@ -130,12 +137,21 @@ export function createReplayController(options: ReplayOptions) {
         quality: preferences.getQuality(),
         fps: settings.fps,
         seconds: settings.seconds,
+        audio: settings.audio,
+        encoder: settings.encoder,
+        signal: preparation.signal,
         isCurrent: current,
         onStatus: () => {
           if (prepared && session === prepared && !disposed) publish();
         },
         onClip: retain,
-        onError: (text) => {
+        onError: (text, fatal) => {
+          if (fatal) {
+            if (!current()) return;
+            stopSession();
+            publish(text);
+            return;
+          }
           if (disposed || !prepared || session !== prepared) return;
           if (prepared.stopping) stopSession(prepared);
           publish(text);
@@ -203,7 +219,7 @@ export function createReplayController(options: ReplayOptions) {
       previous = settings;
     settings = next.settings;
     if (disposed || next.owner !== owner) return;
-    const changed = (['quality', 'fps', 'seconds', 'auto'] as const).some(
+    const changed = (['quality', 'fps', 'seconds', 'auto', 'audio', 'encoder'] as const).some(
       (key) => previous[key] !== settings[key],
     );
     if (source && changed) void sharedStarted(source, { force: sourceForced });
@@ -243,11 +259,14 @@ export function createReplayController(options: ReplayOptions) {
             fps: session.fps,
             maxBytes: session.maxBytes,
             hasAudio: session.hasAudio,
+            encoder: session.encoder,
           }
         : null,
     dispose() {
       if (disposed) return;
       disposed = true;
+      preparation?.abort();
+      preparation = null;
       generation++;
       starting = false;
       source = null;
