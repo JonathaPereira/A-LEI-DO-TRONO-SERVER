@@ -190,8 +190,11 @@ Gerenciamento e cargos só aparecem para contas autorizadas.
 Soundboard permanece na chamada e na sidebar. Clipes, Compartilhar PC e gravação
 ficam em Configurações → Recursos, também acessível a partir dos jogos. Navegação não inicia outra captura ou encerra uma chamada.
 A gravação apresenta início/cancelamento/finalização e salva depois de encerrar os
-recursos próprios. Replay segue disponível na web e suspenso no Windows conforme
-a política existente; a interface informa essa diferença. Remote PC conserva
+recursos próprios. Replay na web e no Electron usa somente a tela em transmissão, sem captura automática
+da tela principal. A central de clipes reúne qualidade, atalhos e pasta em seu submenu.
+Os perfis Excelente (1440p/60 FPS) e Econômica (720p/30 FPS) respeitam os limites
+da origem. Desligar a gravação temporária durante a transmissão descarta somente
+o buffer; a chamada, a tela compartilhada e os clipes já criados continuam. Remote PC conserva
 convite e consentimento explícitos para entrada remota.
 
 Esta seção descreve a implementação em QA. Aceite visual do Marco 3 permanece

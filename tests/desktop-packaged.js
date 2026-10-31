@@ -204,7 +204,8 @@ test(
         page,
         port: 10846,
       });
-      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
+      assert.equal(await page.evaluate(() => window.TronoClips.active), false);
       await page.evaluate(() => window.TronoCallSettings.open('capture'));
       await expect(page.getByRole('dialog', { name: 'Voz e vídeo', exact: true })).toBeVisible();
       await expect(page.locator('#screenFormatSelect')).toBeVisible();

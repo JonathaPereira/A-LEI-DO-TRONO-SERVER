@@ -561,3 +561,18 @@ check(
     gate.resolve();
   },
 );
+
+check('ICE and policy requests start together but publication waits for both', async (t) => {
+  const h = await setup(t), ice = deferred(), policy = deferred();
+  h.ice(() => ice.promise);
+  h.sync(() => policy.promise);
+  const pending = h.transport.connect(h.operation());
+  await tick();
+  assert.deepEqual(h.events, ['ice', 'status']);
+  policy.resolve(status());
+  await tick();
+  assert(!h.events.includes('publish:audio'));
+  ice.resolve();
+  await pending;
+  assert(h.events.includes('publish:audio'));
+});

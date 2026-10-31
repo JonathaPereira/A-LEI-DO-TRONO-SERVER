@@ -22,24 +22,14 @@ export function ClipPreferenceFields({
     'function';
   return (
     <>
-      <label className="clip-audio">
-        <input
-          id="clipAuto"
-          type="checkbox"
-          checked={settings.auto}
-          onChange={(event) => preferences.setSetting('auto', event.target.checked)}
-        />{' '}
-        Preparar replay automaticamente ao compartilhar a tela
-      </label>
-      <label id="clipDesktopAutoLabel" className="clip-audio" hidden>
-        <input
-          id="clipDesktopAuto"
-          type="checkbox"
-          checked={settings.desktopAuto}
-          onChange={(event) => preferences.setSetting('desktopAuto', event.target.checked)}
-        />{' '}
-        Preparar a tela principal ao abrir o aplicativo
-      </label>
+      <div role="group" aria-label="Perfis de qualidade dos clipes">
+        <button type="button" onClick={() => preferences.setPreset('excellent')}>
+          Excelente · 1440p / 60 FPS
+        </button>
+        <button type="button" onClick={() => preferences.setPreset('economic')}>
+          Econômica · 720p / 30 FPS
+        </button>
+      </div>
       <div className="clips-settings">
         <label>
           Qualidade do arquivo

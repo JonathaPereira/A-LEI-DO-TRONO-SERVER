@@ -86,8 +86,9 @@ test(
           window.TronoDesktop.notify({ key: 'invalid', title: 'Test', body: 'No target' }),
         ),
       );
-      phase = 'suspended replay';
-      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+      phase = 'replay waits for a shared source';
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
+      assert.equal(await page.evaluate(() => window.TronoClips.active), false);
       assert.deepEqual(await page.evaluate(() => window.TronoDesktop.prepareReplay()), {
         active: false,
         suspended: true,
@@ -110,7 +111,8 @@ test(
         )
         .toBe(false);
       phase = 'navigation';
-      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
+      assert.equal(await page.evaluate(() => window.TronoClips.active), false);
       await page.evaluate(() => window.TronoCallSettings.open('privacy'));
       await expect(page.locator('dialog[data-topic]')).toBeVisible();
       await page.locator('[data-settings-tab="privacy"]').click();
@@ -124,15 +126,20 @@ test(
         await page.evaluate(async () => (await fetch('/missing-desktop-file')).status),
         404,
       );
-      phase = 'disabled global shortcut';
+      phase = 'global clip shortcut registration and release';
       const registered = await page.evaluate(() =>
         window.TronoDesktop.configureClips({
           active: true,
           shortcut: { ctrl: true, alt: true, code: 'F9' },
         }),
       );
-      assert.equal(registered.active, false);
-      assert.equal(registered.suspended, true);
+      assert.equal(registered.active, true);
+      assert.equal(registered.globalActive, true);
+      assert.equal(
+        await app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered('Control+Alt+F9')),
+        true,
+      );
+      await page.evaluate(() => window.TronoDesktop.configureClips({ active: false }));
       assert.equal(
         await app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered('Control+Alt+F9')),
         false,

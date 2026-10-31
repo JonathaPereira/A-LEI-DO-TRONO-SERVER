@@ -171,6 +171,13 @@ test(
           await prefs();
           await expect(page.locator('#clipQuality')).toHaveValue('balanced');
           await expect(page.locator('#clipFps')).toHaveValue('60');
+          await page.getByRole('button', { name: 'Econômica · 720p / 30 FPS', exact: true }).click();
+          await expect(page.locator('#clipQuality')).toHaveValue('light');
+          await expect(page.locator('#clipFps')).toHaveValue('30');
+          await page.getByRole('button', { name: 'Excelente · 1440p / 60 FPS', exact: true }).click();
+          await expect(page.locator('#clipQuality')).toHaveValue('high');
+          await expect(page.locator('#clipFps')).toHaveValue('60');
+          await page.locator('#clipQuality').selectOption('balanced');
           await page.locator('#clipSeconds').selectOption('15');
           await page.locator('#clipShortcut').click();
           await page.keyboard.press('F5');
@@ -253,7 +260,7 @@ test(
             data.user.id,
           );
           for (const row of rows) {
-            assert(row.duration >= 14 && row.duration <= 27);
+            assert(row.duration >= 14 && row.duration <= 27, JSON.stringify({duration: row.duration, fps: row.fps, quality: row.quality}));
             assert.equal(row.quality, '1920×1080');
             assert.equal(row.fps, 60);
           }

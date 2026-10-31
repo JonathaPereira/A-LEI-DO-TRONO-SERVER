@@ -1,3 +1,4 @@
+import type { ClipShortcut } from '../../types/clips';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
@@ -11,7 +12,13 @@ type BridgePort = Pick<
   'configure' | 'saved' | 'disconnect' | 'connected' | 'globalActive'
 >;
 interface Runtime extends Window {
-  TronoDesktop?: unknown;
+  TronoDesktop?: {
+    configureClips?(value: {
+      shortcut?: ClipShortcut;
+      active: boolean;
+    }): Promise<{ globalActive?: boolean }>;
+    onClip?(listener: () => void): () => void;
+  };
   TronoDesktopClips?: BridgePort;
   TronoClipDesktop?: BridgePort;
   TronoClips?: { clip(): void };
@@ -39,7 +46,47 @@ function readCode(target: Window) {
 }
 export function initializeClipDesktop(target: Window): DesktopClipBridge | null {
   const runtime = target as Runtime;
-  if (runtime.TronoDesktop) return null;
+  if (runtime.TronoDesktop) {
+    if (runtime.TronoClipDesktop) return null;
+    const desktop = runtime.TronoDesktop;
+    let generation = 0,
+      globalActive = false,
+      last = '';
+    const configure = (value: { shortcut?: ClipShortcut; active: boolean }) => {
+      if (!desktop.configureClips) return;
+      const key = JSON.stringify(value);
+      if (key === last) return;
+      last = key;
+      const request = ++generation;
+      globalActive = false;
+      void desktop
+        .configureClips(value)
+        .then((result) => {
+          if (request === generation) globalActive = result.globalActive === true;
+        })
+        .catch(() => {
+          if (request === generation) last = '';
+        });
+    };
+    const remove = desktop.onClip?.(() => runtime.TronoClips?.clip()) ?? (() => {});
+    const disconnect = () => {
+      remove();
+      configure({ active: false });
+    };
+    runtime.TronoClipDesktop = {
+      configure,
+      saved() {},
+      disconnect,
+      get connected() {
+        return true;
+      },
+      get globalActive() {
+        return globalActive;
+      },
+    };
+    target.addEventListener('pagehide', disconnect, { once: true });
+    return null;
+  }
   if (runtime.TronoClipDesktop) return null;
   if (runtime.TronoDesktopClips) {
     runtime.TronoClipDesktop = runtime.TronoDesktopClips;

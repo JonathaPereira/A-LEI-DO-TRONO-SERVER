@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('TronoDesktop', {
   getActivityState: () => ipcRenderer.invoke('mn:activity-state'),
   configureActivity: (config) => ipcRenderer.invoke('mn:activity-configure', config),
   onActivity: (fn) => listen('mn:activity', fn),
-  clipsSuspended: true,
+  clipsSuspended: false,
   readSession: () => ipcRenderer.invoke('mn:session-read'),
   saveSession: (value) => ipcRenderer.invoke('mn:session-save', value),
   getMediaPermissions: () => ipcRenderer.invoke('mn:media-permissions'),

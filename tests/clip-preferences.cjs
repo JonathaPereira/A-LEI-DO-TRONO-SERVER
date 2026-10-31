@@ -203,3 +203,15 @@ test('account change or disposal invalidates a pending floating-window request w
     controls.dispose();
   }
 });
+test('economic and excellent presets set encoding quality and FPS together without changing duration or shortcut', () => {
+  const f = fixture();
+  f.preferences.setSetting('seconds', 60);
+  f.preferences.setPreset('economic');
+  assert.equal(f.preferences.getSnapshot().settings.quality, 'light');
+  assert.equal(f.preferences.getSnapshot().settings.fps, 30);
+  f.preferences.setPreset('excellent');
+  assert.equal(f.preferences.getSnapshot().settings.quality, 'high');
+  assert.equal(f.preferences.getSnapshot().settings.fps, 60);
+  assert.equal(f.preferences.getSnapshot().settings.seconds, 60);
+  assert.equal(f.preferences.shortcutLabel(), 'Ctrl + Shift + X');
+});

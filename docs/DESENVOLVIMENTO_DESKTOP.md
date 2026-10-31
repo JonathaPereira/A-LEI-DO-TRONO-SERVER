@@ -111,6 +111,24 @@ animadas: verifica frames WebRTC, peers/players, fullscreen nativo e descarte
 atrasado. desktop-browser usa Chromium e bridge Windows simulada; pertence à
 suíte browser e não comprova IPC/hardware real.
 
+### Entrada em chamadas: análise e redução de espera
+
+Inspeção em 31/10/2026: `voice/call-lifecycle.ts` aguarda preparação de rede,
+aquisição/processamento do microfone e `onJoined` antes de conectar o transporte.
+`socket/client.ts` autentica a identidade antes de `voice-prepare` (deadline de
+15 s). No caminho SFU, `voice/transport.ts` consulta ICE (request de até 8 s) e
+status (até 8 s) em paralelo, aguardando ambos antes de publicar. Status ausente
+ainda tem nova tentativa após 500 ms. Depois aguarda publicação
+do áudio e assinaturas. `voice/sfu-session.ts` espera coleta ICE até 4,2 s e
+conexão do publicador até 14 s; falhas podem levar à recuperação/fallback P2P.
+São limites e dependências do código, não tempos medidos nem esperas obrigatórias.
+Sem chamada real instrumentada não há evidência para atribuir a demora a uma
+etapa específica. O replay só começa após compartilhamento de tela e não é
+pré-requisito de entrada. A otimização autorizada apenas sobrepõe as consultas
+independentes de ICE/status: elimina a soma de duas esperas, mantendo autenticação,
+cancelamento, publicação condicionada às respostas e fallback existentes. Não
+altera o P2P nem reduz deadlines para aparentar conexão mais rápida.
+
 ## Operações especiais
 
 desktop:build:native exige MSVC, Windows SDK e CMake; Remote Input pode exigir

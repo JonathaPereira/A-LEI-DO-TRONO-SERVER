@@ -791,10 +791,19 @@ async function start() {
       if (capture === pending) cancelCapture();
     }
   });
-  ipcMain.handle('mn:clips-configure', (event) => {
+  ipcMain.handle('mn:clips-configure', (event, configuration) => {
     trusted(event);
-    clearHotkey();
-    return { active: false, suspended: true };
+    if (configuration?.active !== true) {
+      clearHotkey();
+      return { active: false, globalActive: false };
+    }
+    const next = accelerator(configuration.shortcut);
+    if (next !== hotkey) {
+      clearHotkey();
+      if (globalShortcut.register(next, clip)) hotkey = next;
+    }
+    clipActive = true;
+    return { active: true, globalActive: hotkey === next };
   });
   ipcMain.handle('mn:capture-select', async (event, choice) => {
     trusted(event);

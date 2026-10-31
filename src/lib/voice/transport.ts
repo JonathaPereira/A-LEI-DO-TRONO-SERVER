@@ -154,9 +154,13 @@ export function createVoiceTransport(options: TransportOptions) {
     job.promise = (async () => {
       try {
         ensure();
-        await wait(options.realtime.refreshIce());
+        // Independent configuration requests share the same call lifetime.
+        // Keep publication gated on both without paying two sequential round trips.
+        const [, initialStatus] = await wait(
+          Promise.all([options.realtime.refreshIce(), options.realtime.sync()]),
+        );
         ensure();
-        let status = await wait(options.realtime.sync());
+        let status = initialStatus;
         ensure();
         if (!status) {
           options.onStatus('Conferindo o servidor de mídia novamente…', 'warn');

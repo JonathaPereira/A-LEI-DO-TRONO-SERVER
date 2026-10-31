@@ -287,3 +287,19 @@ test('dispose invalidates pending work and detaches preference subscriptions wit
   assert.equal(f.created.length, 0);
   assert.equal(f.controller.getSnapshot().preparing, false);
 });
+test('turning temporary clips off during sharing discards only replay and enabling them reuses the same source', async () => {
+  const f = fixture(), source = borrowed('shared-screen');
+  await f.controller.setOwner('alice');
+  await f.controller.sharedStarted(source);
+  const first = f.created[0];
+  f.preferences.setSetting('auto', false);
+  assert.equal(first.stops, 1);
+  assert.equal(f.controller.getSnapshot().shared, true);
+  assert.equal(f.controller.getSnapshot().active, false);
+  f.preferences.setSetting('auto', true);
+  await tick();
+  assert.equal(f.created.length, 2);
+  assert.equal(f.created[1].source, source);
+  assert.equal(f.controller.getSnapshot().active, true);
+  f.controller.dispose();
+});

@@ -11,7 +11,7 @@ export function initializeClipLibraryView(target: Window) {
   const runtime = target as Runtime,
     client = runtime.TronoClipLibrary,
     host = target.document.getElementById('clipList');
-  if (runtime.TronoDesktop || !client || !host || installed.has(target)) return;
+  if (!client || !host || installed.has(target)) return;
   installed.add(target);
   flushSync(() => createRoot(host).render(<ClipLibraryCards client={client} />));
 }

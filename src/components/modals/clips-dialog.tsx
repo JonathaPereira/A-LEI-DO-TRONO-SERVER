@@ -29,6 +29,10 @@ export function ClipsDialog() {
             Clipar últimos 30 s
           </button>
         </div>
+        <label className="clip-audio">
+          <input id="clipAuto" type="checkbox" defaultChecked /> Gravação temporária de clipes
+          durante a transmissão
+        </label>
         <nav className={'clips-tabs'} role={'tablist'} aria-label={'Central de clipes'}>
           <button
             type={'button'}
@@ -47,7 +51,7 @@ export function ClipsDialog() {
             aria-controls={'clipsPreferences'}
             aria-selected={'false'}
           >
-            Preferências
+            Qualidade, atalhos e pasta
           </button>
         </nav>
         <p id={'clipsStatus'} className={'clips-status'} role={'status'} aria-live={'polite'}>

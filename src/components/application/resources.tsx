@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { AppIcon as Icon } from './icons';
-import { useServices, type ApplicationServices } from './services';
+import { useServices } from './services';
 import { initializeSoundboard } from '../soundboard/runtime';
 import { initializeRecorder } from '../recording/runtime';
 import { initializeRemotePc } from '../../lib/voice/remote-pc';
@@ -15,9 +15,9 @@ import { RemotePcDialog } from '../modals/remote-pc-dialog';
 import styles from './resources.module.css';
 export function ResourceDock() {
   const runtime = useServices();
-  return runtime ? <MountedDock runtime={runtime} /> : null;
+  return runtime ? <MountedDock /> : null;
 }
-function MountedDock({ runtime }: { runtime: ApplicationServices }) {
+function MountedDock() {
   return (
     <div className={styles.dock} aria-label="Recursos da Corte" role="group">
       <span id="recordMatchHost" />
@@ -30,16 +30,7 @@ function MountedDock({ runtime }: { runtime: ApplicationServices }) {
         <Icon name="music" /> Efeitos sonoros
       </button>
 
-      <button
-        type="button"
-        data-open-clips
-        title="Seus clipes"
-        aria-label="Seus clipes"
-        onClick={() => {
-          if (runtime?.TronoDesktop)
-            (document.getElementById('clipsDialog') as HTMLDialogElement)?.showModal();
-        }}
-      >
+      <button type="button" data-open-clips title="Seus clipes" aria-label="Seus clipes">
         <Icon name="clips" /> Seus clipes
       </button>
       <button id="remotePcBtn" type="button" title="Compartilhar PC" aria-label="Compartilhar PC">
@@ -72,13 +63,11 @@ export function AdvancedResources() {
       initializeSoundboard(window, { ready: true });
       initializeRecorder(window);
       initializeRemotePc(window, { ready: true });
-      if (!runtime.TronoDesktop) {
-        initializeClipStore(window);
-        initializeClipDesktop(window);
-        initializeClipPreferencesView(window);
-        initializeClipLibraryView(window);
-        initializeClips(window, { ready: true });
-      }
+      initializeClipStore(window);
+      initializeClipDesktop(window);
+      initializeClipPreferencesView(window);
+      initializeClipLibraryView(window);
+      initializeClips(window, { ready: true });
     });
     return () => {
       canceled = true;
@@ -87,26 +76,7 @@ export function AdvancedResources() {
   return (
     <div className={styles.surface}>
       <div id="soundboardRoot" />
-      {runtime?.TronoDesktop ? (
-        <dialog closedby="any" id="clipsDialog" aria-label="Seus clipes">
-          <header>
-            <h2>Seus clipes</h2>
-            <button
-              type="button"
-              aria-label="Fechar central de clipes"
-              onClick={() => (document.getElementById('clipsDialog') as HTMLDialogElement).close()}
-            >
-              <Icon name="close" />
-            </button>
-          </header>
-          <p>
-            O replay automático está suspenso no aplicativo Windows. Seus clipes do navegador
-            continuam disponíveis ao abrir a versão web.
-          </p>
-        </dialog>
-      ) : (
-        <ClipsDialog />
-      )}
+      <ClipsDialog />
       <RemotePcDialog />
       <div id="recordingNoticeHost" className={styles.recording} />
     </div>

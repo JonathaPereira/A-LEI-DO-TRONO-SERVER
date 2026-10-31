@@ -8,7 +8,7 @@ const express = require('express'),
   { startFixture } = require('./auth-fixture');
 const { installSyntheticCallMedia } = require('./synthetic-call-media.cjs');
 test(
-  'desktop compact settings, remembered login and suspended replay preserve calls',
+  'desktop compact settings, remembered login and shared-screen replay preserve calls',
   { timeout: 150000 },
   async (t) => {
     const host = express();
@@ -96,7 +96,7 @@ test(
           };
           window.TronoDesktop = {
             version: '0.2.1',
-            clipsSuspended: true,
+            clipsSuspended: false,
             readSession: () => window.__readRemembered(),
             saveSession: (value) => window.__saveRemembered(value),
             getMediaPermissions: async () => window.__native.permissions,
@@ -107,12 +107,12 @@ test(
               window.__native.replayCalls++;
               return { suspended: true, active: false };
             },
-            onClip: (fn) => (window.__native.clip = fn),
+            onClip: (fn) => { window.__native.clip = fn; return () => { window.__native.clip = null; }; },
             onCapture: (fn) => (window.__native.capture = fn),
             onCaptureCancel: (fn) => (window.__native.cancel = fn),
             configureClips: async (value) => {
               window.__native.configurations.push(value);
-              return { active: false, suspended: true };
+              return { active: value.active, globalActive: value.active };
             },
             selectCapture: async (value) => {
               window.__native.captureSelections.push(value);
@@ -239,12 +239,12 @@ test(
       }
       await open();
       await step(
-        'suspended replay never allocates resources from old automatic preferences',
+        'replay is available on desktop but never captures a screen until sharing begins',
         async () => {
           await page.evaluate(() => window.TronoCallSettings.open('resources'));
           await expect(page.getByRole('region', { name: 'Recursos', exact: true })).toBeVisible();
-          assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
-          assert.equal(await page.evaluate(() => typeof window.TronoClipControls), 'undefined');
+          assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
+          assert.equal(await page.evaluate(() => typeof window.TronoClipControls), 'object');
           assert.deepEqual(
             await page.evaluate(() => ({
               recorders: window.__native.recorders,
@@ -254,6 +254,34 @@ test(
             })),
             { recorders: 0, workers: 0, replay: 0, captures: 0 },
           );
+          await page.evaluate(async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640; canvas.height = 360;
+            window.__clipCanvas = canvas;
+            window.__clipPaint = setInterval(() => {
+              canvas.getContext('2d').fillStyle = `hsl(${performance.now() % 360} 50% 50%)`;
+              canvas.getContext('2d').fillRect(0, 0, 640, 360);
+            }, 33);
+            window.__borrowedScreen = canvas.captureStream(30);
+            await window.TronoClips.sharedStarted(window.__borrowedScreen);
+          });
+          await expect.poll(() => page.evaluate(() => ({ready: window.TronoClips.replayStatus?.ready, message: document.getElementById('clipsStatus').textContent})), {timeout: 15000}).toMatchObject({ready: true});
+          await expect.poll(() => page.evaluate(() => window.__native.configurations.at(-1)?.active)).toBe(true);
+          await page.evaluate(() => window.__native.clip());
+          await expect.poll(() => page.evaluate(() => window.TronoClipLibrary.getSnapshot().pendingCount)).toBe(1);
+          await page.getByRole('button', { name: 'Seus clipes', exact: true }).click();
+          await page.locator('#clipAuto').uncheck();
+          await expect.poll(() => page.evaluate(() => window.TronoClips.active)).toBe(false);
+          assert.equal(await page.evaluate(() => window.__borrowedScreen.getVideoTracks()[0].readyState), 'live');
+          assert.equal(await page.evaluate(() => window.TronoClipLibrary.getSnapshot().pendingCount), 1);
+          await page.locator('#clipAuto').check();
+          await expect.poll(() => page.evaluate(() => window.TronoClips.active)).toBe(true);
+          await page.evaluate(() => {
+            clearInterval(window.__clipPaint);
+            window.TronoClips.sharedStopped(window.__borrowedScreen);
+            window.__borrowedScreen.getTracks().forEach(track => track.stop());
+          });
+          await page.locator('#clipClose').click();
           await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
         },
       );

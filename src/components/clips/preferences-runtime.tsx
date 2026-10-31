@@ -14,7 +14,7 @@ export function initializeClipPreferencesView(target: Window) {
     preferences = runtime.TronoClipPreferences,
     library = runtime.TronoClipLibrary,
     host = target.document.getElementById('clipPreferencesHost');
-  if (runtime.TronoDesktop || installed.has(target) || !preferences || !library || !host) return;
+  if (installed.has(target) || !preferences || !library || !host) return;
   installed.add(target);
   flushSync(() =>
     createRoot(host).render(<ClipPreferenceFields preferences={preferences} library={library} />),

@@ -275,7 +275,10 @@ montados na aba Recursos das configurações, mesmo quando ela está fechada.
 Nos jogos, um acesso abre essa aba. Não há transferência de DOM entre sidebar
 e jogos. Sair de uma tela não encerra captura.
 Gravação possui sua captura; replay toma emprestada a transmissão e possui seus
-clones. O Electron conserva a suspensão de replay definida na ponte nativa.
+clones. Web e Electron usam o mesmo replay vinculado à fonte compartilhada.
+No Electron, a ponte nativa registra o atalho global somente enquanto o replay
+está pronto; a captura independente da tela principal continua desativada.
+Preferências controlam qualidade/FPS e habilitação do buffer sem encerrar a fonte.
 
 `channels/management-runtime` permite preparar os donos sem montar a antiga
 apresentação. `application/community-settings` apresenta canais, cargos e anexos

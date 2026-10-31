@@ -31,13 +31,12 @@ interface Runtime extends Window {
   TronoClips?: ClipsClient;
 }
 const installed = new WeakMap<Window, ClipsClient>();
-/** Preserve the web-only replay policy. Desktop never installs a replay coordinator. */
+/** Reuses only the shared source; never captures a separate desktop replay. */
 export function initializeClips(
   target: Window,
   { ready: alreadyReady = false } = {},
 ): ClipsClient | null {
   const runtime = target as Runtime;
-  if (runtime.TronoDesktop) return null;
   const previous = installed.get(target);
   if (previous) return previous;
   const preferences = runtime.TronoClipPreferences,

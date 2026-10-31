@@ -1,6 +1,6 @@
 # Reconstrução do frontend
 
-Checkpoint atualizado em 28/10/2026.
+Checkpoint atualizado em 31/10/2026.
 
 Fonte única do plano e checkpoint. Produto/REA:
 [UX_COMUNICACAO.md](UX_COMUNICACAO.md); donos:
@@ -57,7 +57,7 @@ out e .next são saídas.
 | Elementos compartilhados dos jogos                    | Comunicação flutuante, avisos de turno/influência, cinemática, resultado, tooltips e controles ficam protegidos, mesmo fora das três pastas.                                              |
 | Estilos compartilhados                                | Dependências extraídas para games e delimitadas por gameSurface, incluindo overlays. Shell usa CSS Modules próprios. Não apagar regras necessárias aos jogos por não aparecerem no shell. |
 | Conta/rede/chat/arquivos/perfis/mídia                 | Donos existentes observados por snapshots; views novas delegam comandos.                                                                                                                  |
-| Clipes/gravação/soundboard/Remote PC                  | Mesmos armazenamento, autorização e transportes; apresentação reintegrada. Replay Windows continua suspenso conforme capacidade existente.                                                |
+| Clipes/gravação/soundboard/Remote PC                  | Mesmos armazenamento, autorização e transportes; apresentação reintegrada. Replay da tela transmitida reativado no Electron; captura independente da tela principal permanece desativada.                                                |
 | Backend/Electron/tipos compartilhados                 | Serviços, HTTP/WS/IPC, autorização e persistência preservados. Helpers exigem ambiente nativo.                                                                                            |
 | Apresentação externa antiga                           | 30 views/posicionadores finais retirados após revisão individual, além dos cortes anteriores. Destinos registrados no Git; nenhuma árvore legada paralela.                                   |
 
@@ -681,3 +681,36 @@ Hardware, áudio físico, Bluetooth, câmera e tela bloqueada prolongada continu
 sem aceite. Captura nativa da tela/áudio de outros apps, host de Remote PC e push
 de canais não foram portados; web/Windows conservam seus recursos. As execuções
 não significam paridade nativa completa nem aceite visual do usuário.
+
+
+Retomada de clipes em 31/10/2026, na contribuição `codex/clipes-tela`: replay do
+Electron reativado apenas sobre a fonte compartilhada, com atalho global ativo
+quando pronto. Central com submenu de qualidade/atalhos/pasta, perfis Excelente
+e Econômica e controle do buffer temporário sem encerrar a transmissão nem
+apagar clipes já criados. Versões e publicação permanecem intactas.
+Tipos, formato e build passaram; 43 testes core de clipes passaram. Os dois
+arquivos browser afetados passaram em duas rodadas consecutivas, com 16 testes
+por rodada e nenhum skip. A primeira rodada teve oscilação na duração do trecho
+e a nova fixture desktop precisou de frames animados; as duas seguintes passaram
+sem relaxar a asserção de duração. Chromium usou mídia sintética e ponte Electron
+simulada em Linux; atalho/captura/áudio no Windows real e aceite visual continuam
+sem validação nesta retomada. Análise estática da demora nas chamadas registrada
+no guia de desenvolvimento, sem alterar seu fluxo nem atribuir tempos medidos.
+
+
+Publicação de front/backend autorizada em 31/10/2026, com deploy automático do
+Render confirmado pelo usuário ao atualizar main. Otimização adicional de SFU:
+consultas de ICE e status iniciam em paralelo; publicação continua aguardando as
+duas. Novo teste reproduziu a espera sequencial antes da mudança. Os 97 testes
+focados de transporte/realtime/clipes passaram, assim como tipos/formato/build.
+Cenário SFU e continuidade básica de chamada passaram no Chromium; a malha de dez
+clientes P2P falhou por vídeo remoto sem frames no prazo, no caminho P2P que não
+foi alterado. Não equivale a validação real de latência. Testes nativos Windows
+foram atualizados para o replay disponível e o registro/desregistro do atalho.
+Versões preservadas; a publicação deve conservar os gates Windows existentes.
+
+A seleção focada de continuidade básica/SFU passou em duas rodadas consecutivas
+no mesmo build (dois testes por rodada, sem skips). Main remota conferida antes
+do envio: `2fd2c63`. O push a main solicita os deploys automáticos confirmados;
+acompanhamento da API GitHub e verificação pública dependem da liberação de rede
+salva no rascunho do ambiente. Envio do commit não comprova publicação concluída.

@@ -129,6 +129,16 @@ export function createClipPreferences(storage: () => Pick<Storage, 'getItem' | '
       if (!valid || state.settings[key] === value) return;
       save(readClipSettings({ ...state.settings, [key]: value }));
     },
+    setPreset(preset: 'economic' | 'excellent') {
+      if (disposed) return;
+      save(
+        readClipSettings({
+          ...state.settings,
+          quality: preset === 'excellent' ? 'high' : 'light',
+          fps: preset === 'excellent' ? 60 : 30,
+        }),
+      );
+    },
     beginShortcut() {
       publish({ choosingShortcut: true }, 'Pressione o novo atalho. Esc cancela.');
     },

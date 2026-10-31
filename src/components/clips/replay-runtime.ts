@@ -42,6 +42,7 @@ export function createReplayView(
     const state = replay.getSnapshot(),
       settings = preferences.getSnapshot().settings,
       count = library.getSnapshot().pendingCount;
+    element<HTMLInputElement>('clipAuto').checked = settings.auto;
     const available = Math.min(settings.seconds, Math.max(1, Math.floor(state.seconds)));
     const now = element<HTMLButtonElement>('clipNow'),
       toolbar = element<HTMLButtonElement>('clipToolbarNow');
@@ -140,6 +141,9 @@ export function createReplayView(
         .querySelectorAll('[data-open-clips]')
         .forEach((button) => listen(button, 'click', () => open()));
       listen(element('clipClose'), 'click', () => dialog.close());
+      listen(element('clipAuto'), 'change', () =>
+        preferences.setSetting('auto', element<HTMLInputElement>('clipAuto').checked),
+      );
       listen(element('clipNow'), 'click', replay.clip);
       listen(element('clipToolbarNow'), 'click', replay.clip);
       listen(element('clipFloating'), 'click', () => void controls.openFloating());
