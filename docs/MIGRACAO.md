@@ -775,7 +775,9 @@ local também verificou captura, prévia e desligamento. Duas falhas no próprio
 harness foram diagnosticadas: reload antes da navegação inicial e callback de
 timeout tentando acessar o Electron já fechado após o término do teste. O teste
 agora espera a navegação inicial e encerra seu callback junto com o recurso, sem
-remover verificações funcionais. A repetição final precisa concluir com exit 0.
+remover verificações funcionais. A repetição final no commit `3803e30` concluiu
+com sucesso no run `41243483513`: tipos, formato, build, contratos focados e os
+dois cenários no Electron real do Windows. Não houve publicação neste workflow.
 Diagnóstico de CI preserva também erros assíncronos anteriores à falha do arquivo.
 Equipamento alvo informado: 5700X3D/RTX 3060 Ti/32 GB/Windows 11; análise recomenda
 NVENC H.264 para uma futura implementação nativa, ainda não habilitada.
