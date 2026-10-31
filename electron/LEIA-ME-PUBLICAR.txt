@@ -17,6 +17,7 @@ extraia numa pasta nova e abra um terminal dentro de frontend/. Execute:
 
 O instalador atual já acompanha frontend/downloads/.
 Preserve latest.yml e seu SHA-512. Não misture arquivos de entregas diferentes.
-Contas e preferências são mantidas. Clipes automáticos continuam suspensos.
+Contas e preferências são mantidas. Clipes usam a tela em transmissão; desligar
+o buffer temporário preserva a chamada, a transmissão e os clipes já criados.
 Consulte ATUALIZACOES.md e PUBLICAR_SURGE_LEVE.md, incluídos na raiz do ZIP.
 Nexus continua hospedado no itch.io; não envie ZIP/PCK/WASM dele ao Surge.

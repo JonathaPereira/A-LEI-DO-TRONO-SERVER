@@ -731,3 +731,12 @@ Tipos, formato e build passaram após a correção do relatório. Nova execuçã
 Windows solicitada pela contribuição `codex/desktop-clipes-diagnostico`, com
 os gates existentes preservados, para obter a falha exata ou validar o pacote.
 Nenhuma causa de erro nativo é presumida antes desse resultado.
+
+
+Windows 41230776205 identificou a falha exata: `application-call-desktop.cjs`
+ainda exigia o texto "suspenso" na central de clipes, embora o replay nativo
+estivesse pronto com três segundos de vídeo. O contrato obsoleto foi substituído
+por criação/prévia de clipe, pausa/retomada do buffer, preservação da fonte nativa
+e do microfone e retenção do clipe criado. Guia incluído na distribuição alinhado
+ao replay reativado. O aplicativo não foi alterado para satisfazer o texto antigo.
+Validação nativa da correção ainda depende da nova execução Windows.

@@ -261,7 +261,27 @@ test(
       await page.keyboard.press('Escape');
       await page.evaluate(() => window.TronoCallSettings.open('resources'));
       await page.getByRole('button', { name: 'Seus clipes', exact: true }).click();
-      await expect(page.locator('#clipsDialog')).toContainText('suspenso');
+      const clips = page.locator('#clipsDialog');
+      await expect(clips).toBeVisible();
+      await expect(clips.locator('#clipNow')).toBeEnabled({ timeout: 15000 });
+      await expect.poll(() => page.evaluate(() => window.TronoClips.replayStatus?.seconds), { timeout: 15000 }).toBeGreaterThanOrEqual(1);
+      await clips.locator('#clipNow').click();
+      await expect(clips.locator('.clip-card')).toHaveCount(1);
+      await clips.getByRole('button', { name: 'Prévia', exact: true }).click();
+      await expect.poll(() => clips.locator('video').evaluate(video => video.videoWidth)).toBeGreaterThan(0);
+      await clips.locator('#clipAuto').uncheck();
+      await expect.poll(() => page.evaluate(() => window.TronoClips.active)).toBe(false);
+      assert.equal(await page.evaluate(() =>
+        window.TronoSocial.voiceJoined &&
+        window.TronoSocial.getLocalAudioTrack() === window.__nativeMic &&
+        window.__nativeMic.readyState === 'live' &&
+        window.TronoSocial.getLocalDisplayStream() === window.__nativeDisplay &&
+        window.__nativeDisplay.getTracks().every(track => track.readyState === 'live')
+      ), true, 'pausing replay must preserve the native screen source and microphone');
+      await expect(clips.locator('.clip-card')).toHaveCount(1);
+      await clips.locator('#clipAuto').check();
+      await expect.poll(() => page.evaluate(() => window.TronoClips.active)).toBe(true);
+      await expect(picker).toBeHidden();
       await page.keyboard.press('Escape');
       assert.equal(
         await page.evaluate(
