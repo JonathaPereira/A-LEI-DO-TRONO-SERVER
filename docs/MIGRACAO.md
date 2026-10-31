@@ -796,3 +796,14 @@ no navegador em desktop e celular. Metadado do frontend, manifesto, lockfile e
 cabeçalho do guia conferidos na mesma versão. Testes nativos da contribuição
 já aprovados no run `41243483513`; o pacote final passa novamente pelos gates
 de distribuição antes de ser publicado automaticamente.
+
+Entrega 1.0.3 concluída: main em `e9ca715`, workflow Windows `41245224065` com
+validação/empacotamento e publicação Surge aprovados. A etapa de publicação
+verificou hashes dos pacotes, manifesto do atualizador e metadado da versão no
+site. EXE em `https://a-lei-do-trono.surge.sh/downloads/MN-Trono-1.0.3-Windows.exe`;
+EXE e ZIP do frontend da mesma entrega na release privada
+`https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/untagged-3f933f0cd44909da22dc`.
+Registro final mantido na contribuição para não disparar outra publicação da
+mesma versão. NVENC continua pendente; nenhum SQL ou código do backend mudou.
+O workflow Android automático `41245224031` falhou separadamente, com mensagem
+pública genérica de exit 1; não se afirma entrega Android nesta publicação.
