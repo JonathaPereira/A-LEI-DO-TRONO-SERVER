@@ -740,3 +740,17 @@ por criação/prévia de clipe, pausa/retomada do buffer, preservação da fonte
 e do microfone e retenção do clipe criado. Guia incluído na distribuição alinhado
 ao replay reativado. O aplicativo não foi alterado para satisfazer o texto antigo.
 Validação nativa da correção ainda depende da nova execução Windows.
+
+
+A entrega `ed483fc` passou Windows/instalador/publicação no workflow 41231959543.
+Em seguida, o usuário autorizou a versão 1.0.2 para diferenciar o pacote novo da
+1.0.1 já instalada. Contribuição `codex/release-1.0.2`: versão do Electron e os
+dois campos correspondentes do lockfile atualizados, com guias de distribuição
+alinhados. Sem alteração de comportamento, dependências ou versão do backend.
+A publicação 1.0.2 depende dos gates do mesmo fluxo de entrega existente.
+
+Na preparação da 1.0.2 passaram tipos, formatação e build; metadado do frontend,
+manifesto do pacote e lockfile conferidos em 1.0.2. Os 21 testes existentes de
+empacotamento/relatório/atualizador passaram após instalar as dependências do
+Electron sem seus scripts de runtime. Nenhum teste ou código de comportamento
+foi alterado para esta numeração.

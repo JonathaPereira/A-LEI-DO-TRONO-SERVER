@@ -1,8 +1,16 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.1** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.2** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.2
+
+Reidentifica a entrega de clipes para que instalações 1.0.1 encontrem uma versão
+superior no atualizador. Preserva os clipes da tela transmitida, os perfis de
+qualidade e o controle do buffer temporário já presentes no pacote anterior.
+Somente a versão de distribuição foi incrementada; o comportamento e o protocolo
+do backend permanecem iguais. Instalador, frontend e manifesto são gerados juntos.
 
 ## Android em prévia e composição mobile — 1.0.1
 
