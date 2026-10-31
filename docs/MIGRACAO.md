@@ -769,3 +769,13 @@ rodadas consecutivas do navegador passaram (12 testes por rodada, nenhum skip).
 Workflow `Local clips on Windows` valida os dois cenários nativos sem empacotar,
 publicar ou substituir o instalador 1.0.2. Teste novo seleciona apenas uma janela
 QA criada pelo próprio Electron, com áudio desligado no seletor nativo.
+
+Na validação Windows, o cenário de transmissão existente passou; o novo cenário
+local também verificou captura, prévia e desligamento. Duas falhas no próprio
+harness foram diagnosticadas: reload antes da navegação inicial e callback de
+timeout tentando acessar o Electron já fechado após o término do teste. O teste
+agora espera a navegação inicial e encerra seu callback junto com o recurso, sem
+remover verificações funcionais. A repetição final precisa concluir com exit 0.
+Diagnóstico de CI preserva também erros assíncronos anteriores à falha do arquivo.
+Equipamento alvo informado: 5700X3D/RTX 3060 Ti/32 GB/Windows 11; análise recomenda
+NVENC H.264 para uma futura implementação nativa, ainda não habilitada.

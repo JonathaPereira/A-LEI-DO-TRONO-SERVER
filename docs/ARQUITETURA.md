@@ -408,3 +408,11 @@ atômica do arquivo salvo. H.264/MP4 exige outro muxer/buffer: o parser WebM atu
 não deve receber H.264 como se fosse VP8. A integração demanda um binário nativo
 verificado, política de distribuição/licenças e medições num Windows com GPU;
 nenhuma aceleração específica foi habilitada ou medida neste ambiente Linux.
+
+Equipamento informado para a avaliação: Windows 11, Ryzen 7 5700X3D,
+RTX 3060 Ti e 32 GB de RAM. Nesse equipamento o candidato nativo é NVENC H.264;
+Quick Sync requer uma GPU Intel compatível, e AMF requer GPU AMD compatível.
+O processador AMD sozinho não habilita AMF. A escolha desse candidato não é
+evidência de integração, uso efetivo ou medição. A próxima prova deve comparar
+1080p/30 e 1080p/60 no equipamento, com jogo aberto, verificar frames perdidos e
+impacto no jogo, exportação reproduzível com áudio e liberação da captura.

@@ -4,8 +4,8 @@ const {_electron,expect}=require('@playwright/test');
 const {startFixture}=require('./auth-fixture');
 const {closeTestApp,killTestApp}=require('./desktop-test-close');
 test('native local clips require explicit source selection outside voice and release their source when disabled', {timeout:90000,skip:process.platform!=='win32'}, async t=>{
- const directory=await fs.mkdtemp(path.join(os.tmpdir(),'trono-local-clips-'));let app,fixture;
- t.signal.addEventListener('abort',()=>killTestApp(app),{once:true});
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'trono-local-clips-'));let app,fixture,finished=false;
+ t.signal.addEventListener('abort',()=>{if(!finished)killTestApp(app);},{once:true});
  try{
   fixture=await startFixture({port:11987,allowedOrigins:['https://a-lei-do-trono.surge.sh']});
   const email='native-local-clips@example.test',password='Senha12!';await fixture.call('signup',{email,nickname:'Clipes Nativos',password});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});
@@ -24,5 +24,5 @@ test('native local clips require explicit source selection outside voice and rel
   await page.locator('#clipNow').click();await expect(page.locator('.clip-card')).toHaveCount(1);await page.getByRole('button',{name:'Prévia',exact:true}).click();await expect.poll(()=>page.locator('#clipsDialog video').evaluate(v=>v.videoWidth)).toBeGreaterThan(0);
   await page.locator('#clipLocalStop').click();assert.equal(await page.evaluate(()=>window.__localClipSource.getTracks().every(t=>t.readyState==='ended')),true);await expect(page.locator('.clip-card')).toHaveCount(1);
   await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.TronoClips);assert.equal(await page.evaluate(()=>window.TronoClips.active),false);assert.deepEqual(errors,[]);
- }finally{await closeTestApp(app);await fixture?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
+ }finally{finished=true;await closeTestApp(app);await fixture?.stop();await fs.rm(directory,{recursive:true,force:true}).catch(()=>{});}
 });
