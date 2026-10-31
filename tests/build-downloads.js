@@ -88,6 +88,15 @@ test('Windows diagnostics retain nested failures, redact credentials and escape 
   assert.equal(summarizeFailure('ok 1 - valid\n# skipped 1\n# fail 0'), null);
 });
 
+test('Windows summary preserves asynchronous errors reported before a failed test file', () => {
+  const { summarizeFailure } = require('../scripts/desktop/failure-summary.cjs');
+  const input = "ok 1 - scenario passed\n# Error: test generated asynchronous activity: pending navigation rejected\n# authorization: PRIVATE\nnot ok 1 - tests/native.cjs\n  ---\n  error: 'test failed'\n  ...\n" + Array.from({length:40}, (_,i)=>`# later diagnostic ${i}`).join('\n');
+  const summary = summarizeFailure(input);
+  assert.match(summary, /pending navigation rejected/);
+  assert.match(summary, /not ok 1 - tests\/native.cjs/);
+  assert(!summary.includes('PRIVATE'));
+});
+
 test('Windows summary CLI reports failing logs and leaves passing logs quiet without exposing credentials', async () => {
   const os = require('node:os'), {spawnSync} = require('node:child_process');
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'trono-summary-'));

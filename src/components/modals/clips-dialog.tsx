@@ -78,7 +78,7 @@ export function ClipsDialog() {
               Transmitir tela na chamada…
             </button>
             <button id={'clipResume'} type={'button'} hidden>
-              Retomar replay
+              Retomar preparação de clipes
             </button>
             <button id={'clipFloating'} type={'button'} hidden>
               Janela flutuante
@@ -96,10 +96,10 @@ export function ClipsDialog() {
           <details className={'clips-info'}>
             <summary>Armazenamento e recursos</summary>
             <p>
-              O replay mantém apenas os segundos recentes na memória do computador. Parar o
-              compartilhamento descarta esse buffer, preservando os clipes que você criou. O buffer
-              e os clipes não são enviados à Cloudflare; a transmissão da chamada continua usando
-              sua infraestrutura normal. Limpar os dados do site pode apagar os pendentes.
+              Apenas os segundos recentes ficam temporariamente na memória do computador. Desligar a
+              captura local ou parar a transmissão descarta esses segundos, preservando os clipes
+              que você criou. Os clipes ficam neste dispositivo; a transmissão da chamada continua
+              usando sua infraestrutura normal. Limpar os dados do site pode apagar os pendentes.
             </p>
             <p>
               Qualidade alta e 60 FPS exigem mais processamento. O limite de memória pode encurtar

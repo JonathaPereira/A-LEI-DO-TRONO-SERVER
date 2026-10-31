@@ -80,9 +80,9 @@ export function ClipPreferenceFields({
         </label>
       </div>
       <p className="clips-help">
-        Áudio da tela incluído automaticamente quando disponível no compartilhamento. A resolução
-        depende da origem; configure antes de compartilhar para capturar com a qualidade desejada.
-        Mudar estas opções reinicia só o replay e descarta o buffer anterior.
+        O áudio depende da permissão e da fonte selecionada. Configure a qualidade antes de ativar a
+        captura ou transmitir a tela. Mudar estas opções reinicia a preparação dos clipes e descarta
+        os segundos temporários anteriores.
       </p>
       <div className="clip-destination">
         <div>

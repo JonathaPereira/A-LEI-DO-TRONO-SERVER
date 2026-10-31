@@ -31,6 +31,12 @@ function summarizeFailure(text) {
       end++;
     }
     const diagnostic = lines.slice(i, end).join('\n');
+    // Node reports post-test asynchronous failures before the file-level TAP block.
+    if (/^\s*error: ['"]?test failed['"]?\s*$/m.test(diagnostic))
+      blocks.push(
+        'Contexto anterior à falha do arquivo:\n' +
+          bounded(lines.slice(Math.max(0, i - 60), i).join('\n'), 12000),
+      );
     blocks.push(bounded(diagnostic, 7000));
     if (blocks.length === 6) {
       blocks.push('[limite de falhas no resumo; consulte o artefato completo]');

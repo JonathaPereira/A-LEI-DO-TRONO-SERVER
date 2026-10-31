@@ -71,14 +71,14 @@ export function createReplayView(
       : 'Ative a captura local ou prepare clipes durante a transmissão';
     toolbar.classList.toggle('replay-ready', state.ready);
     const source = state.ready
-      ? 'Replay pronto · ' +
+      ? 'Clipes prontos · ' +
         Math.floor(state.seconds) +
         ' s disponíveis · ' +
         (state.hasAudio ? 'áudio incluído' : 'sem áudio')
       : state.active || state.preparing
         ? 'Preparando clipes da tela selecionada…'
         : state.shared
-          ? 'Replay pausado'
+          ? 'Preparação de clipes pausada'
           : 'Escolha uma tela para começar a preparar clipes';
     element('clipSource').textContent = source;
     element('clipReplayDot').classList.toggle('is-ready', state.ready);
@@ -104,7 +104,7 @@ export function createReplayView(
     controls.update({ ready: state.ready, source, seconds: settings.seconds, count });
     if (state.owner !== owner) {
       owner = state.owner;
-      message('Ao compartilhar a tela, o replay fica pronto automaticamente.');
+      message('Ative a captura local ou prepare clipes ao transmitir a tela.');
     }
     for (const [key, snapshot] of [
       ['replay', state],
