@@ -1,0 +1,14 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {testEncoder,readConfig}=require('../electron/replay-native.cjs');
+test('only an unpackaged local QA fixture can select the software H264 test encoder',()=>{
+ const expected={encoder:'h264_mf',encoderLabel:'Media Foundation (teste)'};
+ for(const protocol of ['http','https'])assert.deepEqual(testEncoder({packaged:false,origin:protocol+'://127.0.0.1:11987',encoder:'h264_mf'}),expected);
+ for(const origin of ['https://example.com','http://127.0.0.1.attacker.test','file:///127.0.0.1','bad-url'])assert.deepEqual(testEncoder({packaged:false,origin,encoder:'h264_mf'}),{});
+ assert.deepEqual(testEncoder({packaged:true,origin:'http://127.0.0.1:11987',encoder:'h264_mf'}),{});
+ assert.deepEqual(testEncoder({packaged:false,origin:'http://127.0.0.1:11987',encoder:'anything-else'}),{});
+});
+test('native capture configuration bounds dimensions, rate, memory pressure and cannot select an executable or codec',()=>{
+ const valid={width:1280,height:720,fps:30,seconds:30,audio:true,bitrate:6000000};assert.deepEqual(readConfig({...valid,executable:'unsafe',encoder:'unsafe'}),valid);
+ for(const patch of [{width:99999},{height:721},{fps:999},{seconds:9999},{audio:'yes'},{bitrate:Infinity}])assert.throws(()=>readConfig({...valid,...patch}),/inválida/);
+});

@@ -41,7 +41,7 @@ const { ApplicationAudio } = require('./application-audio.cjs'),
   { createUpdates } = require('./updates.cjs');
 const { contentSecurityPolicy } = require('./content-security.cjs');
 const { developmentOrigin } = require('./development.cjs');
-const { createNativeReplay } = require('./replay-native.cjs');
+const { createNativeReplay, testEncoder } = require('./replay-native.cjs');
 const devOrigin = developmentOrigin({
   packaged: app.isPackaged,
   value: app.commandLine.getSwitchValue('desktop-dev-url'),
@@ -476,11 +476,11 @@ async function start() {
     publish: (value) => {
       if (!window?.isDestroyed()) window?.webContents.send('mn:replay-status', value);
     },
-    ...(!app.isPackaged &&
-    testAPI &&
-    app.commandLine.getSwitchValue('desktop-replay-test-encoder') === 'h264_mf'
-      ? { encoder: 'h264_mf', encoderLabel: 'Media Foundation (teste)' }
-      : {}),
+    ...testEncoder({
+      packaged: app.isPackaged,
+      origin: app.commandLine.getSwitchValue('desktop-api-test-origin'),
+      encoder: app.commandLine.getSwitchValue('desktop-replay-test-encoder'),
+    }),
   });
   for (const [channel, method] of [
     ['mn:replay-capability', 'capability'],

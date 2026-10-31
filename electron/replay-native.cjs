@@ -6,6 +6,15 @@ const { spawn } = require('node:child_process'),
 const { ReplayBuffer } = require('./replay-buffer.cjs'),
   { replayHeader, replayPacket } = require('./replay-input.cjs');
 const MAX = 256 * 1048576;
+function testEncoder({ packaged, origin, encoder }) {
+  if (packaged || encoder !== 'h264_mf') return {};
+  try {
+    const url = new URL(origin);
+    if (url.hostname === '127.0.0.1' && ['http:', 'https:'].includes(url.protocol))
+      return { encoder: 'h264_mf', encoderLabel: 'Media Foundation (teste)' };
+  } catch {}
+  return {};
+}
 function run(executable, args, { input, timeout = 15000, maxOutput = MAX, onSpawn } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }),
@@ -360,4 +369,4 @@ function createNativeReplay({
     },
   };
 }
-module.exports = { createNativeReplay, readConfig, run };
+module.exports = { createNativeReplay, readConfig, run, testEncoder };

@@ -1,5 +1,6 @@
 {
   "core": [
+    "tests/clip-native-policy.cjs",
     "tests/clip-audio.cjs",
     "tests/clip-local-capture.cjs",
     "tests/android-push-registration.cjs",
