@@ -62,3 +62,49 @@ test('installer delivery rejects skipped tests but accepts a zero-skips TAP summ
   assert.equal(pattern.test('# skipped 1'), true);
   assert.equal(pattern.test('ok 1 - installer # SKIP runner unavailable'), true);
 });
+
+test('Windows failure summary retains an early assertion even after eighty passing log lines', () => {
+  const { summarizeFailure } = require('../scripts/desktop/failure-summary.cjs');
+  const log = ['not ok 1 - native replay', '  ---', '  error: expected a live source', '  stack: |', '    at tests/native.cjs:42', '  ...', ...Array.from({length:100}, (_,i) => `ok ${i+2} - later passing check`), '# pass 100', '# fail 1'].join('\r\n');
+  const summary = summarizeFailure(log);
+  assert.match(summary, /not ok 1 - native replay/);
+  assert.match(summary, /expected a live source/);
+  assert.match(summary, /tests\/native.cjs:42/);
+  assert.match(summary, /# fail 1/);
+});
+
+test('Windows diagnostics retain nested failures, redact credentials and escape annotation commands', () => {
+  const { summarizeFailure, formatNotice } = require('../scripts/desktop/failure-summary.cjs');
+  const input = '    not ok 1 - native source\n      ---\n      error: source ended at 25%\n      authorization: Bearer PRIVATE-A\n      access_token: PRIVATE-B\n      refresh_token: PRIVATE-C\n      ...\nnot ok 1 - parent\n  ---\n  error: subtestsFailed\n  ...\n';
+  const summary = summarizeFailure(input);
+  assert.match(summary, /native source/);
+  assert.match(summary, /subtestsFailed/);
+  assert(!summary.includes('PRIVATE-'));
+  const notice = formatNotice('windows-test.log', input);
+  assert(notice.startsWith('::notice title=windows-test.log::'));
+  assert.match(notice, /25%25/);
+  assert.match(notice, /%0A/);
+  assert(!notice.includes('\n'));
+  assert.equal(summarizeFailure('ok 1 - valid\n# skipped 1\n# fail 0'), null);
+});
+
+test('Windows summary CLI reports failing logs and leaves passing logs quiet without exposing credentials', async () => {
+  const os = require('node:os'), {spawnSync} = require('node:child_process');
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'trono-summary-'));
+  try {
+    await fs.writeFile(path.join(directory, 'windows-desktop.log'), 'not ok 1 - failed\n  ---\n  error: expected live screen\n  authorization: PRIVATE\n  ...\n# fail 1');
+    await fs.writeFile(path.join(directory, 'windows-core.log'), 'ok 1 - pass\n# fail 0');
+    const result = spawnSync(process.execPath, [path.resolve(__dirname,'../scripts/desktop/failure-summary.cjs'), directory], {encoding:'utf8'});
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /expected live screen/);
+    assert(!result.stdout.includes('PRIVATE'));
+    assert(!result.stdout.includes('windows-core.log'));
+  } finally { await fs.rm(directory, {recursive:true,force:true}); }
+});
+
+test('large Windows diagnostics keep the failed assertion within the annotation size budget', () => {
+  const { summarizeFailure } = require('../scripts/desktop/failure-summary.cjs');
+  const summary = summarizeFailure('not ok 1 - native capture\n  ---\n  error: expected live screen\n  stack: ' + 'x'.repeat(100000) + '\n  ...\n' + 'frame probe '.repeat(20000));
+  assert.match(summary, /expected live screen/);
+  assert(Buffer.byteLength(summary, 'utf8') <= 48000);
+});

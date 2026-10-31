@@ -714,3 +714,20 @@ no mesmo build (dois testes por rodada, sem skips). Main remota conferida antes
 do envio: `2fd2c63`. O push a main solicita os deploys automáticos confirmados;
 acompanhamento da API GitHub e verificação pública dependem da liberação de rede
 salva no rascunho do ambiente. Envio do commit não comprova publicação concluída.
+
+
+Diagnóstico após Windows 41227271752: o gate falhou na suíte desktop (13 pass,
+1 fail, 1 skip) antes de empacotar o EXE; o resumo antigo cortava o bloco da
+falha e os logs completos estão bloqueados pela política de rede deste ambiente.
+A perda da asserção foi reproduzida com TAP seguido de mais de 80 linhas de
+sucessos. Relatório corrigido para conservar falhas, asserções/stack e resumo,
+com remoção de credenciais e teste do comando executado pelo workflow. Os nove
+testes focados de distribuição/relatório passaram. A causa da falha Windows
+continua pendente de log completo ou nova execução com o relatório corrigido.
+A falha de mídia P2P local tem pré-requisito indisponível confirmado: Chromium
+com `disable_non_proxied_udp`; não foi feita alteração para contornar a política.
+
+Tipos, formato e build passaram após a correção do relatório. Nova execução
+Windows solicitada pela contribuição `codex/desktop-clipes-diagnostico`, com
+os gates existentes preservados, para obter a falha exata ou validar o pacote.
+Nenhuma causa de erro nativo é presumida antes desse resultado.

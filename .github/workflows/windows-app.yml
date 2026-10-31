@@ -175,17 +175,7 @@ jobs:
             core.setOutput('tag',result.tag);
       - name: Report failed test summaries
         if: failure()
-        shell: pwsh
-        run: |
-          Get-ChildItem artifacts -Filter 'windows-*.log' | ForEach-Object {
-            $text = Get-Content $_.FullName -Raw
-            if ($text -match 'not ok [0-9]+|testCodeFailure') {
-              $tail = (Get-Content $_.FullName -Tail 80) -join "`n"
-              $tail = $tail -replace '(?im)(access_token|refresh_token|authorization)[^\r\n]*', '[credential omitted]'
-              $tail = $tail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
-              Write-Output "::notice title=$($_.Name)::$tail"
-            }
-          }
+        run: node scripts/desktop/failure-summary.cjs
       - name: Save failure evidence
         if: failure()
         uses: actions/upload-artifact@v4

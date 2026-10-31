@@ -129,6 +129,20 @@ independentes de ICE/status: elimina a soma de duas esperas, mantendo autentica�
 cancelamento, publicação condicionada às respostas e fallback existentes. Não
 altera o P2P nem reduz deadlines para aparentar conexão mais rápida.
 
+### Diagnóstico de falhas do Windows no CI
+
+O passo `Report failed test summaries` usa `scripts/desktop/failure-summary.cjs`
+para publicar os blocos TAP que falharam, incluindo asserção e stack, seguidos
+do final do log. O artefato `windows-failure-<run>-<attempt>` conserva os logs
+completos. Resumos longos têm limite explícito; campos de autorização e tokens
+são removidos antes da publicação. O relatório não muda o resultado dos testes.
+
+O Chromium gerenciado deste ambiente Linux usa `WebRtcIPHandling` com
+`disable_non_proxied_udp`. A malha P2P local sem TURN não comprova recepção
+real aqui; não desative a política para fazer a validação passar. Windows e
+fluxos SFU precisam de seus próprios resultados, sem inferir a causa de uma
+falha nativa a partir dessa restrição Linux.
+
 ## Operações especiais
 
 desktop:build:native exige MSVC, Windows SDK e CMake; Remote Input pode exigir
