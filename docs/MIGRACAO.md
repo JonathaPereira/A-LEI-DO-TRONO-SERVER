@@ -781,3 +781,18 @@ dois cenários no Electron real do Windows. Não houve publicação neste workfl
 Diagnóstico de CI preserva também erros assíncronos anteriores à falha do arquivo.
 Equipamento alvo informado: 5700X3D/RTX 3060 Ti/32 GB/Windows 11; análise recomenda
 NVENC H.264 para uma futura implementação nativa, ainda não habilitada.
+
+
+Publicação da 1.0.3 autorizada pelo usuário após a validação de clipes locais.
+Contribuição `codex/release-1.0.3` preserva a implementação validada e atualiza
+a versão do Electron, lockfile e guias distribuídos. NVENC continua pendente;
+não há mudança de backend ou SQL. Main remota conferida em `96fbe5a` antes
+da preparação. A entrega usa os gates Windows/instalador/Surge existentes;
+o envio à main deve ser acompanhado até o resultado da publicação.
+
+Preparação 1.0.3: tipos, formatação e build aprovados; os 22 testes focados de
+empacotamento/relatório/atualizador passaram. O link do EXE 1.0.3 foi verificado
+no navegador em desktop e celular. Metadado do frontend, manifesto, lockfile e
+cabeçalho do guia conferidos na mesma versão. Testes nativos da contribuição
+já aprovados no run `41243483513`; o pacote final passa novamente pelos gates
+de distribuição antes de ser publicado automaticamente.

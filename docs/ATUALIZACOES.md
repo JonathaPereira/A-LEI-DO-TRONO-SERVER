@@ -1,8 +1,21 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.2** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.3** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.3
+
+Clipes acessíveis nos controles inferiores principais. Captura local optativa
+permite selecionar tela ou janela sem entrar em chamada ou transmitir; inicia
+desligada em cada abertura do app e pode ser encerrada sem apagar clipes criados.
+Qualidade Excelente/Econômica, atalho e pasta ficam no submenu de configurações.
+O preparo de clipes da transmissão continua opcional e preserva a chamada.
+
+O gravador continua usando VP8/WebM. NVENC/AMF/Quick Sync foram avaliados, mas
+a integração nativa ainda não faz parte desta entrega. Não há novo SQL, migração
+de dados ou mudança de protocolo do backend. A versão 1.0.3 permite ao atualizador
+diferenciar esta implementação da 1.0.2 instalada.
 
 ## Windows 1.0.2
 
