@@ -1,4 +1,5 @@
 'use strict';
+const {launchDesktop}=require('./desktop-first-window.cjs');
 const { test } = require('node:test'),
   assert = require('node:assert/strict'),
   path = require('node:path'),
@@ -29,7 +30,7 @@ test(
       { once: true },
     );
     try {
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: [path.join(root, 'electron'), '--user-data-dir=' + directory],
         timeout: 30000,

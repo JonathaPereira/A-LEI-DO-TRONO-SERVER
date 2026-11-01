@@ -1,4 +1,5 @@
 'use strict';
+const {launchDesktop}=require('./desktop-first-window.cjs');
 const {test}=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs/promises'), os=require('node:os'),path=require('node:path');
 const {_electron,expect}=require('@playwright/test');
 const {startFixture}=require('./auth-fixture');
@@ -11,7 +12,7 @@ for(const backend of ['compatible','native','native-audio'])test('native local c
   fixture=await startFixture({port:11987,allowedOrigins:['https://a-lei-do-trono.surge.sh']});
   const email='native-local-clips@example.test',password='Senha12!';await fixture.call('signup',{email,nickname:'Clipes Nativos',password});await fixture.call('verify',{token_hash:[...fixture.links.keys()].at(-1),type:'signup'});
   if(withSound)await fs.writeFile(path.join(directory,'media-permissions.json'),JSON.stringify({allowed:['audio']}));
-  app=await _electron.launch({executablePath:require('../electron/node_modules/electron'),args:[path.resolve('electron'),'--user-data-dir='+directory,'--desktop-diagnostics',...(withSound?['--use-fake-device-for-media-stream','--autoplay-policy=no-user-gesture-required']:['--mute-audio']),'--desktop-api-test-origin='+fixture.base,...(native?['--desktop-replay-test-encoder=h264_mf']:[])],timeout:30000});
+  app=await launchDesktop(_electron,{executablePath:require('../electron/node_modules/electron'),args:[path.resolve('electron'),'--user-data-dir='+directory,'--desktop-diagnostics',...(withSound?['--use-fake-device-for-media-stream','--autoplay-policy=no-user-gesture-required']:['--mute-audio']),'--desktop-api-test-origin='+fixture.base,...(native?['--desktop-replay-test-encoder=h264_mf']:[])],timeout:30000});
   app.process().stderr.on('data',data=>{mainLogs.push(data.toString());if(mainLogs.length>25)mainLogs.shift();});
   page=await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route('https://a-lei-do-trono-server.onrender.com/**',r=>r.abort());
   await page.addInitScript(base=>{window.TRONO_BACKEND_URL=base;localStorage.setItem('tronoMusicEnabled','0');},fixture.base);
@@ -22,7 +23,7 @@ for(const backend of ['compatible','native','native-audio'])test('native local c
     const target=path.join(directory,'qa-window.cjs');
     const html='<title>QA clipes locais</title><canvas width="600" height="360"></canvas><script>setInterval(()=>{let c=document.querySelector("canvas").getContext("2d");c.fillStyle=`hsl(${Date.now()%360} 50% 50%)`;c.fillRect(0,0,600,360)},33);</script>';
     await fs.writeFile(target,require('./clip-native-qa.cjs').nativeQAProgram(html,path.resolve('artifacts/native-audio/Release/MN-Application-Audio.exe')));
-    qaApp=await _electron.launch({executablePath:require('../electron/node_modules/electron'),args:[target,'--user-data-dir='+path.join(directory,'qa-profile'),'--autoplay-policy=no-user-gesture-required'],timeout:30000});await (await qaApp.firstWindow()).waitForLoadState('load');const deviceStatus=await qaApp.evaluate(()=>global.qaToneStatus);if(deviceStatus.type==='error'&&new Set([0x80070490,0x88890010,0x800706ba]).has(deviceStatus.code)){syntheticApplicationAudio=true;console.log('QA audio: runner sem endpoint de reprodução; PCM de aplicativo controlado pela entrada nativa.');}else assert.equal(deviceStatus.type,'tone-ready',JSON.stringify(deviceStatus));
+    qaApp=await launchDesktop(_electron,{executablePath:require('../electron/node_modules/electron'),args:[target,'--user-data-dir='+path.join(directory,'qa-profile'),'--autoplay-policy=no-user-gesture-required'],timeout:30000});await (await qaApp.firstWindow()).waitForLoadState('load');const deviceStatus=await qaApp.evaluate(()=>global.qaToneStatus);if(deviceStatus.type==='error'&&new Set([0x80070490,0x88890010,0x800706ba]).has(deviceStatus.code)){syntheticApplicationAudio=true;console.log('QA audio: runner sem endpoint de reprodução; PCM de aplicativo controlado pela entrada nativa.');}else assert.equal(deviceStatus.type,'tone-ready',JSON.stringify(deviceStatus));
   }
   if(syntheticApplicationAudio)await page.evaluate(()=>{const create=window.TronoApplicationAudio.create.bind(window.TronoApplicationAudio);window.TronoApplicationAudio.create=async info=>{window.__qaApplicationInfo=info;return create(info);};});
   if(withSound)await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{const context=new AudioContext(),tone=context.createOscillator(),gain=context.createGain(),out=context.createMediaStreamDestination();tone.frequency.value=880;gain.gain.value=0.15;tone.connect(gain).connect(out);tone.start();const track=out.stream.getAudioTracks()[0],stop=track.stop.bind(track);track.stop=()=>{stop();void context.close();};window.__qaMicrophone=out.stream;return out.stream;};});

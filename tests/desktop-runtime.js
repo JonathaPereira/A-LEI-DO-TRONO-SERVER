@@ -7,7 +7,7 @@ const { test } = require('node:test'),
   os = require('node:os');
 const { _electron, expect } = require('@playwright/test');
 const { startHTTPS } = require('./desktop-https-fixture');
-const { firstAppWindow } = require('./desktop-first-window.cjs');
+const { firstAppWindow, launchDesktop } = require('./desktop-first-window.cjs');
 const { killTestApp, closeTestApp } = require('./desktop-test-close');
 test(
   'installed desktop boundary, native shortcut, picker and filesystem integration',
@@ -34,7 +34,7 @@ test(
     );
     try {
       api = await startHTTPS(directory);
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: [
           path.resolve(__dirname, '../electron'),
@@ -391,7 +391,7 @@ test(
       );
       assert.equal(await app.evaluate(() => globalThis.__permissionPrompts), 2);
       await closeTestApp(app);
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: [
           path.resolve(__dirname, '../electron'),

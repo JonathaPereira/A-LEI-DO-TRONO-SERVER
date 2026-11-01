@@ -1,4 +1,5 @@
 'use strict';
+const {launchDesktop}=require('./desktop-first-window.cjs');
 const { test } = require('node:test'),
   assert = require('node:assert/strict'),
   fs = require('node:fs/promises'),
@@ -48,7 +49,7 @@ test(
       });
       await Promise.all(manifest.files.map((f) => cache.read(f.path)));
       phase = 'launch Electron';
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: ['--user-data-dir=' + directory, path.resolve(__dirname, '../electron')],
         timeout: 20000,

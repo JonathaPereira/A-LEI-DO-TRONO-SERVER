@@ -263,6 +263,7 @@
     "tests/desktop-activity-native.cjs",
     "tests/desktop-audio.js",
     "tests/desktop-background-voice.js",
+    "tests/desktop-startup-sync.cjs",
     "tests/desktop-call-audio.cjs",
     "tests/desktop-call-layout.js",
     "tests/desktop-cinzas-runtime.js",
