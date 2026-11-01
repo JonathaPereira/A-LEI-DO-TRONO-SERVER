@@ -847,3 +847,19 @@ Preparação final 1.0.4 aprovou tipos/formato/build, 98 contratos focados e 22 
 distribuição/atualizador, além do novo contrato de proporção do encoder (sem
 esticar ultrawide/vertical ou aumentar fontes pequenas). HUD de clipes foi
 reverificado no build 1.0.4. Publicação usará gates Windows/instalador/Surge.
+
+
+A tentativa de publicação 1.0.4 `41257196422` aprovou fontes, jornadas, executável
+empacotado e instalação real, mas bloqueou o pacote combinado de 241.774.543 bytes.
+A reprodução isolada `41258346492` confirmou EXE de 188.665.030 bytes e limite
+preventivo de 199.229.440 bytes. A correção mantém o ZIP com frontend/EXE e separa
+os envios: instalador em mn-trono-downloads.surge.sh, frontend no domínio atual.
+Cada domínio conserva 190 MiB, com hashes do binário conferidos antes de publicar
+o manifesto. O atualizador instalado lê a mesma URL de feed e resolve a URL
+absoluta; regressão usa o GenericProvider real. Não houve publicação parcial.
+A correção passou tipos/formato/build, 23 contratos de distribuição/atualizador
+e dois ciclos consecutivos de sete cenários da interface de conta/download,
+sem skips. O ZIP conserva o EXE; o .surgeignore impede seu envio duplicado ao
+site principal. A publicação confere o SHA-256 do EXE baixado do domínio novo
+antes de avançar para o feed. A validação completa Windows será repetida no
+commit final para manter a relação entre fontes, instalador e publicação.

@@ -21,6 +21,10 @@ foi medido pelo runner sem NVIDIA. Não há novo SQL ou protocolo de backend.
 Banners da sala de voz mostram microfone cortado no mute e microfone + headset
 cortados no deafen, acompanhando o estado privado dos participantes da chamada.
 
+O EXE agora é servido por `mn-trono-downloads.surge.sh`; o manifesto permanece
+em `a-lei-do-trono.surge.sh/downloads/latest.yml`. O atualizador das versões
+anteriores já resolve essa URL absoluta. O ZIP mantém frontend e EXE juntos.
+
 ## Windows 1.0.3
 
 Clipes acessíveis nos controles inferiores principais. Captura local optativa

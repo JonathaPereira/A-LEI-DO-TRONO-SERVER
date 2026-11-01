@@ -38,7 +38,7 @@ async function fixture() {
   );
   await fs.writeFile(
     path.join(root, 'out/_next/static/chunks/auth.js'),
-    'const download = {href:"https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.11-Windows.exe",name:"MN-Trono-0.1.11-Windows.exe"};',
+    'const download = {href:"https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe",name:"MN-Trono-0.1.11-Windows.exe"};',
   );
   await fs.writeFile(path.join(root, 'out/LEIA_ME_v0.7.9.txt'), 'old instructions');
   await fs.writeFile(path.join(root, 'out/.surgeignore'), '*.exe\n*.zip\n');
@@ -91,11 +91,11 @@ test('Surge package contains the entire frontend and exactly the latest installe
     );
     const yaml = await fs.readFile(path.join(result.frontend, 'downloads/latest.yml'), 'utf8');
     assert(yaml.includes('version: 0.1.11'));
-    assert(yaml.includes('url: MN-Trono-0.1.11-Windows.exe'));
-    assert(yaml.includes('path: MN-Trono-0.1.11-Windows.exe'));
+    assert(yaml.includes('url: https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe'));
+    assert(yaml.includes('path: https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe'));
     assert.equal(
       result.url,
-      'https://a-lei-do-trono.surge.sh/downloads/MN-Trono-0.1.11-Windows.exe',
+      'https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe',
     );
     assert(
       yaml.includes('sha512: ' + crypto.createHash('sha512').update(f.bytes).digest('base64')),
@@ -103,6 +103,7 @@ test('Surge package contains the entire frontend and exactly the latest installe
     assert(yaml.includes('size: ' + f.bytes.length));
     assert.deepEqual((await fs.readdir(path.join(result.frontend, 'downloads'))).sort(), [
       'MN-Trono-0.1.11-Windows.exe',
+      'index.html',
       'latest.yml',
     ]);
     assert.deepEqual(
@@ -111,8 +112,8 @@ test('Surge package contains the entire frontend and exactly the latest installe
     );
     const ignore = await fs.readFile(path.join(result.frontend, '.surgeignore'), 'utf8');
     assert(ignore.includes('*.exe'));
-    assert(ignore.includes('!downloads/MN-Trono-0.1.11-Windows.exe'));
-    assert.equal(ignore.split('\n').filter((l) => l.startsWith('!downloads/')).length, 1);
+    assert(!ignore.includes('!downloads/MN-Trono-0.1.11-Windows.exe'));
+    assert.equal(ignore.split('\n').filter((l) => l.startsWith('!downloads/')).length, 0);
     assert.equal(
       await fs.readFile(path.join(result.frontend, 'vendor/rnnoise/rnnoise.wasm'), 'utf8'),
       'model',
@@ -275,4 +276,21 @@ test('a new release uses the approved local installer and a mismatched public do
   } finally {
     await fs.rm(f.root, { recursive: true, force: true });
   }
+});
+
+test('frontend and installer each respect the hosting budget while the complete ZIP retains the installer', async () => {
+  const f=await fixture();
+  try {
+    const installer=await fs.open(f.installerPath,'r+');
+    await installer.truncate(MAX_SITE_BYTES-512*1024);await installer.close();
+    await fs.writeFile(path.join(f.root,'out/additional.bin'),Buffer.alloc(1024*1024));
+    const result=await prepareSite({...f,version:'0.1.11'});
+    assert(result.deliveryBytes>MAX_SITE_BYTES);
+    assert(result.siteBytes<MAX_SITE_BYTES);
+    assert(result.downloadSiteBytes<MAX_SITE_BYTES);
+    assert.equal((await fs.stat(path.join(result.frontend,'downloads/MN-Trono-0.1.11-Windows.exe'))).size,MAX_SITE_BYTES-512*1024);
+    assert((await fs.readFile(path.join(result.frontend,'downloads/index.html'),'utf8')).includes('MN-Trono-0.1.11-Windows.exe'));
+    const oversized=await fs.open(f.installerPath,'r+');await oversized.truncate(MAX_SITE_BYTES+1);await oversized.close();
+    await assert.rejects(prepareSite({...f,version:'0.1.11'}),/limite preventivo/);
+  } finally {await fs.rm(f.root,{recursive:true,force:true,maxRetries:10,retryDelay:100});}
 });

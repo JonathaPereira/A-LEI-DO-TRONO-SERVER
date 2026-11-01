@@ -78,7 +78,7 @@ test(
       ).toHaveAttribute('download', '');
       await expect(
         page.getByRole('link', { name: 'Baixar para Windows', exact: true }),
-      ).toHaveAttribute('href', `https://a-lei-do-trono.surge.sh/downloads/${installer}`);
+      ).toHaveAttribute('href', `https://mn-trono-downloads.surge.sh/${installer}`);
       await t.test(
         'signup checks the password and requires email confirmation before login',
         async () => {

@@ -15,10 +15,11 @@ const path = require('node:path'),
   });
   const result = await prepareSite({ installerPath });
   console.log(
-    `Site completo ${(result.siteBytes / 1024 / 1024).toFixed(1)} MiB, incluindo somente o instalador atual (${(result.installerBytes / 1024 / 1024).toFixed(1)} MiB).`,
+    `Site ${(result.siteBytes / 1024 / 1024).toFixed(1)} MiB; domínio de downloads ${(result.downloadSiteBytes / 1024 / 1024).toFixed(1)} MiB. O ZIP completo conserva o instalador atual.`,
   );
   console.log(
-    'Publicar frontend/ já disponibiliza o instalador e a atualização interna: ' + result.url,
+    'Publicar primeiro frontend/downloads/ no domínio de downloads e depois frontend/ disponibiliza a atualização: ' +
+      result.url,
   );
 })().catch((error) => {
   console.error(error.message);

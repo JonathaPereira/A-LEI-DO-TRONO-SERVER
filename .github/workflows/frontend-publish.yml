@@ -85,6 +85,10 @@ jobs:
               assert sha256.hexdigest()==sums[name]
               manifest=z.read('frontend/downloads/latest.yml').decode()
               assert re.search(r'^version: '+re.escape(version)+r'$',manifest,re.M)
+              expected_url='https://mn-trono-downloads.surge.sh/'+name
+              assert re.findall(r'^\s*(?:- url|path): (.+)$',manifest,re.M)==[expected_url,expected_url]
+              ignore=z.read('frontend/.surgeignore').decode()
+              assert '*.exe' in ignore.splitlines() and not any(line.startswith('!downloads/') for line in ignore.splitlines())
               assert set(re.findall(r'sha512: (\S+)',manifest))=={base64.b64encode(sha512.digest()).decode()}
               z.extractall(root/'verified')
           game=root/f'Atalaia-Web-{version}.zip'
@@ -139,6 +143,23 @@ jobs:
               with urllib.request.urlopen('https://similo-mn.surge.sh/'+file, timeout=60) as response:
                   assert hashlib.sha256(response.read()).hexdigest()==digest
           PYART
+      - name: Publish and verify the installer before updating the feed
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          mkdir -p artifacts/surge-delivery/installer
+          cp artifacts/surge-delivery/verified/frontend/downloads/* artifacts/surge-delivery/installer/
+          npx --yes surge@0.46.0 artifacts/surge-delivery/installer mn-trono-downloads.surge.sh
+          curl --fail --silent --show-error --retry 3 --max-time 300 "https://mn-trono-downloads.surge.sh/MN-Trono-$APP_VERSION-Windows.exe" -o artifacts/surge-delivery/published-installer.exe
+          python3 <<'PYCODE'
+          from pathlib import Path
+          import hashlib, os
+          root=Path('artifacts/surge-delivery'); name='MN-Trono-'+os.environ['APP_VERSION']+'-Windows.exe'
+          sums={name:digest for digest,name in (line.split('  ',1) for line in (root/('SHA256SUMS-'+os.environ['APP_VERSION']+'.txt')).read_text().splitlines())}
+          assert hashlib.file_digest((root/'published-installer.exe').open('rb'),'sha256').hexdigest()==sums[name]
+          PYCODE
       - name: Publish the verified directory to Surge
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}

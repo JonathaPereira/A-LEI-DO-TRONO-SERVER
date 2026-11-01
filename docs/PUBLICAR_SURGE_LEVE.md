@@ -35,8 +35,11 @@ backend com `features.similo=true`, sem novo SQL. Consulte o
 O publicador valida seu hash e o commit, envia primeiro o jogo para
 `atalaia-mn.surge.sh` e confere a versão antes de atualizar o catálogo principal.
 Os arquivos Godot ficam nesse domínio separado, preservando o limite de tamanho
-do site com instalador. Consulte o [README de Atalaia](../games/atalaia/README.md)
-para edição ou publicação manual do jogo.
+do site. O instalador é enviado e conferido em `mn-trono-downloads.surge.sh` antes
+do manifesto principal ser atualizado. Cada domínio mantém o limite de 190 MiB;
+o ZIP conserva `frontend/downloads/` com EXE, manifesto e página de download.
+Consulte o [README de Atalaia](../games/atalaia/README.md) para edição ou publicação
+manual do jogo.
 
 JS, WASM e PCK do Atalaia incluem versão e commit nos nomes. A página de entrada
 continua `index.html`; cada entrega carrega seus próprios arquivos, evitando que
@@ -71,11 +74,14 @@ Como alternativa manual, baixe o ZIP `MN-Trono-Frontend-<versão>.zip` da releas
 validada, extraia numa pasta nova e abra um terminal dentro de `frontend/`:
 
 ```powershell
+npx --yes surge@0.46.0 ./downloads mn-trono-downloads.surge.sh
 npx --yes surge@0.46.0 . a-lei-do-trono.surge.sh
 ```
 
-Autentique-se na conta do domínio e envie `frontend/` inteira, inclusive
-`downloads/`; preserve o EXE e `latest.yml` da mesma entrega.
+Autentique-se na conta dos domínios. Publique `downloads/` primeiro e depois
+`frontend/`; o `.surgeignore` exclui o EXE apenas do envio ao site principal.
+Preserve o EXE e `latest.yml` da mesma entrega. O atualizador instalado continua
+lendo o manifesto no endereço original e resolve a URL absoluta do instalador.
 
 O layout exporta essa versão no metadado `mn-desktop-version`, e o botão de download
 usa a mesma fonte. O empacotador verifica a versão antes de substituir saídas;

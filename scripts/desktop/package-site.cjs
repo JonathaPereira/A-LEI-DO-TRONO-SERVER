@@ -38,7 +38,7 @@ async function prepareSite({
   if (bytes.length < 1024 * 1024 || bytes[0] !== 0x4d || bytes[1] !== 0x5a)
     throw Error('Instalador Windows inválido.');
   const hash = crypto.createHash('sha512').update(bytes).digest('base64'),
-    url = `https://a-lei-do-trono.surge.sh/downloads/${filename}`;
+    url = `https://mn-trono-downloads.surge.sh/${filename}`;
   const artifacts = outputRoot || path.join(root, 'artifacts'),
     direct = path.join(artifacts, 'windows-download'),
     site = path.join(artifacts, 'site-download');
@@ -77,14 +77,15 @@ async function prepareSite({
       .split(/\r?\n/)
       .filter((line) => !/^!downloads\/MN-Trono-.*-Windows\.exe$/.test(line))
       .join('\n')
-      .trimEnd() +
-      '\n!downloads/' +
-      filename +
-      '\n',
+      .trimEnd() + '\n',
   );
   await fs.writeFile(
     path.join(downloads, 'latest.yml'),
-    `version: ${version}\nfiles:\n  - url: ${filename}\n    sha512: ${hash}\n    size: ${bytes.length}\npath: ${filename}\nsha512: ${hash}\nreleaseDate: '${new Date().toISOString()}'\n`,
+    `version: ${version}\nfiles:\n  - url: ${url}\n    sha512: ${hash}\n    size: ${bytes.length}\npath: ${url}\nsha512: ${hash}\nreleaseDate: '${new Date().toISOString()}'\n`,
+  );
+  await fs.writeFile(
+    path.join(downloads, 'index.html'),
+    `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Trono ${version} para Windows</title><a href="${filename}">Baixar Trono ${version} para Windows</a></html>`,
   );
   await fs.copyFile(
     path.join(root, 'electron/LEIA-ME-PUBLICAR.txt'),
@@ -114,7 +115,9 @@ async function prepareSite({
     path.join(site, '20261016140000_giphy_profile_credits.sql'),
   );
   const files = await filesIn(frontend),
-    siteBytes = files.reduce((sum, f) => sum + f.size, 0);
+    deliveryBytes = files.reduce((sum, f) => sum + f.size, 0),
+    siteBytes = deliveryBytes - bytes.length,
+    downloadSiteBytes = (await filesIn(downloads)).reduce((sum, f) => sum + f.size, 0);
   if (
     files.some(
       (f) =>
@@ -122,10 +125,11 @@ async function prepareSite({
         (/\.exe$/i.test(f.file) &&
           path.relative(frontend, f.file) !== path.join('downloads', filename)),
     ) ||
-    siteBytes > MAX_SITE_BYTES
+    siteBytes > MAX_SITE_BYTES ||
+    downloadSiteBytes > MAX_SITE_BYTES
   )
     throw Error(
-      `O pacote do site excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados. Total: ${siteBytes} bytes; limite: ${MAX_SITE_BYTES} bytes.`,
+      `Um dos domínios excedeu o limite preventivo de 190 MiB ou contém instaladores extras/arquivos compactados. Site: ${siteBytes} bytes; downloads: ${downloadSiteBytes} bytes; limite: ${MAX_SITE_BYTES} bytes.`,
     );
   const rogueliteBytes = files
     .filter((f) => path.relative(frontend, f.file).split(path.sep)[0] === 'roguelite')
@@ -136,7 +140,9 @@ async function prepareSite({
       {
         version,
         siteBytes,
-        frontendWithoutInstallerBytes: siteBytes - bytes.length,
+        frontendWithoutInstallerBytes: siteBytes,
+        deliveryBytes,
+        downloadSiteBytes,
         rogueliteBytes,
         installerBytes: bytes.length,
         installerURL: url,
@@ -154,6 +160,8 @@ async function prepareSite({
     site,
     siteBytes,
     installerBytes: bytes.length,
+    deliveryBytes,
+    downloadSiteBytes,
     url,
     sha512: hash,
   };

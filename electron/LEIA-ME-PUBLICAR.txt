@@ -13,9 +13,12 @@ M&N — publicação automática do frontend e instalador Windows
 
 Publicação manual alternativa: baixe o ZIP MN-Trono-Frontend da entrega aprovada,
 extraia numa pasta nova e abra um terminal dentro de frontend/. Execute:
+   npx --yes surge@0.46.0 ./downloads mn-trono-downloads.surge.sh
    npx --yes surge@0.46.0 . a-lei-do-trono.surge.sh
 
-O instalador atual já acompanha frontend/downloads/.
+O instalador atual já acompanha frontend/downloads/. Publique downloads/ primeiro;
+.surgeignore impede duplicar o EXE no site principal. Cada domínio conserva o limite
+de 190 MiB. O manifesto principal aponta para o EXE do domínio de downloads.
 Preserve latest.yml e seu SHA-512. Não misture arquivos de entregas diferentes.
 Contas e preferências são mantidas. Clipes usam a tela em transmissão; desligar
 o buffer temporário preserva a chamada, a transmissão e os clipes já criados.
