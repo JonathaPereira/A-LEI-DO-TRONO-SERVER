@@ -1,8 +1,21 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.4** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.5** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.5
+
+Corrige a perda de fluidez no caminho nativo: captura os quadros pela track,
+reutiliza buffers e evita bloquear cada frame pela confirmação do anterior.
+O PCM preserva amostras durante atrasos curtos, corrigindo o descarte que
+produzia chiado. O formato de imagem e os perfis de qualidade são preservados.
+
+O atalho global recupera rejeições temporárias e informa o estado real no
+submenu. A regressão Windows usa a tecla real com outra janela em foco e
+exige que o clipe seja criado antes de qualquer consulta ao renderer.
+Não há alteração de backend ou SQL. Desempenho físico no PC do usuário continua
+dependente da fonte, perfil e GPU; o runner não tem NVIDIA.
 
 ## Windows 1.0.4
 

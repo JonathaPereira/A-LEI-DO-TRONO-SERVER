@@ -914,3 +914,12 @@ mudar de resolução durante o jogo. A preparação local final aprovou tipos,
 formato e build; o erro de enumeração de cor apontado pelo primeiro Windows
 não faz parte desse contrato. Os dois cenários controlados medem pixels
 diferentes, sem contar duplicação como FPS; ambos passaram em dois ciclos.
+
+Windows focado `41266518420` aprovou fontes/build, contratos, os três modos de
+captura (compatível, nativo e nativo com som), SendInput fora do foco, criação
+antes da primeira consulta ao renderer, continuidade com janela oculta, áudio
+exportado e descarte. Não é simulação de tecla DOM. A checagem usa monitores
+reais disponíveis e não representa uma partida de LoL ou NVENC físico.
+Preparação 1.0.5 autorizada pelo fluxo de correção/publicação vigente: somente
+desktop/lock/guia recebem a versão; backend permanece 0.14.0-alpha. O Windows
+completo e a publicação validada usarão o mesmo commit da entrega.
