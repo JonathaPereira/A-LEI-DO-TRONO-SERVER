@@ -383,11 +383,11 @@ implicitamente; para mudar o modo, o usuário escolhe/inicia uma nova captura.
 O replay possui dois caminhos. Compatível usa MediaRecorder/WebM e o worker
 existente. Automático prefere NVENC após codificação real de teste; NVENC
 explícito falha com mensagem se indisponível. `clips/native-session.ts` envia
-somente clones da fonte escolhida como YUV/BGRA e PCM. TrackProcessor fornece
+somente clones da fonte escolhida como BGRA e PCM. TrackProcessor fornece
 quadros sem depender de um vídeo desenhado na janela. Dois envios podem ficar
 pendentes, com um frame ainda não copiado esperando crédito; buffers de pixels
 são reutilizados após a confirmação. Sem TrackProcessor, há fallback de vídeo. Não inicia outra captura de monitor. O main valida origem, ID,
-dimensões, formato permitido, tamanho e timestamps de cada pacote. O framing
+dimensões, tamanho e timestamps de cada pacote. O framing
 Matroska toma emprestado o payload e usa escrita vetorizada sem concatená-lo. `electron/replay-native.cjs`
 possui processos FFmpeg, buffer fMP4 limitado a 256 MiB e até dois exports MP4
 por remux sem recodificação. H.264 nunca passa pelo parser WebM. Temporários

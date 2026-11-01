@@ -906,5 +906,11 @@ antes de focar Trono e liberação da fonte, nos caminhos compatível/nativo/som
 A checagem Windows deixa três segundos sem consultar o renderer após SendInput
 e exige timestamp de criação anterior à primeira consulta, para não mascarar
 um app que só processa o atalho quando o teste o desperta. Build/tipos/formato
-e 87 regressões focadas passaram; dois ciclos controlados aprovaram YUV/RGB a
+e 85 regressões focadas passaram; dois ciclos controlados aprovaram fonte direta e redimensionamento a
 56–57 FPS e PCM contínuo. O binário NVENC físico permanece fora do runner.
+
+O candidato final preserva o contrato BGRA e redimensiona novamente se a fonte
+mudar de resolução durante o jogo. A preparação local final aprovou tipos,
+formato e build; o erro de enumeração de cor apontado pelo primeiro Windows
+não faz parte desse contrato. Os dois cenários controlados medem pixels
+diferentes, sem contar duplicação como FPS; ambos passaram em dois ciclos.

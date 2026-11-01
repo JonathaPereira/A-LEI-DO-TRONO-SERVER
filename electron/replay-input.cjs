@@ -30,18 +30,14 @@ const element = (id, ...parts) => {
 };
 const num = (id, n) => element(id, uint(n));
 const str = (id, s) => element(id, Buffer.from(s));
-function replayPixelBytes({ width, height, pixelFormat = 'bgra' }) {
-  return width * height * (pixelFormat === 'bgra' ? 4 : 1.5);
-}
-function replayHeader({ width, height, fps, audio, pixelFormat = 'bgra' }) {
+function replayHeader({ width, height, fps, audio }) {
   const bitmap = Buffer.alloc(40);
   bitmap.writeUInt32LE(40, 0);
   bitmap.writeInt32LE(width, 4);
-  bitmap.writeInt32LE(pixelFormat === 'bgra' ? -height : height, 8);
+  bitmap.writeInt32LE(-height, 8);
   bitmap.writeUInt16LE(1, 12);
-  bitmap.writeUInt16LE(pixelFormat === 'bgra' ? 32 : 12, 14);
-  if (pixelFormat !== 'bgra') bitmap.write(pixelFormat === 'nv12' ? 'NV12' : 'I420', 16, 'ascii');
-  bitmap.writeUInt32LE(replayPixelBytes({ width, height, pixelFormat }), 20);
+  bitmap.writeUInt16LE(32, 14);
+  bitmap.writeUInt32LE(width * height * 4, 20);
   const video = element(
     0xae,
     num(0xd7, 1),
@@ -101,4 +97,4 @@ function replayPacketParts(track, ms, data) {
     data,
   ];
 }
-module.exports = { replayHeader, replayPacket, replayPacketParts, replayPixelBytes };
+module.exports = { replayHeader, replayPacket, replayPacketParts };

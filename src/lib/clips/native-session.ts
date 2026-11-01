@@ -1,6 +1,5 @@
 import type { ReplaySession, ReplaySessionOptions } from './session';
 import type { ClipBufferStatus } from './buffer';
-import { nativeFrameLayout, type NativePixelFormat } from './frames.ts';
 export interface NativeReplayBridge {
   replayCapability(): Promise<{ available: boolean; reason?: string }>;
   startNativeReplay(config: {
@@ -10,9 +9,6 @@ export interface NativeReplayBridge {
     seconds: number;
     bitrate: number;
     audio: boolean;
-    pixelFormat?: NativePixelFormat;
-    inputRange?: 'pc' | 'tv';
-    inputMatrix?: 'bt709' | 'bt601' | 'bt2020';
   }): Promise<{ id: string; encoder: string; maxBytes: number }>;
   pushNativeReplay(packet: {
     id: string;
@@ -130,22 +126,11 @@ export async function createNativeReplaySession(
         options.quality,
       ),
       fps = options.fps,
-      hasAudio = stream.getAudioTracks().length > 0,
-      scaled =
-        (firstFrame?.displayWidth || video.videoWidth) !== width ||
-        (firstFrame?.displayHeight || video.videoHeight) !== height,
-      pixelFormat: NativePixelFormat =
-        !scaled && firstFrame?.format === 'I420'
-          ? 'yuv420p'
-          : !scaled && firstFrame?.format === 'NV12'
-            ? 'nv12'
-            : 'bgra',
-      packed = nativeFrameLayout(pixelFormat, width, height);
+      hasAudio = stream.getAudioTracks().length > 0;
     const canvas = target.document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
-    const drawing = scaled ? canvas.getContext('2d', { alpha: false }) : null;
-    if (scaled && !drawing) throw Error('Não foi possível preparar a imagem dos clipes.');
+    let drawing: CanvasRenderingContext2D | null = null;
     if (hasAudio) {
       context = new AudioContext({ sampleRate: 48000 });
       await context.suspend();
@@ -172,14 +157,6 @@ export async function createNativeReplaySession(
       seconds: options.seconds,
       bitrate: Math.round(options.quality.bitrate * (fps > 30 ? 1.5 : 1)),
       audio: hasAudio,
-      pixelFormat,
-      inputRange: pixelFormat === 'bgra' || firstFrame?.colorSpace.fullRange === true ? 'pc' : 'tv',
-      inputMatrix:
-        firstFrame?.colorSpace.matrix === 'bt2020-ncl'
-          ? 'bt2020'
-          : ['bt470bg', 'smpte170m'].includes(firstFrame?.colorSpace.matrix || '')
-            ? 'bt601'
-            : 'bt709',
     });
     if (!options.isCurrent()) {
       await bridge.stopNativeReplay(job.id);
@@ -231,14 +208,16 @@ export async function createNativeReplaySession(
         submitted = false;
       try {
         let image = frame;
-        if (scaled) {
+        if (frame.displayWidth !== width || frame.displayHeight !== height) {
+          drawing ||= canvas.getContext('2d', { alpha: false });
+          if (!drawing) throw Error('Não foi possível redimensionar a imagem dos clipes.');
           drawing!.drawImage(frame, 0, 0, width, height);
           image = copied = new VideoFrame(canvas, { timestamp: frame.timestamp });
         }
-        const data = pixelBuffers.pop() || new ArrayBuffer(packed.bytes);
+        const data = pixelBuffers.pop() || new ArrayBuffer(width * height * 4);
         await image.copyTo(data, {
-          ...(pixelFormat === 'bgra' ? { format: packed.format } : {}),
-          layout: packed.layout,
+          format: 'BGRA',
+          layout: [{ offset: 0, stride: width * 4 }],
           rect: { x: image.visibleRect?.x || 0, y: image.visibleRect?.y || 0, width, height },
         });
         if (!stopped && job) {
