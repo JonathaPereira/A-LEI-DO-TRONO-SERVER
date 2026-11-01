@@ -1,0 +1,22 @@
+name: Retry the validated 1.0.5 publication
+on:
+  push:
+    branches: [codex/publish-1.0.5-retry]
+permissions:
+  contents: read
+  actions: write
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const expected='8dba9c8137c780ea871f4f5d878ea96a16c02796';
+            const {data:branch}=await github.rest.repos.getBranch({...context.repo,branch:'main'});
+            if(branch.commit.sha!==expected)throw Error('Main changed; preserve the validated installer.');
+            const response=await fetch('https://mn-trono-downloads.surge.sh/MN-Trono-1.0.5-Windows.exe',{method:'HEAD',signal:AbortSignal.timeout(20000)});
+            core.notice('Public installer HTTP status: '+response.status+'; content-length: '+Number(response.headers.get('content-length')||0));
+            await github.rest.actions.createWorkflowDispatch({...context.repo,workflow_id:'frontend-publish.yml',ref:'main',inputs:{release_tag:'desktop-v1.0.5-run-41266862941-attempt-1'}});
+            core.notice('Republishing only the exact validated 1.0.5 delivery; no Windows rebuild or test rerun.');
