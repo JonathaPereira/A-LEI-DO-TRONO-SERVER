@@ -41,7 +41,7 @@ jobs:
           exit $LASTEXITCODE
       - name: Verify real Electron local capture and call coexistence
         run: |
-          npm test -- --suite desktop --filter 'clip-local-desktop.cjs|clip-native-pipeline.cjs|application-call-desktop.cjs' 2>&1 | Tee-Object artifacts/windows-local-desktop.log
+          npm test -- --suite desktop --filter 'clip-local-desktop.cjs|clip-native-pipeline.cjs|application-call-desktop.cjs|desktop-audio.js' 2>&1 | Tee-Object artifacts/windows-local-desktop.log
           exit $LASTEXITCODE
       - name: Report failure details
         if: failure()
