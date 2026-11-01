@@ -877,3 +877,16 @@ EXEs empacotados mantêm a inicialização original. Nenhum prazo/assert foi
 afrouxado. A instrumentação temporária de fases no main ficou somente na
 branch de diagnóstico, sem alteração adicional do produto. A validação final
 retomará os gates completos da entrega antes de enviar ao Surge.
+
+
+Entrega 1.0.4 concluída: `f6dfa133ee37d23c75399a67d267e1fbca0c7ee2` passou
+fontes, contratos, jornadas, executável empacotado e instalação real no Windows
+`41261346161`. A execução focada corrigida `41261081629` aprovou o handshake e
+dois ciclos de voz em segundo plano/reabertura. O pipeline publicou e baixou
+o EXE em https://mn-trono-downloads.surge.sh/MN-Trono-1.0.4-Windows.exe, conferiu
+SHA-256, publicou o frontend e comparou latest.yml e o metadado 1.0.4 do site.
+Frontend com EXE e hashes da mesma entrega: release privada
+https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/untagged-d3d8881aea54651f0fd5 .
+A main permanece no commit do artefato; este checkpoint documental segue somente
+na contribuição para evitar novo deploy. NVENC físico/desempenho da 3060 Ti não
+foram medidos no runner; o app mantém probe real antes de ativá-lo.
