@@ -903,3 +903,8 @@ concatenar trechos descontínuos. O contrato do atalho reproduziu registro
 temporariamente rejeitado sem recuperação; a ponte agora repete e informa o
 estado real. Windows verificará SendInput com outra janela em foco, retenção
 antes de focar Trono e liberação da fonte, nos caminhos compatível/nativo/som.
+A checagem Windows deixa três segundos sem consultar o renderer após SendInput
+e exige timestamp de criação anterior à primeira consulta, para não mascarar
+um app que só processa o atalho quando o teste o desperta. Build/tipos/formato
+e 87 regressões focadas passaram; dois ciclos controlados aprovaram YUV/RGB a
+56–57 FPS e PCM contínuo. O binário NVENC físico permanece fora do runner.

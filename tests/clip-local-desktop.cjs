@@ -44,6 +44,13 @@ for(const backend of ['compatible','native','native-audio'])test('native local c
   else await app.evaluate(({BrowserWindow})=>{const game=BrowserWindow.getAllWindows().find(w=>w.getTitle()==='QA clipes locais');game.show();game.focus();});
   await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused())).toBe(false);
   await require('./desktop-shortcut-input.cjs').pressClipShortcut();
+  // Do not poll the renderer here: a CDP evaluation could wake a suspended page
+  // and hide exactly the failure reported by a player using another monitor.
+  await new Promise(resolve=>setTimeout(resolve,3000));
+  const beforeFirstProbe=Date.now();
+  const saved=await page.evaluate(()=>window.TronoClipStore.list(window.TronoAuth.user.id));
+  assert.equal(saved.length,1,'the OS shortcut must retain a clip before any renderer probe');
+  assert(saved[0].createdAt<beforeFirstProbe-100,'clip creation must precede the first renderer probe');
   await expect(page.locator('.clip-card')).toHaveCount(1,{timeout:15000});
   assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused()),false,'clip must be retained without returning focus to Trono');
   console.log('Windows global clip shortcut with another window focused:',JSON.stringify({backend,displays}));
