@@ -923,3 +923,18 @@ reais disponíveis e não representa uma partida de LoL ou NVENC físico.
 Preparação 1.0.5 autorizada pelo fluxo de correção/publicação vigente: somente
 desktop/lock/guia recebem a versão; backend permanece 0.14.0-alpha. O Windows
 completo e a publicação validada usarão o mesmo commit da entrega.
+
+Entrega 1.0.5 concluída: `8dba9c8137c780ea871f4f5d878ea96a16c02796` passou
+fontes, contratos/jornadas, executável empacotado, instalação real e criação
+dos pacotes no Windows `41266862941`. O primeiro envio do instalador concluiu,
+mas a conferência HTTP retornou código curl 22 antes do frontend; HEAD posterior
+retornou 200 com 188.665.857 bytes. A repetição somente da publicação
+`41268165714` aprovou o mesmo artefato, SHA-256 do EXE público, manifesto e
+metadado 1.0.5, sem recompilar ou repetir Windows. O disparador isolado de
+publicação ficou na branch de operação, sem alterar o commit do produto.
+EXE: https://mn-trono-downloads.surge.sh/MN-Trono-1.0.5-Windows.exe .
+Frontend com EXE da mesma entrega: release privada
+https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/untagged-3ec270380720bdb6de07 .
+A main permanece no commit do artefato. O atalho real foi validado fora do foco,
+sem consulta ao renderer durante a espera; o ensaio de FPS/PCM foi controlado,
+e não representa medição na 3060 Ti ou uma partida de LoL do usuário.
