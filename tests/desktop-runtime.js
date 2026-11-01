@@ -7,6 +7,7 @@ const { test } = require('node:test'),
   os = require('node:os');
 const { _electron, expect } = require('@playwright/test');
 const { startHTTPS } = require('./desktop-https-fixture');
+const { firstAppWindow } = require('./desktop-first-window.cjs');
 const { killTestApp, closeTestApp } = require('./desktop-test-close');
 test(
   'installed desktop boundary, native shortcut, picker and filesystem integration',
@@ -50,7 +51,7 @@ test(
         for (const line of chunk.toString().split('\n'))
           if (line.startsWith('[desktop]')) console.log(line);
       });
-      let page = await app.firstWindow();
+      let page = await firstAppWindow(app);
       await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       assert.equal(page.url(), 'https://a-lei-do-trono.surge.sh/');
       assert.equal(
@@ -403,7 +404,7 @@ test(
         ],
         timeout: 40000,
       });
-      page = await app.firstWindow();
+      page = await firstAppWindow(app);
       await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       await page.waitForFunction(() => window.TronoAuth?.ready);
       await page.evaluate(() => window.TronoAuth.ready);

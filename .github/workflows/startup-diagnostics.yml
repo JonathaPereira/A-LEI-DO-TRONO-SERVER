@@ -1,0 +1,42 @@
+name: Check Windows startup lifecycle
+on:
+  push:
+    branches: [codex/startup-diagnostics]
+permissions:
+  contents: read
+jobs:
+  startup:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare the actual application
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx playwright install chromium
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run build:native
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/desktop/prepare-ffmpeg.cjs
+          exit $LASTEXITCODE
+      - name: Verify startup and reopen twice without changing deadlines
+        shell: pwsh
+        run: |
+          for ($round=1; $round -le 2; $round++) {
+            npm test -- --suite desktop --profile release --filter 'desktop-background-voice.js|desktop-runtime.js' 2>&1 | Tee-Object "artifacts/windows-startup-$round.log"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Report structured test failures
+        if: failure()
+        run: node scripts/desktop/failure-summary.cjs

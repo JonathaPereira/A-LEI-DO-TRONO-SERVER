@@ -124,6 +124,20 @@ const trace = (...values) => {
   if (!app.isPackaged && app.commandLine.hasSwitch('desktop-diagnostics'))
     console.error('[desktop]', ...values);
 };
+function startupPhase(phase, failure) {
+  if (!app.isPackaged && app.commandLine.hasSwitch('desktop-diagnostics'))
+    globalThis.__mnDesktopStartup = {
+      phase,
+      failed: !!failure,
+      ...(failure
+        ? {
+            name: failure.name,
+            code: /^[A-Z_0-9]+$/.test(failure.code || '') ? failure.code : null,
+          }
+        : {}),
+    };
+}
+startupPhase('waiting-ready');
 // Keep renderer Web Audio/RNNoise scheduled when Windows occludes or minimizes the app.
 if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
@@ -150,6 +164,7 @@ else {
     .whenReady()
     .then(start)
     .catch((error) => {
+      startupPhase(globalThis.__mnDesktopStartup?.phase || 'unknown', error);
       trace('startup failure', error.stack || error.message);
       dialog.showErrorBox('Não foi possível abrir o M&N', error.message);
       app.quit();
@@ -176,8 +191,10 @@ async function start() {
   app.setAppUserModelId(
     app.isPackaged ? 'com.jonatha.mn.trono' : 'com.jonatha.mn.trono.development',
   );
+  startupPhase('preferences');
   preferences = new DesktopPreferences(app.getPath('userData'), safeStorage);
   await preferences.load();
+  startupPhase('sessions-and-game-manifest');
   const browserSession = session.fromPartition('persist:mn-trono');
   const gameManifest = JSON.parse(
     await fs.readFile(path.join(root, 'roguelite/asset-manifest.json'), 'utf8'),
@@ -210,6 +227,7 @@ async function start() {
   // Local, versioned UI uses the existing origin for API/WS compatibility.
   // Code and HTML come only from the installed bundle. Listed game media may
   // use its verified cache; there is no remote HTML/script fallback.
+  startupPhase('protocol-handler');
   await browserSession.protocol.handle('https', async (request) => {
     if (!isAppURL(request.url)) {
       const headers = new Headers(request.headers),
@@ -271,6 +289,7 @@ async function start() {
     return voicePriority.setActive(active);
   });
   const workArea = screen.getPrimaryDisplay().workAreaSize;
+  startupPhase('create-window');
   window = new BrowserWindow({
     title: 'M&N · A Lei do Trono',
     icon: path.join(__dirname, 'assets/icon.png'),
@@ -467,6 +486,7 @@ async function start() {
     trusted(event);
     return { active: false, suspended: true };
   });
+  startupPhase('native-replay-cleanup');
   const replayDirectory = path.join(app.getPath('userData'), 'replay-temporary');
   await fs.rm(replayDirectory, { recursive: true, force: true });
   nativeReplay = createNativeReplay({
@@ -931,6 +951,7 @@ async function start() {
   const icon = nativeImage
     .createFromPath(path.join(__dirname, 'assets/icon.png'))
     .resize({ width: 32, height: 32 });
+  startupPhase('create-tray');
   tray = new Tray(icon);
   tray.setToolTip('M&N · A Lei do Trono');
   tray.setContextMenu(
@@ -974,7 +995,9 @@ async function start() {
       },
     ]),
   );
+  startupPhase('load-window');
   await window.loadURL((devOrigin || APP_ORIGIN) + '/');
+  startupPhase('ready');
 }
 function cancelCapture() {
   if (!capture) return;
