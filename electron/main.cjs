@@ -150,6 +150,7 @@ else {
     .whenReady()
     .then(start)
     .catch((error) => {
+      trace('startup failure', error.stack || error.message);
       dialog.showErrorBox('Não foi possível abrir o M&N', error.message);
       app.quit();
     });
