@@ -1,4 +1,5 @@
 'use strict';
+const {launchDesktop}=require('./desktop-first-window.cjs');
 
 const { test } = require('node:test');
 const fs = require('node:fs/promises');
@@ -20,7 +21,7 @@ test(
     const abort = () => killTestApp(app);
     t.signal.addEventListener('abort', abort, { once: true });
     try {
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: [
           path.resolve(__dirname, '../electron'),

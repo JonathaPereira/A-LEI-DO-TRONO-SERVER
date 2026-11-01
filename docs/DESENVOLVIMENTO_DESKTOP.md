@@ -291,3 +291,12 @@ nativo verifica a escolha, MP4 reproduzível, captura com janela oculta e tons
 distintos de aplicativo/microfone. Isso não é medição de NVENC físico ou jogo.
 O pacote final verifica que FFmpeg/DLLs/licenças existem e mantém o probe NVENC
 real. Conferência de GPU/driver/desempenho no PC do usuário continua necessária.
+
+
+As fixtures não empacotadas da entrega usam `launchDesktop` de
+`tests/desktop-first-window.cjs`: ao selecionar o executável explicitamente,
+o Playwright não insere sozinho seu loader de sincronização com app.ready.
+O helper precarrega o loader da versão instalada, preservando prazos e args.
+`desktop-startup-sync.cjs` verifica o handshake e a janela real imediata; uma
+atualização do Playwright deve conservar esse contrato. Instalador/EXE real
+continuam no caminho de lançamento original, sem preload de automação.

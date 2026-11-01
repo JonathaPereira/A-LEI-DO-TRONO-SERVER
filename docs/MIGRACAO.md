@@ -863,3 +863,17 @@ sem skips. O ZIP conserva o EXE; o .surgeignore impede seu envio duplicado ao
 site principal. A publicação confere o SHA-256 do EXE baixado do domínio novo
 antes de avançar para o feed. A validação completa Windows será repetida no
 commit final para manter a relação entre fontes, instalador e publicação.
+
+
+A segunda tentativa `41258871002` aprovou os cenários de clipes e bloqueou a
+entrega por timeouts em firstWindow (voz em segundo plano e reabertura após
+permissões). Dois ciclos focados `41260260911` passaram sem reproduzir a falha.
+A inspeção do Playwright fixado identificou que executablePath explícito não
+precarrega seu loader de sincronização. O contrato real Windows `41260899399`
+falhou especificamente por ausência desse handshake; a correção passou esse
+contrato em `41261081629` e está repetindo os dois cenários completos.
+As fixtures da entrega agora usam o mesmo loader fixado antes do entry; os
+EXEs empacotados mantêm a inicialização original. Nenhum prazo/assert foi
+afrouxado. A instrumentação temporária de fases no main ficou somente na
+branch de diagnóstico, sem alteração adicional do produto. A validação final
+retomará os gates completos da entrega antes de enviar ao Surge.

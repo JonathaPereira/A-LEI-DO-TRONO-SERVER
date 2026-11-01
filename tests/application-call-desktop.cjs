@@ -1,4 +1,5 @@
 'use strict';
+const {launchDesktop}=require('./desktop-first-window.cjs');
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const fs = require('node:fs/promises'),
@@ -53,7 +54,7 @@ test(
         path.join(directory, 'media-permissions.json'),
         JSON.stringify({ allowed: ['audio', 'video'] }),
       );
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: [
           path.resolve('electron'),

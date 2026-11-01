@@ -1,4 +1,5 @@
 'use strict';
+const {launchDesktop}=require('./desktop-first-window.cjs');
 const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const fs = require('node:fs/promises'),
@@ -34,7 +35,7 @@ test(
         token_hash: [...fixture.links.keys()].at(-1),
         type: 'signup',
       });
-      app = await _electron.launch({
+      app = await launchDesktop(_electron,{
         executablePath: require('../electron/node_modules/electron'),
         args: [
           path.resolve('electron'),

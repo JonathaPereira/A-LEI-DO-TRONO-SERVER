@@ -27,6 +27,7 @@
     "tests/auth-desktop.cjs",
     "tests/application-call-desktop.cjs",
     "tests/desktop-background-voice.js",
+    "tests/desktop-startup-sync.cjs",
     "tests/desktop-remote-native.js",
     "tests/desktop-runtime.js",
     "tests/desktop-audio.js",
