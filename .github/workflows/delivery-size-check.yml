@@ -1,0 +1,55 @@
+name: Check delivery packaging only
+on:
+  push:
+    branches: [codex/delivery-size-check]
+permissions:
+  contents: read
+jobs:
+  packaging:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare the same Windows payload without publishing
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run build:native
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/desktop/prepare-ffmpeg.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run pack:win
+          exit $LASTEXITCODE
+      - name: Report only delivery status and numeric sizes
+        uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          script: |
+            const path=require('node:path'),fs=require('node:fs');
+            const root=process.cwd(),version=require('./electron/package.json').version;
+            const localPath=path.join(root,'artifacts/windows-app',`MN-Trono-${version}-Windows.exe`);
+            core.notice(`Installer bytes: ${fs.statSync(localPath).size}`);
+            try {
+              const {prepareSite,DOWNLOAD_REPOSITORY}=require('./scripts/desktop/package-site.cjs');
+              const {releaseInstaller}=require('./scripts/desktop/release-installer.cjs');
+              const installerPath=await releaseInstaller({version,repository:DOWNLOAD_REPOSITORY,localPath,cacheDir:path.join(root,'artifacts/published-installer')});
+              const result=await prepareSite({installerPath});
+              core.notice(`Prepared site bytes: ${result.siteBytes}; installer bytes: ${result.installerBytes}`);
+            } catch(error) {
+              const size=/Total: (\d+) bytes; limite: (\d+) bytes/.exec(error.message);
+              if(size)core.setFailed(`Site size rejected: ${size[1]} bytes; budget: ${size[2]} bytes.`);
+              else if(error.message==='Não foi possível conferir o instalador já publicado no GitHub.')core.setFailed('Published installer lookup failed.');
+              else if(error.code==='ENOENT')core.setFailed('A required delivery file is missing.');
+              else core.setFailed('Delivery preparation failed; no private log or credential is reproduced.');
+            }
