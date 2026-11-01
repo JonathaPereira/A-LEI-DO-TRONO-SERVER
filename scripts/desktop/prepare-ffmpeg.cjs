@@ -58,6 +58,14 @@ async function prepare() {
   });
   if (probe.status !== 0 || !probe.stdout.includes('h264_nvenc'))
     throw Error('O FFmpeg verificado não oferece NVENC.');
+  const build = spawnSync(path.join(output, 'bin/ffmpeg.exe'), ['-hide_banner', '-buildconf'], {
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  const configuration = (build.stdout || '') + '\n' + (build.stderr || '');
+  if (build.status !== 0 || /--enable-(gpl|nonfree)\b/.test(configuration))
+    throw Error('A distribuição FFmpeg deve conservar a configuração LGPL compartilhada.');
+  await fs.writeFile(path.join(output, 'BUILD-CONFIG.txt'), configuration);
   await fs.rm(staging, { recursive: true, force: true });
   await fs.rm(archive, { force: true });
   console.log(

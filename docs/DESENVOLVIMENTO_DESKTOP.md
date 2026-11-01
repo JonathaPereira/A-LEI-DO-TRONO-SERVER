@@ -272,3 +272,22 @@ sem eles publica somente um APK identificado como teste. Uma execução da main
 com chave permanente publica `android-v<versão>`; branches publicam prévias.
 Isso não publica na Play Store nem instala uma atualização sem consentimento.
 A distribuição Windows/Surge existente continua com seus próprios checks.
+
+
+### FFmpeg e clipes NVENC
+
+No desenvolvimento Windows x64, execute `node scripts/desktop/prepare-ffmpeg.cjs`
+após instalar dependências. O script baixa a distribuição LGPL compartilhada
+fixada e confere SHA-256, configuração e disponibilidade do encoder compilado.
+O pacote inclui executável, DLLs substituíveis, licenças e fontes/receita em
+`resources/ffmpeg/`. Não há download de binários ao iniciar a captura.
+
+`tests/clip-native-pipeline.cjs` exige FFmpeg/FFprobe: no Windows usa o pacote
+preparado; no Linux usa os comandos instalados e libx264 apenas no teste. Os
+contratos verificam buffer fMP4, H.264/AAC, remux/tempo, áudio e descarte.
+Electron real usa Media Foundation em fixture local para testar sem NVIDIA;
+a opção só é aceita não empacotada, com endereço 127.0.0.1 explícito. O teste
+nativo verifica a escolha, MP4 reproduzível, captura com janela oculta e tons
+distintos de aplicativo/microfone. Isso não é medição de NVENC físico ou jogo.
+O pacote final verifica que FFmpeg/DLLs/licenças existem e mantém o probe NVENC
+real. Conferência de GPU/driver/desempenho no PC do usuário continua necessária.

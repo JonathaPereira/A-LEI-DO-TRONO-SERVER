@@ -24,6 +24,17 @@ export interface NativeReplayBridge {
     listener: (status: ClipBufferStatus & { id: string; error?: string }) => void,
   ): () => void;
 }
+export function fitNativeCapture(
+  width: number,
+  height: number,
+  bounds: { width: number; height: number },
+) {
+  const scale = Math.min(1, bounds.width / width, bounds.height / height);
+  return {
+    width: Math.max(16, Math.floor((width * scale) / 2) * 2),
+    height: Math.max(16, Math.floor((height * scale) / 2) * 2),
+  };
+}
 /** Copies only replay-owned frames to a native hardware encoder; never captures another screen. */
 export async function createNativeReplaySession(
   target: Window,
@@ -80,16 +91,10 @@ export async function createNativeReplaySession(
       return null;
     }
     const settings = stream.getVideoTracks()[0].getSettings(),
-      width = Math.max(
-        16,
-        Math.floor(Math.min(settings.width || options.quality.width, options.quality.width) / 2) *
-          2,
-      ),
-      height = Math.max(
-        16,
-        Math.floor(
-          Math.min(settings.height || options.quality.height, options.quality.height) / 2,
-        ) * 2,
+      { width, height } = fitNativeCapture(
+        video.videoWidth || settings.width || options.quality.width,
+        video.videoHeight || settings.height || options.quality.height,
+        options.quality,
       ),
       fps = options.fps,
       hasAudio = stream.getAudioTracks().length > 0;

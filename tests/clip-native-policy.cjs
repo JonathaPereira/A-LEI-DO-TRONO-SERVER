@@ -1,6 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {testEncoder,readConfig}=require('../electron/replay-native.cjs');
+test('native capture preserves wide/portrait proportions within encoding bounds and keeps smaller sources at their real size',()=>{const {fitNativeCapture}=require('../src/lib/clips/native-session.ts');const bounds={width:1920,height:1080};assert.deepEqual(fitNativeCapture(3840,2160,bounds),{width:1920,height:1080});assert.deepEqual(fitNativeCapture(3440,1440,bounds),{width:1920,height:802});assert.deepEqual(fitNativeCapture(1080,1920,bounds),{width:606,height:1080});assert.deepEqual(fitNativeCapture(640,480,bounds),{width:640,height:480});});
 test('only an unpackaged local QA fixture can select the software H264 test encoder',()=>{
  const expected={encoder:'h264_mf',encoderLabel:'Media Foundation (teste)'};
  for(const protocol of ['http','https'])assert.deepEqual(testEncoder({packaged:false,origin:protocol+'://127.0.0.1:11987',encoder:'h264_mf'}),expected);

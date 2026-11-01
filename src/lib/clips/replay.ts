@@ -114,7 +114,7 @@ export function createReplayController(options: ReplayOptions) {
     if (!settings.auto && !force) return;
     if (library.hasUnsavedMemory(owner)) {
       publish(
-        'Salve ou descarte os clipes guardados somente nesta sessão antes de retomar o replay.',
+        'Salve ou descarte os clipes guardados somente nesta sessão antes de retomar a captura.',
       );
       return;
     }
@@ -174,11 +174,7 @@ export function createReplayController(options: ReplayOptions) {
       session = prepared;
       prepared.start();
       starting = false;
-      publish(
-        prepared.hasAudio
-          ? 'Replay automático ativo com o áudio da tela.'
-          : 'Replay ativo sem áudio: o navegador não forneceu áudio da tela. Habilite-o no seletor de compartilhamento, quando disponível.',
-      );
+      publish(prepared.hasAudio ? 'Captura iniciada com som.' : 'Captura iniciada sem som.');
     } catch (error) {
       if (!current()) return;
       session?.stop();
@@ -200,7 +196,7 @@ export function createReplayController(options: ReplayOptions) {
     if (disposed) return;
     const target = session;
     if (!target?.status?.ready || target.stopping) {
-      publish('Compartilhe sua tela e aguarde o replay ficar pronto para clipar.');
+      publish('Ative a captura e aguarde alguns segundos para clipar.');
       return;
     }
     if (target.pendingCount >= 4) {

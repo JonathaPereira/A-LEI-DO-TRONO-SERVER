@@ -820,3 +820,30 @@ cancelamento/transições de microfone, os 13 testes áudio/sessão passaram.
 Browser será repetido no build final; Windows validará Electron e exportação.
 O runner sem NVIDIA usa Media Foundation em QA, identificado como teste; não
 comprova aceleração física na 3060 Ti. O pacote mantém o probe NVENC real.
+
+
+Validação funcional de clipes: dois ciclos consecutivos do navegador aprovaram
+18 testes cada, sem skips; inspeção temporária do HUD e banners aprovada pelo
+agente, sem criar snapshots permanentes. Os 96 contratos focados e dois
+contratos da política de encoder de teste passaram. Windows `41254020593`
+aprovou cinco cenários: captura compatível, pipeline nativo MP4/janela oculta,
+chamada coexistente e dois contratos reais de H.264/MP4. A primeira tentativa
+usou indevidamente Compatível porque o fixture HTTP não ativava o modo MF;
+a condição de QA agora aceita somente HTTP(S) local não empacotado e o teste
+exige a escolha efetiva do encoder antes de capturar. O cenário adicional com
+áudio de aplicativo e microfone está na execução `41254409161`.
+Preparação `codex/release-1.0.4`: numeração e guias atualizados para a próxima
+entrega autorizada; o envio à main/publicação depende dessa última validação.
+
+
+Windows `41256364205` aprovou o cenário nativo com áudio de aplicativo e
+microfone: os tons 440/880 Hz foram verificados no MP4 exportado. O teste usa
+entrada PCM nativa controlada quando o runner não tem endpoint físico, sem
+remover a verificação de ambos os tons; a regressão de isolamento por processo
+permanece exigida quando há dispositivo. A ausência de reprodução no runner
+não é apresentada como validação física. O programa QA separado preserva a
+proteção que exclui áudio do próprio Trono e tem sintaxe gerada validada no Node.
+Preparação final 1.0.4 aprovou tipos/formato/build, 98 contratos focados e 22 de
+distribuição/atualizador, além do novo contrato de proporção do encoder (sem
+esticar ultrawide/vertical ou aumentar fontes pequenas). HUD de clipes foi
+reverificado no build 1.0.4. Publicação usará gates Windows/instalador/Surge.

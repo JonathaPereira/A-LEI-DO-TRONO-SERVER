@@ -1,4 +1,4 @@
-M&N · A Lei do Trono — Windows 1.0.3
+M&N · A Lei do Trono — Windows 1.0.4
 
 Trono 1.0: pistas do Similo mantêm a orientação também ao ampliar. Configurações
 separam as 12 cartas da mesa do baralho do informante, com tema principal e
@@ -35,7 +35,7 @@ Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.
 Após autorizar a instalação, o app aberto na bandeja também é encerrado.
 Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
 
-1. Instalação nova: instale MN-Trono-1.0.3-Windows.exe.
+1. Instalação nova: instale MN-Trono-1.0.4-Windows.exe.
    Instalações 0.3.5/0.3.6 com falha ao baixar atualizações precisam instalar
    esta versão manualmente uma vez. Versões anteriores sem a falha podem usar
    o atualizador interno após a publicação do site completo.
@@ -80,7 +80,13 @@ Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas
     local vem desligada ao abrir o app; Desligar captura local encerra essa fonte.
     Configurações dos clipes reúne qualidade Excelente/Econômica, atalho e pasta.
     Preparar clipes ao transmitir a tela continua opcional. Desligar esse preparo
-    mantém a transmissão e os clipes já criados. NVENC ainda não está integrado.
+    mantém a transmissão e os clipes já criados. Som dos clipes permite incluir
+    microfone + áudio da captura ou escolher Sem som. O estado Capturando clipes
+    indica a captura ativa. Codificador oferece Automático, NVIDIA NVENC e
+    Compatível; Automático testa o NVENC e informa o codificador efetivamente
+    ativado. NVENC requer placa/driver NVIDIA compatíveis no aplicativo Windows.
+    O nativo salva MP4; Compatível conserva WebM. Sem som no seletor da fonte
+    também exclui o microfone daquela captura.
 14. Fechar mantém o aplicativo na bandeja. M&N → Sair encerra de verdade.
     Clique na versão no rodapé para buscar atualização. Reiniciar encerra a call;
     escolha um momento conveniente. O atualizador vai direto para a última versão.

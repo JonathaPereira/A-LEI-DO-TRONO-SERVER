@@ -18,7 +18,7 @@ test(
     );
     await fs.access(executable);
     const ffmpegDirectory=path.join(path.dirname(executable),'resources/ffmpeg');
-    for (const file of ['bin/ffmpeg.exe','LICENSE-LGPL-3.txt','LICENSE-GPL-3.txt','UPSTREAM.txt','VERSION.json']) await fs.access(path.join(ffmpegDirectory,file));
+    for (const file of ['bin/ffmpeg.exe','LICENSE-LGPL-3.txt','LICENSE-GPL-3.txt','UPSTREAM.txt','BUILD-CONFIG.txt','VERSION.json']) await fs.access(path.join(ffmpegDirectory,file));
     const ffmpegVersion=JSON.parse(await fs.readFile(path.join(ffmpegDirectory,'VERSION.json'),'utf8'));
     assert.equal(ffmpegVersion.sha256,require('../scripts/desktop/prepare-ffmpeg.cjs').SHA256);
     const codecProbe=require('node:child_process').spawnSync(path.join(ffmpegDirectory,'bin/ffmpeg.exe'),['-hide_banner','-encoders'],{encoding:'utf8',windowsHide:true,timeout:15000});assert.equal(codecProbe.status,0,codecProbe.stderr);assert.match(codecProbe.stdout,/h264_nvenc/);

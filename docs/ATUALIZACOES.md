@@ -1,8 +1,25 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.3** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.4** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.4
+
+O HUD de Seus clipes mostra Captura desligada, Iniciando captura e Capturando
+clipes. Som dos clipes inclui microfone e áudio da captura; Sem som exclui ambos.
+O microfone acompanha entrada/saída da chamada sem parar seu track emprestado.
+Permissões negadas e encerramento da captura liberam os recursos próprios.
+
+Codificador oferece Automático, NVIDIA NVENC e Compatível. O aplicativo Windows
+testa codificação NVENC real antes de ativar esse caminho; Automático usa
+Compatível se indisponível. O indicador identifica o encoder efetivo. O caminho
+nativo mantém H.264 em buffer limitado e exporta MP4; Compatível preserva WebM.
+Driver e GPU compatíveis são necessários. O desempenho na GPU do usuário não
+foi medido pelo runner sem NVIDIA. Não há novo SQL ou protocolo de backend.
+
+Banners da sala de voz mostram microfone cortado no mute e microfone + headset
+cortados no deafen, acompanhando o estado privado dos participantes da chamada.
 
 ## Windows 1.0.3
 
