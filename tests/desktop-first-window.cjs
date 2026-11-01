@@ -23,4 +23,5 @@ async function firstAppWindow(app) {
     throw error;
   }
 }
-module.exports = { firstSizedWindow, firstAppWindow };
+function launchDesktop(electron, options) { return electron.launch(options); }
+module.exports = { firstSizedWindow, firstAppWindow, launchDesktop };

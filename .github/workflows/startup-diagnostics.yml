@@ -15,13 +15,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Prepare the actual application
+      - name: Install the fixed dependencies
         shell: pwsh
         run: |
           npm ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm --prefix electron ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check the actual automation startup boundary
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          node --test tests/desktop-startup-sync.cjs 2>&1 | Tee-Object artifacts/windows-startup-sync.log
+          exit $LASTEXITCODE
+      - name: Prepare the actual application
+        shell: pwsh
+        run: |
           npx playwright install chromium
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build
