@@ -1,6 +1,7 @@
 {
   "core": [
     "tests/clip-native-policy.cjs",
+    "tests/clip-pcm.cjs",
     "tests/clip-audio.cjs",
     "tests/clip-local-capture.cjs",
     "tests/android-push-registration.cjs",
@@ -192,6 +193,7 @@
   ],
   "browser": [
     "tests/clip-local-browser.cjs",
+    "tests/clip-native-rate-browser.cjs",
     "tests/mobile-browser.cjs",
     "tests/voice-recovery-browser.cjs",
     "tests/similo-browser.cjs",

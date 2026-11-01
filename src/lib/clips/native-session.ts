@@ -1,5 +1,6 @@
 import type { ReplaySession, ReplaySessionOptions } from './session';
 import type { ClipBufferStatus } from './buffer';
+import { nativeFrameLayout, type NativePixelFormat } from './frames.ts';
 export interface NativeReplayBridge {
   replayCapability(): Promise<{ available: boolean; reason?: string }>;
   startNativeReplay(config: {
@@ -9,6 +10,9 @@ export interface NativeReplayBridge {
     seconds: number;
     bitrate: number;
     audio: boolean;
+    pixelFormat?: NativePixelFormat;
+    inputRange?: 'pc' | 'tv';
+    inputMatrix?: 'bt709' | 'bt601' | 'bt2020';
   }): Promise<{ id: string; encoder: string; maxBytes: number }>;
   pushNativeReplay(packet: {
     id: string;
@@ -57,7 +61,22 @@ export async function createNativeReplaySession(
   const video = target.document.createElement('video');
   video.muted = true;
   video.playsInline = true;
-  video.srcObject = stream;
+  const Processor = (
+    target as Window & {
+      MediaStreamTrackProcessor?: new (options: {
+        track: MediaStreamTrack;
+        maxBufferSize: number;
+      }) => { readable: ReadableStream<VideoFrame> };
+    }
+  ).MediaStreamTrackProcessor;
+  let reader: ReadableStreamDefaultReader<VideoFrame> | undefined,
+    firstFrame: VideoFrame | undefined;
+  if (Processor)
+    reader = new Processor({
+      track: stream.getVideoTracks()[0],
+      maxBufferSize: 1,
+    }).readable.getReader();
+  else video.srcObject = stream;
   let context: AudioContext | undefined,
     node: AudioWorkletNode | undefined,
     audioInput: MediaStreamAudioSourceNode | undefined,
@@ -69,12 +88,23 @@ export async function createNativeReplaySession(
     status: ClipBufferStatus | null = null,
     startedAt = 0,
     audioBase = 0,
-    videoBusy = false,
+    videoInFlight = 0,
+    wakeFrame: (() => void) | undefined,
+    wakeSleep: (() => void) | undefined,
     audioBusy = false,
     unsubscribe = () => {};
-  const pending = new Set<string>();
+  const pending = new Set<string>(),
+    pixelBuffers: ArrayBuffer[] = [];
   function cleanup() {
     if (timer !== undefined) target.clearTimeout(timer);
+    wakeFrame?.();
+    wakeFrame = undefined;
+    wakeSleep?.();
+    wakeSleep = undefined;
+    pixelBuffers.length = 0;
+    firstFrame?.close();
+    firstFrame = undefined;
+    void reader?.cancel().catch(() => {});
     video.pause();
     video.srcObject = null;
     audioInput?.disconnect();
@@ -85,24 +115,37 @@ export async function createNativeReplaySession(
     unsubscribe();
   }
   try {
-    await video.play();
+    if (reader) {
+      firstFrame = (await reader.read()).value;
+      if (!firstFrame) throw Error('A fonte de vídeo foi encerrada.');
+    } else await video.play();
     if (!options.isCurrent()) {
       cleanup();
       return null;
     }
     const settings = stream.getVideoTracks()[0].getSettings(),
       { width, height } = fitNativeCapture(
-        video.videoWidth || settings.width || options.quality.width,
-        video.videoHeight || settings.height || options.quality.height,
+        firstFrame?.displayWidth || video.videoWidth || settings.width || options.quality.width,
+        firstFrame?.displayHeight || video.videoHeight || settings.height || options.quality.height,
         options.quality,
       ),
       fps = options.fps,
-      hasAudio = stream.getAudioTracks().length > 0;
+      hasAudio = stream.getAudioTracks().length > 0,
+      scaled =
+        (firstFrame?.displayWidth || video.videoWidth) !== width ||
+        (firstFrame?.displayHeight || video.videoHeight) !== height,
+      pixelFormat: NativePixelFormat =
+        !scaled && firstFrame?.format === 'I420'
+          ? 'yuv420p'
+          : !scaled && firstFrame?.format === 'NV12'
+            ? 'nv12'
+            : 'bgra',
+      packed = nativeFrameLayout(pixelFormat, width, height);
     const canvas = target.document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
-    const drawing = canvas.getContext('2d', { alpha: false });
-    if (!drawing) throw Error('Não foi possível preparar a imagem dos clipes.');
+    const drawing = scaled ? canvas.getContext('2d', { alpha: false }) : null;
+    if (scaled && !drawing) throw Error('Não foi possível preparar a imagem dos clipes.');
     if (hasAudio) {
       context = new AudioContext({ sampleRate: 48000 });
       await context.suspend();
@@ -129,6 +172,14 @@ export async function createNativeReplaySession(
       seconds: options.seconds,
       bitrate: Math.round(options.quality.bitrate * (fps > 30 ? 1.5 : 1)),
       audio: hasAudio,
+      pixelFormat,
+      inputRange: pixelFormat === 'bgra' || firstFrame?.colorSpace.fullRange === true ? 'pc' : 'tv',
+      inputMatrix:
+        firstFrame?.colorSpace.matrix === 'bt2020-ncl'
+          ? 'bt2020'
+          : ['bt470bg', 'smpte170m'].includes(firstFrame?.colorSpace.matrix || '')
+            ? 'bt601'
+            : 'bt709',
     });
     if (!options.isCurrent()) {
       await bridge.stopNativeReplay(job.id);
@@ -152,6 +203,10 @@ export async function createNativeReplaySession(
     if (node)
       node.port.onmessage = (event) => {
         const packet = event.data;
+        if (packet?.error) {
+          failed(Error(String(packet.error)));
+          return;
+        }
         if (!job || !started || stopped || audioBusy || !(packet?.data instanceof ArrayBuffer)) {
           node?.port.postMessage('ack');
           return;
@@ -170,34 +225,91 @@ export async function createNativeReplaySession(
             node?.port.postMessage('ack');
           });
       };
-    async function pump() {
-      if (stopped || !job) return;
-      timer = target.setTimeout(() => void pump(), 1000 / fps);
-      if (videoBusy || video.readyState < 2) return;
-      videoBusy = true;
-      let frame: VideoFrame | undefined;
+    async function submit(frame: VideoFrame, ms: number) {
+      videoInFlight++;
+      let copied: VideoFrame | undefined,
+        submitted = false;
       try {
-        const source = video.videoWidth === width && video.videoHeight === height ? video : canvas;
-        if (source === canvas) drawing!.drawImage(video, 0, 0, width, height);
-        frame = new VideoFrame(source, {
-          timestamp: Math.round((performance.now() - startedAt) * 1000),
+        let image = frame;
+        if (scaled) {
+          drawing!.drawImage(frame, 0, 0, width, height);
+          image = copied = new VideoFrame(canvas, { timestamp: frame.timestamp });
+        }
+        const data = pixelBuffers.pop() || new ArrayBuffer(packed.bytes);
+        await image.copyTo(data, {
+          ...(pixelFormat === 'bgra' ? { format: packed.format } : {}),
+          layout: packed.layout,
+          rect: { x: image.visibleRect?.x || 0, y: image.visibleRect?.y || 0, width, height },
         });
-        const data = new ArrayBuffer(width * height * 4);
-        await frame.copyTo(data, { format: 'BGRA', layout: [{ offset: 0, stride: width * 4 }] });
-        frame.close();
-        frame = undefined;
-        if (!stopped && job)
-          await bridge!.pushNativeReplay({
-            id: job.id,
-            kind: 'video',
-            ms: Math.max(0, performance.now() - startedAt),
-            data,
+        if (!stopped && job) {
+          const sending = bridge!.pushNativeReplay({ id: job.id, kind: 'video', ms, data });
+          submitted = true;
+          void sending.catch(failed).finally(() => {
+            if (!stopped) pixelBuffers.push(data);
+            videoInFlight--;
+            wakeFrame?.();
+            wakeFrame = undefined;
           });
+        }
       } catch (error) {
         failed(error);
       } finally {
-        frame?.close();
-        videoBusy = false;
+        frame.close();
+        copied?.close();
+        if (!submitted) videoInFlight--;
+      }
+    }
+    async function pumpFrames() {
+      const interval = 1000 / fps;
+      let due = 0;
+      try {
+        while (!stopped) {
+          let frame: VideoFrame;
+          if (reader) {
+            const next = await reader.read();
+            if (next.done) {
+              if (!stopped) ended();
+              return;
+            }
+            frame = next.value;
+          } else {
+            const delay = Math.max(0, due - (performance.now() - startedAt));
+            await new Promise<void>((resolve) => {
+              wakeSleep = resolve;
+              timer = target.setTimeout(() => {
+                wakeSleep = undefined;
+                resolve();
+              }, delay);
+            });
+            if (stopped) return;
+            if (video.readyState < 2) {
+              due = performance.now() - startedAt + interval;
+              continue;
+            }
+            frame = new VideoFrame(video, {
+              timestamp: Math.round((performance.now() - startedAt) * 1000),
+            });
+          }
+          const ms = Math.max(0, performance.now() - startedAt);
+          if (stopped || ms < due - 2) {
+            frame.close();
+            continue;
+          }
+          due = Math.max(due + interval, ms - interval);
+          // Two IPC writes may be pending, plus this single un-copied frame.
+          // Wait for credit instead of quantizing every delayed write to 20/30 FPS.
+          if (videoInFlight >= 2)
+            await new Promise<void>((resolve) => {
+              wakeFrame = resolve;
+            });
+          if (stopped) {
+            frame.close();
+            return;
+          }
+          await submit(frame, ms);
+        }
+      } catch (error) {
+        failed(error);
       }
     }
     const ended = () => {
@@ -232,7 +344,9 @@ export async function createNativeReplaySession(
         audioBase = context?.currentTime ?? 0;
         stream.getVideoTracks()[0].addEventListener('ended', ended);
         void context?.resume().catch(failed);
-        void pump();
+        firstFrame?.close();
+        firstFrame = undefined;
+        void pumpFrames();
       },
       requestClip(id) {
         if (!status?.ready || stopped) throw Error('Aguarde a captura ficar pronta.');

@@ -91,6 +91,7 @@ export function ClipPreferenceFields({
           </button>
         </label>
       </div>
+      <p id="clipGlobalShortcutStatus" className="clips-help" role="status" hidden />
       <p className="clips-help">
         O áudio depende da permissão e da fonte selecionada. Configure a qualidade antes de ativar a
         captura ou transmitir a tela. Mudar estas opções reinicia a preparação dos clipes e descarta

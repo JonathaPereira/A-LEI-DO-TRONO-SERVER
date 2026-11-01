@@ -364,3 +364,7 @@ aparece após vídeo codificado recebido; erros não fingem captura pronta.
 Captura local continua desligada ao abrir. Banners da sala usam apenas estados
 privados da própria chamada: microfone cortado em mute, microfone + headset
 cortados em deafen. Não se divulga estado detalhado de outras salas no catálogo.
+
+O submenu dos clipes informa se o atalho está pronto para funcionar fora do
+Trono ou se a combinação está indisponível. Uma rejeição temporária é repetida
+enquanto a captura continua; desligar libera o atalho e cancela a repetição.

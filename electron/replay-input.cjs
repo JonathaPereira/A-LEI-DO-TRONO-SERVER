@@ -30,14 +30,18 @@ const element = (id, ...parts) => {
 };
 const num = (id, n) => element(id, uint(n));
 const str = (id, s) => element(id, Buffer.from(s));
-function replayHeader({ width, height, fps, audio }) {
+function replayPixelBytes({ width, height, pixelFormat = 'bgra' }) {
+  return width * height * (pixelFormat === 'bgra' ? 4 : 1.5);
+}
+function replayHeader({ width, height, fps, audio, pixelFormat = 'bgra' }) {
   const bitmap = Buffer.alloc(40);
   bitmap.writeUInt32LE(40, 0);
   bitmap.writeInt32LE(width, 4);
-  bitmap.writeInt32LE(-height, 8);
+  bitmap.writeInt32LE(pixelFormat === 'bgra' ? -height : height, 8);
   bitmap.writeUInt16LE(1, 12);
-  bitmap.writeUInt16LE(32, 14);
-  bitmap.writeUInt32LE(width * height * 4, 20);
+  bitmap.writeUInt16LE(pixelFormat === 'bgra' ? 32 : 12, 14);
+  if (pixelFormat !== 'bgra') bitmap.write(pixelFormat === 'nv12' ? 'NV12' : 'I420', 16, 'ascii');
+  bitmap.writeUInt32LE(replayPixelBytes({ width, height, pixelFormat }), 20);
   const video = element(
     0xae,
     num(0xd7, 1),
@@ -82,10 +86,19 @@ function replayHeader({ width, height, fps, audio }) {
   ]);
 }
 function replayPacket(track, ms, data) {
-  return element(
-    0x1f43b675,
-    num(0xe7, Math.max(0, Math.round(ms))),
-    element(0xa3, Buffer.from([0x80 | track, 0, 0, 0x80]), data),
-  );
+  return Buffer.concat(replayPacketParts(track, ms, data));
 }
-module.exports = { replayHeader, replayPacket };
+// Keep the full pixel payload borrowed: nested EBML concatenation copied it four times.
+function replayPacketParts(track, ms, data) {
+  const time = num(0xe7, Math.max(0, Math.round(ms))),
+    block = Buffer.concat([
+      uint(0xa3),
+      size(4 + data.length),
+      Buffer.from([0x80 | track, 0, 0, 0x80]),
+    ]);
+  return [
+    Buffer.concat([uint(0x1f43b675), size(time.length + block.length + data.length), time, block]),
+    data,
+  ];
+}
+module.exports = { replayHeader, replayPacket, replayPacketParts, replayPixelBytes };

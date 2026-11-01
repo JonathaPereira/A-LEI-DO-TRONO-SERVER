@@ -1,7 +1,7 @@
 name: Local clips on Windows
 on:
   push:
-    branches: [codex/clipes-locais, codex/clipes-nvenc]
+    branches: [codex/clipes-locais, codex/clipes-nvenc, codex/clips-fps-background]
   workflow_dispatch:
 permissions:
   contents: read

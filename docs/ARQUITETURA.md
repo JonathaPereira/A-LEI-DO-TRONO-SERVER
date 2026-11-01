@@ -383,9 +383,12 @@ implicitamente; para mudar o modo, o usuário escolhe/inicia uma nova captura.
 O replay possui dois caminhos. Compatível usa MediaRecorder/WebM e o worker
 existente. Automático prefere NVENC após codificação real de teste; NVENC
 explícito falha com mensagem se indisponível. `clips/native-session.ts` envia
-somente clones da fonte escolhida como BGRA/PCM, com um frame em trânsito e
-backpressure. Não inicia outra captura de monitor. O main valida origem, ID,
-dimensões, tamanho e timestamps de cada pacote. `electron/replay-native.cjs`
+somente clones da fonte escolhida como YUV/BGRA e PCM. TrackProcessor fornece
+quadros sem depender de um vídeo desenhado na janela. Dois envios podem ficar
+pendentes, com um frame ainda não copiado esperando crédito; buffers de pixels
+são reutilizados após a confirmação. Sem TrackProcessor, há fallback de vídeo. Não inicia outra captura de monitor. O main valida origem, ID,
+dimensões, formato permitido, tamanho e timestamps de cada pacote. O framing
+Matroska toma emprestado o payload e usa escrita vetorizada sem concatená-lo. `electron/replay-native.cjs`
 possui processos FFmpeg, buffer fMP4 limitado a 256 MiB e até dois exports MP4
 por remux sem recodificação. H.264 nunca passa pelo parser WebM. Temporários
 são privados, apagados após exportar e limpos na abertura após falha. Navegação
@@ -439,3 +442,11 @@ O processador AMD sozinho não habilita AMF. A escolha desse candidato não é
 evidência de desempenho ou medição no equipamento. A próxima prova deve comparar
 1080p/30 e 1080p/60 no equipamento, com jogo aberto, verificar frames perdidos e
 impacto no jogo, exportação reproduzível com áudio e liberação da captura.
+
+O PCM dos clipes mantém até oito blocos enquanto espera confirmação do encoder;
+um atraso curto não descarta amostras nem cria chiado. Um bloqueio prolongado
+encerra a captura com mensagem, sem unir silenciosamente áudio descontínuo.
+A ponte nativa dos clipes possui o registro do atalho global, repete uma falha
+temporária enquanto a captura continua e cancela a repetição ao desligar. O
+estado indisponível é mostrado junto do atalho; nenhuma falha fica mascarada
+como disponibilidade global. O evento de clipar independe do foco do aplicativo.

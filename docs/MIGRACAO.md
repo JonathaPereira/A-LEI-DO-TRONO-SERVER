@@ -890,3 +890,16 @@ https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/untagged-d3
 A main permanece no commit do artefato; este checkpoint documental segue somente
 na contribuição para evitar novo deploy. NVENC físico/desempenho da 3060 Ti não
 foram medidos no runner; o app mantém probe real antes de ativá-lo.
+
+
+Correção pós-1.0.4: usuário isolou travamentos/chiado no NVENC e atalho que só
+funciona com Trono em foco. Reproduzidor de fonte 60 FPS com confirmação de
+transporte atrasada mediu 20,44 FPS no caminho antigo; TrackProcessor, crédito
+para dois envios e reutilização de buffers passaram a cerca de 57 FPS. Isso é
+medição do pipeline com transporte controlado, sem GPU NVIDIA física.
+O contrato PCM reproduziu descarte de dois dos três blocos sob atraso; a fila
+limitada agora preserva todas as amostras/timestamps e sinaliza excesso, sem
+concatenar trechos descontínuos. O contrato do atalho reproduziu registro
+temporariamente rejeitado sem recuperação; a ponte agora repete e informa o
+estado real. Windows verificará SendInput com outra janela em foco, retenção
+antes de focar Trono e liberação da fonte, nos caminhos compatível/nativo/som.

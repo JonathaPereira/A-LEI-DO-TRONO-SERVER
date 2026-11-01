@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
   createDesktopClipBridge,
+  createNativeDesktopClipBridge,
   validDesktopCode,
   type DesktopClipBridge,
 } from '../../lib/clips/desktop-bridge';
@@ -48,43 +49,19 @@ export function initializeClipDesktop(target: Window): DesktopClipBridge | null 
   const runtime = target as Runtime;
   if (runtime.TronoDesktop) {
     if (runtime.TronoClipDesktop) return null;
-    const desktop = runtime.TronoDesktop;
-    let generation = 0,
-      globalActive = false,
-      last = '';
-    const configure = (value: { shortcut?: ClipShortcut; active: boolean }) => {
-      if (!desktop.configureClips) return;
-      const key = JSON.stringify(value);
-      if (key === last) return;
-      last = key;
-      const request = ++generation;
-      globalActive = false;
-      void desktop
-        .configureClips(value)
-        .then((result) => {
-          if (request === generation) globalActive = result.globalActive === true;
-        })
-        .catch(() => {
-          if (request === generation) last = '';
-        });
-    };
-    const remove = desktop.onClip?.(() => runtime.TronoClips?.clip()) ?? (() => {});
-    const disconnect = () => {
-      remove();
-      configure({ active: false });
-    };
-    runtime.TronoClipDesktop = {
-      configure,
-      saved() {},
-      disconnect,
-      get connected() {
-        return true;
+    const bridge = createNativeDesktopClipBridge({
+      driver: runtime.TronoDesktop,
+      clip: () => runtime.TronoClips?.clip(),
+      publish: (state) => {
+        const status = target.document.getElementById('clipGlobalShortcutStatus');
+        if (status) {
+          status.hidden = false;
+          status.textContent = state.message;
+        }
       },
-      get globalActive() {
-        return globalActive;
-      },
-    };
-    target.addEventListener('pagehide', disconnect, { once: true });
+    });
+    runtime.TronoClipDesktop = bridge;
+    target.addEventListener('pagehide', bridge.disconnect, { once: true });
     return null;
   }
   if (runtime.TronoClipDesktop) return null;

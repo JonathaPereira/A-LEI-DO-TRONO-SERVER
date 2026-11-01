@@ -235,3 +235,105 @@ export function createDesktopClipBridge(options: BridgeOptions) {
   };
 }
 export type DesktopClipBridge = ReturnType<typeof createDesktopClipBridge>;
+
+interface NativeDesktopOptions {
+  driver: {
+    configureClips?(value: {
+      shortcut?: ClipShortcut;
+      active: boolean;
+    }): Promise<{ globalActive?: boolean }>;
+    onClip?(listener: () => void): () => void;
+  };
+  clip(): void;
+  publish?(state: { globalActive: boolean; message: string }): void;
+  setTimer?(callback: () => void, milliseconds: number): ReturnType<typeof setTimeout>;
+  clearTimer?(timer: ReturnType<typeof setTimeout>): void;
+}
+/** Owns only the installed app's global shortcut, never capture or focus. */
+export function createNativeDesktopClipBridge(options: NativeDesktopOptions) {
+  let generation = 0,
+    globalActive = false,
+    last = '',
+    disposed = false;
+  let desired: { shortcut?: ClipShortcut; active: boolean } | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const setTimer = options.setTimer || setTimeout,
+    clearTimer = options.clearTimer || clearTimeout;
+  const cancelRetry = () => {
+    if (timer !== null) clearTimer(timer);
+    timer = null;
+  };
+  const publish = (message: string) => options.publish?.({ globalActive, message });
+  const configure = (value: { shortcut?: ClipShortcut; active: boolean }) => {
+    if (disposed || !options.driver.configureClips) return;
+    desired = {
+      active: value.active,
+      ...(value.shortcut ? { shortcut: { ...value.shortcut } } : {}),
+    };
+    const key = JSON.stringify(desired);
+    if (key === last) return;
+    last = key;
+    cancelRetry();
+    const request = ++generation,
+      configuration = desired;
+    globalActive = false;
+    const unavailable = () => {
+      if (disposed || request !== generation) return;
+      globalActive = false;
+      publish(
+        configuration.active
+          ? 'Atalho indisponível fora do Trono. Escolha outra combinação.'
+          : 'Atalho global desligado.',
+      );
+      if (configuration.active)
+        timer = setTimer(() => {
+          timer = null;
+          if (disposed || request !== generation || !desired) return;
+          last = '';
+          configure(desired);
+        }, 1000);
+    };
+    void Promise.resolve()
+      .then(() => {
+        if (disposed || request !== generation) return null;
+        return options.driver.configureClips!(configuration);
+      })
+      .then((result) => {
+        if (disposed || request !== generation) return;
+        if (configuration.active && result?.globalActive !== true) {
+          unavailable();
+          return;
+        }
+        globalActive = configuration.active && result?.globalActive === true;
+        publish(
+          globalActive ? 'Atalho pronto · funciona fora do Trono.' : 'Atalho global desligado.',
+        );
+      })
+      .catch(unavailable);
+  };
+  const remove =
+    options.driver.onClip?.(() => {
+      if (!disposed) options.clip();
+    }) || (() => {});
+  return {
+    configure,
+    saved() {},
+    disconnect() {
+      if (disposed) return;
+      disposed = true;
+      generation++;
+      cancelRetry();
+      globalActive = false;
+      remove();
+      try {
+        void options.driver.configureClips?.({ active: false }).catch(() => {});
+      } catch {}
+    },
+    get connected() {
+      return !disposed;
+    },
+    get globalActive() {
+      return globalActive;
+    },
+  };
+}

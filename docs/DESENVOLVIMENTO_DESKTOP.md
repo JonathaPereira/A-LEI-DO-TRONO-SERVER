@@ -300,3 +300,12 @@ O helper precarrega o loader da versão instalada, preservando prazos e args.
 `desktop-startup-sync.cjs` verifica o handshake e a janela real imediata; uma
 atualização do Playwright deve conservar esse contrato. Instalador/EXE real
 continuam no caminho de lançamento original, sem preload de automação.
+
+
+`clip-native-rate-browser.cjs` mede quadros efetivamente enviados em fonte de
+60 FPS, com confirmação de vídeo atrasada e um atraso inicial de áudio; verifica
+YUV direto e redimensionamento RGB. Não usa FPS nominal do contêiner como prova
+de fluidez nem mede NVENC físico. Headless não representa foco real do Windows.
+`clip-local-desktop.cjs` usa SendInput do helper existente com a janela QA em
+primeiro plano e exige retenção do clipe sem devolver foco ao Trono. Se houver
+segunda tela, move o Trono para ela; informa quantos monitores reais o runner tem.

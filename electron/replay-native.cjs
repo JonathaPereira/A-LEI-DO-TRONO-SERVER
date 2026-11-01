@@ -4,7 +4,7 @@ const { spawn } = require('node:child_process'),
   path = require('node:path'),
   crypto = require('node:crypto');
 const { ReplayBuffer } = require('./replay-buffer.cjs'),
-  { replayHeader, replayPacket } = require('./replay-input.cjs');
+  { replayHeader, replayPacketParts, replayPixelBytes } = require('./replay-input.cjs');
 const MAX = 256 * 1048576;
 function testEncoder({ packaged, origin, encoder }) {
   if (packaged || encoder !== 'h264_mf') return {};
@@ -70,7 +70,10 @@ function readConfig(c) {
     typeof c.audio !== 'boolean' ||
     !Number.isInteger(c.bitrate) ||
     c.bitrate < 500000 ||
-    c.bitrate > 64000000
+    c.bitrate > 64000000 ||
+    (c.pixelFormat !== undefined && !['bgra', 'yuv420p', 'nv12'].includes(c.pixelFormat)) ||
+    (c.inputRange !== undefined && !['pc', 'tv'].includes(c.inputRange)) ||
+    (c.inputMatrix !== undefined && !['bt709', 'bt601', 'bt2020'].includes(c.inputMatrix))
   )
     throw Error('Configuração de clipes inválida.');
   return {
@@ -80,6 +83,9 @@ function readConfig(c) {
     seconds: c.seconds,
     audio: c.audio,
     bitrate: c.bitrate,
+    ...(c.pixelFormat === undefined ? {} : { pixelFormat: c.pixelFormat }),
+    ...(c.inputRange === undefined ? {} : { inputRange: c.inputRange }),
+    ...(c.inputMatrix === undefined ? {} : { inputMatrix: c.inputMatrix }),
   };
 }
 function encoderArgs(encoder) {
@@ -184,7 +190,7 @@ function createNativeReplay({
         ? ['-map', '0:a:0', '-af', 'aresample=async=1:first_pts=0', '-c:a', 'aac', '-b:a', '160k']
         : ['-an']),
       '-vf',
-      'scale=in_range=pc:out_range=tv:out_color_matrix=bt709,format=nv12',
+      `scale=in_range=${config.inputRange || 'pc'}${config.inputMatrix ? ':in_color_matrix=' + config.inputMatrix : ''}:out_range=tv:out_color_matrix=bt709,format=nv12`,
       ...encoderArgs(encoder),
       '-b:v',
       String(config.bitrate),
@@ -282,7 +288,7 @@ function createNativeReplay({
         : value.data instanceof ArrayBuffer
           ? Buffer.from(value.data)
           : null;
-    const expected = job.config.width * job.config.height * 4;
+    const expected = replayPixelBytes(job.config);
     if (
       !data ||
       (video && data.length !== expected) ||
@@ -298,11 +304,17 @@ function createNativeReplay({
     job.last[slot] = value.ms;
     job.queued++;
     try {
-      await new Promise((resolve, reject) =>
-        job.process.stdin.write(replayPacket(video ? 1 : 2, value.ms, data), (error) =>
-          error ? reject(error) : resolve(),
-        ),
-      );
+      const [header, payload] = replayPacketParts(video ? 1 : 2, value.ms, data);
+      await new Promise((resolve, reject) => {
+        // Both writes are queued atomically in this turn; audio cannot split a video packet.
+        job.process.stdin.cork();
+        try {
+          job.process.stdin.write(header);
+          job.process.stdin.write(payload, (error) => (error ? reject(error) : resolve()));
+        } finally {
+          job.process.stdin.uncork();
+        }
+      });
       return true;
     } finally {
       job.queued--;

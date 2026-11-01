@@ -209,3 +209,12 @@ test('timeout, send failure and socket error restore the local shortcut and rele
   assert.equal(f.connections.length, count);
   assert.equal(f.bridge.getSnapshot().globalActive, false);
 });
+
+
+test('installed global shortcut retries a rejected registration without requiring app focus and disconnect cancels retries',async()=>{
+ const {createNativeDesktopClipBridge}=require('../src/lib/clips/desktop-bridge.ts');
+ let calls=0,callback,clips=0;const timers=new Set(),states=[];
+ const bridge=createNativeDesktopClipBridge({driver:{configureClips:async value=>({globalActive:value.active&&++calls>1}),onClip:listener=>{callback=listener;return()=>callback=null;}},clip:()=>clips++,publish:s=>states.push(s),setTimer:run=>{timers.add(run);return run;},clearTimer:run=>timers.delete(run)});
+ bridge.configure(config());await new Promise(r=>setImmediate(r));assert.equal(bridge.globalActive,false);assert.equal(timers.size,1,'a temporary registration failure must retry while the game remains focused');assert.match(states.at(-1).message,/indisponível/i);
+ const retry=[...timers][0];timers.delete(retry);retry();await new Promise(r=>setImmediate(r));assert.equal(bridge.globalActive,true);callback();assert.equal(clips,1);bridge.disconnect();assert.equal(timers.size,0);assert.equal(callback,null);
+});
