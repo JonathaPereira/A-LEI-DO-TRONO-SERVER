@@ -44,7 +44,14 @@ for(const backend of ['compatible','compatible-audio','native','native-audio'])t
   if(native){const before=await page.evaluate(()=>window.TronoClips.replayStatus.seconds);await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).hide());await expect.poll(()=>page.evaluate(()=>window.TronoClips.replayStatus.seconds),{timeout:10000}).toBeGreaterThan(before+1);}
   await expect.poll(()=>page.evaluate(()=>window.TronoClipDesktop.globalActive)).toBe(true);
   const displays=await app.evaluate(({BrowserWindow,screen})=>{const all=screen.getAllDisplays(),other=all.find(d=>d.id!==screen.getPrimaryDisplay().id),main=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/'));if(other)main.setBounds({x:other.workArea.x+20,y:other.workArea.y+20,width:Math.min(1000,other.workArea.width),height:Math.min(800,other.workArea.height)});return all.length;});
-  if(qaApp)await qaApp.evaluate(({BrowserWindow})=>{const game=BrowserWindow.getAllWindows()[0];game.show();game.focus();});
+  if(qaApp){
+   // Windows may deny programmatic foreground transfer to a separate process.
+   // Activate the disposable target with a real OS click, then assert actual focus.
+   const point=await qaApp.evaluate(({BrowserWindow,screen})=>{const game=BrowserWindow.getAllWindows()[0];game.setAlwaysOnTop(true);game.show();const b=game.getContentBounds();return screen.dipToScreenPoint({x:Math.round(b.x+b.width/2),y:Math.round(b.y+b.height/2)});});
+   await require('./desktop-shortcut-input.cjs').clickDesktop(point);
+   await expect.poll(()=>qaApp.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isFocused())).toBe(true);
+   await qaApp.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setAlwaysOnTop(false));
+  }
   else await app.evaluate(({BrowserWindow})=>{const game=BrowserWindow.getAllWindows().find(w=>w.getTitle()==='QA clipes locais');game.show();game.focus();});
   await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused())).toBe(false);
   await require('./desktop-shortcut-input.cjs').pressClipShortcut();

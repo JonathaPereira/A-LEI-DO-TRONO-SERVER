@@ -974,3 +974,10 @@ incorporadas sem importar workflows temporários nem alterar backend/segredos.
 A fixture de emulador aceita a origem antiga e a nova; resultado em aparelhos
 físicos ainda não confirmado. A rede local bloqueou consulta ao Render (403 do
 proxy), portanto não se atribui causa a uma resposta de produção não observada.
+
+
+A repetição Windows `41494915400` comprovou captura Compatível com som ativa,
+buffer pronto e áudio presente; falhou na preparação do foco externo antes do
+atalho. Windows negou o focus programático para outro processo. A fixture passa
+a ativar a janela QA separada com clique SendInput real e comprovar seu foco,
+sem esconder Trono para simular foco externo nem retirar a asserção do atalho.
