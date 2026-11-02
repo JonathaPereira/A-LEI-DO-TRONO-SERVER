@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <cstdint>
 #include <Xinput.h>
 #include <ViGEm/Client.h>
 #include <string>
@@ -21,6 +22,13 @@ void release(){auto k=keys,b=buttons;for(int v:k)key(v,false);for(int v:b)button
 void unplug(){if(pad){vigem_target_remove(bus,pad);vigem_target_free(pad);pad=nullptr;}if(bus){vigem_disconnect(bus);vigem_free(bus);bus=nullptr;}}
 int main(int argc,char**argv){
  const std::string mode=argc>1?argv[1]:"";
+ // Read-only observation for desktop validation. No input device or window is created.
+ if(mode=="--foreground"){
+  const HWND foreground=GetForegroundWindow();DWORD owner=0;
+  GetWindowThreadProcessId(foreground,&owner);
+  std::cout<<"{\"handle\":\""<<reinterpret_cast<std::uintptr_t>(foreground)<<"\",\"pid\":"<<owner<<"}\n";
+  return foreground&&owner?0:5;
+ }
  if(mode=="--read-xinput"){std::cout<<"[";bool comma=false;for(DWORD i=0;i<4;i++){XINPUT_STATE s{};if(XInputGetState(i,&s)==ERROR_SUCCESS){if(comma)std::cout<<",";comma=true;std::cout<<"{\"index\":"<<i<<",\"buttons\":"<<s.Gamepad.wButtons<<",\"lx\":"<<s.Gamepad.sThumbLX<<",\"lt\":"<<static_cast<int>(s.Gamepad.bLeftTrigger)<<"}";}}std::cout<<"]\n";return 0;}
  if(mode=="--probe"||mode=="--gamepad"){
   bus=vigem_alloc();if(!bus||!VIGEM_SUCCESS(vigem_connect(bus))){unplug();std::cerr<<"Instale o driver opcional ViGEmBus no PC anfitrião para usar um controle separado.\n";return 3;}
