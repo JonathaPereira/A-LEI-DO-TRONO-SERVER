@@ -49,11 +49,12 @@ for(const backend of ['compatible','compatible-audio','native','native-audio'])t
    // Activate the disposable target with a real OS click, then assert actual focus.
    const point=await qaApp.evaluate(({BrowserWindow,screen})=>{const game=BrowserWindow.getAllWindows()[0];game.setAlwaysOnTop(true);game.show();const b=game.getContentBounds();return screen.dipToScreenPoint({x:Math.round(b.x+b.width/2),y:Math.round(b.y+b.height/2)});});
    await require('./desktop-shortcut-input.cjs').clickDesktop(point);
-   await expect.poll(()=>qaApp.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isFocused())).toBe(true);
+   const target=await qaApp.evaluate(({BrowserWindow})=>({pid:process.pid,handle:BrowserWindow.getAllWindows()[0].getNativeWindowHandle().readBigUInt64LE().toString()}));
+   focusState={mainPid:await app.evaluate(()=>process.pid),target};
+   await expect.poll(async()=>{focusState.actual=await require('./desktop-shortcut-input.cjs').foregroundWindow();return focusState.actual.handle;}).toBe(target.handle);
   }
   else await app.evaluate(({BrowserWindow})=>{const game=BrowserWindow.getAllWindows().find(w=>w.getTitle()==='QA clipes locais');game.show();game.focus();});
-  if(qaApp)focusState={mainPid:app.process().pid,qaPid:qaApp.process().pid,foregroundPid:await require('./desktop-shortcut-input.cjs').foregroundPid()};
-  await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused())).toBe(false);
+  if(!qaApp)await expect.poll(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused())).toBe(false);
   await require('./desktop-shortcut-input.cjs').pressClipShortcut();
   // Do not poll the renderer here: a CDP evaluation could wake a suspended page
   // and hide exactly the failure reported by a player using another monitor.
@@ -63,7 +64,8 @@ for(const backend of ['compatible','compatible-audio','native','native-audio'])t
   assert.equal(saved.length,1,'the OS shortcut must retain a clip before any renderer probe');
   assert(saved[0].createdAt<beforeFirstProbe-100,'clip creation must precede the first renderer probe');
   await expect(page.locator('.clip-card')).toHaveCount(1,{timeout:15000});
-  assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused()),false,'clip must be retained without returning focus to Trono');
+  if(qaApp){focusState.afterClip=await require('./desktop-shortcut-input.cjs').foregroundWindow();assert.equal(focusState.afterClip.handle,focusState.target.handle,'the OS foreground must remain the external QA window through clip retention: '+JSON.stringify(focusState));}
+  else assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/')).isFocused()),false,'clip must be retained without returning focus to Trono');
   console.log('Windows global clip shortcut with another window focused:',JSON.stringify({backend,displays}));
   if(qaApp)await qaApp.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setAlwaysOnTop(false));
   await app.evaluate(({BrowserWindow})=>{const main=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/'));main.show();main.focus();});await page.getByRole('button',{name:'Prévia',exact:true}).click();await expect.poll(()=>page.locator('#clipsDialog video').evaluate(v=>v.videoWidth)).toBeGreaterThan(0);

@@ -13,8 +13,8 @@ function sendDesktopInput(commands){
 }
 function pressClipShortcut(){return sendDesktopInput('k 162 1\nk 160 1\nk 88 1\nk 88 0\nk 160 0\nk 162 0\n');}
 function clickDesktop({x,y}){return sendDesktopInput(`m ${Math.round(x)} ${Math.round(y)}\nb 0 1\nb 0 0\n`);}
-function foregroundPid(){
- const script=`Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class ClipQAForeground { [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid); }'; [uint32]$clipOwnerPid=0; [ClipQAForeground]::GetWindowThreadProcessId([ClipQAForeground]::GetForegroundWindow(),[ref]$clipOwnerPid) | Out-Null; Write-Output $clipOwnerPid`;
- return new Promise((resolve,reject)=>{const {execFile}=require('node:child_process');execFile('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{windowsHide:true,timeout:10000},(error,out)=>{if(error)return reject(error);const pid=Number(out.trim());Number.isInteger(pid)&&pid>0?resolve(pid):reject(Error('Windows did not report a foreground process: '+out));});});
+function foregroundWindow(){
+ const script=`Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class ClipQAForeground { [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid); }'; [uint32]$clipOwnerPid=0; $clipWindow=[ClipQAForeground]::GetForegroundWindow(); [ClipQAForeground]::GetWindowThreadProcessId($clipWindow,[ref]$clipOwnerPid) | Out-Null; $clipProcess=Get-Process -Id $clipOwnerPid; [pscustomobject]@{handle=$clipWindow.ToInt64().ToString();pid=$clipOwnerPid;name=$clipProcess.ProcessName;title=$clipProcess.MainWindowTitle} | ConvertTo-Json -Compress`;
+ return new Promise((resolve,reject)=>{const {execFile}=require('node:child_process');execFile('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{windowsHide:true,timeout:10000},(error,out)=>{if(error)return reject(error);try{const state=JSON.parse(out);if(!state.handle||!state.pid)throw Error('No Windows foreground window');resolve(state);}catch(failure){reject(failure);}});});
 }
-module.exports={pressClipShortcut,clickDesktop,foregroundPid};
+module.exports={pressClipShortcut,clickDesktop,foregroundWindow};
