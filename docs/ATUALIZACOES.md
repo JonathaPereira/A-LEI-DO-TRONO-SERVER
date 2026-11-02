@@ -25,8 +25,9 @@ encerra tracks emprestadas da chamada. Não altera backend, dados ou SQL.
 ### Android na preparação 1.0.6
 
 Incorpora as configurações do APK de correção de login publicado separadamente:
-origem HTTPS igual à do site, edição nativa de e-mail/senha e um único tratamento
-das margens de teclado. A primeira versão do APK não tinha essas configurações.
+edição nativa de e-mail/senha e um único tratamento das margens de teclado. A
+origem HTTPS local é preservada para manter acesso aos dados e preferências. A
+primeira versão do APK não tinha essas configurações.
 Erro de login nos aparelhos relatados ainda requer reconferência; uma prévia de
 APK exige aprovação dos testes Android e não equivale a assinatura permanente.
 

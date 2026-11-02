@@ -2,7 +2,7 @@
   "appId": "br.com.mntrono.app",
   "appName": "MN Trono",
   "webDir": "out",
-  "server": { "hostname": "a-lei-do-trono.surge.sh", "androidScheme": "https" },
+  "server": { "hostname": "localhost", "androidScheme": "https" },
   "android": { "backgroundColor": "#101217", "allowMixedContent": false, "captureInput": false },
   "plugins": {
     "CapacitorHttp": { "enabled": false },

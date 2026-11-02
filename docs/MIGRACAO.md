@@ -981,3 +981,20 @@ buffer pronto e áudio presente; falhou na preparação do foco externo antes do
 atalho. Windows negou o focus programático para outro processo. A fixture passa
 a ativar a janela QA separada com clique SendInput real e comprovar seu foco,
 sem esconder Trono para simular foco externo nem retirar a asserção do atalho.
+
+
+Na revisão final Android, manteve-se o hostname original `localhost`: mudar a
+origem isolaria o armazenamento web e as preferências de instalações existentes.
+O backend atual já autoriza `https://localhost`. Da correção Android anterior,
+foram conservadas apenas edição nativa de campos (`captureInput: false`) e
+margens com um único dono (`SystemBars.insetsHandling: disable`). Não se atribui
+o erro dos celulares a CORS sem resposta de produção ou evidência desses aparelhos.
+O APK separado continua disponível para comparação, com seu SHA-256 conferido,
+mas a próxima entrega preservará a origem e os dados do primeiro APK.
+
+
+A execução `41495794580` confirmou o foco real da janela QA após SendInput, mas
+baixar seu estado topmost imediatamente devolveu foco ao Trono antes do atalho.
+A fixture conserva a janela alvo sobreposta até guardar o clipe, só então retira
+topmost para abrir a prévia. As asserções de foco externo e criação antes da
+primeira consulta ao renderer continuam obrigatórias.
