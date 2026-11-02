@@ -951,3 +951,26 @@ Dois contratos reais FFmpeg/libx264 passaram para áudio e MP4, sem GPU NVIDIA.
 A matriz Windows existente passa a incluir Compatível com som e conserva os
 cenários sem som, nativo com som, chamada e atalho real fora do foco. O perfil
 de entrega inclui a jornada local alterada; nenhum gate foi removido.
+
+
+O usuário refinou o gatilho: em Automático, a captura desliga ao usar o atalho.
+Reproduzida a perda do motivo na pausa por falha de persistência: a cópia em memória
+já era preservada, mas o replay mostrava descarte genérico. Agora o motivo da
+biblioteca acompanha replay/captura local, sem retirar a proteção. Jornada de
+atalho Chromium cobre pausa, cópia recuperável, bloqueio de reinício e descarte.
+111 contratos focados e duas rodadas consecutivas de três jornadas passaram.
+
+Windows focado `41493224969` falhou somente no novo Compatível com áudio: a janela
+QA externa ainda não aparecia ao desktopCapturer antes do seletor. Os demais
+contratos reais passaram; um teste de isolamento de áudio foi skip por falta de
+endpoint de reprodução. A fixture agora espera disponibilidade da janela no SO,
+sem aumentar prazo, remover assert ou substituir a seleção explícita.
+
+Investigação Android: o usuário informou erro de login no primeiro APK. A correção
+`15873a4` estava somente na contribuição `codex/android-login-fixes`, com APK de
+teste publicado `41064670654` e SHA-256 registrado na própria contribuição.
+Configurações de origem HTTPS, captura de entrada nativa e margens únicas foram
+incorporadas sem importar workflows temporários nem alterar backend/segredos.
+A fixture de emulador aceita a origem antiga e a nova; resultado em aparelhos
+físicos ainda não confirmado. A rede local bloqueou consulta ao Render (403 do
+proxy), portanto não se atribui causa a uma resposta de produção não observada.

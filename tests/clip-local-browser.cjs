@@ -42,6 +42,16 @@ test('main clips action starts local capture only on request, outside voice, and
  await page.locator('#clipLocalStart').click();await expect(page.locator('#clipNow')).toBeEnabled({timeout:15000});
  await page.locator('[data-clips-tab=preferences]').click();await page.getByRole('button',{name:'Econômica · 720p / 30 FPS',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.TronoClips.active)).toBe(true);
  await page.locator('#clipAudioMode').selectOption('none');await expect.poll(()=>page.evaluate(()=>window.TronoClips.replayStatus?.hasAudio)).toBe(false);assert.equal(await page.evaluate(()=>window.__clipMicrophones.every(s=>s.getTracks().every(t=>t.readyState==='ended'))),true);
+ await page.locator('[data-clips-tab=library]').click();
+ await expect(page.locator('#clipNow')).toBeEnabled({timeout:15000});
+ await page.evaluate(()=>{window.__putClip=window.TronoClipStore.put;window.TronoClipStore.put=async()=>{throw new DOMException('Storage full','QuotaExceededError');};});
+ await page.keyboard.press('Control+Shift+X');
+ await expect(page.locator('#clipLocalStatus')).toContainText('somente na memória');
+ await expect(page.locator('#clipSource')).toHaveText('Captura desligada');await expect(page.locator('.clip-card')).toHaveCount(2);
+ assert.equal(await page.evaluate(()=>window.__localCaptures.at(-1).getTracks().every(t=>t.readyState==='ended')),true);
+ await page.locator('#clipLocalStart').click();await expect(page.locator('#clipLocalStatus')).toContainText('Salve ou descarte');
+ await page.evaluate(async()=>{const lib=window.TronoClipLibrary;for(const id of lib.getSnapshot().emergencyIds)await lib.discard(id);window.TronoClipStore.put=window.__putClip;});
+ await page.locator('#clipLocalStart').click();await expect(page.locator('#clipNow')).toBeEnabled({timeout:15000});
  await page.locator('#clipLocalStop').click();await expect(page.locator('#clipLocalStatus')).toContainText('desligada');await expect(page.locator('#clipSource')).toHaveText('Captura desligada');assert.equal(await page.evaluate(()=>window.__localCaptures[0].getTracks().every(t=>t.readyState==='ended')),true);
  await page.locator('[data-clips-tab=library]').click();await expect(page.locator('.clip-card')).toHaveCount(1);await page.reload();await page.waitForFunction(()=>window.TronoClips);assert.equal(await page.evaluate(()=>window.__localCaptures.length),0);assert.deepEqual(errors,[]);
  }finally{await browser?.close();await fixture.stop();server.closeAllConnections();await new Promise(r=>server.close(r));}

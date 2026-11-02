@@ -132,18 +132,17 @@ export function createClipLibrary(
       await store.setDirectory(owner, null);
     } catch {}
   }
-  async function retain(clip: LocalClip, onStorageFailure: () => void) {
+  async function retain(clip: LocalClip, onStorageFailure: (message: string) => void) {
     const ticket = clip.owner === state.owner ? epoch : -1;
     try {
       await store.put(clip);
     } catch {
       emergency.set(clip.id, clip);
       memoryOnly.add(clip.id);
-      onStorageFailure();
-      message(
-        'Replay pausado: sem espaço ou acesso ao armazenamento do navegador. Este clipe está somente na memória: salve ou descarte antes de retomar e antes de fechar a página.',
-        ticket,
-      );
+      const reason =
+        'Replay pausado: sem espaço ou acesso ao armazenamento do navegador. Este clipe está somente na memória: salve ou descarte antes de retomar e antes de fechar a página.';
+      onStorageFailure(reason);
+      message(reason, ticket);
     }
     if (current(ticket)) {
       await refresh();

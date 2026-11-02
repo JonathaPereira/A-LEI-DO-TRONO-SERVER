@@ -100,8 +100,11 @@ export function createReplayController(options: ReplayOptions) {
       blob: result.blob,
       state: 'pending',
     };
-    await library.retain(clip, () => {
-      if (session === target) stopSession(target);
+    await library.retain(clip, (reason) => {
+      if (session === target) {
+        stopSession(target);
+        publish(reason);
+      }
     });
     if (!disposed && owner === target.owner) options.saved(library.getSnapshot().pendingCount);
   }

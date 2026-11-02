@@ -227,6 +227,7 @@ test('quota failure pauses replay, blocks resume until the memory-only clip is s
   assert.equal(session.stops, 1);
   assert.equal(f.controller.getSnapshot().active, false);
   assert.equal(f.library.hasUnsavedMemory('alice'), true);
+  assert.match(f.controller.getSnapshot().message, /somente na memória/, 'the capture must keep the storage failure reason after clipping');
   await f.controller.resume();
   assert.equal(f.created.length, 1);
   assert.match(f.controller.getSnapshot().message, /Salve ou descarte/);

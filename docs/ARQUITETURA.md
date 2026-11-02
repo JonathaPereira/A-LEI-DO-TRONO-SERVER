@@ -455,3 +455,8 @@ A ponte nativa dos clipes possui o registro do atalho global, repete uma falha
 temporária enquanto a captura continua e cancela a repetição ao desligar. O
 estado indisponível é mostrado junto do atalho; nenhuma falha fica mascarada
 como disponibilidade global. O evento de clipar independe do foco do aplicativo.
+
+
+Ao criar um clipe, falha de persistência pausa o replay e conserva o blob em memória.
+A biblioteca passa o mesmo motivo ao replay e à captura local; o atalho não alterna
+a captura nem elimina o clipe. Retomar exige salvar ou descartar a cópia em memória.

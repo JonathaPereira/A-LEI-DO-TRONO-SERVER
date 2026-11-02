@@ -29,6 +29,10 @@ for(const backend of ['compatible','compatible-audio','native','native-audio'])t
   if(withSound)await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=async()=>{const context=new AudioContext(),tone=context.createOscillator(),gain=context.createGain(),out=context.createMediaStreamDestination();tone.frequency.value=880;gain.gain.value=0.15;tone.connect(gain).connect(out);tone.start();const track=out.stream.getAudioTracks()[0],stop=track.stop.bind(track);track.stop=()=>{stop();void context.close();};window.__qaMicrophone=out.stream;return out.stream;};});
   await app.evaluate(({BrowserWindow})=>{const main=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().startsWith('https://a-lei-do-trono.surge.sh/'));main.show();main.focus();});
   await page.evaluate(()=>{const original=navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getDisplayMedia=async options=>{const source=await original(options);window.__localClipSource=source;return source;};});
+  // The QA window can finish loading before Windows exposes it to desktopCapturer.
+  // Native probing used to hide that race by delaying the picker; compatible does no probe.
+  if(qaApp)await qaApp.evaluate(({BrowserWindow})=>{const qa=BrowserWindow.getAllWindows()[0];qa.show();});
+  await expect.poll(()=>app.evaluate(async({desktopCapturer})=>(await desktopCapturer.getSources({types:['window'],thumbnailSize:{width:0,height:0}})).some(s=>s.name==='QA clipes locais'))).toBe(true);
   await page.evaluate(mode=>window.TronoClipPreferences.setSetting('encoder',mode),native?'auto':'compatible');
   if(native){const capability=await page.evaluate(()=>window.TronoDesktop.replayCapability());assert.equal(capability.encoder,'Media Foundation (teste)',JSON.stringify(capability));assert.equal(capability.available,true,JSON.stringify(capability));}
   await page.locator('[data-account-card]').getByRole('button',{name:'Clipes',exact:true}).click();await expect(page.locator('#clipLocalStatus')).toContainText('desligada');

@@ -203,9 +203,20 @@ versão interna. Use Node 24.12+, JDK 21 completo e Android SDK 36/build-tools 3
 3. O arquivo é `android/app/build/outputs/apk/debug/app-debug.apk`. Habilite a
    instalação da origem usada para abrir o APK no aparelho. Debug não é a entrega
    permanente: sua chave pode mudar e exigir desinstalar antes de outro build.
-4. Incorpore/deploy o backend desta branch para aceitar `https://localhost`.
-   Para um servidor anterior, adicione essa origem a `AUTH_ALLOWED_ORIGINS`, sem
-   remover as origens existentes. Senha, contas, dados e autorização são os mesmos.
+4. O APK serve os arquivos incorporados usando a origem HTTPS do site,
+   `https://a-lei-do-trono.surge.sh`, já autorizada pelo backend. Não configure
+   `server.url`: o frontend continua dentro do APK. Instalações antigas com origem
+   `https://localhost` precisam dessa origem em `AUTH_ALLOWED_ORIGINS` ou do backend
+   que já a permite. Senha, contas, dados e autorização são os mesmos.
+
+Mantenha `android.captureInput: false`: os formulários usam a edição nativa do
+WebView para teclado, cursor, senha e preenchimento automático. O modo `true`
+substitui essa conexão por `BaseInputConnection`. `SystemBars.insetsHandling`
+permanece `disable`, pois `MainActivity` já trata as margens do teclado e das barras.
+Essas configurações da correção `15873a4`, publicada separadamente no APK de login
+`41064670654`, foram incorporadas à preparação 1.0.6; a primeira versão do APK
+não as contém. O teste nativo atual preenche campos por JavaScript: não comprova
+edição/IME em cada fabricante. Confira nos aparelhos afetados.
 
 O workflow `Android app` valida fontes, core/browser e uma WebView Android API35
 real em emulador antes de publicar APK. A fixture é Supabase simulado e backend

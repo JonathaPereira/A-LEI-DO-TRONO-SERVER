@@ -9,7 +9,8 @@ Windows **1.0.6** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 A captura local preserva o motivo da interrupção em vez de substituí-lo por
 “Captura local desligada”. Microfone ausente, ocupado/indisponível, permissão
 negada e entrada selecionada indisponível recebem orientação específica;
-Sem som continua sem pedir microfone. O encerramento da fonte tem aviso próprio.
+Sem som continua sem pedir microfone. O encerramento da fonte tem aviso próprio. Falta de espaço/acesso ao criar um
+clipe mantém o motivo da pausa visível e preserva o clipe em memória para salvar.
 
 Corrige uma falha reproduzida no caminho nativo: meio segundo de atraso na
 primeira confirmação de áudio excedia a fila PCM e encerrava a captura. A fila
@@ -20,6 +21,14 @@ Essa falha nativa não explica sozinha o desligamento relatado também no
 Compatível. A causa nesse computador e a qualidade real na RTX 3060 Ti ainda
 precisam ser confirmadas. Captura inicia desligada, requer consentimento e não
 encerra tracks emprestadas da chamada. Não altera backend, dados ou SQL.
+
+### Android na preparação 1.0.6
+
+Incorpora as configurações do APK de correção de login publicado separadamente:
+origem HTTPS igual à do site, edição nativa de e-mail/senha e um único tratamento
+das margens de teclado. A primeira versão do APK não tinha essas configurações.
+Erro de login nos aparelhos relatados ainda requer reconferência; uma prévia de
+APK exige aprovação dos testes Android e não equivale a assinatura permanente.
 
 ## Windows 1.0.5
 

@@ -1,7 +1,7 @@
 'use strict';
 const { startFixture } = require('./auth-fixture');
 (async () => {
-  const fixture = await startFixture({ port: 10000, appOrigin: 'http://127.0.0.1:18880', allowedOrigins: ['https://localhost'] });
+  const fixture = await startFixture({ port: 10000, appOrigin: 'http://127.0.0.1:18880', allowedOrigins: ['https://localhost', 'https://a-lei-do-trono.surge.sh'] });
   const email = 'android-native@example.test';
   await fixture.call('signup', { email, nickname: 'Android Teste', password: 'Senha12!' });
   await fixture.call('verify', { token_hash: [...fixture.links.keys()].at(-1), type: 'signup' });
