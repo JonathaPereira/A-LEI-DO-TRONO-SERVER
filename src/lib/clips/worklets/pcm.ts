@@ -11,6 +11,7 @@ class ClipPCM extends AudioWorkletProcessor {
   private frames = 0;
   private credit = true;
   private time = 0;
+  // Keep at most one second of PCM while the encoder acknowledges startup/transport.
   private pending: { time: number; data: ArrayBuffer }[] = [];
   private failed = false;
   constructor() {
@@ -37,7 +38,7 @@ class ClipPCM extends AudioWorkletProcessor {
       this.samples[this.frames * 2 + 1] = (channels[1] || channels[0])[i];
       this.frames++;
       if (this.frames === 2048) {
-        if (this.pending.length >= 8) {
+        if (this.pending.length >= Math.ceil(sampleRate / 2048)) {
           this.failed = true;
           this.pending.length = 0;
           this.port.postMessage({

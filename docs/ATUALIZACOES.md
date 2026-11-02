@@ -1,8 +1,25 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.5** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.6** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.6
+
+A captura local preserva o motivo da interrupção em vez de substituí-lo por
+“Captura local desligada”. Microfone ausente, ocupado/indisponível, permissão
+negada e entrada selecionada indisponível recebem orientação específica;
+Sem som continua sem pedir microfone. O encerramento da fonte tem aviso próprio.
+
+Corrige uma falha reproduzida no caminho nativo: meio segundo de atraso na
+primeira confirmação de áudio excedia a fila PCM e encerrava a captura. A fila
+agora guarda até um segundo, com limite de memória, amostras e timestamps
+preservados; um bloqueio maior continua encerrando com mensagem.
+
+Essa falha nativa não explica sozinha o desligamento relatado também no
+Compatível. A causa nesse computador e a qualidade real na RTX 3060 Ti ainda
+precisam ser confirmadas. Captura inicia desligada, requer consentimento e não
+encerra tracks emprestadas da chamada. Não altera backend, dados ou SQL.
 
 ## Windows 1.0.5
 

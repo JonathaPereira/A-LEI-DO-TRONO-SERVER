@@ -4,8 +4,8 @@ const {test}=require('node:test'), assert=require('node:assert/strict'), fs=requ
 const {_electron,expect}=require('@playwright/test');
 const {startFixture}=require('./auth-fixture');
 const {closeTestApp,killTestApp}=require('./desktop-test-close');
-for(const backend of ['compatible','native','native-audio'])test('native local clips '+backend+' require explicit source selection outside voice and release their source when disabled', {timeout:90000,skip:process.platform!=='win32'}, async t=>{
- const native=backend!=='compatible',withSound=backend==='native-audio';let syntheticApplicationAudio=false;
+for(const backend of ['compatible','compatible-audio','native','native-audio'])test('native local clips '+backend+' require explicit source selection outside voice and release their source when disabled', {timeout:90000,skip:process.platform!=='win32'}, async t=>{
+ const native=backend.startsWith('native'),withSound=backend.endsWith('-audio');let syntheticApplicationAudio=false;
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'trono-local-clips-'));let app,qaApp,fixture,page,finished=false;const mainLogs=[];
  t.signal.addEventListener('abort',()=>{if(!finished){killTestApp(app);killTestApp(qaApp);}},{once:true});
  try{

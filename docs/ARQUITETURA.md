@@ -376,8 +376,10 @@ clipes locais; o replay continua possuindo seus clones/recorder/worker. A captur
 não participa da chamada nem publica tracks. Inicia desligada em cada sessão,
 sem restaurar `desktopAuto` antigo. Cancelamento, troca de conta, pagehide,
 encerramento da fonte e falha de preparação invalidam permissões tardias e
-liberam somente a fonte própria. Durante uma captura local, notificações de nova
-transmissão não substituem sua fonte. Desligar a captura não inicia outra fonte
+liberam somente a fonte própria. O motivo do replay é passado ao stop local e
+preservado; ended da fonte usa callback próprio, sem passar o Event como texto.
+Durante uma captura local, notificações de nova transmissão não substituem sua
+fonte. Desligar a captura não inicia outra fonte
 implicitamente; para mudar o modo, o usuário escolhe/inicia uma nova captura.
 
 O replay possui dois caminhos. Compatível usa MediaRecorder/WebM e o worker
@@ -402,7 +404,9 @@ autorizada; falha encerra o replay com mensagem. Sem som não pede microfone,
 remove somente clones de áudio e respeita Sem áudio do seletor nativo. O sinal
 de cancelamento libera clones/microfone imediatamente durante a preparação;
 permissões tardias são descartadas. O dispositivo preferido é lido do dono das
-configurações de voz, sem recriar outro armazenamento de preferências.
+configurações de voz, sem recriar outro armazenamento de preferências. Falhas de
+abertura, ausência, permissão e restrição da entrada têm orientação específica,
+sem recaptura automática nem fallback silencioso para outro dispositivo.
 
 FFmpeg LGPL compartilhado é distribuído separado com DLLs substituíveis,
 licenças e fontes/receita referenciados. `prepare-ffmpeg.cjs` fixa release e
@@ -443,9 +447,10 @@ evidência de desempenho ou medição no equipamento. A próxima prova deve comp
 1080p/30 e 1080p/60 no equipamento, com jogo aberto, verificar frames perdidos e
 impacto no jogo, exportação reproduzível com áudio e liberação da captura.
 
-O PCM dos clipes mantém até oito blocos enquanto espera confirmação do encoder;
-um atraso curto não descarta amostras nem cria chiado. Um bloqueio prolongado
-encerra a captura com mensagem, sem unir silenciosamente áudio descontínuo.
+O PCM dos clipes mantém até um segundo de blocos enquanto espera confirmação do
+encoder (24 blocos de 2048 frames a 48 kHz, cerca de 384 KiB, além do bloco em voo).
+O arranque com 500 ms de atraso não descarta amostras nem cria chiado. Um bloqueio
+prolongado encerra a captura com mensagem, sem unir silenciosamente áudio descontínuo.
 A ponte nativa dos clipes possui o registro do atalho global, repete uma falha
 temporária enquanto a captura continua e cancela a repetição ao desligar. O
 estado indisponível é mostrado junto do atalho; nenhuma falha fica mascarada

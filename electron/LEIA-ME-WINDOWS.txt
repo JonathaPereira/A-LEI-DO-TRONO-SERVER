@@ -1,8 +1,12 @@
-M&N · A Lei do Trono — Windows 1.0.5
+M&N · A Lei do Trono — Windows 1.0.6
 
-Correção 1.0.5: captura nativa com envio de quadros mais fluido e áudio contínuo.
-O atalho global informa quando está pronto para funcionar fora do Trono ou se a
-combinação está indisponível; uma rejeição temporária é tentada novamente.
+Correção 1.0.6: captura local conserva o motivo da falha e orienta sobre microfone
+indisponível, permissão ou escolha de Sem som. O áudio nativo tolera até um segundo
+de fila no arranque, preservando as amostras; atrasos maiores continuam sinalizados.
+Captura permanece desligada por padrão e exige seleção explícita.
+O desligamento relatado em Automático e Compatível ainda precisa ser reconferido
+no equipamento afetado; o teste sem NVIDIA não comprova NVENC físico.
+As melhorias de fluidez e atalho global da 1.0.5 são preservadas.
 
 Trono 1.0: pistas do Similo mantêm a orientação também ao ampliar. Configurações
 separam as 12 cartas da mesa do baralho do informante, com tema principal e

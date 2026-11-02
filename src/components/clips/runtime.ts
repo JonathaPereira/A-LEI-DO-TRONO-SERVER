@@ -76,7 +76,8 @@ export function initializeClips(
   const unsubscribeLocalReplay = replay.subscribe(() =>
     queueMicrotask(() => {
       const state = replay.getSnapshot();
-      if (local.getSnapshot().active && !state.active && !state.preparing) local.stop();
+      if (local.getSnapshot().active && !state.active && !state.preparing)
+        local.stop(state.message);
     }),
   );
   const controls = createClipControls(target, preferences),

@@ -19,7 +19,7 @@ export function createLocalClipCapture(options: LocalCaptureOptions) {
     state = Object.freeze({ ...state, ...patch });
     for (const listener of listeners) listener();
   }
-  function stop() {
+  function stop(message = 'Captura local desligada') {
     generation++;
     const previous = source;
     source = null;
@@ -29,7 +29,7 @@ export function createLocalClipCapture(options: LocalCaptureOptions) {
       options.stopped(previous);
       previous.getTracks().forEach((track) => track.stop());
     }
-    publish({ active: false, pending: false, message: 'Captura local desligada' });
+    publish({ active: false, pending: false, message });
   }
   return {
     getSnapshot: () => state,
@@ -55,8 +55,9 @@ export function createLocalClipCapture(options: LocalCaptureOptions) {
         if (!video || video.readyState !== 'live')
           throw Error('A tela selecionada não está disponível.');
         source = captured;
-        video.addEventListener('ended', stop);
-        unlisten = () => video.removeEventListener('ended', stop);
+        const ended = () => stop('A tela ou janela selecionada encerrou a captura.');
+        video.addEventListener('ended', ended);
+        unlisten = () => video.removeEventListener('ended', ended);
         await options.started(captured);
         if (!current()) return;
         publish({

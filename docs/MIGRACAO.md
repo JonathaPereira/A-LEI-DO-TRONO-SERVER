@@ -923,3 +923,31 @@ reais disponíveis e não representa uma partida de LoL ou NVENC físico.
 Preparação 1.0.5 autorizada pelo fluxo de correção/publicação vigente: somente
 desktop/lock/guia recebem a versão; backend permanece 0.14.0-alpha. O Windows
 completo e a publicação validada usarão o mesmo commit da entrega.
+
+
+Retomada em 02/11/2026, contribuição `codex/clips-startup-diagnostic`, sobre
+`8dba9c8137c780ea871f4f5d878ea96a16c02796` (1.0.5). O checkout estava limpo e
+não continha a contribuição local anterior; a branch também não existia no remoto.
+Reconstruída a preservação do motivo no stop local e no runtime, com callback
+próprio de ended, liberação da fonte/microfone próprios, reinício explícito e
+biblioteca preservada. As evidências do ambiente anterior não foram reutilizadas.
+
+Contratos novos falharam antes da correção: perda do motivo e fila PCM nativa
+estourando com 500 ms de atraso inicial. A fila agora tolera um segundo limitado,
+sem descarte nem junção descontínua. A regressão de consumidor bloqueado permanece.
+Isso não explica a falha em Compatível no PC Windows 11/Ryzen 5700X3D/RTX 3060 Ti;
+a preparação comum de áudio recebe mensagens de permissão, ausência, falha de
+abertura e configuração indisponível. Nenhuma captura/permissão é iniciada sem
+pedido, Sem som não pede microfone e tracks emprestadas permanecem preservadas.
+Preparação da 1.0.6 atualiza desktop, lock e guias; backend permanece 0.14.0-alpha.
+Validação e publicação da entrega ainda pendentes; desempenho NVENC físico e a
+causa no equipamento do usuário não foram comprovados neste Linux.
+
+Tipos, formato, build 1.0.6 e 78 regressões focadas passaram neste ambiente.
+Duas rodadas consecutivas Chromium aprovaram mensagem, erro de microfone,
+liberação, reinício, biblioteca e atraso PCM de 500 ms; fonte direta e pixels
+redimensionados mantiveram aproximadamente 55–56 FPS com transporte controlado.
+Dois contratos reais FFmpeg/libx264 passaram para áudio e MP4, sem GPU NVIDIA.
+A matriz Windows existente passa a incluir Compatível com som e conserva os
+cenários sem som, nativo com som, chamada e atalho real fora do foco. O perfil
+de entrega inclui a jornada local alterada; nenhum gate foi removido.

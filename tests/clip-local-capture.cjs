@@ -18,3 +18,17 @@ test('source end, failed replay setup and disposal release capture and permit no
  await c.start();own.video.dispatchEvent(new Event('ended'));assert.equal(c.getSnapshot().active,false);assert.equal(own.video.stops,1);c.dispose();await c.start();assert.equal(calls,1);
  const failed=stream();const d=createLocalClipCapture({capture:async()=>failed,started:async()=>{throw Error('encoder failed');},stopped:()=>{}});await d.start();assert.equal(failed.video.stops,1);assert.match(d.getSnapshot().message,/encoder failed/);
 });
+test('a replay failure keeps its reason, releases the selected source once and requires an explicit restart',async()=>{
+ const sources=[stream(),stream()];let captures=0,stops=0;
+ const c=createLocalClipCapture({capture:async()=>sources[captures++],started:async()=>{},stopped:()=>stops++});
+ await c.start();c.stop('Microfone interrompido. Escolha Sem som.');
+ assert.equal(c.getSnapshot().message,'Microfone interrompido. Escolha Sem som.');
+ assert.equal(c.getSnapshot().active,false);assert.equal(stops,1);assert.equal(sources[0].video.stops,1);assert.equal(captures,1);
+ sources[0].video.dispatchEvent(new Event('ended'));assert.equal(c.getSnapshot().message,'Microfone interrompido. Escolha Sem som.');
+ await c.start();assert.equal(c.getSnapshot().active,true);assert.equal(captures,2);c.dispose();
+});
+test('source ended reports its own reason instead of passing the Event as a stop message',async()=>{
+ const own=stream();const c=createLocalClipCapture({capture:async()=>own,started:async()=>{},stopped:()=>{}});
+ await c.start();own.video.dispatchEvent(new Event('ended'));
+ assert.equal(typeof c.getSnapshot().message,'string');assert.match(c.getSnapshot().message,/tela.*janela.*encerr/i);assert.equal(own.video.stops,1);c.dispose();
+});

@@ -132,8 +132,17 @@ export async function prepareClipAudio(
     return { dispose, microphone: true };
   } catch (error) {
     dispose();
-    if (error instanceof Error && error.name === 'NotAllowedError')
-      throw Error('Microfone não autorizado. Permita o acesso ou escolha Sem som.');
+    if (error instanceof Error) {
+      const messages: Record<string, string> = {
+        NotAllowedError: 'Microfone não autorizado. Permita o acesso ou escolha Sem som.',
+        NotFoundError: 'Microfone não encontrado. Conecte uma entrada ou escolha Sem som.',
+        NotReadableError:
+          'Não foi possível abrir o microfone. Confira o dispositivo e as permissões do Windows ou escolha Sem som.',
+        OverconstrainedError:
+          'O microfone selecionado não está disponível com essa configuração. Escolha outra entrada nas configurações de voz ou Sem som.',
+      };
+      if (messages[error.name]) throw Error(messages[error.name]);
+    }
     throw error;
   }
 }

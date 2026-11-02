@@ -8,6 +8,7 @@
     "tests/dm-members-browser.cjs",
     "tests/auth-browser.cjs",
     "tests/clip-native-rate-browser.cjs",
+    "tests/clip-local-browser.cjs",
     "tests/chat-composer-browser.cjs",
     "tests/social-browser.js",
     "tests/profile-editor-browser.cjs",
