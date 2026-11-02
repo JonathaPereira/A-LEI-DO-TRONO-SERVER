@@ -925,76 +925,57 @@ desktop/lock/guia recebem a versão; backend permanece 0.14.0-alpha. O Windows
 completo e a publicação validada usarão o mesmo commit da entrega.
 
 
-Retomada em 02/11/2026, contribuição `codex/clips-startup-diagnostic`, sobre
-`8dba9c8137c780ea871f4f5d878ea96a16c02796` (1.0.5). O checkout estava limpo e
-não continha a contribuição local anterior; a branch também não existia no remoto.
-Reconstruída a preservação do motivo no stop local e no runtime, com callback
-próprio de ended, liberação da fonte/microfone próprios, reinício explícito e
-biblioteca preservada. As evidências do ambiente anterior não foram reutilizadas.
+## Clipes e Android — preparação 1.0.6 (02/11/2026)
 
-Contratos novos falharam antes da correção: perda do motivo e fila PCM nativa
-estourando com 500 ms de atraso inicial. A fila agora tolera um segundo limitado,
-sem descarte nem junção descontínua. A regressão de consumidor bloqueado permanece.
-Isso não explica a falha em Compatível no PC Windows 11/Ryzen 5700X3D/RTX 3060 Ti;
-a preparação comum de áudio recebe mensagens de permissão, ausência, falha de
-abertura e configuração indisponível. Nenhuma captura/permissão é iniciada sem
-pedido, Sem som não pede microfone e tracks emprestadas permanecem preservadas.
-Preparação da 1.0.6 atualiza desktop, lock e guias; backend permanece 0.14.0-alpha.
-Validação e publicação da entrega ainda pendentes; desempenho NVENC físico e a
-causa no equipamento do usuário não foram comprovados neste Linux.
+Base `8dba9c8137c780ea871f4f5d878ea96a16c02796` (1.0.5), contribuição
+`codex/clips-startup-diagnostic`. O checkout estava limpo; a contribuição local
+anterior não existia neste ambiente nem no remoto. A preservação do motivo de
+interrupção foi reconstruída e testada novamente, sem reutilizar evidências antigas.
 
-Tipos, formato, build 1.0.6 e 78 regressões focadas passaram neste ambiente.
-Duas rodadas consecutivas Chromium aprovaram mensagem, erro de microfone,
-liberação, reinício, biblioteca e atraso PCM de 500 ms; fonte direta e pixels
-redimensionados mantiveram aproximadamente 55–56 FPS com transporte controlado.
-Dois contratos reais FFmpeg/libx264 passaram para áudio e MP4, sem GPU NVIDIA.
-A matriz Windows existente passa a incluir Compatível com som e conserva os
-cenários sem som, nativo com som, chamada e atalho real fora do foco. O perfil
-de entrega inclui a jornada local alterada; nenhum gate foi removido.
+Reproduções antes da correção: stop local apagava o motivo do replay; a proteção
+por falha de persistência conservava o clipe em memória, mas mostrava descarte
+genérico; a fila PCM nativa estourava com 500 ms de atraso inicial. Agora o motivo
+acompanha replay/captura e a fila tolera um segundo limitado, preservando amostras
+e timestamps. Bloqueio prolongado continua sinalizado; falta de armazenamento
+continua pausando e preservando a cópia em memória, sem reinício automático.
+Captura inicia desligada, requer seleção explícita, preserva Sem som e nunca
+encerra o microfone emprestado da chamada.
 
+O usuário refinou o gatilho para desligamento ao usar o atalho em Automático.
+Isso não comprova que a falha física seja a fila PCM ou o armazenamento; o
+Compatível usa outro encoder e a causa no PC ainda precisa ser confirmada.
+A preparação comum de áudio recebe mensagens específicas para permissão,
+ausência, falha de abertura e configuração indisponível do microfone.
 
-O usuário refinou o gatilho: em Automático, a captura desliga ao usar o atalho.
-Reproduzida a perda do motivo na pausa por falha de persistência: a cópia em memória
-já era preservada, mas o replay mostrava descarte genérico. Agora o motivo da
-biblioteca acompanha replay/captura local, sem retirar a proteção. Jornada de
-atalho Chromium cobre pausa, cópia recuperável, bloqueio de reinício e descarte.
-111 contratos focados e duas rodadas consecutivas de três jornadas passaram.
+Validação local: tipos, formato, build 1.0.6, 111 contratos focados, duas rodadas
+consecutivas das três jornadas Chromium de clipes e oito testes de login/mobile
+passaram. As jornadas cobrem criação por atalho, biblioteca preservada, falha de
+microfone, falha de persistência, liberação e reinício explícito. Dois contratos
+FFmpeg/libx264 reais aprovaram áudio e MP4. O transporte controlado com confirmação
+PCM atrasada 500 ms manteve aproximadamente 56 FPS; não é medição NVENC físico.
 
-Windows focado `41493224969` falhou somente no novo Compatível com áudio: a janela
-QA externa ainda não aparecia ao desktopCapturer antes do seletor. Os demais
-contratos reais passaram; um teste de isolamento de áudio foi skip por falta de
-endpoint de reprodução. A fixture agora espera disponibilidade da janela no SO,
-sem aumentar prazo, remover assert ou substituir a seleção explícita.
+A matriz Windows existente inclui Compatível com áudio, além dos três modos
+anteriores, chamada e atalho SendInput fora do foco. As tentativas focadas
+`41493224969`, `41494915400`, `41495794580`, `41496564969` e `41497308301`
+expuseram preparação da janela QA e métricas de foco conflitantes entre processos;
+a captura Compatível com som chegou a buffer pronto. A fixture aguarda a fonte
+no desktopCapturer e usa clique real, identificando a janela exata com a API
+GetForegroundWindow antes/depois do clipe. Hipóteses intermediárias sobre retorno
+de foco ao baixar topmost não foram confirmadas. O gate continua exigindo criação
+antes da primeira consulta ao renderer, áudio exportado e recursos liberados.
+O Windows focado `41499648564` aprovou os quatro modos, atalho real fora do foco,
+criação antes de consultar o renderer, áudio exportado e descarte. A observação
+final usa o modo somente leitura `--foreground` do helper nativo: a inicialização
+de PowerShell excedia o prazo da observação. O teste externo exige o HWND exato,
+sem depender do estado de foco informado por outro processo Electron. Windows
+completo, instalação, publicação da mesma entrega e emulador Android ainda pendentes.
 
-Investigação Android: o usuário informou erro de login no primeiro APK. A correção
-`15873a4` estava somente na contribuição `codex/android-login-fixes`, com APK de
-teste publicado `41064670654` e SHA-256 registrado na própria contribuição.
-Configurações de origem HTTPS, captura de entrada nativa e margens únicas foram
-incorporadas sem importar workflows temporários nem alterar backend/segredos.
-A fixture de emulador aceita a origem antiga e a nova; resultado em aparelhos
-físicos ainda não confirmado. A rede local bloqueou consulta ao Render (403 do
-proxy), portanto não se atribui causa a uma resposta de produção não observada.
-
-
-A repetição Windows `41494915400` comprovou captura Compatível com som ativa,
-buffer pronto e áudio presente; falhou na preparação do foco externo antes do
-atalho. Windows negou o focus programático para outro processo. A fixture passa
-a ativar a janela QA separada com clique SendInput real e comprovar seu foco,
-sem esconder Trono para simular foco externo nem retirar a asserção do atalho.
-
-
-Na revisão final Android, manteve-se o hostname original `localhost`: mudar a
-origem isolaria o armazenamento web e as preferências de instalações existentes.
-O backend atual já autoriza `https://localhost`. Da correção Android anterior,
-foram conservadas apenas edição nativa de campos (`captureInput: false`) e
-margens com um único dono (`SystemBars.insetsHandling: disable`). Não se atribui
-o erro dos celulares a CORS sem resposta de produção ou evidência desses aparelhos.
-O APK separado continua disponível para comparação, com seu SHA-256 conferido,
-mas a próxima entrega preservará a origem e os dados do primeiro APK.
-
-
-A execução `41495794580` confirmou o foco real da janela QA após SendInput, mas
-baixar seu estado topmost imediatamente devolveu foco ao Trono antes do atalho.
-A fixture conserva a janela alvo sobreposta até guardar o clipe, só então retira
-topmost para abrir a prévia. As asserções de foco externo e criação antes da
-primeira consulta ao renderer continuam obrigatórias.
+Android: o usuário informou erro de login no primeiro APK. A correção `15873a4`
+existia somente em `codex/android-login-fixes`, com APK separado `41064670654`;
+o download e seu SHA-256 foram conferidos. A 1.0.6 incorpora edição nativa dos
+campos (`captureInput: false`) e margens com um dono (`SystemBars.insetsHandling` em `disable`), preservando o hostname original `localhost` e o armazenamento existente.
+O backend vigente já autoriza essa origem. Não se importaram workflows temporários,
+segredos ou mudanças de backend/SQL. A consulta ao Render foi bloqueada pelo proxy
+local, portanto não há novo diagnóstico de produção. O teste Android vigente
+preenche os campos por JavaScript: IME/login nos aparelhos afetados e NVENC na RTX
+3060 Ti do usuário permanecem sem confirmação física. Backend permanece 0.14.0-alpha.

@@ -318,5 +318,8 @@ continuam no caminho de lançamento original, sem preload de automação.
 fonte direta e redimensionamento dos quadros. Não usa FPS nominal do contêiner como prova
 de fluidez nem mede NVENC físico. Headless não representa foco real do Windows.
 `clip-local-desktop.cjs` usa SendInput do helper existente com a janela QA em
-primeiro plano e exige retenção do clipe sem devolver foco ao Trono. Se houver
+primeiro plano e exige retenção do clipe sem devolver foco ao Trono. Para uma
+janela QA de outro processo, compara o HWND retornado por GetForegroundWindow
+antes/depois do clipe, usando o modo somente leitura --foreground do helper.
+Se houver
 segunda tela, move o Trono para ela; informa quantos monitores reais o runner tem.
