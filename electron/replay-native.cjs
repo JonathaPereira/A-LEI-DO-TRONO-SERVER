@@ -318,15 +318,15 @@ function createNativeReplay({
     const job = current;
     if (!job || job.id !== id || job.stopping) throw Error('Captura nativa desligada.');
     if (exports.size >= 2) throw Error('Aguarde os clipes em preparação.');
-    const snapshot = job.buffer.snapshot();
-    if (snapshot.data.length > MAX) throw Error('Clipe acima do limite de memória.');
+    const snapshot = job.buffer.snapshotParts();
+    if (snapshot.bytes > MAX) throw Error('Clipe acima do limite de memória.');
     const token = crypto.randomUUID();
     exports.add(token);
     let folder;
     try {
       await fs.mkdir(directory, { recursive: true, mode: 0o700 });
       folder = await fs.mkdtemp(path.join(directory, 'clip-'));
-      await fs.writeFile(path.join(folder, 'input.mp4'), snapshot.data, { mode: 0o600 });
+      await fs.writeFile(path.join(folder, 'input.mp4'), snapshot.parts, { mode: 0o600 });
       await run(
         executable,
         [

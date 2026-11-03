@@ -30,7 +30,22 @@ export interface VoiceResources {
   readonly appMemoryMB: number;
   readonly freeMemoryMB: number;
 }
+export interface VideoInterval {
+  readonly direction: 'inbound' | 'outbound';
+  readonly fps: number | null;
+  readonly width: number;
+  readonly height: number;
+  readonly freezeCount: number | null;
+  readonly freezeMs: number | null;
+  readonly droppedFrames: number | null;
+  readonly decodeMs: number | null;
+  readonly encodeMs: number | null;
+  readonly sendDelayMs: number | null;
+  readonly bufferMs: number | null;
+}
 export interface MediaTelemetry {
+  readonly outFpsMeasured?: boolean;
+  readonly video?: readonly Readonly<VideoInterval>[];
   readonly audioLossPct: number;
   readonly audioJitterMs: number;
   readonly concealedPct: number;
@@ -75,6 +90,16 @@ export interface MediaStat {
   readonly framesPerSecond?: number;
   readonly frameWidth?: number;
   readonly frameHeight?: number;
+  readonly packetsSent?: number;
+  readonly framesEncoded?: number;
+  readonly totalEncodeTime?: number;
+  readonly framesDecoded?: number;
+  readonly totalDecodeTime?: number;
+  readonly framesSent?: number;
+  readonly totalPacketSendDelay?: number;
+  readonly framesDropped?: number;
+  readonly freezeCount?: number;
+  readonly totalFreezesDuration?: number;
   readonly qualityLimitationReason?: string;
   readonly state?: string;
   readonly nominated?: boolean;

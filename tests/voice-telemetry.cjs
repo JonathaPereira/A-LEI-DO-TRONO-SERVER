@@ -511,3 +511,24 @@ test('reset releases native priority even when the caller does not issue another
   assert.deepEqual(calls, [true, false]);
   assert.equal(h.telemetry.getSnapshot().priority.active, false);
 });
+test('video diagnostics expose interval freezes, dropped frames and encode/decode delays without changing media', async t=>{
+ const h=await setup(t),pc=h.attach();
+ const video=n=>new Map([
+ ['tx',{id:'tx',type:'outbound-rtp',kind:'video',timestamp:n*1000,framesEncoded:n*60,totalEncodeTime:n*.3,framesSent:n*60,packetsSent:n*120,totalPacketSendDelay:n*.24,frameWidth:1920,frameHeight:1080}],
+ ['rx',{id:'rx',type:'inbound-rtp',kind:'video',timestamp:n*1000,framesDecoded:n*60,totalDecodeTime:n*.12,framesDropped:n*2,freezeCount:n,totalFreezesDuration:n*.25,jitterBufferDelay:n*3,jitterBufferEmittedCount:n*60,frameWidth:1920,frameHeight:1080}],
+ ]);
+ pc.report=video(1);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video[0].encodeMs,null,'first report establishes a baseline');
+ pc.report=video(2);await h.telemetry.collect();const rows=h.telemetry.getSnapshot().telemetry.video;
+ assert.equal(rows[0].fps,60);assert.equal(rows[0].encodeMs,5);assert.equal(rows[0].sendDelayMs,2);assert.equal(rows[1].decodeMs,2);assert.equal(rows[1].bufferMs,50);assert.equal(rows[1].freezeCount,1);assert.equal(rows[1].freezeMs,250);assert.equal(rows[1].droppedFrames,2);
+ assert.equal(rows[0].width,1920);assert.equal(rows[0].height,1080);assert(Object.isFrozen(rows));assert(Object.isFrozen(rows[0]));assert(!JSON.stringify(rows).includes('tx'));assert.equal(pc.connectionState,'connected');
+ pc.report=video(0);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video.length,0,'stale reports must not masquerade as healthy intervals');
+ h.telemetry.reset();pc.report=video(3);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video[0].encodeMs,null);
+});
+test('copied video diagnostics whitelist anonymous numbers and preserve unavailable values',()=>{
+ const {diagnosticReport}=require('../src/lib/voice/diagnostic-report.ts');const report=JSON.parse(diagnosticReport({call:{},telemetry:{video:[{direction:'inbound',freezeCount:2,decodeMs:null,width:1920,height:1080,ip:'private',trackIdentifier:'secret',freezeMs:Infinity},{direction:'injected identity',decodeMs:5}]}}));
+ assert.equal(report.video[0].freezeCount,2);assert.equal(report.video[0].decodeMs,null);assert.equal(report.video[0].freezeMs,null);assert.equal(report.video.length,1);assert(!JSON.stringify(report).includes('secret'));assert(!JSON.stringify(report).includes('private'));
+});
+test('a measured zero video FPS is never replaced by the configured capture FPS',async t=>{
+ const h=await setup(t,{getLocalVideo:()=>({getSettings:()=>({frameRate:60,width:1920,height:1080})})}),pc=h.attach();
+ pc.report=report(1);pc.report.get('video').framesPerSecond=0;await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.outFps,0,'a stalled encoder must not be reported as 60 FPS');
+});

@@ -14,3 +14,13 @@ test('native capture configuration bounds dimensions, rate, memory pressure and 
  for(const patch of [{width:99999},{height:721},{fps:999},{seconds:9999},{audio:'yes'},{bitrate:Infinity}])assert.throws(()=>readConfig({...valid,...patch}),/inválida/);
 });
 test('native packet framing borrows the full pixel payload instead of copying it into nested containers',()=>{const {replayPacketParts}=require('../electron/replay-input.cjs');const data=Buffer.alloc(1280*720*4);const parts=replayPacketParts(1,42,data);assert.equal(parts.length,2);assert.equal(parts[1],data);assert(parts[0].length<64);});
+test('native MP4 input rejects an oversized declared box before buffering its payload',()=>{
+ const {ReplayBuffer}=require('../electron/replay-buffer.cjs');const ring=new ReplayBuffer({maxBytes:1024});const header=Buffer.alloc(8);header.writeUInt32BE(4096);header.write('mdat',4);assert.throws(()=>ring.append(header),/large|limit/i);
+});
+test('MP4 headers fragmented byte by byte and cleared mid-header do not corrupt the next stream',()=>{
+ const {ReplayBuffer}=require('../electron/replay-buffer.cjs'),ring=new ReplayBuffer({maxBytes:1024});
+ const extended=Buffer.alloc(24);extended.writeUInt32BE(1);extended.write('free',4);extended.writeBigUInt64BE(24n,8);
+ for(const byte of extended)ring.append(Buffer.from([byte]));assert.equal(ring.status().ready,false);
+ ring.append(Buffer.from([0,0,0]));ring.clear();const small=Buffer.alloc(8);small.writeUInt32BE(8);small.write('free',4);assert.doesNotThrow(()=>ring.append(small));
+ const oversized=Buffer.from(extended);oversized.writeBigUInt64BE(2048n,8);assert.throws(()=>ring.append(oversized.subarray(0,16)),/large|limit/i);
+});

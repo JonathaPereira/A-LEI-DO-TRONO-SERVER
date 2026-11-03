@@ -323,3 +323,16 @@ janela QA de outro processo, compara o HWND retornado por GetForegroundWindow
 antes/depois do clipe, usando o modo somente leitura --foreground do helper.
 Se houver
 segunda tela, move o Trono para ela; informa quantos monitores reais o runner tem.
+
+
+### Investigar stutters sem alterar qualidade
+
+Compare jogo sozinho, jogo com clipes, jogo com transmissão e ambos; repita a
+criação de pelo menos três clipes. Confira tempos de quadro e picos no jogo,
+continuidade de áudio e captura, além da reprodução dos arquivos exportados.
+O relatório de Copiar diagnóstico inclui intervalos anônimos de vídeo por fluxo:
+FPS, freezes, descarte, codificação/decodificação, fila de envio por pacote e buffer.
+Campos null indicam contador indisponível ou intervalo sem baseline, não ausência
+de problema. Compare os relatórios do transmissor e do receptor. Captura/encoder,
+rede e apresentação podem ter causas distintas; preserve o perfil visual enquanto
+isola a etapa. A fixture controlada não mede desempenho em NVIDIA física.

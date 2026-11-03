@@ -387,12 +387,17 @@ existente. Automático prefere NVENC após codificação real de teste; NVENC
 explícito falha com mensagem se indisponível. `clips/native-session.ts` envia
 somente clones da fonte escolhida como BGRA e PCM. TrackProcessor fornece
 quadros sem depender de um vídeo desenhado na janela. Dois envios podem ficar
-pendentes, com um frame ainda não copiado esperando crédito; buffers de pixels
-são reutilizados após a confirmação. Sem TrackProcessor, há fallback de vídeo. Não inicia outra captura de monitor. O main valida origem, ID,
+pendentes; o leitor busca o próximo quadro somente após receber crédito, deixando
+o TrackProcessor manter o quadro recente. Buffers de pixels são reutilizados
+após a confirmação. Sem TrackProcessor, há fallback de vídeo. Não inicia outra captura de monitor. O main valida origem, ID,
 dimensões, tamanho e timestamps de cada pacote. O framing
 Matroska toma emprestado o payload e usa escrita vetorizada sem concatená-lo. `electron/replay-native.cjs`
 possui processos FFmpeg, buffer fMP4 limitado a 256 MiB e até dois exports MP4
-por remux sem recodificação. H.264 nunca passa pelo parser WebM. Temporários
+por remux sem recodificação. O leitor monta cada box uma vez e valida o tamanho
+no cabeçalho, inclusive quando ele chega fragmentado. snapshotParts retém referências
+estáveis aos fragmentos; exportar escreve esse iterável assincronamente, inclusive
+se a captura parar ou o buffer expirar. Não concatena todo o replay no main.
+H.264 nunca passa pelo parser WebM. Temporários
 são privados, apagados após exportar e limpos na abertura após falha. Navegação
 ou crash para o encoder ativo; encerrar o app termina seus processos.
 
@@ -460,3 +465,12 @@ como disponibilidade global. O evento de clipar independe do foco do aplicativo.
 Ao criar um clipe, falha de persistência pausa o replay e conserva o blob em memória.
 A biblioteca passa o mesmo motivo ao replay e à captura local; o atalho não alterna
 a captura nem elimina o clipe. Retomar exige salvar ou descartar a cópia em memória.
+
+
+O diagnóstico de vídeo calcula deltas por estatística/conexão, com baselines
+independentes e descartados na troca de peer ou reset. Tempos acumulados usam as
+unidades de WebRTC Stats: codificação/decodificação por quadro; fila de envio por
+pacote. A cópia do relatório permite apenas direção e campos numéricos anônimos,
+sem IDs de tracks, peers ou endereços. Os dados são somente leitura e não alteram
+parâmetros de envio ou reprodução. FPS medido zero é preservado; configurações da
+fonte são usadas apenas quando o contador não está disponível.

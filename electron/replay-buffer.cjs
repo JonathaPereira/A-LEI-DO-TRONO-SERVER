@@ -111,7 +111,11 @@ class ReplayBuffer {
   constructor({ seconds = 30, maxBytes = 128 * 1048576 } = {}) {
     this.seconds = seconds;
     this.maxBytes = maxBytes;
-    this.pending = Buffer.alloc(0);
+    this.pending = [];
+    this.pendingBytes = 0;
+    this.boxLength = 0;
+    this.header = Buffer.alloc(16);
+    this.headerBytes = 0;
     this.init = [];
     this.metadata = new Map();
     this.fragments = [];
@@ -119,28 +123,53 @@ class ReplayBuffer {
     this.moof = null;
   }
   append(chunk) {
-    this.pending = Buffer.concat([this.pending, chunk]);
-    let consumed = 0;
-    for (const box of boxes(this.pending)) {
-      if (box.end - box.start > this.maxBytes) throw Error('Replay fragment too large');
-      const raw = Buffer.from(this.pending.subarray(box.start, box.end));
-      if (box.type === 'ftyp') this.init = [raw];
-      if (box.type === 'moov') {
+    let offset = 0;
+    while (offset < chunk.length) {
+      if (!this.boxLength) {
+        const needed = this.headerBytes < 8 ? 8 : 16;
+        const count = Math.min(needed - this.headerBytes, chunk.length - offset);
+        chunk.copy(this.header, this.headerBytes, offset, offset + count);
+        this.headerBytes += count;
+        offset += count;
+        if (this.headerBytes < 8) continue;
+        let length = this.header.readUInt32BE(0),
+          header = 8;
+        if (length === 1) {
+          if (this.headerBytes < 16) continue;
+          length = Number(this.header.readBigUInt64BE(8));
+          header = 16;
+        }
+        if (length < header || !Number.isSafeInteger(length)) throw Error('Invalid MP4 box');
+        if (length > this.maxBytes) throw Error('Replay fragment too large');
+        this.boxLength = length;
+        this.pending = [Buffer.from(this.header.subarray(0, header))];
+        this.pendingBytes = header;
+      }
+      const count = Math.min(this.boxLength - this.pendingBytes, chunk.length - offset);
+      if (count) {
+        this.pending.push(Buffer.from(chunk.subarray(offset, offset + count)));
+        this.pendingBytes += count;
+        offset += count;
+      }
+      if (this.pendingBytes !== this.boxLength) continue;
+      const raw = Buffer.concat(this.pending, this.boxLength);
+      this.pending = [];
+      this.pendingBytes = this.boxLength = this.headerBytes = 0;
+      const type = raw.toString('ascii', 4, 8);
+      if (type === 'ftyp') this.init = [raw];
+      if (type === 'moov') {
         this.metadata = tracks(raw, boxes(raw)[0]);
         this.init.push(raw);
       }
-      if (box.type === 'moof') this.moof = raw;
-      if (box.type === 'mdat' && this.moof) {
+      if (type === 'moof') this.moof = raw;
+      if (type === 'mdat' && this.moof) {
         const data = Buffer.concat([this.moof, raw]),
           info = fragment(this.moof, this.metadata);
         this.fragments.push({ ...info, data });
         this.bytes += data.length;
         this.moof = null;
       }
-      consumed = box.end;
     }
-    this.pending = Buffer.from(this.pending.subarray(consumed));
-    if (this.pending.length > this.maxBytes) throw Error('Replay input exceeded memory limit');
     this.prune();
     return this.status();
   }
@@ -165,7 +194,7 @@ class ReplayBuffer {
       bytes: this.bytes,
     };
   }
-  snapshot() {
+  snapshotParts() {
     if (!this.status().ready) throw Error('Aguarde alguns segundos antes de clipar.');
     const end = Math.max(...this.fragments.map((f) => f.end));
     let index = this.fragments.findIndex((f) => f.key);
@@ -174,12 +203,20 @@ class ReplayBuffer {
     });
     const selected = this.fragments.slice(index);
     return {
-      data: Buffer.concat([...this.init, ...selected.map((f) => f.data)]),
+      parts: Object.freeze([...this.init, ...selected.map((f) => f.data)]),
+      bytes:
+        this.init.reduce((n, b) => n + b.length, 0) +
+        selected.reduce((n, f) => n + f.data.length, 0),
       duration: end - selected[0].start,
     };
   }
+  snapshot() {
+    const { parts, duration } = this.snapshotParts();
+    return { data: Buffer.concat(parts), duration };
+  }
   clear() {
-    this.pending = Buffer.alloc(0);
+    this.pending = [];
+    this.pendingBytes = this.boxLength = this.headerBytes = 0;
     this.fragments = [];
     this.bytes = 0;
     this.moof = null;

@@ -117,7 +117,7 @@ export function diagnosticPresentation(source: DiagnosticsSource) {
     telemetryRtt: t.rttMs ? `${Math.round(t.rttMs)} ms` : '—',
     telemetryUpload: formatRate(t.uploadBps),
     telemetryDownload: formatRate(t.downloadBps),
-    telemetryOutFps: t.outFps ? `${Math.round(t.outFps)} FPS` : '—',
+    telemetryOutFps: t.outFps || t.outFpsMeasured ? `${Math.round(t.outFps)} FPS` : '—',
     telemetryInFps: t.inFps ? `${Math.round(t.inFps)} FPS` : '—',
     telemetryOutResolution: resolution(t.outW, t.outH),
     telemetryInResolution: resolution(t.inW, t.inH),

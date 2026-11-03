@@ -85,6 +85,34 @@ export function diagnosticReport({
       processing: safe(processing),
       adaptation: safe(adaptation),
       metrics: numbers,
+      video: (Array.isArray(telemetry?.video) ? telemetry.video : [])
+        .slice(0, 24)
+        .filter(
+          (item) =>
+            item && typeof item === 'object' && ['inbound', 'outbound'].includes(item.direction),
+        )
+        .map((item) => {
+          const row: Record<string, unknown> = { direction: item.direction };
+          for (const key of [
+            'fps',
+            'width',
+            'height',
+            'freezeCount',
+            'freezeMs',
+            'droppedFrames',
+            'decodeMs',
+            'encodeMs',
+            'sendDelayMs',
+            'bufferMs',
+          ]) {
+            const value = item[key];
+            row[key] =
+              typeof value === 'number' && Number.isFinite(value) && value >= 0
+                ? Math.round(value * 100) / 100
+                : null;
+          }
+          return row;
+        }),
       network: {
         state: safe(telemetry?.pcState),
         route: safe(telemetry?.iceRoute),

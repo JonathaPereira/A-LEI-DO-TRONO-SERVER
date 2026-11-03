@@ -243,6 +243,13 @@ export async function createNativeReplaySession(
       let due = 0;
       try {
         while (!stopped) {
+          // Wait before pulling a frame. TrackProcessor keeps the newest frame while
+          // IPC is busy; holding an already-read frame here would export stale pixels.
+          if (videoInFlight >= 2)
+            await new Promise<void>((resolve) => {
+              wakeFrame = resolve;
+            });
+          if (stopped) return;
           let frame: VideoFrame;
           if (reader) {
             const next = await reader.read();
@@ -275,16 +282,6 @@ export async function createNativeReplaySession(
             continue;
           }
           due = Math.max(due + interval, ms - interval);
-          // Two IPC writes may be pending, plus this single un-copied frame.
-          // Wait for credit instead of quantizing every delayed write to 20/30 FPS.
-          if (videoInFlight >= 2)
-            await new Promise<void>((resolve) => {
-              wakeFrame = resolve;
-            });
-          if (stopped) {
-            frame.close();
-            return;
-          }
           await submit(frame, ms);
         }
       } catch (error) {
@@ -336,7 +333,7 @@ export async function createNativeReplaySession(
           .then((result) =>
             options.onClip(session, {
               id,
-              blob: new Blob([new Uint8Array(result.data)], { type: 'video/mp4' }),
+              blob: new Blob([result.data], { type: 'video/mp4' }),
               duration: result.duration,
               bytes: result.bytes,
             }),

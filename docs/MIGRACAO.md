@@ -979,3 +979,42 @@ segredos ou mudanças de backend/SQL. A consulta ao Render foi bloqueada pelo pr
 local, portanto não há novo diagnóstico de produção. O teste Android vigente
 preenche os campos por JavaScript: IME/login nos aparelhos afetados e NVENC na RTX
 3060 Ti do usuário permanecem sem confirmação física. Backend permanece 0.14.0-alpha.
+
+
+## Desempenho de clipes e diagnóstico de vídeo — preparação 1.0.7
+
+Entrega anterior 1.0.6 confirmada em `da94352`: Windows/publicação `41500493565`
+e Android `41500492522` aprovados. A nova contribuição `codex/desktop-media-performance`
+parte desse commit. Usuário autorizou investigação, mudanças, PR, merge e publicação;
+a qualidade visual atual da transmissão deve ser preservada. Relato adicional:
+criar aproximadamente dois clipes podia desligar a captura.
+
+Investigação: o caminho BGRA ainda transporta até 498 MB/s em 1080p/60, e sua
+migração para captura/encoder direto na GPU exige validar consentimento, formatos,
+colorimetria e NVIDIA física. Esta etapa corrige gargalos reproduzidos no caminho
+existente, mantendo seus perfis e contratos de cor. Buffer MP4 recompunha dados
+parciais em cada chunk; snapshot juntava até 256 MiB no main; renderer fazia
+outra cópia explícita do MP4; envio podia manter imagem antiga durante espera.
+
+Ensaio de um box MP4 de 4 MiB em chunks de 16 KiB: Buffer.concat processou
+538.968.064 bytes no código anterior, contra 4.194.304 no incremental; aproximadamente
+1.220 ms contra 5 ms neste Linux. Mede concatenações desse ensaio, não CPU/FPS do
+jogo nem todas as alocações. Teste Chromium reproduziu quadro com cerca de 234 ms
+de idade após 250 ms de atraso; o controle atualizado retoma o quadro recente.
+FFmpeg real valida três exports, sobrevivência dos fragmentos após parar o buffer,
+áudio e MP4 reproduzíveis. A proteção de armazenamento e o consentimento permanecem.
+
+Para stutters da transmissão, o diagnóstico passa a medir intervalos por fluxo,
+com freezes, descarte, FPS e tempos de codec/fila/buffer. Reproduzido também 0 FPS
+medido sendo apresentado como 60 FPS configurado; a fallback agora exige ausência
+do contador. Referência de unidades e campos: padrão oficial
+https://github.com/w3c/webrtc-stats/blob/master/webrtc-stats.html . Os novos dados
+não alteram resolução, bitrate, FPS ou adaptação e são filtrados ao copiar.
+
+Tipos, formato, build, 110 contratos focados e duas rodadas consecutivas de quatro
+jornadas Chromium passaram localmente. Verificação adicional cobre cabeçalhos MP4
+fragmentados/estendidos e limites antecipados. A matriz Windows passa a criar três
+clipes por modo antes de desligar explicitamente. Windows completo, PR/integração
+e publicação da 1.0.7 ainda pendentes; a API do GitHub foi negada pelo proxy local,
+e api.github.com foi adicionado ao rascunho de rede para ativação nas configurações.
+A RTX 3060 Ti e os stutters físicos relatados ainda não foram medidos.

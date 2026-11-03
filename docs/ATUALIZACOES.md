@@ -1,8 +1,29 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.6** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.7** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.7
+
+O replay nativo passa a ler MP4 incrementalmente, evitando recompor o bloco
+incompleto a cada chegada. A criação de um clipe grava as partes do buffer de
+forma assíncrona, sem juntar todo o histórico numa cópia síncrona. O renderer
+remove uma cópia adicional dos bytes do MP4 antes de criar o Blob.
+
+Sob atraso de envio, a captura busca o quadro mais recente quando há capacidade,
+em vez de manter um quadro antigo esperando. O teste de entrega cria três clipes
+consecutivos, conferindo que a captura e a fonte continuam ativas.
+
+A transmissão conserva resolução, bitrate, FPS e a política de adaptação existente.
+Copiar diagnóstico inclui métricas anônimas por fluxo: FPS, congelamentos,
+quadros descartados e tempos médios de codificação, fila de envio por pacote,
+decodificação e buffer. Contadores ausentes permanecem indisponíveis. Zero FPS
+medido não é substituído pelos FPS configurados da fonte.
+
+As mudanças reduzem custos reproduzidos; ainda precisam ser avaliadas com jogo
+aberto e NVIDIA física. O caminho de pixels BGRA via IPC continua existindo.
+Backend, banco e credenciais permanecem com seus contratos existentes.
 
 ## Windows 1.0.6
 

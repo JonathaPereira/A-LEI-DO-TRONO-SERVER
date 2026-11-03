@@ -1,12 +1,12 @@
-M&N · A Lei do Trono — Windows 1.0.6
+M&N · A Lei do Trono — Windows 1.0.7
 
-Correção 1.0.6: captura local conserva o motivo da falha e orienta sobre microfone
-indisponível, permissão ou escolha de Sem som. O áudio nativo tolera até um segundo
-de fila no arranque, preservando as amostras; atrasos maiores continuam sinalizados.
-Captura permanece desligada por padrão e exige seleção explícita.
-O desligamento relatado em Automático e Compatível ainda precisa ser reconferido
-no equipamento afetado; o teste sem NVIDIA não comprova NVENC físico.
-As melhorias de fluidez e atalho global da 1.0.5 são preservadas.
+Melhoria 1.0.7: leitura MP4 incremental e salvamento por partes reduzem cópias e
+pausas na captura nativa. Após atraso, o envio retoma com um quadro recente.
+O diagnóstico copiado inclui congelamentos e tempos de vídeo por fluxo; um
+encoder parado não aparece como se estivesse enviando os FPS configurados.
+Resolução, bitrate e FPS da transmissão são preservados. Captura de clipes
+continua optativa e os clipes em memória permanecem recuperáveis.
+Desempenho NVENC físico e os travamentos relatados no PC exigem reconferência.
 
 Trono 1.0: pistas do Similo mantêm a orientação também ao ampliar. Configurações
 separam as 12 cartas da mesa do baralho do informante, com tema principal e

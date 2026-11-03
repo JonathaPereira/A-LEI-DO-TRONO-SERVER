@@ -1,6 +1,7 @@
 import type { VoicePeerConnection } from '../../types/voice';
 import type {
   MediaStat,
+  VideoInterval,
   MediaTelemetry,
   PlayoutMetrics,
   ReceptionHistory,
@@ -30,7 +31,23 @@ interface Options {
   now?: () => number;
   warn?: (error: unknown) => void;
 }
+const videoCounterKeys = [
+  'framesEncoded',
+  'totalEncodeTime',
+  'framesDecoded',
+  'totalDecodeTime',
+  'framesSent',
+  'packetsSent',
+  'totalPacketSendDelay',
+  'framesDropped',
+  'freezeCount',
+  'totalFreezesDuration',
+  'jitterBufferDelay',
+  'jitterBufferEmittedCount',
+] as const;
+type VideoCounter = (typeof videoCounterKeys)[number];
 interface PeerCounters {
+  video: Map<string, { stamp: number; values: Partial<Record<VideoCounter, number>> }>;
   rates: Map<string, { bytes: number; stamp: number }>;
   losses: Map<string, { received: number; lost: number }>;
   audio: Map<string, { concealed: number; samples: number; delay: number; emitted: number }>;
@@ -144,7 +161,13 @@ export function createVoiceTelemetry(options: Options) {
   function stateFor(pc: VoicePeerConnection) {
     let state = counters.get(pc);
     if (!state) {
-      state = { rates: new Map(), losses: new Map(), audio: new Map(), playout: new Map() };
+      state = {
+        rates: new Map(),
+        losses: new Map(),
+        audio: new Map(),
+        playout: new Map(),
+        video: new Map(),
+      };
       counters.set(pc, state);
     }
     return state;
@@ -166,6 +189,53 @@ export function createVoiceTelemetry(options: Options) {
     const received = next.received - previous.received,
       lost = next.lost - previous.lost;
     return { lost, total: received + lost };
+  }
+  function sampleVideo(
+    state: PeerCounters,
+    stat: MediaStat,
+    stamp: number,
+  ): Readonly<VideoInterval> | null {
+    const previous = state.video.get(stat.id);
+    if (previous && stamp <= previous.stamp) return null;
+    const values: Partial<Record<VideoCounter, number>> = {};
+    for (const key of videoCounterKeys) {
+      const value = stat[key];
+      if (typeof value === 'number' && Number.isFinite(value) && value >= 0) values[key] = value;
+    }
+    state.video.set(stat.id, { stamp, values });
+    const delta = (key: VideoCounter): number | null => {
+      const before = previous?.values[key],
+        after = values[key];
+      return before !== undefined && after !== undefined && after >= before ? after - before : null;
+    };
+    const duration = (time: VideoCounter, count: VideoCounter) => {
+      const elapsed = delta(time),
+        frames = delta(count);
+      return elapsed !== null && frames !== null && frames > 0 ? (elapsed * 1000) / frames : null;
+    };
+    const freezes = delta('totalFreezesDuration');
+    const frameCount = delta(stat.type === 'outbound-rtp' ? 'framesEncoded' : 'framesDecoded');
+    const fps =
+      typeof stat.framesPerSecond === 'number' &&
+      Number.isFinite(stat.framesPerSecond) &&
+      stat.framesPerSecond >= 0
+        ? stat.framesPerSecond
+        : previous && frameCount !== null
+          ? (frameCount * 1000) / (stamp - previous.stamp)
+          : null;
+    return Object.freeze({
+      direction: stat.type === 'outbound-rtp' ? 'outbound' : 'inbound',
+      fps,
+      width: number(stat.frameWidth),
+      height: number(stat.frameHeight),
+      freezeCount: delta('freezeCount'),
+      freezeMs: freezes === null ? null : freezes * 1000,
+      droppedFrames: delta('framesDropped'),
+      decodeMs: duration('totalDecodeTime', 'framesDecoded'),
+      encodeMs: duration('totalEncodeTime', 'framesEncoded'),
+      sendDelayMs: duration('totalPacketSendDelay', 'packetsSent'),
+      bufferMs: duration('jitterBufferDelay', 'jitterBufferEmittedCount'),
+    });
   }
   function voiceReceiver(pcKey: string, pc: VoicePeerConnection, stat: MediaStat) {
     if (pcKey.endsWith(':screen-audio')) return null;
@@ -244,6 +314,8 @@ export function createVoiceTelemetry(options: Options) {
       iceRoute = '',
       pcState = '';
     const limiters: string[] = [];
+    let outFpsMeasured = false;
+    const videoIntervals: Readonly<VideoInterval>[] = [];
     for (const [pcKey, pc] of pcs) {
       if (!current()) return;
       if (!peerCurrent(pcKey, pc)) continue;
@@ -269,9 +341,21 @@ export function createVoiceTelemetry(options: Options) {
           ts = number(stat.timestamp) || now(),
           key = stat.id;
         seen.add(key);
+        if (
+          kind === 'video' &&
+          !stat.isRemote &&
+          ['inbound-rtp', 'outbound-rtp'].includes(stat.type)
+        ) {
+          const interval = sampleVideo(state, stat, ts);
+          if (interval) videoIntervals.push(interval);
+        }
         if (stat.type === 'outbound-rtp' && !stat.isRemote) {
           uploadBps += rate(state, `tx:${key}`, stat.bytesSent, ts);
           if (kind === 'video') {
+            outFpsMeasured ||=
+              typeof stat.framesPerSecond === 'number' &&
+              Number.isFinite(stat.framesPerSecond) &&
+              stat.framesPerSecond >= 0;
             if (Number(stat.framesPerSecond) > outFps) outFps = Number(stat.framesPerSecond) || 0;
             if ((Number(stat.frameWidth) || 0) * (Number(stat.frameHeight) || 0) > outW * outH) {
               outW = Number(stat.frameWidth) || 0;
@@ -367,6 +451,7 @@ export function createVoiceTelemetry(options: Options) {
         });
       }
       for (const key of state.playout.keys()) if (!playoutSeen.has(key)) state.playout.delete(key);
+      for (const key of state.video.keys()) if (!seen.has(key)) state.video.delete(key);
       for (const key of state.audio.keys()) if (!seen.has(key)) state.audio.delete(key);
       for (const key of state.losses.keys()) if (!seen.has(key)) state.losses.delete(key);
       for (const key of state.rates.keys()) if (!seen.has(key.slice(3))) state.rates.delete(key);
@@ -397,7 +482,7 @@ export function createVoiceTelemetry(options: Options) {
       );
       if (history.length > 12) history.shift();
     }
-    if (!outFps) {
+    if (!outFpsMeasured) {
       const track = options.getLocalVideo(),
         settings = track?.getSettings?.() || {};
       outFps = Number(settings.frameRate) || 0;
@@ -410,6 +495,8 @@ export function createVoiceTelemetry(options: Options) {
         ? 'bandwidth'
         : limiters[0] || 'none';
     telemetry = Object.freeze({
+      video: Object.freeze(videoIntervals),
+      outFpsMeasured,
       audioLossPct: audioTotal ? (audioLost / audioTotal) * 100 : 0,
       audioJitterMs,
       concealedPct: samples ? Math.min(100, (concealed / samples) * 100) : 0,
