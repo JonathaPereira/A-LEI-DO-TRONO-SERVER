@@ -1011,13 +1011,31 @@ do contador. Referência de unidades e campos: padrão oficial
 https://github.com/w3c/webrtc-stats/blob/master/webrtc-stats.html . Os novos dados
 não alteram resolução, bitrate, FPS ou adaptação e são filtrados ao copiar.
 
-Tipos, formato, build, 110 contratos focados e duas rodadas consecutivas de quatro
-jornadas Chromium passaram localmente. Verificação adicional cobre cabeçalhos MP4
-fragmentados/estendidos e limites antecipados. A matriz Windows passa a criar três
-clipes por modo antes de desligar explicitamente. Windows completo, PR/integração
-e publicação da 1.0.7 ainda pendentes; a API do GitHub foi negada pelo proxy local,
-e api.github.com foi adicionado ao rascunho de rede para ativação nas configurações.
-A RTX 3060 Ti e os stutters físicos relatados ainda não foram medidos.
+Tipos, formato e build passaram. A primeira revisão aprovou 1.471 contratos gerais;
+a revisão final aprovou 112 contratos direcionados e duas rodadas consecutivas de
+quatro jornadas Chromium. A cobertura inclui cabeçalhos MP4 fragmentados/estendidos
+e limites antecipados. Windows completo `41664190565` aprovou contratos, navegador,
+Electron, três clipes por modo, pacote real e instalação sem skips. O encoder nativo
+de teste é h264_mf; não valida NVENC físico. Ao ampliar para três clipes,
+corrigiu-se o seletor ambíguo da prévia: o teste identifica pelo ID o
+registro de maior createdAt, preservando todas as verificações de fonte e áudio.
+
+A revisão `0088eae` foi integrada na main por avanço direto autorizado, após o
+Windows completo. Abertura de PR permaneceu indisponível: api.github.com foi negada
+pelo proxy; o domínio consta no rascunho de rede, ainda sem ativação no ambiente.
+Produção `41667959608` também aprovou o Windows completo e o instalador real;
+o job Surge publicou e verificou a mesma entrega: hashes do EXE baixado,
+frontend, jogos, manifesto e versão pública 1.0.7. Links:
+[EXE Windows 1.0.7](https://mn-trono-downloads.surge.sh/MN-Trono-1.0.7-Windows.exe)
+e [frontend](https://a-lei-do-trono.surge.sh/). A validação pública foi executada
+pelo runner; os domínios Surge seguem fora da lista de rede do ambiente local.
+A RTX 3060 Ti, o desligamento e os stutters relatados no PC ainda exigem
+reconferência física. O caminho BGRA via IPC permanece.
+
+Android `41667959519` aprovou fonte compartilhada, testes nativos em emulador,
+pacote de produção e publicação do APK de teste 1.0.7 para `0088eae`. O download
+e seu SHA-256 foram conferidos contra o relatório de entrega. Continua sem
+assinatura permanente (`signed: false`); não comprova login nos aparelhos afetados.
 
 A investigação dos pedidos seguidos identificou limite divergente: o controlador
 admitia quatro pedidos, mas o nativo admite dois pendentes. Contrato novo reproduziu

@@ -393,10 +393,13 @@ após a confirmação. Sem TrackProcessor, há fallback de vídeo. Não inicia o
 dimensões, tamanho e timestamps de cada pacote. O framing
 Matroska toma emprestado o payload e usa escrita vetorizada sem concatená-lo. `electron/replay-native.cjs`
 possui processos FFmpeg, buffer fMP4 limitado a 256 MiB e até dois exports MP4
-por remux sem recodificação. O leitor monta cada box uma vez e valida o tamanho
-no cabeçalho, inclusive quando ele chega fragmentado. snapshotParts retém referências
-estáveis aos fragmentos; exportar escreve esse iterável assincronamente, inclusive
-se a captura parar ou o buffer expirar. Não concatena todo o replay no main.
+por remux sem recodificação. Cada sessão informa ao controlador a capacidade de
+pedidos pendentes: dois no nativo e quatro no compatível. O excesso mantém a
+captura ativa e pede que o usuário aguarde. O leitor monta cada box uma vez e
+valida o tamanho no cabeçalho, inclusive quando ele chega fragmentado.
+`snapshotParts` retém referências estáveis aos fragmentos; exportar escreve esse
+iterável assincronamente, inclusive se a captura parar ou o buffer expirar.
+Não concatena todo o replay no main.
 H.264 nunca passa pelo parser WebM. Temporários
 são privados, apagados após exportar e limpos na abertura após falha. Navegação
 ou crash para o encoder ativo; encerrar o app termina seus processos.
@@ -465,7 +468,6 @@ como disponibilidade global. O evento de clipar independe do foco do aplicativo.
 Ao criar um clipe, falha de persistência pausa o replay e conserva o blob em memória.
 A biblioteca passa o mesmo motivo ao replay e à captura local; o atalho não alterna
 a captura nem elimina o clipe. Retomar exige salvar ou descartar a cópia em memória.
-
 
 O diagnóstico de vídeo calcula deltas por estatística/conexão, com baselines
 independentes e descartados na troca de peer ou reset. Tempos acumulados usam as
