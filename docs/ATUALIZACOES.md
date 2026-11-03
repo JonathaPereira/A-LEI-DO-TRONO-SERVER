@@ -13,7 +13,9 @@ remove uma cópia adicional dos bytes do MP4 antes de criar o Blob.
 
 Sob atraso de envio, a captura busca o quadro mais recente quando há capacidade,
 em vez de manter um quadro antigo esperando. O teste de entrega cria três clipes
-consecutivos, conferindo que a captura e a fonte continuam ativas.
+consecutivos, conferindo que a captura e a fonte continuam ativas. Pedidos rápidos
+respeitam o limite de dois exports nativos pendentes e mostram espera, sem indicar
+que a captura ficou indisponível.
 
 A transmissão conserva resolução, bitrate, FPS e a política de adaptação existente.
 Copiar diagnóstico inclui métricas anônimas por fluxo: FPS, congelamentos,

@@ -1018,3 +1018,9 @@ clipes por modo antes de desligar explicitamente. Windows completo, PR/integraç
 e publicação da 1.0.7 ainda pendentes; a API do GitHub foi negada pelo proxy local,
 e api.github.com foi adicionado ao rascunho de rede para ativação nas configurações.
 A RTX 3060 Ti e os stutters físicos relatados ainda não foram medidos.
+
+A investigação dos pedidos seguidos identificou limite divergente: o controlador
+admitia quatro pedidos, mas o nativo admite dois pendentes. Contrato novo reproduziu
+invocação indevida do terceiro pedido; cada sessão agora informa sua capacidade
+(dois no nativo, quatro no compatível), mantendo a captura ativa com aviso de espera.
+Isso corrige um aviso enganoso; não prova por si só a causa de um desligamento real.

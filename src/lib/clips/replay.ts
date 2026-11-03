@@ -202,7 +202,7 @@ export function createReplayController(options: ReplayOptions) {
       publish('Ative a captura e aguarde alguns segundos para clipar.');
       return;
     }
-    if (target.pendingCount >= 4) {
+    if (target.pendingCount >= (target.maxPendingClips ?? 4)) {
       publish('Aguarde os clipes em preparação antes de clipar novamente.');
       return;
     }

@@ -304,3 +304,7 @@ test('turning temporary clips off during sharing discards only replay and enabli
   assert.equal(f.controller.getSnapshot().active, true);
   f.controller.dispose();
 });
+test('a native session with two pending exports keeps capturing and asks to wait instead of invoking a third export',async()=>{
+ const f=fixture();await f.controller.setOwner('alice');await f.controller.sharedStarted(borrowed('screen'));const session=f.created[0];session.maxPendingClips=2;session.pendingCount=2;let requested=false;session.requestClip=()=>{requested=true;throw Error('native limit');};
+ f.controller.clip();assert.equal(requested,false);assert.equal(f.controller.getSnapshot().active,true);assert.equal(session.stops,0);assert.match(f.controller.getSnapshot().message,/Aguarde os clipes/);f.controller.dispose();
+});

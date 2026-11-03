@@ -57,6 +57,7 @@ export interface ReplaySession {
   readonly status: ClipBufferStatus | null;
   readonly stopping: boolean;
   readonly pendingCount: number;
+  readonly maxPendingClips?: number;
   start(): void;
   requestClip(id: string): void;
   stop(): void;
@@ -224,6 +225,7 @@ function ownSession(
     source: options.source,
     hasAudio: stream.getAudioTracks().length > 0,
     extension: 'webm',
+    maxPendingClips: 4,
     get status() {
       return status;
     },

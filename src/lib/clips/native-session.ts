@@ -301,6 +301,7 @@ export async function createNativeReplaySession(
       maxBytes: job.maxBytes,
       hasAudio,
       extension: 'mp4',
+      maxPendingClips: 2,
       get encoder() {
         return job!.encoder + (status?.ready ? ' ativo (H.264)' : ' · iniciando');
       },
