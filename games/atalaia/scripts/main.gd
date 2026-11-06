@@ -2,6 +2,7 @@ extends Node2D
 const Run = preload("res://scripts/run.gd")
 const UI = preload("res://scripts/ui.gd")
 const CardView = preload("res://scripts/card_view.gd")
+const SaveStore = preload("res://scripts/save_store.gd")
 const SAVE_PATH="user://atalaia_campaign_v1.json"
 const SETTINGS_PATH="user://atalaia_settings_v1.json"
 var run: AtalaiaRun
@@ -52,6 +53,8 @@ var hud_timer=0.0
 var save_timer=0.0
 var toast_time=0.0
 var saved: Dictionary={}
+var save_store = SaveStore.new()
+var save_error = ""
 var qa_mode=false
 var card_nodes: Array=[]
 var selected_card=-1
@@ -80,11 +83,9 @@ func _ready():
  modal=Control.new(); layer.add_child(modal); modal.size=Vector2(1600,900); modal.mouse_filter=Control.MOUSE_FILTER_IGNORE
  build_hud()
  load_settings()
- if not qa_mode and FileAccess.file_exists(SAVE_PATH):
-  var candidate=JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
-  if candidate is Dictionary:
-   var check=Run.new()
-   if check.load_data(candidate): saved=candidate
+ if not qa_mode:
+  saved=save_store.load_save()
+  save_error=save_store.error_text
  show_menu()
  if "--showcase" in OS.get_cmdline_user_args():
   var region=1
@@ -96,7 +97,8 @@ func _ready():
 
 func _notification(what):
  if what==NOTIFICATION_WM_CLOSE_REQUEST:
-  save_game(); save_settings();sound.shutdown()
+  if not in_menu and not save_game(): return
+  save_settings();sound.shutdown()
   await get_tree().create_timer(0.12).timeout
   get_tree().quit()
 
@@ -156,7 +158,8 @@ func build_hud():
  campaign_meter=UI.meter(wave,Rect2(54,57,108,3),Color("91bde5"))
  pause_button=UI.button(header,"Pausar",Rect2(1060,22,102,44),toggle_pause)
  speed_button=UI.button(header,"1x",Rect2(1174,22,66,44),toggle_speed)
- UI.button(header,"Salvar",Rect2(1252,22,116,44),func():save_game();toast("Campanha salva"))
+ UI.button(header,"Salvar",Rect2(1252,22,116,44),func():
+  if save_game():toast("Campanha salva"))
  UI.button(header,"Opções",Rect2(1380,22,168,44),show_settings)
  var frame=UI.panel(hud,Rect2(16,108,1118,698),Color(0,0,0,0),Color("647064"))
  frame.mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -417,19 +420,23 @@ func show_menu():
  var h=UI.label(p,"A T A L A I A",Rect2(50,118,760,72),57,UI.GOLD,true);h.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  var sub=UI.label(p,"G U A R D I Õ E S   D O   C R I S T A L",Rect2(50,196,760,32),17,UI.WHITE);sub.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  UI.line(p,Vector2(110,250),Vector2(750,251),Color("75674f"))
- var d=UI.label(p,"Três territórios. Quinze ondas. Um cristal.\nErga a defesa, combine cartas e enfrente o abismo.",Rect2(70,277,720,74),19,UI.MUTED);d.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+ var d=UI.label(p,"Três territórios. Quinze ondas. Um cristal.\nErga a defesa, combine cartas e enfrente o abismo.",Rect2(70,270,720,54),19,UI.MUTED);d.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  if not saved.is_empty():
   UI.button(p,"CONTINUAR CAMPANHA · ONDA %d"%saved.wave,Rect2(210,370,440,54),continue_game,true)
   UI.button(p,"Nova campanha",Rect2(210,436,440,47),func():
    clear_modal();modal_kind="confirm";veil();var q=UI.panel(modal,Rect2(500,310,600,250));UI.label(q,"Iniciar nova campanha?",Rect2(30,30,540,45),27,UI.GOLD,true);UI.label(q,"O progresso atual será substituído.",Rect2(30,88,540,35),17,UI.MUTED);UI.button(q,"Voltar",Rect2(30,158,252,52),show_menu);UI.button(q,"Iniciar",Rect2(302,158,268,52),start_game,true))
  else: UI.button(p,"INICIAR CAMPANHA",Rect2(210,387,440,62),start_game,true)
+ if save_error!="":
+  var warning=UI.label(p,save_error,Rect2(70,328,720,36),13,Color("ffb6a0"))
+  warning.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+  warning.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  var f=UI.label(p,"1–6: construir   ·   Espaço: onda   ·   U: evoluir   ·   P: pausa   ·   M: áudio",Rect2(40,532,780,30),13,UI.MUTED);f.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  var version=UI.label(p,"EDIÇÃO GODOT 0.2  /  EXPEDIÇÃO DO CRISTAL",Rect2(40,585,780,28),11,UI.GOLD);version.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 
 func start_game():
  run=Run.new(int(Time.get_unix_time_from_system()));board.run=run;board.reset_visuals();selected=-1
- in_menu=false;paused=false;hud.visible=true;clear_modal();refresh_hud();save_game()
- toast("Escolha uma arma abaixo e construa junto ao caminho. Espaço inicia a onda.")
+ in_menu=false;paused=false;hud.visible=true;clear_modal();refresh_hud()
+ if save_game():toast("Escolha uma arma abaixo e construa junto ao caminho. Espaço inicia a onda.")
 
 func continue_game():
  var loaded=Run.new()
@@ -515,7 +522,7 @@ func show_ending():
  var text="Três territórios defendidos. O abismo recua." if win else "Reorganize a defesa, combine gelo e dano em área."
  h=UI.label(p,text+"\n%d abates · %d ondas · %d/30 de integridade"%[run.kills,run.wave,run.core],Rect2(50,162,750,84),18,UI.MUTED);h.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  UI.button(p,"Nova campanha",Rect2(220,294,410,58),start_game,true)
- UI.button(p,"Voltar ao título",Rect2(220,366,410,44),func():saved=run.to_data();show_menu())
+ UI.button(p,"Voltar ao título",Rect2(220,366,410,44),save_and_return)
 
 func show_settings():
  if modal_kind!="" and not in_menu:return
@@ -530,18 +537,26 @@ func show_settings():
   slider.value_changed.connect(func(value):sound.set_volume(bus,value))
   i+=1
  UI.button(p,"Retomar defesa",Rect2(35,416,580,54),close_settings,true)
- UI.button(p,"Salvar e voltar ao título",Rect2(35,486,580,43),func():save_game();save_settings();saved=run.to_data();show_menu())
+ UI.button(p,"Salvar e voltar ao título",Rect2(35,486,580,43),save_and_return)
 
 func close_settings():
  clear_modal();paused=false;save_settings();refresh_hud()
 
-func save_game():
- if qa_mode or in_menu:return
- var path=SAVE_PATH+".tmp"
- var file=FileAccess.open(path,FileAccess.WRITE)
- if file:
-  file.store_string(JSON.stringify(run.to_data()));file.close()
-  DirAccess.rename_absolute(path,SAVE_PATH)
+func save_and_return():
+ if not save_game():return
+ save_settings()
+ show_menu()
+
+func save_game() -> bool:
+ if in_menu:return false
+ var snapshot=run.to_data()
+ if not qa_mode and not save_store.save(snapshot):
+  save_error=save_store.error_text
+  toast(save_error)
+  return false
+ saved=snapshot
+ save_error=""
+ return true
 
 func save_settings():
  if qa_mode:return

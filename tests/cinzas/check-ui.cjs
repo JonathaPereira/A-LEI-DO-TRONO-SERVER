@@ -25,7 +25,7 @@ const closeButtons=elements.filter(el=>Object.hasOwn(el.dataset,'close'));
 for(const id of ['helpDialog','codexDialog','controllerDialog'])ids.get(id).children=closeButtons;
 ids.get('difficulty').value='normal';
 const document={getElementById:id=>ids.get(id)||null,createElement:tag=>new Element(tag),querySelectorAll:s=>elements.filter(el=>match(el,s)),querySelector:s=>elements.find(el=>match(el,s)),activeElement:new Element('body'),addEventListener(){},exitFullscreen:()=>Promise.resolve()};
-const winListeners={},window={matchMedia:()=>({matches:false}),addEventListener:(type,cb)=>(winListeners[type]||=[]).push(cb),scrollTo(){}};
+const winListeners={},window={confirm:()=>true,matchMedia:()=>({matches:false}),addEventListener:(type,cb)=>(winListeners[type]||=[]).push(cb),scrollTo(){}};
 let nextFrame;
 let pads=[];
 class MockImage{constructor(){this.width=1774;this.height=887;}set src(v){assert(fs.existsSync('../../public/roguelite/'+v),'Missing texture '+v);this.onload?.();}}
@@ -83,3 +83,44 @@ captured.status='running';captured.offerCards('shrine');captured.cards=[context.
 ids.get('suspendBtn').onclick();assert.equal(captured.status,'menu');assert.equal(ids.get('continueHorde').hidden,false);const saved=JSON.parse(memory['cinzas-demo-v1']).hordeSave;assert(saved);ids.get('continueHorde').onclick();assert.equal(captured.mode,'horde');assert.equal(captured.stage,saved.stage);assert.equal(captured.upgradeCount,saved.history.length);
 console.log('PASS UI boot, animation across all biomes, start/pause/dialog/upgrade/end flows and horde record wiring.');
 console.log('PASS controller UI movement/jump/pause/resume, unplug safety, card choice, close settings and Ultra resolution.');
+
+(async()=>{
+ ids.get('suspendBtn').onclick();
+ elements.find(el=>el.dataset.mode==='adventure').onclick();
+ ids.get('startBtn').onclick();ids.get('upgradeCards').querySelectorAll('button')[0].onclick();
+ const checkpoint=JSON.parse(memory['cinzas-demo-v1']).campaignSave;
+ assert(checkpoint&&checkpoint.format==='cinzas-campaign');
+ const savedHorde=JSON.stringify(JSON.parse(memory['cinzas-demo-v1']).hordeSave);
+ captured.player.hp=12;captured.kills=7;
+ ids.get('suspendBtn').onclick();assert.equal(captured.status,'menu');
+ assert.equal(ids.get('continueCampaign').hidden,false);assert.equal(ids.get('continueHorde').hidden,false);
+ assert(ids.get('saveNote').textContent.includes('Ações posteriores'));
+ ids.get('continueCampaign').onclick();assert.equal(captured.mode,'adventure');
+ assert.equal(captured.player.hp,checkpoint.hp);assert.equal(captured.kills,checkpoint.kills);
+ ids.get('suspendBtn').onclick();
+ const before=memory['cinzas-demo-v1'];window.confirm=()=>{throw Error('Native dialogs must not be required by the embedded game');};
+ ids.get('startBtn').focus();ids.get('startBtn').onclick();assert(ids.get('replaceDialog').open);assert.equal(document.activeElement,ids.get('replaceCancel'));assert.equal(captured.status,'menu');assert.equal(memory['cinzas-demo-v1'],before);
+ ids.get('replaceCancel').onclick();assert.equal(ids.get('replaceDialog').open,false);assert.equal(document.activeElement,ids.get('startBtn'));assert.equal(memory['cinzas-demo-v1'],before);
+ pad.buttons[0].pressed=false;pad.buttons[1].pressed=false;pads=[pad];nextFrame(16000);
+ ids.get('startBtn').onclick();nextFrame(16016);assert.equal(document.activeElement,ids.get('replaceCancel'));
+ pad.buttons[0].pressed=true;nextFrame(16032);assert.equal(ids.get('replaceDialog').open,false);assert.equal(memory['cinzas-demo-v1'],before,'A initially cancels rather than discarding campaign');
+ pad.buttons[0].pressed=false;nextFrame(16048);ids.get('startBtn').onclick();nextFrame(16064);pad.buttons[1].pressed=true;nextFrame(16080);assert.equal(ids.get('replaceDialog').open,false);assert.equal(memory['cinzas-demo-v1'],before,'B closes without overwriting');
+ pad.buttons[1].pressed=false;pads=[];nextFrame(16096);
+ const upload=async data=>{ids.get('saveFile').files=[{size:100,text:async()=>JSON.stringify(data)}];await ids.get('saveFile').onchange();};
+ const cp=JSON.parse(before).campaignSave,horde=JSON.parse(before).hordeSave;
+ for(const data of [
+  {format:'cinzas-save',version:2,scores:[{name:'Invalid',difficulty:'normal',wave:999,kills:99}],checkpoint:horde,campaignCheckpoint:{...cp,history:['missing']}},
+  {format:'cinzas-save',version:2,scores:[],checkpoint:cp,campaignCheckpoint:null},
+  {format:'cinzas-save',version:2,scores:[],checkpoint:null,campaignCheckpoint:horde},
+  {format:'cinzas-save',version:2,scores:[],checkpoint:false,campaignCheckpoint:null},
+ ]){await upload(data);assert.equal(memory['cinzas-demo-v1'],before);assert(ids.get('toast').textContent.includes('inválido'));}
+ await upload({format:'cinzas-save',version:1,scores:[],checkpoint:horde});
+ assert.deepEqual(JSON.parse(memory['cinzas-demo-v1']).campaignSave,cp);
+ assert.equal(JSON.stringify(JSON.parse(memory['cinzas-demo-v1']).hordeSave),savedHorde);
+ const disk=memory['cinzas-demo-v1'],save=context.localStorage.setItem;
+ context.localStorage.setItem=()=>{throw Error('quota')};
+ await upload({format:'cinzas-save',version:2,scores:[],checkpoint:horde,campaignCheckpoint:{...cp,seed:'other'}});
+ assert.equal(memory['cinzas-demo-v1'],disk);assert(ids.get('toast').textContent.includes('indisponível'));
+ context.localStorage.setItem=save;ids.get('continueCampaign').onclick();assert.equal(captured.seed,cp.seed);
+ console.log('PASS campaign UI saves/resumes a separate checkpoint, confirms replacement, preserves v1 imports and rejects invalid/quota-failed imports atomically.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

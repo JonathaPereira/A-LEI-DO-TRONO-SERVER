@@ -13,3 +13,22 @@ A capa gerada para a integração está em assets/catalogue-cover.png. asset-man
 Os verificadores originais estão em tests/cinzas/, com apenas caminhos ajustados ao repositório. node --test tests/cinzas-upstream.js executa a verificação de lógica, exploração, regressões, controle, UI simulada, versão 0.5 e áudio. tests/roguelite-browser.js verifica o jogo real com mídia ativa, ambos os layouts, telas menores/verticais, tela cheia, pausa, retry, backup e retomada da horda. tests/game-assets.js verifica downloads reais comprimidos, limite de concorrência, cache offline e integridade. O workflow Windows abre o aplicativo compilado com o cache previamente preparado e confere a ausência de downloads de mídia nessa sessão.
 
 A integração limita os menus a 12 FPS e a partida no modo Leve a 30 FPS, deixando mais tempo de processamento para a voz e os controles do aplicativo. Os modos Alta/Ultra permitem até 60 FPS; a página independente mantém o ritmo original.
+
+## Continuação de campanha — fundações do Renascimento
+
+`campaignSave` e `hordeSave` são entradas independentes no armazenamento local
+existente. A campanha grava limites seguros: entrada, área limpa e escolha de
+saída. Durante a exploração, o checkpoint de entrada fica congelado: uma carta
+de santuário não pode ser reaplicada ao reconstruir o mesmo capítulo. Limpar a
+área guarda os estados consumidos de santuários/relíquias, contadores, vida,
+build e escolhas. Retomar restaura esses dados em um modelo novo, validado antes
+de substituir a run ativa. Alterações posteriores ao marco não são retomadas.
+
+O menu oferece **Continuar campanha**, pede confirmação para substituir uma
+campanha e permite guardar o marco e voltar ao menu. Morte/vitória encerram o
+save dessa run. Exportação JSON v2 inclui os dois checkpoints; importação v1
+continua preservando a campanha local. Os verificadores `check-campaign.cjs` e
+`check-ui.cjs` cobrem reconstrução, transições dos 15 capítulos, escolhas,
+independência entre modos, importação inválida e armazenamento indisponível.
+`tests/roguelite-browser.js` exercita os controles reais no navegador, sem
+adicionar snapshots visuais permanentes.

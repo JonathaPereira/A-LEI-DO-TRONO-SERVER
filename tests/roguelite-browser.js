@@ -246,21 +246,67 @@ test(
               () => JSON.parse(localStorage.getItem('cinzas-demo-v1')).hordeSave,
             );
             assert(save);
+            await game.locator('[data-mode=adventure]').click();
+            await game.locator('#startBtn').click();
+            await game.locator('#upgradeCards button').first().click();
+            const campaign = await child.evaluate(
+              () => JSON.parse(localStorage.getItem('cinzas-demo-v1')).campaignSave,
+            );
+            assert.equal(campaign.format, 'cinzas-campaign');
+            await game.locator('#pauseBtn').click();
+            await game.locator('#suspendBtn').click();
+            await expect(game.locator('#continueCampaign')).toBeVisible();
+            await expect(game.locator('#continueHorde')).toBeVisible();
+            await game.locator('#startBtn').click();
+            await expect(game.locator('#replaceDialog')).toBeVisible();
+            await expect(game.locator('#replaceCancel')).toBeFocused();
+            await game.locator('#replaceCancel').press('Escape');
+            await expect(game.locator('#replaceDialog')).not.toBeVisible();
+            await expect(game.locator('#startBtn')).toBeFocused();
+            await game.locator('#startBtn').click();
+            await game.locator('#replaceCancel').click();
+            await expect(game.locator('#replaceDialog')).not.toBeVisible();
+            await expect(game.locator('#startBtn')).toBeFocused();
+            assert.deepEqual(await child.evaluate(
+              () => JSON.parse(localStorage.getItem('cinzas-demo-v1')).campaignSave,
+            ), campaign);
+            await game.locator('#continueCampaign').click();
+            await expect(game.locator('#modeLabel')).toContainText('EXPEDIÇÃO');
+            await game.locator('#pauseBtn').click();
+            await game.locator('#suspendBtn').click();
             const downloadEvent = page.waitForEvent('download');
             await game.locator('#exportSave').click();
             const backup = await downloadEvent;
-            assert.equal(backup.suggestedFilename(), 'cinzas-horda-backup.json');
+            assert.equal(backup.suggestedFilename(), 'cinzas-progresso-backup.json');
             const bytes = await fs.readFile(await backup.path());
             assert(bytes.toString().includes('Explorador M&N'));
             await game
               .locator('#saveFile')
               .setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: bytes });
-            await expect(game.locator('#toast')).toHaveText('Recordes e horda importados.');
+            await expect(game.locator('#toast')).toHaveText('Recordes e checkpoints importados.');
+            const contents = JSON.parse(bytes.toString());
+            assert.deepEqual(contents.campaignCheckpoint, campaign);
+            assert.deepEqual(contents.checkpoint, save);
+            await game.locator('#saveFile').setInputFiles({
+              name: 'invalid.json', mimeType: 'application/json',
+              buffer: Buffer.from(JSON.stringify({...contents, campaignCheckpoint: save})),
+            });
+            await expect(game.locator('#toast')).toHaveText('Backup inválido. O progresso anterior foi mantido.');
             await game.locator('#continueHorde').click();
             await expect(game.locator('#hud')).toBeVisible();
             assert.deepEqual(await snapshot(), before);
             assert.deepEqual(missing, []);
             assert.deepEqual(errors, []);
+            await game.locator('#pauseBtn').click();
+            await game.locator('#suspendBtn').click();
+            await game.locator('[data-mode=adventure]').click();
+            await game.locator('#startBtn').click();
+            await game.locator('#replaceConfirm').click();
+            await expect(game.locator('#replaceDialog')).not.toBeVisible();
+            await expect(game.locator('#upgradeScreen')).toBeVisible();
+            const replaced = await child.evaluate(() => JSON.parse(localStorage.getItem('cinzas-demo-v1')));
+            assert.equal(replaced.campaignSave.history.length, 0);
+            assert.deepEqual(replaced.hordeSave, save);
           } finally {
             await context.close();
           }

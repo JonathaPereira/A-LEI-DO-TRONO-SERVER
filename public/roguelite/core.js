@@ -80,7 +80,7 @@
     constructor(){this.status='menu';this.events=[];this.enemies=[];this.projectiles=[];this.effects=[];this.hazards=[];this.fields=[];this.particles=[];this.time=0;this.stage=0;this.biome=0;this.width=2800;this.height=1480;this.camera=0;this.cameraY=0;this.player=this.newPlayer();this.platforms=[];this.owned={};this.spawnQueue=[];this.portals=[];this.shrines=[];this.relics=[];this.zones=[];this.decor=[];}
     newPlayer(difficulty='normal'){const hp=difficulty==='easy'?160:100;return {x:110,y:FLOOR-108,w:34,h:108,vx:0,vy:0,dir:1,hp,maxHp:hp,weapon:'blade',power:1,meleePower:1,haste:1,crit:.05,reach:1,pierce:0,fire:0,frost:0,lightning:0,poison:0,activeElement:'arcane',armor:0,vampire:0,regen:0,speed:1,dashRate:1,magicPower:1,magicRate:1,magicRange:245,jumps:0,ground:true,coyote:.1,jumpBuffer:0,attackCd:0,attackAnim:0,attackDuration:0,skillCd:0,castAnim:0,dashCd:0,dashTime:0,invuln:0,hurtAnim:0,landAnim:0,combo:0,comboWindow:0,swing:null,pendingSkill:null,dropTime:0,dropId:null,platformId:null,respawn:{x:110,y:FLOOR},runPhase:0,jumpPower:1,jumpAge:0,postDash:0,burn:0,shock:0,shockVisual:0,shockLock:0,bleed:0,echo:0,fury:0,shockwave:0,focus:0,aegis:0,terrainWard:0,specialTime:0,specialDuration:0,specialWindup:0,footstepTimer:0,snare:0,frostVisual:0,poisonVisual:0};}
     emit(type,data={}){this.events.push({type,...data});}
-    start({mode='adventure',difficulty='normal',name='Andarilho',seed='cinzas'}={}){this.mode=mode;this.difficulty=difficulty;this.name=name;this.seed=seed;this.rng=random(seed);this.combatRng=random(seed+':combat');this.status='running';this.stage=0;this.time=0;this.kills=0;this.bosses=0;this.completedWaves=0;this.score=0;this.relicCount=0;this.player=this.newPlayer(difficulty);this.owned={};this.selectedCards=[];this.events=[];this.cards=[];this.draftCount=0;this.upgradeCount=0;this.rerolls=3;this.rerollCount=0;this.echoQueue=[];this.chosenHistory=[];this.loadStage();this.emit('start');}
+    start({mode='adventure',difficulty='normal',name='Andarilho',seed='cinzas'}={}){this.campaignCheckpoint=null;this.mode=mode;this.difficulty=difficulty;this.name=name;this.seed=seed;this.rng=random(seed);this.combatRng=random(seed+':combat');this.status='running';this.stage=0;this.time=0;this.kills=0;this.bosses=0;this.completedWaves=0;this.score=0;this.relicCount=0;this.player=this.newPlayer(difficulty);this.owned={};this.selectedCards=[];this.events=[];this.cards=[];this.draftCount=0;this.upgradeCount=0;this.rerolls=3;this.rerollCount=0;this.echoQueue=[];this.chosenHistory=[];this.loadStage();this.emit('start');}
     loadStage(){
       this.rng=random(this.seed+':map:'+this.stage);const chapter=Levels.CHAPTERS[Math.min(this.stage,Levels.CHAPTERS.length-1)];this.biome=this.mode==='horde'?Math.floor(this.stage/5)%3:chapter.biome;this.bossStage=this.mode==='horde'?(this.stage+1)%5===0:!!chapter.boss;
       const map=Levels.create({mode:this.mode,boss:this.bossStage,stage:this.stage,biome:this.biome,rng:this.rng});Object.assign(this,{width:map.width,height:map.height,platforms:map.platforms,zones:map.zones,shrines:map.shrines,relics:map.relics,decor:map.decor,checkpoint:{...map.checkpoint,active:false},chapter:map.chapter,weather:map.weather,background:map.background,tunnels:map.tunnels});
@@ -99,7 +99,7 @@
       }else if(!this.bossStage){
         const count=18+this.stage*2;for(let i=0;i<count;i++){const x=480+i*(this.width-950)/(count-1)+this.rng()*60,type=i%11===9&&this.stage>=6?'bulwark':i%11===8&&this.stage>=5?'archer':i%11===6&&this.stage>=10?'hellhound':i%9===7&&this.stage>=2?'stalker':i%8===6&&this.stage>=1?'spider':i%7===5?'brute':i%4===3?'caster':i%3===1?'bat':'crawler';this.addEnemy(type,x,this.groundY(x)-48,{elite:this.stage>=3&&i%7===0});}
       }
-      this.emit('stage',{biome:this.biome,boss:this.bossStage,rule:this.mode==='horde'?this.waveRule.name:null});
+      this.rememberCampaignCheckpoint();this.emit('stage',{biome:this.biome,boss:this.bossStage,rule:this.mode==='horde'?this.waveRule.name:null});
     }
     groundY(x){let best=null;for(const plat of this.platforms){if(plat.oneWay!==false||plat.ceiling||x<plat.x||x>plat.x+plat.w)continue;const y=Levels.surface(plat,x);if(best===null||y<best)best=y;}return best===null?this.checkpoint?.y||FLOOR:best;}
     surface(plat,x){return Levels.surface(plat,x);}
@@ -127,10 +127,10 @@
       this.cards=choices;return choices;
     }
     offerCards(source='exit'){
-      if(this.status==='upgrade')return this.cards;this.draftCount++;this.upgradeSource=source;this.status='upgrade';this.drawCards();this.emit('upgrade');return this.cards;
+      if(this.status==='upgrade')return this.cards;this.draftCount++;this.upgradeSource=source;this.status='upgrade';this.drawCards();if(source!=='shrine')this.rememberCampaignCheckpoint();this.emit('upgrade');return this.cards;
     }
     rerollCards(){
-      if(this.status!=='upgrade'||this.rerolls<1)return false;const previous=this.cards.map(c=>c.id);this.rerolls--;this.rerollCount++;this.drawCards(previous);this.emit('rerolled');return true;
+      if(this.status!=='upgrade'||this.rerolls<1)return false;const previous=this.cards.map(c=>c.id);this.rerolls--;this.rerollCount++;this.drawCards(previous);if(this.upgradeSource!=='shrine')this.rememberCampaignCheckpoint();this.emit('rerolled');return true;
     }
     cardPreview(card){
       const p=this.player,next={...p};card.apply(next);const stats=[['maxHp','vida máxima',0],['power','dano base',100],['haste','velocidade de ataque',100],['crit','crítico',100],['armor','resistência',100],['fire','fogo',0],['frost','gelo',0],['lightning','raio',0],['poison','veneno',0],['echo','eco',0],['shockwave','onda sísmica',0],['speed','movimento',100],['magicPower','poder da habilidade',100]];
@@ -143,7 +143,7 @@
       card.apply(this.player);this.chosenHistory.push(card.id);if(!this.selectedCards.some(c=>c.id===card.id))this.selectedCards.push(card);this.owned[card.id]=level;this.upgradeCount++;this.player.hp=clamp(this.player.hp,0,this.player.maxHp);
       if(ELEMENT_IDS.includes(card.id)&&this.player.activeElement==='arcane')this.player.activeElement=card.id;
       this.status='running';if(this.upgradeSource==='exit'){this.stage++;this.rerolls+=this.bossStage?1:0;this.loadStage();}else{this.player.invuln=1;this.player.vx=0;this.player.swing=null;this.player.attackAnim=0;}
-      this.emit('chosen',{card,level});return true;
+      if(this.upgradeSource==='start'||this.cleared)this.rememberCampaignCheckpoint();this.emit('chosen',{card,level});return true;
     }
     shrineClear(shrine){return !this.enemies.some(e=>!e.dead&&Math.abs(e.x-shrine.x)<560&&Math.abs(e.y+e.h-shrine.y)<300);}
     interactable(){const p=this.player;if(this.cleared&&Math.abs(p.x+p.w/2-this.checkpoint.x)<100&&Math.abs(p.y+p.h-this.checkpoint.y)<115)return {type:'exit',...this.checkpoint};return this.shrines.find(s=>!s.used&&Math.abs(p.x+p.w/2-s.x)<95&&Math.abs(p.y+p.h-s.y)<115&&this.shrineClear(s))||null;}
@@ -415,28 +415,43 @@
       this.fields=this.fields.filter(f=>f.t>0);
       for(const h of this.hazards){h.age+=dt;h.t-=dt;if(!h.active&&h.t<=0){h.active=true;h.t=.6;this.emit('shake',{amount:3});this.particlesAt(h.x,h.y-20,COLORS.lightning,18,200);}if(h.active&&Math.abs(p.x+p.w/2-h.x)<35&&p.y+p.h>h.y-125&&p.y<h.y)this.hurtPlayer(h.damage,h.x,'lightning');}
       this.hazards=this.hazards.filter(h=>h.t>0||!h.active);this.projectiles=this.projectiles.filter(s=>s.t>0);for(const effect of this.effects)effect.t-=dt;this.effects=this.effects.filter(e=>e.t>0);for(const particle of this.particles){particle.t-=dt;particle.x+=particle.vx*dt;particle.y+=particle.vy*dt;particle.vy+=(particle.kind==='dust'?40:particle.kind==='smoke'?-50:particle.kind==='ember'?-90:particle.kind==='blood'?650:270)*dt;particle.vx*=.985;if(particle.kind==='blood'&&particle.y>=this.groundY(particle.x)){particle.y=this.groundY(particle.x)-1;particle.kind='bloodstain';particle.vx=0;particle.vy=0;particle.t=4;particle.max=4;}if(particle.kind==='bloodstain')particle.vy=0;}this.particles=this.particles.filter(p=>p.t>0);
-      this.enemies=this.enemies.filter(e=>!e.dead);if(!this.cleared&&!this.enemies.length&&!this.spawnQueue.length&&!this.portals.length&&this.status==='running'){this.cleared=true;this.checkpoint.active=true;if(this.mode==='horde'){this.completedWaves=this.stage+1;this.score+=200+Math.max(0,Math.round(200-this.waveElapsed*2));p.hp=Math.min(p.maxHp,p.hp+p.maxHp*(this.bossStage?.08:.04));}this.emit('clear');}
+      this.enemies=this.enemies.filter(e=>!e.dead);if(!this.cleared&&!this.enemies.length&&!this.spawnQueue.length&&!this.portals.length&&this.status==='running'){this.cleared=true;this.checkpoint.active=true;if(this.mode==='horde'){this.completedWaves=this.stage+1;this.score+=200+Math.max(0,Math.round(200-this.waveElapsed*2));p.hp=Math.min(p.maxHp,p.hp+p.maxHp*(this.bossStage?.08:.04));}this.rememberCampaignCheckpoint();this.emit('clear');}
       this.camera=clamp(approach(this.camera,p.x-W*.38,dt*1100),0,Math.max(0,this.width-W));this.cameraY=clamp(approach(this.cameraY,p.y-H*.53,dt*600),0,Math.max(0,this.height-H));
     }
+    rememberCampaignCheckpoint(){
+      if(this.mode==='adventure'&&!['menu','ended'].includes(this.status))this.campaignCheckpoint=this.checkpointData();
+    }
+    checkpointData(){
+      const phase=this.status==='upgrade'?'draft':this.cleared?'cleared':'entry';
+      const data={format:this.mode==='adventure'?'cinzas-campaign':'cinzas-horde',edition:'0.5',version:1,phase,name:this.name,difficulty:this.difficulty,seed:this.seed,stage:this.stage,completedWaves:this.completedWaves,time:this.time,kills:this.kills,bosses:this.bosses,score:this.score,hp:this.player.hp,history:this.chosenHistory.slice(),activeElement:this.player.activeElement,rerolls:this.rerolls,rerollCount:this.rerollCount,draftCount:this.draftCount,cards:phase==='draft'?this.cards.map(c=>c.id):[],upgradeSource:phase==='draft'?this.upgradeSource:null};
+      if(this.mode==='adventure')Object.assign(data,{completedChapters:this.stage+(this.cleared?1:0),relicCount:this.relicCount,usedShrines:this.shrines.filter(s=>s.used).map(s=>s.id),takenRelics:this.relics.flatMap((r,i)=>r.taken?[i]:[])});
+      return data;
+    }
     createCheckpoint(){
-      if(this.mode!=='horde')return null;const phase=this.status==='upgrade'?'draft':this.cleared?'cleared':'entry';
-      return {format:'cinzas-horde',edition:'0.5',version:1,phase,name:this.name,difficulty:this.difficulty,seed:this.seed,stage:this.stage,completedWaves:this.completedWaves,time:this.time,kills:this.kills,bosses:this.bosses,score:this.score,hp:this.player.hp,history:this.chosenHistory.slice(),activeElement:this.player.activeElement,rerolls:this.rerolls,rerollCount:this.rerollCount,draftCount:this.draftCount,cards:phase==='draft'?this.cards.map(c=>c.id):[],upgradeSource:phase==='draft'?this.upgradeSource:null};
+      if(this.mode==='adventure')return this.campaignCheckpoint?JSON.parse(JSON.stringify(this.campaignCheckpoint)):null;
+      return this.mode==='horde'?this.checkpointData():null;
     }
     restoreCheckpoint(data){
       try{
         const validNumber=(v,max)=>Number.isFinite(v)&&v>=0&&v<=max;
-        if(!data||data.format!=='cinzas-horde'||data.edition!=='0.5'||data.version!==1||!['entry','cleared','draft'].includes(data.phase))return false;
-        if(!Number.isInteger(data.stage)||data.stage<0||data.stage>9999||!['easy','normal','hard'].includes(data.difficulty)||typeof data.name!=='string'||data.name.length>20||typeof data.seed!=='string'||data.seed.length>64)return false;
+        if(!data||!['cinzas-horde','cinzas-campaign'].includes(data.format)||data.edition!=='0.5'||data.version!==1||!['entry','cleared','draft'].includes(data.phase))return false;
+        const campaign=data.format==='cinzas-campaign';
+        if(!Number.isInteger(data.stage)||data.stage<0||data.stage>(campaign?Levels.CHAPTERS.length-1:9999)||!['easy','normal','hard'].includes(data.difficulty)||typeof data.name!=='string'||data.name.length>20||typeof data.seed!=='string'||data.seed.length>64)return false;
         if(!Array.isArray(data.history)||data.history.length>1000||!validNumber(data.hp,20000)||data.hp<=0||!validNumber(data.kills,1e7)||!validNumber(data.time,1e8)||!validNumber(data.score,1e10)||!validNumber(data.bosses,10000))return false;
         const finished=data.phase==='cleared'||data.phase==='draft'&&data.upgradeSource==='exit';
-        if(data.completedWaves!==data.stage+(finished?1:0))return false;
-        const probe=new Engine();probe.start({mode:'horde',difficulty:data.difficulty,name:data.name,seed:data.seed});
+        if(campaign?(data.completedWaves!==0||data.completedChapters!==data.stage+(finished?1:0)||!Number.isInteger(data.relicCount)||!validNumber(data.relicCount,6)||data.bosses>3):data.completedWaves!==data.stage+(finished?1:0))return false;
+        const probe=new Engine();probe.start({mode:campaign?'adventure':'horde',difficulty:data.difficulty,name:data.name,seed:data.seed});
         for(const id of data.history){const card=[...CARDS,...RESERVES].find(c=>c.id===id);if(!card||(probe.owned[id]||0)>=card.max)return false;card.apply(probe.player);probe.owned[id]=(probe.owned[id]||0)+1;probe.chosenHistory.push(id);if(!probe.selectedCards.some(c=>c.id===id))probe.selectedCards.push(card);}
         if(data.hp>probe.player.maxHp+.001)return false;
         for(const key of ['rerolls','rerollCount','draftCount'])if(!Number.isInteger(data[key])||!validNumber(data[key],10000))return false;
         Object.assign(probe,{stage:data.stage,completedWaves:data.completedWaves,time:data.time,kills:data.kills,bosses:data.bosses,score:data.score,rerolls:data.rerolls,rerollCount:data.rerollCount,draftCount:data.draftCount,upgradeCount:data.history.length});probe.player.hp=data.hp;
         if(data.activeElement==='arcane'||ELEMENT_IDS.includes(data.activeElement)&&probe.player[data.activeElement]>0)probe.player.activeElement=data.activeElement;else return false;
         probe.events=[];probe.loadStage();
+        if(campaign){
+          if(!Array.isArray(data.usedShrines)||new Set(data.usedShrines).size!==data.usedShrines.length||data.usedShrines.some(id=>!probe.shrines.some(s=>s.id===id)))return false;
+          if(!Array.isArray(data.takenRelics)||new Set(data.takenRelics).size!==data.takenRelics.length||data.takenRelics.some(i=>!Number.isInteger(i)||i<0||i>=probe.relics.length)||data.takenRelics.length>data.relicCount)return false;
+          probe.relicCount=data.relicCount;probe.shrines.forEach(s=>s.used=data.usedShrines.includes(s.id));probe.relics.forEach((r,i)=>r.taken=data.takenRelics.includes(i));
+        }
         if(finished){probe.enemies=[];probe.spawnQueue=[];probe.portals=[];probe.cleared=true;probe.checkpoint.active=true;probe.player.x=probe.checkpoint.x-17;probe.player.y=probe.checkpoint.y-probe.player.h;}
         if(data.phase==='draft'){
           if(!['start','exit'].includes(data.upgradeSource)||!Array.isArray(data.cards)||data.cards.length!==3||new Set(data.cards).size!==3)return false;
@@ -444,7 +459,7 @@
           const category=probe.draftKind();if(probe.cards.some(c=>c.category&&c.category!==category))return false;
           probe.upgradeSource=data.upgradeSource;probe.status='upgrade';probe.emit('upgrade');
         }
-        Object.assign(this,probe);this.emit('resumed');return true;
+        probe.rememberCampaignCheckpoint();Object.assign(this,probe);this.emit('resumed');return true;
       }catch{return false;}
     }
     end(won=false){if(this.status==='ended')return;this.status='ended';this.won=won;this.emit('end',{won});}

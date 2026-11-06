@@ -2,6 +2,8 @@ class_name AtalaiaRun
 extends RefCounted
 
 const C = preload("res://scripts/catalog.gd")
+const SaveSchema = preload("res://scripts/save_schema.gd")
+var error_text := ""
 var maps: Array = C.maps()
 var stage = 0
 var wave = 0
@@ -404,13 +406,13 @@ func to_data() -> Dictionary:
  for key in ["stage","wave","gold","core","phase","towers","enemies","projectiles","pools","doctrines","choices","records","next_id","spawn_count","spawn_total","spawn_timer","elapsed","wave_elapsed","kills"]: data[key]=encode(get(key))
  return data
 
-func load_data(data: Dictionary) -> bool:
- if int(data.get("version",0))!=1: return false
- for key in ["stage","wave","gold","core","phase","towers","enemies","projectiles","pools","doctrines","choices","records","next_id","spawn_count","spawn_total","spawn_timer","elapsed","wave_elapsed","kills"]:
-  if not data.has(key): return false
- if int(data.stage)<0 or int(data.stage)>2 or int(data.wave)<0 or int(data.wave)>15: return false
- for key in data:
-  if key not in ["version","rng_state"]: set(key,decode(data[key]))
+func load_data(data: Variant) -> bool:
+ var problem: String = SaveSchema.validate(data, maps)
+ if problem != "":
+  error_text = "O progresso não pôde ser aberto: " + problem + ". O arquivo original foi preservado."
+  return false
+ # Decode only a fully validated envelope; rejected input cannot partially mutate a run.
+ for key in SaveSchema.FIELDS: set(key,decode(data[key]))
  for t in towers:
   for key in ["id","pad","level","invested"]: t[key]=int(t[key])
  for e in enemies:
@@ -419,4 +421,5 @@ func load_data(data: Dictionary) -> bool:
  spawn_count=int(spawn_count); spawn_total=int(spawn_total); kills=int(kills)
  rng.state=int(data.get("rng_state","1847"))
  set_map(stage)
+ error_text = ""
  return true
