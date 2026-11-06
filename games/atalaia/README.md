@@ -70,6 +70,34 @@ A interface é montada por código; os elementos visuais das torretas e criatura
 
 O Godot guarda a campanha em `user://atalaia_campaign_v1.json` e os volumes em `user://atalaia_settings_v1.json`. A gravação usa arquivo temporário antes da substituição. **Este save é separado da versão web anterior**; a migração dos saves do navegador ainda não está implementada. Uma nova campanha pelo menu pede confirmação antes de substituir o progresso atual.
 
+Na fundação Renascimento, o título informa quando o progresso não pode ser lido.
+Cada substituição saudável mantém a gravação anterior em `.bak`, com cópia
+verificada e troca por temporário. Se o principal desaparecer, deixar de ser JSON
+legível ou falhar na validação de jogo, **Continuar** pode recuperar a cópia
+anterior validada. O aviso **Progresso recuperado** informa que a última gravação
+pode ter sido perdida. Uma versão numérica incompatível não provoca retorno
+silencioso a um save mais antigo.
+
+A recuperação restaura o snapshot completo, incluindo RNG, torretas, ondas e
+escolhas. Ler não altera arquivos. Ao salvar depois, os bytes do principal
+corrompido vão para `.invalid.bak`; uma origem diferente recebe sufixo numérico,
+sem apagar as cópias anteriores. Um principal inválido não substitui a `.bak`
+saudável. Backup inválido não oferece Continuar. Arquivos `.tmp` incompletos não
+são recuperados automaticamente.
+
+A gravação verifica escrita, flush, preservação e substituição. Falhas aparecem
+na tela, mantêm o original e não atualizam o snapshot de Continuar. **Salvar e
+voltar ao título** e o fechamento permanecem na partida se a gravação falhar.
+Também não há substituição quando não é possível atualizar a cópia anterior.
+O incremento foi validado com **32 checks de armazenamento**, **194 de schema**,
+regras/interface e integração Web; não representa homologação Windows.
+
+Os testes de armazenamento usam arquivos reais e dados de usuário isolados:
+
+```sh
+godot --headless --path . --script res://tests/save_store.gd
+```
+
 Os CSVs são escritos em `user://atalaia-dano-onda-NN.csv`; a opção de exportação abre a pasta correspondente. O relatório preserva a autoria de veneno mesmo após venda da torreta. DPS usa o tempo de combate decorrido, com pausas/preparação excluídas. Poças do mesmo dono usam o maior DPS; poças de donos diferentes somam.
 
 ## Validação

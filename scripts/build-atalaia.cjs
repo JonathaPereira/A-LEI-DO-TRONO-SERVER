@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs'),
   path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { runGodot } = require('./godot-process.cjs');
 const root = path.resolve(__dirname, '..');
 const runtime = process.env.GODOT_BIN
   ? { binary: process.env.GODOT_BIN }
@@ -25,13 +25,14 @@ const executable = `atalaia-${gameVersion}-${source.slice(0, 12)}`;
 fs.rmSync(web, { recursive: true, force: true });
 fs.mkdirSync(web, { recursive: true });
 const run = (args) =>
-  execFileSync(runtime.binary, ['--headless', '--path', game, ...args], {
+  runGodot(runtime.binary, ['--headless', '--path', game, ...args], {
     env,
-    stdio: 'inherit',
     timeout: 180000,
   });
 run(['--editor', '--import']);
 run(['--script', 'res://tests/verify.gd']);
+run(['--script', 'res://tests/save_validation.gd']);
+run(['--script', 'res://tests/save_store.gd']);
 run(['--script', 'res://tests/runtime_verify.gd', '--', '--qa']);
 run(['--export-release', 'Web', path.join(web, executable + '.html')]);
 fs.renameSync(path.join(web, executable + '.html'), path.join(web, 'index.html'));

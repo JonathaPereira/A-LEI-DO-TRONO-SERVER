@@ -1,5 +1,43 @@
 # Reconstrução do frontend
 
+Operação Renascimento: [diagnóstico dos três jogos, inventário, fases e primeiro
+incremento](RENASCIMENTO.md). Desenvolvimento alpha; não há homologação 1.0.
+
+Fundação Renascimento em 05/11/2026: Cinzas ganhou continuação de campanha separada
+da horda e backup compatível; Atalaia passou a validar/carregar atomicamente e
+preservar saves inválidos; Nexus original migra progresso para IDs de missão e
+recompensas históricas. Evidências e limites no diagnóstico acima. Conteúdo,
+metaprogressão e audiovisual ampliados continuam pendentes.
+
+Nexus — incremento tático seguinte: ritual com prazo, defesa do trio e comandante
+em três missões existentes; objetivos na preparação/HUD/resultado e automático
+considerando alvo, supremo e proteção. Nove missões e 20 ativos mantidos. Suite
+Godot e paridade livres aprovadas; matriz de 36 cenários registrada sem esconder
+as seis derrotas. [Checklist consolidado de feitos e pendências](RENASCIMENTO.md#checklist-consolidado-solicitado).
+
+Nexus — incremento de equipamentos: oficina com Arma/Proteção/Relíquia,
+patamares I–III, especializações, fragmentos de primeira vitória/repetição e
+migração 1–4→5. Testes de conservação, falha de gravação, campanha nova completa e
+interface aprovados; matriz de 108 cenários registra limites de composição e IA.
+Níveis, domínio, fusão e expansão continuam pendentes. Evidências e checklist no
+[diagnóstico Renascimento](RENASCIMENTO.md#quarto-incremento--equipamentos-e-economia-do-nexus).
+
+Continuidade Renascimento: fabricação escolhida/fusão até III no Nexus com save
+6, proteção de equipadas e orçamento opcional testado; recuperação automática do
+Atalaia a partir de `.bak` validada, com aviso e Continuação real. Testes, builds
+e limites no [quinto incremento](RENASCIMENTO.md#quinto-incremento--fabricaçãofusão-e-recuperação-do-atalaia).
+O usuário autorizou continuar pela checklist durante sua ausência; sequência de
+execução e estado de cada entrega permanecem nesse documento.
+
+Novo marco Nexus: nível comum 1–6, maestria I–III por participação, tela Evolução,
+recibos e bônus limitados; save 7 migra 1–6. Suíte completa/paridade e inspeção Web
+aprovadas. [Evidências do sexto incremento](RENASCIMENTO.md#sexto-incremento--nível-comum-e-maestria-do-nexus).
+Habilidades treináveis entregues no save 8: 60 alternativas com custos/contrapartidas, prévia, execução e gravação Web verificadas. [Sétimo incremento](RENASCIMENTO.md#sétimo-incremento--habilidades-treináveis-do-nexus).
+Retorno Lumi concluído: 24 ativos/seis afinidades, 72 formas treináveis, fichas e 16 falas adicionais. Regras 0.16.0, testes completos, paridade e pacote Web verificados. [Evidências e limites do oitavo incremento](RENASCIMENTO.md#oitavo-incremento--retorno-dos-quatro-lumi).
+Portador escolhido no trio implementado na estrada das cinzas, com prioridade defensiva da IA e HUD. 22 verificações específicas/404 pertinentes e Web aprovados. [Nono incremento](RENASCIMENTO.md#nono-incremento--proteção-de-um-aliado-escolhido).
+Ondas entregues na escadaria das marés, com conservação do trio e recompensa única. 32 verificações específicas, suíte completa/paridade e vitória Web com gravação real aprovadas. [Décimo incremento](RENASCIMENTO.md#décimo-incremento--ondas-sucessivas-no-nexus).
+Campo simétrico de energia entregue na guardiã da memória: 168 verificações específicas/601 pertinentes, matriz e inspeção Web aprovadas. O usuário pediu transferência para outro chat antes de iniciar fases dos chefes. [Prompt e estado de restauração](RENASCIMENTO_CHECKPOINT.md).
+
 Checkpoint atualizado em 31/10/2026.
 
 Fonte única do plano e checkpoint. Produto/REA:

@@ -1,6 +1,16 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {createAtalaia}=require('../src/lib/games/atalaia.ts');
+const {runGodot}=require('../scripts/godot-process.cjs');
+test('Godot build rejects script errors even when the engine exits successfully',()=>{
+ for(const diagnostic of ['SCRIPT ERROR: Invalid access to property', 'Parse Error: Invalid syntax', 'ERROR: Failed to load resource']) {
+  assert.throws(()=>runGodot(process.execPath,['-e',`console.error(${JSON.stringify(diagnostic)})`]),/Godot/);
+ }
+});
+test('Godot build preserves nonzero process failure and accepts warnings without calling them script errors',()=>{
+ assert.throws(()=>runGodot(process.execPath,['-e','process.exit(7)']),error=>error.status===7);
+ assert.doesNotThrow(()=>runGodot(process.execPath,['-e',"console.log('Godot ready');console.warn('WARNING: Optional driver unavailable')"]));
+});
 test('Atalaia only opens the separate web game after an explicit launch', async()=>{
  let views=0,launches=0;
  const game=createAtalaia({desktop:false,openView(){views++;},launchWeb(){launches++;}});

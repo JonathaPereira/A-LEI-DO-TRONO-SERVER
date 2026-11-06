@@ -36,7 +36,15 @@ Roguelite 2D de plataforma para navegador. `dist/` contém o jogo e todos os rec
 
 ## Progresso
 
-O salvamento é local a este navegador e endereço do jogo. Não há ranking compartilhado entre computadores. **Exportar backup** e **Importar backup** abaixo do ranking permitem transferir o progresso; não limpam os recordes antigos. O quadro da 0.5 considera apenas essa edição para comparar as mesmas regras. A campanha ainda reinicia ao iniciar uma nova run. A build da horda é reconstruída das cartas adquiridas ao retomar, sem preservar danos ou abates posteriores ao checkpoint.
+O salvamento é local a este navegador e endereço do jogo. Não há ranking compartilhado entre computadores. **Exportar backup** e **Importar backup** abaixo do ranking permitem transferir o progresso; não limpam os recordes antigos. O quadro da 0.5 considera apenas essa edição para comparar as mesmas regras. Na integração atual, **Continuar campanha** restaura o último marco de capítulo: entrada com a build adquirida, área limpa ou escolha de saída pendente. A horda tem seu próprio save. Ações, danos, abates e recompensas de santuário posteriores ao marco de entrada são descartados ao retomar; concluir a área guarda a build e os objetos consumidos. Não é um save do frame exato. Nova expedição pede confirmação antes de substituir a campanha; a morte ou a vitória encerram o save da run, mantendo a horda e os recordes separados. A build da horda continua reconstruída das cartas adquiridas, sem preservar danos ou abates posteriores ao checkpoint.
+
+O backup atual usa formato 2 e leva campanha, horda e recordes juntos. Backups
+antigos do formato 1 continuam importáveis e preservam a campanha que já está no
+dispositivo. Um checkpoint inválido em qualquer campo rejeita a importação
+inteira. Falha de armazenamento é informada; o jogo não declara importação
+persistida quando o navegador recusa a gravação. Esse incremento é uma fundação
+da Operação Renascimento em desenvolvimento, sem ampliar as três regiões ou
+declarar versão 1.0.
 
 ## Jogar e publicar
 
