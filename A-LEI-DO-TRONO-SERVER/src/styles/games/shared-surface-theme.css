@@ -1,0 +1,250 @@
+/* Game dependencies extracted from src/styles/base/surface-theme.css. */
+@scope (#gameSurface) {
+  /* Community refinements: media focus, compact effects and the original portal art. */
+  :scope {
+    color-scheme: dark;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #71618f #141824;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: #141824;
+    border-radius: 12px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #71618f;
+    border: 2px solid #141824;
+    border-radius: 12px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #b5a0d8;
+  }
+  *::-webkit-scrollbar-corner {
+    background: #141824;
+  }
+  :scope.chat-only-active #socialPanel .mn-peer-gain {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 0 8px !important;
+    width: 100%;
+    max-width: none;
+    border-top: 1px solid #444059 !important;
+    padding: 10px 4px 0 !important;
+    margin-top: 8px !important;
+    box-sizing: border-box;
+  }
+  :scope.chat-only-active #socialPanel .mn-peer-gain > span {
+    display: block !important;
+    font-size: 11px !important;
+    color: #c9c0db;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  :scope.chat-only-active #socialPanel .mn-peer-gain output {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 11px !important;
+    color: #e4d6f6 !important;
+  }
+  :scope.chat-only-active #socialPanel .mn-peer-gain input {
+    grid-column: 1/-1;
+    grid-row: 2;
+    width: 100% !important;
+  }
+  :scope.chat-only-active #socialPanel .mn-person-avatar {
+    overflow: visible !important;
+  }
+  :scope.chat-only-active #socialPanel .mn-person-avatar > i {
+    right: -6px !important;
+    bottom: -5px !important;
+    box-shadow: 0 0 0 2px #1d2132;
+  }
+  :scope.chat-only-active #socialPanel .voice-settings-panel {
+    background: #1b1e30 !important;
+    border-color: #665675 !important;
+  }
+  :scope.chat-only-active #socialPanel :is(.voice-settings-head, .voice-settings-tabs) {
+    background: #29263e !important;
+    border-color: #4b415e !important;
+  }
+  :scope.chat-only-active .voice-settings-tab {
+    background: #302a43 !important;
+    border-color: #55466b !important;
+    color: #d5c9e7 !important;
+  }
+  :scope.chat-only-active .voice-settings-tab.active {
+    background: #645080 !important;
+    border-color: #b39bcf !important;
+    color: #fff0ff !important;
+  }
+  :scope.chat-only-active .voice-settings-panel select {
+    background: #242338 !important;
+    border-color: #5a4d6a !important;
+    color: #eee1ff !important;
+  }
+  :scope.chat-only-active .mn-gain-controls {
+    background: #242238 !important;
+    border-color: #53455f !important;
+    padding: 12px !important;
+  }
+  :scope.chat-only-active .mn-gain-label {
+    gap: 2px 8px !important;
+    color: #d5cce3 !important;
+    padding: 4px 0 !important;
+    min-width: 0;
+  }
+  :scope.chat-only-active .mn-gain-label output {
+    color: #e1c5ff !important;
+  }
+  .mn-stream-volume {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 8px;
+    background: #1f1c31ed;
+    border: 1px solid #625171;
+    max-width: calc(100% - 24px);
+    width: min(280px, calc(100% - 24px));
+    box-sizing: border-box;
+    padding: 8px 12px;
+  }
+  .mn-stream-volume span {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .mn-stream-volume output {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+  }
+  .mn-stream-volume input {
+    grid-column: 1/-1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+  }
+  .portal-volume {
+    gap: 8px;
+  }
+  :scope:not(.chat-only-active) .soundboard-toggle {
+    display: none;
+  }
+  :scope.chat-only-active .community-toggle {
+    right: 132px !important;
+  }
+  :scope:has(#voiceSettingsPanel:not(.hidden)) #callNoticeHost {
+    z-index: 30;
+  }
+  .soundboard-heading .dialog-close {
+    position: static;
+    flex: 0 0 34px;
+  }
+  .focus-person footer > div:first-child {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .focus-person footer strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .focus-media-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+  }
+  .focus-media-actions button {
+    padding: 5px 8px;
+    min-height: 32px;
+    border: 1px solid #78658f;
+    border-radius: 7px;
+    background: #3c304e;
+    color: #eadbff;
+    font: 600 11px var(--ui-font);
+    cursor: pointer;
+  }
+  :scope.chat-only-active
+    #socialPanel
+    #mediaMosaic
+    :is(.camera-tile, .screen-share-tile):fullscreen,
+  :scope.chat-only-active
+    #socialPanel
+    #mediaMosaic
+    :is(.camera-tile, .screen-share-tile).media-maximized {
+    aspect-ratio: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #090c16 !important;
+  }
+  :scope.chat-only-active
+    #socialPanel
+    #mediaMosaic
+    :is(.camera-tile, .screen-share-tile):fullscreen {
+    position: relative !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+  }
+  :scope.chat-only-active
+    #socialPanel
+    #mediaMosaic
+    :is(.camera-tile, .screen-share-tile).media-maximized {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    z-index: 1000 !important;
+  }
+  :is(.camera-tile, .screen-share-tile):fullscreen .media-fullscreen-btn,
+  .media-maximized .media-fullscreen-btn {
+    opacity: 1;
+  }
+  @media (max-width: 760px) {
+    .portal-volume {
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-area: vol;
+      min-width: 0 !important;
+      align-items: center;
+    }
+  }
+  @media (max-width: 640px) {
+    .focus-person footer {
+      padding: 8px;
+    }
+    .focus-media-actions button {
+      font-size: 9px;
+      padding: 4px 6px;
+      min-height: 28px;
+    }
+    .media-focus-selection {
+      max-height: 120px;
+      overflow: auto;
+      flex-shrink: 0;
+    }
+    .media-focus-dialog > header {
+      padding-right: 30px;
+    }
+    .media-focus-dialog .dialog-actions > button:not(.dialog-close) {
+      font-size: 11px;
+      padding: 6px;
+      width: auto;
+      max-width: 110px;
+    }
+    .media-focus-dialog .dialog-actions > button:not(.dialog-close):first-letter {
+      font-size: 11px;
+    }
+  }
+  @media (max-width: 640px) {
+    :scope.chat-only-active #socialPanel .call-toolbar {
+      padding-bottom: 54px !important;
+    }
+  }
+}

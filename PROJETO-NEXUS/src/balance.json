@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.16.0",
+  "affinity": {
+    "advantageMultiplier": 1.25,
+    "resistanceMultiplier": 0.85,
+    "neutralMultiplier": 1
+  },
+  "critical": {
+    "chance": 0.1,
+    "damageMultiplier": 1.4
+  },
+  "damage": {
+    "defenseBaseline": 100,
+    "defenseWeight": 0.5,
+    "minimumHit": 1
+  },
+  "energy": {
+    "initial": 40,
+    "maximum": 100,
+    "basicGain": 24,
+    "guardGain": 25
+  },
+  "shield": {
+    "maxHpRatio": 0.25,
+    "durationRounds": 2
+  },
+  "guard": {
+    "shieldMaxHpRatio": 0.06,
+    "incomingDamageMultiplier": 0.65
+  },
+  "status": {
+    "durationTurns": 2,
+    "burnMaxHpRatio": 0.065,
+    "bleedMaxHpRatio": 0.065,
+    "bleedHealingMultiplier": 0.65,
+    "regenMaxHpRatio": 0.04,
+    "weakenAttackMultiplier": 0.8,
+    "empowerAttackMultiplier": 1.2,
+    "exposeDefenseMultiplier": 0.75,
+    "fortifyIncomingDamageMultiplier": 0.85,
+    "focusDamageMultiplier": 1.25,
+    "coverRedirectRatio": 0.25,
+    "seedHealMaxHpRatio": 0.1,
+    "mirrorDamageRatio": 0.2,
+    "riposteAttackRatio": 0.3,
+    "darkmarkMaxHpRatio": 0.035,
+    "darkmarkDrainRatio": 0.6,
+    "elementalWardIncomingMultiplier": 0.8,
+    "tauntDefenseMultiplier": 0.75
+  },
+  "classPassives": {
+    "arcanoDefenseMultiplier": 0.75,
+    "sombrioDrainRatio": 0.15,
+    "igneoCriticalChance": 0.05,
+    "igneoReflectRatio": 0.1
+  },
+  "fracture": {
+    "startRound": 12,
+    "initialMaxHpRatio": 0.04,
+    "perRoundMaxHpRatio": 0.025,
+    "maxHpRatioCap": 0.85,
+    "healingReductionPerRound": 0.1
+  },
+  "difficulty": {
+    "enemyStatMultiplier": {
+      "easy": 0.82,
+      "normal": 1,
+      "hard": 1.15
+    }
+  },
+  "ai": {
+    "supportPriority": 1.18,
+    "damagePriority": 1.08,
+    "killBonus": 700,
+    "healValue": 1.35,
+    "shieldValue": 0.8
+  },
+  "tankProtection": {
+    "openingTurns": 2
+  }
+}

@@ -1,0 +1,425 @@
+/* Game dependencies extracted from src/styles/chat/channel-layout.css. */
+@scope (#gameSurface) {
+  /* === Chat de Voz M&N v0.7.2 — canais, palco de mídia e painel de conversa === */
+  :scope.chat-only-active {
+    background: #080e16;
+  }
+  .mn-channel.active {
+    background: linear-gradient(90deg, #204b68, #183348);
+    border-color: #4082a5;
+    color: #eafaff;
+  }
+  .mn-channel.active .mn-channel-hash {
+    color: #83d9ff;
+  }
+  :scope.chat-only-active .social-panel.social-chat-hub {
+    display: grid !important;
+    position: fixed !important;
+    top: 88px !important;
+    left: 253px !important;
+    right: 14px !important;
+    bottom: 14px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    border-radius: 15px !important;
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 332px) !important;
+    grid-template-rows: 51px minmax(0, 1fr) !important;
+    grid-template-areas: 'head head' 'voice chat' !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    background: #0c1622 !important;
+    border: 1px solid #2b465c !important;
+  }
+  :scope.chat-only-active .social-chat-hub .social-head {
+    grid-area: head !important;
+    min-height: 51px !important;
+    padding: 8px 17px !important;
+    background: #172638 !important;
+    border-bottom: 1px solid #2b4356 !important;
+  }
+  .social-chat-hub .social-head strong {
+    font-size: 14px !important;
+    color: #d9f0ff !important;
+  }
+  :scope.chat-only-active .social-chat-hub .voice-section {
+    grid-area: voice !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 13px !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    overflow-y: auto !important;
+    padding: 20px !important;
+    background: linear-gradient(140deg, #101b2a, #0b1420) !important;
+    overscroll-behavior: contain;
+  }
+  .social-chat-hub .voice-title {
+    order: 0;
+    min-height: 45px;
+    gap: 12px;
+  }
+  .social-chat-hub .voice-title strong {
+    font-size: 17px !important;
+    color: #e4f4fd !important;
+  }
+  .social-chat-hub .voice-subtitle {
+    font-size: 10px !important;
+    color: #89a8bc !important;
+  }
+  .social-chat-hub #voiceStatus {
+    max-width: 44%;
+    font-size: 10px !important;
+    line-height: 1.4;
+  }
+  :scope.chat-only-active .social-chat-hub .screen-share-grid {
+    order: 1;
+    width: 100%;
+    margin: 0;
+    flex: none;
+  }
+  .social-chat-hub .screen-share-grid:not(.hidden) .screen-share-tile {
+    min-height: min(44vh, 420px);
+    aspect-ratio: 16/9;
+  }
+  .social-chat-hub .screen-share-grid video {
+    object-fit: contain !important;
+    background: #02060b;
+  }
+  :scope.chat-only-active .social-chat-hub .camera-grid {
+    order: 2;
+    width: 100%;
+    margin: 0;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+    gap: 12px;
+  }
+  .social-chat-hub .camera-tile {
+    aspect-ratio: 16/9;
+    min-height: 155px !important;
+  }
+  :scope.chat-only-active .social-chat-hub .voice-roster {
+    order: 3;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+    max-height: none !important;
+    gap: 9px;
+  }
+  .social-chat-hub .voice-person {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-content: start;
+    gap: 3px 8px;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    background: #162333 !important;
+    border: 1px solid #294259 !important;
+  }
+  .social-chat-hub .voice-person strong {
+    font-size: 11px !important;
+  }
+  .social-chat-hub .voice-person small {
+    font-size: 9px !important;
+    line-height: 1.4;
+  }
+  .mn-peer-gain {
+    display: grid;
+    grid-column: 1/-1;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 9px;
+    border-top: 1px solid #2b4156;
+    color: #a8c3d5;
+    font-size: 9px;
+  }
+  .mn-peer-gain input {
+    min-width: 0;
+    width: 100%;
+    accent-color: #55c6f5;
+  }
+  .mn-peer-gain output {
+    font-variant-numeric: tabular-nums;
+    color: #d7efff;
+    min-width: 31px;
+    text-align: right;
+  }
+  :scope.chat-only-active .social-chat-hub .call-toolbar {
+    order: 9;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 6;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    gap: 9px !important;
+    width: 100%;
+    margin-top: auto;
+    padding: 12px !important;
+    border: 1px solid #2f4d63 !important;
+    border-radius: 13px !important;
+    background: #121f2e !important;
+    box-shadow: 0 -6px 22px #0005 !important;
+  }
+  .social-chat-hub .call-control-group {
+    flex: 1 1 115px;
+    min-width: 95px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px;
+    padding: 6px !important;
+    border-radius: 9px !important;
+  }
+  .social-chat-hub .call-control-group > small {
+    font-size: 8px !important;
+    color: #95b9cd !important;
+    letter-spacing: 0.1em;
+  }
+  .social-chat-hub .call-control-group .call-action {
+    min-height: 34px !important;
+    padding: 7px !important;
+    font-size: 9px !important;
+    flex-direction: row !important;
+    white-space: normal !important;
+  }
+  .social-chat-hub .voice-help {
+    order: 10;
+    margin-top: 0 !important;
+    color: #7190a7 !important;
+    font-size: 9px !important;
+  }
+  :scope.chat-only-active .social-chat-hub .voice-settings-panel {
+    order: 7;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: 100%;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    z-index: 8;
+    background: #132334 !important;
+    border-color: #37617f !important;
+  }
+  :scope.chat-only-active .social-chat-hub .telemetry-panel {
+    order: 8;
+    position: relative !important;
+    max-height: none !important;
+  }
+  :scope.chat-only-active .social-chat-hub .court-chat-section {
+    grid-area: chat !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    height: 100% !important;
+    padding: 13px !important;
+    overflow: hidden !important;
+    border-left: 1px solid #2c485e !important;
+    background: #101b29 !important;
+  }
+  .social-chat-hub .court-chat-title {
+    flex: 0 0 auto !important;
+  }
+  .social-chat-hub .court-chat-messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+  }
+  .social-chat-hub .court-chat-compose {
+    flex: 0 0 auto !important;
+  }
+  .social-chat-hub .chat-help {
+    flex: 0 0 auto !important;
+  }
+  .mn-gain-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 13px;
+    border: 1px solid #33516a;
+    border-radius: 10px;
+    background: #0c1926;
+  }
+  .mn-gain-label {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px;
+    color: #d0e5f2;
+    font-size: 11px;
+  }
+  .mn-gain-label output {
+    color: #7ed4f9;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .mn-gain-label input {
+    grid-column: 1/-1;
+    width: 100%;
+    accent-color: #5cc8f3;
+    cursor: pointer;
+  }
+  .mn-gain-controls p {
+    grid-column: 1/-1;
+    font-size: 9px;
+    line-height: 1.4;
+    color: #809db0;
+    margin: 0;
+  }
+  @media (max-width: 1050px) {
+    :scope.chat-only-active .social-panel.social-chat-hub {
+      grid-template-columns: minmax(0, 1fr) minmax(235px, 285px) !important;
+    }
+    :scope.chat-only-active .social-panel.social-chat-hub {
+      left: 219px !important;
+    }
+    :scope.chat-only-active .social-chat-hub .voice-section {
+      padding: 12px !important;
+    }
+  }
+  @media (max-width: 850px) {
+    :scope.chat-only-active .social-panel.social-chat-hub {
+      top: 158px !important;
+      left: 8px !important;
+      right: 8px !important;
+      bottom: 8px !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      grid-template-rows: 46px minmax(0, 1fr) !important;
+      grid-template-areas: 'head' 'voice' !important;
+    }
+    :scope.chat-only-active .social-chat-hub .court-chat-section {
+      display: none !important;
+    }
+    :scope.chat-only-active .social-chat-hub.chat-drawer-open .court-chat-section {
+      display: flex !important;
+      position: absolute !important;
+      z-index: 22 !important;
+      inset: 46px 0 0 !important;
+      width: 100% !important;
+      height: calc(100% - 46px) !important;
+      border-left: none !important;
+    }
+    :scope.chat-only-active .social-chat-hub .voice-section {
+      padding: 13px !important;
+    }
+    :scope.chat-only-active .social-chat-hub .call-toolbar {
+      gap: 4px !important;
+    }
+    .social-chat-hub .call-control-group {
+      flex: 1 1 125px;
+    }
+    .social-chat-hub .voice-settings-panel {
+      max-height: none !important;
+    }
+  }
+  @media (max-width: 480px) {
+    :scope.chat-only-active .social-panel.social-chat-hub {
+      top: 136px !important;
+      left: 4px !important;
+      right: 4px !important;
+      bottom: 4px !important;
+      border-radius: 10px !important;
+    }
+    :scope.chat-only-active .social-chat-hub .voice-section {
+      padding: 9px !important;
+      gap: 9px !important;
+    }
+    .social-chat-hub .voice-title strong {
+      font-size: 13px !important;
+    }
+    .social-chat-hub #voiceStatus {
+      font-size: 8px !important;
+    }
+    .social-chat-hub .camera-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .social-chat-hub .call-control-group {
+      flex: 1 1 42% !important;
+      min-width: 0 !important;
+    }
+    .social-chat-hub .call-control-group .call-action {
+      font-size: 8px !important;
+      min-height: 36px !important;
+    }
+    .mn-gain-controls {
+      grid-template-columns: 1fr;
+    }
+    .mn-gain-controls p {
+      grid-column: auto;
+    }
+    .social-chat-hub .screen-share-grid:not(.hidden) .screen-share-tile {
+      min-height: 170px;
+      aspect-ratio: 16/9;
+    }
+  } /* Sobrescreve o antigo posicionamento absoluto da gaveta v0.6.x no desktop. */
+  :scope.chat-only-active .social-chat-hub .social-head {
+    display: flex !important;
+  }
+  :scope.chat-only-active .social-chat-hub .voice-section {
+    position: relative !important;
+    inset: auto !important;
+  }
+  :scope.chat-only-active .social-chat-hub .court-chat-section {
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    box-shadow: none !important;
+    transition: none !important;
+  }
+  @media (max-width: 850px) {
+    :scope.chat-only-active .social-chat-hub.chat-drawer-open .court-chat-section {
+      position: absolute !important;
+      inset: 46px 0 0 !important;
+    }
+  } /* v0.7.2 — compatibilidade do HUD legado e faixa de canais no mobile. */
+  @media (max-width: 850px) {
+    :scope.chat-only-active .chat-app-statusbar {
+      position: absolute !important;
+      top: 76px !important;
+      left: 9px !important;
+      right: 9px !important;
+      height: 32px !important;
+      transform: none !important;
+      justify-content: flex-start !important;
+      overflow: hidden !important;
+      z-index: 10 !important;
+    }
+    :scope.chat-only-active .mn-channel-sidebar {
+      top: 115px !important;
+    }
+    :scope.chat-only-active .social-panel.social-chat-hub {
+      top: 190px !important;
+    }
+  }
+  @media (max-width: 480px) {
+    :scope.chat-only-active .chat-app-statusbar {
+      top: 73px !important;
+    }
+    :scope.chat-only-active .mn-channel-sidebar {
+      top: 110px !important;
+    }
+    :scope.chat-only-active .social-panel.social-chat-hub {
+      top: 175px !important;
+    }
+  } /* Navigation feedback remains visible while identity/server checks are pending. */
+  .music-playback-status {
+    display: block;
+    color: #b7c9e5;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: normal;
+  }
+  .music-playback-status:empty {
+    display: none;
+  }
+}

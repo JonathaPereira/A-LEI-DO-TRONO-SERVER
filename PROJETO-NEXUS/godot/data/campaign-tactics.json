@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "endangeredHealthRatio": 0.5,
+  "targetDamageWeight": 4.0,
+  "collateralDamageWeight": 0.15,
+  "absorbedDamageWeight": 0.6,
+  "energyCostWeight": 0.25,
+  "ultimateReserveWeight": 1.8,
+  "immediateVictoryBonus": 1000.0,
+  "carrierShieldWeight": 0.7,
+  "carrierCleanseValue": 25
+}

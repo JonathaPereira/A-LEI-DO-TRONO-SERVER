@@ -1,0 +1,378 @@
+/* Game dependencies extracted from src/styles/profiles/appearance.css. */
+@scope (#gameSurface) {
+  /* Personal themes and resizable community panels. */
+  :scope {
+    --theme-accent: #a99cff;
+    --theme-bg: #0c0e18;
+    --theme-panel: #151827;
+    --theme-card: #24263a;
+    --theme-text: #f0f1fa;
+    --theme-muted: #a5acc8;
+    --theme-line: #454059;
+    --theme-soft: #302a43;
+    --accent: var(--theme-accent);
+    --ink: var(--theme-bg);
+    --panel: var(--theme-panel);
+    --card: var(--theme-card);
+    --text: var(--theme-text);
+    --muted: var(--theme-muted);
+    --line: var(--theme-line);
+  }
+  :scope[data-theme='green'] {
+    --theme-accent: #69d29b;
+    --theme-bg: #070b09;
+    --theme-panel: #101a15;
+    --theme-card: #18271f;
+    --theme-text: #eef9f2;
+    --theme-muted: #aac4b4;
+    --theme-line: #365343;
+    --theme-soft: #243b2d;
+  }
+  :scope[data-theme='red'] {
+    --theme-accent: #f47b85;
+    --theme-bg: #0c0809;
+    --theme-panel: #1b1215;
+    --theme-card: #2b1b20;
+    --theme-text: #fff1f3;
+    --theme-muted: #cbb0b5;
+    --theme-line: #603940;
+    --theme-soft: #42252d;
+  }
+  :scope[data-theme='blue'] {
+    --theme-accent: #75bdf2;
+    --theme-bg: #070b10;
+    --theme-panel: #101a26;
+    --theme-card: #18283a;
+    --theme-text: #eef6ff;
+    --theme-muted: #a7bdd3;
+    --theme-line: #345272;
+    --theme-soft: #233b56;
+  }
+  :scope[data-theme='yellow'] {
+    --theme-accent: #efd470;
+    --theme-bg: #0c0b07;
+    --theme-panel: #1a180f;
+    --theme-card: #282418;
+    --theme-text: #fff9e5;
+    --theme-muted: #c6bf9e;
+    --theme-line: #5d5335;
+    --theme-soft: #3d3520;
+  }
+  :scope[data-theme='teal'] {
+    --theme-accent: #5fddcc;
+    --theme-bg: #081210;
+    --theme-panel: #12221f;
+    --theme-card: #1c3430;
+    --theme-text: #e9fcf6;
+    --theme-muted: #a3c7bd;
+    --theme-line: #31574e;
+    --theme-soft: #23473f;
+  }
+  :scope[data-theme='orange'] {
+    --theme-accent: #ffad72;
+    --theme-bg: #130e0b;
+    --theme-panel: #241a13;
+    --theme-card: #39281c;
+    --theme-text: #fff4e9;
+    --theme-muted: #cebba9;
+    --theme-line: #654a35;
+    --theme-soft: #503725;
+  }
+  :scope[data-theme='rose'] {
+    --theme-accent: #efa3cd;
+    --theme-bg: #130c12;
+    --theme-panel: #221620;
+    --theme-card: #362233;
+    --theme-text: #fff0f9;
+    --theme-muted: #cdb3c8;
+    --theme-line: #5f4058;
+    --theme-soft: #482e41;
+  }
+  :scope[data-theme='indigo'] {
+    --theme-accent: #99acff;
+    --theme-bg: #0b0e19;
+    --theme-panel: #171c30;
+    --theme-card: #232b45;
+    --theme-text: #eff2ff;
+    --theme-muted: #b0bad7;
+    --theme-line: #424e74;
+    --theme-soft: #303c62;
+  }
+  :scope[data-theme='graphite'] {
+    --theme-accent: #c1cad6;
+    --theme-bg: #0c0f13;
+    --theme-panel: #181d24;
+    --theme-card: #252d37;
+    --theme-text: #f0f4f8;
+    --theme-muted: #aab7c7;
+    --theme-line: #414e60;
+    --theme-soft: #313e4e;
+  }
+  :scope {
+    color: var(--theme-text);
+  }
+  * {
+    scrollbar-color: var(--theme-line) var(--theme-bg);
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: var(--theme-bg);
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--theme-line);
+    border-color: var(--theme-bg);
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-accent);
+  }
+  .appearance-help {
+    font: 500 11px/1.6 var(--ui-font);
+    color: var(--theme-muted);
+    margin: 8px 0;
+  }
+  :scope.chat-only-active :is(.chat-app-header, .mn-channel-sidebar),
+  :scope.chat-only-active #socialPanel :is(.social-head, .call-toolbar, .voice-help) {
+    background: var(--theme-panel) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active #socialPanel.social-chat-hub {
+    background: var(--theme-bg) !important;
+  }
+  :scope.chat-only-active #socialPanel .voice-section {
+    background:
+      radial-gradient(
+        ellipse at 10% 0,
+        color-mix(in srgb, var(--theme-accent) 9%, transparent),
+        transparent 55%
+      ),
+      var(--theme-bg) !important;
+  }
+  :scope.chat-only-active
+    #socialPanel
+    :is(.court-chat-section, .court-chat-title, .court-chat-compose) {
+    background: var(--theme-panel) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active #socialPanel .court-chat-compose {
+    background: var(--theme-card) !important;
+  }
+  :scope.chat-only-active .mn-channel.active {
+    background: linear-gradient(100deg, var(--theme-soft), var(--theme-panel)) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active .mn-channel:hover {
+    background: var(--theme-card) !important;
+  }
+  :scope.chat-only-active :is(.chat-header-action, .channel-add) {
+    background: var(--theme-card) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  :scope.chat-only-active .chat-app-crest {
+    background: linear-gradient(145deg, var(--theme-soft), var(--theme-line)) !important;
+    border-color: var(--theme-accent) !important;
+  }
+  :scope.chat-only-active
+    :is(.chat-app-brand h2, .mn-sidebar-heading strong, .mn-channel-meta strong) {
+    color: var(--theme-text) !important;
+  }
+  :scope.chat-only-active
+    :is(.mn-channel-meta small, .mn-sidebar-label, .mn-sidebar-bottom small, #chatOnlyStatus) {
+    color: var(--theme-muted) !important;
+  }
+  :scope.chat-only-active .channel-kind-icon {
+    color: var(--theme-accent);
+  }
+  :scope.chat-only-active
+    #socialPanel
+    :is(.voice-person, .mn-media-stage:is(.has-screen, .has-camera) .voice-person) {
+    background: linear-gradient(145deg, var(--theme-card), var(--theme-panel)) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active #socialPanel .call-action {
+    background: var(--theme-card) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  :scope.chat-only-active #socialPanel .call-action:not(:disabled):hover {
+    background: var(--theme-soft) !important;
+    border-color: var(--theme-accent) !important;
+  }
+  :scope.chat-only-active #socialPanel #joinVoiceBtn {
+    background: color-mix(in srgb, var(--theme-accent) 35%, var(--theme-panel)) !important;
+    border-color: var(--theme-accent) !important;
+  }
+  :scope.chat-only-active #socialPanel #joinVoiceBtn.call-active {
+    background: #462b38 !important;
+    border-color: #b6758b !important;
+  }
+  :scope.chat-only-active #socialPanel :is(.voice-settings-panel, .mn-gain-controls) {
+    background: var(--theme-panel) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active
+    #socialPanel
+    :is(.voice-settings-head, .voice-settings-tabs, .voice-settings-tab) {
+    background: var(--theme-card) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  :scope.chat-only-active #socialPanel .voice-settings-tab.active {
+    background: var(--theme-soft) !important;
+    border-color: var(--theme-accent) !important;
+  }
+  :scope.chat-only-active #socialPanel .voice-settings-panel select {
+    background: var(--theme-bg) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  :scope.chat-only-active #socialPanel :is(.mn-gain-label, .mn-peer-gain) {
+    color: var(--theme-muted) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active #socialPanel :is(.mn-gain-label, .mn-peer-gain) output {
+    color: var(--theme-accent) !important;
+  }
+  :scope.chat-only-active #socialPanel :is(#expandMosaicBtn, #channelFilesBtn, #muteTextBtn) {
+    background: var(--theme-soft) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  :scope.chat-only-active
+    #socialPanel
+    #mediaMosaic
+    :is(.camera-tile, .screen-share-tile):not(:fullscreen):not(.media-maximized) {
+    background: var(--theme-bg) !important;
+    border-color: var(--theme-line) !important;
+  }
+  :scope.chat-only-active #socialPanel #mediaMosaic .stream-invitation {
+    background: linear-gradient(145deg, var(--theme-card), var(--theme-panel)) !important;
+  }
+  .feature-dialog,
+  .media-focus-dialog {
+    background: linear-gradient(145deg, var(--theme-card), var(--theme-panel)) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  .feature-dialog :is(input:not([type='checkbox']):not([type='range']), select) {
+    background: var(--theme-panel) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  .primary-button,
+  .secondary-button,
+  .dialog-close {
+    background: var(--theme-soft) !important;
+    border-color: var(--theme-line) !important;
+    color: var(--theme-text) !important;
+  }
+  .primary-button:hover,
+  .secondary-button:hover {
+    border-color: var(--theme-accent) !important;
+  }
+  .focus-person {
+    background: var(--theme-bg);
+    border-color: var(--theme-line);
+  }
+  .focus-person footer,
+  .focus-media-actions button {
+    background: var(--theme-soft);
+    border-color: var(--theme-line);
+    color: var(--theme-text);
+  }
+  .section-eyebrow {
+    color: var(--theme-accent) !important;
+  }
+  :scope.chat-only-active .community-toggle {
+    right: 16px !important;
+  }
+  :scope.chat-only-active .mn-sidebar-bottom {
+    padding-bottom: 78px !important;
+  }
+  :scope.chat-only-active .community-panel {
+    height: min(
+      var(--layout-people-height, calc(100dvh - var(--header) - 70px)),
+      calc(100dvh - var(--header) - 70px)
+    ) !important;
+    bottom: auto !important;
+    box-sizing: border-box;
+  }
+  :scope.chat-only-active #socialPanel.social-chat-hub {
+    bottom: auto !important;
+    height: min(
+      var(--layout-center-height, calc(100dvh - var(--header))),
+      calc(100dvh - var(--header))
+    ) !important;
+  }
+  :scope.chat-only-active #socialPanel .court-chat-section:not([hidden]) {
+    height: min(var(--layout-chat-height, 100%), 100%) !important;
+    align-self: start;
+  }
+  @media (min-width: 901px) {
+    :scope {
+      --sidebar: clamp(180px, var(--layout-sidebar-width, 248px), min(420px, 35vw));
+    }
+  }
+  @media (min-width: 641px) and (max-width: 900px) {
+    :scope {
+      --sidebar: clamp(180px, var(--layout-sidebar-width, 210px), 35vw);
+    }
+  }
+  @media (min-width: 641px) {
+    :scope.chat-only-active .mn-channel-sidebar {
+      bottom: auto !important;
+      height: min(var(--layout-sidebar-height, 100dvh), 100dvh) !important;
+      box-sizing: border-box;
+    }
+  }
+  @media (min-width: 1280px) {
+    :scope.chat-only-active {
+      --people-width: clamp(200px, var(--layout-people-width, 248px), 360px);
+    }
+    :scope.chat-only-active.community-open #socialPanel.social-chat-hub {
+      right: var(--people-width) !important;
+    }
+    :scope.chat-only-active .community-panel {
+      width: var(--people-width) !important;
+      height: min(
+        var(--layout-people-height, calc(100dvh - var(--header))),
+        calc(100dvh - var(--header))
+      ) !important;
+    }
+    :scope.chat-only-active:is(:not(.channel-text-active), .call-connected)
+      #socialPanel.social-chat-hub.chat-drawer-open {
+      grid-template-columns: minmax(0, 1fr) clamp(250px, var(--layout-chat-width, 340px), 50%) !important;
+    }
+  }
+  @media (max-width: 1279px) {
+    :scope.chat-only-active .community-panel {
+      width: min(var(--layout-people-width, 244px), calc(100vw - 24px)) !important;
+    }
+    :scope.chat-only-active:is(:not(.channel-text-active), .call-connected)
+      #socialPanel.chat-drawer-open
+      .court-chat-section:not([hidden]) {
+      width: min(var(--layout-chat-width, 380px), 100%) !important;
+    }
+  }
+  @media (max-width: 640px) {
+    :scope {
+      --channel-strip-height: clamp(76px, var(--layout-strip-height, 92px), 220px);
+    }
+    :scope.chat-only-active .community-toggle {
+      right: 8px !important;
+    }
+    :scope.chat-only-active .mn-channel-sidebar {
+      height: var(--channel-strip-height) !important;
+    }
+    :scope.chat-only-active #socialPanel.social-chat-hub {
+      top: calc(var(--header) + var(--channel-strip-height)) !important;
+      height: min(
+        var(--layout-center-height, calc(100dvh - var(--header) - var(--channel-strip-height))),
+        calc(100dvh - var(--header) - var(--channel-strip-height))
+      ) !important;
+    }
+    :scope.chat-only-active .mn-sidebar-bottom {
+      padding-bottom: 18px !important;
+    }
+  }
+}

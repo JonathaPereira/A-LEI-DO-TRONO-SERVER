@@ -1,0 +1,4 @@
+
+> mn-trono@0.14.0-alpha typecheck
+> tsc --noEmit && tsc -p tsconfig.server.json
+

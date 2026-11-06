@@ -1,0 +1,6 @@
+
+> mn-trono@0.14.0-alpha format:check
+> prettier --check src server electron scripts
+
+Checking formatting...
+All matched files use Prettier code style!

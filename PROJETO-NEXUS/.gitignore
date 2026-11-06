@@ -1,0 +1,9 @@
+node_modules/
+artifacts/
+dist/
+godot/.godot/
+.DS_Store
+*.log
+.env
+.env.local
+.env.pvp

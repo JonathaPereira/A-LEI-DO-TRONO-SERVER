@@ -1,0 +1,177 @@
+name: Publish approved frontend
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Validated Windows delivery produced by the caller
+        type: string
+        required: true
+    secrets:
+      SURGE_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Optional exact build tag; empty selects the validated delivery for this commit
+        type: string
+        required: false
+        default: ''
+permissions:
+  # GitHub exposes draft releases only to callers with push access.
+  contents: write
+  actions: read
+concurrency:
+  group: surge-production
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check existing Surge credential without exposing it
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$SURGE_TOKEN" ]; then
+            echo '::error::Configure the repository secret SURGE_TOKEN before publishing.'
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Find the matching successful Windows delivery
+        id: release
+        uses: actions/github-script@v7
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        with:
+          script: |
+            const {findApprovedBuild}=require('./scripts/desktop/approved-build.cjs');
+            const {version}=require('./electron/package.json');
+            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG,additionalAssets:[`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`]});
+            core.setOutput('tag',approved.tag);
+            core.setOutput('version',approved.version);
+            core.notice('Approved delivery: '+approved.tag+' '+approved.sha);
+      - name: Download and verify the frontend and installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_TAG: ${{ steps.release.outputs.tag }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          mkdir -p artifacts/surge-delivery
+          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --pattern "Atalaia-Web-$APP_VERSION.zip" --pattern "Similo-Art-$APP_VERSION.zip" --dir artifacts/surge-delivery
+          python3 <<'PY'
+          from pathlib import Path, PurePosixPath
+          import base64, hashlib, os, re, zipfile
+          root=Path('artifacts/surge-delivery'); version=os.environ['APP_VERSION']
+          sums={name:digest for digest,name in (line.split('  ',1) for line in (root/f'SHA256SUMS-{version}.txt').read_text().splitlines())}
+          archive=root/f'MN-Trono-Frontend-{version}.zip'
+          assert hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()==sums[archive.name]
+          with zipfile.ZipFile(archive) as z:
+              for entry in z.infolist():
+                  path=PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts
+              name=f'MN-Trono-{version}-Windows.exe'
+              assert [p for p in z.namelist() if p.endswith('.exe')]==['frontend/downloads/'+name]
+              with z.open('frontend/downloads/'+name) as executable:
+                  sha256=hashlib.sha256(); sha512=hashlib.sha512()
+                  while block:=executable.read(1024*1024): sha256.update(block); sha512.update(block)
+              assert sha256.hexdigest()==sums[name]
+              manifest=z.read('frontend/downloads/latest.yml').decode()
+              assert re.search(r'^version: '+re.escape(version)+r'$',manifest,re.M)
+              expected_url='https://mn-trono-downloads.surge.sh/'+name
+              assert re.findall(r'^\s*(?:- url|path): (.+)$',manifest,re.M)==[expected_url,expected_url]
+              ignore=z.read('frontend/.surgeignore').decode()
+              assert '*.exe' in ignore.splitlines() and not any(line.startswith('!downloads/') for line in ignore.splitlines())
+              assert set(re.findall(r'sha512: (\S+)',manifest))=={base64.b64encode(sha512.digest()).decode()}
+              z.extractall(root/'verified')
+          game=root/f'Atalaia-Web-{version}.zip'
+          assert hashlib.file_digest(game.open('rb'),'sha256').hexdigest()==sums[game.name]
+          with zipfile.ZipFile(game) as z:
+              for entry in z.infolist():
+                  path=PurePosixPath(entry.filename)
+                  assert not path.is_absolute() and '..' not in path.parts
+              import json
+              metadata=json.loads(z.read('version.json'))
+              assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
+              assert re.fullmatch(r'\d+\.\d+\.\d+',metadata['gameVersion'])
+              executable='atalaia-'+metadata['gameVersion']+'-'+os.environ['GITHUB_SHA'][:12]
+              assert metadata['executable']==executable
+              assert all(name in z.namelist() for name in ['index.html']+[executable+'.'+ext for ext in ['js','wasm','pck']])
+              z.extractall(root/'atalaia')
+          art=root/f'Similo-Art-{version}.zip'
+          assert hashlib.file_digest(art.open('rb'),'sha256').hexdigest()==sums[art.name]
+          with zipfile.ZipFile(art) as z:
+              expected={'v1/'+theme+'.webp' for theme in ['animals','history','tales','monsters','myths']}
+              assert {p for p in z.namelist() if not p.endswith('/')}==expected|{'version.json'}
+              metadata=json.loads(z.read('version.json'))
+              assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
+              assert set(metadata['files'])==expected
+              for file,digest in metadata['files'].items():
+                  assert hashlib.sha256(z.read(file)).hexdigest()==digest
+              z.extractall(root/'similo-art')
+          print('Frontend, installer, art and update manifest verified.')
+          PY
+      - name: Publish and verify Atalaia before updating the catalog
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          npx --yes surge@0.46.0 artifacts/surge-delivery/atalaia atalaia-mn.surge.sh
+          curl --fail --silent --show-error --retry 3 https://atalaia-mn.surge.sh/version.json -o artifacts/surge-delivery/atalaia-published.json
+          cmp artifacts/surge-delivery/atalaia/version.json artifacts/surge-delivery/atalaia-published.json
+      - name: Publish and verify Similo portraits before updating the catalog
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        shell: bash
+        run: |
+          npx --yes surge@0.46.0 artifacts/surge-delivery/similo-art similo-mn.surge.sh
+          curl --fail --silent --show-error --retry 3 https://similo-mn.surge.sh/version.json -o artifacts/surge-delivery/similo-published.json
+          cmp artifacts/surge-delivery/similo-art/version.json artifacts/surge-delivery/similo-published.json
+          python3 <<'PYART'
+          import json,hashlib,urllib.request
+          from pathlib import Path
+          metadata=json.loads(Path('artifacts/surge-delivery/similo-published.json').read_text())
+          for file,digest in metadata['files'].items():
+              with urllib.request.urlopen('https://similo-mn.surge.sh/'+file, timeout=60) as response:
+                  assert hashlib.sha256(response.read()).hexdigest()==digest
+          PYART
+      - name: Publish and verify the installer before updating the feed
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          mkdir -p artifacts/surge-delivery/installer
+          cp artifacts/surge-delivery/verified/frontend/downloads/* artifacts/surge-delivery/installer/
+          npx --yes surge@0.46.0 artifacts/surge-delivery/installer mn-trono-downloads.surge.sh
+          curl --fail --silent --show-error --retry 3 --max-time 300 "https://mn-trono-downloads.surge.sh/MN-Trono-$APP_VERSION-Windows.exe" -o artifacts/surge-delivery/published-installer.exe
+          python3 <<'PYCODE'
+          from pathlib import Path
+          import hashlib, os
+          root=Path('artifacts/surge-delivery'); name='MN-Trono-'+os.environ['APP_VERSION']+'-Windows.exe'
+          sums={name:digest for digest,name in (line.split('  ',1) for line in (root/('SHA256SUMS-'+os.environ['APP_VERSION']+'.txt')).read_text().splitlines())}
+          assert hashlib.file_digest((root/'published-installer.exe').open('rb'),'sha256').hexdigest()==sums[name]
+          PYCODE
+      - name: Publish the verified directory to Surge
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        run: npx --yes surge@0.46.0 artifacts/surge-delivery/verified/frontend a-lei-do-trono.surge.sh
+      - name: Verify published version
+        env:
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 3 https://a-lei-do-trono.surge.sh/downloads/latest.yml -o artifacts/surge-delivery/published-latest.yml
+          cmp artifacts/surge-delivery/verified/frontend/downloads/latest.yml artifacts/surge-delivery/published-latest.yml
+          grep -Fx "version: $APP_VERSION" artifacts/surge-delivery/published-latest.yml
+          curl --fail --silent --show-error --retry 3 https://a-lei-do-trono.surge.sh/ -o artifacts/surge-delivery/published-index.html
+          grep -E "name=\"mn-desktop-version\"[^>]*content=\"$APP_VERSION\"" artifacts/surge-delivery/published-index.html
+          echo "Published and verified frontend $APP_VERSION at https://a-lei-do-trono.surge.sh/." >> "$GITHUB_STEP_SUMMARY"

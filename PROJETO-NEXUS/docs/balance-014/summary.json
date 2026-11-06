@@ -1,0 +1,1871 @@
+{
+  "schemaVersion": 1,
+  "source": "simulation",
+  "createdAt": "2026-10-21T03:05:42.513Z",
+  "commit": "a9c0c3c9466bba3e6e410e8ba2032c1d7746a56d",
+  "build": "68588d8e71220b48c46d45e2a2ff5fd2c62e2358599b7e35c79bc609f1ce8437",
+  "rulesVersion": "0.11.0",
+  "pvpVersion": "pvp-test-1",
+  "seed": 20261021,
+  "gems": [
+    "ember",
+    "pulse",
+    "sap"
+  ],
+  "total": 1840,
+  "actions": 70311,
+  "possibleTrios": 1140,
+  "exploredTrios": 600,
+  "heroSampleMatches": 600,
+  "heroAppearancesEach": 180,
+  "selection": "600 exploration matches; 20 candidates × 5 shared opponents × 2 sides; 8 finalists × 30 fresh shared opponents × 2 sides; direct round robin for all 8 finalists × 10 seed pairs per matchup. All screening cutoff ties advance. Dominant finalist means best win rate in this equal-schedule round robin; broad-opponent winner is reported separately.",
+  "conditions": "PvP authoritative engine, current AI on both sides, normal stats, no campaign progression. Fixed formation: tanks, supports, damage; alphabetical within role. Repeated roles/classes allowed. Same seed and lineup for reversed sides. Hero ranking uses exploration only; simulated matches never enter production PvP logs.",
+  "limits": "Shortlist model only aids selection. Team leader is the best observed finalist, not a proof of a global optimum among all 1,140 trios or every gem/formation build. Hero win rate means team victories when picked, not 1v1 strength. Paired games share seeds and are correlated. AI decisions are not optimal human PvP play.",
+  "phases": [
+    {
+      "phase": "exploration",
+      "matches": 600,
+      "side0Wins": 299,
+      "meanRounds": 12.748333333333333,
+      "meanActions": 54.38666666666666,
+      "fractureMatches": 366
+    },
+    {
+      "phase": "screening",
+      "matches": 200,
+      "side0Wins": 102,
+      "meanRounds": 10.94,
+      "meanActions": 44.57,
+      "fractureMatches": 85
+    },
+    {
+      "phase": "confirmation",
+      "matches": 480,
+      "side0Wins": 248,
+      "meanRounds": 8.145833333333334,
+      "meanActions": 32.17916666666667,
+      "fractureMatches": 27
+    },
+    {
+      "phase": "head-to-head",
+      "matches": 560,
+      "side0Wins": 416,
+      "meanRounds": 7.2196428571428575,
+      "meanActions": 23.78392857142857,
+      "fractureMatches": 0
+    }
+  ],
+  "heroes": [
+    {
+      "id": "riven",
+      "name": "Riven",
+      "class": "Sombrio",
+      "role": "Dano",
+      "games": 180,
+      "wins": 130,
+      "nonMirrorGames": 152,
+      "nonMirrorWins": 116,
+      "damage": 251322,
+      "healing": 24529,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 50,
+      "winRate": 72.22222222222223,
+      "nonMirrorWinRate": 76.3157894736842,
+      "meanDamage": 1396.2333333333333,
+      "meanHealing": 136.2722222222222,
+      "meanProtection": 0
+    },
+    {
+      "id": "noct",
+      "name": "Noct",
+      "class": "Sombrio",
+      "role": "Dano",
+      "games": 180,
+      "wins": 123,
+      "nonMirrorGames": 172,
+      "nonMirrorWins": 119,
+      "damage": 326946,
+      "healing": 46210,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 57,
+      "winRate": 68.33333333333333,
+      "nonMirrorWinRate": 69.18604651162791,
+      "meanDamage": 1816.3666666666666,
+      "meanHealing": 256.72222222222223,
+      "meanProtection": 0
+    },
+    {
+      "id": "astra",
+      "name": "Astra",
+      "class": "Arcano",
+      "role": "Dano",
+      "games": 180,
+      "wins": 122,
+      "nonMirrorGames": 160,
+      "nonMirrorWins": 112,
+      "damage": 273767,
+      "healing": 4694,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 58,
+      "winRate": 67.77777777777777,
+      "nonMirrorWinRate": 70,
+      "meanDamage": 1520.9277777777777,
+      "meanHealing": 26.07777777777778,
+      "meanProtection": 0
+    },
+    {
+      "id": "torv",
+      "name": "Torv",
+      "class": "Ígneo",
+      "role": "Dano",
+      "games": 180,
+      "wins": 119,
+      "nonMirrorGames": 152,
+      "nonMirrorWins": 105,
+      "damage": 259484,
+      "healing": 13768,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 61,
+      "winRate": 66.11111111111111,
+      "nonMirrorWinRate": 69.07894736842105,
+      "meanDamage": 1441.5777777777778,
+      "meanHealing": 76.4888888888889,
+      "meanProtection": 0
+    },
+    {
+      "id": "nima",
+      "name": "Nima",
+      "class": "Natural",
+      "role": "Dano",
+      "games": 180,
+      "wins": 113,
+      "nonMirrorGames": 156,
+      "nonMirrorWins": 101,
+      "damage": 201974,
+      "healing": 6124,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 67,
+      "winRate": 62.77777777777778,
+      "nonMirrorWinRate": 64.74358974358974,
+      "meanDamage": 1122.0777777777778,
+      "meanHealing": 34.022222222222226,
+      "meanProtection": 0
+    },
+    {
+      "id": "veyra",
+      "name": "Veyra",
+      "class": "Ígneo",
+      "role": "Dano",
+      "games": 180,
+      "wins": 111,
+      "nonMirrorGames": 148,
+      "nonMirrorWins": 95,
+      "damage": 259282,
+      "healing": 3418,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 69,
+      "winRate": 61.666666666666664,
+      "nonMirrorWinRate": 64.1891891891892,
+      "meanDamage": 1440.4555555555555,
+      "meanHealing": 18.988888888888887,
+      "meanProtection": 0
+    },
+    {
+      "id": "ivo",
+      "name": "Ivo",
+      "class": "Arcano",
+      "role": "Dano",
+      "games": 180,
+      "wins": 104,
+      "nonMirrorGames": 160,
+      "nonMirrorWins": 94,
+      "damage": 234558,
+      "healing": 4894,
+      "protected": 0,
+      "shieldGranted": 18333,
+      "losses": 76,
+      "winRate": 57.77777777777778,
+      "nonMirrorWinRate": 58.75,
+      "meanDamage": 1303.1,
+      "meanHealing": 27.18888888888889,
+      "meanProtection": 0
+    },
+    {
+      "id": "maura",
+      "name": "Maura",
+      "class": "Sombrio",
+      "role": "Suporte",
+      "games": 180,
+      "wins": 99,
+      "nonMirrorGames": 140,
+      "nonMirrorWins": 79,
+      "damage": 209242,
+      "healing": 130476,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 81,
+      "winRate": 55,
+      "nonMirrorWinRate": 56.42857142857143,
+      "meanDamage": 1162.4555555555555,
+      "meanHealing": 724.8666666666667,
+      "meanProtection": 0
+    },
+    {
+      "id": "kira",
+      "name": "Kira",
+      "class": "Técnico",
+      "role": "Dano",
+      "games": 180,
+      "wins": 98,
+      "nonMirrorGames": 140,
+      "nonMirrorWins": 78,
+      "damage": 212617,
+      "healing": 610,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 82,
+      "winRate": 54.44444444444444,
+      "nonMirrorWinRate": 55.714285714285715,
+      "meanDamage": 1181.2055555555555,
+      "meanHealing": 3.388888888888889,
+      "meanProtection": 0
+    },
+    {
+      "id": "sylva",
+      "name": "Sylva",
+      "class": "Natural",
+      "role": "Suporte",
+      "games": 180,
+      "wins": 91,
+      "nonMirrorGames": 156,
+      "nonMirrorWins": 79,
+      "damage": 88484,
+      "healing": 167196,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 89,
+      "winRate": 50.55555555555556,
+      "nonMirrorWinRate": 50.64102564102564,
+      "meanDamage": 491.5777777777778,
+      "meanHealing": 928.8666666666667,
+      "meanProtection": 0
+    },
+    {
+      "id": "vesper",
+      "name": "Vesper",
+      "class": "Sombrio",
+      "role": "Tanque",
+      "games": 180,
+      "wins": 87,
+      "nonMirrorGames": 156,
+      "nonMirrorWins": 75,
+      "damage": 172395,
+      "healing": 38342,
+      "protected": 0,
+      "shieldGranted": 83122,
+      "losses": 93,
+      "winRate": 48.333333333333336,
+      "nonMirrorWinRate": 48.07692307692308,
+      "meanDamage": 957.75,
+      "meanHealing": 213.01111111111112,
+      "meanProtection": 0
+    },
+    {
+      "id": "cindra",
+      "name": "Cindra",
+      "class": "Ígneo",
+      "role": "Suporte",
+      "games": 180,
+      "wins": 83,
+      "nonMirrorGames": 156,
+      "nonMirrorWins": 71,
+      "damage": 107557,
+      "healing": 3037,
+      "protected": 0,
+      "shieldGranted": 106489,
+      "losses": 97,
+      "winRate": 46.111111111111114,
+      "nonMirrorWinRate": 45.51282051282051,
+      "meanDamage": 597.5388888888889,
+      "meanHealing": 16.872222222222224,
+      "meanProtection": 0
+    },
+    {
+      "id": "brin",
+      "name": "Brin",
+      "class": "Natural",
+      "role": "Suporte",
+      "games": 180,
+      "wins": 75,
+      "nonMirrorGames": 156,
+      "nonMirrorWins": 63,
+      "damage": 60313,
+      "healing": 149459,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 105,
+      "winRate": 41.666666666666664,
+      "nonMirrorWinRate": 40.38461538461539,
+      "meanDamage": 335.0722222222222,
+      "meanHealing": 830.3277777777778,
+      "meanProtection": 0
+    },
+    {
+      "id": "axion",
+      "name": "Axion",
+      "class": "Técnico",
+      "role": "Tanque",
+      "games": 180,
+      "wins": 73,
+      "nonMirrorGames": 144,
+      "nonMirrorWins": 55,
+      "damage": 116948,
+      "healing": 8175,
+      "protected": 0,
+      "shieldGranted": 233058,
+      "losses": 107,
+      "winRate": 40.55555555555556,
+      "nonMirrorWinRate": 38.19444444444444,
+      "meanDamage": 649.7111111111111,
+      "meanHealing": 45.416666666666664,
+      "meanProtection": 0
+    },
+    {
+      "id": "saira",
+      "name": "Saira",
+      "class": "Arcano",
+      "role": "Suporte",
+      "games": 180,
+      "wins": 70,
+      "nonMirrorGames": 144,
+      "nonMirrorWins": 52,
+      "damage": 100500,
+      "healing": 151587,
+      "protected": 0,
+      "shieldGranted": 0,
+      "losses": 110,
+      "winRate": 38.888888888888886,
+      "nonMirrorWinRate": 36.111111111111114,
+      "meanDamage": 558.3333333333334,
+      "meanHealing": 842.15,
+      "meanProtection": 0
+    },
+    {
+      "id": "oren",
+      "name": "Oren",
+      "class": "Natural",
+      "role": "Tanque",
+      "games": 180,
+      "wins": 68,
+      "nonMirrorGames": 152,
+      "nonMirrorWins": 54,
+      "damage": 105612,
+      "healing": 7479,
+      "protected": 35364,
+      "shieldGranted": 116600,
+      "losses": 112,
+      "winRate": 37.77777777777778,
+      "nonMirrorWinRate": 35.526315789473685,
+      "meanDamage": 586.7333333333333,
+      "meanHealing": 41.55,
+      "meanProtection": 196.46666666666667
+    },
+    {
+      "id": "bast",
+      "name": "Bast",
+      "class": "Técnico",
+      "role": "Tanque",
+      "games": 180,
+      "wins": 65,
+      "nonMirrorGames": 144,
+      "nonMirrorWins": 47,
+      "damage": 114613,
+      "healing": 7049,
+      "protected": 32223,
+      "shieldGranted": 169473,
+      "losses": 115,
+      "winRate": 36.111111111111114,
+      "nonMirrorWinRate": 32.638888888888886,
+      "meanDamage": 636.7388888888889,
+      "meanHealing": 39.16111111111111,
+      "meanProtection": 179.01666666666668
+    },
+    {
+      "id": "elun",
+      "name": "Elun",
+      "class": "Arcano",
+      "role": "Tanque",
+      "games": 180,
+      "wins": 65,
+      "nonMirrorGames": 160,
+      "nonMirrorWins": 55,
+      "damage": 184077,
+      "healing": 2374,
+      "protected": 0,
+      "shieldGranted": 166022,
+      "losses": 115,
+      "winRate": 36.111111111111114,
+      "nonMirrorWinRate": 34.375,
+      "meanDamage": 1022.65,
+      "meanHealing": 13.188888888888888,
+      "meanProtection": 0
+    },
+    {
+      "id": "rhazen",
+      "name": "Rhazen",
+      "class": "Ígneo",
+      "role": "Tanque",
+      "games": 180,
+      "wins": 60,
+      "nonMirrorGames": 140,
+      "nonMirrorWins": 40,
+      "damage": 164236,
+      "healing": 1375,
+      "protected": 0,
+      "shieldGranted": 152604,
+      "losses": 120,
+      "winRate": 33.333333333333336,
+      "nonMirrorWinRate": 28.571428571428573,
+      "meanDamage": 912.4222222222222,
+      "meanHealing": 7.638888888888889,
+      "meanProtection": 0
+    },
+    {
+      "id": "vektor",
+      "name": "Vektor",
+      "class": "Técnico",
+      "role": "Suporte",
+      "games": 180,
+      "wins": 44,
+      "nonMirrorGames": 156,
+      "nonMirrorWins": 32,
+      "damage": 69079,
+      "healing": 3736,
+      "protected": 0,
+      "shieldGranted": 32829,
+      "losses": 136,
+      "winRate": 24.444444444444443,
+      "nonMirrorWinRate": 20.512820512820515,
+      "meanDamage": 383.77222222222224,
+      "meanHealing": 20.755555555555556,
+      "meanProtection": 0
+    }
+  ],
+  "roleCompositions": [
+    {
+      "composition": "3 Dano / 0 Tanque / 0 Suporte",
+      "Dano": 3,
+      "Tanque": 0,
+      "Suporte": 0,
+      "games": 66,
+      "wins": 60,
+      "winRate": 90.9090909090909
+    },
+    {
+      "composition": "2 Dano / 1 Tanque / 0 Suporte",
+      "Dano": 2,
+      "Tanque": 1,
+      "Suporte": 0,
+      "games": 152,
+      "wins": 110,
+      "winRate": 72.36842105263158
+    },
+    {
+      "composition": "2 Dano / 0 Tanque / 1 Suporte",
+      "Dano": 2,
+      "Tanque": 0,
+      "Suporte": 1,
+      "games": 190,
+      "wins": 133,
+      "winRate": 70
+    },
+    {
+      "composition": "1 Dano / 1 Tanque / 1 Suporte",
+      "Dano": 1,
+      "Tanque": 1,
+      "Suporte": 1,
+      "games": 308,
+      "wins": 155,
+      "winRate": 50.324675324675326
+    },
+    {
+      "composition": "1 Dano / 0 Tanque / 2 Suporte",
+      "Dano": 1,
+      "Tanque": 0,
+      "Suporte": 2,
+      "games": 122,
+      "wins": 52,
+      "winRate": 42.622950819672134
+    },
+    {
+      "composition": "1 Dano / 2 Tanque / 0 Suporte",
+      "Dano": 1,
+      "Tanque": 2,
+      "Suporte": 0,
+      "games": 128,
+      "wins": 47,
+      "winRate": 36.71875
+    },
+    {
+      "composition": "0 Dano / 1 Tanque / 2 Suporte",
+      "Dano": 0,
+      "Tanque": 1,
+      "Suporte": 2,
+      "games": 98,
+      "wins": 23,
+      "winRate": 23.46938775510204
+    },
+    {
+      "composition": "0 Dano / 0 Tanque / 3 Suporte",
+      "Dano": 0,
+      "Tanque": 0,
+      "Suporte": 3,
+      "games": 16,
+      "wins": 3,
+      "winRate": 18.75
+    },
+    {
+      "composition": "0 Dano / 2 Tanque / 1 Suporte",
+      "Dano": 0,
+      "Tanque": 2,
+      "Suporte": 1,
+      "games": 94,
+      "wins": 15,
+      "winRate": 15.957446808510639
+    },
+    {
+      "composition": "0 Dano / 3 Tanque / 0 Suporte",
+      "Dano": 0,
+      "Tanque": 3,
+      "Suporte": 0,
+      "games": 26,
+      "wins": 2,
+      "winRate": 7.6923076923076925
+    }
+  ],
+  "screening": [
+    {
+      "key": "nima+riven+veyra",
+      "team": [
+        "nima",
+        "riven",
+        "veyra"
+      ],
+      "name": "Nima + Riven + Veyra",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 5.726978038814824,
+      "rounds": 77,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 7.7
+    },
+    {
+      "key": "nima+noct+riven",
+      "team": [
+        "nima",
+        "noct",
+        "riven"
+      ],
+      "name": "Nima + Noct + Riven",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 5.5561317149879885,
+      "rounds": 77,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 7.7
+    },
+    {
+      "key": "astra+nima+riven",
+      "team": [
+        "astra",
+        "nima",
+        "riven"
+      ],
+      "name": "Astra + Nima + Riven",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 5.3066205715156265,
+      "rounds": 78,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 7.8
+    },
+    {
+      "key": "nima+riven+torv",
+      "team": [
+        "nima",
+        "riven",
+        "torv"
+      ],
+      "name": "Nima + Riven + Torv",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 4.641412701455733,
+      "rounds": 84,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 8.4
+    },
+    {
+      "key": "astra+noct+riven",
+      "team": [
+        "astra",
+        "noct",
+        "riven"
+      ],
+      "name": "Astra + Noct + Riven",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 4.419929843961621,
+      "rounds": 101,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 10.1
+    },
+    {
+      "key": "astra+riven+torv",
+      "team": [
+        "astra",
+        "riven",
+        "torv"
+      ],
+      "name": "Astra + Riven + Torv",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 4.2766452933713035,
+      "rounds": 80,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 8
+    },
+    {
+      "key": "astra+riven+veyra",
+      "team": [
+        "astra",
+        "riven",
+        "veyra"
+      ],
+      "name": "Astra + Riven + Veyra",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 3.278088360897586,
+      "rounds": 87,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 8.7
+    },
+    {
+      "key": "riven+torv+veyra",
+      "team": [
+        "riven",
+        "torv",
+        "veyra"
+      ],
+      "name": "Riven + Torv + Veyra",
+      "games": 10,
+      "wins": 10,
+      "winningHp": 2.802258037214298,
+      "rounds": 94,
+      "losses": 0,
+      "winRate": 100,
+      "meanRounds": 9.4
+    },
+    {
+      "key": "noct+riven+torv",
+      "team": [
+        "noct",
+        "riven",
+        "torv"
+      ],
+      "name": "Noct + Riven + Torv",
+      "games": 10,
+      "wins": 8,
+      "winningHp": 4.006462697624564,
+      "rounds": 84,
+      "losses": 2,
+      "winRate": 80,
+      "meanRounds": 8.4
+    },
+    {
+      "key": "kira+vesper+veyra",
+      "team": [
+        "vesper",
+        "kira",
+        "veyra"
+      ],
+      "name": "Vesper + Kira + Veyra",
+      "games": 10,
+      "wins": 8,
+      "winningHp": 2.825343380898936,
+      "rounds": 117,
+      "losses": 2,
+      "winRate": 80,
+      "meanRounds": 11.7
+    },
+    {
+      "key": "noct+riven+veyra",
+      "team": [
+        "noct",
+        "riven",
+        "veyra"
+      ],
+      "name": "Noct + Riven + Veyra",
+      "games": 10,
+      "wins": 7,
+      "winningHp": 3.1011981386029714,
+      "rounds": 95,
+      "losses": 3,
+      "winRate": 70,
+      "meanRounds": 9.5
+    },
+    {
+      "key": "elun+noct+rhazen",
+      "team": [
+        "elun",
+        "rhazen",
+        "noct"
+      ],
+      "name": "Elun + Rhazen + Noct",
+      "games": 10,
+      "wins": 5,
+      "winningHp": 1.1303361512666465,
+      "rounds": 149,
+      "losses": 5,
+      "winRate": 50,
+      "meanRounds": 14.9
+    },
+    {
+      "key": "brin+maura+torv",
+      "team": [
+        "brin",
+        "maura",
+        "torv"
+      ],
+      "name": "Brin + Maura + Torv",
+      "games": 10,
+      "wins": 3,
+      "winningHp": 2.4604864629982712,
+      "rounds": 121,
+      "losses": 7,
+      "winRate": 30,
+      "meanRounds": 12.1
+    },
+    {
+      "key": "astra+brin+vektor",
+      "team": [
+        "brin",
+        "vektor",
+        "astra"
+      ],
+      "name": "Brin + Vektor + Astra",
+      "games": 10,
+      "wins": 2,
+      "winningHp": 1.6314733720748757,
+      "rounds": 132,
+      "losses": 8,
+      "winRate": 20,
+      "meanRounds": 13.2
+    },
+    {
+      "key": "brin+ivo+vektor",
+      "team": [
+        "brin",
+        "vektor",
+        "ivo"
+      ],
+      "name": "Brin + Vektor + Ivo",
+      "games": 10,
+      "wins": 2,
+      "winningHp": 1.5698416096163132,
+      "rounds": 120,
+      "losses": 8,
+      "winRate": 20,
+      "meanRounds": 12
+    },
+    {
+      "key": "axion+oren+rhazen",
+      "team": [
+        "axion",
+        "oren",
+        "rhazen"
+      ],
+      "name": "Axion + Oren + Rhazen",
+      "games": 10,
+      "wins": 2,
+      "winningHp": 0.5707289864526315,
+      "rounds": 143,
+      "losses": 8,
+      "winRate": 20,
+      "meanRounds": 14.3
+    },
+    {
+      "key": "astra+bast+vektor",
+      "team": [
+        "bast",
+        "vektor",
+        "astra"
+      ],
+      "name": "Bast + Vektor + Astra",
+      "games": 10,
+      "wins": 2,
+      "winningHp": 0.4895063299997171,
+      "rounds": 138,
+      "losses": 8,
+      "winRate": 20,
+      "meanRounds": 13.8
+    },
+    {
+      "key": "bast+ivo+rhazen",
+      "team": [
+        "bast",
+        "rhazen",
+        "ivo"
+      ],
+      "name": "Bast + Rhazen + Ivo",
+      "games": 10,
+      "wins": 2,
+      "winningHp": 0.4863469420184267,
+      "rounds": 141,
+      "losses": 8,
+      "winRate": 20,
+      "meanRounds": 14.1
+    },
+    {
+      "key": "cindra+maura+rhazen",
+      "team": [
+        "rhazen",
+        "cindra",
+        "maura"
+      ],
+      "name": "Rhazen + Cindra + Maura",
+      "games": 10,
+      "wins": 2,
+      "winningHp": 0.36575342465753424,
+      "rounds": 130,
+      "losses": 8,
+      "winRate": 20,
+      "meanRounds": 13
+    },
+    {
+      "key": "elun+kira+rhazen",
+      "team": [
+        "elun",
+        "rhazen",
+        "kira"
+      ],
+      "name": "Elun + Rhazen + Kira",
+      "games": 10,
+      "wins": 1,
+      "winningHp": 0.036073059360730596,
+      "rounds": 140,
+      "losses": 9,
+      "winRate": 10,
+      "meanRounds": 14
+    }
+  ],
+  "confirmation": [
+    {
+      "key": "astra+noct+riven",
+      "team": [
+        "astra",
+        "noct",
+        "riven"
+      ],
+      "name": "Astra + Noct + Riven",
+      "games": 60,
+      "wins": 58,
+      "winningHp": 24.683803222780387,
+      "rounds": 520,
+      "losses": 2,
+      "winRate": 96.66666666666667,
+      "meanRounds": 8.666666666666666
+    },
+    {
+      "key": "nima+riven+veyra",
+      "team": [
+        "nima",
+        "riven",
+        "veyra"
+      ],
+      "name": "Nima + Riven + Veyra",
+      "games": 60,
+      "wins": 57,
+      "winningHp": 28.167259267585997,
+      "rounds": 464,
+      "losses": 3,
+      "winRate": 95,
+      "meanRounds": 7.733333333333333
+    },
+    {
+      "key": "astra+nima+riven",
+      "team": [
+        "astra",
+        "nima",
+        "riven"
+      ],
+      "name": "Astra + Nima + Riven",
+      "games": 60,
+      "wins": 57,
+      "winningHp": 27.100916124783275,
+      "rounds": 479,
+      "losses": 3,
+      "winRate": 95,
+      "meanRounds": 7.983333333333333
+    },
+    {
+      "key": "astra+riven+torv",
+      "team": [
+        "astra",
+        "riven",
+        "torv"
+      ],
+      "name": "Astra + Riven + Torv",
+      "games": 60,
+      "wins": 56,
+      "winningHp": 23.534160547055745,
+      "rounds": 479,
+      "losses": 4,
+      "winRate": 93.33333333333333,
+      "meanRounds": 7.983333333333333
+    },
+    {
+      "key": "astra+riven+veyra",
+      "team": [
+        "astra",
+        "riven",
+        "veyra"
+      ],
+      "name": "Astra + Riven + Veyra",
+      "games": 60,
+      "wins": 55,
+      "winningHp": 25.026892530561298,
+      "rounds": 483,
+      "losses": 5,
+      "winRate": 91.66666666666667,
+      "meanRounds": 8.05
+    },
+    {
+      "key": "nima+riven+torv",
+      "team": [
+        "nima",
+        "riven",
+        "torv"
+      ],
+      "name": "Nima + Riven + Torv",
+      "games": 60,
+      "wins": 54,
+      "winningHp": 24.490293973300798,
+      "rounds": 477,
+      "losses": 6,
+      "winRate": 90,
+      "meanRounds": 7.95
+    },
+    {
+      "key": "riven+torv+veyra",
+      "team": [
+        "riven",
+        "torv",
+        "veyra"
+      ],
+      "name": "Riven + Torv + Veyra",
+      "games": 60,
+      "wins": 54,
+      "winningHp": 23.603062092019158,
+      "rounds": 477,
+      "losses": 6,
+      "winRate": 90,
+      "meanRounds": 7.95
+    },
+    {
+      "key": "nima+noct+riven",
+      "team": [
+        "nima",
+        "noct",
+        "riven"
+      ],
+      "name": "Nima + Noct + Riven",
+      "games": 60,
+      "wins": 53,
+      "winningHp": 24.691168816990693,
+      "rounds": 531,
+      "losses": 7,
+      "winRate": 88.33333333333333,
+      "meanRounds": 8.85
+    }
+  ],
+  "headToHead": [
+    {
+      "key": "nima+riven+veyra",
+      "team": [
+        "nima",
+        "riven",
+        "veyra"
+      ],
+      "name": "Nima + Riven + Veyra",
+      "games": 140,
+      "wins": 106,
+      "winningHp": 21.431677259769497,
+      "rounds": 996,
+      "losses": 34,
+      "winRate": 75.71428571428571,
+      "meanRounds": 7.114285714285714
+    },
+    {
+      "key": "astra+nima+riven",
+      "team": [
+        "astra",
+        "nima",
+        "riven"
+      ],
+      "name": "Astra + Nima + Riven",
+      "games": 140,
+      "wins": 90,
+      "winningHp": 16.96987048581329,
+      "rounds": 982,
+      "losses": 50,
+      "winRate": 64.28571428571429,
+      "meanRounds": 7.014285714285714
+    },
+    {
+      "key": "astra+riven+veyra",
+      "team": [
+        "astra",
+        "riven",
+        "veyra"
+      ],
+      "name": "Astra + Riven + Veyra",
+      "games": 140,
+      "wins": 81,
+      "winningHp": 16.93499896330085,
+      "rounds": 971,
+      "losses": 59,
+      "winRate": 57.857142857142854,
+      "meanRounds": 6.935714285714286
+    },
+    {
+      "key": "nima+riven+torv",
+      "team": [
+        "nima",
+        "riven",
+        "torv"
+      ],
+      "name": "Nima + Riven + Torv",
+      "games": 140,
+      "wins": 80,
+      "winningHp": 13.380053908355796,
+      "rounds": 1012,
+      "losses": 60,
+      "winRate": 57.142857142857146,
+      "meanRounds": 7.228571428571429
+    },
+    {
+      "key": "astra+riven+torv",
+      "team": [
+        "astra",
+        "riven",
+        "torv"
+      ],
+      "name": "Astra + Riven + Torv",
+      "games": 140,
+      "wins": 73,
+      "winningHp": 11.120918869261768,
+      "rounds": 1021,
+      "losses": 67,
+      "winRate": 52.142857142857146,
+      "meanRounds": 7.292857142857143
+    },
+    {
+      "key": "riven+torv+veyra",
+      "team": [
+        "riven",
+        "torv",
+        "veyra"
+      ],
+      "name": "Riven + Torv + Veyra",
+      "games": 140,
+      "wins": 46,
+      "winningHp": 5.515677097880524,
+      "rounds": 1011,
+      "losses": 94,
+      "winRate": 32.857142857142854,
+      "meanRounds": 7.2214285714285715
+    },
+    {
+      "key": "nima+noct+riven",
+      "team": [
+        "nima",
+        "noct",
+        "riven"
+      ],
+      "name": "Nima + Noct + Riven",
+      "games": 140,
+      "wins": 43,
+      "winningHp": 3.805609411369095,
+      "rounds": 1036,
+      "losses": 97,
+      "winRate": 30.714285714285715,
+      "meanRounds": 7.4
+    },
+    {
+      "key": "astra+noct+riven",
+      "team": [
+        "astra",
+        "noct",
+        "riven"
+      ],
+      "name": "Astra + Noct + Riven",
+      "games": 140,
+      "wins": 41,
+      "winningHp": 2.610425636741426,
+      "rounds": 1057,
+      "losses": 99,
+      "winRate": 29.285714285714285,
+      "meanRounds": 7.55
+    }
+  ],
+  "headToHeadMatrix": [
+    {
+      "team": "nima+riven+veyra",
+      "opponents": [
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 13
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 14
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 16
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 13
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 19
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 15
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 16
+        }
+      ]
+    },
+    {
+      "team": "astra+nima+riven",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 7
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 8
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 10
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 8
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 19
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 18
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 20
+        }
+      ]
+    },
+    {
+      "team": "astra+riven+veyra",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 6
+        },
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 12
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 11
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 11
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 11
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 16
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 14
+        }
+      ]
+    },
+    {
+      "team": "nima+riven+torv",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 4
+        },
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 10
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 9
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 12
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 16
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 15
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 14
+        }
+      ]
+    },
+    {
+      "team": "astra+riven+torv",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 7
+        },
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 12
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 9
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 8
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 11
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 15
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 11
+        }
+      ]
+    },
+    {
+      "team": "riven+torv+veyra",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 1
+        },
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 1
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 9
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 4
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 9
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 10
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 12
+        }
+      ]
+    },
+    {
+      "team": "nima+noct+riven",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 5
+        },
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 2
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 4
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 5
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 5
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 10
+        },
+        {
+          "opponent": "astra+noct+riven",
+          "games": 20,
+          "wins": 12
+        }
+      ]
+    },
+    {
+      "team": "astra+noct+riven",
+      "opponents": [
+        {
+          "opponent": "nima+riven+veyra",
+          "games": 20,
+          "wins": 4
+        },
+        {
+          "opponent": "astra+nima+riven",
+          "games": 20,
+          "wins": 0
+        },
+        {
+          "opponent": "astra+riven+veyra",
+          "games": 20,
+          "wins": 6
+        },
+        {
+          "opponent": "nima+riven+torv",
+          "games": 20,
+          "wins": 6
+        },
+        {
+          "opponent": "astra+riven+torv",
+          "games": 20,
+          "wins": 9
+        },
+        {
+          "opponent": "riven+torv+veyra",
+          "games": 20,
+          "wins": 8
+        },
+        {
+          "opponent": "nima+noct+riven",
+          "games": 20,
+          "wins": 8
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "team": [
+        "astra",
+        "riven",
+        "torv"
+      ],
+      "name": "Astra + Riven + Torv",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "astra",
+        "noct",
+        "riven"
+      ],
+      "name": "Astra + Noct + Riven",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "noct",
+        "riven",
+        "torv"
+      ],
+      "name": "Noct + Riven + Torv",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "astra",
+        "nima",
+        "riven"
+      ],
+      "name": "Astra + Nima + Riven",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "nima",
+        "riven",
+        "torv"
+      ],
+      "name": "Nima + Riven + Torv",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "nima",
+        "noct",
+        "riven"
+      ],
+      "name": "Nima + Noct + Riven",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "astra",
+        "riven",
+        "veyra"
+      ],
+      "name": "Astra + Riven + Veyra",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "riven",
+        "torv",
+        "veyra"
+      ],
+      "name": "Riven + Torv + Veyra",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "noct",
+        "riven",
+        "veyra"
+      ],
+      "name": "Noct + Riven + Veyra",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "nima",
+        "riven",
+        "veyra"
+      ],
+      "name": "Nima + Riven + Veyra",
+      "source": "hero-rating"
+    },
+    {
+      "team": [
+        "elun",
+        "rhazen",
+        "noct"
+      ],
+      "name": "Elun + Rhazen + Noct",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "elun",
+        "rhazen",
+        "kira"
+      ],
+      "name": "Elun + Rhazen + Kira",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "brin",
+        "vektor",
+        "astra"
+      ],
+      "name": "Brin + Vektor + Astra",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "bast",
+        "vektor",
+        "astra"
+      ],
+      "name": "Bast + Vektor + Astra",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "bast",
+        "rhazen",
+        "ivo"
+      ],
+      "name": "Bast + Rhazen + Ivo",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "rhazen",
+        "cindra",
+        "maura"
+      ],
+      "name": "Rhazen + Cindra + Maura",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "brin",
+        "vektor",
+        "ivo"
+      ],
+      "name": "Brin + Vektor + Ivo",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "axion",
+        "oren",
+        "rhazen"
+      ],
+      "name": "Axion + Oren + Rhazen",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "brin",
+        "maura",
+        "torv"
+      ],
+      "name": "Brin + Maura + Torv",
+      "source": "observed-residual"
+    },
+    {
+      "team": [
+        "vesper",
+        "kira",
+        "veyra"
+      ],
+      "name": "Vesper + Kira + Veyra",
+      "source": "observed-residual"
+    }
+  ],
+  "screenOpponents": [
+    [
+      "sylva",
+      "noct",
+      "riven"
+    ],
+    [
+      "maura",
+      "saira",
+      "astra"
+    ],
+    [
+      "axion",
+      "bast",
+      "kira"
+    ],
+    [
+      "axion",
+      "vektor",
+      "noct"
+    ],
+    [
+      "brin",
+      "kira",
+      "veyra"
+    ]
+  ],
+  "confirmOpponents": [
+    [
+      "brin",
+      "ivo",
+      "veyra"
+    ],
+    [
+      "oren",
+      "maura",
+      "kira"
+    ],
+    [
+      "brin",
+      "maura",
+      "saira"
+    ],
+    [
+      "ivo",
+      "riven",
+      "veyra"
+    ],
+    [
+      "bast",
+      "rhazen",
+      "saira"
+    ],
+    [
+      "astra",
+      "torv",
+      "veyra"
+    ],
+    [
+      "bast",
+      "cindra",
+      "riven"
+    ],
+    [
+      "oren",
+      "brin",
+      "cindra"
+    ],
+    [
+      "oren",
+      "riven",
+      "veyra"
+    ],
+    [
+      "axion",
+      "bast",
+      "cindra"
+    ],
+    [
+      "cindra",
+      "saira",
+      "ivo"
+    ],
+    [
+      "vesper",
+      "brin",
+      "sylva"
+    ],
+    [
+      "cindra",
+      "saira",
+      "astra"
+    ],
+    [
+      "rhazen",
+      "brin",
+      "sylva"
+    ],
+    [
+      "vesper",
+      "riven",
+      "torv"
+    ],
+    [
+      "axion",
+      "nima",
+      "torv"
+    ],
+    [
+      "axion",
+      "bast",
+      "sylva"
+    ],
+    [
+      "axion",
+      "maura",
+      "noct"
+    ],
+    [
+      "sylva",
+      "ivo",
+      "veyra"
+    ],
+    [
+      "oren",
+      "sylva",
+      "astra"
+    ],
+    [
+      "cindra",
+      "vektor",
+      "ivo"
+    ],
+    [
+      "ivo",
+      "noct",
+      "veyra"
+    ],
+    [
+      "brin",
+      "riven",
+      "torv"
+    ],
+    [
+      "oren",
+      "vesper",
+      "kira"
+    ],
+    [
+      "brin",
+      "sylva",
+      "riven"
+    ],
+    [
+      "elun",
+      "noct",
+      "torv"
+    ],
+    [
+      "bast",
+      "astra",
+      "ivo"
+    ],
+    [
+      "oren",
+      "rhazen",
+      "sylva"
+    ],
+    [
+      "oren",
+      "torv",
+      "veyra"
+    ],
+    [
+      "rhazen",
+      "sylva",
+      "riven"
+    ]
+  ],
+  "shortlistWeights": {
+    "veyra": 0.6277913602669081,
+    "rhazen": -1.0036504228867624,
+    "cindra": -0.1670555864674785,
+    "torv": 0.8965705116363126,
+    "sylva": 0.0778034623062129,
+    "oren": -0.6420668674022945,
+    "nima": 0.7829785886934104,
+    "brin": -0.40793377832286876,
+    "axion": -0.6120040566303817,
+    "kira": 0.35386134950305187,
+    "bast": -0.7021547135585746,
+    "vektor": -1.4772286043296619,
+    "astra": 0.9099543073988988,
+    "elun": -0.7432463262315714,
+    "saira": -0.7170104186714057,
+    "ivo": 0.3892398560528205,
+    "vesper": 0.08632795781799464,
+    "maura": 0.20878047192136429,
+    "noct": 0.8421305847245182,
+    "riven": 1.2969123241795055
+  },
+  "winner": {
+    "key": "nima+riven+veyra",
+    "team": [
+      "nima",
+      "riven",
+      "veyra"
+    ],
+    "name": "Nima + Riven + Veyra",
+    "games": 60,
+    "wins": 57,
+    "winningHp": 28.167259267585997,
+    "rounds": 464,
+    "losses": 3,
+    "winRate": 95,
+    "meanRounds": 7.733333333333333
+  },
+  "broadOpponentWinner": {
+    "key": "astra+noct+riven",
+    "team": [
+      "astra",
+      "noct",
+      "riven"
+    ],
+    "name": "Astra + Noct + Riven",
+    "games": 60,
+    "wins": 58,
+    "winningHp": 24.683803222780387,
+    "rounds": 520,
+    "losses": 2,
+    "winRate": 96.66666666666667,
+    "meanRounds": 8.666666666666666
+  }
+}

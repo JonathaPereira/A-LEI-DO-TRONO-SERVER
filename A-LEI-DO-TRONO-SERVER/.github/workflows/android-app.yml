@@ -1,0 +1,197 @@
+name: Android app
+on:
+  push:
+    branches: [main, codex/android-app]
+    paths:
+      [
+        'android/**',
+        'capacitor.config.json',
+        'src/**',
+        'server/**',
+        'supabase/**',
+        'scripts/**',
+        'tests/**',
+        'package*.json',
+        'electron/package*.json',
+        '.github/workflows/android-app.yml',
+      ]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install dependencies and Android SDK
+        run: |
+          npm ci
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+          npx playwright install --with-deps chromium
+      - name: Validate shared source
+        id: shared
+        run: |
+          npm run typecheck
+          npm run format:check
+          npm run build
+          npm test
+          npm test -- --suite browser --filter 'mobile-browser|notifications-browser|voice-recovery-browser'
+      - name: Prepare optional Firebase and permanent signing
+        id: prepare
+        env:
+          FIREBASE_ANDROID_CONFIG_JSON: ${{ secrets.FIREBASE_ANDROID_CONFIG_JSON }}
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os, json, base64
+          from pathlib import Path
+          firebase = os.environ.get('FIREBASE_ANDROID_CONFIG_JSON', '')
+          signed = all(os.environ.get(k) for k in ['KEYSTORE','STORE_PASSWORD','KEY_ALIAS','KEY_PASSWORD'])
+          if firebase:
+              config = json.loads(firebase)
+              if not any(c.get('client_info',{}).get('android_client_info',{}).get('package_name') == 'br.com.mntrono.app' for c in config.get('client',[])):
+                  raise SystemExit('Firebase config must belong to br.com.mntrono.app')
+              Path('android/app/google-services.json').write_text(firebase)
+          if signed:
+              key = Path(os.environ['RUNNER_TEMP']) / 'trono-android.jks'
+              key.write_bytes(base64.b64decode(os.environ['KEYSTORE'], validate=True))
+              with open(os.environ['GITHUB_ENV'],'a') as env:
+                  env.write('TRONO_ANDROID_KEYSTORE_PATH=' + str(key) + '\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write('signed=' + str(signed).lower() + '\n')
+              out.write('firebase=' + str(bool(firebase)).lower() + '\n')
+          PY
+      - name: Prepare actual WebView fixture
+        run: |
+          TRONO_ANDROID_TEST_BACKEND=http://127.0.0.1:10000 npm run android:sync
+          node tests/android-fixture.cjs > /tmp/trono-android-fixture.log 2>&1 &
+          for i in $(seq 1 30); do
+            if grep -q 'Android fixture ready' /tmp/trono-android-fixture.log; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/trono-android-fixture.log
+          exit 1
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Validate native Android microphone, background call and notifications
+        id: device
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none -camera-front none
+          script: |
+            adb reverse tcp:10000 tcp:10000
+            chmod +x android/gradlew
+            android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon --console=plain
+      - name: Package production backend without test fixture
+        id: package
+        env:
+          TRONO_ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          TRONO_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          TRONO_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SIGNED: ${{ steps.prepare.outputs.signed }}
+        run: |
+          npm run android:sync
+          if [ "$SIGNED" = true ]; then
+            android/gradlew -p android :app:assembleRelease :app:bundleRelease --no-daemon --console=plain
+          else
+            android/gradlew -p android :app:assembleDebug --no-daemon --console=plain
+          fi
+          node - <<'JS'
+          const fs=require('node:fs'), crypto=require('node:crypto');
+          const version=require('./electron/package.json').version, signed=process.env.SIGNED==='true';
+          const name=`MN-Trono-${version}-Android${signed?'':'-teste'}.apk`;
+          fs.mkdirSync('artifacts/android-delivery',{recursive:true});
+          fs.copyFileSync(`android/app/build/outputs/apk/${signed?'release/app-release.apk':'debug/app-debug.apk'}`,`artifacts/android-delivery/${name}`);
+          const hash=crypto.createHash('sha256').update(fs.readFileSync(`artifacts/android-delivery/${name}`)).digest('hex');
+          fs.writeFileSync('artifacts/android-delivery/SHA256SUMS.txt',`${hash}  ${name}\n`);
+          if(signed)fs.copyFileSync('android/app/build/outputs/bundle/release/app-release.aab',`artifacts/android-delivery/MN-Trono-${version}-Android.aab`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`name=${name}\nversion=${version}\nsha256=${hash}\n`);
+          JS
+      - name: Publish verified Android preview or signed release
+        id: publication
+        uses: actions/github-script@v7
+        env:
+          APK_NAME: ${{ steps.package.outputs.name }}
+          APP_VERSION: ${{ steps.package.outputs.version }}
+          SIGNED: ${{ steps.prepare.outputs.signed }}
+          FIREBASE_CONFIGURED: ${{ steps.prepare.outputs.firebase }}
+        with:
+          script: |
+            const fs=require('node:fs');
+            const signed=process.env.SIGNED==='true', version=process.env.APP_VERSION;
+            const stable=signed&&context.ref==='refs/heads/main';
+            const tag=stable?`android-v${version}`:`android-preview-v${version}-run-${context.runId}`;
+            const body=[`Fonte: ${context.sha}`,`Testes compartilhados e Android API 35 aprovados.`,`Assinatura: ${signed?'chave permanente configurada':'APK de teste; a assinatura de teste pode mudar entre builds. Não é a distribuição final.'}`,`Firebase no APK: ${process.env.FIREBASE_CONFIGURED==='true'?'configurado; o servidor também precisa da configuração':'pendente; avisos com app fechado ainda não estão ativos.'}`,`O backend precisa incorporar esta alteração para autorizar a origem Android.`, `Não inclui garantia de áudio físico, tela bloqueada prolongada, Bluetooth, todos os fabricantes ou captura de tela do Android.`].join('\n\n');
+            const release=(await github.rest.repos.createRelease({...context.repo,tag_name:tag,target_commitish:context.sha,name:`MN Trono Android ${version}${stable?'':' — teste'}`,body,prerelease:!stable})).data;
+            for(const name of fs.readdirSync('artifacts/android-delivery')) {
+              const data=fs.readFileSync('artifacts/android-delivery/'+name);
+              const asset=(await github.rest.repos.uploadReleaseAsset({...context.repo,release_id:release.id,name,data,headers:{'content-type':'application/octet-stream','content-length':data.length}})).data;
+              if(name===process.env.APK_NAME)core.setOutput('apk_url',asset.browser_download_url);
+            }
+            core.setOutput('release_url',release.html_url);
+      - name: Preserve test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ github.run_id }}
+          path: |
+            artifacts/android*
+            android/app/build/outputs/androidTest-results
+            android/app/build/reports/androidTests
+          if-no-files-found: ignore
+      - name: Publish delivery status without changing source branch
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          SHARED: ${{ steps.shared.outcome }}
+          DEVICE: ${{ steps.device.outcome }}
+          PACKAGE: ${{ steps.package.outcome }}
+          PUBLISHED: ${{ steps.publication.outcome }}
+          APK_URL: ${{ steps.publication.outputs.apk_url }}
+          RELEASE_URL: ${{ steps.publication.outputs.release_url }}
+          APK_NAME: ${{ steps.package.outputs.name }}
+          SHA256: ${{ steps.package.outputs.sha256 }}
+          SIGNED: ${{ steps.prepare.outputs.signed }}
+          FIREBASE_CONFIGURED: ${{ steps.prepare.outputs.firebase }}
+        with:
+          script: |
+            const report={checkedAt:new Date().toISOString(),source:context.sha,runId:context.runId,runUrl:`https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,shared:process.env.SHARED,device:process.env.DEVICE,package:process.env.PACKAGE,published:process.env.PUBLISHED,apkUrl:process.env.APK_URL,releaseUrl:process.env.RELEASE_URL,apkName:process.env.APK_NAME,sha256:process.env.SHA256,signed:process.env.SIGNED==='true',firebaseConfigured:process.env.FIREBASE_CONFIGURED==='true',mainPreserved:context.ref!=='refs/heads/main'};
+            const branch='codex/android-delivery-status';
+            let head;
+            try {head=(await github.rest.git.getRef({...context.repo,ref:'heads/'+branch})).data.object.sha;}
+            catch(error){if(error.status!==404)throw error;head=(await github.rest.git.getRef({...context.repo,ref:'heads/main'})).data.object.sha;await github.rest.git.createRef({...context.repo,ref:'refs/heads/'+branch,sha:head});}
+            const commit=(await github.rest.git.getCommit({...context.repo,commit_sha:head})).data;
+            const blob=(await github.rest.git.createBlob({...context.repo,content:JSON.stringify(report,null,2)+'\n',encoding:'utf-8'})).data;
+            const tree=(await github.rest.git.createTree({...context.repo,base_tree:commit.tree.sha,tree:[{path:'android-delivery-status.json',mode:'100644',type:'blob',sha:blob.sha}]})).data;
+            const next=(await github.rest.git.createCommit({...context.repo,message:'ci: report Android delivery',tree:tree.sha,parents:[head]})).data;
+            await github.rest.git.updateRef({...context.repo,ref:'heads/'+branch,sha:next.sha});
+            await core.summary.addHeading('Android delivery').addCodeBlock(JSON.stringify(report,null,2),'json').write();

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: nexus-pvp
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run pvp:server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: NODE_ENV
+        value: production
+      - key: PVP_ALLOWED_ORIGINS
+        sync: false
+      - key: PVP_ADMIN_TOKEN
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

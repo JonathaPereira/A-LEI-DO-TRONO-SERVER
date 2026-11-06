@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+artifacts
+public
+package-lock.json
+electron/package-lock.json
+docs/archive
+supabase

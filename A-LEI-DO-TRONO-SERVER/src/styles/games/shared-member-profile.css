@@ -1,0 +1,127 @@
+/* Game dependencies extracted from src/styles/profiles/member-profile.css. */
+@scope (#gameSurface) {
+  .profile-files-load {
+    padding: 8px 10px;
+    border: 1px solid #ffffff20;
+    background: #252c3c;
+    color: #dfe4f2;
+    border-radius: 7px;
+    cursor: pointer;
+    font: 500 11px var(--ui-font);
+  } /* Profile settings follow the reference: navigation, editor, then live preview. */
+  .profile-settings-nav > button.active {
+    background: #6557e53b;
+    color: #e6e0ff;
+    box-shadow: inset 3px 0 #8a7cff;
+  }
+  @media (min-width: 1200px) {
+    :scope.desktop-app #desktopSettingsDialog:has([data-settings-panel='account']:not([hidden])) {
+      width: calc(100vw - 32px) !important;
+      max-width: 1600px !important;
+      height: calc(100dvh - 32px) !important;
+      max-height: none !important;
+    }
+    :scope.desktop-app
+      #desktopSettingsDialog:has([data-settings-panel='account']:not([hidden]))
+      .voice-settings-content {
+      padding: 0;
+      overflow: hidden;
+    }
+    :scope.desktop-app #desktopSettingsDialog [data-settings-panel='account']:not([hidden]) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    :scope.desktop-app #desktopSettingsDialog [data-settings-panel='account'] > h2 {
+      display: none;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor {
+      height: 100%;
+      min-height: 0;
+      grid-template-columns: minmax(330px, 1fr) minmax(300px, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 0;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-fields {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 24px 16px 0;
+      grid-column: 1;
+      grid-row: 1;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-preview {
+      position: relative;
+      grid-column: 2;
+      grid-row: 1/-1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      min-height: 0;
+      padding: 35px;
+      overflow: auto;
+      isolation: isolate;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-actions {
+      padding: 12px 20px 0 0;
+      background: none;
+    }
+    :scope.desktop-app #desktopAccountDetails > #storageUsage {
+      display: none;
+    }
+    :scope.desktop-app #desktopAccountDetails > #profileFiles:empty {
+      display: none;
+    }
+  }
+  @media (max-width: 1199px) {
+    :scope.desktop-app #desktopSettingsDialog .profile-editor {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 24px !important;
+      height: auto !important;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-preview {
+      position: relative !important;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 500px;
+      align-self: center;
+      padding: 24px;
+      box-sizing: border-box;
+      isolation: isolate;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-actions {
+      display: flex;
+      position: sticky;
+      bottom: 0;
+      z-index: 3;
+      order: 5;
+      padding: 12px;
+      background: var(--theme-bg);
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-fields {
+      min-height: 0;
+      overflow: visible;
+    }
+  }
+  @media (min-width: 1200px) {
+    :scope.desktop-app #desktopSettingsDialog .profile-editor {
+      align-items: stretch !important;
+    }
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-fields,
+    :scope.desktop-app #desktopSettingsDialog .profile-editor-preview {
+      align-self: stretch !important;
+      height: 100% !important;
+      max-height: 100% !important;
+      box-sizing: border-box !important;
+    }
+  }
+}

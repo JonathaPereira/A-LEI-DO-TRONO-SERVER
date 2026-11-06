@@ -1,0 +1,315 @@
+/* Game dependencies extracted from src/styles/desktop/desktop-shell.css. */
+@scope (#gameSurface) {
+  /* Only the installed app uses this shell. Website layouts remain responsive. */
+  #desktopRail button.active {
+    color: var(--theme-accent);
+    background: var(--theme-soft);
+    border-color: var(--theme-line);
+  }
+  :scope.desktop-app #desktopCallDock {
+    position: fixed;
+    inset: auto 0 0 var(--desktop-rail);
+    height: var(--desktop-dock);
+    z-index: 90;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, max-content) minmax(0, 1fr);
+    align-items: center;
+    gap: 22px;
+    padding: 12px 22px;
+    box-sizing: border-box;
+    border-top: 1px solid var(--theme-line);
+    background: var(--theme-panel);
+    box-shadow: 0 -12px 35px #0002;
+  }
+  :scope.desktop-app #desktopCallDock .call-toolbar {
+    grid-column: 2;
+    min-width: 0;
+    overflow-x: auto;
+    position: static !important;
+    inset: auto !important;
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    width: auto !important;
+    max-width: 100% !important;
+    flex: 0 1 auto !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-control-group {
+    display: contents !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-control-group > small {
+    display: none !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-action {
+    width: auto !important;
+    min-width: 58px !important;
+    flex: none !important;
+    padding: 9px 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-size: 9px !important;
+    border: 1px solid var(--theme-line) !important;
+    border-radius: 11px !important;
+    background: var(--theme-soft) !important;
+    color: var(--theme-text) !important;
+    box-shadow: none !important;
+    line-height: 1.2 !important;
+    min-height: 52px !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-action:hover:not(:disabled) {
+    border-color: var(--theme-accent) !important;
+    background: var(--theme-card) !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-action.active,
+  :scope.desktop-app #desktopCallDock .call-action.settings-active {
+    color: var(--theme-accent) !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-icon {
+    font-size: 18px !important;
+    width: 21px !important;
+    height: 21px !important;
+    background: transparent !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-icon:after {
+    display: none !important;
+  }
+  :scope.desktop-app #voiceSettingsPanel {
+    position: fixed !important;
+    inset: auto 20px calc(var(--desktop-dock) + 12px) auto !important;
+    width: min(560px, calc(100vw - 125px)) !important;
+    max-height: calc(100dvh - 150px) !important;
+    overflow: auto !important;
+    z-index: 120 !important;
+    box-shadow: 0 18px 80px #0008 !important;
+    background: var(--theme-panel) !important;
+    border: 1px solid var(--theme-line) !important;
+    border-radius: 18px !important;
+  }
+  :scope.desktop-app #portalScreen {
+    min-height: calc(100dvh - var(--desktop-dock));
+    width: 100%;
+    overflow: hidden;
+  }
+  :scope.desktop-app #chatOnlyScreen .mn-channel-sidebar {
+    left: var(--desktop-rail) !important;
+    bottom: var(--desktop-dock) !important;
+  }
+  :scope.desktop-app #chatOnlyScreen .chat-app-header {
+    left: calc(var(--desktop-rail) + var(--layout-sidebar-width, 248px)) !important;
+  }
+  :scope.desktop-app #socialPanel.social-chat-hub {
+    left: calc(var(--desktop-rail) + var(--layout-sidebar-width, 248px)) !important;
+    bottom: var(--desktop-dock) !important;
+    height: calc(
+      var(--layout-center-height, 100dvh) - var(--header, 82px) - var(--desktop-dock)
+    ) !important;
+  }
+  :scope.desktop-app .voice-title strong {
+    font-size: 24px;
+  }
+  :scope.desktop-app .voice-title {
+    margin-bottom: 20px;
+  }
+  :scope.desktop-app #socialPanel .voice-section {
+    padding-bottom: 16px !important;
+  }
+  :scope.desktop-app[data-desktop-view='home'] #socialPanel,
+  :scope.desktop-app[data-desktop-view='clips'] #socialPanel,
+  :scope.desktop-app[data-desktop-view='game'] #socialPanel.social-chat-hub {
+    display: none !important;
+  }
+  .desktop-app[data-desktop-view='clips'] > .screen {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  :scope.desktop-app #setupScreen,
+  :scope.desktop-app #roomScreen {
+    max-width: 1100px;
+    margin: auto;
+    padding: 24px;
+  }
+  :scope.desktop-app #gameScreen {
+    padding-bottom: var(--desktop-dock);
+  }
+  :scope.desktop-app #desktopCallDock {
+    z-index: 800;
+  }
+  :scope.desktop-app #voiceSettingsPanel {
+    z-index: 900 !important;
+  }
+  :scope.desktop-app #portalScreen {
+    height: calc(100dvh - var(--desktop-dock));
+    min-height: 0;
+    grid-template-rows: 72px minmax(0, 1fr) 86px;
+  }
+  :scope.desktop-app.chat-only-active #socialPanel.social-chat-hub {
+    left: calc(var(--desktop-rail) + var(--sidebar)) !important;
+    bottom: var(--desktop-dock) !important;
+    height: min(
+      var(--layout-center-height, 100dvh),
+      calc(100dvh - var(--header) - var(--desktop-dock))
+    ) !important;
+  }
+  @media (max-width: 1150px) {
+    :scope.desktop-app #desktopCallDock {
+      justify-content: center;
+      padding-inline: 8px;
+      gap: 8px;
+    }
+    :scope.desktop-app #desktopCallDock .call-action {
+      font-size: 8px !important;
+      min-width: 52px !important;
+      padding: 9px 6px !important;
+    }
+  }
+  :scope.desktop-app #desktopCallDock .call-icon {
+    position: relative;
+    font-size: 0 !important;
+  }
+  :scope.desktop-app #desktopCallDock .call-icon:after {
+    display: block !important;
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    mask: var(--desktop-icon) center/contain no-repeat;
+  }
+  :is(.desktop-app, [data-app-layout='discord']) #joinVoiceBtn {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M4 14v-3a8 8 0 0 1 16 0v3'/%3E%3Crect x='3' y='12' width='4' height='8' rx='2'/%3E%3Crect x='17' y='12' width='4' height='8' rx='2'/%3E%3C/svg%3E");
+  }
+  :is(.desktop-app, [data-app-layout='discord']) #muteMicBtn {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8'/%3E%3C/svg%3E");
+  }
+  :is(.desktop-app, [data-app-layout='discord']) #deafenVoiceBtn {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Cpath d='M3 9h4l5-5v16l-5-5H3zM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14'/%3E%3C/svg%3E");
+  }
+  :is(.desktop-app, [data-app-layout='discord']) #cameraBtn {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='2' y='5' width='14' height='14' rx='3'/%3E%3Cpath d='m16 10 6-4v12l-6-4'/%3E%3C/svg%3E");
+  }
+  :is(.desktop-app, [data-app-layout='discord']) #screenShareBtn {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='2' y='3' width='20' height='14' rx='2'/%3E%3Cpath d='M8 22h8M12 17v5M12 13V6m-4 4 4-4 4 4'/%3E%3C/svg%3E");
+  }
+  :scope.desktop-app #clipToolbarNow {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Ccircle cx='5' cy='6' r='3'/%3E%3Ccircle cx='5' cy='18' r='3'/%3E%3Cpath d='m8 8 14 13M8 16 22 3'/%3E%3C/svg%3E");
+  }
+  :is(.desktop-app, [data-app-layout='discord']) #voiceSettingsBtn {
+    --desktop-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='m9 3 1 2h4l1-2 3 2v3l3 2v4l-3 2v3l-3 2-1-2h-4l-1 2-3-2v-3l-3-2v-4l3-2V5z'/%3E%3C/svg%3E");
+  }
+  :scope.desktop-app #desktopCallDock .danger-active {
+    color: #ff9b9b !important;
+    border-color: #854657 !important;
+  }
+  :scope.desktop-app #desktopCallDock :is(.camera-active, .screen-active) {
+    color: var(--theme-accent) !important;
+    border-color: var(--theme-accent) !important;
+  }
+  :scope.desktop-app #desktopCallDock #joinVoiceBtn.call-active {
+    color: #ff9b9b !important;
+  }
+  :scope.desktop-app #desktopCallDock .danger-active .call-icon:before {
+    content: '';
+    position: absolute;
+    height: 2px;
+    width: 27px;
+    top: 9px;
+    left: -3px;
+    background: currentColor;
+    transform: rotate(-45deg);
+    z-index: 1;
+  } /* Global tools stay above every app page; panels are individually collapsible. */
+  :scope.desktop-app #desktopTopBar {
+    position: fixed;
+    inset: 0 0 auto var(--desktop-rail);
+    height: var(--desktop-top);
+    z-index: 810;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 8px 18px;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--theme-line);
+    background: var(--theme-panel);
+  }
+  :scope.desktop-app #desktopTopBar button {
+    position: static !important;
+    inset: auto !important;
+    min-height: 34px;
+    padding: 7px 12px !important;
+    box-shadow: none !important;
+    font: 600 12px var(--ui-font) !important;
+    border: 1px solid var(--theme-line) !important;
+    border-radius: 9px !important;
+    background: var(--theme-soft) !important;
+    color: var(--theme-text) !important;
+    cursor: pointer;
+  }
+  :scope.desktop-app #desktopTopBar button[aria-expanded='true'],
+  :scope.desktop-app #desktopTopBar button:hover {
+    border-color: var(--theme-accent) !important;
+    color: var(--theme-accent) !important;
+  }
+  .desktop-replay-status.ready:before {
+    background: var(--theme-accent);
+    box-shadow: 0 0 0 4px var(--theme-soft);
+  }
+  :scope.desktop-app #portalScreen {
+    height: calc(100dvh - var(--desktop-dock) - var(--desktop-top));
+  }
+  :scope.desktop-app.chat-only-active #chatOnlyScreen .chat-app-header {
+    top: var(--desktop-top) !important;
+    left: calc(var(--desktop-rail) + var(--sidebar)) !important;
+  }
+  :scope.desktop-app.chat-only-active #chatOnlyScreen .mn-channel-sidebar {
+    inset: var(--desktop-top) auto var(--desktop-dock) var(--desktop-rail) !important;
+    width: var(--sidebar) !important;
+    height: calc(
+      min(var(--layout-sidebar-height, 100dvh), 100dvh) - var(--desktop-top) - var(--desktop-dock)
+    ) !important;
+    max-height: calc(100dvh - var(--desktop-top) - var(--desktop-dock)) !important;
+    box-sizing: border-box;
+  }
+  :scope.desktop-app.chat-only-active #chatOnlyScreen .mn-sidebar-bottom {
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    min-height: 64px;
+    box-sizing: border-box;
+    padding: 12px 6px !important;
+  }
+  :scope.desktop-app.chat-only-active #socialPanel.social-chat-hub {
+    top: calc(var(--header) + var(--desktop-top)) !important;
+    right: 0 !important;
+    height: min(
+      var(--layout-center-height, 100dvh),
+      calc(100dvh - var(--header) - var(--desktop-dock) - var(--desktop-top))
+    ) !important;
+  }
+  :scope.desktop-app #communityPanel.hidden {
+    display: none !important;
+  }
+  :scope.desktop-app #telemetryPanel {
+    position: fixed !important;
+    inset: calc(var(--desktop-top) + 8px) 12px auto auto !important;
+    width: min(540px, calc(100vw - var(--desktop-rail) - 32px));
+    max-height: calc(100dvh - var(--desktop-top) - var(--desktop-dock) - 24px);
+    overflow: auto;
+    z-index: 860 !important;
+    background: var(--theme-panel);
+    border-color: var(--theme-line);
+    color: var(--theme-text);
+    box-sizing: border-box;
+  }
+  :scope.desktop-app #telemetryPanel strong {
+    color: var(--theme-text);
+  }
+  :scope.desktop-app #telemetryPanel .telemetry-grid small {
+    color: var(--theme-muted);
+  }
+}

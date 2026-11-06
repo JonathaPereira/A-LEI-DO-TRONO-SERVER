@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "skill": {"id":"burst", "name":"Ímpeto", "rank":1, "powerMultiplier":1.15, "costDelta":10, "detail":"Fator principal +15%; custo +10 EN. Em apoio sem poder principal, amplia a transferência de energia."},
+  "ultimate": {"id":"economy", "name":"Economia", "rank":2, "powerMultiplier":0.9, "costDelta":-10, "detail":"Fator principal −10%; custo −10 EN. Em apoio sem poder principal, reduz a energia adicional."},
+  "basic": {"id":"rhythm", "name":"Ritmo", "rank":3, "powerMultiplier":0.9, "costDelta":0, "energyGainDelta":4, "detail":"Fator principal −10%; recupera mais 4 EN por ataque básico. Efeitos e recargas permanecem."}
+}

@@ -1,0 +1,111 @@
+role_group,gem_recipe,games,wins,win_rate_pct,mean_ultimates
+3 Danos,3 ATQ,180,150,83.333,0.644
+3 Danos,2 ATQ + 1 VIDA,180,152,84.444,0.728
+3 Danos,2 ATQ + 1 EN,180,144,80.000,1.367
+3 Danos,1 ATQ + 2 VIDA,180,151,83.889,0.822
+3 Danos,1 ATQ + 1 VIDA + 1 EN,180,145,80.556,1.506
+3 Danos,1 ATQ + 2 EN,180,146,81.111,1.606
+3 Danos,3 VIDA,180,158,87.778,0.822
+3 Danos,2 VIDA + 1 EN,180,151,83.889,1.561
+3 Danos,1 VIDA + 2 EN,180,147,81.667,1.689
+3 Danos,3 EN,180,158,87.778,2.483
+3 Danos,Sem gemas,180,125,69.444,0.778
+2 Danos + 1 Tanque,3 ATQ,180,135,75.000,1.033
+2 Danos + 1 Tanque,2 ATQ + 1 VIDA,180,134,74.444,1.172
+2 Danos + 1 Tanque,2 ATQ + 1 EN,180,138,76.667,1.811
+2 Danos + 1 Tanque,1 ATQ + 2 VIDA,180,130,72.222,1.244
+2 Danos + 1 Tanque,1 ATQ + 1 VIDA + 1 EN,180,138,76.667,1.967
+2 Danos + 1 Tanque,1 ATQ + 2 EN,180,126,70.000,2.083
+2 Danos + 1 Tanque,3 VIDA,180,134,74.444,1.406
+2 Danos + 1 Tanque,2 VIDA + 1 EN,180,132,73.333,2.078
+2 Danos + 1 Tanque,1 VIDA + 2 EN,180,131,72.778,2.256
+2 Danos + 1 Tanque,3 EN,180,144,80.000,2.828
+2 Danos + 1 Tanque,Sem gemas,180,102,56.667,1.389
+2 Danos + 1 Suporte,3 ATQ,180,135,75.000,1.378
+2 Danos + 1 Suporte,2 ATQ + 1 VIDA,180,130,72.222,1.528
+2 Danos + 1 Suporte,2 ATQ + 1 EN,180,130,72.222,2.039
+2 Danos + 1 Suporte,1 ATQ + 2 VIDA,180,131,72.778,1.611
+2 Danos + 1 Suporte,1 ATQ + 1 VIDA + 1 EN,180,127,70.556,2.133
+2 Danos + 1 Suporte,1 ATQ + 2 EN,180,126,70.000,2.406
+2 Danos + 1 Suporte,3 VIDA,180,132,73.333,1.733
+2 Danos + 1 Suporte,2 VIDA + 1 EN,180,130,72.222,2.156
+2 Danos + 1 Suporte,1 VIDA + 2 EN,180,127,70.556,2.544
+2 Danos + 1 Suporte,3 EN,180,133,73.889,2.967
+2 Danos + 1 Suporte,Sem gemas,180,97,53.889,1.622
+1 Dano + 2 Tanques,3 ATQ,180,86,47.778,1.756
+1 Dano + 2 Tanques,2 ATQ + 1 VIDA,180,89,49.444,1.889
+1 Dano + 2 Tanques,2 ATQ + 1 EN,180,84,46.667,2.322
+1 Dano + 2 Tanques,1 ATQ + 2 VIDA,180,90,50.000,1.944
+1 Dano + 2 Tanques,1 ATQ + 1 VIDA + 1 EN,180,87,48.333,2.333
+1 Dano + 2 Tanques,1 ATQ + 2 EN,180,81,45.000,2.589
+1 Dano + 2 Tanques,3 VIDA,180,82,45.556,2.072
+1 Dano + 2 Tanques,2 VIDA + 1 EN,180,87,48.333,2.461
+1 Dano + 2 Tanques,1 VIDA + 2 EN,180,79,43.889,2.678
+1 Dano + 2 Tanques,3 EN,180,102,56.667,3.544
+1 Dano + 2 Tanques,Sem gemas,180,68,37.778,1.844
+1 Dano + 1 Tanque + 1 Suporte,3 ATQ,180,102,56.667,2.178
+1 Dano + 1 Tanque + 1 Suporte,2 ATQ + 1 VIDA,180,108,60.000,2.250
+1 Dano + 1 Tanque + 1 Suporte,2 ATQ + 1 EN,180,114,63.333,2.706
+1 Dano + 1 Tanque + 1 Suporte,1 ATQ + 2 VIDA,180,112,62.222,2.344
+1 Dano + 1 Tanque + 1 Suporte,1 ATQ + 1 VIDA + 1 EN,180,111,61.667,2.772
+1 Dano + 1 Tanque + 1 Suporte,1 ATQ + 2 EN,180,110,61.111,3.017
+1 Dano + 1 Tanque + 1 Suporte,3 VIDA,180,115,63.889,2.489
+1 Dano + 1 Tanque + 1 Suporte,2 VIDA + 1 EN,180,111,61.667,2.750
+1 Dano + 1 Tanque + 1 Suporte,1 VIDA + 2 EN,180,110,61.111,3.194
+1 Dano + 1 Tanque + 1 Suporte,3 EN,180,113,62.778,3.711
+1 Dano + 1 Tanque + 1 Suporte,Sem gemas,180,85,47.222,2.244
+1 Dano + 2 Suportes,3 ATQ,180,98,54.444,1.978
+1 Dano + 2 Suportes,2 ATQ + 1 VIDA,180,102,56.667,2.061
+1 Dano + 2 Suportes,2 ATQ + 1 EN,180,103,57.222,2.583
+1 Dano + 2 Suportes,1 ATQ + 2 VIDA,180,106,58.889,2.256
+1 Dano + 2 Suportes,1 ATQ + 1 VIDA + 1 EN,180,106,58.889,2.683
+1 Dano + 2 Suportes,1 ATQ + 2 EN,180,99,55.000,2.911
+1 Dano + 2 Suportes,3 VIDA,180,107,59.444,2.339
+1 Dano + 2 Suportes,2 VIDA + 1 EN,180,103,57.222,2.833
+1 Dano + 2 Suportes,1 VIDA + 2 EN,180,106,58.889,2.994
+1 Dano + 2 Suportes,3 EN,180,99,55.000,3.389
+1 Dano + 2 Suportes,Sem gemas,180,90,50.000,2.161
+3 Tanques,3 ATQ,180,23,12.778,1.828
+3 Tanques,2 ATQ + 1 VIDA,180,23,12.778,1.750
+3 Tanques,2 ATQ + 1 EN,180,16,8.889,2.450
+3 Tanques,1 ATQ + 2 VIDA,180,17,9.444,1.878
+3 Tanques,1 ATQ + 1 VIDA + 1 EN,180,21,11.667,2.383
+3 Tanques,1 ATQ + 2 EN,180,15,8.333,2.578
+3 Tanques,3 VIDA,180,10,5.556,1.850
+3 Tanques,2 VIDA + 1 EN,180,15,8.333,2.522
+3 Tanques,1 VIDA + 2 EN,180,12,6.667,2.572
+3 Tanques,3 EN,180,26,14.444,3.628
+3 Tanques,Sem gemas,180,7,3.889,1.639
+2 Tanques + 1 Suporte,3 ATQ,180,41,22.778,2.211
+2 Tanques + 1 Suporte,2 ATQ + 1 VIDA,180,40,22.222,2.306
+2 Tanques + 1 Suporte,2 ATQ + 1 EN,180,43,23.889,2.789
+2 Tanques + 1 Suporte,1 ATQ + 2 VIDA,180,38,21.111,2.317
+2 Tanques + 1 Suporte,1 ATQ + 1 VIDA + 1 EN,180,44,24.444,2.928
+2 Tanques + 1 Suporte,1 ATQ + 2 EN,180,37,20.556,2.944
+2 Tanques + 1 Suporte,3 VIDA,180,39,21.667,2.278
+2 Tanques + 1 Suporte,2 VIDA + 1 EN,180,39,21.667,2.928
+2 Tanques + 1 Suporte,1 VIDA + 2 EN,180,34,18.889,2.989
+2 Tanques + 1 Suporte,3 EN,180,46,25.556,3.894
+2 Tanques + 1 Suporte,Sem gemas,180,28,15.556,2.144
+1 Tanque + 2 Suportes,3 ATQ,180,64,35.556,2.744
+1 Tanque + 2 Suportes,2 ATQ + 1 VIDA,180,65,36.111,2.739
+1 Tanque + 2 Suportes,2 ATQ + 1 EN,180,62,34.444,3.400
+1 Tanque + 2 Suportes,1 ATQ + 2 VIDA,180,67,37.222,2.872
+1 Tanque + 2 Suportes,1 ATQ + 1 VIDA + 1 EN,180,69,38.333,3.494
+1 Tanque + 2 Suportes,1 ATQ + 2 EN,180,60,33.333,3.528
+1 Tanque + 2 Suportes,3 VIDA,180,62,34.444,2.944
+1 Tanque + 2 Suportes,2 VIDA + 1 EN,180,64,35.556,3.661
+1 Tanque + 2 Suportes,1 VIDA + 2 EN,180,59,32.778,3.633
+1 Tanque + 2 Suportes,3 EN,180,54,30.000,4.128
+1 Tanque + 2 Suportes,Sem gemas,180,55,30.556,2.578
+3 Suportes,3 ATQ,180,55,30.556,2.900
+3 Suportes,2 ATQ + 1 VIDA,180,57,31.667,3.028
+3 Suportes,2 ATQ + 1 EN,180,54,30.000,3.472
+3 Suportes,1 ATQ + 2 VIDA,180,52,28.889,3.067
+3 Suportes,1 ATQ + 1 VIDA + 1 EN,180,52,28.889,3.622
+3 Suportes,1 ATQ + 2 EN,180,51,28.333,3.811
+3 Suportes,3 VIDA,180,52,28.889,3.178
+3 Suportes,2 VIDA + 1 EN,180,55,30.556,3.744
+3 Suportes,1 VIDA + 2 EN,180,63,35.000,3.811
+3 Suportes,3 EN,180,51,28.333,4.117
+3 Suportes,Sem gemas,180,43,23.889,2.850

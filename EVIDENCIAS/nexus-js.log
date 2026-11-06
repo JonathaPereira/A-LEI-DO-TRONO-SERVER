@@ -1,0 +1,68 @@
+
+> projeto-nexus@0.1.0 test
+> node --test tests/*.test.js
+
+✔ six affinities each have a distinct tank, support and damage kit with stable art indices (3.023443ms)
+✔ six-class cycle closes with Lumi over Ígneo and reversed resistance (0.304641ms)
+✔ invalid teams, illegal targets and unavailable actions do not mutate a battle (2.980849ms)
+✔ preview gives exact normal and critical shield/HP endpoints without changing RNG or live state (1.96056ms)
+✔ Veyra consumes a burn for a 40% technique combo, while Riven keeps bleeding on his technique (3.93432ms)
+✔ basic attacks apply their own marks and grant 24 energy; cooldown lasts two personal turns (2.020859ms)
+✔ taunt constrains single-target damage but area attacks still reach all enemies (0.610423ms)
+✔ a live cover guardian receives 25% of a single hit; a dead guardian cannot protect (1.350867ms)
+✔ Sylva seed heals the next attacker, is consumed, and cannot revive (0.64252ms)
+✔ fortification reduces incoming damage and inspiration increases attack (1.171202ms)
+✔ mirror and riposte react once, and do not trigger infinite counter chains (1.461902ms)
+✔ Kira pierces shield while Elun spends his stored shield once for an area supreme (1.570453ms)
+✔ Vektor restores only available energy and purification preserves positive statuses (0.920802ms)
+✔ Maura benefits from allied bleeding to heal the most wounded ally (0.598164ms)
+✔ critical against shield reports exact remaining barrier and useful protection (0.598756ms)
+✔ damage is capped at remaining HP and shield; attacks cannot revive defeated targets (0.381955ms)
+✔ burn and bleeding tick separately after impact and bypass shields; regeneration never revives (0.889927ms)
+✔ Fracture starts at round 12 with 4% max HP, bypasses barriers and ends defensive loops (9.779365ms)
+✔ deterministic AI exercises all twenty-four kits and keeps resources bounded through complete matches (147.057486ms)
+✔ difficulty scales enemy HP and attack, while roles and speeds are persistent (0.20917ms)
+✔ periodic burn, bleeding and regeneration activate exactly twice per target (2.540167ms)
+✔ independent shields add up to the cap without renewing an older layer (0.686987ms)
+✔ round 1 shield expires in round 3 while round 2 shield survives, consuming oldest layers first (0.686266ms)
+✔ basic attacks can target front or rear unless a live enemy is provoking (0.24362ms)
+✔ bleeding reduces direct, secondary, seed and drain healing; previews report the actual reduction (1.132816ms)
+✔ purifying heals apply before cleanse; cleanse removes bleeding but cannot remove Fracture (0.286844ms)
+✔ Fracture reduces every healing source progressively from round 12 and blocks healing from round 21 (1.620677ms)
+✔ one archived hero per affinity returns with a distinct specialty and stable artwork index (0.218122ms)
+✔ dark marks tick actual HP through shields, heal only their living author and record correct off-turn endpoints (0.388265ms)
+✔ mark refresh cannot stack; purification removes marks and preserves elemental protection (0.572026ms)
+✔ Ivo spreads exactly one existing affliction without extending its duration or taking ownership (0.81115ms)
+✔ elemental ward reduces advantageous direct damage only; enemies remain selectable (1.026518ms)
+✔ Sentinel weakens a direct aggressor after contact and never chains counter reactions (0.671073ms)
+✔ a nearly defeated interceptor cannot erase overflow damage and cannot intercept an area attack (1.013379ms)
+✔ Vesper creates two-turn taunt and riposte while multi-status combos consume just one opening (0.529292ms)
+✔ Igneo defensive reflection uses HP damage only, and Torv receives his advertised critical window (1.079767ms)
+✔ an isolated interceptor skips its unavailable ally protection and always selects a legal attack (0.419761ms)
+✔ provoking tank pays a bound defense penalty; cleansing cannot remove that price (0.519118ms)
+✔ opening cover selects a single tank and stops redirecting when that tank falls (0.225233ms)
+✔ AI finishes an exposed damage hero, conserves energy, protects a dying ally and never changes RNG (0.371299ms)
+✔ four original Lumi heroes return with stable identities, portraits and complete distinct kits (15.72901ms)
+✔ the sixth affinity closes the cycle through Sombrio, Lumi and Igneo (0.370698ms)
+✔ Auren purifies and shields one ally with an elemental ward, without granting healing (16.323399ms)
+✔ Elyra heals before purifying bleeding and then grants a separate small barrier (0.716871ms)
+✔ Solen consumes an existing weakened opening only with his ultimate (1.403476ms)
+✔ Zaya restores modest team health and energy without reviving fallen allies (0.648579ms)
+✔ every restored action keeps deterministic public previews equal to actual receipts (18.15278ms)
+✔ free gem copies preserve three slots, reject invalid heroes and apply additive bonuses once (3.994328ms)
+✔ two sockets finish a full battle and reproduce every authoritative action, then persist a separate replay (4285.891603ms)
+✔ server rejects opponent control, illegal targets, forged damage, stale sequence and loadout edits during a match (16.728258ms)
+✔ session tokens reconnect only their own seat; replacement cannot be disconnected by an old socket (52.531486ms)
+✔ turn timeout and exhausted reconnect grace create distinct outcomes, excluded from combat win rates (58.864901ms)
+✔ logs require an admin key, origins are checked and client build mismatches cannot create rooms (39.346389ms)
+PvP: sincronização remota pendente; nova tentativa em 30 segundos.
+✔ remote log failures keep a local copy and retry with a backend-only key (22.586825ms)
+✔ the pt-BR cast contains 96 original real clips for every active hero, independent of browser speech services (14.543311ms)
+ℹ tests 55
+ℹ suites 0
+ℹ pass 55
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4800.298626

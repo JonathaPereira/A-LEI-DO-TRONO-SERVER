@@ -1,0 +1,33 @@
+Continue a Operação Renascimento dos três jogos a partir deste checkpoint.
+
+Repositórios e branches de continuidade:
+- JonathaPereira/A-LEI-DO-TRONO-SERVER — codex/renascimento-audit
+- JonathaPereira/PROJETO-NEXUS — codex/renascimento-save-recovery
+
+Use as fontes completas de RENASCIMENTO-COMPLETO.zip ou clone as duas branches
+acima. O ZIP contém PROMPT_PARA_PROXIMO_CHAT.txt e MANIFESTO.json, com revisões e
+integridade. Não comece do main nem reaplique patches sobre essas fontes completas.
+
+Antes de editar, leia no repositório principal:
+1. AGENTS.md e docs/agents/workflow.md;
+2. docs/RENASCIMENTO_CHECKPOINT.md;
+3. docs/RENASCIMENTO_DIRETRIZ_ORIGINAL.txt (pedido original integral);
+4. docs/RENASCIMENTO.md, especialmente a checklist consolidada e o incremento 11;
+5. docs/MIGRACAO.md.
+No Nexus, leia godot/ROADMAP.md, CAMPAIGN.md, PROGRESSION.md e BALANCING.md.
+
+O trabalho chegou ao campo Corrente do éter. Fases dos chefes ainda não foram
+iniciadas no código. O próximo item recomendado é um chefe com duas fases,
+seguido da expansão da campanha Nexus para seis capítulos/48 missões variadas,
+vínculos/aquisição/jornadas individuais, progressão permanente de Cinzas e
+árvores estratégicas do Atalaia. A diretriz original mantém todas as metas.
+
+Preserve jogos, artes, lore, trios livres e saves. Não recomece os projetos.
+Faça entregas pequenas completas com testes de comportamento, build e inspeção
+apropriados; atualize a checklist e os documentos donos. Continue pelos itens
+pendentes sem depender de prompts repetidos para cada passo. Informe progresso
+em português e diferencie código implementado, testes, simulações e aceite humano.
+
+O usuário autorizou commit/push deste checkpoint nas duas branches. Main, merge,
+PR, deploy e publicação de release não fazem parte dessa autorização. Renascimento
+1.0 ainda não está homologado.

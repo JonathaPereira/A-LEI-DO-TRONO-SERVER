@@ -1,0 +1,10 @@
+/* Only the integrated view: keep the complete arena above the M&N call dock. */
+@media(orientation:landscape) and (min-width:900px){
+ html.mn-embedded .app{padding:0 16px}
+ html.mn-embedded .topbar{height:52px;gap:22px}
+ html.mn-embedded .brand{font-size:14px}
+ html.mn-embedded .brandmark{font-size:27px}
+ html.mn-embedded .brand small{font-size:7px;margin-top:2px}
+ html.mn-embedded .abovegame{height:36px}
+ html.mn-embedded .gameframe.running:not(:fullscreen){width:min(100%,calc((100dvh - 106px)*2));min-height:0;aspect-ratio:2/1;margin-inline:auto}
+}

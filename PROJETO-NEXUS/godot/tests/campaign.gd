@@ -1,0 +1,193 @@
+extends RefCounted
+const Campaign = preload("res://scripts/campaign.gd")
+const Combat = preload("res://scripts/combat.gd")
+const PATH := "user://campaign-test.json"
+
+static func _clean() -> void:
+	for suffix in ["", ".tmp", ".bak", ".bak.tmp", ".v1.bak", ".v1.bak.1", ".v2.bak", ".v3.bak", ".invalid.bak", ".invalid.bak.1"]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH + suffix))
+
+static func _write(value: String) -> void:
+	var file := FileAccess.open(PATH, FileAccess.WRITE)
+	file.store_string(value)
+	file.close()
+
+static func model(check: Callable) -> void:
+	_clean()
+	var engine = Combat.new()
+	var progress = Campaign.new(engine.catalog, PATH)
+	check.call(progress.cleared == 0 and progress.can_play(0) and not progress.can_play(1), "Campaign starts with only the first mission unlocked")
+	check.call(progress.available("ember") == 3 and progress.available("sap") == 3 and progress.available("pulse") == 3, "Starter inventory has three real copies of each gem")
+	check.call(progress.slots("veyra") == ["", "", ""] and progress.available("unknown") == 0, "Empty heroes expose three slots and unknown gems have no inventory")
+	for slot in range(3):
+		check.call(progress.equip("veyra", "ember", slot), "Each of three slots accepts the same gem type")
+	check.call(progress.slots("veyra") == ["ember", "ember", "ember"] and progress.available("ember") == 0, "Three repeated gems consume three copies")
+	check.call(progress.available("ember", "veyra", 1) == 1 and progress.available("ember", "veyra") == 0, "Inventory excludes only the explicitly selected slot, never the whole hero")
+	check.call(progress.equip("veyra", "ember", 1) and not progress.equip("astra", "ember"), "A full inventory allows retaining an equipped gem but rejects a fourth copy")
+	check.call(not progress.equip("minion-root", "sap") and not progress.equip("veyra", "unknown") and not progress.equip("veyra", "sap", -1) and not progress.equip("veyra", "sap", 3), "Only active heroes, known gems and three valid slots can be equipped")
+	var detached: Array = progress.slots("veyra")
+	detached[0] = "sap"
+	check.call(progress.slots("veyra")[0] == "ember", "Slot access returns a copy that cannot mutate saved equipment")
+	check.call(progress.equip("veyra", "sap", 1) and progress.available("ember") == 1 and progress.available("sap") == 2, "Replacing one slot returns only its old copy to inventory")
+	check.call(progress.slots("veyra") == ["ember", "sap", "ember"], "Changing the middle slot preserves both neighboring slots")
+	check.call(progress.equip("veyra", "", 1) and progress.available("sap") == 3, "Removing one gem is free and returns its copy")
+	check.call(progress.equip("veyra", "ember", 1), "An emptied socket can be equipped again")
+	check.call(progress.summary("veyra").contains("1 · Brasa") and progress.summary("veyra").contains("2 · Brasa") and progress.summary("veyra").contains("3 · Brasa"), "Equipment summary explicitly lists all three sockets")
+	check.call(not progress.set_team(["veyra", "veyra", "astra"]), "Campaign roster rejects duplicate heroes")
+	check.call(progress.set_team(["axion", "veyra", "astra"]), "Campaign roster saves three free choices")
+	for slot in range(3):
+		progress.equip("axion", "sap", slot)
+		progress.equip("astra", "pulse", slot)
+	check.call(is_equal_approx(progress.bonuses("veyra").attack, 0.12) and is_equal_approx(progress.bonuses("axion").health, 0.15) and progress.bonuses("astra").energy == 24, "Repeated gem bonuses add to 12 percent attack, 15 percent health and 24 energy")
+	var restored = Campaign.new(engine.catalog, PATH)
+	check.call(restored.team == progress.team and restored.equipped == progress.equipped, "Equipped gems and campaign team survive reopening")
+	check.call(JSON.parse_string(FileAccess.get_file_as_string(PATH)).schemaVersion == 8, "New equipment writes the three-chapter schema at the compatible save path")
+	var baseline: Dictionary = engine.new_battle(progress.team, engine.catalog.default_teams[1])
+	var mission: Dictionary = progress.battle(engine, 0)
+	for pair in [["0-axion", "maxHp", 1.15], ["0-veyra", "attack", 1.12]]:
+		check.call(engine.unit(mission, pair[0])[pair[1]] == engine.rounded(engine.unit(baseline, pair[0])[pair[1]] * pair[2]), "Repeated campaign stat gems add before one final rounding against baseline")
+	check.call(engine.unit(mission, "0-astra").energy == 64 and engine.unit(baseline, "0-astra").energy == 40, "Three energy gems change only campaign starting energy")
+	check.call(engine.unit(mission, "0-veyra").attack == 281 and engine.unit(mission, "0-axion").hp == engine.unit(mission, "0-axion").maxHp, "Triple gems avoid multiplicative or iterative rounding and begin at full health")
+	check.call(engine.unit(baseline, "0-veyra").attack == engine.catalog.hero_by_id.veyra.attack, "Gems never mutate catalog or free combat stats")
+	check.call(engine.catalog.heroes.size() == 24 and not engine.catalog.heroes.any(func(h): return h.role == "Minion"), "Campaign enemies do not enter the selectable roster")
+	check.call(progress.complete(2).has("error") and progress.cleared == 0, "Locked missions cannot award gems")
+	var reward: Dictionary = progress.complete(0)
+	check.call(reward.first and reward.saved and progress.copies("ember") == 4 and progress.can_play(1), "First victory unlocks next mission and awards one gem")
+	check.call(not progress.complete(0).first and progress.copies("ember") == 4, "Replays cannot farm duplicate first-clear rewards")
+	var resumed = Campaign.new(engine.catalog, PATH)
+	check.call(resumed.cleared == 1 and resumed.copies("ember") == 4 and resumed.available("ember") == 1, "First-clear rewards and three equipped copies survive reopening")
+	var legacy := '{"schemaVersion":1,"cleared":1,"team":["sylva","maura","saira"],"equipped":{"veyra":"ember","axion":"sap","astra":"pulse"}}'
+	_write(legacy)
+	var migrated = Campaign.new(engine.catalog, PATH)
+	check.call(migrated.cleared == 1 and migrated.team == ["sylva", "maura", "saira"] and migrated.slots("veyra") == ["ember", "", ""], "Version-one migration preserves chapter, free team and old gem in socket one")
+	check.call(FileAccess.get_file_as_string(PATH) == legacy and not FileAccess.file_exists(PATH + ".v1.bak"), "Loading an old save does not replace the source file")
+	check.call(migrated.available("ember") == 3 and migrated.available("sap") == 2, "Migrated saves receive the new three-copy starter inventory plus earned rewards")
+	check.call(migrated.equip("veyra", "ember", 1) and FileAccess.get_file_as_string(PATH + ".v1.bak") == legacy, "The exact old save is backed up before its first version-two replacement")
+	check.call(JSON.parse_string(FileAccess.get_file_as_string(PATH)).schemaVersion == 8 and Campaign.new(engine.catalog, PATH).slots("veyra") == ["ember", "ember", ""], "Migrated three-slot equipment survives reopening")
+	check.call(migrated.equip("veyra", "pulse", 2) and FileAccess.get_file_as_string(PATH + ".v1.bak") == legacy, "Later saves preserve the original migration backup")
+	var other_legacy: String = legacy.replace('"cleared":1', '"cleared":2')
+	_write(other_legacy)
+	var other_migration = Campaign.new(engine.catalog, PATH)
+	check.call(other_migration.save_progress() and FileAccess.get_file_as_string(PATH + ".v1.bak") == legacy and FileAccess.get_file_as_string(PATH + ".v1.bak.1") == other_legacy, "A different legacy source receives its own backup without overwriting the first")
+	_clean()
+	_write(legacy)
+	DirAccess.make_dir_absolute(ProjectSettings.globalize_path(PATH + ".v1.bak"))
+	var blocked = Campaign.new(engine.catalog, PATH)
+	var old_equipped: Dictionary = blocked.equipped.duplicate(true)
+	check.call(not blocked.equip("veyra", "ember", 1) and blocked.equipped == old_equipped and blocked.error_text.contains("preservar"), "Backup failure reports the problem and rolls back the changed socket")
+	check.call(FileAccess.get_file_as_string(PATH) == legacy, "Backup failure leaves the only original progress file untouched")
+	_clean()
+	var invalid := '{"schemaVersion":2,"cleared":99,"team":["unknown"],"inventory":{"ember":9999},"equipped":{"veyra":["ember","ember","ember","pulse"],"astra":["ember","ember",null],"kira":["ember","unknown",12],"minion-root":["sap","sap","sap"],"oren":"sap","saira":["pulse","pulse","pulse"],"maura":["pulse","sap","sap"],"elun":["sap","sap","sap"]}}'
+	_write(invalid)
+	var sanitized = Campaign.new(engine.catalog, PATH)
+	check.call(sanitized.cleared == 3 and sanitized.team == engine.catalog.default_teams[0] and sanitized.error_text != "", "Invalid progress and team are sanitized with a visible explanation")
+	check.call(sanitized.copies("ember") == 4 and sanitized.available("ember") == 0 and sanitized.available("sap") == 0 and sanitized.available("pulse") == 0, "Invalid inventory claims cannot create excess copies beyond starters and first victories")
+	check.call(sanitized.slots("veyra") == ["ember", "ember", "ember"] and sanitized.slots("astra") == ["ember", "", ""] and sanitized.slots("kira") == ["", "", ""], "Invalid socket types, extra slots and excess repeated gems are discarded safely")
+	check.call(not sanitized.equipped.has("minion-root") and not sanitized.equipped.has("oren") and sanitized.slots("elun") == ["sap", "sap", ""], "Inactive heroes and malformed arrays cannot consume inventory")
+	check.call(sanitized.save_progress() and FileAccess.get_file_as_string(PATH + ".invalid.bak") == invalid, "Saving repaired fields preserves the exact invalid source before replacing it")
+	_clean()
+	_write("not json")
+	var damaged = Campaign.new(engine.catalog, PATH)
+	check.call(damaged.cleared == 0 and damaged.error_text != "" and FileAccess.get_file_as_string(PATH) == "not json", "Corrupt saves report the problem without crashing or deleting the file")
+	check.call(damaged.equip("veyra", "ember") and FileAccess.get_file_as_string(PATH + ".invalid.bak") == "not json", "Recovering from a corrupt save preserves its source instead of silently losing it")
+	_write('{"schemaVersion":999,"cleared":3}')
+	var future = Campaign.new(engine.catalog, PATH)
+	check.call(future.cleared == 0 and future.error_text != "", "Unknown future save schemas are rejected rather than partially misinterpreted")
+	for malformed in ['{"schemaVersion":"2"}', '{"schemaVersion":null}', '[]']:
+		_write(malformed)
+		var rejected = Campaign.new(engine.catalog, PATH)
+		check.call(rejected.cleared == 0 and rejected.equipped.is_empty() and rejected.error_text != "", "Malformed schema types report an error without runtime exceptions")
+	_write('{"schemaVersion":2,"cleared":9e200,"team":["axion","veyra","astra"],"equipped":{}}')
+	var huge_count = Campaign.new(engine.catalog, PATH)
+	check.call(huge_count.cleared == 3 and huge_count.copies("ember") == 4, "Extreme numeric progress is clamped before integer conversion and cannot inflate inventory")
+	var unavailable = Campaign.new(engine.catalog, "user://missing-directory/save.json")
+	check.call(not unavailable.equip("veyra", "ember") and unavailable.equipped.is_empty() and unavailable.error_text != "", "Failed saving rolls back the gem change and explains the failure")
+	var before_team: Array = unavailable.team.duplicate()
+	check.call(not unavailable.set_team(["saira", "maura", "sylva"]) and unavailable.team == before_team, "Failed saving rolls back campaign team changes")
+	var pending: Dictionary = unavailable.complete(0)
+	check.call(pending.first and not pending.saved and unavailable.cleared == 1 and unavailable.error_text != "", "An unsaved earned victory stays in memory and explicitly reports the write failure")
+	_clean()
+
+static func run(tree: SceneTree, scene: PackedScene, check: Callable) -> void:
+	model(check)
+	var app = scene.instantiate()
+	tree.root.add_child(app)
+	await tree.process_frame
+	app.campaign = Campaign.new(app.catalog, PATH)
+	app.reduced_motion = true
+	app.hub.story_button.pressed.emit()
+	await tree.process_frame
+	check.call(app.hub.page == "story" and not app.hub.mission_buttons[0].disabled and app.hub.mission_buttons[1].disabled, "Story menu shows progression locks")
+	var free_teams: Array = app.teams.duplicate(true)
+	app.hub.team_button.pressed.emit()
+	check.call(app.roster_campaign and app.roster_side.disabled, "Story team picker locks enemy selection")
+	app.roster_work[0] = ["axion", "veyra", "astra"]
+	app.roster_dialog.hide()
+	app.roster_dialog.confirmed.emit()
+	check.call(app.campaign.team == ["axion", "veyra", "astra"] and app.teams == free_teams, "Story team changes preserve both free combat teams")
+	app.hub.open("gems")
+	app.hub.selected_hero = "veyra"
+	app.hub.open("gems")
+	app.hub.gem_buttons.ember.pressed.emit()
+	check.call(app.campaign.slots("veyra") == ["ember", "", ""] and app.hub.remove_button.disabled == false, "Gem interface equips the selected socket and enables removal")
+	var games_before: int = app.Lab.read_records().size()
+	app.mode = "local"
+	for index in range(3):
+		app.hub.open("story")
+		app.hub.mission_buttons[index].pressed.emit()
+		await tree.process_frame
+		check.call(app.campaign_mission == index and app.combat_view.visible and not app.hub.visible, "Mission button enters the campaign battlefield")
+		check.call(app.state.units.filter(func(u): return u.side == 1).size() == 3 and app.fighters.size() == 6, "Mission spawns three real enemies and three heroes")
+		check.call(app.roster_button.disabled and not app.mode_picker.visible, "Mission roster and difficulty cannot be changed during battle")
+		if index == 2:
+			check.call(app.combat.unit(app.state, "1-boss-vesper").maxHp > app.catalog.hero_by_id.vesper.hp and app.fighters["1-boss-vesper"].hero_id == "vesper" and app.fighters["1-boss-vesper"].position_label.text.contains("CHEFE"), "Boss has isolated stats, clear identification and Vesper's animated poses")
+		app._start()
+		# Play every campaign fight with the real deterministic engine, including enemy AI.
+		while app.state.phase == "playing" and app.state.turns < 400:
+			var choice: Dictionary = app.campaign.choose_ai(app.combat,app.state)
+			var result: Dictionary = app.campaign.act(app.combat,app.state, choice.actionId, choice.targetId)
+			check.call(not result.has("error"), "Campaign AI action is legal")
+		check.call(app.state.phase == "finished" and app.state.winner == 0, "Default trio can complete each chapter mission with starter gems")
+		app._refresh()
+		check.call(app.campaign.cleared == index + 1 and app.result_dialog.visible, "Victory result advances and saves campaign progress")
+		var copies_before: int = app.campaign.copies(Campaign.MISSIONS[index].reward)
+		app._refresh()
+		check.call(app.campaign.copies(Campaign.MISSIONS[index].reward) == copies_before, "Repeated result rendering cannot duplicate rewards")
+		app.result_dialog.hide()
+		app.result_dialog.confirmed.emit()
+		await tree.process_frame
+		check.call(app.hub.visible and app.hub.page == "story", "Victory confirmation returns to missions")
+	check.call(app.Lab.read_records().size() == games_before, "Campaign matches do not pollute baseline balance statistics")
+	var reload = Campaign.new(app.catalog, PATH)
+	check.call(reload.cleared == 3 and reload.slots("veyra") == ["ember", "", ""], "Completed chapter and three gem sockets persist together")
+	app._begin_mission(2)
+	for actor in app.state.units:
+		if actor.side == 0: actor.hp = 1
+	app.state.cursor = app.state.order.find("1-minion-acolyte")
+	app.combat.current(app.state).energy = 100
+	app.campaign.act(app.combat,app.state, "ultimate", "0-veyra")
+	app._refresh()
+	check.call(app.state.winner == 1 and app.result_dialog.dialog_text.contains("DERROTA") and app.campaign.cleared == 3 and app.campaign.copies("pulse") == 4, "Defeat preserves progress and cannot grant another gem")
+	app.result_dialog.hide()
+	app.result_dialog.confirmed.emit()
+	check.call(app.campaign_mission == 2 and not app.started and app.state.units.all(func(u): return u.hp == u.maxHp), "Retry restores the same mission at full health")
+	app.state.cursor = app.state.order.find("1-boss-vesper")
+	check.call(not app._human_turn(), "Campaign enemies remain AI-controlled even when free combat was in local mode")
+	app._start()
+	app._open_menu()
+	check.call(app.menu_dialog.visible and app.started and app.ai_pending, "Leaving an unfinished mission pauses pending AI and asks before discarding the battle")
+	app.menu_dialog.hide()
+	app.menu_dialog.canceled.emit()
+	check.call(app.campaign_mission == 2 and app.started, "Canceling return keeps the active mission")
+	app._open_menu()
+	app.menu_dialog.hide()
+	app.menu_dialog.confirmed.emit()
+	check.call(app.hub.visible and not app.started and app.campaign.cleared == 3, "Returning to menu cancels pending AI and preserves earned progress")
+	app._enter_free()
+	check.call(app.teams == free_teams and app.state.units.all(func(u): return not u.has("gem")) and app.campaign_mission == -1, "Returning to free combat restores the original teams without gem bonuses")
+	# Let the canceled AI timer return through its generation guard before freeing its owner.
+	await tree.create_timer(0.6).timeout
+	app.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+	_clean()

@@ -1,0 +1,393 @@
+/* Game dependencies extracted from src/styles/navigation/portal.css. */
+@scope (#gameSurface) {
+  /* Dois Reinos: portal M&N + A Lei do Trono */
+  :scope {
+    --font-display: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+    --font-reading: Georgia, 'Times New Roman', serif;
+    --mn-blue: #46b7ff;
+    --mn-blue2: #8bdcff;
+    --mn-deep: #071a35;
+    --throne-gold: #f0bd5d;
+    --throne-amber: #ff7a2f;
+    --throne-red: #a91e20;
+  }
+  :scope,
+  :scope {
+    font-family: var(--font-reading);
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+  .setup-card h1,
+  .brand strong,
+  .law-tracker h3,
+  .event-log-panel h3 {
+    overflow: hidden;
+    background: #030710;
+  }
+  .portal-screen.hidden {
+    display: none !important;
+  }
+  .portal-nav-btn.active {
+    border-color: rgba(113, 190, 255, 0.45);
+    background: linear-gradient(180deg, rgba(45, 105, 183, 0.38), rgba(17, 49, 95, 0.42));
+    color: #edf8ff;
+    box-shadow:
+      inset 0 1px rgba(255, 255, 255, 0.08),
+      0 6px 18px rgba(0, 0, 0, 0.22);
+  }
+  .portal-status-dot.online {
+    background: #24df85;
+    box-shadow:
+      0 0 0 4px rgba(36, 223, 133, 0.1),
+      0 0 13px rgba(36, 223, 133, 0.5);
+  }
+  .portal-status-dot.offline {
+    background: #e16565;
+    box-shadow: 0 0 0 4px rgba(225, 101, 101, 0.1);
+  }
+  @keyframes riftPulse {
+    50% {
+      opacity: 0.55;
+      filter: blur(0.4px);
+    }
+  }
+  @keyframes riftFloat {
+    50% {
+      transform: translateY(-8px) rotate(45deg) scale(1.04);
+    }
+  }
+  @keyframes riftSpark {
+    0% {
+      transform: translateY(35px) scale(0.3);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-70px) scale(0);
+      opacity: 0;
+    }
+  }
+  .portal-volume span {
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: #7f94a5;
+    text-transform: uppercase;
+  }
+  @keyframes musicBar {
+    50% {
+      transform: scaleY(0.35);
+      opacity: 0.6;
+    }
+  }
+  .portal-track-select {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 10px;
+    background: rgba(7, 10, 15, 0.55);
+  }
+  .portal-track-select .track-btn {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 7px;
+    font-size: 8px;
+  }
+  .portal-music-btn {
+    height: 36px;
+    border: 1px solid #38414b;
+    border-radius: 9px;
+    background: #11171e;
+    color: #dce6ec;
+    font-size: 9px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .portal-music-btn {
+    padding: 0 12px;
+  }
+  .portal-music-btn.music-active {
+    border-color: #446e8c;
+    color: #d8f2ff;
+  }
+  .portal-volume {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .portal-volume input {
+    width: 100%;
+    accent-color: #6ec8ff;
+  }
+  .portal-volume output {
+    font-size: 8px;
+    color: #9ba8ae;
+  } /* O lobby passa a funcionar como segundo nível do portal. */
+  .lobby-screen,
+  .room-screen {
+    background:
+      radial-gradient(circle at 50% 12%, rgba(160, 80, 28, 0.13), transparent 33%),
+      linear-gradient(rgba(5, 4, 3, 0.82), rgba(4, 4, 4, 0.93)),
+      url('/assets/portal_realms.png') center/cover fixed;
+  }
+  .lobby-screen .setup-card,
+  .room-screen .setup-card {
+    backdrop-filter: blur(18px);
+    background: linear-gradient(180deg, rgba(23, 17, 12, 0.93), rgba(8, 8, 8, 0.97));
+    border-color: rgba(238, 183, 77, 0.52);
+  }
+  .portal-back-btn {
+    z-index: 5;
+  } /* A página do chat ganha identidade própria M&N sem alterar a lógica de mídia. */
+  .transport-pill {
+    border-color: #35556c !important;
+    color: #a8d8ee !important;
+    background: #0d1b25 !important;
+  }
+  .connection-health {
+    border-color: #2d485d !important;
+    background: #0a151e !important;
+  }
+  :scope.chat-only-active .social-panel.social-chat-hub {
+    background: linear-gradient(145deg, rgba(6, 14, 24, 0.93), rgba(6, 9, 14, 0.985)) !important;
+    border-color: #254d68 !important;
+    box-shadow:
+      0 28px 90px #000d,
+      inset 0 1px rgba(143, 215, 255, 0.035) !important;
+  }
+  :scope.chat-only-active .social-chat-hub .voice-section {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(34, 123, 190, 0.13), transparent 34%),
+      radial-gradient(circle at 87% 85%, rgba(100, 47, 121, 0.08), transparent 34%) !important;
+  }
+  :scope.chat-only-active .social-chat-hub .call-toolbar {
+    border-color: #29485b !important;
+    background: rgba(5, 15, 24, 0.88) !important;
+  }
+  .voice-title strong {
+    font-family: var(--font-display);
+    letter-spacing: 0.025em;
+  }
+  .voice-title .voice-subtitle {
+    letter-spacing: 0.04em;
+  }
+  .voice-actions .call-action {
+    transition:
+      transform 0.15s ease,
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .voice-actions .call-action:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+  :scope.chat-only-active .social-chat-hub .camera-tile,
+  :scope.chat-only-active .social-chat-hub .screen-share-tile {
+    border-color: #294f66 !important;
+    background: #03080d !important;
+    box-shadow:
+      0 14px 38px #0009,
+      0 0 0 1px rgba(93, 192, 255, 0.03) inset !important;
+  }
+  :scope.chat-only-active .social-chat-hub .camera-tile.speaking {
+    border-color: #58c9ff !important;
+    box-shadow:
+      0 0 0 1px rgba(88, 201, 255, 0.22),
+      0 0 28px rgba(44, 155, 216, 0.2) !important;
+  }
+  :scope.chat-only-active .social-chat-hub .court-chat-section {
+    border-left-color: #294b60 !important;
+    background: linear-gradient(180deg, rgba(7, 18, 28, 0.995), rgba(5, 9, 14, 0.998)) !important;
+  } /* Janela de comunicação flutuante: redimensionável e com estado persistente. */
+  .social-panel.social-floating {
+    min-width: 330px;
+    min-height: 330px;
+    max-width: calc(100vw - 10px);
+    max-height: calc(100vh - 10px);
+    resize: none;
+    overflow: hidden;
+  }
+  .social-panel.social-floating .voice-section {
+    min-height: 0;
+    overflow: auto;
+  }
+  .social-resize-grip {
+    display: none;
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    width: 24px;
+    height: 24px;
+    z-index: 90;
+    cursor: nwse-resize;
+    color: #8ebed8;
+    font-size: 13px;
+    place-items: center;
+    border-radius: 8px 0 13px 0;
+    background: linear-gradient(
+      135deg,
+      transparent 0 42%,
+      rgba(88, 171, 218, 0.22) 43% 51%,
+      transparent 52% 60%,
+      rgba(88, 171, 218, 0.5) 61% 69%,
+      transparent 70%
+    );
+  }
+  .social-panel.social-floating .social-resize-grip {
+    display: grid;
+  }
+  .social-panel.resizing {
+    user-select: none;
+    transition: none !important;
+  }
+  .social-mini-dock {
+    position: fixed;
+    z-index: 359;
+    right: 18px;
+    bottom: 18px;
+    min-width: 164px;
+    height: 48px;
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px 5px 7px;
+    border: 1px solid #355872;
+    border-radius: 13px;
+    background: linear-gradient(145deg, rgba(12, 28, 42, 0.96), rgba(8, 13, 19, 0.98));
+    color: #dff5ff;
+    box-shadow:
+      0 16px 40px #000b,
+      0 0 24px rgba(63, 168, 227, 0.11);
+    cursor: pointer;
+  }
+  .social-mini-dock > span {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: #173b56;
+    font-size: 15px;
+  }
+  .social-mini-dock strong {
+    font-size: 9px;
+    text-align: left;
+  }
+  .social-mini-dock em {
+    font-size: 7px;
+    color: #78b9dc;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+  }
+  .social-mini-dock:hover {
+    border-color: #5ea9d4;
+    transform: translateY(-1px);
+  } /* Câmeras e telas podem ser ajustadas pelo canto no Salão Livre. */
+  .media-resize-grip {
+    position: absolute;
+    z-index: 12;
+    right: 2px;
+    bottom: 2px;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px 0 12px 0;
+    background: linear-gradient(
+      135deg,
+      transparent 0 42%,
+      rgba(176, 221, 247, 0.22) 43% 51%,
+      transparent 52% 60%,
+      rgba(176, 221, 247, 0.66) 61% 69%,
+      transparent 70%
+    );
+    color: #d8f1ff;
+    font-size: 11px;
+    cursor: nwse-resize;
+    opacity: 0.72;
+  }
+  .media-resize-grip:hover {
+    opacity: 1;
+  }
+  .camera-tile.media-resizing,
+  .screen-share-tile.media-resizing {
+    user-select: none;
+    transition: none !important;
+  }
+  .screen-share-tile.share-collapsed {
+    min-width: 230px !important;
+    max-width: 100% !important;
+  } /* Tipografia do tabuleiro: medieval, porém legível em português. */
+  .game-screen,
+  .setup-screen,
+  .room-screen {
+    font-family: var(--font-reading);
+  }
+  .brand strong,
+  .player-name,
+  .center-info strong,
+  .hand-toolbar strong,
+  .modal-card h2,
+  .brand strong {
+    font-variant-caps: small-caps;
+    font-size: 15px;
+    letter-spacing: 0.075em;
+  }
+  .modal-card h2,
+  .royal-btn,
+  .icon-btn,
+  .small-btn {
+    letter-spacing: 0.01em;
+  }
+  @media (max-width: 1080px) {
+    .portal-track-select {
+      display: none;
+    }
+  }
+  @media (max-width: 760px) {
+    .portal-music-btn {
+      grid-area: music;
+    }
+    .portal-volume {
+      grid-area: vol;
+      min-width: 150px;
+    }
+    .portal-track-select {
+      display: none;
+    }
+    .social-mini-dock {
+      right: 8px;
+      bottom: 8px;
+    }
+    .social-panel.social-floating {
+      min-width: 0;
+      min-height: 0;
+      resize: none;
+    }
+    .social-panel.social-floating .social-resize-grip {
+      display: none;
+    }
+    .media-resize-grip {
+      display: none;
+    }
+    .screen-share-tile.share-collapsed {
+      min-width: 0 !important;
+    }
+  }
+  @media (max-width: 430px) {
+    .portal-volume {
+      display: none;
+    }
+  }
+}

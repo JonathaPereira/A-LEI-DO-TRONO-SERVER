@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "language": "pt-BR",
+  "synthetic": true,
+  "heroes": {
+    "veyra": {
+      "voice": "pf_dora",
+      "speed": 0.97,
+      "pitch": 0.94,
+      "lines": {
+        "select": "Vamos acender essa luta.",
+        "skill": "Dancem com as brasas!",
+        "ultimate": "Até o sol vai se partir!",
+        "victory": "A última chama é nossa."
+      }
+    },
+    "rhazen": {
+      "voice": "pm_santa",
+      "speed": 0.995,
+      "pitch": 0.965,
+      "lines": {
+        "select": "Fiquem atrás de mim.",
+        "skill": "Meu coração é uma fornalha.",
+        "ultimate": "Sintam o peso da fornalha!",
+        "victory": "Nossa linha não cedeu."
+      }
+    },
+    "cindra": {
+      "voice": "pf_dora",
+      "speed": 1.02,
+      "pitch": 0.99,
+      "lines": {
+        "select": "Eu cubro vocês.",
+        "skill": "Sigam o sinal escarlate.",
+        "ultimate": "As estrelas também queimam!",
+        "victory": "Acertamos em cheio."
+      }
+    },
+    "torv": {
+      "voice": "pm_alex",
+      "speed": 1.045,
+      "pitch": 1.015,
+      "lines": {
+        "select": "Não vou recuar.",
+        "skill": "Chegamos ao ponto de fusão!",
+        "ultimate": "O chão vai se abrir!",
+        "victory": "Ainda tenho fogo nos punhos."
+      }
+    },
+    "sylva": {
+      "voice": "pf_dora",
+      "speed": 1.07,
+      "pitch": 1.04,
+      "lines": {
+        "select": "Toda vida merece florescer.",
+        "skill": "Deixem o jardim cuidar de vocês.",
+        "ultimate": "Que a primavera nunca termine!",
+        "victory": "A vida encontra um caminho."
+      }
+    },
+    "oren": {
+      "voice": "pm_santa",
+      "speed": 0.97,
+      "pitch": 1.065,
+      "lines": {
+        "select": "Ninguém passa por estas raízes.",
+        "skill": "Firmes como o carvalho.",
+        "ultimate": "Floresta, desperte!",
+        "victory": "Continuamos de pé."
+      }
+    },
+    "nima": {
+      "voice": "pf_dora",
+      "speed": 0.995,
+      "pitch": 0.94,
+      "lines": {
+        "select": "Nenhum alvo fora do meu alcance.",
+        "skill": "Um espinho basta.",
+        "ultimate": "Não há fuga entre mil espinhos!",
+        "victory": "O vento trouxe a vitória."
+      }
+    },
+    "brin": {
+      "voice": "pm_alex",
+      "speed": 1.02,
+      "pitch": 0.965,
+      "lines": {
+        "select": "Sigam o ritmo da floresta.",
+        "skill": "Respirem. Eu cuido de vocês.",
+        "ultimate": "Escutem a canção do mundo!",
+        "victory": "Nossa harmonia venceu."
+      }
+    },
+    "axion": {
+      "voice": "pm_alex",
+      "speed": 1.045,
+      "pitch": 0.99,
+      "lines": {
+        "select": "Defesa em posição.",
+        "skill": "Campo de contenção, ativar.",
+        "ultimate": "Protocolo zero. Agora!",
+        "victory": "Equipe preservada. Missão cumprida."
+      }
+    },
+    "kira": {
+      "voice": "pf_dora",
+      "speed": 1.07,
+      "pitch": 1.015,
+      "lines": {
+        "select": "Alvo na mira.",
+        "skill": "Sobrecarga pronta!",
+        "ultimate": "Vocês não podem fugir da órbita!",
+        "victory": "Precisão faz a diferença."
+      }
+    },
+    "bast": {
+      "voice": "pm_santa",
+      "speed": 0.97,
+      "pitch": 1.04,
+      "lines": {
+        "select": "Eu seguro esta linha.",
+        "skill": "Atrás da minha proteção.",
+        "ultimate": "Ativar bastião magnético!",
+        "victory": "Nenhum aliado fica para trás."
+      }
+    },
+    "vektor": {
+      "voice": "pm_alex",
+      "speed": 0.995,
+      "pitch": 1.065,
+      "lines": {
+        "select": "Todos os sistemas prontos.",
+        "skill": "Reparos a caminho.",
+        "ultimate": "Rede de cobalto, conectar!",
+        "victory": "Cálculo perfeito."
+      }
+    },
+    "astra": {
+      "voice": "pf_dora",
+      "speed": 1.02,
+      "pitch": 0.94,
+      "lines": {
+        "select": "As estrelas já escolheram.",
+        "skill": "Sua órbita termina aqui.",
+        "ultimate": "Que o céu inteiro desabe!",
+        "victory": "O destino ficou ao nosso lado."
+      }
+    },
+    "elun": {
+      "voice": "pm_alex",
+      "speed": 1.045,
+      "pitch": 0.965,
+      "lines": {
+        "select": "Toda muralha tem outro lado.",
+        "skill": "Encontrem a saída, se puderem.",
+        "ultimate": "O impossível começa agora!",
+        "victory": "Mais uma possibilidade vencida."
+      }
+    },
+    "saira": {
+      "voice": "pf_dora",
+      "speed": 1.07,
+      "pitch": 0.99,
+      "lines": {
+        "select": "A maré ainda pode mudar.",
+        "skill": "Deixem o éter renovar vocês.",
+        "ultimate": "Constelações, cantem por nós!",
+        "victory": "Trouxemos todos de volta à luz."
+      }
+    },
+    "ivo": {
+      "voice": "pm_alex",
+      "speed": 0.97,
+      "pitch": 1.015,
+      "lines": {
+        "select": "Um passo entre dois mundos.",
+        "skill": "Vocês vão sentir este eco.",
+        "ultimate": "Vou quebrar o horizonte!",
+        "victory": "Esta realidade é nossa."
+      }
+    },
+    "vesper": {
+      "voice": "pf_dora",
+      "speed": 0.995,
+      "pitch": 1.04,
+      "lines": {
+        "select": "Atrás de mim.",
+        "skill": "Eu serei o alvo.",
+        "ultimate": "O eclipse será absoluto!",
+        "victory": "Enquanto eu estiver aqui, vocês vivem."
+      }
+    },
+    "maura": {
+      "voice": "pf_dora",
+      "speed": 1.02,
+      "pitch": 1.065,
+      "lines": {
+        "select": "Até o silêncio deixa marcas.",
+        "skill": "Todo pacto tem um preço.",
+        "ultimate": "Escutem o réquiem das sombras!",
+        "victory": "O silêncio voltou a ser nosso."
+      }
+    },
+    "noct": {
+      "voice": "pm_santa",
+      "speed": 1.045,
+      "pitch": 0.94,
+      "lines": {
+        "select": "Eu já encontrei sua fraqueza.",
+        "skill": "O vazio veio cobrar.",
+        "ultimate": "Que esta noite nunca termine!",
+        "victory": "A escuridão conhece o vencedor."
+      }
+    },
+    "riven": {
+      "voice": "pf_dora",
+      "speed": 1.07,
+      "pitch": 0.965,
+      "lines": {
+        "select": "Guarde bem sua última lembrança.",
+        "skill": "Sua dívida é comigo.",
+        "ultimate": "Lembre-se deste instante!",
+        "victory": "Uma dívida a menos."
+      }
+    },
+    "auren": {
+      "voice": "pm_santa",
+      "speed": 0.96,
+      "pitch": 1.02,
+      "lines": {
+        "select": "Meu juramento continua aceso.",
+        "skill": "A aurora protege você.",
+        "ultimate": "Que a luz sustente nosso caminho!",
+        "victory": "Guardamos mais um amanhecer."
+      }
+    },
+    "elyra": {
+      "voice": "pf_dora",
+      "speed": 0.985,
+      "pitch": 1.015,
+      "lines": {
+        "select": "Há lugar para você na luz.",
+        "skill": "Respire. Eu estou aqui.",
+        "ultimate": "Um novo amanhecer para todos!",
+        "victory": "Ninguém atravessa sozinho."
+      }
+    },
+    "solen": {
+      "voice": "pm_alex",
+      "speed": 1.035,
+      "pitch": 1.045,
+      "lines": {
+        "select": "O horizonte ainda nos espera.",
+        "skill": "Deixe sua força se dispersar.",
+        "ultimate": "Mil sóis, um só instante!",
+        "victory": "Mais um passo além da noite."
+      }
+    },
+    "zaya": {
+      "voice": "pf_dora",
+      "speed": 1.095,
+      "pitch": 1.085,
+      "lines": {
+        "select": "Trago notícias de outra aurora.",
+        "skill": "O próximo passo é de vocês.",
+        "ultimate": "Abram as asas do amanhã!",
+        "victory": "Esta mensagem merece chegar."
+      }
+    }
+  }
+}

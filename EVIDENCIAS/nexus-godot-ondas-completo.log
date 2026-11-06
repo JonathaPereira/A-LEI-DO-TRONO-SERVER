@@ -1,0 +1,66 @@
+
+> projeto-nexus@0.1.0 test:godot
+> node scripts/test-godot.mjs
+
+Importando o projeto com Godot…
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Campaign waves: 32 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Single-carrier objectives: 22 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Lumi restoration: 41 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Ability training: 108 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Team level and hero mastery: 39 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Gem fabrication and fusion: 58 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Equipment progression: 51 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Mission objectives: 38 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Mission identity progression: 37 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Campaign save recovery: 20 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Floating attack receipt: 26 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Classes and RPG workshop: 34 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+HUD, 2D impacts and sound: 196 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+PvP, voice cast and rendering budgets: 202 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Balance and Web mixer: 9 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+2D campaign, menus and automation: 51 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+3D stage validation: 423 checks, 0 failures.
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Vesper art and animation: 33 checks, 0 failures.
+Executando paridade do motor e teste de interface…
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+Godot native validation complete: 1301 checks.
+✓ 36 partidas reproduzidas com resultados idênticos ao JavaScript (2018 ações).
+✓ 1301 verificações nativas, incluindo 1272 de interface: formação, persistência, IA, animação, partida completa e replay.
+✓ Logs exportados reproduzem 282 simulações completas (17730 ações); tabelas CSV e filtros conferidos.

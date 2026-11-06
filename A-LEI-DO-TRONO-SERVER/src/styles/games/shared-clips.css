@@ -1,0 +1,50 @@
+/* Game dependencies extracted from src/styles/clips/clips.css. */
+@scope (#gameSurface) {
+  .clips-heading .dialog-close {
+    position: static;
+    flex: none;
+  }
+  .replay-dot.is-ready {
+    background: var(--theme-accent);
+    box-shadow: 0 0 12px var(--theme-accent);
+  }
+  .clips-tabs button.active {
+    background: var(--theme-soft);
+    color: var(--theme-accent);
+    border-color: var(--theme-line);
+  }
+  #clipToolbarCount {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-left: 4px;
+    border-radius: 5px;
+    background: var(--theme-card);
+    color: var(--theme-accent);
+    font-size: 10px;
+  }
+  :scope.chat-only-active #clipToolbarNow {
+    --mn-icon: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.8"%3E%3Ccircle cx="6" cy="6" r="3"/%3E%3Ccircle cx="6" cy="18" r="3"/%3E%3Cpath d="m8 8 12 12M8 16 20 4"/%3E%3C/svg%3E');
+  }
+  :scope.chat-only-active .call-action[data-open-clips] {
+    --mn-icon: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.8"%3E%3Crect x="3" y="3" width="18" height="18" rx="3"/%3E%3Cpath d="M3 9h18M8 3v6M16 3v6M10 13l5 3-5 3z"/%3E%3C/svg%3E');
+  }
+  :scope.chat-only-active #socialPanel #clipToolbarNow.replay-ready {
+    border-color: var(--theme-accent) !important;
+    background: var(--theme-card) !important;
+    color: var(--theme-accent) !important;
+  }
+  .social-panel:not(.social-chat-hub) .call-control-columns {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+  @media (max-width: 640px) {
+    :scope.chat-only-active #socialPanel .call-toolbar .call-action {
+      flex: 0 1 calc(25% - 6px) !important;
+      min-width: 0 !important;
+      padding: 6px 3px !important;
+      font-size: 9px !important;
+    }
+    .social-panel:not(.social-chat-hub) .call-control-columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+}

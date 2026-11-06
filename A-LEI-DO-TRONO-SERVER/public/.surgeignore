@@ -1,0 +1,9 @@
+# O ZIP conserva o EXE; publique downloads/ separadamente no domínio de downloads.
+*.exe
+*.zip
+*.tar
+*.tgz
+node_modules/
+.git/
+.env
+manual/A_Lei_do_Trono_Manual_v0.4_Edicao_Visual.pdf

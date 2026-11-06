@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "craftUnlock": "gate",
+  "craftCopies": 3,
+  "craftMaterials": 1,
+  "fusionCopies": 3,
+  "levelUnlocks": ["", "eclipse", "tidal-heart"],
+  "bonuses": {"ember": [0.04, 0.05, 0.06], "sap": [0.05, 0.065, 0.08], "pulse": [8, 10, 12]}
+}

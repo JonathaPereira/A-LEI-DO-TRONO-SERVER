@@ -1,0 +1,157 @@
+{
+  "renderer": "Chromium SwiftShader (software, not representative of a real GPU)",
+  "viewport": [
+    1280,
+    720
+  ],
+  "action": "ultimate",
+  "before": [
+    {
+      "embedded": false,
+      "hero": "veyra",
+      "frames": 32,
+      "medianMs": 116.80000000000109,
+      "p95Ms": 316.60000000000036,
+      "worstMs": 333.39999999999964,
+      "over50ms": 32
+    },
+    {
+      "embedded": false,
+      "hero": "astra",
+      "frames": 31,
+      "medianMs": 150,
+      "p95Ms": 266.7000000000007,
+      "worstMs": 300.1000000000022,
+      "over50ms": 30
+    },
+    {
+      "embedded": false,
+      "hero": "saira",
+      "frames": 35,
+      "medianMs": 116.70000000000073,
+      "p95Ms": 266.7000000000007,
+      "worstMs": 333.2999999999993,
+      "over50ms": 35
+    },
+    {
+      "embedded": false,
+      "hero": "vesper",
+      "frames": 20,
+      "medianMs": 150,
+      "p95Ms": 716.5999999999985,
+      "worstMs": 716.5999999999985,
+      "over50ms": 20
+    },
+    {
+      "embedded": true,
+      "hero": "veyra",
+      "frames": 29,
+      "medianMs": 133.3000000000011,
+      "p95Ms": 333.39999999999964,
+      "worstMs": 416.60000000000036,
+      "over50ms": 29
+    },
+    {
+      "embedded": true,
+      "hero": "astra",
+      "frames": 33,
+      "medianMs": 116.70000000000073,
+      "p95Ms": 266.59999999999854,
+      "worstMs": 266.7000000000007,
+      "over50ms": 33
+    },
+    {
+      "embedded": true,
+      "hero": "saira",
+      "frames": 38,
+      "medianMs": 116.70000000000073,
+      "p95Ms": 216.70000000000073,
+      "worstMs": 250,
+      "over50ms": 38
+    },
+    {
+      "embedded": true,
+      "hero": "vesper",
+      "frames": 27,
+      "medianMs": 133.29999999999927,
+      "p95Ms": 333.40000000000146,
+      "worstMs": 516.5999999999985,
+      "over50ms": 27
+    }
+  ],
+  "after": [
+    {
+      "embedded": false,
+      "hero": "veyra",
+      "frames": 44,
+      "medianMs": 100,
+      "p95Ms": 166.60000000000036,
+      "worstMs": 216.70000000000073,
+      "over50ms": 44
+    },
+    {
+      "embedded": false,
+      "hero": "astra",
+      "frames": 51,
+      "medianMs": 100,
+      "p95Ms": 116.70000000000073,
+      "worstMs": 150,
+      "over50ms": 50
+    },
+    {
+      "embedded": false,
+      "hero": "saira",
+      "frames": 48,
+      "medianMs": 100,
+      "p95Ms": 133.39999999999782,
+      "worstMs": 233.29999999999927,
+      "over50ms": 47
+    },
+    {
+      "embedded": false,
+      "hero": "vesper",
+      "frames": 47,
+      "medianMs": 100,
+      "p95Ms": 149.89999999999782,
+      "worstMs": 283.2999999999993,
+      "over50ms": 44
+    },
+    {
+      "embedded": true,
+      "hero": "veyra",
+      "frames": 44,
+      "medianMs": 100,
+      "p95Ms": 166.59999999999854,
+      "worstMs": 216.60000000000036,
+      "over50ms": 44
+    },
+    {
+      "embedded": true,
+      "hero": "astra",
+      "frames": 48,
+      "medianMs": 100,
+      "p95Ms": 133.29999999999927,
+      "worstMs": 150,
+      "over50ms": 48
+    },
+    {
+      "embedded": true,
+      "hero": "saira",
+      "frames": 44,
+      "medianMs": 100,
+      "p95Ms": 166.70000000000073,
+      "worstMs": 283.2000000000007,
+      "over50ms": 44
+    },
+    {
+      "embedded": true,
+      "hero": "vesper",
+      "frames": 45,
+      "medianMs": 100,
+      "p95Ms": 166.79999999999927,
+      "worstMs": 200.10000000000218,
+      "over50ms": 43
+    }
+  ],
+  "note": "Local software rendering reference only. Not a real GPU FPS guarantee; host is a simple iframe, not a full Trono call session."
+}

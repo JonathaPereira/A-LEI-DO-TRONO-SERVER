@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "firstClearExperience": 100,
+  "replayExperience": 25,
+  "teamThresholds": [0, 100, 250, 450, 700, 1000],
+  "growthPerLevel": {"health": 0.02, "attack": 0.01, "defense": 0.01},
+  "masteryPerVictory": 10,
+  "masteryThresholds": [0, 10, 30, 60],
+  "masteryBonusesPerRank": {"Dano": {"attack": 0.005}, "Tanque": {"health": 0.01}, "Suporte": {"energy": 1}}
+}

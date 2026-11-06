@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.pdf binary
+
+# Runtime asset hashes are verified on Windows; keep exact binary/data bytes.
+public/roguelite/assets/** -text
+
+# Preserve unmodified upstream SDK formatting and identify third-party code.
+electron/native-audio/vendor/ViGEmClient/** -whitespace linguist-vendored

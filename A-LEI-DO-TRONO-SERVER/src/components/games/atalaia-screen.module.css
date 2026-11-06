@@ -1,0 +1,40 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.header h1 {
+  flex: 1;
+  font-size: 24px;
+}
+.header small {
+  font-size: 15px;
+  color: var(--text-muted, #aaa);
+}
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+  padding: 24px 0;
+}
+.intro img {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+.intro p {
+  line-height: 1.7;
+}
+.tag {
+  color: #cfb87b;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+@media (max-width: 800px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}

@@ -1,0 +1,205 @@
+name: Windows full app
+on:
+  push:
+    branches: [main, codex/windows-app-foundation, 'codex/desktop-*', 'codex/next-*']
+    paths:
+      [
+        '.gitattributes',
+        'electron/**',
+        'src/**',
+        'public/**',
+        'games/atalaia/**',
+        'games/similo/**',
+        'server/**',
+        'scripts/**',
+        'tests/**',
+        'supabase/**',
+        'package*.json',
+        '*config*',
+        '.github/workflows/windows-app.yml',
+      ]
+  workflow_dispatch:
+    inputs:
+      publish_surge:
+        description: Publish the validated delivery to Surge automatically
+        type: boolean
+        default: true
+      extended_browser:
+        description: Run every browser regression instead of the release journeys
+        type: boolean
+        default: false
+      refresh_instructions:
+        description: Refresh only instructions and hashes in an existing draft release
+        type: boolean
+        default: false
+      release_tag:
+        description: Exact draft build tag, required for instruction refresh
+        type: string
+        default: ''
+permissions:
+  contents: write
+  actions: write
+jobs:
+  refresh-instructions:
+    if: github.event_name == 'workflow_dispatch' && inputs.refresh_instructions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Refresh only the draft instructions and checksums
+        uses: actions/github-script@v7
+        env:
+          TASK_RELEASE_TAG: ${{ inputs.release_tag }}
+        with:
+          script: |
+            const fs=require('node:fs'),crypto=require('node:crypto');
+            const version=require('./electron/package.json').version;
+            const tag=process.env.TASK_RELEASE_TAG;
+            if(!tag.startsWith(`desktop-v${version}-run-`)||!/^[a-zA-Z0-9.-]+$/.test(tag))throw Error('Choose a build tag for the current desktop version.');
+            const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
+            const release=releases.find(r=>r.tag_name===tag);
+            if(!release?.draft)throw Error('Only a draft release can have its instructions refreshed.');
+            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`,`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`];
+            const lines=names.map(name=>{
+              const asset=release.assets.find(a=>a.name===name);
+              if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
+              return asset.digest.slice(7)+'  '+name;
+            });
+            const instructions=fs.readFileSync('electron/LEIA-ME-WINDOWS.txt');
+            if(!instructions.toString('utf8').split(/\r?\n/)[0].includes('Windows '+version))throw Error('Instruction heading must match the desktop version.');
+            lines.push(crypto.createHash('sha256').update(instructions).digest('hex')+'  LEIA-ME-WINDOWS.txt');
+            const files=[{name:'LEIA-ME-WINDOWS.txt',data:instructions},{name:`SHA256SUMS-${version}.txt`,data:Buffer.from(lines.join('\n')+'\n')}];
+            for(const file of files){
+              const old=release.assets.find(a=>a.name===file.name);
+              if(old)await github.rest.repos.deleteReleaseAsset({...context.repo,asset_id:old.id});
+              await github.rest.repos.uploadReleaseAsset({...context.repo,release_id:release.id,name:file.name,data:file.data,headers:{'content-type':'text/plain','content-length':file.data.length}});
+            }
+            core.notice('Instructions refreshed; EXE and ZIP assets were preserved: '+release.html_url);
+  windows:
+    name: Validate and package Windows
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
+    runs-on: windows-latest
+    timeout-minutes: ${{ inputs.extended_browser && 35 || 25 }}
+    outputs:
+      release_tag: ${{ steps.distribution.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            electron/package-lock.json
+      - name: Install dependencies once
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx playwright install chromium
+          exit $LASTEXITCODE
+      - name: Export the complete Atalaia game for the web
+        shell: pwsh
+        run: |
+          node scripts/prepare-godot.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/build-atalaia.cjs 2>&1 | Tee-Object artifacts/atalaia-build.log
+          exit $LASTEXITCODE
+      - name: Prepare Similo art for its separate static domain
+        run: node scripts/build-similo-art.cjs
+      - name: Check sources and build frontend and native helpers once
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run format:check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix electron run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/desktop/prepare-ffmpeg.cjs
+          exit $LASTEXITCODE
+      - name: Verify contracts and real user journeys
+        shell: pwsh
+        env:
+          EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
+        run: |
+          npm test 2>&1 | Tee-Object artifacts/windows-core.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $selection = @('--suite', 'browser', '--profile', 'release')
+          if ($env:EXTENDED_BROWSER -eq 'true') { $selection = @('--suite', 'browser') }
+          npm test -- @selection 2>&1 | Tee-Object artifacts/windows-browser.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm test -- --suite desktop --profile release 2>&1 | Tee-Object artifacts/windows-desktop.log
+          exit $LASTEXITCODE
+      - name: Package and smoke test the actual executable
+        shell: pwsh
+        run: |
+          npm --prefix electron run pack:win
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm test -- --suite desktop --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
+          exit $LASTEXITCODE
+      - name: Accept the real installer on the disposable runner
+        shell: pwsh
+        run: |
+          npm test -- --suite desktop --filter '(?:desktop-installer\.js)$' 2>&1 | Tee-Object artifacts/windows-installer.log
+          $testExit = $LASTEXITCODE
+          if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP\b') { $testExit = 1 }
+          exit $testExit
+      - name: Prepare the matched frontend and installer download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          node scripts/desktop/prepare-downloads.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = (Get-Content electron/package.json | ConvertFrom-Json).version
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/atalaia/web), (Join-Path (Resolve-Path artifacts) "Atalaia-Web-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/similo-art), (Join-Path (Resolve-Path artifacts) "Similo-Art-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+      - name: Save the validated delivery in a private draft release
+        id: distribution
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
+            const version=require('./electron/package.json').version;
+            const result=await publishBuild({github,context,core,additionalFiles:[`artifacts/Atalaia-Web-${version}.zip`,`artifacts/Similo-Art-${version}.zip`]});
+            core.setOutput('tag',result.tag);
+      - name: Report failed test summaries
+        if: failure()
+        run: node scripts/desktop/failure-summary.cjs
+      - name: Save failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            artifacts/windows-*.log
+            artifacts/atalaia-build.log
+            artifacts/atalaia/*.png
+            artifacts/similo/screens/*.png
+            artifacts/frontend-reset/call-qa
+            artifacts/frontend-reset/auth-regression/*.png
+            artifacts/profile-media*/failure-*.png
+
+  publish-surge:
+    name: Publish validated delivery to Surge
+    needs: [windows]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish_surge)
+    uses: ./.github/workflows/frontend-publish.yml
+    with:
+      release_tag: ${{ needs.windows.outputs.release_tag }}
+    secrets:
+      SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}

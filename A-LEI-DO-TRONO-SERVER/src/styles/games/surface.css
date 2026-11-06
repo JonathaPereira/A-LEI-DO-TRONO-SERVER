@@ -1,0 +1,50 @@
+/* The preserved games use the full viewport independently of the former shell. */
+@scope (#gameSurface) {
+  :scope {
+    --games-left: 0px !important;
+    --games-top: 0px !important;
+    --games-bottom: 0px !important;
+  }
+
+  :scope
+    :is(
+      #setupScreen,
+      #roomScreen,
+      #gameScreen,
+      #azulScreen,
+      #splendorScreen,
+      #loveLetterScreen,
+      #similoScreen,
+      #ticketToRideScreen,
+      #rogueliteScreen,
+      #nexusScreen
+    ) {
+    position: relative !important;
+    inset: auto !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: auto;
+  }
+}
+
+@scope (#gameSurface) {
+  #similoScreen.similo-immersive {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1500;
+    overflow: auto;
+  }
+}
+@scope (#gameSurface) {
+  #similoScreen {
+    padding: 0 !important;
+  }
+  #similoScreen:fullscreen {
+    width: 100vw !important;
+    height: 100dvh !important;
+    overflow: auto;
+  }
+}

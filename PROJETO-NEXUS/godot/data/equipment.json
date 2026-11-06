@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "firstClearMaterials": 6,
+  "chapterBonusMaterials": 6,
+  "replayMaterials": 2,
+  "chapterEnds": ["eclipse", "tidal-heart", "forge-heart"],
+  "upgradeCosts": [0, 3, 5],
+  "tierUnlocks": ["", "eclipse", "tidal-heart"],
+  "variantUnlock": "eclipse",
+  "slots": [
+    {"id":"weapon", "name":"Arma", "variants":{
+      "standard":{"name":"Arma de assalto", "detail":"Melhorias aumentam o ataque sem alterar os custos das habilidades.", "bonuses":[{}, {"attack":0.04}, {"attack":0.08}]},
+      "channel":{"name":"Canalizador", "detail":"Troca 4% do ataque base por energia inicial: 8, 12 ou 16 por patamar.", "bonuses":[{"attack":-0.04,"energy":8}, {"attack":-0.04,"energy":12}, {"attack":-0.04,"energy":16}]}
+    }},
+    {"id":"protection", "name":"Proteção", "variants":{
+      "standard":{"name":"Manto de salvaguarda", "detail":"Melhorias aumentam a vida máxima e inicial em 6% ou 12%.", "bonuses":[{}, {"health":0.06}, {"health":0.12}]},
+      "bastion":{"name":"Armadura de bastião", "detail":"Troca 4% da vida base por 15%, 30% ou 48% de defesa. Não protege contra dano periódico que ignora defesa.", "bonuses":[{"health":-0.04,"defense":0.15}, {"health":-0.04,"defense":0.30}, {"health":-0.04,"defense":0.48}]}
+    }},
+    {"id":"relic", "name":"Relíquia", "variants":{
+      "standard":{"name":"Selo do ímpeto", "detail":"Melhorias concedem 4 ou 8 de energia inicial.", "bonuses":[{}, {"energy":4}, {"energy":8}]},
+      "anchor":{"name":"Âncora vital", "detail":"Troca 4 de energia inicial por 4%, 8% ou 12% da vida base.", "bonuses":[{"health":0.04,"energy":-4}, {"health":0.08,"energy":-4}, {"health":0.12,"energy":-4}]}
+    }}
+  ]
+}

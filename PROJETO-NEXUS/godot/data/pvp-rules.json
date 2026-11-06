@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "version": "pvp-test-1",
+  "slotCount": 3,
+  "inventory": "unlimited-test",
+  "gems": [
+    {"id":"ember","name":"Brasa lapidada","stat":"attack","bonus":0.04,"effect":"+4% ATQ","color":"f49b70"},
+    {"id":"sap","name":"Seiva cristalizada","stat":"maxHp","bonus":0.05,"effect":"+5% VIDA","color":"8bd5a4"},
+    {"id":"pulse","name":"Pulso de éter","stat":"energy","bonus":8,"effect":"+8 EN inicial","color":"a9a0f6"}
+  ]
+}

@@ -1,0 +1,381 @@
+# Atualizações do aplicativo
+
+Este é o guia mantido para atualizar instalações existentes. A entrega publica
+Windows **1.0.7** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+`downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.7
+
+O replay nativo passa a ler MP4 incrementalmente, evitando recompor o bloco
+incompleto a cada chegada. A criação de um clipe grava as partes do buffer de
+forma assíncrona, sem juntar todo o histórico numa cópia síncrona. O renderer
+remove uma cópia adicional dos bytes do MP4 antes de criar o Blob.
+
+Sob atraso de envio, a captura busca o quadro mais recente quando há capacidade,
+em vez de manter um quadro antigo esperando. O teste de entrega cria três clipes
+consecutivos, conferindo que a captura e a fonte continuam ativas. Pedidos rápidos
+respeitam o limite de dois exports nativos pendentes e mostram espera, sem indicar
+que a captura ficou indisponível.
+
+A transmissão conserva resolução, bitrate, FPS e a política de adaptação existente.
+Copiar diagnóstico inclui métricas anônimas por fluxo: FPS, congelamentos,
+quadros descartados e tempos médios de codificação, fila de envio por pacote,
+decodificação e buffer. Contadores ausentes permanecem indisponíveis. Zero FPS
+medido não é substituído pelos FPS configurados da fonte.
+
+As mudanças reduzem custos reproduzidos; ainda precisam ser avaliadas com jogo
+aberto e NVIDIA física. O caminho de pixels BGRA via IPC continua existindo.
+Backend, banco e credenciais permanecem com seus contratos existentes.
+
+## Windows 1.0.6
+
+A captura local preserva o motivo da interrupção em vez de substituí-lo por
+“Captura local desligada”. Microfone ausente, ocupado/indisponível, permissão
+negada e entrada selecionada indisponível recebem orientação específica;
+Sem som continua sem pedir microfone. O encerramento da fonte tem aviso próprio. Falta de espaço/acesso ao criar um
+clipe mantém o motivo da pausa visível e preserva o clipe em memória para salvar.
+
+Corrige uma falha reproduzida no caminho nativo: meio segundo de atraso na
+primeira confirmação de áudio excedia a fila PCM e encerrava a captura. A fila
+agora guarda até um segundo, com limite de memória, amostras e timestamps
+preservados; um bloqueio maior continua encerrando com mensagem.
+
+Essa falha nativa não explica sozinha o desligamento relatado também no
+Compatível. A causa nesse computador e a qualidade real na RTX 3060 Ti ainda
+precisam ser confirmadas. Captura inicia desligada, requer consentimento e não
+encerra tracks emprestadas da chamada. Não altera backend, dados ou SQL.
+
+### Android na preparação 1.0.6
+
+Incorpora as configurações do APK de correção de login publicado separadamente:
+edição nativa de e-mail/senha e um único tratamento das margens de teclado. A
+origem HTTPS local é preservada para manter acesso aos dados e preferências. A
+primeira versão do APK não tinha essas configurações.
+Erro de login nos aparelhos relatados ainda requer reconferência; uma prévia de
+APK exige aprovação dos testes Android e não equivale a assinatura permanente.
+
+## Windows 1.0.5
+
+Corrige a perda de fluidez no caminho nativo: captura os quadros pela track,
+reutiliza buffers e evita bloquear cada frame pela confirmação do anterior.
+O PCM preserva amostras durante atrasos curtos, corrigindo o descarte que
+produzia chiado. O formato de imagem e os perfis de qualidade são preservados.
+
+O atalho global recupera rejeições temporárias e informa o estado real no
+submenu. A regressão Windows usa a tecla real com outra janela em foco e
+exige que o clipe seja criado antes de qualquer consulta ao renderer.
+Não há alteração de backend ou SQL. Desempenho físico no PC do usuário continua
+dependente da fonte, perfil e GPU; o runner não tem NVIDIA.
+
+## Windows 1.0.4
+
+O HUD de Seus clipes mostra Captura desligada, Iniciando captura e Capturando
+clipes. Som dos clipes inclui microfone e áudio da captura; Sem som exclui ambos.
+O microfone acompanha entrada/saída da chamada sem parar seu track emprestado.
+Permissões negadas e encerramento da captura liberam os recursos próprios.
+
+Codificador oferece Automático, NVIDIA NVENC e Compatível. O aplicativo Windows
+testa codificação NVENC real antes de ativar esse caminho; Automático usa
+Compatível se indisponível. O indicador identifica o encoder efetivo. O caminho
+nativo mantém H.264 em buffer limitado e exporta MP4; Compatível preserva WebM.
+Driver e GPU compatíveis são necessários. O desempenho na GPU do usuário não
+foi medido pelo runner sem NVIDIA. Não há novo SQL ou protocolo de backend.
+
+Banners da sala de voz mostram microfone cortado no mute e microfone + headset
+cortados no deafen, acompanhando o estado privado dos participantes da chamada.
+
+O EXE agora é servido por `mn-trono-downloads.surge.sh`; o manifesto permanece
+em `a-lei-do-trono.surge.sh/downloads/latest.yml`. O atualizador das versões
+anteriores já resolve essa URL absoluta. O ZIP mantém frontend e EXE juntos.
+
+## Windows 1.0.3
+
+Clipes acessíveis nos controles inferiores principais. Captura local optativa
+permite selecionar tela ou janela sem entrar em chamada ou transmitir; inicia
+desligada em cada abertura do app e pode ser encerrada sem apagar clipes criados.
+Qualidade Excelente/Econômica, atalho e pasta ficam no submenu de configurações.
+O preparo de clipes da transmissão continua opcional e preserva a chamada.
+
+O gravador continua usando VP8/WebM. NVENC/AMF/Quick Sync foram avaliados, mas
+a integração nativa ainda não faz parte desta entrega. Não há novo SQL, migração
+de dados ou mudança de protocolo do backend. A versão 1.0.3 permite ao atualizador
+diferenciar esta implementação da 1.0.2 instalada.
+
+## Windows 1.0.2
+
+Reidentifica a entrega de clipes para que instalações 1.0.1 encontrem uma versão
+superior no atualizador. Preserva os clipes da tela transmitida, os perfis de
+qualidade e o controle do buffer temporário já presentes no pacote anterior.
+Somente a versão de distribuição foi incrementada; o comportamento e o protocolo
+do backend permanecem iguais. Instalador, frontend e manifesto são gerados juntos.
+
+## Android em prévia e composição mobile — 1.0.1
+
+A contribuição `codex/android-app` adiciona o host Android e a composição para
+celular. A prévia Android corrigida foi publicada no GitHub; frontend e
+instalador Windows 1.0.1 foram publicados no Surge após aprovação dos workflows,
+com hashes dos downloads completos conferidos. Main/backend ainda aguardam merge.
+
+A barra inferior separa conversa, jogos, amigos, membros e menu; campos e controles
+respeitam toque/teclado. Navegar conserva a chamada e oferece retorno aos controles.
+O APK Android 8+ usa sessão protegida pelo Keystore e serviço de primeiro plano
+somente durante chamada explícita. Encerrar a tarefa/processo não restaura a chamada.
+
+Firebase não está configurado inicialmente. O código prepara avisos genéricos de
+DMs/pedidos com app fechado, bloqueio por conta/mutes e preferência desligada.
+Ativação exige Firebase no APK, segredo de envio no backend, SQL aditivo
+`supabase/upgrade-android-push.sql` e backend atualizado para a origem Android.
+**Não execute install.sql em banco existente.** Passos e assinatura em
+[Android](DESENVOLVIMENTO_DESKTOP.md#android-gerar-e-configurar).
+
+Sem chave permanente, o workflow publica APK de teste; não é o pacote definitivo
+para futuras atualizações. Windows/Surge continuam automáticos depois da aceitação
+Windows do código incorporado à main. A publicação 1.0.1 no Surge foi conferida; publicar o frontend não atualiza
+o backend nem configura o Firebase. Captura nativa da tela/áudio de outros apps, host de Remote PC e push de
+canais não estão implementados no APK. Web/Windows conservam os recursos vigentes.
+
+## Windows 1.0.0
+
+Inicia a numeração pública 1.0 do Trono. Aplicativo, frontend, instalador e
+manifesto de atualização usam 1.0.0; o protocolo do backend permanece compatível.
+
+Similo conserva a orientação da pista também na ampliação. A relação recebida do
+servidor controla tanto a carta quanto a descrição vertical/semelhança ou
+horizontal/diferença, em qualquer tamanho de tela e com movimento reduzido.
+
+A seleção separa “12 cartas da mesa” de “Baralho do informante”. Cada grupo tem
+um tema principal e uma mistura opcional, com resumo dos temas escolhidos. Não
+mostra mais o tamanho do conjunto de temas como se fosse o número de cartas na
+mesa. Mudanças do anfitrião continuam compartilhadas; demais participantes só
+consultam as escolhas. A seleção não permite temas duplicados.
+
+Sem SQL, mudança de regras ou novo requisito de backend para este reparo visual.
+Preserva a recuperação de voz e os demais jogos. Publicação conjunta de frontend
+e instalador continua condicionada à aceitação Windows do mesmo código.
+
+## Windows 0.3.12
+
+Quedas temporárias da conexão de controle mantêm a chamada por até 45 segundos.
+O cliente reconecta automaticamente, autentica a mesma sessão e retoma a mesma
+identidade/assento. Microfone, câmera, compartilhamento e conexões de mídia já
+estabelecidas permanecem com seus donos. A mesa mostra “Reconectando…”; pacotes
+de áudio perdidos não são gravados nem reproduzidos depois.
+
+Sair durante a recuperação libera os dispositivos e não reativa a voz ao voltar.
+Logout, sessão substituída, moderação e prazo esgotado continuam encerrando a
+participação. O servidor preserva a cadeira somente nesse intervalo; reinício do
+processo perde essa reserva em memória e exige entrar novamente.
+
+**Requer também atualizar o backend**: `/health` e o welcome do WebSocket devem
+anunciar `features.voiceResume=true`. Backend antigo mantém o comportamento
+anterior; publicar só o frontend/EXE não habilita a recuperação. Sem SQL novo.
+O instalador e o site continuam sendo publicados juntos após aceitação Windows.
+
+## Windows 0.3.11
+
+Adiciona Similo online ao catálogo: visual escuro, cinco temas com misturas
+independentes para mesa/pistas, capitão alternado para resolver divergências,
+votos animados e informações flutuantes nas 120 cartas. Controles da Corte
+ficam no cabeçalho desse jogo para liberar o HUD.
+
+**Requer atualizar o backend com esta contribuição**, mantendo as variáveis
+existentes. Confira `/health`: `features.similo` deve ser `true`. Não há SQL.
+O frontend informa quando o servidor ainda não oferece o jogo; publicar somente
+o site ou instalar o EXE não adiciona o serviço de partidas ao backend.
+
+O pipeline entrega também `Similo-Art-0.3.11.zip` e publica suas folhas em
+`similo-mn.surge.sh` antes do catálogo. Os hashes do ZIP e de cada folha são
+conferidos. As imagens precisam de rede e ficam fora do EXE para conservar o
+limite de tamanho do site. Regras e operação em [Similo](../games/similo/README.md).
+Preserva avatares, lista de membros aberta por padrão e jogos existentes.
+
+## Windows 0.3.10
+
+Corrige os avatares das mensagens diretas: cada mensagem usa a foto ou o ícone
+do remetente, inclusive a própria conta, e o cabeçalho identifica o destinatário.
+Reutiliza o carregamento de arquivos e a proteção por conta já existentes.
+
+A lista de membros fica aberta por padrão nas telas autenticadas de chamada,
+texto, DMs, catálogo e jogos. Ela mostra online e offline com os dados de presença
+já autorizados. O botão do cabeçalho e o X da lista permitem recolher; a escolha
+permanece durante a navegação e volta a aberta ao trocar de conta ou reiniciar.
+No desktop, a lista reserva uma coluna. Em telas menores, usa uma lateral
+sobreposta, que também fecha com Esc depois dos diálogos/popovers superiores.
+O fullscreen próprio de um jogo conserva sua apresentação imersiva.
+
+Mantém Atalaia Godot 0.2 e as correções anteriores do instalador/atualizador.
+Não há SQL nem alteração do backend nesta entrega. Frontend e instalador seguem
+a publicação conjunta e automática no Surge após aprovação da pipeline.
+
+## Windows 0.3.9
+
+Atualiza Atalaia para Godot 0.2: HUD com indicadores nomeados, contagem animada
+de ouro e barras de integridade/onda/campanha. O campo usa proporção uniforme,
+com recorte dos objetos nos limites do cenário. As três regiões recebem novos
+fundos; as estradas preservam a textura e a geometria aprovadas. Construções,
+reposicionamentos e evoluções têm transições; inimigos mostram dano suavizado
+e recompensas de ouro. Mantém as regras e os saves da campanha Godot existente.
+
+O jogo web 0.6.1 fornecido como referência possui conteúdo adicional (seis
+regiões, 30 ondas, cristais e oficina). Esta entrega visual do Godot conserva
+suas três regiões e 15 ondas; não migra o save da versão web anterior.
+
+Frontend, instalador e Atalaia são preparados pela mesma entrega e publicados
+automaticamente no Surge após aprovação dos testes. A correção do atualizador
+das versões 0.3.7/0.3.8 permanece incluída.
+
+## Windows 0.3.8
+
+O instalador volta a incluir a configuração necessária para baixar atualizações.
+Instalações afetadas precisam instalar esta versão manualmente uma vez; as
+próximas versões poderão ser obtidas pelo atualizador interno.
+
+Inclui as animações públicas do Love Letter: carta, autor, alvo e resultado;
+o Guarda aguarda dois segundos antes de revelar acerto ou erro. A última carta
+permanece ilustrada na mesa, e os favores por vitória e pela Espiã aparecem
+separados. Movimento reduzido e informações secretas são preservados.
+
+A 0.3.8 também alinha os vagões às posições impressas do Ticket to Ride e integra
+Atalaia: Guardiões do Cristal, com o projeto Godot e as artes enviados. O catálogo
+abre o jogo em aba própria na web e janela isolada no Windows; a publicação
+automática inclui o jogo antes de atualizar o frontend.
+
+Entrega da reconstrução A Corte: comunicação, chamada com grade/foco, perfis,
+arquivos, soundboard, clipes e gravação na interface Next.js, React e TypeScript.
+Jogos completos, contratos do backend e recursos existentes são preservados.
+Inclui cancelamento de gravação pendente ao trocar conta, inicialização do
+atualizador e fullscreen independentes da apresentação antiga.
+
+A versão 0.3.8 preserva contas,
+sessão lembrada e preferências. A instalação conserva as correções que encerram
+o aplicativo na bandeja e aceitam diretórios com apóstrofo. Reiniciar encerra a
+chamada: escolha um momento conveniente.
+
+Windows full app encadeia publicação no Surge após validar e empacotar a entrega.
+A distribuição só está concluída quando a verificação do site passa; uma versão
+preparada no código não comprova publicação. Veja o fluxo automático e a repetição
+sem tag em [Distribuição web e Windows](PUBLICAR_SURGE_LEVE.md).
+Esta entrega não introduz SQL nem altera a versão do backend.
+
+### Novidades incorporadas (0.2.11 a 0.3.2 / 0.14.0-alpha)
+
+- **Ticket to Ride**: Novo jogo de tabuleiro ferroviário com mapa interativo, cartas de vagão e bilhetes de destino, pontuação dinâmica e bots.
+- **Nexus Hub & Launcher**: Gerenciador de jogos web independentes em iframe seguro com tokens temporários de autenticação.
+- **Remote PC Beta & Gamepad Virtual**: Controle remoto e coop de PC em baixa latência via WebRTC com injeção nativa de controle virtual Xbox no Windows (ViGEm).
+- **Moderação de Chamada**: Ferramentas de staff no card de participante para mutar/desmutar, bloquear/liberar câmera e tela, e desconectar membros da voz.
+
+## Instalar ou atualizar no Windows
+
+Use o EXE da entrega aprovada no repositório oficial. Quem já usa o atualizador
+pode verificar a versão em **Configurações → Aplicativo** e seguir a atualização; a instalação manual
+usa o EXE da mesma entrega. Reiniciar encerra a chamada: escolha um momento
+conveniente. Contas, preferências e sessão lembrada são preservadas.
+
+Mudanças no Electron ou no helper nativo exigem instalar o aplicativo atualizado,
+pelo atualizador ou manualmente. Publicar somente a interface web não substitui
+os arquivos incorporados à instalação. O desenvolvimento local não atualiza o
+aplicativo instalado.
+
+### Recuperação do atualizador Windows
+
+Pacotes gerados com `electron-builder --dir` e depois NSIS com `--prepackaged`
+ficaram sem `resources/app-update.yml`. Nessa condição, o aplicativo pode
+encontrar uma versão mais recente, mas falha ao iniciar o download e mostra o
+erro genérico em Configurações → Aplicativo. O fluxo de entrega agora gera o
+pacote NSIS diretamente e confere esse arquivo no executável e após a instalação.
+Uma instalação já afetada precisa receber manualmente o EXE da versão
+**0.3.7 ou posterior**, após sua aprovação e publicação. Publicar o site
+ou clicar novamente em Buscar atualizações não adiciona o arquivo ausente ao
+aplicativo instalado. Preserve a
+mesma conta e o perfil ao reinstalar.
+
+## Conferir uma entrega
+
+1. Use o build aprovado em Releases: `MN-Trono-Frontend-<versão>.zip`,
+   `MN-Trono-<versão>-Windows.exe` e `SHA256SUMS-<versão>.txt` da mesma entrega.
+   O acesso às releases privadas requer autenticação.
+2. Confira os hashes e extraia o ZIP numa pasta nova. Ele contém `frontend/`,
+   com um único instalador em `downloads/`, o manifesto e os guias na raiz.
+   Não misture EXE e manifesto de builds diferentes, mesmo com a mesma versão.
+3. A pipeline publica automaticamente quando habilitada. Para envio manual
+   alternativo, publique `frontend/` inteira, incluindo `downloads/`, seguindo
+   [Distribuição web e Windows](PUBLICAR_SURGE_LEVE.md). Confira a versão e o
+   hash em `downloads/latest.yml`. Sincronizar fontes ou gerar um pacote local
+   não publica o aplicativo.
+4. Confira as mudanças de backend e SQL ausentes no destino antes de distribuir.
+   A versão instalada no seu computador não comprova o estado do banco remoto.
+
+O empacotador inclui este arquivo com nome fixo; não é necessário criar um novo
+Markdown a cada versão. Atualize este guia quando houver uma nova exigência de
+atualização. O histórico detalhado permanece nos commits e nas releases.
+
+## Backend e banco de dados
+
+A integração 0.2.10 não exige SQL adicional nem redeploy de backend em relação à
+0.2.9. Isso não elimina os pré-requisitos das funcionalidades anteriores. Para
+uma base existente, aplique somente upgrades e migrações ainda ausentes, na ordem
+de suas dependências. Não reaplique o instalador de banco numa base existente.
+
+Uma instalação nova usa `supabase/install.sql`; o comando
+`npm run database:prepare` gera uma cópia reunida para revisão. No repositório,
+`docs/DESENVOLVIMENTO_DESKTOP.md` descreve o ambiente e os limites desse roteiro.
+As variáveis do servidor ficam em [Configuração do backend](PUBLICAR_SURGE_LEVE.md#configuração-do-backend).
+
+### GIFs do GIPHY
+
+Se o destino ainda não recebeu a atualização de GIFs da 0.2.8:
+
+- Aplique `supabase/migrations/20261016140000_giphy_profile_credits.sql`, depois
+  das migrações anteriores de perfis. O SQL também acompanha a raiz do ZIP.
+  Ele atualiza o validador de créditos, preservando os perfis existentes.
+- Use o backend com o endpoint autenticado `/community/gif-provider`.
+- Configure `GIPHY_API_KEY` no backend para tendências, pesquisa e paginação
+  dentro do seletor. Essa é a chave pública do cliente GIPHY, enviada ao navegador
+  autenticado para consultas diretas; nunca use tokens privados de serviço ou do
+  Supabase nessa variável. O token de sessão do app não é enviado ao GIPHY.
+
+Sem chave, a importação por link e pré-visualização continuam disponíveis.
+Sem o SQL necessário, o banco recusa salvar os novos créditos. GIFs continuam
+limitados a 10 MB; os créditos antigos do Wikimedia permanecem válidos.
+Testes com respostas controladas não comprovam o acesso ao catálogo real.
+
+## Voz e recuperação de mídia
+
+Abrir o aplicativo não conecta automaticamente à voz. Navegar por mensagens,
+amigos e jogos preserva uma chamada já conectada; sair da voz preserva o jogo.
+
+Desde a 0.2.9, microfone nativo ou sem filtro, com ganho em 100%, usa envio direto
+para WebRTC, evitando processamento Web Audio desnecessário. Ganho e mute não
+exigem recaptura. O Electron conserva o agendamento do renderer em segundo plano;
+a margem solicitada de 40 ms não representa uma medição da latência final.
+
+A proteção de voz recebida durante jogos é local e ligada por padrão. Pode pedir
+uma margem de reprodução entre 60 e 140 ms sem trocar trilhas ou reconectar.
+A prioridade de áudio ajusta somente processos elegíveis do próprio aplicativo,
+preserva prioridades maiores e não exige administrador nem reserva CPU.
+
+Na 0.2.10, câmera e tela tentam recuperar a publicação afetada, com fila separada
+para o áudio recebido. O fallback P2P é coordenado para toda a sala e dura até
+esvaziar a voz; não há retorno automático para SFU durante a chamada. Para tentar
+uma nova escolha de transporte, todos saem da voz e entram novamente. A partida
+pode continuar. Veja a [política de recuperação e painel flutuante](ANALISE_SFU_E_JANELA_FLUTUANTE.md).
+
+O roteiro de validação e o aceite da versão migrada ficam em
+`docs/MIGRACAO.md`, no repositório. Testes sintéticos não substituem microfone, áudio do
+jogo e transmissão entre computadores reais.
+
+## Resumo das versões incorporadas
+
+| Desktop | Mudanças principais                                                             |
+| ------- | ------------------------------------------------------------------------------- |
+| 0.2.3   | Perfis com prévia de avatar, capa e fundo; ajustes da chamada.                  |
+| 0.2.4   | Entrada explícita na voz, edição de perfis e navegação preservando a chamada.   |
+| 0.2.5   | Correções dos controles de mídia, parada da câmera e cabeçalho recolhível.      |
+| 0.2.6   | Controles consistentes e anúncio de mídia antes de aguardar o transporte.       |
+| 0.2.7   | Imagens no chat, arquivos privados, canais mistos e ajustes de áudio e jogos.   |
+| 0.2.8   | Seletor GIPHY e migração de créditos de perfis.                                 |
+| 0.2.9   | Envio de voz direto e agendamento do Electron em segundo plano.                 |
+| 0.2.10  | Painel flutuante compacto, recuperação por mídia e fallback coordenado da sala. |
+
+As notas individuais foram consolidadas aqui. Para investigar uma versão antiga,
+consulte o histórico Git de `docs/archive/ATUALIZAR_WINDOWS_v<versão>.md`.

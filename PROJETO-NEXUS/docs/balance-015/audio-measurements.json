@@ -1,0 +1,38 @@
+[
+  {
+    "embedded": false,
+    "voice": {
+      "peak": 0.16754150390625,
+      "states": [
+        "running"
+      ]
+    },
+    "effect": {
+      "peak": 0.0430755615234375,
+      "states": [
+        "running"
+      ]
+    },
+    "muted": 0,
+    "warnings": []
+  },
+  {
+    "embedded": true,
+    "voice": {
+      "peak": 0.56494140625,
+      "states": [
+        "running"
+      ]
+    },
+    "effect": {
+      "peak": 0.222747802734375,
+      "states": [
+        "running"
+      ]
+    },
+    "muted": 0,
+    "warnings": [
+      "Failed to get a ServiceWorkerRegistration: The user denied permission to use Service Worker."
+    ]
+  }
+]

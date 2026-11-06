@@ -1,0 +1,10821 @@
+{
+	"abilityTraining": {
+		"basic": {
+			"costDelta": 0.0,
+			"detail": "Fator principal −10%; recupera mais 4 EN por ataque básico. Efeitos e recargas permanecem.",
+			"energyGainDelta": 4.0,
+			"id": "rhythm",
+			"name": "Ritmo",
+			"powerMultiplier": 0.9,
+			"rank": 3.0
+		},
+		"schemaVersion": 1.0,
+		"skill": {
+			"costDelta": 10.0,
+			"detail": "Fator principal +15%; custo +10 EN. Em apoio sem poder principal, amplia a transferência de energia.",
+			"id": "burst",
+			"name": "Ímpeto",
+			"powerMultiplier": 1.15,
+			"rank": 1.0
+		},
+		"ultimate": {
+			"costDelta": -10.0,
+			"detail": "Fator principal −10%; custo −10 EN. Em apoio sem poder principal, reduz a energia adicional.",
+			"id": "economy",
+			"name": "Economia",
+			"powerMultiplier": 0.9,
+			"rank": 2.0
+		}
+	},
+	"build": "basic",
+	"equipment": {
+		"chapterBonusMaterials": 6.0,
+		"chapterEnds": [
+			"eclipse",
+			"tidal-heart",
+			"forge-heart"
+		],
+		"firstClearMaterials": 6.0,
+		"replayMaterials": 2.0,
+		"schemaVersion": 1.0,
+		"slots": [
+			{
+				"id": "weapon",
+				"name": "Arma",
+				"variants": {
+					"channel": {
+						"bonuses": [
+							{
+								"attack": -0.04,
+								"energy": 8.0
+							},
+							{
+								"attack": -0.04,
+								"energy": 12.0
+							},
+							{
+								"attack": -0.04,
+								"energy": 16.0
+							}
+						],
+						"detail": "Troca 4% do ataque base por energia inicial: 8, 12 ou 16 por patamar.",
+						"name": "Canalizador"
+					},
+					"standard": {
+						"bonuses": [
+							{
+
+							},
+							{
+								"attack": 0.04
+							},
+							{
+								"attack": 0.08
+							}
+						],
+						"detail": "Melhorias aumentam o ataque sem alterar os custos das habilidades.",
+						"name": "Arma de assalto"
+					}
+				}
+			},
+			{
+				"id": "protection",
+				"name": "Proteção",
+				"variants": {
+					"bastion": {
+						"bonuses": [
+							{
+								"defense": 0.15,
+								"health": -0.04
+							},
+							{
+								"defense": 0.3,
+								"health": -0.04
+							},
+							{
+								"defense": 0.48,
+								"health": -0.04
+							}
+						],
+						"detail": "Troca 4% da vida base por 15%, 30% ou 48% de defesa. Não protege contra dano periódico que ignora defesa.",
+						"name": "Armadura de bastião"
+					},
+					"standard": {
+						"bonuses": [
+							{
+
+							},
+							{
+								"health": 0.06
+							},
+							{
+								"health": 0.12
+							}
+						],
+						"detail": "Melhorias aumentam a vida máxima e inicial em 6% ou 12%.",
+						"name": "Manto de salvaguarda"
+					}
+				}
+			},
+			{
+				"id": "relic",
+				"name": "Relíquia",
+				"variants": {
+					"anchor": {
+						"bonuses": [
+							{
+								"energy": -4.0,
+								"health": 0.04
+							},
+							{
+								"energy": -4.0,
+								"health": 0.08
+							},
+							{
+								"energy": -4.0,
+								"health": 0.12
+							}
+						],
+						"detail": "Troca 4 de energia inicial por 4%, 8% ou 12% da vida base.",
+						"name": "Âncora vital"
+					},
+					"standard": {
+						"bonuses": [
+							{
+
+							},
+							{
+								"energy": 4.0
+							},
+							{
+								"energy": 8.0
+							}
+						],
+						"detail": "Melhorias concedem 4 ou 8 de energia inicial.",
+						"name": "Selo do ímpeto"
+					}
+				}
+			}
+		],
+		"tierUnlocks": [
+			"",
+			"eclipse",
+			"tidal-heart"
+		],
+		"upgradeCosts": [
+			0.0,
+			3.0,
+			5.0
+		],
+		"variantUnlock": "eclipse"
+	},
+	"errors": 0,
+	"gemForge": {
+		"bonuses": {
+			"ember": [
+				0.04,
+				0.05,
+				0.06
+			],
+			"pulse": [
+				8.0,
+				10.0,
+				12.0
+			],
+			"sap": [
+				0.05,
+				0.065,
+				0.08
+			]
+		},
+		"craftCopies": 3.0,
+		"craftMaterials": 1.0,
+		"craftUnlock": "gate",
+		"fusionCopies": 3.0,
+		"levelUnlocks": [
+			"",
+			"eclipse",
+			"tidal-heart"
+		],
+		"schemaVersion": 1.0
+	},
+	"gemLevel": 1,
+	"includesLumi": true,
+	"masteryPoints": 0,
+	"progression": {
+		"firstClearExperience": 100.0,
+		"growthPerLevel": {
+			"attack": 0.01,
+			"defense": 0.01,
+			"health": 0.02
+		},
+		"masteryBonusesPerRank": {
+			"Dano": {
+				"attack": 0.005
+			},
+			"Suporte": {
+				"energy": 1.0
+			},
+			"Tanque": {
+				"health": 0.01
+			}
+		},
+		"masteryPerVictory": 10.0,
+		"masteryThresholds": [
+			0.0,
+			10.0,
+			30.0,
+			60.0
+		],
+		"replayExperience": 25.0,
+		"schemaVersion": 1.0,
+		"teamThresholds": [
+			0.0,
+			100.0,
+			250.0,
+			450.0,
+			700.0,
+			1000.0
+		]
+	},
+	"rulesVersion": "0.16.0",
+	"scenarios": [
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 1,
+				"reason": "target",
+				"round": 1,
+				"turns": 5,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 5,
+			"units": [
+				{
+					"damage": 73,
+					"healing": 0,
+					"hp": 1053,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 333,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 390,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 183,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 180,
+					"healing": 27,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 28,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 28,
+			"units": [
+				{
+					"damage": 355,
+					"healing": 0,
+					"hp": 1124,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 602
+				},
+				{
+					"damage": 1588,
+					"healing": 0,
+					"hp": 1020,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1276,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 127,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 131
+				},
+				{
+					"damage": 390,
+					"healing": 25,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 227,
+					"healing": 0,
+					"hp": 1375,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 301
+				},
+				{
+					"damage": 647,
+					"healing": 0,
+					"hp": 967,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 867,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 94,
+					"healing": 186,
+					"hp": 680,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 225,
+					"healing": 34,
+					"hp": 35,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 527,
+					"healing": 0,
+					"hp": 1461,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 602
+				},
+				{
+					"damage": 1722,
+					"healing": 0,
+					"hp": 1065,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1288,
+					"healing": 0,
+					"hp": 1040,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 136,
+					"healing": 439,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 64,
+					"healing": 98,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 5,
+				"reason": "cleared",
+				"round": 5,
+				"turns": 20,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 20,
+			"units": [
+				{
+					"damage": 252,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 602
+				},
+				{
+					"damage": 1222,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 990,
+					"healing": 0,
+					"hp": 712,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 12,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 141
+				},
+				{
+					"damage": 237,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 224
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "target",
+				"round": 6,
+				"turns": 31,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 31,
+			"units": [
+				{
+					"damage": 424,
+					"healing": 0,
+					"hp": 1079,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 603
+				},
+				{
+					"damage": 1402,
+					"healing": 0,
+					"hp": 695,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1756,
+					"healing": 0,
+					"hp": 244,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 390,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 455
+				},
+				{
+					"damage": 316,
+					"healing": 0,
+					"hp": 51,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 232,
+					"healing": 481,
+					"hp": 65,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 1,
+				"reason": "target",
+				"round": 1,
+				"turns": 5,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 5,
+			"units": [
+				{
+					"damage": 65,
+					"healing": 0,
+					"hp": 1104,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 333,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 390,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 183,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 129,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 26,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 26,
+			"units": [
+				{
+					"damage": 327,
+					"healing": 0,
+					"hp": 1257,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 904
+				},
+				{
+					"damage": 1831,
+					"healing": 0,
+					"hp": 815,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1061,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 196,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 67
+				},
+				{
+					"damage": 393,
+					"healing": 25,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 194,
+					"healing": 0,
+					"hp": 1375,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 301
+				},
+				{
+					"damage": 680,
+					"healing": 0,
+					"hp": 994,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 867,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 67,
+					"healing": 186,
+					"hp": 680,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 225,
+					"healing": 34,
+					"hp": 35,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 527,
+					"healing": 0,
+					"hp": 1461,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 602
+				},
+				{
+					"damage": 1709,
+					"healing": 0,
+					"hp": 1065,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1301,
+					"healing": 0,
+					"hp": 1040,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 136,
+					"healing": 439,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 64,
+					"healing": 98,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 4,
+				"reason": "cleared",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 365,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 301
+				},
+				{
+					"damage": 1131,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 968,
+					"healing": 0,
+					"hp": 712,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 12,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 141
+				},
+				{
+					"damage": 237,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "target",
+				"round": 6,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 1026,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 424,
+					"healing": 0,
+					"hp": 1079,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 603
+				},
+				{
+					"damage": 1650,
+					"healing": 0,
+					"hp": 732,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1624,
+					"healing": 0,
+					"hp": 415,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 322,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 455
+				},
+				{
+					"damage": 224,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 184,
+					"healing": 481,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 1,
+				"reason": "target",
+				"round": 1,
+				"turns": 2,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 2,
+			"units": [
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 333,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 436,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 6,
+				"reason": "cleared",
+				"round": 6,
+				"turns": 24,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 24,
+			"units": [
+				{
+					"damage": 293,
+					"healing": 0,
+					"hp": 1217,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 904
+				},
+				{
+					"damage": 1703,
+					"healing": 0,
+					"hp": 1020,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1225,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 107,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 61
+				},
+				{
+					"damage": 317,
+					"healing": 27,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 194,
+					"healing": 0,
+					"hp": 1375,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 301
+				},
+				{
+					"damage": 680,
+					"healing": 0,
+					"hp": 994,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 867,
+					"healing": 0,
+					"hp": 1105,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 67,
+					"healing": 186,
+					"hp": 680,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 225,
+					"healing": 34,
+					"hp": 35,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 30,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 30,
+			"units": [
+				{
+					"damage": 527,
+					"healing": 0,
+					"hp": 1461,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 602
+				},
+				{
+					"damage": 1761,
+					"healing": 0,
+					"hp": 1065,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1249,
+					"healing": 0,
+					"hp": 1040,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 136,
+					"healing": 439,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 64,
+					"healing": 98,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 4,
+				"reason": "cleared",
+				"round": 4,
+				"turns": 16,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 16,
+			"units": [
+				{
+					"damage": 252,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 301
+				},
+				{
+					"damage": 1149,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1063,
+					"healing": 0,
+					"hp": 670,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 12,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 141
+				},
+				{
+					"damage": 279,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "target",
+				"round": 6,
+				"turns": 31,
+				"winner": 0
+			},
+			"seed": 1102,
+			"team": [
+				"axion",
+				"veyra",
+				"astra"
+			],
+			"turns": 31,
+			"units": [
+				{
+					"damage": 424,
+					"healing": 0,
+					"hp": 1059,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 603
+				},
+				{
+					"damage": 1402,
+					"healing": 0,
+					"hp": 732,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1756,
+					"healing": 0,
+					"hp": 336,
+					"id": "0-astra",
+					"maxHp": 1105,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 390,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 455
+				},
+				{
+					"damage": 244,
+					"healing": 0,
+					"hp": 51,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 195,
+					"healing": 481,
+					"hp": 65,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 7,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 7,
+			"units": [
+				{
+					"damage": 151,
+					"healing": 157,
+					"hp": 1507,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 31
+				},
+				{
+					"damage": 113,
+					"healing": 0,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 532,
+					"healing": 17,
+					"hp": 859,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 167,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 85,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 179,
+					"healing": 27,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 915,
+					"healing": 33,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 501
+				},
+				{
+					"damage": 409,
+					"healing": 146,
+					"hp": 1244,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1615,
+					"healing": 169,
+					"hp": 363,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 341,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 640,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 18,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 18,
+			"units": [
+				{
+					"damage": 309,
+					"healing": 0,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 313
+				},
+				{
+					"damage": 194,
+					"healing": 138,
+					"hp": 1208,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 619,
+					"healing": 38,
+					"hp": 578,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 223,
+					"healing": 0,
+					"hp": 260,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 254,
+					"healing": 149,
+					"hp": 680,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 371,
+					"healing": 56,
+					"hp": 321,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 45,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 45,
+			"units": [
+				{
+					"damage": 746,
+					"healing": 32,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 1034
+				},
+				{
+					"damage": 453,
+					"healing": 912,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1756,
+					"healing": 85,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 787,
+					"healing": 534,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 82,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 250,
+					"healing": 237,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 439,
+					"healing": 42,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 626
+				},
+				{
+					"damage": 406,
+					"healing": 733,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1465,
+					"healing": 344,
+					"hp": 991,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 247,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 708,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 138,
+					"healing": 21,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 989,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 634,
+					"healing": 316,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 501
+				},
+				{
+					"damage": 331,
+					"healing": 541,
+					"hp": 158,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 895,
+					"healing": 56,
+					"hp": 580,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 964,
+					"healing": 0,
+					"hp": 358,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 423,
+					"healing": 0,
+					"hp": 504,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 426
+				},
+				{
+					"damage": 460,
+					"healing": 505,
+					"hp": 593,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 7,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 7,
+			"units": [
+				{
+					"damage": 146,
+					"healing": 157,
+					"hp": 1558,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 31
+				},
+				{
+					"damage": 113,
+					"healing": 0,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 529,
+					"healing": 16,
+					"hp": 858,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 167,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 85,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 128,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 8,
+				"reason": "cleared",
+				"round": 8,
+				"turns": 34,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 34,
+			"units": [
+				{
+					"damage": 910,
+					"healing": 33,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 752
+				},
+				{
+					"damage": 376,
+					"healing": 532,
+					"hp": 1244,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1774,
+					"healing": 193,
+					"hp": 757,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 475,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 595,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 18,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 18,
+			"units": [
+				{
+					"damage": 309,
+					"healing": 0,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 313
+				},
+				{
+					"damage": 194,
+					"healing": 138,
+					"hp": 1244,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 619,
+					"healing": 38,
+					"hp": 664,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 187,
+					"healing": 0,
+					"hp": 260,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 212,
+					"healing": 149,
+					"hp": 680,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 327,
+					"healing": 49,
+					"hp": 314,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 9,
+				"reason": "cleared",
+				"round": 9,
+				"turns": 44,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 44,
+			"units": [
+				{
+					"damage": 824,
+					"healing": 32,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 814
+				},
+				{
+					"damage": 553,
+					"healing": 732,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1648,
+					"healing": 85,
+					"hp": 997,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 735,
+					"healing": 534,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 82,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 250,
+					"healing": 237,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 6,
+				"reason": "cleared",
+				"round": 6,
+				"turns": 27,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 27,
+			"units": [
+				{
+					"damage": 536,
+					"healing": 42,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 626
+				},
+				{
+					"damage": 529,
+					"healing": 604,
+					"hp": 1241,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1292,
+					"healing": 317,
+					"hp": 1020,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 293,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 569,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 138,
+					"healing": 21,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1026,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 674,
+					"healing": 316,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 501
+				},
+				{
+					"damage": 305,
+					"healing": 541,
+					"hp": 273,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 901,
+					"healing": 57,
+					"hp": 518,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 951,
+					"healing": 0,
+					"hp": 332,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 384,
+					"healing": 0,
+					"hp": 510,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 426
+				},
+				{
+					"damage": 460,
+					"healing": 505,
+					"hp": 593,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 7,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 7,
+			"units": [
+				{
+					"damage": 133,
+					"healing": 96,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 31
+				},
+				{
+					"damage": 113,
+					"healing": 0,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 540,
+					"healing": 17,
+					"hp": 693,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 234,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 91,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 147,
+					"healing": 17,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 975,
+					"healing": 33,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 501
+				},
+				{
+					"damage": 409,
+					"healing": 146,
+					"hp": 1244,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1555,
+					"healing": 160,
+					"hp": 363,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 377,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 595,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 18,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 18,
+			"units": [
+				{
+					"damage": 309,
+					"healing": 0,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 313
+				},
+				{
+					"damage": 194,
+					"healing": 138,
+					"hp": 1244,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 619,
+					"healing": 38,
+					"hp": 664,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 187,
+					"healing": 0,
+					"hp": 260,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 212,
+					"healing": 149,
+					"hp": 680,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 327,
+					"healing": 49,
+					"hp": 314,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 9,
+				"reason": "cleared",
+				"round": 9,
+				"turns": 43,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 43,
+			"units": [
+				{
+					"damage": 746,
+					"healing": 32,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 783
+				},
+				{
+					"damage": 485,
+					"healing": 732,
+					"hp": 1333,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1794,
+					"healing": 85,
+					"hp": 997,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 735,
+					"healing": 534,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 82,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 250,
+					"healing": 237,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 6,
+				"reason": "cleared",
+				"round": 6,
+				"turns": 27,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 27,
+			"units": [
+				{
+					"damage": 495,
+					"healing": 42,
+					"hp": 1571,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 626
+				},
+				{
+					"damage": 582,
+					"healing": 713,
+					"hp": 1241,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1292,
+					"healing": 354,
+					"hp": 1066,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 300,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 606,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 194,
+					"healing": 29,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1102,
+			"team": [
+				"rhazen",
+				"sylva",
+				"riven"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 634,
+					"healing": 204,
+					"hp": 1357,
+					"id": "0-rhazen",
+					"maxHp": 1571,
+					"shieldGranted": 501
+				},
+				{
+					"damage": 254,
+					"healing": 808,
+					"hp": 266,
+					"id": "0-sylva",
+					"maxHp": 1333,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1017,
+					"healing": 185,
+					"hp": 688,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1053,
+					"healing": 0,
+					"hp": 329,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 384,
+					"healing": 0,
+					"hp": 488,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 426
+				},
+				{
+					"damage": 430,
+					"healing": 505,
+					"hp": 593,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 7,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 7,
+			"units": [
+				{
+					"damage": 132,
+					"healing": 0,
+					"hp": 1433,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 513,
+					"healing": 0,
+					"hp": 650,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 143,
+					"healing": 0,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 211,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 122,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 166,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 13,
+				"reason": "cleared",
+				"round": 13,
+				"turns": 50,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 50,
+			"units": [
+				{
+					"damage": 865,
+					"healing": 0,
+					"hp": 1428,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 934
+				},
+				{
+					"damage": 1693,
+					"healing": 0,
+					"hp": 0,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 680,
+					"healing": 703,
+					"hp": 1080,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 735,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 67
+				},
+				{
+					"damage": 313,
+					"healing": 47,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 732,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 16,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 16,
+			"units": [
+				{
+					"damage": 265,
+					"healing": 0,
+					"hp": 1440,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 180
+				},
+				{
+					"damage": 767,
+					"healing": 0,
+					"hp": 951,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 258,
+					"healing": 351,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 292,
+					"healing": 0,
+					"hp": 815,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 0,
+					"healing": 82,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 321,
+					"healing": 31,
+					"hp": 244,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 44,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 44,
+			"units": [
+				{
+					"damage": 716,
+					"healing": 0,
+					"hp": 1559,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 754
+				},
+				{
+					"damage": 2549,
+					"healing": 0,
+					"hp": 1024,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 594,
+					"healing": 339,
+					"hp": 1211,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 408,
+					"healing": 783,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 192,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 305
+				},
+				{
+					"damage": 0,
+					"healing": 76,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 30,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 30,
+			"units": [
+				{
+					"damage": 465,
+					"healing": 0,
+					"hp": 1559,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 574
+				},
+				{
+					"damage": 1777,
+					"healing": 0,
+					"hp": 922,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 239,
+					"healing": 961,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 255,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 338
+				},
+				{
+					"damage": 530,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 110,
+					"healing": 17,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 989,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 146,
+					"healing": 0,
+					"hp": 1258,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 394
+				},
+				{
+					"damage": 1175,
+					"healing": 0,
+					"hp": 694,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 374,
+					"healing": 867,
+					"hp": 686,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 816,
+					"healing": 0,
+					"hp": 594,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 365,
+					"healing": 0,
+					"hp": 672,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 426
+				},
+				{
+					"damage": 281,
+					"healing": 481,
+					"hp": 737,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 7,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 7,
+			"units": [
+				{
+					"damage": 132,
+					"healing": 0,
+					"hp": 1445,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 507,
+					"healing": 0,
+					"hp": 685,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 143,
+					"healing": 0,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 211,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 122,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 119,
+					"healing": 13,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 43,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 43,
+			"units": [
+				{
+					"damage": 622,
+					"healing": 0,
+					"hp": 1491,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 727
+				},
+				{
+					"damage": 2107,
+					"healing": 0,
+					"hp": 77,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 533,
+					"healing": 527,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 593,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 179
+				},
+				{
+					"damage": 129,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 662,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 16,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 16,
+			"units": [
+				{
+					"damage": 265,
+					"healing": 0,
+					"hp": 1474,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 180
+				},
+				{
+					"damage": 767,
+					"healing": 0,
+					"hp": 1006,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 258,
+					"healing": 322,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 209,
+					"healing": 0,
+					"hp": 815,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 0,
+					"healing": 82,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 286,
+					"healing": 26,
+					"hp": 239,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 44,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 44,
+			"units": [
+				{
+					"damage": 708,
+					"healing": 0,
+					"hp": 1559,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 754
+				},
+				{
+					"damage": 2557,
+					"healing": 0,
+					"hp": 1024,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 594,
+					"healing": 339,
+					"hp": 1211,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 408,
+					"healing": 783,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 192,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 305
+				},
+				{
+					"damage": 0,
+					"healing": 76,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 30,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 30,
+			"units": [
+				{
+					"damage": 523,
+					"healing": 0,
+					"hp": 1559,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 574
+				},
+				{
+					"damage": 1719,
+					"healing": 0,
+					"hp": 911,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 239,
+					"healing": 961,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 255,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 338
+				},
+				{
+					"damage": 541,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 110,
+					"healing": 17,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1026,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 146,
+					"healing": 0,
+					"hp": 1291,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 394
+				},
+				{
+					"damage": 1065,
+					"healing": 0,
+					"hp": 694,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 374,
+					"healing": 867,
+					"hp": 610,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 892,
+					"healing": 0,
+					"hp": 660,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 365,
+					"healing": 0,
+					"hp": 716,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 426
+				},
+				{
+					"damage": 248,
+					"healing": 481,
+					"hp": 737,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 7,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 7,
+			"units": [
+				{
+					"damage": 132,
+					"healing": 0,
+					"hp": 1445,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 450,
+					"healing": 0,
+					"hp": 685,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 200,
+					"healing": 0,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 211,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 122,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 119,
+					"healing": 13,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 40,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 40,
+			"units": [
+				{
+					"damage": 581,
+					"healing": 0,
+					"hp": 1534,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 727
+				},
+				{
+					"damage": 2197,
+					"healing": 0,
+					"hp": 191,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 462,
+					"healing": 543,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 493,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 179
+				},
+				{
+					"damage": 129,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 692,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 16,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 16,
+			"units": [
+				{
+					"damage": 265,
+					"healing": 0,
+					"hp": 1474,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 180
+				},
+				{
+					"damage": 767,
+					"healing": 0,
+					"hp": 1006,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 258,
+					"healing": 322,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 209,
+					"healing": 0,
+					"hp": 815,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 0,
+					"healing": 82,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 286,
+					"healing": 26,
+					"hp": 239,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 44,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 44,
+			"units": [
+				{
+					"damage": 670,
+					"healing": 0,
+					"hp": 1559,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 754
+				},
+				{
+					"damage": 2595,
+					"healing": 0,
+					"hp": 1024,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 594,
+					"healing": 339,
+					"hp": 1181,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 438,
+					"healing": 783,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 192,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 305
+				},
+				{
+					"damage": 0,
+					"healing": 76,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 30,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 30,
+			"units": [
+				{
+					"damage": 581,
+					"healing": 0,
+					"hp": 1559,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 574
+				},
+				{
+					"damage": 1661,
+					"healing": 0,
+					"hp": 939,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 245,
+					"healing": 986,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 302,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 338
+				},
+				{
+					"damage": 491,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 154,
+					"healing": 23,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1102,
+			"team": [
+				"oren",
+				"kira",
+				"saira"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 146,
+					"healing": 0,
+					"hp": 1223,
+					"id": "0-oren",
+					"maxHp": 1559,
+					"shieldGranted": 394
+				},
+				{
+					"damage": 1065,
+					"healing": 0,
+					"hp": 694,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 374,
+					"healing": 867,
+					"hp": 653,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 917,
+					"healing": 0,
+					"hp": 660,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 365,
+					"healing": 0,
+					"hp": 716,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 426
+				},
+				{
+					"damage": 248,
+					"healing": 481,
+					"hp": 737,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 1,
+				"reason": "target",
+				"round": 1,
+				"turns": 2,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 2,
+			"units": [
+				{
+					"damage": 324,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 445,
+					"healing": 0,
+					"hp": 1094,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 6,
+				"reason": "cleared",
+				"round": 6,
+				"turns": 21,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 21,
+			"units": [
+				{
+					"damage": 1318,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 872,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 889,
+					"healing": 0,
+					"hp": 51,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 409,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 350,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 13,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 13,
+			"units": [
+				{
+					"damage": 671,
+					"healing": 0,
+					"hp": 1017,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 813,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 648,
+					"healing": 0,
+					"hp": 708,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 355,
+					"healing": 0,
+					"hp": 7,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 129,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 5,
+				"reason": "cleared",
+				"round": 5,
+				"turns": 20,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 20,
+			"units": [
+				{
+					"damage": 1126,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 864,
+					"healing": 81,
+					"hp": 950,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1159,
+					"healing": 0,
+					"hp": 980,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 256,
+					"healing": 303,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 114,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 4,
+				"reason": "cleared",
+				"round": 4,
+				"turns": 15,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 15,
+			"units": [
+				{
+					"damage": 667,
+					"healing": 0,
+					"hp": 481,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 67
+				},
+				{
+					"damage": 562,
+					"healing": 0,
+					"hp": 942,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1180,
+					"healing": 0,
+					"hp": 723,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 697,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 133,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 4,
+				"reason": "target",
+				"round": 4,
+				"turns": 19,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 19,
+			"units": [
+				{
+					"damage": 505,
+					"healing": 0,
+					"hp": 580,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 554,
+					"healing": 20,
+					"hp": 931,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 683,
+					"healing": 0,
+					"hp": 731,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 349,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 303
+				},
+				{
+					"damage": 268,
+					"healing": 0,
+					"hp": 723,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 137
+				},
+				{
+					"damage": 207,
+					"healing": 183,
+					"hp": 737,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 1,
+				"reason": "target",
+				"round": 1,
+				"turns": 2,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 2,
+			"units": [
+				{
+					"damage": 324,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 445,
+					"healing": 0,
+					"hp": 1094,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 6,
+				"reason": "cleared",
+				"round": 6,
+				"turns": 21,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 21,
+			"units": [
+				{
+					"damage": 1385,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 872,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 822,
+					"healing": 0,
+					"hp": 56,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 404,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 350,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 13,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 13,
+			"units": [
+				{
+					"damage": 621,
+					"healing": 0,
+					"hp": 1017,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 683,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 648,
+					"healing": 0,
+					"hp": 708,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 355,
+					"healing": 0,
+					"hp": 187,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 129,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 4,
+				"reason": "cleared",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 973,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 811,
+					"healing": 73,
+					"hp": 942,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1179,
+					"healing": 0,
+					"hp": 980,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 256,
+					"healing": 117,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 114,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 4,
+				"reason": "cleared",
+				"round": 4,
+				"turns": 15,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 15,
+			"units": [
+				{
+					"damage": 667,
+					"healing": 0,
+					"hp": 481,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 67
+				},
+				{
+					"damage": 631,
+					"healing": 0,
+					"hp": 994,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1111,
+					"healing": 0,
+					"hp": 723,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 645,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 133,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 4,
+				"reason": "target",
+				"round": 4,
+				"turns": 19,
+				"winner": 0
+			},
+			"seed": 1026,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 19,
+			"units": [
+				{
+					"damage": 542,
+					"healing": 0,
+					"hp": 580,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 504,
+					"healing": 14,
+					"hp": 932,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 683,
+					"healing": 0,
+					"hp": 731,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 342,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 303
+				},
+				{
+					"damage": 268,
+					"healing": 0,
+					"hp": 736,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 137
+				},
+				{
+					"damage": 207,
+					"healing": 183,
+					"hp": 737,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 1,
+				"reason": "target",
+				"round": 1,
+				"turns": 2,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 2,
+			"units": [
+				{
+					"damage": 324,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 445,
+					"healing": 0,
+					"hp": 1094,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 5,
+				"reason": "cleared",
+				"round": 5,
+				"turns": 19,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 19,
+			"units": [
+				{
+					"damage": 1123,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 970,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1068,
+					"healing": 0,
+					"hp": 359,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 409,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 184,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 13,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 13,
+			"units": [
+				{
+					"damage": 621,
+					"healing": 0,
+					"hp": 1017,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 683,
+					"healing": 0,
+					"hp": 1125,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 648,
+					"healing": 0,
+					"hp": 708,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 355,
+					"healing": 0,
+					"hp": 187,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 129,
+					"healing": 19,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 5,
+				"reason": "cleared",
+				"round": 5,
+				"turns": 20,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 20,
+			"units": [
+				{
+					"damage": 1126,
+					"healing": 0,
+					"hp": 1115,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 864,
+					"healing": 81,
+					"hp": 950,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1159,
+					"healing": 0,
+					"hp": 980,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 256,
+					"healing": 303,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 114,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 4,
+				"reason": "cleared",
+				"round": 4,
+				"turns": 15,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 15,
+			"units": [
+				{
+					"damage": 667,
+					"healing": 0,
+					"hp": 433,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 67
+				},
+				{
+					"damage": 631,
+					"healing": 0,
+					"hp": 994,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1111,
+					"healing": 0,
+					"hp": 723,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 693,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 0,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 133,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 4,
+				"reason": "target",
+				"round": 4,
+				"turns": 19,
+				"winner": 0
+			},
+			"seed": 1102,
+			"team": [
+				"nima",
+				"riven",
+				"kira"
+			],
+			"turns": 19,
+			"units": [
+				{
+					"damage": 542,
+					"healing": 0,
+					"hp": 580,
+					"id": "0-nima",
+					"maxHp": 1115,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 504,
+					"healing": 14,
+					"hp": 932,
+					"id": "0-riven",
+					"maxHp": 1125,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 683,
+					"healing": 0,
+					"hp": 731,
+					"id": "0-kira",
+					"maxHp": 1094,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 342,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 303
+				},
+				{
+					"damage": 268,
+					"healing": 0,
+					"hp": 736,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 137
+				},
+				{
+					"damage": 207,
+					"healing": 183,
+					"hp": 737,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 3,
+				"reason": "target",
+				"round": 3,
+				"turns": 13,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 13,
+			"units": [
+				{
+					"damage": 98,
+					"healing": 0,
+					"hp": 674,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 319
+				},
+				{
+					"damage": 1229,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 150,
+					"healing": 0,
+					"hp": 1243,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 267,
+					"healing": 0,
+					"hp": 486,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 75,
+					"healing": 0,
+					"hp": 721,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 369,
+					"healing": 55,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 9,
+				"reason": "cleared",
+				"round": 9,
+				"turns": 38,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 38,
+			"units": [
+				{
+					"damage": 569,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 881
+				},
+				{
+					"damage": 2444,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 280,
+					"healing": 740,
+					"hp": 310,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 356
+				},
+				{
+					"damage": 261,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 776,
+					"healing": 99,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 370,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 18,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 18,
+			"units": [
+				{
+					"damage": 245,
+					"healing": 0,
+					"hp": 1383,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 351
+				},
+				{
+					"damage": 933,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 152,
+					"healing": 116,
+					"hp": 838,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 47
+				},
+				{
+					"damage": 157,
+					"healing": 0,
+					"hp": 483,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 189,
+					"healing": 268,
+					"hp": 104,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 385,
+					"healing": 59,
+					"hp": 646,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 12,
+				"reason": "cleared",
+				"round": 12,
+				"turns": 56,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 56,
+			"units": [
+				{
+					"damage": 975,
+					"healing": 0,
+					"hp": 1529,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 1279
+				},
+				{
+					"damage": 2842,
+					"healing": 0,
+					"hp": 1007,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 560,
+					"healing": 516,
+					"hp": 1059,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 389
+				},
+				{
+					"damage": 592,
+					"healing": 1289,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 124,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 434
+				},
+				{
+					"damage": 55,
+					"healing": 150,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 33,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 33,
+			"units": [
+				{
+					"damage": 437,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 639
+				},
+				{
+					"damage": 1862,
+					"healing": 0,
+					"hp": 764,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 277,
+					"healing": 524,
+					"hp": 748,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 306
+				},
+				{
+					"damage": 76,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 462,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 740,
+					"healing": 112,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 989,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 673,
+					"healing": 0,
+					"hp": 1563,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 582
+				},
+				{
+					"damage": 1891,
+					"healing": 0,
+					"hp": 420,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 401,
+					"healing": 642,
+					"hp": 994,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 242
+				},
+				{
+					"damage": 423,
+					"healing": 0,
+					"hp": 359,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 263,
+					"healing": 0,
+					"hp": 317,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 311,
+					"healing": 569,
+					"hp": 145,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 3,
+				"reason": "target",
+				"round": 3,
+				"turns": 13,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 13,
+			"units": [
+				{
+					"damage": 98,
+					"healing": 0,
+					"hp": 737,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 319
+				},
+				{
+					"damage": 1344,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 150,
+					"healing": 0,
+					"hp": 1243,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 267,
+					"healing": 0,
+					"hp": 486,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 75,
+					"healing": 0,
+					"hp": 597,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 306,
+					"healing": 46,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 9,
+				"reason": "cleared",
+				"round": 9,
+				"turns": 38,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 38,
+			"units": [
+				{
+					"damage": 656,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 881
+				},
+				{
+					"damage": 2350,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 280,
+					"healing": 740,
+					"hp": 378,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 356
+				},
+				{
+					"damage": 261,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 66
+				},
+				{
+					"damage": 731,
+					"healing": 92,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 347,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 18,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 18,
+			"units": [
+				{
+					"damage": 199,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 351
+				},
+				{
+					"damage": 895,
+					"healing": 0,
+					"hp": 1092,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 152,
+					"healing": 137,
+					"hp": 838,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 64
+				},
+				{
+					"damage": 157,
+					"healing": 0,
+					"hp": 521,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 83,
+					"healing": 268,
+					"hp": 150,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 385,
+					"healing": 59,
+					"hp": 646,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 12,
+				"reason": "cleared",
+				"round": 12,
+				"turns": 55,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 55,
+			"units": [
+				{
+					"damage": 845,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 1247
+				},
+				{
+					"damage": 2975,
+					"healing": 0,
+					"hp": 1099,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 557,
+					"healing": 635,
+					"hp": 1193,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 581
+				},
+				{
+					"damage": 452,
+					"healing": 1289,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 157,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 434
+				},
+				{
+					"damage": 55,
+					"healing": 150,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 32,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 32,
+			"units": [
+				{
+					"damage": 437,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 639
+				},
+				{
+					"damage": 1831,
+					"healing": 0,
+					"hp": 764,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 300,
+					"healing": 524,
+					"hp": 800,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 306
+				},
+				{
+					"damage": 76,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 462,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 688,
+					"healing": 104,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1026,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 713,
+					"healing": 0,
+					"hp": 1531,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 582
+				},
+				{
+					"damage": 1704,
+					"healing": 0,
+					"hp": 448,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 370,
+					"healing": 642,
+					"hp": 1043,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 242
+				},
+				{
+					"damage": 406,
+					"healing": 0,
+					"hp": 406,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 263,
+					"healing": 0,
+					"hp": 335,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 283,
+					"healing": 569,
+					"hp": 258,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 3,
+				"reason": "target",
+				"round": 3,
+				"turns": 13,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 13,
+			"units": [
+				{
+					"damage": 98,
+					"healing": 0,
+					"hp": 737,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 319
+				},
+				{
+					"damage": 1189,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 181,
+					"healing": 0,
+					"hp": 1243,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 267,
+					"healing": 0,
+					"hp": 486,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 75,
+					"healing": 0,
+					"hp": 721,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 306,
+					"healing": 46,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 9,
+				"reason": "cleared",
+				"round": 9,
+				"turns": 40,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 40,
+			"units": [
+				{
+					"damage": 498,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 881
+				},
+				{
+					"damage": 2439,
+					"healing": 0,
+					"hp": 990,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 330,
+					"healing": 740,
+					"hp": 947,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 356
+				},
+				{
+					"damage": 155,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 136
+				},
+				{
+					"damage": 738,
+					"healing": 73,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 224,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 18,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 18,
+			"units": [
+				{
+					"damage": 199,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 351
+				},
+				{
+					"damage": 895,
+					"healing": 0,
+					"hp": 1092,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 152,
+					"healing": 137,
+					"hp": 838,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 64
+				},
+				{
+					"damage": 157,
+					"healing": 0,
+					"hp": 521,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 83,
+					"healing": 268,
+					"hp": 150,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 385,
+					"healing": 59,
+					"hp": 646,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 12,
+				"reason": "cleared",
+				"round": 12,
+				"turns": 56,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 56,
+			"units": [
+				{
+					"damage": 856,
+					"healing": 0,
+					"hp": 1529,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 1279
+				},
+				{
+					"damage": 2946,
+					"healing": 0,
+					"hp": 1099,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 575,
+					"healing": 602,
+					"hp": 1193,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 581
+				},
+				{
+					"damage": 452,
+					"healing": 1289,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 124,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 434
+				},
+				{
+					"damage": 55,
+					"healing": 150,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 32,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 32,
+			"units": [
+				{
+					"damage": 437,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 639
+				},
+				{
+					"damage": 1825,
+					"healing": 0,
+					"hp": 721,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 312,
+					"healing": 524,
+					"hp": 764,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 306
+				},
+				{
+					"damage": 76,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 498,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 731,
+					"healing": 110,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1102,
+			"team": [
+				"auren",
+				"solen",
+				"elyra"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 767,
+					"healing": 0,
+					"hp": 1563,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 582
+				},
+				{
+					"damage": 1704,
+					"healing": 0,
+					"hp": 576,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 351,
+					"healing": 642,
+					"hp": 901,
+					"id": "0-elyra",
+					"maxHp": 1243,
+					"shieldGranted": 242
+				},
+				{
+					"damage": 465,
+					"healing": 0,
+					"hp": 366,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 258,
+					"healing": 0,
+					"hp": 340,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 211,
+					"healing": 569,
+					"hp": 258,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 8,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 8,
+			"units": [
+				{
+					"damage": 98,
+					"healing": 0,
+					"hp": 1487,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 32
+				},
+				{
+					"damage": 186,
+					"healing": 0,
+					"hp": 661,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 514,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 166,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 91,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 255,
+					"healing": 29,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 763,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 534
+				},
+				{
+					"damage": 396,
+					"healing": 633,
+					"hp": 626,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 2049,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 235,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 76
+				},
+				{
+					"damage": 620,
+					"healing": 14,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 145,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 195,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 269
+				},
+				{
+					"damage": 208,
+					"healing": 238,
+					"hp": 865,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 778,
+					"healing": 0,
+					"hp": 955,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 84,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 168,
+					"healing": 188,
+					"hp": 652,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 454,
+					"healing": 0,
+					"hp": 591,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 45,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 45,
+			"units": [
+				{
+					"damage": 639,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 1092
+				},
+				{
+					"damage": 591,
+					"healing": 723,
+					"hp": 1127,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 2477,
+					"healing": 0,
+					"hp": 1033,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 536,
+					"healing": 499,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 90,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 225,
+					"healing": 208,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 31,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 31,
+			"units": [
+				{
+					"damage": 437,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 539
+				},
+				{
+					"damage": 486,
+					"healing": 989,
+					"hp": 758,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1583,
+					"healing": 0,
+					"hp": 829,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 213,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 847,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 332,
+					"healing": 42,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 35,
+				"winner": 1
+			},
+			"seed": 989,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 35,
+			"units": [
+				{
+					"damage": 1297,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 594
+				},
+				{
+					"damage": 279,
+					"healing": 989,
+					"hp": 970,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1724,
+					"healing": 0,
+					"hp": 526,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 580,
+					"healing": 0,
+					"hp": 331,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 267,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 354,
+					"healing": 569,
+					"hp": 155,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 8,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 8,
+			"units": [
+				{
+					"damage": 98,
+					"healing": 0,
+					"hp": 1505,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 32
+				},
+				{
+					"damage": 186,
+					"healing": 0,
+					"hp": 716,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 505,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 166,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 91,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 182,
+					"healing": 20,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 736,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 534
+				},
+				{
+					"damage": 396,
+					"healing": 662,
+					"hp": 638,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 2069,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 298,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 76
+				},
+				{
+					"damage": 574,
+					"healing": 7,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 145,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 162,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 269
+				},
+				{
+					"damage": 208,
+					"healing": 238,
+					"hp": 918,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 811,
+					"healing": 0,
+					"hp": 955,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 84,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 168,
+					"healing": 188,
+					"hp": 652,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 401,
+					"healing": 0,
+					"hp": 591,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 10,
+				"reason": "cleared",
+				"round": 10,
+				"turns": 45,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 45,
+			"units": [
+				{
+					"damage": 596,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 1092
+				},
+				{
+					"damage": 604,
+					"healing": 723,
+					"hp": 1127,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 2507,
+					"healing": 0,
+					"hp": 1065,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 504,
+					"healing": 499,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 90,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 225,
+					"healing": 208,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 31,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 31,
+			"units": [
+				{
+					"damage": 477,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 539
+				},
+				{
+					"damage": 486,
+					"healing": 948,
+					"hp": 820,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1543,
+					"healing": 0,
+					"hp": 783,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 298,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 705,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 332,
+					"healing": 42,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1026,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 1241,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 594
+				},
+				{
+					"damage": 279,
+					"healing": 925,
+					"hp": 917,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1555,
+					"healing": 0,
+					"hp": 392,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 663,
+					"healing": 0,
+					"hp": 401,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 339,
+					"healing": 0,
+					"hp": 155,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 322,
+					"healing": 569,
+					"hp": 155,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 8,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 8,
+			"units": [
+				{
+					"damage": 98,
+					"healing": 0,
+					"hp": 1505,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 32
+				},
+				{
+					"damage": 186,
+					"healing": 0,
+					"hp": 716,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 505,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 166,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 91,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 182,
+					"healing": 20,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 736,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 534
+				},
+				{
+					"damage": 396,
+					"healing": 690,
+					"hp": 638,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 2069,
+					"healing": 0,
+					"hp": 1147,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 269,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 76
+				},
+				{
+					"damage": 631,
+					"healing": 7,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 145,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 90,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 269
+				},
+				{
+					"damage": 208,
+					"healing": 238,
+					"hp": 918,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 804,
+					"healing": 0,
+					"hp": 955,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 84,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 95
+				},
+				{
+					"damage": 168,
+					"healing": 188,
+					"hp": 652,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 401,
+					"healing": 0,
+					"hp": 670,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 11,
+				"reason": "cleared",
+				"round": 11,
+				"turns": 49,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 49,
+			"units": [
+				{
+					"damage": 741,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 1124
+				},
+				{
+					"damage": 688,
+					"healing": 723,
+					"hp": 1095,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 2619,
+					"healing": 0,
+					"hp": 1065,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 536,
+					"healing": 840,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 90,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 217
+				},
+				{
+					"damage": 225,
+					"healing": 208,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 31,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 31,
+			"units": [
+				{
+					"damage": 477,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 538
+				},
+				{
+					"damage": 486,
+					"healing": 1009,
+					"hp": 1036,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1552,
+					"healing": 0,
+					"hp": 627,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 252,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 747,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 411,
+					"healing": 51,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1102,
+			"team": [
+				"auren",
+				"zaya",
+				"veyra"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 1241,
+					"healing": 0,
+					"hp": 1593,
+					"id": "0-auren",
+					"maxHp": 1593,
+					"shieldGranted": 594
+				},
+				{
+					"damage": 317,
+					"healing": 957,
+					"hp": 970,
+					"id": "0-zaya",
+					"maxHp": 1141,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 1706,
+					"healing": 0,
+					"hp": 454,
+					"id": "0-veyra",
+					"maxHp": 1147,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 580,
+					"healing": 0,
+					"hp": 363,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 339,
+					"healing": 0,
+					"hp": 155,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 350
+				},
+				{
+					"damage": 322,
+					"healing": 569,
+					"hp": 4,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 8,
+				"winner": 0
+			},
+			"seed": 767,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 8,
+			"units": [
+				{
+					"damage": 372,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 281,
+					"healing": 0,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 138,
+					"healing": 0,
+					"hp": 980,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 183,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 109,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 144,
+					"healing": 22,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 30,
+				"winner": 0
+			},
+			"seed": 841,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 30,
+			"units": [
+				{
+					"damage": 2533,
+					"healing": 0,
+					"hp": 1116,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 331,
+					"healing": 719,
+					"hp": 924,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 381,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 636
+				},
+				{
+					"damage": 224,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 137
+				},
+				{
+					"damage": 369,
+					"healing": 51,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 269,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 923,
+					"healing": 0,
+					"hp": 937,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 144,
+					"healing": 155,
+					"hp": 1216,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 283,
+					"healing": 0,
+					"hp": 1507,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 318
+				},
+				{
+					"damage": 79,
+					"healing": 0,
+					"hp": 820,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 0,
+					"healing": 268,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 393,
+					"healing": 53,
+					"hp": 387,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 11,
+				"reason": "cleared",
+				"round": 11,
+				"turns": 49,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 49,
+			"units": [
+				{
+					"damage": 3023,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 709,
+					"healing": 288,
+					"hp": 1211,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 810,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 1590
+				},
+				{
+					"damage": 207,
+					"healing": 1392,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 158,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 434
+				},
+				{
+					"damage": 0,
+					"healing": 150,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 8,
+				"reason": "cleared",
+				"round": 8,
+				"turns": 37,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 37,
+			"units": [
+				{
+					"damage": 1742,
+					"healing": 0,
+					"hp": 722,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 142
+				},
+				{
+					"damage": 347,
+					"healing": 555,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 447,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 1272
+				},
+				{
+					"damage": 76,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 255,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 525,
+					"healing": 72,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 989,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 1574,
+					"healing": 0,
+					"hp": 715,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 472,
+					"healing": 875,
+					"hp": 514,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 528,
+					"healing": 0,
+					"hp": 1049,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 636
+				},
+				{
+					"damage": 861,
+					"healing": 0,
+					"hp": 328,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 329,
+					"healing": 0,
+					"hp": 653,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 535
+				},
+				{
+					"damage": 352,
+					"healing": 569,
+					"hp": 359,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 8,
+				"winner": 0
+			},
+			"seed": 804,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 8,
+			"units": [
+				{
+					"damage": 372,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 274,
+					"healing": 0,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 138,
+					"healing": 0,
+					"hp": 1021,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 183,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 109,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 103,
+					"healing": 15,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 30,
+				"winner": 0
+			},
+			"seed": 878,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 30,
+			"units": [
+				{
+					"damage": 2418,
+					"healing": 0,
+					"hp": 847,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 456,
+					"healing": 567,
+					"hp": 986,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 381,
+					"healing": 0,
+					"hp": 1508,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 636
+				},
+				{
+					"damage": 144,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 137
+				},
+				{
+					"damage": 439,
+					"healing": 61,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 256,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 915,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 923,
+					"healing": 0,
+					"hp": 982,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 144,
+					"healing": 155,
+					"hp": 1216,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 283,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 318
+				},
+				{
+					"damage": 72,
+					"healing": 0,
+					"hp": 820,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 0,
+					"healing": 268,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 348,
+					"healing": 46,
+					"hp": 380,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 11,
+				"reason": "cleared",
+				"round": 11,
+				"turns": 49,
+				"winner": 0
+			},
+			"seed": 952,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 49,
+			"units": [
+				{
+					"damage": 3021,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 744,
+					"healing": 320,
+					"hp": 1211,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 777,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 1590
+				},
+				{
+					"damage": 207,
+					"healing": 1392,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 190,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 434
+				},
+				{
+					"damage": 0,
+					"healing": 150,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 8,
+				"reason": "cleared",
+				"round": 8,
+				"turns": 37,
+				"winner": 0
+			},
+			"seed": 989,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 37,
+			"units": [
+				{
+					"damage": 1742,
+					"healing": 0,
+					"hp": 705,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 142
+				},
+				{
+					"damage": 347,
+					"healing": 555,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 441,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 1272
+				},
+				{
+					"damage": 107,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 284,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 112
+				},
+				{
+					"damage": 482,
+					"healing": 66,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1026,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 1433,
+					"healing": 0,
+					"hp": 767,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 472,
+					"healing": 875,
+					"hp": 456,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 528,
+					"healing": 0,
+					"hp": 994,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 636
+				},
+				{
+					"damage": 922,
+					"healing": 0,
+					"hp": 328,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 329,
+					"healing": 0,
+					"hp": 653,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 535
+				},
+				{
+					"damage": 352,
+					"healing": 569,
+					"hp": 500,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 4,
+					"target": "1-minion-acolyte",
+					"targetName": "o Acólito do Véu",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "court",
+			"result": {
+				"completedRounds": 2,
+				"reason": "target",
+				"round": 2,
+				"turns": 8,
+				"winner": 0
+			},
+			"seed": 880,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 8,
+			"units": [
+				{
+					"damage": 372,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 274,
+					"healing": 0,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 138,
+					"healing": 0,
+					"hp": 1021,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 183,
+					"healing": 0,
+					"hp": 831,
+					"id": "1-minion-root",
+					"maxHp": 831,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 109,
+					"healing": 0,
+					"hp": 1029,
+					"id": "1-minion-sentinel",
+					"maxHp": 1029,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 103,
+					"healing": 15,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 769,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": [
+					{
+						"attackScale": 0.9,
+						"healthScale": 0.65,
+						"name": "Vigias da escadaria"
+					},
+					{
+						"attackScale": 1.0,
+						"healthScale": 0.75,
+						"name": "Reforços da maré"
+					}
+				]
+			},
+			"mission": "tidal-gate",
+			"result": {
+				"completedRounds": 7,
+				"reason": "cleared",
+				"round": 7,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 954,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 2486,
+					"healing": 0,
+					"hp": 1051,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 430,
+					"healing": 677,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 323,
+					"healing": 0,
+					"hp": 1253,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 954
+				},
+				{
+					"damage": 45,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 665,
+					"shieldGranted": 137
+				},
+				{
+					"damage": 330,
+					"healing": 45,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 503,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 393,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-root",
+					"maxHp": 543,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectAll": true,
+					"rounds": 3,
+					"type": "survive"
+				},
+				"waves": []
+			},
+			"mission": "tidal-archive",
+			"result": {
+				"completedRounds": 3,
+				"reason": "survived",
+				"round": 4,
+				"turns": 17,
+				"winner": 0
+			},
+			"seed": 991,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 17,
+			"units": [
+				{
+					"damage": 923,
+					"healing": 0,
+					"hp": 982,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 144,
+					"healing": 155,
+					"hp": 1216,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 283,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 318
+				},
+				{
+					"damage": 72,
+					"healing": 0,
+					"hp": 820,
+					"id": "1-minion-tide",
+					"maxHp": 886,
+					"shieldGranted": 94
+				},
+				{
+					"damage": 0,
+					"healing": 268,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 680,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 348,
+					"healing": 46,
+					"hp": 380,
+					"id": "1-minion-acolyte",
+					"maxHp": 670,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+					"basicEnergyGain": 4,
+					"id": "aether-current",
+					"name": "Corrente do éter",
+					"skillCostDelta": 5
+				},
+				"objective": {
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "tidal-heart",
+			"result": {
+				"completedRounds": 11,
+				"reason": "cleared",
+				"round": 11,
+				"turns": 49,
+				"winner": 0
+			},
+			"seed": 1028,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 49,
+			"units": [
+				{
+					"damage": 3056,
+					"healing": 0,
+					"hp": 1175,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 709,
+					"healing": 288,
+					"hp": 1211,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 777,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 1590
+				},
+				{
+					"damage": 207,
+					"healing": 1392,
+					"hp": 0,
+					"id": "1-boss-tide",
+					"maxHp": 1550,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 158,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-tide",
+					"maxHp": 820,
+					"shieldGranted": 434
+				},
+				{
+					"damage": 0,
+					"healing": 150,
+					"hp": 0,
+					"id": "1-minion-siren",
+					"maxHp": 630,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"protectSlot": 0,
+					"type": "clear"
+				},
+				"waves": []
+			},
+			"mission": "forge-road",
+			"result": {
+				"completedRounds": 6,
+				"reason": "cleared",
+				"round": 6,
+				"turns": 29,
+				"winner": 0
+			},
+			"seed": 1065,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 29,
+			"units": [
+				{
+					"damage": 1723,
+					"healing": 0,
+					"hp": 817,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 71
+				},
+				{
+					"damage": 365,
+					"healing": 414,
+					"hp": 1288,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 423,
+					"healing": 0,
+					"hp": 1514,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 636
+				},
+				{
+					"damage": 107,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-cinder",
+					"maxHp": 840,
+					"shieldGranted": 197
+				},
+				{
+					"damage": 160,
+					"healing": 0,
+					"hp": 0,
+					"id": "1-minion-sentinel",
+					"maxHp": 930,
+					"shieldGranted": 224
+				},
+				{
+					"damage": 353,
+					"healing": 47,
+					"hp": 0,
+					"id": "1-minion-acolyte",
+					"maxHp": 694,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 0
+		},
+		{
+			"conditions": {
+				"bossPhase": {
+
+				},
+				"field": {
+
+				},
+				"objective": {
+					"rounds": 6,
+					"target": "1-boss-relay",
+					"targetName": "o Guardião do relé",
+					"type": "target"
+				},
+				"waves": []
+			},
+			"mission": "forge-relay",
+			"result": {
+				"completedRounds": 6,
+				"reason": "deadline",
+				"round": 7,
+				"turns": 36,
+				"winner": 1
+			},
+			"seed": 1102,
+			"team": [
+				"solen",
+				"saira",
+				"axion"
+			],
+			"turns": 36,
+			"units": [
+				{
+					"damage": 1514,
+					"healing": 0,
+					"hp": 715,
+					"id": "0-solen",
+					"maxHp": 1175,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 472,
+					"healing": 875,
+					"hp": 481,
+					"id": "0-saira",
+					"maxHp": 1288,
+					"shieldGranted": 0
+				},
+				{
+					"damage": 528,
+					"healing": 0,
+					"hp": 1049,
+					"id": "0-axion",
+					"maxHp": 1514,
+					"shieldGranted": 636
+				},
+				{
+					"damage": 894,
+					"healing": 0,
+					"hp": 268,
+					"id": "1-boss-relay",
+					"maxHp": 1521,
+					"shieldGranted": 485
+				},
+				{
+					"damage": 329,
+					"healing": 0,
+					"hp": 632,
+					"id": "1-minion-tide",
+					"maxHp": 959,
+					"shieldGranted": 535
+				},
+				{
+					"damage": 352,
+					"healing": 569,
+					"hp": 500,
+					"id": "1-minion-siren",
+					"maxHp": 737,
+					"shieldGranted": 0
+				}
+			],
+			"winner": 1
+		}
+	],
+	"scope": "campaign objectives only; automatic policy",
+	"tactics": {
+		"absorbedDamageWeight": 0.6,
+		"carrierCleanseValue": 25.0,
+		"carrierShieldWeight": 0.7,
+		"collateralDamageWeight": 0.15,
+		"endangeredHealthRatio": 0.5,
+		"energyCostWeight": 0.25,
+		"immediateVictoryBonus": 1000.0,
+		"schemaVersion": 1.0,
+		"targetDamageWeight": 4.0,
+		"ultimateReserveWeight": 1.8
+	},
+	"trained": false
+}

@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+public/*.js
+public/*.css
+npm-debug.log*
+.env
+.DS_Store
+artifacts/
+public/downloads/*.exe
+electron/**/bin/
+electron/**/obj/
+
+supabase/.temp/
+
+# Godot sources are tracked; imports and exports are generated.
+.godot/
+games/**/builds/
+
+# Native Android distribution inputs are supplied securely by CI.
+android/app/google-services.json
+*.jks
+*.keystore

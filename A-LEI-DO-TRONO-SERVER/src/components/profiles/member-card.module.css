@@ -1,0 +1,170 @@
+.card {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  border: 1px solid #404040;
+  border-radius: 12px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  background: #181818;
+  color: #e6dfd0;
+  font:
+    13px/1.6 'Segoe UI',
+    sans-serif;
+}
+.card,
+.card * {
+  box-sizing: border-box;
+}
+.card :global(.member-background),
+.card :global(.member-shade) {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.card :global(.member-background img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(var(--member-blur));
+}
+.card :global(.member-shade) {
+  background: rgb(0 0 0 / var(--member-darkness));
+}
+.card :global(.member-cover) {
+  height: 118px;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(115deg, #38332a, #242424);
+  touch-action: none;
+}
+.card :global(.member-cover img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center var(--member-cover-position);
+  transform: scale(var(--member-cover-zoom));
+}
+.card :global(.member-content) {
+  padding: 20px;
+  background: rgb(20 20 20 / var(--member-opacity));
+}
+.card :global(.member-identity),
+.card :global(.member-details) {
+  min-width: 0;
+}
+.card :global(.member-avatar) {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-top: -52px;
+  border: 4px solid #202020;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #303030;
+  color: var(--member-accent);
+}
+.card :global(.member-avatar img),
+.card :global(.member-avatar svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card :global(.member-name) {
+  margin: 10px 0 2px;
+  font:
+    500 24px/1.3 Georgia,
+    serif;
+  color: #e6d8b9;
+}
+.card :global(.member-handle) {
+  margin: 0;
+  color: #b0b0b0;
+  font-size: 12px;
+}
+.card :global(.member-status) {
+  margin: 10px 0 0;
+  color: #d4d4d4;
+}
+.card :global(.member-details) {
+  margin-top: 18px;
+}
+.card :global(.member-details h3) {
+  margin: 18px 0 7px;
+  color: #d6b779;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.card :global(.member-details h3:first-child) {
+  margin-top: 0;
+}
+.card :global(.member-bio) {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.card :global(.member-tags),
+.card :global(.member-links) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.card :global(.member-tags span),
+.card :global(.member-links a) {
+  max-width: 100%;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: #ffffff0c;
+}
+.card a {
+  color: #dcc28f;
+}
+.card :global(.member-empty) {
+  margin: 0;
+  color: #ababab;
+  font-size: 12px;
+}
+.card :global(.member-media-credits) {
+  margin-top: 18px;
+  font-size: 11px;
+  color: #b6a787;
+}
+.card :global(.member-media-credits summary) {
+  cursor: pointer;
+}
+.card :global(.member-media-credits a) {
+  display: block;
+  margin-top: 6px;
+}
+.card :global(.member-since) {
+  display: block;
+  padding-top: 14px;
+  margin-top: 16px;
+  border-top: 1px solid #ffffff14;
+  color: #b0b0b0;
+  font-size: 10px;
+}
+.card[data-layout='full'] :global(.member-cover) {
+  height: 184px;
+}
+.card[data-layout='full'] :global(.member-content) {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.75fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 24px;
+}
+.card[data-layout='full'] :global(.member-details) {
+  margin-top: 0;
+}
+@media (max-width: 600px) {
+  .card[data-layout='full'] :global(.member-content) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 20px;
+  }
+  .card[data-layout='full'] :global(.member-cover) {
+    height: 138px;
+  }
+}

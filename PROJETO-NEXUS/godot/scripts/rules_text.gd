@@ -1,0 +1,26 @@
+extends RefCounted
+## UI descriptions derive from the same parameters as the engine.
+## Edit src/balance.json, then npm run sync:godot; do not balance values here.
+static var rules: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat-rules.json"))
+
+static func percent(value: float) -> String:
+	var scaled := value * 100.0
+	return (str(int(round(scaled))) if is_equal_approx(scaled, round(scaled)) else ("%.1f" % scaled).replace(".", ",")) + "%"
+
+static func relationship(multiplier: float) -> String:
+	if multiplier > 1: return "Vulnerável +" + percent(multiplier - 1)
+	if multiplier < 1: return "Resistente −" + percent(1 - multiplier)
+	return "Neutro"
+
+static func status_names() -> Dictionary:
+	var s: Dictionary = rules.status
+	return {"darkmark": "Marca obscura: drena " + percent(s.darkmarkMaxHpRatio) + " vida", "sentinel": "Sentinela: enfraquece agressores", "elementalWard": "Égide: reduz vantagem em " + percent(1-s.elementalWardIncomingMultiplier), "burn": "Queimadura", "bleed": "Sangramento: cura −" + percent(1 - s.bleedHealingMultiplier), "regen": "Regeneração", "weaken": "Ataque −" + percent(1 - s.weakenAttackMultiplier), "expose": "Defesa −" + percent(1 - s.exposeDefenseMultiplier), "empower": "Ataque +" + percent(s.empowerAttackMultiplier - 1), "fortify": "Dano recebido −" + percent(1 - s.fortifyIncomingDamageMultiplier), "cover": "Proteção: desvia " + percent(s.coverRedirectRatio), "mirror": "Reflete " + percent(s.mirrorDamageRatio) + " do dano à vida", "riposte": "Contra-ataca: " + percent(s.riposteAttackRatio) + " ATQ", "taunt": "Provocação", "tauntRisk": "Custo da provocação: DEF −" + percent(1-s.tauntDefenseMultiplier), "emberguard": "Retalia com queimadura", "focus": "Próximo golpe +" + percent(s.focusDamageMultiplier - 1), "seed": "Semente: próximo atacante cura " + percent(s.seedHealMaxHpRatio)}
+
+static func help_text() -> String:
+	var r: Dictionary = rules
+	return "Monte um trio de personagens diferentes. Escolha a habilidade, selecione o alvo e confirme. A iniciativa usa velocidade; o campo mostra frente e duas posições de retaguarda.\n\n" + \
+	"ENERGIA E AÇÕES\nAtaque básico: um alvo, +%d energia. Defesa: +%d energia, escudo de %s da vida e redução de dano de %s até o próximo turno. Técnicas e supremos têm custo, alcance e recarga próprios, descritos nos cards.\n\n" % [int(r.energy.basicGain), int(r.energy.guardGain), percent(r.guard.shieldMaxHpRatio), percent(1 - r.guard.incomingDamageMultiplier)] + \
+	"DANO E ESTADOS\nCrítico: chance de %s; dano +%s. Vida, energia e escudo usam barras separadas. Queimadura e sangramento atravessam escudos: %s / %s da vida máxima por ativação, durante %d turnos. Sangramento reduz toda cura recebida em %s. Regeneração: %s por ativação. Purificação remove efeitos negativos; curar e purificar aplica a cura antes da limpeza.\n\n" % [percent(r.critical.chance), percent(r.critical.damageMultiplier - 1), percent(r.status.burnMaxHpRatio), percent(r.status.bleedMaxHpRatio), int(r.status.durationTurns), percent(1 - r.status.bleedHealingMultiplier), percent(r.status.regenMaxHpRatio)] + \
+	"ALVOS E PROTEÇÃO\nA posição é visual: qualquer adversário vivo pode ser escolhido. Provocação restringe ataques individuais ao provocador; área atinge todos. O provocador perde 25% de defesa durante a postura; esse custo termina junto com a provocação. Escudos somam até %s da vida máxima. Cada aplicação dura %d rodadas globais e expira separadamente; os golpes consomem a mais antiga primeiro. O primeiro tanque da formação protege os aliados por 2 turnos pessoais na abertura: %s do golpe individual vai ao protetor vivo. Sombrio drena %s do dano direto à vida; dano absorvido não gera cura.\n\n" % [percent(r.shield.maxHpRatio), int(r.shield.durationRounds), percent(r.status.coverRedirectRatio), percent(r.classPassives.sombrioDrainRatio)] + \
+	"AFINIDADES E FRATURA\nVantagem: +%s. Resistência: −%s. A Fratura começa na rodada %d: %s da vida antes de cada ação pessoal, +%s por rodada, até %s. Ignora escudos e reduz toda cura em %s adicionais por rodada, até zero. Essa redução multiplica a do sangramento e não pode ser purificada.\n\n" % [percent(r.affinity.advantageMultiplier - 1), percent(1 - r.affinity.resistanceMultiplier), int(r.fracture.startRound), percent(r.fracture.initialMaxHpRatio), percent(r.fracture.perRoundMaxHpRatio), percent(r.fracture.maxHpRatioCap), percent(r.fracture.healingReductionPerRound)] + \
+	"IDENTIDADES E COMBOS\nÍgneo: +5 pontos de chance crítica; tanques e suportes refletem 10% do dano direto à vida. Natural: cura, sangramento e estados. Técnico: barreiras e buffs. Arcano: área, manipulação e égide (−20% de dano direto com vantagem). Sombrio: marcas (3,5% da vida por turno; autor cura 60% do dano real) e roubo de vida. Misture classes para preparar combos; uma aflição não acumula consigo mesma. Reações não geram novas reações.\n\nHERÓIS E CAMPANHA\nConsulte habilidades, sinergia e história na aba Heróis. Cada herói leva três gemas, inclusive repetidas. Os bônus são somados e valem somente na história; missões concluídas, trio e engastes são salvos neste dispositivo. Batalhas em andamento não são salvas.\n\nF11 alterna tela cheia; Esc volta à janela. 1–4 escolhem ações, setas mudam alvo e Enter confirma. Reduzir animações mantém todas as regras."
