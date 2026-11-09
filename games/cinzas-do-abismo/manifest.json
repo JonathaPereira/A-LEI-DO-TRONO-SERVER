@@ -1,0 +1,447 @@
+{
+  "schema": 1,
+  "id": "cinzas-do-abismo",
+  "version": "0.5",
+  "cacheKey": "cdf6a6b48db75124dc6e",
+  "bytes": 22138607,
+  "files": [
+    {
+      "path": "assets/catalogue-cover.png",
+      "bytes": 2407572,
+      "sha256": "52f50e5500a430128d45bafc71bb61da3f9074f33622d240095049176d00a574",
+      "type": "image/png"
+    },
+    {
+      "path": "assets/creatures.webp",
+      "bytes": 735352,
+      "sha256": "c75e6050c5c9993fba2d46088f65326b02f207d660eeeb3751c41d462b77f8d2",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/forest.webp",
+      "bytes": 201472,
+      "sha256": "64bd49b1d55a536a7b27465430ce9f3b9f5749dd0421602234e7cfaac7c4b6b0",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/forge.webp",
+      "bytes": 178934,
+      "sha256": "d93fcfd3ea1a5cf305d635b2161cc1e331b42af7c7875a3ed17f155ac4417647",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/hero.webp",
+      "bytes": 425236,
+      "sha256": "5e5aee22692068dcbb054be27c864f14f1aa222b65003c6903b682fe8a9f8559",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/ruins.webp",
+      "bytes": 162592,
+      "sha256": "77a2453088bc92068f1708c5b44c5bf8a8aa2b9b38698c5fe4ddf3008664058e",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-blade.webp",
+      "bytes": 58310,
+      "sha256": "ee63f090ed689cff6fd9f631d27a1bbb6931662283064fef85707588c7956c04",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-bow.webp",
+      "bytes": 85952,
+      "sha256": "7ab53dbd6a33ae1aa374d0f1985ca6541b34635a6a5a0800ad5584a051583571",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-fire.webp",
+      "bytes": 73634,
+      "sha256": "dad16d1990903c21b5cd478e21e58c64ca9c4549d01af98bec5b061358f75dc5",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-frost.webp",
+      "bytes": 97878,
+      "sha256": "3537be9e4466d9251efee17086be2c4b6a793afb981ee4cd00f24b82d7beb730",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-hammer.webp",
+      "bytes": 72696,
+      "sha256": "2e78c09059f46b94637cb464875f652aba6de7ccf37997e3cd729b3176a0e74d",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-lightning.webp",
+      "bytes": 69622,
+      "sha256": "834ec90ef62183a796e62faef55c751e645d3c5adb9c8d04913572ed23fb26ff",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-poison.webp",
+      "bytes": 66008,
+      "sha256": "4cc8fd0111d9105ac9ab1b91cb22d998824a20c4e57cd9211a95e99e351b4506",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/card-staff.webp",
+      "bytes": 73776,
+      "sha256": "340873d2a076d6f6cfb60a77f087484a990843cee97f6055ffdaed2b9f05ec6f",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/forest.webp",
+      "bytes": 364010,
+      "sha256": "4cd9f30516c688e49673354ad848114f90dbe90beeb961074c2f2281b5f0bb5e",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/forge.webp",
+      "bytes": 325678,
+      "sha256": "43ba81e935bd9f6b1474b4938f988117ff8750f6ba764d5585e9b48a42de861a",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/hero_combat.webp",
+      "bytes": 373058,
+      "sha256": "8b5bdf1f9a8341b34880fe85fc361ed7b25e5062850214f4fbdbdf635b043c63",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/hero_motion.webp",
+      "bytes": 220496,
+      "sha256": "f905d550aa3923bd89e41800ad0459e1b8e843805074007dafc3cb7153894f75",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/portrait.webp",
+      "bytes": 8304,
+      "sha256": "591b17a9fa3d1afc50490461a19ccd86ece644c0f51cca5fdc67a04cd43cb466",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/ruins.webp",
+      "bytes": 445142,
+      "sha256": "d654e9ffbd23dece390d79b5cd6718baf85d5528eaa8437ba39285dda58b16ee",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/terrain-0.webp",
+      "bytes": 101716,
+      "sha256": "4655ab259e075ea2da1027a1f75ad70f411e20dfebbf1e0ce8dc5df06f4b8b2d",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/terrain-1.webp",
+      "bytes": 77694,
+      "sha256": "e55af5021724c1bd42153d71b93a5cb7e8ae0bd317c735dcd24db48215c4dba2",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/terrain-2.webp",
+      "bytes": 74120,
+      "sha256": "405162295fc924c1ddf5956a1a964eb57883ea04b910f85acb67738161612c5d",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/terrain-3.webp",
+      "bytes": 115702,
+      "sha256": "9a72e066bd32286b984c2aa63556a5a2462d9565eabf19d550bbcb03afcda944",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/terrain-4.webp",
+      "bytes": 85216,
+      "sha256": "5614150c7cff9ec6b9c0fc3582581db902834543a46076b5dfa0301254f5682f",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v3/terrain-5.webp",
+      "bytes": 76084,
+      "sha256": "282d485df374a32001067efe7df744f801d18bf0f61e7a2123a699f8263f7807",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/blade_combos.webp",
+      "bytes": 450708,
+      "sha256": "ab1a61de101dded557f35a424835f45aa7c71a270349dc182fc586404d4e7e8f",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/boss_eclipse.webp",
+      "bytes": 468770,
+      "sha256": "9b9b5e0ef07554e2fbddd9d7a30a969c39b0f222089a7e437e13e494f0364efb",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/boss_forge.webp",
+      "bytes": 485568,
+      "sha256": "92aa2a52596684ff787aec8fc83749cb3805b1c3d38f7e6d1417ee8df320d104",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/boss_root.webp",
+      "bytes": 521088,
+      "sha256": "d3e15f0f70ea7446348feac71752432e25972fde4d404559865b7a5708892777",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-bloodmoon.webp",
+      "bytes": 45214,
+      "sha256": "2df9c214ab7decbc289309a81d48b541668d44c5d23342c2c63d6bfac0acb170",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-boots.webp",
+      "bytes": 57634,
+      "sha256": "37f5683bac6ccddee34cfaf31a3a9437078b7ff88d2f3e041fde3924cd1c3e88",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-core.webp",
+      "bytes": 72488,
+      "sha256": "9f890011427cb6df7e4b2e601c156a7287d3fc35c5f62634df349b9df45eecd5",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-echo.webp",
+      "bytes": 62244,
+      "sha256": "b64f82a48714c96dc48a8f465af36dcaf6136ea0c053d728b764fc534edd3700",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-edge.webp",
+      "bytes": 56720,
+      "sha256": "b5145a288b30dbaacb4405ce1428d88cfc22cfe549bd9d216d998a1d44c69b1d",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-heart.webp",
+      "bytes": 70270,
+      "sha256": "72eaea342c76279ed0ac51c5e2d93ff58d324be5f8691f29a785410820f8d79c",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-icecrown.webp",
+      "bytes": 76820,
+      "sha256": "48a3f125969ef95ca7a040ff1b36e1dba286ec6e67fbf4fee53e8d16f506e6f0",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-meteor.webp",
+      "bytes": 77438,
+      "sha256": "bfe02482643bdf13fd1674bb61a9314706960e645185abd2191871dceebea61b",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-phoenix.webp",
+      "bytes": 69268,
+      "sha256": "f6cba361b32d9d85c77c8747e02c53a7a26254ef3f256a594eee22771e0bea78",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-rings.webp",
+      "bytes": 55788,
+      "sha256": "b6c24ca3065a81d72f78ba3bacf00c4f5c72875159f9b4c932bb5de9bd9e3056",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-shield.webp",
+      "bytes": 74784,
+      "sha256": "0316bf0337c82f160e001b823d6b982d0a56fef871f65028b2d085a115da9efb",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/card-toxic.webp",
+      "bytes": 59896,
+      "sha256": "03d1b3835d4959efd07bcd442ede2ac35041db37432e33c4ad22a649241aa651",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/caster_motion.webp",
+      "bytes": 695788,
+      "sha256": "ca02c2bf9cb2da37ca82b7043121015064d912f019a02bc58cbaa98f45b344ad",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/cave.webp",
+      "bytes": 444056,
+      "sha256": "84b3ebb70ee43b162044faa288055a9da8ec92e2d2821c258935097ee965535d",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/hero_blade.webp",
+      "bytes": 481798,
+      "sha256": "53c2ea9995c13a938e097ff7f6ca7358c5491c6e6434827e03d5a50c107ac419",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/hero_bow.webp",
+      "bytes": 550160,
+      "sha256": "1b87779f443cc923cdda340c95b52b6bfd69ca214384c099d12bdbcefe472603",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/hero_hammer.webp",
+      "bytes": 512206,
+      "sha256": "74c2c680409483414a684facf7490268abe3a4ff332017d3408286b55d658fe6",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/hero_staff.webp",
+      "bytes": 512438,
+      "sha256": "218fd66ebea704f6a1f520de24d9d9029c5049e1ccdea5d1b15838681c90d664",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/mob_motion.webp",
+      "bytes": 1002262,
+      "sha256": "1b3086f22f22bec55a63ae47ec791c3ef824a04a8143226c92e84d480c3fee4e",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v4/winter.webp",
+      "bytes": 512652,
+      "sha256": "1ac9a1138d35cdc98ee8448d33ce0b891157ff71d2c34ed00b27aa18f44edf9f",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/audio/music-boss.mp3",
+      "bytes": 531270,
+      "sha256": "25786e1477cb02c15c6a5ee16be3389af1b574f7bdcaa316ccf132d57651befe",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/music-crypt.mp3",
+      "bytes": 961350,
+      "sha256": "c0b30d42422ba853ab3354045ad8b58473b64fd9a07e9f98f3c25b6255a97c37",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/music-forest.mp3",
+      "bytes": 810048,
+      "sha256": "3dcbcd03c3fd8e2a5050283e57d2169bc0d1f1b44b78b25d118defd3887a3086",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/music-forge.mp3",
+      "bytes": 654986,
+      "sha256": "9711f1ddd3f1fc7f608e7902276225d619d58da16144b4fd62008c620f503575",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/pain-1.mp3",
+      "bytes": 7985,
+      "sha256": "86ac69fde9b117d64bda580610ed09aae27cbac1c0bc0951b1301a83d75c33f6",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/pain-2.mp3",
+      "bytes": 8821,
+      "sha256": "527a0041eabbf01217cfbf5b74610ed4034c9d5d36fd31537bd69d2e072a6042",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/pain-3.mp3",
+      "bytes": 9657,
+      "sha256": "e24627a1f662a8fb454602e51aa6e9d187f487d0f1b5046e014fb56aea675ed1",
+      "type": "audio/mpeg"
+    },
+    {
+      "path": "assets/v5/audio/score.json",
+      "bytes": 990,
+      "sha256": "0523fe06779f95084677b29c40ea06f33b1b927914a0c26fa906fd6fdf5271d8",
+      "type": "application/json"
+    },
+    {
+      "path": "assets/v5/blade_special.webp",
+      "bytes": 371490,
+      "sha256": "871b957de341ca072971fff5c3757125ec30b8f28aaf38d69b5688acd75d1ab8",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/bow_actions.webp",
+      "bytes": 356412,
+      "sha256": "ac96c1166fc24de9b6f27e5498f3c6c737df7d0991df7dfd3947d2c6db09cf54",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/forest_bg.webp",
+      "bytes": 584470,
+      "sha256": "ea88c40fee99798c36b4f7cb86c7b0b1f4c483e70d5892592adf68ec32be0556",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-0.webp",
+      "bytes": 116142,
+      "sha256": "954e00e805e2aaba5a4e70eb7a86587cf9b61a29b2c0fbcba0c6696b4a979063",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-1.webp",
+      "bytes": 135320,
+      "sha256": "b45d051333d05da591747232c7351861f07c63a63fa05d9485c346033b423444",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-2.webp",
+      "bytes": 112034,
+      "sha256": "f2c2bfd175a0ab20b0b21930ade9b5c42b8f2686fba81a57823885090b215315",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-3.webp",
+      "bytes": 137558,
+      "sha256": "3c828af119beffa94b5c0131a6003b18da5e4ef96540db4295d909b2cdc63e46",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-4.webp",
+      "bytes": 144712,
+      "sha256": "0ee4272c8af9159b98ff65f4908997fc746a720ef9bfbb81294b4b829a40ab38",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-5.webp",
+      "bytes": 133542,
+      "sha256": "ce7824888cc605326c3f4d2d914d40ef533b5bc27bb528e22132952f79573752",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-6.webp",
+      "bytes": 135180,
+      "sha256": "a1fc81a506a0979dcb3b62c8b6dc5405915c41872555c4adba76485ef883b319",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/material-7.webp",
+      "bytes": 126866,
+      "sha256": "8b5a27939d0f3838acbecc26683611954ed56695972d4bceb8d46f95e3a8f7be",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/mobs_new.webp",
+      "bytes": 865486,
+      "sha256": "87bd68ce12da18d49895b7a53125814ffa4954c10a865ab54d36c9b1c125d186",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/staff_actions.webp",
+      "bytes": 344704,
+      "sha256": "63481821be621056b9e4eeb39e8240d902a1d2216ed482e6ebe6a5f99c3790f4",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/tunnel_bg.webp",
+      "bytes": 750620,
+      "sha256": "175013036c8079f7b28c5f2ecb681b3d2414619447bd17b59cd960b8db55dd7a",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/v5/wisp_motion.webp",
+      "bytes": 446652,
+      "sha256": "968d170029f76a2aa2499a408ac79d4cac48d97dc4b4b0e7368465028c099c63",
+      "type": "image/webp"
+    }
+  ]
+}
