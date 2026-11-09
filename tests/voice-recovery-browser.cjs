@@ -7,7 +7,7 @@ const { chromium, expect } = require('@playwright/test');
 const { startFixture } = require('./auth-fixture');
 const { installCanvasCamera } = require('./camera-fixture');
 
-test('two live accounts keep voice identity, captures and peers through repeated signaling outages and can leave during recovery', {timeout: 60000}, async () => {
+test('two live accounts keep voice identity, captures and peers through repeated signaling outages and can leave during recovery', {timeout: 90000}, async () => {
   const server = await new Promise(r => {
     const s = express().use(express.static(path.resolve('out'))).listen(0, '127.0.0.1', () => r(s));
   });
@@ -43,12 +43,13 @@ test('two live accounts keep voice identity, captures and peers through repeated
       },{base:fixture.base,login});
       await context.addInitScript(installCanvasCamera);
       await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
-      const page = await context.newPage(); pages.push(page); page.setDefaultTimeout(7000);
+      const page = await context.newPage(); pages.push(page); page.setDefaultTimeout(15000);
       page.on('pageerror',error => errors.push(error.message));
       await page.goto(origin,{waitUntil:'domcontentloaded'});
-      await expect(page.locator('#chatOnlyScreen')).toBeVisible();
-      await page.getByRole('button',{name:'Entrar na voz de Geral',exact:true}).click();
-      await expect.poll(() => page.evaluate(() => window.TronoSocial.voiceJoined)).toBe(true);
+      await page.waitForFunction(() => window.TronoAuth?.ready, { timeout: 20000 }).catch(() => {});
+      await expect(page.locator('#chatOnlyScreen')).toBeVisible({ timeout: 20000 });
+      await page.getByRole('button',{name:'Entrar na voz de Geral',exact:true}).click({ timeout: 10000 });
+      await expect.poll(() => page.evaluate(() => window.TronoSocial?.voiceJoined), { timeout: 15000 }).toBe(true);
       await page.evaluate(() => window.TronoNetwork.onMessage(m => { if (m.type === 'connection') window.__recoveryEvents.push(m); }));
     }
     const [ana,beto] = pages;

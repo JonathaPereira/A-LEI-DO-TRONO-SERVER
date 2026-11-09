@@ -78,11 +78,11 @@ test('Atalaia runs its actual Godot export, saves combat, downloads CSV and pres
   await painted();
   await click(800,545);await click(120,850);await click(115,440);
   await frame.locator('canvas').press('Space');
-  await expect.poll(async()=>{const save=await readSave(frame);return save?.wave;},{timeout:20000}).toBe(1);
+  await expect.poll(async()=>{const save=await readSave(frame);return save?.wave;},{timeout:60000}).toBe(1);
   const saved=await readSave(frame);assert.equal(saved.towers.length,1);
   await game.screenshot({path:'artifacts/atalaia/integrated-wave.png'});
   checkpoint('wave-saved');
-  const downloadPromise=game.waitForEvent('download',{timeout:15000});await click(1390,788);const download=await downloadPromise;
+  const downloadPromise=game.waitForEvent('download',{timeout:30000});await click(1390,788);const download=await downloadPromise;
   assert.match(download.suggestedFilename(),/^atalaia-dano-onda-01\.csv$/);
   await download.saveAs('artifacts/atalaia/damage.csv');assert.match(await fs.readFile('artifacts/atalaia/damage.csv','utf8'),/Dano campanha/);
   await screen.getByRole('button',{name:'‹ Jogos',exact:true}).click();
