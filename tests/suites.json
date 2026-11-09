@@ -1,5 +1,6 @@
 {
   "core": [
+    "games/lei-do-trono/tests/rules.test.cjs",
     "tests/men-games-registry.cjs",
     "tests/clip-native-policy.cjs",
     "tests/clip-pcm.cjs",
