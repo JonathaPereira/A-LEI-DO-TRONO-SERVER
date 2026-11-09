@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { CallNavigationSnapshot } from '../../types/call-navigation';
 import type { PrimaryScreen, PortalSnapshot } from '../../lib/navigation/portal';
-import type { GameDestination } from '../../lib/games/library';
+import { getAllRegisteredGames } from '../../lib/men-games/registry';
 import { Avatar } from '../profiles/avatar';
 import { DirectProfileBanner } from '../profiles/decorations';
 import { AccountForm, AccountOverlay } from './auth';
@@ -37,77 +37,7 @@ const GAME_SCREENS = new Set<PrimaryScreen>([
   'nexusScreen',
   'atalaiaScreen',
 ]);
-const games: readonly {
-  id: GameDestination;
-  title: string;
-  tag: string;
-  description: string;
-  image: string;
-}[] = [
-  {
-    id: 'throne',
-    title: 'A Lei do Trono',
-    tag: 'ESTRATÉGIA · CARTAS',
-    description: 'A Corte espera sua próxima jogada.',
-    image: '/assets/games/throne-cover.webp',
-  },
-  {
-    id: 'azul',
-    title: 'Azul',
-    tag: 'ESTRATÉGIA · 2–4 JOGADORES',
-    description: 'Uma cor de cada vez. Uma obra só sua.',
-    image: '/assets/azul/box-cover.webp',
-  },
-  {
-    id: 'splendor',
-    title: 'Splendor',
-    tag: 'ESTRATÉGIA · 2–4 JOGADORES',
-    description: 'Gemas, prestígio e uma boa oportunidade.',
-    image: '/assets/games/splendor-cover.webp',
-  },
-  {
-    id: 'similo',
-    title: 'Similo',
-    tag: 'DEDUÇÃO COOPERATIVA · 2–8 JOGADORES',
-    description: 'Uma pista, mil conexões. Misture temas e descubra o segredo.',
-    image: '/assets/similo/cover.svg',
-  },
-  {
-    id: 'love-letter',
-    title: 'Love Letter',
-    tag: 'DEDUÇÃO · 2–6 JOGADORES',
-    description: 'Poucas cartas. Muitas intenções.',
-    image: '/assets/love-letter/table.webp',
-  },
-  {
-    id: 'ticket-to-ride',
-    title: 'Ticket to Ride',
-    tag: 'ESTRATÉGIA · 2–5 JOGADORES',
-    description: 'Conecte cidades. Planeje seu caminho.',
-    image: '/assets/ticket-to-ride/board-usa.jpg',
-  },
-  {
-    id: 'roguelite',
-    title: 'Cinzas do Abismo',
-    tag: 'AÇÃO · SOLO',
-    description: 'Uma nova jornada a cada tentativa.',
-    image: '/roguelite/assets/catalogue-cover.png',
-  },
-  {
-    id: 'atalaia',
-    title: 'Atalaia',
-    tag: 'TOWER DEFENSE · SOLO',
-    description: 'Quinze ondas para defender o cristal.',
-    image: '/assets/games/atalaia-cover.jpg',
-  },
-  {
-    id: 'nexus',
-    title: 'Nexus',
-    tag: 'AVENTURA · JOGO EXTERNO',
-    description: 'Ecos do Crepúsculo, na sua próxima aventura.',
-    image: '/assets/games/nexus-cover.webp',
-  },
-];
+const games = getAllRegisteredGames();
 function CallSummary({ runtime }: { runtime: ApplicationServices }) {
   const state = useModel(runtime.TronoCallToolbar),
     nav = useModel(runtime.TronoCallNavigation);

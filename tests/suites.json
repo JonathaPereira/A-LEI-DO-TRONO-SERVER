@@ -1,5 +1,6 @@
 {
   "core": [
+    "tests/men-games-registry.cjs",
     "tests/clip-native-policy.cjs",
     "tests/clip-pcm.cjs",
     "tests/clip-audio.cjs",
