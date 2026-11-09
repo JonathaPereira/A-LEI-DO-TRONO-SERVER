@@ -82,7 +82,11 @@ export function initializeRoguelite(target: Window): () => void {
     });
     controller.start();
   }
-  target.addEventListener('trono:ready', bind, { once: true });
+  if ((target as unknown as { __tronoReady?: boolean }).__tronoReady) {
+    bind();
+  } else {
+    target.addEventListener('trono:ready', bind, { once: true });
+  }
   const dispose = () => {
     disposed = true;
     target.removeEventListener('trono:ready', bind);

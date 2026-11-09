@@ -25,8 +25,12 @@ export function initializeTabletopAudio(target: Window): () => void {
       ['similo', 'similoScreen'],
     ] as const
   ).map(([key, id]) => {
-    const screen = doc.getElementById(id)!;
-    return { key, screen, host: screen.querySelector<HTMLElement>('[data-game-audio-slot]')! };
+    const screen = doc.getElementById(id);
+    return {
+      key,
+      screen: screen!,
+      host: screen?.querySelector<HTMLElement>('[data-game-audio-slot]') ?? null,
+    };
   });
   const controller = createTabletopAudio({ audio: (target as Runtime).TronoAudio, events: target });
   const host = doc.createElement('div');
@@ -39,25 +43,26 @@ export function initializeTabletopAudio(target: Window): () => void {
   const outside = (event: PointerEvent) => {
     const key = controller.getSnapshot().open;
     const current = hosts.find((item) => item.key === key);
-    if (current && event.target instanceof Node && !current.host.contains(event.target)) close();
+    if (current?.host && event.target instanceof Node && !current.host.contains(event.target))
+      close();
   };
   const escape = (event: KeyboardEvent) => {
     if (event.key !== 'Escape') return;
     const current = hosts.find((item) => item.key === controller.getSnapshot().open);
-    if (current?.host.contains(doc.activeElement)) current.host.querySelector('summary')?.focus();
+    if (current?.host?.contains(doc.activeElement)) current.host.querySelector('summary')?.focus();
     close();
   };
   const visibility = () => {
     const key: TabletopGame | null = controller.getSnapshot().open;
     if (
       doc.hidden ||
-      hosts.some((item) => item.key === key && item.screen.classList.contains('hidden'))
+      hosts.some((item) => item.key === key && item.screen?.classList.contains('hidden'))
     )
       close();
   };
   const observer = new MutationObserver(visibility);
   for (const { screen } of hosts)
-    observer.observe(screen, { attributes: true, attributeFilter: ['class'] });
+    if (screen) observer.observe(screen, { attributes: true, attributeFilter: ['class'] });
   doc.addEventListener('pointerdown', outside);
   doc.addEventListener('keydown', escape);
   doc.addEventListener('visibilitychange', visibility);

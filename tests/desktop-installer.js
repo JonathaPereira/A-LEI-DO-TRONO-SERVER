@@ -9,6 +9,7 @@ const fs = require('node:fs/promises'),
 const { spawn, spawnSync } = require('node:child_process');
 const { _electron, expect } = require('@playwright/test');
 const { closeTestApp } = require('./desktop-test-close');
+const { firstAppWindow } = require('./desktop-first-window.cjs');
 const disposableRunner =
   process.env.GITHUB_ACTIONS === 'true' && process.env.RUNNER_ENVIRONMENT === 'github-hosted';
 function run(file, args) {
@@ -65,7 +66,7 @@ test(
         args: ['--user-data-dir=' + profile],
         timeout: 40000,
       });
-      const page = await app.firstWindow();
+      const page = await firstAppWindow(app, { timeout: 60000 });
       await expect(page.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       const oldProcess = app.process(),
         exited = new Promise((resolve) => oldProcess.once('exit', resolve));
@@ -101,7 +102,7 @@ test(
         args: ['--user-data-dir=' + profile],
         timeout: 40000,
       });
-      const updated = await app.firstWindow();
+      const updated = await firstAppWindow(app, { timeout: 60000 });
       await expect(updated.locator('[data-entry]')).toBeVisible({ timeout: 30000 });
       assert.equal(await updated.evaluate(() => window.TronoDesktop.version), version);
     } finally {

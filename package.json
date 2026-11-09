@@ -12,6 +12,8 @@
     "desktop:build:native": "npm --prefix electron run build:native",
     "desktop:package": "npm run build && npm --prefix electron run pack:win",
     "build:manual": "node scripts/build-law-assets.js && node scripts/build-manual.js && node scripts/print-manual.js",
+    "build:men-games": "node scripts/build-men-games.cjs",
+    "build:trono-communication": "node scripts/build-trono-communication.cjs",
     "server:dev": "node --env-file-if-exists=.env --watch server/index.ts",
     "predev": "node scripts/prepare-renderer.cjs",
     "dev": "next dev --hostname 127.0.0.1",
