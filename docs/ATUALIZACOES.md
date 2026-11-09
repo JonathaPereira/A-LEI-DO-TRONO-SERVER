@@ -1,8 +1,18 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.7** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.8** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.8
+
+O aplicativo separa a infraestrutura de jogos (**MeN Games**) da inicialização
+do comunicador (**MeN Trono**). Com o novo `LazyRegistry`, nenhum dos 9 jogos é
+instanciado durante a abertura da aplicação: os controladores, observadores e
+interfaces de jogos só são carregados sob demanda quando selecionados no catálogo.
+O portal MeN Games Hub passa a ser publicado de forma independente em
+`https://men-games.surge.sh` e os pacotes autônomos de A Lei do Trono e Cinzas do
+Abismo contam com ciclos de atualização isolados.
 
 ## Windows 1.0.7
 
