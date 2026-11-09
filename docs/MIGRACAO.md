@@ -1,4 +1,6 @@
-# Reconstrução do frontend
+# Reconstrução do frontend e Infraestrutura MeN Games
+
+Operação MeN Games (08/11/2026): auditoria completa do repositório, desacoplamento dos jogos e criação da infraestrutura independente MeN Games. Branch de salvaguarda: `backup/pre-men-games` (base `1d00bf0`). Branch de trabalho: `codex/men-games-separation`. Registro central dos 9 jogos (`src/lib/men-games/registry.ts` e `games/registry.json`), vinculação do catálogo do shell, host de execução isolado sob demanda (`src/components/games/men-games-host.tsx`) e estruturação inicial do pacote desacoplado de A Lei do Trono (`games/lei-do-trono/`). Suíte core 1.479 testes aprovados (1.475 originais + 4 do registro). Build estático e typecheck aprovados.
 
 Operação Renascimento: [diagnóstico dos três jogos, inventário, fases e primeiro
 incremento](RENASCIMENTO.md). Desenvolvimento alpha; não há homologação 1.0.
@@ -95,9 +97,9 @@ out e .next são saídas.
 | Elementos compartilhados dos jogos                    | Comunicação flutuante, avisos de turno/influência, cinemática, resultado, tooltips e controles ficam protegidos, mesmo fora das três pastas.                                              |
 | Estilos compartilhados                                | Dependências extraídas para games e delimitadas por gameSurface, incluindo overlays. Shell usa CSS Modules próprios. Não apagar regras necessárias aos jogos por não aparecerem no shell. |
 | Conta/rede/chat/arquivos/perfis/mídia                 | Donos existentes observados por snapshots; views novas delegam comandos.                                                                                                                  |
-| Clipes/gravação/soundboard/Remote PC                  | Mesmos armazenamento, autorização e transportes; apresentação reintegrada. Replay da tela transmitida reativado no Electron; captura independente da tela principal permanece desativada.                                                |
+| Clipes/gravação/soundboard/Remote PC                  | Mesmos armazenamento, autorização e transportes; apresentação reintegrada. Replay da tela transmitida reativado no Electron; captura independente da tela principal permanece desativada. |
 | Backend/Electron/tipos compartilhados                 | Serviços, HTTP/WS/IPC, autorização e persistência preservados. Helpers exigem ambiente nativo.                                                                                            |
-| Apresentação externa antiga                           | 30 views/posicionadores finais retirados após revisão individual, além dos cortes anteriores. Destinos registrados no Git; nenhuma árvore legada paralela.                                   |
+| Apresentação externa antiga                           | 30 views/posicionadores finais retirados após revisão individual, além dos cortes anteriores. Destinos registrados no Git; nenhuma árvore legada paralela.                                |
 
 Revisão do corte: artifacts/frontend-reset/finish-removal-review.json.
 Inventários e evidências anteriores são artefatos auxiliares, não outra fonte
@@ -171,7 +173,6 @@ reparo não exige novo backend. Actions não pôde criar o PR pela política do
 repositório: contribuição enviada em `codex/similo-clue-layout`, main preservada,
 compare disponível para criação e merge pelo usuário.
 
-
 Recuperação de voz preparada em `codex/voice-reconnect-grace`, Windows 0.3.12,
 sobre main `51bf245`. A atualização 0.3.11/Similo foi incorporada (#59) e publicada
 pela execução Windows `40620493982`; a checagem pública posterior confirmou site,
@@ -216,7 +217,6 @@ está enviado em `codex/voice-reconnect-grace`, com compare para criação manua
 Main foi preservada nesta execução. A indisponibilidade anterior do ambiente
 não publicou mudanças; a entrega acima foi retomada e validada depois.
 
-
 Similo integrado na contribuição `codex/similo-online`, sobre a main `9149a52`,
 preparando Windows 0.3.11. O usuário aprovou o protótipo e solicitou integração
 com mesa escura, capitão alternado, HUD ajustado e informações flutuantes nas
@@ -237,7 +237,6 @@ publicação pertencem ao workflow do mesmo commit. Fontes não comprovam deploy
 O backend precisa ser atualizado com a contribuição e anunciar `features.similo`.
 As artes são entregues separadamente em `similo-mn.surge.sh`, com hashes da mesma
 execução, antes do frontend/instalador; isso conserva o limite do pacote Surge.
-
 
 A primeira execução Windows `40612206178`, no commit `3aaf232`, aprovou os
 contratos e as jornadas do Similo, mas encerrou a jornada do Atalaia por timeout.
@@ -310,18 +309,18 @@ tracks, frames, energia/RTP, injeção real e partida completa.
 
 ### Conferência local anterior ao envio
 
-| Limite | Resultado e evidência em artifacts/frontend-reset |
-| --- | --- |
-| Fontes e compilação | typecheck e format:check aprovados; local-release-build.log e local-release-native-build.log. |
-| Core completo | 1.412/1.412, zero skips, 45,8s em local-release-core-final.log. |
-| Perfil browser | Duas rodadas consecutivas: 42 aprovados, zero falhas e um skip externo de FFmpeg por rodada; local-release-v3-browser-1/2.log. Decode pelo Chromium aprovado. |
-| Perfil Electron | Duas rodadas consecutivas: 15/15, zero skips; local-release-v3-desktop-1/2.log. |
-| Repetição web + Electron | 252,0s e 252,4s por rodada completa; inclui partida, PCM de envio/recepção, foco e Remote PC. |
-| RNNoise que falhava | Três rodadas de seis casos, sem falhas/skips, com dois núcleos e o timeout de clique original; local-noise-final-1/2/3.log. |
-| Glue PowerShell real | 21 casos de sucesso, propagação de falhas, argumentos e skips; check-workflow-gates.cjs. |
-| Integridade do publicador | Sete casos, rejeitando ZIP/EXE/manifesto/versão adulterados e caminhos extras; check-publish-integrity.cjs. |
-| Executável e instalador | Smoke real aprovado em local-delivery-packaged.log; NSIS gerado em local-delivery-installer.log. Sem instalação no computador do usuário. |
-| Pacote distribuível | Site de 188,7 MiB, com um instalador de 135,5 MiB; local-delivery-downloads.log. ZIP/EXE/manifesto reais passaram pelo mesmo verificador do workflow em local-release-real/. |
+| Limite                    | Resultado e evidência em artifacts/frontend-reset                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fontes e compilação       | typecheck e format:check aprovados; local-release-build.log e local-release-native-build.log.                                                                                |
+| Core completo             | 1.412/1.412, zero skips, 45,8s em local-release-core-final.log.                                                                                                              |
+| Perfil browser            | Duas rodadas consecutivas: 42 aprovados, zero falhas e um skip externo de FFmpeg por rodada; local-release-v3-browser-1/2.log. Decode pelo Chromium aprovado.                |
+| Perfil Electron           | Duas rodadas consecutivas: 15/15, zero skips; local-release-v3-desktop-1/2.log.                                                                                              |
+| Repetição web + Electron  | 252,0s e 252,4s por rodada completa; inclui partida, PCM de envio/recepção, foco e Remote PC.                                                                                |
+| RNNoise que falhava       | Três rodadas de seis casos, sem falhas/skips, com dois núcleos e o timeout de clique original; local-noise-final-1/2/3.log.                                                  |
+| Glue PowerShell real      | 21 casos de sucesso, propagação de falhas, argumentos e skips; check-workflow-gates.cjs.                                                                                     |
+| Integridade do publicador | Sete casos, rejeitando ZIP/EXE/manifesto/versão adulterados e caminhos extras; check-publish-integrity.cjs.                                                                  |
+| Executável e instalador   | Smoke real aprovado em local-delivery-packaged.log; NSIS gerado em local-delivery-installer.log. Sem instalação no computador do usuário.                                    |
+| Pacote distribuível       | Site de 188,7 MiB, com um instalador de 135,5 MiB; local-delivery-downloads.log. ZIP/EXE/manifesto reais passaram pelo mesmo verificador do workflow em local-release-real/. |
 
 Este checkpoint registra a preparação local. A aprovação remota de cada entrega
 fica na [execução Windows full app](https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/workflows/windows-app.yml)
@@ -385,17 +384,17 @@ iguais. Partida completa, rodada humana e gates de distribuição permanecem.
 Verificação local contra a base 75340bf, antes da atualização de main, com logs
 em `artifacts/test-trim`:
 
-| Limite | Resultado |
-| --- | --- |
-| Fontes | typecheck, format:check e build aprovados; build de referência 2,8s e posterior 3,9s. |
-| Core | 1.398 aprovados, zero falhas/skips; 44,8s, contra 1.412 em 46,8s antes do corte. Os 14 casos retirados pertenciam aos contratos aposentados e à organização dos imports. |
-| Browser completo | 164 aprovados, zero falhas e dois skips externos de FFmpeg/FFprobe; 544,6s. Reprodução/decodificação Chromium aprovadas. |
-| Browser release | Duas rodadas: 42 aprovados e um skip externo por rodada; 151,4s e 148,2s. Referência anterior: 149,0s. |
-| Electron release | Duas rodadas: 14 aprovados e uma falha de foco do Remote PC em cada; 96,8s e 110,1s. Referência anterior: 14 aprovados e a mesma falha, em 133,6s. Nenhum skip. |
+| Limite               | Resultado                                                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fontes               | typecheck, format:check e build aprovados; build de referência 2,8s e posterior 3,9s.                                                                                     |
+| Core                 | 1.398 aprovados, zero falhas/skips; 44,8s, contra 1.412 em 46,8s antes do corte. Os 14 casos retirados pertenciam aos contratos aposentados e à organização dos imports.  |
+| Browser completo     | 164 aprovados, zero falhas e dois skips externos de FFmpeg/FFprobe; 544,6s. Reprodução/decodificação Chromium aprovadas.                                                  |
+| Browser release      | Duas rodadas: 42 aprovados e um skip externo por rodada; 151,4s e 148,2s. Referência anterior: 149,0s.                                                                    |
+| Electron release     | Duas rodadas: 14 aprovados e uma falha de foco do Remote PC em cada; 96,8s e 110,1s. Referência anterior: 14 aprovados e a mesma falha, em 133,6s. Nenhum skip.           |
 | Voz em segundo plano | Cinco combinações comprovadas em cada rodada release; 57,4s e 58,7s, contra 80,8s antes. Matriz completa sem perfil aprovada com nove combinações e zero skips, em 92,5s. |
-| Empacotamento local | Executável gerado sem instalação; 7,3s antes e 7,6s depois, sem ganho atribuído ao corte de testes. |
-| Executável real | Smoke do pacote atual aprovado: um teste, zero falhas/skips, em 31,5s. |
-| Revisão | Padrões e especificação: zero achados de implementação. |
+| Empacotamento local  | Executável gerado sem instalação; 7,3s antes e 7,6s depois, sem ganho atribuído ao corte de testes.                                                                       |
+| Executável real      | Smoke do pacote atual aprovado: um teste, zero falhas/skips, em 31,5s.                                                                                                    |
+| Revisão              | Padrões e especificação: zero achados de implementação.                                                                                                                   |
 
 Naquela execução, o perfil desktop não ficou integralmente aprovado: o clique nativo do Remote PC
 não foca o campo da janela de QA. A falha ocorreu antes das alterações, repetiu
@@ -569,7 +568,6 @@ Encerrar com três aceites, recursos com destino/evidência, corte concluído,
 comandos/CI consolidados, docs coerentes e checks pertinentes concluídos com
 limitações reais declaradas. Aceite visual não comprova hardware ou CI remoto.
 
-
 ## Reparo do atualizador Windows 0.3.7
 
 A preparação da 0.3.7 parte de `6f9c2bc` (base Windows 0.3.6). O manifesto
@@ -591,7 +589,6 @@ passou; `downloads/latest.yml` e o metadado da página anunciam 0.3.7. O EXE
 público respondeu a HEAD e faixa parcial, e seu download completo teve o
 mesmo SHA-256 da release aprovada. Instalações afetadas ainda precisam
 instalar manualmente a 0.3.7 uma vez para recuperar atualizações futuras.
-
 
 ## Ajustes de jogos e Atalaia — 0.3.8
 
@@ -660,14 +657,12 @@ full app do mesmo commit. A versão 0.3.8 preparada localmente não comprova sua
 publicação: o manifesto de produção continua sendo a referência. Aprovação
 visual anterior do frontend não implica aceite dos novos ajustes de jogos.
 
-
 Após incorporar o reparo do atualizador na 0.3.8: typecheck, format:check e build
 aprovados; 1.430 contratos core (`artifacts/atalaia/v038-core.log`) e duas rodadas
 Atalaia/Nexus, com sete casos por rodada e zero falhas/skips
 (`v038-browser-1/2.log`). Os fontes de apresentação de Love Letter e do tabuleiro
 não mudaram nessa integração; a nova entrega Windows confirma também a configuração
 do atualizador incorporada ao NSIS.
-
 
 ## Android — preparação da 1.0.1 (29/10/2026)
 
@@ -685,7 +680,6 @@ localhost incorreto antes da correção; contratos locais passaram depois. Layou
 mobile usa navegador com microfone virtual; teste Android em emulador pertence ao
 workflow do mesmo commit. Resultados finais e links de entrega serão registrados
 após sua execução. Nenhuma aprovação visual ou de hardware é presumida.
-
 
 Fechamento Android/1.0.1: código validado `2858e66`. A revisão Windows detectou
 que o painel mobile herdava a coluna 2 do desktop e criava uma coluna implícita,
@@ -720,7 +714,6 @@ sem aceite. Captura nativa da tela/áudio de outros apps, host de Remote PC e pu
 de canais não foram portados; web/Windows conservam seus recursos. As execuções
 não significam paridade nativa completa nem aceite visual do usuário.
 
-
 Retomada de clipes em 31/10/2026, na contribuição `codex/clipes-tela`: replay do
 Electron reativado apenas sobre a fonte compartilhada, com atalho global ativo
 quando pronto. Central com submenu de qualidade/atalhos/pasta, perfis Excelente
@@ -734,7 +727,6 @@ sem relaxar a asserção de duração. Chromium usou mídia sintética e ponte E
 simulada em Linux; atalho/captura/áudio no Windows real e aceite visual continuam
 sem validação nesta retomada. Análise estática da demora nas chamadas registrada
 no guia de desenvolvimento, sem alterar seu fluxo nem atribuir tempos medidos.
-
 
 Publicação de front/backend autorizada em 31/10/2026, com deploy automático do
 Render confirmado pelo usuário ao atualizar main. Otimização adicional de SFU:
@@ -753,7 +745,6 @@ do envio: `2fd2c63`. O push a main solicita os deploys automáticos confirmados;
 acompanhamento da API GitHub e verificação pública dependem da liberação de rede
 salva no rascunho do ambiente. Envio do commit não comprova publicação concluída.
 
-
 Diagnóstico após Windows 41227271752: o gate falhou na suíte desktop (13 pass,
 1 fail, 1 skip) antes de empacotar o EXE; o resumo antigo cortava o bloco da
 falha e os logs completos estão bloqueados pela política de rede deste ambiente.
@@ -770,7 +761,6 @@ Windows solicitada pela contribuição `codex/desktop-clipes-diagnostico`, com
 os gates existentes preservados, para obter a falha exata ou validar o pacote.
 Nenhuma causa de erro nativo é presumida antes desse resultado.
 
-
 Windows 41230776205 identificou a falha exata: `application-call-desktop.cjs`
 ainda exigia o texto "suspenso" na central de clipes, embora o replay nativo
 estivesse pronto com três segundos de vídeo. O contrato obsoleto foi substituído
@@ -778,7 +768,6 @@ por criação/prévia de clipe, pausa/retomada do buffer, preservação da fonte
 e do microfone e retenção do clipe criado. Guia incluído na distribuição alinhado
 ao replay reativado. O aplicativo não foi alterado para satisfazer o texto antigo.
 Validação nativa da correção ainda depende da nova execução Windows.
-
 
 A entrega `ed483fc` passou Windows/instalador/publicação no workflow 41231959543.
 Em seguida, o usuário autorizou a versão 1.0.2 para diferenciar o pacote novo da
@@ -792,7 +781,6 @@ manifesto do pacote e lockfile conferidos em 1.0.2. Os 21 testes existentes de
 empacotamento/relatório/atualizador passaram após instalar as dependências do
 Electron sem seus scripts de runtime. Nenhum teste ou código de comportamento
 foi alterado para esta numeração.
-
 
 Contribuição `codex/clipes-locais`: acessos inferiores para clipes, rótulos de
 configuração simplificados e captura local optativa sem chamada/transmissão.
@@ -820,7 +808,6 @@ Diagnóstico de CI preserva também erros assíncronos anteriores à falha do ar
 Equipamento alvo informado: 5700X3D/RTX 3060 Ti/32 GB/Windows 11; análise recomenda
 NVENC H.264 para uma futura implementação nativa, ainda não habilitada.
 
-
 Publicação da 1.0.3 autorizada pelo usuário após a validação de clipes locais.
 Contribuição `codex/release-1.0.3` preserva a implementação validada e atualiza
 a versão do Electron, lockfile e guias distribuídos. NVENC continua pendente;
@@ -846,7 +833,6 @@ mesma versão. NVENC continua pendente; nenhum SQL ou código do backend mudou.
 O workflow Android automático `41245224031` falhou separadamente, com mensagem
 pública genérica de exit 1; não se afirma entrega Android nesta publicação.
 
-
 Contribuição `codex/clipes-nvenc`, com publicação autorizada após testes:
 HUD simplificado, microfone com Sem som, continuidade em transições da chamada,
 ícones mute/deafen nos banners e NVENC H.264/MP4 com probe real, buffer e
@@ -858,7 +844,6 @@ cancelamento/transições de microfone, os 13 testes áudio/sessão passaram.
 Browser será repetido no build final; Windows validará Electron e exportação.
 O runner sem NVIDIA usa Media Foundation em QA, identificado como teste; não
 comprova aceleração física na 3060 Ti. O pacote mantém o probe NVENC real.
-
 
 Validação funcional de clipes: dois ciclos consecutivos do navegador aprovaram
 18 testes cada, sem skips; inspeção temporária do HUD e banners aprovada pelo
@@ -873,7 +858,6 @@ exige a escolha efetiva do encoder antes de capturar. O cenário adicional com
 Preparação `codex/release-1.0.4`: numeração e guias atualizados para a próxima
 entrega autorizada; o envio à main/publicação depende dessa última validação.
 
-
 Windows `41256364205` aprovou o cenário nativo com áudio de aplicativo e
 microfone: os tons 440/880 Hz foram verificados no MP4 exportado. O teste usa
 entrada PCM nativa controlada quando o runner não tem endpoint físico, sem
@@ -885,7 +869,6 @@ Preparação final 1.0.4 aprovou tipos/formato/build, 98 contratos focados e 22 
 distribuição/atualizador, além do novo contrato de proporção do encoder (sem
 esticar ultrawide/vertical ou aumentar fontes pequenas). HUD de clipes foi
 reverificado no build 1.0.4. Publicação usará gates Windows/instalador/Surge.
-
 
 A tentativa de publicação 1.0.4 `41257196422` aprovou fontes, jornadas, executável
 empacotado e instalação real, mas bloqueou o pacote combinado de 241.774.543 bytes.
@@ -902,7 +885,6 @@ site principal. A publicação confere o SHA-256 do EXE baixado do domínio novo
 antes de avançar para o feed. A validação completa Windows será repetida no
 commit final para manter a relação entre fontes, instalador e publicação.
 
-
 A segunda tentativa `41258871002` aprovou os cenários de clipes e bloqueou a
 entrega por timeouts em firstWindow (voz em segundo plano e reabertura após
 permissões). Dois ciclos focados `41260260911` passaram sem reproduzir a falha.
@@ -916,7 +898,6 @@ afrouxado. A instrumentação temporária de fases no main ficou somente na
 branch de diagnóstico, sem alteração adicional do produto. A validação final
 retomará os gates completos da entrega antes de enviar ao Surge.
 
-
 Entrega 1.0.4 concluída: `f6dfa133ee37d23c75399a67d267e1fbca0c7ee2` passou
 fontes, contratos, jornadas, executável empacotado e instalação real no Windows
 `41261346161`. A execução focada corrigida `41261081629` aprovou o handshake e
@@ -928,7 +909,6 @@ https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/tag/untagged-d3
 A main permanece no commit do artefato; este checkpoint documental segue somente
 na contribuição para evitar novo deploy. NVENC físico/desempenho da 3060 Ti não
 foram medidos no runner; o app mantém probe real antes de ativá-lo.
-
 
 Correção pós-1.0.4: usuário isolou travamentos/chiado no NVENC e atalho que só
 funciona com Trono em foco. Reproduzidor de fonte 60 FPS com confirmação de
@@ -961,7 +941,6 @@ reais disponíveis e não representa uma partida de LoL ou NVENC físico.
 Preparação 1.0.5 autorizada pelo fluxo de correção/publicação vigente: somente
 desktop/lock/guia recebem a versão; backend permanece 0.14.0-alpha. O Windows
 completo e a publicação validada usarão o mesmo commit da entrega.
-
 
 ## Clipes e Android — preparação 1.0.6 (02/11/2026)
 
@@ -1017,7 +996,6 @@ segredos ou mudanças de backend/SQL. A consulta ao Render foi bloqueada pelo pr
 local, portanto não há novo diagnóstico de produção. O teste Android vigente
 preenche os campos por JavaScript: IME/login nos aparelhos afetados e NVENC na RTX
 3060 Ti do usuário permanecem sem confirmação física. Backend permanece 0.14.0-alpha.
-
 
 ## Desempenho de clipes e diagnóstico de vídeo — preparação 1.0.7
 
