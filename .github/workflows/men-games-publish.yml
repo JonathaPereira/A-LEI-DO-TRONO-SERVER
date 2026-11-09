@@ -1,0 +1,72 @@
+name: Publish MeN Games Hub
+on:
+  push:
+    branches: [main, 'codex/men-games-*']
+    paths:
+      - 'games/**'
+      - 'src/lib/men-games/**'
+      - 'scripts/build-men-games.cjs'
+      - '.github/workflows/men-games-publish.yml'
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Surge domain for MeN Games Hub
+        type: string
+        default: 'men-games.surge.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: men-games-surge
+  cancel-in-progress: false
+
+jobs:
+  publish-hub:
+    name: Build and Publish MeN Games Hub to Surge
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check existing Surge credential
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$SURGE_TOKEN" ]; then
+            echo '::error::Configure the repository secret SURGE_TOKEN before publishing.'
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build MeN Games distribution package
+        run: npm run build:men-games
+
+      - name: Verify distribution integrity
+        run: node --test tests/men-games-distribution.cjs
+
+      - name: Publish MeN Games Hub to Surge
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          TARGET_DOMAIN: ${{ inputs.domain || 'men-games.surge.sh' }}
+        run: |
+          npx --yes surge@0.46.0 artifacts/men-games-distribution "$TARGET_DOMAIN"
+
+      - name: Verify live MeN Games Hub and Registry
+        env:
+          TARGET_DOMAIN: ${{ inputs.domain || 'men-games.surge.sh' }}
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 3 "https://$TARGET_DOMAIN/registry.json" -o artifacts/published-registry.json
+          cmp artifacts/men-games-distribution/registry.json artifacts/published-registry.json
+          echo "Published and verified MeN Games Hub at https://$TARGET_DOMAIN/" >> "$GITHUB_STEP_SUMMARY"
