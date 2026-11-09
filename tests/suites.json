@@ -5,6 +5,7 @@
     "games/cinzas-do-abismo/tests/package.test.cjs",
     "tests/men-games-registry.cjs",
     "tests/lazy-games.cjs",
+    "tests/men-games-distribution.cjs",
     "tests/clip-native-policy.cjs",
     "tests/clip-pcm.cjs",
     "tests/clip-audio.cjs",
