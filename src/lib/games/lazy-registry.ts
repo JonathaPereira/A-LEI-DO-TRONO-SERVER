@@ -48,6 +48,10 @@ export function createLazyRegistry<T extends string>(): LazyRegistry<T> {
       const values = new Map<T, unknown>();
 
       for (const [name, initFn] of initializers) {
+        if (Object.prototype.hasOwnProperty.call(target, name)) {
+          set.add(name);
+          continue;
+        }
         Object.defineProperty(target, name, {
           configurable: true,
           enumerable: true,

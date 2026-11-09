@@ -11,7 +11,7 @@ export function TabletopAudioControls({
   hosts,
 }: {
   controller: TabletopAudio;
-  hosts: readonly { key: TabletopGame; host: HTMLElement }[];
+  hosts: readonly { key: TabletopGame; host: HTMLElement | null }[];
 }) {
   const state = useSyncExternalStore(
     controller.subscribe,
@@ -19,6 +19,7 @@ export function TabletopAudioControls({
     controller.getSnapshot,
   );
   return hosts.map(({ key, host }) => {
+    if (!host) return null;
     const value = state.volumes[key],
       label = tabletopGames[key].label,
       open = state.open === key;
