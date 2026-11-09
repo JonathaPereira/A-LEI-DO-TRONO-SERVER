@@ -1,5 +1,6 @@
 import { createGameLibrary } from '../../lib/games/library';
 import type { GameLibrary, GameDestination } from '../../lib/games/library';
+import { isGameInitialized } from './lazy-games';
 
 interface LibraryRuntime extends Window {
   TronoAuth: { readonly user: object | null };
@@ -68,13 +69,15 @@ export function initializeGameLibrary(target: Window): () => void {
       return () => observer.disconnect();
     },
     navigate(destination) {
-      if (destination !== 'azul') runtime.TronoAzul.leaveView();
+      if (destination !== 'azul' && isGameInitialized(target, 'TronoAzul'))
+        runtime.TronoAzul.leaveView();
       switch (destination) {
         case 'library':
           runtime.TronoPortal.showOnly('gamesScreen');
           runtime.TronoSocial.showForRoom(false);
           doc.body.dataset.gamesView = 'library';
-          if (runtime.TronoAuth.user) void runtime.TronoAzul.refreshRooms();
+          if (runtime.TronoAuth.user && isGameInitialized(target, 'TronoAzul'))
+            void runtime.TronoAzul.refreshRooms();
           return;
         case 'throne':
           return runtime.TronoPortal.openGame(true);
