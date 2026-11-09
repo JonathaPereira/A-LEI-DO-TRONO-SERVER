@@ -11,8 +11,10 @@ async function firstSizedWindow(app, size) {
   return page;
 }
 
-async function firstAppWindow(app) {
-  try { return await app.firstWindow(); }
+async function firstAppWindow(app, options = { timeout: 60000 }) {
+  const existing = app.windows()[0];
+  if (existing) return existing;
+  try { return await app.firstWindow(options); }
   catch(error) {
     let timer;
     const state=await Promise.race([

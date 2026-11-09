@@ -8,6 +8,7 @@ const { test } = require('node:test'),
   os = require('node:os');
 const { _electron, expect } = require('@playwright/test');
 const { killTestApp, closeTestApp } = require('./desktop-test-close');
+const { firstAppWindow } = require('./desktop-first-window.cjs');
 test(
   'compiled Windows app starts with its own game, interface and RNNoise resources',
   { timeout: 130000 },
@@ -78,6 +79,9 @@ test(
         ],
         timeout: 40000,
       });
+      app
+        .process()
+        .stderr?.on('data', (chunk) => diagnostics.push('stderr ' + String(chunk).trim()));
       assert.equal(await app.evaluate(({ app }) => app.isPackaged), true);
       await app.evaluate(({ net }) => {
         global.__cinzasRemoteDownloads = 0;
@@ -106,7 +110,7 @@ test(
       await fs.access(path.join(resourceRoot, 'renderer/manual/A_Lei_do_Trono_Manual_v0.9.0.pdf'));
       await fs.access(path.join(resourceRoot, 'native/MN-Remote-Input.exe'));
       phase = 'installed interface';
-      page = await app.firstWindow();
+      page = await firstAppWindow(app, { timeout: 60000 });
       page.setDefaultTimeout(15000);
       page.on('console', (m) => {
         if (m.type() === 'error' || /Native bridge|Refused|Content Security/i.test(m.text()))
@@ -429,7 +433,21 @@ test(
               .catch((e) => ({ error: e.message })),
             new Promise((r) => setTimeout(() => r({ renderer: 'did not answer' }), 2000)),
           ])
-        : {};
+        : await Promise.race([
+            app
+              ?.evaluate(({ BrowserWindow, app }) => ({
+                ready: app.isReady(),
+                windows: BrowserWindow.getAllWindows().map((w) => ({
+                  destroyed: w.isDestroyed(),
+                  visible: w.isVisible(),
+                  loading: w.webContents.isLoading(),
+                  crashed: w.webContents.isCrashed?.() || false,
+                  url: w.webContents.getURL(),
+                })),
+              }))
+              .catch(() => ({ appUnavailable: true })),
+            new Promise((r) => setTimeout(() => r({ app: 'did not answer' }), 2000)),
+          ]);
       throw new Error(
         'Packaged desktop ' +
           JSON.stringify({ phase, state, diagnostics: diagnostics.slice(-12) }) +
