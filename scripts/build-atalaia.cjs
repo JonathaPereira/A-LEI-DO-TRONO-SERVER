@@ -22,17 +22,47 @@ const gameVersion = /^config\/version="([^"]+)"/m.exec(
 if (!/^\d+\.\d+\.\d+$/.test(gameVersion) || !/^(?:local|[a-f0-9]{40})$/.test(source))
   throw Error('Invalid Atalaia export identity.');
 const executable = `atalaia-${gameVersion}-${source.slice(0, 12)}`;
+const completionMarkers = {
+  'res://tests/verify.gd': /RESULTADO: \d+ verificações, 0 falhas/,
+  'res://tests/save_validation.gd': /Save validation: \d+ checks, 0 failures/,
+  'res://tests/save_store.gd': /SAVE STORE: \d+ checks, 0 failures/,
+  'res://tests/strategy.gd': /Strategic progression: \d+ checks, 0 failures/,
+  'res://tests/profile_recovery.gd': /Strategic profile recovery: \d+ checks, 0 failures/,
+  'res://tests/keyboard_controls.gd': /Keyboard controls: \d+ checks, 0 failures/,
+  'res://tests/achievements.gd': /Local achievements: \d+ checks, 0 failures/,
+  'res://tests/chronicle.gd': /Chronicle: \d+ checks, 0 failures/,
+  'res://tests/economy_offers.gd': /Economy offers: \d+ checks, 0 failures/,
+  'res://tests/crown_pulse.gd': /Crown pulse: \d+ checks, 0 failures/,
+  'res://tests/slag_ward.gd': /Slag ward: \d+ checks, 0 failures/,
+  'res://tests/march_aura.gd': /March aura: \d+ checks, 0 failures/,
+  'res://tests/interference.gd': /Tower interference: \d+ checks, 0 failures/,
+  'res://tests/campaign.gd': /CAMPANHA: victory/,
+  'res://tests/runtime_verify.gd': /UI RESULTADO: 0 falha\(s\)/,
+};
 fs.rmSync(web, { recursive: true, force: true });
 fs.mkdirSync(web, { recursive: true });
 const run = (args) =>
   runGodot(runtime.binary, ['--headless', '--path', game, ...args], {
     env,
     timeout: 180000,
+    expectedOutput: completionMarkers[args[args.indexOf('--script') + 1]],
   });
 run(['--editor', '--import']);
 run(['--script', 'res://tests/verify.gd']);
 run(['--script', 'res://tests/save_validation.gd']);
 run(['--script', 'res://tests/save_store.gd']);
+run(['--script', 'res://tests/strategy.gd', '--', '--qa']);
+run(['--script', 'res://tests/profile_recovery.gd', '--', '--qa']);
+run(['--script', 'res://tests/keyboard_controls.gd', '--', '--qa']);
+run(['--script', 'res://tests/achievements.gd', '--', '--qa']);
+run(['--script', 'res://tests/chronicle.gd', '--', '--qa']);
+run(['--script', 'res://tests/economy_offers.gd']);
+run(['--script', 'res://tests/interference.gd', '--', '--qa']);
+run(['--script', 'res://tests/march_aura.gd', '--', '--qa']);
+run(['--script', 'res://tests/crown_pulse.gd', '--', '--qa']);
+run(['--script', 'res://tests/slag_ward.gd', '--', '--qa']);
+run(['--script', 'res://tests/campaign.gd']);
+run(['--script', 'res://tests/campaign.gd', '--', '--chronicle', '--seed=78']);
 run(['--script', 'res://tests/runtime_verify.gd', '--', '--qa']);
 run(['--export-release', 'Web', path.join(web, executable + '.html')]);
 fs.renameSync(path.join(web, executable + '.html'), path.join(web, 'index.html'));

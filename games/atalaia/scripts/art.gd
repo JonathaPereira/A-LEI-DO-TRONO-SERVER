@@ -21,6 +21,7 @@ static func cell(sheet: String, index: int, cols: int, rows: int) -> AtlasTextur
  return a
 
 static func tower(type: String) -> Texture2D:
+ type=AtalaiaCatalog.family(type)
  var atlas=cell("towers-v2.webp",AtalaiaCatalog.TYPES.find(type)*2,4,3)
  if type!="tesla":return atlas
  # The adjacent firing pose spills into the left transparent margin of this cell.
@@ -32,7 +33,7 @@ static func tower(type: String) -> Texture2D:
  return cache.tesla_clean
 
 static func head(type: String) -> Texture2D:
- return cell("tower-heads-v4.webp",AtalaiaCatalog.TYPES.find(type),3,2)
+ return cell("tower-heads-v4.webp",AtalaiaCatalog.TYPES.find(AtalaiaCatalog.family(type)),3,2)
 
 static func tight(sheet: String, index: int, bands: Array = []) -> AtlasTexture:
  var key="tight"+sheet+str(index)

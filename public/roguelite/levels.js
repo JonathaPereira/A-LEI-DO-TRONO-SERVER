@@ -1,6 +1,16 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.AbyssLevels=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   const surface=(p,x)=>p.y+(p.y2===undefined?0:(p.y2-p.y)*Math.max(0,Math.min(1,(x-p.x)/p.w)));
+  const WEAPON_VARIANTS={
+    ash_blade:{weapon:'blade',chapter:5,name:'Lâmina de guarda',damage:.85,windupGuard:.20,description:'Dano básico −15%. Durante a preparação do corte, recebe 20% menos dano.'},
+    echo_bow:{weapon:'bow',chapter:10,name:'Arco do eco',damage:.65,cooldown:.48,angles:[-.075,.075],description:'Duas flechas em leque. Cada uma causa 65% do dano base; a recarga sobe para 0,48 s.'},
+    rift_hammer:{weapon:'hammer',chapter:15,name:'Martelo de ruptura',damage:1.80,pierceGuard:true,description:'Golpe básico de 180% em área atravessa a guarda dos escudeiros. A versão ancestral causa 215%.'},
+    frost_staff:{weapon:'staff',chapter:20,name:'Cajado das geadas',damage:.75,slowOnHit:true,description:'Orbes básicos aplicam gelo por 2 s. Dano básico de 75%; o Cajado das Marés causa 95%.'}
+  };
+  const RUNES={
+    frost:{chapter:20,name:'Runa das Geleiras',effect:'O especial neutro aplica gelo.'},
+    fire:{chapter:25,name:'Runa do Alvorecer',effect:'O especial neutro causa queimadura.'}
+  };
   const TERRAIN={normal:{name:'Pedra firme',color:'#9ead94'},mud:{name:'Lama · movimento reduzido',color:'#947953'},water:{name:'Água rasa · passos pesados',color:'#7acbdb'},ice:{name:'Gelo · menor aderência',color:'#b0e9fa'},wind:{name:'Vento · corrente horizontal',color:'#d9d7e4'},lava:{name:'Brasa · causa queimadura',color:'#ff9f67'},spring:{name:'Raízes elásticas · pulo ampliado',color:'#a9e58d'},conveyor:{name:'Esteira · transporte lateral',color:'#dfb27b'}};
   // Each chapter has its own authored elevation profile and landmark sequence.
   // Entries are [length, end elevation, landmark, terrain, optional route kind].
@@ -19,10 +29,20 @@
     {name:'Fundição das correntes',biome:2,weather:'smoke',sections:[[1150,650,'Pátio das correntes'],[1250,950,'Caldeira inferior','lava','islands'],[1550,950,'Oficina dos colossos','conveyor','lift'],[1100,420,'Escada de ferro'],[1750,420,'Passarela dos guindastes','wind','bridge'],[1250,790,'Forno abandonado','lava','islands'],[1500,790,'Linha de fundição','conveyor'],[1050,280,'Torre das correntes'],[1600,280,'Corridor de pressão','wind'],[1200,670,'Martelo da forja'],[1000,670,'Vigília de ferro']]},
     {name:'O rio de fogo',biome:2,weather:'embers',sections:[[1050,558,'Margem carbonizada'],[1300,990,'Cascata de escória','lava','islands'],[1950,990,'Ilhas incandescentes','lava','islands'],[1200,650,'Penhasco de basalto'],[1550,650,'Ponte das cinzas','wind','bridge'],[1150,270,'Escarpa fumegante'],[1750,270,'Caminho das brasas','lava','islands'],[1200,870,'Vale dos condenados'],[1600,870,'Corrente de fogo','conveyor','lift'],[1350,390,'A última subida'],[1100,390,'Portão de carvão']]},
     {name:'A cidadela em chamas',biome:2,weather:'storm',sections:[[1100,700,'Muralhas queimadas'],[1300,390,'Escada do cerco'],[1800,390,'Bastião dos martelos','conveyor','bridge'],[1200,1000,'O fosso de cinzas','lava','islands'],[1800,1000,'Cidade inferior','lava','lift'],[1300,650,'Ruínas dos soldados'],[1750,650,'Praça dos brasões','conveyor'],[1100,260,'Torre do rei','wind'],[1700,260,'Passarela da coroa','wind','bridge'],[1200,780,'Portões da forja'],[1450,780,'A promessa final','lava','islands'],[1000,500,'Antes da última chama']]},
-    {name:'Coração da forja',biome:2,boss:true,weather:'embers'}
+    {name:'Coração da forja',biome:2,boss:true,weather:'embers'},
+    {name:'As cinzas sob o gelo',gateGuards:[9,26,43],deck:'crawler spider caster bat wisp bulwark'.split(' '),biome:3,weather:'snow',background:'glacier',sections:[[1260,655,'Portal sem brasa'],[1550,1090,'Descida dos mineiros','ice'],[1660,1090,'Rio represado','water','islands'],[1510,590,'Escarpa da geada','ice','lift'],[1950,590,'Lajes do degelo','ice'],[1780,725,'Arco do silêncio']]},
+    {name:'O poço das camadas',deck:'bat archer brute bat stalker spider'.split(' '),biome:3,weather:'snow',background:'glacier',sections:[[1450,590,'Chão de agulhas','ice'],[1640,1110,'Rampa das cordas'],[1800,1110,'Poço antigo','water','islands'],[1530,1110,'Galeria sem vento'],[1670,695,'Escada do poço','ice','lift'],[1820,780,'Limiar dos peregrinos']]},
+    {name:'O espelho sem céu',cacheName:'Urna do degelo',deck:'wisp caster wisp bulwark crawler spider'.split(' '),biome:3,weather:'snow',background:'glacier',sections:[[1730,730,'Cristais opacos','ice'],[1720,1030,'Margem vazia'],[1920,1030,'O espelho','ice','islands'],[1670,510,'Trilha do reflexo','wind','lift'],[1460,510,'Pontes rachadas','ice','bridge'],[1590,665,'Saída do reflexo']]},
+    {name:'A travessia branca',deck:'stalker bat archer spider wisp hellhound'.split(' '),biome:3,weather:'wind',background:'glacier',sections:[[1410,620,'Marco da neve'],[1510,280,'Subida da encosta','ice','lift'],[2050,280,'Ponte branca','wind','bridge'],[1550,940,'Refúgio enterrado'],[1560,940,'Água sob a neve','water','islands'],[1780,760,'Capela sem chama','ice']]},
+    {name:'A garganta do silêncio',biome:3,boss:true,weather:'snow',background:'glacier',perches:[[260,560,280],[820,425,250],[1310,550,280],[1830,435,250],[2350,560,280]],arenaTerrain:'ice'},
+    {name:'Os portões sem sombra',deck:'bulwark crawler archer brute caster stalker'.split(' '),biome:4,weather:'wind',background:'bastion',sections:[[1500,730,'Primeira muralha'],[1440,450,'Subida do portão','wind','lift'],[1690,450,'Janela dos arautos','wind','bridge'],[1630,920,'Pátio dos mensageiros'],[1900,920,'Canal das primeiras luzes','water','islands'],[1570,620,'Porta sem sombra']]},
+    {name:'As torres que cantam',shrineName:'Sino da vigília',shrineRoute:'Ponte da vigília',deck:'archer bat wisp archer spider crawler'.split(' '),biome:4,weather:'storm',background:'bastion',sections:[[1590,575,'Entrada das torres','wind'],[1660,950,'Caminho das cordas'],[1610,950,'Casa dos sinos'],[1700,490,'Escada dos sinos','wind','lift'],[1750,490,'Pontes da harmonia','wind','bridge'],[1610,745,'Passagem dos vigias']]},
+    {name:'A calha do primeiro sol',deck:'hellhound caster hellhound brute spider bulwark'.split(' '),biome:4,weather:'embers',background:'bastion',sections:[[1440,680,'Pórtico da calha'],[1680,1070,'Rampa quente','lava','islands'],[1640,1070,'Forno vazio','conveyor'],[1820,555,'Passagem dos contrapesos','conveyor','lift'],[1770,555,'Calha aberta','wind','bridge'],[1610,700,'Lado iluminado']]},
+    {name:'A muralha do amanhecer',deck:'bulwark archer stalker brute wisp hellhound caster'.split(' '),biome:4,weather:'storm',background:'bastion',sections:[[1580,760,'Cais dos vigias'],[1730,1050,'Galeria de manivelas'],[1760,1050,'Sob a muralha','conveyor'],[1440,590,'Passos do arauto','wind','lift'],[1960,590,'Último contraforte','wind','bridge'],[1570,720,'Vestíbulo do sol']]},
+    {name:'O sol sob a pedra',conductorName:'Condutor do alvorecer',biome:4,boss:true,weather:'storm',background:'bastion',perches:[[320,585,240],[680,410,280],[1300,500,320],[1940,410,260],[2400,585,260]]}
   ];
   function create({mode='adventure',boss=false,stage=0,biome=0,rng=()=>.5}){
-    const platforms=[],zones=[],shrines=[],relics=[],decor=[],tunnels=[];let uid=0;
+    const platforms=[],zones=[],shrines=[],relics=[],decor=[],tunnels=[],breakables=[];let uid=0;
     const add=(x,y,w,options={})=>{const p={id:++uid,x,y,w,h:24,oneWay:true,material:biome,effect:'normal',...options};platforms.push(p);return p;};
     const chapter=mode==='adventure'?CHAPTERS[Math.min(stage,CHAPTERS.length-1)]:null;
     let width,height=1540,spawn={x:110,y:558},checkpoint;
@@ -38,18 +58,20 @@
       const center=platforms.find(p=>p.oneWay===false&&1200>=p.x&&1200<=p.x+p.w);checkpoint={x:1200,y:surface(center,1200)};spawn={x:1160,y:surface(center,1160)};
       decor.push({x:340,y:surface(platforms[0],340),type:'torch'},{x:2070,y:surface(platforms.filter(p=>p.oneWay===false).at(-1),2070),type:'torch'});
     }else if(boss||chapter.boss){
-      width=2900;height=1160;add(0,760,width,{ground:true,oneWay:false,h:400});
-      const perches=biome===0?[[250,590,330],[930,430,260],[1690,430,260],[2330,590,330]]:biome===1?[[200,580,260],[620,390,280],[1230,540,340],[1980,390,280],[2440,580,260]]:[[230,560,300],[780,440,220],[1860,440,220],[2370,560,300]];
+      width=2900;height=1160;add(0,760,width,{ground:true,oneWay:false,h:400,effect:chapter.arenaTerrain||'normal'});
+      const perches=chapter.perches||(biome===0?[[250,590,330],[930,430,260],[1690,430,260],[2330,590,330]]:biome===1?[[200,580,260],[620,390,280],[1230,540,340],[1980,390,280],[2440,580,260]]:[[230,560,300],[780,440,220],[1860,440,220],[2370,560,300]]);
       perches.forEach(([x,y,w])=>add(x,y,w,{kind:biome===2?'bridge':'rock',effect:biome===1?'ice':'normal'}));
       spawn={x:110,y:760};checkpoint={x:width-160,y:760};zones.push({x:0,w:width,name:chapter.name});decor.push({x:600,y:760,type:'torch'},{x:width-600,y:760,type:'torch'});
     }else{
       let x=0,y=chapter.sections[0][1];spawn={x:110,y};
       chapter.sections.forEach(([length,endY,name,effect='normal',route],i)=>{
         // Seed only alters secondary routes; the landmark topology stays unique.
-        const bridge=route==='bridge',p=add(x,y,length,{ground:!bridge,oneWay:false,y2:endY,h:bridge?90:420,kind:bridge?'bridge':'rock',effect});zones.push({x,w:length,y,y2:endY,name,effect,background:effect==='ice'?'winter':chapter.background||['forestHD','ruins','forge'][biome]});
+        const bridge=route==='bridge',p=add(x,y,length,{ground:!bridge,oneWay:false,y2:endY,h:bridge?90:420,kind:bridge?'bridge':'rock',effect});zones.push({x,w:length,y,y2:endY,name,effect,background:effect==='ice'&&biome<3?'winter':chapter.background||['forestHD','ruins','forge'][biome]});
         const at=offset=>surface(p,x+offset);
         if(stage%5===1&&i===Math.floor(chapter.sections.length/2)){
-          const sx=x+length*.78,sy=surface(p,sx);if(effect==='lava'){const station=add(sx-120,sy-95,260,{kind:'rock'});shrines.push({id:'shrine-'+i,x:sx,y:station.y,used:false});}else shrines.push({id:'shrine-'+i,x:sx,y:sy,used:false});
+          const sx=x+length*.78,sy=surface(p,sx);
+          const y=effect==='lava'?add(sx-120,sy-95,260,{kind:'rock'}).y:sy;
+          shrines.push({id:'shrine-'+i,x:sx,y,used:false,name:chapter.shrineName||'Santuário',rerolls:chapter.shrineName?1:0});
         }
         if(route==='islands'||effect==='lava'){
           for(let j=40;j<length-100;j+=225){const py=at(j+95)-95;add(x+j,py,190,{kind:'rock'});}relics.push({x:x+length*.5,y:at(length*.5)-150,taken:false});
@@ -75,9 +97,25 @@
       for(let tx=tunnel.x+50;tx<tunnel.x+tunnel.w;tx+=220)decor.push({x:tx,y:surface(floor,tx),type:'torch'});
       for(const z of zones)if(z.x<tunnel.x+tunnel.w&&z.x+z.w>tunnel.x){z.background='tunnelHD';z.tunnel=true;}
     }
+    if(mode==='adventure'&&chapter?.shrineRoute&&shrines.length){
+      const bell=shrines[0];bell.opensRoute=chapter.shrineRoute;
+      // Route availability derives from the same consumed shrine recorded in checkpoints.
+      const afterBell=object=>Object.defineProperty(object,'disabled',{enumerable:true,get:()=>!bell.used});
+      afterBell(add(bell.x+220,bell.y-125,260,{kind:'bridge'}));
+      afterBell(add(bell.x+410,bell.y-240,240,{kind:'bridge'}));
+      relics.push(afterBell({x:bell.x+530,y:bell.y-285,taken:false}));
+    }
+    if(mode==='adventure'&&chapter?.cacheName){
+      const shelf=platforms.find(p=>p.oneWay&&!p.moving&&!p.ceiling);
+      if(shelf){const x=shelf.x+shelf.w/2;breakables.push({id:'thaw-urn',name:chapter.cacheName,x:x-28,y:surface(shelf,x)-94,w:56,h:94,platformId:shelf.id,hp:40,maxHp:40,healRatio:.12,rerolls:1,score:40,broken:false});}
+    }
+    if(mode==='adventure'&&chapter?.conductorName){
+      const shelf=platforms.find(p=>p.oneWay&&!p.moving&&!p.ceiling);
+      if(shelf){const x=shelf.x+shelf.w/2;breakables.push({id:'dawn-conductor',kind:'conductor',name:chapter.conductorName,x:x-28,y:surface(shelf,x)-130,w:56,h:130,platformId:shelf.id,hp:70,maxHp:70,healRatio:0,rerolls:0,score:0,broken:false});}
+    }
     const groundAt=x=>{const p=platforms.find(p=>p.oneWay===false&&!p.ceiling&&x>=p.x&&x<=p.x+p.w);return p?surface(p,x):null;};
-    return {width,height,platforms,zones,shrines,relics,decor,tunnels,spawn,checkpoint,groundAt,chapter:chapter?.name,weather:chapter?.weather||['mist','eclipse','embers'][biome],background:chapter?.background||['forestHD','ruins','forge'][biome]};
+    return {width,height,platforms,zones,shrines,relics,decor,tunnels,breakables,spawn,checkpoint,groundAt,chapter:chapter?.name,weather:chapter?.weather||['mist','eclipse','embers'][biome],background:chapter?.background||['forestHD','ruins','forge'][biome]};
   }
   const WAVE_RULES=[{id:'balanced',name:'Marcha das sombras',description:'Clavas e garras avançam por todos os níveis.',hp:1,speed:1},{id:'swarm',name:'Enxame noturno',description:'Morcegos mergulham; plataformas cobertas de gelo.',hp:.85,speed:1.16},{id:'elite',name:'Corte dos condenados',description:'Elites resistentes e caçadores com investidas.',hp:1.1,speed:.95},{id:'arcane',name:'Cerco arcano',description:'Feiticeiros disparam rajadas de plataformas.',hp:.95,speed:1},{id:'storm',name:'Eclipse instável',description:'Colunas elétricas avisadas no chão; ventos fortes.',hp:1,speed:1.05}];
-  return {create,surface,WAVE_RULES,CHAPTERS,TERRAIN};
+  return {create,surface,WAVE_RULES,CHAPTERS,TERRAIN,RUNES,WEAPON_VARIANTS};
 });

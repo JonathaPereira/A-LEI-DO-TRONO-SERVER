@@ -2,9 +2,10 @@
 const { spawnSync } = require('node:child_process');
 
 function runGodot(binary, args, options = {}) {
+  const { expectedOutput, ...spawnOptions } = options;
   const result = spawnSync(binary, args, {
     maxBuffer: 16 * 1024 * 1024,
-    ...options,
+    ...spawnOptions,
     encoding: 'utf8',
     stdio: 'pipe',
   });
@@ -15,6 +16,11 @@ function runGodot(binary, args, options = {}) {
     const error = new Error(
       `Godot validation failed (status ${result.status}): ${result.error?.message || log.slice(-4000)}`,
     );
+    error.status = result.status;
+    throw error;
+  }
+  if (expectedOutput && !expectedOutput.test(log)) {
+    const error = new Error(`Godot completion marker missing (status ${result.status}).`);
     error.status = result.status;
     throw error;
   }

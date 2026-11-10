@@ -38,13 +38,416 @@ Portador escolhido no trio implementado na estrada das cinzas, com prioridade de
 Ondas entregues na escadaria das marés, com conservação do trio e recompensa única. 32 verificações específicas, suíte completa/paridade e vitória Web com gravação real aprovadas. [Décimo incremento](RENASCIMENTO.md#décimo-incremento--ondas-sucessivas-no-nexus).
 Campo simétrico de energia entregue na guardiã da memória: 168 verificações específicas/601 pertinentes, matriz e inspeção Web aprovadas. O usuário pediu transferência para outro chat antes de iniciar fases dos chefes. [Prompt e estado de restauração](RENASCIMENTO_CHECKPOINT.md).
 
-Checkpoint atualizado em 31/10/2026.
+Continuidade local do Nexus: Arconte e Custódio em duas fases, oito novas
+missões em O Colapso e 17 missões em quatro capítulos. O save 8 mantém a jornada
+anterior e libera o novo capítulo após a Fornalha. No Trono passaram typecheck,
+formatação, build, 1.475 testes core, três verificações Web de Cinzas e o
+build e seis testes do Atalaia. [Incrementos e checklist](RENASCIMENTO.md#décimo-segundo-incremento--duas-fases-no-arconte).
+
+A continuidade seguinte levou o Nexus a 48 missões principais e três
+secundárias. Cinzas recebeu o Legado de arma inicial e o Atalaia recebeu
+Engenharia, Proteção e Conhecimento. [Evidências e estado atual](RENASCIMENTO.md#décimo-quarto-incremento--campanha-principal-de-nexus).
+
+A continuidade local acrescentou três desafios, vínculos no save 9 e 24
+jornadas com pactos no Nexus. Cinzas chega ao capítulo 25 e o Atalaia tem
+Crônica de 30 fases, torretas regionais e modos extras separados dos saves.
+A continuidade seguinte acrescentou 24 técnicas adquiridas por pacto no save
+10, quatro variantes de arma de Cinzas e fundos próprios para suas novas regiões.
+[Evidências e limites](RENASCIMENTO.md#décimo-sexto-incremento--vínculos-jornadas-e-desafios-do-nexus).
+
+A fase dos juncos do Atalaia recebeu névoa temporária, aviso e retomada pelo
+relógio da onda. Os 275 checks da Crônica e a simulação de 30 fases passaram.
+A matriz Nexus compara os 24 heróis com técnicas de maestria/pacto em 2.496
+cenários adicionais; não equivale a playtest humano. Cinzas passou a cancelar
+checkpoints pendentes de tentativas encerradas e proteger backups importados
+contra a tentativa antiga. [Incremento 19](RENASCIMENTO.md#décimo-nono-incremento--névoa-tática-e-revisão-de-persistência).
+
+Cinzas acrescenta seleção de regiões para treino independente, liberada
+pelo Legado e com preparo fixo descrito no menu. O treino conserva os saves
+normais e não concede recompensas permanentes. [Incremento 20](RENASCIMENTO.md#vigésimo-incremento--treino-de-regiões-de-cinzas).
+
+Atalaia acrescenta quatro terrenos elevados, com alcance derivado da posição,
+prévia coerente com doutrinas e identificação no HUD. Crônica: 285 checks;
+cobertura: 188 combinações alcançáveis; 12 campanhas simuladas vencidas com
+22–30 de integridade. [Incremento 21](RENASCIMENTO.md#vigésimo-primeiro-incremento--posições-elevadas-do-atalaia).
+
+Nexus recebeu oito conquistas locais derivadas do save, com requisitos e
+contagens em Extras. As 15 verificações específicas incluem catálogo parcial e consulta sem
+gravação e compatibilidade dos fatos antigos. [Incremento 22](RENASCIMENTO.md#vigésimo-segundo-incremento--conquistas-locais-do-nexus).
+
+O ensaio contínuo Nexus usa save vazio e recursos conquistados: quatro trios
+concluíram 48/48; cinco pararam no relé. A revisão corrigiu apoio ofensivo
+ignorado pela IA de prazo, com doze checks e previsão do início do turno
+pelo próprio combate. Alvos auxiliares e avaliação ampla seguem pendentes.
+[Incremento 23](RENASCIMENTO.md#vigésimo-terceiro-incremento--campanha-contínua-e-apoio-ofensivo).
+
+Atalaia recebeu o sabotador da fase 23, com aviso, cancelamento, bloqueio
+curto de disparos e persistência validada. Os 16 checks específicos, as duas
+campanhas completas e o build passaram. Sinais/HUD foram inspecionados em
+perfil Web descartável; arte e áudio não estão homologados.
+[Incremento 24](RENASCIMENTO.md#vigésimo-quarto-incremento--sabotagem-de-torretas-no-atalaia).
+
+A revisão integral confirmou perda possível do recorde de Sobrevivência em
+falha de disco. Voltar/repetir/nova campanha/fechar agora preservam a sessão
+até salvar; 25 checks de progressão passaram. O executor requer conclusão
+explícita das suítes Godot. Host: 1.481 core/sete integrações Atalaia.
+[Incremento 25](RENASCIMENTO.md#vigésimo-quinto-incremento--recordes-de-sobrevivência-sem-descarte).
+
+O perfil estratégico do Atalaia agora compartilha o dono de arquivos validados
+das campanhas, com recuperação, aviso e preservação de dados incompatíveis
+introduzidos durante a sessão. Os 16 checks específicos e o build Web completo
+passaram. A suíte Nexus atualizada também concluiu campanha contínua, regressões,
+paridade e logs. [Incremento 26](RENASCIMENTO.md#vigésimo-sexto-incremento--recuperação-do-perfil-estratégico).
+
+Atalaia acrescenta remapeamento dos 11 atalhos em Opções → Teclado, com troca
+de conflitos, restauração, persistência e dicas atualizadas. Os 31 checks,
+builds, sete integrações e inspeção Web em duas resoluções passaram.
+[Incremento 27](RENASCIMENTO.md#vigésimo-sétimo-incremento--teclado-configurável-no-atalaia).
+
+Os três jogos têm créditos acessíveis nos menus, com avisos de licença nos
+exports Godot e retorno sem alterar progresso. Inspeções nativas/Web,
+regressões e builds passaram. [Incremento 28](RENASCIMENTO.md#vigésimo-oitavo-incremento--créditos-acessíveis-nos-três-jogos).
+
+Atalaia recebeu oito conquistas locais derivadas do perfil, sem novos dados
+ou recompensas. Os 15 checks, builds e sete integrações passaram; inspeção
+Chrome em duas resoluções e revisão sem achados. [Incremento 29](RENASCIMENTO.md#vigésimo-nono-incremento--conquistas-locais-do-atalaia).
+
+Cinzas recebeu oito conquistas derivadas do Legado e recordes atuais. Consulta
+sem regravação, backup compatível, 14 grupos de continuação, 1.481 core e seis
+testes browser passaram. Os três jogos têm conquistas locais; demais metas
+globais seguem abertas. [Incremento 30](RENASCIMENTO.md#trigésimo-incremento--conquistas-locais-de-cinzas).
+
+Ensaios adicionais completaram 30 reinicializações Web Cinzas, 100 Atalaia
+nativas e 75 Nexus com cancelamento de ataques. Contagens de nós/listeners
+permaneceram estáveis nas amostras; memória e limites registrados, sem inferir
+60 FPS ou estabilidade por horas. [Incremento 31](RENASCIMENTO.md#trigésimo-primeiro-incremento--ensaios-de-reinicialização).
+
+Cinzas ganhou remapeamento de teclado para 11 ações, conflitos com aliases,
+preferência persistente e dicas atualizadas. Corrigida captura Shift+letra
+com TDD; sete testes browser, core e build passaram. [Incremento 32](RENASCIMENTO.md#trigésimo-segundo-incremento--teclado-configurável-de-cinzas).
+
+Cinzas acrescenta redução explícita de tremor de tela, com preferência do
+sistema e escolha persistente. O teste verificou a apresentação real; oito
+browsers, core e build passaram. [Incremento 33](RENASCIMENTO.md#trigésimo-terceiro-incremento--redução-explícita-do-tremor-de-tela).
+
+O Sino da Vigília de Cinzas abre passarelas e relíquia opcional pelo estado
+já salvo do santuário. Corrigido orçamento de dez relíquias na retomada;
+15 grupos de exploração, core, oito browsers e build passaram. [Incremento 34](RENASCIMENTO.md#trigésimo-quarto-incremento--a-ponte-do-sino-da-vigília).
+
+Corrigida a associação de materiais nas regiões novas de Cinzas: pedra em
+piso/teto normais, preservando gelo e terrenos especiais explícitos. Build,
+regressões e inspeção Web passaram. [Incremento 35](RENASCIMENTO.md#trigésimo-quinto-incremento--materiais-coerentes-nas-novas-regiões).
+
+Checkpoint local atualizado em `artifacts/renascimento-transfer`, com fontes
+WIP completas dos dois repositórios, bases exatas e manifesto de hashes.
+[Recuperação](RENASCIMENTO_CHECKPOINT.md#checkpoint-local-atualizado-em-08112026).
+Não substitui o pacote histórico nem autoriza commit/push/publicação.
+
+A validação de inventário máximo reabriu 75 checkpoints de Cinzas em três
+sementes, com todos os santuários e 11 relíquias por expedição. As 13 suítes
+upstream passaram; fixture isola coleta/persistência de combate.
+[Incremento 37](RENASCIMENTO.md#trigésimo-sétimo-incremento--inventário-máximo-ao-longo-da-expedição).
+
+Nexus oferece `Pular animação` em ações locais/campanha, com resultado já
+calculado e fechamento único. Dezoito verificações direcionadas, suíte completa,
+PvP nativo/Web, áudio e inspeção em duas resoluções passaram. Revisão dos dois
+eixos sem pendências; nenhum aceite humano inferido.
+[Incremento 38](RENASCIMENTO.md#trigésimo-oitavo-incremento--pular-a-apresentação-do-turno-no-nexus).
+
+O Nexus também remapeia nove comandos em Teclado. Mapa único para entrada/dicas,
+troca de conflitos e preferências compatíveis; 25 verificações, suíte completa,
+55 testes JS/PvP, export e dois clientes Chrome passaram. Inspeção do agente em
+duas resoluções; aceite humano permanece pendente.
+[Incremento 39](RENASCIMENTO.md#trigésimo-nono-incremento--teclado-configurável-do-nexus).
+
+Atalaia corrige a renovação paga que repetia o Tributo garantido de
+Conhecimento. TDD e matriz com 8.422 verificações/36 sessões de ofertas passaram;
+a fixture isola economia de combate. Build Godot/Web, tipos, formato, build
+Next e 1.481 contratos core passaram. Revisão dos dois eixos sem achados.
+[Incremento 40](RENASCIMENTO.md#quadragésimo-incremento--renovação-de-conhecimento-e-matriz-de-ofertas).
+
+Matriz de cartas do Atalaia ampliada ao combate: 36 campanhas legais
+completaram 30 fases, em três políticas/três sementes/três árvores ou nenhuma.
+Recursos terminou com integridade 4–12; adaptativa e renovação, 19–30.
+Não representa playtest humano nem equilíbrio de todas as construções.
+[Incremento 41](RENASCIMENTO.md#quadragésimo-primeiro-incremento--cartas-em-campanhas-com-combate).
+
+Nexus conserva a pose de derrota entre ações e nos caminhos reduzido/pulo/
+snapshot, inclusive por reflexão. TDD, 110 verificações direcionadas, suíte
+integrada, build, PvP nativo/Web e inspeção Godot/llvmpipe passaram. Sem
+aceite humano ou conclusão das animações de todo o elenco.
+[Incremento 42](RENASCIMENTO.md#quadragésimo-segundo-incremento--continuidade-da-derrota-no-nexus).
+
+Novo checkpoint local `RENASCIMENTO-CONTINUIDADE-2026-11-08-INCREMENTO-42.zip`
+conserva as fontes WIP completas até 42, documentação do corte e evidências.
+Manifesto/hash/CRC verificáveis; pacote anterior preservado. Sem Git mutável,
+publicação ou homologação. [Recuperação](RENASCIMENTO_CHECKPOINT.md#checkpoint-local-atualizado-em-08112026).
+
+Nexus recebeu o piloto corporal de Rhazen: oito desenhos adicionais,
+sequências/tempos próprios, defesa e derrota ajoelhada. TDD, 14 verificações,
+regressões completas, export Web e inspeção Godot/Chrome passaram. Os prompts
+e o hash estão no manifesto de arte; originais preservados. Aceite humano e
+animações do elenco completo permanecem abertos.
+[Incremento 44](RENASCIMENTO.md#quadragésimo-quarto-incremento--coreografia-corporal-do-rhazen).
+
+Cindra recebeu oito quadros corporais próprios e tempos por ação, usando o
+mesmo controlador do piloto Rhazen. Kit de suporte preservado; 24 verificações
+de coreografia, 110 de derrota, export e inspeções Godot/Chrome passaram.
+Revisão dos dois eixos sem achados; aceite artístico permanece pendente.
+[Incremento 45](RENASCIMENTO.md#quadragésimo-quinto-incremento--coreografia-de-arco-da-cindra).
+
+Oren e Nima ampliam o piloto corporal Nexus com oito desenhos cada, sem
+alterar o motor ou os kits. Passaram 44 verificações de coreografia, 110 de
+derrota, build Web de 93,1 MiB e inspeções Godot/Chrome em duas resoluções.
+Revisão dos dois eixos sem achados; aceite humano permanece pendente.
+[Incremento 46](RENASCIMENTO.md#quadragésimo-sexto-incremento--peso-e-arco-de-oren-e-nima).
+
+Checkpoint local de 09/11: `RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-46.zip`
+preserva fontes WIP completas, os quatro atlas corporais, prompts e evidências
+até 46, com manifesto/hash/CRC. Pacotes anteriores conservados; sem commit,
+push ou publicação. [Recuperação](RENASCIMENTO_CHECKPOINT.md#checkpoint-local-atualizado-em-09112026).
+
+Kira e Vektor ampliam a seis os perfis corporais Nexus, com rifle/drones,
+emissão alinhada, proteção contra fases antigas e correções de enquadramento/
+opacidade. Passaram 68 verificações de coreografia, 110 de derrota, três de
+transição, quatro de enquadramento, regressão integrada e build Web de 95,7 MiB.
+Inspeções Godot/Chrome e revisões sem achados; aceite humano permanece aberto.
+O ZIP do corte 46 é preservado; incremento 48 está nos checkouts.
+[Incremento 48](RENASCIMENTO.md#quadragésimo-oitavo-incremento--rifle-drones-e-continuidade-das-fases).
+
+Nexus diferencia as segundas fases do Arquivista e da Arquiteta com Exposição
+purificável e passagem parcial por escudos, usando o motor existente. Passaram
+482 verificações pertinentes, quatro campanhas contínuas 48/48, build e
+inspeção nativa. Contra-jogo explicado na preparação/HUD/Registro; sem aceite
+humano, Git mutável ou repetição integral da paridade do incremento anterior.
+[Incremento 49](RENASCIMENTO.md#quadragésimo-nono-incremento--contra-jogo-nas-fases-finais).
+
+Checkpoint local do corte 49: fontes WIP completas, seis perfis corporais,
+padrões de chefes e evidências selecionadas, com manifesto/hash/CRC. Os três
+pacotes anteriores permanecem preservados, sem Git mutável ou publicação.
+[Recuperação](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-49--09112026).
+
+Atalaia ganhou o Arauto na Crônica: aura de marcha não cumulativa, controle
+eficaz, alcance visível e save compatível. Passaram 16 casos próprios, build
+Godot com regressões, 36/36 campanhas simuladas, 1.481 core, typecheck/format,
+Next e um fluxo Chrome real. Inspeção nativa por fixture, sem aceite humano.
+O pacote até 49 permanece preservado; incremento 51 está no checkout.
+[Incremento 51](RENASCIMENTO.md#quinquagésimo-primeiro-incremento--aura-de-marcha-no-atalaia).
+
+Cinzas ganhou a Urna do Degelo opcional: básicos/especiais das quatro armas,
+conteúdo único e consumo compatível com checkpoints antigos. Passaram 22
+verificações de exploração, 1.481 core, typecheck/format/build e oito testes
+Web. Inspeção Chrome intacta/quebrada/retomada em fixture, com som mutado e
+sem aceite humano. [Incremento 52](RENASCIMENTO.md#quinquagésimo-segundo-incremento--urna-destrutível-em-cinzas).
+
+Cinzas conserva toques curtos de ataque por teclado/mouse/toque até o quadro
+seguinte, uma vez, respeitando pausa/perda de foco. TDD, 1.482 core, tipos,
+formato, build, oito Web e inspeção de toques reais no Chrome passaram.
+[Incremento 53](RENASCIMENTO.md#quinquagésimo-terceiro-incremento--ataque-curto-entre-quadros).
+
+Checkpoint local do corte 53 conserva os dois projetos WIP completos, com
+manifesto/hash/CRC e evidências por jogo. Os quatro ZIPs anteriores permanecem
+preservados. [Recuperação](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-53--09112026).
+
+Axion e Astra ampliam para oito os perfis corporais Nexus. Passaram 92
+verificações de coreografia, 110 de derrota, build Web de 97,8 MiB e
+inspeções Godot/Chrome. Conferência local realizada; revisão independente
+pendente por limite de uso da ferramenta. Sem aceite humano.
+[Incremento 55](RENASCIMENTO.md#quinquagésimo-quinto-incremento--lâmina-e-órbitas-de-axion-e-astra).
+
+Elun e Saira ampliam para dez os perfis corporais Nexus. Passaram 116 casos
+de coreografia, 110 de derrota, build de 99,9 MiB e inspeções Godot/Chrome.
+Conferência local realizada; revisão independente e aceite humano pendentes.
+[Incremento 56](RENASCIMENTO.md#quinquagésimo-sexto-incremento--corte-e-cura-de-elun-e-saira).
+
+Nexus passou em 100 ciclos limitados de cancelamento alternando dez perfis:
+617 nós/3.475 objetos constantes, 229,11–229,94 MiB em 64,71 s. Não comprova
+sessões prolongadas/GPU. Novo pacote do corte 56 preserva fontes e evidências,
+registrando revisões independentes pendentes e conservando os cinco anteriores.
+[Recuperação](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-56--09112026).
+
+Veyra, Sylva, Vesper e Auren ampliam o Nexus para 14 perfis corporais.
+Passaram 164 casos; após corrigir transparência de Sylva, mais 36 selecionados
+e 110 de derrota. Export final 104,4 MiB e inspeções Godot/Chrome concluídos
+pelo agente. Revisão independente e aceite humano pendentes. O corte 56
+permanece intacto, sem esta fatia.
+[Incremento 58](RENASCIMENTO.md#quinquagésimo-oitavo-incremento--lâminas-natureza-eclipse-e-aurora).
+
+Torv, Brin, Bast e Ivo ampliam para 18 os perfis corporais Nexus. Passaram
+72 casos dirigidos, 110 de derrota, checagens JS, build de 107,3 MiB e inspeções
+nativas/Web pelo agente. Revisões independentes Standards/Spec de 55/56/58/59
+concluídas sem achados, encerrando as pendências anteriores. Sem aceite humano.
+[Incremento 59](RENASCIMENTO.md#quinquagésimo-nono-incremento--punhos-seiva-e-fendas-dos-retornados).
+
+Noct, Maura e Riven ampliam o Nexus para 21 perfis corporais. Passaram 60
+casos dirigidos, 110 de derrota, JS e build de 109,5 MiB. Inspeção nativa
+e Chrome em duas resoluções concluídos pelo agente; revisões independentes
+Standards/Spec de 60/61 concluídas sem achados.
+[Incremento 60](RENASCIMENTO.md#sexagésimo-incremento--garras-pacto-e-adagas-do-eclipse).
+
+Elyra, Solen e Zaya completam 24 perfis corporais de oito desenhos no Nexus.
+Passaram 55 testes JS e build de 111,9 MiB; inspeção nativa concluída.
+Chrome final e revisão independente concluídos sem achados. Suíte Godot
+completa e ensaio de cancelamento em fechamento. Supremos finais e aceite
+humano permanecem.
+[Incremento 61](RENASCIMENTO.md#sexagésimo-primeiro-incremento--cajado-palma-e-arco-lumi).
+
+Validação Nexus do elenco completo: 284 casos de coreografia, 1.301 nativos/
+1.272 de interface, campanha contínua 48/48, 36 partidas em paridade e 282
+logs reproduzidos. PvP local nativo 305/69 ações e dois Chrome passaram.
+Ensaio limitado de 240 cancelamentos concluiu em 155,19 s, 617 nós/3.690 objetos
+constantes; não comprova GPU física ou sessões por horas. Novo pacote do
+corte 61/documentação 62 preserva os seis anteriores e registra revisões
+independentes concluídas. Sem aceite humano ou autorização de commit/push.
+[Recuperação](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-61--09112026).
+
+Cinzas ganhou Condutor do Alvorecer no confronto final: desligamento anunciado
+do ciclo ambiental, sem loot, conservando ataques do guardião e retomada por
+marcos. Passaram 27 de exploração, 1.483 core, tipos, formato, build e oito Web e fluxo DOM.
+Inspeção Chrome em duas resoluções pelo agente; 66/120 duelos de variantes são
+simulação, sem equilíbrio/aceite humano. Revisões Standards/Spec concluídas
+sem achados, com repetição dirigida de 27 casos e fluxo DOM.
+O corte 61/documentação 62 permanece intacto e não inclui esta fatia.
+[Incremento 63](RENASCIMENTO.md#sexagésimo-terceiro-incremento--condutor-destrutível-na-arena-final-de-cinzas).
+
+Novo corte local 63/documentação 64 conserva o condutor, a integração Nexus
+do 62 e revisões concluídas, com fontes WIP, hashes/CRC e evidências por jogo.
+Sete pacotes anteriores preservados, sem release/homologação ou ações Git.
+[Recuperação](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-63--09112026).
+
+Nexus ganhou duas lições avançadas no sistema existente, totalizando cinco,
+com lista rolável/foco, estados textuais e indisponibilidade explícita no PvP.
+Passaram 33 dirigidos, seis simulações legais e integrada 1.301/1.272 UI/paridade.
+Export de 111,9 MiB e inspeções nativa/Web concluídos; quinta lição com 2/2
+objetivos por teclado e movimento reduzido. Revisões Standards/Spec sem achados.
+O corte 63 permanece intacto, sem esta fatia. Sem aceite humano.
+[Incremento 65](RENASCIMENTO.md#sexagésimo-quinto-incremento--lições-avançadas-e-lista-acessível-no-nexus).
+
+Novo corte local 65/documentação 66 preserva as cinco lições Nexus, condutor e
+fontes WIP dos dois projetos. Manifesto separa 33 dirigidos finais dos 27 iniciais,
+simulações legais, inspeção e aceite humano pendente. CRC/hashes/SHA externos
+verificados; oito pacotes anteriores preservados, sem ações Git/publicação.
+[Recuperação](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-65--09112026).
+
+Checkpoint de continuidade Renascimento atualizado em 09/11/2026.
 
 Fonte única do plano e checkpoint. Produto/REA:
 [UX_COMUNICACAO.md](UX_COMUNICACAO.md); donos:
 [ARQUITETURA.md](ARQUITETURA.md); operação:
 [DESENVOLVIMENTO_DESKTOP.md](DESENVOLVIMENTO_DESKTOP.md); contribuição:
 [agents/workflow.md](agents/workflow.md). Detalhes históricos ficam no Git.
+
+Novo pacote local do corte 71 conserva fontes/WIP do 70, ensaios/diagnóstico
+do 71 e documentação 72. Manifesto/CRC/hashes por arquivo e SHA-256 externo;
+dez ZIPs anteriores preservados e reconferidos. Revisões independentes 70/71
+concluídas sem achados. Sem publicação ou homologação; commit/push ainda
+exigem confirmação. [Corte e limites](RENASCIMENTO.md#septuagésimo-segundo-incremento--preservação-do-corte-71).
+
+Novo corte 74/documentação 75 preserva a escolta Atalaia e o ensaio Nexus
+nativo, com revisões concluídas. Onze ZIPs anteriores reconferidos e intactos;
+manifesto/CRC/hashes por arquivo/SHA-256 externo. Sem saves reais, exports ou
+publicação. [Estado e limites](RENASCIMENTO.md#septuagésimo-quinto-incremento--preservação-do-corte-74).
+
+Atalaia — incremento 74: Guardião da escória chama duas escoltas na segunda
+fase e protege aliados próximos, sem acúmulo. Saves v1 antigos preservados;
+ataques mantêm seus destinatários quando a fase cria inimigos. Passaram 35
+dirigidos, build completo, matriz legal 36/36 e três observações com proteção
+efetiva; tipos/formato/Next/1.484 core. Revisão reproduziu círculo cacheado
+na morte, corrigido e conferido no renderer; fluxo Chrome final passou e
+rechecagens Standards/Spec concluíram sem achados restantes. Ensaio Nexus nativo 73 concluiu
+1.316 ciclos/1.802,790 s, saída 0 limpa, memória estática 70,03–71,08 MiB;
+não mede RSS/driver/GPU ou FPS físico. Essas alterações
+posteriores ao ZIP 71 integram o novo corte 74 e permanecem no checkout.
+
+Corte local 81, fontes até 80: novo ZIP de continuidade de 10/11/2026, com
+2.310 fontes/WIP, 1.333 evidências e manifesto. Conserva Refluxo, ensaios de
+trios/teclado, supremos Rhazen/Cindra e correção de emissão; bases exatas e
+main preservadas. Os 13 pacotes anteriores foram rechecados por SHA/tamanho.
+Consulte RENASCIMENTO_CHECKPOINT e os acompanhantes SHA/VERIFICACAO para
+transportar/restaurar. A R2 corrige metadado histórico inicial das lições
+(27; posteriores 33), sem alterar fontes de produto; ZIP inicial preservado.
+Sem Git/publicação/homologação humana.
+
+Nexus — incremento 80: oito desenhos próprios do supremo de
+Cindra, com correção da emissão pela escala efetiva do quadro após P2
+reproduzido. Passaram 62 casos dirigidos/nove de transição e geometria,
+55 JS/check, nativo final quatro casos e export 113,4 MiB. Chrome conferiu
+retorno após queimadura do supremo/básico em duas resoluções; Standards/
+Spec reexaminaram o P2 corrigido sem achados restantes. Duas tentativas nativas expiradas preservadas e
+qualificadas. Sem nova integrada ampla, humano ou publicação; WIP após ZIP 74.
+
+Nexus — ensaio 79: seleção Web por teclado conferida após isolar pressuposto
+incorreto de foco no roteiro. Reprodução mínima e dois percursos na galeria
+em duas resoluções, sem mudar jogo/motor ou repetir build do produto.
+Tentativas iniciais preservadas e qualificadas; acessibilidade ampla aberta.
+
+Nexus — incremento 78: oito desenhos exclusivos do supremo de
+Rhazen, mantendo básico/defesa/derrota e resolução única. 26 dirigidos/cinco
+transições e inspeção nativa concluídos; 55 JS/check, integrada com 286
+coreografias/1.301 nativos/1.272 UI/paridade/replays, export 112,6 MiB e
+Chrome em duas resoluções passaram. Primeira seleção Web inválida preservada
+e repetida. Standards/Spec sem achados; sem aceite humano. WIP após ZIP 74.
+
+Nexus — ensaio 77: duas novas composições completaram 48/48 com foco temporário
+na curadora do relé; 25 comparações, zero erros, três trios ainda sem percurso
+completo. Sem mudar produto/IA ou executar build novo; BALANCING distingue
+políticas e derrotas. Evidências locais posteriores ao ZIP 74.
+
+Nexus — incremento 76: Executor aplica Enfraquecimento purificável pelo
+Refluxo da segunda fase; parâmetros existentes e kits livres preservados.
+38 padrões, 55 JS, integrada/paridade/replays e quatro campanhas 48/48
+aprovados; export local, inspeções nativa/Chrome em duas resoluções e revisão
+Standards/Spec sem achados concluídos. Chrome: fase 2 e vitória em 17 rodadas/
+76 ações, com perfil desbloqueado de fixture e automático normal. WIP posterior
+ao ZIP 74, sem Git/publicação/aceite humano.
+
+Ensaios 71: Atalaia 195 campanhas/11.971 retomadas em 15 minutos;
+Cinzas 43 sessões/reinícios Chrome em 15 minutos. Nexus completou 30 minutos,
+mas o roteiro liberava o dono durante uma espera pendente, gerando aviso de
+saída. Reprodução mínima e confirmação de retorno eliminaram o aviso sem
+mudar o jogo; a repetição corrigida concluiu 1.325 ciclos em 1.801,028 s,
+saída 0 limpa, com cancelamento/commit único conferidos. Memória headless
+cresceu; reprodução mínima corresponde ao defeito de acessibilidade Godot
+#124439. Controls reutilizados, fora da árvore e o controle Wayland por
+software ficaram estáveis; o motor permanece intacto. Cinco políticas legais
+de campanha Cinzas perderam 60 casos, chegando no máximo ao capítulo 13;
+não comprovam impossibilidade nem equilíbrio final. Hardware, memória do
+jogo nativo e aceite humano seguem pendentes.
+[Evidências e estado](RENASCIMENTO.md#septuagésimo-primeiro-incremento--ensaios-prolongados-e-diagnóstico-de-memória).
+
+Cinzas — incremento 70: resolução terminal interrompe acertos/recompensas
+posteriores ao dano fatal, preservando os anteriores. Reproduções de cinco
+fontes com Pacto vital legal, 28 gameplay, fluxo DOM, 1.484 core,
+tipos/formato/build, oito Web e inspeção em duas resoluções passaram.
+A matriz de variantes conserva 66/120 vitórias. Revisões de código sem
+achados restantes, incluindo documentos e a regressão adicional de crédito
+anterior ao dano fatal. Sem aceite
+humano ou alteração de save; esta fatia está no checkout, fora do corte 68.
+[Evidências](RENASCIMENTO.md#septuagésimo-incremento--derrota-terminal-coerente-em-cinzas).
+
+Corte 68 — incremento documental 69: pacote local completo/WIP conserva
+pulso da Coroa e navegação da Coleção, integrada Nexus e matriz Atalaia,
+com revisões sem achados restantes, bases e hashes. Nove pacotes anteriores
+preservados e reconferidos. Ensaio Nexus de 30 minutos ainda em andamento,
+fora das evidências concluídas desse corte. [Checkpoint de continuidade](RENASCIMENTO_CHECKPOINT.md#corte-local-até-o-incremento-68--09112026).
+
+Nexus — incremento 68: Coleção conserva foco, seleção, rolagem e prévia de
+nova tentativa, sem alterar transações ou trios. Passaram 30 casos dirigidos,
+55 JS, export 111,9 MiB e integrada 1.301/1.272 UI/paridade/replays. Inspeções
+Godot/Chrome em duas resoluções verificaram melhoria, especialização e
+habilidade; a primeira tentativa Web incompleta foi preservada e distinguida.
+Revisões de código sem achados; precisão documental do fallback corrigida.
+Sem aceite humano, commit/push ou publicação. [Evidências e checklist](RENASCIMENTO.md#sexagésimo-oitavo-incremento--continuidade-por-teclado-na-coleção-nexus).
+
+Atalaia — incremento 67: a Coroa do Bastião anuncia pulso periódico na
+segunda fase, com interrupção breve e save v1 compatível. Passaram 38 casos,
+build/regressões, 1.483 core e Chrome; 36/36 campanhas simuladas concluídas.
+Inspeções em duas resoluções usam fixture e software; sem aceite humano.
+A revisão Spec identificou janela parcial de aviso e a correção foi
+reproduzida antes da rechecagem final; Standards/Spec concluídas sem achados
+restantes. O ZIP do corte 65 permanece intacto
+e ainda não inclui esta fatia; nenhuma ação Git/publicação foi executada.
+[Evidências e limites](RENASCIMENTO.md#sexagésimo-sétimo-incremento--pulso-anunciado-da-coroa-do-bastião).
 
 ## Direção e autorização
 

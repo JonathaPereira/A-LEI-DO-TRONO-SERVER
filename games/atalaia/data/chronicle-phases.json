@@ -1,0 +1,42 @@
+[
+  {"act":"O Primeiro Cerco","intro":"A Vigília acende o Cristal na fronteira da floresta. As raízes trazem sinais de um cerco mais antigo.","ending":"A trilha do Guardião leva ao dique. O Cristal precisa cruzar enquanto a passagem ainda está aberta.","phases":[
+    {"name":"A vigília do portão","deck":["skeleton","wolf"],"count":14,"interval":0.94,"lanes":[0],"threat":1.0,"integrity":30,"reward":15},
+    {"name":"Passos sob as raízes","deck":["wolf","wolf","spider"],"count":16,"interval":0.78,"lanes":[0],"threat":0.94,"integrity":29,"reward":16},
+    {"name":"A árvore doente","deck":["mushroom","spider","skeleton"],"count":17,"interval":0.86,"lanes":[0],"threat":1.02,"integrity":28,"reward":18},
+    {"name":"Caçada ao sino","deck":["wolf","wolf","skeleton","spider"],"count":20,"interval":0.65,"lanes":[0],"threat":0.94,"integrity":28,"reward":18},
+    {"name":"Pedras na estrada","deck":["golem","skeleton","mushroom"],"count":17,"interval":0.88,"lanes":[0],"threat":1.0,"integrity":27,"reward":20},
+    {"name":"Guardião das raízes","deck":["spider","mushroom","wolf"],"count":20,"interval":0.75,"lanes":[0],"threat":1.02,"integrity":25,"reward":28}
+  ]},
+  {"act":"Fronteiras Corrompidas","intro":"A Matriarca divide a defesa entre duas margens. Os juncos escondem qual via será usada primeiro.","ending":"O dique devolve o sinal do Cristal e revela três entradas na cidadela.","phases":[
+    {"name":"A margem proibida","deck":["spirit","wolf","skeleton"],"count":18,"interval":0.77,"lanes":[1],"threat":1.0,"integrity":28,"reward":20},
+    {"name":"O dique invertido","deck":["mushroom","golem","wolf"],"count":18,"interval":0.72,"lanes":[0],"threat":1.03,"integrity":28,"reward":22},
+    {"name":"O chamado dos juncos","environment":{"id":"marsh_fog","name":"Névoa dos juncos","description":"Alcance das torretas −20% por 6 s, a partir de 8 s, a cada 20 s. Farol Espectral mantém o alcance. Aviso 3 s antes.","starts":8.0,"duration":6.0,"period":20.0,"warning":3.0,"rangeMultiplier":0.8},"deck":["spirit","spirit","spider"],"count":21,"interval":0.64,"lanes":[0,1],"threat":0.94,"integrity":26,"reward":22},
+    {"name":"Dois bancos de lama","deck":["mushroom","wolf","spider"],"count":22,"interval":0.7,"lanes":[1,0,1],"threat":1.0,"integrity":26,"reward":24},
+    {"name":"O veneno da comporta","deck":["spider","golem","spirit"],"count":22,"interval":0.69,"lanes":[0,0,1],"threat":1.03,"integrity":24,"reward":26},
+    {"name":"Matriarca das raízes","deck":["mushroom","spider","spirit","wolf"],"count":24,"interval":0.66,"lanes":[0,1],"threat":1.04,"integrity":23,"reward":32}
+  ]},
+  {"act":"A Ruptura","intro":"Três vias convergem no mesmo pátio. Uma delas é curta o bastante para virar um ataque surpresa.","ending":"O pátio permanece de pé. A fundição perde um Guardião e sua última defesa chama o Bastião.","phases":[
+    {"name":"A via partida","deck":["wolf","spirit","wolf"],"count":22,"interval":0.63,"lanes":[1],"threat":1.0,"integrity":28,"reward":24},
+    {"name":"Atrás do contraforte","deck":["golem","skeleton","mushroom"],"count":19,"interval":0.76,"lanes":[2,0],"threat":1.07,"integrity":26,"reward":24},
+    {"name":"Três sinos","deck":["spider","spirit","skeleton"],"count":26,"interval":0.6,"lanes":[0,1,2],"threat":1.0,"integrity":26,"reward":27},
+    {"name":"O atalho dos lobos","deck":["wolf","wolf","wolf","spirit"],"count":25,"interval":0.55,"lanes":[1,1,2],"threat":0.96,"integrity":25,"reward":28},
+    {"name":"Golens do desnível","deck":["golem","golem","mushroom"],"count":20,"interval":0.73,"lanes":[0,2],"threat":1.09,"integrity":24,"reward":30},
+    {"name":"Sentinela da cidadela","deck":["spirit","golem","spider","wolf"],"count":28,"interval":0.6,"lanes":[1,2,0],"threat":1.04,"integrity":22,"reward":34}
+  ]},
+  {"act":"A Queda dos Guardiões","intro":"A caldeira abre três passagens independentes. Entre elas surgem espíritos velados, visíveis no trecho final.","ending":"A escória esfria. Os guardiões enviam o último aviso pelas quatro estradas do Bastião.","phases":[
+    {"name":"O topo da fundição","deck":["ward","wolf","spirit"],"count":24,"interval":0.64,"lanes":[0,1],"threat":1.03,"integrity":27,"reward":28},
+    {"name":"Cinzas por baixo","deck":["herald","wolf","spider","wolf"],"count":26,"interval":0.51,"lanes":[2],"threat":0.98,"integrity":26,"reward":30},
+    {"name":"Calhas ferventes","deck":["mushroom","spirit","golem"],"count":23,"interval":0.66,"lanes":[1,0,1],"threat":1.05,"integrity":25,"reward":30},
+    {"name":"O cerco das três bocas","deck":["brood","wolf","skeleton","spirit"],"count":30,"interval":0.56,"lanes":[2,0,1],"threat":1.02,"integrity":24,"reward":34},
+    {"name":"Última patrulha do alto","deck":["ward","spirit","golem","wolf","sapper"],"count":26,"interval":0.66,"lanes":[0,2,0],"threat":1.05,"integrity":23,"reward":34},
+    {"name":"Guardião da escória","deck":["golem","mushroom","spider","spirit"],"count":29,"interval":0.62,"lanes":[0,1,2],"threat":1.06,"integrity":21,"reward":38}
+  ]},
+  {"act":"O Último Bastião","intro":"As estradas trazem ataques de quatro direções. A Coroa abre a última frente para romper o Cristal.","ending":"A Coroa cai. O Cristal volta a guiar os cinco territórios pelas estradas abertas.","phases":[
+    {"name":"Ao norte, o vazio","deck":["spirit","spirit","wolf"],"count":28,"interval":0.55,"lanes":[0,1],"threat":1.04,"integrity":27,"reward":32},
+    {"name":"A rota dos arqueiros","deck":["skeleton","wolf","spider"],"count":29,"interval":0.5,"lanes":[1,3],"threat":1.0,"integrity":26,"reward":34},
+    {"name":"Os portões gêmeos","deck":["golem","mushroom","spirit"],"count":27,"interval":0.62,"lanes":[0,3,0],"threat":1.06,"integrity":25,"reward":35},
+    {"name":"O dia que vacila","deck":["wolf","spider","spirit","wolf"],"count":34,"interval":0.49,"lanes":[0,1,2,3],"threat":1.02,"integrity":24,"reward":36},
+    {"name":"O aviso da última torre","deck":["golem","golem","spirit","mushroom"],"count":22,"interval":1.03,"lanes":[2,3],"threat":0.96,"integrity":22,"reward":38},
+    {"name":"A Coroa do Bastião","deck":["spirit","golem","wolf","spider"],"count":36,"interval":0.53,"lanes":[3,1,2,0],"threat":1.06,"integrity":20,"reward":50}
+  ]}
+]

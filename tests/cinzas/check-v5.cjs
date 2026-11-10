@@ -11,8 +11,8 @@ test('Bow and staff release at the shared rendered anchor in both directions, lo
 test('Every weapon has a distinct delayed R1 special and its own cooldown',()=>{
  for(const weapon of ['blade','bow','staff','hammer']){const e=make(),p=e.player;p.weapon=weapon;e.spawnQueue=[{}];e.enemies=[];const target=e.addEnemy('brute',p.x+110);target.hp=2000;target.maxHp=2000;target.cd=999;assert(e.skill());assert.equal(p.skillCd,SPECIALS[weapon].cooldown);assert.equal(target.hp,2000);assert(!e.skill());tick(e,70);if(weapon==='blade')assert(target.hp<1940);if(weapon==='hammer')assert(target.hp<=1915);if(weapon==='bow')assert(e.events.some(ev=>ev.type==='release'&&ev.super&&ev.weapon==='bow'));if(weapon==='staff')assert(e.events.some(ev=>ev.type==='release'&&ev.super&&ev.weapon==='staff'));}
 });
-test('Campaign has three shrines, six scarce relics, and physical underground passages',()=>{
- const e=make();e.mode='adventure';let shrines=0,relics=0,tunnels=0;for(let i=0;i<CHAPTERS.length;i++){e.stage=i;e.loadStage();shrines+=e.shrines.length;relics+=e.relics.length;tunnels+=(e.tunnels||[]).length;for(const roof of e.platforms.filter(p=>p.ceiling)){const x=roof.x+roof.w/2;assert(e.groundY(x)-e.ceilingY(x)>=245);}}
+test('The original fifteen chapters preserve their shrines, relics and passages',()=>{
+ const e=make();e.mode='adventure';let shrines=0,relics=0,tunnels=0;for(let i=0;i<15;i++){e.stage=i;e.loadStage();shrines+=e.shrines.length;relics+=e.relics.length;tunnels+=(e.tunnels||[]).length;for(const roof of e.platforms.filter(p=>p.ceiling)){const x=roof.x+roof.w/2;assert(e.groundY(x)-e.ceilingY(x)>=245);}}
  assert.equal(shrines,3);assert.equal(relics,6);assert.equal(tunnels,12);
 });
 test('Jump collides with a tunnel ceiling and fast airborne motion cannot penetrate an uphill floor',()=>{

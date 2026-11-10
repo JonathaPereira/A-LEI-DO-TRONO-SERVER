@@ -17,3 +17,16 @@ p.buttons[0].pressed=false;c.poll([p],1.8);p.buttons[0].pressed=true;assert(c.po
 const other=pad(1);other.axes[0]=-.9;assert.equal(c.poll([other,pad(3)],2).pad.index,1,'A controller receiving input becomes active');
 c.vibrate();c.device.vibrationActuator={playEffect:()=>Promise.reject(new Error('unsupported'))};c.vibrate();
 console.log('PASS Gamepad deadzone, movement, navigation repeat, edge-triggered jump/pause, continuous attack, remap, device switch, disconnect/reconnect and optional vibration.');
+const {Keyboard,KEY_DEFAULT}=require('../../public/roguelite/controller.js');
+const keyboard=new Keyboard();
+assert.equal(keyboard.actionFor('ArrowLeft'),'left');assert.equal(keyboard.actionFor('KeyW'),'jump');assert.equal(keyboard.actionFor('Enter'),'interact');
+assert(keyboard.setBinding('attack','KeyH'));assert.equal(keyboard.actionFor('KeyH'),'attack');assert.equal(keyboard.actionFor('KeyJ'),'');assert.equal(keyboard.actionFor('KeyZ'),'attack');
+assert(keyboard.setBinding('skill','KeyH'));assert.equal(keyboard.actionFor('KeyH'),'skill');assert.equal(keyboard.actionFor('KeyK'),'attack');assert.equal(keyboard.actionFor('KeyX'),'skill');
+const restored=new Keyboard(JSON.parse(JSON.stringify(keyboard.snapshot())));assert.deepEqual(restored.snapshot(),keyboard.snapshot());
+const before=keyboard.snapshot();
+for(const bad of [null,{}, {...before,attack:['Digit1']},{...before,attack:before.skill}, {...before,attack:['ArrowRight']},{...before,attack:['KeyJ','KeyJ']},{...before,extra:['KeyB']},{...before,attack:[]}]){assert.equal(keyboard.load(bad),false);assert.deepEqual(keyboard.snapshot(),before);}
+assert.equal(keyboard.setBinding('attack','Escape'),false);assert.equal(keyboard.setBinding('left','ArrowRight'),false);assert.equal(keyboard.setBinding('unknown','KeyB'),false);
+keyboard.reset();assert(keyboard.setBinding('attack','KeyW'));assert.equal(keyboard.actionFor('KeyW'),'attack');assert.equal(keyboard.actionFor('KeyJ'),'jump');assert.equal(keyboard.actionFor('Space'),'jump');
+keyboard.reset();assert(keyboard.setBinding('jump','KeyW'));assert.equal(keyboard.actionFor('KeyW'),'jump');assert.equal(keyboard.actionFor('Space'),'');assert.equal(keyboard.actionFor('ArrowUp'),'jump');
+keyboard.reset();const detached=keyboard.snapshot();detached.jump[0]='KeyB';assert.equal(keyboard.actionFor('Space'),'jump');assert.deepEqual(keyboard.snapshot().jump,KEY_DEFAULT.jump);
+console.log('PASS Keyboard movement aliases, remapping, primary/alternate conflicts, reserved keys, invalid atomic loads, preferences and reset.');

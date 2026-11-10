@@ -64,7 +64,8 @@ func verify():
  b.wave=10;b.phase="cards";b.choices=[C.card("treasury")];b.apply_card(0,-1);b.apply_doctrine(0)
  check(b.stage==2 and b.routes.size()==3,"Terceira fase usa três caminhos reais")
  var route_ok=true
- for stage in range(3):
+ b=Run.new(21,"chronicle")
+ for stage in range(b.maps.size()):
   b.set_map(stage)
   for p in b.pads:
    var distance=INF
@@ -72,7 +73,7 @@ func verify():
     var pts=route.points
     for i in range(1,pts.size()):distance=minf(distance,p.distance_to(Geometry2D.get_closest_point_to_segment(p,pts[i-1],pts[i])))
    if distance>105.0 or distance<45.0:route_ok=false
- check(route_ok,"Todos os 48 espaços ficam junto a uma estrada e ao alcance do fogo")
+ check(route_ok,"Os 86 espaços dos cinco territórios ficam junto a uma estrada e ao alcance do fogo")
  var save=Run.new(22);save.gold=1000;save.build("poison",0);save.start_wave();save.spawn_enemy("spider",0)
  save.pools.append({"owner":save.towers[0].id,"pos":Vector2(50,60),"radius":48.0,"dps":9.0,"residual":5.0,"time":3.0,"duration":5.0})
  save.tick(0.5)

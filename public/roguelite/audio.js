@@ -43,7 +43,7 @@
       else if(type==='land'||type==='headbump'){if(!this.ready(type,.1))return;this.noise(.07,500,.055);this.oscillator(78,37,.08,.045);}
       else if(type==='dash'){if(this.ready('dash',.15))this.noise(.2,1700,.085);}
       else if(type==='telegraph'){if(this.ready('warning',.15)){this.oscillator(58,73,.23,.05);this.noise(.2,460,.045);}}
-      else if(['chosen','relic','bosskill','clear','end'].includes(type)){if(!this.ready('reward',.15))return;const notes=type==='bosskill'?[196,294,392]:[392,494,587];notes.forEach((f,i)=>this.oscillator(f,f,.35,.035,'sine',i*.065));}
+      else if(['chosen','relic','breakable','bosskill','clear','end'].includes(type)){if(!this.ready('reward',.15))return;const notes=type==='bosskill'?[196,294,392]:[392,494,587];notes.forEach((f,i)=>this.oscillator(f,f,.35,.035,'sine',i*.065));}
     }
   }
   return {Soundscape};

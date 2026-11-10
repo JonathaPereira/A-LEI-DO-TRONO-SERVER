@@ -4,6 +4,34 @@
   const NAMES={xbox:['A','B','X','Y','LB','RB','LT','RT','View','Menu','LS','RS','↑','↓','←','→','Xbox'],playstation:['×','○','□','△','L1','R1','L2','R2','Share','Options','L3','R3','↑','↓','←','→','PS']};
   const profileFor=(id='')=>/sony|dual|playstation|054c/i.test(id)?'playstation':'xbox';
   const buttonLabel=(index,profile='xbox')=>profile==='generic'?'Botão '+(index+1):(NAMES[profile]||NAMES.xbox)[index]||'Botão '+(index+1);
+  const KEY_DEFAULT=Object.freeze(Object.fromEntries(Object.entries({left:['KeyA','ArrowLeft'],right:['KeyD','ArrowRight'],down:['KeyS','ArrowDown'],jump:['Space','KeyW','ArrowUp'],attack:['KeyJ','KeyZ'],skill:['KeyK','KeyX'],dash:['ShiftLeft','ShiftRight','KeyL'],interact:['KeyE','Enter'],element:['KeyQ'],pause:['KeyP'],reroll:['KeyR']}).map(([action,codes])=>[action,Object.freeze(codes)])));
+  class Keyboard {
+    constructor(mapping){this.reset();if(mapping!==undefined)this.load(mapping);}
+    reset(){this.mapping=Object.fromEntries(Object.entries(KEY_DEFAULT).map(([action,codes])=>[action,[...codes]]));}
+    snapshot(){return Object.fromEntries(Object.entries(this.mapping).map(([action,codes])=>[action,[...codes]]));}
+    static bindable(code){return typeof code==='string'&&(/^(Key[A-Z]|Digit[056789]|ShiftLeft|ShiftRight)$/.test(code)||code==='Space');}
+    load(mapping){
+      if(!mapping||typeof mapping!=='object'||Array.isArray(mapping)||Object.keys(mapping).length!==Object.keys(KEY_DEFAULT).length)return false;
+      const used=new Set();
+      for(const action of Object.keys(KEY_DEFAULT)){
+        const codes=mapping[action];
+        if(!Array.isArray(codes)||!codes.length||codes.length>4||!Keyboard.bindable(codes[0]))return false;
+        for(const code of codes){if(!(Keyboard.bindable(code)||KEY_DEFAULT[action].includes(code))||used.has(code))return false;used.add(code);}
+      }
+      this.mapping=Object.fromEntries(Object.keys(KEY_DEFAULT).map(action=>[action,[...mapping[action]]]));return true;
+    }
+    setBinding(action,code){
+      if(!Object.hasOwn(KEY_DEFAULT,action)||!Keyboard.bindable(code))return false;
+      const next=this.snapshot(),previous=next[action][0];
+      for(const other of Object.keys(next))if(other!==action){const index=next[other].indexOf(code);if(index>=0)next[other][index]=previous;}
+      next[action]=[code,...next[action].slice(1).filter(value=>value!==code)];return this.load(next);
+    }
+    actionFor(code){return Object.keys(this.mapping).find(action=>this.mapping[action].includes(code))||'';}
+    label(action,aliases=false){
+      const names={Space:'Espaço',ShiftLeft:aliases?'Shift esq.':'Shift',ShiftRight:aliases?'Shift dir.':'Shift',ArrowLeft:'←',ArrowRight:'→',ArrowDown:'↓',ArrowUp:'↑'};
+      return (aliases?this.mapping[action]:this.mapping[action].slice(0,1)).map(code=>names[code]||code.replace(/^Key|^Digit/,'')).join(' / ');
+    }
+  }
   class Controller {
     constructor(mapping={}){this.mapping={...DEFAULT};for(const [key,value] of Object.entries(mapping))if(key in DEFAULT&&Number.isInteger(value)&&value>=0&&value<32)this.mapping[key]=value;this.deadzone=.24;this.previous=[];this.index=null;this.navAt=0;this.navDirection='';this.device=null;}
     setBinding(action,index){if(!(action in DEFAULT)||!Number.isInteger(index)||index<0||index>31)return false;const previous=this.mapping[action],other=Object.keys(this.mapping).find(k=>k!==action&&this.mapping[k]===index);if(other)this.mapping[other]=previous;this.mapping[action]=index;return true;}
@@ -26,5 +54,5 @@
     }
     vibrate(strength=.4,duration=90){try{const actuator=this.device?.vibrationActuator;if(!actuator?.playEffect)return;Promise.resolve(actuator.playEffect('dual-rumble',{duration,startDelay:0,strongMagnitude:strength,weakMagnitude:strength*.5})).catch(()=>{});}catch{}}
   }
-  return {Controller,DEFAULT,NAMES,buttonLabel,profileFor};
+  return {Controller,DEFAULT,NAMES,buttonLabel,profileFor,Keyboard,KEY_DEFAULT};
 });
