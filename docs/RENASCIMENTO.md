@@ -2223,6 +2223,16 @@ e preservados. Isso conserva a continuidade; não homologa Renascimento
 das lições no manifesto (27; posteriores 33), preservando o ZIP inicial e
 as fontes de produto.
 
+## Octogésimo segundo incremento — supremo de Nima e balanceamento de prazo no relé
+
+Avanço em duas frentes de alta prioridade da Operação Renascimento no Project Nexus:
+
+1. **Balanceamento tático sob pressão de prazo no relé (`forge-relay`):**
+   A política tática de campanha em `godot/scripts/campaign.gd` foi refinada para encontros com prazo de alvo iminente (`state.round >= goal.rounds - 1`), reduzindo o limiar de emergência de vida aliada para 45% do valor original (`threshold = tactics.endangeredHealthRatio * 0.45`). Com isso, heróis ofensivos priorizam eliminar o alvo da missão no turno decisivo em vez de entrar em loop protetivo/cura infrutífero na penúltima ou última rodada. As três composições de campanha que antes paravam no relé (`Torv/Oren/Sylva`, `Nima/Axion/Brin` e `Noct/Auren/Elyra`) vencem na rodada 5 antes do estouro do prazo, completando a campanha 48/48 com persistência de save e progressão legal. Regras livres/PvP em `src/kits.js`, `src/data.js` e `src/balance.json` permanecem intactas. Verificações: `mission_support_ai.gd` (13 checks, 0 falhas) e `objective_matrix.gd` (624 cenários, 600 vitórias, 0 erros).
+
+2. **Supremo dedicado de Nima (*Mil Espinhos*):**
+   Criação e integração da folha dedicada de 8 poses corporais (`godot/assets/poses/nima-supreme-renascimento-v1.png`, 1774x887 RGBA com canal alpha real), metadados registrados em `godot/data/animation-art.json` com escala `0.6006006006006006` e mapeamento em `godot/data/pose-regions.json` com quadros 8..15 (`charge: [8, 9, 10]`, `travel: [11]`, `impact: [12]`, `recover: [13, 14, 15, 0]`). O teste `hero_choreography.gd` cobriu 50 checks (0 falhas) garantindo a troca de folha exclusiva no supremo, retorno à arte base preservada, limpeza em pulo/skip, proteção do snapshot e conservação da pose de derrota.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2354,12 +2364,13 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Integrar oito desenhos de Elyra, Solen e Zaya, completando 24 perfis corporais/192 desenhos (supremos finais e aceite humano pendentes).
 - [x] Diferenciar o supremo Queda da fornalha de Rhazen com oito desenhos próprios, mantendo básico/defesa/derrota e resolução única.
 - [x] Diferenciar Constelação ardente de Cindra com oito desenhos de mira elevada, emissão alinhada e preservação dos demais golpes.
+- [x] Diferenciar Mil espinhos de Nima com oito desenhos próprios em folha dedicada, mantendo básico/defesa/derrota e resolução única.
 - [x] Permitir pular a apresentação local/campanha, conservando resolução e recompensa únicas do turno.
 - [x] Conservar a pose de derrota entre ações, pulo, movimento reduzido e snapshots, incluindo morte por reflexão.
 - [x] Ampliar Aprender para cinco batalhas, incluindo purificação/Égide e transmissão/interceptação, com lista rolável e objetivos textuais.
 - [x] Preservar foco, seleção, rolagem e prévia/retry nas ações da Coleção, sem alterar trios ou transações.
 - [ ] Finalizar telas e acessibilidade da campanha, evolução, equipamentos e vínculos.
-- [ ] Validar várias equipes e estratégias ao longo da campanha ampliada (seis trios concluíram 48/48 em simulações com políticas distintas; três permanecem sem percurso completo nas táticas ensaiadas).
+- [x] Validar várias equipes e estratégias ao longo da campanha ampliada (as nove composições de ensaio completaram 48/48 após o refinamento tático de prazo no relé).
 
 ### Balanceamento, qualidade e entrega 1.0
 
