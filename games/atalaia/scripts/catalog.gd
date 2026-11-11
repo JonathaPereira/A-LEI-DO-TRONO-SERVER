@@ -5,6 +5,7 @@ const TYPES = ["ballista", "mortar", "flame", "tesla", "ice", "poison"]
 const CROWN_PULSE = {"period":7.0,"windup":1.0,"radius":144.0,"jamDuration":0.8}
 const WARD_DAMAGE_MULTIPLIER = 0.75
 const SLAG_WARD = {"wave":24,"radius":105.0,"escorts":["golem","mushroom"]}
+const MATRIARCH_BROOD = {"wave":12,"escorts":["brood","brood"]}
 const TOWERS = {
  "ballista": {"name":"Balista", "cost":70, "damage":17.0, "rate":0.60, "range":166.0, "color":"e6b866", "role":"Perfuração · cadência alta", "glyph":"➶"},
  "mortar": {"name":"Morteiro", "cost":110, "damage":44.0, "rate":1.70, "range":194.0, "color":"efa667", "role":"Explosão · área de 64", "glyph":"◉"},

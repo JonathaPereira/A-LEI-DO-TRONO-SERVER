@@ -287,6 +287,7 @@ func refresh_hud():
   if "sapper" in recipe.deck:phase_label.tooltip_text+="\nSabotador: anuncia a interferência por 0,65 s e bloqueia uma torreta por 1,2 s. Elimine-o antes do disparo e distribua a defesa."
   if not run.crown_pulse().is_empty():phase_label.tooltip_text+="\nPulso da Coroa: abaixo de metade da vida, a cada 7 s avisa por 1 s e interrompe torretas a até 144 por 0,8 s. Elimine o chefe durante o aviso ou distribua a defesa; queimaduras e projéteis já lançados continuam."
   if not run.slag_ward().is_empty():phase_label.tooltip_text+="\nGuardião da escória: com 50% de vida ou menos, convoca uma vez um golem e um cogumelo. Aliados a até 105 recebem 25% menos dano de impactos sem perfuração. Não protege a si mesmo nem acumula com Vigias. Elimine a fonte; queimaduras, veneno e perfuração atravessam a aura."
+  if not run.matriarch_brood().is_empty():phase_label.tooltip_text+="\nMatriarca das raízes: com 50% de vida ou menos, convoca uma vez uma ninhada de duas tecelãs. As tecelãs se dividem em filhotes ao cair. Reserve dano em área e controle para conter o enxame."
   if run.phase=="prep":wave_progress_label.text="Bônus: +%d ouro com %d de integridade"%[recipe.reward,recipe.integrity]
   var environment:=run.environment()
   if not environment.is_empty():
@@ -499,7 +500,7 @@ func drain_events():
    "integrity_bonus":toast("Objetivo de integridade · +%d ouro"%e.gold)
    "crown_pulse":toast("Pulso da Coroa · torretas próximas interrompidas por 0,8 s")
    "crown_warning":toast("Pulso da Coroa em 1 s · alcance 144 · torretas próximas serão interrompidas")
-   "boss_phase":toast("Guardião da escória · duas escoltas · torretas interrompidas · aura protege aliados a até 105" if not run.slag_ward().is_empty() else "Chefe em segunda fase · torretas próximas interrompidas")
+   "boss_phase":toast("Guardião da escória · duas escoltas · torretas interrompidas · aura protege aliados a até 105" if not run.slag_ward().is_empty() else ("Matriarca das raízes · ninhada de tecelãs · torretas interrompidas · elimine com dano em área" if not run.matriarch_brood().is_empty() else "Chefe em segunda fase · torretas próximas interrompidas"))
    "map":
     selected=-1;moving=false;board.reset_visuals()
     var next_name: String=Chronicle.acts[run.stage].act if run.mode==Chronicle.MODE else run.maps[run.stage].name

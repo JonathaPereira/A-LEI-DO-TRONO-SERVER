@@ -82,6 +82,19 @@ func _call_slag_escorts(boss: Dictionary) -> void:
   escort.pos=C.route_point(routes[int(boss.lane)],escort.d)
   escort.angle=boss.angle
 
+func matriarch_brood() -> Dictionary:
+ var number: int=wave+1 if phase=="prep" else wave
+ return C.MATRIARCH_BROOD.duplicate() if mode==Chronicle.MODE and scenario!="survival" and number==int(C.MATRIARCH_BROOD.wave) else {}
+
+func _call_matriarch_escorts(boss: Dictionary) -> void:
+ var recipe:=matriarch_brood()
+ if recipe.is_empty():return
+ for index in range(recipe.escorts.size()):
+  var escort:=spawn_enemy(recipe.escorts[index],int(boss.lane))
+  escort.d=maxf(0.0,boss.d-30.0*(index+1))
+  escort.pos=C.route_point(routes[int(boss.lane)],escort.d)
+  escort.angle=boss.angle
+
 func crown_pulse(enemy: Dictionary = {}) -> Dictionary:
  var number: int=wave+1 if phase=="prep" else wave
  if mode!=Chronicle.MODE or scenario=="survival" or number!=max_waves():return {}
@@ -306,6 +319,7 @@ func damage(e: Dictionary, amount: float, owner: int, ignore_armor: bool = false
  if mode==Chronicle.MODE and e.type=="boss" and e.hp>0 and e.hp<=e.max_hp*0.5 and not e.get("enraged",false):
   e["enraged"]=true
   _call_slag_escorts(e)
+  _call_matriarch_escorts(e)
   if not crown_pulse().is_empty():e["pulse_started_at"]=wave_elapsed
   e.speed*=1.13
   for tower in towers:

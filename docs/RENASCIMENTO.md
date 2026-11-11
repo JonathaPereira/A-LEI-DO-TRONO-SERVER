@@ -2245,7 +2245,13 @@ Avanço na coreografia corporal dedicada do Project Nexus, inaugurando a classe 
 Avanço na coreografia dedicada do Project Nexus completando a dupla de destaque da classe Técnica:
 
 1. **Supremo dedicado de Axion (*Protocolo Zero*):**
-   Criação e integração da folha dedicada de 8 poses corporais (`godot/assets/poses/axion-supreme-renascimento-v1.png`, 1774x887 RGBA com canal alpha real e padding uniforme), metadados registrados em `godot/data/animation-art.json` com escala `0.6006006006006006` e mapeamento em `godot/data/pose-regions.json` com quadros 8..15 (`charge: [8, 9, 10]`, `travel: [11]`, `impact: [12]`, `recover: [13, 14, 15, 0]`, `"friendly": true`). O teste de coreografia (`hero_choreography.gd`) expandiu para 76 checks (0 falhas) cobrindo troca de folha exclusiva no supremo de suporte, projeção da barreira de protocolo, retorno à folha base preservada, limpeza em pulo/skip, proteção do snapshot e conservação da pose de derrota.
+## Octogésimo quinto incremento — ninhada da Matriarca das raízes
+
+Na fase 12 da Crônica/repetição/desafio do Atalaia, a Matriarca das raízes convoca uma vez uma ninhada de duas tecelãs (`brood`) ao cruzar 50% de vida sem morrer. Entram imediatamente atrás dela na mesma rota; ao serem abatidas, as tecelãs dividem-se em filhotes (`hatchling`), gerando uma pressão de enxame tática que exige dano em área (Morteiro, Lança-chamas, Tesla com ressonância) ou controle (Gelo/Poças).
+O avanço de 13% e a interrupção inicial das torretas próximas em raio 144 permanecem. Clássica, Sobrevivência e outros chefes conservam suas regras originais.
+Sem campo novo de save: o flag `enraged` existente evita nova convocação ao salvar e retomar; saves antigos já na segunda fase não ganham escoltas surpresa ao carregar ou no próximo acerto.
+
+Run possui `matriarch_brood()` e `_call_matriarch_escorts()`; Main comunica na preparação o limiar, as tecelãs, a divisão em filhotes e o contrajogo por dano em área, e o toast de `boss_phase` anuncia a convocação. A iteração de movimento e ataques em área mantém o isolamento das recém-nascidas no mesmo subpasso de disparo. Passaram 22 verificações dirigidas em `root_matriarch.gd`; build e suítes completas do Atalaia (`verify.gd`, `runtime_verify.gd`, `chronicle.gd` com 285 checks, `slag_ward.gd` com 35 checks, `crown_pulse.gd` com 38 checks), mais `tests/atalaia.cjs` e regressões de Cinzas passaram com zero falhas.
 
 ## Continuidade autorizada durante a ausência do usuário
 
@@ -2327,6 +2333,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Introduzir Arauto com aura de marcha, alcance visível, bônus sem acúmulo, contra-jogo por controle e retomada compatível.
 - [x] Diferenciar o chefe final da Crônica com pulso periódico anunciado, interrupção breve, alcance legível e retomada compatível.
 - [x] Diferenciar o Guardião da escória com convocação única de escoltas, proteção próxima sem acúmulo e contrajogo por perfuração/dano contínuo.
+- [x] Diferenciar a Matriarca das raízes com convocação única de ninhada na segunda fase, avanço em enxame e contrajogo por dano em área.
 - [x] Adicionar renovação por ouro, duas cartas táticas e evolução priorizada no painel.
 - [x] Validar distribuição das cartas e economia em três políticas/três sementes/quatro condições de árvore, com 36 campanhas completas simuladas.
 - [x] Verificar ofertas e retomada em 36 sessões/1.392 ofertas, com três políticas econômicas, separadas do combate.

@@ -38,6 +38,12 @@ O incremento 84 completa a dupla da classe Técnica com o supremo corporal
 dedicado *Protocolo Zero* de Axion (`axion-supreme-renascimento-v1.png`, 1774x887,
 8 poses), registrado em `animation-art.json` e `pose-regions.json` (76 checks em
 `hero_choreography.gd`).
+O incremento 85 diferencia a segunda fase da Matriarca das raízes (chefe da onda
+12 da Crônica do Atalaia) com convocação única de ninhada de duas tecelãs
+(`brood`) ao cruzar 50% de vida sem morrer, entrando imediatamente atrás do chefe
+na mesma rota e dividindo-se em filhotes (`hatchling`) ao cair, com contrajogo por
+dano em área, tooltip na preparação e toast dedicado (22 checks em
+`root_matriarch.gd`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências
