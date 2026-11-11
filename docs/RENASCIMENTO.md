@@ -2293,6 +2293,17 @@ Uma suíte rigorosa e dedicada (`tests/cinzas/check-combat-review.cjs`) foi dese
 
 A suíte executou com 100% de aprovação (6 verificações integradas completas); `tests/cinzas-upstream.js` e `node scripts/test.cjs --filter cinzas` executaram todos os 20 testes com zero falhas; `npm run format:check` e `npm run typecheck` confirmaram conformidade estrita de código.
 
+## Nonagésimo incremento — rebalanceamento e matriz de playtests reproduzíveis de Campanha e Horda em Cinzas
+
+Uma nova suíte integrada de balanceamento reproduzível (`tests/cinzas/check-balance-matrix.cjs`) foi desenvolvida e incorporada a `tests/cinzas-upstream.js`, auditando o comportamento mecânico, curvas de escalonamento e sobrevivência por simulação automatizada de 60fps em cenários determinísticos:
+
+1. **Curvas de escalonamento da Horda:** Verificação matemática exaustiva de `hordeTuning(wave)` para ondas 1 a 25. Garantia de limites estritos: escalonamento de HP entre 1.0x e 4.0x, multiplicador de dano entre 1.0x e 2.5x, velocidade entre 0.95x e 1.30x, redução de recarga contida em 0.68s–1.00s, contagem de inimigos por horda entre 6 e 38, intervalo mínimo de surgimento preservado em >= 0.65s e teto fixo de inimigos simultâneos respeitado em no máximo 14 (`simultaneous <= 14`), impedindo explosão de entidades ou degradação de desempenho em ondas elevadas.
+2. **Cenários reproduzíveis de Horda:** Simulações com bots de combate reativos (`kiting` para projéteis e avanço tático para armas brancas) nas ondas 1, 3 e 5 com as 4 armas. A onda 1 demonstra taxa de vitória robusta (>= 75%) permitindo progressão inicial consistente, densidade de inimigos controlada sob o teto de 14 e pontuação/abates estritamente finitos.
+3. **Matriz de playtests da Campanha:** 80 duelos simulados cobrindo os 5 chefes de região (capítulos 5, 10, 15, 20, 25), as 4 classes de armas (`blade`, `hammer`, `bow`, `staff`), múltiplas sementes determinísticas e políticas de combate (`close`, `space`). A taxa global de vitória situa-se em faixa balanceada e saudável (68.8%, dentro da janela esperada de 40% a 90%), sem nenhum encontro degenerado com 0% de vitórias (todas as 5 regiões possuem rotas viáveis de conclusão com builds representativas).
+4. **Equidade de variantes do Legado:** Ensaios com as 4 variantes permanentes (`ash_blade`, `rift_hammer`, `echo_bow`, `frost_staff`) confirmam viabilidade equivalente e estabilidade numérica de vida e dano.
+
+A suíte executou com 4 baterias de validação aprovadas; `tests/cinzas-upstream.js` agora totaliza 18 suítes com 100% de aprovação (21 checks no agregador `scripts/test.cjs --filter cinzas`).
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2348,7 +2359,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Abrir uma rota elevada com relíquia pelo Sino da Vigília, com coleta e retomada sem duplicação.
 - [x] Introduzir o Relicário do Eclipse destrutível no capítulo 8 (Biblioteca suspensa), com conteúdo único, quatro armas e retomada por marcos.
 - [x] Entregar campanha nas cinco regiões planejadas, com começo e conclusão.
-- [ ] Rebalancear campanha/Horda por cenários reproduzíveis e playtests.
+- [x] Rebalancear campanha/Horda por cenários reproduzíveis e playtests.
 
 - [x] Introduzir a Urna do Degelo destrutível no capítulo 18, com conteúdo único, quatro armas e retomada por marcos.
 - [x] Adicionar condutor destrutível no confronto final, com desligamento das colunas ambientais, ataques do chefe preservados e retomada por marcos.
