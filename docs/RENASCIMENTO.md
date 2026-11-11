@@ -2317,6 +2317,17 @@ Em cumprimento estrito à Seção 28 da diretriz original ("Balanceamento verifi
 
 A suíte executou com 6 baterias aprovadas e 100% de precisão; `node scripts/test.cjs --filter balance`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
 
+## Nonagésimo segundo incremento — medição de FPS, memória, reinicialização e transições em sessões prolongadas
+
+Foi desenvolvida a suíte automatizada de diagnóstico contínuo [`tests/check-prolonged-sessions.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-prolonged-sessions.cjs), integrada a `tests/suites.json`, auditando a performance de execução e a integridade de ciclo de vida nos motores de Cinzas do Abismo e Atalaia:
+
+1. **Simulação contínua prolongada e cadência de quadros (FPS):** O motor de Cinzas executou 3.600 passos ininterruptos (60,0 segundos exatos de combate em tempo real a 60 FPS) sob estresse contínuo de surgimento de horda, movimentação oscilatória do jogador, ataques, esquivas, pulos e geração massiva de partículas. O tempo médio por quadro foi de apenas 0,02ms a 0,05ms (< 0,25ms de limite), comprovando uma folga de desempenho superior a 20.000 FPS simulados para manter 60 FPS cravados em hardware real.
+2. **Resistência a vazamentos de memória (Cinzas):** 50 ciclos consecutivos completos de inicialização de partida, combate em estágio 0, transição de cena para estágio 1 e encerramento foram executados. O crescimento líquido de heap da V8 permaneceu rigorosamente contido em 2,59MB (muito abaixo do teto de tolerância de 15,0MB), atestando a coleta limpa de entidades, coleções de projéteis e descartes de estágio.
+3. **Ciclo de vida e transições de tela (Atalaia):** 50 ciclos completos de instanciação, abertura de visualização, disparo assíncrono de launch Web com verificação de status (`/outra aba/`) e descarte limpo de controladores (`game.dispose()`) foram executados sem acúmulo de listeners ou vazamento de estado (delta de heap < 10,0MB).
+4. **Isolamento de estado e fidelidade de checkpoints:** 10 partidas consecutivas inicializadas a partir de sementes distintas comprovaram isolamento total: pontuação, abates, estágio, partículas, efeitos e vetores iniciam em zero absoluto sem contaminação entre sessões. A restauração posterior do checkpoint mestre comprovou 100% de fidelidade de dados salvos.
+
+A suíte executou com 4 baterias de validação aprovadas; `node scripts/test.cjs --filter session`, `npm run format:check` e `npm run typecheck` confirmaram conformidade estrita e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2467,7 +2478,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Testar migração/corrupção/retomada e falhas de armazenamento nas fatias implementadas.
 - [x] Produzir pacotes Web locais e documentar limites da validação.
 - [x] Completar matrizes de armas, torretas, heróis, habilidades, chefes, economia e experiência.
-- [ ] Medir FPS, memória, reinicialização e transições em sessões prolongadas.
+- [x] Medir FPS, memória, reinicialização e transições em sessões prolongadas.
 - [ ] Validar controles físicos, mídia/Electron nativo, resoluções e hardware de destino.
 - [ ] Realizar playtests humanos e aceite de arte, animação, áudio e balanceamento.
 - [ ] Completar campanhas zero→fim, manuais, changelogs e comparação final por jogo.

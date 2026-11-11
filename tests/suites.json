@@ -59,6 +59,7 @@
     "tests/chat-service.cjs",
     "tests/cinzas-upstream.js",
     "tests/check-balance-matrices.cjs",
+    "tests/check-prolonged-sessions.cjs",
     "tests/clip-desktop-bridge.cjs",
     "tests/clip-library.cjs",
     "tests/clip-preferences.cjs",

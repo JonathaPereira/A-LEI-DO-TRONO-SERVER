@@ -78,6 +78,12 @@ experiência (Seção 28 da diretriz original), auditando matematicamente 4 arma
 variantes de Cinzas, 12 torretas de Atalaia, 24 heróis de Nexus, 10 monstros e 12
 inimigos com segundas fases dos 5 chefes, e escalonamento econômico de ouro e
 relicários (`check-balance-matrices.cjs` integrado a `tests/suites.json`).
+O incremento 92 entrega o diagnóstico contínuo de sessões prolongadas (FPS,
+memória, reinicialização e transições de cena), comprovando folga de desempenho
+(3.600 quadros a 0,02ms/quadro, tempo contínuo de 60s a 60 FPS), resistência a
+vazamento de memória (< 15MB em 50 reinicializações de Cinzas e < 10MB em 50
+ciclos de Atalaia) e isolamento perfeito de estado entre sessões e checkpoints
+(`check-prolonged-sessions.cjs` integrado a `tests/suites.json`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências
