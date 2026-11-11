@@ -6,6 +6,7 @@ const { test } = require('node:test'),
 const cases = [
   'check-game.cjs',
   'check-exploration.cjs',
+  'check-combat-review.cjs',
   'check-regressions.cjs',
   'check-controller.cjs',
   'check-ui.cjs',

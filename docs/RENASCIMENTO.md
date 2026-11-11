@@ -2280,6 +2280,19 @@ Persistência integrada atomicamente no formato 1 de checkpoints em `brokenObjec
 
 TDD em `check-exploration.cjs` cobriu presença, alcance por pulo duplo em três sementes, danos pelas quatro armas (básicos e especiais), imunidade a disparos inimigos, conservação e concessão única no checkpoint de vitória, rollback com combate e rejeição atômica de corrupção. A suíte de exploração passou de 27 para 34 checks; 1.485 testes do core, as 19 suítes de Cinzas e todas as oito suítes Godot do Atalaia passaram com zero falhas.
 
+## Octogésimo nono incremento — revisão integral dos seis pilares de combate em Cinzas
+
+Uma suíte rigorosa e dedicada (`tests/cinzas/check-combat-review.cjs`) foi desenvolvida e integrada ao pipeline principal de testes (`tests/cinzas-upstream.js`), inspecionando e garantindo de ponta a ponta os seis pilares de combate de Cinzas do Abismo:
+
+1. **Dano:** Verificação dos danos nominais das 4 armas básicas (espada 22, martelo 47.3, arco 24.2, cajado 20.9) e suas 4 variantes do Legado (Lâmina de guarda 18.7, Martelo de ruptura 39.6, Arco do eco 14.3 por flecha em leque duplo totalizando 28.6, Cajado das geadas 16.5); escalonamento multiplicativo limpo por cartas de poder (`power`) e perfuração corpo a corpo (`meleePower`); ativação de Fúria no 3º golpe da cadeia de combo (`fp.fury`) e Sangue fervente (`bloodrage` +35% abaixo de 40% HP); e acertos críticos dobrando o dano líquido (2x) com emissão de evento de impacto crítico.
+2. **Cadência:** Duração e tempos de preparação (`windup`) nominais de golpe por arma; recarga básica (`attackCd`); aceleração precisa de cadência por cartas de Rapidez (`1 / haste`); recargas nominais dos especiais das 4 armas (`SPECIALS.weapon.cooldown`); e aceleração de recarga por Fluxo Mágico (`1 / magicRate`).
+3. **Colisão:** Alcance do arco de corte ampliado por cartas de alcance (`reach`), impedindo acertos fora do raio geométrico; penetração de projéteis com esgotamento ordenado da contagem (`pierce`) ao longo da trajetória; colisão precisa contra teto de túneis bloqueando subida do topo da caixa de colisão do jogador; e navegação em declives e aclives mantendo os pés perfeitamente ancorados sem afundamento ou teletransporte.
+4. **Esquiva:** Velocidade de avanço na esquiva (`dir * 790 px/s`), duração de 0.21s, janela de invulnerabilidade irrestrita de no mínimo 0.25s anulando dano físico, projéteis e perigos ambientais; aceleração de recarga da esquiva por cartas de Esquiva (`1 / dashRate`); e mitigação de dano pós-esquiva por cartas de Égide (`aegis`, -15% por nível na janela de 2s).
+5. **Resistência:** Redução percentual direta de dano sofrido por armadura (`armor`); multiplicadores de dificuldade do jogo (fácil 0.70x, normal 1.00x, difícil 1.45x); absorção de 20% de dano durante o windup com a Lâmina de guarda (`windupGuard`); mitigação de dano de terreno por cartas de Proteção contra terreno em lava (`terrainWard`); bloqueio frontal de 58% pelo escudo do Escudeiro (`bulwark`); e perfuração completa da guarda por ataques inbloqueáveis (`unblockable: true` do Martelo de ruptura).
+6. **Estados:** Duração de queimadura por fogo (3s) e dano contínuo (6 dps por nível) com explosão de Inferno de 24 de dano ao abater o inimigo; desaceleração por gelo (2s) com bônus de despedaçar (`shatter`, +30% de dano); veneno contínuo (5s, 4 dps por nível) dobrado para 8 dps por Praga (`plague`); salto em cadeia de relâmpago (`chain lightning`, 60% por salto); e controle de grupo contra o jogador (enredamento por teia de 1.8s, sangramento e corte por dano físico, queima por fogo e choque visual/paralisia por eletricidade).
+
+A suíte executou com 100% de aprovação (6 verificações integradas completas); `tests/cinzas-upstream.js` e `node scripts/test.cjs --filter cinzas` executaram todos os 20 testes com zero falhas; `npm run format:check` e `npm run typecheck` confirmaram conformidade estrita de código.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2328,7 +2341,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Implantar Legado permanente, com desbloqueio de preferências de arma na nova expedição.
 - [x] Liberar runas permanentes de Gelo e Fogo nos capítulos 20 e 25.
 - [x] Ampliar o Legado com variantes de arma e seleção de regiões para treino independente.
-- [ ] Revisar integralmente dano, cadência, colisão, esquiva, resistência e estados.
+- [x] Revisar integralmente dano, cadência, colisão, esquiva, resistência e estados.
 - [x] Interromper combate posterior à derrota no mesmo quadro, preservando créditos anteriores, resultado e persistência coerentes.
 - [x] Adicionar quatro variantes táticas às famílias existentes, com marcos e contrapartidas.
 - [x] Ampliar terrenos, rotas alternativas, destruição, segredos e eventos (Sino da Vigília, Urna do Degelo, Condutor do Alvorecer e Relicário do Eclipse entregues).

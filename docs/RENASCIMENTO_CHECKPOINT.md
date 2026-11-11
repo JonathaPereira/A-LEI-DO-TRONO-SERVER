@@ -61,6 +61,12 @@ Abismo), numa prateleira elevada opcional da rota alcançável por pulo duplo, c
 pelas quatro armas, imunidade a disparos inimigos, apresentação temática em
 ametista e ouro no Canvas, persistência atômica no formato 1 em `brokenObjects` e
 rejeição atômica de corrupção (34 checks em `check-exploration.cjs`).
+O incremento 89 entrega a revisão integral dos seis pilares de combate de Cinzas
+do Abismo (dano nominal e variantes, cadência e haste, colisão e declives, esquiva
+e invulnerabilidade, resistência e guardas, estados e controle de grupo),
+consolidando uma nova suíte automatizada integrada ao pipeline principal (6
+verificações integradas em `check-combat-review.cjs` e 20 suítes em
+`cinzas-upstream.js`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências
