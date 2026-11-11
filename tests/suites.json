@@ -61,6 +61,7 @@
     "tests/check-balance-matrices.cjs",
     "tests/check-prolonged-sessions.cjs",
     "tests/check-profiles-achievements-remapping.cjs",
+    "tests/check-menus-scenes-accessibility.cjs",
     "tests/clip-desktop-bridge.cjs",
     "tests/clip-library.cjs",
     "tests/clip-preferences.cjs",

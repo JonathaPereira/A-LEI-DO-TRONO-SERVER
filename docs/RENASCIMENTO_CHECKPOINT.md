@@ -92,6 +92,13 @@ contextuais de preparação de ondas, perigos e as segundas fases dos 5 chefes; 
 remapeamento completo de teclado (11 ações por jogo com troca atômica e proteção de
 teclas reservadas) e controle (`check-profiles-achievements-remapping.cjs`
 integrado a `tests/suites.json`).
+O incremento 94 consolida os menus completos de continuar, nova campanha,
+seleção, progressão, configurações, créditos e sair nos dois jogos (7 fluxos
+contratuais com proteção de substituição de dados), os controles de
+acessibilidade (redução de tremor de tela e partículas/fumaça de cenário e
+volumes multicanais independentes) e a máquina de estados finita de transições de
+cenas e modais (`check-menus-scenes-accessibility.cjs` integrado a
+`tests/suites.json`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

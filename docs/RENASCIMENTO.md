@@ -2347,6 +2347,22 @@ Foi desenvolvida a suíte unificada de auditoria [`tests/check-profiles-achievem
 
 A suíte executou com 10 baterias aprovadas e 100% de sucesso; `node scripts/test.cjs --filter remapping`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
 
+## Nonagésimo quarto incremento — consolidação dos menus completos, acessibilidade visual/sonora e gerenciamento de cenas
+
+Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-menus-scenes-accessibility.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-menus-scenes-accessibility.cjs), registrada em `tests/suites.json`, auditando de ponta a ponta a integridade de telas, menus, acessibilidade e ciclo de vida de cenas nos motores de Atalaia e Cinzas do Abismo:
+
+1. **Menus Completos de Jogo a Jogo (7 Componentes Contratuais):**
+   - *Atalaia:* Presença e coerência dos sete fluxos: (1) Continuar dinamicamente nomeado para campanha clássica (`CONTINUAR CAMPANHA · ONDA %d`) ou crônica (`CONTINUAR CRÔNICA · FASE %d`), condicionado a save válido; (2) Nova campanha protegida por modal de confirmação (`modal_kind = "confirm"`) com alerta de substituição e botões Voltar/Iniciar; (3) Seleção de modo de campanha com alternância transparente entre Clássica (15 ondas) e Crônica (30 fases); (4) Telas dedicadas de progressão (Árvores Estratégicas de Engenharia, Proteção e Conhecimento) e Conquistas locais (cards com contagem `0/8` a `8/8`); (5) Configurações completas de áudio e atalhos de teclado; (6) Créditos e licenças (SIL Open Font License 1.1 e licença do Godot Engine); e (7) Retorno seguro ao menu (`save_and_return`) salvando o estado de defesa ou encerrando a sessão limpa da sobrevivência.
+   - *Cinzas:* Presença e coerência dos sete fluxos: (1) Botões de continuar dedicados para expedição (`continueCampaign`) e horda (`continueHorde`) com restauração atômica de checkpoints; (2) Nova campanha com guarda em diálogo modal nativo (`replaceDialog`) com foco inicial no botão cancelar (`replaceCancel`) para prevenir descarte acidental; (3) Seleção de modo (Expedição / Horda), dificuldade (`easy`, `normal`, `hard`), semente diária e treino regional por bioma; (4) Progressão e Legado com seleção de arma permanente e runas de Gelo/Fogo desbloqueadas por marcos; (5) Configurações com diálogo de controle e atalhos; (6) Diálogo de créditos e licenças com retorno seguro; e (7) Pausa (`pauseBtn`), suspensão no marco (`suspendBtn`) e encerramento de tentativa (`exitBtn`).
+2. **Configurações e Acessibilidade Visual e Sonora:**
+   - *Redução de Movimento e Tremor:* Em Cinzas, `reducedShake` anula integralmente eventos de impacto no motor (`shake = 0`), prevenindo qualquer deslocamento do canvas em `renderer.draw`. No Atalaia, o controle de `ReducedEffects` (`board.reduced_effects`) reduz fumaça, partículas e oscilações do cenário.
+   - *Controles de Áudio Independentes:* Atalaia expõe 4 barramentos com controle contínuo (`Master`, `Music`, `Effects`, `Ambience`). Cinzas oferece ajuste independente de trilha (`musicVolume`) e efeitos (`effectsVolume`), com persistência contínua e atalho mestre (`soundBtn`).
+3. **Gerenciamento de Cenas e Transições de Estado:**
+   - *Cinzas:* Máquina de estados finita da Engine auditada em transições válidas (`menu` -> `upgrade` -> `running` -> `paused` -> `ended`), passagem entre os 25 capítulos com restauração de vida no checkpoint, acúmulo de cartas e troca de biomas, e pausa automática na abertura de modais ou perda de foco.
+   - *Atalaia:* Máquina de modais com foco e véu de escurecimento (`veil(0.68)` a `veil(0.83)`), pausa automática ao abrir opções para proteger o cristal de invasão, e descarte limpo de controladores (`queue_free`, `sound.shutdown()`).
+
+A suíte executou com 7 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter accessibility`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2375,8 +2391,8 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Preservar projetos, arte, áudio, licenças, trios e decisões existentes.
 - [x] Produzir incrementos de código com testes de regressão e builds Web.
 - [ ] Concluir auditoria aprofundada de cada subsistema e do conteúdo completo.
-- [ ] Completar configurações/acessibilidade/transições e gerenciamento de cenas de todos os jogos.
-- [ ] Completar em cada jogo os menus de continuar/nova campanha/seleção/progressão/configurações/créditos/sair conforme suas mecânicas.
+- [x] Completar configurações/acessibilidade/transições e gerenciamento de cenas de todos os jogos.
+- [x] Completar em cada jogo os menus de continuar/nova campanha/seleção/progressão/configurações/créditos/sair conforme suas mecânicas.
 - [x] Expor créditos e atribuições nos menus dos três jogos, com retorno que preserva progresso.
 - [x] Consultar conquistas locais nos três jogos, derivadas dos respectivos fatos de progressão.
 - [x] Completar perfis, conquistas locais, tutoriais contextuais e remapeamento de controles onde aplicável.
