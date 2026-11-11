@@ -44,6 +44,12 @@ O incremento 85 diferencia a segunda fase da Matriarca das raízes (chefe da ond
 na mesma rota e dividindo-se em filhotes (`hatchling`) ao cair, com contrajogo por
 dano em área, tooltip na preparação e toast dedicado (22 checks em
 `root_matriarch.gd`).
+O incremento 86 diferencia a segunda fase da Sentinela da cidadela (chefe da onda
+18 da Crônica do Atalaia) com convocação única de escolta de golem e blindagem
+rúnica reforçada para 33% de armadura ao cruzar 50% de vida sem morrer, com
+contrajogo explícito por perfuração (Metal do abismo, Arpão), Caçador de colossos
+e dano contínuo (fogo/veneno), tooltip e toast dedicado (27 checks em
+`citadel_sentinel.gd`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

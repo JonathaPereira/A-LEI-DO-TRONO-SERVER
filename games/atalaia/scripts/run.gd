@@ -95,6 +95,25 @@ func _call_matriarch_escorts(boss: Dictionary) -> void:
   escort.pos=C.route_point(routes[int(boss.lane)],escort.d)
   escort.angle=boss.angle
 
+func citadel_sentinel() -> Dictionary:
+ var number: int=wave+1 if phase=="prep" else wave
+ return C.CITADEL_SENTINEL.duplicate() if mode==Chronicle.MODE and scenario!="survival" and number==int(C.CITADEL_SENTINEL.wave) else {}
+
+func _call_citadel_escorts(boss: Dictionary) -> void:
+ var recipe:=citadel_sentinel()
+ if recipe.is_empty():return
+ for index in range(recipe.escorts.size()):
+  var escort:=spawn_enemy(recipe.escorts[index],int(boss.lane))
+  escort.d=maxf(0.0,boss.d-30.0*(index+1))
+  escort.pos=C.route_point(routes[int(boss.lane)],escort.d)
+  escort.angle=boss.angle
+
+func enemy_armor(enemy: Dictionary) -> float:
+ var base: float=float(enemy.get("armor",0.0))
+ if enemy.type=="boss" and enemy.get("enraged",false) and not citadel_sentinel().is_empty():
+  base+=float(C.CITADEL_SENTINEL.bonusArmor)
+ return base*(0.65 if enemy.get("revealed",0.0)>0.0 else 1.0)
+
 func crown_pulse(enemy: Dictionary = {}) -> Dictionary:
  var number: int=wave+1 if phase=="prep" else wave
  if mode!=Chronicle.MODE or scenario=="survival" or number!=max_waves():return {}
@@ -307,7 +326,7 @@ func spawn_enemy(type: String = "", lane_index: int = -1) -> Dictionary:
 
 func damage(e: Dictionary, amount: float, owner: int, ignore_armor: bool = false):
  if e.dead or amount<=0: return
- var armor: float=e.armor*(0.65 if e.get("revealed",0.0)>0.0 else 1.0)
+ var armor: float=enemy_armor(e)
  var effective = amount*(1.0 if ignore_armor else 1.0-armor)
  if not ignore_armor and e.type!="ward" and enemies.any(func(guard):
   var radius:=protection_radius(guard)
@@ -320,6 +339,7 @@ func damage(e: Dictionary, amount: float, owner: int, ignore_armor: bool = false
   e["enraged"]=true
   _call_slag_escorts(e)
   _call_matriarch_escorts(e)
+  _call_citadel_escorts(e)
   if not crown_pulse().is_empty():e["pulse_started_at"]=wave_elapsed
   e.speed*=1.13
   for tower in towers:
