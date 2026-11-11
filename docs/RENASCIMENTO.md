@@ -2304,6 +2304,19 @@ Uma nova suíte integrada de balanceamento reproduzível (`tests/cinzas/check-ba
 
 A suíte executou com 4 baterias de validação aprovadas; `tests/cinzas-upstream.js` agora totaliza 18 suítes com 100% de aprovação (21 checks no agregador `scripts/test.cjs --filter cinzas`).
 
+## Nonagésimo primeiro incremento — matrizes consolidadas de armas, torretas, heróis, habilidades, chefes, economia e experiência
+
+Em cumprimento estrito à Seção 28 da diretriz original ("Balanceamento verificável"), foi criada a suíte unificada de auditoria e validação matemática de matrizes [`tests/check-balance-matrices.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-balance-matrices.cjs), registrada em `tests/suites.json`, validando de ponta a ponta os seis eixos de parâmetros dos jogos:
+
+1. **Matriz de Armas:** 4 armas básicas de Cinzas (`blade`, `hammer`, `bow`, `staff`) auditadas com DPS nominal de 40 a 75, alcance diferenciado (arco >= 700, cajado >= 500, lâmina/martelo <= 160) e tempos de golpe; e 4 variantes do Legado (`ash_blade`, `rift_hammer`, `echo_bow`, `frost_staff`) com marcos de desbloqueio nos capítulos 5/10/15/20 e traços táticos comprovados (20% guarda de windup, perfuração de escudo, leque duplo e gelo ao contato).
+2. **Matriz de Torretas:** 12 torretas de Atalaia (6 básicas: Balista, Morteiro, Lança-chamas, Tesla, Glacial, Alquimista; e 6 avançadas: Guardião de Raízes, Arpão do Abismo, Canhão Sísmico, Farol Espectral, Forja de Cinzas, Obelisco Solar), cobrindo custos de 70 a 168 ouro, dano de 5.0 a 44.0, cadência de 0.22 a 1.95s, alcance de 112 a 202px e eficiência balanceada de 0.05 a 0.45 DPS/ouro, com herança estrita de famílias e atos de desbloqueio 0 a 4.
+3. **Matriz de Heróis e Personagens:** O Peregrino de Cinzas com escalonamento por dificuldade (160 HP fácil / 100 HP normal e difícil, fatores de dano 0.70x a 1.45x, velocidade 300, esquiva 790 e invulnerabilidade >= 0.25s); o Cristal do Atalaia; e os 24 heróis de Nexus com vida (950–1500), ataque (150–285), defesa (65–130), velocidade (60–120), representação completa das classes Dano, Tanque e Suporte, e ataques básicos normalizados (0.60–1.0).
+4. **Matriz de Habilidades:** 4 especiais e 2 runas de Cinzas (recargas 6–8s, windup 0.15–0.75s, duração 0.70–1.10s); 12 cartas/doutrinas de Atalaia; e poderes de habilidades e supremos do elenco de Nexus.
+5. **Matriz de Chefes e Inimigos:** 10 monstros comuns de Cinzas (tamanhos 30–65px, HP 40–140, desbloqueios ondas 1–9) e 5 chefes de bioma; 12 inimigos de Atalaia (HP 24–1400, velocidades 20–85, recompensas 0–95g, armadura 0.0–0.23); e os gatilhos dedicados das segundas fases dos 5 chefes da Crônica (`ROOT_GUARDIAN`, `MATRIARCH_BROOD`, `CITADEL_SENTINEL`, `SLAG_WARD`, `CROWN_PULSE`).
+6. **Matriz de Economia e Experiência:** Progressão de 25 capítulos e ondas 1–25 de Cinzas sob `hordeTuning` (HP 1.0–4.0x, dano 1.0–2.5x, teto 14 inimigos), relicários e 36 cartas; fluxo de ouro de Atalaia com paridade de eliminação (10 esqueletos de 7g compram exatamente 1 balista de 70g) e recompensa de chefe (95g cobre 56% da torre mais cara do jogo).
+
+A suíte executou com 6 baterias aprovadas e 100% de precisão; `node scripts/test.cjs --filter balance`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2453,7 +2466,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Executar regressões core, Godot e browser das fundações entregues.
 - [x] Testar migração/corrupção/retomada e falhas de armazenamento nas fatias implementadas.
 - [x] Produzir pacotes Web locais e documentar limites da validação.
-- [ ] Completar matrizes de armas, torretas, heróis, habilidades, chefes, economia e experiência.
+- [x] Completar matrizes de armas, torretas, heróis, habilidades, chefes, economia e experiência.
 - [ ] Medir FPS, memória, reinicialização e transições em sessões prolongadas.
 - [ ] Validar controles físicos, mídia/Electron nativo, resoluções e hardware de destino.
 - [ ] Realizar playtests humanos e aceite de arte, animação, áudio e balanceamento.
