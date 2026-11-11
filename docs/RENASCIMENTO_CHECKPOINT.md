@@ -99,6 +99,15 @@ acessibilidade (redução de tremor de tela e partículas/fumaça de cenário e
 volumes multicanais independentes) e a máquina de estados finita de transições de
 cenas e modais (`check-menus-scenes-accessibility.cjs` integrado a
 `tests/suites.json`).
+O incremento 95 consolida a persistência de sistemas criados na Operação
+Renascimento: rastreamento atômico de brokenObjects nos quatro marcos de
+exploração de Cinzas (Relicário, Urna, Condutor e Sino da Vigília) com
+impossibilidade de duplicação de recompensas, formato de backup v3 integrando
+scores, horda, campanha e legado com compatibilidade retroativa e rejeição
+estrita de corrupção, resiliência de StrategyProgress em Atalaia via arquivos
+.tmp, .bak e .invalid.bak com isolamento total entre modos, e persistência
+de preferências e atalhos (`check-persistence-systems.cjs` integrado a
+`tests/suites.json`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

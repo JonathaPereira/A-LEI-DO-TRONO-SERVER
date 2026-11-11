@@ -2363,6 +2363,24 @@ Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-
 
 A suíte executou com 7 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter accessibility`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
 
+## Nonagésimo quinto incremento — consolidação da persistência de sistemas criados, exploração atômica e resiliência de backups
+
+Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-persistence-systems.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-persistence-systems.cjs), registrada em `tests/suites.json`, auditando de ponta a ponta a persistência, integridade atômica e recuperação de todos os novos sistemas criados nos motores de Cinzas do Abismo e Atalaia:
+
+1. **Persistência de Exploração e Objetos Quebráveis (Cinzas):**
+   - Rastreamento e conservação atômica de `brokenObjects` nos quatro marcos de exploração: Relicário do Eclipse (capítulo 8 / estágio 7, `eclipse-cache`), Urna do Degelo (capítulo 18 / estágio 17, `thaw-urn`), Condutor do Alvorecer (capítulo 25 / estágio 24, `dawn-conductor`) e o Sino da Vigília (capítulo 22 / estágio 21, santuário com abertura de rota elevada).
+   - A suíte comprovou que a destruição de objetos só é registrada após a conclusão segura do marco de combate (prevenindo que vantagens de exploração sejam salvas antes da vitória na sala), e que após restauração limpa de checkpoint os objetos iniciam no estado quebrado sem permitir duplicação de rerolls, atributos ou pontos.
+2. **Formato de Backup v3 e Compatibilidade Retroativa (Cinzas):**
+   - O formato unificado `cinzas-save` v3 integra recordes da Horda, checkpoint de horda (`hordeSave`), checkpoint de campanha (`campaignSave`) e perfil permanente do Legado (`legacy` com variantes de armas e runas).
+   - Compatibilidade estrita com backups legados v1 (apenas Horda) e v2 (com campanha sem legado), além de rejeição atômica de corrupção: payloads com mais de 2MB, formatos desconhecidos, versões inexistentes, mais de 150 recordes ou dados truncados são sumariamente recusados mantendo o armazenamento intacto.
+3. **Resiliência Estratégica e Recuperação de Falhas (Atalaia):**
+   - O sistema de perfis estratégicos (`StrategyProgress` / `StrategyStore`) mantém integridade contra falhas de gravação via arquivos `.tmp`, cópia de segurança atômica (`.bak`) e arquivamento de bytes ilegíveis (`.invalid.bak`). Em caso de colapso do arquivo principal, a restauração da cópia válida anterior é automática e acompanhada de aviso instrutivo ao jogador.
+   - Desacoplamento de modos comprovado: avanços e novos recordes na Sobrevivência infinita jamais contaminam os registros da Crônica ou da Campanha Clássica, e vice-versa.
+4. **Persistência de Preferências e Acessibilidade:**
+   - Mapeamentos de teclas (11 comandos em cada jogo com resolução atômica de conflitos), configurações de controle, barramentos de áudio independentes e reduções de tremor/efeitos são persistidos com serialização idempotente e restauração segura.
+
+A suíte executou com 8 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter persistence`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2400,7 +2418,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Remapear 11 ações de teclado de Cinzas, preservando aliases, controles e teclas reservadas.
 - [x] Remapear nove comandos do Nexus com conflitos, restauração, persistência e dicas coerentes.
 - [x] Oferecer redução explícita de tremor de tela em Cinzas, com preferência do sistema e persistência.
-- [ ] Finalizar persistência dos sistemas ainda por criar; as campanhas atuais já possuem validação, cópias e continuação/recuperação.
+- [x] Finalizar persistência dos sistemas ainda por criar; as campanhas atuais já possuem validação, cópias e continuação/recuperação.
 
 ### Cinzas do Abismo
 
