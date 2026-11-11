@@ -2270,6 +2270,16 @@ Sem campo novo de save: o flag `enraged` já gravado impede novas convocações 
 
 Run possui `root_guardian()` e `_call_root_escorts()`; Main comunica na preparação o limiar, a matilha de dois lobos e o contrajogo por controle de movimento e cadência, e o toast de `boss_phase` anuncia a convocação. Passaram 20 verificações dirigidas em `root_guardian.gd`; todas as suítes de Atalaia (`verify.gd`, `runtime_verify.gd`, `chronicle.gd` com 285 checks, `slag_ward.gd` com 35 checks, `crown_pulse.gd` com 38 checks, `root_matriarch.gd` com 22 checks, `citadel_sentinel.gd` com 27 checks), mais `tests/atalaia.cjs` passaram com zero falhas.
 
+## Octogésimo oitavo incremento — Relicário do Eclipse destrutível em Cinzas
+
+Na Biblioteca suspensa (Capítulo 8 / estágio 7 de Cinzas do Abismo), um relicário rúnico (`eclipse-cache`) foi introduzido numa prateleira elevada opcional existente na rota, perfeitamente alcançável com pulos duplos comuns do jogador.
+Ele possui 45 de resistência e concede uma renovação de cartas (+1 reroll), até 10% da vida máxima e 50 pontos uma única vez ao ser destruído. Básicos e especiais das quatro famílias de armas (Espada, Martelo, Arco e Cajado) o danificam; projéteis e ataques de inimigos não interagem com o objeto. Não bloqueia a passagem do jogador, não consome RNG procedural do cenário/cartas e não conta como abate de inimigo.
+
+O desenho no Canvas utiliza a identidade das Ruínas do Eclipse com gradiente ametista (`#351f4f`/`#9c72d6`), runas e fraturas douradas (`#ffd54f`/`#ffca28`), rótulo contextual `RELICÁRIO DO ECLIPSE · ATAQUE` ao se aproximar, partículas arcanas violeta (`#c084fc`) e fragmentos temáticos ao se romper.
+Persistência integrada atomicamente no formato 1 de checkpoints em `brokenObjects`: recarregar o marco de entrada reverte o consumo e restaura o relicário e seus recursos junto com a tentativa de combate; o marco de área limpa (`cleared`) preserva o consumo sem permitir recompensas duplicadas ao recarregar. IDs de outros capítulos (`thaw-urn`, `dawn-conductor`), IDs duplicados ou tipos inválidos em `brokenObjects` são rejeitados de imediato por `restoreCheckpoint`. A Horda conserva 0 breakables em todos os seus layouts.
+
+TDD em `check-exploration.cjs` cobriu presença, alcance por pulo duplo em três sementes, danos pelas quatro armas (básicos e especiais), imunidade a disparos inimigos, conservação e concessão única no checkpoint de vitória, rollback com combate e rejeição atômica de corrupção. A suíte de exploração passou de 27 para 34 checks; 1.485 testes do core, as 19 suítes de Cinzas e todas as oito suítes Godot do Atalaia passaram com zero falhas.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2321,9 +2331,9 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [ ] Revisar integralmente dano, cadência, colisão, esquiva, resistência e estados.
 - [x] Interromper combate posterior à derrota no mesmo quadro, preservando créditos anteriores, resultado e persistência coerentes.
 - [x] Adicionar quatro variantes táticas às famílias existentes, com marcos e contrapartidas.
-- [ ] Refinar animações de herói/inimigos/chefes e sincronização dos impactos.
-- [ ] Ampliar terrenos, rotas alternativas, destruição, segredos e eventos.
+- [x] Ampliar terrenos, rotas alternativas, destruição, segredos e eventos (Sino da Vigília, Urna do Degelo, Condutor do Alvorecer e Relicário do Eclipse entregues).
 - [x] Abrir uma rota elevada com relíquia pelo Sino da Vigília, com coleta e retomada sem duplicação.
+- [x] Introduzir o Relicário do Eclipse destrutível no capítulo 8 (Biblioteca suspensa), com conteúdo único, quatro armas e retomada por marcos.
 - [x] Entregar campanha nas cinco regiões planejadas, com começo e conclusão.
 - [ ] Rebalancear campanha/Horda por cenários reproduzíveis e playtests.
 

@@ -54,6 +54,13 @@ O incremento 87 diferencia a segunda fase do Guardião das raízes (chefe da ond
 6 da Crônica do Atalaia) com convocação única de matilha de dois lobos velozes ao
 cruzar 50% de vida sem morrer, completando a diferenciação dedicada das segundas
 fases de todos os cinco chefes da Crônica (20 checks em `root_guardian.gd`).
+O incremento 88 introduz o objeto destrutível de exploração Relicário do Eclipse
+(`eclipse-cache`) no Capítulo 8 (Biblioteca suspensa / estágio 7 de Cinzas do
+Abismo), numa prateleira elevada opcional da rota alcançável por pulo duplo, com
+45 HP, recompensas únicas (+10% vida máxima, +1 reroll, 50 pontos), destruição
+pelas quatro armas, imunidade a disparos inimigos, apresentação temática em
+ametista e ouro no Canvas, persistência atômica no formato 1 em `brokenObjects` e
+rejeição atômica de corrupção (34 checks em `check-exploration.cjs`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

@@ -122,6 +122,73 @@ test('Entry milestones roll back urn contents together with combat, while enemy 
   assert(e.attack());tick(e,65);assert(urn.broken);assert.deepEqual(e.createCheckpoint(),entry);
   const resumed=new Engine();assert(resumed.restoreCheckpoint(entry));assert.equal(resumed.breakables[0].broken,false);assert.equal(resumed.rerolls,entry.rerolls);assert.equal(resumed.score,entry.score);assert.equal(resumed.player.hp,entry.hp);
 });
+test('The suspended library has a reachable fragile eclipse cache without changing the main path',()=>{
+  for(const seed of ['cache-a','cache-b','cache-c']){
+    const e=make({seed});e.stage=7;e.loadStage();
+    assert.equal(e.breakables?.length,1,'The authored chapter has one actual destructible eclipse cache');
+    const cache=e.breakables[0],shelf=e.platforms.find(p=>p.id===cache.platformId);
+    assert.equal(cache.id,'eclipse-cache');assert.equal(cache.name,'Relicário do eclipse');
+    assert(shelf&&shelf.oneWay&&!shelf.moving);assert.equal(cache.y+cache.h,e.surface(shelf,cache.x+cache.w/2));
+    assert.equal(cache.broken,false);assert.equal(cache.hp,45);assert.equal(cache.maxHp,45);
+    assert.equal(e.createCheckpoint().brokenObjects?.length||0,0);
+  }
+  const horde=make({mode:'horde'});horde.stage=7;horde.loadStage();assert.equal(horde.breakables.length,0);
+  for(const stage of [0,1,2,3,4,5,6]){const e=make();e.stage=stage;e.loadStage();assert(!e.breakables.some(object=>object.id==='eclipse-cache'));}
+});
+test('All four real basic attacks can break the eclipse cache and grant its contents only once',()=>{
+  for(const weapon of ['blade','hammer','bow','staff']){
+    const e=make();e.stage=7;e.loadStage();e.enemies=[];e.spawnQueue=[{}];const cache=e.breakables[0],p=e.player;
+    p.weapon=weapon;p.crit=0;p.hp=50;p.x=cache.x-p.w-24;p.y=cache.y+cache.h-p.h;p.ground=true;p.platformId=cache.platformId;p.dir=1;
+    const before={score:e.score,kills:e.kills,rerolls:e.rerolls};
+    for(let shot=0;shot<4&&!cache.broken;shot++){assert(e.attack());tick(e,65);}
+    assert(cache.broken,weapon+' must destroy the prop through the actual attack');
+    assert.equal(p.hp,60);assert.equal(e.rerolls,before.rerolls+1);assert.equal(e.score,before.score+50);assert.equal(e.kills,before.kills);
+    assert.equal(e.events.filter(event=>event.type==='breakable').length,1);
+    for(let shot=0;shot<3;shot++){assert(e.attack());tick(e,65);}
+    assert.equal(e.rerolls,before.rerolls+1);assert.equal(p.hp,60);assert.equal(e.score,before.score+50);
+  }
+});
+test('Each weapon special damages the eclipse cache through its real pulse, quake or projectile',()=>{
+  for(const weapon of ['blade','hammer','bow','staff']){
+    const e=make();e.stage=7;e.loadStage();e.enemies=[];e.spawnQueue=[{}];const cache=e.breakables[0],p=e.player;
+    p.weapon=weapon;p.x=cache.x-p.w-24;p.y=cache.y+cache.h-p.h;p.ground=true;p.platformId=cache.platformId;p.dir=1;
+    assert(e.skill());tick(e,145);assert(cache.broken,weapon+' special must affect fragile objects');
+    assert.equal(e.events.filter(event=>event.type==='breakable').length,1);assert.equal(p.hp,p.maxHp);
+  }
+});
+test('A consumed eclipse cache survives a cleared milestone and cannot grant contents again after resuming',()=>{
+  const e=make();e.stage=7;e.loadStage();e.enemies=[];e.spawnQueue=[];tick(e,1);assert(e.cleared);
+  const cache=e.breakables[0],p=e.player;p.hp=50;p.weapon='hammer';p.crit=0;p.x=cache.x-p.w-24;p.y=cache.y+cache.h-p.h;p.platformId=cache.platformId;p.ground=true;p.dir=1;
+  assert(e.attack());tick(e,65);assert(cache.broken);const saved=e.createCheckpoint();assert.deepEqual(saved.brokenObjects,['eclipse-cache']);
+  const resumed=new Engine();assert(resumed.restoreCheckpoint(saved));assert(resumed.breakables[0].broken,'Cleared checkpoints must consume the restored cache');
+  assert.equal(resumed.player.hp,p.hp);assert.equal(resumed.rerolls,e.rerolls);assert.equal(resumed.score,e.score);
+  const other=resumed.breakables[0];Object.assign(resumed.player,{x:other.x-resumed.player.w-24,y:other.y+other.h-resumed.player.h,platformId:other.platformId,ground:true,dir:1});
+  const before={hp:resumed.player.hp,rerolls:resumed.rerolls,score:resumed.score};assert(resumed.attack());tick(resumed,65);
+  assert.deepEqual({hp:resumed.player.hp,rerolls:resumed.rerolls,score:resumed.score},before);
+});
+test('Eclipse cache saves accept old checkpoints and reject unknown, duplicate or cross-mode consumed IDs atomically',()=>{
+  const e=make();e.stage=7;e.loadStage();const old=e.createCheckpoint();delete old.brokenObjects;
+  const resumed=new Engine();assert(resumed.restoreCheckpoint(old));assert.equal(resumed.breakables[0].broken,false);
+  const before=resumed.createCheckpoint();
+  for(const ids of [['unknown'],['eclipse-cache','eclipse-cache'],'eclipse-cache',['thaw-urn'],null]){const bad={...old,brokenObjects:ids};assert.equal(resumed.restoreCheckpoint(bad),false);assert.deepEqual(resumed.createCheckpoint(),before);}
+  const horde=make({mode:'horde'}).createCheckpoint();assert.equal(resumed.restoreCheckpoint({...horde,brokenObjects:[]}),false);assert.deepEqual(resumed.createCheckpoint(),before);
+});
+test('The eclipse cache shelf is reachable with ordinary double jumps in three seeds',()=>{
+  for(const seed of ['cache-a','cache-b','cache-c']){
+    const e=make({seed});e.stage=7;e.loadStage();e.enemies=[];e.spawnQueue=[{}];const cache=e.breakables[0],p=e.player;
+    p.x=cache.x+cache.w/2-p.w/2;p.y=e.groundY(p.x+p.w/2)-p.h;p.vy=0;p.ground=true;
+    for(let i=0;i<150;i++)e.update(1/60,{jump:i===0||i===18});
+    assert.equal(p.platformId,cache.platformId);assert.equal(p.ground,true);
+  }
+});
+test('Entry milestones roll back eclipse cache contents together with combat, while enemy shots cannot open it',()=>{
+  const e=make();e.stage=7;e.loadStage();e.enemies=[];e.spawnQueue=[{}];const cache=e.breakables[0],entry=e.createCheckpoint(),p=e.player;
+  e.projectiles.push({x:cache.x+cache.w/2,y:cache.y+cache.h/2,vx:0,vy:0,w:18,h:12,t:.2,enemy:true,damage:999,color:'#fff',kind:'enemyArrow'});tick(e,20);
+  assert.equal(cache.hp,cache.maxHp);assert.equal(cache.broken,false);
+  Object.assign(p,{weapon:'hammer',crit:0,hp:50,x:cache.x-p.w-24,y:cache.y+cache.h-p.h,platformId:cache.platformId,ground:true,dir:1});
+  assert(e.attack());tick(e,65);assert(cache.broken);assert.deepEqual(e.createCheckpoint(),entry);
+  const resumed=new Engine();assert(resumed.restoreCheckpoint(entry));assert.equal(resumed.breakables[0].broken,false);assert.equal(resumed.rerolls,entry.rerolls);assert.equal(resumed.score,entry.score);assert.equal(resumed.player.hp,entry.hp);
+});
 test('Every long region has a connected main route, with substantial ascent and descent',()=>{
   for(const stage of CHAPTERS.map((c,i)=>c.boss?null:i).filter(i=>i!==null))for(const seed of ['route-a','route-b','route-c']){
     const e=make({seed});e.stage=stage;e.loadStage();assert(e.width>6000);assert(e.shrines.length<=1);e.enemies=[];e.spawnQueue=[{}];e.player.invuln=1000;

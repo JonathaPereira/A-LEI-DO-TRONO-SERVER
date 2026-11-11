@@ -259,10 +259,10 @@
     }
     damageBreakable(object,amount){
       if(this.status!=='running'||!this.breakables.includes(object)||object.broken||!Number.isFinite(amount)||amount<=0)return false;
-      const conductor=object.kind==='conductor',color=conductor?'#f1cc78':'#c5edff';object.hp=Math.max(0,object.hp-amount);this.particlesAt(object.x+object.w/2,object.y+object.h/2,color,8,120,'ice');
+      const conductor=object.kind==='conductor',color=conductor?'#f1cc78':object.id==='eclipse-cache'?'#c084fc':'#c5edff',particleKind=object.id==='eclipse-cache'?'arcane':'ice';object.hp=Math.max(0,object.hp-amount);this.particlesAt(object.x+object.w/2,object.y+object.h/2,color,8,120,particleKind);
       if(object.hp===0){
         object.broken=true;if(conductor)this.hazards=this.hazards.filter(hazard=>hazard.source!=='storm');const before=this.player.hp;this.player.hp=Math.min(this.player.maxHp,before+this.player.maxHp*object.healRatio);this.rerolls+=object.rerolls;this.score+=object.score;
-        this.particlesAt(object.x+object.w/2,object.y+object.h/2,color,24,180,'ice');this.effects.push({type:'text',x:object.x+object.w/2,y:object.y-15,text:conductor?'Eclipse contido':'+1 renovação',t:1.2,max:1.2,color});
+        this.particlesAt(object.x+object.w/2,object.y+object.h/2,color,24,180,particleKind);this.effects.push({type:'text',x:object.x+object.w/2,y:object.y-15,text:conductor?'Eclipse contido':'+1 renovação',t:1.2,max:1.2,color});
         this.emit('breakable',{name:object.name,healed:this.player.hp-before,rerolls:object.rerolls,...(conductor?{effect:'storm'}:{})});if(this.cleared)this.rememberCampaignCheckpoint();
       }
       return true;
