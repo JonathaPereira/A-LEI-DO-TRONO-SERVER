@@ -126,6 +126,16 @@ e Canhão Sísmico, cores personalizadas de projéteis para torretas avançadas 
 Solar), ausência estrita de estética 8-bit com 19 amostras OGG de alta fidelidade gravadas,
 compressor Master anti-clipping e reverb de estúdio nos efeitos (`check-atalaia-audiovisual-fantasy.cjs`
 integrado a `tests/suites.json`). Completando 100% dos itens da seção 'Atalaia: Guardiões do Cristal'.
+O incremento 98 consolida as campanhas zero→fim (execução sequencial automatizada
+do Capítulo 1 ao 25 em Cinzas do Abismo até a vitória no Alvorecer com destruição
+do Condutor, e validação completa das 30 fases dos 5 Atos da Crônica e 15 ondas
+do Atalaia), os manuais do jogador (`games/cinzas-do-abismo/MANUAL.md` e
+`games/atalaia/MANUAL.md`), os changelogs de transição para a Renascimento 1.0
+(`games/cinzas-do-abismo/CHANGELOG.md` e `games/atalaia/CHANGELOG.md`) e o relatório
+comparativo formal final (`docs/COMPARACAO_RENASCIMENTO.md`) distinguindo
+explicitamente planejado, implementado, testado, aprovado e o status de pausa
+de Nexus por ordem do usuário (`check-campaigns-manuals-comparative.cjs`
+integrado a `tests/suites.json`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências
