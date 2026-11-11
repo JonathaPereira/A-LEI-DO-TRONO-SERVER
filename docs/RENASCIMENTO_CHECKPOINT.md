@@ -84,6 +84,14 @@ memória, reinicialização e transições de cena), comprovando folga de desemp
 vazamento de memória (< 15MB em 50 reinicializações de Cinzas e < 10MB em 50
 ciclos de Atalaia) e isolamento perfeito de estado entre sessões e checkpoints
 (`check-prolonged-sessions.cjs` integrado a `tests/suites.json`).
+O incremento 93 consolida a auditoria e verificação dos quatro pilares de
+interface, dados e controle em Cinzas do Abismo e Atalaia: ciclo de vida do perfil
+permanente e estratégico com tolerância a falhas e isolamento; as 8 conquistas
+locais por jogo com garantia de pureza e zero efeitos colaterais; tutoriais e dicas
+contextuais de preparação de ondas, perigos e as segundas fases dos 5 chefes; e
+remapeamento completo de teclado (11 ações por jogo com troca atômica e proteção de
+teclas reservadas) e controle (`check-profiles-achievements-remapping.cjs`
+integrado a `tests/suites.json`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

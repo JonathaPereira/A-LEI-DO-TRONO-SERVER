@@ -2328,6 +2328,25 @@ Foi desenvolvida a suíte automatizada de diagnóstico contínuo [`tests/check-p
 
 A suíte executou com 4 baterias de validação aprovadas; `node scripts/test.cjs --filter session`, `npm run format:check` e `npm run typecheck` confirmaram conformidade estrita e ausência de regressões.
 
+## Nonagésimo terceiro incremento — consolidação de perfis, conquistas locais, tutoriais contextuais e remapeamento de controles
+
+Foi desenvolvida a suíte unificada de auditoria [`tests/check-profiles-achievements-remapping.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-profiles-achievements-remapping.cjs), integrada a `tests/suites.json`, auditando de ponta a ponta os quatro pilares de interface, dados e controle em Cinzas do Abismo e Atalaia:
+
+1. **Perfis Permanentes e Resiliência de Dados:**
+   - *Cinzas:* Ciclo de vida completo do perfil permanente (`AbyssPersistence`), inicialização limpa (`cleanLegacy(null)` com versão 1, zero concluídos e sem arma), marcos de desbloqueio das 4 armas (`blade: 3`, `bow: 5`, `hammer: 10`, `staff: 15`), variantes táticas do Legado vinculadas às suas famílias de armas e capítulos (`ash_blade`, `rift_hammer`, `echo_bow`, `frost_staff`), runas permanentes de Gelo (capítulo 20) e Fogo (capítulo 25), atualização atômica de campanhas via checkpoints válidos, rejeição de formatos incorretos ou dados corrompidos, e mesclagem idempotente (`mergeLegacy`) que preserva o maior progresso e as preferências do jogador.
+   - *Atalaia:* Perfil estratégico (`StrategyProgress`) com controle de Ranks vinculados a ondas concluídas (Rank 0 bloqueado, Rank 1 a partir da onda 5 e Rank 2 a partir da onda 10), seleção estrita das 3 especializações (`engineering`, `warding`, `lore`), isolamento ao jogar sem especialização sem revogar marcos, e tolerância a arquivos ilegíveis com aviso e preservação de fontes incompatíveis.
+2. **Conquistas Locais (8 por jogo):**
+   - *Cinzas:* 8 marcos derivados estritamente de fatos de progressão (`ember`, `forest`, `crypt`, `forge`, `glacier`, `dawn`, `horde_guardian`, `horde_twenty`). A auditoria comprova imutabilidade pura (nenhuma mutação dos objetos de entrada e zero escritas em disco), teto estrito de progresso (`current <= goal`), e filtragem rigorosa que restringe os feitos de sobrevivência aos recordes da edição 0.5 vigente.
+   - *Atalaia:* 8 conquistas locais catalogadas (`first_node`, `archive`, `first_act`, `frontiers`, `rupture`, `chronicle`, `watch`, `endless`). Inspeção em tela nunca reescreve nem cria perfis prematuros no disco, com independência comprovada entre os modos Clássico, Crônica e Sobrevivência.
+3. **Tutoriais Contextuais e Orientações Táticas:**
+   - *Atalaia:* Textos instrutivos exibidos dinamicamente na preparação de fase cobrindo todas as mecânicas táticas: terrenos elevados (+18 de alcance com anel duplo), Vigia de escória (proteção de aliados e resistência a fogo), Tecelã (divisão em filhotes e necessidade de dano em área), Arauto (aura de velocidade de +20% a 120 de alcance sem acúmulo, vulnerável a lentidão/raízes), Sabotador (anúncio de 0,65s e bloqueio de torretas por 1,2s), e orientações das segundas fases dos 5 chefes (Pulso da Coroa, Guardião da escória, Matriarca das raízes, Sentinela da cidadela e Guardião das raízes).
+   - *Cinzas:* Exibição de dicas de ação na HUD (`action-hints`), Códice com catálogo das 36 cartas e reações elementais (Inferno, Congelamento, Cadeia e Praga), diálogo de ajuda (`helpDialog`) com instrução de esquiva e invulnerabilidade, banners de onda e toasts contextuais para eventos do cenário e conflitos entre abas.
+4. **Remapeamento de Controles (Teclado e Controle):**
+   - *Atalaia:* 11 atalhos de teclado (`wave`, `upgrade`, `pause`, `speed`, `mute` e as 6 torretas do arsenal) com troca automática e atômica (`swap`) em conflito, impedindo duplicidade ou perda de comandos, recusa estrita de teclas reservadas (`Enter`, `Escape`), serialização em `to_data()` e restauração segura em `load_data()`.
+   - *Cinzas:* 11 ações com aliases múltiplos (`Keyboard`), resolução atômica de colisões, suporte a perfis Xbox e PlayStation em `Controller`, filtragem de zona morta analógica (0,24), repetição de navegação digital e desconexão segura sem congelamento.
+
+A suíte executou com 10 baterias aprovadas e 100% de sucesso; `node scripts/test.cjs --filter remapping`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2360,7 +2379,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [ ] Completar em cada jogo os menus de continuar/nova campanha/seleção/progressão/configurações/créditos/sair conforme suas mecânicas.
 - [x] Expor créditos e atribuições nos menus dos três jogos, com retorno que preserva progresso.
 - [x] Consultar conquistas locais nos três jogos, derivadas dos respectivos fatos de progressão.
-- [ ] Completar perfis, conquistas locais, tutoriais contextuais e remapeamento de controles onde aplicável.
+- [x] Completar perfis, conquistas locais, tutoriais contextuais e remapeamento de controles onde aplicável.
 - [x] Remapear os 11 atalhos do Atalaia, com conflitos, restauração e dicas coerentes.
 - [x] Remapear 11 ações de teclado de Cinzas, preservando aliases, controles e teclas reservadas.
 - [x] Remapear nove comandos do Nexus com conflitos, restauração, persistência e dicas coerentes.
