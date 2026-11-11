@@ -50,6 +50,10 @@ rúnica reforçada para 33% de armadura ao cruzar 50% de vida sem morrer, com
 contrajogo explícito por perfuração (Metal do abismo, Arpão), Caçador de colossos
 e dano contínuo (fogo/veneno), tooltip e toast dedicado (27 checks em
 `citadel_sentinel.gd`).
+O incremento 87 diferencia a segunda fase do Guardião das raízes (chefe da onda
+6 da Crônica do Atalaia) com convocação única de matilha de dois lobos velozes ao
+cruzar 50% de vida sem morrer, completando a diferenciação dedicada das segundas
+fases de todos os cinco chefes da Crônica (20 checks em `root_guardian.gd`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

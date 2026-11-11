@@ -2262,6 +2262,14 @@ Sem campo novo de save: a blindagem é calculada dinamicamente via `enemy_armor(
 
 Run possui `citadel_sentinel()`, `_call_citadel_escorts()` e `enemy_armor()`; Main comunica na preparação o limiar, o golem, a armadura de 33% e o contrajogo por perfuração e dano contínuo, e o toast de `boss_phase` anuncia a convocação e a armadura reforçada. A iteração de disparos em área mantém o isolamento da escolta no mesmo subpasso de transição. Passaram 27 verificações dirigidas em `citadel_sentinel.gd`; build e suítes completas do Atalaia (`verify.gd`, `runtime_verify.gd`, `chronicle.gd` com 285 checks, `slag_ward.gd` com 35 checks, `crown_pulse.gd` com 38 checks, `root_matriarch.gd` com 22 checks), mais `tests/atalaia.cjs` passaram com zero falhas.
 
+## Octogésimo sétimo incremento — matilha do Guardião das raízes e conclusão das segundas fases de Atalaia
+
+Na fase 6 da Crônica/repetição/desafio do Atalaia, o Guardião das raízes convoca uma vez uma matilha de dois lobos velozes (`wolf`) ao cruzar 50% de vida sem morrer. Entram imediatamente atrás dele na mesma rota; a alta velocidade dos lobos (79) pressiona o controle de trilha antes que alcancem o cristal, recompensando desaceleração e raízes (Obelisco Glacial, Guardião de Raízes) e cadência de disparo.
+O avanço de 13% e a interrupção inicial das torretas próximas em raio 144 permanecem. Clássica, Sobrevivência e outros chefes conservam suas regras originais.
+Sem campo novo de save: o flag `enraged` já gravado impede novas convocações na recarga ou em acertos subsequentes. Com esta entrega, todos os cinco chefes da Crônica (Guardião das raízes na onda 6, Matriarca das raízes na onda 12, Sentinela da cidadela na onda 18, Guardião da escória na onda 24 e A Coroa do Bastião na onda 30) possuem segundas fases com identidades táticas, escoltas e contrajogos dedicados.
+
+Run possui `root_guardian()` e `_call_root_escorts()`; Main comunica na preparação o limiar, a matilha de dois lobos e o contrajogo por controle de movimento e cadência, e o toast de `boss_phase` anuncia a convocação. Passaram 20 verificações dirigidas em `root_guardian.gd`; todas as suítes de Atalaia (`verify.gd`, `runtime_verify.gd`, `chronicle.gd` com 285 checks, `slag_ward.gd` com 35 checks, `crown_pulse.gd` com 38 checks, `root_matriarch.gd` com 22 checks, `citadel_sentinel.gd` com 27 checks), mais `tests/atalaia.cjs` passaram com zero falhas.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2337,13 +2345,14 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Exibir oito conquistas locais derivadas das árvores, Crônica e Sobrevivência, sem regravar o perfil.
 - [x] Implementar Obelisco Solar, Guardião de Raízes, Canhão Sísmico, Farol Espectral, Forja de Cinzas e Arpão do Abismo, com upgrades e limitações próprias.
 - [x] Ampliar elevações e eventos ambientais: quatro posições elevadas e névoa temporária, com avisos e alcance efetivo verificados.
-- [ ] Expandir elites e interferências de inimigos comuns (proteção, resistência a fogo, divisão, espíritos velados, sabotagem e segunda fase dos chefes já entregues).
+- [x] Expandir elites e interferências de inimigos comuns (proteção, resistência a fogo, divisão, espíritos velados, sabotagem e segunda fase dos cinco chefes entregues).
 - [x] Implementar sabotagem anunciada, bloqueio temporário de disparos e persistência do alvo/temporizadores.
 - [x] Introduzir Arauto com aura de marcha, alcance visível, bônus sem acúmulo, contra-jogo por controle e retomada compatível.
 - [x] Diferenciar o chefe final da Crônica com pulso periódico anunciado, interrupção breve, alcance legível e retomada compatível.
 - [x] Diferenciar o Guardião da escória com convocação única de escoltas, proteção próxima sem acúmulo e contrajogo por perfuração/dano contínuo.
 - [x] Diferenciar a Matriarca das raízes com convocação única de ninhada na segunda fase, avanço em enxame e contrajogo por dano em área.
 - [x] Diferenciar a Sentinela da cidadela com escolta de golem, armadura rúnica de 33% na segunda fase e contrajogo por perfuração/dano contínuo.
+- [x] Diferenciar o Guardião das raízes com convocação única de matilha de lobos na segunda fase, avanço veloz e contrajogo por controle e cadência.
 - [x] Adicionar renovação por ouro, duas cartas táticas e evolução priorizada no painel.
 - [x] Validar distribuição das cartas e economia em três políticas/três sementes/quatro condições de árvore, com 36 campanhas completas simuladas.
 - [x] Verificar ofertas e retomada em 36 sessões/1.392 ofertas, com três políticas econômicas, separadas do combate.

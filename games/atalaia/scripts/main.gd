@@ -289,6 +289,7 @@ func refresh_hud():
   if not run.slag_ward().is_empty():phase_label.tooltip_text+="\nGuardião da escória: com 50% de vida ou menos, convoca uma vez um golem e um cogumelo. Aliados a até 105 recebem 25% menos dano de impactos sem perfuração. Não protege a si mesmo nem acumula com Vigias. Elimine a fonte; queimaduras, veneno e perfuração atravessam a aura."
   if not run.matriarch_brood().is_empty():phase_label.tooltip_text+="\nMatriarca das raízes: com 50% de vida ou menos, convoca uma vez uma ninhada de duas tecelãs. As tecelãs se dividem em filhotes ao cair. Reserve dano em área e controle para conter o enxame."
   if not run.citadel_sentinel().is_empty():phase_label.tooltip_text+="\nSentinela da cidadela: com 50% de vida ou menos, convoca um golem de escolta e reforça sua armadura rúnica para 33%. Perfuração (Metal do abismo, Arpão), caçadores de colossos e dano contínuo (fogo/veneno) superam a blindagem."
+  if not run.root_guardian().is_empty():phase_label.tooltip_text+="\nGuardião das raízes: com 50% de vida ou menos, convoca uma matilha de dois lobos velozes e interrompe torretas próximas. Controle de movimento (Gelo, Guardião de Raízes) e cadência contêm a investida rápida."
   if run.phase=="prep":wave_progress_label.text="Bônus: +%d ouro com %d de integridade"%[recipe.reward,recipe.integrity]
   var environment:=run.environment()
   if not environment.is_empty():
@@ -501,7 +502,7 @@ func drain_events():
    "integrity_bonus":toast("Objetivo de integridade · +%d ouro"%e.gold)
    "crown_pulse":toast("Pulso da Coroa · torretas próximas interrompidas por 0,8 s")
    "crown_warning":toast("Pulso da Coroa em 1 s · alcance 144 · torretas próximas serão interrompidas")
-   "boss_phase":toast("Guardião da escória · duas escoltas · torretas interrompidas · aura protege aliados a até 105" if not run.slag_ward().is_empty() else ("Matriarca das raízes · ninhada de tecelãs · torretas interrompidas · elimine com dano em área" if not run.matriarch_brood().is_empty() else ("Sentinela da cidadela · escolta de golem · torretas interrompidas · armadura rúnica reforçada · use perfuração e dano contínuo" if not run.citadel_sentinel().is_empty() else "Chefe em segunda fase · torretas próximas interrompidas")))
+   "boss_phase":toast("Guardião da escória · duas escoltas · torretas interrompidas · aura protege aliados a até 105" if not run.slag_ward().is_empty() else ("Matriarca das raízes · ninhada de tecelãs · torretas interrompidas · elimine com dano em área" if not run.matriarch_brood().is_empty() else ("Sentinela da cidadela · escolta de golem · torretas interrompidas · armadura rúnica reforçada · use perfuração e dano contínuo" if not run.citadel_sentinel().is_empty() else ("Guardião das raízes · matilha de dois lobos · torretas interrompidas · contenha a investida rápida" if not run.root_guardian().is_empty() else "Chefe em segunda fase · torretas próximas interrompidas"))))
    "map":
     selected=-1;moving=false;board.reset_visuals()
     var next_name: String=Chronicle.acts[run.stage].act if run.mode==Chronicle.MODE else run.maps[run.stage].name
