@@ -30,7 +30,10 @@ campanha que permaneciam bloqueadas (`Torv/Oren/Sylva`, `Nima/Axion/Brin` e
 `mission_support_ai.gd`, 624 cenários/600 vitórias em `objective_matrix.gd`), e a
 diferenciação corporal do supremo *Mil Espinhos* de Nima com folha dedicada de 8
 desenhos (`nima-supreme-renascimento-v1.png`), metadados e mapeamento de
-regiões (50 checks em `hero_choreography.gd`).
+regiões (50 checks em `hero_choreography.gd`). O incremento 83 inaugura a
+classe Técnica com o supremo corporal dedicado *Órbita de Aço* de Kira
+(`kira-supreme-renascimento-v1.png`, 1774x887, 8 poses), registrado em
+`animation-art.json` e `pose-regions.json` (63 checks em `hero_choreography.gd`).
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

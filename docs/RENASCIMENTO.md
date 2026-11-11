@@ -2233,6 +2233,13 @@ Avanço em duas frentes de alta prioridade da Operação Renascimento no Project
 2. **Supremo dedicado de Nima (*Mil Espinhos*):**
    Criação e integração da folha dedicada de 8 poses corporais (`godot/assets/poses/nima-supreme-renascimento-v1.png`, 1774x887 RGBA com canal alpha real), metadados registrados em `godot/data/animation-art.json` com escala `0.6006006006006006` e mapeamento em `godot/data/pose-regions.json` com quadros 8..15 (`charge: [8, 9, 10]`, `travel: [11]`, `impact: [12]`, `recover: [13, 14, 15, 0]`). O teste `hero_choreography.gd` cobriu 50 checks (0 falhas) garantindo a troca de folha exclusiva no supremo, retorno à arte base preservada, limpeza em pulo/skip, proteção do snapshot e conservação da pose de derrota.
 
+## Octogésimo terceiro incremento — supremo de Kira e expansão da classe Técnica
+
+Avanço na coreografia corporal dedicada do Project Nexus, inaugurando a classe Técnica:
+
+1. **Supremo dedicado de Kira (*Órbita de Aço*):**
+   Criação e integração da folha dedicada de 8 poses corporais (`godot/assets/poses/kira-supreme-renascimento-v1.png`, 1774x887 RGBA com canal alpha real e padding uniforme), metadados registrados em `godot/data/animation-art.json` com escala `0.5208333333333334` e mapeamento em `godot/data/pose-regions.json` com quadros 8..15 (`charge: [8, 9, 10]`, `travel: [11]`, `impact: [12]`, `recover: [13, 14, 15, 0]`). O teste de coreografia (`hero_choreography.gd`) expandiu para 63 checks (0 falhas) cobrindo troca de folha exclusiva no supremo, retorno à folha base preservada, limpeza em pulo/skip, proteção do snapshot e conservação da pose de derrota.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2365,6 +2372,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Diferenciar o supremo Queda da fornalha de Rhazen com oito desenhos próprios, mantendo básico/defesa/derrota e resolução única.
 - [x] Diferenciar Constelação ardente de Cindra com oito desenhos de mira elevada, emissão alinhada e preservação dos demais golpes.
 - [x] Diferenciar Mil espinhos de Nima com oito desenhos próprios em folha dedicada, mantendo básico/defesa/derrota e resolução única.
+- [x] Diferenciar Órbita de aço de Kira com oito desenhos próprios em folha dedicada, mantendo básico/defesa/derrota e resolução única.
 - [x] Permitir pular a apresentação local/campanha, conservando resolução e recompensa únicas do turno.
 - [x] Conservar a pose de derrota entre ações, pulo, movimento reduzido e snapshots, incluindo morte por reflexão.
 - [x] Ampliar Aprender para cinco batalhas, incluindo purificação/Égide e transmissão/interceptação, com lista rolável e objetivos textuais.
