@@ -108,6 +108,14 @@ estrita de corrupção, resiliência de StrategyProgress em Atalaia via arquivos
 .tmp, .bak e .invalid.bak com isolamento total entre modos, e persistência
 de preferências e atalhos (`check-persistence-systems.cjs` integrado a
 `tests/suites.json`).
+O incremento 96 consolida a auditoria aprofundada de cada subsistema e do
+conteúdo completo de Cinzas do Abismo e Atalaia: 6 pilares de combate, catálogo
+integral de 12 inimigos e 5 segundas fases de chefes com contra-jogos, 25 capítulos
+e 4 marcos de exploração destrutíveis, 5 atos da Crônica (30 fases) e campanha
+clássica, 36 cartas, 4 armas e 4 variantes de legado, paridade econômica de ouro
+e especializações, integridade física de assets e licenças, e isolamento estrito
+de estado entre sessões (`check-subsystems-content-audit.cjs` integrado a
+`tests/suites.json`). Completando 100% da seção 'Ambiente, arquitetura e continuidade'.
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

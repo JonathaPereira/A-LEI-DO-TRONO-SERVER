@@ -2381,6 +2381,26 @@ Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-
 
 A suíte executou com 8 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter persistence`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
 
+## Nonagésimo sexto incremento — auditoria aprofundada de cada subsistema e do conteúdo completo
+
+Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-subsystems-content-audit.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-subsystems-content-audit.cjs), registrada em `tests/suites.json`, realizando uma auditoria exaustiva, de ponta a ponta, de cada subsistema e do catálogo completo de conteúdo de Cinzas do Abismo e Atalaia:
+
+1. **Auditoria do Subsistema de Combate:**
+   - *Cinzas do Abismo:* Verificação dos 6 pilares de combate (cálculo de dano e acertos críticos, cadência/cooldown com cancelamento correto, precisão de caixas de colisão AABB para projéteis e entidades, esquiva com frames de invulnerabilidade `invincibleTimer`, resistência base e modificadores de redução de dano, e máquina de estados de debuffs com queima periódica `burningTimer` e lentidão rúnica de congelamento `frozenTimer`).
+   - *Atalaia:* Validação do catálogo integral dos 12 inimigos com velocidade e armadura proporcionais à paridade geométrica das rotas, e mecânicas das segundas fases de todos os chefes (convocação de lobos pelo Guardião das raízes, ninhada e divisão pela Matriarca, escolta de golem e blindagem de 33% pela Sentinela, proteção por escoltas pelo Guardião da escória, e pulso de interrupção periódica pelo Chefe Final).
+2. **Auditoria do Subsistema de Níveis e Exploração:**
+   - *Cinzas:* Integridade dos 25 capítulos distribuídos uniformemente pelas 5 regiões (Profundezas, Catacumbas, Forja, Caverna de Gelo e Alvorecer), e auditoria física e lógica dos 4 marcos de exploração destrutíveis e segredos (Relicário do Eclipse no cap. 8, Urna do Degelo no cap. 18, Sino da Vigília no cap. 22 e Condutor do Alvorecer no cap. 25).
+   - *Atalaia:* Conexão narrativa e sequencial dos 5 atos da Crônica (30 fases) com objetivos e metas de integridade do cristal em `data/chronicle-phases.json`, além da integridade da campanha clássica de 15 ondas determinísticas.
+3. **Auditoria do Subsistema de Progressão e Economia:**
+   - *Cinzas:* Catálogo das 36 cartas de melhoria com atributos válidos, 4 armas fundamentais, 4 variantes de arma do Legado com desbloqueio em capítulos específicos (5, 10, 15, 20) e runas permanentes de Gelo (cap. 20) e Fogo (cap. 25).
+   - *Atalaia:* Paridade matemática da economia de ouro (recompensas por inimigo vs. custos de balistas, morteiros e torres avançadas), as 12 cartas/doutrinas de apoio estratégico, árvores de especialização de Engenharia, Proteção e Conhecimento com limiares (5 e 10 ondas), e as 8 conquistas locais derivadas de fatos de progressão.
+4. **Auditoria do Subsistema Audiovisual e Acessibilidade:**
+   - Verificação da integridade física e conformidade de licenças de todos os assets no disco (spritesheets `towers-v2`, `creatures-v2`, `crystal-core-v5`, áudios OGG e licenças FONT, GODOT e COPYRIGHT), bem como controles de acessibilidade (redução de tremor de tela, efeitos reduzidos, e controles de volume multicanal independentes para Master, Música e SFX).
+5. **Auditoria do Subsistema de Dados, Estado e Resiliência:**
+   - Garantia de isolamento estrito de instâncias e sessões (nenhum vazamento de pontuação ou abates entre partidas sucessivas) e atomicidade em cópias e restaurações.
+
+A suíte executou com 9 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter audit`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2408,7 +2428,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Registrar auditoria inicial, matriz, inventário e riscos de regressão.
 - [x] Preservar projetos, arte, áudio, licenças, trios e decisões existentes.
 - [x] Produzir incrementos de código com testes de regressão e builds Web.
-- [ ] Concluir auditoria aprofundada de cada subsistema e do conteúdo completo.
+- [x] Concluir auditoria aprofundada de cada subsistema e do conteúdo completo.
 - [x] Completar configurações/acessibilidade/transições e gerenciamento de cenas de todos os jogos.
 - [x] Completar em cada jogo os menus de continuar/nova campanha/seleção/progressão/configurações/créditos/sair conforme suas mecânicas.
 - [x] Expor créditos e atribuições nos menus dos três jogos, com retorno que preserva progresso.

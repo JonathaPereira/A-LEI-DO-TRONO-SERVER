@@ -63,6 +63,7 @@
     "tests/check-profiles-achievements-remapping.cjs",
     "tests/check-menus-scenes-accessibility.cjs",
     "tests/check-persistence-systems.cjs",
+    "tests/check-subsystems-content-audit.cjs",
     "tests/clip-desktop-bridge.cjs",
     "tests/clip-library.cjs",
     "tests/clip-preferences.cjs",
