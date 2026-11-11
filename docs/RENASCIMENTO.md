@@ -2401,6 +2401,27 @@ Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-
 
 A suíte executou com 9 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter audit`, `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
 
+## Nonagésimo sétimo incremento — refinamento de animações, efeitos visuais e áudio com identidade de fantasia no Atalaia
+
+Foi desenvolvida e integrada a suíte automatizada de validação [`tests/check-atalaia-audiovisual-fantasy.cjs`](file:///home/antigravity/JonathaPereira/A-LEI-DO-TRONO-SERVER/tests/check-atalaia-audiovisual-fantasy.cjs), registrada em `tests/suites.json`, auditando e refinando integralmente os sistemas de animação, efeitos visuais e identidade sonora de fantasia moderna no Atalaia: Guardiões do Cristal, em total conformidade com as diretrizes da Operação Renascimento:
+
+1. **Refinamento de Animações de Entidades e Torretas:**
+   - *Inimigos:* Ciclo de marcha a 8 FPS com texturas de alta definição (`mob-walk-v6.webp` para quadrúpedes/bípedes e `creatures-v2.webp` para cogumelos, espíritos e chefes), passadas anatômicas personalizadas (`stride` de 25 a 40), balanço vertical orgânico (`bobbing`), flutuação etérea de espíritos (`float_offset` senoidal), espelhamento direcional contínuo (`flip_h`), transição de morte `die()` com esmaecimento e rotação/achatamento suaves via Tween, e flashes visuais no impacto e sob desaceleração rúnica.
+   - *Torretas:* Rotação suave do domo para mira em tempo real (`data.aim`), recuo balístico dinâmico que absorve o impacto do tiro ao longo do vetor de mira com deformação elástica da base de disparo, anéis rúnicos expansivos de evolução/upgrade sincronizados com a cor de cada família, e movimentação/reposicionamento com transição cúbica suave (`Tween.TRANS_CUBIC`).
+   - *Interface e Cartas:* Apresentação fluida de cartas de doutrinas com fade e escala, confirmação de alvos e retorno suave à preparação.
+2. **Refinamento de Efeitos Visuais Modernos (VFX):**
+   - *Fogo:* Jato térmico em 3 camadas poligonais fluidas com turbulência senoidal, halo de glow aditivo e dispersão de faíscas incandescentes (com extensão para a Forja de Cinzas).
+   - *Eletricidade:* Arcos de raio proceduralmente ramificados com perturbações ortogonais senoidais aleatórias e 3 passadas de cor (halo elétrico azul, arco ciano e filamento central branco incandescente).
+   - *Veneno e Ácido:* Poças em perspectiva isométrica (escala 1, 0.45) no piso com anéis de refração concêntricos e efervescência de bolhas químicas ascendentes.
+   - *Explosões e Cerco:* Refinamento em `board.gd` estendendo a física de dispersão de estilhaços (26 partículas em alta velocidade) e fumaça volumétrica cônica (`smoke`) para incluir torretas de área avançadas como o Canhão Sísmico (`seismic`), além de cores personalizadas nos projéteis do Arpão do Abismo (`harpoon`), Obelisco Solar (`solar`) e Canhão Sísmico.
+   - *Acessibilidade Visual:* Perfil de efeitos reduzidos (`reduced_effects`) mantendo a legibilidade tática integral (raios e avisos de contagem regressiva de chefes preservados, enquanto névoa densa, shaders pesados e excesso de partículas são atenuados).
+3. **Avaliação da Identidade Sonora de Fantasia (Ausência Estrita de 8-bit):**
+   - Rejeição absoluta de sintetizadores rudimentares, bips ou ruídos chiptune de onda quadrada. O catálogo de 19 amostras OGG é 100% composto por gravações e instrumentação acústica/orquestral de alta fidelidade (faixas de música orquestral >350KB, paisagens sonoras de ambiência >540KB, percussões pesadas de cerco e fanfarras de vitória/derrota).
+   - Arquitetura de processamento em `sound.gd` com Compressor dinâmico no barramento Master (`threshold: -7dB, ratio: 3.0`) contra clipping em momentos de alta intensidade, e Reverb espacial de estúdio (`room_size: 0.4, wet: 0.09, dry: 0.92`) conferindo acústica cavernosa e mágica.
+   - Panning estéreo 2D, atenuação por distância física e variação aleatória de pitch (`randf_range(0.96, 1.04)`) para eliminar monotonia mecânica, além de controle multicanal independente com persistência.
+
+A suíte executou com 7 baterias de validação aprovadas com 100% de sucesso; `node scripts/test.cjs --filter fantasy`, `node scripts/build-atalaia.cjs` (com 285 checks de Crônica, 8.422 checks econômicos e export Web release), `npm run format:check` e `npm run typecheck` confirmaram conformidade e ausência de regressões.
+
 ## Continuidade autorizada durante a ausência do usuário
 
 O usuário autorizou concluir o trabalho atual e prosseguir pelos itens pendentes,
@@ -2488,7 +2509,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Validar distribuição das cartas e economia em três políticas/três sementes/quatro condições de árvore, com 36 campanhas completas simuladas.
 - [x] Verificar ofertas e retomada em 36 sessões/1.392 ofertas, com três políticas econômicas, separadas do combate.
 - [x] Entregar sobrevivência infinita, desafios e repetição de fases concluídas.
-- [ ] Refinar animações, efeitos e áudio com avaliação da identidade de fantasia.
+- [x] Refinar animações, efeitos e áudio com avaliação da identidade de fantasia.
 
 ### Project Nexus — prioridade principal
 

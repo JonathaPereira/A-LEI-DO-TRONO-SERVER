@@ -116,6 +116,16 @@ clássica, 36 cartas, 4 armas e 4 variantes de legado, paridade econômica de ou
 e especializações, integridade física de assets e licenças, e isolamento estrito
 de estado entre sessões (`check-subsystems-content-audit.cjs` integrado a
 `tests/suites.json`). Completando 100% da seção 'Ambiente, arquitetura e continuidade'.
+O incremento 97 consolida o refinamento integral de animações, efeitos visuais
+modernos e identidade sonora de fantasia do Atalaia: Guardiões do Cristal:
+ciclos anatômicos de caminhada a 8 FPS, bobbing, flutuação senoidal e morte suave,
+rotação de mira e recuo balístico dinâmico com absorção de impacto, efeitos de fogo
+em 3 camadas, raios ramificados ortogonais procedurais, poças isométricas efervescentes,
+física de dispersão de estilhaços (26 partículas) e fumaça volumétrica cônica para morteiros
+e Canhão Sísmico, cores personalizadas de projéteis para torretas avançadas (Arpão, Obelisco
+Solar), ausência estrita de estética 8-bit com 19 amostras OGG de alta fidelidade gravadas,
+compressor Master anti-clipping e reverb de estúdio nos efeitos (`check-atalaia-audiovisual-fantasy.cjs`
+integrado a `tests/suites.json`). Completando 100% dos itens da seção 'Atalaia: Guardiões do Cristal'.
 
 `artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
 reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências

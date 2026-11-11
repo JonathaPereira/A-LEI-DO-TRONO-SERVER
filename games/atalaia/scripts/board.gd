@@ -134,10 +134,11 @@ func event(e: Dictionary):
  match e.kind:
   "lightning": bolts.append({"points":e.points,"age":0.0,"seed":randi()})
   "impact":
-   var col=Color(AtalaiaCatalog.TOWERS[e.type].color)
-   burst(e.pos,col,26 if e.type=="mortar" else 9,115.0 if e.type=="mortar" else 50.0)
+   var is_mortar=e.type=="mortar" or AtalaiaCatalog.family(e.type)=="mortar"
+   var col=Color(AtalaiaCatalog.TOWERS.get(e.type,AtalaiaCatalog.TOWERS.get(AtalaiaCatalog.family(e.type),{})).get("color","efa667"))
+   burst(e.pos,col,26 if is_mortar else 9,115.0 if is_mortar else 50.0)
    rings.append({"pos":e.pos,"color":col,"age":0.0,"life":0.6,"size":maxf(20,e.radius)})
-   if e.type=="mortar" and not reduced_effects:
+   if is_mortar and not reduced_effects:
     for i in range(8):smoke.append({"pos":e.pos,"vel":Vector2(randf_range(-30,30),randf_range(-36,2)),"age":0.0,"life":randf_range(0.65,1.3),"size":randf_range(10,19)})
   "crown_pulse":
    rings.append({"pos":e.pos,"color":Color("efb5a0"),"age":0.0,"life":0.5,"size":e.radius})
@@ -254,7 +255,7 @@ func draw_effects(c: Node2D):
    c.draw_texture_rect(AtalaiaArt.glow(),Rect2(end-Vector2(60,55),Vector2(120,110)),false,Color(1,0.3,0.02,0.3))
  for p in run.projectiles:
   var type=AtalaiaCatalog.family(p.t.type)
-  var color=Color(AtalaiaCatalog.TOWERS[type].color)
+  var color=Color(AtalaiaCatalog.TOWERS.get(p.t.type,AtalaiaCatalog.TOWERS[type]).color)
   var pos: Vector2=p.pos
   var direction: Vector2=(p.end-p.start).normalized()
   c.draw_line(pos-direction*19,pos,color,2.0 if type=="ballista" else 3.0,true)
