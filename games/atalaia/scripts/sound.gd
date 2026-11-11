@@ -71,14 +71,16 @@ func update_flame(active: bool, dt: float):
 
 func event(e: Dictionary):
  var pos=e.get("pos",Vector2(650,300))*Vector2(1.16,1.0)+Vector2(16,174)
+ var family_id=AtalaiaCatalog.family(e.get("type",""))
  match e.kind:
-  "shot": play({"mortar":"launch"}.get(e.type,e.type),pos,-8.0)
-  "impact": play("mortar" if e.type=="mortar" else "impact",pos,-6 if e.type=="mortar" else -18)
+  "shot": play({"mortar":"launch"}.get(family_id,family_id),pos,-8.0)
+  "impact": play("mortar" if family_id=="mortar" else "impact",pos,-6 if family_id=="mortar" else -18)
   "lightning": play("tesla",pos,-9)
   "build","move": play("click",pos)
   "upgrade": play("upgrade",pos,-10)
   "leak": play("leak",pos,-8)
   "wave": play("wave",Vector2(800,450),-8)
+  "jam": play("ice",pos,-12)
   "cards","doctrine": play("reveal",Vector2(800,450),-8)
   "card_chosen","doctrine_chosen": play("card",Vector2(800,450),-7)
   "victory","defeat": play(e.kind,Vector2(800,450),-6)

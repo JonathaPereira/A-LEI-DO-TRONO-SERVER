@@ -11,6 +11,11 @@ test('Godot build preserves nonzero process failure and accepts warnings without
  assert.throws(()=>runGodot(process.execPath,['-e','process.exit(7)']),error=>error.status===7);
  assert.doesNotThrow(()=>runGodot(process.execPath,['-e',"console.log('Godot ready');console.warn('WARNING: Optional driver unavailable')"]));
 });
+test('Godot checks cannot pass by exiting before their completion marker',()=>{
+ const expectedOutput=/ALL CHECKS COMPLETED/;
+ assert.throws(()=>runGodot(process.execPath,['-e',"console.log('Starting checks');process.exit(0)"],{expectedOutput}),/completion/i);
+ assert.doesNotThrow(()=>runGodot(process.execPath,['-e',"console.log('ALL CHECKS COMPLETED')"],{expectedOutput}));
+});
 test('Atalaia only opens the separate web game after an explicit launch', async()=>{
  let views=0,launches=0;
  const game=createAtalaia({desktop:false,openView(){views++;},launchWeb(){launches++;}});

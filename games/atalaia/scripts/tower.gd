@@ -9,6 +9,7 @@ var destination=Vector2.ZERO
 var move_tween: Tween
 var displayed_level=1
 var upgrade_flash=0.0
+var jam_marker: Node2D
 
 func place_at(point: Vector2):
  if not placed:
@@ -29,7 +30,7 @@ func configure(t: Dictionary):
  base.texture=original
  base.scale=Vector2.ONE*104.0/original.get_width()
  base.position=Vector2(0,-43)
- if t.type in ["tesla","ice"]:
+ if AtalaiaCatalog.family(t.type) in ["tesla","ice"]:
   $Gimbal/Head.visible=false
  else:
   var region=AtlasTexture.new()
@@ -42,6 +43,12 @@ func configure(t: Dictionary):
   head.texture=AtalaiaArt.head(t.type)
   head.scale=Vector2.ONE*82.0/head.texture.get_width()
  $Gimbal.position=Vector2(0,-56)
+ jam_marker=Node2D.new();jam_marker.name="InterferenceSignal";jam_marker.z_index=3;add_child(jam_marker)
+ for direction in [-1,1]:
+  var stroke=Line2D.new();stroke.width=2.5;stroke.default_color=Color("b6e8ff");stroke.antialiased=true
+  stroke.points=PackedVector2Array([Vector2(-12,-56-12*direction),Vector2(12,-56+12*direction)])
+  jam_marker.add_child(stroke)
+ jam_marker.visible=false
  modulate=Color(1,1,1,0)
  scale=Vector2(0.92,0.92)
  var tween=create_tween().set_parallel(true)
@@ -57,6 +64,7 @@ func _process(dt):
  $Gimbal/Head.rotation=data.aim
  $Gimbal/Head.position=Vector2(-data.recoil*4.0,0).rotated(data.aim)
  $Base.scale.y=(104.0/AtalaiaArt.tower(data.type).get_width())*(1.0-data.recoil*0.015)
+ jam_marker.visible=data.get("jam_time",0.0)>0.0
  queue_redraw()
 
 func _draw():

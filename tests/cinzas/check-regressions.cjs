@@ -35,9 +35,9 @@ test('Same upgrade twice really stacks stats and visible preview; levels survive
   assert(e.cardPreview(CARDS.find(c=>c.id==='power')).includes('144% → 166%'));
   select(e,'vitality');select(e,'vitality');assert.equal(e.player.maxHp,140);assert.equal(e.owned.vitality,2);e.stage=6;e.loadStage();assert.equal(e.player.maxHp,140);assert.equal(e.owned.power,2);assert.equal(e.owned.vitality,2);
 });
-test('All twelve exploration chapters have different geometry and the campaign uses seven active terrain mechanics',()=>{
+test('All twenty exploration chapters have different geometry and the campaign uses seven active terrain mechanics',()=>{
   const signatures=new Set(),terrains=new Set();for(let stage=0;stage<CHAPTERS.length;stage++){const e=make();e.stage=stage;e.loadStage();if(!e.bossStage){assert(e.width>=9500);signatures.add(JSON.stringify(e.platforms.filter(p=>p.oneWay===false).map(p=>[p.w,p.y,p.y2,p.effect])));assert(e.shrines.length<=1);}for(const p of e.platforms)terrains.add(p.effect);}
-  assert.equal(signatures.size,12);for(const terrain of Object.keys(TERRAIN))assert(terrains.has(terrain));
+  assert.equal(signatures.size,20);for(const terrain of Object.keys(TERRAIN))assert(terrains.has(terrain));
 });
 test('Terrain changes player movement, ice traction, jump and fire damage; ward mitigates it',()=>{
   function arena(effect){const e=make({mode:'horde'});e.enemies=[];e.spawnQueue=[{}];e.platforms=e.platforms.filter(p=>p.oneWay===false);e.platforms[0].effect=effect;e.player.x=200;e.player.y=770-e.player.h;e.player.platformId=e.platforms[0].id;e.player.ground=true;return e;}

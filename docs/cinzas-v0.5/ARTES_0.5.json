@@ -41,6 +41,18 @@
       "key": "forest_bg",
       "prompt": "Use case: stylized-concept. Production cinematic panoramic16:9 background for realistic2D side scrolling darkfantasy game. Deep ancient forest with monumental gnarledtrees, far ruinedcastle through layersof atmosphericmist, moonlit waterfall to a lower cavernentrance, shafts ofsilvermoonlight illuminatingmoss androots, rich photographicnatural materials eleganthighend mattepainting, bluegreenpalette subtlewarm distantlanterns. Distant sceneryonly noforegroundfloor orwalkable platforms nocharacters no UI no text. Lowerplayableregion uncluttered, shadows readable, strong layereddepth, notpixelart.",
       "production": "dist/assets/v5/forest_bg.webp"
+    },
+    {
+      "key": "glacier",
+      "prompt": "Create ONE polished wide landscape background texture for an existing 2D side-scrolling dark fantasy game called Cinzas do Abismo. 16:9 wide panorama. Region: Geleiras do Silêncio. Paint an ancient colossal frozen ravine under blue grey overcast, layers of fracture ice and black stone, distant slanted ruined arches almost buried in mist, barely visible glacier crevasses and muted moonstone reflections, drifting fine snow with sparsity. Painted gothic fantasy, intricate natural detail with quiet cool slate and teal colors, mostly mid/dark values. The camera looks across the valley at distant terrain. Keep the lower half quiet, darker and less contrasty, since the game overlays interactive terrain and little pixel-smooth painted characters there. Spread points of interest along the horizontal span to support camera pan and cropping on all sides. Single background layer, no platforms, close ledges, creatures, people, buildings in the immediate foreground, text, fonts, border, UI or watermarks. A distinctive new snowy environment asset, clean, atmospheric, restrained.",
+      "production": "public/roguelite/assets/renascimento/glacier.webp",
+      "method": "Built-in image_gen, original opaque panorama, WebP encoding at quality 88."
+    },
+    {
+      "key": "bastion",
+      "prompt": "Create ONE polished wide landscape background texture for an existing 2D side-scrolling dark fantasy game called Cinzas do Abismo. 16:9 wide panorama. Region: Bastião do Alvorecer, an ancient fantasy citadel where the dawn finally reaches the stone. Paint a distant breached fortress spanning several cliffs, a wide high path and successive gothic towers receding into amber dust, a pale warm dawn just behind the upper skyline toward the right, slate violet and dark navy shadows with muted old gold edges. Painted gothic fantasy with intricate weathered architecture and atmospheric depth. Keep the lower half quiet, darker and less contrasty since the game overlays interactive terrain and small characters there. Use a landscape side-on panorama with interest spread along the horizontal span for camera pan and cropping. Single background layer, no foreground ledge or visible gameplay platforms, creatures, people, lettering, text, border, UI or watermark. Distinct from a forest or a frozen ruin; restrained luminous architecture and clouds in the distance.",
+      "production": "public/roguelite/assets/renascimento/bastion.webp",
+      "method": "Built-in image_gen, original opaque panorama, WebP encoding at quality 88."
     }
   ]
 }

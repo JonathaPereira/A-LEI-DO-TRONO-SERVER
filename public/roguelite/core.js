@@ -15,7 +15,7 @@
     blade: { name: 'Lâmina do Andarilho', cooldown: .32, damage: 1, range: 120 },
     bow: { name: 'Arco do Crepúsculo', cooldown: .40, damage: 1.1, range: 750 },
     hammer: { name: 'Martelo Ancestral', cooldown: .65, damage: 2.15, range: 138 },
-    staff: { name: 'Cajado das Marés', cooldown: .28, damage: .8, range: 700 }
+    staff: { name: 'Cajado das Marés', cooldown: .28, damage: .95, range: 700 }
   };
   const CARDS = [
     { id:'fire',name:'Brasa viva',type:'Fogo',family:'fire',icon:'flame',desc:'Ataques queimam por 3s: 6 de dano por segundo por nível.',max:3,apply:p=>p.fire++ },
@@ -64,7 +64,16 @@
   const REGIONS = [
     {name:'Floresta esquecida',subtitle:'Sob as raízes, algo desperta.',boss:'O Guardião de Raízes',accent:'#78c9ac',sky:['#0c2028','#21443e'],stone:'#1d3b3a',top:'#5b8470'},
     {name:'Ruínas do eclipse',subtitle:'As pedras lembram o seu nome.',boss:'A Sentinela do Eclipse',accent:'#ba9ed9',sky:['#181c32','#3a344c'],stone:'#343346',top:'#78728a'},
-    {name:'Forja das cinzas',subtitle:'A última chama exige um preço.',boss:'O Rei da Forja',accent:'#ee9b6c',sky:['#251c26','#51342e'],stone:'#3d3335',top:'#94785d'}
+    {name:'Forja das cinzas',subtitle:'A chama exige um preço.',boss:'O Rei da Forja',accent:'#ee9b6c',sky:['#251c26','#51342e'],stone:'#3d3335',top:'#94785d'},
+    {name:'Geleiras do silêncio',subtitle:'A água guarda o calor que a forja perdeu.',boss:'A Guardiã do Degelo',accent:'#8bd5f5',sky:['#121f35','#355a6f'],stone:'#244054',top:'#9ed6e7',bossArt:'bossEclipse'},
+    {name:'Bastião do alvorecer',subtitle:'A luz espera que alguém abra os portões.',boss:'O Arauto do Primeiro Sol',accent:'#ffd58e',sky:['#3d2831','#765340'],stone:'#443539',top:'#c49e70',bossArt:'bossForge'}
+  ];
+  const BOSS_PATTERNS=[
+    {speed:45,actions:['roots','shots','roots']},
+    {speed:80,actions:['crystals','shots','crystals']},
+    {speed:60,actions:['fan','charge','slam']},
+    {speed:64,actions:['crystals','whiteout','shots']},
+    {speed:75,actions:['slam','sunrise','charge']}
   ];
   const Levels=typeof module==='object'&&module.exports?require('./levels.js'):globalThis.AbyssLevels;
   const Rig=typeof module==='object'&&module.exports?require('./rig.js'):globalThis.AbyssRig;
@@ -77,14 +86,14 @@
         {id:'resolve',name:'Vontade infinita',type:'Arma · repetível',family:'weapon',icon:'sword',art:'edge',max:Infinity,desc:'+5% de dano base. Sem limite de acúmulo.',apply:p=>p.power+=.05}
       ];
   class Engine {
-    constructor(){this.status='menu';this.events=[];this.enemies=[];this.projectiles=[];this.effects=[];this.hazards=[];this.fields=[];this.particles=[];this.time=0;this.stage=0;this.biome=0;this.width=2800;this.height=1480;this.camera=0;this.cameraY=0;this.player=this.newPlayer();this.platforms=[];this.owned={};this.spawnQueue=[];this.portals=[];this.shrines=[];this.relics=[];this.zones=[];this.decor=[];}
+    constructor(){this.status='menu';this.events=[];this.enemies=[];this.projectiles=[];this.effects=[];this.hazards=[];this.fields=[];this.particles=[];this.time=0;this.stage=0;this.biome=0;this.width=2800;this.height=1480;this.camera=0;this.cameraY=0;this.player=this.newPlayer();this.platforms=[];this.owned={};this.spawnQueue=[];this.portals=[];this.shrines=[];this.relics=[];this.breakables=[];this.zones=[];this.decor=[];}
     newPlayer(difficulty='normal'){const hp=difficulty==='easy'?160:100;return {x:110,y:FLOOR-108,w:34,h:108,vx:0,vy:0,dir:1,hp,maxHp:hp,weapon:'blade',power:1,meleePower:1,haste:1,crit:.05,reach:1,pierce:0,fire:0,frost:0,lightning:0,poison:0,activeElement:'arcane',armor:0,vampire:0,regen:0,speed:1,dashRate:1,magicPower:1,magicRate:1,magicRange:245,jumps:0,ground:true,coyote:.1,jumpBuffer:0,attackCd:0,attackAnim:0,attackDuration:0,skillCd:0,castAnim:0,dashCd:0,dashTime:0,invuln:0,hurtAnim:0,landAnim:0,combo:0,comboWindow:0,swing:null,pendingSkill:null,dropTime:0,dropId:null,platformId:null,respawn:{x:110,y:FLOOR},runPhase:0,jumpPower:1,jumpAge:0,postDash:0,burn:0,shock:0,shockVisual:0,shockLock:0,bleed:0,echo:0,fury:0,shockwave:0,focus:0,aegis:0,terrainWard:0,specialTime:0,specialDuration:0,specialWindup:0,footstepTimer:0,snare:0,frostVisual:0,poisonVisual:0};}
     emit(type,data={}){this.events.push({type,...data});}
-    start({mode='adventure',difficulty='normal',name='Andarilho',seed='cinzas'}={}){this.campaignCheckpoint=null;this.mode=mode;this.difficulty=difficulty;this.name=name;this.seed=seed;this.rng=random(seed);this.combatRng=random(seed+':combat');this.status='running';this.stage=0;this.time=0;this.kills=0;this.bosses=0;this.completedWaves=0;this.score=0;this.relicCount=0;this.player=this.newPlayer(difficulty);this.owned={};this.selectedCards=[];this.events=[];this.cards=[];this.draftCount=0;this.upgradeCount=0;this.rerolls=3;this.rerollCount=0;this.echoQueue=[];this.chosenHistory=[];this.loadStage();this.emit('start');}
+    start({mode='adventure',difficulty='normal',name='Andarilho',seed='cinzas',legacyWeapon='',legacyRune='',legacyVariant='',practiceRegion=null}={}){this.campaignCheckpoint=null;this.legacyWeapon=mode==='adventure'&&WEAPON_IDS.includes(legacyWeapon)?legacyWeapon:'';this.legacyRune=mode==='adventure'&&Object.hasOwn(Levels.RUNES,legacyRune)?legacyRune:'';this.legacyVariant=mode==='adventure'&&Object.hasOwn(Levels.WEAPON_VARIANTS,legacyVariant)?legacyVariant:'';if(this.legacyVariant)this.legacyWeapon=Levels.WEAPON_VARIANTS[this.legacyVariant].weapon;this.mode=mode;this.difficulty=difficulty;this.name=name;this.seed=seed;this.rng=random(seed);this.combatRng=random(seed+':combat');this.practiceRegion=mode==='adventure'&&Number.isInteger(practiceRegion)&&practiceRegion>=0&&practiceRegion<REGIONS.length?practiceRegion:null;this.status='running';this.stage=this.practiceRegion===null?0:this.practiceRegion*5;this.time=0;this.kills=0;this.bosses=0;this.completedWaves=0;this.score=0;this.relicCount=0;this.player=this.newPlayer(difficulty);if(this.practiceRegion!==null){const region=this.practiceRegion;this.player.maxHp+=region*20;this.player.hp=this.player.maxHp;this.player.power+=region*.20;this.player.haste+=region*.08;this.player.armor+=region*.03;}this.owned={};this.selectedCards=[];this.events=[];this.cards=[];this.draftCount=0;this.upgradeCount=0;this.rerolls=3;this.rerollCount=0;this.echoQueue=[];this.chosenHistory=[];this.loadStage();this.emit('start');}
     loadStage(){
       this.rng=random(this.seed+':map:'+this.stage);const chapter=Levels.CHAPTERS[Math.min(this.stage,Levels.CHAPTERS.length-1)];this.biome=this.mode==='horde'?Math.floor(this.stage/5)%3:chapter.biome;this.bossStage=this.mode==='horde'?(this.stage+1)%5===0:!!chapter.boss;
-      const map=Levels.create({mode:this.mode,boss:this.bossStage,stage:this.stage,biome:this.biome,rng:this.rng});Object.assign(this,{width:map.width,height:map.height,platforms:map.platforms,zones:map.zones,shrines:map.shrines,relics:map.relics,decor:map.decor,checkpoint:{...map.checkpoint,active:false},chapter:map.chapter,weather:map.weather,background:map.background,tunnels:map.tunnels});
-      this.enemies=[];this.projectiles=[];this.effects=[];this.hazards=[];this.fields=[];this.particles=[];this.portals=[];this.spawnQueue=[];this.cleared=false;this.hitStop=0;this.waveElapsed=0;this.spawnTimer=1.4;this.hazardTimer=5;this.waveRule=Levels.WAVE_RULES[this.stage%Levels.WAVE_RULES.length];this.hordeTuning=hordeTuning(this.stage+1);this.waveTotal=0;this.waveSpawned=0;this.echoQueue=[];this.skillPulses=[];
+      const map=Levels.create({mode:this.mode,boss:this.bossStage,stage:this.stage,biome:this.biome,rng:this.rng});Object.assign(this,{width:map.width,height:map.height,platforms:map.platforms,zones:map.zones,shrines:map.shrines,relics:map.relics,breakables:map.breakables,decor:map.decor,checkpoint:{...map.checkpoint,active:false},chapter:map.chapter,weather:map.weather,background:map.background,tunnels:map.tunnels});
+      this.enemies=[];this.projectiles=[];this.effects=[];this.hazards=[];this.fields=[];this.particles=[];this.portals=[];this.spawnQueue=[];this.cleared=false;this.hitStop=0;this.waveElapsed=0;this.spawnTimer=1.4;this.hazardTimer=5;this.waveRule=Levels.WAVE_RULES[this.stage%Levels.WAVE_RULES.length];this.hordeTuning=hordeTuning(this.stage+1);this.waveTotal=0;this.waveSpawned=0;this.gateGuards=this.mode==='adventure'?chapter.gateGuards||[]:[];this.echoQueue=[];this.skillPulses=[];
       const p=this.player;Object.assign(p,{x:map.spawn.x,y:map.spawn.y-p.h,vx:0,vy:0,jumps:0,ground:true,invuln:1.2,dashTime:0,swing:null,pendingSkill:null,specialTime:0,attackAnim:0,castAnim:0,dropTime:0,platformId:null,respawn:{...map.spawn}});this.camera=clamp(p.x-W*.38,0,this.width-W);this.cameraY=clamp(p.y-H*.52,0,this.height-H);
       if(this.bossStage)this.addEnemy('boss',this.width-620,this.groundY(this.width-620)-120);
       if(this.mode==='horde'){
@@ -97,7 +106,7 @@
           this.spawnQueue.push({type,side:i%2,lane:(i+this.stage)%3,elite:this.stage>=6&&(i%7===0||this.waveRule.id==='elite'&&i%5===0)});
         }
       }else if(!this.bossStage){
-        const count=18+this.stage*2;for(let i=0;i<count;i++){const x=480+i*(this.width-950)/(count-1)+this.rng()*60,type=i%11===9&&this.stage>=6?'bulwark':i%11===8&&this.stage>=5?'archer':i%11===6&&this.stage>=10?'hellhound':i%9===7&&this.stage>=2?'stalker':i%8===6&&this.stage>=1?'spider':i%7===5?'brute':i%4===3?'caster':i%3===1?'bat':'crawler';this.addEnemy(type,x,this.groundY(x)-48,{elite:this.stage>=3&&i%7===0});}
+        const count=Math.min(52,18+this.stage*2);for(let i=0;i<count;i++){const x=480+i*(this.width-950)/(count-1)+this.rng()*60,type=chapter.deck?chapter.deck[i%chapter.deck.length]:i%11===9&&this.stage>=6?'bulwark':i%11===8&&this.stage>=5?'archer':i%11===6&&this.stage>=10?'hellhound':i%9===7&&this.stage>=2?'stalker':i%8===6&&this.stage>=1?'spider':i%7===5?'brute':i%4===3?'caster':i%3===1?'bat':'crawler';const gateGuard=this.gateGuards.includes(i);this.addEnemy(type,x,this.groundY(x)-48,{gateGuard,chapterSlot:i,elite:gateGuard||this.stage>=3&&i%7===0});}
       }
       this.rememberCampaignCheckpoint();this.emit('stage',{biome:this.biome,boss:this.bossStage,rule:this.mode==='horde'?this.waveRule.name:null});
     }
@@ -107,10 +116,10 @@
     ceilingY(x){let bottom=0;for(const roof of this.platforms)if(roof.ceiling&&x>=roof.x&&x<=roof.x+roof.w)bottom=Math.max(bottom,this.surface(roof,x)+roof.h);return bottom;}
     zoneName(){return this.zones.find(z=>this.player.x>=z.x&&this.player.x<z.x+z.w)?.name||REGIONS[this.biome].name;}
     addEnemy(type,x,y,options={}){
-      const waveScale=this.mode==='horde'?this.hordeTuning.hp:1+this.biome*.3+this.stage*.035;
-      const base=type==='boss'?[76,136,780]:(MONSTERS[type]?.size||MONSTERS.crawler.size).slice();if(type==='boss'&&this.biome===1){base[0]=60;base[1]=112;}
+      const waveScale=this.mode==='horde'?this.hordeTuning.hp:1+Math.min(this.biome,2)*.3+this.stage*.035;
+      const base=type==='boss'?[76,136,780]:(MONSTERS[type]?.size||MONSTERS.crawler.size).slice();if(type==='boss'&&[1,3].includes(this.biome)){base[0]=60;base[1]=112;}
       const elite=!!options.elite,scale=(this.mode==='horde'?this.hordeTuning.damage:waveScale)*(elite?1.15:1),hp=base[2]*waveScale*(elite?1.5:1)*(this.mode==='horde'?this.waveRule.hp:1)*(this.difficulty==='easy'?.8:1);
-      const e={id:(this.enemyId||0)+1,type,x,y:['bat','wisp'].includes(type)?Math.max(70,this.groundY(x+base[0]/2)-220):this.groundY(x+base[0]/2)-base[1],w:base[0],h:base[1],hp,maxHp:hp,vx:0,vy:0,ground:false,dir:-1,cd:1.8+this.rng()*1.5,age:this.rng()*6,flash:0,burn:0,slow:0,venom:0,dead:false,phase:1,action:'idle',actionTime:0,actionCycle:0,scale,elite,jumpCd:this.rng()*2,platformId:null,shock:0,shockLock:0,hitReact:0,bleed:0,charred:0,burnTick:0,animTime:0,outOfBoundsRecoveries:0};
+      const e={id:(this.enemyId||0)+1,type,x,y:['bat','wisp'].includes(type)?Math.max(70,this.groundY(x+base[0]/2)-220):this.groundY(x+base[0]/2)-base[1],w:base[0],h:base[1],hp,maxHp:hp,vx:0,vy:0,ground:false,dir:-1,cd:1.8+this.rng()*1.5,age:this.rng()*6,flash:0,burn:0,slow:0,venom:0,dead:false,phase:1,action:'idle',actionTime:0,actionCycle:0,scale,elite,gateGuard:!!options.gateGuard,chapterSlot:options.chapterSlot,jumpCd:this.rng()*2,platformId:null,shock:0,shockLock:0,hitReact:0,bleed:0,charred:0,burnTick:0,animTime:0,outOfBoundsRecoveries:0};
       if(options.platform){e.x=options.platform.x+options.platform.w*.5;e.y=this.surface(options.platform,e.x+e.w/2)-e.h;e.ground=true;e.platformId=options.platform.id;}
       this.enemyId=e.id;this.enemies.push(e);return e;
     }
@@ -124,6 +133,9 @@
       if(previous.length&&fresh.length){const pick=fresh[Math.floor(rng()*fresh.length)];choices.push(pick);pool.splice(pool.indexOf(pick),1);}
       while(choices.length<3&&pool.length)choices.push(pool.splice(Math.floor(rng()*pool.length),1)[0]);
       for(const card of RESERVES)if(choices.length<3)choices.push(card);
+      if(category==='weapon'&&this.legacyWeapon&&!choices.some(card=>card.id===this.legacyWeapon)){
+        choices[2]=CARDS.find(card=>card.id===this.legacyWeapon);
+      }
       this.cards=choices;return choices;
     }
     offerCards(source='exit'){
@@ -134,7 +146,7 @@
     }
     cardPreview(card){
       const p=this.player,next={...p};card.apply(next);const stats=[['maxHp','vida máxima',0],['power','dano base',100],['haste','velocidade de ataque',100],['crit','crítico',100],['armor','resistência',100],['fire','fogo',0],['frost','gelo',0],['lightning','raio',0],['poison','veneno',0],['echo','eco',0],['shockwave','onda sísmica',0],['speed','movimento',100],['magicPower','poder da habilidade',100]];
-      if(next.weapon!==p.weapon)return WEAPONS[next.weapon].name;
+      if(WEAPON_IDS.includes(card.id)){const weapon=this.weaponStats(card.id);return weapon.name+' · dano básico '+Math.round(weapon.damage*100)+'% · alcance '+weapon.range;}
       const changes=stats.filter(([key])=>next[key]!==p[key]).slice(0,2).map(([key,label,m])=>label+': '+Math.round(p[key]*(m||1))+(m?'%':'')+' → '+Math.round(next[key]*(m||1))+(m?'%':''));
       return changes.join(' · ')||'Efeito permanente na sua build';
     }
@@ -145,13 +157,20 @@
       this.status='running';if(this.upgradeSource==='exit'){this.stage++;this.rerolls+=this.bossStage?1:0;this.loadStage();}else{this.player.invuln=1;this.player.vx=0;this.player.swing=null;this.player.attackAnim=0;}
       if(this.upgradeSource==='start'||this.cleared)this.rememberCampaignCheckpoint();this.emit('chosen',{card,level});return true;
     }
+    objectiveText(){
+      if(this.cleared)return 'Portal liberado →';
+      if(this.mode==='horde')return 'Restantes: '+(this.enemies.length+this.spawnQueue.length+this.portals.length)+' · '+this.score+' pontos';
+      if(this.bossStage)return 'Derrote o guardião';
+      if(this.gateGuards.length)return 'Sentinelas do gelo: '+this.enemies.filter(enemy=>enemy.gateGuard).length+' · selo do portal';
+      return 'Explore · '+this.enemies.length+' inimigos · '+this.relicCount+' relíquias';
+    }
     shrineClear(shrine){return !this.enemies.some(e=>!e.dead&&Math.abs(e.x-shrine.x)<560&&Math.abs(e.y+e.h-shrine.y)<300);}
     interactable(){const p=this.player;if(this.cleared&&Math.abs(p.x+p.w/2-this.checkpoint.x)<100&&Math.abs(p.y+p.h-this.checkpoint.y)<115)return {type:'exit',...this.checkpoint};return this.shrines.find(s=>!s.used&&Math.abs(p.x+p.w/2-s.x)<95&&Math.abs(p.y+p.h-s.y)<115&&this.shrineClear(s))||null;}
     willDraftAtExit(){return this.mode!=='horde'||this.upgradeCount<3||this.bossStage||this.stage%2===0;}
     useCheckpoint(){
       if(this.status!=='running')return false;const target=this.interactable();if(!target)return false;
-      if(target.type==='exit'){if(this.mode==='adventure'&&this.stage===Levels.CHAPTERS.length-1){this.end(true);return true;}this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*(this.mode==='horde'?0:this.bossStage?.15:.1));if(this.mode==='horde'&&!this.willDraftAtExit()){this.stage++;this.loadStage();}else this.offerCards('exit');}
-      else{const shrine=this.shrines.find(s=>s.id===target.id);shrine.used=true;this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*.08);this.player.respawn={x:shrine.x,y:shrine.y};this.offerCards('shrine');}
+      if(target.type==='exit'){if(this.mode==='adventure'&&(this.stage===Levels.CHAPTERS.length-1||this.practiceRegion!==null&&this.stage===this.practiceRegion*5+4)){this.end(true);return true;}this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*(this.mode==='horde'?0:this.bossStage?.15:.1));if(this.mode==='horde'&&!this.willDraftAtExit()){this.stage++;this.loadStage();}else this.offerCards('exit');}
+      else{const shrine=this.shrines.find(s=>s.id===target.id);shrine.used=true;this.rerolls+=shrine.rerolls;this.player.hp=Math.min(this.player.maxHp,this.player.hp+this.player.maxHp*.08);this.player.respawn={x:shrine.x,y:shrine.y};this.offerCards('shrine');}
       return true;
     }
     setElement(element){if(element==='arcane'||this.player[element]>0){this.player.activeElement=element;this.emit('element',{element});return true;}return false;}
@@ -205,30 +224,52 @@
       }
       if(['fire','frost','lightning','poison'].includes(kind))this.emit('status',{element:kind});
     }
+    weaponVariant(weapon=this.player.weapon){
+      const variant=Levels.WEAPON_VARIANTS[this.legacyVariant];
+      return variant?.weapon===weapon?variant:null;
+    }
+    weaponStats(weapon=this.player.weapon){
+      const variant=this.weaponVariant(weapon);
+      return variant?{...WEAPONS[weapon],...variant}:WEAPONS[weapon];
+    }
     attack(){
-      const p=this.player;if(this.status!=='running'||p.attackCd>0||p.swing||p.specialTime>0)return false;const w=WEAPONS[p.weapon];p.combo=p.comboWindow>0?(p.combo+1)%3:0;p.comboWindow=1.1;
+      const p=this.player;if(this.status!=='running'||p.attackCd>0||p.swing||p.specialTime>0)return false;const w=this.weaponStats();p.combo=p.comboWindow>0?(p.combo+1)%3:0;p.comboWindow=1.1;
       const duration=(p.weapon==='hammer'?.66:p.weapon==='bow'?.4:p.weapon==='staff'?.38:.42)/p.haste;p.attackDuration=duration;p.attackAnim=duration;p.attackCd=Math.max(duration,w.cooldown/p.haste);p.swing={weapon:p.weapon,t:0,duration,windup:duration*(p.weapon==='hammer'?.45:.36),hit:false,combo:p.combo,airborne:!p.ground,variant:p.combo%2};this.emit('attack',{weapon:p.weapon,combo:p.combo});return true;
     }
     resolveAttack(swing){
-      const p=this.player,w=WEAPONS[swing.weapon],comboFactor=swing.weapon==='blade'?[1,1.12,1.45][swing.combo]:1;let damage=22*p.power*w.damage*comboFactor*(p.bloodrage&&p.hp/p.maxHp<.4?1.35:1)*(swing.combo===2||swing.airborne?1+p.fury*.25:1);if(swing.weapon==='blade'||swing.weapon==='hammer')damage*=p.meleePower;const critical=this.combatRng()<p.crit;if(critical)damage*=2;
+      const p=this.player,w=this.weaponStats(swing.weapon),variant=this.weaponVariant(swing.weapon),comboFactor=swing.weapon==='blade'?[1,1.12,1.45][swing.combo]:1;let damage=22*p.power*w.damage*comboFactor*(p.bloodrage&&p.hp/p.maxHp<.4?1.35:1)*(swing.combo===2||swing.airborne?1+p.fury*.25:1);if(swing.weapon==='blade'||swing.weapon==='hammer')damage*=p.meleePower;const critical=this.combatRng()<p.crit;if(critical)damage*=2;
       const color=this.elementColor(),x=p.x+p.w/2,y=p.y+p.h*.46;
       if(swing.weapon==='blade'||swing.weapon==='hammer'){
         if(p.shockwave&&p.ground)this.projectiles.push({x:x+p.dir*25,y:this.groundY(x)-22,vx:p.dir*420,vy:0,w:38,h:28,t:1.4,enemy:false,damage:18*p.shockwave*p.power,critical:false,pierce:50,hit:[],kind:'wave',damageKind:'physical',color:'#d4b78d',trail:[]});
         const range=w.range*p.reach+(swing.weapon==='blade'&&swing.combo===2?20:0),hitbox={x:p.dir===1?x:x-range,y:p.y-35,w:range,h:p.h+85};
         this.effects.push({type:'slash',x,y,dir:p.dir,size:range,t:.32,max:.32,heavy:swing.weapon==='hammer',combo:swing.combo,color});
         this.particlesAt(x+p.dir*range*.65,y,color,swing.weapon==='hammer'?25:12,180);
-        for(const e of this.enemies)if(!e.dead&&overlap(hitbox,e)){this.damageEnemy(e,damage,critical,true,'physical');e.vx=p.dir*(e.type==='boss'?60:240);this.hitStop=Math.max(this.hitStop,swing.weapon==='hammer'?.065:.025);}
+        for(const e of this.enemies)if(!e.dead&&overlap(hitbox,e)){this.damageEnemy(e,damage,critical,true,'physical',true,{unblockable:!!variant?.pierceGuard});e.vx=p.dir*(e.type==='boss'?60:240);this.hitStop=Math.max(this.hitStop,swing.weapon==='hammer'?.065:.025);}
+        for(const object of this.breakables)if(!object.broken&&overlap(hitbox,object))this.damageBreakable(object,damage);
         if(swing.weapon==='hammer'){const gy=this.groundY(x);this.effects.push({type:'groundring',x:x+p.dir*35,y:gy,size:170,t:.48,max:.48,color});this.emit('shake',{amount:6});}
       }else{
         const origin=Rig.muzzle(p,swing.weapon,this.time),x=origin.x,y=origin.y;
         let target=null,best=w.range;for(const enemy of this.enemies){const dx=enemy.x+enemy.w/2-x;if(enemy.dead||Math.sign(dx)!==p.dir)continue;const d=Math.hypot(dx,enemy.y+enemy.h/2-y);if(d<best){target=enemy;best=d;}}
-        const angle=target?Math.atan2(target.y+target.h/2-y,target.x+target.w/2-x):p.dir===1?0:Math.PI,speed=swing.weapon==='bow'?840:480;
-        this.projectiles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,w:18,h:12,t:1.4*p.reach,enemy:false,damage,critical,homing:swing.weapon==='staff',pierce:p.pierce,hit:[],color,kind:swing.weapon,damageKind:swing.weapon==='bow'?'physical':'arcane',element:p.activeElement,trail:[]});this.particlesAt(x,y,color,8,90);this.emit('release',{weapon:swing.weapon,element:p.activeElement});
+        const angle=target?Math.atan2(target.y+target.h/2-y,target.x+target.w/2-x):p.dir===1?0:Math.PI,speed=swing.weapon==='bow'?840:525;
+        for(const offset of variant?.angles||[0]){
+          this.projectiles.push({x,y,vx:Math.cos(angle+offset)*speed,vy:Math.sin(angle+offset)*speed,w:18,h:12,t:1.4*p.reach,enemy:false,damage,critical,homing:swing.weapon==='staff',pierce:p.pierce,slowOnHit:!!variant?.slowOnHit,hit:[],color,kind:swing.weapon,damageKind:swing.weapon==='bow'?'physical':'arcane',element:p.activeElement,trail:[]});
+        }
+        this.particlesAt(x,y,color,8,90);this.emit('release',{weapon:swing.weapon,element:p.activeElement});
       }
+    }
+    damageBreakable(object,amount){
+      if(this.status!=='running'||!this.breakables.includes(object)||object.broken||!Number.isFinite(amount)||amount<=0)return false;
+      const conductor=object.kind==='conductor',color=conductor?'#f1cc78':'#c5edff';object.hp=Math.max(0,object.hp-amount);this.particlesAt(object.x+object.w/2,object.y+object.h/2,color,8,120,'ice');
+      if(object.hp===0){
+        object.broken=true;if(conductor)this.hazards=this.hazards.filter(hazard=>hazard.source!=='storm');const before=this.player.hp;this.player.hp=Math.min(this.player.maxHp,before+this.player.maxHp*object.healRatio);this.rerolls+=object.rerolls;this.score+=object.score;
+        this.particlesAt(object.x+object.w/2,object.y+object.h/2,color,24,180,'ice');this.effects.push({type:'text',x:object.x+object.w/2,y:object.y-15,text:conductor?'Eclipse contido':'+1 renovação',t:1.2,max:1.2,color});
+        this.emit('breakable',{name:object.name,healed:this.player.hp-before,rerolls:object.rerolls,...(conductor?{effect:'storm'}:{})});if(this.cleared)this.rememberCampaignCheckpoint();
+      }
+      return true;
     }
     skill(){
       const p=this.player;if(this.status!=='running'||p.skillCd>0||p.specialTime>0)return false;
-      const element=p.activeElement!=='arcane'&&p[p.activeElement]>0?p.activeElement:'arcane',spec=SPECIALS[p.weapon];
+      const element=p.activeElement!=='arcane'&&p[p.activeElement]>0?p.activeElement:this.legacyRune||'arcane',spec=SPECIALS[p.weapon];
       p.skillCd=spec.cooldown/p.magicRate;p.specialTime=spec.duration;p.specialDuration=spec.duration;p.specialWindup=spec.windup;p.castAnim=spec.duration;p.swing=null;p.attackAnim=0;
       p.pendingSkill={element,weapon:p.weapon,t:spec.windup};if(p.weapon==='hammer'&&!p.ground)p.vy=Math.max(650,p.vy);const origin=['bow','staff'].includes(p.weapon)?Rig.muzzle(p,p.weapon,this.time):{x:p.x+p.w/2,y:p.y+p.h-58};
       this.effects.push({type:'charge',element,weapon:p.weapon,x:origin.x,y:origin.y,follow:true,size:p.weapon==='bow'?34:50,t:spec.windup,max:spec.windup,color:COLORS[element]||COLORS.arcane});this.emit('cast',{element,weapon:p.weapon});return true;
@@ -248,10 +289,11 @@
         const gy=this.groundY(x),radius=225+(p.magicRange-245)*.35;
         this.effects.push({type:'quake',element,x,y:gy,size:radius,t:.85,max:.85,color});this.particlesAt(x,gy,color,50,300,'debris');
         for(const enemy of this.enemies)if(!enemy.dead&&Math.abs(enemy.x+enemy.w/2-x)<radius&&Math.abs(enemy.y+enemy.h-gy)<160){this.damageEnemy(enemy,85*damage,false,true,'physical',true,{unblockable:true});if(enemy.type!=='boss'){enemy.vy=-260;enemy.ground=false;}this.damageVisual(enemy,element);}
+        for(const object of this.breakables)if(!object.broken&&Math.abs(object.x+object.w/2-x)<radius&&Math.abs(object.y+object.h-gy)<160)this.damageBreakable(object,85*damage);
         for(const dir of [-1,1])this.projectiles.push({x,y:gy-22,vx:dir*430,vy:0,w:45,h:32,t:1.1,enemy:false,damage:26*damage,critical:false,pierce:40,hit:[],kind:'wave',damageKind:'physical',element,color,trail:[]});this.emit('shake',{amount:8});
       }else{
         const origin=Rig.muzzle(p,weapon,this.time),angle=this.aimFrom(origin),bow=weapon==='bow',speed=bow?1120:620;
-        this.projectiles.push({x:origin.x,y:origin.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,w:bow?32:42,h:bow?18:42,t:2.1+(bow?(p.magicRange-245)/1120:0),enemy:false,damage:(bow?118:82)*damage,critical:bow,pierce:bow?4+p.pierce:0,hit:[],kind:bow?'chargedArrow':'superOrb',damageKind:bow?'physical':element,element,color,explosion:!bow,radius:130+(p.magicRange-245)*.28,trail:[]});
+        this.projectiles.push({x:origin.x,y:origin.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,w:bow?32:42,h:bow?18:42,t:2.1+(bow?(p.magicRange-245)/1120:0),enemy:false,damage:(bow?118:95)*damage,critical:bow,pierce:bow?4+p.pierce:0,hit:[],kind:bow?'chargedArrow':'superOrb',damageKind:bow?'physical':element,element,color,explosion:!bow,radius:130+(p.magicRange-245)*.28,trail:[]});
         this.effects.push({type:'muzzle',x:origin.x,y:origin.y,size:bow?42:65,t:.3,max:.3,color});this.particlesAt(origin.x,origin.y,color,25,180);this.emit('release',{weapon,element,super:true});
       }
       this.emit('skill',{weapon,element,name:SPECIALS[weapon].name});return true;
@@ -259,6 +301,7 @@
     explodeShot(shot){
       if(shot.exploded)return;shot.exploded=true;const color=shot.color||COLORS[shot.element];this.effects.push({type:'nova',element:shot.element,x:shot.x,y:shot.y,size:shot.radius||125,t:.7,max:.7,color});this.particlesAt(shot.x,shot.y,color,40,220,shot.element==='frost'?'ice':'spark');
       for(const enemy of this.enemies)if(!enemy.dead&&!shot.hit.includes(enemy.id)&&Math.hypot(enemy.x+enemy.w/2-shot.x,enemy.y+enemy.h*.5-shot.y)<shot.radius){this.damageEnemy(enemy,shot.damage*.55,false,true,shot.element,false);this.damageVisual(enemy,shot.element);}
+      for(const object of this.breakables)if(!object.broken&&!shot.hit.includes('object:'+object.id)&&Math.hypot(object.x+object.w/2-shot.x,object.y+object.h/2-shot.y)<shot.radius)this.damageBreakable(object,shot.damage*.55);
       if(shot.element==='fire'||shot.element==='poison')this.fields.push({x:shot.x,y:shot.y,radius:95,t:2.5,max:2.5,damage:8,element:shot.element,color});
     }
     elementColor(){const p=this.player,k=p.activeElement!=='arcane'&&p[p.activeElement]>0?p.activeElement:p.lightning?'lightning':p.fire?'fire':p.frost?'frost':p.poison?'poison':'arcane';return COLORS[k]||'#b9e4d4';}
@@ -274,7 +317,7 @@
       this.effects.push({type:'burst',x:e.x+e.w/2,y:e.y+e.h/2,size:e.type==='boss'?160:65,t:.75,max:.75,color:e.burn?COLORS.fire:REGIONS[this.biome].accent});if(e.type==='boss'){this.bosses++;this.rerolls++;this.emit('bosskill');this.emit('shake',{amount:12});}this.emit('kill',{boss:e.type==='boss',elite:e.elite});
       if(p.inferno&&e.burn>0){this.effects.push({type:'nova',element:'fire',x:e.x+e.w/2,y:e.y+e.h/2,size:125,t:.4,max:.4,color:COLORS.fire});for(const other of this.enemies)if(!other.dead&&Math.hypot(other.x-e.x,other.y-e.y)<125)this.damageEnemy(other,24,false,false,'fire',false);}
     }
-    hurtPlayer(damage,sourceX,kind='physical'){const p=this.player;if(p.invuln>0||p.dashTime>0||this.status!=='running')return false;const factor=this.difficulty==='easy'?.7:this.difficulty==='hard'?1.45:1;p.hp=Math.max(0,p.hp-damage*factor*(1-p.armor)*(p.postDash>0?1-p.aegis*.15:1));p.invuln=.8;p.hurtAnim=.28;this.damageVisual(p,kind,damage);if(sourceX!==undefined)p.vx=Math.sign(p.x-sourceX)*210;this.particlesAt(p.x+p.w/2,p.y+p.h*.5,'#e4b092',15,150);this.emit('hurt',{kind,damage});if(kind==='web')p.snare=1.8;this.emit('shake',{amount:5});if(p.hp<=0)this.end(false);return true;}
+    hurtPlayer(damage,sourceX,kind='physical'){const p=this.player;if(p.invuln>0||p.dashTime>0||this.status!=='running')return false;const factor=this.difficulty==='easy'?.7:this.difficulty==='hard'?1.45:1;const windupGuard=p.swing&&p.swing.t<p.swing.windup?(this.weaponVariant()?.windupGuard||0):0;p.hp=Math.max(0,p.hp-damage*factor*(1-windupGuard)*(1-p.armor)*(p.postDash>0?1-p.aegis*.15:1));p.invuln=.8;p.hurtAnim=.28;this.damageVisual(p,kind,damage);if(sourceX!==undefined)p.vx=Math.sign(p.x-sourceX)*210;this.particlesAt(p.x+p.w/2,p.y+p.h*.5,'#e4b092',15,150);this.emit('hurt',{kind,damage});if(kind==='web')p.snare=1.8;this.emit('shake',{amount:5});if(p.hp<=0)this.end(false);return true;}
     shootEnemy(e,angle,speed=250,damage=12,kind='orb'){this.projectiles.push({x:e.x+e.w/2,y:e.y+e.h*.4,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,w:14,h:14,t:5,enemy:true,damage:damage*e.scale,color:this.biome===2?'#f39e6c':'#cf9ea5',kind,damageKind:kind==='web'?'web':kind==='fireball'?'fire':this.biome===1?'lightning':'arcane',trail:[]});}
     mobAI(e,dt){
       if(['archer','bulwark','spider','hellhound','wisp'].includes(e.type)){this.extraMobAI(e,dt);return;}
@@ -361,17 +404,47 @@
           if(e.nextAction==='shots'){const a=Math.atan2(p.y+p.h/2-e.y-e.h*.4,p.x+p.w/2-e.x-e.w/2);for(let i=-1;i<=1;i++)this.shootEnemy(e,a+i*.22,260+e.phase*30,13);}
           if(e.nextAction==='crystals')for(let i=0;i<3+e.phase;i++){const x=clamp(p.x+(i-1)*145,80,this.width-80);this.hazards.push({x,y:this.groundY(x),t:.9,max:.9,age:0,damage:17*e.scale,active:false});}
           if(e.nextAction==='fan')for(let i=0;i<7;i++)this.shootEnemy(e,-Math.PI+.18+i*(Math.PI-.36)/6,245+e.phase*30,14,'fireball');
+          if(e.nextAction==='whiteout'){
+            const focus=p.x+p.w/2;
+            for(let i=-e.phase;i<=e.phase;i++){
+              const x=clamp(focus+i*145,80,this.width-80);
+              this.hazards.push({x,y:this.groundY(x),t:1.05,max:1.05,age:0,damage:14*e.scale,active:false});
+            }
+            const direction=e.dir>0?0:-Math.PI;
+            for(let i=1;i<=2;i++)this.shootEnemy(e,direction+(e.dir>0?-i:i)*.18,315,12);
+          }
+          if(e.nextAction==='sunrise'){
+            const center=e.dir>0?0:-Math.PI;
+            for(let i=-e.phase-1;i<=e.phase+1;i++)this.shootEnemy(e,center+i*.28,300+i*9,14,'fireball');
+            this.effects.push({type:'nova',x:e.x+e.w/2,y:gy-28,size:136,t:.48,max:.48,color:REGIONS[this.biome].accent});
+          }
         }
       }else if(e.action==='leap'){if(e.ground&&e.actionTime<.3){e.action='idle';e.cd=1.6;const y=this.groundY(e.x);for(const dir of [-1,1])this.projectiles.push({x:e.x+e.w/2,y:y-25,vx:dir*340,vy:0,w:35,h:25,t:4,enemy:true,damage:20*e.scale,color:'#f9a568',kind:'wave',trail:[]});this.effects.push({type:'groundring',x:e.x+e.w/2,y,size:240,t:.6,max:.6,color:'#ffbe70'});this.particlesAt(e.x+e.w/2,y,'#ffbe70',40,280);this.emit('shake',{amount:8});}}
       else if(e.action==='charge'&&e.actionTime<=0){e.action='idle';e.cd=1.4;}
       else if(e.action==='recover'){e.vx=approach(e.vx,0,600*dt);if(e.actionTime<=0){e.action='idle';e.animTime=0;}}
-      else if(e.action==='idle'){const speed=this.biome===0?45:this.biome===1?80:60;e.vx=approach(e.vx,Math.abs(p.x-e.x)>200?e.dir*speed:0,400*dt);if(e.cd<=0){e.actionCycle++;e.action='windup';e.animTime=0;e.actionTime=e.phase===2?.6:.9;e.vx=0;const cycle=e.actionCycle%3;e.nextAction=this.biome===0?(cycle===1?'shots':'roots'):this.biome===1?(cycle===1?'shots':'crystals'):cycle===0?'fan':cycle===1?'charge':'slam';if(this.biome===1&&cycle===2){this.effects.push({type:'sigil',element:'lightning',x:e.x+e.w/2,y:e.y+e.h/2,size:120,t:.7,max:.7,color:COLORS.lightning});}this.emit('telegraph',{action:e.nextAction});}}
+      else if(e.action==='idle'){
+        const pattern=BOSS_PATTERNS[this.biome];
+        e.vx=approach(e.vx,Math.abs(p.x-e.x)>200?e.dir*pattern.speed:0,400*dt);
+        if(e.cd<=0){
+          e.actionCycle++;e.action='windup';e.animTime=0;e.actionTime=e.phase===2?.6:.9;e.vx=0;
+          const cycle=e.actionCycle%pattern.actions.length;
+          e.nextAction=pattern.actions[cycle];
+          if(this.biome===1&&cycle===2||['whiteout','sunrise'].includes(e.nextAction)){
+            const color=this.biome===1?COLORS.lightning:REGIONS[this.biome].accent;
+            this.effects.push({type:'sigil',element:'lightning',x:e.x+e.w/2,y:e.y+e.h/2,size:120,t:.7,max:.7,color});
+          }
+          this.emit('telegraph',{action:e.nextAction});
+        }
+      }
       if(e.slow>0)e.vx*=.75;this.moveBody(e,dt);
     }
     spawnHorde(dt){
       if(this.spawnQueue.length&&this.enemies.filter(e=>!e.dead).length<this.hordeTuning.simultaneous){this.spawnTimer-=dt;if(this.spawnTimer<=0){const spawn=this.spawnQueue.shift(),x=spawn.side?this.width-110:70;let platform=null;if(spawn.lane&&['caster','archer'].includes(spawn.type)){const elevated=this.platforms.filter(p=>p.oneWay&&!p.moving);platform=elevated[spawn.side?elevated.length-1:0];}this.portals.push({...spawn,x:platform?platform.x+platform.w*.5:x,y:platform?platform.y:this.groundY(x),platform,t:.9});this.spawnTimer=this.hordeTuning.interval;}}
       for(const portal of this.portals){portal.t-=dt;if(portal.t<=0){this.addEnemy(portal.type,portal.x,portal.y,{elite:portal.elite,platform:portal.platform});this.waveSpawned++;this.emit('spawn');}}this.portals=this.portals.filter(p=>p.t>0);
-      if(this.waveRule.id==='storm'&&!this.cleared){this.hazardTimer-=dt;if(this.hazardTimer<=0){const x=clamp(this.player.x+80,80,this.width-80);this.hazards.push({x,y:this.groundY(x),t:1.2,max:1.2,age:0,damage:10+this.stage,active:false});this.hazardTimer=5;}}
+      this.stormColumns(dt);
+    }
+    stormColumns(dt){
+      if(this.waveRule.id==='storm'&&!this.cleared&&!this.breakables.some(object=>object.kind==='conductor'&&object.broken)){this.hazardTimer-=dt;if(this.hazardTimer<=0){const x=clamp(this.player.x+80,80,this.width-80);this.hazards.push({x,y:this.groundY(x),t:1.2,max:1.2,age:0,damage:10+this.stage,active:false,source:'storm'});this.hazardTimer=5;}}
     }
     update(dt,input={}){
       if(this.status!=='running')return;dt=clamp(dt,0,1/30);this.time+=dt;this.waveElapsed+=dt;const p=this.player;if(this.hitStop>0){this.hitStop=Math.max(0,this.hitStop-dt);return;}
@@ -384,21 +457,23 @@
       if(input.dash&&p.dashCd<=0){p.dashTime=.21;p.postDash=2;p.dashCd=1.3/p.dashRate;p.invuln=Math.max(p.invuln,.25);p.vy=0;this.particlesAt(p.x,p.y+p.h*.5,this.elementColor(),12,90);this.emit('dash');}
       if(p.dashTime>0){p.vx=p.dir*790;p.vy=0;if(Math.floor(this.time*60)%2===0)this.effects.push({type:'ghost',x:p.x,y:p.y,dir:p.dir,t:.3,max:.3,color:this.elementColor()});}
       else{const moveFactor=p.specialTime>0?(p.weapon==='bow'?.48:.64):p.castAnim>0?.7:p.swing?.weapon==='hammer'?.52:p.swing?.weapon==='blade'?.78:1;const terrainFactor=p.terrain==='mud'?.64:p.terrain==='water'?.78:1,acceleration=p.terrain==='ice'?(axis?510:180):2200;p.vx=approach(p.vx,axis*300*p.speed*moveFactor*terrainFactor*(p.snare>0?.58:1),dt*acceleration);if(p.terrain==='wind')p.vx+=Math.sin(this.time*.7+this.stage)*210*dt;if(p.terrain==='conveyor')p.vx+=125*dt;}
-      p.jumpAge+=dt;p.runPhase+=Math.abs(p.vx)*dt/46;this.moveBody(p,dt);if(p.ground){p.jumps=0;p.coyote=.09;}else p.coyote=Math.max(0,p.coyote-dt);
+      p.jumpAge+=dt;p.runPhase+=Math.abs(p.vx)*dt/46;this.moveBody(p,dt);if(this.status!=='running')return;if(p.ground){p.jumps=0;p.coyote=.09;}else p.coyote=Math.max(0,p.coyote-dt);
       if(p.ground&&Math.abs(p.vx)>90&&p.footstepTimer<=0){p.footstepTimer=.2;const wet=['water','mud'].includes(p.terrain);this.particlesAt(p.x+p.w/2,p.y+p.h,wet?'#8cbac7':'#a9a794',wet?5:3,wet?90:45,wet?'splash':'dust');this.emit('step',{terrain:p.terrain,kind:support?.kind});}
       if(p.pendingSkill){p.pendingSkill.t-=dt;if(p.pendingSkill.weapon==='hammer'&&p.pendingSkill.t<=0&&!p.ground)p.specialTime=Math.max(p.specialTime,.35);if(p.pendingSkill.t<=0&&(p.pendingSkill.weapon!=='hammer'||p.ground)){const {element,weapon}=p.pendingSkill;p.pendingSkill=null;this.resolveSkill(element,weapon);}}
       if(p.swing){p.swing.t+=dt;if(!p.swing.hit&&p.swing.t>=p.swing.windup){p.swing.hit=true;this.resolveAttack(p.swing);}if(p.swing.t>=p.swing.duration)p.swing=null;}
       if(input.attack)this.attack();if(input.skill)this.skill();if(input.interact)this.useCheckpoint();if(this.status!=='running')return;
-      for(const relic of this.relics)if(!relic.taken&&Math.hypot(p.x+p.w/2-relic.x,p.y+p.h/2-relic.y)<58){relic.taken=true;this.relicCount++;if(this.relicCount%3===0)this.rerolls++;this.score+=200;this.particlesAt(relic.x,relic.y,'#ffe6a1',28,160);this.emit('relic');}
+      for(const relic of this.relics)if(!relic.disabled&&!relic.taken&&Math.hypot(p.x+p.w/2-relic.x,p.y+p.h/2-relic.y)<58){relic.taken=true;this.relicCount++;if(this.relicCount%3===0)this.rerolls++;this.score+=200;this.particlesAt(relic.x,relic.y,'#ffe6a1',28,160);this.emit('relic');}
       if(p.terrain==='lava'&&p.terrainWard<1)this.hurtPlayer(9*(1-p.terrainWard),undefined,'fire');
-      if(this.mode==='horde')this.spawnHorde(dt);
-      for(const pulse of this.skillPulses){pulse.t-=dt;if(pulse.t<=0){const x=p.x+p.w/2,y=p.y+p.h-52;for(const enemy of this.enemies)if(!enemy.dead&&Math.hypot(enemy.x+enemy.w/2-x,enemy.y+enemy.h*.5-y)<pulse.radius){this.damageEnemy(enemy,pulse.damage,false,true,'physical',true,{unblockable:true});this.damageVisual(enemy,pulse.element);}}}this.skillPulses=this.skillPulses.filter(pulse=>pulse.t>0);
+      if(this.status!=='running')return;
+      if(this.mode==='horde')this.spawnHorde(dt);else if(this.breakables.some(object=>object.kind==='conductor'))this.stormColumns(dt);
+      for(const pulse of this.skillPulses){pulse.t-=dt;if(pulse.t<=0){const x=p.x+p.w/2,y=p.y+p.h-52;for(const enemy of this.enemies)if(!enemy.dead&&Math.hypot(enemy.x+enemy.w/2-x,enemy.y+enemy.h*.5-y)<pulse.radius){this.damageEnemy(enemy,pulse.damage,false,true,'physical',true,{unblockable:true});this.damageVisual(enemy,pulse.element);}for(const object of this.breakables)if(!object.broken&&Math.hypot(object.x+object.w/2-x,object.y+object.h/2-y)<pulse.radius)this.damageBreakable(object,pulse.damage);}}this.skillPulses=this.skillPulses.filter(pulse=>pulse.t>0);
       for(const echo of this.echoQueue){echo.t-=dt;if(echo.t<=0&&!echo.target.dead){this.damageEnemy(echo.target,echo.damage,false,false,'echo',false);this.effects.push({type:'slash',x:echo.target.x,y:echo.target.y+echo.target.h/2,dir:1,size:65,t:.2,max:.2,color:'#adc9ed'});}}this.echoQueue=this.echoQueue.filter(q=>q.t>0);
       for(const e of this.enemies){
         if(e.dead)continue;e.age+=dt;e.animTime+=dt;e.hitReact=Math.max(0,e.hitReact-dt);e.bleed=Math.max(0,e.bleed-dt);e.shock=Math.max(0,e.shock-dt);e.shockLock=Math.max(0,e.shockLock-dt);e.shockVisual=Math.max(0,(e.shockVisual||0)-dt);e.frostVisual=Math.max(0,(e.frostVisual||0)-dt);e.poisonVisual=Math.max(0,(e.poisonVisual||0)-dt);e.flash=Math.max(0,e.flash-dt);e.slow=Math.max(0,e.slow-dt);if(e.burn>0){e.burn-=dt;e.hp-=6*Math.max(1,p.fire)*dt;e.charred=Math.min(1,e.charred+dt*.08);e.burnTick-=dt;if(e.burnTick<=0){this.particlesAt(e.x+e.w*.5,e.y+e.h*.6,'#f69949',3,50,'ember');e.burnTick=.11;}}if(e.venom>0){e.venom-=dt;e.hp-=4*p.poison*(p.plague?2:1)*dt;}if(e.hp<=0){this.killEnemy(e);continue;}
         if(this.mode==='adventure'&&e.type!=='boss'&&Math.abs(e.x-p.x)>1150)continue;
         if(e.type==='boss')this.bossAI(e,dt);else this.mobAI(e,dt);
         if(overlap(p,e))this.hurtPlayer(e.type==='boss'?20*e.scale:10*e.scale,e.x);
+        if(this.status!=='running')return;
       }
       for(const shot of this.projectiles){shot.t-=dt;if(shot.t<=0)continue;
         if(shot.homing&&!shot.enemy){let target=null,best=500;for(const e of this.enemies){if(e.dead||shot.hit.includes(e.id))continue;const d=Math.hypot(e.x-shot.x,e.y-shot.y);if(d<best){best=d;target=e;}}if(target){const a=Math.atan2(target.y+target.h/2-shot.y,target.x+target.w/2-shot.x);shot.vx=approach(shot.vx,Math.cos(a)*480,dt*1400);shot.vy=approach(shot.vy,Math.sin(a)*480,dt*1400);}}
@@ -407,27 +482,38 @@
         if(shot.kind!=='wave')for(const solid of this.platforms){if(solid.oneWay!==false||shot.x<solid.x||shot.x>solid.x+solid.w)continue;const top=this.surface(solid,shot.x);const collision=solid.ceiling?shot.y>=top&&shot.y<=top+solid.h:shot.y>top+2&&oldShotY<=this.surface(solid,oldShotX)+4;if(collision){if(shot.explosion)this.explodeShot(shot);this.particlesAt(shot.x,shot.y,shot.color,10,120,shot.element==='frost'?'ice':'spark');shot.t=0;break;}}
         if(shot.t<=0)continue;
 
-        if(shot.enemy){if(overlap({x:shot.x-shot.w/2,y:shot.y-shot.h/2,w:shot.w,h:shot.h},p)){this.hurtPlayer(shot.damage,shot.x,shot.damageKind||'arcane');shot.t=0;this.particlesAt(shot.x,shot.y,shot.color,12,120);}}
-        else for(const e of this.enemies){if(e.dead||shot.hit.includes(e.id))continue;if(overlap({x:shot.x-shot.w/2,y:shot.y-shot.h/2,w:shot.w,h:shot.h},e)){shot.hit.push(e.id);this.damageEnemy(e,shot.damage,shot.critical,true,shot.damageKind||'physical',true,{weapon:shot.kind==='chargedArrow'?'bow':shot.kind});this.damageVisual(e,shot.element||'arcane');if(shot.explosion)this.explodeShot(shot);if(shot.pierce<=0){shot.t=0;break;}shot.pierce--;}}
+        if(shot.enemy){if(overlap({x:shot.x-shot.w/2,y:shot.y-shot.h/2,w:shot.w,h:shot.h},p)){this.hurtPlayer(shot.damage,shot.x,shot.damageKind||'arcane');shot.t=0;this.particlesAt(shot.x,shot.y,shot.color,12,120);if(this.status!=='running')return;}}
+        else for(const e of this.enemies){if(e.dead||shot.hit.includes(e.id))continue;if(overlap({x:shot.x-shot.w/2,y:shot.y-shot.h/2,w:shot.w,h:shot.h},e)){shot.hit.push(e.id);this.damageEnemy(e,shot.damage,shot.critical,true,shot.damageKind||'physical',true,{weapon:shot.kind==='chargedArrow'?'bow':shot.kind});this.damageVisual(e,shot.element||'arcane');if(shot.slowOnHit)this.damageVisual(e,'frost');if(shot.explosion)this.explodeShot(shot);if(shot.pierce<=0){shot.t=0;break;}shot.pierce--;}}
+        if(!shot.enemy&&shot.t>0)for(const object of this.breakables){
+          const key='object:'+object.id;if(object.broken||shot.hit.includes(key)||!overlap({x:shot.x-shot.w/2,y:shot.y-shot.h/2,w:shot.w,h:shot.h},object))continue;
+          shot.hit.push(key);this.damageBreakable(object,shot.damage);if(shot.explosion)this.explodeShot(shot);if(shot.pierce<=0){shot.t=0;break;}shot.pierce--;
+        }
         if(shot.x<0||shot.x>this.width||shot.y<0||shot.y>this.height+50)shot.t=0;
       }
-      for(const field of this.fields){field.t-=dt;if(field.enemy){if(Math.hypot(p.x+p.w/2-field.x,p.y+p.h-10-field.y)<field.radius)this.hurtPlayer(field.damage,field.x,field.element);continue;}for(const enemy of this.enemies)if(!enemy.dead&&Math.hypot(enemy.x+enemy.w/2-field.x,enemy.y+enemy.h/2-field.y)<field.radius){enemy.hp-=field.damage*p.magicPower*dt;if(field.element==='fire')enemy.burn=Math.max(enemy.burn,.3);if(field.element==='poison')enemy.venom=Math.max(enemy.venom,.15);if(enemy.hp<=0)this.killEnemy(enemy);}}
+      for(const field of this.fields){field.t-=dt;if(field.enemy){if(Math.hypot(p.x+p.w/2-field.x,p.y+p.h-10-field.y)<field.radius)this.hurtPlayer(field.damage,field.x,field.element);if(this.status!=='running')return;continue;}for(const enemy of this.enemies)if(!enemy.dead&&Math.hypot(enemy.x+enemy.w/2-field.x,enemy.y+enemy.h/2-field.y)<field.radius){enemy.hp-=field.damage*p.magicPower*dt;if(field.element==='fire')enemy.burn=Math.max(enemy.burn,.3);if(field.element==='poison')enemy.venom=Math.max(enemy.venom,.15);if(enemy.hp<=0)this.killEnemy(enemy);}}
       this.fields=this.fields.filter(f=>f.t>0);
       for(const h of this.hazards){h.age+=dt;h.t-=dt;if(!h.active&&h.t<=0){h.active=true;h.t=.6;this.emit('shake',{amount:3});this.particlesAt(h.x,h.y-20,COLORS.lightning,18,200);}if(h.active&&Math.abs(p.x+p.w/2-h.x)<35&&p.y+p.h>h.y-125&&p.y<h.y)this.hurtPlayer(h.damage,h.x,'lightning');}
       this.hazards=this.hazards.filter(h=>h.t>0||!h.active);this.projectiles=this.projectiles.filter(s=>s.t>0);for(const effect of this.effects)effect.t-=dt;this.effects=this.effects.filter(e=>e.t>0);for(const particle of this.particles){particle.t-=dt;particle.x+=particle.vx*dt;particle.y+=particle.vy*dt;particle.vy+=(particle.kind==='dust'?40:particle.kind==='smoke'?-50:particle.kind==='ember'?-90:particle.kind==='blood'?650:270)*dt;particle.vx*=.985;if(particle.kind==='blood'&&particle.y>=this.groundY(particle.x)){particle.y=this.groundY(particle.x)-1;particle.kind='bloodstain';particle.vx=0;particle.vy=0;particle.t=4;particle.max=4;}if(particle.kind==='bloodstain')particle.vy=0;}this.particles=this.particles.filter(p=>p.t>0);
-      this.enemies=this.enemies.filter(e=>!e.dead);if(!this.cleared&&!this.enemies.length&&!this.spawnQueue.length&&!this.portals.length&&this.status==='running'){this.cleared=true;this.checkpoint.active=true;if(this.mode==='horde'){this.completedWaves=this.stage+1;this.score+=200+Math.max(0,Math.round(200-this.waveElapsed*2));p.hp=Math.min(p.maxHp,p.hp+p.maxHp*(this.bossStage?.08:.04));}this.rememberCampaignCheckpoint();this.emit('clear');}
+      this.enemies=this.enemies.filter(e=>!e.dead);const combatPending=this.gateGuards.length?this.enemies.some(e=>e.gateGuard):this.enemies.length>0;if(!this.cleared&&!combatPending&&!this.spawnQueue.length&&!this.portals.length&&this.status==='running'){this.cleared=true;this.checkpoint.active=true;if(this.mode==='horde'){this.completedWaves=this.stage+1;this.score+=200+Math.max(0,Math.round(200-this.waveElapsed*2));p.hp=Math.min(p.maxHp,p.hp+p.maxHp*(this.bossStage?.08:.04));}this.rememberCampaignCheckpoint();this.emit('clear');}
       this.camera=clamp(approach(this.camera,p.x-W*.38,dt*1100),0,Math.max(0,this.width-W));this.cameraY=clamp(approach(this.cameraY,p.y-H*.53,dt*600),0,Math.max(0,this.height-H));
     }
     rememberCampaignCheckpoint(){
-      if(this.mode==='adventure'&&!['menu','ended'].includes(this.status))this.campaignCheckpoint=this.checkpointData();
+      if(this.mode==='adventure'&&this.practiceRegion===null&&!['menu','ended'].includes(this.status))this.campaignCheckpoint=this.checkpointData();
     }
     checkpointData(){
+      if(this.practiceRegion!==null)return null;
       const phase=this.status==='upgrade'?'draft':this.cleared?'cleared':'entry';
       const data={format:this.mode==='adventure'?'cinzas-campaign':'cinzas-horde',edition:'0.5',version:1,phase,name:this.name,difficulty:this.difficulty,seed:this.seed,stage:this.stage,completedWaves:this.completedWaves,time:this.time,kills:this.kills,bosses:this.bosses,score:this.score,hp:this.player.hp,history:this.chosenHistory.slice(),activeElement:this.player.activeElement,rerolls:this.rerolls,rerollCount:this.rerollCount,draftCount:this.draftCount,cards:phase==='draft'?this.cards.map(c=>c.id):[],upgradeSource:phase==='draft'?this.upgradeSource:null};
+      if(this.mode==='adventure'&&this.breakables.length)data.brokenObjects=this.breakables.filter(object=>object.broken).map(object=>object.id);
+      if(this.legacyWeapon)data.legacyWeapon=this.legacyWeapon;
+      if(this.legacyRune)data.legacyRune=this.legacyRune;
+      if(this.legacyVariant)data.legacyVariant=this.legacyVariant;
+      if(this.cleared&&this.gateGuards.length)data.remainingEnemies=this.enemies.filter(enemy=>!enemy.dead).map(enemy=>enemy.chapterSlot);
       if(this.mode==='adventure')Object.assign(data,{completedChapters:this.stage+(this.cleared?1:0),relicCount:this.relicCount,usedShrines:this.shrines.filter(s=>s.used).map(s=>s.id),takenRelics:this.relics.flatMap((r,i)=>r.taken?[i]:[])});
       return data;
     }
     createCheckpoint(){
+      if(this.practiceRegion!==null)return null;
       if(this.mode==='adventure')return this.campaignCheckpoint?JSON.parse(JSON.stringify(this.campaignCheckpoint)):null;
       return this.mode==='horde'?this.checkpointData():null;
     }
@@ -436,11 +522,19 @@
         const validNumber=(v,max)=>Number.isFinite(v)&&v>=0&&v<=max;
         if(!data||!['cinzas-horde','cinzas-campaign'].includes(data.format)||data.edition!=='0.5'||data.version!==1||!['entry','cleared','draft'].includes(data.phase))return false;
         const campaign=data.format==='cinzas-campaign';
+        if(!campaign&&Object.hasOwn(data,'brokenObjects'))return false;
+        if(Object.hasOwn(data,'legacyWeapon')&&(!campaign||!WEAPON_IDS.includes(data.legacyWeapon)))return false;
+        if(Object.hasOwn(data,'legacyVariant')&&(!campaign||!Object.hasOwn(Levels.WEAPON_VARIANTS,data.legacyVariant)))return false;
+        if(data.legacyVariant&&data.legacyWeapon&&Levels.WEAPON_VARIANTS[data.legacyVariant].weapon!==data.legacyWeapon)return false;
+        if(Object.hasOwn(data,'legacyRune')&&(!campaign||typeof data.legacyRune!=='string'||!Object.hasOwn(Levels.RUNES,data.legacyRune)))return false;
         if(!Number.isInteger(data.stage)||data.stage<0||data.stage>(campaign?Levels.CHAPTERS.length-1:9999)||!['easy','normal','hard'].includes(data.difficulty)||typeof data.name!=='string'||data.name.length>20||typeof data.seed!=='string'||data.seed.length>64)return false;
         if(!Array.isArray(data.history)||data.history.length>1000||!validNumber(data.hp,20000)||data.hp<=0||!validNumber(data.kills,1e7)||!validNumber(data.time,1e8)||!validNumber(data.score,1e10)||!validNumber(data.bosses,10000))return false;
         const finished=data.phase==='cleared'||data.phase==='draft'&&data.upgradeSource==='exit';
-        if(campaign?(data.completedWaves!==0||data.completedChapters!==data.stage+(finished?1:0)||!Number.isInteger(data.relicCount)||!validNumber(data.relicCount,6)||data.bosses>3):data.completedWaves!==data.stage+(finished?1:0))return false;
-        const probe=new Engine();probe.start({mode:campaign?'adventure':'horde',difficulty:data.difficulty,name:data.name,seed:data.seed});
+        const chaptersReached=Levels.CHAPTERS.slice(0,data.stage+1);
+        const relicLimit=Math.max(6,chaptersReached.filter((chapter,index)=>!chapter.boss&&index%2===1).length+chaptersReached.filter(chapter=>chapter.shrineRoute).length);
+        const bossLimit=Math.max(3,chaptersReached.filter(chapter=>chapter.boss).length);
+        if(campaign?(data.completedWaves!==0||data.completedChapters!==data.stage+(finished?1:0)||!Number.isInteger(data.relicCount)||!validNumber(data.relicCount,relicLimit)||data.bosses>bossLimit):data.completedWaves!==data.stage+(finished?1:0))return false;
+        const probe=new Engine();probe.start({mode:campaign?'adventure':'horde',difficulty:data.difficulty,name:data.name,seed:data.seed,legacyWeapon:data.legacyWeapon,legacyRune:data.legacyRune,legacyVariant:data.legacyVariant});
         for(const id of data.history){const card=[...CARDS,...RESERVES].find(c=>c.id===id);if(!card||(probe.owned[id]||0)>=card.max)return false;card.apply(probe.player);probe.owned[id]=(probe.owned[id]||0)+1;probe.chosenHistory.push(id);if(!probe.selectedCards.some(c=>c.id===id))probe.selectedCards.push(card);}
         if(data.hp>probe.player.maxHp+.001)return false;
         for(const key of ['rerolls','rerollCount','draftCount'])if(!Number.isInteger(data[key])||!validNumber(data[key],10000))return false;
@@ -448,15 +542,24 @@
         if(data.activeElement==='arcane'||ELEMENT_IDS.includes(data.activeElement)&&probe.player[data.activeElement]>0)probe.player.activeElement=data.activeElement;else return false;
         probe.events=[];probe.loadStage();
         if(campaign){
+          const broken=Object.hasOwn(data,'brokenObjects')?data.brokenObjects:[];
+          if(!Array.isArray(broken)||new Set(broken).size!==broken.length||broken.some(id=>typeof id!=='string'||!probe.breakables.some(object=>object.id===id)))return false;
+          for(const object of probe.breakables)if(broken.includes(object.id)){object.broken=true;object.hp=0;}
           if(!Array.isArray(data.usedShrines)||new Set(data.usedShrines).size!==data.usedShrines.length||data.usedShrines.some(id=>!probe.shrines.some(s=>s.id===id)))return false;
           if(!Array.isArray(data.takenRelics)||new Set(data.takenRelics).size!==data.takenRelics.length||data.takenRelics.some(i=>!Number.isInteger(i)||i<0||i>=probe.relics.length)||data.takenRelics.length>data.relicCount)return false;
           probe.relicCount=data.relicCount;probe.shrines.forEach(s=>s.used=data.usedShrines.includes(s.id));probe.relics.forEach((r,i)=>r.taken=data.takenRelics.includes(i));
+          if(probe.relics.some(relic=>relic.taken&&relic.disabled))return false;
         }
-        if(finished){probe.enemies=[];probe.spawnQueue=[];probe.portals=[];probe.cleared=true;probe.checkpoint.active=true;probe.player.x=probe.checkpoint.x-17;probe.player.y=probe.checkpoint.y-probe.player.h;}
+        if(Object.hasOwn(data,'remainingEnemies')){
+          const remaining=data.remainingEnemies;
+          if(!campaign||!finished||!probe.gateGuards.length||!Array.isArray(remaining)||remaining.length>probe.enemies.length||new Set(remaining).size!==remaining.length||remaining.some(slot=>!probe.enemies.some(enemy=>!enemy.gateGuard&&enemy.chapterSlot===slot)))return false;
+        }
+        if(finished){probe.enemies=probe.enemies.filter(enemy=>data.remainingEnemies?.includes(enemy.chapterSlot));probe.spawnQueue=[];probe.portals=[];probe.cleared=true;probe.checkpoint.active=true;probe.player.x=probe.checkpoint.x-17;probe.player.y=probe.checkpoint.y-probe.player.h;}
         if(data.phase==='draft'){
           if(!['start','exit'].includes(data.upgradeSource)||!Array.isArray(data.cards)||data.cards.length!==3||new Set(data.cards).size!==3)return false;
           probe.cards=data.cards.map(id=>[...CARDS,...RESERVES].find(c=>c.id===id));if(probe.cards.some(c=>!c||(probe.owned[c.id]||0)>=c.max||c.requires&&!c.requires(probe.player)))return false;
           const category=probe.draftKind();if(probe.cards.some(c=>c.category&&c.category!==category))return false;
+          if(category==='weapon'&&probe.legacyWeapon&&!data.cards.includes(probe.legacyWeapon))return false;
           probe.upgradeSource=data.upgradeSource;probe.status='upgrade';probe.emit('upgrade');
         }
         probe.rememberCampaignCheckpoint();Object.assign(this,probe);this.emit('resumed');return true;

@@ -1,8 +1,273 @@
 # Checkpoint de transferência — Operação Renascimento
 
-O usuário pediu para interromper a continuidade automática neste ponto e entregar uma branch acessível e um prompt para outro desenvolvedor/chat. **Não recomeçar a auditoria nem reimplementar entregas já feitas.**
+O checkpoint original registrou uma interrupção para transferência. A instrução
+vigente é continuar autonomamente pelos itens pendentes, preservando o checkout
+e os pacotes. **Não recomeçar a auditoria nem reimplementar entregas já feitas.**
 
-## Situação de preservação
+## Continuidade após a transferência
+
+As referências publicadas foram usadas como base da continuidade local.
+Os incrementos 12–80 cobrem fases de chefes, expansão de Nexus, vínculos e
+jornadas, Legado/cinco regiões de Cinzas e árvores/Crônica/modos do Atalaia.
+O corte 61 conserva os 24 perfis corporais e a verificação integrada do 62.
+As revisões independentes de 55/56/58/59/60/61 foram concluídas sem achados.
+As pendências de revisão nos manifestos dos pacotes antigos são históricas.
+As seções abaixo distinguem os pacotes e os limites de cada evidência.
+O novo corte 63 inclui o condutor de Cinzas e a integração Nexus do 62, com
+revisões independentes concluídas. Os pacotes anteriores permanecem preservados.
+O novo corte 65 conserva as cinco lições Nexus, o condutor e a verificação
+integrada, com documentação 66 e revisões concluídas. As seções distinguem
+os pacotes; os oito anteriores permanecem preservados.
+A autorização vigente exige confirmação explícita para commit e push.
+Consulte o [andamento e a checklist](RENASCIMENTO.md#checklist-consolidado-solicitado).
+
+## Corte local até o incremento 80 — 10/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-10-INCREMENTO-80-R2.zip`
+reúne fontes/WIP até 80 e documentação 81: 2.310 fontes, 1.333 evidências
+e manifesto (3.644 entradas). Acompanham `.zip.sha256` e `.VERIFICACAO.json`;
+confira esses arquivos ao transportar/restaurar. As bases e branches exatas
+continuam as da tabela deste checkpoint, com main preservada. Não use
+somente main para recuperar os arquivos novos e o trabalho sem commit.
+
+Inclui Refluxo do Executor (38 padrões/quatro campanhas 48/48), duas novas
+composições com 48/48 por política temporária do relé (25 comparações), os
+supremos corporais de Rhazen/Cindra e a emissão corrigida por escala efetiva.
+São 24 perfis/26 folhas/208 desenhos, com artes básicas preservadas. A última
+integrada ampla Nexus é a do 78: 286 coreografias, 1.301 nativos/1.272 UI,
+paridade/replays. No 80 passaram 62 dirigidos/nove de transição/geometria,
+55 JS/check, export local 113,4 MiB, quatro casos nativos e Chrome em duas
+resoluções; Standards/Spec sem achados restantes após P2 reproduzido/corrigido.
+
+A R2 corrige um P3 de metadado histórico: a primeira integrada de lições tinha
+27 verificações; 33 é a cobertura posterior. O ZIP inicial do corte 80 fica
+preservado. As fontes de produto não mudam nessa correção.
+
+Os 13 pacotes anteriores foram rechecados por tamanho/SHA-256 e permanecem
+preservados. Ensaios distinguem fixtures, táticas experimentais, tentativas
+inválidas e aceite humano ausente. Supremos completos dos 24, demais metas
+da checklist e homologação 1.0 continuam abertos. Sem commit/push, merge,
+PR, deploy ou publicação; preserve a autorização vigente.
+
+## Corte local até o incremento 74 — 09/11/2026
+
+**Posterior ao pacote:** o 80 acrescenta supremo corporal de Cindra e corrige
+emissão pela escala efetiva do quadro; 62 dirigidos/nove geometria, 55 JS/check,
+export 113,4 MiB, quatro casos nativos e Chrome em duas resoluções passaram.
+Standards/Spec reexaminaram o P2 corrigido sem achados restantes; sem aceite
+humano ou nova integrada ampla. O 79 conferiu o
+roteiro de seleção por teclado, sem alterar produto. O incremento 78 acrescenta oito desenhos exclusivos
+do supremo de Rhazen, com 26 dirigidos/cinco transições, 55 JS/check, integrada
+(286 coreografias/1.301 nativos/1.272 UI/paridade/replays), export 112,6 MiB,
+nativo/Chrome em duas resoluções conferidos e Standards/Spec sem achados.
+Sem aceite humano. O ensaio 77 registrou
+duas novas campanhas 48/48 por tática temporária, sem alterar a IA pública.
+Nexus também contém o Refluxo das marés do 76, com 38
+padrões, 55 JS, integrada/paridade/replays, export e quatro campanhas 48/48.
+Inspeções nativa/Web em duas resoluções e Standards/Spec sem achados concluídos.
+Web confirmou fase 2 e vitória com perfil desbloqueado de fixture; sem aceite
+humano. Fontes e testes modificados ainda
+não integram o ZIP 74; preservar o checkout e os pacotes anteriores.
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-74.zip`
+conserva fontes/WIP até 74 e documentação/evidências 75. Inclui a escolta do
+Guardião da escória (35 dirigidos, build completo, 1.484 core/Chrome, matriz
+36/36) e o Nexus nativo (1.316 ciclos/30 minutos/saída 0), com revisões
+73/74 concluídas sem achados restantes. Memória estática nativa não mede
+RSS/driver/GPU ou FPS físico. Manifesto, CRC/hashes por arquivo e SHA-256
+externo verificados; onze pacotes anteriores preservados e reconferidos.
+Não inclui saves reais/dependências/exports; Git/publicação/homologação
+continuam limitados como descrito acima.
+
+## Corte local até o incremento 71 — 09/11/2026
+
+**Depois deste corte:** o checkout contém o Guardião da escória do 74,
+com 35 casos dirigidos/build/matriz 36/36 e fontes novas. Rechecagens
+independentes concluídas sem achados restantes; o Nexus nativo do 73 concluiu 1.316 ciclos/30 minutos, saída
+0 limpa, memória estática 70,03–71,08 MiB, sem fechar hardware/FPS/RSS/GPU.
+Esses trabalhos não estão no ZIP 71; foram incorporados ao corte 74.
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-71.zip`
+conserva fontes completas/WIP até 71 e documentação/evidências 72. Inclui
+resolução terminal Cinzas (28 gameplay, DOM, 1.484 core, oito Web, tipos/
+formato/build) e ensaios prolongados dos três jogos, com revisões 70/71
+concluídas. O Nexus repetido encerrou 1.325 ciclos/30 minutos com saída 0
+limpa; a memória headless cresceu e o diagnóstico upstream está documentado,
+sem trocar motor ou fechar a meta de memória. Manifesto, CRC, hashes por
+arquivo e SHA-256 externo verificados; dez pacotes anteriores intactos,
+com hashes reconferidos. Sem saves reais, dependências ou exports. Não é
+release/homologação; a autorização Git permanece limitada como descrito acima.
+
+## Continuidade posterior ao corte 68, incorporada ao corte 71
+
+O incremento 70 corrige resoluções posteriores à derrota no mesmo quadro em
+Cinzas, com cinco fontes fatais, 28 casos de gameplay, fluxo DOM, core/tipos/
+formato/build, oito Web e inspeção em duas resoluções. Preserva créditos
+anteriores ao dano fatal e não altera save/kit/arte. Essa fatia está no
+checkout e ainda não está no ZIP 68; não descartá-la ao restaurar o pacote.
+Os ensaios 71 registram Atalaia 195 campanhas/11.971 retomadas
+e Cinzas 43 sessões Chrome, ambos em cerca de 15 minutos. O primeiro Nexus
+completou 30 minutos com aviso de liberação antecipada do dono no roteiro.
+Uma reprodução mínima com retorno aguardado encerrou limpa; a repetição
+completa corrigida terminou em 1.801,028 s/1.325 ciclos, saída 0 limpa e
+nenhuma ação pendente ao liberar a cena, sem alterar fontes do jogo. A memória
+headless cresceu; reprodução mínima e controles correspondem ao defeito
+upstream Godot #124439, sem trocar o motor ou fechar a meta de memória.
+Cinzas perdeu 60 cenários de cinco políticas legais; capítulo máximo 13,
+sem prova de impossibilidade ou aceite de balanceamento. Evidências no 71.
+
+## Entregas locais 67/68 incluídas no novo corte
+
+O incremento 67 implementa pulso anunciado da Coroa do Bastião, exclusivo da
+fase final da Crônica/repetição/desafio. Passaram 38 casos dirigidos,
+build/regressões do Atalaia, core/tipos/formato/Next/Chrome e matriz 36/36.
+O timestamp opcional preserva save v1; aviso permanece com efeitos reduzidos.
+A revisão identificou e reproduziu uma janela parcial, corrigida antes da
+rechecagem final; Standards/Spec concluídas sem achados restantes, com os
+38 casos reexecutados por ambos. Inspeções são fixtures com áudio Dummy/mutado e renderização
+por software, sem aceite humano. O incremento 68 conserva foco/rolagem/seleção/retry na Coleção Nexus: 30
+casos dirigidos, 55 JS, integrada 1.301/1.272 UI/paridade/replays e inspeções
+nativa/Web em duas resoluções. As fontes 67/68 estão no novo corte 68; os pacotes anteriores permanecem
+intactos, com seus estados históricos.
+
+## Corte local até o incremento 68 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-68.zip`
+conserva fontes completas/WIP até 68 e documentação/evidências 69. Inclui
+pulso da Coroa (38 dirigidos, build/regressões/matriz 36/36) e Coleção Nexus
+(30 dirigidos, 55 JS, integrada 1.301/1.272 UI/paridade/replays), com suas
+revisões concluídas. Distingue fixtures, tentativa Web incompleta e repetição
+confirmada, sem aceite humano. CRC/todos os hashes e SHA-256 externo são
+verificados. Nove pacotes anteriores preservados, com hashes reconferidos.
+O ensaio de 30 minutos está em andamento e não é declarado concluído neste
+corte. Não inclui saves reais, dependências ou exports reconstruíveis.
+Commit/push exigem confirmação; main, merge, PR, deploy e release continuam
+fora do checkpoint. Renascimento 1.0 permanece sem homologação.
+
+## Corte local até o incremento 65 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-65.zip`
+conserva fontes completas/WIP até 65 e documentação/evidências 66. Inclui cinco
+lições Nexus, seus 33 casos dirigidos finais e a integrada do 65 (27 dirigidos na
+abertura, seguida de 1.301 nativos/1.272 UI/paridade/replays); seis simulações
+legais e conclusão Web 2/2 por teclado/movimento reduzido, além do condutor de
+Cinzas/checagens 63. Registra revisões independentes concluídas, bases/branches,
+fontes novas e hashes. CRC/todos os hashes e SHA-256 externo verificados.
+Oito ZIPs anteriores preservados; sem saves reais, dependências ou exports
+reconstruíveis. Não é release/homologação; commit/push exigem confirmação.
+
+## Corte local até o incremento 63 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-63.zip`
+conserva fontes completas/WIP até 63 e documentação/evidências 64. Inclui o
+condutor de Cinzas com 1.483 core, 27 de exploração, oito Web e inspeção em duas resoluções,
+além dos 24 perfis Nexus/regressão integrada do 62. Registra revisões independentes
+concluídas, bases/branches/arquivos novos e hashes. CRC e todos os hashes são
+conferidos, com SHA-256 externo. Sete ZIPs anteriores preservados; não inclui
+saves reais, dependências ou exports reconstruíveis. Não é release, homologação
+ou autorização de commit/push. Os limites das simulações e do aceite humano
+permanecem explícitos no manifesto e nos documentos donos.
+
+## Corte local até o incremento 61 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-61.zip`
+conserva fontes WIP completas até 61 e documentação/evidências do corte 62.
+Inclui os 24 perfis corporais/192 desenhos, prompts/correções e metadados;
+regressão integrada 1.301/1.272 UI, coreografia 284, derrota 110, 55 testes JS,
+campanha contínua 48/48, paridade/replays e PvP local nativo/Web. Ensaio de
+240 cancelamentos alternando o elenco é limitado e separado de hardware/FPS.
+As revisões independentes de 55/56/58/59/60/61 foram concluídas sem achados;
+as pendências nos manifestos antigos são históricas. Manifesto conserva bases,
+branches, fontes novas e estado sem commit. SHA-256 externo, CRC e hashes de
+todas as entradas acompanham o pacote. Seis ZIPs anteriores permanecem intactos.
+Não inclui saves reais, dependências ou exports reconstruíveis. Supremos finais,
+metas abertas e aceite humano continuam; não é release ou homologação.
+Commit/push ainda exigem confirmação explícita.
+
+## Corte local até o incremento 56 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-56.zip`
+conserva fontes completas/WIP até 56 e documentação do corte no incremento 57.
+Inclui os dez perfis corporais e suas evidências. O manifesto mantém pendentes
+as revisões independentes de 55/56 e distingue regressões, simulações e ensaio
+curto de cancelamento. Registra bases, branches, estado sem commit, fontes
+novas e hashes. SHA-256 externo e verificação de CRC/todas as entradas acompanham
+o ZIP. Cinco pacotes anteriores permanecem intactos. Não inclui saves reais,
+dependências ou exports reconstruíveis; não é release ou homologação.
+Commit/push continuam exigindo confirmação explícita.
+
+## Corte local até o incremento 53 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-53.zip`
+conserva fontes completas/WIP até 53 e documentação do corte no incremento 54.
+Inclui Arauto no Atalaia, urna/ataques curtos em Cinzas e a integração Nexus
+até 49. Manifesto registra bases, branches, status, fontes novas e hashes;
+separa as evidências atuais de cada jogo e mantém aceite humano falso.
+SHA-256 externo e verificação de CRC/todas as entradas acompanham o ZIP.
+Os quatro pacotes anteriores permanecem intactos. Não inclui saves reais,
+dependências ou exports reconstruíveis; não é release ou homologação.
+Commit/push seguem exigindo confirmação explícita.
+
+## Corte local até o incremento 49 — 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-49.zip`
+conserva fontes completas/WIP até 49 e documentação do corte no incremento 50.
+Inclui seis folhas corporais, prompts e integração de apresentação, além dos
+padrões do Arquivista/Arquiteta. Manifesto registra bases exatas, branches,
+status Git, hashes e evidências selecionadas. Distingue a regressão integrada
+do 48 das verificações pertinentes do 49. SHA-256 e verificação de CRC/todas
+as entradas acompanham o ZIP. Os três pacotes anteriores permanecem intactos.
+Não inclui saves reais, dependências ou exports reconstruíveis. Não é release
+nem homologação; commit/push exigem confirmação explícita.
+
+## Checkpoint local atualizado em 09/11/2026
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-09-INCREMENTO-46.zip`
+conserva fontes completas e WIP até o incremento 46, incluindo as quatro
+folhas corporais novas, metadados e prompts, mais a documentação do corte
+no incremento 47. As bases exatas continuam as da tabela abaixo. O manifesto
+registra branches, estado sem commit, hashes e evidências selecionadas,
+distinguindo as verificações atuais de arte da última regressão integrada.
+SHA-256 externo e verificação de CRC/todas as entradas usam o nome-base do ZIP.
+Não inclui saves reais, dependências ou exports reconstruíveis. Não é release.
+Os dois pacotes de 08/11 abaixo permanecem preservados. Commit/push seguem
+exigindo confirmação explícita.
+
+## Checkpoint local atualizado em 08/11/2026
+
+O pacote do corte até o incremento 42 é
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-08-INCREMENTO-42.zip`.
+Inclui fontes completas e WIP até o incremento 42, mais a documentação do
+incremento 43 que registra este corte. Usa as mesmas bases exatas da tabela
+abaixo e contém `MANIFESTO.json`, hashes de cada entrada e evidências selecionadas.
+O SHA-256 externo e a verificação estão em arquivos com o mesmo nome-base do
+novo ZIP. Preserve ambos os pacotes ao restaurar; nenhum autoriza commit/push.
+Não inclui saves reais, dependências ou exports reconstruíveis. Não é release.
+
+O pacote abaixo é o checkpoint anterior desta continuidade e conserva seu corte:
+
+`artifacts/renascimento-transfer/RENASCIMENTO-CONTINUIDADE-2026-11-08.zip`
+guarda as fontes completas dos dois checkouts, incluindo arquivos novos e
+alterações sem commit até o incremento 35, além desta documentação. É um
+checkpoint de desenvolvimento; não é release homologada ou publicação.
+`MANIFESTO.json` contém bases, branches, estado Git e hashes individuais.
+O arquivo `.sha256` ao lado do ZIP verifica o pacote inteiro.
+
+| Checkout | Base exata do trabalho sem commit |
+| --- | --- |
+| A-LEI-DO-TRONO-SERVER · codex/renascimento-audit | `9162d48c7b7c324f2697fee2f851bc2c7bcf2374` |
+| PROJETO-NEXUS · codex/renascimento-save-recovery | `27768ca126d8e2f93139702656849c561eec0705` |
+
+Para recuperação, primeiro preserve o checkout de destino e confira o hash do
+ZIP. Restaure os diretórios nomeados sobre essas bases exatas, conservando
+`.git`, saves e quaisquer alterações posteriores. Confira os hashes individuais
+do manifesto antes de editar. Dependências, caches, exports e segredos ficam
+fora; builds usam os lockfiles e o toolchain documentados. Não restaurar somente
+`main`. As referências históricas e o pacote anterior abaixo são preservados.
+Commit e push continuam exigindo confirmação explícita; não houve nenhum nesta
+continuidade. A checklist viva de trabalho pendente está em `RENASCIMENTO.md`.
+
+## Situação de preservação da transferência anterior
 
 O usuário autorizou explicitamente criar os commits e fazer push das duas branches de continuidade. A entrega consolidada é `RENASCIMENTO-COMPLETO.zip`: contém as fontes completas dos dois projetos, recursos dos jogos, diretriz original, checklist, evidências selecionadas e prompt. O `MANIFESTO.json` do ZIP registra os commits, os estados remotos verificados e hashes dos arquivos. Não houve merge, PR, deploy ou publicação de release.
 

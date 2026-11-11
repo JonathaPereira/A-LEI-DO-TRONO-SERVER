@@ -18,6 +18,8 @@ var rings: Array=[]
 var ground_material: ShaderMaterial
 var background: Sprite2D
 var terrain: Node2D
+var haze: Node2D
+var reduced_effects := false
 var shown_stage=-1
 var core_flash=0.0
 var smoke: Array=[]
@@ -35,10 +37,17 @@ func _ready():
  terrain=Node2D.new();terrain.set_script(preload("res://scripts/terrain.gd"));add_child(terrain)
  terrain.z_index=-1
  actors=Node2D.new(); actors.y_sort_enabled=true; add_child(actors)
- var haze=Node2D.new();haze.set_script(preload("res://scripts/smoke.gd"));haze.board=self;add_child(haze)
+ haze=Node2D.new();haze.set_script(preload("res://scripts/smoke.gd"));haze.board=self;add_child(haze)
  effects=Node2D.new(); effects.set_script(preload("res://scripts/effects.gd")); effects.board=self; add_child(effects)
  var additive=CanvasItemMaterial.new(); additive.blend_mode=CanvasItemMaterial.BLEND_MODE_ADD
  effects.material=additive
+
+func set_reduced_effects(enabled: bool) -> void:
+ reduced_effects=enabled
+ background.material=null if enabled else ground_material
+ haze.visible=not enabled
+ haze.set_process(not enabled)
+ if enabled:smoke.clear()
 
 func _unhandled_input(event):
  if not interactive or not is_instance_valid(run): return
@@ -64,17 +73,19 @@ func _process(dt):
  smoke_clock+=dt
  for p in smoke:p.age+=dt;p.pos+=p.vel*dt
  smoke=smoke.filter(func(p):return p.age<p.life)
- if smoke_clock>0.065:
+ if not reduced_effects and smoke_clock>0.065:
   smoke_clock=0
   for p in run.projectiles:
-   if p.t.type=="mortar" and smoke.size()<80:smoke.append({"pos":p.pos,"vel":Vector2(randf_range(-7,7),-12),"age":0.0,"life":0.65,"size":7.0})
+   if AtalaiaCatalog.family(p.t.type)=="mortar" and smoke.size()<80:smoke.append({"pos":p.pos,"vel":Vector2(randf_range(-7,7),-12),"age":0.0,"life":0.65,"size":7.0})
  core_flash=maxf(0.0,core_flash-dt)
  for f in floaters:f.age+=dt
  floaters=floaters.filter(func(f):return f.age<1.1)
+ var presentation_stage: int=run.maps[run.stage].get("presentationStage",run.stage)
  if shown_stage!=int(run.stage):
   shown_stage=int(run.stage)
-  var asset="terrain-%s-v7.png"%["forest","marsh","ruins"][run.stage]
+  var asset="terrain-%s-v7.png"%["forest","marsh","ruins"][presentation_stage]
   background.texture=AtalaiaArt.texture(asset)
+  background.modulate=Color(run.maps[run.stage].get("tint","#ffffff"))
   background.scale=Vector2(1000,620)/background.texture.get_size()
   ground_material.set_shader_parameter("wet",0.0 if run.stage==2 else 1.0)
   terrain.run=run;terrain.queue_redraw()
@@ -92,7 +103,8 @@ func _process(dt):
  for e in run.enemies:
   var id=int(e.id); active.append(id)
   if not enemy_nodes.has(id):
-   var node=ENEMY_SCENE.instantiate(); actors.add_child(node); node.configure(e,run.stage); enemy_nodes[id]=node
+   var node=ENEMY_SCENE.instantiate(); actors.add_child(node); node.configure(e,presentation_stage); enemy_nodes[id]=node
+  enemy_nodes[id].protection_radius=run.protection_radius(e)
  for id in enemy_nodes.keys():
   if id not in active:
    if is_instance_valid(enemy_nodes[id]): enemy_nodes[id].die()
@@ -111,6 +123,7 @@ func _process(dt):
  queue_redraw()
 
 func burst(pos: Vector2, color: Color, count: int, speed: float = 70.0, gravity: float = 45.0):
+ if reduced_effects:count=mini(7,count)
  for i in range(count):
   if bursts.size()>450: break
   var angle=randf()*TAU
@@ -124,8 +137,13 @@ func event(e: Dictionary):
    var col=Color(AtalaiaCatalog.TOWERS[e.type].color)
    burst(e.pos,col,26 if e.type=="mortar" else 9,115.0 if e.type=="mortar" else 50.0)
    rings.append({"pos":e.pos,"color":col,"age":0.0,"life":0.6,"size":maxf(20,e.radius)})
-   if e.type=="mortar":
+   if e.type=="mortar" and not reduced_effects:
     for i in range(8):smoke.append({"pos":e.pos,"vel":Vector2(randf_range(-30,30),randf_range(-36,2)),"age":0.0,"life":randf_range(0.65,1.3),"size":randf_range(10,19)})
+  "crown_pulse":
+   rings.append({"pos":e.pos,"color":Color("efb5a0"),"age":0.0,"life":0.5,"size":e.radius})
+  "boss_phase":
+   burst(e.pos,Color("efb5a0"),35,115.0)
+   rings.append({"pos":e.pos,"color":Color("efb5a0"),"age":0.0,"life":0.8,"size":144.0})
   "build","move","upgrade":
    var col=Color(AtalaiaCatalog.TOWERS[e.type].color)
    burst(e.pos-Vector2(0,25),col,22,55.0,-50.0)
@@ -137,6 +155,13 @@ func event(e: Dictionary):
 
 func _draw():
  if not is_instance_valid(run): return
+ var environment:=run.environment()
+ if environment.get("state")=="active":
+  # Keep the environmental signal behind enemies and readable in the light profile.
+  draw_rect(Rect2(0,0,1000,620),Color(0.63,0.81,0.83,0.10))
+  if not reduced_effects:
+   for lane in run.routes:
+    draw_polyline(lane.points,Color(0.68,0.85,0.87,0.07),32.0+sin(time)*4.0,true)
  # Pools are on the ground, behind every actor. Same-owner damage does not stack.
  for p in run.pools:
   var opacity=minf(1.0,p.time/0.8)
@@ -151,7 +176,27 @@ func _draw():
    var pos=Vector2(cos(j*8.0),sin(j*8.0))*radius*0.66
    draw_arc(pos,2.0+f*5.0,0,TAU,12,Color(0.65,1.0,0.28,(1.0-f)*0.55*opacity),1.3,true)
   draw_set_transform(Vector2.ZERO)
+ # Telegraph the actual Euclidean radius; the warning is gameplay information,
+ # so the light-effects profile keeps it and the countdown intact.
+ for enemy in run.enemies:
+  var pulse:=run.crown_pulse(enemy)
+  if not pulse.get("warning",false):continue
+  draw_circle(enemy.pos,float(pulse.radius),Color(0.94,0.46,0.32,0.09))
+  draw_arc(enemy.pos,float(pulse.radius),0,TAU,96,Color("f5bc9c"),2.5,true)
+  var label="PULSO · %.1f s"%float(pulse.remaining)
+  draw_string_outline(AtalaiaUI.font(),enemy.pos+Vector2(-68,47),label,HORIZONTAL_ALIGNMENT_LEFT,180,17,4,Color("12212b"))
+  draw_string(AtalaiaUI.font(),enemy.pos+Vector2(-68,47),label,HORIZONTAL_ALIGNMENT_LEFT,180,17,Color("ffe3c2"))
+ for enemy in run.enemies:
+  if enemy.dead or enemy.get("jam_windup",0.0)<=0.0:continue
+  var target:=run.tower_by_id(int(enemy.jam_target))
+  if not target.is_empty():draw_line(enemy.pos-Vector2(0,24),run.pads[int(target.pad)]-Vector2(0,56),Color("9ecde7b3"),2,true)
  for i in range(run.pads.size()):
+  if run.pad_range_bonus(i)>0:
+   var raised: Vector2=run.pads[i]
+   draw_set_transform(raised,0,Vector2(1,0.48))
+   draw_arc(Vector2.ZERO,31,0,TAU,40,Color("f4cf88"),2.0,true)
+   draw_arc(Vector2.ZERO,36,0,TAU,40,Color(0.96,0.81,0.53,0.45),1.0,true)
+   draw_set_transform(Vector2.ZERO)
   if not run.occupant(i).is_empty(): continue
   var pos: Vector2=run.pads[i]
   var active=i==hover
@@ -169,7 +214,7 @@ func _draw():
   draw_circle(pos,radius,Color(0.35,0.7,0.85,0.035))
   draw_arc(pos,radius,0,TAU,96,Color(0.65,0.9,1.0,0.22),1.0,true)
  elif hover>=0 and build_type!="":
-  var radius=AtalaiaCatalog.TOWERS[build_type].range
+  var radius=run.stats({"type":build_type,"level":1,"mods":[],"pad":hover}).range
   draw_arc(run.pads[hover],radius,0,TAU,96,Color(0.86,0.8,0.5,0.35),1.0,true)
  for f in floaters:
   var alpha=clampf((1.1-f.age)*2.5,0,1)
@@ -180,7 +225,7 @@ func _draw():
 func draw_effects(c: Node2D):
  if not is_instance_valid(run): return
  # Atmospheric motes drift at the edges; roads remain clear.
- for i in range(38):
+ for i in range(0 if reduced_effects else 38):
   var p=Vector2(fposmod(i*173.0+sin(time*0.12+i)*26.0,995.0),fposmod(i*97.0-time*(2+i%3),610.0))
   var a=(0.3+sin(time*1.1+i*3.0)*0.2)*0.6
   var color=Color("e5cf83") if run.stage!=2 else Color("edbd87")
@@ -188,7 +233,7 @@ func draw_effects(c: Node2D):
   if i%4==0: c.draw_texture_rect(AtalaiaArt.glow(),Rect2(p-Vector2(8,8),Vector2(16,16)),false,Color(color,a*0.25))
  for t in run.towers:
   var pos: Vector2=AtalaiaCatalog.muzzle(t,run.pads[t.pad])
-  if t.type=="flame" and t.firing:
+  if AtalaiaCatalog.family(t.type)=="flame" and t.firing:
    var end: Vector2=t.beam
    var length=pos.distance_to(end)+15.0
    c.draw_set_transform(pos,(end-pos).angle())
@@ -208,7 +253,7 @@ func draw_effects(c: Node2D):
    c.draw_set_transform(Vector2.ZERO)
    c.draw_texture_rect(AtalaiaArt.glow(),Rect2(end-Vector2(60,55),Vector2(120,110)),false,Color(1,0.3,0.02,0.3))
  for p in run.projectiles:
-  var type=p.t.type
+  var type=AtalaiaCatalog.family(p.t.type)
   var color=Color(AtalaiaCatalog.TOWERS[type].color)
   var pos: Vector2=p.pos
   var direction: Vector2=(p.end-p.start).normalized()

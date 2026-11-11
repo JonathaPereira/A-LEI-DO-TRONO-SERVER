@@ -2,8 +2,8 @@
   "schema": 1,
   "id": "cinzas-do-abismo",
   "version": "0.5",
-  "cacheKey": "cdf6a6b48db75124dc6e",
-  "bytes": 22138607,
+  "cacheKey": "b658adb67b0098169561",
+  "bytes": 22413359,
   "files": [
     {
       "path": "assets/catalogue-cover.png",
@@ -33,6 +33,18 @@
       "path": "assets/hero.webp",
       "bytes": 425236,
       "sha256": "5e5aee22692068dcbb054be27c864f14f1aa222b65003c6903b682fe8a9f8559",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/renascimento/bastion.webp",
+      "bytes": 141338,
+      "sha256": "f369b8ccbccfddab0458c2a26a2c493ea29e0f778bf3065a77c3feb61121cd8e",
+      "type": "image/webp"
+    },
+    {
+      "path": "assets/renascimento/glacier.webp",
+      "bytes": 133414,
+      "sha256": "b9e9729b927fcf2f8c801b15af2904d9817e17a5716eacd092d833d686b77902",
       "type": "image/webp"
     },
     {

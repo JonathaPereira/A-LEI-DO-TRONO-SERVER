@@ -267,9 +267,12 @@ test(
             await game.locator('#replaceCancel').click();
             await expect(game.locator('#replaceDialog')).not.toBeVisible();
             await expect(game.locator('#startBtn')).toBeFocused();
-            assert.deepEqual(await child.evaluate(
-              () => JSON.parse(localStorage.getItem('cinzas-demo-v1')).campaignSave,
-            ), campaign);
+            assert.deepEqual(
+              await child.evaluate(
+                () => JSON.parse(localStorage.getItem('cinzas-demo-v1')).campaignSave,
+              ),
+              campaign,
+            );
             await game.locator('#continueCampaign').click();
             await expect(game.locator('#modeLabel')).toContainText('EXPEDIÇÃO');
             await game.locator('#pauseBtn').click();
@@ -288,10 +291,13 @@ test(
             assert.deepEqual(contents.campaignCheckpoint, campaign);
             assert.deepEqual(contents.checkpoint, save);
             await game.locator('#saveFile').setInputFiles({
-              name: 'invalid.json', mimeType: 'application/json',
-              buffer: Buffer.from(JSON.stringify({...contents, campaignCheckpoint: save})),
+              name: 'invalid.json',
+              mimeType: 'application/json',
+              buffer: Buffer.from(JSON.stringify({ ...contents, campaignCheckpoint: save })),
             });
-            await expect(game.locator('#toast')).toHaveText('Backup inválido. O progresso anterior foi mantido.');
+            await expect(game.locator('#toast')).toHaveText(
+              'Backup inválido. O progresso anterior foi mantido.',
+            );
             await game.locator('#continueHorde').click();
             await expect(game.locator('#hud')).toBeVisible();
             assert.deepEqual(await snapshot(), before);
@@ -304,7 +310,9 @@ test(
             await game.locator('#replaceConfirm').click();
             await expect(game.locator('#replaceDialog')).not.toBeVisible();
             await expect(game.locator('#upgradeScreen')).toBeVisible();
-            const replaced = await child.evaluate(() => JSON.parse(localStorage.getItem('cinzas-demo-v1')));
+            const replaced = await child.evaluate(() =>
+              JSON.parse(localStorage.getItem('cinzas-demo-v1')),
+            );
             assert.equal(replaced.campaignSave.history.length, 0);
             assert.deepEqual(replaced.hordeSave, save);
           } finally {
@@ -318,3 +326,268 @@ test(
     }
   },
 );
+
+test(
+  'Cinzas preserves pending saves and asks again when another tab updates a replacement',
+  { timeout: 60000 },
+  async () => {
+    const { Engine } = require('../public/roguelite/core.js');
+    const engine = new Engine();
+    engine.start({ seed: 'aba-original', name: 'Lia' });
+    const original = engine.createCheckpoint();
+    let browser;
+    const server = express()
+      .use(express.static(path.resolve('out')))
+      .listen(0, '127.0.0.1');
+    await new Promise((resolve) => server.on('listening', resolve));
+    try {
+      browser = await chromium.launch({
+        executablePath: process.env.CHROMIUM_EXECUTABLE_PATH,
+        args: ['--no-sandbox', '--mute-audio'],
+      });
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+      const address = 'http://127.0.0.1:' + server.address().port + '/roguelite/';
+      await page.addInitScript(() => {
+        const write = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (key, value) {
+          if (window.blockGameSave && key === 'cinzas-demo-v1')
+            throw new DOMException('quota fixture', 'QuotaExceededError');
+          return write.call(this, key, value);
+        };
+      });
+      await page.goto(address);
+      const other = await context.newPage();
+      await other.goto(address);
+      const write = (checkpoint) =>
+        other.evaluate(
+          (checkpoint) =>
+            localStorage.setItem(
+              'cinzas-demo-v1',
+              JSON.stringify({ scores: [], campaignSave: checkpoint }),
+            ),
+          checkpoint,
+        );
+      const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('cinzas-demo-v1')));
+      await write(original);
+      await page.locator('#startBtn').click();
+      await expect(page.locator('#replaceDialog')).toBeVisible();
+      const newer = { ...original, seed: 'aba-mais-nova' };
+      await write(newer);
+      await page.locator('#replaceConfirm').click();
+      await expect(page.locator('#replaceDialog')).toBeVisible();
+      assert.equal((await read()).campaignSave.seed, newer.seed);
+      await page.locator('#replaceCancel').click();
+      await page.locator('#continueCampaign').click();
+      await expect(page.locator('#seedLabel')).toHaveText('SEMENTE ' + newer.seed);
+      await page.locator('#pauseBtn').click();
+      await page.locator('#suspendBtn').click();
+      await page.evaluate(() => {
+        window.blockGameSave = true;
+      });
+      await page.locator('#startBtn').click();
+      await page.locator('#replaceConfirm').click();
+      await page.locator('#upgradeCards button').first().click();
+      const pendingSeed = await page.locator('#seedLabel').textContent();
+      assert.notEqual(pendingSeed, 'SEMENTE ' + newer.seed);
+      await page.locator('#pauseBtn').click();
+      await page.locator('#suspendBtn').click();
+      await page.evaluate(() => {
+        window.blockGameSave = false;
+      });
+      await page.locator('#soundBtn').click();
+      await page.locator('#continueCampaign').click();
+      await expect(page.locator('#seedLabel')).toHaveText(pendingSeed);
+      assert.equal('SEMENTE ' + (await read()).campaignSave.seed, pendingSeed);
+      await context.close();
+    } finally {
+      await browser?.close();
+      await new Promise((resolve) => {
+        server.close(resolve);
+        server.closeAllConnections();
+      });
+    }
+  },
+);
+
+test(
+  'Cinzas unlocked region practice preserves the regular campaign and legacy',
+  { timeout: 60000 },
+  async () => {
+    const { Engine } = require('../public/roguelite/core.js');
+    const engine = new Engine();
+    engine.start({ seed: 'campanha-preservada', name: 'Lia' });
+    const original = {
+      scores: [],
+      campaignSave: engine.createCheckpoint(),
+      legacy: { version: 1, cleared: 15, weapon: 'bow' },
+    };
+    const server = express()
+      .use(express.static(path.resolve('out')))
+      .listen(0, '127.0.0.1');
+    await new Promise((resolve) => server.on('listening', resolve));
+    let browser;
+    try {
+      browser = await chromium.launch({
+        executablePath: process.env.CHROMIUM_EXECUTABLE_PATH,
+        args: ['--no-sandbox', '--mute-audio'],
+      });
+      const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+      await page.addInitScript((value) => {
+        localStorage.setItem('cinzas-demo-v1', JSON.stringify(value));
+        window.fixturePad = {
+          id: 'Xbox fixture',
+          index: 0,
+          connected: true,
+          timestamp: 1,
+          mapping: 'standard',
+          axes: [0, 0, 0, 0],
+          buttons: Array.from({ length: 18 }, () => ({ pressed: false, value: 0 })),
+        };
+        Object.defineProperty(navigator, 'getGamepads', { value: () => [window.fixturePad] });
+      }, original);
+      await page.goto('http://127.0.0.1:' + server.address().port + '/roguelite/');
+      await expect(page.locator('#practiceRegion option[value="4"]')).toBeDisabled();
+      await expect(page.locator('#practiceRegion option[value="3"]')).toBeEnabled();
+      for (let step = 0; step < 10; step++) {
+        if (await page.evaluate(() => document.activeElement.id === 'practiceBtn')) break;
+        await page.evaluate(() => {
+          window.fixturePad.buttons[13] = { pressed: true, value: 1 };
+        });
+        await page.waitForTimeout(180);
+        await page.evaluate(() => {
+          window.fixturePad.buttons[13] = { pressed: false, value: 0 };
+        });
+        await page.waitForTimeout(180);
+      }
+      await expect(page.locator('#practiceBtn')).toBeFocused();
+      assert(
+        await page.evaluate(() => {
+          const rect = document.querySelector('#practiceBtn').getBoundingClientRect();
+          const frame = document.querySelector('#gameframe').getBoundingClientRect();
+          return (
+            rect.top >= Math.max(0, frame.top) && rect.bottom <= Math.min(innerHeight, frame.bottom)
+          );
+        }),
+        'Controller focus must scroll its action inside the visible game frame',
+      );
+      await page.locator('#practiceRegion').selectOption('3');
+      await page.locator('#practiceBtn').click();
+      await expect(page.locator('#replaceDialog')).not.toBeVisible();
+      await page.locator('#upgradeCards button').first().click();
+      await expect(page.locator('#modeLabel')).toContainText('TREINO · GELEIRAS');
+      await expect(page.locator('#roomLabel')).toContainText('Etapa 16 / 25');
+      await page.locator('#pauseBtn').click();
+      await expect(page.locator('#suspendBtn')).not.toBeVisible();
+      await page.locator('#exitBtn').click();
+      await expect(page.locator('#endTitle')).toHaveText('Treino encerrado.');
+      assert.deepEqual(
+        await page.evaluate(() => JSON.parse(localStorage.getItem('cinzas-demo-v1'))),
+        original,
+      );
+      await page.locator('#menuBtn').click();
+      await page.locator('#continueCampaign').click();
+      await expect(page.locator('#seedLabel')).toHaveText('SEMENTE campanha-preservada');
+    } finally {
+      await browser?.close();
+      await new Promise((resolve) => {
+        server.close(resolve);
+        server.closeAllConnections();
+      });
+    }
+  },
+);
+
+test('Cinzas local achievements read durable campaign and horde facts without rewriting progress', { timeout: 45000 }, async () => {
+  const server = express().use(express.static(path.resolve('out'))).listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.on('listening', resolve));
+  let browser;
+  const original = { sound: false, legacy: { version: 1, cleared: 10, weapon: 'bow' }, scores: [{ edition: '0.5', name: 'Lia', difficulty: 'normal', wave: 5, kills: 12 }] };
+  try {
+    browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox', '--mute-audio'] });
+    const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+    await page.addInitScript((data) => localStorage.setItem('cinzas-demo-v1', JSON.stringify(data)), original);
+    await page.goto('http://127.0.0.1:' + server.address().port + '/roguelite/');
+    await page.getByRole('button', { name: 'Conquistas', exact: true }).click({timeout:5000});
+    await expect(page.locator('#achievementsDialog')).toBeVisible();
+    await expect(page.locator('#achievementsTitle')).toHaveText('Conquistas locais · 4/8');
+    await expect(page.locator('#achievementGrid [data-unlocked=true]')).toHaveCount(4);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('cinzas-demo-v1'))), original);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#achievementsDialog')).not.toBeVisible();
+    await page.evaluate(() => { const data=JSON.parse(localStorage.getItem('cinzas-demo-v1'));data.legacy.cleared=25;data.legacy.weapon='';data.scores[0].wave=20;localStorage.setItem('cinzas-demo-v1',JSON.stringify(data)); });
+    const complete = await page.evaluate(() => localStorage.getItem('cinzas-demo-v1'));
+    await page.getByRole('button', { name: 'Conquistas', exact: true }).click();
+    await expect(page.locator('#achievementsTitle')).toHaveText('Conquistas locais · 8/8');
+    await expect(page.locator('#achievementGrid [data-unlocked=true]')).toHaveCount(8);
+    assert.equal(await page.evaluate(() => localStorage.getItem('cinzas-demo-v1')), complete);
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => { server.close(resolve);server.closeAllConnections(); });
+  }
+});
+
+test('Cinzas keyboard remapping persists, swaps conflicts and updates the real combat hints', { timeout: 45000 }, async () => {
+  const server=express().use(express.static(path.resolve('out'))).listen(0,'127.0.0.1');
+  await new Promise(resolve=>server.on('listening',resolve));let browser;
+  try {
+    browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--mute-audio']});
+    const page=await browser.newPage({viewport:{width:1440,height:900}});
+    await page.goto('http://127.0.0.1:'+server.address().port+'/roguelite/');
+    await page.locator('#controllerBtn').click();
+    const attack=page.locator('#keyboardMappingButtons [data-key-map=attack]');
+    await attack.click({timeout:5000});await page.keyboard.press('h');
+    await expect(attack.locator('b')).toHaveText('H');
+    await page.locator('#controllerDialog [data-close]').first().click();
+    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('cinzas-demo-v1')).keyboardMapping);
+    assert.equal(saved.attack[0],'KeyH');
+    await page.reload();await page.locator('#controllerBtn').click();await expect(attack.locator('b')).toHaveText('H');
+    await attack.click();await page.keyboard.down('Shift');await page.keyboard.press('h');await page.keyboard.up('Shift');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('cinzas-demo-v1')).keyboardMapping.attack[0]),'KeyH','A shifted letter must not save Shift as a replacement');
+    await page.keyboard.press('Escape');await expect(page.locator('#controllerDialog')).toBeVisible();
+    await attack.click();await page.keyboard.press('1');
+    await expect(page.locator('#keyboardStatus')).toContainText('Esc cancela');
+    await page.keyboard.press('Escape');await expect(page.locator('#controllerDialog')).toBeVisible();
+    await expect(attack.locator('b')).toHaveText('H');
+    await page.locator('#keyboardMappingButtons [data-key-map=skill]').click();await page.keyboard.press('h');
+    await expect(attack.locator('b')).toHaveText('K');
+    await expect(page.locator('#keyboardMappingButtons [data-key-map=skill]')).toContainText('H');
+    await page.locator('#controllerDialog [data-close]').first().click();
+    await page.locator('[data-mode=horde]').click();await page.locator('#startBtn').click();await page.locator('#upgradeCards button').first().click();
+    await expect(page.locator('#skillKey')).toHaveText('H');
+    await expect(page.locator('#actionHints')).toContainText('K');
+    await page.keyboard.press('h');await expect(page.locator('#skillStatus')).toHaveText(/^[0-9]+\.[0-9]s$/);
+    await page.locator('#controllerBtn').click();await attack.click();await page.keyboard.press('Shift');
+    await expect(attack.locator('b')).toHaveText('Shift');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('cinzas-demo-v1')).keyboardMapping.attack[0]),'ShiftLeft');
+    await page.locator('#resetKeyboard').click();
+    await expect(page.locator('#keyboardMappingButtons [data-key-map=attack] b')).toHaveText('J');
+    await page.locator('#controllerDialog [data-close]').first().click();await expect(page.locator('#skillKey')).toHaveText('K');
+  } finally {await browser?.close();await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});}
+});
+
+test('Cinzas screen shake preference follows the system, persists and changes actual presentation only', { timeout: 45000 }, async () => {
+  const server=express().use(express.static(path.resolve('out'))).listen(0,'127.0.0.1');
+  await new Promise(resolve=>server.on('listening',resolve));let browser;
+  try {
+    browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--mute-audio']});
+    const page=await browser.newPage({viewport:{width:1440,height:900}});await page.emulateMedia({reducedMotion:'reduce'});
+    await page.addInitScript(()=>{
+      Object.defineProperty(window,'Abyss',{configurable:true,set(api){delete window.Abyss;window.Abyss=api;const Engine=api.Engine;api.Engine=class extends Engine{constructor(...args){super(...args);if(!window.presentationEngine)window.presentationEngine=this;}};}});
+      Object.defineProperty(window,'AbyssRenderer',{configurable:true,set(Renderer){delete window.AbyssRenderer;window.AbyssRenderer=Renderer;const draw=Renderer.prototype.draw;Renderer.prototype.draw=function(...args){window.presentedShakes??=[];window.presentedShakes.push(args[2]);if(window.presentedShakes.length>64)window.presentedShakes.shift();return draw.apply(this,args);};}});
+    });
+    await page.goto('http://127.0.0.1:'+server.address().port+'/roguelite/');await page.locator('#controllerBtn').click();
+    const reduce=page.getByRole('checkbox',{name:'Reduzir tremor de tela',exact:true});
+    await expect(reduce).toBeChecked({timeout:5000});
+    await reduce.uncheck();await page.reload();await page.locator('#controllerBtn').click();await expect(reduce).not.toBeChecked();
+    await page.locator('#controllerDialog [data-close]').first().click();
+    await page.locator('[data-mode=horde]').click();await page.locator('#startBtn').click();await page.locator('#upgradeCards button').first().click();
+    await page.evaluate(()=>{window.presentedShakes=[];window.presentationEngine.emit('shake',{amount:12});});
+    await expect.poll(()=>page.evaluate(()=>window.presentedShakes.some(value=>value>0))).toBe(true);
+    await page.locator('#controllerBtn').click();await reduce.check();await page.locator('#controllerDialog [data-close]').first().click();
+    await page.evaluate(()=>{window.presentedShakes=[];window.presentationEngine.emit('shake',{amount:12});});await page.waitForTimeout(250);
+    const values=await page.evaluate(()=>window.presentedShakes);
+    assert(values.length>0);assert(values.every(value=>value===0),'Reduced shake must render no camera displacement');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('cinzas-demo-v1')).reducedShake),true);
+  } finally {await browser?.close();await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});}
+});

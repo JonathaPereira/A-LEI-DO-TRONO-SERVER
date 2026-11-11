@@ -314,6 +314,12 @@ donos, conservando bloqueios, descarte e a ordem dos modais. Não há listener
 global novo para forçar fechamento nem alteração dos prompts protegidos dos jogos.
 
 
+Em Cinzas, `controller.js` possui os mapas de teclado e controle. `Keyboard`
+valida snapshots, troca conflitos entre teclas primárias/alternativas e fornece
+os nomes exibidos. `game.js` captura a edição, apresenta e persiste a preferência
+pelo dono de armazenamento existente; a mesma instância despacha o comando e
+alimenta as dicas. A captura de Shift aguarda liberação sem combinação.
+
 Atalaia tem o projeto original em `games/atalaia`; `scripts/build-atalaia.cjs`
 exporta o jogo com o toolchain fixado por `scripts/prepare-godot.cjs`.
 `src/lib/games/atalaia.ts` possui apenas estado/comandos de abertura, e a tela
@@ -334,6 +340,123 @@ as estradas pintadas, usando a mesma geometria das rotas, sem reamostrar as
 regras de movimento. A camada do terreno só é reconstruída na troca de região.
 A contagem animada de ouro é apresentação; compras usam o saldo em `run.gd`.
 
+`validated_file.gd` possui a gravação atômica dos documentos JSON v1, rotação
+de cópia saudável, recuperação e conservação dos bytes inválidos. O adaptador
+`save_store.gd` valida campanhas por `run.gd`; `strategy_progress.gd` valida
+o perfil de árvores e recordes. Os validadores de domínio permanecem separados.
+A consulta de conquistas deriva snapshots novos do perfil, sem persistência
+ou recompensa adicional. O dono de arquivo verifica versões incompatíveis também antes de substituir
+uma fonte alterada durante a sessão. `main.gd` apresenta o aviso de recuperação
+e conserva a Sobrevivência quando o recorde não pode ser gravado.
+
+`keyboard_controls.gd` possui o mapa dos 11 comandos de teclado, validação,
+troca de conflitos e nomes exibidos. `main.gd` captura a edição antes dos
+controles da interface e usa o mesmo mapa no despacho e nas dicas. A preferência
+integra as configurações existentes; testes injetam um caminho próprio e nunca
+gravam o arquivo real de preferências.
+
+
+No Nexus, `main.gd` conserva o resultado pendente da ação durante a apresentação.
+O fim normal e `Pular animação` usam o mesmo fechamento, protegido por identidade
+e versão de batalha. Pular cancela diretores/áudio e invalida callbacks antes de
+aplicar o resultado existente; não recalcula combate nem recompensas. O salto
+não é oferecido na fila autoritativa do PvP.
+
+`keyboard_controls.gd` do Nexus possui os nove comandos, validação atômica,
+troca de conflitos e nomes. Captura em `keyboard_settings.gd` e despacho de
+`main.gd` compartilham a normalização do evento; cartões e dicas consultam
+o mesmo mapa. O campo opcional integra `preferences.cfg`, separado do save
+de campanha. Testes injetam arquivo próprio antes de montar a interface.
+
+`fighter.gd` possui a pose estável de derrota e sua restauração por snapshot.
+O diretor empresta seu Tween rastreado para o movimento fatal; continua dono
+da criação e do cancelamento. Impactos animados adiam a pose final até a
+reação; pulo, movimento reduzido, ticks e snapshots assentam o estado morto
+diretamente. Cancelar uma apresentação reaplica a pose correspondente à vida
+apresentada, sem interferir no resultado do combate.
+
+`lessons.gd` possui roteiros, preparação e progresso derivado dos recibos reais
+das cinco lições. Main conserva/restaura equipes e opções livres, impede entrada
+em PvP e apresenta a lista rolável com foco acompanhado. Campanha, motor e
+registros continuam nos seus donos; treinos não concedem progresso persistente.
+
+`pose-regions.json` do Nexus mapeia atlas, âncoras, sequências por fase e tempos
+próprios opcionais. Quadros podem selecionar folha/escala próprias; `tierPhases`
+opcional escolhe a sequência da habilidade, preservando as fases padrão
+e a precedência de suporte/derrota. Rhazen usa esse recurso no supremo.
+`Fighter` prepara as folhas no cache existente, resolve os dados e só troca a região quando
+muda o quadro. O diretor anima o progresso pelos Tweens que já possui; pulo e
+reinício os cancelam junto aos movimentos. Sem sequência própria, os seis
+atlas anteriores conservam sua seleção de quadros. Rhazen usa o primeiro
+perfil expandido e um desenho de derrota; Cindra acrescenta o segundo perfil.
+Oren, Nima, Kira, Vektor, Axion, Astra, Elun, Saira, Veyra, Sylva, Vesper e Auren
+ampliam os dados para 14 perfis; Torv, Brin, Bast e Ivo chegam a 18.
+Noct, Maura e Riven completam 21; Elyra, Solen e Zaya totalizam os 24.
+Todos mantêm a ilustração
+de repouso original, sem acrescentar lógica ao motor de combate.
+Fighter possui a transformação dos pontos opcionais de emissão, usando a
+mesma escala efetiva do quadro desenhado, com fallback à escala do perfil.
+Invalida
+interpolações de fases anteriores por versão de comando. O diretor consulta
+a emissão no lançamento e conserva seus Tweens. Showcase ajusta a profundidade
+à altura do palco para reservar margem superior. A aparência de derrota fica
+no Fighter, sem multiplicar duas reduções de opacidade.
+
+`mission_boss_phases.gd` valida opções de pressão dos capítulos e aplica
+somente overrides locais de técnica no checkpoint de fase. Efeitos negativos
+e passagem parcial por escudos usam o motor existente; explicações de
+preparação, HUD, técnica e Registro derivam dos mesmos parâmetros.
+
+No Nexus, Hub possui também a continuidade de foco na Coleção: recompõe os
+controles usando o modelo atual, reconstitui a opção solicitada e espera o
+layout antes de focar. Controles descartados, invisíveis ou substituídos por
+nova navegação não recebem foco; uma escolha posterior do usuário prevalece.
+A posição anterior é conservada quando o destino continua visível, e ações
+que ficam indisponíveis usam o seletor habilitado como alternativa. Campaign conserva
+transações, rollback, custos, atributos e o formato do save.
+
+No Atalaia, Run calcula a aura de marcha do Arauto a partir das fontes vivas
+e posições no início de cada passo. A associação é temporária; não amplia
+o formato de save. Catálogo possui alcance/multiplicador, e Enemy desenha
+o mesmo alcance e a insígnia, sem alterar o estado do combate.
+
+No Atalaia, Run também possui o pulso periódico do chefe final: consulta
+pública somente de leitura, aplicação de interferência e relógio opcional
+`pulse_started_at` por inimigo. Catálogo possui período/aviso/raio/duração;
+SaveSchema valida contexto e timestamp antes de carregar. Avisos recuperam
+sua janela completa em passos grandes. Board desenha círculo/contador do
+snapshot inclusive com efeitos reduzidos; Main apresenta preparação e
+anúncio/resolução. Nenhum temporizador cosmético decide combate ou é salvo.
+
+Run também possui a escolta do Guardião da escória na fase 24: a transição
+não letal existente convoca uma vez os dois tipos definidos no catálogo.
+`enraged` já persistido impede reconvocar, inclusive ao reabrir saves antigos
+sem escoltas. `protection_radius` é a consulta comum à mitigação e à Board;
+Enemy recebe somente o raio de apresentação e invalida seu desenho ao morrer.
+Proteção não acumula nem protege a própria fonte; os caminhos existentes de
+dano contínuo/perfuração continuam atravessando-a. Run captura os inimigos
+da iteração e os destinatários de cada ataque em área antes de resolver
+danos, impedindo aplicação retroativa aos convocados. Não há novo campo
+de save, estado paralelo de proteção ou regra de combate no renderer.
+
+Em Cinzas, Engine.update também possui a ordem da resolução terminal. Dano
+fatal interrompe fases posteriores do mesmo quadro antes de conceder novos
+acertos, abates ou cura; créditos anteriores permanecem. Game consome a fila
+de eventos depois desse resultado, apresenta o encerramento e delega ao
+mesmo protocolo de armazenamento/remoção do checkpoint. A correção não usa
+estado paralelo, rollback de um quadro inteiro ou novo formato persistido.
+
+Em Cinzas, Levels também posiciona o condutor na arena final sem consumir RNG.
+Core possui o ciclo ambiental de colunas, compartilhado com a Horda; sua origem
+identifica quais avisos/colunas o condutor pode cancelar. O estado de destruição
+fica no objeto do mapa, sem flag duplicada ou novo formato de save. Renderer
+apresenta estrutura/cristal/fraturas; Game apresenta o evento tático e solicita
+salvamento pelo mesmo dono. Ataques do chefe permanecem no seu controlador.
+
+Em Cinzas, Levels posiciona a urna opcional sem consumir RNG adicional.
+Engine possui dano, recompensa e IDs consumidos em `brokenObjects`, campo
+opcional do checkpoint por marcos. O probe valida antes de substituir a
+sessão. Renderer desenha o objeto; eventos existentes ligam aviso e áudio.
 
 ## Host Android
 
