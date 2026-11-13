@@ -1,8 +1,20 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.8** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.9** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.9
+
+A transmissão de tela passa a priorizar codificação por hardware H.264
+(`prioritizeH264`) tanto no SFU quanto em conexões P2P, acionando o silício
+dedicado NVIDIA NVENC / MediaFoundation em GPUs dedicadas (como a RTX 3060 Ti)
+para codificação em tempo real em 1–2 ms com 0% de sobrecarga na CPU.
+A política de degradação passa a utilizar `maintain-framerate` para conteúdo
+em movimento (`motion`), preservando taxa de quadros e fluidez estável (60 FPS)
+durante transmissões de jogos e eliminando microtravamentos/stutter. No processo
+principal do Electron no Windows, flags `--enable-gpu-rasterization` e
+`--enable-zero-copy` passam superfícies DXGI da GPU diretamente ao codificador.
 
 ## Windows 1.0.8
 
