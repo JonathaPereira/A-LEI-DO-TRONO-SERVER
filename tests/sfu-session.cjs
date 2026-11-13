@@ -59,6 +59,9 @@ class Peer extends EventTarget {
       mid: '0',
       sender: { track, getParameters: () => ({ encodings: init.sendEncodings || [{}] }) },
       receiver: { track: new Track(track.kind) },
+      setCodecPreferences: (codecs) => {
+        this.tr.preferredCodecs = codecs;
+      },
     };
     return this.tr;
   }
@@ -651,4 +654,64 @@ test('native subscription failure after the queue finishes schedules a new negot
   const next = h.session.subscriptions.get('peer:audio');
   assert(next && next !== old && !next.negotiating);
   assert.deepEqual(h.fallback, []);
+});
+
+test('prioritizeH264 moves H264 codecs to the top of the preference list', async () => {
+  const { prioritizeH264 } = await import('../src/lib/voice/sfu-encoding.ts');
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: (kind) =>
+        kind === 'video'
+          ? {
+              codecs: [
+                { mimeType: 'video/VP8', clockRate: 90000 },
+                { mimeType: 'video/H264', clockRate: 90000 },
+                { mimeType: 'video/VP9', clockRate: 90000 },
+              ],
+            }
+          : { codecs: [] },
+    };
+    let preferred = null;
+    const mockTransceiver = {
+      setCodecPreferences: (codecs) => {
+        preferred = codecs;
+      },
+    };
+    const applied = prioritizeH264(mockTransceiver);
+    assert.equal(applied, true);
+    assert.equal(preferred[0].mimeType, 'video/H264');
+    assert.equal(preferred.length, 3);
+  } finally {
+    globalThis.RTCRtpSender = originalSender;
+  }
+});
+
+test('screen publication prioritizes H264 on the video transceiver for hardware NVENC', async (t) => {
+  const h = await setup(t);
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: (kind) =>
+        kind === 'video'
+          ? {
+              codecs: [
+                { mimeType: 'video/VP8', clockRate: 90000 },
+                { mimeType: 'video/H264', clockRate: 90000 },
+                { mimeType: 'video/VP9', clockRate: 90000 },
+              ],
+            }
+          : { codecs: [] },
+    };
+    const track = new Track('video');
+    const pubPromise = h.session.publish('screen', track);
+    await h.advance(100);
+    const pub = await pubPromise;
+    assert(pub);
+    const peer = h.pcs.at(-1);
+    assert(peer?.tr?.preferredCodecs);
+    assert.equal(peer.tr.preferredCodecs[0].mimeType, 'video/H264');
+  } finally {
+    globalThis.RTCRtpSender = originalSender;
+  }
 });

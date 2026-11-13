@@ -128,6 +128,8 @@ const trace = (...values) => {
 if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {

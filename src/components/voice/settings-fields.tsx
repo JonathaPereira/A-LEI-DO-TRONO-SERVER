@@ -315,8 +315,8 @@ export function VoiceCaptureSettings({
               void client.selectContent(event.target.value);
             }}
           >
-            <option value="detail">Nitidez • jogos, textos e detalhes</option>
-            <option value="motion">Movimento • vídeo e animações</option>
+            <option value="motion">Fluidez • jogos, transmissões e movimento contínuo</option>
+            <option value="detail">Nitidez • textos, slides e documentos estáticos</option>
           </select>
         </label>
       </div>

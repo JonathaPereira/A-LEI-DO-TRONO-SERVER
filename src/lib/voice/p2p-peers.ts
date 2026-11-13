@@ -1,5 +1,6 @@
 import type { PeerSignal, VoiceMediaKind, VoicePeerConnection } from '../../types/voice';
 import { parsePeerSignal } from './peer-protocol.ts';
+import { prioritizeH264 } from './sfu-encoding.ts';
 
 type Status = 'connected' | 'reconnecting' | 'offer-timeout' | 'connection-timeout';
 interface PeerOptions {
@@ -144,6 +145,7 @@ export function createP2pPeers(options: PeerOptions) {
             direction: 'sendrecv',
           });
       if (!transceiver) continue;
+      if (kind === 'screen') prioritizeH264(transceiver);
       transceiver.direction = 'sendrecv';
       peer[transceiverKey] = transceiver;
       peer[senderKey] = transceiver.sender;

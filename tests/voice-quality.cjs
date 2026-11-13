@@ -106,7 +106,10 @@ test('SFU budget caps effective profiles while P2P retains selected quality and 
   assert.equal(quality.getSnapshot().preferences.transmissionQuality, 'economy');
 });
 test('only valid preferences are persisted and disabling adaptation restores the chosen format', async () => {
-  const { quality, values, writes } = await fixture({ mnScreenFormat: '1080-60' });
+  const { quality, values, writes } = await fixture({
+    mnScreenFormat: '1080-60',
+    mnScreenContent: 'detail',
+  });
   quality.configure({
     screenFormat: '__proto__',
     screenBitrateMbps: 999,
@@ -124,7 +127,7 @@ test('only valid preferences are persisted and disabling adaptation restores the
   quality.sample({ limiter: 'cpu' }, 50000);
   assert.equal(quality.getSnapshot().adaptation.level, 0);
 });
-test('screen encoders preserve 60 FPS at full RID, resolution priority and the original source', async () => {
+test('screen encoders preserve 60 FPS at full RID and maintain framerate when content is motion', async () => {
   const { quality } = await fixture({
     mnScreenFormat: '1080-60',
     mnScreenBitrate: '10',
@@ -136,12 +139,26 @@ test('screen encoders preserve 60 FPS at full RID, resolution priority and the o
   };
   await quality.applySender(s, 'screen');
   assert.equal(s.track.contentHint, 'motion');
-  assert.equal(s.applied[0].degradationPreference, 'maintain-resolution');
+  assert.equal(s.applied[0].degradationPreference, 'maintain-framerate');
   assert.deepEqual(s.applied[0].encodings, [
     { rid: 'f', scaleResolutionDownBy: 2, maxBitrate: 10000000, maxFramerate: 60 },
     { rid: 'h', scaleResolutionDownBy: 4, maxBitrate: 4200000, maxFramerate: 30 },
     { rid: 'q', scaleResolutionDownBy: 8, maxBitrate: 1800000, maxFramerate: 20 },
   ]);
+});
+test('screen encoders use maintain-resolution when content is detail', async () => {
+  const { quality } = await fixture({
+    mnScreenFormat: '720-30',
+    mnScreenContent: 'detail',
+  });
+  const s = sender([{ rid: 'f' }]);
+  await quality.applySender(s, 'screen');
+  assert.equal(s.track.contentHint, 'detail');
+  assert.equal(s.applied[0].degradationPreference, 'maintain-resolution');
+});
+test('unconfigured screen content defaults to motion for smooth streaming', async () => {
+  const { quality } = await fixture();
+  assert.equal(quality.getSnapshot().preferences.screenContent, 'motion');
 });
 test('microphone and application audio budgets survive both adaptation levels', async () => {
   const { quality } = await fixture();

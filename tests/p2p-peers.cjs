@@ -15,7 +15,7 @@ function transceiver(kind) {
   return {direction: 'recvonly', receiver: {track: {kind}}, sender: {
     track: null, replacements: [],
     async replaceTrack(track) { this.replacements.push(track); this.track = track; },
-  }};
+  }, setCodecPreferences(codecs) { this.preferredCodecs = codecs; }};
 }
 class Peer {
   constructor() {
@@ -224,3 +224,27 @@ test('connected peer announces screen watch; failures request ICE and expose con
   pc2.connectionState = 'closed'; pc2.onconnectionstatechange();
   assert.equal(h2.peers.connections.size, 0);
 });
+
+test('initiator prioritizes H264 on the screen transceiver for hardware NVENC', async t => {
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: kind =>
+        kind === 'video'
+          ? {
+              codecs: [
+                { mimeType: 'video/VP8', clockRate: 90000 },
+                { mimeType: 'video/H264', clockRate: 90000 },
+              ],
+            }
+          : { codecs: [] },
+    };
+    const h = await setup(t);
+    const pc = h.peers.ensure('z');
+    assert(pc._tronoScreenTransceiver.preferredCodecs);
+    assert.equal(pc._tronoScreenTransceiver.preferredCodecs[0].mimeType, 'video/H264');
+  } finally {
+    globalThis.RTCRtpSender = originalSender;
+  }
+});
+
