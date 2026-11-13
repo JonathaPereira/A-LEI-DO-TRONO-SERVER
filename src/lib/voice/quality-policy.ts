@@ -7,7 +7,7 @@ export const QUALITY_ORDER: readonly TransmissionQuality[] = Object.freeze([
   'balanced',
   'high',
 ]);
-export const SCREEN_BITRATES: readonly number[] = Object.freeze([4, 6, 8, 10, 12, 15]);
+export const SCREEN_BITRATES: readonly number[] = Object.freeze([4, 6, 8, 10, 12, 15, 18]);
 export const SCREEN_FORMATS: Readonly<Record<ScreenFormatId, VideoProfile['screen']>> =
   Object.freeze({
     '720-15': Object.freeze({ width: 1280, height: 720, fps: 15 }),
@@ -16,6 +16,8 @@ export const SCREEN_FORMATS: Readonly<Record<ScreenFormatId, VideoProfile['scree
     '720-60': Object.freeze({ width: 1280, height: 720, fps: 60 }),
     '1080-30': Object.freeze({ width: 1920, height: 1080, fps: 30 }),
     '1080-60': Object.freeze({ width: 1920, height: 1080, fps: 60 }),
+    '1440-30': Object.freeze({ width: 2560, height: 1440, fps: 30 }),
+    '1440-60': Object.freeze({ width: 2560, height: 1440, fps: 60 }),
   });
 const format = Object.freeze({ width: 1280, height: 720, fps: 30 });
 export const QUALITY_PROFILES: Readonly<Record<TransmissionQuality, QualityProfile>> =

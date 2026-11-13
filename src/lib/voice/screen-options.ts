@@ -20,8 +20,8 @@ export function createScreenOptions(options: ScreenOptions) {
   const listeners = new Set<() => void>();
   let snapshot: ScreenOptionsSnapshot = Object.freeze({
     open: false,
-    resolution: '720',
-    fps: '30',
+    resolution: '1080',
+    fps: '60',
     audio: true,
     limited: false,
     replay: false,
@@ -81,8 +81,8 @@ export function createScreenOptions(options: ScreenOptions) {
     setResolution(value: string) {
       if (
         snapshot.open &&
-        ['720', '1080'].includes(value) &&
-        !(snapshot.limited && value === '1080')
+        ['720', '1080', '1440'].includes(value) &&
+        !(snapshot.limited && ['1080', '1440'].includes(value))
       )
         update({ resolution: value });
     },

@@ -55,7 +55,7 @@ test('screen capture preserves replay quality, native audio options and a single
   assert(Object.isFrozen(current));
   assert.equal(h.requests.length, 1);
   assert.deepEqual(h.requests[0], {
-    video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } },
+    video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60, max: 60 } },
     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false,
       suppressLocalAudioPlayback: false, restrictOwnAudio: true },
     systemAudio: 'include', windowAudio: 'window', selfBrowserSurface: 'exclude',
@@ -79,7 +79,7 @@ test('without replay or shared audio, capture requests only the selected call fo
   h.settings.replay = null; h.settings.audio = false;
   h.settings.format = { width: 1920, height: 1080, fps: 60 };
   await h.capture.start();
-  assert.deepEqual(h.requests[0].video.frameRate, { ideal: 60 });
+  assert.deepEqual(h.requests[0].video.frameRate, { ideal: 60, max: 60 });
   assert.equal(h.requests[0].audio, false);
   assert.equal(h.requests[0].systemAudio, 'exclude');
   assert.equal(h.requests[0].windowAudio, 'exclude');

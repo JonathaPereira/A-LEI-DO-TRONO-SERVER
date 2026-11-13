@@ -236,3 +236,18 @@ test('rejected preferences leave dialog open and never request capture', async (
   assert.equal(client.getSnapshot().open, true);
   assert.deepEqual(calls, [['configure', '1080', '60', true]]);
 });
+
+test('1440p resolution is supported in dialog options and blocked when limited', async () => {
+  const { client } = await screen();
+  client.open();
+  client.setResolution('1440');
+  assert.equal(client.getSnapshot().resolution, '1440');
+  client.close();
+
+  const { client: lim, defaults } = await screen();
+  defaults.resolution = 720;
+  defaults.limited = true;
+  lim.open();
+  lim.setResolution('1440');
+  assert.equal(lim.getSnapshot().resolution, '720');
+});

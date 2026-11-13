@@ -42,8 +42,8 @@ export function createCallQuality(options: QualityOptions) {
     initialBitrate = Number(storage.getItem(keys.screenBitrateMbps));
   let preferences: QualityPreferences = Object.freeze({
     transmissionQuality: isQuality(initialQuality) ? initialQuality : 'balanced',
-    screenFormat: isScreenFormat(initialFormat) ? initialFormat : '720-30',
-    screenBitrateMbps: SCREEN_BITRATES.includes(initialBitrate) ? initialBitrate : 8,
+    screenFormat: isScreenFormat(initialFormat) ? initialFormat : '1080-60',
+    screenBitrateMbps: SCREEN_BITRATES.includes(initialBitrate) ? initialBitrate : 10,
     screenContent: storage.getItem(keys.screenContent) === 'detail' ? 'detail' : 'motion',
     adaptiveEnabled: storage.getItem(keys.adaptiveEnabled) !== '0',
   });
@@ -165,11 +165,12 @@ export function createCallQuality(options: QualityOptions) {
               preferences.screenContent === 'motion' ? 'maintain-framerate' : 'maintain-resolution';
             sender.track.contentHint = preferences.screenContent;
             const source = sender.track.getSettings();
-            const scale = Math.max(
+            const rawScale = Math.max(
               1,
               (source.width || q.screen.width) / q.screen.width,
               (source.height || q.screen.height) / q.screen.height,
             );
+            const scale = Math.abs(rawScale - 1) < 0.05 ? 1 : rawScale;
             const byRid: Record<string, number> = {
               f: q.screenBitrate,
               h: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
