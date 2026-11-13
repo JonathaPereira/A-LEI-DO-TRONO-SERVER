@@ -248,3 +248,18 @@ test('initiator prioritizes H264 on the screen transceiver for hardware NVENC', 
   }
 });
 
+test('screen startup offer hints are applied to P2P screen offers when screen track is active', async t => {
+  const h = await setup(t);
+  const pc = h.peers.ensure('z');
+  await h.advance(0);
+  await h.peers.handleSignal(answer);
+  pc.createOffer = async () => ({
+    type: 'offer',
+    sdp: 'v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=rtpmap:96 H264/90000\r\n',
+  });
+  await h.peers.handleSignal({fromId: 'z', signalType: 'stream-watch', data: {watching: true}});
+  pc.onnegotiationneeded();
+  await h.advance(100);
+  const offer = pc.localDescription?.sdp || '';
+  assert(offer.includes('x-google-min-bitrate='), 'P2P offer should include x-google-min-bitrate');
+});

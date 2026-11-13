@@ -139,6 +139,18 @@ test('720p/15 and 1080p/30 retain their existing bitrate presets', async (t) => 
   assert.equal(h.preferences().screenBitrateMbps, 8);
 });
 
+test('1440p at 60fps and 30fps retain their 15Mbps and 12Mbps presets', async (t) => {
+  const h = await setup(t);
+  assert(h.sharing.configure('1440', '60', true));
+  assert.deepEqual(h.preferences(), {
+    screenFormat: '1440-60',
+    transmissionQuality: 'high',
+    screenBitrateMbps: 15,
+  });
+  assert(h.sharing.configure('1440', '30', true));
+  assert.equal(h.preferences().screenBitrateMbps, 12);
+});
+
 test('invalid formats and a left call cannot change preferences', async (t) => {
   const h = await setup(t);
   assert.equal(h.sharing.configure('1440', '120', false), false);

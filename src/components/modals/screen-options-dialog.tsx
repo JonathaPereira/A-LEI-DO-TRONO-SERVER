@@ -55,6 +55,9 @@ export function ScreenOptionsContent({
               <option value={'1080'} disabled={state.limited}>
                 1080p · Alta definição
               </option>
+              <option value={'1440'} disabled={state.limited}>
+                1440p · 2K Ultra
+              </option>
             </select>
           </label>
           <label>

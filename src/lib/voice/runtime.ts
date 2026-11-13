@@ -257,6 +257,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
           .find((t) => t.readyState === 'live') || null,
     }),
     applyQuality: applySenderQuality,
+    getScreenBitrate: () => callQuality.getSnapshot().screenBitrate,
     sendSignal: (id, type, data) => window.TronoNetwork?.sendVoiceSignal(id, type, data),
     getScreenWatch: (id) => mediaInterest.isWatching(id),
     onTrack: (id, track, transceiver) => remoteMedia.attachPeer(id, track, transceiver),

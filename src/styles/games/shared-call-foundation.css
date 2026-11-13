@@ -1087,6 +1087,7 @@
     object-fit: contain;
     background: #050607;
     opacity: 0;
+    transform: translateZ(0);
   }
   .screen-share-tile.has-video video {
     opacity: 1;

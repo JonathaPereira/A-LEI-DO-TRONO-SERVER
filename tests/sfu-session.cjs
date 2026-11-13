@@ -222,7 +222,7 @@ test('screen stays single-layer with native 60 FPS settings and video-only start
   assert.equal(h.pcs[0].init.sendEncodings, undefined);
   assert.equal(h.settings.screen.fps, 60);
   const offer = h.pcs[0].localDescription.sdp;
-  assert(offer.includes('x-google-start-bitrate=5200;x-google-max-bitrate=8000'));
+  assert(offer.includes('x-google-min-bitrate=3200;x-google-start-bitrate=5200;x-google-max-bitrate=8000'));
   assert(offer.includes('foo=bar'));
   assert(!offer.includes('start-bitrate=100'));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));

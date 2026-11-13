@@ -1,8 +1,33 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.9** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.10** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.10
+
+Otimização fina da transmissão de tela focada em eliminar serrilhados de escala
+e microtravamentos (*frame pacing judder*):
+- **Eliminação de serrilhados e preservação de nitidez:** suporte nativo a 1440p
+  (2K Ultra @ 60 FPS e 30 FPS até 18 Mbps) no diálogo de compartilhamento de tela
+  e na política de qualidade (`quality-policy.ts`). O formato padrão passa de 720p
+  para 1080p @ 60 FPS (10 Mbps), eliminando o *downscale* fracionário de 1.5x em
+  telas Full HD. Fixação de escala exata 1:1 (`scale = 1.0`) para proporções com
+  desvio inferior a 5%, eliminando artefatos bilineares do WebRTC em textos e HUDs.
+- **Piso mínimo de bitrate no SDP (`x-google-min-bitrate`):** injeção de piso
+  mínimo garantido (mínimo de 2.500 kbps ou 40% do bitrate alvo) em parâmetros
+  fmtp do SDP (H.264 e VP8), impedindo que flutuações de BWE derrubem a taxa para
+  o piso genérico de 300 kbps da WebRTC.
+- **Tuning de SDP em chamadas P2P:** aplicação de `screenStartupOffer` também em
+  conexões P2P (`p2p-peers.ts`), garantindo paridade de bitrate e codec entre
+  chamadas 1-a-1 e salas em grupo (SFU).
+- **Estabilidade de quadros e captura:** restrição de `frameRate: { ideal, max }`
+  na captura de tela para evitar dessincronia e pacing instável em monitores de
+  alta taxa de atualização (144Hz/240Hz). Desativação da oclusão nativa de janelas
+  no Electron para Windows (`--disable-features=CalculateNativeWinOcclusion`),
+  evitando que jogos em tela cheia reduzam a prioridade de renderização da stream.
+  Isolamento de camada de composição GPU com `transform: translateZ(0)` nos
+  elementos `<video>` da stream.
 
 ## Windows 1.0.9
 

@@ -101,7 +101,10 @@ export function createScreenCapture({
         video: {
           width: { ideal: Math.max(settings.format.width, settings.replay?.width || 0) },
           height: { ideal: Math.max(settings.format.height, settings.replay?.height || 0) },
-          frameRate: { ideal: Math.max(settings.format.fps, settings.replay?.fps || 0) },
+          frameRate: {
+            ideal: Math.max(settings.format.fps, settings.replay?.fps || 0),
+            max: Math.max(settings.format.fps, settings.replay?.fps || 0),
+          },
         },
         audio: settings.audio
           ? {

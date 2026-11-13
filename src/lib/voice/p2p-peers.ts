@@ -1,12 +1,13 @@
 import type { PeerSignal, VoiceMediaKind, VoicePeerConnection } from '../../types/voice';
 import { parsePeerSignal } from './peer-protocol.ts';
-import { prioritizeH264 } from './sfu-encoding.ts';
+import { prioritizeH264, screenStartupOffer } from './sfu-encoding.ts';
 
 type Status = 'connected' | 'reconnecting' | 'offer-timeout' | 'connection-timeout';
 interface PeerOptions {
   getSettings(): { enabled: boolean; localId: string | null | undefined };
   createConnection(): RTCPeerConnection;
   getTracks(): Record<VoiceMediaKind, MediaStreamTrack | null>;
+  getScreenBitrate?(): number;
   applyQuality(sender: RTCRtpSender, kind: VoiceMediaKind): Promise<void>;
   sendSignal(id: string, type: PeerSignal['signalType'], data: PeerSignal['data']): void;
   getScreenWatch(id: string): boolean;
@@ -190,11 +191,14 @@ export function createP2pPeers(options: PeerOptions) {
           peer.restartIce();
         } catch {}
       }
-      const offer = await peer.createOffer({ iceRestart });
+      let offer = await peer.createOffer({ iceRestart });
       if (!current(session)) return;
       if (peer.signalingState !== 'stable') {
         session.renegotiate = true;
         return;
+      }
+      if (peer._tronoScreenSender?.track) {
+        offer = screenStartupOffer(offer, options.getScreenBitrate?.() ?? 8000000);
       }
       await peer.setLocalDescription(offer);
       if (!current(session)) return;
@@ -352,8 +356,11 @@ export function createP2pPeers(options: PeerOptions) {
         if (!current(session)) return;
       }
       if (isOffer) {
-        const answer = await peer.createAnswer();
+        let answer = await peer.createAnswer();
         if (!current(session)) return;
+        if (peer._tronoScreenSender?.track) {
+          answer = screenStartupOffer(answer, options.getScreenBitrate?.() ?? 8000000);
+        }
         await peer.setLocalDescription(answer);
         if (current(session)) description(session, 'answer');
       } else if (peer.signalingState === 'stable' && session.renegotiate) {

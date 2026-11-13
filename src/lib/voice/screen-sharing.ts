@@ -134,8 +134,19 @@ export function createScreenSharing(options: SharingOptions) {
       if (disposed || !options.call().joined || !isScreenFormat(format)) return false;
       options.quality.configure({
         screenFormat: format,
-        transmissionQuality: resolution === '1080' ? 'high' : 'balanced',
-        screenBitrateMbps: resolution === '1080' ? (fps === '60' ? 10 : 8) : fps === '15' ? 4 : 6,
+        transmissionQuality: ['1080', '1440'].includes(resolution) ? 'high' : 'balanced',
+        screenBitrateMbps:
+          resolution === '1440'
+            ? fps === '60'
+              ? 15
+              : 12
+            : resolution === '1080'
+              ? fps === '60'
+                ? 10
+                : 8
+              : fps === '15'
+                ? 4
+                : 6,
       });
       snapshot = Object.freeze({ ...snapshot, audio });
       options.storage.setItem('mnShareStreamAudio', audio ? '1' : '0');

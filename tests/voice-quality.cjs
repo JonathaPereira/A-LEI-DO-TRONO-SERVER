@@ -64,8 +64,8 @@ test('invalid persisted preferences fall back; snapshots and nested profiles are
   });
   const snapshot = quality.getSnapshot();
   assert.equal(snapshot.preferences.transmissionQuality, 'balanced');
-  assert.equal(snapshot.preferences.screenFormat, '720-30');
-  assert.equal(snapshot.screenBitrate, 8000000);
+  assert.equal(snapshot.preferences.screenFormat, '1080-60');
+  assert.equal(snapshot.screenBitrate, 10000000);
   assert.equal(snapshot, quality.getSnapshot());
   assert.throws(() => (snapshot.profile.screen.fps = 5), TypeError);
   assert.throws(() => (snapshot.preferences.adaptiveEnabled = false), TypeError);
@@ -296,4 +296,21 @@ test('preferred layers honor economy, maximization and sustained adaptation; P2P
   assert.equal(quality.preferredRid('screen', true), 'h');
   quality.sample({ limiter: 'cpu' }, 32000);
   assert.equal(quality.preferredRid('camera', true), 'q');
+});
+
+test('1440p (2K) profiles and clean native scale prevent fractional downscaling', async () => {
+  const { quality } = await fixture({
+    mnScreenFormat: '1440-60',
+    mnScreenBitrate: '15',
+  });
+  const snapshot = quality.getSnapshot();
+  assert.equal(snapshot.preferences.screenFormat, '1440-60');
+  assert.equal(snapshot.profile.screen.width, 2560);
+  assert.equal(snapshot.profile.screen.height, 1440);
+  assert.equal(snapshot.profile.screen.fps, 60);
+
+  const nativeScreen = sender([{}], { width: 1920, height: 1080 });
+  const customQuality = (await fixture({ mnScreenFormat: '1080-60' })).quality;
+  await customQuality.applySender(nativeScreen, 'screen');
+  assert.equal(nativeScreen.applied[0].encodings[0].scaleResolutionDownBy, 1);
 });
