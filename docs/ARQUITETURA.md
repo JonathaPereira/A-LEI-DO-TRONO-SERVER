@@ -181,6 +181,15 @@ settings/initialize.ts prepara o controlador antes da voz, sem montar a view
 antiga nem adquirir dispositivos. media-settings.tsx apresenta os controles dos
 donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
 getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
+A transmissão de tela prioriza o codec H.264 (`prioritizeH264`) tanto no SFU
+(`sfu-session.ts`) quanto em conexões P2P (`p2p-peers.ts`), permitindo que a
+codificação por hardware (NVIDIA NVENC / MediaFoundation no Windows) opere em
+1–2 ms com 0% de sobrecarga na CPU. O perfil padrão de conteúdo de tela é `motion`,
+que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência
+e fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail`
+(`maintain-resolution`) para documentos e apresentações estáticas. No processo
+principal do Electron (`electron/main.cjs`), flags `--enable-gpu-rasterization` e
+`--enable-zero-copy` encaminham superfícies DXGI diretamente ao codificador.
 Escape fecha primeiro o menu/diálogo ou a tela cheia; outro Escape pode retornar
 à grade. O dono media-focus também encerra explicitamente fullscreen nativo.
 

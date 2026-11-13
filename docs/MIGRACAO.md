@@ -1461,3 +1461,17 @@ admitia quatro pedidos, mas o nativo admite dois pendentes. Contrato novo reprod
 invocação indevida do terceiro pedido; cada sessão agora informa sua capacidade
 (dois no nativo, quatro no compatível), mantendo a captura ativa com aviso de espera.
 Isso corrige um aviso enganoso; não prova por si só a causa de um desligamento real.
+
+Ajuste de fluidez da transmissão de tela (branch `codex/stream-fluidity-nvenc`):
+identificada causa raiz de microtravamentos na transmissão de tela em GPUs dedicadas
+(como a RTX 3060 Ti). O pipeline padrão negociava VP8 por software na CPU via libvpx
+e forçava `degradationPreference: 'maintain-resolution'` com `contentHint: 'detail'`.
+Implementada priorização de codec H.264 (`prioritizeH264`) nos transceivers de tela
+em SFU (`sfu-session.ts`) e P2P (`p2p-peers.ts`), descarregando a codificação em
+tempo real para o chip NVENC/MediaFoundation em hardware. O padrão de conteúdo de tela
+passou a ser `motion` com `maintain-framerate`, estabilizando a cadência de quadros
+(60 FPS estáveis) para jogos e vídeo. Adicionadas flags `--enable-gpu-rasterization`
+e `--enable-zero-copy` no Electron para repassar superfícies DXGI diretamente ao
+codificador. Cobertura ampliada em `voice-quality.cjs`, `sfu-session.cjs` e `p2p-peers.cjs`;
+1496 testes aprovados, build e format:check preservados sem regressões.
+

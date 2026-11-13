@@ -75,3 +75,18 @@ export function advertisedRids(transceiver: RTCRtpTransceiver, pc: RTCPeerConnec
   }
   return rids;
 }
+
+export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined): boolean {
+  if (!transceiver?.setCodecPreferences) return false;
+  try {
+    const sender = typeof RTCRtpSender !== 'undefined' ? RTCRtpSender : null;
+    const codecs = sender?.getCapabilities?.('video')?.codecs;
+    if (!codecs?.length) return false;
+    const h264 = codecs.filter((c) => c.mimeType?.toLowerCase() === 'video/h264');
+    if (!h264.length) return false;
+    transceiver.setCodecPreferences([...h264, ...codecs.filter((c) => !h264.includes(c))]);
+    return true;
+  } catch {
+    return false;
+  }
+}
