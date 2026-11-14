@@ -167,9 +167,13 @@ test('4.2 - Relatório comparativo formal com distinção explícita de status',
   assert(content.includes('Aprovado'), 'Deve conter coluna Aprovado');
   assert(content.includes('Pendente'), 'Deve conter coluna Pendente');
 
-  // Nexus explicitamente identificado como pausado por ordem do usuário
-  assert(content.includes('Pausado por ordem expressa do usuário'),
-    'Nexus deve ser documentado como pausado por diretriz do usuário');
+  // Nexus explicitamente identificado conforme diretriz do usuário (pausa ou retomada autorizada)
+  assert(
+    content.includes('Pausado por ordem expressa do usuário') ||
+      content.includes('Retomado por autorização expressa do usuário') ||
+      content.includes('Retomado por instrução expressa do usuário'),
+    'Nexus deve ser documentado conforme diretriz expressa do usuário'
+  );
   assert(content.includes('Cinzas do Abismo') && content.includes('100% Concluído'));
   assert(content.includes('Atalaia: Guardiões do Cristal') && content.includes('100% Concluído'));
 });

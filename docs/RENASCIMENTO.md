@@ -2546,7 +2546,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Implementar campo simétrico de energia e composição com treino/ondas (um encontro existente).
 - [x] Entregar o primeiro chefe em duas fases (Arconte), com preparação, HUD, Registro e resultado.
 - [x] Diferenciar fases do Arquivista e da Arquiteta com Exposição purificável e passagem parcial por escudos, avisos e contra-jogo.
-- [ ] Ampliar mecânicas de elites e chefes (sete definições de fases, composição com ondas e campos; Arquivista, Arquiteta e Executor têm pressões distintas).
+- [x] Ampliar mecânicas de elites e chefes (sete definições de fases, composição com ondas e campos; Arquivista, Arquiteta e Executor têm pressões distintas).
 - [x] Implementar oficina com três peças, patamares, especializações e prévias de atributos.
 - [x] Implementar fragmentos previsíveis, recompensas repetíveis e transferência conservando gemas/investimento.
 - [x] Migrar equipamento/progresso ao save 5 com backup e recuperação conjunta.
