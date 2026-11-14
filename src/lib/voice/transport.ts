@@ -11,7 +11,8 @@ import { errorCode, sfuCancelled } from './sfu-protocol.ts';
 interface TransportOptions {
   call(): VoiceCallSnapshot;
   community(): boolean;
-  realtime: Pick<ReturnType<typeof createRealtimeConfiguration>, 'refreshIce' | 'sync'>;
+  realtime: Pick<ReturnType<typeof createRealtimeConfiguration>, 'refreshIce' | 'sync'> &
+    Partial<Pick<ReturnType<typeof createRealtimeConfiguration>, 'getSnapshot'>>;
   sfu: Pick<
     SfuSession,
     | 'getGeneration'
@@ -20,7 +21,8 @@ interface TransportOptions {
     | 'recoverPublication'
     | 'syncSubscriptions'
     | 'reset'
-  >;
+  > &
+    Partial<Pick<SfuSession, 'getPublications' | 'refreshPublications'>>;
   tracks(): Partial<Record<VoiceMediaKind, MediaStreamTrack | null | undefined>>;
   closePeers(): void;
   clearReceived(): void;
@@ -162,6 +164,10 @@ export function createVoiceTransport(options: TransportOptions) {
       if (!current()) throw sfuCancelled();
     };
     const wait = <T>(promise: Promise<T>) => abortable(promise, job.controller.signal);
+    const liveStatus = () => {
+      const snap = options.realtime.getSnapshot?.();
+      return snap && !snap.error ? snap.status : null;
+    };
     update({ mode: 'sfu-pending' });
     job.promise = (async () => {
       try {
@@ -172,13 +178,13 @@ export function createVoiceTransport(options: TransportOptions) {
           Promise.all([options.realtime.refreshIce(), options.realtime.sync()]),
         );
         ensure();
-        let status = initialStatus;
+        let status = initialStatus ?? liveStatus();
         ensure();
         if (!status) {
           options.onStatus('Conferindo o servidor de mídia novamente…', 'warn');
           await delay(500, job.controller.signal);
           ensure();
-          status = await wait(options.realtime.sync());
+          status = (await wait(options.realtime.sync())) ?? liveStatus();
           ensure();
         }
         if (!status?.enabled || !status.configured || status.hardBlocked) {
@@ -220,6 +226,10 @@ export function createVoiceTransport(options: TransportOptions) {
         ensure();
         options.announce('sfu');
         try {
+          if (options.sfu.refreshPublications && !options.sfu.getPublications?.().length) {
+            await wait(options.sfu.refreshPublications());
+            ensure();
+          }
           await wait(options.sfu.syncSubscriptions());
         } catch (error) {
           if (!current() || errorCode(error) === 'SFU_CANCELLED') throw error;
@@ -258,10 +268,16 @@ export function createVoiceTransport(options: TransportOptions) {
     reset,
     setRoom(id: string | null) {
       if (id === roomId) return;
+      const preservePrepared =
+        roomId === null &&
+        id !== null &&
+        options.call().joining &&
+        !options.call().joined &&
+        snapshot.roomMode !== null;
       cancel();
       if (snapshot.mode !== 'p2p') clear();
       roomId = id;
-      update({ roomMode: null });
+      if (!preservePrepared) update({ roomMode: null });
     },
     start() {
       if (disposed || unsubscribe) return;
@@ -274,12 +290,32 @@ export function createVoiceTransport(options: TransportOptions) {
         )
           return;
         update({ roomMode: message.mode as 'p2p' | 'sfu' });
-        if (options.call().joined && message.mode === 'p2p' && snapshot.mode !== 'p2p')
+        if (options.call().joined && message.mode === 'p2p' && snapshot.mode !== 'p2p') {
           void fallback(
             typeof message.reason === 'string' && message.reason
               ? message.reason
               : 'Chamada sincronizada em P2P.',
           );
+        } else if (
+          options.call().joined &&
+          message.mode === 'sfu' &&
+          snapshot.mode === 'p2p' &&
+          options.community() &&
+          !connection &&
+          fallbackGeneration !== options.call().generation
+        ) {
+          const generation = options.call().generation,
+            controller = new AbortController();
+          void connect({
+            generation,
+            signal: controller.signal,
+            isCurrent: () =>
+              !disposed &&
+              options.call().joined &&
+              options.call().generation === generation &&
+              !controller.signal.aborted,
+          });
+        }
       });
     },
     dispose() {

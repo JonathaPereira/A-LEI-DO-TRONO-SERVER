@@ -585,15 +585,89 @@ check('community P2P refreshes ICE/TURN credentials before syncing peers', async
   assert.deepEqual(h.events, ['ice', 'sync-peers']);
 });
 
-check('transient syncSubscriptions failure keeps SFU active without forcing room-wide fallback', async (t) => {
-  const h = await setup(t);
-  h.publish((kind) => {
-    h.publications.set(kind, { ready: true });
-    return Promise.resolve();
-  });
-  h.subscriptions(() => Promise.reject(Object.assign(new Error('sub failed'), { code: 'BAD_SFU_OFFER' })));
-  await h.transport.connect(h.operation());
-  assert.equal(h.transport.getSnapshot().mode, 'sfu');
-  assert.equal(h.state.fallbacks, 0);
-  assert(h.events.includes('sync-peers'));
-});
+check(
+  'transient syncSubscriptions failure keeps SFU active without forcing room-wide fallback',
+  async (t) => {
+    const h = await setup(t);
+    h.publish((kind) => {
+      h.publications.set(kind, { ready: true });
+      return Promise.resolve();
+    });
+    h.subscriptions(() =>
+      Promise.reject(Object.assign(new Error('sub failed'), { code: 'BAD_SFU_OFFER' })),
+    );
+    await h.transport.connect(h.operation());
+    assert.equal(h.transport.getSnapshot().mode, 'sfu');
+    assert.equal(h.state.fallbacks, 0);
+    assert(h.events.includes('sync-peers'));
+  },
+);
+
+check(
+  'superseded realtime sync uses live broadcast snapshot and refreshes empty publication catalog',
+  async (t) => {
+    let refreshed = 0;
+    const h = await setup(t, {
+      realtime: {
+        refreshIce: async () => {},
+        sync: async () => null,
+        getSnapshot: () => ({ status: status(), error: '', turn: false }),
+      },
+    });
+    h.transport.dispose();
+    const { createVoiceTransport } = await modulePromise;
+    const events = [];
+    const transport = createVoiceTransport({
+      call: () => h.state.call,
+      community: () => true,
+      realtime: {
+        refreshIce: async () => {
+          events.push('ice');
+        },
+        sync: async () => {
+          events.push('sync');
+          return null;
+        },
+        getSnapshot: () => ({ status: status(), error: '', turn: false }),
+      },
+      sfu: {
+        getGeneration: () => 0,
+        publications: h.publications,
+        getPublications: () => [],
+        refreshPublications: async () => {
+          refreshed++;
+          events.push('refresh-publications');
+          return [];
+        },
+        publish: async (kind) => {
+          h.publications.set(kind, { ready: true });
+          events.push('publish:' + kind);
+        },
+        recoverPublication: async () => true,
+        syncSubscriptions: async () => {
+          events.push('subscriptions');
+        },
+        reset: () => {},
+      },
+      tracks: () => ({ audio: h.tracks.audio }),
+      closePeers: () => {},
+      clearReceived: () => {},
+      syncPeers: () => events.push('sync-peers'),
+      announce: (mode) => events.push('announce:' + mode),
+      fallbackRoom: () => events.push('fallback'),
+      onMessage: () => () => {},
+      onChange() {},
+      onStatus() {},
+      onError() {},
+    });
+    transport.setRoom('room');
+    transport.prepare('sfu');
+    transport.begin();
+    await transport.connect(h.operation());
+    assert.equal(transport.getSnapshot().mode, 'sfu');
+    assert.equal(refreshed, 1);
+    assert(events.indexOf('refresh-publications') < events.indexOf('subscriptions'));
+    assert(!events.includes('fallback'));
+  },
+);
+

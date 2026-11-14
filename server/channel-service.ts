@@ -762,7 +762,7 @@ export function createChannelService({
     if (message.joined) {
       chooseVoiceMode(room);
       if (
-        message.transport === 'p2p' ||
+        (room.kind !== 'chat' && message.transport === 'p2p') ||
         (!player.voiceJoined &&
           [...room.players.values()].filter((p) => p.voiceJoined).length >=
             realtimeSfu.statusPayload().maxParticipants)
@@ -786,8 +786,10 @@ export function createChannelService({
     player.screenFps = message.screenFps || player.screenFps || 30;
     const transport = message.transport || player.mediaTransport || 'p2p';
     player.mediaTransport =
-      player.voiceJoined && room.voiceMode === 'sfu' && ['sfu', 'sfu-pending'].includes(transport)
-        ? transport
+      player.voiceJoined && room.voiceMode === 'sfu'
+        ? transport === 'sfu'
+          ? 'sfu'
+          : 'sfu-pending'
         : 'p2p';
     if (player.voiceJoined && player.mediaTransport === 'sfu')
       player.transmissionQuality = realtimeSfu.notePlayerQuality(

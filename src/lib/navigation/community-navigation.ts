@@ -450,6 +450,7 @@ export function createCommunityNavigation(options: Options) {
         network.primaryRoom === room.id
       ) {
         resume = null;
+        voice.consumeRoom(msg.room);
         void voice.joinVoice().catch(options.warn);
       }
     }
