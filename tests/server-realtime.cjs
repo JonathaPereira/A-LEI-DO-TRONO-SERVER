@@ -533,3 +533,14 @@ test('TURN stop aborts a provider ignoring cancellation and cannot populate a di
   await tick();
   await assert.rejects(ice.configuration());
 });
+
+test('_waitPublicationActive accepts an existing local track even if still reported inactive at timeout', async (t) => {
+  const f = fixture(t);
+  await f.publish(f.peers[0]);
+  const [pub] = f.manager._pubMap('voice').values();
+  pub.lastVerifiedAt = 0;
+  f.sessions.get(pub.sessionId).tracks[0].status = 'inactive';
+  assert.equal(await f.manager._waitPublicationActive(pub, 10), true);
+  f.sessions.delete(pub.sessionId);
+  assert.equal(await f.manager._waitPublicationActive(pub, 10), false);
+});

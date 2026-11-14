@@ -94,8 +94,8 @@ export function createSocketGateway({
   sfu: realtimeSfu,
   version: VERSION,
   authTimeoutMs = 0,
-  rateLimitCapacity = 80,
-  rateLimitPerSec = 40,
+  rateLimitCapacity = 600,
+  rateLimitPerSec = 250,
 }: Options) {
   let closed = false;
   const suspended = new Map<string, { ws: BackendSocket; timer: ReturnType<typeof setTimeout> }>();

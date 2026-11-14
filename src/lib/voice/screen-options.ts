@@ -20,8 +20,8 @@ export function createScreenOptions(options: ScreenOptions) {
   const listeners = new Set<() => void>();
   let snapshot: ScreenOptionsSnapshot = Object.freeze({
     open: false,
-    resolution: '1080',
-    fps: '60',
+    resolution: '720',
+    fps: '30',
     audio: true,
     limited: false,
     replay: false,

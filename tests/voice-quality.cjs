@@ -64,8 +64,8 @@ test('invalid persisted preferences fall back; snapshots and nested profiles are
   });
   const snapshot = quality.getSnapshot();
   assert.equal(snapshot.preferences.transmissionQuality, 'balanced');
-  assert.equal(snapshot.preferences.screenFormat, '1080-60');
-  assert.equal(snapshot.screenBitrate, 10000000);
+  assert.equal(snapshot.preferences.screenFormat, '720-30');
+  assert.equal(snapshot.screenBitrate, 8000000);
   assert.equal(snapshot, quality.getSnapshot());
   assert.throws(() => (snapshot.profile.screen.fps = 5), TypeError);
   assert.throws(() => (snapshot.preferences.adaptiveEnabled = false), TypeError);
@@ -156,9 +156,9 @@ test('screen encoders use maintain-resolution when content is detail', async () 
   assert.equal(s.track.contentHint, 'detail');
   assert.equal(s.applied[0].degradationPreference, 'maintain-resolution');
 });
-test('unconfigured screen content defaults to motion for smooth streaming', async () => {
+test('unconfigured screen content defaults to detail as in 1.0.8 baseline', async () => {
   const { quality } = await fixture();
-  assert.equal(quality.getSnapshot().preferences.screenContent, 'motion');
+  assert.equal(quality.getSnapshot().preferences.screenContent, 'detail');
 });
 test('microphone and application audio budgets survive both adaptation levels', async () => {
   const { quality } = await fixture();

@@ -1,8 +1,35 @@
 # Atualizações do aplicativo
 
 Este é o guia mantido para atualizar instalações existentes. A entrega publica
-Windows **1.0.10** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
+Windows **1.0.12** e preserva o backend **0.14.0-alpha**. Instalador e manifesto
 `downloads/latest.yml` identificam a versão efetivamente distribuída.
+
+## Windows 1.0.12
+
+Correção de estabilidade de voz em chamadas SFU/P2P e regressão controlada para a base
+estável da **1.0.8** em codificação e captura no Windows:
+- **Isolamento de fallback SFU na sala (`channel-service.ts`):** quando outros membros da
+  chamada já estão conectados via Cloudflare SFU, um `voice-fallback` isolado limpa e
+  resincroniza apenas aquele participante sem derrubar toda a sala para P2P (evitando queda
+  total de voz para usuários atrás de CGNAT quando TURN não está habilitado).
+- **Sincronização de status e publicação SFU (`channel-service.ts`, `realtime-sfu.ts`):**
+  atualizações de voz (`handleVoiceState`) não abortam mais respostas `realtime-status`
+  pendentes em clientes antigos, e `_waitPublicationActive` aceita tracks locais já
+  registradas mesmo que ainda reportadas como `inactive` ao entrar mutado ou antes do
+  primeiro pacote RTP.
+- **Proteção contra falsos fallbacks de assinatura (`sfu-session.ts`):** falha em uma
+  assinatura de áudio remoto não derruba a chamada para P2P enquanto a publicação de áudio
+  local estiver ativa no SFU.
+- **Sinalização e limite WebSocket (`socket-gateway.ts`, `channel-service.ts`):**
+  capacidade de rajada WebSocket ampliada (`600` / `250 msg/s`) para absorver rajadas de ICE
+  e estados, e `handleVoiceSignal` bloqueia apenas participantes em `'sfu'` ativo (mantendo
+  `'stream-watch'` e transições `'sfu-pending'` funcionais).
+- **Regressão de vídeo/Electron para a base `1.0.8`:** removida a priorização forçada de
+  H.264 (`prioritizeH264`), removida a injeção de `x-google-min-bitrate` no SDP e em
+  conexões P2P, removidas as flags experimentais `CalculateNativeWinOcclusion`,
+  `enable-gpu-rasterization` e `enable-zero-copy` no Electron Windows e restaurados os
+  padrões iniciais de tela para `720p @ 30 FPS`, `8 Mbps` e conteúdo `detail` (mantendo a
+  opção manual de 1440p disponível).
 
 ## Windows 1.0.10
 

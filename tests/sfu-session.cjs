@@ -222,7 +222,8 @@ test('screen stays single-layer with native 60 FPS settings and video-only start
   assert.equal(h.pcs[0].init.sendEncodings, undefined);
   assert.equal(h.settings.screen.fps, 60);
   const offer = h.pcs[0].localDescription.sdp;
-  assert(offer.includes('x-google-min-bitrate=3200;x-google-start-bitrate=5200;x-google-max-bitrate=8000'));
+  assert(!offer.includes('x-google-min-bitrate='));
+  assert(offer.includes('x-google-start-bitrate=5200;x-google-max-bitrate=8000'));
   assert(offer.includes('foo=bar'));
   assert(!offer.includes('start-bitrate=100'));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));
@@ -445,6 +446,25 @@ test('malformed audio subscription offers retry with the existing backoff and fa
     [1, 2, 3],
   );
   assert.deepEqual(h.fallback, ['subscription']);
+});
+test('remote audio subscription failure does not trigger fallback while local audio publication is active', async (t) => {
+  const h = await setup(t);
+  await h.session.publish('audio', new Track('audio'));
+  assert.equal(h.session.publications.get('audio')?.ready, true);
+  h.session.setPublications([metadata('audio')]);
+  h.request(async (a, p) =>
+    a === 'subscribe-track'
+      ? { sessionId: 'bad', mid: '0', sessionDescription: sdp('answer') }
+      : h.base(a, p),
+  );
+  await h.session.syncSubscriptions();
+  await h.advance(900);
+  await h.advance(1800);
+  assert.deepEqual(
+    h.retries.map((r) => r.attempt),
+    [1, 2, 3],
+  );
+  assert.deepEqual(h.fallback, []);
 });
 test('connection failure handlers and timers from a reset session cannot affect the next call', async (t) => {
   const h = await setup(t);
@@ -687,7 +707,7 @@ test('prioritizeH264 moves H264 codecs to the top of the preference list', async
   }
 });
 
-test('screen publication prioritizes H264 on the video transceiver for hardware NVENC', async (t) => {
+test('screen publication preserves default transceiver codec order', async (t) => {
   const h = await setup(t);
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -709,8 +729,7 @@ test('screen publication prioritizes H264 on the video transceiver for hardware 
     const pub = await pubPromise;
     assert(pub);
     const peer = h.pcs.at(-1);
-    assert(peer?.tr?.preferredCodecs);
-    assert.equal(peer.tr.preferredCodecs[0].mimeType, 'video/H264');
+    assert.equal(peer?.tr?.preferredCodecs, undefined);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }

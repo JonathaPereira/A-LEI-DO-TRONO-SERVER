@@ -811,7 +811,6 @@ export function createChannelService({
     broadcastChatChannels();
     broadcastVoiceRoster(room);
     if (room.kind === 'chat' && player.voiceJoined) {
-      realtimeSfu.broadcastStatus(room);
       realtimeSfu.broadcastPublications(room);
     }
   }
@@ -824,19 +823,17 @@ export function createChannelService({
     if (!room || !player || player.ws !== ws || ws.roomId !== room.id || !player.voiceJoined)
       return;
     const target = room.players.get(String(message.targetId || ''));
-    if (
-      !target ||
-      !target.voiceJoined ||
-      target.ws.roomId !== room.id ||
-      target.id === player.id ||
-      player.mediaTransport !== 'p2p' ||
-      target.mediaTransport !== 'p2p'
-    )
+    if (!target || !target.voiceJoined || target.ws.roomId !== room.id || target.id === player.id)
       return;
     const signalType = String(message.signalType || '');
     if (!['offer', 'answer', 'ice', 'renegotiate-request', 'stream-watch'].includes(signalType))
       return;
     if (signalType === 'stream-watch' && room.kind !== 'chat') return;
+    if (
+      signalType !== 'stream-watch' &&
+      (player.mediaTransport === 'sfu' || target.mediaTransport === 'sfu')
+    )
+      return;
     if (message.data !== undefined && message.data !== null) {
       if (typeof message.data !== 'object' || JSON.stringify(message.data).length > 65536) return;
     }
@@ -936,7 +933,26 @@ export function createChannelService({
       if (closed) return;
       const room = roomFor(ws.roomId);
       const player = room?.players.get(ws.clientId);
-      if (room && player?.ws === ws && player.voiceJoined) forceRoomP2p(room);
+      if (!room || player?.ws !== ws || !player.voiceJoined) return;
+      const policy = realtimeSfu.statusPayload();
+      const activeSfuPeers =
+        room.kind === 'chat' &&
+        policy.enabled &&
+        policy.configured &&
+        !policy.hardBlocked &&
+        [...room.players.values()].some(
+          (p) => p.id !== player.id && p.voiceJoined && p.mediaTransport === 'sfu',
+        );
+      if (activeSfuPeers) {
+        // Isolate a single client fallback so active SFU peers are not forced into P2P.
+        player.mediaTransport = 'sfu-pending';
+        void realtimeSfu.cleanupClient(player.id, room.id);
+        sendVoiceMode(room);
+        realtimeSfu.broadcastPublications(room);
+        broadcastVoiceRoster(room);
+        return;
+      }
+      forceRoomP2p(room);
     },
     updateProfile(ws: ChannelConnection, account: BackendAccount) {
       if (closed) return;

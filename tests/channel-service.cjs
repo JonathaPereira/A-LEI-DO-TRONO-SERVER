@@ -177,6 +177,71 @@ test('SFU mode is shared by the room, admission falls back together and leaving 
   }
 });
 
+test('single client voice-fallback isolates only that caller while other SFU peers stay active', () => {
+  const f = fixture({ enabled: true, maxParticipants: 6 }),
+    alice = f.connection('alice'),
+    alan = f.connection('alan');
+  try {
+    for (const ws of [alice, alan]) f.service.joinRoom(ws, 'chat-jogos');
+    f.service.prepareVoice(alice, { requestId: 'prep-a' });
+    f.service.handleVoiceState(alice, { joined: true, transport: 'sfu' });
+    f.service.handleVoiceState(alan, { joined: true, transport: 'sfu-pending' });
+
+    const room = f.rooms.get('chat-jogos');
+    f.service.fallbackVoice(alan);
+    assert.equal(room.voiceMode, 'sfu');
+    assert.equal(room.players.get('alice').mediaTransport, 'sfu');
+    assert.equal(room.players.get('alan').mediaTransport, 'sfu-pending');
+    assert(f.effects.some((effect) => effect.cleanup?.[0] === 'alan'));
+
+    // Only Alan left with no active SFU peers falls back to P2P.
+    f.service.handleVoiceState(alice, { joined: false });
+    f.service.fallbackVoice(alan);
+    assert.equal(room.voiceMode, 'p2p');
+    assert.equal(room.players.get('alan').mediaTransport, 'p2p');
+  } finally {
+    f.service.stop();
+  }
+});
+
+test('handleVoiceSignal allows stream-watch and sfu-pending signaling while blocking active sfu P2P offers', () => {
+  const f = fixture({ enabled: true }),
+    a = f.connection('alice'),
+    b = f.connection('bob');
+  try {
+    for (const ws of [a, b]) f.service.joinRoom(ws, 'chat-jogos');
+    f.service.handleVoiceState(a, { joined: true, transport: 'sfu' });
+    f.service.handleVoiceState(b, { joined: true, transport: 'sfu' });
+
+    const beforeBlocked = f.messages.length;
+    f.service.handleVoiceSignal(a, {
+      targetId: b.clientId,
+      signalType: 'offer',
+      data: { type: 'offer', sdp: 'v=0' },
+    });
+    assert.equal(f.messages.length, beforeBlocked);
+
+    f.service.handleVoiceSignal(a, {
+      targetId: b.clientId,
+      signalType: 'stream-watch',
+      data: { watching: true },
+    });
+    assert.equal(f.messages.at(-1).signalType, 'stream-watch');
+
+    const room = f.rooms.get('chat-jogos');
+    room.players.get('alice').mediaTransport = 'sfu-pending';
+    room.players.get('bob').mediaTransport = 'p2p';
+    f.service.handleVoiceSignal(a, {
+      targetId: b.clientId,
+      signalType: 'offer',
+      data: { type: 'offer', sdp: 'v=0' },
+    });
+    assert.equal(f.messages.at(-1).signalType, 'offer');
+  } finally {
+    f.service.stop();
+  }
+});
+
 test('deleting selected text keeps voice, deleting voice keeps selected text, and a game can reattach its call', () => {
   const f = fixture(),
     a = f.connection('alice');

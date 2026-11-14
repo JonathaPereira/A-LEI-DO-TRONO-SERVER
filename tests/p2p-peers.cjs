@@ -225,11 +225,11 @@ test('connected peer announces screen watch; failures request ICE and expose con
   assert.equal(h2.peers.connections.size, 0);
 });
 
-test('initiator prioritizes H264 on the screen transceiver for hardware NVENC', async t => {
+test('initiator preserves default screen transceiver codec order', async (t) => {
   const originalSender = globalThis.RTCRtpSender;
   try {
     globalThis.RTCRtpSender = {
-      getCapabilities: kind =>
+      getCapabilities: (kind) =>
         kind === 'video'
           ? {
               codecs: [
@@ -241,14 +241,13 @@ test('initiator prioritizes H264 on the screen transceiver for hardware NVENC', 
     };
     const h = await setup(t);
     const pc = h.peers.ensure('z');
-    assert(pc._tronoScreenTransceiver.preferredCodecs);
-    assert.equal(pc._tronoScreenTransceiver.preferredCodecs[0].mimeType, 'video/H264');
+    assert.equal(pc._tronoScreenTransceiver.preferredCodecs, undefined);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }
 });
 
-test('screen startup offer hints are applied to P2P screen offers when screen track is active', async t => {
+test('P2P screen offers do not inject forced bitrate SDP hints', async (t) => {
   const h = await setup(t);
   const pc = h.peers.ensure('z');
   await h.advance(0);
@@ -257,9 +256,10 @@ test('screen startup offer hints are applied to P2P screen offers when screen tr
     type: 'offer',
     sdp: 'v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=rtpmap:96 H264/90000\r\n',
   });
-  await h.peers.handleSignal({fromId: 'z', signalType: 'stream-watch', data: {watching: true}});
+  await h.peers.handleSignal({ fromId: 'z', signalType: 'stream-watch', data: { watching: true } });
   pc.onnegotiationneeded();
   await h.advance(100);
   const offer = pc.localDescription?.sdp || '';
-  assert(offer.includes('x-google-min-bitrate='), 'P2P offer should include x-google-min-bitrate');
+  assert(!offer.includes('x-google-min-bitrate='), 'P2P offer should not inject x-google-min-bitrate');
+  assert(!offer.includes('x-google-start-bitrate='), 'P2P offer should not rewrite SDP bitrate hints');
 });

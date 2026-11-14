@@ -8,12 +8,7 @@ import type {
 } from '../../types/sfu';
 import type { VoiceMediaKind } from '../../types/voice';
 import { abortable, waitForPeer } from './peer-wait.ts';
-import {
-  advertisedRids,
-  cameraEncodings,
-  prioritizeH264,
-  screenStartupOffer,
-} from './sfu-encoding.ts';
+import { advertisedRids, cameraEncodings, screenStartupOffer } from './sfu-encoding.ts';
 import {
   description,
   errorCode,
@@ -237,7 +232,6 @@ export function createSfuSession(options: SfuOptions) {
         const init: RTCRtpTransceiverInit = { direction: 'sendonly' };
         if (simulcast && kind === 'camera') init.sendEncodings = cameraEncodings(settings);
         const tr = pc.addTransceiver(track, init);
-        if (kind === 'screen') prioritizeH264(tr);
         const offer = await abortable(pc.createOffer(), r.controller.signal);
         ensure();
         await abortable(
@@ -517,6 +511,7 @@ export function createSfuSession(options: SfuOptions) {
       pub.kind === 'audio' &&
       !stale &&
       attempt >= 3 &&
+      !publications.get('audio')?.ready &&
       [
         'BAD_SFU_ANSWER',
         'BAD_SFU_OFFER',

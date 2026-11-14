@@ -421,7 +421,11 @@ export class RealtimeSfuManager {
   }
   async _publicationActive(
     pub: RealtimePublication,
-    { maxAge = 1200, signal }: { maxAge?: number; signal?: AbortSignal } = {},
+    {
+      maxAge = 1200,
+      signal,
+      allowInactive = false,
+    }: { maxAge?: number; signal?: AbortSignal; allowInactive?: boolean } = {},
   ) {
     if (!pub?.sessionId || !pub?.trackName) return false;
     if (pub.lastVerifiedAt && Date.now() - pub.lastVerifiedAt < maxAge) return true;
@@ -440,7 +444,7 @@ export class RealtimeSfuManager {
     const track = (info?.tracks || []).find(
       (t) => t && t.location === 'local' && String(t.trackName || '') === String(pub.trackName),
     );
-    const active = !!track && track.status !== 'inactive';
+    const active = !!track && (allowInactive || track.status !== 'inactive');
     if (active) {
       pub.lastVerifiedAt = Date.now();
       pub.remoteStatus = track.status || 'active';
@@ -460,6 +464,14 @@ export class RealtimeSfuManager {
         signal: AbortSignal.any([this.scope.signal, ...(signal ? [signal] : [])]),
       });
     } while (Date.now() < end);
+    if (!lastError) {
+      try {
+        if (await this._publicationActive(pub, { maxAge: 0, signal, allowInactive: true }))
+          return true;
+      } catch (err) {
+        lastError = err;
+      }
+    }
     if (lastError) throw lastError;
     return false;
   }
