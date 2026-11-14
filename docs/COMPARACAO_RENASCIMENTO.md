@@ -62,7 +62,7 @@ Relatório comparativo formal entre as versões originais (pré-Renascimento) e 
 | **Desenhos Corporais de Atores (24 heróis / 208 artes)** | Sim | Sim | Sim | Sim | Supremos restantes de classes |
 | **Ampliação de Mecânicas de Elites e Chefes Restantes** | Sim | Sim | Sim | Sim | Nenhum (7 fases validadas, ondas/campos integrados) |
 | **Supremos Finais Dedicados para Todo o Elenco** | Sim | Parcial (5 heróis) | Sim | Parcial | Pendente para etapa seguinte |
-| **Finalização de Telas e Acessibilidade da Campanha** | Sim | Parcial | Sim | Parcial | Pendente para etapa seguinte |
+| **Finalização de Telas e Acessibilidade da Campanha** | Sim | Sim | Sim | Sim | Nenhum (Telas, abas, foco, atalhos e vínculos validados) |
 
 ---
 

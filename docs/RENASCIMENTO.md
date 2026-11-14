@@ -2580,7 +2580,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Conservar a pose de derrota entre ações, pulo, movimento reduzido e snapshots, incluindo morte por reflexão.
 - [x] Ampliar Aprender para cinco batalhas, incluindo purificação/Égide e transmissão/interceptação, com lista rolável e objetivos textuais.
 - [x] Preservar foco, seleção, rolagem e prévia/retry nas ações da Coleção, sem alterar trios ou transações.
-- [ ] Finalizar telas e acessibilidade da campanha, evolução, equipamentos e vínculos.
+- [x] Finalizar telas e acessibilidade da campanha, evolução, equipamentos e vínculos.
 - [x] Validar várias equipes e estratégias ao longo da campanha ampliada (as nove composições de ensaio completaram 48/48 após o refinamento tático de prazo no relé).
 
 ### Balanceamento, qualidade e entrega 1.0

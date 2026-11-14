@@ -67,6 +67,7 @@
     "tests/check-atalaia-audiovisual-fantasy.cjs",
     "tests/check-campaigns-manuals-comparative.cjs",
     "tests/check-nexus-boss-phases.cjs",
+    "tests/check-nexus-screens-accessibility.cjs",
     "tests/clip-desktop-bridge.cjs",
     "tests/clip-library.cjs",
     "tests/clip-preferences.cjs",
