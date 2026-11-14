@@ -6,55 +6,34 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const distRoot = path.join(root, 'artifacts/men-games-distribution');
 const registryFile = path.join(root, 'games/registry.json');
+const MEN_GAMES_ORIGIN = 'https://men-games.surge.sh';
 
-function copyRecursive(src, dest) {
-  if (!fs.existsSync(src)) return;
-  const stats = fs.statSync(src);
-  if (stats.isDirectory()) {
-    fs.mkdirSync(dest, { recursive: true });
-    for (const child of fs.readdirSync(src)) {
-      copyRecursive(path.join(src, child), path.join(dest, child));
-    }
-  } else {
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
-  }
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function buildMenGamesDistribution() {
-  console.log('Building MeN Games central distribution package...');
+  console.log('Building MeN Games index distribution hub...');
 
   if (!fs.existsSync(registryFile)) {
     throw new Error('games/registry.json not found!');
   }
 
-  // Ensure clean dist directory
   fs.rmSync(distRoot, { recursive: true, force: true });
   fs.mkdirSync(distRoot, { recursive: true });
 
-  // 1. Copy registry.json
   fs.copyFileSync(registryFile, path.join(distRoot, 'registry.json'));
 
-  // 2. Distribute A Lei do Trono
-  const leiDoTronoSrc = path.join(root, 'games/lei-do-trono');
-  const leiDoTronoDist = path.join(distRoot, 'lei-do-trono');
-  copyRecursive(path.join(leiDoTronoSrc, 'frontend'), leiDoTronoDist);
-  copyRecursive(path.join(leiDoTronoSrc, 'assets'), path.join(leiDoTronoDist, 'assets'));
-  copyRecursive(
-    path.join(leiDoTronoSrc, 'documentation'),
-    path.join(leiDoTronoDist, 'documentation'),
-  );
+  const coversSrc = path.join(root, 'public/assets/games');
+  if (fs.existsSync(coversSrc)) {
+    fs.cpSync(coversSrc, path.join(distRoot, 'assets/games'), { recursive: true });
+  }
 
-  // 3. Distribute Cinzas do Abismo
-  const cinzasSrc = path.join(root, 'games/cinzas-do-abismo');
-  const cinzasDist = path.join(distRoot, 'cinzas-do-abismo');
-  copyRecursive(path.join(cinzasSrc, 'frontend'), cinzasDist);
-  copyRecursive(path.join(cinzasSrc, 'core'), path.join(cinzasDist, 'core'));
-  // Mirror game assets into standalone distribution
-  copyRecursive(path.join(root, 'public/roguelite/assets'), path.join(cinzasDist, 'assets'));
-  copyRecursive(path.join(cinzasSrc, 'manifest.json'), path.join(cinzasDist, 'manifest.json'));
-
-  // 4. Generate Central Launcher Hub
   const registry = JSON.parse(fs.readFileSync(registryFile, 'utf8'));
   const launcherHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -92,11 +71,6 @@ function buildMenGamesDistribution() {
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-    .game-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--gold);
     }
     .card-body { padding: 1.25rem; display: flex; flex-direction: column; flex: 1; }
     .tag { font-size: 0.75rem; color: var(--gold); font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem; }
@@ -111,7 +85,6 @@ function buildMenGamesDistribution() {
       text-align: center;
       font-weight: 700;
       font-size: 0.9rem;
-      transition: background 0.15s ease;
     }
     .btn-play:hover { background: var(--gold-hover); }
   </style>
@@ -119,22 +92,25 @@ function buildMenGamesDistribution() {
 <body>
   <header>
     <h1>MeN GAMES</h1>
-    <p class="lead">Centro de distribuição e execução de jogos da MeNCorp</p>
+    <p class="lead">Catálogo indexado dinamicamente do repositório MENGAMES (${escapeHtml(MEN_GAMES_ORIGIN)})</p>
   </header>
   <main class="catalog-grid">
     ${registry.games
-      .map(
-        (g) => `
-      <div class="game-card">
+      .map((g) => {
+        const href = /^https?:\/\//.test(g.entryUrl)
+          ? g.entryUrl
+          : `${MEN_GAMES_ORIGIN}/${encodeURIComponent(g.id === 'throne' ? 'lei-do-trono' : g.id === 'roguelite' ? 'cinzas-do-abismo' : g.id)}/`;
+        return `
+      <div class="game-card" data-game="${escapeHtml(g.id)}">
         <div class="card-body">
-          <span class="tag">${g.tag}</span>
-          <h2 class="title">${g.title}</h2>
-          <p class="desc">${g.description}</p>
-          <a href="${g.id === 'throne' ? './lei-do-trono/' : g.id === 'roguelite' ? './cinzas-do-abismo/' : g.entryUrl}" class="btn-play">Jogar Agora</a>
+          <span class="tag">${escapeHtml(g.tag)}</span>
+          <h2 class="title">${escapeHtml(g.title)}</h2>
+          <p class="desc">${escapeHtml(g.description)}</p>
+          <a href="${escapeHtml(href)}" class="btn-play">Jogar Agora</a>
         </div>
       </div>
-    `,
-      )
+    `;
+      })
       .join('')}
   </main>
 </body>
@@ -142,7 +118,7 @@ function buildMenGamesDistribution() {
 
   fs.writeFileSync(path.join(distRoot, 'index.html'), launcherHtml);
   console.log(
-    'MeN Games central distribution package created successfully at artifacts/men-games-distribution/',
+    'MeN Games index distribution created successfully at artifacts/men-games-distribution/',
   );
 }
 

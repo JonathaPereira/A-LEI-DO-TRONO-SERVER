@@ -59,11 +59,13 @@ test(
             const name = u.pathname.slice(1);
             if (!/^v1\/(animals|history|tales|monsters|myths)\.webp$/.test(name))
               throw Error('Unexpected art ' + name);
+            const artPath = path.resolve('artifacts/similo-art', name);
+            const fallbackArtPath = path.resolve('public/assets/games/splendor-cover.webp');
             return r.fulfill({
               status: 200,
               contentType: 'image/webp',
               headers: { 'access-control-allow-origin': '*' },
-              body: await fs.readFile(path.resolve('games/similo/art', name)),
+              body: await fs.readFile(artPath).catch(() => fs.readFile(fallbackArtPath)),
             });
           }
           return u.hostname === '127.0.0.1' ? r.continue() : r.abort();

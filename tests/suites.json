@@ -1,8 +1,5 @@
 {
   "core": [
-    "games/lei-do-trono/tests/rules.test.cjs",
-    "games/lei-do-trono/tests/frontend.test.cjs",
-    "games/cinzas-do-abismo/tests/package.test.cjs",
     "tests/men-games-registry.cjs",
     "tests/lazy-games.cjs",
     "tests/men-games-distribution.cjs",
@@ -57,15 +54,6 @@
     "tests/chat-moderation-sql.js",
     "tests/chat-moderation-ws.js",
     "tests/chat-service.cjs",
-    "tests/cinzas-upstream.js",
-    "tests/check-balance-matrices.cjs",
-    "tests/check-prolonged-sessions.cjs",
-    "tests/check-profiles-achievements-remapping.cjs",
-    "tests/check-menus-scenes-accessibility.cjs",
-    "tests/check-persistence-systems.cjs",
-    "tests/check-subsystems-content-audit.cjs",
-    "tests/check-atalaia-audiovisual-fantasy.cjs",
-    "tests/check-campaigns-manuals-comparative.cjs",
     "tests/clip-desktop-bridge.cjs",
     "tests/clip-library.cjs",
     "tests/clip-preferences.cjs",
@@ -219,7 +207,6 @@
     "tests/application-audio-worklet-browser.cjs",
     "tests/application-call-browser.cjs",
     "tests/application-shell-browser.cjs",
-    "tests/atalaia-browser.cjs",
     "tests/auth-browser.cjs",
     "tests/azul-browser.js",
     "tests/call-controls-browser.js",
@@ -297,12 +284,5 @@
     "tests/desktop-updates.js",
     "tests/application-call-desktop.cjs"
   ],
-  "godot": [
-    "tests/check-nexus-boss-phases.cjs",
-    "tests/check-nexus-screens-accessibility.cjs",
-    "tests/check-nexus-animations-choreography.cjs",
-    "tests/check-hardware-electron-resolutions.cjs",
-    "tests/check-release-packages-homologation.cjs",
-    "tests/check-renascimento-final-declaration.cjs"
-  ]
+  "godot": []
 }

@@ -7,6 +7,7 @@ import type { PrimaryScreen, PortalSnapshot } from '../../lib/navigation/portal'
 import {
   fetchRemoteGamesRegistry,
   getAllRegisteredGames,
+  getCachedOrRegisteredGames,
   getRegisteredGame,
 } from '../../lib/men-games/registry';
 import type { MenGameManifest } from '../../lib/men-games/types';
@@ -592,7 +593,9 @@ function Communication({ runtime }: { runtime: ApplicationServices }) {
   );
 }
 function Catalog({ runtime }: { runtime: ApplicationServices }) {
-  const [catalogGames, setCatalogGames] = useState<readonly MenGameManifest[]>(games);
+  const [catalogGames, setCatalogGames] = useState<readonly MenGameManifest[]>(() =>
+    getCachedOrRegisteredGames(),
+  );
   const [remoteHostedGame, setRemoteHostedGame] = useState<MenGameManifest | null>(null);
 
   useEffect(() => {

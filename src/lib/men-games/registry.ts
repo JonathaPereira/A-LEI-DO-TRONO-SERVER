@@ -159,10 +159,69 @@ export const MEN_GAMES_REGISTRY: readonly MenGameManifest[] = Object.freeze([
 
 export const MEN_GAMES_ORIGIN = 'https://men-games.surge.sh';
 export const MEN_GAMES_REGISTRY_URL = `${MEN_GAMES_ORIGIN}/registry.json`;
+export const MEN_GAMES_CACHE_KEY = 'mn-games-registry-cache-v1';
 
 const LOCAL_GAME_COVER_PATHS = new Set<string>(MEN_GAMES_REGISTRY.map((game) => game.image));
 
 let latestIndexedGames: readonly MenGameManifest[] = MEN_GAMES_REGISTRY;
+
+function defaultStorage(): Storage | null {
+  try {
+    return typeof window !== 'undefined' && window.localStorage ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readCachedGamesRegistry(
+  storage: Pick<Storage, 'getItem'> | null = defaultStorage(),
+): readonly MenGameManifest[] | null {
+  try {
+    const rawJson = storage?.getItem(MEN_GAMES_CACHE_KEY);
+    if (!rawJson) {
+      return null;
+    }
+    const parsed = JSON.parse(rawJson) as
+      Partial<MenGameManifest>[] | { games?: Partial<MenGameManifest>[] };
+    const entries = Array.isArray(parsed) ? parsed : parsed?.games;
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return null;
+    }
+    const localById = new Map<string, MenGameManifest>(
+      MEN_GAMES_REGISTRY.map((game) => [game.id, game]),
+    );
+    const normalized: MenGameManifest[] = [];
+    for (const rawGame of entries) {
+      const id = typeof rawGame?.id === 'string' ? rawGame.id.trim() : '';
+      const entry = normalizeRemoteGameManifest(rawGame ?? {}, id ? localById.get(id) : undefined);
+      if (entry) {
+        normalized.push(entry);
+      }
+    }
+    return normalized.length > 0 ? Object.freeze(normalized) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeCachedGamesRegistry(
+  games: readonly MenGameManifest[],
+  storage: Pick<Storage, 'setItem'> | null = defaultStorage(),
+): void {
+  try {
+    if (storage && games.length > 0) {
+      storage.setItem(MEN_GAMES_CACHE_KEY, JSON.stringify(games));
+    }
+  } catch {
+    // Ignore storage quota or restricted context errors
+  }
+}
+
+export function getCachedOrRegisteredGames(
+  storage: Pick<Storage, 'getItem'> | null = defaultStorage(),
+): readonly MenGameManifest[] {
+  return readCachedGamesRegistry(storage) ?? MEN_GAMES_REGISTRY;
+}
 
 function resolveRemoteUrl(value: string, origin: string): string {
   if (/^https?:\/\//i.test(value)) {
@@ -234,15 +293,16 @@ export function normalizeRemoteGameManifest(
 
 export async function fetchRemoteGamesRegistry(
   fetchImpl: typeof fetch = fetch,
+  storage: Pick<Storage, 'getItem' | 'setItem'> | null = defaultStorage(),
 ): Promise<readonly MenGameManifest[]> {
   try {
     const response = await fetchImpl(MEN_GAMES_REGISTRY_URL, { cache: 'no-store' });
     if (!response || !response.ok) {
-      return latestIndexedGames;
+      return readCachedGamesRegistry(storage) ?? latestIndexedGames;
     }
     const payload = (await response.json()) as { games?: Partial<MenGameManifest>[] };
     if (!payload || !Array.isArray(payload.games) || payload.games.length === 0) {
-      return latestIndexedGames;
+      return readCachedGamesRegistry(storage) ?? latestIndexedGames;
     }
     const localById = new Map<string, MenGameManifest>(
       MEN_GAMES_REGISTRY.map((game) => [game.id, game]),
@@ -257,9 +317,10 @@ export async function fetchRemoteGamesRegistry(
     }
     if (normalized.length > 0) {
       latestIndexedGames = Object.freeze(normalized);
+      writeCachedGamesRegistry(latestIndexedGames, storage);
     }
   } catch {
-    return latestIndexedGames;
+    return readCachedGamesRegistry(storage) ?? latestIndexedGames;
   }
   return latestIndexedGames;
 }

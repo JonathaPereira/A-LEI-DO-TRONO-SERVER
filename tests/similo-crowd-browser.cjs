@@ -67,13 +67,16 @@ test(
       });
       await context.route('**/*', async (route) => {
         const u = new URL(route.request().url());
-        if (u.hostname === 'similo-mn.surge.sh')
+        if (u.hostname === 'similo-mn.surge.sh') {
+          const artPath = path.resolve('artifacts/similo-art', u.pathname.slice(1));
+          const fallbackArtPath = path.resolve('public/assets/games/splendor-cover.webp');
           return route.fulfill({
             status: 200,
             contentType: 'image/webp',
             headers: { 'access-control-allow-origin': '*' },
-            body: await fs.readFile(path.resolve('games/similo/art', u.pathname.slice(1))),
+            body: await fs.readFile(artPath).catch(() => fs.readFile(fallbackArtPath)),
           });
+        }
         return u.hostname === '127.0.0.1' ? route.continue() : route.abort();
       });
       await context.addInitScript(

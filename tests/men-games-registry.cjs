@@ -6,11 +6,15 @@ const path = require('node:path');
 const {
   MEN_GAMES_REGISTRY,
   MEN_GAMES_REGISTRY_URL,
+  MEN_GAMES_CACHE_KEY,
   fetchRemoteGamesRegistry,
   getAllRegisteredGames,
+  getCachedOrRegisteredGames,
   getIndexedGame,
   getRegisteredGame,
   getGameByDestination,
+  readCachedGamesRegistry,
+  writeCachedGamesRegistry,
 } = require('../src/lib/men-games/registry.ts');
 
 test('MeN Games Registry exports all 9 canonical games with complete metadata', () => {
@@ -152,4 +156,28 @@ test('fetchRemoteGamesRegistry indexes remote MENGAMES catalog and keeps offline
   assert.equal(remoteGames[1].entryUrl, 'https://men-games.surge.sh/novo-jogo/index.html');
   assert.equal(remoteGames[1].image, 'https://men-games.surge.sh/assets/games/novo-jogo.webp');
   assert.equal(getIndexedGame('novo-jogo')?.title, 'Novo Jogo Indexado');
+
+  assert.equal(MEN_GAMES_CACHE_KEY, 'mn-games-registry-cache-v1');
+  const backing = new Map();
+  const mockStorage = {
+    getItem: (k) => backing.get(k) ?? null,
+    setItem: (k, v) => {
+      backing.set(k, v);
+    },
+  };
+  assert.equal(readCachedGamesRegistry(mockStorage), null);
+  assert.equal(getCachedOrRegisteredGames(mockStorage), MEN_GAMES_REGISTRY);
+
+  writeCachedGamesRegistry(remoteGames, mockStorage);
+  const restored = readCachedGamesRegistry(mockStorage);
+  assert.ok(restored);
+  assert.equal(restored.length, 2);
+  assert.equal(restored[1].id, 'novo-jogo');
+  assert.equal(getCachedOrRegisteredGames(mockStorage)[1].title, 'Novo Jogo Indexado');
+
+  const cachedOnOffline = await fetchRemoteGamesRegistry(async () => {
+    throw new Error('offline after cache');
+  }, mockStorage);
+  assert.equal(cachedOnOffline.length, 2);
+  assert.equal(cachedOnOffline[1].id, 'novo-jogo');
 });

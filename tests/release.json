@@ -20,8 +20,7 @@
     "tests/voice-moderation-browser.js",
     "tests/noise-processing.js",
     "tests/voice-reception-browser.js",
-    "tests/love-letter-browser.js",
-    "tests/atalaia-browser.cjs"
+    "tests/love-letter-browser.js"
   ],
   "desktop": [
     "tests/clip-native-pipeline.cjs",

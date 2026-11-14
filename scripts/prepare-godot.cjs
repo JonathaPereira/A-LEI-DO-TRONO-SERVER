@@ -5,6 +5,17 @@ const fs = require('node:fs'),
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..'),
   tools = path.join(root, 'artifacts/godot-tools');
+
+if (!fs.existsSync(path.join(root, 'games/atalaia/project.godot'))) {
+  fs.mkdirSync(tools, { recursive: true });
+  fs.writeFileSync(
+    path.join(tools, 'runtime.json'),
+    JSON.stringify({ decoupled: true, origin: 'https://atalaia-mn.surge.sh' }, null, 2) + '\n',
+  );
+  console.log('Atalaia está desacoplado no MENGAMES; usando https://atalaia-mn.surge.sh.');
+  process.exit(0);
+}
+
 const version = '4.6.3';
 const filenames = {
   win32: `Godot_v${version}-stable_win64.exe.zip`,

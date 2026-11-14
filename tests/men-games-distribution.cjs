@@ -6,27 +6,23 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const { buildMenGamesDistribution } = require('../scripts/build-men-games.cjs');
 
-test('buildMenGamesDistribution packages independent games and central launcher hub', () => {
+test('buildMenGamesDistribution generates decoupled registry and index hub', () => {
   buildMenGamesDistribution();
 
   const distRoot = path.join(root, 'artifacts/men-games-distribution');
   assert.ok(fs.existsSync(distRoot), 'Distribution directory must exist');
 
-  // Hub index and registry
-  assert.ok(fs.existsSync(path.join(distRoot, 'index.html')), 'Launcher index.html must exist');
-  assert.ok(fs.existsSync(path.join(distRoot, 'registry.json')), 'registry.json must exist');
+  const indexPath = path.join(distRoot, 'index.html');
+  const registryPath = path.join(distRoot, 'registry.json');
+  assert.ok(fs.existsSync(indexPath), 'Launcher index.html must exist');
+  assert.ok(fs.existsSync(registryPath), 'registry.json must exist');
 
-  // A Lei do Trono package
-  const leiDoTrono = path.join(distRoot, 'lei-do-trono');
-  assert.ok(fs.existsSync(path.join(leiDoTrono, 'index.html')), 'lei-do-trono index.html must exist');
-  assert.ok(fs.existsSync(path.join(leiDoTrono, 'style.css')), 'lei-do-trono style.css must exist');
-  assert.ok(fs.existsSync(path.join(leiDoTrono, 'app.js')), 'lei-do-trono app.js must exist');
-  assert.ok(fs.existsSync(path.join(leiDoTrono, 'documentation/manual.pdf')), 'lei-do-trono manual.pdf must exist');
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const html = fs.readFileSync(indexPath, 'utf8');
+  assert.equal(registry.games.length, 9);
 
-  // Cinzas do Abismo package
-  const cinzas = path.join(distRoot, 'cinzas-do-abismo');
-  assert.ok(fs.existsSync(path.join(cinzas, 'index.html')), 'cinzas index.html must exist');
-  assert.ok(fs.existsSync(path.join(cinzas, 'core/core.js')), 'cinzas core.js must exist');
-  assert.ok(fs.existsSync(path.join(cinzas, 'manifest.json')), 'cinzas manifest.json must exist');
-  assert.ok(fs.existsSync(path.join(cinzas, 'assets/catalogue-cover.png')), 'cinzas catalogue cover must exist');
+  for (const game of registry.games) {
+    assert.ok(html.includes(game.title), `Expected ${game.title} in index.html`);
+    assert.ok(html.includes('https://'), `Expected remote URL for ${game.id} in index.html`);
+  }
 });
