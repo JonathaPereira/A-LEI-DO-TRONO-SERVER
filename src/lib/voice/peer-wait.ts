@@ -11,23 +11,43 @@ export function waitForPeer(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let done = false;
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
     const events =
       phase === 'gather'
-        ? ['icegatheringstatechange']
+        ? ['icegatheringstatechange', 'icecandidate']
         : ['connectionstatechange', 'iceconnectionstatechange'];
     const finish = (error?: Error) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
+      if (graceTimer) clearTimeout(graceTimer);
       for (const event of events) peer.removeEventListener(event, check);
       signal.removeEventListener('abort', abort);
       if (error) reject(error);
       else resolve();
     };
     const abort = () => finish(sfuCancelled());
-    const check = () => {
+    const check = (event?: Event) => {
       if (phase === 'gather') {
-        if (peer.iceGatheringState === 'complete') finish();
+        if (peer.iceGatheringState === 'complete') {
+          finish();
+          return;
+        }
+        if (event?.type === 'icecandidate') {
+          const candidate = (event as RTCPeerConnectionIceEvent).candidate;
+          if (!candidate) {
+            finish();
+            return;
+          }
+          const line = candidate.candidate || '';
+          const remoteCandidate = /\btyp\s+(?:srflx|relay)\b/i.test(line);
+          if (remoteCandidate) {
+            if (graceTimer) clearTimeout(graceTimer);
+            graceTimer = setTimeout(() => finish(), 250);
+          } else if (!graceTimer) {
+            graceTimer = setTimeout(() => finish(), 600);
+          }
+        }
       } else if (
         peer.connectionState === 'connected' ||
         ['connected', 'completed'].includes(peer.iceConnectionState)

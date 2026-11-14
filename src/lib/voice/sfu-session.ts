@@ -8,7 +8,12 @@ import type {
 } from '../../types/sfu';
 import type { VoiceMediaKind } from '../../types/voice';
 import { abortable, waitForPeer } from './peer-wait.ts';
-import { advertisedRids, cameraEncodings, screenStartupOffer } from './sfu-encoding.ts';
+import {
+  advertisedRids,
+  cameraEncodings,
+  screenEncodings,
+  screenStartupOffer,
+} from './sfu-encoding.ts';
 import {
   description,
   errorCode,
@@ -223,14 +228,16 @@ export function createSfuSession(options: SfuOptions) {
     const ensure = () => {
       if (!current()) throw sfuCancelled();
     };
-    for (const simulcast of kind === 'camera' ? [true, false] : [false]) {
+    for (const simulcast of kind === 'camera' || kind === 'screen' ? [true, false] : [false]) {
       ensure();
       const r = resource('publish', kind),
         pc = r.pc;
       try {
         const settings = options.getSettings();
         const init: RTCRtpTransceiverInit = { direction: 'sendonly' };
-        if (simulcast && kind === 'camera') init.sendEncodings = cameraEncodings(settings);
+        if (simulcast && (kind === 'camera' || kind === 'screen'))
+          init.sendEncodings =
+            kind === 'screen' ? screenEncodings(settings) : cameraEncodings(settings);
         const tr = pc.addTransceiver(track, init);
         const offer = await abortable(pc.createOffer(), r.controller.signal);
         ensure();
@@ -241,7 +248,7 @@ export function createSfuSession(options: SfuOptions) {
           r.controller.signal,
         );
         ensure();
-        await waitForPeer(pc, 'gather', 4200, r.controller.signal);
+        await waitForPeer(pc, 'gather', 1400, r.controller.signal);
         ensure();
         const rids = simulcast ? advertisedRids(tr, pc) : [];
         const reply = readPublish(
@@ -398,7 +405,7 @@ export function createSfuSession(options: SfuOptions) {
       ensure();
       await abortable(pc.setLocalDescription(answer), r.controller.signal);
       ensure();
-      await waitForPeer(pc, 'gather', 4200, r.controller.signal);
+      await waitForPeer(pc, 'gather', 1400, r.controller.signal);
       ensure();
       readAccepted(
         await request(r, 'renegotiate', {

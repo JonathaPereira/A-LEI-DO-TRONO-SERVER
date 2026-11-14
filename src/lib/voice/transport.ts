@@ -196,6 +196,13 @@ export function createVoiceTransport(options: TransportOptions) {
         options.onError(null);
         options.closePeers();
         ensure();
+        // Prefetch remote publications alongside local audio publish so room audio arrives sooner.
+        const prefetchedPublications =
+          options.sfu.refreshPublications && !options.sfu.getPublications?.().length
+            ? options.sfu.refreshPublications().catch((error) => {
+                if (current() && errorCode(error) !== 'SFU_CANCELLED') warn(error);
+              })
+            : null;
         const audio = options.tracks().audio;
         if (audio) {
           try {
@@ -226,7 +233,10 @@ export function createVoiceTransport(options: TransportOptions) {
         ensure();
         options.announce('sfu');
         try {
-          if (options.sfu.refreshPublications && !options.sfu.getPublications?.().length) {
+          if (prefetchedPublications) {
+            await wait(prefetchedPublications);
+            ensure();
+          } else if (options.sfu.refreshPublications && !options.sfu.getPublications?.().length) {
             await wait(options.sfu.refreshPublications());
             ensure();
           }

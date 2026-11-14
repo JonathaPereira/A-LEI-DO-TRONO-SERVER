@@ -21,6 +21,29 @@ export function cameraEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
     },
   ];
 }
+export function screenEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
+  return [
+    {
+      rid: 'f',
+      scaleResolutionDownBy: 1,
+      maxBitrate: q.screenBitrate,
+      maxFramerate: q.screen.fps,
+      networkPriority: 'high',
+    },
+    {
+      rid: 'h',
+      scaleResolutionDownBy: 2,
+      maxBitrate: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
+      maxFramerate: Math.min(q.screen.fps, 30),
+    },
+    {
+      rid: 'q',
+      scaleResolutionDownBy: 4,
+      maxBitrate: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
+      maxFramerate: Math.min(q.screen.fps, 20),
+    },
+  ];
+}
 // Chromium's startup hint is advisory; congestion control still owns actual bandwidth.
 export function screenStartupOffer(
   offer: RTCSessionDescriptionInit,

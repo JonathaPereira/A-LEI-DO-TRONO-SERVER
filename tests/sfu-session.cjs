@@ -216,10 +216,30 @@ test('camera publication preserves simulcast profiles, readiness and borrowed ca
   assert.equal(track.stops, 0);
   assert.equal(h.pcs[0].closes, 1);
 });
-test('screen stays single-layer with native 60 FPS settings and video-only startup SDP hints', async (t) => {
+test('screen uses simulcast encodings with high network priority and video-only startup SDP hints', async (t) => {
   const h = await setup(t);
   await h.session.publish('screen', new Track());
-  assert.equal(h.pcs[0].init.sendEncodings, undefined);
+  assert.deepEqual(h.pcs[0].init.sendEncodings, [
+    {
+      rid: 'f',
+      scaleResolutionDownBy: 1,
+      maxBitrate: 8000000,
+      maxFramerate: 60,
+      networkPriority: 'high',
+    },
+    {
+      rid: 'h',
+      scaleResolutionDownBy: 2,
+      maxBitrate: 3360000,
+      maxFramerate: 30,
+    },
+    {
+      rid: 'q',
+      scaleResolutionDownBy: 4,
+      maxBitrate: 1440000,
+      maxFramerate: 20,
+    },
+  ]);
   assert.equal(h.settings.screen.fps, 60);
   const offer = h.pcs[0].localDescription.sdp;
   assert(!offer.includes('x-google-min-bitrate='));
@@ -227,7 +247,7 @@ test('screen stays single-layer with native 60 FPS settings and video-only start
   assert(offer.includes('foo=bar'));
   assert(!offer.includes('start-bitrate=100'));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));
-  assert.deepEqual(h.calls[0].payload.rids, []);
+  assert.deepEqual(h.calls[0].payload.rids, ['f', 'h', 'q']);
 });
 test('unsupported camera simulcast retries one single layer; explicit budget/network blocks do not retry', async (t) => {
   const h = await setup(t);
@@ -491,7 +511,7 @@ test('gathering and connection waits remove all listeners and timers on cancella
   const pending = h.session.publish('audio', new Track('audio')),
     reject = assert.rejects(pending, { code: 'SFU_CANCELLED' });
   await tick();
-  assert.equal(h.pcs[0].listeners, 1);
+  assert.equal(h.pcs[0].listeners, 2);
   h.session.reset();
   await reject;
   assert.equal(h.pcs[0].listeners, 0);
