@@ -63,11 +63,13 @@ export function assertProductionConfig(env: NodeJS.ProcessEnv = process.env): vo
     missing.push('SUPABASE_SECRET_KEY');
   }
   if (!String(env.APP_URL || '').trim()) missing.push('APP_URL');
-  if (!String(env.TURNSTILE_SECRET_KEY || '').trim()) missing.push('TURNSTILE_SECRET_KEY');
   if (missing.length > 0) {
     throw new Error(
       `Production startup aborted: missing required variables: ${missing.join(', ')}`,
     );
+  }
+  if (!String(env.TURNSTILE_SECRET_KEY || '').trim()) {
+    console.warn('[security] TURNSTILE_SECRET_KEY is not set; Turnstile verification is bypassed.');
   }
 }
 export function createApplication({

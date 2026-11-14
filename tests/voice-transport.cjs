@@ -576,3 +576,24 @@ check('ICE and policy requests start together but publication waits for both', a
   await pending;
   assert(h.events.includes('publish:audio'));
 });
+
+check('community P2P refreshes ICE/TURN credentials before syncing peers', async (t) => {
+  const h = await setup(t);
+  h.transport.prepare('p2p');
+  await h.transport.connect(h.operation());
+  assert.equal(h.transport.getSnapshot().mode, 'p2p');
+  assert.deepEqual(h.events, ['ice', 'sync-peers']);
+});
+
+check('transient syncSubscriptions failure keeps SFU active without forcing room-wide fallback', async (t) => {
+  const h = await setup(t);
+  h.publish((kind) => {
+    h.publications.set(kind, { ready: true });
+    return Promise.resolve();
+  });
+  h.subscriptions(() => Promise.reject(Object.assign(new Error('sub failed'), { code: 'BAD_SFU_OFFER' })));
+  await h.transport.connect(h.operation());
+  assert.equal(h.transport.getSnapshot().mode, 'sfu');
+  assert.equal(h.state.fallbacks, 0);
+  assert(h.events.includes('sync-peers'));
+});

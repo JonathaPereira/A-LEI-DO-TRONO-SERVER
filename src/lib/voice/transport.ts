@@ -121,8 +121,20 @@ export function createVoiceTransport(options: TransportOptions) {
     if (connection?.generation === operation.generation) return connection.promise;
     if (!options.community() || snapshot.roomMode !== 'sfu') {
       update({ mode: 'p2p' });
-      options.syncPeers();
-      return Promise.resolve();
+      if (!options.community()) {
+        options.syncPeers();
+        return Promise.resolve();
+      }
+      return (async () => {
+        try {
+          await abortable(options.realtime.refreshIce(), operation.signal);
+        } catch (error) {
+          if (errorCode(error) === 'SFU_CANCELLED' || !operation.isCurrent()) return;
+          warn(error);
+        }
+        if (disposed || !operation.isCurrent() || !options.call().joined) return;
+        options.syncPeers();
+      })();
     }
     cancel();
     const job: Connection = {
@@ -207,7 +219,12 @@ export function createVoiceTransport(options: TransportOptions) {
         }
         ensure();
         options.announce('sfu');
-        await wait(options.sfu.syncSubscriptions());
+        try {
+          await wait(options.sfu.syncSubscriptions());
+        } catch (error) {
+          if (!current() || errorCode(error) === 'SFU_CANCELLED') throw error;
+          warn(error);
+        }
         ensure();
         options.syncPeers();
         options.onStatus('Voz conectada pelo Cloudflare SFU.', 'ok');

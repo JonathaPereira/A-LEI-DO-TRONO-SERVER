@@ -44,9 +44,8 @@ test('assertProductionConfig fails fast when AUTH_REQUIRED or secrets are missin
     () => assertProductionConfig({ ...fullProdEnv(), AUTH_REQUIRED: 'false' }),
     /AUTH_REQUIRED/,
   );
-  assert.throws(
-    () => assertProductionConfig({ ...fullProdEnv(), TURNSTILE_SECRET_KEY: '' }),
-    /TURNSTILE_SECRET_KEY/,
+  assert.doesNotThrow(() =>
+    assertProductionConfig({ ...fullProdEnv(), TURNSTILE_SECRET_KEY: '' }),
   );
   assert.throws(
     () => assertProductionConfig({ ...fullProdEnv(), SUPABASE_SECRET_KEY: '   ' }),
