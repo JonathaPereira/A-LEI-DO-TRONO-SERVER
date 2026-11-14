@@ -16,25 +16,63 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px 28px 16px;
+  padding: 16px 24px 12px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--shell-border, #212121);
+}
+.headingMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .heading h1 {
   font:
-    500 25px/1.25 Georgia,
+    500 22px/1.2 Georgia,
     serif;
-  margin: 5px 0;
-  color: #e7ddca;
+  margin: 3px 0;
+  color: var(--shell-text, #e7ddca);
+}
+.headingStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 .heading p {
   font-size: 12px;
-  color: #989898;
-  margin: 4px 0;
+  color: var(--shell-muted, #989898);
+  margin: 0;
+}
+.telemetryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #8dbba1;
+}
+.telemetryDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8dbba1;
+  box-shadow: 0 0 8px #8dbba1;
+}
+.fpsBadge {
+  color: var(--shell-accent, #d6b779);
+  font-weight: 600;
+  padding-left: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
 }
 .eyebrow {
   font-size: 9px;
   letter-spacing: 2px;
-  color: #ad9568;
+  color: var(--shell-accent, #ad9568);
+  font-weight: 600;
 }
 .headingActions {
   display: flex;
@@ -50,7 +88,93 @@
   background: #252525;
   color: #d6b779;
   border-radius: 7px;
-  padding: 9px 12px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.theaterButton {
+  background: rgba(214, 183, 121, 0.12) !important;
+  border-color: rgba(214, 183, 121, 0.35) !important;
+}
+.helpButton {
+  color: #a8a8a8 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+.guideBalloon {
+  position: absolute;
+  top: 68px;
+  right: 24px;
+  z-index: 120;
+  max-width: 320px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(18, 19, 24, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--shell-accent, #d6b779);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  color: var(--shell-text, #e5e5e5);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guideBalloonHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--shell-accent, #d6b779);
+}
+.guideBalloonClose {
+  background: transparent;
+  border: 0;
+  color: #888;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+.guideBalloonClose:hover {
+  color: #fff;
+}
+.guideBalloonList {
+  margin: 8px 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcutKbd {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--shell-accent, #d6b779);
+  font-weight: 600;
+}
+.guideBalloonDismiss {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: var(--shell-accent, #d6b779);
+  color: #121212;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  font-size: 11px;
+}
+.call[data-theater='true'] {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100dvh;
+}
+.call[data-theater='true'] .heading {
+  padding: 8px 16px;
 }
 .grid {
   flex: 1;

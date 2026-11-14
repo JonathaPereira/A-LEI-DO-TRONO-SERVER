@@ -23,6 +23,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var keys=Object.keys(localStorage);var themeKey=keys.find(function(k){return k.indexOf('mnTheme:')===0;});var theme=themeKey?localStorage.getItem(themeKey):'purple';if(theme)document.documentElement.dataset.theme=theme;var cursorKey=keys.find(function(k){return k.indexOf('mnCursor:')===0;});var cursor=cursorKey?localStorage.getItem(cursorKey):'royal';document.documentElement.dataset.cursor=cursor||'royal';}catch(e){}})();`,
+          }}
+        />
         <Script src="/auth-boot.js" strategy="beforeInteractive" />
       </head>
       <body>{children}</body>

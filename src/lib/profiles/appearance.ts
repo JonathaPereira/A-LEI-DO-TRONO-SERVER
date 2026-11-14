@@ -11,9 +11,18 @@ export const THEMES = [
   { id: 'rose', color: '#efa3cd', label: 'Rosa e preto' },
   { id: 'indigo', color: '#99acff', label: 'Índigo e preto' },
   { id: 'graphite', color: '#c1cad6', label: 'Grafite e preto' },
+  { id: 'natal', color: '#e63946', label: 'Natal da Corte 🎄' },
 ] as const;
 export type Theme = (typeof THEMES)[number]['id'];
 const theme = (value: unknown): Theme => THEMES.find((theme) => theme.id === value)?.id ?? 'purple';
+
+export const CURSORS = [
+  { id: 'royal', label: 'Espada Real (32px · Tema Corte)' },
+  { id: 'default', label: 'Padrão do sistema (Seta normal)' },
+] as const;
+export type CursorPreference = (typeof CURSORS)[number]['id'];
+const cursor = (value: unknown): CursorPreference =>
+  CURSORS.find((c) => c.id === value)?.id ?? 'royal';
 
 interface AppearanceOptions {
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -22,15 +31,18 @@ interface AppearanceOptions {
   accountId(): string | null;
   authReady: Promise<unknown>;
   applyTheme(value: Theme): void;
+  applyCursor?(value: CursorPreference): void;
 }
 /** Local presentation only. Theme and feedback have one owner across both settings shells. */
 export function createAppearancePreferences(options: AppearanceOptions) {
   let state = Object.freeze<{ theme: Theme; message: string }>({ theme: 'purple', message: '' });
+  let currentCursor: CursorPreference = 'royal';
   let account = options.accountId(),
     started = false,
     disposed = false;
   const listeners = new Set<() => void>();
   const key = () => 'mnTheme:' + (options.accountId() || 'guest');
+  const cursorKey = () => 'mnCursor:' + (options.accountId() || 'guest');
   function update(next: typeof state) {
     if (disposed || (next.theme === state.theme && next.message === state.message)) return;
     state = Object.freeze(next);
@@ -44,16 +56,25 @@ export function createAppearancePreferences(options: AppearanceOptions) {
     } catch {
       /* Use the default theme. */
     }
+    let savedCursor: unknown;
+    try {
+      savedCursor = options.storage.getItem(cursorKey());
+    } catch {
+      /* Use the default cursor. */
+    }
     const nextAccount = options.accountId(),
       next = theme(saved);
+    currentCursor = cursor(savedCursor);
     // The retired resizer no longer restores geometry that users cannot adjust.
     clearPanelDimensions(options.style);
     update({ theme: next, message: account === nextAccount ? state.message : '' });
     account = nextAccount;
     options.applyTheme(next);
+    options.applyCursor?.(currentCursor);
   }
   return {
     getSnapshot: () => state,
+    getCursor: () => currentCursor,
     subscribe(listener: () => void) {
       if (disposed) return () => {};
       listeners.add(listener);
@@ -78,6 +99,17 @@ export function createAppearancePreferences(options: AppearanceOptions) {
       }
       update({ theme: next, message: 'Tema aplicado.' });
       options.applyTheme(next);
+    },
+    selectCursor(value: unknown) {
+      if (disposed) return;
+      currentCursor = cursor(value);
+      try {
+        options.storage.setItem(cursorKey(), currentCursor);
+      } catch {
+        /* Apply even without persistence. */
+      }
+      options.applyCursor?.(currentCursor);
+      update({ ...state, message: 'Cursor atualizado.' });
     },
     resetPanels() {
       if (disposed) return;

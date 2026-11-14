@@ -49,6 +49,10 @@ export function initializeAccountResources(target: Window) {
       if (gameSurface) gameSurface.dataset.theme = theme;
       target.dispatchEvent(new CustomEvent('trono-theme-change', { detail: { theme } }));
     },
+    applyCursor(cursor) {
+      target.document.documentElement.dataset.cursor = cursor;
+      target.dispatchEvent(new CustomEvent('trono-cursor-change', { detail: { cursor } }));
+    },
   });
   Object.assign(target, {
     TronoProfileGifs: gifs,

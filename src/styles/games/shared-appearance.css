@@ -108,6 +108,16 @@
     --theme-line: #414e60;
     --theme-soft: #313e4e;
   }
+  :scope[data-theme='natal'] {
+    --theme-accent: #e63946;
+    --theme-bg: #0a150f;
+    --theme-panel: #0e1f16;
+    --theme-card: #142d1f;
+    --theme-text: #f1faee;
+    --theme-muted: #93b8a3;
+    --theme-line: #224833;
+    --theme-soft: #173725;
+  }
   :scope {
     color: var(--theme-text);
   }

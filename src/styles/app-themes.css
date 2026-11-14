@@ -1,0 +1,354 @@
+/* Themes and Cursor system for M&N · A Lei do Trono */
+
+/* ========================================================
+   CURSOR: ESPADA REAL (32px · Tema da Corte) & PADRÃO
+   ======================================================== */
+html[data-cursor='royal'],
+html[data-cursor='royal'] body,
+html[data-cursor='royal'] .app,
+html[data-cursor='royal'] #gameSurface,
+html[data-cursor='royal'] * {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M2 2 L14.5 7.5 L19.5 12.5 L12.5 19.5 L7.5 14.5 Z' fill='%23e6e3da' stroke='%230c0d10' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cline x1='5' y1='5' x2='15' y2='15' stroke='%23d6b779' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M10.5 20.5 C13 18 18 13 20.5 10.5' stroke='%230c0d10' stroke-width='3.8' stroke-linecap='round'/%3E%3Cpath d='M10.5 20.5 C13 18 18 13 20.5 10.5' stroke='%23d6b779' stroke-width='2.1' stroke-linecap='round'/%3E%3Cline x1='16.5' y1='16.5' x2='23' y2='23' stroke='%230c0d10' stroke-width='3.6' stroke-linecap='round'/%3E%3Cline x1='16.5' y1='16.5' x2='23' y2='23' stroke='%238a6c34' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='24.2' cy='24.2' r='2.4' fill='%23d6b779' stroke='%230c0d10' stroke-width='1.2'/%3E%3C/svg%3E")
+      2 2,
+    default;
+}
+
+html[data-cursor='royal'] button,
+html[data-cursor='royal'] a,
+html[data-cursor='royal'] [role='button'],
+html[data-cursor='royal'] select,
+html[data-cursor='royal'] input[type='button'],
+html[data-cursor='royal'] input[type='submit'],
+html[data-cursor='royal'] input[type='checkbox'],
+html[data-cursor='royal'] input[type='radio'],
+html[data-cursor='royal'] label,
+html[data-cursor='royal'] summary {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M2 2 L14.5 7.5 L19.5 12.5 L12.5 19.5 L7.5 14.5 Z' fill='%23fff0ca' stroke='%230c0d10' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cline x1='5' y1='5' x2='15' y2='15' stroke='%23ffffff' stroke-width='1.3' stroke-linecap='round'/%3E%3Cpath d='M10.5 20.5 C13 18 18 13 20.5 10.5' stroke='%230c0d10' stroke-width='3.8' stroke-linecap='round'/%3E%3Cpath d='M10.5 20.5 C13 18 18 13 20.5 10.5' stroke='%23ffe39f' stroke-width='2.1' stroke-linecap='round'/%3E%3Cline x1='16.5' y1='16.5' x2='23' y2='23' stroke='%230c0d10' stroke-width='3.6' stroke-linecap='round'/%3E%3Cline x1='16.5' y1='16.5' x2='23' y2='23' stroke='%23c49a46' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='24.2' cy='24.2' r='2.4' fill='%23ffe39f' stroke='%230c0d10' stroke-width='1.2'/%3E%3C/svg%3E")
+      2 2,
+    pointer;
+}
+
+html[data-cursor='royal'] input[type='text'],
+html[data-cursor='royal'] input[type='search'],
+html[data-cursor='royal'] input[type='password'],
+html[data-cursor='royal'] input[type='email'],
+html[data-cursor='royal'] textarea,
+html[data-cursor='royal'] [contenteditable='true'] {
+  cursor: text !important;
+}
+
+html[data-cursor='default'],
+html[data-cursor='default'] * {
+  cursor: auto !important;
+}
+
+/* ========================================================
+   TEMAS DINÂMICOS DO APP (Cores 100% Funcionais)
+   ======================================================== */
+:root {
+  --app-theme-bg: #131313;
+  --app-theme-side: #191919;
+  --app-theme-rail: #121212;
+  --app-theme-card: #202020;
+  --app-theme-border: #2c2c2c;
+  --app-theme-text: #e5e5e5;
+  --app-theme-muted: #8a8a8a;
+  --app-theme-accent: #d6b779;
+  --app-theme-accent-hover: #e8cf97;
+  --app-theme-soft: #2d2618;
+}
+
+/* 1. Purple · Roxo padrão */
+html[data-theme='purple'],
+:root[data-theme='purple'] {
+  --app-theme-bg: #100f16;
+  --app-theme-side: #16151f;
+  --app-theme-rail: #0d0c12;
+  --app-theme-card: #201e2b;
+  --app-theme-border: #322e43;
+  --app-theme-text: #f2effa;
+  --app-theme-muted: #9e97af;
+  --app-theme-accent: #a99cff;
+  --app-theme-accent-hover: #beb5ff;
+  --app-theme-soft: #2c2744;
+}
+
+/* 2. Green · Verde e preto */
+html[data-theme='green'],
+:root[data-theme='green'] {
+  --app-theme-bg: #0a120d;
+  --app-theme-side: #0f1c14;
+  --app-theme-rail: #070d09;
+  --app-theme-card: #15271d;
+  --app-theme-border: #234130;
+  --app-theme-text: #edf8f2;
+  --app-theme-muted: #94b0a1;
+  --app-theme-accent: #69d29b;
+  --app-theme-accent-hover: #81e2b0;
+  --app-theme-soft: #1d3d2c;
+}
+
+/* 3. Red · Preto e vermelho */
+html[data-theme='red'],
+:root[data-theme='red'] {
+  --app-theme-bg: #140a0c;
+  --app-theme-side: #1c0e12;
+  --app-theme-rail: #0e0608;
+  --app-theme-card: #2a161c;
+  --app-theme-border: #42212b;
+  --app-theme-text: #fceede;
+  --app-theme-muted: #ba9ea4;
+  --app-theme-accent: #f47b85;
+  --app-theme-accent-hover: #ff949c;
+  --app-theme-soft: #421e28;
+}
+
+/* 4. Blue · Azul e preto */
+html[data-theme='blue'],
+:root[data-theme='blue'] {
+  --app-theme-bg: #09111a;
+  --app-theme-side: #0e1926;
+  --app-theme-rail: #070c13;
+  --app-theme-card: #142437;
+  --app-theme-border: #213a57;
+  --app-theme-text: #eef6fd;
+  --app-theme-muted: #90a8be;
+  --app-theme-accent: #75bdf2;
+  --app-theme-accent-hover: #8fcefa;
+  --app-theme-soft: #1b3552;
+}
+
+/* 5. Yellow · Amarelo e preto */
+html[data-theme='yellow'],
+:root[data-theme='yellow'] {
+  --app-theme-bg: #13120c;
+  --app-theme-side: #1b1910;
+  --app-theme-rail: #0d0c08;
+  --app-theme-card: #282518;
+  --app-theme-border: #413b26;
+  --app-theme-text: #faf7eb;
+  --app-theme-muted: #b0aa93;
+  --app-theme-accent: #efd470;
+  --app-theme-accent-hover: #fae188;
+  --app-theme-soft: #3d371f;
+}
+
+/* 6. Teal · Turquesa e preto */
+html[data-theme='teal'],
+:root[data-theme='teal'] {
+  --app-theme-bg: #071312;
+  --app-theme-side: #0c1c1b;
+  --app-theme-rail: #060e0e;
+  --app-theme-card: #132b27;
+  --app-theme-border: #1e453f;
+  --app-theme-text: #edf9f7;
+  --app-theme-muted: #8eaba6;
+  --app-theme-accent: #5fddcc;
+  --app-theme-accent-hover: #78ecdc;
+  --app-theme-soft: #19403a;
+}
+
+/* 7. Orange · Laranja e preto */
+html[data-theme='orange'],
+:root[data-theme='orange'] {
+  --app-theme-bg: #140d0a;
+  --app-theme-side: #1d140e;
+  --app-theme-rail: #0e0906;
+  --app-theme-card: #2c1e15;
+  --app-theme-border: #452f20;
+  --app-theme-text: #faf3ee;
+  --app-theme-muted: #bca493;
+  --app-theme-accent: #ffad72;
+  --app-theme-accent-hover: #ffc08d;
+  --app-theme-soft: #452b1b;
+}
+
+/* 8. Rose · Rosa e preto */
+html[data-theme='rose'],
+:root[data-theme='rose'] {
+  --app-theme-bg: #140a13;
+  --app-theme-side: #1d0f1b;
+  --app-theme-rail: #0e070d;
+  --app-theme-card: #2b1727;
+  --app-theme-border: #44233e;
+  --app-theme-text: #faeff8;
+  --app-theme-muted: #ba9eb4;
+  --app-theme-accent: #efa3cd;
+  --app-theme-accent-hover: #f9badc;
+  --app-theme-soft: #421e3b;
+}
+
+/* 9. Indigo · Índigo e preto */
+html[data-theme='indigo'],
+:root[data-theme='indigo'] {
+  --app-theme-bg: #0a0e1c;
+  --app-theme-side: #101529;
+  --app-theme-rail: #080a14;
+  --app-theme-card: #18203c;
+  --app-theme-border: #263360;
+  --app-theme-text: #eef2fd;
+  --app-theme-muted: #929ebd;
+  --app-theme-accent: #99acff;
+  --app-theme-accent-hover: #b4c2ff;
+  --app-theme-soft: #202d59;
+}
+
+/* 10. Graphite · Grafite e preto */
+html[data-theme='graphite'],
+:root[data-theme='graphite'] {
+  --app-theme-bg: #111215;
+  --app-theme-side: #18191d;
+  --app-theme-rail: #0c0d0f;
+  --app-theme-card: #22242a;
+  --app-theme-border: #353842;
+  --app-theme-text: #f2f4f7;
+  --app-theme-muted: #969ba5;
+  --app-theme-accent: #c1cad6;
+  --app-theme-accent-hover: #dce1e9;
+  --app-theme-soft: #2f343e;
+}
+
+/* ========================================================
+   11. TEMA DE NATAL DA CORTE 🎄🎅🛷 (Festivo & Animado)
+   ======================================================== */
+html[data-theme='natal'],
+:root[data-theme='natal'] {
+  --app-theme-bg: #09130d;
+  --app-theme-side: #0e1d14;
+  --app-theme-rail: #060e09;
+  --app-theme-card: #142a1d;
+  --app-theme-border: #224631;
+  --app-theme-text: #f3faf5;
+  --app-theme-muted: #95b8a3;
+  --app-theme-accent: #e63946;
+  --app-theme-accent-hover: #f1525f;
+  --app-theme-soft: #1d402b;
+}
+
+/* Efeito de neve caindo suavemente no fundo da aplicação */
+@keyframes snowfall {
+  0% {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      400px 800px,
+      250px 600px,
+      150px 400px;
+  }
+}
+
+html[data-theme='natal'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+  opacity: 0.35;
+  background-image:
+    radial-gradient(2px 2px at 40px 60px, #ffffff, transparent),
+    radial-gradient(3px 3px at 120px 180px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 200px 90px, rgba(255, 255, 255, 0.6), transparent);
+  background-size:
+    400px 400px,
+    300px 300px,
+    200px 200px;
+  animation: snowfall 22s linear infinite;
+}
+
+/* Guirlanda / Barra doce natalina no topo da sidebar */
+html[data-theme='natal'] [class*='sidebarHeader'] {
+  border-top: 3px solid transparent;
+  border-image: repeating-linear-gradient(
+      -45deg,
+      #e63946,
+      #e63946 8px,
+      #ffffff 8px,
+      #ffffff 16px,
+      #2a9d8f 16px,
+      #2a9d8f 24px,
+      #d6b779 24px,
+      #d6b779 32px
+    )
+    3;
+}
+
+/* Touquinha de Papai Noel no Brasão da Corte */
+html[data-theme='natal'] [class*='crest'] {
+  position: relative;
+}
+html[data-theme='natal'] [class*='crest']::after {
+  content: '🎅';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 16px;
+  transform: rotate(15deg);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* Meia natalina nos canais ativos */
+html[data-theme='natal'] [class*='channel'][data-active='true']::after {
+  content: ' 🧦';
+  font-size: 11px;
+}
+
+/* Trenó / presente na biblioteca de jogos */
+html[data-theme='natal'] [class*='friendsButton'][data-active='true']::after {
+  content: ' 🛷';
+  font-size: 12px;
+}
+
+/* Pílula festiva no botão principal de conexão */
+html[data-theme='natal'] button[data-control='joinVoiceBtn'] {
+  background: linear-gradient(135deg, #e63946 0%, #b81d29 100%) !important;
+  box-shadow: 0 0 14px rgba(230, 57, 70, 0.45) !important;
+}
+
+/* ========================================================
+   BALÕES FLUTUANTES / GUIA DE ATALHOS & NOVIDADES
+   ======================================================== */
+.onboarding-balloon {
+  position: absolute;
+  z-index: 80;
+  max-width: 320px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(22, 23, 28, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--app-theme-accent, #d6b779);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: var(--app-theme-text, #f0ede6);
+  font-size: 12px;
+  line-height: 1.5;
+  animation: balloonPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes balloonPop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.onboarding-balloon kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--app-theme-accent, #d6b779);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}

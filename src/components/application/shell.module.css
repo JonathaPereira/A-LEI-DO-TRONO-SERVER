@@ -15,12 +15,15 @@
   overflow: auto;
 }
 .app {
-  --shell-bg: #131313;
-  --shell-side: #191919;
-  --shell-rail: #121212;
-  --shell-text: #e5e5e5;
-  --shell-muted: #8a8a8a;
-  --shell-accent: #d6b779;
+  --shell-bg: var(--app-theme-bg, #131313);
+  --shell-side: var(--app-theme-side, #191919);
+  --shell-rail: var(--app-theme-rail, #121212);
+  --shell-text: var(--app-theme-text, #e5e5e5);
+  --shell-muted: var(--app-theme-muted, #8a8a8a);
+  --shell-accent: var(--app-theme-accent, #d6b779);
+  --shell-accent-hover: var(--app-theme-accent-hover, #e8cf97);
+  --shell-card: var(--app-theme-card, #202020);
+  --shell-border: var(--app-theme-border, #2a2a2a);
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   height: 100dvh;
@@ -71,32 +74,33 @@
   overflow: hidden;
 }
 .sidebarHeader {
-  height: 84px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 18px;
-  border-bottom: 1px solid #212121;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--shell-border, #212121);
   box-shadow: 0 1px 3px #0002;
   flex-shrink: 0;
 }
 .sidebarHeader strong {
   font:
-    600 21px/1.2 Georgia,
+    600 18px/1.2 Georgia,
     serif;
-  color: #e5e5e5;
+  color: var(--shell-text, #e5e5e5);
 }
 .brandHome > div {
   flex: 1;
-  padding-left: 12px;
+  padding-left: 10px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 .sidebarHeader small {
-  font-size: 7px;
-  letter-spacing: 2px;
-  color: #ae9360;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--shell-accent, #ae9360);
+  font-weight: 600;
 }
 .sidebarScroll {
   padding: 18px 12px;

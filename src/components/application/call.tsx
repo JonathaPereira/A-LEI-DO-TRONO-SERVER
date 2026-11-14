@@ -133,6 +133,15 @@ export function CallSurface({
   const stage = runtime.TronoCallStage,
     state = useModel(stage),
     toolbar = useModel(runtime.TronoCallToolbar);
+  const [theater, setTheater] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => {
+    try {
+      return !localStorage.getItem('mnGuide:callShortcuts');
+    } catch {
+      return false;
+    }
+  });
+  const sectionRef = useRef<HTMLElement>(null);
   const grid = useRef<HTMLDivElement>(null),
     focus = useRef<HTMLDivElement>(null),
     strip = useRef<HTMLDivElement>(null);
@@ -142,22 +151,55 @@ export function CallSurface({
   useLayoutEffect(() => {
     window.dispatchEvent(new Event('trono:call-hosts'));
   }, [slots]);
+
   useEffect(() => {
-    const escape = (event: KeyboardEvent) => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!visible || event.defaultPrevented) return;
+      const target = event.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.getAttribute('contenteditable') === 'true');
+
       if (
-        visible &&
         event.key === 'Escape' &&
-        !event.defaultPrevented &&
         !document.fullscreenElement &&
         !document.querySelector('dialog[open], [popover]:popover-open, .media-maximized')
       ) {
         if (chatOpen) toggleChat();
+        else if (theater) setTheater(false);
         else stage.grid();
+      } else if (!isInput && (event.key === 'f' || event.key === 'F')) {
+        event.preventDefault();
+        setTheater((prev) => !prev);
+        if (sectionRef.current) {
+          if (!document.fullscreenElement) {
+            void sectionRef.current.requestFullscreen?.().catch(() => {});
+          } else {
+            void document.exitFullscreen?.().catch(() => {});
+          }
+        }
+      } else if (!isInput && (event.key === 'm' || event.key === 'M')) {
+        event.preventDefault();
+        void runtime.TronoCallToolbar.activate('muteMicBtn');
+      } else if (!isInput && (event.key === 'c' || event.key === 'C')) {
+        event.preventDefault();
+        toggleChat();
       }
     };
-    document.addEventListener('keydown', escape, true);
-    return () => document.removeEventListener('keydown', escape, true);
-  }, [stage, visible, chatOpen, toggleChat]);
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [stage, visible, chatOpen, toggleChat, theater, runtime]);
+
+  const dismissGuide = () => {
+    setGuideOpen(false);
+    try {
+      localStorage.setItem('mnGuide:callShortcuts', 'true');
+    } catch {}
+  };
+
   const controls: readonly [
     CallControlId,
     (
@@ -180,25 +222,56 @@ export function CallSurface({
   ];
   return (
     <section
+      ref={sectionRef}
       className={styles.call}
       data-focused={!!state.focused}
+      data-theater={String(theater)}
       hidden={!visible}
       aria-label="Chamada da Corte"
     >
       <header className={styles.heading}>
-        <div>
+        <div className={styles.headingMeta}>
           <span className={styles.eyebrow}>À MESMA MESA</span>
           <h1>{state.roomName || 'Salão da Corte'}</h1>
-          <p>
-            {state.joined
-              ? state.participants.length + ' na chamada'
-              : 'Entre na voz para participar.'}
-          </p>
+          <div className={styles.headingStatus}>
+            <p>
+              {state.joined
+                ? state.participants.length + ' na chamada'
+                : 'Entre na voz para participar.'}
+            </p>
+            {state.joined && (
+              <span className={styles.telemetryBadge}>
+                <span className={styles.telemetryDot} />
+                <span>Cloudflare SFU · TURN ativo</span>
+                {state.screens.length > 0 && (
+                  <span className={styles.fpsBadge}>1080p · 60 fps</span>
+                )}
+              </span>
+            )}
+          </div>
         </div>
         <div className={styles.headingActions}>
+          <button
+            type="button"
+            className={styles.theaterButton}
+            title="Alternar Tela Cheia (F)"
+            aria-label="Alternar Tela Cheia"
+            onClick={() => {
+              setTheater((prev) => !prev);
+              if (sectionRef.current) {
+                if (!document.fullscreenElement) {
+                  void sectionRef.current.requestFullscreen?.().catch(() => {});
+                } else {
+                  void document.exitFullscreen?.().catch(() => {});
+                }
+              }
+            }}
+          >
+            <Icon name="screen" size={16} /> {theater ? 'Sair da Tela Cheia' : 'Tela Cheia (F)'}
+          </button>
           {state.focused && (
             <button type="button" onClick={stage.grid}>
-              <Icon name="grid" size={16} /> Grade
+              <Icon name="grid" size={16} /> Grade (Esc)
             </button>
           )}
           <button
@@ -207,10 +280,53 @@ export function CallSurface({
             aria-expanded={chatOpen}
             onClick={toggleChat}
           >
-            <Icon name="chat" size={17} /> Conversas
+            <Icon name="chat" size={17} /> Conversas (C)
+          </button>
+          <button
+            type="button"
+            className={styles.helpButton}
+            title="Atalhos e novidades"
+            aria-label="Atalhos e novidades"
+            onClick={() => setGuideOpen((prev) => !prev)}
+          >
+            ✦ Atalhos
           </button>
         </div>
       </header>
+
+      {guideOpen && (
+        <aside className={styles.guideBalloon} aria-label="Novos atalhos e funções">
+          <div className={styles.guideBalloonHeader}>
+            <span>Novas Funções &amp; Atalhos</span>
+            <button
+              type="button"
+              className={styles.guideBalloonClose}
+              onClick={dismissGuide}
+              aria-label="Fechar guia"
+            >
+              ✕
+            </button>
+          </div>
+          <p>Transmissão sem engasgos em 60 fps e atalhos rápidos de teclado:</p>
+          <ul className={styles.guideBalloonList}>
+            <li>
+              <kbd className={styles.shortcutKbd}>F</kbd> Tela Cheia / Modo Teatro
+            </li>
+            <li>
+              <kbd className={styles.shortcutKbd}>M</kbd> Mutar / Desmutar Microfone
+            </li>
+            <li>
+              <kbd className={styles.shortcutKbd}>C</kbd> Abrir / Fechar Chat
+            </li>
+            <li>
+              <kbd className={styles.shortcutKbd}>Esc</kbd> Voltar à Grade / Sair
+            </li>
+          </ul>
+          <button type="button" className={styles.guideBalloonDismiss} onClick={dismissGuide}>
+            Entendi
+          </button>
+        </aside>
+      )}
       <div
         ref={grid}
         className={styles.grid}

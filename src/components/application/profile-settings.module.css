@@ -431,6 +431,58 @@
   border-radius: 9px;
   box-shadow: inset 0 0 0 9px #161616aa;
 }
+.surface :global(.cursor-picker) {
+  border: 0;
+  padding: 0;
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.surface :global(.cursor-picker legend) {
+  font-size: 14px;
+  padding-bottom: 12px;
+  color: #daceb8;
+  font-weight: 600;
+}
+.surface :global(.cursor-picker .cursor-option) {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 0;
+  padding: 14px;
+  min-height: 60px;
+  border: 1px solid #393939;
+  border-radius: 10px;
+  background: #191919;
+  cursor: pointer;
+}
+.surface :global(.cursor-picker .cursor-option:has(:checked)) {
+  border-color: #a88f5c;
+  background: #2a2a2a;
+}
+.surface :global(.cursor-picker .cursor-option input) {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.surface :global(.cursor-picker .cursor-option:has(:focus-visible)) {
+  outline: 1px solid #b8a77f;
+  outline-offset: 2px;
+}
+.surface :global(.cursor-swatch) {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: #131417;
+  border: 1px solid #3a3b40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d6b779;
+}
 .surface :global(.profile-editor-preview > small) {
   margin: 8px 0;
   letter-spacing: 1px;
