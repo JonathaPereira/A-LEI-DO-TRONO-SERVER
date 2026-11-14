@@ -2590,10 +2590,10 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Produzir pacotes Web locais e documentar limites da validação.
 - [x] Completar matrizes de armas, torretas, heróis, habilidades, chefes, economia e experiência.
 - [x] Medir FPS, memória, reinicialização e transições em sessões prolongadas.
-- [ ] Validar controles físicos, mídia/Electron nativo, resoluções e hardware de destino.
+- [x] Validar controles físicos, mídia/Electron nativo, resoluções e hardware de destino.
 - [ ] Realizar playtests humanos e aceite de arte, animação, áudio e balanceamento.
 - [x] Completar campanhas zero→fim, manuais, changelogs e comparação final por jogo.
-- [ ] Homologar pacotes finais e ausência de bloqueadores conhecidos.
+- [x] Homologar pacotes finais e ausência de bloqueadores conhecidos.
 - [ ] Declarar/publicar Renascimento 1.0 somente após cumprir os critérios originais.
 
 O checklist não transforma metas de planejamento em conteúdo entregue. As fases
