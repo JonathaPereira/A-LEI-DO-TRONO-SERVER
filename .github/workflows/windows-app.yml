@@ -86,8 +86,6 @@ jobs:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
     timeout-minutes: ${{ inputs.extended_browser && 35 || 25 }}
-    env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}\ms-playwright
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
@@ -112,6 +110,7 @@ jobs:
           EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
           FULL_TESTS: ${{ inputs.full_tests || false }}
         run: |
+          "PLAYWRIGHT_BROWSERS_PATH=$env:RUNNER_TEMP\ms-playwright" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           if ($env:EXTENDED_BROWSER -eq 'true' -or $env:FULL_TESTS -eq 'true' -or $env:EVENT_NAME -ne 'push') {
             node scripts/select-tests.cjs --full --github-output $env:GITHUB_OUTPUT
           } else {
