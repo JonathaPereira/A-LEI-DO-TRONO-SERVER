@@ -1,4 +1,10 @@
-M&N · A Lei do Trono — Windows 1.0.13
+M&N · A Lei do Trono — Windows 1.0.14
+
+Melhoria 1.0.14: novo design visual com temas 100% funcionais no aplicativo, tema especial
+Natal da Corte 🎄 (com neve suave animada, doces, gorro festivo e meias/trenó decorativos),
+cursor de mouse personalizado Espada Real (32px) com brilho dourado e opção de voltar ao
+ponteiro padrão, e palco de chamadas aprimorado com atalhos de teclado (F para Tela Cheia,
+M para mutar, C para chat e Esc para grade).
 
 Melhoria 1.0.13: conexão SFU acelerada (ICE gathering rápido + prefetch paralelo +
 limite padrão elevado para 32 participantes) e transmissão de tela estabilizada para
