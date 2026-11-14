@@ -148,6 +148,7 @@
     "tests/screen-capture.cjs",
     "tests/screen-publication.cjs",
     "tests/screen-sharing.cjs",
+    "tests/security-hardening.cjs",
     "tests/server-auth.cjs",
     "tests/server-community.cjs",
     "tests/server-files.cjs",

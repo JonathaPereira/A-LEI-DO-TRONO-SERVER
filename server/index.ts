@@ -1,9 +1,10 @@
 import type { BackendApplication, ApplicationOptions } from './app';
 
-const { createApplication } = require('./app.ts') as typeof import('./app');
+const { createApplication, assertProductionConfig } = require('./app.ts') as typeof import('./app');
 const { version } = require('../package.json') as { version: string };
 
 function startApplication(options: ApplicationOptions = {}): BackendApplication {
+  assertProductionConfig(process.env);
   const port = Number(process.env.PORT || 10000);
   const host = process.env.HOST || '0.0.0.0';
   if (!Number.isInteger(port) || port < 0 || port > 65535) {

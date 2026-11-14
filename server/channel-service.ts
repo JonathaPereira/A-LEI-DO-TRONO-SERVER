@@ -819,11 +819,13 @@ export function createChannelService({
     if (!message) return;
     const room = roomFor(ws.roomId),
       player = room?.players.get(ws.clientId);
-    if (!room || !player || player.ws !== ws || !player.voiceJoined) return;
+    if (!room || !player || player.ws !== ws || ws.roomId !== room.id || !player.voiceJoined)
+      return;
     const target = room.players.get(String(message.targetId || ''));
     if (
       !target ||
       !target.voiceJoined ||
+      target.ws.roomId !== room.id ||
       target.id === player.id ||
       player.mediaTransport !== 'p2p' ||
       target.mediaTransport !== 'p2p'
@@ -833,6 +835,9 @@ export function createChannelService({
     if (!['offer', 'answer', 'ice', 'renegotiate-request', 'stream-watch'].includes(signalType))
       return;
     if (signalType === 'stream-watch' && room.kind !== 'chat') return;
+    if (message.data !== undefined && message.data !== null) {
+      if (typeof message.data !== 'object' || JSON.stringify(message.data).length > 65536) return;
+    }
     send(target.ws, {
       type: 'voice-signal',
       fromId: player.id,

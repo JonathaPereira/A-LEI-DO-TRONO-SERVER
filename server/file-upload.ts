@@ -24,6 +24,55 @@ export function detectMime(b: Buffer) {
   // Other files are downloadable without an executable inline preview.
   return 'application/octet-stream';
 }
+const FORBIDDEN_EXTENSIONS = new Set([
+  '.html',
+  '.htm',
+  '.xhtml',
+  '.svg',
+  '.svgz',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.vbs',
+  '.bat',
+  '.cmd',
+  '.ps1',
+  '.scr',
+  '.exe',
+  '.msi',
+  '.dll',
+]);
+export function sanitizeFileName(raw: string): string {
+  const cleaned = [...raw.replace(/[\\/\x00-\x1f\x7f]/g, '_').replace(/\.\.+/g, '_')]
+    .slice(0, 140)
+    .join('')
+    .replace(/^\.+/, '')
+    .trim();
+  return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : 'arquivo';
+}
+export function isForbiddenUpload(name: string, prefix: Buffer, mime: string): boolean {
+  const lowerName = name.toLowerCase();
+  const dot = lowerName.lastIndexOf('.');
+  if (dot !== -1 && FORBIDDEN_EXTENSIONS.has(lowerName.slice(dot))) return true;
+  if (mime === 'application/octet-stream') {
+    const head = prefix
+      .subarray(0, 512)
+      .toString('utf8')
+      .replace(/^\uFEFF/, '')
+      .trimStart()
+      .toLowerCase();
+    if (
+      head.startsWith('<svg') ||
+      head.startsWith('<!doctype html') ||
+      head.startsWith('<html') ||
+      head.startsWith('<script') ||
+      (head.startsWith('<?xml') && head.includes('<svg'))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 export async function peek(req: IncomingMessage) {
   const iterator = req[Symbol.asyncIterator](),
     chunks: Buffer[] = [];

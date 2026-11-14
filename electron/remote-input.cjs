@@ -160,7 +160,15 @@ class RemoteInput {
   }
   input(token, event) {
     const job = this.job;
-    if (!job || job.token !== token || job.closed || !event || typeof event !== 'object')
+    if (
+      !job ||
+      typeof token !== 'string' ||
+      token.length !== job.token.length ||
+      !crypto.timingSafeEqual(Buffer.from(token, 'utf8'), Buffer.from(job.token, 'utf8')) ||
+      job.closed ||
+      !event ||
+      typeof event !== 'object'
+    )
       return false;
     const display = this.displays().find((d) => String(d.id) === this.displayId);
     if (!display) {
