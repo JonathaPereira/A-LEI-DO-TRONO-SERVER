@@ -1,18 +1,21 @@
 .promoWrap {
-  position: fixed;
-  right: 20px;
-  bottom: 164px;
-  z-index: 900;
-  width: min(356px, calc(100vw - 32px));
-  pointer-events: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 10px 18px 0;
+  z-index: 3;
 }
 
 .promoCard {
   position: relative;
-  pointer-events: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 4px;
   overflow: hidden;
-  border-radius: 16px;
-  padding: 16px 18px;
+  border-radius: 12px;
+  padding: 11px 44px 12px 16px;
   color: #f6efe2;
   background:
     radial-gradient(circle at 88% 14%, rgba(214, 183, 121, 0.16), transparent 46%),
@@ -25,20 +28,20 @@
     );
   border: 1px solid rgba(214, 183, 121, 0.52);
   box-shadow:
-    0 22px 54px rgba(0, 0, 0, 0.72),
-    0 0 28px rgba(214, 183, 121, 0.14),
+    0 12px 32px rgba(0, 0, 0, 0.45),
+    0 0 22px rgba(214, 183, 121, 0.12),
     inset 0 1px 0 rgba(255, 244, 214, 0.18);
   font:
     13px/1.5 'Segoe UI',
     Arial,
     sans-serif;
-  animation: promoEnter 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: promoEnter 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes promoEnter {
   from {
     opacity: 0;
-    transform: translateY(-14px) scale(0.97);
+    transform: translateY(-8px) scale(0.985);
   }
   to {
     opacity: 1;
@@ -47,11 +50,12 @@
 }
 
 .lightsBar {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: -6px -4px 12px;
-  padding: 0 4px 8px;
+  margin: -5px -32px 6px -4px;
+  padding: 0 4px 6px;
   border-bottom: 1px dashed rgba(214, 183, 121, 0.22);
 }
 
@@ -100,10 +104,10 @@
 
 .closeBtn {
   position: absolute;
-  top: 28px;
-  right: 14px;
-  width: 28px;
-  height: 28px;
+  top: 24px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   border-radius: 6px;
@@ -123,17 +127,18 @@
 }
 
 .headerRow {
+  grid-column: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-right: 30px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .emblem {
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
   background: radial-gradient(circle at 30% 30%, rgba(214, 183, 121, 0.28), rgba(20, 48, 32, 0.72));
@@ -146,7 +151,7 @@
 .title {
   margin: 0;
   font:
-    600 18px/1.25 Georgia,
+    600 15.5px/1.22 Georgia,
     serif;
   color: #f8ebd0;
   text-shadow: 0 1px 10px rgba(214, 183, 121, 0.22);
@@ -154,30 +159,36 @@
 
 .subtitleTag {
   display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  letter-spacing: 1.2px;
+  margin-top: 1px;
+  font-size: 9.5px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: #d6b779;
 }
 
 .body {
-  margin: 12px 0 16px;
+  grid-column: 1;
+  margin: 2px 0 0;
   color: #d7e2da;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .actions {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  align-self: center;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
 }
 
 .primaryBtn {
-  flex: 1 1 auto;
-  min-height: 38px;
-  padding: 9px 14px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 36px;
+  padding: 7px 14px;
   border-radius: 8px;
   border: 1px solid rgba(247, 217, 152, 0.65);
   background: linear-gradient(135deg, #b82534 0%, #8b1623 55%, #6e111d 100%);
@@ -204,8 +215,10 @@
 }
 
 .secondaryBtn {
-  min-height: 38px;
-  padding: 9px 14px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 36px;
+  padding: 7px 12px;
   border-radius: 8px;
   border: 1px solid rgba(214, 183, 121, 0.28);
   background: rgba(15, 31, 22, 0.72);
@@ -223,18 +236,28 @@
   color: #f6efe2;
 }
 
+@media (max-width: 960px) {
+  .actions {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .primaryBtn,
+  .secondaryBtn {
+    flex: 1 1 160px;
+  }
+}
+
 @media (max-width: 760px) {
   .promoWrap {
-    top: calc(56px + env(safe-area-inset-top, 0px));
-    bottom: auto;
-    left: 12px;
-    right: 12px;
-    width: auto;
-    max-width: 400px;
-    margin: 0 auto;
+    padding: 8px 10px 0;
   }
   .promoCard {
-    padding: 16px;
+    padding: 10px 38px 11px 12px;
+  }
+  .lightsBar {
+    margin: -4px -26px 6px -2px;
   }
 }
 

@@ -847,6 +847,9 @@ export function ApplicationShell({
                   <Icon name="members" />
                 </button>
               </header>
+              {runtime && (
+                <ChristmasPromo runtime={runtime} visible={!entry && !game && sessionReady} />
+              )}
               <section
                 id="portalScreen"
                 className={screen === 'portalScreen' ? styles.authScreen : 'hidden'}
@@ -992,7 +995,6 @@ export function ApplicationShell({
           <ProfileDialogs runtime={runtime} />
           <CommunityDialogs runtime={runtime} />
           <ApplicationNotices runtime={runtime} />
-          <ChristmasPromo runtime={runtime} visible={!entry && !game && sessionReady} />
         </>
       )}
     </>
