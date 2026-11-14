@@ -134,13 +134,7 @@ export function CallSurface({
     state = useModel(stage),
     toolbar = useModel(runtime.TronoCallToolbar);
   const [theater, setTheater] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(() => {
-    try {
-      return !localStorage.getItem('mnGuide:callShortcuts');
-    } catch {
-      return false;
-    }
-  });
+  const [guideOpen, setGuideOpen] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const grid = useRef<HTMLDivElement>(null),
     focus = useRef<HTMLDivElement>(null),
