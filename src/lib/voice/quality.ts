@@ -158,10 +158,12 @@ export function createCallQuality(options: QualityOptions) {
           const parameters = sender.getParameters();
           if (!parameters.encodings?.length) parameters.encodings = [{}];
           const q = getSnapshot().profile;
-          if (kind === 'audio' || kind === 'screen-audio')
-            parameters.encodings[0].maxBitrate = kind === 'screen-audio' ? 192000 : q.audioBitrate;
-          else if (kind === 'screen') {
-            parameters.degradationPreference =
+          if (kind === 'audio' || kind === 'screen-audio') {
+            const targetBitrate = kind === 'screen-audio' ? 192000 : q.audioBitrate;
+            if (parameters.encodings[0].maxBitrate === targetBitrate) return;
+            parameters.encodings[0].maxBitrate = targetBitrate;
+          } else if (kind === 'screen') {
+            const targetDegradation =
               preferences.screenContent === 'motion' ? 'maintain-framerate' : 'maintain-resolution';
             sender.track.contentHint = preferences.screenContent;
             const source = sender.track.getSettings();
@@ -170,22 +172,34 @@ export function createCallQuality(options: QualityOptions) {
               (source.width || q.screen.width) / q.screen.width,
               (source.height || q.screen.height) / q.screen.height,
             );
-            const scale = Math.abs(rawScale - 1) < 0.05 ? 1 : rawScale;
+            const scale = Math.abs(rawScale - 1) < 0.08 ? 1 : rawScale;
             const byRid: Record<string, number> = {
               f: q.screenBitrate,
               h: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
               q: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
             };
+            let changed = parameters.degradationPreference !== targetDegradation;
+            parameters.degradationPreference = targetDegradation;
             for (const e of parameters.encodings) {
-              e.scaleResolutionDownBy = scale * (e.rid === 'h' ? 2 : e.rid === 'q' ? 4 : 1);
-              e.maxBitrate = (e.rid && byRid[e.rid]) || q.screenBitrate;
-              e.maxFramerate =
+              const nextScale = scale * (e.rid === 'h' ? 2 : e.rid === 'q' ? 4 : 1);
+              const nextBitrate = (e.rid && byRid[e.rid]) || q.screenBitrate;
+              const nextFps =
                 e.rid === 'q'
                   ? Math.min(q.screen.fps, 20)
                   : e.rid === 'h'
                     ? Math.min(q.screen.fps, 30)
                     : q.screen.fps;
+              if (
+                e.scaleResolutionDownBy !== nextScale ||
+                e.maxBitrate !== nextBitrate ||
+                e.maxFramerate !== nextFps
+              )
+                changed = true;
+              e.scaleResolutionDownBy = nextScale;
+              e.maxBitrate = nextBitrate;
+              e.maxFramerate = nextFps;
             }
+            if (!changed) return;
           } else if (parameters.encodings.length >= 3 && parameters.encodings.some((e) => e.rid)) {
             const byRid: Record<string, number> = {
               f: q.videoBitrate,

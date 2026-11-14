@@ -65,7 +65,7 @@ export function readRealtimeSettings(env: NodeJS.ProcessEnv = process.env): Real
     highDisableGb,
     screenDisableGb: Math.max(highDisableGb, num('REALTIME_SCREEN_DISABLE_GB', 900)),
     monthBaseGb: Math.max(0, num('REALTIME_MONTHLY_BASE_GB', 0)),
-    maxParticipants: Math.max(2, Math.min(32, Math.floor(num('REALTIME_MAX_PARTICIPANTS', 8)))),
+    maxParticipants: Math.max(2, Math.min(32, Math.floor(num('REALTIME_MAX_PARTICIPANTS', 32)))),
     estimateSafetyFactor: Math.max(1, Math.min(4, num('REALTIME_ESTIMATE_SAFETY_FACTOR', 1.5))),
   };
 }

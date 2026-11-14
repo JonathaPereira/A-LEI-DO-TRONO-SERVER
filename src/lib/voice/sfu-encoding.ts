@@ -51,7 +51,8 @@ export function screenStartupOffer(
 ): RTCSessionDescriptionInit {
   if (!offer?.sdp) return offer;
   const max = Math.round(bitrate / 1000),
-    start = Math.min(6000, Math.round(max * 0.65));
+    min = Math.min(2500, Math.max(800, Math.round(max * 0.3))),
+    start = Math.min(7500, Math.max(min, Math.round(max * 0.7)));
   const parts = offer.sdp.split(/(?=m=)/);
   return {
     type: offer.type,
@@ -63,7 +64,7 @@ export function screenStartupOffer(
         );
         for (const id of ids) {
           const re = new RegExp('^a=fmtp:' + id + ' (.*)$', 'm'),
-            hint = `x-google-start-bitrate=${start};x-google-max-bitrate=${max}`;
+            hint = `x-google-min-bitrate=${min};x-google-start-bitrate=${start};x-google-max-bitrate=${max}`;
           if (re.test(part))
             part = part.replace(
               re,

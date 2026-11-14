@@ -87,7 +87,7 @@ export class SfuPublicationRecovery {
           break;
         this.options.report?.(kind, last, attempt, false);
         await (this.options.delay ?? delay)(
-          Math.min(8000, 500 * 2 ** (attempt - 1)),
+          Math.min(8000, 350 * 2 ** (attempt - 1)),
           job.controller.signal,
         );
         if (!current()) return false;

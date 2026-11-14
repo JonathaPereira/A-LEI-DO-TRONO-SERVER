@@ -1,4 +1,9 @@
-M&N · A Lei do Trono — Windows 1.0.12
+M&N · A Lei do Trono — Windows 1.0.13
+
+Melhoria 1.0.13: conexão SFU acelerada (ICE gathering rápido + prefetch paralelo +
+limite padrão elevado para 32 participantes) e transmissão de tela estabilizada para
+jogos (camada única dedicada de alta prioridade, piso de bitrate anti-stutter no SDP
+e proteção contra throttling em segundo plano).
 
 Melhoria 1.0.8: infraestrutura MeN Games e inicialização preguiçosa (Lazy Boot).
 Os jogos não são carregados na abertura do comunicador, liberando CPU e memória

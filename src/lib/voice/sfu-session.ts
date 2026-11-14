@@ -8,12 +8,7 @@ import type {
 } from '../../types/sfu';
 import type { VoiceMediaKind } from '../../types/voice';
 import { abortable, waitForPeer } from './peer-wait.ts';
-import {
-  advertisedRids,
-  cameraEncodings,
-  screenEncodings,
-  screenStartupOffer,
-} from './sfu-encoding.ts';
+import { advertisedRids, cameraEncodings, screenStartupOffer } from './sfu-encoding.ts';
 import {
   description,
   errorCode,
@@ -228,16 +223,22 @@ export function createSfuSession(options: SfuOptions) {
     const ensure = () => {
       if (!current()) throw sfuCancelled();
     };
-    for (const simulcast of kind === 'camera' || kind === 'screen' ? [true, false] : [false]) {
+    for (const simulcast of kind === 'camera' ? [true, false] : [false]) {
       ensure();
       const r = resource('publish', kind),
         pc = r.pc;
       try {
         const settings = options.getSettings();
         const init: RTCRtpTransceiverInit = { direction: 'sendonly' };
-        if (simulcast && (kind === 'camera' || kind === 'screen'))
-          init.sendEncodings =
-            kind === 'screen' ? screenEncodings(settings) : cameraEncodings(settings);
+        if (simulcast && kind === 'camera') init.sendEncodings = cameraEncodings(settings);
+        else if (kind === 'screen')
+          init.sendEncodings = [
+            {
+              maxBitrate: settings.screenBitrate,
+              maxFramerate: settings.screen.fps,
+              networkPriority: 'high',
+            },
+          ];
         const tr = pc.addTransceiver(track, init);
         const offer = await abortable(pc.createOffer(), r.controller.signal);
         ensure();

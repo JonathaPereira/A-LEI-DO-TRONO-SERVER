@@ -28,7 +28,7 @@ test('Realtime defaults and configured clamps preserve bitrate profiles and the 
   assert.equal(settings.turnTtl, 21600);
   assert.equal(settings.softLimitGb, 800);
   assert.equal(settings.hardLimitGb, 950);
-  assert.equal(settings.maxParticipants, 8);
+  assert.equal(settings.maxParticipants, 32);
   assert.equal(settings.estimateSafetyFactor, 1.5);
   assert.deepEqual(PROFILE, {
     economy: { audio: 64000, camera: { f: 900000, h: 450000, q: 180000 }, screen: 4000000 },
