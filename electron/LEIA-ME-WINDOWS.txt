@@ -1,4 +1,10 @@
-M&N · A Lei do Trono — Windows 1.0.15
+M&N · A Lei do Trono — Windows 1.1.0
+
+Melhoria 1.1.0: otimização de GPU no tema natalino (compositor 100% em transform/opacity),
+redução de uso de CPU no compartilhamento de tela (prioridade H.264 por hardware no SFU,
+limite de resolução sem downscale desnecessário, pausa de prévia oculta/recolhida e
+gravação de replay opt-in) e pipeline de validação seletiva sem engavetamento nem suítes
+de jogos desnecessárias.
 
 Melhoria 1.0.15: Especial de Natal em A Corte 🎄 — expansão completa do tema natalino
 ("Uma celebração no reino") com pisca-piscas LED discretos e alternados nos botões,

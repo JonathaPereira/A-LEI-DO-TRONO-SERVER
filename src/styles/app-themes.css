@@ -236,21 +236,13 @@ html[data-theme='natal'],
   --natal-snow: #fff8eb;
 }
 
-/* Neve discreta + poeira dourada no fundo da aplicação (zero interferência na leitura) */
+/* Neve discreta + poeira dourada no fundo da aplicação (100% compositor GPU via translate3d) */
 @keyframes natalSnowfall {
   0% {
-    background-position:
-      0 0,
-      0 0,
-      0 0,
-      0 0;
+    transform: translate3d(0, -380px, 0);
   }
   100% {
-    background-position:
-      360px 720px,
-      -180px 540px,
-      240px 420px,
-      120px 320px;
+    transform: translate3d(380px, 0, 0);
   }
 }
 
@@ -258,77 +250,45 @@ html[data-theme='natal'],
   0%,
   100% {
     opacity: 0.34;
-    filter: brightness(0.82);
   }
   50% {
     opacity: 1;
-    filter: brightness(1.3);
   }
 }
 
 @keyframes natalTwinkleB {
   0%,
   100% {
-    opacity: 0.96;
-    filter: brightness(1.25);
+    opacity: 0.98;
   }
   50% {
     opacity: 0.3;
-    filter: brightness(0.78);
-  }
-}
-
-@keyframes natalBorderPulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 10px rgba(201, 42, 55, 0.24),
-      0 0 16px rgba(214, 183, 121, 0.14),
-      inset 0 1px 0 rgba(255, 248, 235, 0.18);
-  }
-  50% {
-    box-shadow:
-      0 0 16px rgba(214, 183, 121, 0.38),
-      0 0 22px rgba(71, 197, 128, 0.2),
-      inset 0 1px 0 rgba(255, 248, 235, 0.34);
-  }
-}
-
-@keyframes natalSpeakerAura {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px rgba(214, 183, 121, 0.85),
-      0 0 20px rgba(71, 197, 128, 0.34),
-      inset 0 0 18px rgba(214, 183, 121, 0.12);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(247, 215, 148, 0.96),
-      0 0 26px rgba(201, 42, 55, 0.36),
-      inset 0 0 22px rgba(71, 197, 128, 0.14);
   }
 }
 
 html[data-theme='natal'] body::after {
   content: '';
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: -380px;
+  width: calc(100vw + 380px);
+  height: calc(100vh + 380px);
   pointer-events: none;
   z-index: 99998;
   opacity: 0.24;
+  contain: strict;
   background-image:
     radial-gradient(2px 2px at 48px 72px, rgba(255, 248, 235, 0.95), transparent),
     radial-gradient(3px 3px at 170px 210px, rgba(255, 250, 240, 0.72), transparent),
     radial-gradient(1.5px 1.5px at 260px 115px, rgba(214, 183, 121, 0.75), transparent),
-    radial-gradient(1.5px 1.5px at 90px 290px, rgba(255, 248, 235, 0.58), transparent);
+    radial-gradient(1.5px 1.5px at 90px 160px, rgba(255, 248, 235, 0.58), transparent);
   background-size:
     380px 380px,
-    300px 300px,
-    260px 260px,
-    220px 220px;
+    380px 380px,
+    190px 190px,
+    190px 190px;
   animation: natalSnowfall 28s linear infinite;
-  will-change: background-position;
+  will-change: transform;
 }
 
 /* ---------- BARRA LATERAL ESQUERDA ---------- */
@@ -381,6 +341,7 @@ html[data-theme='natal'] [class*='_sidebarHeader']::before {
     radial-gradient(3px 3px at 80% 50%, #ff5e6c, transparent 70%),
     radial-gradient(3px 3px at 94% 50%, #4ed68b, transparent 70%);
   animation: natalTwinkleA 3.6s ease-in-out infinite;
+  will-change: opacity;
 }
 
 /* Brasão real com estrela dourada discreta no canto superior */
@@ -512,6 +473,7 @@ html[data-theme='natal']
     radial-gradient(3px 3px at 86% 4px, #52cf8a, transparent 70%),
     radial-gradient(3px 3px at 95% 4px, #f2d282, transparent 70%);
   animation: natalTwinkleB 4.2s ease-in-out infinite;
+  will-change: opacity;
 }
 
 /* ---------- ÁREA CENTRAL DE CONVERSAS ---------- */
@@ -568,7 +530,10 @@ html[data-theme='natal'] #profileSave {
   background: linear-gradient(135deg, #a81f2d 0%, #7d1522 55%, #5b101b 100%) !important;
   color: #fff7e6 !important;
   border: 1px solid rgba(240, 207, 136, 0.62) !important;
-  animation: natalBorderPulse 4s ease-in-out infinite;
+  box-shadow:
+    0 0 14px rgba(214, 183, 121, 0.28),
+    0 0 18px rgba(201, 42, 55, 0.22),
+    inset 0 1px 0 rgba(255, 248, 235, 0.24);
 }
 
 html[data-theme='natal'] button[class*='_primary']:hover,
@@ -595,6 +560,7 @@ html[data-theme='natal'] #profileSave::before {
     radial-gradient(3px 3px at 32% calc(100% - 1px), #ffd87d, transparent 72%),
     radial-gradient(3px 3px at 84% calc(100% - 1px), #ff5e6c, transparent 72%);
   animation: natalTwinkleA 3.2s ease-in-out infinite;
+  will-change: opacity;
 }
 
 html[data-theme='natal'] button[class*='_primary']::after,
@@ -613,6 +579,7 @@ html[data-theme='natal'] #profileSave::after {
     radial-gradient(3px 3px at 12% calc(100% - 1px), #fff7e0, transparent 72%),
     radial-gradient(3px 3px at 60% calc(100% - 1px), #58df94, transparent 72%);
   animation: natalTwinkleB 3.2s ease-in-out infinite;
+  will-change: opacity;
 }
 
 /* Tier 2: Botões secundários (controles de voz, painel de conta, chat composer, diálogos) */
@@ -647,6 +614,7 @@ html[data-theme='natal']
     radial-gradient(2.4px 2.4px at 82% 2px, #58df94, transparent 75%),
     radial-gradient(2.4px 2.4px at 50% calc(100% - 2px), #f2d282, transparent 75%);
   animation: natalTwinkleA 4.1s ease-in-out infinite;
+  will-change: opacity;
 }
 
 html[data-theme='natal'] [class*='_controls'] button[aria-pressed='true'],
@@ -712,7 +680,10 @@ html[data-theme='natal'] [class*='_card'] {
 html[data-theme='natal'] [class*='_card']::before {
   content: '';
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
   border-radius: inherit;
   pointer-events: none;
   z-index: 2;
@@ -722,11 +693,15 @@ html[data-theme='natal'] [class*='_card']::before {
     radial-gradient(3px 3px at calc(100% - 32px) 4px, #58df94, transparent 70%),
     radial-gradient(3px 3px at calc(100% - 14px) 4px, #fff5dc, transparent 70%);
   animation: natalTwinkleB 4.4s ease-in-out infinite;
+  will-change: opacity;
 }
 
 html[data-theme='natal'] [class*='_card'][data-speaking='true'] {
   border-color: #eed08b !important;
-  animation: natalSpeakerAura 2.8s ease-in-out infinite;
+  box-shadow:
+    0 0 0 1px rgba(247, 215, 148, 0.94),
+    0 0 22px rgba(71, 197, 128, 0.34),
+    inset 0 0 18px rgba(214, 183, 121, 0.14);
 }
 
 html[data-theme='natal'] [class*='_live'] {

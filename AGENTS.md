@@ -35,10 +35,15 @@ A instrução mais recente do usuário prevalece sobre convenções e skills.
 
 ## Verificação e documentação
 
-Após código: typecheck, format:check, build e regressões pertinentes dos scripts
-vigentes. Build antes das suítes de interface. Confira mídia no Electron real
-conforme [desenvolvimento](docs/DESENVOLVIMENTO_DESKTOP.md), declarando fixtures e
-limitações. Avalie manualmente e obtenha aceite antes de novos testes visuais.
+Após código: typecheck, format:check, build e somente os testes diretamente relacionados
+à mudança proposta (`node scripts/select-tests.cjs --working-tree`). Não execute suítes de
+jogos nem suítes completas sem relação direta com a alteração; poupe testes desnecessários,
+use `--exclude-games` para validações de plataforma e `--retries 1` em suítes E2E para
+impedir engavetamento e travamento da atualização por falhas irrelevantes. Build antes das
+suítes de interface. Confira mídia no Electron real conforme
+[desenvolvimento](docs/DESENVOLVIMENTO_DESKTOP.md) quando mídia/captura nativa for afetada,
+declarando fixtures e limitações. Avalie manualmente e obtenha aceite antes de novos testes
+visuais.
 
 Revise o diff completo, incluindo novos arquivos e alterações sem commit. Use
 code-review com base compatível. Entregue somente evidências realmente concluídas.

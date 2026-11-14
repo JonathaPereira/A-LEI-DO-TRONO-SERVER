@@ -74,12 +74,16 @@ test('screen capture preserves replay quality, native audio options and a single
   assert.deepEqual(h.replayStops, [current.source]);
 });
 
-test('without replay or shared audio, capture requests only the selected call format', async t => {
+test('without replay or shared audio, capture requests and caps only the selected call format', async t => {
   const h = await setup(t);
   h.settings.replay = null; h.settings.audio = false;
   h.settings.format = { width: 1920, height: 1080, fps: 60 };
   await h.capture.start();
-  assert.deepEqual(h.requests[0].video.frameRate, { ideal: 60, max: 60 });
+  assert.deepEqual(h.requests[0].video, {
+    width: { ideal: 1920, max: 1920 },
+    height: { ideal: 1080, max: 1080 },
+    frameRate: { ideal: 60, max: 60 },
+  });
   assert.equal(h.requests[0].audio, false);
   assert.equal(h.requests[0].systemAudio, 'exclude');
   assert.equal(h.requests[0].windowAudio, 'exclude');

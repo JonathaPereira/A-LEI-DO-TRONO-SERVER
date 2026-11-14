@@ -128,6 +128,10 @@ test(
             localStorage.setItem('tronoMusicEnabled', '0');
             localStorage.setItem('tronoSfxEnabled', '0');
             localStorage.setItem('tronoNoiseSuppression', '0');
+            localStorage.setItem(
+              'tronoClips:' + data.user.id,
+              JSON.stringify({ version: 2, auto: true }),
+            );
             window.__displayRequests = [];
             const NativeRecorder = window.MediaRecorder;
             window.MediaRecorder = class extends NativeRecorder {

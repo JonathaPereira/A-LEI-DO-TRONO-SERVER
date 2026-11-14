@@ -32,6 +32,10 @@ on:
         description: Run full release test suites even for focused changes
         type: boolean
         default: false
+      include_games:
+        description: Include game tests even when game files were not changed
+        type: boolean
+        default: false
       refresh_instructions:
         description: Refresh only instructions and hashes in an existing draft release
         type: boolean
@@ -43,6 +47,9 @@ on:
 permissions:
   contents: write
   actions: write
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   refresh-instructions:
     if: github.event_name == 'workflow_dispatch' && inputs.refresh_instructions
@@ -109,12 +116,17 @@ jobs:
           CURRENT_SHA: ${{ github.sha }}
           EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
           FULL_TESTS: ${{ inputs.full_tests || false }}
+          INCLUDE_GAMES: ${{ inputs.include_games || false }}
         run: |
           "PLAYWRIGHT_BROWSERS_PATH=$env:RUNNER_TEMP\ms-playwright" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $extra = @()
+          if ($env:INCLUDE_GAMES -eq 'true' -or $env:FULL_TESTS -eq 'true') {
+            $extra += '--include-games'
+          }
           if ($env:EXTENDED_BROWSER -eq 'true' -or $env:FULL_TESTS -eq 'true' -or $env:EVENT_NAME -ne 'push') {
-            node scripts/select-tests.cjs --full --github-output $env:GITHUB_OUTPUT
+            node scripts/select-tests.cjs --full @extra --github-output $env:GITHUB_OUTPUT
           } else {
-            node scripts/select-tests.cjs --base $env:BEFORE_SHA --head $env:CURRENT_SHA --github-output $env:GITHUB_OUTPUT
+            node scripts/select-tests.cjs --base $env:BEFORE_SHA --head $env:CURRENT_SHA @extra --github-output $env:GITHUB_OUTPUT
           }
           exit $LASTEXITCODE
       - name: Cache Playwright browsers
@@ -202,36 +214,57 @@ jobs:
         shell: pwsh
         env:
           EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
+          INCLUDE_GAMES: ${{ steps.plan.outputs.include_games }}
           PLAN_MODE: ${{ steps.plan.outputs.mode }}
           PLAN_REASONS: ${{ steps.plan.outputs.reasons }}
           RUN_CORE: ${{ steps.plan.outputs.run_core }}
+          CORE_MODE: ${{ steps.plan.outputs.core_mode }}
+          CORE_FILTER: ${{ steps.plan.outputs.core_filter }}
           BROWSER_MODE: ${{ steps.plan.outputs.browser_mode }}
           BROWSER_FILTER: ${{ steps.plan.outputs.browser_filter }}
           DESKTOP_MODE: ${{ steps.plan.outputs.desktop_mode }}
           DESKTOP_FILTER: ${{ steps.plan.outputs.desktop_filter }}
         run: |
-          Write-Host "Test plan: mode=$env:PLAN_MODE browser=$env:BROWSER_MODE ($env:BROWSER_FILTER) desktop=$env:DESKTOP_MODE ($env:DESKTOP_FILTER) reasons=$env:PLAN_REASONS"
+          Write-Host "Test plan: mode=$env:PLAN_MODE include_games=$env:INCLUDE_GAMES core=$env:CORE_MODE browser=$env:BROWSER_MODE ($env:BROWSER_FILTER) desktop=$env:DESKTOP_MODE ($env:DESKTOP_FILTER) reasons=$env:PLAN_REASONS"
           if ($env:RUN_CORE -eq 'true') {
-            npm test 2>&1 | Tee-Object artifacts/windows-core.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            if ($env:CORE_MODE -eq 'filtered' -and $env:CORE_FILTER) {
+              node scripts/test.cjs --suite core --filter $env:CORE_FILTER 2>&1 | Tee-Object artifacts/windows-core.log
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            } elseif ($env:CORE_MODE -eq 'platform' -and $env:INCLUDE_GAMES -ne 'true') {
+              node scripts/test.cjs --suite core --exclude-games 2>&1 | Tee-Object artifacts/windows-core.log
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            } else {
+              node scripts/test.cjs --suite core 2>&1 | Tee-Object artifacts/windows-core.log
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          } else {
+            Write-Host 'Skipping unrelated core tests for this change.'
           }
           if ($env:EXTENDED_BROWSER -eq 'true') {
-            node scripts/test.cjs --suite browser 2>&1 | Tee-Object artifacts/windows-browser.log
+            $browserArgs = @('--suite', 'browser', '--retries', '1')
+            if ($env:INCLUDE_GAMES -ne 'true') { $browserArgs += '--exclude-games' }
+            node scripts/test.cjs @browserArgs 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:BROWSER_MODE -eq 'release') {
-            node scripts/test.cjs --suite browser --profile release 2>&1 | Tee-Object artifacts/windows-browser.log
+            node scripts/test.cjs --suite browser --profile release --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } elseif ($env:BROWSER_MODE -eq 'platform') {
+            node scripts/test.cjs --suite browser --profile release --exclude-games --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:BROWSER_MODE -eq 'filtered' -and $env:BROWSER_FILTER) {
-            node scripts/test.cjs --suite browser --filter $env:BROWSER_FILTER 2>&1 | Tee-Object artifacts/windows-browser.log
+            node scripts/test.cjs --suite browser --filter $env:BROWSER_FILTER --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             Write-Host 'Skipping unrelated browser tests for this change.'
           }
           if ($env:DESKTOP_MODE -eq 'release') {
-            node scripts/test.cjs --suite desktop --profile release 2>&1 | Tee-Object artifacts/windows-desktop.log
+            node scripts/test.cjs --suite desktop --profile release --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } elseif ($env:DESKTOP_MODE -eq 'platform') {
+            node scripts/test.cjs --suite desktop --profile release --exclude-games --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:DESKTOP_MODE -eq 'filtered' -and $env:DESKTOP_FILTER) {
-            node scripts/test.cjs --suite desktop --filter $env:DESKTOP_FILTER 2>&1 | Tee-Object artifacts/windows-desktop.log
+            node scripts/test.cjs --suite desktop --filter $env:DESKTOP_FILTER --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             Write-Host 'Skipping unrelated un-packaged desktop tests for this change.'
@@ -242,12 +275,12 @@ jobs:
         run: |
           npm --prefix electron run pack:win
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm test -- --suite desktop --filter '(?:desktop-packaged\.js)$' 2>&1 | Tee-Object artifacts/windows-packaged.log
+          node scripts/test.cjs --suite desktop --filter '(?:desktop-packaged\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-packaged.log
           exit $LASTEXITCODE
       - name: Accept the real installer on the disposable runner
         shell: pwsh
         run: |
-          npm test -- --suite desktop --filter '(?:desktop-installer\.js)$' 2>&1 | Tee-Object artifacts/windows-installer.log
+          node scripts/test.cjs --suite desktop --filter '(?:desktop-installer\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-installer.log
           $testExit = $LASTEXITCODE
           if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP\b') { $testExit = 1 }
           exit $testExit

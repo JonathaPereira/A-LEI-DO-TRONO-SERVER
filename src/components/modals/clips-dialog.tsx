@@ -53,8 +53,7 @@ export function ClipsDialog() {
           </select>
         </label>
         <label className="clip-audio">
-          <input id="clipAuto" type="checkbox" defaultChecked /> Preparar clipes ao transmitir a
-          tela
+          <input id="clipAuto" type="checkbox" /> Preparar clipes ao transmitir a tela
         </label>
         <nav className={'clips-tabs'} role={'tablist'} aria-label={'Central de clipes'}>
           <button

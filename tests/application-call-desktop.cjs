@@ -264,6 +264,8 @@ test(
       await page.getByRole('button', { name: 'Seus clipes', exact: true }).click();
       const clips = page.locator('#clipsDialog');
       await expect(clips).toBeVisible();
+      if (!(await clips.locator('#clipAuto').isChecked()))
+        await clips.locator('#clipAuto').check();
       await expect(clips.locator('#clipNow')).toBeEnabled({ timeout: 15000 });
       await expect.poll(() => page.evaluate(() => window.TronoClips.replayStatus?.seconds), { timeout: 15000 }).toBeGreaterThanOrEqual(1);
       await clips.locator('#clipNow').click();

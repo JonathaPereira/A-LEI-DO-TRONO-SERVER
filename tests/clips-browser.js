@@ -79,7 +79,7 @@ test(
             const canvas = document.createElement('canvas');
             canvas.width = 1920;
             canvas.height = 1080;
-            const ctx = canvas.getContext('2d'),
+            const ctx = canvas.getContext('2d', { willReadFrequently: true }),
               start = performance.now();
             const paint = () => {
               const seconds = (performance.now() - start) / 1000;
@@ -168,6 +168,7 @@ test(
           await expect(page.locator('#clipToolbarNow')).toBeVisible();
           await central();
           await expect(page.locator('#clipsLibrary')).toBeVisible();
+          await page.locator('#clipAuto').check();
           await prefs();
           await expect(page.locator('#clipQuality')).toHaveValue('balanced');
           await expect(page.locator('#clipFps')).toHaveValue('60');

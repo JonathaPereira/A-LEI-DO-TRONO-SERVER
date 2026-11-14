@@ -64,9 +64,10 @@
   height: 7px;
   border-radius: 50%;
   background: var(--bulb, #d6b779);
-  box-shadow: 0 0 7px var(--bulb, #d6b779);
+  box-shadow: 0 0 8px var(--bulb, #d6b779);
   opacity: 0.92;
   animation: bulbGlow 3.2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .bulb:nth-child(4n + 1) {
@@ -90,15 +91,11 @@
   0%,
   100% {
     opacity: 0.45;
-    transform: scale(0.9);
-    box-shadow: 0 0 3px var(--bulb);
+    transform: scale3d(0.88, 0.88, 1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.12);
-    box-shadow:
-      0 0 10px var(--bulb),
-      0 0 16px rgba(255, 240, 200, 0.25);
+    transform: scale3d(1.14, 1.14, 1);
   }
 }
 

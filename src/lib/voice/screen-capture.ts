@@ -85,6 +85,9 @@ export function createScreenCapture({
       outgoing: MediaStream | undefined,
       resource: Resource | undefined;
     try {
+      const targetWidth = Math.max(settings.format.width, settings.replay?.width || 0),
+        targetHeight = Math.max(settings.format.height, settings.replay?.height || 0),
+        targetFps = Math.max(settings.format.fps, settings.replay?.fps || 0);
       // Window audio avoids feeding the whole call back into a game-window share.
       // Older browsers may ignore these optional display-audio controls.
       const constraints: Omit<DisplayMediaStreamOptions, 'audio'> & {
@@ -99,11 +102,15 @@ export function createScreenCapture({
         selfBrowserSurface: 'exclude';
       } = {
         video: {
-          width: { ideal: Math.max(settings.format.width, settings.replay?.width || 0) },
-          height: { ideal: Math.max(settings.format.height, settings.replay?.height || 0) },
+          width: settings.replay
+            ? { ideal: targetWidth }
+            : { ideal: targetWidth, max: targetWidth },
+          height: settings.replay
+            ? { ideal: targetHeight }
+            : { ideal: targetHeight, max: targetHeight },
           frameRate: {
-            ideal: Math.max(settings.format.fps, settings.replay?.fps || 0),
-            max: Math.max(settings.format.fps, settings.replay?.fps || 0),
+            ideal: targetFps,
+            max: targetFps,
           },
         },
         audio: settings.audio

@@ -149,9 +149,9 @@ export function CallSurface({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!visible || event.defaultPrevented) return;
-      const target = event.target as HTMLElement | null;
+      const target = event.target;
       const isInput =
-        target &&
+        target instanceof HTMLElement &&
         (target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable ||

@@ -681,7 +681,7 @@ test('native subscription failure after the queue finishes schedules a new negot
   assert.deepEqual(h.fallback, []);
 });
 
-test('prioritizeH264 moves H264 codecs to the top of the preference list', async () => {
+test('prioritizeH264 moves Constrained Baseline H264 ahead while keeping fallback codecs', async () => {
   const { prioritizeH264 } = await import('../src/lib/voice/sfu-encoding.ts');
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -691,7 +691,8 @@ test('prioritizeH264 moves H264 codecs to the top of the preference list', async
           ? {
               codecs: [
                 { mimeType: 'video/VP8', clockRate: 90000 },
-                { mimeType: 'video/H264', clockRate: 90000 },
+                { mimeType: 'video/H264', clockRate: 90000, sdpFmtpLine: 'profile-level-id=640032' },
+                { mimeType: 'video/H264', clockRate: 90000, sdpFmtpLine: 'profile-level-id=42e01f' },
                 { mimeType: 'video/VP9', clockRate: 90000 },
               ],
             }
@@ -706,13 +707,15 @@ test('prioritizeH264 moves H264 codecs to the top of the preference list', async
     const applied = prioritizeH264(mockTransceiver);
     assert.equal(applied, true);
     assert.equal(preferred[0].mimeType, 'video/H264');
-    assert.equal(preferred.length, 3);
+    assert.match(preferred[0].sdpFmtpLine, /42e01f/);
+    assert.equal(preferred[1].mimeType, 'video/H264');
+    assert.equal(preferred.length, 4);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }
 });
 
-test('screen publication preserves default transceiver codec order', async (t) => {
+test('screen publication prioritizes H264 hardware codecs while retaining fallback codecs', async (t) => {
   const h = await setup(t);
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -734,7 +737,8 @@ test('screen publication preserves default transceiver codec order', async (t) =
     const pub = await pubPromise;
     assert(pub);
     const peer = h.pcs.at(-1);
-    assert.equal(peer?.tr?.preferredCodecs, undefined);
+    assert.equal(peer?.tr?.preferredCodecs?.[0]?.mimeType, 'video/H264');
+    assert.equal(peer?.tr?.preferredCodecs?.length, 3);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }

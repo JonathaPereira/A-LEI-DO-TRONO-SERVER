@@ -1,5 +1,5 @@
 'use client';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CallStage, ParticipantView, StageSnapshot } from '../../lib/voice/stage';
 import presentation from '../application/call.module.css';
@@ -32,6 +32,12 @@ export function MediaTile({
 }) {
   const client = runtime.TronoCallStage;
   const [tile] = useState(() => document.createElement('div'));
+  const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
+  useEffect(() => {
+    const sync = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
   const screen = kind === 'screen',
     watching = !screen || p.watching;
   const paused = screen && p.self && snapshot.previewPaused,
@@ -120,7 +126,9 @@ export function MediaTile({
     <>
       <BorrowedVideo
         stream={screen ? p.screenStream : p.cameraStream}
-        active={screen ? watching && !paused && live : live}
+        active={
+          !hidden && (screen ? watching && !paused && (!p.collapsed || external) && live : live)
+        }
         onDoubleClick={fullscreen}
       />
       {external && (

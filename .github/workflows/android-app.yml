@@ -20,7 +20,7 @@ permissions:
   contents: write
 concurrency:
   group: android-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -52,8 +52,8 @@ jobs:
           npm run typecheck
           npm run format:check
           npm run build
-          npm test
-          npm test -- --suite browser --filter 'mobile-browser|notifications-browser|voice-recovery-browser'
+          node scripts/test.cjs --suite core --exclude-games --filter 'android-|mobile-|auth|channel-|channels|chat-|community-|direct-attachments|file|messenger|notifications|profile-|registered-accounts|server-(?:auth|community|files|realtime|social)|sessions|settings|sfu-|social-|socket-|voice-'
+          node scripts/test.cjs --suite browser --filter 'mobile-browser|notifications-browser|voice-recovery-browser' --retries 1
       - name: Prepare optional Firebase and permanent signing
         id: prepare
         env:

@@ -54,7 +54,7 @@ export function readClipSettings(value: unknown): ClipSettings {
       quality === 'balanced' || quality === 'high' || quality === 'light' ? quality : 'light',
     fps: fps === 60 ? 60 : 30,
     seconds: seconds === 15 || seconds === 60 || seconds === 120 ? seconds : 30,
-    auto: data.auto !== false,
+    auto: data.auto === true,
     desktopAuto: data.desktopAuto !== false,
     audio: data.audio === 'none' ? 'none' : 'on',
     encoder: data.encoder === 'nvenc' || data.encoder === 'compatible' ? data.encoder : 'auto',

@@ -49,11 +49,13 @@ test('version-two preferences keep quality, FPS, duration, flags and shortcut un
   assert(Object.isFrozen(f.preferences.getSnapshot().settings.shortcut));
   assert(Object.isFrozen(f.preferences.getQuality()));
 });
-test('legacy settings retain their migration and malformed JSON or shortcut fields never break startup', () => {
+test('legacy settings retain their migration and auto-replay defaults to opt-in without breaking malformed fields', () => {
+  assert.equal(readClipSettings(null).auto, false);
   assert.equal(readClipSettings({ quality: 'high', fps: 30 }).fps, 60);
   assert.equal(readClipSettings({ quality: 'light' }).quality, 'balanced');
   assert.equal(readClipSettings({ version: 2, quality: null, fps: null }).quality, 'light');
   assert.equal(readClipSettings({ version: 2, quality: null, fps: null }).fps, 30);
+  assert.equal(readClipSettings({ version: 2, auto: true }).auto, true);
   const f = fixture();
   for (const raw of [
     'null',

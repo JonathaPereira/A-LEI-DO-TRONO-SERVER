@@ -108,7 +108,11 @@ export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined
     if (!codecs?.length) return false;
     const h264 = codecs.filter((c) => c.mimeType?.toLowerCase() === 'video/h264');
     if (!h264.length) return false;
-    transceiver.setCodecPreferences([...h264, ...codecs.filter((c) => !h264.includes(c))]);
+    // Constrained Baseline (42e0...) works across hardware encoders/decoders
+    // while retaining the full fallback list (other H.264 profiles, RTX, VP8/VP9/AV1).
+    const baseline = h264.filter((c) => /profile-level-id=42e0/i.test(c.sdpFmtpLine || ''));
+    const orderedH264 = [...baseline, ...h264.filter((c) => !baseline.includes(c))];
+    transceiver.setCodecPreferences([...orderedH264, ...codecs.filter((c) => !h264.includes(c))]);
     return true;
   } catch {
     return false;

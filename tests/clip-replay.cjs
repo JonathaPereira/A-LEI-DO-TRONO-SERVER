@@ -52,7 +52,12 @@ function fixture() {
   const rows = new Map(),
     saved = [],
     created = [],
-    storage = new Map();
+    autoEnabled = JSON.stringify({ version: 2, auto: true }),
+    storage = new Map([
+      ['tronoClips:local', autoEnabled],
+      ['tronoClips:alice', autoEnabled],
+      ['tronoClips:bob', autoEnabled],
+    ]);
   const preferences = createClipPreferences(() => ({
     getItem: (key) => storage.get(key),
     setItem: (key, value) => storage.set(key, value),
@@ -89,8 +94,17 @@ function fixture() {
     },
   };
   const controller = createReplayController(options);
+  preferences.setSetting('auto', true);
   return { controller, preferences, library, options, rows, saved, created, store };
 }
+test('screen share leaves background replay idle unless auto-replay is opted in or forced', async () => {
+  const f = fixture();
+  f.preferences.setSetting('auto', false);
+  await f.controller.sharedStarted(borrowed('idle'));
+  assert.equal(f.created.length, 0);
+  await f.controller.sharedStarted(borrowed('forced'), { force: true });
+  assert.equal(f.created.length, 1);
+});
 test('a replaced source invalidates delayed preparation and stale source shutdown cannot stop its replacement', async () => {
   const f = fixture(),
     pending = deferred(),

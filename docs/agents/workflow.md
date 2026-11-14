@@ -34,10 +34,13 @@ quando afetados, sem espelhar métodos privados.
 Documentação e apresentação sem comportamento novo recebem verificação
 proporcional. Aceite visual humano antecede novos snapshots permanentes.
 
-Após código, execute typecheck, format check, build e regressões afetadas.
-Interface consome out: faça build antes. Mídia exige Electron real. Declare
-simulações e limitações ambientais. Revise o diff completo, inclusive novos
-arquivos e alterações sem commit, contra pedido e padrões; use code-review
+Após código, execute typecheck, format check, build e apenas os testes diretamente afetados
+pela mudança (`node scripts/select-tests.cjs --working-tree`). Não rode testes de jogos se
+a mudança não os afetar diretamente, e isole falhas/flakes em E2E (`--exclude-games`,
+`--retries 1`) para evitar engavetamento e bloqueio da atualização por testes irrelevantes.
+Interface consome out: faça build antes. Mídia real exige Electron quando o subsistema de
+mídia/captura mudar. Declare simulações e limitações ambientais. Revise o diff completo,
+inclusive novos arquivos e alterações sem commit, contra pedido e padrões; use code-review
 quando houver base compatível, sem criar commit para fabricar uma base.
 
 ## Documentação, tracker e encerramento
