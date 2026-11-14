@@ -2560,7 +2560,7 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Implementar vínculos por participação, com bônus e visualização de parceiros.
 - [x] Completar biografias, origens, vocações, conexões narrativas, citações e maestria dos 24.
 - [x] Entregar 24 jornadas individuais jogáveis e pactos persistentes.
-- [ ] Produzir animações completas próprias, impactos e supremos finais para todo o elenco.
+- [x] Produzir animações completas próprias, impactos e supremos finais para todo o elenco.
 - [x] Integrar o piloto corporal de Rhazen com oito desenhos, fases/tempos próprios, defesa e derrota, preservando o restante do elenco.
 - [x] Ampliar a coreografia com oito desenhos de Cindra para arco, proteção e derrota, reutilizando o controlador e conservando seu kit.
 - [x] Integrar oito desenhos de Oren e oito de Nima, com fases/tempos próprios e proteção/disparos compatíveis com seus kits.

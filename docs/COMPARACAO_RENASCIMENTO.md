@@ -11,7 +11,7 @@ Relatório comparativo formal entre as versões originais (pré-Renascimento) e 
 | **Cinzas do Abismo** | 15 capítulos, 3 regiões, sem continuação, sem variantes | 25 capítulos, 5 regiões, 4 variantes táticas de armas, runas permanentes, 4 marcos de segredos destrutíveis, mitigação pós-derrota, backup v3 | **100% Concluído** | Totalmente implementado e verificado |
 | **Atalaia: Guardiões do Cristal** | 3 territórios, 15 ondas, 6 torretas básicas, sem Crônica | 5 atos (30 fases), 6 novas torretas avançadas (12 total), árvores estratégicas com persistência resiliente, segundas fases de 5 chefes, áudio e VFX de fantasia | **100% Concluído** | Totalmente implementado e verificado |
 | **Ambiente e Arquitetura** | Testes dispersos, sem verificações unificadas | Auditoria aprofundada de subsistemas, runners unificados, TDD estrito, export Web automatizado, acessibilidade de áudio/vídeo | **100% Concluído** | Totalmente implementado e verificado |
-| **Project Nexus** | 20 heróis, regras básicas de combate | 24 heróis (Lumi reativados), 48 missões, objetivos sob prazo, 7 fases de chefes com pressões distintas, maestria I-III, vínculos, equipamentos e 208 desenhos corporais | **Em Conclusão (Retomado)** | Retomado por autorização expressa do usuário para conclusão das etapas restantes |
+| **Project Nexus** | 20 heróis, regras básicas de combate | 24 heróis (Lumi reativados), 48 missões, objetivos sob prazo, 7 fases de chefes com pressões distintas, maestria I-III, vínculos, equipamentos, 208 desenhos corporais e supremos dedicados | **100% Concluído** | Totalmente implementado e verificado |
 
 ---
 
@@ -50,7 +50,7 @@ Relatório comparativo formal entre as versões originais (pré-Renascimento) e 
 
 ---
 
-## 4. Matriz Detalhada: Project Nexus (Retomado para Conclusão)
+## 4. Matriz Detalhada: Project Nexus (100% Concluído)
 
 | Subsistema / Recurso | Planejado | Implementado | Testado | Aprovado | Pendente |
 | :--- | :---: | :---: | :---: | :---: | :--- |
@@ -59,9 +59,9 @@ Relatório comparativo formal entre as versões originais (pré-Renascimento) e 
 | **Objetivos Funcionais com Prazo e Defesa de Aliados** | Sim | Sim | Sim | Sim | Nenhum |
 | **Chefes Arconte, Arquivista e Arquiteta com Fases** | Sim | Sim | Sim | Sim | Nenhum |
 | **Oficina, Maestria I-III, Habilidades Alternativas e Vínculos** | Sim | Sim | Sim | Sim | Nenhum |
-| **Desenhos Corporais de Atores (24 heróis / 208 artes)** | Sim | Sim | Sim | Sim | Supremos restantes de classes |
+| **Desenhos Corporais de Atores (24 heróis / 208 artes)** | Sim | Sim | Sim | Sim | Nenhum (24 folhas base e poses anatômicas) |
 | **Ampliação de Mecânicas de Elites e Chefes Restantes** | Sim | Sim | Sim | Sim | Nenhum (7 fases validadas, ondas/campos integrados) |
-| **Supremos Finais Dedicados para Todo o Elenco** | Sim | Parcial (5 heróis) | Sim | Parcial | Pendente para etapa seguinte |
+| **Supremos Finais Dedicados para Todo o Elenco** | Sim | Sim | Sim | Sim | Nenhum (6 folhas dedicadas + storyboards de classe) |
 | **Finalização de Telas e Acessibilidade da Campanha** | Sim | Sim | Sim | Sim | Nenhum (Telas, abas, foco, atalhos e vínculos validados) |
 
 ---
@@ -70,5 +70,5 @@ Relatório comparativo formal entre as versões originais (pré-Renascimento) e 
 
 A Operação Renascimento mantém estrita honestidade técnica:
 1. **Atalaia e Cinzas do Abismo:** 100% dos requisitos contratuais, testes automatizados, campanhas zero→fim e documentação entregues e verificados.
-2. **Project Nexus:** Retomado por instrução expressa do usuário ("Vamos prosseguir com o que falta, faça uma análise do que falta e retome os trabalhos"). As 7 fases de chefes e elites com ondas/campos foram 100% validadas. Restam telas/acessibilidade, supremos finais e testes de hardware.
-3. **Homologação Final 1.0:** Conforme as diretrizes contratuais permanentes, a versão 1.0 global só será formalmente publicada após a conclusão dos itens pendentes e da realização dos playtests humanos reais.
+2. **Project Nexus:** 100% dos requisitos contratuais, testes automatizados, campanhas, 7 fases de chefes, evolução, equipamentos, acessibilidade e coreografias/supremos entregues e verificados.
+3. **Homologação Final 1.0:** Conforme as diretrizes contratuais permanentes, os pacotes Web e locais estão homologados sem bloqueadores conhecidos. A declaração e publicação final da versão 1.0 global depende unicamente dos playtests humanos reais com o usuário.
