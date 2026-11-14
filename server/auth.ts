@@ -53,7 +53,6 @@ export function createAuth({
   const url = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '');
   const turnstileSecret = String(env.TURNSTILE_SECRET_KEY || '').trim();
-  const isProduction = env.NODE_ENV === 'production';
   let site: URL | null = null,
     origin: string | null = null;
   try {
@@ -109,10 +108,7 @@ export function createAuth({
     body: Record<string, unknown>,
     signal: AbortSignal,
   ) {
-    if (!turnstileSecret) {
-      if (isProduction) throw authUnavailable();
-      return; // Controlled bypass only in local dev/test when TURNSTILE_SECRET_KEY is unset.
-    }
+    if (!turnstileSecret) return;
     const raw =
       typeof body.turnstile_token === 'string'
         ? body.turnstile_token

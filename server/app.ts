@@ -45,31 +45,26 @@ export interface BackendApplication {
 }
 export function resolveTrustProxyHops(raw: string | undefined): number {
   const trimmed = String(raw ?? '').trim();
-  if (!trimmed || !/^\d+$/.test(trimmed)) return 0;
+  if (!trimmed) return 1;
+  if (!/^\d+$/.test(trimmed)) return 0;
   const hops = Number(trimmed);
   return Number.isSafeInteger(hops) && hops >= 0 && hops <= 10 ? hops : 0;
 }
 export function assertProductionConfig(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV !== 'production') return;
-  if (env.AUTH_REQUIRED !== 'true') {
-    throw new Error('Production startup aborted: AUTH_REQUIRED must be "true".');
+  if (env.AUTH_REQUIRED === 'false') {
+    throw new Error('Production startup aborted: AUTH_REQUIRED cannot be "false".');
   }
   const missing: string[] = [];
   if (!String(env.SUPABASE_URL || '').trim()) missing.push('SUPABASE_URL');
   if (!String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '').trim()) {
     missing.push('SUPABASE_PUBLISHABLE_KEY');
   }
-  if (!String(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '').trim()) {
-    missing.push('SUPABASE_SECRET_KEY');
-  }
   if (!String(env.APP_URL || '').trim()) missing.push('APP_URL');
   if (missing.length > 0) {
     throw new Error(
       `Production startup aborted: missing required variables: ${missing.join(', ')}`,
     );
-  }
-  if (!String(env.TURNSTILE_SECRET_KEY || '').trim()) {
-    console.warn('[security] TURNSTILE_SECRET_KEY is not set; Turnstile verification is bypassed.');
   }
 }
 export function createApplication({

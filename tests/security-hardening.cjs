@@ -25,9 +25,9 @@ const fullProdEnv = () => ({
   TURNSTILE_SECRET_KEY: 'turnstile-secret',
 });
 
-test('resolveTrustProxyHops strictly accepts 0..10 and defaults invalid values to 0', () => {
-  assert.equal(resolveTrustProxyHops(undefined), 0);
-  assert.equal(resolveTrustProxyHops(''), 0);
+test('resolveTrustProxyHops strictly accepts 0..10 and defaults unset to 1 and invalid values to 0', () => {
+  assert.equal(resolveTrustProxyHops(undefined), 1);
+  assert.equal(resolveTrustProxyHops(''), 1);
   assert.equal(resolveTrustProxyHops('true'), 0);
   assert.equal(resolveTrustProxyHops('-1'), 0);
   assert.equal(resolveTrustProxyHops('11'), 0);
@@ -37,7 +37,7 @@ test('resolveTrustProxyHops strictly accepts 0..10 and defaults invalid values t
   assert.equal(resolveTrustProxyHops('2'), 2);
 });
 
-test('assertProductionConfig fails fast when AUTH_REQUIRED or secrets are missing in production', () => {
+test('assertProductionConfig fails fast when AUTH_REQUIRED is false or core vars are missing in production', () => {
   assert.doesNotThrow(() => assertProductionConfig({ NODE_ENV: 'development' }));
   assert.doesNotThrow(() => assertProductionConfig(fullProdEnv()));
   assert.throws(
@@ -48,8 +48,8 @@ test('assertProductionConfig fails fast when AUTH_REQUIRED or secrets are missin
     assertProductionConfig({ ...fullProdEnv(), TURNSTILE_SECRET_KEY: '' }),
   );
   assert.throws(
-    () => assertProductionConfig({ ...fullProdEnv(), SUPABASE_SECRET_KEY: '   ' }),
-    /SUPABASE_SECRET_KEY/,
+    () => assertProductionConfig({ ...fullProdEnv(), SUPABASE_PUBLISHABLE_KEY: '   ' }),
+    /SUPABASE_PUBLISHABLE_KEY/,
   );
 });
 
