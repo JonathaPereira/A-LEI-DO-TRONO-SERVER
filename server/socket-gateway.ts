@@ -93,7 +93,7 @@ export function createSocketGateway({
   soundboard,
   sfu: realtimeSfu,
   version: VERSION,
-  authTimeoutMs = 5000,
+  authTimeoutMs = 0,
   rateLimitCapacity = 80,
   rateLimitPerSec = 40,
 }: Options) {
