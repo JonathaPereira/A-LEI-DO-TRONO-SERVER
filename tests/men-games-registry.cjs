@@ -5,7 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   MEN_GAMES_REGISTRY,
+  MEN_GAMES_REGISTRY_URL,
+  fetchRemoteGamesRegistry,
   getAllRegisteredGames,
+  getIndexedGame,
   getRegisteredGame,
   getGameByDestination,
 } = require('../src/lib/men-games/registry.ts');
@@ -88,4 +91,65 @@ test('games/registry.json matches TypeScript registry data integrity', () => {
     assert.equal(fromJson.version, game.version);
     assert.equal(fromJson.authRequired, game.authRequired);
   }
+});
+
+test('fetchRemoteGamesRegistry indexes remote MENGAMES catalog and keeps offline fallback', async () => {
+  assert.equal(MEN_GAMES_REGISTRY_URL, 'https://men-games.surge.sh/registry.json');
+
+  const offlineFallback = await fetchRemoteGamesRegistry(async () => {
+    throw new Error('network offline');
+  });
+  assert.equal(offlineFallback.length, MEN_GAMES_REGISTRY.length);
+
+  const remoteGames = await fetchRemoteGamesRegistry(async (url) => {
+    assert.equal(url, MEN_GAMES_REGISTRY_URL);
+    return {
+      ok: true,
+      async json() {
+        return {
+          version: '1.0.1',
+          games: [
+            {
+              id: 'throne',
+              destination: 'throne',
+              title: 'A Lei do Trono (Remoto)',
+              tag: 'ESTRATÉGIA · CARTAS',
+              description: 'Atualizado via MENGAMES',
+              version: '0.14.1',
+              category: 'strategy',
+              launchMode: 'embedded-stage',
+              entryUrl: '/assets/cards/',
+              image: '/assets/games/throne-cover.webp',
+              authRequired: true,
+              fullscreen: true,
+              multiplayer: true,
+              status: 'available',
+            },
+            {
+              id: 'novo-jogo',
+              destination: 'novo-jogo',
+              title: 'Novo Jogo Indexado',
+              tag: 'ARCADE',
+              description: 'Publicado só no MENGAMES',
+              version: '1.0.0',
+              category: 'action',
+              launchMode: 'isolated-iframe',
+              entryUrl: '/novo-jogo/index.html',
+              image: '/assets/games/novo-jogo.webp',
+              authRequired: false,
+              fullscreen: true,
+              multiplayer: false,
+              status: 'available',
+            },
+          ],
+        };
+      },
+    };
+  });
+
+  assert.equal(remoteGames.length, 2);
+  assert.equal(remoteGames[0].title, 'A Lei do Trono (Remoto)');
+  assert.equal(remoteGames[1].entryUrl, 'https://men-games.surge.sh/novo-jogo/index.html');
+  assert.equal(remoteGames[1].image, 'https://men-games.surge.sh/assets/games/novo-jogo.webp');
+  assert.equal(getIndexedGame('novo-jogo')?.title, 'Novo Jogo Indexado');
 });

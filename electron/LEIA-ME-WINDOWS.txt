@@ -1,4 +1,4 @@
-M&N · A Lei do Trono — Windows 1.0.8
+M&N · A Lei do Trono — Windows 1.0.12
 
 Melhoria 1.0.8: infraestrutura MeN Games e inicialização preguiçosa (Lazy Boot).
 Os jogos não são carregados na abertura do comunicador, liberando CPU e memória

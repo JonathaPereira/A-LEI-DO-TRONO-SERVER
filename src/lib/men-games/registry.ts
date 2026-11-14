@@ -157,8 +157,122 @@ export const MEN_GAMES_REGISTRY: readonly MenGameManifest[] = Object.freeze([
   },
 ]);
 
+export const MEN_GAMES_ORIGIN = 'https://men-games.surge.sh';
+export const MEN_GAMES_REGISTRY_URL = `${MEN_GAMES_ORIGIN}/registry.json`;
+
+const LOCAL_GAME_COVER_PATHS = new Set<string>(MEN_GAMES_REGISTRY.map((game) => game.image));
+
+let latestIndexedGames: readonly MenGameManifest[] = MEN_GAMES_REGISTRY;
+
+function resolveRemoteUrl(value: string, origin: string): string {
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  const normalizedPath = value.startsWith('/') ? value : `/${value}`;
+  return `${origin}${normalizedPath}`;
+}
+
+export function normalizeRemoteGameManifest(
+  raw: Partial<MenGameManifest>,
+  fallback?: MenGameManifest,
+): MenGameManifest | null {
+  const rawId = typeof raw.id === 'string' ? raw.id.trim() : '';
+  const id = (rawId || fallback?.id || '') as GameDestination;
+  const destination = (
+    typeof raw.destination === 'string' && raw.destination.trim()
+      ? raw.destination.trim()
+      : fallback?.destination || id
+  ) as GameDestination;
+  const title =
+    typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : fallback?.title || '';
+  if (!id || !title) {
+    return null;
+  }
+  const launchMode = raw.launchMode ?? fallback?.launchMode ?? 'isolated-iframe';
+  const rawEntryUrl =
+    typeof raw.entryUrl === 'string' && raw.entryUrl.trim()
+      ? raw.entryUrl.trim()
+      : fallback?.entryUrl || `/${id}/index.html`;
+  const entryUrl =
+    !fallback || launchMode === 'isolated-iframe' || launchMode === 'external-window'
+      ? resolveRemoteUrl(rawEntryUrl, MEN_GAMES_ORIGIN)
+      : rawEntryUrl;
+  const rawImage =
+    typeof raw.image === 'string' && raw.image.trim()
+      ? raw.image.trim()
+      : fallback?.image || '/assets/games/cover.svg';
+  const image =
+    rawImage.startsWith('/') && !LOCAL_GAME_COVER_PATHS.has(rawImage)
+      ? resolveRemoteUrl(rawImage, MEN_GAMES_ORIGIN)
+      : rawImage;
+
+  return {
+    id,
+    destination,
+    title,
+    tag: typeof raw.tag === 'string' && raw.tag.trim() ? raw.tag.trim() : fallback?.tag || 'JOGO',
+    description:
+      typeof raw.description === 'string' ? raw.description : fallback?.description || '',
+    version:
+      typeof raw.version === 'string' && raw.version.trim()
+        ? raw.version.trim()
+        : fallback?.version || '1.0.0',
+    category: raw.category ?? fallback?.category ?? 'strategy',
+    launchMode,
+    entryUrl,
+    image,
+    assetsSize: typeof raw.assetsSize === 'number' ? raw.assetsSize : fallback?.assetsSize,
+    authRequired:
+      typeof raw.authRequired === 'boolean' ? raw.authRequired : (fallback?.authRequired ?? false),
+    fullscreen:
+      typeof raw.fullscreen === 'boolean' ? raw.fullscreen : (fallback?.fullscreen ?? true),
+    multiplayer:
+      typeof raw.multiplayer === 'boolean' ? raw.multiplayer : (fallback?.multiplayer ?? false),
+    status: raw.status ?? fallback?.status ?? 'available',
+  };
+}
+
+export async function fetchRemoteGamesRegistry(
+  fetchImpl: typeof fetch = fetch,
+): Promise<readonly MenGameManifest[]> {
+  try {
+    const response = await fetchImpl(MEN_GAMES_REGISTRY_URL, { cache: 'no-store' });
+    if (!response || !response.ok) {
+      return latestIndexedGames;
+    }
+    const payload = (await response.json()) as { games?: Partial<MenGameManifest>[] };
+    if (!payload || !Array.isArray(payload.games) || payload.games.length === 0) {
+      return latestIndexedGames;
+    }
+    const localById = new Map<string, MenGameManifest>(
+      MEN_GAMES_REGISTRY.map((game) => [game.id, game]),
+    );
+    const normalized: MenGameManifest[] = [];
+    for (const rawGame of payload.games) {
+      const id = typeof rawGame?.id === 'string' ? rawGame.id.trim() : '';
+      const entry = normalizeRemoteGameManifest(rawGame ?? {}, id ? localById.get(id) : undefined);
+      if (entry) {
+        normalized.push(entry);
+      }
+    }
+    if (normalized.length > 0) {
+      latestIndexedGames = Object.freeze(normalized);
+    }
+  } catch {
+    return latestIndexedGames;
+  }
+  return latestIndexedGames;
+}
+
 export function getAllRegisteredGames(): readonly MenGameManifest[] {
   return MEN_GAMES_REGISTRY;
+}
+
+export function getIndexedGame(id: string): MenGameManifest | undefined {
+  return (
+    latestIndexedGames.find((game) => game.id === id || game.destination === id) ??
+    getRegisteredGame(id)
+  );
 }
 
 export function getRegisteredGame(id: string): MenGameManifest | undefined {

@@ -4,7 +4,13 @@ import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { CallNavigationSnapshot } from '../../types/call-navigation';
 import type { PrimaryScreen, PortalSnapshot } from '../../lib/navigation/portal';
-import { getAllRegisteredGames } from '../../lib/men-games/registry';
+import {
+  fetchRemoteGamesRegistry,
+  getAllRegisteredGames,
+  getRegisteredGame,
+} from '../../lib/men-games/registry';
+import type { MenGameManifest } from '../../lib/men-games/types';
+import { MenGamesHost } from '../games/men-games-host';
 import { Avatar } from '../profiles/avatar';
 import { DirectProfileBanner } from '../profiles/decorations';
 import { AccountForm, AccountOverlay } from './auth';
@@ -586,6 +592,25 @@ function Communication({ runtime }: { runtime: ApplicationServices }) {
   );
 }
 function Catalog({ runtime }: { runtime: ApplicationServices }) {
+  const [catalogGames, setCatalogGames] = useState<readonly MenGameManifest[]>(games);
+  const [remoteHostedGame, setRemoteHostedGame] = useState<MenGameManifest | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchRemoteGamesRegistry().then((remote) => {
+      if (active) {
+        setCatalogGames(remote);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (remoteHostedGame) {
+    return <MenGamesHost game={remoteHostedGame} active onBack={() => setRemoteHostedGame(null)} />;
+  }
+
   return (
     <div className={styles.catalog}>
       <div className={styles.catalogHeading}>
@@ -594,12 +619,22 @@ function Catalog({ runtime }: { runtime: ApplicationServices }) {
         <p>A próxima história começa na mesma mesa.</p>
       </div>
       <div className={styles.gameGrid}>
-        {games.map((game) => (
+        {catalogGames.map((game) => (
           <button
             className={styles.gameCard}
             data-game={game.id}
             key={game.id}
-            onClick={() => void runtime.TronoGameLibrary.open(game.id)}
+            onClick={() => {
+              if (getRegisteredGame(game.id)) {
+                void runtime.TronoGameLibrary.open(game.id);
+                return;
+              }
+              if (game.launchMode === 'external-window') {
+                window.open(game.entryUrl, '_blank', 'noopener,noreferrer');
+                return;
+              }
+              setRemoteHostedGame(game);
+            }}
           >
             <span className={styles.cover}>
               <img src={game.image} alt="" loading="lazy" />
