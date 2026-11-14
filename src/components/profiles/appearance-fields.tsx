@@ -10,8 +10,53 @@ export function AppearanceFields({ client }: { client: AppearancePreferences }) 
     () => client.getCursor(),
     () => 'royal' as const,
   );
+  const reducedMotion = useSyncExternalStore(
+    client.subscribe,
+    () => client.getReducedMotion(),
+    () => false,
+  );
+  const baseThemeLabel =
+    THEMES.find((item) => item.id === client.getBaseTheme())?.label ?? 'Roxo · padrão';
+  const christmasActive = state.theme === 'natal';
   return (
     <>
+      <div className="christmas-setting-card" data-christmas-active={christmasActive}>
+        <div className="christmas-setting-copy">
+          <strong>Tema de Natal</strong>
+          <small>
+            {christmasActive
+              ? `Ativo na Corte. Ao desativar, retorna ao tema ${baseThemeLabel}.`
+              : 'Especial de fim de ano em verde-pinho, bordô e dourado com luzes suaves e neve.'}
+          </small>
+        </div>
+        <label className="christmas-toggle-label">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Tema de Natal"
+            checked={christmasActive}
+            onChange={(e) => client.setChristmasEnabled(e.target.checked)}
+          />
+          <span>{christmasActive ? 'Ativado' : 'Desativado'}</span>
+        </label>
+      </div>
+
+      <label className="reduced-motion-setting">
+        <input
+          type="checkbox"
+          aria-label="Reduzir animações decorativas"
+          checked={reducedMotion}
+          onChange={(e) => client.setReducedMotion(e.target.checked)}
+        />
+        <span>
+          <strong>Reduzir animações decorativas</strong>
+          <small>
+            Suaviza pisca-piscas, brilhos e flocos de neve decorativos para máxima fluidez ou
+            conforto visual.
+          </small>
+        </span>
+      </label>
+
       <fieldset className="theme-picker">
         <legend>Cores do aplicativo e das mesas</legend>
         {THEMES.map((theme) => (

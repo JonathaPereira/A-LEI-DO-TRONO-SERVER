@@ -28,6 +28,10 @@ on:
         description: Run every browser regression instead of the release journeys
         type: boolean
         default: false
+      full_tests:
+        description: Run full release test suites even for focused changes
+        type: boolean
+        default: false
       refresh_instructions:
         description: Refresh only instructions and hashes in an existing draft release
         type: boolean
@@ -82,12 +86,15 @@ jobs:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
     timeout-minutes: ${{ inputs.extended_browser && 35 || 25 }}
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}\ms-playwright
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 20
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -95,6 +102,53 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             electron/package-lock.json
+      - name: Plan selective test execution
+        id: plan
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
+          FULL_TESTS: ${{ inputs.full_tests || false }}
+        run: |
+          if ($env:EXTENDED_BROWSER -eq 'true' -or $env:FULL_TESTS -eq 'true' -or $env:EVENT_NAME -ne 'push') {
+            node scripts/select-tests.cjs --full --github-output $env:GITHUB_OUTPUT
+          } else {
+            node scripts/select-tests.cjs --base $env:BEFORE_SHA --head $env:CURRENT_SHA --github-output $env:GITHUB_OUTPUT
+          }
+          exit $LASTEXITCODE
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\ms-playwright
+          key: playwright-win-${{ hashFiles('package-lock.json') }}
+      - name: Cache Godot tools
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: artifacts/godot-tools
+          key: godot-win64-${{ hashFiles('scripts/prepare-godot.cjs') }}
+      - name: Cache FFmpeg binaries
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: artifacts/ffmpeg
+          key: ffmpeg-win64-${{ hashFiles('scripts/desktop/prepare-ffmpeg.cjs', 'electron/ffmpeg-notices/**') }}
+      - name: Cache native audio helpers
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: artifacts/native-audio/Release
+          key: native-audio-win64-${{ hashFiles('electron/native-audio/**', 'scripts/desktop/build-native.cjs') }}
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-win-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-win-${{ hashFiles('package-lock.json') }}-
       - name: Install dependencies once
         shell: pwsh
         run: |
@@ -102,13 +156,22 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm --prefix electron ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npx playwright install chromium
-          exit $LASTEXITCODE
+          if ('${{ steps.playwright-cache.outputs.cache-hit }}' -ne 'true') {
+            npx playwright install chromium
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host 'Using cached Playwright Chromium binary.'
+          }
+          exit 0
       - name: Export the complete Atalaia game for the web
         shell: pwsh
         run: |
-          node scripts/prepare-godot.cjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path 'artifacts/godot-tools/runtime.json')) {
+            node scripts/prepare-godot.cjs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host 'Using cached Godot runtime.'
+          }
           node scripts/build-atalaia.cjs 2>&1 | Tee-Object artifacts/atalaia-build.log
           exit $LASTEXITCODE
       - name: Prepare Similo art for its separate static domain
@@ -123,23 +186,58 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix electron run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/desktop/prepare-ffmpeg.cjs
-          exit $LASTEXITCODE
+          if (!(Test-Path 'artifacts/native-audio/Release/MN-Application-Audio.exe') -or !(Test-Path 'artifacts/native-audio/Release/MN-Remote-Input.exe')) {
+            npm --prefix electron run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host 'Using cached native audio helpers.'
+          }
+          if (!(Test-Path 'artifacts/ffmpeg/bin/ffmpeg.exe')) {
+            node scripts/desktop/prepare-ffmpeg.cjs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host 'Using cached FFmpeg binaries.'
+          }
+          exit 0
       - name: Verify contracts and real user journeys
         shell: pwsh
         env:
           EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
+          PLAN_MODE: ${{ steps.plan.outputs.mode }}
+          PLAN_REASONS: ${{ steps.plan.outputs.reasons }}
+          RUN_CORE: ${{ steps.plan.outputs.run_core }}
+          BROWSER_MODE: ${{ steps.plan.outputs.browser_mode }}
+          BROWSER_FILTER: ${{ steps.plan.outputs.browser_filter }}
+          DESKTOP_MODE: ${{ steps.plan.outputs.desktop_mode }}
+          DESKTOP_FILTER: ${{ steps.plan.outputs.desktop_filter }}
         run: |
-          npm test 2>&1 | Tee-Object artifacts/windows-core.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $selection = @('--suite', 'browser', '--profile', 'release')
-          if ($env:EXTENDED_BROWSER -eq 'true') { $selection = @('--suite', 'browser') }
-          npm test -- @selection 2>&1 | Tee-Object artifacts/windows-browser.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm test -- --suite desktop --profile release 2>&1 | Tee-Object artifacts/windows-desktop.log
-          exit $LASTEXITCODE
+          Write-Host "Test plan: mode=$env:PLAN_MODE browser=$env:BROWSER_MODE ($env:BROWSER_FILTER) desktop=$env:DESKTOP_MODE ($env:DESKTOP_FILTER) reasons=$env:PLAN_REASONS"
+          if ($env:RUN_CORE -eq 'true') {
+            npm test 2>&1 | Tee-Object artifacts/windows-core.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          if ($env:EXTENDED_BROWSER -eq 'true') {
+            node scripts/test.cjs --suite browser 2>&1 | Tee-Object artifacts/windows-browser.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } elseif ($env:BROWSER_MODE -eq 'release') {
+            node scripts/test.cjs --suite browser --profile release 2>&1 | Tee-Object artifacts/windows-browser.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } elseif ($env:BROWSER_MODE -eq 'filtered' -and $env:BROWSER_FILTER) {
+            node scripts/test.cjs --suite browser --filter $env:BROWSER_FILTER 2>&1 | Tee-Object artifacts/windows-browser.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host 'Skipping unrelated browser tests for this change.'
+          }
+          if ($env:DESKTOP_MODE -eq 'release') {
+            node scripts/test.cjs --suite desktop --profile release 2>&1 | Tee-Object artifacts/windows-desktop.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } elseif ($env:DESKTOP_MODE -eq 'filtered' -and $env:DESKTOP_FILTER) {
+            node scripts/test.cjs --suite desktop --filter $env:DESKTOP_FILTER 2>&1 | Tee-Object artifacts/windows-desktop.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Host 'Skipping unrelated un-packaged desktop tests for this change.'
+          }
+          exit 0
       - name: Package and smoke test the actual executable
         shell: pwsh
         run: |

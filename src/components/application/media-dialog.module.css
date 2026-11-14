@@ -3,10 +3,10 @@
   max-width: calc(100vw - 32px);
   max-height: calc(100dvh - 40px);
   padding: 28px;
-  border: 1px solid #363636;
+  border: 1px solid var(--app-theme-border, #363636);
   border-radius: 14px;
-  background: #1d1d1d;
-  color: #e2e2e2;
+  background: var(--app-theme-side, #1d1d1d);
+  color: var(--app-theme-text, #e2e2e2);
   box-shadow: 0 24px 100px #0009;
   color-scheme: dark;
   font:

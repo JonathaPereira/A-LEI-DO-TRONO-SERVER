@@ -319,8 +319,8 @@
   flex-shrink: 0;
   min-width: 0;
   padding: 10px 16px 14px;
-  border-top: 1px solid #252525;
-  background: #161616;
+  border-top: 1px solid var(--app-theme-border, #252525);
+  background: var(--app-theme-side, #161616);
 }
 .controls {
   display: flex;
@@ -334,10 +334,10 @@
   place-items: center;
   width: 42px;
   height: 38px;
-  border: 1px solid #353535 !important;
+  border: 1px solid var(--app-theme-border, #353535) !important;
   border-radius: 8px;
-  background: #282828;
-  color: #c6c6c6;
+  background: var(--app-theme-card, #282828);
+  color: var(--app-theme-text, #c6c6c6);
 }
 .controls button[aria-pressed='true'] {
   color: #e0c58d;
@@ -407,10 +407,10 @@
   max-height: calc(100dvh - 16px);
   overflow: auto;
   padding: 9px;
-  border: 1px solid #454545;
+  border: 1px solid var(--app-theme-border, #454545);
   border-radius: 10px;
-  background: #272727;
-  color: #dedede;
+  background: var(--app-theme-side, #272727);
+  color: var(--app-theme-text, #dedede);
   box-shadow: 0 12px 44px #0009;
   font:
     12px/1.5 'Segoe UI',

@@ -211,35 +211,102 @@ html[data-theme='graphite'],
 }
 
 /* ========================================================
-   11. TEMA DE NATAL DA CORTE 🎄🎅🛷 (Festivo & Animado)
+   11. A CORTE — ESPECIAL DE NATAL: UMA CELEBRAÇÃO NO REINO
+   Paleta: Verde-pinho escuro, bordô/vermelho natalino,
+   dourado metálico, branco quente (neve) e detalhes em cobre.
    ======================================================== */
 html[data-theme='natal'],
 :root[data-theme='natal'] {
-  --app-theme-bg: #09130d;
-  --app-theme-side: #0e1d14;
-  --app-theme-rail: #060e09;
-  --app-theme-card: #142a1d;
-  --app-theme-border: #224631;
-  --app-theme-text: #f3faf5;
-  --app-theme-muted: #95b8a3;
-  --app-theme-accent: #e63946;
-  --app-theme-accent-hover: #f1525f;
-  --app-theme-soft: #1d402b;
+  --app-theme-bg: #07110b;
+  --app-theme-side: #0b1911;
+  --app-theme-rail: #050c08;
+  --app-theme-card: #12261a;
+  --app-theme-border: #285139;
+  --app-theme-text: #f7f1e3;
+  --app-theme-muted: #9eb9a8;
+  --app-theme-accent: #d6b779;
+  --app-theme-accent-hover: #efd291;
+  --app-theme-soft: #2e151c;
+  --natal-crimson: #c92a37;
+  --natal-burgundy: #48131d;
+  --natal-pine: #163a26;
+  --natal-emerald: #47c580;
+  --natal-gold: #d6b779;
+  --natal-copper: #b87344;
+  --natal-snow: #fff8eb;
 }
 
-/* Efeito de neve caindo suavemente no fundo da aplicação */
-@keyframes snowfall {
+/* Neve discreta + poeira dourada no fundo da aplicação (zero interferência na leitura) */
+@keyframes natalSnowfall {
   0% {
     background-position:
+      0 0,
       0 0,
       0 0,
       0 0;
   }
   100% {
     background-position:
-      400px 800px,
-      250px 600px,
-      150px 400px;
+      360px 720px,
+      -180px 540px,
+      240px 420px,
+      120px 320px;
+  }
+}
+
+@keyframes natalTwinkleA {
+  0%,
+  100% {
+    opacity: 0.34;
+    filter: brightness(0.82);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes natalTwinkleB {
+  0%,
+  100% {
+    opacity: 0.96;
+    filter: brightness(1.25);
+  }
+  50% {
+    opacity: 0.3;
+    filter: brightness(0.78);
+  }
+}
+
+@keyframes natalBorderPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(201, 42, 55, 0.24),
+      0 0 16px rgba(214, 183, 121, 0.14),
+      inset 0 1px 0 rgba(255, 248, 235, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(214, 183, 121, 0.38),
+      0 0 22px rgba(71, 197, 128, 0.2),
+      inset 0 1px 0 rgba(255, 248, 235, 0.34);
+  }
+}
+
+@keyframes natalSpeakerAura {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(214, 183, 121, 0.85),
+      0 0 20px rgba(71, 197, 128, 0.34),
+      inset 0 0 18px rgba(214, 183, 121, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(247, 215, 148, 0.96),
+      0 0 26px rgba(201, 42, 55, 0.36),
+      inset 0 0 22px rgba(71, 197, 128, 0.14);
   }
 }
 
@@ -248,66 +315,530 @@ html[data-theme='natal'] body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 99999;
-  opacity: 0.35;
+  z-index: 99998;
+  opacity: 0.24;
   background-image:
-    radial-gradient(2px 2px at 40px 60px, #ffffff, transparent),
-    radial-gradient(3px 3px at 120px 180px, rgba(255, 255, 255, 0.8), transparent),
-    radial-gradient(1.5px 1.5px at 200px 90px, rgba(255, 255, 255, 0.6), transparent);
+    radial-gradient(2px 2px at 48px 72px, rgba(255, 248, 235, 0.95), transparent),
+    radial-gradient(3px 3px at 170px 210px, rgba(255, 250, 240, 0.72), transparent),
+    radial-gradient(1.5px 1.5px at 260px 115px, rgba(214, 183, 121, 0.75), transparent),
+    radial-gradient(1.5px 1.5px at 90px 290px, rgba(255, 248, 235, 0.58), transparent);
   background-size:
-    400px 400px,
+    380px 380px,
     300px 300px,
-    200px 200px;
-  animation: snowfall 22s linear infinite;
+    260px 260px,
+    220px 220px;
+  animation: natalSnowfall 28s linear infinite;
+  will-change: background-position;
 }
 
-/* Guirlanda / Barra doce natalina no topo da sidebar */
-html[data-theme='natal'] [class*='sidebarHeader'] {
-  border-top: 3px solid transparent;
-  border-image: repeating-linear-gradient(
-      -45deg,
-      #e63946,
-      #e63946 8px,
-      #ffffff 8px,
-      #ffffff 16px,
-      #2a9d8f 16px,
-      #2a9d8f 24px,
-      #d6b779 24px,
-      #d6b779 32px
-    )
-    3;
+/* ---------- BARRA LATERAL ESQUERDA ---------- */
+html[data-theme='natal']
+  [class*='_sidebar']:not([class*='_sidebarHeader']):not([class*='_sidebarScroll']):not(
+    [class*='_sidebarHint']
+  ) {
+  background:
+    radial-gradient(circle at 12% 4%, rgba(201, 42, 55, 0.12), transparent 36%),
+    radial-gradient(circle at 90% 96%, rgba(214, 183, 121, 0.08), transparent 40%),
+    linear-gradient(180deg, #0a1810 0%, #0b1911 60%, #101311 100%) !important;
+  border-right: 1px solid rgba(214, 183, 121, 0.24) !important;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='96' viewBox='0 0 120 96' fill='none'%3E%3Cpath d='M0 96 C26 78 48 64 78 52 M18 96 C38 80 56 72 86 68 M6 74 C24 64 42 54 64 40' stroke='%23285c3d' stroke-width='2.2' stroke-linecap='round' opacity='0.32'/%3E%3Ccircle cx='34' cy='72' r='3' fill='%23c92a37' opacity='0.45'/%3E%3Ccircle cx='54' cy='60' r='2.5' fill='%23d6b779' opacity='0.5'/%3E%3Ccircle cx='22' cy='83' r='2.5' fill='%23b87344' opacity='0.45'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #0a1810 0%, #0b1911 60%, #101311 100%);
+  background-repeat: no-repeat, repeat;
+  background-position:
+    left bottom,
+    center;
 }
 
-/* Touquinha de Papai Noel no Brasão da Corte */
-html[data-theme='natal'] [class*='crest'] {
+html[data-theme='natal'] [class*='_sidebarHeader'] {
   position: relative;
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      rgba(201, 42, 55, 0.85),
+      rgba(214, 183, 121, 0.9),
+      rgba(44, 130, 84, 0.9),
+      rgba(184, 115, 68, 0.85)
+    )
+    1;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.14);
 }
-html[data-theme='natal'] [class*='crest']::after {
-  content: '🎅';
+
+/* Filigrana de luzes no topo do cabeçalho da sidebar */
+html[data-theme='natal'] [class*='_sidebarHeader']::before {
+  content: '';
   position: absolute;
-  top: -8px;
-  right: -8px;
-  font-size: 16px;
-  transform: rotate(15deg);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  left: 10px;
+  right: 10px;
+  top: 2px;
+  height: 5px;
+  pointer-events: none;
+  background-image:
+    radial-gradient(3px 3px at 8% 50%, #ff5e6c, transparent 70%),
+    radial-gradient(3px 3px at 26% 50%, #4ed68b, transparent 70%),
+    radial-gradient(3px 3px at 44% 50%, #f3d285, transparent 70%),
+    radial-gradient(3px 3px at 62% 50%, #fff6df, transparent 70%),
+    radial-gradient(3px 3px at 80% 50%, #ff5e6c, transparent 70%),
+    radial-gradient(3px 3px at 94% 50%, #4ed68b, transparent 70%);
+  animation: natalTwinkleA 3.6s ease-in-out infinite;
 }
 
-/* Meia natalina nos canais ativos */
-html[data-theme='natal'] [class*='channel'][data-active='true']::after {
-  content: ' 🧦';
-  font-size: 11px;
+/* Brasão real com estrela dourada discreta no canto superior */
+html[data-theme='natal'] [class*='_crest'] {
+  position: relative;
+  border-color: rgba(214, 183, 121, 0.65) !important;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(201, 42, 55, 0.25),
+    rgba(16, 48, 30, 0.85)
+  ) !important;
+  box-shadow: 0 0 14px rgba(214, 183, 121, 0.22);
+}
+html[data-theme='natal'] [class*='_crest']::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1L9.6 5.1L14 5.5L10.6 8.3L11.7 12.6L8 10.3L4.3 12.6L5.4 8.3L2 5.5L6.4 5.1Z' fill='%23f5d78d' stroke='%238c5228' stroke-width='0.8'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+  filter: drop-shadow(0 0 5px rgba(245, 215, 141, 0.65));
 }
 
-/* Trenó / presente na biblioteca de jogos */
-html[data-theme='natal'] [class*='friendsButton'][data-active='true']::after {
-  content: ' 🛷';
-  font-size: 12px;
+html[data-theme='natal'] [class*='_sectionLabel'] {
+  color: #c9a76a;
 }
 
-/* Pílula festiva no botão principal de conexão */
-html[data-theme='natal'] button[data-control='joinVoiceBtn'] {
-  background: linear-gradient(135deg, #e63946 0%, #b81d29 100%) !important;
-  box-shadow: 0 0 14px rgba(230, 57, 70, 0.45) !important;
+html[data-theme='natal'] [class*='_channel']:not([class*='_channelLabel']),
+html[data-theme='natal'] [class*='_friendsButton'] {
+  position: relative;
+  border: 1px solid transparent;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease,
+    color 0.18s ease;
+}
+
+html[data-theme='natal'] [class*='_channel']:not([class*='_channelLabel']):hover,
+html[data-theme='natal'] [class*='_friendsButton']:hover {
+  background: linear-gradient(90deg, rgba(24, 58, 38, 0.72), rgba(56, 17, 25, 0.36)) !important;
+  border-color: rgba(214, 183, 121, 0.26);
+}
+
+html[data-theme='natal'] [class*='_channel']:not([class*='_channelLabel'])[data-active='true'],
+html[data-theme='natal'] [class*='_friendsButton'][data-active='true'] {
+  background: linear-gradient(
+    90deg,
+    rgba(72, 19, 29, 0.9) 0%,
+    rgba(22, 58, 38, 0.88) 72%,
+    rgba(16, 40, 27, 0.92) 100%
+  ) !important;
+  border-left: 2px solid #f0cf88 !important;
+  border-color: rgba(214, 183, 121, 0.45);
+  color: #fff3d6 !important;
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 240, 210, 0.12);
+}
+
+/* Pequenos pontos de luz natalina no canal ativo (sem cobrir texto ou ícones) */
+html[data-theme='natal']
+  [class*='_channel']:not([class*='_channelLabel'])[data-active='true']::before,
+html[data-theme='natal'] [class*='_friendsButton'][data-active='true']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 14% 2px, #ff6471, transparent 70%),
+    radial-gradient(2px 2px at 52% 2px, #f2d184, transparent 70%),
+    radial-gradient(2px 2px at 88% calc(100% - 2px), #55d68f, transparent 70%);
+  animation: natalTwinkleA 3.8s ease-in-out infinite;
+}
+
+html[data-theme='natal'] [class*='_callSummary'] {
+  background: linear-gradient(150deg, rgba(19, 49, 32, 0.95), rgba(51, 16, 22, 0.9)) !important;
+  border-color: rgba(214, 183, 121, 0.48) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme='natal'] [class*='_account'] {
+  background: linear-gradient(160deg, rgba(16, 40, 26, 0.95), rgba(38, 13, 18, 0.92)) !important;
+  border-color: rgba(214, 183, 121, 0.38) !important;
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 248, 235, 0.12);
+}
+
+/* ---------- BARRA SUPERIOR ---------- */
+html[data-theme='natal']
+  [class*='_header']:not([class*='_headerSymbol']):not([class*='_headerText']):not(
+    [class*='_headerStatus']
+  ) {
+  position: relative;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(214, 183, 121, 0.14), transparent 38%),
+    linear-gradient(90deg, #0b1911 0%, #0e2016 54%, #1f1217 100%) !important;
+  border-bottom: 1px solid rgba(214, 183, 121, 0.28) !important;
+  box-shadow: inset 0 2px 0 rgba(255, 248, 235, 0.08);
+}
+
+/* Pisca-piscas discretos no topo da aplicação */
+html[data-theme='natal']
+  [class*='_header']:not([class*='_headerSymbol']):not([class*='_headerText']):not(
+    [class*='_headerStatus']
+  )::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 7px;
+  pointer-events: none;
+  background-image:
+    radial-gradient(3px 3px at 5% 4px, #ef4b58, transparent 70%),
+    radial-gradient(3px 3px at 14% 4px, #52cf8a, transparent 70%),
+    radial-gradient(3px 3px at 23% 4px, #f2d282, transparent 70%),
+    radial-gradient(3px 3px at 32% 4px, #fff5dc, transparent 70%),
+    radial-gradient(3px 3px at 41% 4px, #ef4b58, transparent 70%),
+    radial-gradient(3px 3px at 50% 4px, #52cf8a, transparent 70%),
+    radial-gradient(3px 3px at 59% 4px, #f2d282, transparent 70%),
+    radial-gradient(3px 3px at 68% 4px, #fff5dc, transparent 70%),
+    radial-gradient(3px 3px at 77% 4px, #ef4b58, transparent 70%),
+    radial-gradient(3px 3px at 86% 4px, #52cf8a, transparent 70%),
+    radial-gradient(3px 3px at 95% 4px, #f2d282, transparent 70%);
+  animation: natalTwinkleB 4.2s ease-in-out infinite;
+}
+
+/* ---------- ÁREA CENTRAL DE CONVERSAS ---------- */
+html[data-theme='natal'] [class*='_communityScreen'],
+html[data-theme='natal'] [class*='_main'] {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(214, 183, 121, 0.08), transparent 34%),
+    radial-gradient(circle at 14% 88%, rgba(44, 130, 84, 0.1), transparent 40%),
+    linear-gradient(180deg, #07110b 0%, #09150e 65%, #0c120f 100%);
+}
+
+html[data-theme='natal'] [class*='_conversationHeading'] {
+  background: rgba(11, 25, 17, 0.72);
+  border-bottom: 1px solid rgba(214, 183, 121, 0.2) !important;
+}
+
+html[data-theme='natal'] [class*='_timeline'] {
+  background-image:
+    radial-gradient(1.5px 1.5px at 15% 22%, rgba(214, 183, 121, 0.28), transparent 70%),
+    radial-gradient(1.5px 1.5px at 82% 38%, rgba(255, 248, 235, 0.22), transparent 70%),
+    radial-gradient(2px 2px at 68% 78%, rgba(214, 183, 121, 0.24), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='120' viewBox='0 0 160 120' fill='none'%3E%3Cpath d='M160 120 C128 104 106 86 84 60 M138 120 C118 98 106 78 96 52 M156 96 C132 86 112 72 94 50' stroke='%2325593b' stroke-width='2' stroke-linecap='round' opacity='0.22'/%3E%3Ccircle cx='122' cy='92' r='3' fill='%23c92a37' opacity='0.28'/%3E%3Ccircle cx='106' cy='76' r='2.5' fill='%23d6b779' opacity='0.3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+}
+
+html[data-theme='natal'] [class*='_message']:not([class*='_messageHeading']):hover {
+  background: rgba(24, 52, 35, 0.34) !important;
+}
+
+html[data-theme='natal'] [class*='_emptyConversation'] > span {
+  background: radial-gradient(circle, rgba(201, 42, 55, 0.32), rgba(22, 58, 38, 0.9)) !important;
+  border: 1px solid rgba(214, 183, 121, 0.45);
+  box-shadow: 0 0 20px rgba(214, 183, 121, 0.16);
+}
+
+html[data-theme='natal']
+  [class*='_composer']:not([class*='_composerArea']):not([class*='_composerStatus']) {
+  background: linear-gradient(180deg, rgba(16, 35, 24, 0.96), rgba(11, 24, 16, 0.98)) !important;
+  border: 1px solid rgba(214, 183, 121, 0.32) !important;
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 248, 235, 0.08);
+}
+
+/* ---------- BOTÕES COM ILUMINAÇÃO E STROBES SUAVES (OBRIGATÓRIO) ---------- */
+/* Tier 1: Botões principais e de destaque (sem alterar tamanho, forma ou cobrir texto/ícone) */
+html[data-theme='natal'] button[class*='_primary'],
+html[data-theme='natal'] button[data-control='joinVoiceBtn'],
+html[data-theme='natal'] button[class*='_theaterButton'],
+html[data-theme='natal'] [class*='_invite'] > button:last-child,
+html[data-theme='natal'] #profileSave {
+  position: relative;
+  background: linear-gradient(135deg, #a81f2d 0%, #7d1522 55%, #5b101b 100%) !important;
+  color: #fff7e6 !important;
+  border: 1px solid rgba(240, 207, 136, 0.62) !important;
+  animation: natalBorderPulse 4s ease-in-out infinite;
+}
+
+html[data-theme='natal'] button[class*='_primary']:hover,
+html[data-theme='natal'] button[data-control='joinVoiceBtn']:hover,
+html[data-theme='natal'] button[class*='_theaterButton']:hover,
+html[data-theme='natal'] #profileSave:hover {
+  background: linear-gradient(135deg, #be2635 0%, #8e1928 55%, #69121f 100%) !important;
+}
+
+/* Pisca-pisca alternado nas bordas (grupo A = vermelho + dourado, grupo B = verde + branco quente) */
+html[data-theme='natal'] button[class*='_primary']::before,
+html[data-theme='natal'] button[data-control='joinVoiceBtn']::before,
+html[data-theme='natal'] button[class*='_theaterButton']::before,
+html[data-theme='natal'] #profileSave::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    radial-gradient(3px 3px at 10% 1px, #ff5e6c, transparent 72%),
+    radial-gradient(3px 3px at 58% 1px, #ffd87d, transparent 72%),
+    radial-gradient(3px 3px at 32% calc(100% - 1px), #ffd87d, transparent 72%),
+    radial-gradient(3px 3px at 84% calc(100% - 1px), #ff5e6c, transparent 72%);
+  animation: natalTwinkleA 3.2s ease-in-out infinite;
+}
+
+html[data-theme='natal'] button[class*='_primary']::after,
+html[data-theme='natal'] button[data-control='joinVoiceBtn']::after,
+html[data-theme='natal'] button[class*='_theaterButton']::after,
+html[data-theme='natal'] #profileSave::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    radial-gradient(3px 3px at 34% 1px, #58df94, transparent 72%),
+    radial-gradient(3px 3px at 84% 1px, #fff7e0, transparent 72%),
+    radial-gradient(3px 3px at 12% calc(100% - 1px), #fff7e0, transparent 72%),
+    radial-gradient(3px 3px at 60% calc(100% - 1px), #58df94, transparent 72%);
+  animation: natalTwinkleB 3.2s ease-in-out infinite;
+}
+
+/* Tier 2: Botões secundários (controles de voz, painel de conta, chat composer, diálogos) */
+html[data-theme='natal'] [class*='_controls'] button,
+html[data-theme='natal'] [class*='_voiceActions'] button,
+html[data-theme='natal'] [class*='_account'] > button,
+html[data-theme='natal']
+  [class*='_composer']:not([class*='_composerArea']):not([class*='_composerStatus'])
+  button[class*='_send'],
+html[data-theme='natal'] [class*='_headingActions'] button:not([class*='_theaterButton']),
+html[data-theme='natal'] [class*='_confirmDialog'] button:not([class*='_danger']) {
+  position: relative;
+  border-color: rgba(214, 183, 121, 0.36) !important;
+  background: linear-gradient(160deg, rgba(20, 48, 32, 0.94), rgba(14, 29, 20, 0.96));
+  color: #f4ebd8;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.1);
+}
+
+html[data-theme='natal'] [class*='_controls'] button::before,
+html[data-theme='natal'] [class*='_voiceActions'] button::before,
+html[data-theme='natal'] [class*='_account'] > button::before,
+html[data-theme='natal']
+  [class*='_composer']:not([class*='_composerArea']):not([class*='_composerStatus'])
+  button[class*='_send']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2.4px 2.4px at 18% 2px, #ff6975, transparent 75%),
+    radial-gradient(2.4px 2.4px at 82% 2px, #58df94, transparent 75%),
+    radial-gradient(2.4px 2.4px at 50% calc(100% - 2px), #f2d282, transparent 75%);
+  animation: natalTwinkleA 4.1s ease-in-out infinite;
+}
+
+html[data-theme='natal'] [class*='_controls'] button[aria-pressed='true'],
+html[data-theme='natal'] [class*='_voiceActions'] button[aria-pressed='true'],
+html[data-theme='natal'] [class*='_account'] > button[aria-pressed='true'] {
+  background: linear-gradient(145deg, rgba(84, 21, 31, 0.95), rgba(34, 62, 42, 0.92)) !important;
+  border-color: rgba(242, 209, 130, 0.72) !important;
+  color: #ffe8b0 !important;
+  box-shadow:
+    0 0 12px rgba(214, 183, 121, 0.28),
+    inset 0 1px 0 rgba(255, 248, 235, 0.2);
+}
+
+/* Botão especial de desconexão da chamada (claramente distinguível em rubi/cobre) */
+html[data-theme='natal'] [class*='_controls'] button[data-danger='true'],
+html[data-theme='natal'] [class*='_disconnectVoice'],
+html[data-theme='natal'] [class*='_confirmDialog'] button[class*='_danger'] {
+  background: linear-gradient(145deg, #9d1c2b 0%, #6b111c 100%) !important;
+  border: 1px solid rgba(245, 185, 148, 0.65) !important;
+  color: #fff2ec !important;
+  box-shadow:
+    0 0 14px rgba(201, 42, 55, 0.36),
+    inset 0 1px 0 rgba(255, 224, 210, 0.25);
+}
+
+html[data-theme='natal'] button:disabled::before,
+html[data-theme='natal'] button:disabled::after {
+  animation: none !important;
+  opacity: 0.25;
+}
+
+/* ---------- SALAS DE VOZ & CARTÕES DE VÍDEO ---------- */
+html[data-theme='natal'] [class*='_call']:not([class*='_callSummary']) {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(214, 183, 121, 0.1), transparent 36%),
+    radial-gradient(circle at 84% 82%, rgba(201, 42, 55, 0.12), transparent 40%),
+    linear-gradient(180deg, #07120c 0%, #0a1810 60%, #101412 100%) !important;
+}
+
+html[data-theme='natal'] [class*='_heading']:not([class*='_headingActions']) {
+  border-bottom: 1px solid rgba(214, 183, 121, 0.24) !important;
+  background: linear-gradient(90deg, rgba(11, 25, 17, 0.9), rgba(34, 14, 19, 0.72));
+}
+
+html[data-theme='natal'] [class*='_footer'] {
+  background: linear-gradient(180deg, rgba(11, 24, 16, 0.95), rgba(8, 17, 12, 0.98)) !important;
+  border-top: 1px solid rgba(214, 183, 121, 0.26) !important;
+}
+
+html[data-theme='natal'] [class*='_card'] {
+  border: 1px solid rgba(214, 183, 121, 0.36) !important;
+  background: radial-gradient(
+    ellipse at 50% 90%,
+    rgba(22, 56, 36, 0.72),
+    rgba(10, 22, 15, 0.95) 75%
+  ) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(184, 115, 68, 0.14);
+}
+
+/* Micro-luzes natalinas sutis nas quinas superiores dos cards da sala de voz */
+html[data-theme='natal'] [class*='_card']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    radial-gradient(3px 3px at 14px 4px, #ff6471, transparent 70%),
+    radial-gradient(3px 3px at 32px 4px, #f2d282, transparent 70%),
+    radial-gradient(3px 3px at calc(100% - 32px) 4px, #58df94, transparent 70%),
+    radial-gradient(3px 3px at calc(100% - 14px) 4px, #fff5dc, transparent 70%);
+  animation: natalTwinkleB 4.4s ease-in-out infinite;
+}
+
+html[data-theme='natal'] [class*='_card'][data-speaking='true'] {
+  border-color: #eed08b !important;
+  animation: natalSpeakerAura 2.8s ease-in-out infinite;
+}
+
+html[data-theme='natal'] [class*='_live'] {
+  background: linear-gradient(90deg, rgba(16, 48, 30, 0.92), rgba(72, 19, 29, 0.92)) !important;
+  border: 1px solid rgba(214, 183, 121, 0.42);
+  color: #f8e9c6 !important;
+}
+
+/* ---------- LISTA DE MEMBROS ---------- */
+html[data-theme='natal']
+  [class*='_members']:not([class*='_membersHeader']):not([class*='_membersScroll']) {
+  background:
+    radial-gradient(circle at 80% 94%, rgba(201, 42, 55, 0.1), transparent 44%),
+    linear-gradient(180deg, #0b1911 0%, #09150e 100%) !important;
+  border-left: 1px solid rgba(214, 183, 121, 0.25) !important;
+}
+
+html[data-theme='natal'] [class*='_membersHeader'] {
+  border-bottom: 1px solid rgba(214, 183, 121, 0.24) !important;
+}
+
+html[data-theme='natal'] [class*='_member'][data-online='true']:hover {
+  background: linear-gradient(90deg, rgba(22, 56, 36, 0.72), rgba(56, 17, 25, 0.45)) !important;
+}
+
+html[data-theme='natal'] [class*='_member'][data-online='true'] [class*='_avatar'] {
+  border-color: rgba(214, 183, 121, 0.58) !important;
+  box-shadow: 0 0 10px rgba(214, 183, 121, 0.18);
+}
+
+html[data-theme='natal'] [class*='_onlineDot'][data-online='true'] {
+  background: #55d98e !important;
+  box-shadow:
+    0 0 6px rgba(85, 217, 142, 0.75),
+    0 0 0 2px rgba(214, 183, 121, 0.28);
+}
+
+/* ---------- JANELAS, MENUS, MODAIS E NOTIFICAÇÕES ---------- */
+html[data-theme='natal'] dialog,
+html[data-theme='natal'] [class*='_contextMenu'],
+html[data-theme='natal'] [class*='_panel'],
+html[data-theme='natal'] [class*='_emojis'],
+html[data-theme='natal'] [class*='_guideBalloon'],
+html[data-theme='natal'] [class*='_notice']:not([class*='_notices']),
+html[data-theme='natal'] [class*='_authCard'],
+html[data-theme='natal'] [class*='_gameCard'] {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(214, 183, 121, 0.1), transparent 42%),
+    linear-gradient(
+      160deg,
+      rgba(13, 31, 21, 0.98) 0%,
+      rgba(16, 23, 18, 0.98) 65%,
+      rgba(36, 14, 19, 0.97) 100%
+    ) !important;
+  border-color: rgba(214, 183, 121, 0.42) !important;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 248, 235, 0.12);
+}
+
+html[data-theme='natal'] [class*='_contextMenu'] button:hover,
+html[data-theme='natal'] [class*='_panel'] button:hover {
+  background: linear-gradient(90deg, rgba(28, 66, 43, 0.78), rgba(72, 19, 29, 0.56)) !important;
+  color: #fff3d6 !important;
+}
+
+/* ---------- MOBILE DOCK ---------- */
+html[data-theme='natal'] [class*='_dock'] {
+  background: linear-gradient(180deg, rgba(13, 30, 20, 0.97), rgba(24, 11, 15, 0.98)) !important;
+  border-top: 1px solid rgba(214, 183, 121, 0.36) !important;
+}
+
+html[data-theme='natal'] [class*='_activeCall'] {
+  background: linear-gradient(90deg, #163b26, #3d141c) !important;
+  color: #f6e7c5 !important;
+}
+
+/* ---------- REDUÇÃO DE MOVIMENTO & DESEMPENHO ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='natal'] body::after,
+  html[data-theme='natal'] [class*='_sidebarHeader']::before,
+  html[data-theme='natal']
+    [class*='_channel']:not([class*='_channelLabel'])[data-active='true']::before,
+  html[data-theme='natal'] [class*='_friendsButton'][data-active='true']::before,
+  html[data-theme='natal']
+    [class*='_header']:not([class*='_headerSymbol']):not([class*='_headerText']):not(
+      [class*='_headerStatus']
+    )::before,
+  html[data-theme='natal'] [class*='_card']::before,
+  html[data-theme='natal'] [class*='_card'][data-speaking='true'],
+  html[data-theme='natal'] button::before,
+  html[data-theme='natal'] button::after,
+  html[data-theme='natal'] button {
+    animation: none !important;
+  }
+}
+
+html[data-reduced-motion='true'] body::after,
+html[data-reduced-motion='true'] [class*='_sidebarHeader']::before,
+html[data-reduced-motion='true']
+  [class*='_channel']:not([class*='_channelLabel'])[data-active='true']::before,
+html[data-reduced-motion='true'] [class*='_friendsButton'][data-active='true']::before,
+html[data-reduced-motion='true']
+  [class*='_header']:not([class*='_headerSymbol']):not([class*='_headerText']):not(
+    [class*='_headerStatus']
+  )::before,
+html[data-reduced-motion='true'] [class*='_card']::before,
+html[data-reduced-motion='true'] [class*='_card'][data-speaking='true'],
+html[data-reduced-motion='true'] button::before,
+html[data-reduced-motion='true'] button::after,
+html[data-reduced-motion='true'] button {
+  animation: none !important;
 }
 
 /* ========================================================

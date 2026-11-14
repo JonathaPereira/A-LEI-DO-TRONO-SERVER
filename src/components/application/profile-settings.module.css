@@ -202,9 +202,9 @@
   color: #d6b779;
 }
 .surface :global(#profileSave) {
-  background: #d6b779;
+  background: var(--app-theme-accent, #d6b779);
   color: #1d1d1d;
-  border-color: #d6b779;
+  border-color: var(--app-theme-accent, #d6b779);
   font-weight: 600;
 }
 .surface :global(.auth-error) {
@@ -227,11 +227,11 @@
   max-width: calc(100vw - 32px);
   max-height: calc(100dvh - 32px);
   overflow: auto;
-  border: 1px solid #4c4c4c;
+  border: 1px solid var(--app-theme-border, #4c4c4c);
   border-radius: 12px;
   padding: 24px;
-  background: #1d1d1d;
-  color: #dfdfdf;
+  background: var(--app-theme-side, #1d1d1d);
+  color: var(--app-theme-text, #dfdfdf);
   font: inherit;
 }
 .surface :global(dialog::backdrop) {
@@ -314,6 +314,79 @@
   height: 14px;
   border-radius: 50%;
   background: var(--swatch);
+}
+.surface :global(.christmas-setting-card) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(214, 183, 121, 0.34);
+  background:
+    linear-gradient(135deg, rgba(20, 48, 32, 0.72), rgba(56, 17, 25, 0.62)),
+    var(--app-theme-card, #202020);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.08);
+}
+.surface :global(.christmas-setting-card[data-christmas-active='true']) {
+  border-color: rgba(214, 183, 121, 0.72);
+  box-shadow:
+    0 0 18px rgba(201, 42, 55, 0.18),
+    inset 0 0 12px rgba(214, 183, 121, 0.1);
+}
+.surface :global(.christmas-setting-copy) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.surface :global(.christmas-setting-copy strong) {
+  font-size: 14px;
+  color: #f4e6c3;
+}
+.surface :global(.christmas-toggle-label) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 183, 121, 0.45);
+  background: rgba(12, 24, 17, 0.78);
+  color: #f3e9d2;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+.surface :global(.christmas-toggle-label input) {
+  width: auto;
+  margin: 0;
+}
+.surface :global(.reduced-motion-setting) {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--app-theme-border, #353535);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+}
+.surface :global(.reduced-motion-setting input) {
+  width: auto;
+  margin-top: 3px;
+}
+.surface :global(.reduced-motion-setting span) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.surface :global(.reduced-motion-setting strong) {
+  font-size: 12px;
+  color: var(--app-theme-text, #e5e5e5);
 }
 @media (max-width: 600px) {
   .surface :global(.profile-link-row) {

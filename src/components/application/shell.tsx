@@ -28,6 +28,7 @@ import { useModel, useServices, type ApplicationServices } from './services';
 import { AppIcon as Icon } from './icons';
 import styles from './shell.module.css';
 import { MobileNavigation } from './mobile-navigation';
+import { ChristmasPromo } from './christmas-promo';
 
 const noop = () => () => {};
 const empty = () => null;
@@ -991,6 +992,7 @@ export function ApplicationShell({
           <ProfileDialogs runtime={runtime} />
           <CommunityDialogs runtime={runtime} />
           <ApplicationNotices runtime={runtime} />
+          <ChristmasPromo runtime={runtime} visible={!entry && sessionReady} />
         </>
       )}
     </>

@@ -18,10 +18,10 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  border: 1px solid #514536;
+  border: 1px solid var(--app-theme-border, #514536);
   border-radius: 10px;
-  background: #1c1c1cf5;
-  color: #e8e2d6;
+  background: var(--app-theme-side, #1c1c1cf5);
+  color: var(--app-theme-text, #e8e2d6);
   box-shadow: 0 10px 32px #0008;
   padding: 12px;
   pointer-events: auto;

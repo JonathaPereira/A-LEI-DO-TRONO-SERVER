@@ -27,10 +27,10 @@
   overflow: auto;
   padding: 16px;
   margin: 0;
-  border: 1px solid #474747;
+  border: 1px solid var(--app-theme-border, #474747);
   border-radius: 12px;
-  background: #252525;
-  color: #dfdfdf;
+  background: var(--app-theme-side, #252525);
+  color: var(--app-theme-text, #dfdfdf);
   box-shadow: 0 14px 50px #0008;
   font:
     13px/1.6 'Segoe UI',

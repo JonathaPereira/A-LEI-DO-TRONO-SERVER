@@ -2,22 +2,43 @@
 const { spawnSync } = require('node:child_process');
 const { resolve, join } = require('node:path');
 const { existsSync } = require('node:fs');
+const os = require('node:os');
 const suites = require('../tests/suites.json');
+
+function defaultConcurrency(suite) {
+  if (suite !== 'core') return 1;
+  const cpus =
+    typeof os.availableParallelism === 'function' ? os.availableParallelism() : os.cpus().length;
+  return Math.min(4, Math.max(1, cpus || 4));
+}
 
 function select(args) {
   let suite = 'core',
     filter = '',
     profile = '',
+    concurrency = null,
     list = false;
   for (let i = 0; i < args.length; i++) {
     const option = args[i];
     if (option === '--list') list = true;
-    else if (option === '--suite' || option === '--filter' || option === '--profile') {
+    else if (
+      option === '--suite' ||
+      option === '--filter' ||
+      option === '--profile' ||
+      option === '--concurrency'
+    ) {
       const value = args[++i];
       if (!value || value.startsWith('--')) throw new Error('Valor obrigatório: ' + option);
       if (option === '--suite') suite = value;
       else if (option === '--filter') filter = value;
-      else profile = value;
+      else if (option === '--profile') profile = value;
+      else {
+        const parsed = Number.parseInt(value, 10);
+        if (!Number.isInteger(parsed) || String(parsed) !== value || parsed < 1) {
+          throw new Error('Concorrência inválida: ' + value);
+        }
+        concurrency = parsed;
+      }
     } else throw new Error('Opção desconhecida: ' + option);
   }
   if (profile && profile !== 'release') throw new Error('Perfil desconhecido: ' + profile);
@@ -33,7 +54,13 @@ function select(args) {
       (!pattern || pattern.test(file)),
   );
   if (!files.length) throw new Error('Nenhum teste corresponde à seleção.');
-  return { files, list, suite, profile };
+  return {
+    files,
+    list,
+    suite,
+    profile,
+    concurrency: concurrency ?? defaultConcurrency(suite),
+  };
 }
 function run(args) {
   const selection = select(args);
@@ -60,7 +87,7 @@ function run(args) {
     process.execPath,
     [
       '--test',
-      '--test-concurrency=1',
+      `--test-concurrency=${selection.concurrency}`,
       ...(env.CI ? ['--test-reporter=tap'] : []),
       ...selection.files,
     ],

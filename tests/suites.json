@@ -163,6 +163,7 @@
     "tests/styles.cjs",
     "tests/tabletop-audio.cjs",
     "tests/test-command.cjs",
+    "tests/test-selection.cjs",
     "tests/text-voice-channels.js",
     "tests/throne-choices.cjs",
     "tests/throne-controls.cjs",
@@ -257,7 +258,8 @@
     "tests/throne-lobby-browser.cjs",
     "tests/ticket-to-ride-browser.js",
     "tests/voice-moderation-browser.js",
-    "tests/voice-reception-browser.js"
+    "tests/voice-reception-browser.js",
+    "tests/christmas-theme-browser.js"
   ],
   "desktop": [
     "tests/clip-native-pipeline.cjs",

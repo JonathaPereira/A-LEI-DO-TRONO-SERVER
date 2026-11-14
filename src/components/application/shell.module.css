@@ -119,23 +119,23 @@
   min-height: 38px;
   padding: 8px 10px;
   background: transparent;
-  color: #8a8a8a;
+  color: var(--shell-muted, #8a8a8a);
   border-radius: 4px;
 }
 .friendsButton {
   margin-bottom: 2px;
   min-height: 40px;
-  color: #ababab;
+  color: var(--shell-muted, #ababab);
 }
 .channel:hover,
 .friendsButton:hover {
-  background: #242424;
-  color: #c6c6c6;
+  background: var(--shell-card, #242424);
+  color: var(--shell-text, #c6c6c6);
 }
 .channel[data-active='true'],
 .friendsButton[data-active='true'] {
-  background: #262626;
-  color: #d6b779;
+  background: var(--app-theme-soft, #262626);
+  color: var(--shell-accent, #d6b779);
 }
 .channel > .channelLabel {
   min-width: 0;
@@ -216,7 +216,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  background: #191919;
+  background: var(--shell-side, #191919);
   min-height: 64px;
   padding: 8px;
   flex-shrink: 0;
@@ -229,11 +229,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #2c2c2c;
-  border: 1px solid #d6b77933;
+  background: var(--shell-card, #2c2c2c);
+  border: 1px solid var(--shell-border, #d6b77933);
   flex-shrink: 0;
   overflow: hidden;
-  color: #d6b779;
+  color: var(--shell-accent, #d6b779);
   font-weight: 600;
 }
 .account > div {
@@ -276,20 +276,20 @@
   align-items: center;
   gap: 14px;
   padding: 0 28px;
-  border-bottom: 1px solid #ffffff09;
+  border-bottom: 1px solid var(--shell-border, #ffffff09);
   flex-shrink: 0;
   z-index: 2;
-  background: #131313;
+  background: var(--shell-bg, #131313);
 }
 .headerSymbol {
-  color: #b69a64;
+  color: var(--shell-accent, #b69a64);
   display: flex;
 }
 .header strong {
   font:
     600 18px/1.4 Georgia,
     serif;
-  color: #e5e5e5;
+  color: var(--shell-text, #e5e5e5);
 }
 .headerStatus {
   margin-left: auto;
@@ -440,7 +440,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #232323;
+  background: var(--shell-card, #232323);
+  border: 1px solid var(--shell-border, transparent);
   border-radius: 8px;
   padding: 9px 10px;
 }
@@ -553,13 +554,13 @@
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  background: #191919;
-  color: #e5e5e5;
+  background: var(--shell-side, #191919);
+  color: var(--shell-text, #e5e5e5);
   font:
     13px/1.65 'Segoe UI',
     Arial,
     sans-serif;
-  border-left: 1px solid #292929;
+  border-left: 1px solid var(--shell-border, #292929);
   overflow: hidden;
 }
 .members,
@@ -585,7 +586,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 0 12px;
-  border-bottom: 1px solid #292929;
+  border-bottom: 1px solid var(--shell-border, #292929);
 }
 .membersHeader h2 {
   margin: 0;
@@ -620,7 +621,7 @@
   border-radius: 4px;
 }
 .member:hover {
-  background: #242424;
+  background: var(--shell-card, #242424);
 }
 .member > .memberIdentity {
   flex: 1;
@@ -670,17 +671,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: safe center;
-  background: radial-gradient(ellipse at 70% 20%, #d6b77909, transparent 65%), #131313;
+  background:
+    radial-gradient(ellipse at 70% 20%, #d6b77909, transparent 65%), var(--app-theme-bg, #131313);
 }
 .authCard {
   width: 100%;
   max-width: 420px;
-  background: #191919;
-  border: 1px solid #ffffff08;
+  background: var(--app-theme-side, #191919);
+  border: 1px solid var(--app-theme-border, #ffffff08);
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 10px 30px #0002;
-  color: #e5e5e5;
+  color: var(--app-theme-text, #e5e5e5);
   font:
     14px/1.45 'Segoe UI',
     Arial,
@@ -689,7 +691,7 @@
 .authBrand {
   display: block;
   font-size: 19px;
-  color: #d6b779;
+  color: var(--app-theme-accent, #d6b779);
   margin-bottom: 20px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -743,7 +745,7 @@
 .primary {
   display: block;
   width: 100%;
-  background: #d6b779;
+  background: var(--app-theme-accent, #d6b779);
   color: #191919;
   border-radius: 4px;
   min-height: 42px;
@@ -752,7 +754,7 @@
   font-weight: 600;
 }
 .primary:hover {
-  background: #c6a465;
+  background: var(--app-theme-accent-hover, #c6a465);
 }
 .link {
   background: transparent;
@@ -848,10 +850,10 @@
   color: #8a8a8a;
 }
 .confirmDialog {
-  border: 1px solid #474747;
+  border: 1px solid var(--app-theme-border, #474747);
   border-radius: 8px;
-  background: #131313;
-  color: #e5e5e5;
+  background: var(--app-theme-bg, #131313);
+  color: var(--app-theme-text, #e5e5e5);
   padding: 24px;
   max-width: min(440px, calc(100vw - 32px));
   font:
@@ -995,8 +997,9 @@
   padding: 0;
   overflow: hidden;
   border-radius: 8px;
-  background: #191919;
-  color: #e5e5e5;
+  background: var(--app-theme-side, #191919);
+  border: 1px solid var(--app-theme-border, transparent);
+  color: var(--app-theme-text, #e5e5e5);
   transition:
     transform 0.15s,
     box-shadow 0.15s;
@@ -1772,11 +1775,11 @@
   .workspace:not([data-mobile-entry='true']) {
     height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
     grid-template-rows: minmax(0, 1fr) auto;
-    background: #101217;
+    background: var(--shell-bg, #101217);
   }
   .workspace:not([data-mobile-entry='true']) .app {
     height: 100%;
-    background: #101217;
+    background: var(--shell-bg, #101217);
   }
   .workspaceContent {
     overflow: hidden;
@@ -1790,9 +1793,9 @@
     grid-column: 1;
     z-index: 19;
     box-shadow: none;
-    border: 1px solid #d6b77920;
+    border: 1px solid var(--shell-border, #d6b77920);
     border-radius: 18px 18px 0 0;
-    background: #171c23;
+    background: var(--shell-side, #171c23);
   }
   .membersHeader {
     padding: 8px 16px;
@@ -1823,8 +1826,8 @@
   .header {
     min-height: 60px;
     height: 60px;
-    background: #151920;
-    border-color: #ffffff0b;
+    background: var(--shell-side, #151920);
+    border-color: var(--shell-border, #ffffff0b);
   }
   .headerText small {
     display: none;
@@ -1874,12 +1877,12 @@
   }
   .composerArea {
     padding: 6px 10px 10px;
-    background: #101217;
+    background: var(--shell-bg, #101217);
   }
   .composer {
     border-radius: 18px;
-    background: #1c2430;
-    border: 1px solid #ffffff0b;
+    background: var(--shell-card, #1c2430);
+    border: 1px solid var(--shell-border, #ffffff0b);
   }
   .composer textarea {
     font-size: 16px;
@@ -1889,7 +1892,7 @@
     min-height: 44px;
   }
   .sidebar {
-    background: #151920;
+    background: var(--shell-side, #151920);
   }
   .workspace .app[data-drawer='true'] > .sidebar {
     position: fixed;

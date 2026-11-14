@@ -24,6 +24,8 @@ export type CursorPreference = (typeof CURSORS)[number]['id'];
 const cursor = (value: unknown): CursorPreference =>
   CURSORS.find((c) => c.id === value)?.id ?? 'royal';
 
+export const CHRISTMAS_CAMPAIGN_ID = '2026-natal-v1';
+
 interface AppearanceOptions {
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   style: Pick<CSSStyleDeclaration, 'removeProperty'>;
@@ -32,49 +34,81 @@ interface AppearanceOptions {
   authReady: Promise<unknown>;
   applyTheme(value: Theme): void;
   applyCursor?(value: CursorPreference): void;
+  applyReducedMotion?(reduced: boolean): void;
 }
 /** Local presentation only. Theme and feedback have one owner across both settings shells. */
 export function createAppearancePreferences(options: AppearanceOptions) {
   let state = Object.freeze<{ theme: Theme; message: string }>({ theme: 'purple', message: '' });
   let currentCursor: CursorPreference = 'royal';
+  let baseTheme: Theme = 'purple';
+  let reducedMotion = false;
+  let promoDismissedOrAccepted = false;
   let account = options.accountId(),
     started = false,
     disposed = false;
   const listeners = new Set<() => void>();
   const key = () => 'mnTheme:' + (options.accountId() || 'guest');
+  const baseKey = () => 'mnBaseTheme:' + (options.accountId() || 'guest');
   const cursorKey = () => 'mnCursor:' + (options.accountId() || 'guest');
-  function update(next: typeof state) {
-    if (disposed || (next.theme === state.theme && next.message === state.message)) return;
-    state = Object.freeze(next);
+  const reducedMotionKey = () => 'mnReducedMotion:' + (options.accountId() || 'guest');
+  const promoKey = () => 'mnChristmasPromo:' + (options.accountId() || 'guest');
+  const notify = () => {
     for (const listener of listeners) listener();
+  };
+  function update(next: typeof state, forceNotify = false) {
+    if (disposed) return;
+    const changed = next.theme !== state.theme || next.message !== state.message;
+    if (!changed && !forceNotify) return;
+    if (changed) state = Object.freeze(next);
+    notify();
+  }
+  function saveItem(storageKey: string, value: string) {
+    try {
+      options.storage.setItem(storageKey, value);
+    } catch {
+      /* Apply even without persistence. */
+    }
   }
   function read() {
     if (disposed) return;
-    let saved: unknown;
+    let saved: unknown,
+      savedBase: unknown,
+      savedCursor: unknown,
+      savedMotion: unknown,
+      savedPromo: unknown;
     try {
       saved = options.storage.getItem(key());
+      savedBase = options.storage.getItem(baseKey());
+      savedCursor = options.storage.getItem(cursorKey());
+      savedMotion = options.storage.getItem(reducedMotionKey());
+      savedPromo = options.storage.getItem(promoKey());
     } catch {
       /* Use the default theme. */
     }
-    let savedCursor: unknown;
-    try {
-      savedCursor = options.storage.getItem(cursorKey());
-    } catch {
-      /* Use the default cursor. */
-    }
     const nextAccount = options.accountId(),
-      next = theme(saved);
+      next = theme(saved),
+      parsedBase = theme(savedBase);
+    baseTheme = next !== 'natal' ? next : parsedBase !== 'natal' ? parsedBase : 'purple';
     currentCursor = cursor(savedCursor);
+    reducedMotion = savedMotion === '1' || savedMotion === 'true';
+    promoDismissedOrAccepted =
+      typeof savedPromo === 'string' && savedPromo.startsWith(CHRISTMAS_CAMPAIGN_ID + ':');
     // The retired resizer no longer restores geometry that users cannot adjust.
     clearPanelDimensions(options.style);
-    update({ theme: next, message: account === nextAccount ? state.message : '' });
+    update({ theme: next, message: account === nextAccount ? state.message : '' }, true);
     account = nextAccount;
     options.applyTheme(next);
     options.applyCursor?.(currentCursor);
+    options.applyReducedMotion?.(reducedMotion);
   }
   return {
     getSnapshot: () => state,
     getCursor: () => currentCursor,
+    getReducedMotion: () => reducedMotion,
+    isChristmasActive: () => state.theme === 'natal',
+    getBaseTheme: () => baseTheme,
+    shouldShowChristmasPromo: () =>
+      !disposed && state.theme !== 'natal' && !promoDismissedOrAccepted,
     subscribe(listener: () => void) {
       if (disposed) return () => {};
       listeners.add(listener);
@@ -92,24 +126,75 @@ export function createAppearancePreferences(options: AppearanceOptions) {
     selectTheme(value: unknown) {
       if (disposed) return;
       const next = theme(value);
-      try {
-        options.storage.setItem(key(), next);
-      } catch {
-        /* Apply even without persistence. */
+      if (next !== 'natal') {
+        baseTheme = next;
+        saveItem(baseKey(), next);
+      } else if (state.theme !== 'natal') {
+        baseTheme = state.theme;
+        saveItem(baseKey(), baseTheme);
       }
+      saveItem(key(), next);
       update({ theme: next, message: 'Tema aplicado.' });
       options.applyTheme(next);
+    },
+    setChristmasEnabled(enabled: boolean) {
+      if (disposed) return;
+      if (enabled) {
+        if (state.theme !== 'natal') {
+          baseTheme = state.theme;
+          saveItem(baseKey(), baseTheme);
+        }
+        promoDismissedOrAccepted = true;
+        saveItem(promoKey(), CHRISTMAS_CAMPAIGN_ID + ':accepted');
+        saveItem(key(), 'natal');
+        update({ theme: 'natal', message: 'Tema de Natal ativado na Corte.' }, true);
+        options.applyTheme('natal');
+        return;
+      }
+      const restore = baseTheme !== 'natal' ? baseTheme : 'purple';
+      saveItem(key(), restore);
+      update({ theme: restore, message: 'Tema original restaurado.' }, true);
+      options.applyTheme(restore);
+    },
+    acceptChristmasPromo() {
+      if (disposed) return;
+      if (state.theme !== 'natal') {
+        baseTheme = state.theme;
+        saveItem(baseKey(), baseTheme);
+      }
+      promoDismissedOrAccepted = true;
+      saveItem(promoKey(), CHRISTMAS_CAMPAIGN_ID + ':accepted');
+      saveItem(key(), 'natal');
+      update({ theme: 'natal', message: 'Tema de Natal ativado na Corte.' }, true);
+      options.applyTheme('natal');
+    },
+    dismissChristmasPromo() {
+      if (disposed) return;
+      promoDismissedOrAccepted = true;
+      saveItem(promoKey(), CHRISTMAS_CAMPAIGN_ID + ':dismissed');
+      notify();
+    },
+    setReducedMotion(reduced: boolean) {
+      if (disposed) return;
+      reducedMotion = !!reduced;
+      saveItem(reducedMotionKey(), reducedMotion ? '1' : '0');
+      options.applyReducedMotion?.(reducedMotion);
+      update(
+        {
+          ...state,
+          message: reducedMotion
+            ? 'Animações decorativas reduzidas.'
+            : 'Animações decorativas ativadas.',
+        },
+        true,
+      );
     },
     selectCursor(value: unknown) {
       if (disposed) return;
       currentCursor = cursor(value);
-      try {
-        options.storage.setItem(cursorKey(), currentCursor);
-      } catch {
-        /* Apply even without persistence. */
-      }
+      saveItem(cursorKey(), currentCursor);
       options.applyCursor?.(currentCursor);
-      update({ ...state, message: 'Cursor atualizado.' });
+      update({ ...state, message: 'Cursor atualizado.' }, true);
     },
     resetPanels() {
       if (disposed) return;

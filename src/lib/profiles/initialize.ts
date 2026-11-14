@@ -53,6 +53,10 @@ export function initializeAccountResources(target: Window) {
       target.document.documentElement.dataset.cursor = cursor;
       target.dispatchEvent(new CustomEvent('trono-cursor-change', { detail: { cursor } }));
     },
+    applyReducedMotion(reduced) {
+      target.document.documentElement.dataset.reducedMotion = reduced ? 'true' : 'false';
+      target.dispatchEvent(new CustomEvent('trono-reduced-motion-change', { detail: { reduced } }));
+    },
   });
   Object.assign(target, {
     TronoProfileGifs: gifs,
