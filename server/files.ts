@@ -22,7 +22,13 @@ import {
 } from './files-protocol.ts';
 import { createStorageDatabase } from './storage-database.ts';
 import { r2Adapter } from './storage-r2.ts';
-import { detectMime, peek, drainRejectedUpload } from './file-upload.ts';
+import {
+  detectMime,
+  peek,
+  drainRejectedUpload,
+  sanitizeFileName,
+  isForbiddenUpload,
+} from './file-upload.ts';
 export { signedUrl, r2Adapter } from './storage-r2.ts';
 export { detectMime, LIMITS };
 interface FilesOptions {
@@ -312,7 +318,10 @@ export function createFiles({
       };
     });
     route('get', '/channel/:roomId', async (req) => {
-      if (!membership(context(req).account.id, req.params.roomId))
+      const roomId = String(req.params.roomId || '');
+      if (!roomId || roomId.length > 120 || /[\\/\x00-\x1f\x7f]|\.\./.test(roomId))
+        throw error('INVALID_REQUEST', 'Canal inválido.', 400);
+      if (!membership(context(req).account.id, roomId))
         throw error('NOT_IN_ROOM', 'Entre no canal para ver seus anexos.', 403);
       const offset = Math.max(0, Math.min(10000000, Math.floor(Number(req.query.offset) || 0)));
       const rows = readFilePage(
@@ -385,8 +394,7 @@ export function createFiles({
       } catch {
         throw error('INVALID_FILENAME', 'Nome de arquivo inválido.');
       }
-      name =
-        [...name.replace(/[\\/\x00-\x1f\x7f]/g, '_')].slice(0, 140).join('').trim() || 'arquivo';
+      name = sanitizeFileName(name);
       active.set(owner, (active.get(owner) || 0) + 1);
       let row: StoredFile | null = null,
         deadline: NodeJS.Timeout | undefined,
@@ -414,6 +422,12 @@ export function createFiles({
         } else ({ prefix, body } = await peek(req));
         const mime = detectMime(prefix),
           isVideo = ['video/mp4', 'video/webm'].includes(mime);
+        if (isForbiddenUpload(name, prefix, mime))
+          throw error(
+            'UNSUPPORTED_FILE_TYPE',
+            'Este tipo de arquivo não é permitido por segurança.',
+            400,
+          );
         if (size > (kind === 'avatar' ? LIMITS.avatar : isVideo ? LIMITS.video : LIMITS.file))
           throw error('FILE_TOO_LARGE', 'Limite: 10 MB por arquivo e 100 MB por vídeo MP4.', 413);
         if (

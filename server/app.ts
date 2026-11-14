@@ -43,6 +43,33 @@ export interface BackendApplication {
   wss: SocketServer<typeof BackendSocket>;
   close(): Promise<void>;
 }
+export function resolveTrustProxyHops(raw: string | undefined): number {
+  const trimmed = String(raw ?? '').trim();
+  if (!trimmed || !/^\d+$/.test(trimmed)) return 0;
+  const hops = Number(trimmed);
+  return Number.isSafeInteger(hops) && hops >= 0 && hops <= 10 ? hops : 0;
+}
+export function assertProductionConfig(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV !== 'production') return;
+  if (env.AUTH_REQUIRED !== 'true') {
+    throw new Error('Production startup aborted: AUTH_REQUIRED must be "true".');
+  }
+  const missing: string[] = [];
+  if (!String(env.SUPABASE_URL || '').trim()) missing.push('SUPABASE_URL');
+  if (!String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '').trim()) {
+    missing.push('SUPABASE_PUBLISHABLE_KEY');
+  }
+  if (!String(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '').trim()) {
+    missing.push('SUPABASE_SECRET_KEY');
+  }
+  if (!String(env.APP_URL || '').trim()) missing.push('APP_URL');
+  if (!String(env.TURNSTILE_SECRET_KEY || '').trim()) missing.push('TURNSTILE_SECRET_KEY');
+  if (missing.length > 0) {
+    throw new Error(
+      `Production startup aborted: missing required variables: ${missing.join(', ')}`,
+    );
+  }
+}
 export function createApplication({
   scheduleDelay = (ms) => ms,
   chooseDecrees,
@@ -51,8 +78,20 @@ export function createApplication({
   loveLetterRandom,
   similoRandom,
 }: ApplicationOptions = {}): BackendApplication {
+  assertProductionConfig(process.env);
   const app = express();
-  app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
+  app.disable('x-powered-by');
+  app.set('trust proxy', resolveTrustProxyHops(process.env.TRUST_PROXY_HOPS));
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self)');
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
   const accountAuth = createAuth({
     onRevoke: (event) => gateway.revoke(event),
     onProfileChange: (account) => gateway.profileChanged(account),

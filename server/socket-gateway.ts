@@ -41,6 +41,9 @@ export class BackendSocket extends WebSocket implements ChannelConnection {
   authAttempts = 0;
   authQueue?: Promise<void>;
   guestRate?: { count: number; until: number };
+  msgTokens = 80;
+  msgLastRefill = Date.now();
+  authTimeout?: ReturnType<typeof setTimeout>;
   readonly identityScope = new AbortController();
 }
 export function sendSocket(connection: unknown, payload: unknown): void {
@@ -67,6 +70,9 @@ interface Options {
   soundboard: ReturnType<typeof createVoiceSoundboard>;
   sfu: RealtimeSfuManager;
   version: string;
+  authTimeoutMs?: number;
+  rateLimitCapacity?: number;
+  rateLimitPerSec?: number;
 }
 /** Owns one set of socket listeners, identity operations and heartbeat per application. */
 export function createSocketGateway({
@@ -87,11 +93,20 @@ export function createSocketGateway({
   soundboard,
   sfu: realtimeSfu,
   version: VERSION,
+  authTimeoutMs = 5000,
+  rateLimitCapacity = 80,
+  rateLimitPerSec = 40,
 }: Options) {
   let closed = false;
   const suspended = new Map<string, { ws: BackendSocket; timer: ReturnType<typeof setTimeout> }>();
   const allConnections = () =>
     new Set([...wss.clients, ...[...suspended.values()].map((s) => s.ws)]);
+  function clearAuthTimer(ws: BackendSocket) {
+    if (ws.authTimeout) {
+      clearTimeout(ws.authTimeout);
+      ws.authTimeout = undefined;
+    }
+  }
   function forget(ws: BackendSocket) {
     const entry = suspended.get(ws.resumeToken);
     if (entry?.ws === ws) {
@@ -152,6 +167,22 @@ export function createSocketGateway({
       ws.terminate();
       return;
     }
+    ws.msgTokens = rateLimitCapacity;
+    ws.msgLastRefill = Date.now();
+    if (accountAuth.required && authTimeoutMs > 0) {
+      ws.authTimeout = setTimeout(() => {
+        ws.authTimeout = undefined;
+        if (!closed && ws.readyState === WebSocket.OPEN && !ws.account && !ws.guest) {
+          send(ws, {
+            type: 'error',
+            code: 'AUTH_TIMEOUT',
+            message: 'Tempo de autenticação esgotado.',
+          });
+          ws.close(4001, 'Tempo de autenticação esgotado');
+        }
+      }, authTimeoutMs);
+      ws.authTimeout.unref?.();
+    }
     ws.on('pong', () => {
       ws.isAlive = true;
     });
@@ -167,6 +198,20 @@ export function createSocketGateway({
     });
     ws.on('message', (raw) => {
       if (closed) return;
+      const now = Date.now();
+      const elapsedSec = Math.max(0, (now - ws.msgLastRefill) / 1000);
+      ws.msgTokens = Math.min(rateLimitCapacity, ws.msgTokens + elapsedSec * rateLimitPerSec);
+      ws.msgLastRefill = now;
+      if (ws.msgTokens < 1) {
+        send(ws, {
+          type: 'error',
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Limite de mensagens excedido.',
+        });
+        ws.close(1008, 'RATE_LIMIT_EXCEEDED');
+        return;
+      }
+      ws.msgTokens -= 1;
       let parsed: unknown;
       try {
         parsed = JSON.parse(raw.toString());
@@ -235,6 +280,7 @@ export function createSocketGateway({
             ws.account = null;
             ws.activity = null;
             ws.guest = identity;
+            clearAuthTimer(ws);
             const resumed = resume(ws, message.resumeToken);
             community.note(ws);
             send(ws, {
@@ -314,6 +360,7 @@ export function createSocketGateway({
             if (priorAccount?.id !== account.id) ws.activity = null;
             ws.guest = null;
             ws.account = account;
+            clearAuthTimer(ws);
             const resumed = resume(ws, message.resumeToken);
             ws.authAttempts = 0;
             send(ws, {
@@ -366,10 +413,10 @@ export function createSocketGateway({
         });
         return;
       }
-      const publicMessages = ['list-rooms', 'list-chat-channels', 'ping'];
+      const publicMessages = new Set(['list-rooms', 'list-chat-channels', 'ping']);
       const publicStatus = message.type === 'sfu-request' && message.action === 'status';
       const gameGuest = community.validGuest(ws);
-      const guestActions = [
+      const guestActions = new Set([
         'check-name',
         'leave-room',
         'leave-game-room',
@@ -383,17 +430,19 @@ export function createSocketGateway({
         'voice-state',
         'voice-signal',
         'state-request',
-      ];
+      ]);
       const guestAllowed =
         gameGuest &&
+        !ws.account &&
         (message.type === 'presence-request' ||
           message.type === 'check-name' ||
           (['join-room', 'join-game-room'].includes(message.type) &&
             rooms.get(typeof message.roomId === 'string' ? message.roomId : '')?.kind === 'game') ||
           ((channels.gameRoomFor(ws)?.kind === 'game' ||
             rooms.get(ws.roomId || '')?.kind === 'game') &&
-            guestActions.includes(message.type)));
-      if (gameGuest && !guestAllowed && !publicMessages.includes(message.type) && !publicStatus) {
+            guestActions.has(message.type)));
+      const isMember = !!ws.account && ws.account.expiresAt > Date.now();
+      if (gameGuest && !guestAllowed && !publicMessages.has(message.type) && !publicStatus) {
         send(ws, {
           type: 'error',
           code: 'LOGIN_REQUIRED_CHAT',
@@ -404,9 +453,9 @@ export function createSocketGateway({
       if (
         accountAuth.required &&
         !guestAllowed &&
-        !publicMessages.includes(message.type) &&
+        !publicMessages.has(message.type) &&
         !publicStatus &&
-        (!ws.account || ws.account.expiresAt <= Date.now())
+        !isMember
       ) {
         send(ws, {
           type: 'error',
@@ -415,6 +464,17 @@ export function createSocketGateway({
         });
         return;
       }
+      const denyGuestOnly = () => {
+        if (ws.guest && !isMember) {
+          send(ws, {
+            type: 'error',
+            code: 'LOGIN_REQUIRED_CHAT',
+            message: 'Entre em uma conta para acessar este recurso.',
+          });
+          return true;
+        }
+        return false;
+      };
       switch (message.type) {
         case 'azul':
           azulService.handle(ws, message);
@@ -437,13 +497,14 @@ export function createSocketGateway({
         case 'list-chat-channels':
           send(ws, {
             type: 'chat-channels',
-            channels: channels.safeChatChannels(!!ws.account && ws.account.expiresAt > Date.now()),
+            channels: channels.safeChatChannels(isMember),
           });
           break;
         case 'presence-request':
           send(ws, community.snapshot(ws));
           break;
         case 'activity-state': {
+          if (denyGuestOnly()) break;
           const result = community.updateActivity(ws, message.activity);
           if (!result.ok)
             send(ws, {
@@ -475,6 +536,7 @@ export function createSocketGateway({
           channels.joinRoom(ws, message.roomId, message.name);
           break;
         case 'join-text-channel':
+          if (denyGuestOnly()) break;
           channels.joinTextRoom(ws, message.roomId, message.name);
           break;
         case 'leave-room':
@@ -490,10 +552,12 @@ export function createSocketGateway({
           throneService.handle(ws, message);
           break;
         case 'chat-history-request':
+          if (denyGuestOnly()) break;
           chat.requestHistory(ws, message);
           break;
         case 'chat-message-delete':
         case 'chat-history-clear':
+          if (denyGuestOnly()) break;
           void chat.moderate(ws, message);
           break;
         case 'chat-message':
@@ -506,6 +570,7 @@ export function createSocketGateway({
           channels.fallbackVoice(ws);
           break;
         case 'voice-moderate':
+          if (denyGuestOnly()) break;
           channels.moderateVoice(ws, message);
           break;
         case 'voice-state':
@@ -516,12 +581,15 @@ export function createSocketGateway({
           channels.handleVoiceSignal(ws, message);
           break;
         case 'soundboard-play':
+          if (denyGuestOnly()) break;
           void soundboard.play(ws, message);
           break;
         case 'remote-pc':
+          if (denyGuestOnly()) break;
           void remotePc.handle(ws, message);
           break;
         case 'sfu-request':
+          if (!publicStatus && denyGuestOnly()) break;
           void realtimeSfu.handleRequest(ws, message);
           break;
         case 'state-request': {
@@ -543,6 +611,7 @@ export function createSocketGateway({
       }
     });
     ws.on('close', (code) => {
+      clearAuthTimer(ws);
       if (closed || ws.voiceTransferred) return;
       ws.identityScope.abort();
       azulService.disconnect(ws);
@@ -647,6 +716,7 @@ export function createSocketGateway({
       suspended.clear();
       wss.removeListener('connection', onConnection);
       for (const ws of wss.clients) {
+        clearAuthTimer(ws);
         ws.identityScope.abort();
         ws.terminate();
       }

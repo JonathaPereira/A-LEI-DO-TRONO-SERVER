@@ -7,6 +7,7 @@ import { passwordChecks, validPassword } from '../src/lib/auth/password.ts';
 import { validNickname } from '../src/lib/auth/nickname.ts';
 import { authError, authUnavailable, object, policyMessage } from './auth-errors.ts';
 import { createAuthProvider } from './auth-provider.ts';
+import { createRateLimiter, type RateLimiter } from './rate-limit.ts';
 import {
   readVerifiedUser,
   readAccountProfile,
@@ -20,6 +21,7 @@ export { passwordChecks, validPassword, validNickname, policyMessage, authError 
 interface AuthOptions {
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
+  rateLimiter?: RateLimiter;
   onRevoke?: (event: { userId: string; sessionId?: string; all: boolean }) => void;
   onProfileChange?: (account: BackendAccount) => void;
 }
@@ -44,11 +46,14 @@ function respond(res: Response, error: unknown) {
 export function createAuth({
   env = process.env,
   fetchImpl = globalThis.fetch,
+  rateLimiter,
   onRevoke = () => {},
   onProfileChange = () => {},
 }: AuthOptions = {}) {
   const url = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '');
+  const turnstileSecret = String(env.TURNSTILE_SECRET_KEY || '').trim();
+  const isProduction = env.NODE_ENV === 'production';
   let site: URL | null = null,
     origin: string | null = null;
   try {
@@ -74,20 +79,15 @@ export function createAuth({
         .filter(Boolean),
     ].filter((value): value is string => !!value),
   );
-  const rates = new Map<string, { count: number; until: number }>();
+  const limiter = rateLimiter || createRateLimiter(env);
+  const ownsLimiter = !rateLimiter;
   const lifetime = new AbortController();
   const installed = new WeakSet<Express>();
   const provider = createAuthProvider({ url, key, configured, signal: lifetime.signal, fetchImpl });
   const { request: upstream, assertAvailable: assertConfigured } = provider;
-  const rateCleanup = setInterval(() => {
-    const now = Date.now();
-    for (const [k, v] of rates) if (v.until <= now) rates.delete(k);
-  }, 60_000);
-  rateCleanup.unref();
   const health = () => ({ required, configured });
-  function limit(req: ApiRequest, body: Record<string, unknown>, kind: string, max = 10) {
-    const now = Date.now(),
-      keys = [`${kind}:ip:${req.ip || req.socket.remoteAddress}`];
+  async function limit(req: ApiRequest, body: Record<string, unknown>, kind: string, max = 10) {
+    const keys = [`${kind}:ip:${req.ip || req.socket.remoteAddress}`];
     if (['signup', 'recover'].includes(kind))
       keys.push(
         `${kind}:email:${String(body.email || '')
@@ -95,18 +95,67 @@ export function createAuth({
           .toLowerCase()}`,
       );
     for (const k of keys) {
-      let r = rates.get(k);
-      if (!r || r.until <= now) {
-        r = { count: 0, until: now + 60_000 };
-        rates.set(k, r);
-      }
-      r.count++;
-      if (r.count > max)
+      const result = await limiter.consume(k, max, 60_000);
+      if (!result.allowed)
         throw authError(
           'AUTH_RATE_LIMIT',
           'Muitas tentativas. Aguarde um minuto antes de tentar novamente.',
           429,
         );
+    }
+  }
+  async function verifyTurnstile(
+    req: ApiRequest,
+    body: Record<string, unknown>,
+    signal: AbortSignal,
+  ) {
+    if (!turnstileSecret) {
+      if (isProduction) throw authUnavailable();
+      return; // Controlled bypass only in local dev/test when TURNSTILE_SECRET_KEY is unset.
+    }
+    const raw =
+      typeof body.turnstile_token === 'string'
+        ? body.turnstile_token
+        : typeof body['cf-turnstile-response'] === 'string'
+          ? body['cf-turnstile-response']
+          : '';
+    const token = raw.trim();
+    if (!token || token.length > 4096)
+      throw authError(
+        'CAPTCHA_REQUIRED',
+        'Confirme a verificação de segurança para continuar.',
+        400,
+      );
+    let response: globalThis.Response;
+    try {
+      const form = new URLSearchParams({
+        secret: turnstileSecret,
+        response: token,
+      });
+      const ip = req.ip || req.socket.remoteAddress;
+      if (ip) form.set('remoteip', ip);
+      response = await fetchImpl('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+        signal,
+      });
+    } catch (err) {
+      if (signal.aborted) throw err;
+      throw authUnavailable();
+    }
+    let verified: unknown = null;
+    try {
+      verified = await response.json();
+    } catch {
+      throw authUnavailable();
+    }
+    if (!response.ok || !object(verified) || verified.success !== true) {
+      throw authError(
+        'CAPTCHA_FAILED',
+        'Verificação de segurança inválida ou expirada. Tente novamente.',
+        403,
+      );
     }
   }
   function tokenFrom(req: { headers: IncomingHttpHeaders }) {
@@ -210,7 +259,7 @@ export function createAuth({
           assertConfigured();
           const body = req.body === undefined ? {} : req.body;
           if (!object(body)) throw authError('INVALID_REQUEST', 'Dados inválidos.');
-          limit(req, body, kind, max);
+          await limit(req, body, kind, max);
           const value = await fn(req, body, signal);
           if (!signal.aborted && !res.destroyed && !res.writableEnded) res.json(value);
           else if (lifetime.signal.aborted) respond(res, authUnavailable());
@@ -224,7 +273,8 @@ export function createAuth({
     route(
       'post',
       'signup',
-      async (_req, body) => {
+      async (req, body, signal) => {
+        await verifyTurnstile(req, body, signal);
         const email = emailFrom(body),
           password = requirePassword(body),
           nickname = String(body.nickname || '')
@@ -255,18 +305,37 @@ export function createAuth({
       'signup',
       5,
     );
-    route('post', 'login', async (_req, body, signal) => {
+    route('post', 'login', async (req, body, signal) => {
+      await verifyTurnstile(req, body, signal);
       const email = emailFrom(body);
+      const lockKey = `login:${email}`;
+      const lockedMs = await limiter.getLockout(lockKey);
+      if (lockedMs > 0) {
+        throw authError(
+          'ACCOUNT_LOCKED',
+          'Muitas tentativas incorretas. Aguarde antes de tentar novamente.',
+          429,
+        );
+      }
       if (typeof body.password !== 'string' || !body.password || body.password.length > 1024)
         throw authError('INVALID_CREDENTIALS', 'E-mail ou senha inválidos.', 401);
-      return sessionPayload(
-        await upstream('/auth/v1/token?grant_type=password', {
-          method: 'POST',
-          body: { email, password: body.password },
+      try {
+        const result = await sessionPayload(
+          await upstream('/auth/v1/token?grant_type=password', {
+            method: 'POST',
+            body: { email, password: body.password },
+            signal,
+          }),
           signal,
-        }),
-        signal,
-      );
+        );
+        await limiter.clearFailures(lockKey);
+        return result;
+      } catch (err) {
+        if (object(err) && (err.status === 401 || err.code === 'INVALID_CREDENTIALS')) {
+          await limiter.recordFailure(lockKey, [60_000, 300_000, 900_000], 5);
+        }
+        throw err;
+      }
     });
     route(
       'post',
@@ -289,7 +358,8 @@ export function createAuth({
     route(
       'post',
       'recover',
-      async (_req, body) => {
+      async (req, body, signal) => {
+        await verifyTurnstile(req, body, signal);
         const email = emailFrom(body),
           redirect = new URL(site!.href);
         redirect.searchParams.set('auth', 'recovery');
@@ -418,8 +488,7 @@ export function createAuth({
     stop() {
       if (lifetime.signal.aborted) return;
       lifetime.abort();
-      clearInterval(rateCleanup);
-      rates.clear();
+      if (ownsLimiter) void limiter.stop();
     },
     required,
     configured,
