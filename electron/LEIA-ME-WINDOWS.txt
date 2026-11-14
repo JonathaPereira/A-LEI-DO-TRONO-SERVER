@@ -1,4 +1,10 @@
-M&N · A Lei do Trono — Windows 1.0.14
+M&N · A Lei do Trono — Windows 1.0.15
+
+Melhoria 1.0.15: Especial de Natal em A Corte 🎄 — expansão completa do tema natalino
+("Uma celebração no reino") com pisca-piscas LED discretos e alternados nos botões,
+neve suave no chat, salas de voz e barra lateral decoradas, janela de apresentação
+flutuante com ativação instantânea sem desconectar chamadas e opções de Tema de Natal e
+Reduzir animações decorativas nas configurações de aparência.
 
 Melhoria 1.0.14: novo design visual com temas 100% funcionais no aplicativo, tema especial
 Natal da Corte 🎄 (com neve suave animada, doces, gorro festivo e meias/trenó decorativos),
