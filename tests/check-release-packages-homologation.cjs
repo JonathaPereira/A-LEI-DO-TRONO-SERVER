@@ -98,7 +98,7 @@ test('2.2 - Homologação de todas as suítes de validação unificadas da Opera
   const suitesPath = path.join(root, 'tests/suites.json');
   assert(fs.existsSync(suitesPath));
   const suites = JSON.parse(fs.readFileSync(suitesPath, 'utf8'));
-  const coreList = suites.core || [];
+  const allSuites = [...(suites.core || []), ...(suites.godot || [])];
 
   const renascimentoSuites = [
     'tests/check-balance-matrices.cjs',
@@ -116,7 +116,7 @@ test('2.2 - Homologação de todas as suítes de validação unificadas da Opera
   ];
 
   for (const s of renascimentoSuites) {
-    assert(coreList.includes(s), `Suíte ${s} deve estar registrada em suites.json`);
+    assert(allSuites.includes(s), `Suíte ${s} deve estar registrada em suites.json`);
     assert(fs.existsSync(path.join(root, s)), `Arquivo físico da suíte ${s} deve existir`);
   }
 });

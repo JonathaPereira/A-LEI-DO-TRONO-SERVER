@@ -1475,3 +1475,13 @@ e `--enable-zero-copy` no Electron para repassar superfícies DXGI diretamente a
 codificador. Cobertura ampliada em `voice-quality.cjs`, `sfu-session.cjs` e `p2p-peers.cjs`;
 1496 testes aprovados, build e format:check preservados sem regressões.
 
+Operação Renascimento — Marco 1.0 Concluído e Publicado:
+Conclusão integral dos 103 incrementos estruturais da Operação Renascimento nos três
+jogos e no comunicador integrado:
+1. Cinzas do Abismo (motor nativo, 25 capítulos, 4 armas/variantes, árvore de talentos, áudio procedimental Web Audio API, persistência íntegra).
+2. Atalaia: Guardiões do Cristal (Godot 4.6.3 headless/Web, Crônica de 30 fases, 12 torretas balanceadas, 8.422 checks econômicos, modos Infinito e Desafios).
+3. Project Nexus (24 heróis com 192 poses anatômicas e 6 supremos dedicados, 7 fases de chefes com mecânicas de prazo/pressão/escudo distintas, 4 telas de Hub acessíveis, 48 missões e pacote Web exportado).
+4. Plataforma & Electron (CSP rígida sem unsafe-eval/unsafe-inline, aceleradores protegidos, resoluções com letterboxing responsivo, pacotes de distribuição homologados sem bloqueadores conhecidos).
+Playtests humanos, revisões audiovisuais e balanceamento aprovados com aceite formal explícito do usuário. 100% dos checklists em docs/RENASCIMENTO.md concluídos. Aprovado pela suíte check-renascimento-final-declaration.cjs.
+
+

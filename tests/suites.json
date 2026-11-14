@@ -302,6 +302,7 @@
     "tests/check-nexus-screens-accessibility.cjs",
     "tests/check-nexus-animations-choreography.cjs",
     "tests/check-hardware-electron-resolutions.cjs",
-    "tests/check-release-packages-homologation.cjs"
+    "tests/check-release-packages-homologation.cjs",
+    "tests/check-renascimento-final-declaration.cjs"
   ]
 }

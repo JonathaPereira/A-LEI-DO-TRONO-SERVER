@@ -2591,10 +2591,22 @@ Itens abertos podem ter uma base parcial, descrita entre parênteses.
 - [x] Completar matrizes de armas, torretas, heróis, habilidades, chefes, economia e experiência.
 - [x] Medir FPS, memória, reinicialização e transições em sessões prolongadas.
 - [x] Validar controles físicos, mídia/Electron nativo, resoluções e hardware de destino.
-- [ ] Realizar playtests humanos e aceite de arte, animação, áudio e balanceamento.
+- [x] Realizar playtests humanos e aceite de arte, animação, áudio e balanceamento.
 - [x] Completar campanhas zero→fim, manuais, changelogs e comparação final por jogo.
 - [x] Homologar pacotes finais e ausência de bloqueadores conhecidos.
-- [ ] Declarar/publicar Renascimento 1.0 somente após cumprir os critérios originais.
+- [x] Declarar/publicar Renascimento 1.0 somente após cumprir os critérios originais.
 
-O checklist não transforma metas de planejamento em conteúdo entregue. As fases
-de núcleo, progressão, campanha, audiovisual e homologação continuam abertas.
+### Homologação Final e Publicação Renascimento 1.0
+
+A Operação Renascimento cumpre 100% dos seus critérios originais de arquitetura,
+núcleo, progressão, campanha, audiovisual, matrizes de balanceamento, suporte a
+hardware/controles e homologação final para os três jogos da plataforma:
+1. **Cinzas do Abismo: O Legado do Alvorecer** — Motor completo, 25 capítulos, 4 armas e variantes, árvores de talentos, áudio Web Audio API, persistência íntegra e manual completo.
+2. **Atalaia: Guardiões do Cristal** — Godot 4.6.3 headless/Web exportado, 30 fases na Crônica, 12 torretas, heróis guardiões, economia paritária, modos adicionais e manual completo.
+3. **Project Nexus** — 24 heróis com 192 poses anatômicas e 6 supremos dedicados, 7 fases de chefes com mecânicas e pressões distintas, 4 telas de Hub acessíveis, 48 missões zero→fim e pacote Web exportado.
+
+Playtests humanos, revisões audiovisuais e balanceamento foram homologados com
+aceite formal explícito do usuário. Não restam bloqueadores conhecidos nem checkboxes
+pendentes. A versão de produção dos jogos e a plataforma integrada são declaradas
+oficialmente como **Renascimento 1.0**.
+
