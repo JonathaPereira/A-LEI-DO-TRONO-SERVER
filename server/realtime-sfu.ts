@@ -1015,7 +1015,9 @@ export class RealtimeSfuManager {
       }
       if (action === 'set-screen-bitrate') {
         const requested = Number(payload.screenBitrate);
-        if (![4000000, 6000000, 8000000, 10000000, 12000000, 15000000].includes(requested))
+        if (
+          ![4000000, 6000000, 8000000, 10000000, 12000000, 15000000, 18000000].includes(requested)
+        )
           throw Object.assign(new Error('Bitrate de tela inválido.'), {
             code: 'BAD_SCREEN_BITRATE',
           });

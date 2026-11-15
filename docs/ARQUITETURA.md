@@ -182,9 +182,14 @@ antiga nem adquirir dispositivos. media-settings.tsx apresenta os controles dos
 donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
 getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
 A transmissão de tela prioriza o codec H.264 (`prioritizeH264`) tanto no SFU
-(`sfu-session.ts`) quanto em conexões P2P (`p2p-peers.ts`), permitindo que a
+(`sfu-session.ts`) quanto em conexões P2P (`p2p-peers.ts`), preservando os codecs `video/rtx`
+pareados para retransmissão NACK/RTX e permitindo que a
 codificação por hardware (NVIDIA NVENC / MediaFoundation no Windows) opere em
-1–2 ms com 0% de sobrecarga na CPU. O perfil padrão de conteúdo de tela é `motion`,
+1–2 ms com 0% de sobrecarga na CPU. A telemetria de mídia (`voice/telemetry.ts`)
+coleta deltas por fluxo de publicação/recepção e classifica congelamentos reais em 8 categorias
+sem confundir tela estática com falha; `voice/video-recovery.ts` e `voice/sfu-session.ts`
+aplicam recuperação direcionada e limitada por fluxo/estado `disconnected` (> 4,5 s) sem
+derrubar chamada, microfone, câmera ou socket. O perfil padrão de conteúdo de tela é `motion`,
 que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência
 e fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail`
 (`maintain-resolution`) para documentos e apresentações estáticas. No processo

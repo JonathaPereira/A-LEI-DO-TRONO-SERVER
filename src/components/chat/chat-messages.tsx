@@ -8,6 +8,7 @@ import type { ChatMessagesController } from '../../lib/chat/messages';
 import { initializeChatMessages } from '../../lib/chat/browser';
 import { Avatar } from '../profiles/avatar';
 import { Attachment } from '../files/attachment';
+import { MessageText } from './message-text';
 
 const emptySubscribe = () => () => {};
 const emptySnapshot = () => EMPTY_MESSAGES;
@@ -78,7 +79,9 @@ const MessageRow = memo(function MessageRow({
           </button>
         )}
       </div>
-      <p>{message.text}</p>
+      <p>
+        <MessageText text={message.text} />
+      </p>
       {message.attachment && <Attachment file={message.attachment} />}
     </div>
   );

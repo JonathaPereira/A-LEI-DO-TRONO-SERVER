@@ -133,6 +133,15 @@
     overflow-wrap: anywhere;
     white-space: pre-wrap;
   }
+  .court-chat-msg p a.chat-message-link {
+    color: #8ec9ff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    word-break: break-word;
+  }
+  .court-chat-msg p a.chat-message-link:hover {
+    color: #c2e2ff;
+  }
   .court-chat-compose {
     display: grid;
     grid-template-columns: 1fr auto;

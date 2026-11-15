@@ -30,6 +30,62 @@ export interface VoiceResources {
   readonly appMemoryMB: number;
   readonly freeMemoryMB: number;
 }
+export type VideoFreezeCause =
+  | 'capture-interrupted'
+  | 'encoder-stalled'
+  | 'send-stalled'
+  | 'transport-congestion'
+  | 'sfu-forwarding-stalled'
+  | 'subscription-interrupted'
+  | 'receiver-not-decoding'
+  | 'presentation-frozen';
+export interface VideoFreezeEvent {
+  readonly streamKey: string;
+  readonly pcKey: string;
+  readonly direction: 'inbound' | 'outbound';
+  readonly mid: string | null;
+  readonly rid: string | null;
+  readonly trackId: string | null;
+  readonly startedAt: number;
+  readonly endedAt: number | null;
+  readonly durationMs: number;
+  readonly recovered: boolean;
+  readonly cause: VideoFreezeCause | null;
+}
+export interface VideoStreamHealth {
+  readonly streamKey: string;
+  readonly pcKey: string;
+  readonly direction: 'inbound' | 'outbound';
+  readonly mid: string | null;
+  readonly rid: string | null;
+  readonly trackId: string | null;
+  readonly pcState: string;
+  readonly iceState: string;
+  readonly width: number;
+  readonly height: number;
+  readonly fps: number | null;
+  readonly bitrateBps: number | null;
+  readonly lossPct: number | null;
+  readonly packetsDelta: number | null;
+  readonly packetsLost: number | null;
+  readonly retransmittedPackets: number | null;
+  readonly sendDelayMs: number | null;
+  readonly encodeMs: number | null;
+  readonly decodeMs: number | null;
+  readonly bufferMs: number | null;
+  readonly minBufferMs: number | null;
+  readonly nackCount: number | null;
+  readonly pliCount: number | null;
+  readonly firCount: number | null;
+  readonly keyFrames: number | null;
+  readonly freezeCount: number | null;
+  readonly stalled: boolean;
+  readonly stallMs: number;
+  readonly cause: VideoFreezeCause | null;
+  readonly codec: string | null;
+  readonly implementation: string | null;
+  readonly hardwareAccelerated: boolean | null;
+}
 export interface VideoInterval {
   readonly direction: 'inbound' | 'outbound';
   readonly fps: number | null;
@@ -42,10 +98,28 @@ export interface VideoInterval {
   readonly encodeMs: number | null;
   readonly sendDelayMs: number | null;
   readonly bufferMs: number | null;
+  readonly framesEncoded?: number | null;
+  readonly framesSent?: number | null;
+  readonly framesReceived?: number | null;
+  readonly framesDecoded?: number | null;
+  readonly packetsSent?: number | null;
+  readonly packetsReceived?: number | null;
+  readonly packetsLost?: number | null;
+  readonly retransmittedPackets?: number | null;
+  readonly nackCount?: number | null;
+  readonly pliCount?: number | null;
+  readonly firCount?: number | null;
+  readonly keyFrames?: number | null;
+  readonly minBufferMs?: number | null;
+  readonly freezeCause?: VideoFreezeCause | null;
 }
 export interface MediaTelemetry {
   readonly outFpsMeasured?: boolean;
   readonly video?: readonly Readonly<VideoInterval>[];
+  readonly streams?: readonly Readonly<VideoStreamHealth>[];
+  readonly freezes?: readonly Readonly<VideoFreezeEvent>[];
+  readonly retransmittedPackets?: number;
+  readonly availableOutgoingBitrate?: number | null;
   readonly audioLossPct: number;
   readonly audioJitterMs: number;
   readonly concealedPct: number;
@@ -82,6 +156,22 @@ export interface MediaStat {
   readonly bytesReceived?: number;
   readonly packetsReceived?: number;
   readonly packetsLost?: number;
+  readonly retransmittedPacketsSent?: number;
+  readonly framesReceived?: number;
+  readonly nackCount?: number;
+  readonly pliCount?: number;
+  readonly firCount?: number;
+  readonly keyFramesEncoded?: number;
+  readonly keyFramesDecoded?: number;
+  readonly jitterBufferMinimumDelay?: number;
+  readonly rid?: string;
+  readonly codecId?: string;
+  readonly mimeType?: string;
+  readonly encoderImplementation?: string;
+  readonly powerEfficientEncoder?: boolean;
+  readonly decoderImplementation?: string;
+  readonly powerEfficientDecoder?: boolean;
+  readonly availableOutgoingBitrate?: number;
   readonly totalSamplesReceived?: number;
   readonly concealedSamples?: number;
   readonly jitterBufferDelay?: number;

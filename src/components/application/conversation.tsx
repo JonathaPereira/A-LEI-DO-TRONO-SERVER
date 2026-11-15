@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { EMOJIS } from '../../lib/chat/emojis';
 import { Avatar } from '../profiles/avatar';
 import { Attachment } from '../files/attachment';
+import { MessageText } from '../chat/message-text';
 import type { ChatMessage } from '../../types/domain';
 import { directPeople, directPerson } from '../../lib/messenger/selectors';
 import { useModel, type ApplicationServices } from './services';
@@ -98,7 +99,9 @@ function ChannelMessage({
             </button>
           )}
         </div>
-        <p>{message.text}</p>
+        <p>
+          <MessageText text={message.text} />
+        </p>
         {message.attachment && (
           <div className={styles.attachment}>
             <Attachment file={message.attachment} />
@@ -486,7 +489,9 @@ export function Conversation({ runtime }: { runtime: ApplicationServices }) {
                           <strong>{name}</strong>
                           <DateLabel value={message.ts} />
                         </div>
-                        <p>{message.text}</p>
+                        <p>
+                          <MessageText text={message.text} />
+                        </p>
                         {message.attachment && (
                           <div className={styles.attachment}>
                             <Attachment file={message.attachment} privateMessage />

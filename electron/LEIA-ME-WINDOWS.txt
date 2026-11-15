@@ -1,4 +1,10 @@
-M&N · A Lei do Trono — Windows 1.1.0
+M&N · A Lei do Trono — Windows 1.1.1
+
+Melhoria 1.1.1: operação screen share anti-microtravamentos (pareamento video/rtx no H.264,
+piso/arranque SDP balanceados contra estagnação de fila, telemetria por fluxo com diagnóstico
+de 8 causas de congelamento, recuperação direcionada por stream com cooldown sem derrubar voz/câmera/socket
+e adaptação gradual mais rápida sob congestionamento), reconhecimento de links clicáveis no chat público e DMs
+e preservação da tela da biblioteca/jogos durante atualização em segundo plano da sessão.
 
 Melhoria 1.1.0: otimização de GPU no tema natalino (compositor 100% em transform/opacity),
 redução de uso de CPU no compartilhamento de tela (prioridade H.264 por hardware no SFU,

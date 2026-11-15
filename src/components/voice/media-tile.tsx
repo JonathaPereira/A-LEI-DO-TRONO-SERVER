@@ -44,20 +44,20 @@ export function MediaTile({
     live = screen ? watching && p.screenLive : p.cameraLive;
   const docked = screen ? p.screenDock && watching : p.cameraDock;
   const host = screen ? 'screenShareGrid' : 'cameraGrid';
+  const orderIndex = snapshot.participants.findIndex((person) => person.id === p.id);
   const idle = useRef<StreamControls | null>(null);
-  useLayoutEffect(
-    () => () => {
+  useLayoutEffect(() => {
+    idle.current?.dispose();
+    idle.current = screen ? bindStreamControls(tile) : null;
+    return () => {
       idle.current?.dispose();
       idle.current = null;
-    },
-    [tile, screen],
-  );
+    };
+  }, [tile, screen]);
   useLayoutEffect(() => {
     const place = () => {
       tile.dataset.peer = p.id;
-      tile.style.order = String(
-        snapshot.participants.findIndex((person) => person.id === p.id) * 2 + (screen ? 0 : 1),
-      );
+      tile.style.order = String(orderIndex * 2 + (screen ? 0 : 1));
       tile.classList.add(screen ? 'screen-share-tile' : 'camera-tile');
       if (!screen) tile.classList.add('camera-live');
       for (const [name, on] of Object.entries({
@@ -96,12 +96,23 @@ export function MediaTile({
     };
     place();
     window.addEventListener('trono:call-hosts', place);
-    if (screen) {
-      idle.current = bindStreamControls(tile);
-      idle.current.update(!external && live && !p.collapsed && !paused);
-    }
+    idle.current?.update(!external && live && !p.collapsed && !paused);
     return () => window.removeEventListener('trono:call-hosts', place);
-  });
+  }, [
+    tile,
+    p.id,
+    p.name,
+    p.speaking,
+    p.collapsed,
+    screen,
+    live,
+    paused,
+    watching,
+    external,
+    docked,
+    host,
+    orderIndex,
+  ]);
   useLayoutEffect(
     () =>
       external

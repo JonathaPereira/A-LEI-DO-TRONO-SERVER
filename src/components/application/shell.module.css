@@ -403,6 +403,15 @@
   font-size: 14px;
   line-height: 1.55;
 }
+.message p a {
+  color: #8bc4ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+.message p a:hover {
+  color: #b8ddff;
+}
 .message .avatar {
   width: 38px;
   height: 38px;

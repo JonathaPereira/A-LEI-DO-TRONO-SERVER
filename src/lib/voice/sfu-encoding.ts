@@ -44,15 +44,15 @@ export function screenEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
     },
   ];
 }
-// Chromium's startup hint is advisory; congestion control still owns actual bandwidth.
+// Chromium's startup hint is advisory; keep floor/start bounded to avoid uplink bursts and tail-drop stalls.
 export function screenStartupOffer(
   offer: RTCSessionDescriptionInit,
   bitrate: number,
 ): RTCSessionDescriptionInit {
   if (!offer?.sdp) return offer;
   const max = Math.round(bitrate / 1000),
-    min = Math.min(2500, Math.max(800, Math.round(max * 0.3))),
-    start = Math.min(7500, Math.max(min, Math.round(max * 0.7)));
+    min = Math.min(900, Math.max(300, Math.round(max * 0.1))),
+    start = Math.min(3200, Math.max(min, Math.round(max * 0.4)));
   const parts = offer.sdp.split(/(?=m=)/);
   return {
     type: offer.type,
@@ -106,13 +106,32 @@ export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined
     const sender = typeof RTCRtpSender !== 'undefined' ? RTCRtpSender : null;
     const codecs = sender?.getCapabilities?.('video')?.codecs;
     if (!codecs?.length) return false;
-    const h264 = codecs.filter((c) => c.mimeType?.toLowerCase() === 'video/h264');
-    if (!h264.length) return false;
-    // Constrained Baseline (42e0...) works across hardware encoders/decoders
-    // while retaining the full fallback list (other H.264 profiles, RTX, VP8/VP9/AV1).
-    const baseline = h264.filter((c) => /profile-level-id=42e0/i.test(c.sdpFmtpLine || ''));
-    const orderedH264 = [...baseline, ...h264.filter((c) => !baseline.includes(c))];
-    transceiver.setCodecPreferences([...orderedH264, ...codecs.filter((c) => !h264.includes(c))]);
+    // Keep paired video/rtx capabilities bound to each codec so NACK/RTX stays active.
+    const groups: RTCRtpCodec[][] = [];
+    for (let index = 0; index < codecs.length; index++) {
+      const codec = codecs[index];
+      const next = codecs[index + 1];
+      if (
+        codec.mimeType?.toLowerCase() !== 'video/rtx' &&
+        next?.mimeType?.toLowerCase() === 'video/rtx'
+      ) {
+        groups.push([codec, next]);
+        index++;
+      } else {
+        groups.push([codec]);
+      }
+    }
+    const h264Groups = groups.filter((g) => g[0].mimeType?.toLowerCase() === 'video/h264');
+    if (!h264Groups.length) return false;
+    const baseline = h264Groups.filter((g) =>
+      /profile-level-id=42e0/i.test(g[0].sdpFmtpLine || ''),
+    );
+    const ordered = [
+      ...baseline,
+      ...h264Groups.filter((g) => !baseline.includes(g)),
+      ...groups.filter((g) => !h264Groups.includes(g)),
+    ].flat();
+    transceiver.setCodecPreferences(ordered);
     return true;
   } catch {
     return false;

@@ -104,6 +104,19 @@ export function diagnosticReport({
             'encodeMs',
             'sendDelayMs',
             'bufferMs',
+            'minBufferMs',
+            'framesEncoded',
+            'framesSent',
+            'framesReceived',
+            'framesDecoded',
+            'packetsSent',
+            'packetsReceived',
+            'packetsLost',
+            'retransmittedPackets',
+            'nackCount',
+            'pliCount',
+            'firCount',
+            'keyFrames',
           ]) {
             const value = item[key];
             row[key] =
@@ -111,8 +124,25 @@ export function diagnosticReport({
                 ? Math.round(value * 100) / 100
                 : null;
           }
+          if (typeof item.freezeCause === 'string' && item.freezeCause)
+            row.freezeCause = safe(item.freezeCause);
           return row;
         }),
+      freezes: (Array.isArray(telemetry?.freezes) ? telemetry.freezes : [])
+        .slice(-16)
+        .filter(
+          (item) =>
+            item && typeof item === 'object' && ['inbound', 'outbound'].includes(item.direction),
+        )
+        .map((item) => ({
+          direction: item.direction,
+          durationMs:
+            typeof item.durationMs === 'number' && Number.isFinite(item.durationMs)
+              ? Math.round(Math.max(0, item.durationMs))
+              : 0,
+          recovered: !!item.recovered,
+          cause: typeof item.cause === 'string' && item.cause ? safe(item.cause) : null,
+        })),
       network: {
         state: safe(telemetry?.pcState),
         route: safe(telemetry?.iceRoute),

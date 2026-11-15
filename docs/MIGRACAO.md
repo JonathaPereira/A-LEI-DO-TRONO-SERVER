@@ -1475,6 +1475,11 @@ e `--enable-zero-copy` no Electron para repassar superfícies DXGI diretamente a
 codificador. Cobertura ampliada em `voice-quality.cjs`, `sfu-session.cjs` e `p2p-peers.cjs`;
 1496 testes aprovados, build e format:check preservados sem regressões.
 
+Operação Screen Share, Links no Chat e Estabilidade da Biblioteca de Jogos (1.1.1):
+1. Reconhecimento seguro de links HTTP/HTTPS/www no corpo de mensagens públicas e privadas (`lib/chat/links.ts`, `components/chat/message-text.tsx`) preservando CSP/`rel="noopener noreferrer"`.
+2. Preservação da tela ativa em jogos/biblioteca (`lib/navigation/portal.ts` `identityChanged`) durante refreshes silenciosos de sessão da mesma conta.
+3. Eliminação de microtravamentos no screen share: `prioritizeH264` mantendo `video/rtx` pareado (`sfu-encoding.ts`), dicas SDP `x-google-min-bitrate`/`start-bitrate` balanceadas contra estagnação de fila, remoção de loops de `useLayoutEffect` e vazamento de `bindStreamControls` em `CallStageView`/`MediaTile`, proteção contra `setParameters` redundante em `quality.ts`, telemetria por fluxo com diagnóstico de 8 causas em `telemetry.ts` (`diagnostic-report.ts`), recuperação pontual com cooldown/limite em `video-recovery.ts` + tolerância a `disconnected` (> 4,5 s) em `sfu-session.ts`, adaptação de `CallStability` a congestionamento/congelamentos em 6 s (`quality-policy.ts`) e aceitação de 18 Mbps (com teto de política) no `set-screen-bitrate` do servidor (`server/realtime-sfu.ts`).
+
 Operação Renascimento — Marco 1.0 Concluído e Publicado:
 Conclusão integral dos 103 incrementos estruturais da Operação Renascimento nos três
 jogos e no comunicador integrado:

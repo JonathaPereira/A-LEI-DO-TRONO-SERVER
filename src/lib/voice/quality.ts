@@ -206,11 +206,21 @@ export function createCallQuality(options: QualityOptions) {
               h: Math.max(180000, Math.round(q.videoBitrate * 0.42)),
               q: Math.max(90000, Math.round(q.videoBitrate * 0.16)),
             };
+            let changed = false;
             for (const e of parameters.encodings) {
-              e.maxBitrate = (e.rid && byRid[e.rid]) || q.videoBitrate;
-              e.maxFramerate = q.camera.fps;
+              const nextBitrate = (e.rid && byRid[e.rid]) || q.videoBitrate;
+              const nextFps = q.camera.fps;
+              if (e.maxBitrate !== nextBitrate || e.maxFramerate !== nextFps) changed = true;
+              e.maxBitrate = nextBitrate;
+              e.maxFramerate = nextFps;
             }
+            if (!changed) return;
           } else {
+            if (
+              parameters.encodings[0].maxBitrate === q.videoBitrate &&
+              parameters.encodings[0].maxFramerate === q.camera.fps
+            )
+              return;
             parameters.encodings[0].maxBitrate = q.videoBitrate;
             parameters.encodings[0].maxFramerate = q.camera.fps;
           }

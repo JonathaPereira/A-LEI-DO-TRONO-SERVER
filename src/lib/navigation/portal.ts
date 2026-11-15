@@ -102,6 +102,8 @@ export function createPortal(options: Options) {
   });
   let started = false,
     disposed = false,
+    initializedIdentity = false,
+    lastActorKey = '',
     epoch = 0,
     checkVersion = 0,
     navigation = 0;
@@ -158,19 +160,25 @@ export function createPortal(options: Options) {
     return feedback;
   }
   function identityChanged() {
-    epoch++;
-    cancelNameCheck();
-    cancelNavigation();
     const { user, guest } = options.identity();
+    const nextActorKey = user ? `user:${user.id}` : guest ? `guest:${guest.id}` : '';
+    const actorChanged = !initializedIdentity || nextActorKey !== lastActorKey;
+    initializedIdentity = true;
+    lastActorKey = nextActorKey;
     const name = safePlayerName(user?.nickname || guest?.nickname || '');
+    if (actorChanged || name !== state.name) {
+      epoch++;
+      cancelNameCheck();
+    }
+    if (actorChanged) {
+      cancelNavigation();
+    }
     // Publish one snapshot: subscribers must never see the old account's feedback.
     update({
       name,
       label: guest ? `${name} · Convidado` : name || 'Visitante',
       readOnly: !!user || !guest,
-      busy: false,
-      entryStatus: '',
-      creditsOpen: false,
+      ...(actorChanged ? { busy: false, entryStatus: '', creditsOpen: false } : {}),
       feedback: Object.freeze({
         available: false,
         message: user
@@ -180,7 +188,7 @@ export function createPortal(options: Options) {
             : 'Entre ou jogue como convidado',
       }),
     });
-    if (options.entry === 'community') {
+    if (options.entry === 'community' && (actorChanged || state.screen === 'portalScreen')) {
       if (user) void openVoice();
       else if (!guest) showPortal();
     }

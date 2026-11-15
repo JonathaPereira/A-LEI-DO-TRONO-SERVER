@@ -228,7 +228,7 @@ test('screen uses dedicated single-layer encoding with native 60 FPS and min/sta
   ]);
   assert.equal(h.settings.screen.fps, 60);
   const offer = h.pcs[0].localDescription.sdp;
-  assert(offer.includes('x-google-min-bitrate=2400;x-google-start-bitrate=5600;x-google-max-bitrate=8000'));
+  assert(offer.includes('x-google-min-bitrate=800;x-google-start-bitrate=3200;x-google-max-bitrate=8000'));
   assert(offer.includes('foo=bar'));
   assert(!offer.includes('start-bitrate=100'));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));
@@ -742,4 +742,53 @@ test('screen publication prioritizes H264 hardware codecs while retaining fallba
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }
+});
+
+test('prioritizeH264 keeps paired video/rtx directly attached to each codec', async () => {
+  const { prioritizeH264 } = await import('../src/lib/voice/sfu-encoding.ts');
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: () => ({
+        codecs: [
+          { mimeType: 'video/VP8', clockRate: 90000 },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=96' },
+          { mimeType: 'video/H264', clockRate: 90000, sdpFmtpLine: 'profile-level-id=42e01f' },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=102' },
+        ],
+      }),
+    };
+    let preferred = null;
+    prioritizeH264({ setCodecPreferences: (c) => (preferred = c) });
+    assert.equal(preferred[0].mimeType, 'video/H264');
+    assert.equal(preferred[1].mimeType, 'video/rtx');
+    assert.equal(preferred[1].sdpFmtpLine, 'apt=102');
+    assert.equal(preferred[2].mimeType, 'video/VP8');
+    assert.equal(preferred[3].mimeType, 'video/rtx');
+  } finally {
+    globalThis.RTCRtpSender = originalSender;
+  }
+});
+
+test('disconnected SFU subscription recovers cleanly only if disconnected exceeds 4500 ms', async (t) => {
+  const h = await setup(t);
+  h.session.setPublications([metadata('screen', 'p1')]);
+  await h.session.syncSubscriptions();
+  const sub = h.session.subscriptions.get('peer:screen');
+  const subPc = sub.pc;
+  // Brief flicker recovers within 4500ms -> no teardown.
+  subPc.connectionState = 'disconnected';
+  subPc.onconnectionstatechange?.();
+  await h.advance(3000);
+  subPc.connectionState = 'connected';
+  subPc.onconnectionstatechange?.();
+  await h.advance(3000);
+  assert.equal(h.session.subscriptions.get('peer:screen'), sub);
+
+  // Sustained disconnected > 4500ms closes only that stale subscription and retries cleanly.
+  subPc.connectionState = 'disconnected';
+  subPc.onconnectionstatechange?.();
+  await h.advance(4600);
+  assert.equal(subPc.connectionState, 'closed');
+  assert.equal(subPc.closes, 1);
 });

@@ -1,5 +1,5 @@
 'use client';
-import { useLayoutEffect, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { Portal } from '../../lib/navigation/portal';
 import { ParticipantCard } from './participant-card';
@@ -20,6 +20,14 @@ export function CallStageView({ runtime, hosts }: { runtime: StageRuntime; hosts
   const portal = (runtime as StageRuntime & { TronoPortal: Portal }).TronoPortal;
   const route = useSyncExternalStore(portal.subscribe, portal.getSnapshot, portal.getSnapshot);
   const external = !['setupScreen', 'roomScreen', 'gameScreen'].includes(route.screen);
+  const recoveryKey = state.joined
+    ? state.participants
+        .map(
+          (p) =>
+            `${p.id}:${p.camera && !p.hiddenCamera && !p.cameraLive ? 1 : 0}:${p.screen && p.watching && !p.screenLive ? 1 : 0}`,
+        )
+        .join(',')
+    : '';
   useLayoutEffect(() => {
     for (const [name, on] of Object.entries({
       'has-camera': state.hasCamera,
@@ -38,8 +46,21 @@ export function CallStageView({ runtime, hosts }: { runtime: StageRuntime; hosts
     hosts.cameras.classList.toggle('one-camera', state.joined && state.cameras.length === 1);
     hosts.screens.classList.toggle('hidden', !state.joined || !state.community);
     hosts.screens.classList.toggle('screen-share-empty', !state.screens.length);
+  }, [
+    hosts,
+    state.hasCamera,
+    state.hasScreen,
+    state.screensLayout,
+    state.idle,
+    state.joined,
+    state.cameraDocked,
+    state.cameras.length,
+    state.community,
+    state.screens.length,
+  ]);
+  useEffect(() => {
     client.recoverVisible();
-  });
+  }, [client, recoveryKey]);
   const roster = state.joined ? (
     state.participants.map((p) => (
       <ParticipantCard

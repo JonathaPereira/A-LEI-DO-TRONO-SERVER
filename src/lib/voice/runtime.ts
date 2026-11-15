@@ -33,6 +33,7 @@ import { createVoiceCall } from './call-lifecycle';
 import { createVoiceRoster } from './roster';
 import { createVoiceTransport } from './transport';
 import { createSfuSession } from './sfu-session';
+import { createVideoFreezeRecovery } from './video-recovery';
 import { QUALITY_ORDER, SCREEN_FORMATS } from './quality-policy';
 import type { SocialFacade, VoiceRuntimeWindow } from './runtime-ports';
 import type { VoiceMediaKind, VoicePeerConnection } from '../../types/voice';
@@ -380,6 +381,86 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     onChange: updateAudioRecoveryUI,
   });
 
+  const videoFreezeRecovery = createVideoFreezeRecovery({
+    active: () => voiceCall.getSnapshot().joined,
+    generation: () => voiceCall.getSnapshot().generation,
+    isSfu: () => transportIsSfu(),
+    async nudgePublisher(kind) {
+      const track =
+        kind === 'screen'
+          ? screenCapture.getCapture()?.outgoing.getVideoTracks()[0]
+          : cameraCapture.getSnapshot().capture?.track;
+      if (!track || track.readyState !== 'live') return false;
+      let nudged = false;
+      if (transportIsSfu()) {
+        const pub = sfuSession.publications.get(kind);
+        if (pub?.sender?.replaceTrack && pub.sender.track === track) {
+          await pub.sender.replaceTrack(track);
+          await callQuality.applySender(pub.sender, kind);
+          nudged = true;
+        }
+      } else {
+        for (const pc of peers.values()) {
+          const tr = kind === 'screen' ? pc._tronoScreenTransceiver : pc._tronoVideoTransceiver;
+          if (tr?.sender?.replaceTrack && tr.sender.track === track) {
+            await tr.sender.replaceTrack(track);
+            await callQuality.applySender(tr.sender, kind);
+            nudged = true;
+          }
+        }
+      }
+      return nudged;
+    },
+    async recoverPublisher(kind) {
+      if (!voiceCall.getSnapshot().joined) return false;
+      if (transportIsSfu()) {
+        await sfuSession.recoverPublication(
+          kind,
+          Object.assign(new Error('Transmissão de vídeo interrompida.'), {
+            code: 'SFU_VIDEO_STALLED',
+          }),
+        );
+        return true;
+      }
+      for (const id of peers.keys()) p2pPeers.negotiate(id, false, true);
+      return peers.size > 0;
+    },
+    async refreshSfuSubscription(peerId, kind) {
+      const key = sfuKey(peerId, kind);
+      const sub = sfuSubscriptions.get(key);
+      const pub = sfuSession.getPublications().find((p) => sfuKey(p.ownerId, p.kind) === key);
+      if (!sub || !pub?.rids.length) return false;
+      await sfuSession.setLayer(key, preferredRidForMedia(kind, false), true);
+      return true;
+    },
+    async recoverSfuSubscription(peerId, kind) {
+      if (!voiceCall.getSnapshot().joined || !transportIsSfu()) return false;
+      const key = sfuKey(peerId, kind);
+      const generation = sfuSession.getGeneration();
+      await sfuSession.closeSubscription(key);
+      if (
+        !voiceCall.getSnapshot().joined ||
+        !transportIsSfu() ||
+        generation !== sfuSession.getGeneration()
+      )
+        return false;
+      await refreshSfuPublicationList();
+      if (
+        !voiceCall.getSnapshot().joined ||
+        !transportIsSfu() ||
+        generation !== sfuSession.getGeneration()
+      )
+        return false;
+      void syncSfuSubscriptions();
+      return true;
+    },
+    async recoverP2pMedia(peerId, iceRestart) {
+      if (!voiceCall.getSnapshot().joined || transportIsSfu() || !peers.has(peerId)) return false;
+      p2pPeers.negotiate(peerId, iceRestart, true);
+      return true;
+    },
+  });
+
   const voiceTelemetry: ReturnType<typeof createVoiceTelemetry> = createVoiceTelemetry({
     protection: storage.getItem('mnVoiceProtection') !== '0',
     getSettings: () => ({
@@ -400,15 +481,19 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       ? (active) => setVoiceProtection.call(desktop, active)
       : undefined,
     onSample: async (snapshot, isCurrent) => {
-      if (!isCurrent() || !callQuality.sample(snapshot, performance.now())) return;
-      await applyQualityToLiveMedia();
-      if (isCurrent())
-        setStatus(
-          callQuality.getSnapshot().adaptation.level
-            ? 'Vídeo adaptado para aliviar ' + callQuality.getSnapshot().adaptation.reason + '.'
-            : 'Qualidade de vídeo restaurada.',
-          'ok',
-        );
+      if (!isCurrent()) return;
+      const adapted = callQuality.sample(snapshot, performance.now());
+      if (adapted) {
+        await applyQualityToLiveMedia();
+        if (isCurrent())
+          setStatus(
+            callQuality.getSnapshot().adaptation.level
+              ? 'Vídeo adaptado para aliviar ' + callQuality.getSnapshot().adaptation.reason + '.'
+              : 'Qualidade de vídeo restaurada.',
+            'ok',
+          );
+      }
+      if (isCurrent()) await videoFreezeRecovery.inspect(snapshot);
     },
     onChange: refreshDiagnostics,
   });
@@ -564,6 +649,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       () => window.TronoAndroid?.stopVoice(),
       realtime.cancelIce,
       speakingIndicators.reset,
+      videoFreezeRecovery.reset,
       voiceTelemetry.reset,
       cameraCapture.stop,
       closeAllPeers,

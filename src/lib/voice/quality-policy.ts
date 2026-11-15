@@ -82,16 +82,40 @@ export class CallStability {
       return changed;
     }
     const cpu = t.limiter === 'cpu' || (t.eventLoopLagMs ?? 0) >= 180;
+    const videoFreeze =
+      (t.streams || []).some(
+        (s) =>
+          s.stalled &&
+          (s.cause === 'transport-congestion' ||
+            s.cause === 'encoder-stalled' ||
+            s.cause === 'send-stalled' ||
+            s.cause === 'receiver-not-decoding'),
+      ) ||
+      (t.video || []).some(
+        (v) => (v.freezeCount ?? 0) > 0 && ((v.sendDelayMs ?? 0) >= 50 || (v.encodeMs ?? 0) >= 28),
+      );
     const network =
       (t.audioLossPct ?? 0) >= 5 ||
+      (t.lossPct ?? 0) >= 5 ||
+      (t.retransmittedPackets ?? 0) >= 8 ||
       (t.audioJitterMs ?? 0) >= 70 ||
       (t.rttMs ?? 0) >= 350 ||
-      t.limiter === 'bandwidth';
+      t.limiter === 'bandwidth' ||
+      videoFreeze;
+    const stepDownDelay = videoFreeze ? 6000 : 12000;
     if (cpu || network) {
       this.goodSince = null;
       if (this.badSince === null) this.badSince = stamp;
-      this.currentReason = cpu ? 'sobrecarga local' : 'instabilidade de rede';
-      if (stamp - this.badSince >= 12000 && stamp - this.changedAt >= 20000 && this.level < 2) {
+      this.currentReason = cpu
+        ? 'sobrecarga local'
+        : videoFreeze
+          ? 'congelamentos no vídeo'
+          : 'instabilidade de rede';
+      if (
+        stamp - this.badSince >= stepDownDelay &&
+        stamp - this.changedAt >= 20000 &&
+        this.level < 2
+      ) {
         this.currentLevel++;
         this.changedAt = stamp;
         this.badSince = stamp;

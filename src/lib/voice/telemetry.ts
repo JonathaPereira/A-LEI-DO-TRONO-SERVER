@@ -1,7 +1,10 @@
 import type { VoicePeerConnection } from '../../types/voice';
 import type {
   MediaStat,
+  VideoFreezeCause,
+  VideoFreezeEvent,
   VideoInterval,
+  VideoStreamHealth,
   MediaTelemetry,
   PlayoutMetrics,
   ReceptionHistory,
@@ -36,18 +39,37 @@ const videoCounterKeys = [
   'totalEncodeTime',
   'framesDecoded',
   'totalDecodeTime',
+  'framesReceived',
   'framesSent',
   'packetsSent',
+  'packetsReceived',
+  'packetsLost',
+  'retransmittedPacketsSent',
+  'bytesSent',
+  'bytesReceived',
   'totalPacketSendDelay',
   'framesDropped',
   'freezeCount',
   'totalFreezesDuration',
   'jitterBufferDelay',
   'jitterBufferEmittedCount',
+  'jitterBufferMinimumDelay',
+  'nackCount',
+  'pliCount',
+  'firCount',
+  'keyFramesEncoded',
+  'keyFramesDecoded',
 ] as const;
 type VideoCounter = (typeof videoCounterKeys)[number];
 interface PeerCounters {
-  video: Map<string, { stamp: number; values: Partial<Record<VideoCounter, number>> }>;
+  video: Map<
+    string,
+    {
+      stamp: number;
+      zeroProgressStreak: number;
+      values: Partial<Record<VideoCounter, number>>;
+    }
+  >;
   rates: Map<string, { bytes: number; stamp: number }>;
   losses: Map<string, { received: number; lost: number }>;
   audio: Map<string, { concealed: number; samples: number; delay: number; emitted: number }>;
@@ -112,6 +134,21 @@ export function createVoiceTelemetry(options: Options) {
   let rowOwners: readonly (string | undefined)[] = Object.freeze([]);
   let playout: Readonly<PlayoutMetrics> | null = null;
   const history: ReceptionHistory[] = [];
+  const activeFreezes = new Map<
+    string,
+    {
+      streamKey: string;
+      pcKey: string;
+      direction: 'inbound' | 'outbound';
+      mid: string | null;
+      rid: string | null;
+      trackId: string | null;
+      startedAt: number;
+      lastSeenAt: number;
+      cause: VideoFreezeCause | null;
+    }
+  >();
+  const freezeHistory: VideoFreezeEvent[] = [];
 
   function refreshRows() {
     rows = Object.freeze(reception.snapshot().map((row) => Object.freeze(row)));
@@ -190,11 +227,94 @@ export function createVoiceTelemetry(options: Options) {
       lost = next.lost - previous.lost;
     return { lost, total: received + lost };
   }
+  function findVideoTrack(
+    pc: VoicePeerConnection,
+    stat: MediaStat,
+    direction: 'inbound' | 'outbound',
+  ): MediaStreamTrack | undefined {
+    const transceivers = pc.getTransceivers?.() || [];
+    if (direction === 'outbound') {
+      const senderTrack =
+        transceivers.find(
+          (tr) =>
+            (stat.trackIdentifier && tr.sender?.track?.id === stat.trackIdentifier) ||
+            (stat.mid != null &&
+              String(tr.mid) === String(stat.mid) &&
+              tr.sender?.track?.kind === 'video'),
+        )?.sender?.track ??
+        transceivers.find((tr) => tr.sender?.track?.kind === 'video')?.sender?.track;
+      return senderTrack ?? options.getLocalVideo();
+    }
+    return (
+      transceivers.find(
+        (tr) =>
+          tr.receiver?.track?.kind === 'video' &&
+          ((stat.trackIdentifier && tr.receiver.track.id === stat.trackIdentifier) ||
+            (stat.mid != null && String(tr.mid) === String(stat.mid))),
+      )?.receiver?.track ??
+      transceivers.find((tr) => tr.receiver?.track?.kind === 'video')?.receiver?.track
+    );
+  }
+  function recordFreezeTransition(
+    streamKey: string,
+    pcKey: string,
+    direction: 'inbound' | 'outbound',
+    stat: MediaStat,
+    track: MediaStreamTrack | undefined,
+    stamp: number,
+    stalled: boolean,
+    cause: VideoFreezeCause | null,
+  ): number {
+    const ongoing = activeFreezes.get(streamKey);
+    if (stalled) {
+      if (ongoing) {
+        ongoing.lastSeenAt = stamp;
+        if (!ongoing.cause && cause) ongoing.cause = cause;
+        return Math.max(0, stamp - ongoing.startedAt);
+      }
+      activeFreezes.set(streamKey, {
+        streamKey,
+        pcKey,
+        direction,
+        mid: stat.mid != null ? String(stat.mid) : null,
+        rid: stat.rid ?? null,
+        trackId: track?.id || stat.trackIdentifier || null,
+        startedAt: stamp,
+        lastSeenAt: stamp,
+        cause,
+      });
+      return 0;
+    }
+    if (ongoing) {
+      activeFreezes.delete(streamKey);
+      freezeHistory.push(
+        Object.freeze({
+          streamKey: ongoing.streamKey,
+          pcKey: ongoing.pcKey,
+          direction: ongoing.direction,
+          mid: ongoing.mid,
+          rid: ongoing.rid,
+          trackId: ongoing.trackId,
+          startedAt: ongoing.startedAt,
+          endedAt: stamp,
+          durationMs: Math.max(0, stamp - ongoing.startedAt),
+          recovered: true,
+          cause: ongoing.cause,
+        }),
+      );
+      if (freezeHistory.length > 32) freezeHistory.shift();
+    }
+    return 0;
+  }
   function sampleVideo(
+    pcKey: string,
+    pc: VoicePeerConnection,
     state: PeerCounters,
     stat: MediaStat,
     stamp: number,
-  ): Readonly<VideoInterval> | null {
+    pcRttMs: number | null,
+    codecMime: string | null,
+  ): { interval: Readonly<VideoInterval>; health: Readonly<VideoStreamHealth> } | null {
     const previous = state.video.get(stat.id);
     if (previous && stamp <= previous.stamp) return null;
     const values: Partial<Record<VideoCounter, number>> = {};
@@ -202,7 +322,6 @@ export function createVoiceTelemetry(options: Options) {
       const value = stat[key];
       if (typeof value === 'number' && Number.isFinite(value) && value >= 0) values[key] = value;
     }
-    state.video.set(stat.id, { stamp, values });
     const delta = (key: VideoCounter): number | null => {
       const before = previous?.values[key],
         after = values[key];
@@ -213,29 +332,247 @@ export function createVoiceTelemetry(options: Options) {
         frames = delta(count);
       return elapsed !== null && frames !== null && frames > 0 ? (elapsed * 1000) / frames : null;
     };
+    const direction: 'inbound' | 'outbound' = stat.type === 'outbound-rtp' ? 'outbound' : 'inbound';
+    const track = findVideoTrack(pc, stat, direction);
+    const elapsedMs = previous ? Math.max(1, stamp - previous.stamp) : 0;
     const freezes = delta('totalFreezesDuration');
-    const frameCount = delta(stat.type === 'outbound-rtp' ? 'framesEncoded' : 'framesDecoded');
+    const freezeCount = delta('freezeCount');
+    const framesEncoded = delta('framesEncoded');
+    const framesSent = delta('framesSent');
+    const framesReceived = delta('framesReceived');
+    const framesDecoded = delta('framesDecoded');
+    const packetsSent = delta('packetsSent');
+    const packetsReceived = delta('packetsReceived');
+    const packetsLost = delta('packetsLost');
+    const retransmittedPackets = delta('retransmittedPacketsSent');
+    const bytesDelta = delta(direction === 'outbound' ? 'bytesSent' : 'bytesReceived');
+    const droppedFrames = delta('framesDropped');
+    const nackCount = delta('nackCount');
+    const pliCount = delta('pliCount');
+    const firCount = delta('firCount');
+    const keyFrames = delta(direction === 'outbound' ? 'keyFramesEncoded' : 'keyFramesDecoded');
+    const encodeMs = duration('totalEncodeTime', 'framesEncoded');
+    const decodeMs = duration('totalDecodeTime', 'framesDecoded');
+    const sendDelayMs = duration('totalPacketSendDelay', 'packetsSent');
+    const bufferMs = duration('jitterBufferDelay', 'jitterBufferEmittedCount');
+    const minBufferMs = duration('jitterBufferMinimumDelay', 'jitterBufferEmittedCount');
+    const frameCount = direction === 'outbound' ? framesEncoded : framesDecoded;
     const fps =
       typeof stat.framesPerSecond === 'number' &&
       Number.isFinite(stat.framesPerSecond) &&
       stat.framesPerSecond >= 0
         ? stat.framesPerSecond
         : previous && frameCount !== null
-          ? (frameCount * 1000) / (stamp - previous.stamp)
+          ? (frameCount * 1000) / elapsedMs
           : null;
-    return Object.freeze({
-      direction: stat.type === 'outbound-rtp' ? 'outbound' : 'inbound',
+    const pcState = pc.connectionState || '';
+    const iceState = pc.iceConnectionState || '';
+    const transportDown =
+      pcState === 'disconnected' ||
+      pcState === 'failed' ||
+      pcState === 'closed' ||
+      iceState === 'disconnected' ||
+      iceState === 'failed';
+    const limiter = stat.qualityLimitationReason || 'none';
+    const priorZeroStreak = previous?.zeroProgressStreak ?? 0;
+
+    let stalled = false;
+    let cause: VideoFreezeCause | null = null;
+    let zeroProgress = false;
+
+    if (previous) {
+      if (direction === 'outbound') {
+        zeroProgress = (framesEncoded ?? 0) === 0 || (packetsSent ?? 0) === 0;
+        const captureDown =
+          !!track &&
+          (track.readyState !== 'live' || track.muted === true || track.enabled === false);
+        const congested =
+          transportDown ||
+          (limiter === 'bandwidth' && ((sendDelayMs ?? 0) >= 60 || (framesSent ?? 0) === 0)) ||
+          ((packetsSent ?? 0) > 0 &&
+            (retransmittedPackets ?? 0) >= Math.max(5, (packetsSent ?? 0) * 0.15)) ||
+          ((pcRttMs ?? 0) >= 400 && (framesSent ?? 0) === 0);
+
+        if (elapsedMs >= 500 && framesEncoded === 0 && captureDown) {
+          stalled = true;
+          cause = 'capture-interrupted';
+        } else if (
+          elapsedMs >= 500 &&
+          (framesEncoded ?? 0) > 0 &&
+          ((framesSent ?? 0) === 0 || (packetsSent ?? 0) === 0 || (bytesDelta ?? 0) === 0)
+        ) {
+          stalled = true;
+          cause = congested ? 'transport-congestion' : 'send-stalled';
+        } else if (transportDown && ((framesSent ?? 0) === 0 || fps === 0)) {
+          stalled = true;
+          cause = 'transport-congestion';
+        } else if (
+          elapsedMs >= 500 &&
+          framesEncoded === 0 &&
+          !captureDown &&
+          (limiter === 'cpu' ||
+            (droppedFrames ?? 0) > 0 ||
+            (pliCount ?? 0) > 0 ||
+            (firCount ?? 0) > 0 ||
+            ((nackCount ?? 0) > 3 && (framesSent ?? 0) === 0))
+        ) {
+          stalled = true;
+          cause = 'encoder-stalled';
+        } else if (congested && ((framesSent ?? 0) === 0 || fps === 0)) {
+          stalled = true;
+          cause = 'transport-congestion';
+        }
+      } else {
+        const pktDelta = packetsReceived ?? 0;
+        const lossDelta = packetsLost ?? 0;
+        zeroProgress = pktDelta === 0 && (framesDecoded ?? 0) === 0;
+        const rxLossPct =
+          pktDelta + lossDelta > 0 ? (lossDelta / (pktDelta + lossDelta)) * 100 : null;
+        const congested =
+          (rxLossPct !== null && rxLossPct >= 5) ||
+          (lossDelta > 0 &&
+            ((framesDecoded ?? 0) === 0 || (freezeCount ?? 0) > 0) &&
+            (rxLossPct ?? 0) >= 2) ||
+          ((pcRttMs ?? 0) >= 350 && ((freezeCount ?? 0) > 0 || (framesDecoded ?? 0) === 0));
+        const trackEnded = track?.readyState === 'ended';
+        const trackMuted = track?.muted === true;
+
+        if (
+          trackEnded ||
+          pcState === 'failed' ||
+          pcState === 'closed' ||
+          (transportDown && pktDelta === 0 && !congested)
+        ) {
+          stalled = true;
+          cause = 'subscription-interrupted';
+        } else if (transportDown && ((framesDecoded ?? 0) === 0 || (freezeCount ?? 0) > 0)) {
+          stalled = true;
+          cause =
+            congested || pcState === 'disconnected'
+              ? 'transport-congestion'
+              : 'subscription-interrupted';
+        } else if (
+          elapsedMs >= 500 &&
+          framesDecoded === 0 &&
+          ((pktDelta >= 3 && (bytesDelta ?? 0) >= 1200) || (framesReceived ?? 0) >= 2)
+        ) {
+          stalled = true;
+          cause = congested ? 'transport-congestion' : 'receiver-not-decoding';
+        } else if (
+          pcKey.startsWith('sfu') &&
+          elapsedMs >= 500 &&
+          pktDelta === 0 &&
+          (bytesDelta ?? 0) === 0 &&
+          !trackEnded &&
+          (trackMuted || (pliCount ?? 0) > 0 || (firCount ?? 0) > 0 || priorZeroStreak >= 1)
+        ) {
+          stalled = true;
+          cause = congested ? 'transport-congestion' : 'sfu-forwarding-stalled';
+        } else if ((framesDecoded ?? 0) > 0 && ((freezeCount ?? 0) > 0 || (freezes ?? 0) > 0)) {
+          stalled = true;
+          cause = congested ? 'transport-congestion' : 'presentation-frozen';
+        } else if ((freezeCount ?? 0) > 0 || (freezes ?? 0) > 0) {
+          stalled = true;
+          cause = null;
+        }
+      }
+    }
+
+    state.video.set(stat.id, {
+      stamp,
+      zeroProgressStreak: previous && zeroProgress ? priorZeroStreak + 1 : 0,
+      values,
+    });
+
+    const streamKey = `${pcKey}:${stat.id}`;
+    const stallMs = previous
+      ? recordFreezeTransition(streamKey, pcKey, direction, stat, track, stamp, stalled, cause)
+      : 0;
+    const packetsDelta = direction === 'outbound' ? packetsSent : packetsReceived;
+    const lossPct =
+      direction === 'inbound' &&
+      packetsReceived !== null &&
+      packetsLost !== null &&
+      packetsReceived + packetsLost > 0
+        ? (packetsLost / (packetsReceived + packetsLost)) * 100
+        : null;
+    const bitrateBps =
+      bytesDelta !== null && elapsedMs > 0 ? (bytesDelta * 8000) / elapsedMs : null;
+
+    const interval = Object.freeze({
+      direction,
       fps,
       width: number(stat.frameWidth),
       height: number(stat.frameHeight),
-      freezeCount: delta('freezeCount'),
+      freezeCount,
       freezeMs: freezes === null ? null : freezes * 1000,
-      droppedFrames: delta('framesDropped'),
-      decodeMs: duration('totalDecodeTime', 'framesDecoded'),
-      encodeMs: duration('totalEncodeTime', 'framesEncoded'),
-      sendDelayMs: duration('totalPacketSendDelay', 'packetsSent'),
-      bufferMs: duration('jitterBufferDelay', 'jitterBufferEmittedCount'),
+      droppedFrames,
+      decodeMs,
+      encodeMs,
+      sendDelayMs,
+      bufferMs,
+      framesEncoded: direction === 'outbound' ? framesEncoded : null,
+      framesSent: direction === 'outbound' ? framesSent : null,
+      framesReceived: direction === 'inbound' ? framesReceived : null,
+      framesDecoded: direction === 'inbound' ? framesDecoded : null,
+      packetsSent: direction === 'outbound' ? packetsSent : null,
+      packetsReceived: direction === 'inbound' ? packetsReceived : null,
+      packetsLost: direction === 'inbound' ? packetsLost : null,
+      retransmittedPackets: direction === 'outbound' ? retransmittedPackets : null,
+      nackCount,
+      pliCount,
+      firCount,
+      keyFrames,
+      minBufferMs,
+      freezeCause: cause,
     });
+
+    const health = Object.freeze({
+      streamKey,
+      pcKey,
+      direction,
+      mid: stat.mid != null ? String(stat.mid) : null,
+      rid: stat.rid ?? null,
+      trackId: track?.id || stat.trackIdentifier || null,
+      pcState,
+      iceState,
+      width: number(stat.frameWidth),
+      height: number(stat.frameHeight),
+      fps,
+      bitrateBps,
+      lossPct,
+      packetsDelta,
+      packetsLost: direction === 'inbound' ? packetsLost : null,
+      retransmittedPackets: direction === 'outbound' ? retransmittedPackets : null,
+      sendDelayMs,
+      encodeMs,
+      decodeMs,
+      bufferMs,
+      minBufferMs,
+      nackCount,
+      pliCount,
+      firCount,
+      keyFrames,
+      freezeCount,
+      stalled,
+      stallMs,
+      cause,
+      codec: codecMime,
+      implementation:
+        direction === 'outbound'
+          ? (stat.encoderImplementation ?? null)
+          : (stat.decoderImplementation ?? null),
+      hardwareAccelerated:
+        direction === 'outbound'
+          ? typeof stat.powerEfficientEncoder === 'boolean'
+            ? stat.powerEfficientEncoder
+            : null
+          : typeof stat.powerEfficientDecoder === 'boolean'
+            ? stat.powerEfficientDecoder
+            : null,
+    });
+
+    return { interval, health };
   }
   function voiceReceiver(pcKey: string, pc: VoicePeerConnection, stat: MediaStat) {
     if (pcKey.endsWith(':screen-audio')) return null;
@@ -315,7 +652,11 @@ export function createVoiceTelemetry(options: Options) {
       pcState = '';
     const limiters: string[] = [];
     let outFpsMeasured = false;
+    let retransmittedTotal = 0;
+    let availableOutgoingBitrate: number | null = null;
     const videoIntervals: Readonly<VideoInterval>[] = [];
+    const videoStreams: Readonly<VideoStreamHealth>[] = [];
+    const seenVideoStreamKeys = new Set<string>();
     for (const [pcKey, pc] of pcs) {
       if (!current()) return;
       if (!peerCurrent(pcKey, pc)) continue;
@@ -336,6 +677,33 @@ export function createVoiceTelemetry(options: Options) {
       if (!peerCurrent(pcKey, pc)) continue;
       reportsAvailable ||= report.size > 0;
       const voicePlayoutIds = new Set<string>();
+      const codecs = new Map<string, string>();
+      let pcRttSum = 0,
+        pcRttCount = 0;
+      report.forEach((stat) => {
+        if (stat.type === 'codec' && typeof stat.mimeType === 'string')
+          codecs.set(stat.id, stat.mimeType);
+        if (
+          stat.type === 'candidate-pair' &&
+          stat.state === 'succeeded' &&
+          (stat.nominated || stat.selected)
+        ) {
+          if (Number.isFinite(stat.currentRoundTripTime)) {
+            pcRttSum += number(stat.currentRoundTripTime) * 1000;
+            pcRttCount++;
+          }
+          if (Number.isFinite(stat.availableOutgoingBitrate)) {
+            const avail = number(stat.availableOutgoingBitrate);
+            availableOutgoingBitrate =
+              availableOutgoingBitrate === null ? avail : Math.min(availableOutgoingBitrate, avail);
+          }
+        }
+        if (stat.type === 'remote-inbound-rtp' && Number.isFinite(stat.roundTripTime)) {
+          pcRttSum += number(stat.roundTripTime) * 1000;
+          pcRttCount++;
+        }
+      });
+      const pcRttMs = pcRttCount ? pcRttSum / pcRttCount : null;
       report.forEach((stat) => {
         const kind = stat.kind || stat.mediaType || '',
           ts = number(stat.timestamp) || now(),
@@ -346,8 +714,17 @@ export function createVoiceTelemetry(options: Options) {
           !stat.isRemote &&
           ['inbound-rtp', 'outbound-rtp'].includes(stat.type)
         ) {
-          const interval = sampleVideo(state, stat, ts);
-          if (interval) videoIntervals.push(interval);
+          const codecMime = stat.codecId
+            ? (codecs.get(stat.codecId) ?? null)
+            : (stat.mimeType ?? null);
+          const sampled = sampleVideo(pcKey, pc, state, stat, ts, pcRttMs, codecMime);
+          if (sampled) {
+            videoIntervals.push(sampled.interval);
+            videoStreams.push(sampled.health);
+            seenVideoStreamKeys.add(sampled.health.streamKey);
+            if (sampled.interval.retransmittedPackets)
+              retransmittedTotal += sampled.interval.retransmittedPackets;
+          }
         }
         if (stat.type === 'outbound-rtp' && !stat.isRemote) {
           uploadBps += rate(state, `tx:${key}`, stat.bytesSent, ts);
@@ -494,8 +871,49 @@ export function createVoiceTelemetry(options: Options) {
       : limiters.includes('bandwidth')
         ? 'bandwidth'
         : limiters[0] || 'none';
+    const stampNow = now();
+    for (const [streamKey, ongoing] of activeFreezes) {
+      if (seenVideoStreamKeys.has(streamKey)) continue;
+      activeFreezes.delete(streamKey);
+      freezeHistory.push(
+        Object.freeze({
+          streamKey: ongoing.streamKey,
+          pcKey: ongoing.pcKey,
+          direction: ongoing.direction,
+          mid: ongoing.mid,
+          rid: ongoing.rid,
+          trackId: ongoing.trackId,
+          startedAt: ongoing.startedAt,
+          endedAt: stampNow,
+          durationMs: Math.max(0, stampNow - ongoing.startedAt),
+          recovered: false,
+          cause: ongoing.cause,
+        }),
+      );
+      if (freezeHistory.length > 32) freezeHistory.shift();
+    }
+    const ongoingFreezes: VideoFreezeEvent[] = [...activeFreezes.values()].map((ongoing) =>
+      Object.freeze({
+        streamKey: ongoing.streamKey,
+        pcKey: ongoing.pcKey,
+        direction: ongoing.direction,
+        mid: ongoing.mid,
+        rid: ongoing.rid,
+        trackId: ongoing.trackId,
+        startedAt: ongoing.startedAt,
+        endedAt: null,
+        durationMs: Math.max(0, stampNow - ongoing.startedAt),
+        recovered: false,
+        cause: ongoing.cause,
+      }),
+    );
+    const allFreezes = Object.freeze([...freezeHistory, ...ongoingFreezes].slice(-32));
     telemetry = Object.freeze({
       video: Object.freeze(videoIntervals),
+      streams: Object.freeze(videoStreams),
+      freezes: allFreezes,
+      retransmittedPackets: retransmittedTotal,
+      availableOutgoingBitrate,
       outFpsMeasured,
       audioLossPct: audioTotal ? (audioLost / audioTotal) * 100 : 0,
       audioJitterMs,
@@ -553,7 +971,15 @@ export function createVoiceTelemetry(options: Options) {
       }
       if (version !== schedule) return;
       const next = options.getSettings();
-      const delay = next.joined ? (next.detailsOpen && next.foreground ? 2000 : 5000) : 15000;
+      const hasActiveVideo =
+        !!options.getLocalVideo() ||
+        (telemetry?.streams?.length ?? 0) > 0 ||
+        activeFreezes.size > 0;
+      const delay = next.joined
+        ? (next.detailsOpen && next.foreground) || (hasActiveVideo && next.foreground)
+          ? 2000
+          : 5000
+        : 15000;
       expected = now() + delay;
       timer = setTimeout(tick, delay);
     };
@@ -566,6 +992,8 @@ export function createVoiceTelemetry(options: Options) {
     reception.clear();
     owners.clear();
     counters.clear();
+    activeFreezes.clear();
+    freezeHistory.length = 0;
     refreshRows();
     history.length = 0;
     playout = null;

@@ -77,6 +77,7 @@ interface Resource {
   cleanupTimeout: number;
   subscription: SfuSubscription | null;
   layerQueue: Promise<void>;
+  disconnectTimer: ReturnType<typeof setTimeout> | null;
 }
 /** Owns SFU peers, pending requests, catalog, queues and retry timers.
  * Local capture and the single WebSocket remain borrowed dependencies.
@@ -125,6 +126,7 @@ export function createSfuSession(options: SfuOptions) {
       cleanupTimeout: purpose === 'publish' ? 9000 : 8000,
       subscription: null,
       layerQueue: Promise.resolve(),
+      disconnectTimer: null,
     };
     resources.add(r);
     resourceOf.set(pc, r);
@@ -141,9 +143,16 @@ export function createSfuSession(options: SfuOptions) {
       .then(() => {})
       .catch(warn));
   }
+  function clearDisconnectTimer(r: Resource) {
+    if (r.disconnectTimer) {
+      clearTimeout(r.disconnectTimer);
+      r.disconnectTimer = null;
+    }
+  }
   function dispose(r: Resource): Promise<void> {
     if (!r.closed) {
       r.closed = true;
+      clearDisconnectTimer(r);
       r.controller.abort();
       resources.delete(r);
       r.pc.ontrack = null;
@@ -301,12 +310,16 @@ export function createSfuSession(options: SfuOptions) {
         if (readyRids) pub.rids = readyRids;
         options.onReady(kind, false);
         pc.onconnectionstatechange = () => {
-          if (
-            owned() &&
-            !r.closed &&
-            publications.get(kind) === pub &&
-            pc.connectionState === 'failed'
-          )
+          if (!owned() || r.closed || publications.get(kind) !== pub) {
+            clearDisconnectTimer(r);
+            return;
+          }
+          if (pc.connectionState === 'connected') {
+            clearDisconnectTimer(r);
+            return;
+          }
+          if (pc.connectionState === 'failed') {
+            clearDisconnectTimer(r);
             void publicationRecovery
               .recover(
                 kind,
@@ -315,6 +328,27 @@ export function createSfuSession(options: SfuOptions) {
                 }),
               )
               .catch(warn);
+            return;
+          }
+          if (pc.connectionState === 'disconnected' && !r.disconnectTimer) {
+            r.disconnectTimer = setTimeout(() => {
+              r.disconnectTimer = null;
+              if (
+                owned() &&
+                !r.closed &&
+                publications.get(kind) === pub &&
+                pc.connectionState === 'disconnected'
+              )
+                void publicationRecovery
+                  .recover(
+                    kind,
+                    Object.assign(new Error('Conexão SFU estagnada em disconnected.'), {
+                      code: 'SFU_CONNECTION_STALLED',
+                    }),
+                  )
+                  .catch(warn);
+            }, 4500);
+          }
         };
         if (kind === 'audio') {
           const latest = options.getTrack?.('audio');
@@ -427,7 +461,16 @@ export function createSfuSession(options: SfuOptions) {
       sub.readyAt = Date.now();
       options.onReady(pub.kind, true);
       pc.onconnectionstatechange = () => {
-        if (current() && pc.connectionState === 'failed') {
+        if (!current()) {
+          clearDisconnectTimer(r);
+          return;
+        }
+        if (pc.connectionState === 'connected') {
+          clearDisconnectTimer(r);
+          return;
+        }
+        if (pc.connectionState === 'failed') {
+          clearDisconnectTimer(r);
           void closeSubscription(key, false);
           retry(
             pub,
@@ -435,6 +478,21 @@ export function createSfuSession(options: SfuOptions) {
               code: 'SFU_CONNECTION_FAILED',
             }),
           );
+          return;
+        }
+        if (pc.connectionState === 'disconnected' && !r.disconnectTimer) {
+          r.disconnectTimer = setTimeout(() => {
+            r.disconnectTimer = null;
+            if (current() && pc.connectionState === 'disconnected') {
+              void closeSubscription(key, false);
+              retry(
+                pub,
+                Object.assign(new Error('Assinatura SFU estagnada em disconnected.'), {
+                  code: 'SFU_CONNECTION_STALLED',
+                }),
+              );
+            }
+          }, 4500);
         }
       };
       return sub;
@@ -588,7 +646,7 @@ export function createSfuSession(options: SfuOptions) {
     }
     return Promise.allSettled(jobs).then(() => {});
   }
-  function setLayer(key: string, rid: SfuRid): Promise<void> {
+  function setLayer(key: string, rid: SfuRid, force = false): Promise<void> {
     const sub = subscriptions.get(key),
       r = sub && resourceOf.get(sub.pc);
     if (!sub || !r || r.closed) return Promise.resolve();
@@ -599,7 +657,7 @@ export function createSfuSession(options: SfuOptions) {
     const next = r.layerQueue
       .catch(() => {})
       .then(async () => {
-        if (!current() || sub.preferredRid === rid) return;
+        if (!current() || (!force && sub.preferredRid === rid)) return;
         const preferred = readLayer(
           await request(
             r,

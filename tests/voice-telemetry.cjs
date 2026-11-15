@@ -532,3 +532,263 @@ test('a measured zero video FPS is never replaced by the configured capture FPS'
  const h=await setup(t,{getLocalVideo:()=>({getSettings:()=>({frameRate:60,width:1920,height:1080})})}),pc=h.attach();
  pc.report=report(1);pc.report.get('video').framesPerSecond=0;await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.outFps,0,'a stalled encoder must not be reported as 60 FPS');
 });
+
+test('classifies all 8 video freeze causes without confusing static images or guessing without evidence', async (t) => {
+  let screenTrack = { id: 'tx-track', kind: 'video', readyState: 'live', muted: false, enabled: true };
+  let rxTrack = { id: 'rx-track', kind: 'video', readyState: 'live', muted: false, enabled: true };
+  const h = await setup(t, { getLocalVideo: () => screenTrack });
+
+  const makeVideoPc = (dir, overrides = () => ({}), trackRef = () => (dir === 'outbound' ? screenTrack : rxTrack)) => {
+    const p = peer();
+    p.getTransceivers = () => [
+      {
+        mid: '0',
+        receiver: p.voice,
+        sender: { track: null },
+      },
+      {
+        mid: '1',
+        sender: dir === 'outbound' ? { track: trackRef() } : { track: null },
+        receiver: dir === 'inbound' ? { track: trackRef(), playoutDelayHint: undefined, jitterBufferTarget: null } : p.screen,
+      },
+    ];
+    let step = 0;
+    p.next = () => {
+      step++;
+      const m = report(step);
+      m.delete('video');
+      const base =
+        dir === 'outbound'
+          ? {
+              id: 'vid',
+              type: 'outbound-rtp',
+              kind: 'video',
+              mid: '1',
+              trackIdentifier: trackRef()?.id,
+              timestamp: step * 2000,
+              framesEncoded: step * 60,
+              framesSent: step * 60,
+              packetsSent: step * 120,
+              bytesSent: step * 100000,
+              retransmittedPacketsSent: 0,
+              pliCount: 0,
+              totalEncodeTime: step * 0.2,
+              totalPacketSendDelay: step * 0.1,
+              frameWidth: 1920,
+              frameHeight: 1080,
+              qualityLimitationReason: 'none',
+            }
+          : {
+              id: 'vid',
+              type: 'inbound-rtp',
+              kind: 'video',
+              mid: '1',
+              trackIdentifier: trackRef()?.id,
+              timestamp: step * 2000,
+              packetsReceived: step * 120,
+              packetsLost: 0,
+              bytesReceived: step * 100000,
+              framesReceived: step * 60,
+              framesDecoded: step * 60,
+              framesDropped: 0,
+              freezeCount: 0,
+              totalFreezesDuration: 0,
+              pliCount: 0,
+              totalDecodeTime: step * 0.1,
+              jitterBufferDelay: step * 1,
+              jitterBufferEmittedCount: step * 60,
+              frameWidth: 1920,
+              frameHeight: 1080,
+            };
+      m.set('vid', { ...base, ...overrides(step) });
+      p.report = m;
+    };
+    return p;
+  };
+
+  // Static desktop: 0 encoded frames, track live/unmuted, 0 PLI, 0 drops, 0 freezes -> NOT a freeze.
+  const staticPc = makeVideoPc('outbound', (s) => ({
+    framesEncoded: 60,
+    framesSent: 60,
+    packetsSent: 120 + s,
+    bytesSent: 100000 + s * 60,
+  }));
+  h.connections.set('sfu:screen', staticPc);
+  staticPc.next();
+  await h.telemetry.collect();
+  staticPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.freezes.length, 0);
+  h.connections.clear();
+  h.telemetry.reset();
+
+  // 1. capture-interrupted, 2. encoder-stalled, 3. send-stalled, 4. transport-congestion (outbound)
+  let outMode = 'healthy';
+  let frozenOut = { encoded: 60, sent: 60, packets: 120, bytes: 100000 };
+  const outPc = makeVideoPc('outbound', (s) => {
+    if (outMode === 'healthy') {
+      frozenOut = { encoded: s * 60, sent: s * 60, packets: s * 120, bytes: s * 100000 };
+      return {};
+    }
+    if (outMode === 'capture')
+      return {
+        framesEncoded: frozenOut.encoded,
+        framesSent: frozenOut.sent,
+        packetsSent: frozenOut.packets,
+        bytesSent: frozenOut.bytes,
+      };
+    if (outMode === 'encoder')
+      return {
+        framesEncoded: frozenOut.encoded,
+        framesSent: frozenOut.sent,
+        packetsSent: frozenOut.packets,
+        bytesSent: frozenOut.bytes,
+        pliCount: s,
+      };
+    if (outMode === 'send') {
+      frozenOut.encoded += 60;
+      return {
+        framesEncoded: frozenOut.encoded,
+        framesSent: frozenOut.sent,
+        packetsSent: frozenOut.packets,
+        bytesSent: frozenOut.bytes,
+      };
+    }
+    if (outMode === 'congestion') {
+      frozenOut.encoded += 60;
+      frozenOut.packets += 10;
+      return {
+        framesEncoded: frozenOut.encoded,
+        framesSent: frozenOut.sent,
+        packetsSent: frozenOut.packets,
+        bytesSent: frozenOut.bytes,
+        retransmittedPacketsSent: s * 25,
+        qualityLimitationReason: 'bandwidth',
+      };
+    }
+    return {};
+  });
+  h.connections.set('sfu:screen', outPc);
+  outPc.next();
+  await h.telemetry.collect();
+
+  screenTrack = { ...screenTrack, muted: true };
+  outMode = 'capture';
+  outPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'capture-interrupted');
+
+  screenTrack = { ...screenTrack, muted: false };
+  outMode = 'healthy';
+  outPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.freezes.at(-1).recovered, true);
+
+  outMode = 'encoder';
+  outPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'encoder-stalled');
+
+  outMode = 'send';
+  outPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'send-stalled');
+
+  outMode = 'congestion';
+  outPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'transport-congestion');
+
+  h.connections.clear();
+  h.telemetry.reset();
+
+  // 5. sfu-forwarding-stalled, 6. subscription-interrupted, 7. receiver-not-decoding, 8. presentation-frozen, and null on insufficient evidence
+  let inMode = 'healthy';
+  let frozenIn = { packets: 120, bytes: 100000, received: 60, decoded: 60 };
+  const inPc = makeVideoPc('inbound', (s) => {
+    if (inMode === 'no-decode') {
+      frozenIn.packets += 120;
+      frozenIn.bytes += 100000;
+      frozenIn.received += 10;
+      return {
+        packetsReceived: frozenIn.packets,
+        bytesReceived: frozenIn.bytes,
+        framesDecoded: frozenIn.decoded,
+        framesReceived: frozenIn.received,
+        pliCount: s,
+      };
+    }
+    if (inMode === 'sfu-stall')
+      return {
+        packetsReceived: frozenIn.packets,
+        bytesReceived: frozenIn.bytes,
+        framesReceived: frozenIn.received,
+        framesDecoded: frozenIn.decoded,
+        pliCount: s,
+      };
+    if (inMode === 'sub-drop')
+      return {
+        packetsReceived: frozenIn.packets,
+        bytesReceived: frozenIn.bytes,
+        framesReceived: frozenIn.received,
+        framesDecoded: frozenIn.decoded,
+      };
+    if (inMode === 'presentation') {
+      frozenIn.packets += 120;
+      frozenIn.bytes += 100000;
+      frozenIn.received += 60;
+      frozenIn.decoded += 60;
+      return {
+        packetsReceived: frozenIn.packets,
+        bytesReceived: frozenIn.bytes,
+        framesReceived: frozenIn.received,
+        framesDecoded: frozenIn.decoded,
+        freezeCount: s,
+        totalFreezesDuration: s * 0.4,
+      };
+    }
+    if (inMode === 'ambiguous') {
+      return {
+        packetsReceived: undefined,
+        bytesReceived: undefined,
+        framesReceived: undefined,
+        framesDecoded: undefined,
+        freezeCount: s,
+        totalFreezesDuration: s * 0.4,
+      };
+    }
+    frozenIn = { packets: s * 120, bytes: s * 100000, received: s * 60, decoded: s * 60 };
+    return {};
+  });
+  h.connections.set('sfu:peer-1:screen', inPc);
+  inPc.next();
+  await h.telemetry.collect();
+
+  inMode = 'no-decode';
+  inPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'receiver-not-decoding');
+
+  inMode = 'sfu-stall';
+  rxTrack = { ...rxTrack, muted: true };
+  inPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'sfu-forwarding-stalled');
+
+  rxTrack = { ...rxTrack, muted: false, readyState: 'ended' };
+  inMode = 'sub-drop';
+  inPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'subscription-interrupted');
+
+  rxTrack = { ...rxTrack, readyState: 'live' };
+  inMode = 'presentation';
+  inPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, 'presentation-frozen');
+
+  inMode = 'ambiguous';
+  inPc.next();
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, null);
+});
