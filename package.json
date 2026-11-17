@@ -2,7 +2,7 @@
   "name": "mn-trono",
   "version": "0.14.0-alpha",
   "private": true,
-  "description": "Aplicativo desktop e web de comunica\u00e7\u00e3o e jogos",
+  "description": "Aplicativo desktop e web de comunicação e jogos",
   "main": "server/index.ts",
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.ts",
@@ -37,7 +37,7 @@
     "@capacitor/core": "8.6.0",
     "@phosphor-icons/react": "2.1.10",
     "express": "^4.21.2",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "ws": "^8.18.0"

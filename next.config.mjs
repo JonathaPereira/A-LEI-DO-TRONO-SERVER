@@ -4,6 +4,9 @@ const nextConfig = {
   images: { unoptimized: true },
   poweredByHeader: false,
   agentRules: false,
+  experimental: {
+    agentUpgrade: 'security',
+  },
 };
 
 export default nextConfig;
