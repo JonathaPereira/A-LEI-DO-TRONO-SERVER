@@ -1475,6 +1475,10 @@ e `--enable-zero-copy` no Electron para repassar superfícies DXGI diretamente a
 codificador. Cobertura ampliada em `voice-quality.cjs`, `sfu-session.cjs` e `p2p-peers.cjs`;
 1496 testes aprovados, build e format:check preservados sem regressões.
 
+Operação Marca Registrada — Transição Animada de Boas-Vindas (1.2.0):
+1. Overlay cinematográfico de entrada (`components/application/welcome-intro.tsx`, `welcome-intro.module.css` e `lib/application/welcome-intro.ts`) exibindo o emblema real (`throne.png`), anel orbital, *light sheen*, slogan institucional, foto ou GIF animado de perfil via `<Avatar />`, saudação personalizada (`"Bem vindo, <Nome>"`) e cargo na Corte.
+2. Executa por ~4,45 s em segundo plano sem bloquear a inicialização de WebSocket, canais, presença ou carregamento do avatar, oferecendo atalho de saída imediata (clique na tela, `Esc` ou botão `"Entrar agora"`) e replay pelo menu `"Meu perfil"` (`"Rever boas-vindas"`), respeitando `prefers-reduced-motion` e `data-reduced-motion`.
+
 Operação Screen Share, Links no Chat e Estabilidade da Biblioteca de Jogos (1.1.1):
 1. Reconhecimento seguro de links HTTP/HTTPS/www no corpo de mensagens públicas e privadas (`lib/chat/links.ts`, `components/chat/message-text.tsx`) preservando CSP/`rel="noopener noreferrer"`.
 2. Preservação da tela ativa em jogos/biblioteca (`lib/navigation/portal.ts` `identityChanged`) durante refreshes silenciosos de sessão da mesma conta.

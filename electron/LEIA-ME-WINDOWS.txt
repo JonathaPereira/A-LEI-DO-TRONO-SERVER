@@ -1,3 +1,11 @@
+M&N · A Lei do Trono — Windows 1.2.0
+
+Melhoria 1.2.0: transição animada de boas-vindas na entrada do aplicativo e troca de conta
+(logotipo e slogan de M&N · A Lei do Trono com anel orbital, brilho light sheen, nome do usuário,
+foto de perfil com suporte completo a GIFs animados e badge do cargo na Corte), atuando como
+janela de ~4,5 s para carregamento de canais, presença e avatar em segundo plano, com atalho
+"Entrar agora" / Esc e opção "Rever boas-vindas" no menu do perfil.
+
 M&N · A Lei do Trono — Windows 1.1.1
 
 Melhoria 1.1.1: operação screen share anti-microtravamentos (pareamento video/rtx no H.264,

@@ -66,10 +66,10 @@ const SLICE_RULES = [
       /^src\/styles\/(?!games\/)/i,
       /^src\/components\/(?:application|profiles|navigation)\//i,
       /^src\/components\/application\.tsx$/i,
-      /^src\/lib\/(?:profiles|preferences|settings|navigation)\//i,
+      /^src\/lib\/(?:application|profiles|preferences|settings|navigation)\//i,
       /^src\/app\/(?:layout\.tsx|page\.tsx|globals\.css)$/i,
       /^src\/types\/(?:profiles|profile-[^/]+|call-navigation|domain)\.ts$/i,
-      /^tests\/(?:christmas-theme-browser|appearance-preferences(?:-browser)?|profile-[^/]+|application-shell-browser|mobile-browser|hover-tooltip|personal-preferences|giphy-provider|member-profiles|responsive-layout|settings|styles|app-layout-browser|member-profile-browser|portal-browser|portal-navigation|settings-portrait-browser|frontend-browser)\.(?:c?js)$/i,
+      /^tests\/(?:welcome-intro(?:-browser)?|christmas-theme-browser|appearance-preferences(?:-browser)?|profile-[^/]+|application-shell-browser|mobile-browser|hover-tooltip|personal-preferences|giphy-provider|member-profiles|responsive-layout|settings|styles|app-layout-browser|member-profile-browser|portal-browser|portal-navigation|settings-portrait-browser|frontend-browser)\.(?:c?js)$/i,
     ],
     core: [
       'tests/appearance-preferences.cjs',
@@ -89,8 +89,10 @@ const SLICE_RULES = [
       'tests/responsive-layout.cjs',
       'tests/settings.cjs',
       'tests/styles.cjs',
+      'tests/welcome-intro.cjs',
     ],
     browser: [
+      'tests/welcome-intro-browser.cjs',
       'tests/christmas-theme-browser.js',
       'tests/appearance-preferences-browser.cjs',
       'tests/application-shell-browser.cjs',

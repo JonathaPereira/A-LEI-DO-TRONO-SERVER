@@ -29,6 +29,8 @@ import { AppIcon as Icon } from './icons';
 import styles from './shell.module.css';
 import { MobileNavigation } from './mobile-navigation';
 import { ChristmasPromo } from './christmas-promo';
+import { WelcomeIntroOverlay } from './welcome-intro';
+import { triggerWelcomeIntroReplay } from '../../lib/application/welcome-intro';
 
 const noop = () => () => {};
 const empty = () => null;
@@ -431,6 +433,12 @@ function Navigation({
               <Icon name="settings" size={18} />
               Configurações da Corte
             </button>
+            {account && (
+              <button type="button" data-close-panel onClick={() => triggerWelcomeIntroReplay()}>
+                <Icon name="crown" size={18} />
+                Rever boas-vindas
+              </button>
+            )}
             <button
               type="button"
               data-close-panel
@@ -995,6 +1003,7 @@ export function ApplicationShell({
           <ProfileDialogs runtime={runtime} />
           <CommunityDialogs runtime={runtime} />
           <ApplicationNotices runtime={runtime} />
+          <WelcomeIntroOverlay runtime={runtime} />
         </>
       )}
     </>
