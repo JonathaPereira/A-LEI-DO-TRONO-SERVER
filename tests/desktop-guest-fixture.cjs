@@ -5,9 +5,7 @@ const { startFixture } = require('./auth-fixture');
 async function enterNativeGuest({ app, page, port, nickname = 'Convidado nativo' }) {
   const fixture = await startFixture({ port, allowedOrigins: ['https://a-lei-do-trono.surge.sh'] });
   try {
-    await page.waitForFunction(
-      () => document.readyState === 'interactive' || document.readyState === 'complete',
-    );
+    await page.waitForLoadState('load');
     await app.evaluate(({ net }, base) => {
       const original = net.fetch.bind(net);
       global.__nativeGuestFetch = net.fetch;

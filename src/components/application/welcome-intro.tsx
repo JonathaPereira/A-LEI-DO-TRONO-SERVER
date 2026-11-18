@@ -77,7 +77,7 @@ export function WelcomeIntroOverlay({ runtime }: { runtime: ApplicationServices 
   useEffect(() => clearDismissTimer, [clearDismissTimer]);
 
   const appReady = isGuest
-    ? portal.connected
+    ? true
     : portal.connected && channels.ready && Boolean(community.presence);
 
   useEffect(() => {
