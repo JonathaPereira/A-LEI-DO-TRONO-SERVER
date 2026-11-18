@@ -13,6 +13,7 @@ export interface VideoFreezeRecoveryOptions {
   windowMs?: number;
   maxAttempts?: number;
   minStallMs?: number;
+  hardRecoverStallMs?: number;
   healthyResetMs?: number;
   now?: () => number;
   nudgePublisher(
@@ -81,6 +82,7 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
   const windowMs = options.windowMs ?? 45000;
   const maxAttempts = options.maxAttempts ?? 3;
   const minStallMs = options.minStallMs ?? 1500;
+  const hardRecoverStallMs = options.hardRecoverStallMs ?? Math.max(minStallMs * 2, 3800);
   const healthyResetMs = options.healthyResetMs ?? 15000;
   const warn = options.warn ?? ((error: unknown) => console.warn('[VideoRecovery]', error));
   const targets = new Map<string, TargetHistory>();
@@ -153,11 +155,15 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
       // Never loop SFU publish retries if the local capture source itself stopped producing frames.
       if (stream.cause === 'capture-interrupted') continue;
 
-      const immediate =
-        stream.cause === 'subscription-interrupted' ||
-        stream.cause === 'send-stalled' ||
-        stream.cause === 'receiver-not-decoding';
+      const immediate = stream.cause === 'subscription-interrupted';
       if (stream.stallMs < (immediate ? Math.min(minStallMs, 800) : minStallMs)) continue;
+
+      const transportBroken =
+        stream.cause === 'subscription-interrupted' ||
+        stream.pcState === 'failed' ||
+        stream.pcState === 'disconnected' ||
+        stream.pcState === 'closed';
+      const canHardRecover = transportBroken || stream.stallMs >= hardRecoverStallMs;
 
       pruneWindow(entry, stamp);
       const attemptIndex = entry.attempts.length;
@@ -170,7 +176,7 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
             options.nudgePublisher(pubKind, stream.cause),
           );
           triggered ||= ran;
-        } else {
+        } else if (canHardRecover) {
           const ran = await runAction(targetKey, callGen, () =>
             options.recoverPublisher(pubKind, stream.cause),
           );
@@ -183,13 +189,18 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
       if (!parsed) continue;
       if (parsed.transport === 'sfu') {
         if (attemptIndex === 0) {
+          // Single-layer screen subscriptions have no RID switch option; avoid tearing down
+          // the PeerConnection on brief <3.8s stutters while transport stays connected.
+          if (!canHardRecover && parsed.kind === 'screen') continue;
           const ran = await runAction(targetKey, callGen, async () => {
             const refreshed = await options.refreshSfuSubscription(parsed.peerId, parsed.kind);
             if (refreshed) return true;
-            return options.recoverSfuSubscription(parsed.peerId, parsed.kind);
+            return canHardRecover
+              ? options.recoverSfuSubscription(parsed.peerId, parsed.kind)
+              : false;
           });
           triggered ||= ran;
-        } else {
+        } else if (canHardRecover) {
           const ran = await runAction(targetKey, callGen, () =>
             options.recoverSfuSubscription(parsed.peerId, parsed.kind),
           );

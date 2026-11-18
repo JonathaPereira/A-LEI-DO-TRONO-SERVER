@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   WELCOME_INTRO_DURATION_MS,
   WELCOME_INTRO_EVENT,
   WELCOME_INTRO_EXIT_DELAY_MS,
+  WELCOME_INTRO_MIN_READY_DURATION_MS,
+  WELCOME_INTRO_MIN_READY_EXIT_MS,
   WELCOME_INTRO_REDUCED_DURATION_MS,
   WELCOME_INTRO_REDUCED_EXIT_DELAY_MS,
   buildWelcomeIdentityKey,
@@ -37,39 +39,64 @@ export function WelcomeIntroOverlay({ runtime }: { runtime: ApplicationServices 
 
   const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const [replaying, setReplaying] = useState(false);
+  const [startedAt, setStartedAt] = useState(0);
   const [playKey, setPlayKey] = useState(0);
   const [lastIdentity, setLastIdentity] = useState<string | null>(null);
+  const dismissTimerRef = useRef<number | null>(null);
 
-  const startIntro = useCallback(() => {
-    setExiting(false);
-    setVisible(true);
-    setPlayKey((k) => k + 1);
+  const clearDismissTimer = useCallback(() => {
+    if (dismissTimerRef.current !== null) {
+      window.clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
   }, []);
 
+  const startIntro = useCallback(
+    (isReplay: boolean) => {
+      clearDismissTimer();
+      setReplaying(isReplay);
+      setExiting(false);
+      setVisible(true);
+      setStartedAt(Date.now());
+      setPlayKey((k) => k + 1);
+    },
+    [clearDismissTimer],
+  );
+
   const dismissIntro = useCallback(() => {
+    clearDismissTimer();
     setExiting(true);
-    window.setTimeout(() => {
+    dismissTimerRef.current = window.setTimeout(() => {
+      dismissTimerRef.current = null;
       setVisible(false);
       setExiting(false);
     }, 260);
-  }, []);
+  }, [clearDismissTimer]);
+
+  useEffect(() => clearDismissTimer, [clearDismissTimer]);
+
+  const appReady = isGuest
+    ? portal.connected
+    : portal.connected && channels.ready && Boolean(community.presence);
 
   useEffect(() => {
     if (!identityKey) {
       if (lastIdentity !== null) setLastIdentity(null);
+      clearDismissTimer();
       setVisible(false);
       setExiting(false);
       return;
     }
     if (lastIdentity !== identityKey) {
       setLastIdentity(identityKey);
-      startIntro();
+      startIntro(false);
     }
-  }, [identityKey, lastIdentity, startIntro]);
+  }, [identityKey, lastIdentity, startIntro, clearDismissTimer]);
 
   useEffect(() => {
     const onReplay = () => {
-      if (identityKey) startIntro();
+      if (identityKey) startIntro(true);
     };
     window.addEventListener(WELCOME_INTRO_EVENT, onReplay);
     return () => window.removeEventListener(WELCOME_INTRO_EVENT, onReplay);
@@ -92,6 +119,24 @@ export function WelcomeIntroOverlay({ runtime }: { runtime: ApplicationServices 
       window.clearTimeout(doneTimer);
     };
   }, [visible, playKey]);
+
+  useEffect(() => {
+    if (!visible || replaying || !appReady || isReducedMotionPreferred()) return;
+    const elapsed = Math.max(0, Date.now() - startedAt);
+    const earlyExitDelay = Math.max(0, WELCOME_INTRO_MIN_READY_EXIT_MS - elapsed);
+    const fadeDuration = WELCOME_INTRO_MIN_READY_DURATION_MS - WELCOME_INTRO_MIN_READY_EXIT_MS;
+
+    const earlyExitTimer = window.setTimeout(() => setExiting(true), earlyExitDelay);
+    const earlyDoneTimer = window.setTimeout(() => {
+      setVisible(false);
+      setExiting(false);
+    }, earlyExitDelay + fadeDuration);
+
+    return () => {
+      window.clearTimeout(earlyExitTimer);
+      window.clearTimeout(earlyDoneTimer);
+    };
+  }, [visible, playKey, replaying, appReady, startedAt]);
 
   useEffect(() => {
     if (!visible || exiting) return;

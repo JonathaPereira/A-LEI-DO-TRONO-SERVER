@@ -102,12 +102,8 @@ export function createScreenCapture({
         selfBrowserSurface: 'exclude';
       } = {
         video: {
-          width: settings.replay
-            ? { ideal: targetWidth }
-            : { ideal: targetWidth, max: targetWidth },
-          height: settings.replay
-            ? { ideal: targetHeight }
-            : { ideal: targetHeight, max: targetHeight },
+          width: { ideal: targetWidth },
+          height: { ideal: targetHeight },
           frameRate: {
             ideal: targetFps,
             max: targetFps,

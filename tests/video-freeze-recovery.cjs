@@ -97,7 +97,7 @@ test('video freeze recovery performs targeted per-stream nudge and bounded recov
     ['recover-pub', 'screen', 'encoder-stalled'],
   ]);
 
-  // 3. Multi-participant inbound RX freeze recovers ONLY stalled screen, leaving healthy camera & other peers untouched.
+  // 3. Brief 1600ms single-layer inbound screen stutter does NOT tear down a connected subscription.
   time += 2000;
   await recovery.inspect({
     streams: [
@@ -107,6 +107,31 @@ test('video freeze recovery performs targeted per-stream nudge and bounded recov
         direction: 'inbound',
         cause: 'receiver-not-decoding',
         stallMs: 1600,
+      }),
+      stream({
+        streamKey: 'c1',
+        pcKey: 'sfu:peer-b:camera',
+        direction: 'inbound',
+        stalled: false,
+        stallMs: 0,
+        cause: null,
+      }),
+    ],
+  });
+  assert.equal(
+    events.some((e) => e[1] === 'peer-a'),
+    false,
+  );
+
+  // Sustained freeze >= 3800ms escalates cleanly only on the stalled peer stream.
+  await recovery.inspect({
+    streams: [
+      stream({
+        streamKey: 's1',
+        pcKey: 'sfu:peer-a:screen',
+        direction: 'inbound',
+        cause: 'receiver-not-decoding',
+        stallMs: 3900,
       }),
       stream({
         streamKey: 'c1',
@@ -131,7 +156,7 @@ test('video freeze recovery performs targeted per-stream nudge and bounded recov
           pcKey: 'sfu:peer-a:screen',
           direction: 'inbound',
           cause: 'sfu-forwarding-stalled',
-          stallMs: 2500,
+          stallMs: 4200,
         }),
       ],
     });
@@ -143,9 +168,19 @@ test('video freeze recovery performs targeted per-stream nudge and bounded recov
   joined = false;
   time += 60000;
   await recovery.inspect({
-    streams: [stream({ pcKey: 'sfu:peer-c:screen', direction: 'inbound', cause: 'sfu-forwarding-stalled', stallMs: 3000 })],
+    streams: [
+      stream({
+        pcKey: 'sfu:peer-c:screen',
+        direction: 'inbound',
+        cause: 'sfu-forwarding-stalled',
+        stallMs: 3000,
+      }),
+    ],
   });
-  assert.equal(events.some((e) => e[1] === 'peer-c'), false);
+  assert.equal(
+    events.some((e) => e[1] === 'peer-c'),
+    false,
+  );
 });
 
 test('CallStability adapts faster to active video freeze/congestion and server allows 18 Mbps SFU bitrate clamping', async () => {
@@ -159,8 +194,20 @@ test('CallStability adapts faster to active video freeze/congestion and server a
     },
     0,
   );
-  assert.equal(stability.sample({ lossPct: 6.5, streams: [{ stalled: true, cause: 'transport-congestion' }] }, 5000), false);
-  assert.equal(stability.sample({ lossPct: 6.5, streams: [{ stalled: true, cause: 'transport-congestion' }] }, 6000), true);
+  assert.equal(
+    stability.sample(
+      { lossPct: 6.5, streams: [{ stalled: true, cause: 'transport-congestion' }] },
+      5000,
+    ),
+    false,
+  );
+  assert.equal(
+    stability.sample(
+      { lossPct: 6.5, streams: [{ stalled: true, cause: 'transport-congestion' }] },
+      6000,
+    ),
+    true,
+  );
   assert.equal(stability.level, 1);
   assert.equal(stability.sample({}, 7000), false);
   assert.equal(stability.sample({}, 67000), true);

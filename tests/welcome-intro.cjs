@@ -4,13 +4,26 @@ const assert = require('node:assert/strict');
 
 test('welcome intro helpers build stable keys, greetings, roles, load states, and replay events', async () => {
   const {
+    WELCOME_INTRO_DURATION_MS,
     WELCOME_INTRO_EVENT,
+    WELCOME_INTRO_EXIT_DELAY_MS,
+    WELCOME_INTRO_MIN_READY_DURATION_MS,
+    WELCOME_INTRO_MIN_READY_EXIT_MS,
     buildWelcomeIdentityKey,
     getWelcomeGreeting,
     getWelcomeLoadStatus,
     getWelcomeRoleLabel,
     triggerWelcomeIntroReplay,
   } = await import('../src/lib/application/welcome-intro.ts');
+
+  assert(
+    WELCOME_INTRO_MIN_READY_EXIT_MS > 0 &&
+      WELCOME_INTRO_MIN_READY_EXIT_MS < WELCOME_INTRO_EXIT_DELAY_MS,
+  );
+  assert(
+    WELCOME_INTRO_MIN_READY_DURATION_MS > WELCOME_INTRO_MIN_READY_EXIT_MS &&
+      WELCOME_INTRO_MIN_READY_DURATION_MS < WELCOME_INTRO_DURATION_MS,
+  );
 
   assert.equal(buildWelcomeIdentityKey(null, false), null);
   assert.equal(buildWelcomeIdentityKey({ id: 'u-1', role: 'creator' }, false), 'user:u-1');

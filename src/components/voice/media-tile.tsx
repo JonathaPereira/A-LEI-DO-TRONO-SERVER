@@ -140,6 +140,7 @@ export function MediaTile({
         active={
           !hidden && (screen ? watching && !paused && (!p.collapsed || external) && live : live)
         }
+        pauseWhenUnfocused={screen && p.self}
         onDoubleClick={fullscreen}
       />
       {external && (

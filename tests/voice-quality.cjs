@@ -156,9 +156,9 @@ test('screen encoders use maintain-resolution when content is detail', async () 
   assert.equal(s.track.contentHint, 'detail');
   assert.equal(s.applied[0].degradationPreference, 'maintain-resolution');
 });
-test('unconfigured screen content defaults to detail as in 1.0.8 baseline', async () => {
+test('unconfigured screen content defaults to motion to preserve gameplay framerate', async () => {
   const { quality } = await fixture();
-  assert.equal(quality.getSnapshot().preferences.screenContent, 'detail');
+  assert.equal(quality.getSnapshot().preferences.screenContent, 'motion');
 });
 test('microphone and application audio budgets survive both adaptation levels', async () => {
   const { quality } = await fixture();

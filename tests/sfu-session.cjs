@@ -228,7 +228,11 @@ test('screen uses dedicated single-layer encoding with native 60 FPS and min/sta
   ]);
   assert.equal(h.settings.screen.fps, 60);
   const offer = h.pcs[0].localDescription.sdp;
-  assert(offer.includes('x-google-min-bitrate=800;x-google-start-bitrate=3200;x-google-max-bitrate=8000'));
+  assert(
+    offer.includes(
+      'x-google-min-bitrate=2400;x-google-start-bitrate=4800;x-google-max-bitrate=8000',
+    ),
+  );
   assert(offer.includes('foo=bar'));
   assert(!offer.includes('start-bitrate=100'));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));
@@ -681,7 +685,7 @@ test('native subscription failure after the queue finishes schedules a new negot
   assert.deepEqual(h.fallback, []);
 });
 
-test('prioritizeH264 moves Constrained Baseline H264 ahead while keeping fallback codecs', async () => {
+test('prioritizeH264 ranks higher-level Constrained Baseline and High Profile H264 ahead while keeping fallback codecs', async () => {
   const { prioritizeH264 } = await import('../src/lib/voice/sfu-encoding.ts');
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -691,8 +695,21 @@ test('prioritizeH264 moves Constrained Baseline H264 ahead while keeping fallbac
           ? {
               codecs: [
                 { mimeType: 'video/VP8', clockRate: 90000 },
-                { mimeType: 'video/H264', clockRate: 90000, sdpFmtpLine: 'profile-level-id=640032' },
-                { mimeType: 'video/H264', clockRate: 90000, sdpFmtpLine: 'profile-level-id=42e01f' },
+                {
+                  mimeType: 'video/H264',
+                  clockRate: 90000,
+                  sdpFmtpLine: 'profile-level-id=42e01f',
+                },
+                {
+                  mimeType: 'video/H264',
+                  clockRate: 90000,
+                  sdpFmtpLine: 'profile-level-id=640032',
+                },
+                {
+                  mimeType: 'video/H264',
+                  clockRate: 90000,
+                  sdpFmtpLine: 'profile-level-id=42e02a',
+                },
                 { mimeType: 'video/VP9', clockRate: 90000 },
               ],
             }
@@ -707,9 +724,10 @@ test('prioritizeH264 moves Constrained Baseline H264 ahead while keeping fallbac
     const applied = prioritizeH264(mockTransceiver);
     assert.equal(applied, true);
     assert.equal(preferred[0].mimeType, 'video/H264');
-    assert.match(preferred[0].sdpFmtpLine, /42e01f/);
-    assert.equal(preferred[1].mimeType, 'video/H264');
-    assert.equal(preferred.length, 4);
+    assert.match(preferred[0].sdpFmtpLine, /42e02a/);
+    assert.match(preferred[1].sdpFmtpLine, /42e01f/);
+    assert.match(preferred[2].sdpFmtpLine, /640032/);
+    assert.equal(preferred.length, 5);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }

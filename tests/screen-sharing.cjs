@@ -115,6 +115,7 @@ test('1080p at 60fps retains the existing 10Mbps preset and persists audio prefe
   assert(h.sharing.configure('1080', '60', false));
   assert.deepEqual(h.preferences(), {
     screenFormat: '1080-60',
+    screenContent: 'motion',
     transmissionQuality: 'high',
     screenBitrateMbps: 10,
   });
@@ -132,11 +133,13 @@ test('720p/15 and 1080p/30 retain their existing bitrate presets', async (t) => 
   assert(h.sharing.configure('720', '15', true));
   assert.deepEqual(h.preferences(), {
     screenFormat: '720-15',
+    screenContent: 'detail',
     transmissionQuality: 'balanced',
     screenBitrateMbps: 4,
   });
   assert(h.sharing.configure('1080', '30', true));
   assert.equal(h.preferences().screenBitrateMbps, 8);
+  assert.equal(h.preferences().screenContent, 'motion');
 });
 
 test('1440p at 60fps and 30fps retain their 15Mbps and 12Mbps presets', async (t) => {
@@ -144,6 +147,7 @@ test('1440p at 60fps and 30fps retain their 15Mbps and 12Mbps presets', async (t
   assert(h.sharing.configure('1440', '60', true));
   assert.deepEqual(h.preferences(), {
     screenFormat: '1440-60',
+    screenContent: 'motion',
     transmissionQuality: 'high',
     screenBitrateMbps: 15,
   });

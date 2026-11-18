@@ -1,7 +1,7 @@
 'use strict';
 const os = require('node:os');
-// Only Electron's own, positively identified Audio Service is eligible. No
-// renderer, game, arbitrary PID, administrator privilege or real-time class.
+// Protect Electron's own Audio Service and Video Capture Service from Windows Game Mode EcoQoS throttling.
+// No renderer, game, arbitrary PID, administrator privilege or real-time class.
 class AudioPriority {
   constructor({
     platform = process.platform,
@@ -21,7 +21,10 @@ class AudioPriority {
   isAudio(row) {
     return (
       row.type === 'Utility' &&
-      (row.serviceName === 'audio.mojom.AudioService' || row.name === 'Audio Service') &&
+      (row.serviceName === 'audio.mojom.AudioService' ||
+        row.name === 'Audio Service' ||
+        row.serviceName === 'video_capture.mojom.VideoCaptureService' ||
+        row.name === 'Video Capture') &&
       Number.isSafeInteger(row.pid) &&
       row.pid > 0 &&
       Number.isFinite(row.creationTime)

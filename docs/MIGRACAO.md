@@ -1475,11 +1475,22 @@ e `--enable-zero-copy` no Electron para repassar superfícies DXGI diretamente a
 codificador. Cobertura ampliada em `voice-quality.cjs`, `sfu-session.cjs` e `p2p-peers.cjs`;
 1496 testes aprovados, build e format:check preservados sem regressões.
 
+Operação Estabilidade de Transmissão em Jogos High-FPS (1.2.1):
+
+1. Recuperação inteligente em camada única (`video-recovery.ts`): evita derrubar a PeerConnection SFU do espectador durante oscilações curtas (< 3.800 ms) ou na tentativa 0 quando não há camadas RID para alternar.
+2. Fluidez nativa de jogos (`quality.ts`, `screen-sharing.ts`): restaura `'motion'` (`maintain-framerate`) como padrão e aplica `'motion'` automaticamente ao selecionar 30/60 FPS (mantendo `'detail'` para 15 FPS).
+3. Encoder H.264 e SDP sem gargalo (`sfu-encoding.ts`, `p2p-peers.ts`): `prioritizeH264` passa a ranquear Constrained Baseline por nível decrescente (`>= 4.2/5.0` acima de `3.1`) e demais perfis H.264 tanto em `screen` SFU quanto P2P preservando `video/rtx`, e `screenStartupOffer` eleva `x-google-min-bitrate` para 30% (`1,2–3,5 Mbps`) e `x-google-start-bitrate` para 60% (`<= 6 Mbps`) nas ofertas SFU.
+4. Captura sem downscale em CPU (`screen-capture.ts`): remove restrição `max: targetWidth/Height` de `getDisplayMedia`, delegando escala ao `scaleResolutionDownBy` em hardware.
+5. Proteção Desktop/Windows (`electron/main.cjs`, `electron/audio-priority.cjs`, `borrowed-video.tsx`, `media-tile.tsx`): adiciona `CalculateNativeWinOcclusion,IntensiveWakeUpThrottling`, protege `video_capture.mojom.VideoCaptureService` com `PRIORITY_ABOVE_NORMAL` contra Windows Game Mode EcoQoS, e pausa a prévia local (`p.self`) quando a janela perde foco para evitar contenção DWM em monitores mistos.
+6. Segurança frontend: Next.js atualizado de `16.4.2` para `16.4.6` (`experimental.agentUpgrade: 'security'`).
+
 Operação Marca Registrada — Transição Animada de Boas-Vindas (1.2.0):
-1. Overlay cinematográfico de entrada (`components/application/welcome-intro.tsx`, `welcome-intro.module.css` e `lib/application/welcome-intro.ts`) exibindo o emblema real (`throne.png`), anel orbital, *light sheen*, slogan institucional, foto ou GIF animado de perfil via `<Avatar />`, saudação personalizada (`"Bem vindo, <Nome>"`) e cargo na Corte.
+
+1. Overlay cinematográfico de entrada (`components/application/welcome-intro.tsx`, `welcome-intro.module.css` e `lib/application/welcome-intro.ts`) exibindo o emblema real (`throne.png`), anel orbital, _light sheen_, slogan institucional, foto ou GIF animado de perfil via `<Avatar />`, saudação personalizada (`"Bem vindo, <Nome>"`) e cargo na Corte.
 2. Executa por ~4,45 s em segundo plano sem bloquear a inicialização de WebSocket, canais, presença ou carregamento do avatar, oferecendo atalho de saída imediata (clique na tela, `Esc` ou botão `"Entrar agora"`) e replay pelo menu `"Meu perfil"` (`"Rever boas-vindas"`), respeitando `prefers-reduced-motion` e `data-reduced-motion`.
 
 Operação Screen Share, Links no Chat e Estabilidade da Biblioteca de Jogos (1.1.1):
+
 1. Reconhecimento seguro de links HTTP/HTTPS/www no corpo de mensagens públicas e privadas (`lib/chat/links.ts`, `components/chat/message-text.tsx`) preservando CSP/`rel="noopener noreferrer"`.
 2. Preservação da tela ativa em jogos/biblioteca (`lib/navigation/portal.ts` `identityChanged`) durante refreshes silenciosos de sessão da mesma conta.
 3. Eliminação de microtravamentos no screen share: `prioritizeH264` mantendo `video/rtx` pareado (`sfu-encoding.ts`), dicas SDP `x-google-min-bitrate`/`start-bitrate` balanceadas contra estagnação de fila, remoção de loops de `useLayoutEffect` e vazamento de `bindStreamControls` em `CallStageView`/`MediaTile`, proteção contra `setParameters` redundante em `quality.ts`, telemetria por fluxo com diagnóstico de 8 causas em `telemetry.ts` (`diagnostic-report.ts`), recuperação pontual com cooldown/limite em `video-recovery.ts` + tolerância a `disconnected` (> 4,5 s) em `sfu-session.ts`, adaptação de `CallStability` a congestionamento/congelamentos em 6 s (`quality-policy.ts`) e aceitação de 18 Mbps (com teto de política) no `set-screen-bitrate` do servidor (`server/realtime-sfu.ts`).
@@ -1487,10 +1498,9 @@ Operação Screen Share, Links no Chat e Estabilidade da Biblioteca de Jogos (1.
 Operação Renascimento — Marco 1.0 Concluído e Publicado:
 Conclusão integral dos 103 incrementos estruturais da Operação Renascimento nos três
 jogos e no comunicador integrado:
+
 1. Cinzas do Abismo (motor nativo, 25 capítulos, 4 armas/variantes, árvore de talentos, áudio procedimental Web Audio API, persistência íntegra).
 2. Atalaia: Guardiões do Cristal (Godot 4.6.3 headless/Web, Crônica de 30 fases, 12 torretas balanceadas, 8.422 checks econômicos, modos Infinito e Desafios).
 3. Project Nexus (24 heróis com 192 poses anatômicas e 6 supremos dedicados, 7 fases de chefes com mecânicas de prazo/pressão/escudo distintas, 4 telas de Hub acessíveis, 48 missões e pacote Web exportado).
 4. Plataforma & Electron (CSP rígida sem unsafe-eval/unsafe-inline, aceleradores protegidos, resoluções com letterboxing responsivo, pacotes de distribuição homologados sem bloqueadores conhecidos).
-Playtests humanos, revisões audiovisuais e balanceamento aprovados com aceite formal explícito do usuário. 100% dos checklists em docs/RENASCIMENTO.md concluídos. Aprovado pela suíte check-renascimento-final-declaration.cjs.
-
-
+   Playtests humanos, revisões audiovisuais e balanceamento aprovados com aceite formal explícito do usuário. 100% dos checklists em docs/RENASCIMENTO.md concluídos. Aprovado pela suíte check-renascimento-final-declaration.cjs.

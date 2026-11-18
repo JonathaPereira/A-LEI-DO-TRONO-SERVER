@@ -51,8 +51,8 @@ export function screenStartupOffer(
 ): RTCSessionDescriptionInit {
   if (!offer?.sdp) return offer;
   const max = Math.round(bitrate / 1000),
-    min = Math.min(900, Math.max(300, Math.round(max * 0.1))),
-    start = Math.min(3200, Math.max(min, Math.round(max * 0.4)));
+    min = Math.min(3500, Math.max(1200, Math.round(max * 0.3))),
+    start = Math.min(6000, Math.max(min, Math.round(max * 0.6)));
   const parts = offer.sdp.split(/(?=m=)/);
   return {
     type: offer.type,
@@ -100,6 +100,19 @@ export function advertisedRids(transceiver: RTCRtpTransceiver, pc: RTCPeerConnec
   return rids;
 }
 
+function h264Rank(codec: RTCRtpCodec): number {
+  const match = /profile-level-id=([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(
+    codec.sdpFmtpLine || '',
+  );
+  if (!match) return 1;
+  const profile = match[1].toLowerCase();
+  const level = parseInt(match[3], 16);
+  // Keep Constrained Baseline (42e0) first for universal SFU/hardware support, sorted by higher level first.
+  const profileScore =
+    profile === '42' ? 200 : profile === '64' ? 120 : profile === '4d' ? 100 : 50;
+  return profileScore + (Number.isFinite(level) ? Math.min(level, 99) : 0);
+}
+
 export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined): boolean {
   if (!transceiver?.setCodecPreferences) return false;
   try {
@@ -123,13 +136,10 @@ export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined
     }
     const h264Groups = groups.filter((g) => g[0].mimeType?.toLowerCase() === 'video/h264');
     if (!h264Groups.length) return false;
-    const baseline = h264Groups.filter((g) =>
-      /profile-level-id=42e0/i.test(g[0].sdpFmtpLine || ''),
-    );
+    const rankedH264 = [...h264Groups].sort((a, b) => h264Rank(b[0]) - h264Rank(a[0]));
     const ordered = [
-      ...baseline,
-      ...h264Groups.filter((g) => !baseline.includes(g)),
-      ...groups.filter((g) => !h264Groups.includes(g)),
+      ...rankedH264,
+      ...groups.filter((g) => g[0].mimeType?.toLowerCase() !== 'video/h264'),
     ].flat();
     transceiver.setCodecPreferences(ordered);
     return true;

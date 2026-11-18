@@ -134,6 +134,7 @@ export function createScreenSharing(options: SharingOptions) {
       if (disposed || !options.call().joined || !isScreenFormat(format)) return false;
       options.quality.configure({
         screenFormat: format,
+        screenContent: fps === '15' ? 'detail' : 'motion',
         transmissionQuality: ['1080', '1440'].includes(resolution) ? 'high' : 'balanced',
         screenBitrateMbps:
           resolution === '1440'

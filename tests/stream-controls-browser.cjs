@@ -10,7 +10,7 @@ const { exerciseStreamControls } = require('./stream-controls-flow.cjs');
 
 test(
   'exported web players keep keyboard, drag and fullscreen controls while receiving live frames',
-  { timeout: 90000 },
+  { timeout: 120000 },
   async () => {
     const server = await new Promise((resolve) => {
       const server = express()

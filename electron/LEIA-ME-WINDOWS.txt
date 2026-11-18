@@ -1,3 +1,12 @@
+M&N · A Lei do Trono — Windows 1.2.1
+
+Melhoria 1.2.1: eliminação de travadas reais no screen share de jogos em tela cheia/sem bordas
+(padrão screenContent='motion' com maintain-framerate em 30/60 FPS, priorização H.264 por nível
+decrescente no SFU e P2P sem afetar áudio/câmera, piso SDP anti-colapso em 30% do bitrate alvo no SFU,
+remoção de downscale síncrono em CPU na captura getDisplayMedia, tolerância >= 3,8s antes de derrubar
+assinaturas SFU de camada única, proteção de prioridade do VideoCaptureService contra EcoQoS do Windows,
+desativação de CalculateNativeWinOcclusion/IntensiveWakeUpThrottling, pausa da prévia local sem foco e Next.js 16.4.6).
+
 M&N · A Lei do Trono — Windows 1.2.0
 
 Melhoria 1.2.0: transição animada de boas-vindas na entrada do aplicativo e troca de conta
