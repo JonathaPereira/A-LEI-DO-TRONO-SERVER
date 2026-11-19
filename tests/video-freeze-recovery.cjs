@@ -164,6 +164,24 @@ test('video freeze recovery performs targeted per-stream nudge and bounded recov
   const peerARecoveries = events.filter((e) => e[0] === 'recover-sub' && e[1] === 'peer-a');
   assert.equal(peerARecoveries.length, 3);
 
+  // 4b. Connected SFU screen with presentation-frozen does NOT tear down the PeerConnection.
+  time += 10000;
+  await recovery.inspect({
+    streams: [
+      stream({
+        streamKey: 's-pres',
+        pcKey: 'sfu:peer-pres:screen',
+        direction: 'inbound',
+        cause: 'presentation-frozen',
+        stallMs: 5500,
+      }),
+    ],
+  });
+  assert.equal(
+    events.some((e) => e[1] === 'peer-pres'),
+    false,
+  );
+
   // 5. Generation change / call end prevents actions.
   joined = false;
   time += 60000;

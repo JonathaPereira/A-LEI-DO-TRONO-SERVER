@@ -329,6 +329,7 @@ export function VoiceCaptureSettings({
             }}
           >
             <option value="auto">Automático • padrão do navegador (recomendado)</option>
+            <option value="av1">AV1 • hardware moderno (RX 7000/9000, RTX 40+)</option>
             <option value="vp8">VP8 • estável em jogos (multi-thread)</option>
             <option value="vp9">VP9 • alta nitidez / menor banda</option>
             <option value="h264">H.264 • hardware (NVENC / AMF / QSV)</option>

@@ -188,6 +188,10 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
       const parsed = parsePeerTarget(stream.pcKey, stream, sfu);
       if (!parsed) continue;
       if (parsed.transport === 'sfu') {
+        // presentation-frozen means frames are still decoding; tearing down a healthy SFU
+        // screen PeerConnection triggers a worse renegotiation/keyframe freeze loop.
+        if (parsed.kind === 'screen' && stream.cause === 'presentation-frozen' && !transportBroken)
+          continue;
         if (attemptIndex === 0) {
           // Single-layer screen subscriptions have no RID switch option; avoid tearing down
           // the PeerConnection on brief <3.8s stutters while transport stays connected.

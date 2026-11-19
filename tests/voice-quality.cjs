@@ -320,4 +320,20 @@ test('1440p (2K) profiles and clean native scale prevent fractional downscaling'
   const customQuality = (await fixture({ mnScreenFormat: '1080-60' })).quality;
   await customQuality.applySender(nativeScreen, 'screen');
   assert.equal(nativeScreen.applied[0].encodings[0].scaleResolutionDownBy, 1);
+
+  const av1Fixture = await fixture({ mnScreenFormat: '1080-30', mnScreenCodec: 'av1' });
+  assert.equal(av1Fixture.quality.getSnapshot().preferences.screenCodec, 'av1');
+  const prefilled = sender(
+    [{ scaleResolutionDownBy: 1, maxBitrate: 8000000, maxFramerate: 30 }],
+    { width: 1920, height: 1080 },
+  );
+  prefilled.getParameters = () => ({
+    degradationPreference: 'maintain-framerate',
+    encodings: [{ scaleResolutionDownBy: 1, maxBitrate: 8000000, maxFramerate: 30 }],
+  });
+  await av1Fixture.quality.applySender(prefilled, 'screen');
+  assert.equal(prefilled.applied.length, 1);
+  assert.equal(prefilled.applied[0].encodings[0].maxFramerate, 30);
+  await av1Fixture.quality.applySender(prefilled, 'screen');
+  assert.equal(prefilled.applied.length, 1);
 });

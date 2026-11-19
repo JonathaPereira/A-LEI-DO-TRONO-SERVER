@@ -493,6 +493,26 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
               : 'Qualidade de vídeo restaurada.',
             'ok',
           );
+      } else if (screenSharing()) {
+        const target = callQuality.getSnapshot().profile.screen;
+        const oversized = (snapshot.streams || []).some(
+          (s) =>
+            s.direction === 'outbound' &&
+            (s.pcKey === 'sfu:screen' || s.pcKey.startsWith('p2p:')) &&
+            ((s.height > 0 && s.height > target.height * 1.08) ||
+              (s.fps !== null && s.fps > target.fps + 5)),
+        );
+        if (oversized) {
+          const sfuScreen = sfuLocalPublications.get('screen')?.sender;
+          if (sfuScreen) await applySenderQuality(sfuScreen, 'screen');
+          else
+            await Promise.allSettled(
+              [...peers.values()]
+                .map((pc) => pc._tronoScreenSender)
+                .filter((sender): sender is RTCRtpSender => Boolean(sender))
+                .map((sender) => applySenderQuality(sender, 'screen')),
+            );
+        }
       }
       if (isCurrent()) await videoFreezeRecovery.inspect(snapshot);
     },

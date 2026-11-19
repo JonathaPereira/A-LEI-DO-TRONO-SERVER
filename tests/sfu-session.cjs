@@ -799,6 +799,31 @@ test('prioritizeH264 keeps paired video/rtx directly attached to each codec', as
   }
 });
 
+test('prioritizeScreenCodec supports AV1 while keeping paired video/rtx attached', async () => {
+  const { prioritizeScreenCodec } = await import('../src/lib/voice/sfu-encoding.ts');
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: () => ({
+        codecs: [
+          { mimeType: 'video/VP8', clockRate: 90000 },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=96' },
+          { mimeType: 'video/AV1', clockRate: 90000 },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=45' },
+        ],
+      }),
+    };
+    let preferred = null;
+    assert.equal(prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'av1'), true);
+    assert.equal(preferred[0].mimeType, 'video/AV1');
+    assert.equal(preferred[1].mimeType, 'video/rtx');
+    assert.equal(preferred[1].sdpFmtpLine, 'apt=45');
+    assert.equal(preferred[2].mimeType, 'video/VP8');
+  } finally {
+    globalThis.RTCRtpSender = originalSender;
+  }
+});
+
 test('disconnected SFU subscription recovers cleanly only if disconnected exceeds 4500 ms', async (t) => {
   const h = await setup(t);
   h.session.setPublications([metadata('screen', 'p1')]);

@@ -156,6 +156,16 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
     track.addEventListener('mute', muted);
     track.addEventListener('unmute', unmuted);
     if (receiver && kind === 'audio') options.onVoiceReceiver(id, receiver, true);
+    if (receiver && kind === 'screen' && track.kind === 'video') {
+      try {
+        const target = receiver as unknown as {
+          jitterBufferTarget?: number | null;
+          playoutDelayHint?: number | null;
+        };
+        if ('jitterBufferTarget' in target) target.jitterBufferTarget = 60;
+        else if ('playoutDelayHint' in target) target.playoutDelayHint = 0.06;
+      } catch {}
+    }
     if (kind === 'audio' || (kind === 'screen-audio' && options.getInterest(id).screen))
       options.onAudioReady(id, kind);
     if (track.kind === 'video' && !track.muted) healthy();

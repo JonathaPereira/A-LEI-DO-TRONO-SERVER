@@ -53,6 +53,7 @@ export function createCallQuality(options: QualityOptions) {
   });
   let revision = 0;
   const queues = new WeakMap<RTCRtpSender, Promise<void>>();
+  const initializedScreenSenders = new WeakSet<RTCRtpSender>();
   const warn = options.warn ?? ((error: unknown) => console.warn('[CallQuality]', error));
   let cached: QualitySnapshot | undefined, cachedPreferences: QualityPreferences | undefined;
   let cachedSfu: boolean | undefined,
@@ -183,7 +184,9 @@ export function createCallQuality(options: QualityOptions) {
               h: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
               q: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
             };
-            let changed = parameters.degradationPreference !== targetDegradation;
+            let changed =
+              !initializedScreenSenders.has(sender) ||
+              parameters.degradationPreference !== targetDegradation;
             parameters.degradationPreference = targetDegradation;
             for (const e of parameters.encodings) {
               const nextScale = scale * (e.rid === 'h' ? 2 : e.rid === 'q' ? 4 : 1);
@@ -229,7 +232,10 @@ export function createCallQuality(options: QualityOptions) {
             parameters.encodings[0].maxBitrate = q.videoBitrate;
             parameters.encodings[0].maxFramerate = q.camera.fps;
           }
-          if (current()) await sender.setParameters(parameters);
+          if (current()) {
+            await sender.setParameters(parameters);
+            if (kind === 'screen') initializedScreenSenders.add(sender);
+          }
         } catch (error) {
           if (current()) warn(error);
         }

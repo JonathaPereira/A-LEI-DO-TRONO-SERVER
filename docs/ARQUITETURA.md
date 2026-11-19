@@ -183,15 +183,20 @@ donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
 getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
 A transmissão de tela suporta preferência configurável de codec (`prioritizeScreenCodec`:
 `auto` por padrão para evitar fallback forçado para OpenH264 single-thread no Windows, com
-opções explícitas `vp8`, `vp9` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
+opções explícitas `av1`, `vp8`, `vp9` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
 P2P (`p2p-peers.ts`), preservando os codecs `video/rtx` pareados para retransmissão NACK/RTX
 e usando piso/início conservadores em `screenStartupOffer` para não engessar o controle de
-congestionamento. A telemetria de mídia (`voice/telemetry.ts`) coleta deltas por fluxo de
-publicação/recepção, classifica congelamentos reais em 8 categorias sem confundir tela estática
-com falha e o relatório sanitizado (`voice/diagnostic-report.ts`) expõe codec, implementação do
-encoder/decoder e aceleração por hardware por fluxo; `voice/video-recovery.ts` e
-`voice/sfu-session.ts` aplicam recuperação direcionada e limitada por fluxo/estado `disconnected`
-(> 4,5 s) sem derrubar chamada, microfone, câmera ou socket. O perfil padrão de conteúdo de tela
+congestionamento. No lado emissor, `voice/quality.ts` garante o commit inicial de `setParameters`
+pós-negociação e `voice/runtime.ts` reconcilia `scaleResolutionDownBy`/`maxFramerate` caso a
+telemetria detecte resolução ou FPS acima do formato escolhido; no lado receptor, `voice/remote-media.ts`
+configura um alvo de 60 ms (`jitterBufferTarget` / `playoutDelayHint`) no `RTCRtpReceiver` de tela
+para suavizar quadros pesados sem atrasar áudio. A telemetria de mídia (`voice/telemetry.ts`) coleta
+deltas por fluxo de publicação/recepção, classifica congelamentos reais em 8 categorias sem confundir
+tela estática com falha e o relatório sanitizado (`voice/diagnostic-report.ts`) expõe codec, implementação
+do encoder/decoder e aceleração por hardware por fluxo; `voice/video-recovery.ts` e `voice/sfu-session.ts`
+aplicam recuperação direcionada e limitada por fluxo/estado `disconnected` (> 4,5 s) sem derrubar
+chamada, microfone, câmera ou socket — e evitam reconectar assinaturas SFU de tela saudáveis em
+`presentation-frozen` enquanto o decoder ainda progride. O perfil padrão de conteúdo de tela
 é `motion`, que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência e
 fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail` (`maintain-resolution`)
 para documentos e apresentações estáticas. No processo principal do Electron (`electron/main.cjs`

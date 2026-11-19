@@ -13,7 +13,13 @@ export const QUALITY_ORDER: readonly TransmissionQuality[] = Object.freeze([
   'high',
 ]);
 export const SCREEN_BITRATES: readonly number[] = Object.freeze([4, 6, 8, 10, 12, 15, 18]);
-export const SCREEN_CODECS: readonly ScreenCodec[] = Object.freeze(['auto', 'vp8', 'vp9', 'h264']);
+export const SCREEN_CODECS: readonly ScreenCodec[] = Object.freeze([
+  'auto',
+  'vp8',
+  'vp9',
+  'av1',
+  'h264',
+]);
 export const SCREEN_FORMATS: Readonly<Record<ScreenFormatId, VideoProfile['screen']>> =
   Object.freeze({
     '720-15': Object.freeze({ width: 1280, height: 720, fps: 15 }),

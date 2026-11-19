@@ -119,7 +119,14 @@ export function prioritizeScreenCodec(
   codec: ScreenCodec = 'auto',
 ): boolean {
   if (codec === 'auto' || !transceiver?.setCodecPreferences) return false;
-  const targetMime = codec === 'h264' ? 'video/h264' : codec === 'vp9' ? 'video/vp9' : 'video/vp8';
+  const targetMime =
+    codec === 'h264'
+      ? 'video/h264'
+      : codec === 'vp9'
+        ? 'video/vp9'
+        : codec === 'av1'
+          ? 'video/av1'
+          : 'video/vp8';
   try {
     const sender = typeof RTCRtpSender !== 'undefined' ? RTCRtpSender : null;
     const codecs = sender?.getCapabilities?.('video')?.codecs;

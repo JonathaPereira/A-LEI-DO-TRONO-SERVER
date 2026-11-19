@@ -1,3 +1,11 @@
+M&N · A Lei do Trono — Windows 1.3.1
+
+Melhoria 1.3.1: estabilidade de screen share (Degrau 2) — suporte ao codec AV1 (hardware
+em GPUs modernas RX 7000/9000 e RTX 40+, decodificação em hardware RTX 30+), alvo de buffer
+de 60 ms no receptor de vídeo de tela para eliminar presentation-frozen, proteção contra
+reconexão destrutiva da assinatura SFU em presentation-frozen com transporte saudável, e
+reconciliação automática de resolução/FPS no emissor quando a captura excede o formato escolhido.
+
 M&N · A Lei do Trono — Windows 1.3.0
 
 Melhoria 1.3.0: estabilidade de screen share (Degrau 1) — seletor de codec de tela
