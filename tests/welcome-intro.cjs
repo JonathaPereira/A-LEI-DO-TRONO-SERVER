@@ -16,6 +16,8 @@ test('welcome intro helpers build stable keys, greetings, roles, load states, an
     triggerWelcomeIntroReplay,
   } = await import('../src/lib/application/welcome-intro.ts');
 
+  assert.equal(WELCOME_INTRO_EXIT_DELAY_MS, 4450);
+  assert.equal(WELCOME_INTRO_DURATION_MS, 4950);
   assert(
     WELCOME_INTRO_MIN_READY_EXIT_MS > 0 &&
       WELCOME_INTRO_MIN_READY_EXIT_MS < WELCOME_INTRO_EXIT_DELAY_MS,

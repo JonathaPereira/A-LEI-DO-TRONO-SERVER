@@ -40,6 +40,10 @@ public class MainActivity extends BridgeActivity {
                   null);
           return WindowInsetsCompat.CONSUMED;
         });
+    if (bridge != null && bridge.getWebView() != null) {
+      bridge.getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false);
+      bridge.getWebView().setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
+    }
     getOnBackPressedDispatcher()
         .addCallback(
             this,
@@ -53,5 +57,25 @@ public class MainActivity extends BridgeActivity {
                         "window.dispatchEvent(new Event('trono-android-back'))", null);
               }
             });
+  }
+
+  private void keepCallWebViewAlive() {
+    if (CallService.lease == null || bridge == null || bridge.getWebView() == null) return;
+    // Capacitor's BridgeActivity pauses the WebView on screen-off/background, which suspends
+    // WebRTC audio and JS timers. Resume the WebView while CallService holds an active call lease.
+    bridge.getWebView().onResume();
+    bridge.getWebView().resumeTimers();
+  }
+
+  @Override
+  public void onPause() {
+    super.onPause();
+    keepCallWebViewAlive();
+  }
+
+  @Override
+  public void onStop() {
+    super.onStop();
+    keepCallWebViewAlive();
   }
 }

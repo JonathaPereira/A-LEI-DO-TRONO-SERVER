@@ -206,6 +206,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       }),
     onTrackChanged: (change) => devicePublication.publishMicrophone(change),
   });
+  const screenWatchers = new Set<string>();
   const screenCapture: ReturnType<typeof createScreenCapture> = createScreenCapture({
     mediaDevices: navigator.mediaDevices,
     getSettings: () => ({
@@ -223,6 +224,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       void window.TronoClips?.sharedStarted?.(source);
     },
     onSourceStopped: (source) => {
+      screenWatchers.clear();
       window.TronoClips?.sharedStopped?.(source);
     },
   });
@@ -678,6 +680,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       voiceTransport.reset,
       audioPlayback.reset,
       () => {
+        screenWatchers.clear();
         localStream?.getTracks().forEach((track) => track.stop());
         localStream = null;
       },
@@ -744,6 +747,13 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     onNotice: callNotice,
     onLocalModeration: (moderation) => {
       applyVoiceModeration(moderation);
+    },
+    onScreenWatch: (fromId, watching) => {
+      const changed =
+        watching && screenSharing()
+          ? !screenWatchers.has(fromId) && (screenWatchers.add(fromId), true)
+          : screenWatchers.delete(fromId);
+      if (changed) renderScreenGrid();
     },
     onChange: () => {
       audioPlayback.refresh();
@@ -1617,6 +1627,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         localRole: window.TronoAuth?.user?.role || 'member',
         previewPaused: preview.previewPaused,
         previewCollapsed: preview.collapsed,
+        screenWatcherIds: screenSharing() ? [...screenWatchers] : [],
         participants: call.joined
           ? detailedPlayers().map((p) => {
               const self = p.id === meId(),

@@ -175,9 +175,10 @@ test('preference storage survives denied getters, full storage and failed remova
     assert.equal(storage.getItem('key'), null);
   }
 });
-test('desktop music is opt-in, web defaults are preserved and old track IDs migrate without opening audio', () => {
+test('background music is opt-in across desktop and web/Android and old track IDs migrate without opening audio', () => {
   assert.equal(fixture().owner.musicEnabled, false);
-  assert.equal(fixture({ desktop: false }).owner.musicEnabled, true);
+  assert.equal(fixture({ desktop: false }).owner.musicEnabled, false);
+  assert.equal(fixture({ desktop: false, stored: { tronoMusicEnabled: '1' } }).owner.musicEnabled, true);
   for (const id of ['tavern', 'classical', '__proto__', 'missing']) {
     const f = fixture({ stored: { tronoMusicTrack: id } });
     assert.equal(f.owner.currentTrack, 'lofi');

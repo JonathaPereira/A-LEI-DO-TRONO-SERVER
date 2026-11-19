@@ -328,10 +328,10 @@ export function VoiceCaptureSettings({
               void client.selectCodec(event.target.value);
             }}
           >
-            <option value="auto">Automático • padrão do navegador (recomendado)</option>
+            <option value="vp9">VP9 • oficial (melhor equilíbrio visual)</option>
+            <option value="auto">Automático • padrão do navegador</option>
             <option value="av1">AV1 • hardware moderno (RX 7000/9000, RTX 40+)</option>
-            <option value="vp8">VP8 • estável em jogos (multi-thread)</option>
-            <option value="vp9">VP9 • alta nitidez / menor banda</option>
+            <option value="vp8">VP8 • estável em jogos leves (multi-thread)</option>
             <option value="h264">H.264 • hardware (NVENC / AMF / QSV)</option>
           </select>
         </label>

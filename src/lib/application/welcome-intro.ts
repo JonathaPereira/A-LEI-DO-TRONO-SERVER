@@ -1,10 +1,10 @@
 import type { AccountRole } from '../../types/domain';
 
 export const WELCOME_INTRO_EVENT = 'trono:replay-welcome-intro';
-export const WELCOME_INTRO_EXIT_DELAY_MS = 3950;
-export const WELCOME_INTRO_DURATION_MS = 4450;
-export const WELCOME_INTRO_MIN_READY_EXIT_MS = 1800;
-export const WELCOME_INTRO_MIN_READY_DURATION_MS = 2250;
+export const WELCOME_INTRO_EXIT_DELAY_MS = 4450;
+export const WELCOME_INTRO_DURATION_MS = 4950;
+export const WELCOME_INTRO_MIN_READY_EXIT_MS = 2300;
+export const WELCOME_INTRO_MIN_READY_DURATION_MS = 2750;
 export const WELCOME_INTRO_REDUCED_EXIT_DELAY_MS = 450;
 export const WELCOME_INTRO_REDUCED_DURATION_MS = 650;
 

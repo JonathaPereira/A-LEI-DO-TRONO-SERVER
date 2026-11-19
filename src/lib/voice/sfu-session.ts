@@ -244,6 +244,7 @@ export function createSfuSession(options: SfuOptions) {
       try {
         const settings = options.getSettings();
         const init: RTCRtpTransceiverInit = { direction: 'sendonly' };
+        const screenCodec = settings.screenCodec ?? 'auto';
         if (simulcast && kind === 'camera') init.sendEncodings = cameraEncodings(settings);
         else if (kind === 'screen')
           init.sendEncodings = [
@@ -251,10 +252,26 @@ export function createSfuSession(options: SfuOptions) {
               maxBitrate: settings.screenBitrate,
               maxFramerate: settings.screen.fps,
               networkPriority: 'high',
-            },
+              ...(screenCodec === 'vp9' || screenCodec === 'av1'
+                ? { scalabilityMode: 'L1T2' }
+                : {}),
+            } as RTCRtpEncodingParameters,
           ];
-        const tr = pc.addTransceiver(track, init);
-        if (kind === 'screen') prioritizeScreenCodec(tr, settings.screenCodec ?? 'auto');
+        let tr: RTCRtpTransceiver;
+        try {
+          tr = pc.addTransceiver(track, init);
+        } catch (error) {
+          if (kind === 'screen' && init.sendEncodings?.[0]) {
+            const fallbackEnc = { ...init.sendEncodings[0] } as RTCRtpEncodingParameters & {
+              scalabilityMode?: string;
+            };
+            delete fallbackEnc.scalabilityMode;
+            tr = pc.addTransceiver(track, { ...init, sendEncodings: [fallbackEnc] });
+          } else {
+            throw error;
+          }
+        }
+        if (kind === 'screen') prioritizeScreenCodec(tr, screenCodec);
         const offer = await abortable(pc.createOffer(), r.controller.signal);
         ensure();
         await abortable(

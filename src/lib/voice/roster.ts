@@ -32,6 +32,7 @@ interface RosterOptions {
   onSound(kind: 'join' | 'leave' | 'disconnect', id: string): void;
   onNotice(notice: VoiceNotice): void;
   onLocalModeration?(moderation: { serverMuted?: boolean; mediaBlocked?: boolean }): void;
+  onScreenWatch?(fromId: string, watching: boolean): void;
   onChange(): void;
   onMessage(listener: (message: SocketMessage) => void): () => void;
   warn?(error: unknown): void;
@@ -227,13 +228,17 @@ export function createVoiceRoster(options: RosterOptions) {
         options.onSound(state.joined ? 'join' : 'leave', state.playerId);
       update();
       sync();
-    } else if (
-      message.type === 'voice-signal' &&
-      optionalRoom &&
-      options.call().joined &&
-      options.transport() === 'p2p'
-    ) {
-      background(() => options.peers.handleSignal(message));
+    } else if (message.type === 'voice-signal' && optionalRoom && options.call().joined) {
+      if (
+        message.signalType === 'stream-watch' &&
+        isParticipantId(message.fromId) &&
+        typeof (message.data as { watching?: unknown } | null)?.watching === 'boolean'
+      ) {
+        options.onScreenWatch?.(message.fromId, (message.data as { watching: boolean }).watching);
+      }
+      if (options.transport() === 'p2p') {
+        background(() => options.peers.handleSignal(message));
+      }
     } else if (message.type === 'player-left' && inRoom && isParticipantId(message.playerId))
       removeParticipant(message.playerId);
     else if (message.type === 'sfu-publications' && inRoom) {

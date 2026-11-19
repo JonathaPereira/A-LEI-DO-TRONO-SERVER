@@ -162,8 +162,8 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
           jitterBufferTarget?: number | null;
           playoutDelayHint?: number | null;
         };
-        if ('jitterBufferTarget' in target) target.jitterBufferTarget = 60;
-        else if ('playoutDelayHint' in target) target.playoutDelayHint = 0.06;
+        if ('jitterBufferTarget' in target) target.jitterBufferTarget = 80;
+        else if ('playoutDelayHint' in target) target.playoutDelayHint = 0.08;
       } catch {}
     }
     if (kind === 'audio' || (kind === 'screen-audio' && options.getInterest(id).screen))

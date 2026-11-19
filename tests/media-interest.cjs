@@ -67,7 +67,13 @@ test('SFU closes only screen subscriptions and retains voice and camera', async 
       ['close', 'remote', 'screen-audio'],
     ],
   );
-  assert(!h.events.some((e) => e[0] === 'watch'));
+  assert.deepEqual(
+    h.events.filter((e) => e[0] === 'watch'),
+    [
+      ['watch', 'remote', true],
+      ['watch', 'remote', false],
+    ],
+  );
 });
 test('hiding a camera disables borrowed video without stopping it and restores the same track', async (t) => {
   const h = await setup(t);

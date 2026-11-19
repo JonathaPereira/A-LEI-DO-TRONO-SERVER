@@ -26,6 +26,7 @@ export interface StageSource {
   localRole?: string;
   previewPaused: boolean;
   previewCollapsed: boolean;
+  screenWatcherIds?: readonly string[];
   participants: readonly StagePerson[];
 }
 interface StageOptions {
@@ -133,6 +134,10 @@ export function createCallStage(options: StageOptions) {
     );
     const cameras = participants.filter((p) => p.camera && !p.hiddenCamera),
       screens = source.community ? participants.filter((p) => p.screen) : [];
+    const watcherSet = new Set(source.screenWatcherIds || []);
+    const screenWatchers = Object.freeze(
+      participants.filter((p) => !p.self && watcherSet.has(p.id)),
+    );
     const screensLayout = source.hub && participants.some((p) => p.screen);
     return Object.freeze({
       ...source,
@@ -140,6 +145,7 @@ export function createCallStage(options: StageOptions) {
       focused,
       cameras: Object.freeze(cameras),
       screens: Object.freeze(screens),
+      screenWatchers,
       switching: !!switching,
       screensLayout,
       cameraDocked: cameras.length ? cameras.every((p) => p.cameraDock) : screensLayout,

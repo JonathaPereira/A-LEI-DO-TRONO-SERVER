@@ -1,3 +1,13 @@
+M&N · A Lei do Trono — Windows & Android 2.0.0
+
+Melhoria 2.0.0: VP9 definido como codec oficial de screen share (com priorização de Profile 0
+para decodificação em hardware universal, escalabilidade temporal L1T2 e alvo de buffer de 80 ms
+no receptor), indicador com avatares de quem está assistindo sua transmissão em tempo real (SFU e P2P),
+músicas de fundo desligadas por padrão em todas as plataformas, transição de boas-vindas estendida
+em +0,5 s, e correção no Android para manter chamadas ativas em segundo plano com a tela desligada
+(WebView mantido ativo durante o CallService, WifiLock e AudioManager MODE_IN_COMMUNICATION + melhorias
+de responsividade mobile).
+
 M&N · A Lei do Trono — Windows 1.3.1
 
 Melhoria 1.3.1: estabilidade de screen share (Degrau 2) — suporte ao codec AV1 (hardware

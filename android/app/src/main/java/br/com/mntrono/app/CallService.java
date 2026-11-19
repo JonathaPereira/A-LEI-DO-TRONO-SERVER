@@ -3,15 +3,19 @@ package br.com.mntrono.app;
 import android.app.*;
 import android.content.*;
 import android.content.pm.ServiceInfo;
+import android.media.AudioManager;
+import android.net.wifi.WifiManager;
 import android.os.*;
 import androidx.core.app.NotificationCompat;
 
-/** Holds only the foreground lease and CPU lock. WebRTC retains its existing media owner. */
+/** Holds only the foreground lease, CPU/Wi-Fi locks, and audio communication mode. WebRTC retains its existing media owner. */
 public class CallService extends Service {
   static final String CHANNEL = "trono_calls";
   static final int ID = 7;
   static volatile String lease;
   private PowerManager.WakeLock cpu;
+  private WifiManager.WifiLock wifi;
+  private Integer previousAudioMode;
   private String ownedLease;
 
   @Override
@@ -61,6 +65,32 @@ public class CallService extends Service {
       cpu.setReferenceCounted(false);
       cpu.acquire();
     }
+    if (wifi == null) {
+      try {
+        WifiManager wifiManager =
+            (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager != null) {
+          int mode =
+              Build.VERSION.SDK_INT >= 29
+                  ? WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                  : WifiManager.WIFI_MODE_FULL_HIGH_PERF;
+          wifi = wifiManager.createWifiLock(mode, "MNTrono:CallWifi");
+          wifi.setReferenceCounted(false);
+          wifi.acquire();
+        }
+      } catch (Exception ignored) {
+      }
+    }
+    if (previousAudioMode == null) {
+      try {
+        AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (audio != null) {
+          previousAudioMode = audio.getMode();
+          audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        }
+      } catch (Exception ignored) {
+      }
+    }
     return START_NOT_STICKY; // Never restore a phantom call after the process was killed.
   }
 
@@ -75,6 +105,16 @@ public class CallService extends Service {
   public void onDestroy() {
     if (cpu != null && cpu.isHeld()) cpu.release();
     cpu = null;
+    if (wifi != null && wifi.isHeld()) wifi.release();
+    wifi = null;
+    if (previousAudioMode != null) {
+      try {
+        AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (audio != null) audio.setMode(previousAudioMode);
+      } catch (Exception ignored) {
+      }
+      previousAudioMode = null;
+    }
     if (ownedLease != null && ownedLease.equals(lease)) lease = null;
     stopForeground(STOP_FOREGROUND_REMOVE);
     super.onDestroy();

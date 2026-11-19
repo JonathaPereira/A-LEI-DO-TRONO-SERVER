@@ -107,6 +107,31 @@ function CallCard({
         )}
       </div>
       {screen && <span className={styles.live}>AO VIVO</span>}
+      {screen && p.self && state.screenWatchers.length > 0 && (
+        <div
+          className={styles.watchers}
+          title={
+            'Assistindo agora: ' + state.screenWatchers.map((viewer) => viewer.name).join(', ')
+          }
+          aria-label={
+            state.screenWatchers.length === 1
+              ? `${state.screenWatchers[0].name} está assistindo sua transmissão`
+              : `${state.screenWatchers.length} pessoas assistindo sua transmissão`
+          }
+        >
+          <Icon name="eye" size={13} />
+          <div className={styles.watcherAvatars}>
+            {state.screenWatchers.slice(0, 5).map((viewer) => (
+              <span key={viewer.id} className={styles.watcherChip} title={viewer.name}>
+                <Avatar person={viewer} className={styles.watcherAvatar} />
+              </span>
+            ))}
+            {state.screenWatchers.length > 5 && (
+              <span className={styles.watcherMore}>+{state.screenWatchers.length - 5}</span>
+            )}
+          </div>
+        </div>
+      )}
       <div className={styles.cardActions}>
         <CallMenu runtime={runtime} person={p} kind={kind} visible={visible} card={card} />
       </div>

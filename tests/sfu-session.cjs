@@ -824,6 +824,30 @@ test('prioritizeScreenCodec supports AV1 while keeping paired video/rtx attached
   }
 });
 
+test('prioritizeScreenCodec ranks VP9 Profile 0 ahead of Profile 2 while preserving RTX', async () => {
+  const { prioritizeScreenCodec } = await import('../src/lib/voice/sfu-encoding.ts');
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: () => ({
+        codecs: [
+          { mimeType: 'video/VP9', clockRate: 90000, sdpFmtpLine: 'profile-id=2' },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=100' },
+          { mimeType: 'video/VP9', clockRate: 90000, sdpFmtpLine: 'profile-id=0' },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=98' },
+        ],
+      }),
+    };
+    let preferred = null;
+    assert.equal(prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'vp9'), true);
+    assert.equal(preferred[0].sdpFmtpLine, 'profile-id=0');
+    assert.equal(preferred[1].sdpFmtpLine, 'apt=98');
+    assert.equal(preferred[2].sdpFmtpLine, 'profile-id=2');
+  } finally {
+    globalThis.RTCRtpSender = originalSender;
+  }
+});
+
 test('disconnected SFU subscription recovers cleanly only if disconnected exceeds 4500 ms', async (t) => {
   const h = await setup(t);
   h.session.setPublications([metadata('screen', 'p1')]);

@@ -182,15 +182,20 @@ antiga nem adquirir dispositivos. media-settings.tsx apresenta os controles dos
 donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
 getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
 A transmissão de tela suporta preferência configurável de codec (`prioritizeScreenCodec`:
-`auto` por padrão para evitar fallback forçado para OpenH264 single-thread no Windows, com
-opções explícitas `av1`, `vp8`, `vp9` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
+`vp9` como padrão oficial com Profile 0 priorizado e escalabilidade temporal `L1T2`, mantendo
+opções explícitas `auto`, `av1`, `vp8` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
 P2P (`p2p-peers.ts`), preservando os codecs `video/rtx` pareados para retransmissão NACK/RTX
 e usando piso/início conservadores em `screenStartupOffer` para não engessar o controle de
 congestionamento. No lado emissor, `voice/quality.ts` garante o commit inicial de `setParameters`
 pós-negociação e `voice/runtime.ts` reconcilia `scaleResolutionDownBy`/`maxFramerate` caso a
 telemetria detecte resolução ou FPS acima do formato escolhido; no lado receptor, `voice/remote-media.ts`
-configura um alvo de 60 ms (`jitterBufferTarget` / `playoutDelayHint`) no `RTCRtpReceiver` de tela
-para suavizar quadros pesados sem atrasar áudio. A telemetria de mídia (`voice/telemetry.ts`) coleta
+configura um alvo de 80 ms (`jitterBufferTarget` / `playoutDelayHint`) no `RTCRtpReceiver` de tela
+para suavizar quadros pesados sem atrasar áudio. Espectadores de tela sinalizam `stream-watch` tanto
+em SFU quanto em P2P (`voice/media-interest.ts`, `voice/roster.ts`) para exibir os avatares de quem
+assiste à transmissão no cartão do emissor (`call.tsx`). No Android (`MainActivity.java` e `CallService.java`),
+enquanto há chamada ativa o serviço em primeiro plano mantém `PARTIAL_WAKE_LOCK`, `WifiLock` e
+`AudioManager.MODE_IN_COMMUNICATION`, e `MainActivity` retoma o WebView em `onPause`/`onStop` para
+evitar suspensão de áudio/WebRTC com a tela desligada. A telemetria de mídia (`voice/telemetry.ts`) coleta
 deltas por fluxo de publicação/recepção, classifica congelamentos reais em 8 categorias sem confundir
 tela estática com falha e o relatório sanitizado (`voice/diagnostic-report.ts`) expõe codec, implementação
 do encoder/decoder e aceleração por hardware por fluxo; `voice/video-recovery.ts` e `voice/sfu-session.ts`

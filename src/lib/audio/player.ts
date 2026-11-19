@@ -42,9 +42,7 @@ export function createAudioPlayer(options: Options) {
   const saved = storage.getItem('tronoMusicTrack') || 'lofi';
   const initialTrack = saved === 'tavern' || saved === 'classical' ? 'lofi' : saved;
   let state: AudioSnapshot = Object.freeze({
-    musicEnabled: options.desktop
-      ? storage.getItem('tronoMusicEnabled') === '1'
-      : storage.getItem('tronoMusicEnabled') !== '0',
+    musicEnabled: storage.getItem('tronoMusicEnabled') === '1',
     sfxEnabled: storage.getItem('tronoSfxEnabled') !== '0',
     musicVolume: volume(storage.getItem('tronoMusicVolume') ?? 32),
     currentTrack: isMusicTrack(initialTrack) ? initialTrack : ('lofi' as MusicTrack),

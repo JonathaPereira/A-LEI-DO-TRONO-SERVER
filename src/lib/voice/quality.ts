@@ -48,7 +48,7 @@ export function createCallQuality(options: QualityOptions) {
     screenFormat: isScreenFormat(initialFormat) ? initialFormat : '720-30',
     screenBitrateMbps: SCREEN_BITRATES.includes(initialBitrate) ? initialBitrate : 8,
     screenContent: storage.getItem(keys.screenContent) === 'detail' ? 'detail' : 'motion',
-    screenCodec: isScreenCodec(initialCodec) ? initialCodec : 'auto',
+    screenCodec: isScreenCodec(initialCodec) ? initialCodec : 'vp9',
     adaptiveEnabled: storage.getItem(keys.adaptiveEnabled) !== '0',
   });
   let revision = 0;

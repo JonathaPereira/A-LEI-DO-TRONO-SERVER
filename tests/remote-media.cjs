@@ -221,7 +221,7 @@ test('remote screen video receiver configures 60ms jitterBufferTarget or playout
     receiver: audioReceiver,
     isCurrent: () => true,
   });
-  assert.equal(screenReceiver.jitterBufferTarget, 60);
-  assert.equal(fallbackReceiver.playoutDelayHint, 0.06);
+  assert.equal(screenReceiver.jitterBufferTarget, 80);
+  assert.equal(fallbackReceiver.playoutDelayHint, 0.08);
   assert.equal(audioReceiver.jitterBufferTarget, null);
 });

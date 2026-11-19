@@ -64,7 +64,7 @@ export function createMediaInterest(options: InterestOptions) {
       options.unlockAudio();
     }
     if (options.isSfu()) background(options.syncSubscriptions);
-    else options.sendWatch(id, watching.has(id));
+    options.sendWatch(id, watching.has(id));
     if (watching.has(id)) options.attachScreenAudio(id);
     options.onChange('screen');
   }

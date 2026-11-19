@@ -111,7 +111,7 @@ test('only valid preferences are persisted and disabling adaptation restores the
     mnScreenContent: 'detail',
     mnScreenCodec: 'invalid-codec',
   });
-  assert.equal(quality.getSnapshot().preferences.screenCodec, 'auto');
+  assert.equal(quality.getSnapshot().preferences.screenCodec, 'vp9');
   quality.configure({
     screenFormat: '__proto__',
     screenBitrateMbps: 999,

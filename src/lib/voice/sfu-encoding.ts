@@ -114,6 +114,14 @@ function h264Rank(codec: RTCRtpCodec): number {
   return profileScore + (Number.isFinite(level) ? Math.min(level, 99) : 0);
 }
 
+function vp9Rank(codec: RTCRtpCodec): number {
+  const match = /profile-id=(\d+)/i.exec(codec.sdpFmtpLine || '');
+  if (!match) return 200;
+  // Profile 0 (8-bit 4:2:0) has universal hardware decode across NVIDIA/AMD/Intel/Android.
+  const id = Number(match[1]);
+  return id === 0 ? 300 : id === 2 ? 150 : 50;
+}
+
 export function prioritizeScreenCodec(
   transceiver: RTCRtpTransceiver | null | undefined,
   codec: ScreenCodec = 'auto',
@@ -151,7 +159,9 @@ export function prioritizeScreenCodec(
     const ranked =
       codec === 'h264'
         ? [...matchingGroups].sort((a, b) => h264Rank(b[0]) - h264Rank(a[0]))
-        : matchingGroups;
+        : codec === 'vp9'
+          ? [...matchingGroups].sort((a, b) => vp9Rank(b[0]) - vp9Rank(a[0]))
+          : matchingGroups;
     const ordered = [
       ...ranked,
       ...groups.filter((g) => g[0].mimeType?.toLowerCase() !== targetMime),
