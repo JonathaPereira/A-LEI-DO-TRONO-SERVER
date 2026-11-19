@@ -45,13 +45,15 @@ async function publishBuild({
   root = path.resolve(__dirname, '../..'),
 }) {
   const repo = context.repo,
-    { version } = JSON.parse(await fs.readFile(path.join(root, 'electron/package.json'), 'utf8'));
+    { version } = JSON.parse(
+      await fs.readFile(path.join(root, 'apps/desktop/package.json'), 'utf8'),
+    );
   if (!/^\d+\.\d+\.\d+$/.test(version) || !Number.isSafeInteger(Number(context.runId)))
     throw Error('Identidade do build inválida.');
   const files = [
     path.join(root, 'artifacts/windows-download', `MN-Trono-${version}-Windows.exe`),
     path.join(root, 'artifacts', `MN-Trono-Frontend-${version}.zip`),
-    path.join(root, 'electron/LEIA-ME-WINDOWS.txt'),
+    path.join(root, 'apps/desktop/LEIA-ME-WINDOWS.txt'),
     ...additionalFiles.map((file) => path.join(root, file)),
   ];
   const bytes = await Promise.all(files.map((file) => fs.readFile(file))),
@@ -66,7 +68,7 @@ async function publishBuild({
   if (!Number.isSafeInteger(attempt) || attempt < 1) throw Error('Tentativa do build inválida.');
   const tag = `desktop-v${version}-run-${context.runId}-attempt-${attempt}`,
     runURL = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${context.runId}`;
-  const body = `${MARKER}\nPacotes validados de Windows ${version}. Empacotamento: ${context.sha}. Fonte do instalador: ${process.env.MN_SOURCE_TAG || context.sha}.\n\nBaixe o EXE e o ZIP do site desta mesma entrega. O ZIP contém frontend/ com somente o instalador atual em downloads/, o manifesto e o guia de publicação.\n\nA etapa final de Windows full app publica esta mesma entrega no Surge quando habilitada. Para repetir somente a publicação, execute Publish approved frontend no mesmo commit e deixe release_tag vazio. Não é preciso copiar tags nem enviar o EXE separadamente. Consulte ATUALIZACOES.md e PUBLICAR_SURGE_LEVE.md na raiz do ZIP para as instruções de backend e SQL.\n\nBuild: ${runURL}\n\nSomente a versão atual e uma anterior são conservadas nestes downloads automáticos. Esta release é um rascunho privado para revisão e distribuição ao proprietário.`;
+  const body = `${MARKER}\nPacotes validados de Windows ${version}. Empacotamento: ${context.sha}. Fonte do instalador: ${process.env.MN_SOURCE_TAG || context.sha}.\n\nBaixe o EXE e o ZIP do site desta mesma entrega. O ZIP contém frontend/ com somente o instalador atual em downloads/, o manifesto e o guia de publicação.\n\nA etapa final de Windows full app publica esta mesma entrega no Surge quando habilitada. Para repetir somente a publicação, execute Publish approved frontend no mesmo commit e deixe release_tag vazio. Não é preciso copiar tags nem enviar o EXE separadamente. Consulte DEPLOY_RENDER_SURGE.md e ARQUITETURA.md na raiz do ZIP para as instruções de backend e SQL.\n\nBuild: ${runURL}\n\nSomente a versão atual e uma anterior são conservadas nestes downloads automáticos. Esta release é um rascunho privado para revisão e distribuição ao proprietário.`;
   const { data: release } = await github.rest.repos.createRelease({
     ...repo,
     tag_name: tag,

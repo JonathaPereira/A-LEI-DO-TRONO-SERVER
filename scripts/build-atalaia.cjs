@@ -78,7 +78,7 @@ async function syncRemoteAtalaiaBuild() {
       game: 'atalaia',
       gameVersion,
       executable,
-      desktopVersion: require('../electron/package.json').version,
+      desktopVersion: require('../apps/desktop/package.json').version,
       source,
     }) + '\n',
   );
@@ -160,7 +160,7 @@ if (!fs.existsSync(path.join(game, 'project.godot'))) {
       game: 'atalaia',
       gameVersion,
       executable,
-      desktopVersion: require('../electron/package.json').version,
+      desktopVersion: require('../apps/desktop/package.json').version,
       source,
     }) + '\n',
   );

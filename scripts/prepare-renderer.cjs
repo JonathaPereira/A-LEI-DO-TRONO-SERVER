@@ -5,7 +5,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const target = path.join(root, 'public');
+const target = path.join(root, 'apps/web/public');
 
 // Root JS/CSS in public are generated. Styles now belong to the Next CSS graph.
 const outputs = new Map();
@@ -24,7 +24,7 @@ outputs.set(
 );
 const compilerPackage = require.resolve('typescript/package.json');
 const compiler = path.resolve(path.dirname(compilerPackage), require(compilerPackage).bin.tsc);
-const result = spawnSync(process.execPath, [compiler, '-p', 'tsconfig.renderer.json'], {
+const result = spawnSync(process.execPath, [compiler, '-p', 'apps/web/tsconfig.renderer.json'], {
   cwd: root,
   stdio: 'inherit',
   windowsHide: true,

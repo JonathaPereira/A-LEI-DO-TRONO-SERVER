@@ -29,7 +29,7 @@ function buildMenGamesDistribution() {
 
   fs.copyFileSync(registryFile, path.join(distRoot, 'registry.json'));
 
-  const coversSrc = path.join(root, 'public/assets/games');
+  const coversSrc = path.join(root, 'apps/web/public/assets/games');
   if (fs.existsSync(coversSrc)) {
     fs.cpSync(coversSrc, path.join(distRoot, 'assets/games'), { recursive: true });
   }

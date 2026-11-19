@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const outDir = path.join(root, 'out');
+const outDir = path.join(root, 'apps/web/out');
 const targetDir = path.join(root, 'artifacts/men-trono-communication');
 
 function isGameAsset(relativePath) {
@@ -42,7 +42,7 @@ function buildTronoCommunication() {
   console.log('Building standalone MeN Trono Communication package (lightweight)...');
 
   if (!fs.existsSync(path.join(outDir, 'index.html'))) {
-    throw new Error('out/index.html not found! Run npm run build first.');
+    throw new Error('apps/web/out/index.html not found! Run npm run build:web first.');
   }
 
   // Clean and prepare output

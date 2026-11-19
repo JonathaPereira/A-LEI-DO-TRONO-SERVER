@@ -1,0 +1,18 @@
+{
+  "name": "@trono/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend Node.js, WebSocket e Cloudflare Realtime SFU (deploy Render)",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env --watch src/index.ts",
+    "start": "node --env-file-if-exists=../../.env src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@trono/protocol": "*",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

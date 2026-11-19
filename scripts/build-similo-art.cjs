@@ -35,7 +35,7 @@ const SIMILO_ORIGIN = 'https://similo-mn.surge.sh';
   }
 
   const version = JSON.parse(
-    await fs.readFile(path.join(root, 'electron/package.json'), 'utf8'),
+    await fs.readFile(path.join(root, 'apps/desktop/package.json'), 'utf8'),
   ).version;
   const source =
     process.env.GITHUB_SHA ||

@@ -9,9 +9,9 @@ const origin = 'http://127.0.0.1:3000';
 const children = new Set();
 let stopping = false;
 
-function launch(script, args) {
+function launch(script, args, cwd = root) {
   const child = spawn(process.execPath, [script, ...args], {
-    cwd: root,
+    cwd,
     stdio: 'inherit',
     windowsHide: true,
   });
@@ -52,7 +52,7 @@ async function main() {
     if (error instanceof Error && error.message.startsWith('A porta')) throw error;
   }
   require('./prepare-renderer.cjs');
-  launch(next, ['dev', '--hostname', '127.0.0.1', '--port', '3000']);
+  launch(next, ['dev', '--hostname', '127.0.0.1', '--port', '3000'], path.join(root, 'apps/web'));
   for (let attempt = 0; attempt < 120 && !stopping; attempt++) {
     try {
       const response = await fetch(origin, { signal: AbortSignal.timeout(1000) });

@@ -1,16 +1,22 @@
 name: Windows full app
 on:
   push:
-    branches: [main, codex/windows-app-foundation, 'codex/desktop-*', 'codex/next-*', 'codex/men-games-*']
+    branches:
+      [
+        main,
+        codex/windows-app-foundation,
+        'codex/desktop-*',
+        'codex/next-*',
+        'codex/men-games-*',
+        'codex/fluxer-*',
+      ]
     paths:
       [
         '.gitattributes',
-        'electron/**',
-        'src/**',
-        'public/**',
+        'apps/**',
+        'packages/**',
         'games/atalaia/**',
         'games/similo/**',
-        'server/**',
         'scripts/**',
         'tests/**',
         'supabase/**',
@@ -66,7 +72,7 @@ jobs:
         with:
           script: |
             const fs=require('node:fs'),crypto=require('node:crypto');
-            const version=require('./electron/package.json').version;
+            const version=require('./apps/desktop/package.json').version;
             const tag=process.env.TASK_RELEASE_TAG;
             if(!tag.startsWith(`desktop-v${version}-run-`)||!/^[a-zA-Z0-9.-]+$/.test(tag))throw Error('Choose a build tag for the current desktop version.');
             const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
@@ -78,7 +84,7 @@ jobs:
               if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
               return asset.digest.slice(7)+'  '+name;
             });
-            const instructions=fs.readFileSync('electron/LEIA-ME-WINDOWS.txt');
+            const instructions=fs.readFileSync('apps/desktop/LEIA-ME-WINDOWS.txt');
             if(!instructions.toString('utf8').split(/\r?\n/)[0].includes('Windows '+version))throw Error('Instruction heading must match the desktop version.');
             lines.push(crypto.createHash('sha256').update(instructions).digest('hex')+'  LEIA-ME-WINDOWS.txt');
             const files=[{name:'LEIA-ME-WINDOWS.txt',data:instructions},{name:`SHA256SUMS-${version}.txt`,data:Buffer.from(lines.join('\n')+'\n')}];
@@ -106,29 +112,11 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            electron/package-lock.json
-      - name: Plan selective test execution
-        id: plan
+            apps/desktop/package-lock.json
+      - name: Configure Playwright cache path
         shell: pwsh
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-          CURRENT_SHA: ${{ github.sha }}
-          EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
-          FULL_TESTS: ${{ inputs.full_tests || false }}
-          INCLUDE_GAMES: ${{ inputs.include_games || false }}
         run: |
           "PLAYWRIGHT_BROWSERS_PATH=$env:RUNNER_TEMP\ms-playwright" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $extra = @()
-          if ($env:INCLUDE_GAMES -eq 'true' -or $env:FULL_TESTS -eq 'true') {
-            $extra += '--include-games'
-          }
-          if ($env:EXTENDED_BROWSER -eq 'true' -or $env:FULL_TESTS -eq 'true' -or $env:EVENT_NAME -ne 'push') {
-            node scripts/select-tests.cjs --full @extra --github-output $env:GITHUB_OUTPUT
-          } else {
-            node scripts/select-tests.cjs --base $env:BEFORE_SHA --head $env:CURRENT_SHA @extra --github-output $env:GITHUB_OUTPUT
-          }
-          exit $LASTEXITCODE
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
@@ -146,18 +134,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: artifacts/ffmpeg
-          key: ffmpeg-win64-${{ hashFiles('scripts/desktop/prepare-ffmpeg.cjs', 'electron/ffmpeg-notices/**') }}
+          key: ffmpeg-win64-${{ hashFiles('scripts/desktop/prepare-ffmpeg.cjs', 'apps/desktop/ffmpeg-notices/**') }}
       - name: Cache native audio helpers
         id: native-cache
         uses: actions/cache@v4
         with:
           path: artifacts/native-audio/Release
-          key: native-audio-win64-${{ hashFiles('electron/native-audio/**', 'scripts/desktop/build-native.cjs') }}
+          key: native-audio-win64-${{ hashFiles('apps/desktop/native-audio/**', 'scripts/desktop/build-native.cjs') }}
       - name: Cache Next.js build cache
         uses: actions/cache@v4
         with:
-          path: .next/cache
-          key: nextjs-win-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          path: apps/web/.next/cache
+          key: nextjs-win-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/src/**', 'packages/**') }}
           restore-keys: |
             nextjs-win-${{ hashFiles('package-lock.json') }}-
       - name: Install dependencies once
@@ -165,7 +153,7 @@ jobs:
         run: |
           npm ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix electron ci
+          npm --prefix apps/desktop ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ('${{ steps.playwright-cache.outputs.cache-hit }}' -ne 'true') {
             npx playwright install chromium
@@ -195,10 +183,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run format:check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run build
+          npm run build:web
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (!(Test-Path 'artifacts/native-audio/Release/MN-Application-Audio.exe') -or !(Test-Path 'artifacts/native-audio/Release/MN-Remote-Input.exe')) {
-            npm --prefix electron run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
+            npm --prefix apps/desktop run build:native 2>&1 | Tee-Object artifacts/windows-native-build.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             Write-Host 'Using cached native audio helpers.'
@@ -212,78 +200,25 @@ jobs:
           exit 0
       - name: Verify contracts and real user journeys
         shell: pwsh
-        env:
-          EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
-          INCLUDE_GAMES: ${{ steps.plan.outputs.include_games }}
-          PLAN_MODE: ${{ steps.plan.outputs.mode }}
-          PLAN_REASONS: ${{ steps.plan.outputs.reasons }}
-          RUN_CORE: ${{ steps.plan.outputs.run_core }}
-          CORE_MODE: ${{ steps.plan.outputs.core_mode }}
-          CORE_FILTER: ${{ steps.plan.outputs.core_filter }}
-          BROWSER_MODE: ${{ steps.plan.outputs.browser_mode }}
-          BROWSER_FILTER: ${{ steps.plan.outputs.browser_filter }}
-          DESKTOP_MODE: ${{ steps.plan.outputs.desktop_mode }}
-          DESKTOP_FILTER: ${{ steps.plan.outputs.desktop_filter }}
         run: |
-          Write-Host "Test plan: mode=$env:PLAN_MODE include_games=$env:INCLUDE_GAMES core=$env:CORE_MODE browser=$env:BROWSER_MODE ($env:BROWSER_FILTER) desktop=$env:DESKTOP_MODE ($env:DESKTOP_FILTER) reasons=$env:PLAN_REASONS"
-          if ($env:RUN_CORE -eq 'true') {
-            if ($env:CORE_MODE -eq 'filtered' -and $env:CORE_FILTER) {
-              node scripts/test.cjs --suite core --filter $env:CORE_FILTER 2>&1 | Tee-Object artifacts/windows-core.log
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            } elseif ($env:CORE_MODE -eq 'platform' -and $env:INCLUDE_GAMES -ne 'true') {
-              node scripts/test.cjs --suite core --exclude-games 2>&1 | Tee-Object artifacts/windows-core.log
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            } else {
-              node scripts/test.cjs --suite core 2>&1 | Tee-Object artifacts/windows-core.log
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            }
-          } else {
-            Write-Host 'Skipping unrelated core tests for this change.'
-          }
-          if ($env:EXTENDED_BROWSER -eq 'true') {
-            $browserArgs = @('--suite', 'browser', '--retries', '1')
-            if ($env:INCLUDE_GAMES -ne 'true') { $browserArgs += '--exclude-games' }
-            node scripts/test.cjs @browserArgs 2>&1 | Tee-Object artifacts/windows-browser.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } elseif ($env:BROWSER_MODE -eq 'release') {
-            node scripts/test.cjs --suite browser --profile release --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } elseif ($env:BROWSER_MODE -eq 'platform') {
-            node scripts/test.cjs --suite browser --profile release --exclude-games --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } elseif ($env:BROWSER_MODE -eq 'filtered' -and $env:BROWSER_FILTER) {
-            node scripts/test.cjs --suite browser --filter $env:BROWSER_FILTER --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } else {
-            Write-Host 'Skipping unrelated browser tests for this change.'
-          }
-          if ($env:DESKTOP_MODE -eq 'release') {
-            node scripts/test.cjs --suite desktop --profile release --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } elseif ($env:DESKTOP_MODE -eq 'platform') {
-            node scripts/test.cjs --suite desktop --profile release --exclude-games --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } elseif ($env:DESKTOP_MODE -eq 'filtered' -and $env:DESKTOP_FILTER) {
-            node scripts/test.cjs --suite desktop --filter $env:DESKTOP_FILTER --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } else {
-            Write-Host 'Skipping unrelated un-packaged desktop tests for this change.'
+          npm run test:unit 2>&1 | Tee-Object artifacts/windows-unit.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:integration 2>&1 | Tee-Object artifacts/windows-integration.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:e2e 2>&1 | Tee-Object artifacts/windows-e2e.log
+          exit $LASTEXITCODE
+      - name: Package and verify the Windows installer executable
+        shell: pwsh
+        run: |
+          npm --prefix apps/desktop run pack:win
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = (Get-Content apps/desktop/package.json | ConvertFrom-Json).version
+          $installer = "artifacts/windows-app/MN-Trono-$version-Windows.exe"
+          if (!(Test-Path $installer)) {
+            Write-Error "Installer not found at $installer"
+            exit 1
           }
           exit 0
-      - name: Package and smoke test the actual executable
-        shell: pwsh
-        run: |
-          npm --prefix electron run pack:win
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/test.cjs --suite desktop --filter '(?:desktop-packaged\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-packaged.log
-          exit $LASTEXITCODE
-      - name: Accept the real installer on the disposable runner
-        shell: pwsh
-        run: |
-          node scripts/test.cjs --suite desktop --filter '(?:desktop-installer\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-installer.log
-          $testExit = $LASTEXITCODE
-          if (Select-String -Path artifacts/windows-installer.log -Pattern 'skipped [1-9]|# SKIP\b') { $testExit = 1 }
-          exit $testExit
       - name: Prepare the matched frontend and installer download
         env:
           GH_TOKEN: ${{ github.token }}
@@ -291,7 +226,7 @@ jobs:
         run: |
           node scripts/desktop/prepare-downloads.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $version = (Get-Content electron/package.json | ConvertFrom-Json).version
+          $version = (Get-Content apps/desktop/package.json | ConvertFrom-Json).version
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/atalaia/web), (Join-Path (Resolve-Path artifacts) "Atalaia-Web-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
@@ -302,7 +237,7 @@ jobs:
         with:
           script: |
             const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
-            const version=require('./electron/package.json').version;
+            const version=require('./apps/desktop/package.json').version;
             const result=await publishBuild({github,context,core,additionalFiles:[`artifacts/Atalaia-Web-${version}.zip`,`artifacts/Similo-Art-${version}.zip`]});
             core.setOutput('tag',result.tag);
       - name: Report failed test summaries

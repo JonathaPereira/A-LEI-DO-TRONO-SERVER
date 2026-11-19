@@ -17,7 +17,9 @@ function bounded(text, bytes) {
 }
 
 function summarizeFailure(text) {
-  if (!/not ok [0-9]+|testCodeFailure/.test(text)) return null;
+  if (!/not ok [0-9]+|testCodeFailure|Error:|No tests found|\b[0-9]+ failed\b/i.test(text)) {
+    return null;
+  }
   const lines = redact(text).split(/\r?\n/),
     blocks = [];
   for (let i = 0; i < lines.length; i++) {
@@ -41,6 +43,14 @@ function summarizeFailure(text) {
     if (blocks.length === 6) {
       blocks.push('[limite de falhas no resumo; consulte o artefato completo]');
       break;
+    }
+  }
+  if (blocks.length === 0) {
+    const playwrightMatches = lines.filter((line) =>
+      /Error:|No tests found|\b[0-9]+ failed\b/i.test(line),
+    );
+    if (playwrightMatches.length > 0) {
+      blocks.push(bounded(playwrightMatches.slice(0, 12).join('\n'), 12000));
     }
   }
   return bounded(

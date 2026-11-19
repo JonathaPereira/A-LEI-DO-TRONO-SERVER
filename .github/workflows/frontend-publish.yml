@@ -52,7 +52,7 @@ jobs:
         with:
           script: |
             const {findApprovedBuild}=require('./scripts/desktop/approved-build.cjs');
-            const {version}=require('./electron/package.json');
+            const {version}=require('./apps/desktop/package.json');
             const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG,additionalAssets:[`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`]});
             core.setOutput('tag',approved.tag);
             core.setOutput('version',approved.version);

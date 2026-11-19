@@ -38,6 +38,8 @@ function prepare(directory) {
 }
 if (require.main === module)
   console.log(
-    'Static referrer policy prepared for ' + prepare(path.resolve(__dirname, '../out')) + ' pages.',
+    'Static referrer policy prepared for ' +
+      prepare(path.resolve(__dirname, '../apps/web/out')) +
+      ' pages.',
   );
 module.exports = { earlyReferrerPolicy, prepare };
