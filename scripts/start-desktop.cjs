@@ -5,7 +5,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const application = path.join(root, 'electron');
+const application = path.join(root, 'apps/desktop');
 const profile = path.join(root, 'artifacts', 'desktop-profile');
 const helper = path.join(root, 'artifacts', 'native-audio', 'Release', 'MN-Application-Audio.exe');
 const development = process.argv.some((arg) => arg.startsWith('--desktop-dev-url='));
@@ -19,8 +19,8 @@ try {
 }
 
 fs.mkdirSync(profile, { recursive: true });
-if (!development && !fs.existsSync(path.join(root, 'out/index.html'))) {
-  console.error('Compile a interface com npm run build ou use npm run desktop:dev.');
+if (!development && !fs.existsSync(path.join(root, 'apps/web/out/index.html'))) {
+  console.error('Compile a interface com npm run build:web ou use npm run desktop:dev.');
   process.exit(1);
 }
 console.log('Iniciando M&N desktop com a interface local.');

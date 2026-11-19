@@ -1,164 +1,137 @@
 'use strict';
+
 const { spawnSync } = require('node:child_process');
-const { resolve, join } = require('node:path');
-const { existsSync } = require('node:fs');
-const os = require('node:os');
-const suites = require('../tests/suites.json');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const GAME_TEST_PATTERN =
-  /^tests\/(?:men-games-|lazy-games|similo-|atalaia|azul-|bot-names|court-|game-|love-letter-|nexus|roguelite-|splendor-|tabletop-audio|throne-|ticket-to-ride-|desktop-cinzas-runtime)/i;
+const ROOT_DIR = path.resolve(__dirname, '..');
 
-function isGameTest(file) {
-  return GAME_TEST_PATTERN.test(String(file || '').replace(/\\/g, '/'));
-}
-
-function defaultConcurrency(suite) {
-  if (suite !== 'core') return 1;
-  const cpus =
-    typeof os.availableParallelism === 'function' ? os.availableParallelism() : os.cpus().length;
-  return Math.min(4, Math.max(1, cpus || 4));
-}
-
-function parsePositiveInt(value, label) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || String(parsed) !== value || parsed < 1) {
-    throw new Error(`${label} inválida: ${value}`);
+function collectTestFiles(dir, suffix) {
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const results = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...collectTestFiles(full, suffix));
+    } else if (entry.isFile() && entry.name.endsWith(suffix)) {
+      results.push(path.relative(ROOT_DIR, full));
+    }
   }
-  return parsed;
+  return results.sort();
 }
 
-function parseNonNegativeInt(value, label) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || String(parsed) !== value || parsed < 0) {
-    throw new Error(`${label} inválida: ${value}`);
+function parseArgs(argv) {
+  let layer = 'all';
+  let filter = '';
+  let retries = 0;
+  let list = false;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--list') {
+      list = true;
+    } else if (arg === '--layer') {
+      const value = argv[++i];
+      if (!value || !['unit', 'integration', 'e2e', 'all'].includes(value)) {
+        throw new Error(`Camada inválida para --layer: ${value || '(vazio)'}`);
+      }
+      layer = value;
+    } else if (arg === '--filter') {
+      filter = argv[++i] || '';
+    } else if (arg === '--retries') {
+      const parsed = Number.parseInt(argv[++i] || '', 10);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        throw new Error('Valor inválido para --retries');
+      }
+      retries = parsed;
+    } else {
+      throw new Error(`Opção desconhecida: ${arg}`);
+    }
   }
-  return parsed;
+
+  return { layer, filter, retries, list };
 }
 
-function select(args) {
-  let suite = 'core',
-    filter = '',
-    profile = '',
-    concurrency = null,
-    retries = 0,
-    excludeGames = false,
-    list = false;
-  for (let i = 0; i < args.length; i++) {
-    const option = args[i];
-    if (option === '--list') list = true;
-    else if (option === '--exclude-games') excludeGames = true;
-    else if (
-      option === '--suite' ||
-      option === '--filter' ||
-      option === '--profile' ||
-      option === '--concurrency' ||
-      option === '--retries'
-    ) {
-      const value = args[++i];
-      if (!value || value.startsWith('--')) throw new Error('Valor obrigatório: ' + option);
-      if (option === '--suite') suite = value;
-      else if (option === '--filter') filter = value;
-      else if (option === '--profile') profile = value;
-      else if (option === '--concurrency') concurrency = parsePositiveInt(value, 'Concorrência');
-      else retries = parseNonNegativeInt(value, 'Tentativas extras');
-    } else throw new Error('Opção desconhecida: ' + option);
-  }
-  if (profile && profile !== 'release') throw new Error('Perfil desconhecido: ' + profile);
-  const release = profile ? require('../tests/release.json') : null;
-  const selected = suite === 'all' ? Object.values(suites).flat() : suites[suite];
-  if (!selected) throw new Error('Suíte desconhecida: ' + suite);
-  const pattern = filter ? new RegExp(filter, 'i') : null;
-  const files = selected.filter(
-    (file) =>
-      (!release ||
-        suites.core.includes(file) ||
-        Object.values(release).some((group) => group.includes(file))) &&
-      (!excludeGames || !isGameTest(file)) &&
-      (!pattern || pattern.test(file)),
-  );
-  if (!files.length) throw new Error('Nenhum teste corresponde à seleção.');
-  return {
-    files,
-    list,
-    suite,
-    profile,
-    excludeGames,
-    retries,
-    concurrency: concurrency ?? defaultConcurrency(suite),
-  };
-}
-function spawnTests(files, selection, env) {
-  const result = spawnSync(
-    process.execPath,
-    [
-      '--test',
-      `--test-concurrency=${selection.concurrency}`,
-      ...(env.CI ? ['--test-reporter=tap'] : []),
-      ...files,
-    ],
-    {
-      cwd: resolve(__dirname, '..'),
-      env,
-      stdio: 'inherit',
-    },
-  );
+function runNodeTestLayer(files) {
+  if (!files.length) return 0;
+  const result = spawnSync(process.execPath, ['--test', ...files], {
+    cwd: ROOT_DIR,
+    stdio: 'inherit',
+  });
   if (result.error) throw result.error;
   return result.status ?? 1;
 }
 
-function runWithIsolation(selection, env) {
-  const failed = [];
-  for (const file of selection.files) {
-    let status = spawnTests([file], selection, env);
-    let attempts = 0;
-    while (status !== 0 && attempts < selection.retries) {
-      attempts++;
-      console.log(
-        `\n[retry ${attempts}/${selection.retries}] Reexecutando teste isolado: ${file}\n`,
-      );
-      status = spawnTests([file], selection, env);
-    }
-    if (status !== 0) failed.push(file);
-  }
-  if (failed.length) {
-    console.error(`\nTestes com falha após isolamento (${failed.length}): ${failed.join(', ')}`);
-    return 1;
-  }
-  return 0;
+function runE2eLayer(files, retries) {
+  if (!files.length) return 0;
+  const cli = require.resolve('@playwright/test/cli');
+  const args = [cli, 'test', ...files];
+  if (retries > 0) args.push(`--retries=${retries}`);
+  const result = spawnSync(process.execPath, args, {
+    cwd: ROOT_DIR,
+    stdio: 'inherit',
+  });
+  if (result.error) throw result.error;
+  return result.status ?? 1;
 }
 
-function run(args) {
-  const selection = select(args);
-  if (selection.list) {
-    console.log(selection.files.join('\n'));
+function main() {
+  const { layer, filter, retries, list } = parseArgs(process.argv.slice(2));
+  const pattern = filter ? new RegExp(filter, 'i') : null;
+
+  const unitFiles = collectTestFiles(path.join(ROOT_DIR, 'tests/unit'), '.test.ts').filter(
+    (file) => !pattern || pattern.test(file),
+  );
+  const integrationFiles = collectTestFiles(
+    path.join(ROOT_DIR, 'tests/integration'),
+    '.test.ts',
+  ).filter((file) => !pattern || pattern.test(file));
+  const e2eFiles = collectTestFiles(path.join(ROOT_DIR, 'tests/e2e'), '.spec.ts').filter(
+    (file) => !pattern || pattern.test(file),
+  );
+
+  if (list) {
+    const selected =
+      layer === 'unit'
+        ? unitFiles
+        : layer === 'integration'
+          ? integrationFiles
+          : layer === 'e2e'
+            ? e2eFiles
+            : [...unitFiles, ...integrationFiles];
+    console.log(selected.join('\n'));
     return 0;
   }
-  if (selection.files.some((file) => suites.desktop.includes(file)) && process.platform !== 'win32')
-    throw new Error(
-      'A suíte desktop exige Windows e os recursos nativos descritos no guia de desenvolvimento.',
-    );
-  const env = { ...process.env, MN_TEST_PROFILE: selection.profile };
-  if (!env.CHROMIUM_EXECUTABLE_PATH && process.platform === 'win32') {
-    const bundled = require('@playwright/test').chromium.executablePath();
-    const chrome = join(
-      env.ProgramFiles || 'C:\\Program Files',
-      'Google/Chrome/Application/chrome.exe',
-    );
-    if (!existsSync(bundled) && existsSync(chrome)) env.CHROMIUM_EXECUTABLE_PATH = chrome;
+
+  if (layer === 'unit') {
+    if (!unitFiles.length) throw new Error('Nenhum teste unitário encontrado em tests/unit.');
+    return runNodeTestLayer(unitFiles);
   }
-  if (env.CHROMIUM_EXECUTABLE_PATH && !env.AUTH_TEST_CHROMIUM)
-    env.AUTH_TEST_CHROMIUM = env.CHROMIUM_EXECUTABLE_PATH;
-  if (selection.retries > 0 && (selection.concurrency === 1 || selection.files.length === 1)) {
-    return runWithIsolation(selection, env);
+  if (layer === 'integration') {
+    if (!integrationFiles.length) {
+      throw new Error('Nenhum teste de integração encontrado em tests/integration.');
+    }
+    return runNodeTestLayer(integrationFiles);
   }
-  return spawnTests(selection.files, selection, env);
+  if (layer === 'e2e') {
+    if (!e2eFiles.length) throw new Error('Nenhum teste E2E encontrado em tests/e2e.');
+    return runE2eLayer(e2eFiles, retries);
+  }
+
+  if (!unitFiles.length && !integrationFiles.length) {
+    throw new Error('Nenhum teste encontrado em tests/unit ou tests/integration.');
+  }
+  const unitStatus = runNodeTestLayer(unitFiles);
+  if (unitStatus !== 0) return unitStatus;
+  return runNodeTestLayer(integrationFiles);
 }
+
 if (require.main === module) {
   try {
-    process.exitCode = run(process.argv.slice(2));
+    process.exitCode = main();
   } catch (error) {
-    console.error(error.message);
+    console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }
 }
-module.exports = { select, isGameTest, GAME_TEST_PATTERN };

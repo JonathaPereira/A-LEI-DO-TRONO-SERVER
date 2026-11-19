@@ -1,18 +1,17 @@
 name: Android app
 on:
   push:
-    branches: [main, codex/android-app]
+    branches: [main, codex/android-app, 'codex/fluxer-*']
     paths:
       [
         'android/**',
         'capacitor.config.json',
-        'src/**',
-        'server/**',
+        'apps/**',
+        'packages/**',
         'supabase/**',
         'scripts/**',
         'tests/**',
         'package*.json',
-        'electron/package*.json',
         '.github/workflows/android-app.yml',
       ]
   workflow_dispatch:
@@ -51,9 +50,9 @@ jobs:
         run: |
           npm run typecheck
           npm run format:check
-          npm run build
-          node scripts/test.cjs --suite core --exclude-games --filter 'android-|mobile-|auth|channel-|channels|chat-|community-|direct-attachments|file|messenger|notifications|profile-|registered-accounts|server-(?:auth|community|files|realtime|social)|sessions|settings|sfu-|social-|socket-|voice-'
-          node scripts/test.cjs --suite browser --filter 'mobile-browser|notifications-browser|voice-recovery-browser' --retries 1
+          npm run build:web
+          npm test
+          npm run test:e2e
       - name: Prepare optional Firebase and permanent signing
         id: prepare
         env:
@@ -85,7 +84,7 @@ jobs:
       - name: Prepare actual WebView fixture
         run: |
           TRONO_ANDROID_TEST_BACKEND=http://127.0.0.1:10000 npm run android:sync
-          node tests/android-fixture.cjs > /tmp/trono-android-fixture.log 2>&1 &
+          node scripts/android/fixture.ts > /tmp/trono-android-fixture.log 2>&1 &
           for i in $(seq 1 30); do
             if grep -q 'Android fixture ready' /tmp/trono-android-fixture.log; then exit 0; fi
             sleep 1
@@ -127,7 +126,7 @@ jobs:
           fi
           node - <<'JS'
           const fs=require('node:fs'), crypto=require('node:crypto');
-          const version=require('./electron/package.json').version, signed=process.env.SIGNED==='true';
+          const version=require('./apps/desktop/package.json').version, signed=process.env.SIGNED==='true';
           const name=`MN-Trono-${version}-Android${signed?'':'-teste'}.apk`;
           fs.mkdirSync('artifacts/android-delivery',{recursive:true});
           fs.copyFileSync(`android/app/build/outputs/apk/${signed?'release/app-release.apk':'debug/app-debug.apk'}`,`artifacts/android-delivery/${name}`);

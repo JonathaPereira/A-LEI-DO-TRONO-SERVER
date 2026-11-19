@@ -3,9 +3,9 @@ const path = require('node:path'),
   fs = require('node:fs/promises'),
   express = require('express'),
   { chromium } = require('@playwright/test'),
-  R = require('../src/lib/games/throne-rules.ts').throneRules;
+  R = require('../apps/web/src/lib/games/throne-rules.ts').throneRules;
 (async () => {
-  const frontend = path.resolve(__dirname, '../public'),
+  const frontend = path.resolve(__dirname, '../apps/web/public'),
     server = express().use(express.static(frontend)).listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   let browser;

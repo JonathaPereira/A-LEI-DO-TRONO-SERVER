@@ -1,7 +1,13 @@
 name: Local clips on Windows
 on:
   push:
-    branches: [codex/clipes-locais, codex/clipes-nvenc, codex/clips-fps-background, codex/clips-startup-diagnostic]
+    branches:
+      [
+        codex/clipes-locais,
+        codex/clipes-nvenc,
+        codex/clips-fps-background,
+        codex/clips-startup-diagnostic,
+      ]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,7 +26,7 @@ jobs:
         run: |
           npm ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix electron ci
+          npm --prefix apps/desktop ci
           exit $LASTEXITCODE
       - name: Check sources and build renderer
         run: |
@@ -28,20 +34,22 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run format:check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run build
+          npm run build:web
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix electron run build:native
+          npm --prefix apps/desktop run build:native
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/desktop/prepare-ffmpeg.cjs
           exit $LASTEXITCODE
-      - name: Verify capture owners
+      - name: Verify unit and integration test pyramid
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          npm test -- --filter 'clip-|screen-capture.cjs' 2>&1 | Tee-Object artifacts/windows-local-core.log
+          npm test 2>&1 | Tee-Object artifacts/windows-local-core.log
           exit $LASTEXITCODE
-      - name: Verify real Electron local capture and call coexistence
+      - name: Verify E2E browser journeys
         run: |
-          npm test -- --suite desktop --filter 'clip-local-desktop.cjs|clip-native-pipeline.cjs|application-call-desktop.cjs|desktop-audio.js' 2>&1 | Tee-Object artifacts/windows-local-desktop.log
+          npx playwright install chromium
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:e2e 2>&1 | Tee-Object artifacts/windows-local-e2e.log
           exit $LASTEXITCODE
       - name: Report failure details
         if: failure()

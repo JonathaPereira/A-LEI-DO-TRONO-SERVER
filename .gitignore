@@ -1,17 +1,22 @@
 node_modules/
 .next/
 out/
+dist/
+packages/*/dist/
+apps/*/out/
+apps/*/.next/
 *.tsbuildinfo
-next-env.d.ts
-public/*.js
-public/*.css
+apps/web/next-env.d.ts
+apps/web/public/*.js
+apps/web/public/*.css
+.agents/skills/
 npm-debug.log*
 .env
 .DS_Store
 artifacts/
-public/downloads/*.exe
-electron/**/bin/
-electron/**/obj/
+apps/web/public/downloads/*.exe
+apps/desktop/**/bin/
+apps/desktop/**/obj/
 
 supabase/.temp/
 
