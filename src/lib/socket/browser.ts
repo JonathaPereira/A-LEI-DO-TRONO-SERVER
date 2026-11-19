@@ -4,9 +4,10 @@ import type { NetworkClient } from './client.ts';
 import { createSocketTransport } from './transport.ts';
 
 export interface NetworkRuntime {
-  location: { hostname: string };
+  location: { hostname: string; protocol?: string };
   TRONO_BACKEND_URL?: string;
   TronoAndroid?: unknown;
+  Capacitor?: { isNativePlatform?(): boolean };
   TronoAuth?: NetworkIdentity;
   TronoSocial?: VoiceContext;
   TronoNetwork?: NetworkClient;
@@ -35,10 +36,14 @@ export function resolveBackendHttp(hostname: string, override?: string, native =
 /** Installs one client per page; old controllers only retain its existing public name. */
 export function initializeNetwork(runtime: NetworkRuntime): NetworkClient {
   if (runtime.TronoNetwork) return runtime.TronoNetwork;
+  const native =
+    !!runtime.TronoAndroid ||
+    runtime.location.protocol === 'https:' ||
+    Boolean(runtime.Capacitor?.isNativePlatform?.());
   const backendHttp = resolveBackendHttp(
     runtime.location.hostname,
     runtime.TRONO_BACKEND_URL,
-    !!runtime.TronoAndroid,
+    native,
   );
   const transport = createSocketTransport({ url: backendWebSocketUrl(backendHttp) });
   const client = createNetworkClient({

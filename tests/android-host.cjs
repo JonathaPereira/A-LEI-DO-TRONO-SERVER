@@ -53,8 +53,11 @@ test('denied Android microphone permission does not leave a running call service
 });
 
 test('bundled Android assets connect to production rather than a localhost development server', async () => {
-  const { resolveBackendHttp } = await import('../src/lib/socket/browser.ts');
+  const { initializeNetwork, resolveBackendHttp } = await import('../src/lib/socket/browser.ts');
   assert.equal(resolveBackendHttp('localhost', undefined, true), 'https://a-lei-do-trono-server.onrender.com');
   assert.equal(resolveBackendHttp('localhost'), 'http://localhost:10000');
   assert.equal(resolveBackendHttp('localhost', 'https://fixture.example', true), 'https://fixture.example');
+  const httpsLocal = initializeNetwork({ location: { hostname: 'localhost', protocol: 'https:' } });
+  assert.equal(httpsLocal.BACKEND_HTTP, 'https://a-lei-do-trono-server.onrender.com');
 });
+

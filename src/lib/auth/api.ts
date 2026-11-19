@@ -55,8 +55,15 @@ export function createAuthApi({
         });
       } catch (error) {
         if (signal?.aborted) throw signal.reason;
+        const reason = error instanceof Error && error.message ? error.message.slice(0, 120) : '';
+        const origin =
+          typeof globalThis.location === 'object' && globalThis.location?.origin
+            ? globalThis.location.origin
+            : '';
+        const detail = [origin, base, reason].filter(Boolean).join(' · ');
         throw new AuthError(
-          'Não foi possível conectar. Aguarde alguns segundos e tente novamente.',
+          'Não foi possível conectar. Aguarde alguns segundos e tente novamente.' +
+            (detail ? ` [${detail}]` : ''),
           'NETWORK_ERROR',
         );
       }

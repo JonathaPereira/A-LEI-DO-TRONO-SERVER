@@ -1,3 +1,9 @@
+M&N · A Lei do Trono — Windows & Android 2.0.1
+
+Correção 2.0.1: reforço na resolução do servidor no Android (impedindo fallback para http://localhost:10000
+em WebView HTTPS mesmo sem detecção prévia de TronoAndroid), permissão ACCESS_NETWORK_STATE no manifesto
+Android e detalhe diagnóstico em falhas de rede no login.
+
 M&N · A Lei do Trono — Windows & Android 2.0.0
 
 Melhoria 2.0.0: VP9 definido como codec oficial de screen share (com priorização de Profile 0
