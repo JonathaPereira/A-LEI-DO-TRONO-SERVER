@@ -2,7 +2,7 @@ M&N — publicação automática do frontend e instalador Windows
 
 1. Em Actions → Windows full app → Run workflow, selecione a branch desejada.
    publish_surge vem ligado; após os checks e o instalador passarem, a execução
-   publica no Surge usando a versão de electron/package.json e a tag do pacote.
+   publica no Surge usando a versão de apps/desktop/package.json e a tag do pacote.
    Push em main também publica automaticamente. SURGE_TOKEN deve estar configurado.
 2. Confira a etapa final de publicação e a verificação de downloads/latest.yml.
 3. Se só o Surge falhar, execute Publish approved frontend na mesma branch/commit,

@@ -15,7 +15,7 @@ function collectTestFiles(dir, suffix) {
     if (entry.isDirectory()) {
       results.push(...collectTestFiles(full, suffix));
     } else if (entry.isFile() && entry.name.endsWith(suffix)) {
-      results.push(path.relative(ROOT_DIR, full));
+      results.push(path.relative(ROOT_DIR, full).replace(/\\/g, '/'));
     }
   }
   return results.sort();

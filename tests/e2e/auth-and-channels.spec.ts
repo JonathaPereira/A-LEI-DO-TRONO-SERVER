@@ -1,4 +1,5 @@
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
@@ -142,7 +143,7 @@ test.describe('E2E: Autenticação e Navegação de Canais', () => {
         CLOUDFLARE_REALTIME_APP_ID: 'app-e2e',
         CLOUDFLARE_REALTIME_API_TOKEN: 'tok-e2e',
       },
-      sfuUsageFile: `/tmp/trono-e2e-auth-${Date.now()}.json`,
+      sfuUsageFile: path.join(os.tmpdir(), `trono-e2e-auth-${Date.now()}.json`),
     });
     await new Promise<void>((resolve) => backend.server.listen(0, '127.0.0.1', resolve));
     const port = (backend.server.address() as AddressInfo).port;

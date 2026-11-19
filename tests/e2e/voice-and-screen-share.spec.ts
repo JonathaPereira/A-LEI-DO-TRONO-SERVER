@@ -1,4 +1,5 @@
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
@@ -372,7 +373,7 @@ test.describe('E2E: Voz e Transmissão de Tela com Cloudflare SFU', () => {
         CLOUDFLARE_REALTIME_API_TOKEN: 'tok-e2e',
       },
       sfuFetchImpl: cf.fetchImpl,
-      sfuUsageFile: `/tmp/trono-e2e-voice-${Date.now()}.json`,
+      sfuUsageFile: path.join(os.tmpdir(), `trono-e2e-voice-${Date.now()}.json`),
     });
     await new Promise<void>((resolve) => backend.server.listen(0, '127.0.0.1', resolve));
     const port = (backend.server.address() as AddressInfo).port;
