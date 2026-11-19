@@ -108,13 +108,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none -camera-front none
           script: |
             mkdir -p artifacts
-            bash -eo pipefail -c '
-              {
-                adb reverse tcp:10000 tcp:10000
-                chmod +x android/gradlew
-                android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon --console=plain --stacktrace
-              } 2>&1 | tee artifacts/android-device.log
-            '
+            adb reverse tcp:10000 tcp:10000 > artifacts/android-device.log 2>&1
+            chmod +x android/gradlew
+            bash -eo pipefail -c "android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon --console=plain --stacktrace 2>&1 | tee -a artifacts/android-device.log"
       - name: Package production backend without test fixture
         id: package
         env:
