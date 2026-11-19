@@ -25,6 +25,7 @@ interface QualityOptions {
   call(): Pick<VoiceCallSnapshot, 'generation' | 'joined'>;
   refreshCamera(): Promise<void>;
   refreshScreenHint(): void;
+  applySfuScreen?(): Promise<void>;
   senders(): Iterable<{ sender: RTCRtpSender | null | undefined; kind: VoiceMediaKind }>;
   subscriptions(): Iterable<{ key: string; kind: VoiceMediaKind }>;
   setLayer(key: string, rid: SfuRid): Promise<void>;
@@ -89,11 +90,14 @@ export function createCallQuality(options: QualityOptions) {
     const screenBitrate =
       Math.min(preferences.screenBitrateMbps, policy.sfu && policy.highAllowed === false ? 6 : 15) *
       1000000;
-    const profile = stability.profile({
-      ...QUALITY_PROFILES[effectiveQuality],
-      screen: SCREEN_FORMATS[preferences.screenFormat],
-      screenBitrate,
-    });
+    const profile = stability.profile(
+      {
+        ...QUALITY_PROFILES[effectiveQuality],
+        screen: SCREEN_FORMATS[preferences.screenFormat],
+        screenBitrate,
+      },
+      preferences.screenContent,
+    );
     cached = Object.freeze({
       preferences,
       effectiveQuality,
@@ -266,7 +270,9 @@ export function createCallQuality(options: QualityOptions) {
       warn(error);
     }
     await Promise.allSettled(
-      [...options.senders()].map(({ sender, kind }) => applySender(sender, kind)),
+      [...options.senders()]
+        .map(({ sender, kind }) => applySender(sender, kind))
+        .concat(options.applySfuScreen?.() ?? []),
     );
     if (current()) await applyLayers();
   }

@@ -148,7 +148,7 @@ export class CallStability {
     }
     return false;
   }
-  profile<T extends VideoProfile>(base: T): T {
+  profile<T extends VideoProfile>(base: T, content?: string): T {
     if (!this.level) return base;
     const severe = this.level === 2;
     return {
@@ -157,7 +157,7 @@ export class CallStability {
       screen: {
         width: Math.min(base.screen.width, 1280),
         height: Math.min(base.screen.height, 720),
-        fps: Math.min(base.screen.fps, severe ? 15 : 30),
+        fps: content === 'motion' ? base.screen.fps : Math.min(base.screen.fps, severe ? 15 : 30),
       },
       videoBitrate: Math.min(base.videoBitrate, severe ? 450000 : 1000000),
       screenBitrate: Math.min(base.screenBitrate, severe ? 2500000 : 4000000),

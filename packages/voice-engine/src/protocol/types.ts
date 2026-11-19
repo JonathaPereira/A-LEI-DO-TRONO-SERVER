@@ -54,6 +54,7 @@ export interface CameraOptions {
   height?: number;
   frameRate?: number;
   maxBitrateBps?: number;
+  simulcast?: boolean;
   codec?: string;
 }
 

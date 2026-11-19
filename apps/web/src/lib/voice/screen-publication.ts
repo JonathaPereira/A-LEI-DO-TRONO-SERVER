@@ -1,14 +1,15 @@
 import type { ScreenCaptureChange } from '../../types/voice';
 import type { SfuSession } from './sfu-session';
 import type { createP2pPeers } from './p2p-peers';
-import type { createCallQuality } from './quality';
 import type { createScreenSharing } from './screen-sharing';
 
 interface PublicationOptions {
   isSfu(): boolean;
-  sfu: Pick<SfuSession, 'publications' | 'publish' | 'closePublication' | 'recoverPublication'>;
+  sfu: Pick<
+    SfuSession,
+    'publications' | 'publishScreen' | 'closePublication' | 'recoverPublication'
+  >;
   p2p: Pick<ReturnType<typeof createP2pPeers>, 'connections' | 'syncTracks'>;
-  quality: Pick<ReturnType<typeof createCallQuality>, 'applySender'>;
   sharing: Pick<ReturnType<typeof createScreenSharing>, 'resetPreview' | 'getSnapshot'>;
   announce(): void;
   onAudioDetached(): void;
@@ -17,33 +18,22 @@ interface PublicationOptions {
 
 /** Publishes borrowed screen tracks through the existing transport/resource owners. */
 export function createScreenPublication(options: PublicationOptions) {
-  async function publish({ capture, replace, isCurrent }: ScreenCaptureChange) {
+  async function publish({ capture, isCurrent }: ScreenCaptureChange) {
     if (!isCurrent()) return;
     const stream = capture.outgoing;
     options.sharing.resetPreview();
     // Announce before any transport wait so the remote invitation appears immediately.
     options.announce();
     if (options.isSfu()) {
-      const tracks = [
-        ['screen', stream.getVideoTracks()[0]],
-        ['screen-audio', stream.getAudioTracks()[0]],
-      ] as const;
-      await Promise.all(
-        tracks.map(async ([kind, track]) => {
-          try {
-            if (!isCurrent()) return;
-            const publication = replace ? options.sfu.publications.get(kind) : null;
-            if (track && publication?.sender) {
-              await publication.sender.replaceTrack(track);
-              if (!isCurrent()) return;
-              await options.quality.applySender(publication.sender, kind);
-            } else if (track) await options.sfu.publish(kind, track);
-            else if (publication) await options.sfu.closePublication(kind);
-          } catch (error) {
-            if (isCurrent()) void options.sfu.recoverPublication(kind, error);
-          }
-        }),
-      );
+      const video = stream.getVideoTracks()[0];
+      const audio = stream.getAudioTracks()[0] ?? null;
+      if (video) {
+        try {
+          await options.sfu.publishScreen(video, audio);
+        } catch (error) {
+          if (isCurrent()) void options.sfu.recoverPublication('screen', error);
+        }
+      }
     }
     if (!isCurrent()) return;
     // The SFU may have fallen back while publication was pending.

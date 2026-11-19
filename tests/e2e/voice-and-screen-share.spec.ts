@@ -401,7 +401,13 @@ test.describe('E2E: Voz e Transmissão de Tela com Cloudflare SFU', () => {
         if (!navigator.mediaDevices) {
           Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true });
         }
+        const fixture = { captures: [] as MediaStream[], cancelNext: false };
+        Object.defineProperty(window, 'tronoScreenFixture', { value: fixture });
         navigator.mediaDevices.getDisplayMedia = async () => {
+          if (fixture.cancelNext) {
+            fixture.cancelNext = false;
+            throw new DOMException('Seletor cancelado', 'NotAllowedError');
+          }
           const canvas = document.createElement('canvas');
           canvas.width = 640;
           canvas.height = 360;
@@ -437,6 +443,7 @@ test.describe('E2E: Voz e Transmissão de Tela com Cloudflare SFU', () => {
             origAudioStop();
           };
           stream.addTrack(audioTrack);
+          fixture.captures.push(stream);
           return stream;
         };
       }, backendUrl);
@@ -463,7 +470,6 @@ test.describe('E2E: Voz e Transmissão de Tela com Cloudflare SFU', () => {
       };
 
       await loginAndJoinVoice(alicePage, ALICE);
-      await loginAndJoinVoice(bobPage, BOB);
 
       // Alice abre opções de tela e inicia compartilhamento com áudio
       const aliceShareBtn = alicePage.locator(
@@ -494,7 +500,18 @@ test.describe('E2E: Voz e Transmissão de Tela com Cloudflare SFU', () => {
       });
       assertOrExpectKeepAlive(keepAliveBox);
 
-      // 2. Bob vê o card da tela de Alice e clica para assistir
+      await expect
+        .poll(() =>
+          cf.calls.some(
+            (call) =>
+              call.suffix.endsWith('/tracks/new') &&
+              publishedScreenKinds(call.body).includes('screen'),
+          ),
+        )
+        .toBe(true);
+      await loginAndJoinVoice(bobPage, BOB);
+
+      // 2. Bob entra depois da publicação e escolhe assistir.
       const watchButton = bobPage
         .locator('[data-call-screen]')
         .getByRole('button', { name: 'Assistir transmissão' })
@@ -502,51 +519,101 @@ test.describe('E2E: Voz e Transmissão de Tela com Cloudflare SFU', () => {
       await expect(watchButton).toBeVisible();
       await watchButton.click();
 
-      // Aguarda renegociação do Bob concluir no provider
+      // Exige o offer/answer referente à tela, em vez da negociação inicial do microfone.
       await expect
-        .poll(() => cf.calls.filter((c) => c.suffix.endsWith('/renegotiate')).length)
-        .toBeGreaterThanOrEqual(1);
+        .poll(() =>
+          cf.calls.some((call, index) => {
+            if (!call.suffix.endsWith('/tracks/new')) return false;
+            const body = call.body as { tracks?: Array<{ location: string; trackName: string }> };
+            return (
+              body.tracks?.some(
+                (track) =>
+                  track.location === 'remote' &&
+                  track.trackName.startsWith('screen-') &&
+                  !track.trackName.startsWith('screen-audio-'),
+              ) &&
+              cf.calls
+                .slice(index + 1)
+                .some((next) => next.suffix === call.suffix.replace('/tracks/new', '/renegotiate'))
+            );
+          }),
+        )
+        .toBe(true);
 
       // Verifica que houve publicação atômica de screen + screen-audio sem GET polling
       const getCalls = cf.calls.filter((c) => c.method === 'GET');
       expect(getCalls.length).toBe(0);
 
-      const localTrackCalls = cf.calls.filter((c) => {
-        if (!c.suffix.endsWith('/tracks/new')) return false;
-        const tracks = (c.body as { tracks?: Array<{ location: string; trackName: string }> })
-          ?.tracks;
-        return Array.isArray(tracks) && tracks.some((t) => t.location === 'local');
+      const screenBatches = () =>
+        cf.calls
+          .filter((call) => call.suffix.endsWith('/tracks/new'))
+          .map((call) => publishedScreenKinds(call.body))
+          .filter((kinds) => kinds.length);
+      expect(screenBatches()).toEqual([['screen', 'screen-audio']]);
+
+      const switched = await alicePage.evaluate(async () => {
+        const host = window as unknown as {
+          tronoScreenFixture: { cancelNext: boolean; captures: MediaStream[] };
+          TronoSocial: { switchScreenShare(): Promise<boolean> };
+        };
+        host.tronoScreenFixture.cancelNext = true;
+        const cancelled = await host.TronoSocial.switchScreenShare();
+        const wasStillLive = host.tronoScreenFixture.captures[0]
+          .getTracks()
+          .every((track) => track.readyState === 'live');
+        const replaced = await host.TronoSocial.switchScreenShare();
+        return {
+          cancelled,
+          wasStillLive,
+          replaced,
+          previousEnded: host.tronoScreenFixture.captures[0]
+            .getTracks()
+            .every((track) => track.readyState === 'ended'),
+        };
       });
-      const screenCall = localTrackCalls.find((c) =>
-        (c.body as { tracks: Array<{ trackName: string }> }).tracks.some(
-          (t) => t.trackName.startsWith('screen-') && !t.trackName.startsWith('screen-audio-'),
-        ),
-      );
-      const screenAudioCall = localTrackCalls.find((c) =>
-        (c.body as { tracks: Array<{ trackName: string }> }).tracks.some((t) =>
-          t.trackName.startsWith('screen-audio-'),
-        ),
-      );
-      expect(screenCall).toBeTruthy();
-      expect(screenAudioCall).toBeTruthy();
-      expect(screenCall?.suffix).toBe(screenAudioCall?.suffix);
+      expect(switched).toEqual({
+        cancelled: false,
+        wasStillLive: true,
+        replaced: true,
+        previousEnded: true,
+      });
+      expect(screenBatches()).toEqual([
+        ['screen', 'screen-audio'],
+        ['screen', 'screen-audio'],
+      ]);
 
       const newSessions = cf.calls.filter((c) => c.suffix === '/sessions/new');
       // No máximo 1 publisher + 1 subscriber por participante ativo
       expect(newSessions.length).toBeLessThanOrEqual(4);
 
       // 3. Alice encerra o compartilhamento -> remove keep-alive sink e fecha tracks via /tracks/close
+      const priorCloses = cf.calls.filter((call) => call.suffix.endsWith('/tracks/close')).length;
       await aliceShareBtn.click();
       await expect(keepAlive).toHaveCount(0);
+      const released = await alicePage.evaluate(() => {
+        const host = window as unknown as { tronoScreenFixture: { captures: MediaStream[] } };
+        return host.tronoScreenFixture.captures.every((stream) =>
+          stream.getTracks().every((track) => track.readyState === 'ended'),
+        );
+      });
+      expect(released).toBe(true);
       await expect
         .poll(() => cf.calls.filter((c) => c.suffix.endsWith('/tracks/close')).length)
-        .toBeGreaterThanOrEqual(1);
+        .toBeGreaterThan(priorCloses);
     } finally {
       await aliceCtx.close();
       await bobCtx.close();
     }
   });
 });
+
+function publishedScreenKinds(body: unknown): string[] {
+  const tracks = (body as { tracks?: Array<{ location: string; trackName: string }> })?.tracks;
+  return (tracks ?? []).flatMap((track) => {
+    if (track.location !== 'local' || !track.trackName.startsWith('screen-')) return [];
+    return [track.trackName.startsWith('screen-audio-') ? 'screen-audio' : 'screen'];
+  });
+}
 
 function assertOrExpectKeepAlive(info: {
   width: string;

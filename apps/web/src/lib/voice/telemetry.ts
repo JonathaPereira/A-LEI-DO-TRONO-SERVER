@@ -26,6 +26,11 @@ interface Options {
   protection: boolean;
   getSettings(): Settings;
   getConnections(): readonly (readonly [string, VoicePeerConnection])[];
+  getSfuMediaKey?(
+    direction: 'publish' | 'subscribe',
+    mid: string | null,
+    trackId: string | null,
+  ): string | undefined;
   getLocalVideo(): MediaStreamTrack | undefined;
   getResources?: () => Promise<unknown>;
   setVoiceProtection?: (active: boolean) => Promise<unknown>;
@@ -575,7 +580,12 @@ export function createVoiceTelemetry(options: Options) {
     return { interval, health };
   }
   function voiceReceiver(pcKey: string, pc: VoicePeerConnection, stat: MediaStat) {
-    if (pcKey.endsWith(':screen-audio')) return null;
+    const kind = options.getSfuMediaKey?.(
+      'subscribe',
+      stat.mid == null ? null : String(stat.mid),
+      typeof stat.trackIdentifier === 'string' ? stat.trackIdentifier : null,
+    );
+    if (pcKey.startsWith('sfu') && kind?.endsWith(':screen-audio')) return null;
     const screen = pc._tronoScreenAudioTransceiver;
     if (
       (screen?.mid != null && String(stat.mid) === String(screen.mid)) ||
@@ -717,7 +727,15 @@ export function createVoiceTelemetry(options: Options) {
           const codecMime = stat.codecId
             ? (codecs.get(stat.codecId) ?? null)
             : (stat.mimeType ?? null);
-          const sampled = sampleVideo(pcKey, pc, state, stat, ts, pcRttMs, codecMime);
+          const direction = stat.type === 'outbound-rtp' ? 'publish' : 'subscribe';
+          const mediaKey = pcKey.startsWith('sfu')
+            ? options.getSfuMediaKey?.(
+                direction,
+                stat.mid == null ? null : String(stat.mid),
+                typeof stat.trackIdentifier === 'string' ? stat.trackIdentifier : null,
+              )
+            : undefined;
+          const sampled = sampleVideo(mediaKey ?? pcKey, pc, state, stat, ts, pcRttMs, codecMime);
           if (sampled) {
             videoIntervals.push(sampled.interval);
             videoStreams.push(sampled.health);

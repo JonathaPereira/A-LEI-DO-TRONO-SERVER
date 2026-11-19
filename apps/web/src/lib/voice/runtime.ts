@@ -132,6 +132,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     call: () => voiceCall.getSnapshot(),
     refreshCamera: () => cameraCapture.refreshQuality(),
     refreshScreenHint: () => screenCapture.refreshHint(),
+    applySfuScreen: () => sfuSession.updateScreenEncoding().catch(reportScreenEncodingFailure),
     *senders() {
       for (const pc of peers.values()) {
         yield { sender: pc._tronoAudioSender, kind: 'audio' };
@@ -139,7 +140,9 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         yield { sender: pc._tronoScreenSender, kind: 'screen' };
         yield { sender: pc._tronoScreenAudioSender, kind: 'screen-audio' };
       }
-      for (const pub of sfuLocalPublications.values()) yield { sender: pub.sender, kind: pub.kind };
+      for (const pub of sfuLocalPublications.values()) {
+        if (pub.kind !== 'screen') yield { sender: pub.sender, kind: pub.kind };
+      }
     },
     subscriptions: () => sfuSubscriptions.values(),
     setLayer: (key, rid) => sfuSession.setLayer(key, rid),
@@ -475,6 +478,19 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       desktop: !!window.TronoDesktop,
     }),
     getConnections: allTelemetryPeerConnections,
+    getSfuMediaKey(direction, mid, trackId) {
+      if (direction === 'publish') {
+        for (const publication of sfuLocalPublications.values()) {
+          if ((mid !== null && publication.mid === mid) || publication.sender.track?.id === trackId)
+            return `sfu:${publication.kind}`;
+        }
+      } else {
+        for (const subscription of sfuSubscriptions.values()) {
+          if ((mid !== null && subscription.mid === mid) || subscription.track?.id === trackId)
+            return `sfu:${subscription.key}`;
+        }
+      }
+    },
     getLocalVideo: () =>
       screenSharing()
         ? screenCapture.getCapture()?.outgoing.getVideoTracks()[0]
@@ -506,7 +522,8 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         );
         if (oversized) {
           const sfuScreen = sfuLocalPublications.get('screen')?.sender;
-          if (sfuScreen) await applySenderQuality(sfuScreen, 'screen');
+          if (sfuScreen)
+            await sfuSession.updateScreenEncoding(true).catch(reportScreenEncodingFailure);
           else
             await Promise.allSettled(
               [...peers.values()]
@@ -528,12 +545,14 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       quality: cappedQuality(),
       screenBitrate: effectiveScreenBitrate(),
       screenCodec: qualityPreferences().screenCodec,
+      screenContent: qualityPreferences().screenContent,
       videoBitrate: qualityProfile().videoBitrate,
       camera: qualityProfile().camera,
       screen: qualityProfile().screen,
       ice: realtime.configuration('sfu'),
     }),
-    createConnection: (config) => new RTCPeerConnection(config),
+    roomId: () => currentVoiceRoom()?.id,
+    participantId: meId,
     request: (action, payload, timeout) => window.TronoNetwork.requestSfu(action, payload, timeout),
     wants: wantsSfuPublication,
     getTrack: (kind) =>
@@ -574,6 +593,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       if (receiving || lastSfuError.toLowerCase().includes(kind)) lastSfuError = '';
     },
     onRetry: reportSfuRetry,
+    onScreenEncodingError: reportScreenEncodingFailure,
     onFallback: (reason) =>
       fallbackToP2p(
         reason === 'publisher'
@@ -847,7 +867,6 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     isSfu: () => transportIsSfu(),
     sfu: sfuSession,
     p2p: p2pPeers,
-    quality: callQuality,
     sharing: screenSharingControls,
     announce: () => {
       window.TronoNetwork?.setVoiceState(
@@ -945,8 +964,16 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
   function applySenderQuality(sender: RTCRtpSender, kind: VoiceMediaKind) {
     return callQuality.applySender(sender, kind);
   }
-  function applyQualityToLiveMedia() {
-    return callQuality.applyAll().finally(() => voiceSettings.refresh());
+  function reportScreenEncodingFailure(error: unknown) {
+    lastSfuError = 'Tela: ' + (errorField(error, 'message') || 'Falha ao ajustar a qualidade.');
+    setStatus(lastSfuError, 'warn');
+  }
+  async function applyQualityToLiveMedia() {
+    try {
+      await callQuality.applyAll();
+    } finally {
+      voiceSettings.refresh();
+    }
   }
   function preferredRidForMedia(kind: VoiceMediaKind, maximized = false) {
     return callQuality.preferredRid(kind, maximized);
@@ -1068,7 +1095,8 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     });
   }
   function detachSfuRemoteMedia(sub: SfuSubscription) {
-    for (const receiver of sub.pc.getReceivers()) voiceTelemetry.removeReceiver(receiver);
+    const receiver = sub.pc.getTransceivers().find((tr) => tr.mid === sub.mid)?.receiver;
+    if (receiver) voiceTelemetry.removeReceiver(receiver);
     remoteMedia.detachSubscription(sub);
     if (sub.kind === 'audio') {
       removeRemoteAudio(sub.publisherId);
@@ -1354,10 +1382,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     const list: [string, VoicePeerConnection][] = [];
     for (const [id, pc] of peers)
       if (pc && pc.connectionState !== 'closed') list.push([`p2p:${id}`, pc]);
-    for (const [kind, pub] of sfuLocalPublications)
-      if (pub?.pc && pub.pc.connectionState !== 'closed') list.push([`sfu-pub:${kind}`, pub.pc]);
-    for (const [key, sub] of sfuSubscriptions)
-      if (sub?.pc && sub.pc.connectionState !== 'closed') list.push([`sfu-sub:${key}`, sub.pc]);
+    const publisher = sfuLocalPublications.values().next().value?.pc;
+    const subscriber = sfuSubscriptions.values().next().value?.pc;
+    if (publisher && publisher.connectionState !== 'closed')
+      list.push(['sfu-publisher', publisher]);
+    if (subscriber && subscriber.connectionState !== 'closed')
+      list.push(['sfu-subscriber', subscriber]);
     return list;
   }
   function refreshDiagnostics() {
@@ -1375,6 +1405,9 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       assessment,
       history: receiveHistory,
     } = voiceTelemetry.getSnapshot();
+    const quality = callQuality.getSnapshot();
+    const screenSender = sfuLocalPublications.get('screen')?.sender;
+    const encoding = screenSender?.getParameters().encodings?.[0];
     return diagnosticReport({
       version: window.TronoDesktop?.version || window.TronoNetwork.CLIENT_VERSION,
       platform: window.TronoDesktop ? 'Windows' : 'Navegador',
@@ -1403,6 +1436,14 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       adaptation: callQuality.getSnapshot().adaptation.level
         ? callQuality.getSnapshot().adaptation.reason
         : 'qualidade escolhida',
+      screenQuality: screenSharing()
+        ? {
+            selected: quality.preferences.screenFormat,
+            targetFps: quality.profile.screen.fps,
+            configuredSenderFps: encoding?.maxFramerate ?? null,
+            scaleResolutionDownBy: encoding?.scaleResolutionDownBy ?? null,
+          }
+        : undefined,
       resources: nativeResources,
     });
   }

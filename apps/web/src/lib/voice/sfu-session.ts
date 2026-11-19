@@ -1,3 +1,10 @@
+import type { SfuClientAction } from '@trono/protocol';
+import {
+  CloudflareSfuExecutionAdapter,
+  VoiceEngineController,
+  type RemoteTrackDelivery,
+  type ScreenShareOptions,
+} from '@trono/voice-engine';
 import { SfuPublicationRecovery, SfuSubscriptionQueue, globalSfuFailure } from './sfu-recovery.ts';
 import type {
   SfuLocalPublication,
@@ -9,21 +16,10 @@ import type {
 import type { VoiceMediaKind } from '../../types/voice';
 import { abortable } from './peer-wait.ts';
 import {
-  advertisedRids,
-  cameraEncodings,
-  prioritizeScreenCodec,
-  screenEncodings,
-} from './sfu-encoding.ts';
-import {
-  description,
   errorCode,
-  readAccepted,
   readCatalogResponse,
-  readLayer,
   readPublications,
-  retrySingleLayer,
   screenKind,
-  sessionIdOf,
   sfuCancelled,
   sfuError,
   sfuKey,
@@ -32,7 +28,8 @@ import {
 
 interface SfuOptions {
   getSettings(): SfuSettings;
-  createConnection(config: RTCConfiguration): RTCPeerConnection;
+  roomId(): string | undefined;
+  participantId(): string | null | undefined;
   request(action: string, payload: Record<string, unknown>, timeout?: number): Promise<unknown>;
   wants(publication: SfuPublication): boolean;
   getTrack?(kind: VoiceMediaKind): MediaStreamTrack | null | undefined;
@@ -57,95 +54,22 @@ interface SfuOptions {
   }): void;
   onFallback(reason: 'publisher' | 'subscription'): Promise<void>;
   onChange(): void;
+  onScreenEncodingError(error: unknown): void;
   warn?: (error: unknown) => void;
 }
 
-interface Token {
-  readonly generation: number;
-  cancelled: boolean;
-  publisherSessionId?: string;
-}
-
-interface PersistentPeer {
-  readonly pc: RTCPeerConnection;
-  readonly controller: AbortController;
-  readonly purpose: 'publish' | 'subscribe';
-  closed: boolean;
-  sessionId: string | null;
-  queue: Promise<void>;
-  layerQueue: Promise<void>;
-  disconnectTimer: ReturnType<typeof setTimeout> | null;
-}
-
-interface MidSubscriptionBinding {
-  pub: SfuPublication;
-  sub: SfuSubscription;
-  current: () => boolean;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function readBatchPublish(value: unknown) {
-  if (!isRecord(value) || !sessionIdOf(value) || !Array.isArray(value.publications)) {
-    throw sfuError('BAD_SFU_PUBLISH');
-  }
-  const first = value.publications[0];
-  if (!isRecord(first) || typeof first.trackName !== 'string' || !first.trackName) {
-    throw sfuError('BAD_SFU_PUBLISH');
-  }
-  const rids = Array.isArray(first.rids)
-    ? (first.rids.filter(
-        (r): r is SfuRid => r === 'f' || r === 'h' || r === 'q',
-      ) as readonly SfuRid[])
-    : undefined;
-  return {
-    sessionId: value.sessionId as string,
-    trackName: first.trackName,
-    rids,
-    description:
-      value.sessionDescription == null ? null : description(value.sessionDescription, 'answer'),
-  };
-}
-
-function readBatchSubscribe(value: unknown) {
-  if (!isRecord(value) || !sessionIdOf(value) || !Array.isArray(value.tracks)) {
-    throw sfuError('BAD_SFU_OFFER');
-  }
-  const first = value.tracks[0];
-  if (!isRecord(first) || typeof first.mid !== 'string') {
-    throw sfuError('BAD_SFU_OFFER');
-  }
-  const preferredRid =
-    first.preferredRid === 'f' || first.preferredRid === 'h' || first.preferredRid === 'q'
-      ? (first.preferredRid as SfuRid)
-      : null;
-  return {
-    sessionId: value.sessionId as string,
-    mid: first.mid,
-    preferredRid,
-    description: description(value.sessionDescription, 'offer'),
-  };
-}
-
-/**
- * Owns asymmetric persistent SFU peers (at most 1 Publisher + 1 Subscriber per call),
- * serialized SDP mutation queues, pending requests, catalog, and retry timers.
- * Local capture and the single WebSocket remain borrowed dependencies.
- */
+/** Bridges the call UI, track owners and catalog to the shared SFU engine. */
 export function createSfuSession(options: SfuOptions) {
   const publications = new Map<VoiceMediaKind, SfuLocalPublication>();
   const subscriptions = new Map<string, SfuSubscription>();
-  const subscriptionsByMid = new Map<string, MidSubscriptionBinding>();
-  const publishTokens = new Map<VoiceMediaKind, Token>();
-  const subscribeTokens = new Map<string, Token>();
   const retries = new Map<
     string,
     { timer: ReturnType<typeof setTimeout>; publication: SfuPublication }
   >();
   const retryCounts = new Map<string, number>();
   const retryVersions = new Map<string, string>();
+  const publicationVersion = (pub: SfuPublication) =>
+    JSON.stringify([pub.sessionId, pub.trackName]);
   const warn = options.warn ?? ((error: unknown) => console.warn('[SfuSession]', error));
   const subscriptionQueue = new SfuSubscriptionQueue();
   const publicationRecovery = new SfuPublicationRecovery({
@@ -160,256 +84,234 @@ export function createSfuSession(options: SfuOptions) {
     },
   });
 
-  let publisherPeer: PersistentPeer | null = null;
-  let subscriberPeer: PersistentPeer | null = null;
   let generation = 0;
   let catalogRevision = 0;
   let catalog: readonly SfuPublication[] = Object.freeze([]);
+  let teardown = Promise.resolve();
+  let engine = createEngine();
+  let reconnecting = false;
+  let lastReconnect = -Infinity;
 
-  const enabled = (token: Token) =>
-    !token.cancelled && token.generation === generation && options.getSettings().enabled;
-
-  function clearDisconnectTimer(peer: PersistentPeer) {
-    if (peer.disconnectTimer) {
-      clearTimeout(peer.disconnectTimer);
-      peer.disconnectTimer = null;
-    }
-  }
-
-  function createPersistentPeer(purpose: 'publish' | 'subscribe'): PersistentPeer {
-    const pc = options.createConnection(options.getSettings().ice);
-    return {
-      pc,
-      controller: new AbortController(),
-      purpose,
-      closed: false,
-      sessionId: null,
-      queue: Promise.resolve(),
-      layerQueue: Promise.resolve(),
-      disconnectTimer: null,
-    };
-  }
-
-  function enqueueOnPeer<T>(peer: PersistentPeer, fn: () => Promise<T>): Promise<T> {
-    const run = peer.queue.then(fn, fn);
-    peer.queue = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    return run;
-  }
-
-  function ensurePublisherPeer(): PersistentPeer {
-    if (publisherPeer && !publisherPeer.closed) return publisherPeer;
-    const peer = createPersistentPeer('publish');
-    const pc = peer.pc;
+  function createEngine() {
     const epoch = generation;
+    const lifetime = new AbortController();
+    const peers = new Map<'publish' | 'subscribe', RTCPeerConnection>();
+    const timers = new Map<'publish' | 'subscribe', ReturnType<typeof setTimeout>>();
+    const local = new Map<VoiceMediaKind, MediaStreamTrack>();
+    const screenInputs = new Map<
+      string,
+      { video: MediaStreamTrack; audio: MediaStreamTrack | null }
+    >();
+    const pendingDeliveries = new Map<string, RemoteTrackDelivery>();
+    let connecting: Promise<void> | undefined;
+    let captureNumber = 0;
+    let screenQueue = Promise.resolve();
+    const subscriptionTasks = new Map<string, Promise<void>>();
 
-    pc.onconnectionstatechange = () => {
-      if (peer.closed || epoch !== generation || !options.getSettings().enabled) {
-        clearDisconnectTimer(peer);
-        return;
-      }
-      if (pc.connectionState === 'connected') {
-        clearDisconnectTimer(peer);
-        return;
-      }
-      if (pc.connectionState === 'failed') {
-        clearDisconnectTimer(peer);
-        for (const kind of [...publications.keys()]) {
-          void publicationRecovery
-            .recover(
-              kind,
-              Object.assign(new Error('Conexão SFU interrompida.'), {
-                code: 'SFU_CONNECTION_FAILED',
-              }),
-            )
-            .catch(warn);
-        }
-        return;
-      }
-      if (pc.connectionState === 'disconnected' && !peer.disconnectTimer) {
-        peer.disconnectTimer = setTimeout(() => {
-          peer.disconnectTimer = null;
-          if (
-            !peer.closed &&
-            epoch === generation &&
-            options.getSettings().enabled &&
-            pc.connectionState === 'disconnected'
-          ) {
-            for (const kind of [...publications.keys()]) {
-              void publicationRecovery
-                .recover(
-                  kind,
-                  Object.assign(new Error('Conexão SFU estagnada em disconnected.'), {
-                    code: 'SFU_CONNECTION_STALLED',
-                  }),
-                )
-                .catch(warn);
+    const adapter = new CloudflareSfuExecutionAdapter({
+      mediaDevices: null,
+      getIceConfiguration: () => options.getSettings().ice,
+      onSubscriberNegotiationError() {
+        if (epoch === generation) void recoverConnection('subscription').catch(warn);
+      },
+      getQuality: qualityPreset,
+      borrowInputTracks: true,
+      manageKeepAlive: false,
+      onScreenEncodingError: (error) => options.onScreenEncodingError(error),
+      signaling: {
+        async request<T>(
+          action: SfuClientAction,
+          payload: Record<string, unknown>,
+          signal?: AbortSignal,
+        ) {
+          if (action === 'close-session' || action === 'ensure-session') {
+            return (await options.request(action, payload, 8000)) as T;
+          }
+          if (epoch !== generation || lifetime.signal.aborted || signal?.aborted)
+            throw sfuCancelled();
+          const scope = signal ? AbortSignal.any([signal, lifetime.signal]) : lifetime.signal;
+          const timeout = action === 'publish-tracks' ? 15000 : 12000;
+          return (await abortable(options.request(action, payload, timeout), scope)) as T;
+        },
+      },
+      onPeerConnectionCreated(role, peer) {
+        if (!(peer instanceof RTCPeerConnection)) return;
+        peers.set(role, peer);
+        peer.addEventListener('connectionstatechange', () => {
+          clearTimeout(timers.get(role));
+          timers.delete(role);
+          const fallback = () => {
+            if (!lifetime.signal.aborted && options.getSettings().enabled) {
+              void recoverConnection(role === 'publish' ? 'publisher' : 'subscription').catch(warn);
             }
-          }
-        }, 4500);
-      }
-    };
-
-    publisherPeer = peer;
-    return peer;
-  }
-
-  function ensureSubscriberPeer(): PersistentPeer {
-    if (subscriberPeer && !subscriberPeer.closed) return subscriberPeer;
-    const peer = createPersistentPeer('subscribe');
-    const pc = peer.pc;
-    const epoch = generation;
-
-    pc.ontrack = (event) => {
-      const mid = event.transceiver?.mid;
-      if (!mid) return;
-      const binding = subscriptionsByMid.get(mid);
-      if (!binding || !binding.current() || subscriptions.get(binding.sub.key) !== binding.sub) {
-        return;
-      }
-      binding.sub.track = event.track;
-      options.onTrack(binding.pub, event.track, binding.sub, event.receiver, binding.current);
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (peer.closed || epoch !== generation || !options.getSettings().enabled) {
-        clearDisconnectTimer(peer);
-        return;
-      }
-      if (pc.connectionState === 'connected') {
-        clearDisconnectTimer(peer);
-        return;
-      }
-      if (pc.connectionState === 'failed') {
-        clearDisconnectTimer(peer);
-        recoverSubscriberFailures(
-          Object.assign(new Error('Conexão SFU interrompida.'), {
-            code: 'SFU_CONNECTION_FAILED',
-          }),
-        );
-        return;
-      }
-      if (pc.connectionState === 'disconnected' && !peer.disconnectTimer) {
-        peer.disconnectTimer = setTimeout(() => {
-          peer.disconnectTimer = null;
-          if (
-            !peer.closed &&
-            epoch === generation &&
-            options.getSettings().enabled &&
-            pc.connectionState === 'disconnected'
-          ) {
-            recoverSubscriberFailures(
-              Object.assign(new Error('Assinatura SFU estagnada em disconnected.'), {
-                code: 'SFU_CONNECTION_STALLED',
-              }),
-            );
-          }
-        }, 4500);
-      }
-    };
-
-    subscriberPeer = peer;
-    return peer;
-  }
-
-  function recoverSubscriberFailures(error: Error) {
-    const bindings = [...subscriptionsByMid.values()];
-    for (const binding of bindings) {
-      void closeSubscription(binding.sub.key, false);
-      retry(binding.pub, error);
-    }
-  }
-
-  function disposePeer(peer: PersistentPeer | null, notifyServer: boolean) {
-    if (!peer || peer.closed) return;
-    peer.closed = true;
-    clearDisconnectTimer(peer);
-    peer.controller.abort();
-    peer.pc.ontrack = null;
-    peer.pc.onconnectionstatechange = null;
-    try {
-      peer.pc.close();
-    } catch (error) {
-      warn(error);
-    }
-    if (notifyServer && peer.sessionId) {
-      void options
-        .request(
-          'close-session',
-          { sessionId: peer.sessionId, purpose: peer.purpose },
-          peer.purpose === 'publish' ? 9000 : 8000,
-        )
-        .catch(warn);
-    }
-  }
-
-  function peerRequest(
-    peer: PersistentPeer,
-    action: string,
-    payload: Record<string, unknown>,
-    timeout?: number,
-  ) {
-    const result = options.request(action, payload, timeout).then((value) => {
-      if (
-        action === 'ensure-session' ||
-        action === 'publish-tracks' ||
-        action === 'subscribe-tracks'
-      ) {
-        const sid = sessionIdOf(value);
-        if (sid) peer.sessionId = sid;
-      }
-      return value;
+          };
+          if (peer.connectionState === 'failed') fallback();
+          else if (peer.connectionState === 'disconnected')
+            timers.set(role, setTimeout(fallback, 4500));
+        });
+      },
+      onRemoteTrack(delivery) {
+        if (epoch !== generation) return;
+        const key = sfuKey(delivery.participantId, delivery.kind);
+        const sub = subscriptions.get(key);
+        if (sub) deliver(sub, delivery);
+        else pendingDeliveries.set(key, delivery);
+      },
     });
-    return abortable(result, peer.controller.signal);
+
+    const controller = new VoiceEngineController({
+      ...adapter.hostPorts,
+      propagateCommandErrors: true,
+      media: {
+        connect: (input) => adapter.connect(input),
+        disconnect: (input) => adapter.disconnect(input),
+        startMicrophone: ({ options: requested, signal }) => {
+          const track = local.get('audio');
+          if (!track) throw sfuCancelled();
+          return adapter.startMicrophone({ options: { ...requested, track }, signal });
+        },
+        stopMicrophone: () => adapter.stopMicrophone(),
+        setMicrophoneMuted: (muted) => adapter.setMicrophoneMuted(muted),
+        startCamera: ({ options: requested, signal }) => {
+          const track = local.get('camera');
+          if (!track) throw sfuCancelled();
+          return adapter.startCamera({ options: { ...requested, track }, signal });
+        },
+        stopCamera: () => adapter.stopCamera(),
+        startScreenShare: (input) => {
+          const tracks = screenInputs.get(input.captureId);
+          if (!tracks) throw sfuCancelled();
+          return adapter.startScreenShare({
+            ...input,
+            videoTrack: tracks.video,
+            audioTrack: tracks.audio,
+          });
+        },
+        updateScreenEncoding: (input) => adapter.updateScreenEncoding(input),
+        republishScreenShare: (input) => adapter.republishScreenShare(input),
+        stopScreenShare: (input) => adapter.stopScreenShare(input),
+        startScreenAudio: (input) => {
+          const track = local.get('screen-audio');
+          if (!track) throw sfuCancelled();
+          return adapter.startScreenAudio({ ...input, options: { ...input.options, track } });
+        },
+        stopScreenAudio: (input) => adapter.stopScreenAudio(input),
+      },
+    });
+
+    function ensure(): Promise<void> {
+      if (connecting) return connecting;
+      const roomId = options.roomId();
+      const participantId = options.participantId();
+      if (!roomId || !participantId || lifetime.signal.aborted)
+        return Promise.reject(sfuCancelled());
+      connecting = teardown
+        .then(() => {
+          if (lifetime.signal.aborted) throw sfuCancelled();
+          return controller.connect({ roomId, participantId, quality: qualityPreset() });
+        })
+        .catch((error) => {
+          connecting = undefined;
+          throw error;
+        });
+      return connecting;
+    }
+
+    function deliver(sub: SfuSubscription, delivery: RemoteTrackDelivery) {
+      if (!(delivery.track instanceof MediaStreamTrack)) return;
+      const receiver = sub.pc.getTransceivers().find((tr) => tr.mid === sub.mid)?.receiver;
+      const pub = catalog.find((entry) => matchesSubscription(entry, sub));
+      const current = () =>
+        epoch === generation &&
+        subscriptions.get(sub.key) === sub &&
+        !!pub &&
+        options.wants(pub) &&
+        catalogHas(pub);
+      if (receiver && pub && delivery.mid === sub.mid && current()) {
+        sub.track = delivery.track;
+        options.onTrack(pub, delivery.track, sub, receiver, current);
+      }
+    }
+
+    function retire() {
+      lifetime.abort();
+      for (const timer of timers.values()) clearTimeout(timer);
+      for (const peer of peers.values()) peer.close();
+      controller.dispose();
+      const closed = adapter.disconnect({ roomId: null }).catch(warn);
+      return Promise.allSettled([connecting, closed]).then(() => undefined);
+    }
+
+    return {
+      adapter,
+      controller,
+      ensure,
+      local,
+      peers,
+      screenInputs,
+      pendingDeliveries,
+      deliver,
+      retire,
+      subscriptionTasks,
+      runScreen<T>(task: () => Promise<T>): Promise<T> {
+        const next = screenQueue.then(task);
+        screenQueue = next.then(
+          () => undefined,
+          () => undefined,
+        );
+        return next;
+      },
+      nextCapture: () => `screen-${++captureNumber}`,
+    };
   }
 
-  async function ensureSessionId(peer: PersistentPeer): Promise<string> {
-    if (peer.sessionId) return peer.sessionId;
-    const reply = await peerRequest(
-      peer,
-      'ensure-session',
-      { purpose: peer.purpose },
-      peer.purpose === 'publish' ? 9000 : 8000,
-    );
-    const sid = sessionIdOf(reply);
-    if (!sid) throw sfuError('BAD_SFU_SESSION');
-    peer.sessionId = sid;
-    return sid;
+  function qualityPreset() {
+    const quality = options.getSettings().quality;
+    return quality === 'high' || quality === 'economy' ? quality : 'balanced';
+  }
+
+  function screenTarget(): ScreenShareOptions {
+    const settings = options.getSettings();
+    return {
+      width: settings.screen.width,
+      height: settings.screen.height,
+      frameRate: settings.screen.fps,
+      maxBitrateBps: settings.screenBitrate,
+      codec: settings.screenCodec,
+      contentHint: settings.screenContent,
+      quality: qualityPreset(),
+      simulcast: false,
+    };
+  }
+
+  function syncLocal(kind: VoiceMediaKind) {
+    const descriptor = engine.adapter.getLocalPublication(kind);
+    const pc = engine.peers.get('publish');
+    const sender = pc?.getTransceivers().find((tr) => tr.mid === descriptor?.mid)?.sender;
+    if (!descriptor || !pc || !sender) {
+      publications.delete(kind);
+      return;
+    }
+    const publication: SfuLocalPublication = { ...descriptor, pc, sender, ready: true };
+    publications.set(kind, publication);
+    return publication;
   }
 
   async function closePublication(kind: VoiceMediaKind, cancelRecovery = true): Promise<void> {
     if (cancelRecovery) publicationRecovery.cancel(kind);
-    const token = publishTokens.get(kind);
-    if (token) token.cancelled = true;
-    publishTokens.delete(kind);
-
-    const pub = publications.get(kind);
-    if (!pub) return;
     publications.delete(kind);
-
-    const peer = publisherPeer;
-    try {
-      await pub.sender.replaceTrack(null);
-    } catch {
-      // Ignore replaceTrack failures when track/sender is already closed.
+    if (kind === 'screen') {
+      publicationRecovery.cancel('screen-audio');
+      publications.delete('screen-audio');
     }
-    const transceiver = peer?.pc
-      .getTransceivers?.()
-      .find((tr) => tr.sender === pub.sender || tr.mid === pub.mid);
-    if (transceiver) transceiver.direction = 'inactive';
-
-    if (peer && !peer.closed && peer.sessionId) {
-      await enqueueOnPeer(peer, async () => {
-        if (peer.closed || !peer.sessionId) return;
-        await peerRequest(
-          peer,
-          'unpublish-tracks',
-          { sessionId: peer.sessionId, mids: [pub.mid] },
-          9000,
-        ).catch(warn);
-      });
+    const { controller } = engine;
+    if (kind === 'audio') await controller.stopMicrophone();
+    else if (kind === 'camera') await controller.stopCamera();
+    else if (kind === 'screen') await controller.stopScreenShare();
+    else if (controller.getSnapshot().screenAudio.status !== 'stopped') {
+      await controller.stopScreenAudio();
+    } else {
+      await engine.adapter.stopScreenAudio({ captureId: null });
     }
   }
 
@@ -420,337 +322,210 @@ export function createSfuSession(options: SfuOptions) {
     retryVersions.delete(key);
   }
 
-  function closeSubscription(key: string, clearRetries = true, cancelQueued = true): Promise<void> {
+  async function closeSubscription(
+    key: string,
+    clearRetries = true,
+    cancelQueued = true,
+  ): Promise<void> {
     if (cancelQueued) subscriptionQueue.cancel(key);
-    const token = subscribeTokens.get(key);
-    if (token) token.cancelled = true;
-    subscribeTokens.delete(key);
     if (clearRetries) clearRetry(key);
-
+    engine.pendingDeliveries.delete(key);
     const sub = subscriptions.get(key);
-    if (!sub) return Promise.resolve();
+    if (!sub) return;
     subscriptions.delete(key);
-    subscriptionsByMid.delete(sub.mid);
-
+    options.onSubscriptionClosed(sub);
     try {
-      options.onSubscriptionClosed(sub);
+      await engine.controller.setRemoteTrackSubscription({
+        participantId: sub.publisherId,
+        kind: sub.kind,
+        subscribed: false,
+      });
     } catch (error) {
       warn(error);
     }
+  }
 
-    const peer = subscriberPeer;
-    if (!peer || peer.closed) return Promise.resolve();
-
-    const transceiver = peer.pc.getTransceivers?.().find((tr) => tr.mid === sub.mid);
-    if (transceiver) transceiver.direction = 'inactive';
-
-    return enqueueOnPeer(peer, async () => {
-      if (peer.closed || !peer.sessionId) return;
-      await peerRequest(
-        peer,
-        'close-subscription',
-        {
-          sessionId: peer.sessionId,
-          mid: sub.mid,
-          publisherId: sub.publisherId,
-          kind: sub.kind,
-        },
-        8000,
-      ).catch(warn);
+  async function publishScreen(
+    video: MediaStreamTrack,
+    audio: MediaStreamTrack | null,
+    recovery = false,
+  ) {
+    if (!options.getSettings().enabled) return null;
+    if (!options.getSettings().screenAllowed) throw sfuError('SCREEN_BUDGET_BLOCKED');
+    if (!recovery) {
+      publicationRecovery.cancel('screen');
+      publicationRecovery.cancel('screen-audio');
+    }
+    const active = engine;
+    await active.ensure();
+    if (active !== engine || video.readyState === 'ended') throw sfuCancelled();
+    return active.runScreen(async () => {
+      if (active !== engine || video.readyState !== 'live') throw sfuCancelled();
+      const captureId = active.nextCapture();
+      active.screenInputs.set(captureId, {
+        video,
+        audio: audio?.readyState === 'live' ? audio : null,
+      });
+      try {
+        await active.controller.startScreenShare({ ...screenTarget(), captureId });
+        if (active !== engine || active.controller.getSnapshot().screen.captureId !== captureId) {
+          throw sfuCancelled();
+        }
+        const screen = syncLocal('screen');
+        const sound = syncLocal('screen-audio');
+        if (sound) await options.applyQuality(sound.sender, 'screen-audio');
+        if (active === engine) options.onReady('screen', false);
+        return screen ?? null;
+      } finally {
+        if (active === engine) {
+          syncLocal('screen');
+          syncLocal('screen-audio');
+        }
+        active.screenInputs.delete(captureId);
+      }
     });
   }
 
-  async function publish(
-    kind: VoiceMediaKind,
-    track: MediaStreamTrack,
-    recovery = false,
-  ): Promise<SfuLocalPublication | null> {
-    if (!options.getSettings().enabled || !track) return null;
-    if (screenKind(kind) && !options.getSettings().screenAllowed) {
-      throw Object.assign(new Error('Compartilhamento bloqueado pelo freio de consumo.'), {
-        code: 'SCREEN_BUDGET_BLOCKED',
+  async function updateScreenEncoding(force = false) {
+    const active = engine;
+    return active.runScreen(async () => {
+      if (
+        active !== engine ||
+        !publications.has('screen') ||
+        active.controller.getSnapshot().screen.status !== 'published'
+      )
+        return;
+      try {
+        await active.controller.updateScreenEncoding({ options: screenTarget(), force });
+      } catch (error) {
+        if (active === engine && !active.adapter.getLocalPublication('screen')) {
+          void publicationRecovery.recover('screen', error).catch(warn);
+        }
+        throw error;
+      } finally {
+        if (active === engine) syncLocal('screen');
+      }
+    });
+  }
+
+  async function publish(kind: VoiceMediaKind, track: MediaStreamTrack, recovery = false) {
+    if (!options.getSettings().enabled) return null;
+    if (kind === 'screen')
+      return publishScreen(track, options.getTrack?.('screen-audio') ?? null, recovery);
+    if (!recovery) publicationRecovery.cancel(kind);
+    const active = engine;
+    await active.ensure();
+    if (engine !== active || track.readyState === 'ended') throw sfuCancelled();
+    active.local.set(kind, track);
+    const previous = publications.get(kind);
+    if (kind !== 'screen-audio' && (recovery || (previous && previous.sender.track !== track))) {
+      await closePublication(kind, false);
+    }
+    if (active !== engine || track.readyState !== 'live') throw sfuCancelled();
+    if (kind === 'audio') await active.controller.startMicrophone();
+    else if (kind === 'camera') {
+      const settings = options.getSettings();
+      await active.controller.startCamera({
+        frameRate: settings.camera.fps,
+        maxBitrateBps: settings.videoBitrate,
+        simulcast: true,
+      });
+    } else {
+      await active.controller.startScreenAudio({
+        captureId: active.controller.getSnapshot().screen.captureId ?? undefined,
       });
     }
-
-    if (recovery) {
-      const prevToken = publishTokens.get(kind);
-      if (prevToken) prevToken.cancelled = true;
-    } else {
-      publicationRecovery.cancel(kind);
-    }
-
-    const token: Token = { generation, cancelled: false };
-    publishTokens.set(kind, token);
-    const owned = () => enabled(token) && publishTokens.get(kind) === token;
-    const current = () =>
-      owned() && (publications.get(kind)?.sender.track || track).readyState !== 'ended';
-    const ensure = () => {
-      if (!current()) throw sfuCancelled();
-    };
-
-    const peer = ensurePublisherPeer();
-
-    return enqueueOnPeer(peer, async () => {
-      const pc = peer.pc;
-      for (const simulcast of kind === 'camera' ? [true, false] : [false]) {
-        ensure();
-        let tr: RTCRtpTransceiver | null = null;
-        try {
-          const sessionId = await ensureSessionId(peer);
-          ensure();
-
-          // Unpublish any active track of the same kind before adding the new transceiver.
-          const previousPub = publications.get(kind);
-          if (previousPub) {
-            publications.delete(kind);
-            try {
-              await previousPub.sender.replaceTrack(null);
-            } catch {
-              // Ignore replaceTrack error on previous sender.
-            }
-            const prevTr = pc
-              .getTransceivers?.()
-              .find((item) => item.sender === previousPub.sender || item.mid === previousPub.mid);
-            if (prevTr) prevTr.direction = 'inactive';
-            await peerRequest(
-              peer,
-              'unpublish-tracks',
-              { sessionId, mids: [previousPub.mid] },
-              9000,
-            ).catch(warn);
-            ensure();
-          }
-
-          const settings = options.getSettings();
-          const init: RTCRtpTransceiverInit = { direction: 'sendonly' };
-          const screenCodec = settings.screenCodec ?? 'auto';
-          if (simulcast && kind === 'camera') {
-            init.sendEncodings = cameraEncodings(settings);
-          } else if (kind === 'screen') {
-            init.sendEncodings = screenEncodings(settings)
-              .slice(0, 1)
-              .map((enc) => ({
-                ...enc,
-                rid: undefined,
-                ...(screenCodec === 'vp9' || screenCodec === 'av1'
-                  ? { scalabilityMode: 'L1T2' }
-                  : {}),
-              })) as RTCRtpEncodingParameters[];
-          }
-
-          try {
-            tr = pc.addTransceiver(track, init);
-          } catch (error) {
-            if (kind === 'screen' && init.sendEncodings?.[0]) {
-              const fallbackEnc = { ...init.sendEncodings[0] } as RTCRtpEncodingParameters & {
-                scalabilityMode?: string;
-              };
-              delete fallbackEnc.scalabilityMode;
-              tr = pc.addTransceiver(track, { ...init, sendEncodings: [fallbackEnc] });
-            } else {
-              throw error;
-            }
-          }
-
-          if (kind === 'screen') prioritizeScreenCodec(tr, screenCodec);
-
-          const offer = await abortable(pc.createOffer(), peer.controller.signal);
-          ensure();
-          await abortable(pc.setLocalDescription(offer), peer.controller.signal);
-          ensure();
-
-          const rids = simulcast ? advertisedRids(tr, pc) : [];
-          const mid = String(tr.mid);
-          const reply = readBatchPublish(
-            await peerRequest(
-              peer,
-              'publish-tracks',
-              {
-                sessionId,
-                quality: options.getSettings().quality,
-                screenBitrate: options.getSettings().screenBitrate,
-                sessionDescription: description(pc.localDescription, 'offer'),
-                tracks: [{ kind, mid, rids }],
-              },
-              recovery ? 9000 : 15000,
-            ),
-          );
-          ensure();
-
-          if (reply.description) {
-            await abortable(pc.setRemoteDescription(reply.description), peer.controller.signal);
-            ensure();
-          }
-
-          const pub: SfuLocalPublication = {
-            kind,
-            pc,
-            sessionId: reply.sessionId,
-            mid,
-            sender: tr.sender,
-            trackName: reply.trackName,
-            rids: reply.rids ?? rids,
-            ready: true,
-          };
-          publications.set(kind, pub);
-          await abortable(options.applyQuality(pub.sender, kind), peer.controller.signal);
-          ensure();
-          options.onReady(kind, false);
-
-          if (kind === 'audio') {
-            const latest = options.getTrack?.('audio');
-            if (latest?.readyState === 'live' && pub.sender.track !== latest) {
-              await abortable(pub.sender.replaceTrack(latest), peer.controller.signal);
-              ensure();
-              await abortable(options.applyQuality(pub.sender, kind), peer.controller.signal);
-              ensure();
-            }
-          }
-          return pub;
-        } catch (error) {
-          if (tr) {
-            tr.direction = 'inactive';
-            void tr.sender.replaceTrack(null).catch(() => {});
-          }
-          if (!current()) throw sfuCancelled();
-          if (simulcast && retrySingleLayer(error)) {
-            warn(error);
-            continue;
-          }
-          throw error;
-        }
-      }
-      throw sfuCancelled();
-    });
+    if (active !== engine) throw sfuCancelled();
+    const publication = syncLocal(kind);
+    if (!publication) throw sfuCancelled();
+    await options.applyQuality(publication.sender, kind);
+    if (active === engine) options.onReady(kind, false);
+    return publication;
   }
 
-  const catalogHas = (pub: SfuPublication) =>
+  const matchesSubscription = (pub: SfuPublication, sub: SfuSubscription) =>
+    sfuKey(pub.ownerId, pub.kind) === sub.key &&
+    pub.sessionId === sub.publisherSessionId &&
+    pub.trackName === sub.trackName;
+
+  const catalogHas = (entry: SfuPublication) =>
     catalog.some(
-      (p) =>
-        sfuKey(p.ownerId, p.kind) === sfuKey(pub.ownerId, pub.kind) &&
-        p.sessionId === pub.sessionId,
+      (pub) =>
+        sfuKey(pub.ownerId, pub.kind) === sfuKey(entry.ownerId, entry.kind) &&
+        pub.sessionId === entry.sessionId &&
+        pub.trackName === entry.trackName,
     );
 
-  async function subscribe(
-    pub: SfuPublication,
-    currentJob: () => boolean,
-  ): Promise<SfuSubscription | null> {
-    if (!options.getSettings().enabled || !options.wants(pub) || !catalogHas(pub)) return null;
+  async function subscribe(pub: SfuPublication, currentJob: () => boolean): Promise<void> {
+    const active = engine;
     const key = sfuKey(pub.ownerId, pub.kind);
-    const existing = subscriptions.get(key);
-    if (existing?.publisherSessionId === pub.sessionId) return existing;
-
-    await closeSubscription(key, false, false);
-
-    const token: Token = { generation, cancelled: false, publisherSessionId: pub.sessionId };
-    const watch = options.watchVersion(pub.ownerId);
-    subscribeTokens.set(key, token);
-
-    const peer = ensureSubscriberPeer();
-    let activeSub: SfuSubscription | null = null;
-    const current = () =>
-      enabled(token) &&
-      !peer.closed &&
-      subscribeTokens.get(key) === token &&
-      (activeSub?.negotiating === false || currentJob()) &&
-      options.wants(pub) &&
-      catalogHas(pub) &&
-      (!screenKind(pub.kind) || watch === options.watchVersion(pub.ownerId));
-    const ensure = () => {
-      if (!current()) throw sfuCancelled();
-    };
-
-    return enqueueOnPeer(peer, async () => {
-      const pc = peer.pc;
-      try {
-        ensure();
-        const sessionId = await ensureSessionId(peer);
-        ensure();
-
-        const rid =
-          ['camera', 'screen'].includes(pub.kind) && pub.rids.length
-            ? options.preferredRid(pub.kind)
-            : null;
-
-        const reply = readBatchSubscribe(
-          await peerRequest(
-            peer,
-            'subscribe-tracks',
-            {
-              sessionId,
-              quality: options.getSettings().quality,
-              tracks: [
-                {
-                  publisherId: pub.ownerId,
-                  kind: pub.kind,
-                  preferredRid: rid,
-                },
-              ],
-            },
-            12000,
-          ),
-        );
-        ensure();
-
+    const task = (active.subscriptionTasks.get(key) ?? Promise.resolve())
+      .catch(() => {})
+      .then(async () => {
+        const watch = options.watchVersion(pub.ownerId);
+        const current = () =>
+          engine === active &&
+          currentJob() &&
+          options.getSettings().enabled &&
+          options.wants(pub) &&
+          catalogHas(pub) &&
+          (!screenKind(pub.kind) || options.watchVersion(pub.ownerId) === watch);
+        if (!current()) return;
+        await closeSubscription(key, false, false);
+        await active.ensure();
+        if (!current()) return;
+        const subscribed = { participantId: pub.ownerId, kind: pub.kind };
+        await active.controller.setRemoteTrackSubscription({
+          ...subscribed,
+          subscribed: true,
+          preferredRid: pub.rids.length ? options.preferredRid(pub.kind) : null,
+        });
+        if (!current()) {
+          active.pendingDeliveries.delete(key);
+          if (active === engine)
+            await active.controller.setRemoteTrackSubscription({
+              ...subscribed,
+              subscribed: false,
+            });
+          return;
+        }
+        const metadata = active.adapter.getRemoteSubscription(pub.ownerId, pub.kind);
+        const pc = active.peers.get('subscribe');
+        if (!metadata || !pc) throw sfuError('BAD_SFU_OFFER');
         const sub: SfuSubscription = {
+          ...metadata,
           key,
           pc,
-          sessionId: reply.sessionId,
-          mid: reply.mid,
           publisherSessionId: pub.sessionId,
           publisherId: pub.ownerId,
+          trackName: pub.trackName,
           kind: pub.kind,
-          preferredRid: reply.preferredRid,
           track: null,
-          negotiating: true,
-          readyAt: 0,
+          negotiating: false,
+          readyAt: Date.now(),
         };
-        activeSub = sub;
         subscriptions.set(key, sub);
-        subscriptionsByMid.set(sub.mid, { pub, sub, current });
-
-        await abortable(pc.setRemoteDescription(reply.description), peer.controller.signal);
-        ensure();
-        const answer = await abortable(pc.createAnswer(), peer.controller.signal);
-        ensure();
-        await abortable(pc.setLocalDescription(answer), peer.controller.signal);
-        ensure();
-
-        readAccepted(
-          await peerRequest(
-            peer,
-            'renegotiate',
-            {
-              sessionId: sub.sessionId,
-              sessionDescription: description(pc.localDescription, 'answer'),
-            },
-            10000,
-          ),
-        );
-        ensure();
-
-        sub.negotiating = false;
-        sub.readyAt = Date.now();
+        const delivery = active.pendingDeliveries.get(key);
+        active.pendingDeliveries.delete(key);
+        if (delivery) active.deliver(sub, delivery);
         options.onReady(pub.kind, true);
-        return sub;
-      } catch (error) {
-        if (activeSub) {
-          if (subscriptions.get(key) === activeSub) subscriptions.delete(key);
-          if (subscriptionsByMid.get(activeSub.mid)?.sub === activeSub) {
-            subscriptionsByMid.delete(activeSub.mid);
-          }
-        }
-        throw current() ? error : sfuCancelled();
-      }
-    });
+      });
+    active.subscriptionTasks.set(key, task);
+    try {
+      await task;
+    } finally {
+      if (active.subscriptionTasks.get(key) === task) active.subscriptionTasks.delete(key);
+    }
   }
 
   function applyCatalog(next: readonly SfuPublication[]) {
     catalog = next;
     catalogRevision++;
-    for (const [key, sessionId] of retryVersions) {
+    for (const [key, version] of retryVersions) {
       if (
-        !next.some((pub) => sfuKey(pub.ownerId, pub.kind) === key && pub.sessionId === sessionId)
+        !next.some(
+          (pub) => sfuKey(pub.ownerId, pub.kind) === key && publicationVersion(pub) === version,
+        )
       ) {
         clearRetry(key);
       }
@@ -760,15 +535,8 @@ export function createSfuSession(options: SfuOptions) {
         subscriptionQueue.cancel(key);
       }
     }
-    for (const [key, token] of [...subscribeTokens]) {
-      if (
-        !next.some(
-          (pub) =>
-            sfuKey(pub.ownerId, pub.kind) === key && pub.sessionId === token.publisherSessionId,
-        )
-      ) {
-        void closeSubscription(key);
-      }
+    for (const [key, sub] of subscriptions) {
+      if (!next.some((pub) => matchesSubscription(pub, sub))) void closeSubscription(key);
     }
     for (const [key, entry] of [...retries]) {
       if (!catalogHas(entry.publication)) clearRetry(key);
@@ -853,7 +621,7 @@ export function createSfuSession(options: SfuOptions) {
       return;
     }
 
-    retryVersions.set(key, pub.sessionId);
+    retryVersions.set(key, publicationVersion(pub));
     if (pub.kind !== 'audio' && attempt >= 4) return;
     const delay = stale
       ? Math.min(5000, 500 * 1.7 ** Math.min(attempt - 1, 4))
@@ -877,12 +645,14 @@ export function createSfuSession(options: SfuOptions) {
 
     const jobs: Promise<unknown>[] = [];
     for (const [key, pub] of desired) {
-      if (retryVersions.has(key) && retryVersions.get(key) !== pub.sessionId) clearRetry(key);
+      if (retryVersions.has(key) && retryVersions.get(key) !== publicationVersion(pub))
+        clearRetry(key);
       if (retries.has(key) || (pub.kind !== 'audio' && (retryCounts.get(key) ?? 0) >= 4)) continue;
-      if (subscriptions.get(key)?.publisherSessionId === pub.sessionId) continue;
+      const existing = subscriptions.get(key);
+      if (existing && matchesSubscription(pub, existing)) continue;
 
       jobs.push(
-        subscriptionQueue.schedule(key, pub.kind, pub.sessionId, async (currentJob) => {
+        subscriptionQueue.schedule(key, pub.kind, publicationVersion(pub), async (currentJob) => {
           try {
             await subscribe(pub, currentJob);
             if (current() && currentJob()) clearRetry(key);
@@ -913,65 +683,79 @@ export function createSfuSession(options: SfuOptions) {
     return Promise.allSettled(jobs).then(() => {});
   }
 
-  function setLayer(key: string, rid: SfuRid, force = false): Promise<void> {
+  async function setLayer(key: string, rid: SfuRid, force = false): Promise<void> {
     const sub = subscriptions.get(key);
-    const peer = subscriberPeer;
-    if (!sub || !peer || peer.closed) return Promise.resolve();
-    if (!catalog.find((pub) => sfuKey(pub.ownerId, pub.kind) === key)?.rids.length) {
-      return Promise.resolve();
-    }
-
-    const current = () =>
-      !peer.closed && options.getSettings().enabled && subscriptions.get(key) === sub;
-
-    const next = peer.layerQueue
-      .catch(() => {})
-      .then(async () => {
-        if (!current() || (!force && sub.preferredRid === rid)) return;
-        const preferred = readLayer(
-          await peerRequest(
-            peer,
-            'update-subscription',
-            { sessionId: sub.sessionId, mid: sub.mid, preferredRid: rid },
-            9000,
-          ),
-        );
-        if (current()) sub.preferredRid = preferred;
+    if (
+      !sub ||
+      (!force && sub.preferredRid === rid) ||
+      !catalog.find((pub) => matchesSubscription(pub, sub))?.rids.length
+    )
+      return;
+    const active = engine;
+    if (force) await active.adapter.setSubscriptionLayer(sub.publisherId, sub.kind, rid);
+    else
+      await active.controller.setRemoteTrackSubscription({
+        participantId: sub.publisherId,
+        kind: sub.kind,
+        subscribed: true,
+        preferredRid: rid,
       });
-    peer.layerQueue = next;
-    return next;
+    if (engine === active && subscriptions.get(key) === sub) {
+      sub.preferredRid =
+        active.adapter.getRemoteSubscription(sub.publisherId, sub.kind)?.preferredRid ?? null;
+    }
   }
 
-  function reset() {
+  async function recoverConnection(reason: 'publisher' | 'subscription') {
+    if (reconnecting || !options.getSettings().enabled) return;
+    if (performance.now() - lastReconnect < 20_000) {
+      await options.onFallback(reason);
+      return;
+    }
+    reconnecting = true;
+    lastReconnect = performance.now();
+    reset(true);
+    const active = engine;
+    try {
+      await active.ensure();
+      for (const kind of ['audio', 'camera', 'screen'] as const) {
+        if (active !== engine || !options.getSettings().enabled) return;
+        const track = options.getTrack?.(kind);
+        if (track?.readyState !== 'live') continue;
+        try {
+          await publish(kind, track);
+        } catch (error) {
+          if (kind === 'audio') throw error;
+          if (active === engine) void publicationRecovery.recover(kind, error).catch(warn);
+        }
+      }
+      if (active === engine) await refreshPublications();
+      if (active === engine) await syncSubscriptions();
+    } catch (error) {
+      if (active === engine && options.getSettings().enabled) {
+        warn(error);
+        await options.onFallback(reason);
+      }
+    } finally {
+      reconnecting = false;
+    }
+  }
+
+  function reset(reconnectingSfu = false) {
+    if (!reconnectingSfu) lastReconnect = -Infinity;
     generation++;
     catalogRevision++;
     catalog = Object.freeze([]);
     publicationRecovery.clear();
     subscriptionQueue.clear();
-    retryVersions.clear();
-    for (const token of [...publishTokens.values(), ...subscribeTokens.values()]) {
-      token.cancelled = true;
-    }
-    publishTokens.clear();
-    subscribeTokens.clear();
-    for (const key of [...retries.keys()]) clearRetry(key);
+    for (const key of retries.keys()) clearRetry(key);
     retryCounts.clear();
-
-    for (const sub of [...subscriptions.values()]) {
-      try {
-        options.onSubscriptionClosed(sub);
-      } catch (error) {
-        warn(error);
-      }
-    }
+    retryVersions.clear();
+    for (const sub of subscriptions.values()) options.onSubscriptionClosed(sub);
     publications.clear();
     subscriptions.clear();
-    subscriptionsByMid.clear();
-
-    disposePeer(publisherPeer, true);
-    disposePeer(subscriberPeer, true);
-    publisherPeer = null;
-    subscriberPeer = null;
+    teardown = engine.retire();
+    engine = createEngine();
   }
 
   return {
@@ -982,6 +766,8 @@ export function createSfuSession(options: SfuOptions) {
     setPublications,
     refreshPublications,
     publish,
+    publishScreen,
+    updateScreenEncoding,
     recoverPublication: (kind: VoiceMediaKind, error: unknown) =>
       publicationRecovery.recover(kind, error),
     closePublication,

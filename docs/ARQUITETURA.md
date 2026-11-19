@@ -80,3 +80,11 @@ sequenceDiagram
 | Serviço Backend SFU   | `apps/server/src/modules/sfu/`                             | `CloudflareRealtimeSfuService`, `CloudflareCallsClient`, `TurnIceService`, `UsagePolicy` |
 | Frontend Estático     | `apps/web/`                                                | Interface Next.js (`apps/web/src/`, `output: 'export'` -> `apps/web/out/`)               |
 | Host Desktop          | `apps/desktop/`                                            | Janela Electron, helpers nativos e captura desktop                                       |
+
+## Integração da chamada no aplicativo
+
+A sessão SFU do frontend liga a interface e o catálogo de publicações a uma instância de `VoiceEngineController` e `CloudflareSfuExecutionAdapter` por geração da chamada. O adaptador concentra as duas conexões e serializa as negociações. O frontend mantém o controle de interesse do espectador e empresta ao adaptador as tracks já preparadas pelo microfone processado, pela câmera e pela captura de tela, incluindo o áudio por aplicativo no Electron. Isso permite reaproveitar as capturas quando a chamada transita para P2P.
+
+A captura de tela agrupa vídeo e áudio disponível em um pedido `publish-tracks`. A troca de codec republica a track de vídeo e preserva a de áudio. O seletor da origem continua vinculado ao gesto do usuário. A troca cancelada deixa a captura anterior ativa.
+
+O modo **Movimento** usa uma camada de resolução e preserva o FPS escolhido como alvo durante a adaptação. A política reduz bitrate e dimensões quando a chamada está sob pressão. O adaptador calcula a escala a partir da track real e informa falhas ao aplicar os parâmetros do emissor. A telemetria chama `getStats()` uma vez por conexão e associa as amostras SFU às mídias pelo MID ou pela track.

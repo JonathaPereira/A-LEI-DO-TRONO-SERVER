@@ -94,7 +94,6 @@ export function createScreenSharing(options: SharingOptions) {
     if (sendState) options.announceStopped();
     options.onChange('stopped');
     if (options.policy().sfu) {
-      void options.closePublication('screen-audio').catch(warn);
       void options.closePublication('screen').catch(warn);
     } else {
       const jobs: Promise<unknown>[] = [];

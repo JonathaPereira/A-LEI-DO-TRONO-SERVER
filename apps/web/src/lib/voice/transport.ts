@@ -219,7 +219,7 @@ export function createVoiceTransport(options: TransportOptions) {
         ensure();
         // Optional publications must never delay incoming voice or one another.
         const tracks = options.tracks();
-        for (const kind of ['camera', 'screen', 'screen-audio'] as const) {
+        for (const kind of ['camera', 'screen'] as const) {
           ensure();
           const track = tracks[kind];
           if (!track || (kind !== 'camera' && !status.screenAllowed)) continue;

@@ -168,6 +168,7 @@ export class VoiceEngineRuntime implements VoiceEngineDriver {
       if (failedEvent) {
         await this.dispatch(failedEvent);
       }
+      if (this.#ports.propagateCommandErrors) throw error;
     }
   }
 

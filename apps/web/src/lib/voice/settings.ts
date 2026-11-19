@@ -215,13 +215,7 @@ export function createVoiceSettings(options: SettingsOptions) {
     },
     selectCodec(value: string) {
       if (!isScreenCodec(value)) return Promise.resolve();
-      return changeQuality(
-        () => options.quality.configure({ screenCodec: value }),
-        (current) => {
-          if (current())
-            options.onStatus('Codec de tela aplicado ao próximo compartilhamento.', 'ok');
-        },
-      );
+      return changeQuality(() => options.quality.configure({ screenCodec: value }));
     },
     selectBitrate(value: string) {
       const bitrate = Number(value);

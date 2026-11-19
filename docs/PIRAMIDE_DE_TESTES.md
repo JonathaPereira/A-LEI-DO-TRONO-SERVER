@@ -49,3 +49,9 @@ node scripts/test.cjs --layer unit --filter screen-share
 # Rodar toda a pirâmide local (unit + integration)
 npm test
 ```
+
+## Aceite de fluidez no Windows
+
+Compare o cliente publicado e o candidato em duas máquinas, na mesma cena de movimento contínuo de Phantom Blade Zero, com o mesmo codec e bitrate. Use 1080p60 com perfil Movimento e confirme nos dois diagnósticos que a chamada utiliza Cloudflare SFU. Depois do aquecimento, colete cinco minutos no espectador com a janela em primeiro plano. Use os relatórios `getStats()` do envio e da recepção e conte separadamente os quadros apresentados pelo vídeo com `requestVideoFrameCallback`.
+
+A meta inicial é ter pelo menos 57 quadros apresentados em 95% das janelas completas de um segundo e nenhum intervalo de 500 ms ou mais entre apresentações. Repita a 720p60 para observar o efeito da resolução. Registre a versão, o codec, o alvo de FPS e os intervalos observados junto dos diagnósticos. Os testes com mídia sintética verificam o fluxo de publicação e o ciclo de vida, enquanto esse ensaio mede o jogo e o transporte em uso.

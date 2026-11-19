@@ -1,3 +1,4 @@
+import { isValidSdpDescription } from '@trono/protocol';
 import type {
   PublishTrackItem,
   SdpDescription,
@@ -44,6 +45,7 @@ import {
 
 export interface MediaStreamTrackLike extends DisplayMediaTrackLike {
   enabled?: boolean;
+  getSettings?(): MediaTrackSettings;
 }
 
 export interface MediaStreamLike extends DisplayMediaStreamLike {
@@ -90,7 +92,7 @@ export interface PeerConnectionLike {
   getTransceivers?(): RtpTransceiverLike[];
   createOffer(): Promise<SdpDescription>;
   createAnswer(): Promise<SdpDescription>;
-  setLocalDescription(description: SdpDescription): Promise<void>;
+  setLocalDescription(description: SdpDescription | { type: 'rollback' }): Promise<void>;
   setRemoteDescription(description: SdpDescription): Promise<void>;
   close(): void;
 }
@@ -116,6 +118,13 @@ export interface CloudflareSfuExecutionAdapterOptions {
   signaling: SignalingTransportLike;
   createPeerConnection?: (config: RTCConfiguration) => PeerConnectionLike;
   mediaDevices?: MediaDevicesAdapterLike | null;
+  getIceConfiguration?(): RTCConfiguration;
+  getQuality?(): SfuQualityPreset;
+  onSubscriberNegotiationError?(error: unknown): void;
+  /** The host retains ownership of tracks it supplies, including during transport fallback. */
+  borrowInputTracks?: boolean;
+  manageKeepAlive?: boolean;
+  onScreenEncodingError?(error: unknown): void;
   captureRegistry?: SourceLifecycleRegistry;
   keepAliveDoc?: KeepAliveDocumentLike | null;
   getCodecCapabilities?: (
@@ -218,8 +227,18 @@ function resolveMediaDevices(
   return null;
 }
 
-function toSenderTarget(options: ScreenShareOptions): ScreenShareSenderTarget {
+function toSenderTarget(
+  options: ScreenShareOptions,
+  track: MediaStreamTrackLike,
+): ScreenShareSenderTarget {
+  const settings = track.getSettings?.();
+  const scale = Math.max(
+    1,
+    options.width && settings?.width ? settings.width / options.width : 1,
+    options.height && settings?.height ? settings.height / options.height : 1,
+  );
   return {
+    scaleResolutionDownBy: scale,
     frameRate: options.frameRate,
     maxFramerate: options.frameRate,
     maxBitrateBps: options.maxBitrateBps,
@@ -254,6 +273,34 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
   readonly #onLocalCapture: CloudflareSfuExecutionAdapterOptions['onLocalCapture'];
   readonly #onPeerConnectionCreated: CloudflareSfuExecutionAdapterOptions['onPeerConnectionCreated'];
 
+  readonly #getQuality: CloudflareSfuExecutionAdapterOptions['getQuality'];
+  readonly #getIceConfiguration: CloudflareSfuExecutionAdapterOptions['getIceConfiguration'];
+  readonly #onSubscriberNegotiationError: CloudflareSfuExecutionAdapterOptions['onSubscriberNegotiationError'];
+  readonly #borrowInputTracks: boolean;
+  readonly #manageKeepAlive: boolean;
+  readonly #onScreenEncodingError: CloudflareSfuExecutionAdapterOptions['onScreenEncodingError'];
+  readonly #descriptors = new Map<SfuMediaKind, SfuPublicationDescriptor>();
+
+  getLocalPublication(kind: SfuMediaKind): SfuPublicationDescriptor | undefined {
+    return this.#descriptors.get(kind);
+  }
+
+  getRemoteSubscription(participantId: string, kind: RemoteTrackKind) {
+    const entry = this.#subscriptions.get(`${participantId}:${kind}`);
+    if (!entry || !this.#subscriberSessionId) return undefined;
+    return {
+      mid: entry.mid,
+      preferredRid: entry.preferredRid,
+      sessionId: this.#subscriberSessionId,
+    };
+  }
+
+  #rememberPublications(response: PublishTracksResponse): void {
+    for (const publication of response.publications) {
+      this.#descriptors.set(publication.kind, publication);
+    }
+  }
+
   #connected = false;
   #quality: SfuQualityPreset = 'balanced';
   #publisherSessionId: string | null = null;
@@ -272,6 +319,12 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
 
   constructor(options: CloudflareSfuExecutionAdapterOptions) {
     this.#signaling = options.signaling;
+    this.#getIceConfiguration = options.getIceConfiguration;
+    this.#getQuality = options.getQuality;
+    this.#onSubscriberNegotiationError = options.onSubscriberNegotiationError;
+    this.#borrowInputTracks = options.borrowInputTracks ?? false;
+    this.#manageKeepAlive = options.manageKeepAlive ?? true;
+    this.#onScreenEncodingError = options.onScreenEncodingError;
     this.#createPeerConnection = options.createPeerConnection ?? defaultCreatePeerConnection;
     this.#mediaDevices = resolveMediaDevices(options.mediaDevices);
     this.#captureRegistry = options.captureRegistry ?? new SourceLifecycleRegistry();
@@ -306,31 +359,44 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     assertNotAborted(params.signal);
     this.#quality = params.quality;
 
-    const rawIce = await this.#signaling.request('ice-config', {}, params.signal);
+    const config = this.#getIceConfiguration?.() ?? {
+      iceServers: normalizeIceServers(
+        await this.#signaling.request('ice-config', {}, params.signal),
+      ),
+    };
     assertNotAborted(params.signal);
-    const iceServers = normalizeIceServers(rawIce);
 
-    const [pubSession, subSession] = await Promise.all([
-      this.#signaling.request<EnsureSessionResponse>(
-        'ensure-session',
-        { purpose: 'publish' },
-        params.signal,
-      ),
-      this.#signaling.request<EnsureSessionResponse>(
-        'ensure-session',
-        { purpose: 'subscribe' },
-        params.signal,
-      ),
+    const [pub, sub] = await Promise.allSettled([
+      this.#signaling.request<EnsureSessionResponse>('ensure-session', { purpose: 'publish' }),
+      this.#signaling.request<EnsureSessionResponse>('ensure-session', { purpose: 'subscribe' }),
     ]);
-    assertNotAborted(params.signal);
+    if (pub.status === 'rejected' || sub.status === 'rejected' || params.signal?.aborted) {
+      await Promise.allSettled(
+        [pub, sub].flatMap((result) =>
+          result.status === 'fulfilled' && result.value?.sessionId
+            ? [this.#signaling.request('close-session', { sessionId: result.value.sessionId })]
+            : [],
+        ),
+      );
+      if (pub.status === 'rejected') throw pub.reason;
+      if (sub.status === 'rejected') throw sub.reason;
+      assertNotAborted(params.signal);
+    }
+    if (
+      pub.status !== 'fulfilled' ||
+      sub.status !== 'fulfilled' ||
+      typeof pub.value?.sessionId !== 'string' ||
+      typeof sub.value?.sessionId !== 'string'
+    ) {
+      throw new Error('O SFU não retornou as duas sessões de mídia.');
+    }
+    this.#publisherSessionId = pub.value.sessionId;
+    this.#subscriberSessionId = sub.value.sessionId;
 
-    this.#publisherSessionId = pubSession.sessionId;
-    this.#subscriberSessionId = subSession.sessionId;
-
-    this.#publisherPc = this.#createPeerConnection({ iceServers });
+    this.#publisherPc = this.#createPeerConnection(config);
     this.#onPeerConnectionCreated?.('publish', this.#publisherPc);
 
-    this.#subscriberPc = this.#createPeerConnection({ iceServers });
+    this.#subscriberPc = this.#createPeerConnection(config);
     this.#subscriberPc.ontrack = (event) => {
       const mid = event.transceiver?.mid ?? null;
       if (!mid) return;
@@ -350,8 +416,8 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
 
     this.#connected = true;
     return {
-      publisherSessionId: pubSession.sessionId,
-      subscriberSessionId: subSession.sessionId,
+      publisherSessionId: pub.value.sessionId,
+      subscriberSessionId: sub.value.sessionId,
     };
   }
 
@@ -390,10 +456,11 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       }
 
       const captureId = `mic-${++this.#captureSeq}`;
-      this.#captureRegistry.registerCapture(captureId, [track], {
-        sourceKey: 'microphone',
-        replacePrevious: true,
-      });
+      if (!this.#borrowInputTracks || !params.options.track)
+        this.#captureRegistry.registerCapture(captureId, [track], {
+          sourceKey: 'microphone',
+          replacePrevious: true,
+        });
       this.#onLocalCapture?.({ kind: 'audio', captureId, track, stream });
 
       await this.#unpublishKindIfActive('audio', params.signal);
@@ -453,21 +520,43 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       }
 
       const captureId = `cam-${++this.#captureSeq}`;
-      this.#captureRegistry.registerCapture(captureId, [track], {
-        sourceKey: 'camera',
-        replacePrevious: true,
-      });
+      if (!this.#borrowInputTracks || !params.options.track)
+        this.#captureRegistry.registerCapture(captureId, [track], {
+          sourceKey: 'camera',
+          replacePrevious: true,
+        });
       this.#onLocalCapture?.({ kind: 'camera', captureId, track, stream });
 
       await this.#unpublishKindIfActive('camera', params.signal);
 
-      const entry = await this.#publishSingleLocalTrack({
-        kind: 'camera',
-        track,
-        captureId,
-        rids: [],
-        signal: params.signal,
-      });
+      const encodings = params.options.simulcast
+        ? SIMULCAST_ENCODINGS.map((encoding, index) => ({
+            ...encoding,
+            maxFramerate:
+              index === 2 ? Math.min(params.options.frameRate ?? 24, 24) : params.options.frameRate,
+            maxBitrate: params.options.maxBitrateBps
+              ? Math.round(params.options.maxBitrateBps * [1, 0.42, 0.16][index])
+              : undefined,
+          }))
+        : undefined;
+      const publication = { kind: 'camera' as const, track, captureId, signal: params.signal };
+      let entry: PublishedLocalEntry;
+      try {
+        entry = await this.#publishSingleLocalTrack({
+          ...publication,
+          rids: encodings ? SIMULCAST_RIDS : [],
+          encodings,
+        });
+      } catch (error) {
+        if (!encodings || params.signal?.aborted) throw error;
+        const code = error instanceof Error && 'code' in error ? error.code : '';
+        if (
+          typeof code === 'string' &&
+          ['VOICE_MODERATED', 'SFU_SESSION_STALE', 'SFU_CANCELLED'].includes(code)
+        )
+          throw error;
+        entry = await this.#publishSingleLocalTrack({ ...publication, rids: [] });
+      }
       return { trackId: entry.trackId, mid: entry.mid };
     });
   }
@@ -514,11 +603,12 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
         stream = captured.stream;
       }
 
-      this.#captureRegistry.registerCapture(captureId, [videoTrack], {
-        sourceKey: 'screen',
-        replacePrevious: true,
-      });
-      if (audioTrack) {
+      if (!this.#borrowInputTracks || !params.videoTrack)
+        this.#captureRegistry.registerCapture(captureId, [videoTrack], {
+          sourceKey: 'screen',
+          replacePrevious: true,
+        });
+      if (audioTrack && (!this.#borrowInputTracks || !params.audioTrack)) {
         this.#captureRegistry.registerCapture(`${captureId}:audio`, [audioTrack], {
           sourceKey: 'screenAudio',
           replacePrevious: true,
@@ -526,7 +616,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       }
 
       applyScreenContentHint(videoTrack, options.contentHint);
-      ensureKeepAliveSink(videoTrack, this.#keepAliveDoc);
+      if (this.#manageKeepAlive) ensureKeepAliveSink(videoTrack, this.#keepAliveDoc);
       this.#onLocalCapture?.({ kind: 'screen', captureId, track: videoTrack, stream });
       if (audioTrack) {
         this.#onLocalCapture?.({
@@ -549,46 +639,21 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       this.#screenAudioExplicitlyStarted = false;
 
       const rids = options.simulcast ? SIMULCAST_RIDS : [];
-      const screenTransceiver = this.#addSendTransceiver(
-        pc,
-        videoTrack,
-        options.simulcast ? SIMULCAST_ENCODINGS : undefined,
-      );
+      const screenTransceiver = this.#addScreenTransceiver(pc, videoTrack, options);
       const capabilities = this.#getCodecCapabilities?.('video') ?? null;
       prioritizeScreenCodec(screenTransceiver, options.codec ?? 'auto', capabilities);
 
       const audioTransceiver = audioTrack ? this.#addSendTransceiver(pc, audioTrack) : null;
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      assertNotAborted(signal);
+      const sources = [{ kind: 'screen' as const, transceiver: screenTransceiver, rids }];
+      const tracks = audioTransceiver
+        ? [...sources, { kind: 'screen-audio' as const, transceiver: audioTransceiver, rids: [] }]
+        : sources;
+      const [screenMid, audioMid] = await this.#negotiatePublication(pc, tracks, options, signal);
 
-      const sdpOffer: SdpDescription = pc.localDescription ?? offer;
-      const screenMid = screenTransceiver.mid ?? '0';
-      const batchTracks: PublishTrackItem[] = [{ kind: 'screen', mid: screenMid, rids }];
-      let audioMid: string | null = null;
-      if (audioTrack && audioTransceiver) {
-        audioMid = audioTransceiver.mid ?? '1';
-        batchTracks.push({ kind: 'screen-audio', mid: audioMid, rids: [] });
-      }
-
-      const response = await this.#signaling.request<PublishTracksResponse>(
-        'publish-tracks',
-        {
-          sessionId: this.#publisherSessionId,
-          quality: options.quality ?? this.#quality,
-          screenBitrate: options.maxBitrateBps,
-          sessionDescription: sdpOffer,
-          tracks: batchTracks,
-        },
-        signal,
+      await this.#applyScreenEncoding(screenTransceiver, videoTrack, options).catch(
+        (error: unknown) => this.#onScreenEncodingError?.(error),
       );
-      this.#publisherSessionId = response.sessionId;
-      await pc.setRemoteDescription(response.sessionDescription);
-
-      await enforceScreenShareSenderParameters(screenTransceiver.sender, toSenderTarget(options), {
-        track: videoTrack,
-      });
 
       const videoTrackId = trackIdOf(videoTrack, `screen-${captureId}`);
       this.#published.set('screen', {
@@ -628,12 +693,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       if (!entry || entry.captureId !== params.captureId) {
         throw new Error('No active screen share publication matches captureId.');
       }
-      applyScreenContentHint(entry.track, params.options.contentHint);
-      await enforceScreenShareSenderParameters(
-        entry.transceiver.sender,
-        toSenderTarget(params.options),
-        { track: entry.track },
-      );
+      await this.#applyScreenEncoding(entry.transceiver, entry.track, params.options);
     });
   }
 
@@ -675,39 +735,23 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       }
 
       applyScreenContentHint(videoTrack, options.contentHint);
-      ensureKeepAliveSink(videoTrack, this.#keepAliveDoc);
+      if (this.#manageKeepAlive) ensureKeepAliveSink(videoTrack, this.#keepAliveDoc);
 
       const rids = options.simulcast ? SIMULCAST_RIDS : [];
-      const transceiver = this.#addSendTransceiver(
-        pc,
-        videoTrack,
-        options.simulcast ? SIMULCAST_ENCODINGS : undefined,
-      );
+      const transceiver = this.#addScreenTransceiver(pc, videoTrack, options);
       const capabilities = this.#getCodecCapabilities?.('video') ?? null;
       prioritizeScreenCodec(transceiver, options.codec ?? 'auto', capabilities);
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      assertNotAborted(signal);
-
-      const mid = transceiver.mid ?? '0';
-      const response = await this.#signaling.request<PublishTracksResponse>(
-        'publish-tracks',
-        {
-          sessionId: this.#publisherSessionId,
-          quality: options.quality ?? this.#quality,
-          screenBitrate: options.maxBitrateBps,
-          sessionDescription: pc.localDescription ?? offer,
-          tracks: [{ kind: 'screen', mid, rids }],
-        },
+      const [mid] = await this.#negotiatePublication(
+        pc,
+        [{ kind: 'screen', transceiver, rids }],
+        options,
         signal,
       );
-      this.#publisherSessionId = response.sessionId;
-      await pc.setRemoteDescription(response.sessionDescription);
 
-      await enforceScreenShareSenderParameters(transceiver.sender, toSenderTarget(options), {
-        track: videoTrack,
-      });
+      await this.#applyScreenEncoding(transceiver, videoTrack, options).catch((error: unknown) =>
+        this.#onScreenEncodingError?.(error),
+      );
 
       const trackId = trackIdOf(videoTrack, `screen-${captureId}`);
       this.#published.set('screen', {
@@ -726,7 +770,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
 
   async stopScreenShare(params: { captureId: string | null; reason?: string }): Promise<void> {
     return this.#enqueuePublisherMutation(async () => {
-      clearKeepAliveSink(this.#keepAliveDoc);
+      if (this.#manageKeepAlive) clearKeepAliveSink(this.#keepAliveDoc);
 
       const screenEntry = this.#published.get('screen');
       const screenAudioEntry = this.#published.get('screen-audio');
@@ -792,10 +836,11 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
         track.enabled = !params.options.muted;
       }
 
-      this.#captureRegistry.registerCapture(`${params.captureId}:audio`, [track], {
-        sourceKey: 'screenAudio',
-        replacePrevious: true,
-      });
+      if (!this.#borrowInputTracks || !params.options.track)
+        this.#captureRegistry.registerCapture(`${params.captureId}:audio`, [track], {
+          sourceKey: 'screenAudio',
+          replacePrevious: true,
+        });
 
       const entry = await this.#publishSingleLocalTrack({
         kind: 'screen-audio',
@@ -825,6 +870,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     kind: RemoteTrackKind;
     preferredRid: SfuSimulcastRid | null;
     signal?: AbortSignal;
+    force?: boolean;
   }): Promise<void> {
     return this.#enqueueSubscriberMutation(async () => {
       const pc = this.#assertSubscriberReady(params.signal);
@@ -832,11 +878,11 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       const existing = this.#subscriptions.get(key);
 
       if (existing) {
-        if (existing.preferredRid === params.preferredRid) {
+        if (existing.preferredRid === params.preferredRid && !params.force) {
           return;
         }
         if (params.kind === 'camera' || params.kind === 'screen') {
-          await this.#signaling.request(
+          const result = await this.#signaling.request<{ preferredRid: SfuSimulcastRid | null }>(
             'update-subscription',
             {
               sessionId: this.#subscriberSessionId,
@@ -845,31 +891,41 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
             },
             params.signal,
           );
-          existing.preferredRid = params.preferredRid;
+          existing.preferredRid = result.preferredRid;
           return;
         }
       }
 
-      const response = await this.#signaling.request<SubscribeTracksResponse>(
-        'subscribe-tracks',
-        {
-          sessionId: this.#subscriberSessionId,
-          quality: this.#quality,
-          tracks: [
-            {
-              publisherId: params.participantId,
-              kind: params.kind,
-              preferredRid: params.preferredRid,
-            },
-          ],
-        },
-        params.signal,
-      );
+      const response = await this.#signaling.request<SubscribeTracksResponse>('subscribe-tracks', {
+        sessionId: this.#subscriberSessionId,
+        quality: this.#getQuality?.() ?? this.#quality,
+        tracks: [
+          {
+            publisherId: params.participantId,
+            kind: params.kind,
+            preferredRid: params.preferredRid,
+          },
+        ],
+      });
 
-      this.#subscriberSessionId = response.sessionId;
-      for (const tr of response.tracks) {
+      try {
+        if (
+          response?.sessionId !== this.#subscriberSessionId ||
+          !isValidSdpDescription(response.sessionDescription, 'offer') ||
+          !Array.isArray(response.tracks) ||
+          response.tracks.length !== 1 ||
+          response.tracks[0]?.publisherId !== params.participantId ||
+          response.tracks[0]?.kind !== params.kind ||
+          typeof response.tracks[0]?.mid !== 'string'
+        ) {
+          throw Object.assign(new Error('Oferta inválida ao assinar mídia no SFU.'), {
+            code: 'BAD_SFU_OFFER',
+          });
+        }
+
+        const tr = response.tracks[0];
         const entry: RemoteSubscriptionEntry = {
-          key: `${tr.publisherId}:${tr.kind}`,
+          key,
           participantId: tr.publisherId,
           kind: tr.kind,
           mid: tr.mid,
@@ -877,22 +933,40 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
         };
         this.#subscriptions.set(entry.key, entry);
         this.#subscriptionsByMid.set(tr.mid, entry);
-      }
 
-      await pc.setRemoteDescription(response.sessionDescription);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      assertNotAborted(params.signal);
-
-      await this.#signaling.request(
-        'renegotiate',
-        {
+        await pc.setRemoteDescription(response.sessionDescription);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        const accepted = await this.#signaling.request<{ accepted?: boolean }>('renegotiate', {
           sessionId: this.#subscriberSessionId,
           sessionDescription: pc.localDescription ?? answer,
-        },
-        params.signal,
-      );
+        });
+        if (accepted?.accepted !== true) {
+          throw Object.assign(new Error('Resposta SDP recusada pelo SFU.'), {
+            code: 'BAD_SFU_RENEGOTIATE',
+          });
+        }
+      } catch (error) {
+        const entry = this.#subscriptions.get(key);
+        if (entry) {
+          this.#subscriptions.delete(key);
+          this.#subscriptionsByMid.delete(entry.mid);
+          this.#onRemoteTrackEnded?.(entry);
+        }
+        // The remote session may still be waiting for an answer. Recover the
+        // transport instead of reusing its half-negotiated subscriber.
+        if (this.#connected) this.#onSubscriberNegotiationError?.(error);
+        throw error;
+      }
     });
+  }
+
+  setSubscriptionLayer(
+    participantId: string,
+    kind: RemoteTrackKind,
+    preferredRid: SfuSimulcastRid,
+  ) {
+    return this.subscribeTrack({ participantId, kind, preferredRid, force: true });
   }
 
   async unsubscribeTrack(params: {
@@ -968,6 +1042,42 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     return run;
   }
 
+  async #applyScreenEncoding(
+    transceiver: RtpTransceiverLike,
+    track: MediaStreamTrackLike,
+    options: ScreenShareOptions,
+  ): Promise<void> {
+    const result = await enforceScreenShareSenderParameters(
+      transceiver.sender,
+      toSenderTarget(options, track),
+      { track },
+    );
+    if (!result.applied) {
+      throw result.reason === 'set-parameters-failed'
+        ? result.error
+        : new Error('Não foi possível ajustar a qualidade da transmissão.');
+    }
+  }
+
+  #addScreenTransceiver(
+    pc: PeerConnectionLike,
+    track: MediaStreamTrackLike,
+    options: ScreenShareOptions,
+  ): RtpTransceiverLike {
+    if (options.simulcast) return this.#addSendTransceiver(pc, track, SIMULCAST_ENCODINGS);
+    const encoding: Record<string, unknown> = {};
+    if (options.frameRate) encoding.maxFramerate = options.frameRate;
+    if (options.maxBitrateBps) encoding.maxBitrate = options.maxBitrateBps;
+    if (options.codec === 'vp9' || options.codec === 'av1') {
+      try {
+        return this.#addSendTransceiver(pc, track, [{ ...encoding, scalabilityMode: 'L1T2' }]);
+      } catch (error) {
+        if (!(error instanceof DOMException || error instanceof TypeError)) throw error;
+      }
+    }
+    return this.#addSendTransceiver(pc, track, [encoding]);
+  }
+
   #addSendTransceiver(
     pc: PeerConnectionLike,
     track: MediaStreamTrackLike,
@@ -997,29 +1107,18 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     track: MediaStreamTrackLike;
     captureId: string | null;
     rids: SfuSimulcastRid[];
+    encodings?: Array<Record<string, unknown>>;
     signal?: AbortSignal;
   }): Promise<PublishedLocalEntry> {
     const pc = this.#assertPublisherReady(params.signal);
-    const transceiver = this.#addSendTransceiver(pc, params.track);
+    const transceiver = this.#addSendTransceiver(pc, params.track, params.encodings);
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    assertNotAborted(params.signal);
-
-    const mid = transceiver.mid ?? '0';
-    const response = await this.#signaling.request<PublishTracksResponse>(
-      'publish-tracks',
-      {
-        sessionId: this.#publisherSessionId,
-        quality: this.#quality,
-        sessionDescription: pc.localDescription ?? offer,
-        tracks: [{ kind: params.kind, mid, rids: params.rids }],
-      },
+    const [mid] = await this.#negotiatePublication(
+      pc,
+      [{ kind: params.kind, transceiver, rids: params.rids }],
+      {},
       params.signal,
     );
-
-    this.#publisherSessionId = response.sessionId;
-    await pc.setRemoteDescription(response.sessionDescription);
 
     const trackId = trackIdOf(params.track, `${params.kind}-${mid}`);
     const entry: PublishedLocalEntry = {
@@ -1035,6 +1134,75 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     return entry;
   }
 
+  async #negotiatePublication(
+    pc: PeerConnectionLike,
+    sources: Array<{
+      kind: SfuMediaKind;
+      transceiver: RtpTransceiverLike;
+      rids: SfuSimulcastRid[];
+    }>,
+    options: ScreenShareOptions,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    let published: PublishTracksResponse | undefined;
+    let tracks: PublishTrackItem[] = [];
+    try {
+      assertNotAborted(signal);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      assertNotAborted(signal);
+      tracks = sources.map(({ kind, transceiver, rids }) => {
+        if (transceiver.mid == null) throw new Error('MID ausente na oferta do SFU.');
+        return { kind, mid: transceiver.mid, rids };
+      });
+      const response = await this.#signaling.request<PublishTracksResponse>('publish-tracks', {
+        sessionId: this.#publisherSessionId,
+        quality: options.quality ?? this.#getQuality?.() ?? this.#quality,
+        screenBitrate: options.maxBitrateBps,
+        sessionDescription: pc.localDescription ?? offer,
+        tracks,
+      });
+      if (
+        !response ||
+        response.sessionId !== this.#publisherSessionId ||
+        !Array.isArray(response.publications) ||
+        !tracks.every((track) =>
+          response.publications.some(
+            (pub) =>
+              pub.kind === track.kind && pub.mid === track.mid && typeof pub.trackName === 'string',
+          ),
+        ) ||
+        !isValidSdpDescription(response.sessionDescription, 'answer')
+      ) {
+        throw Object.assign(new Error('Resposta inválida ao publicar no SFU.'), {
+          code: 'BAD_SFU_ANSWER',
+        });
+      }
+      published = response;
+      await pc.setRemoteDescription(response.sessionDescription);
+      assertNotAborted(signal);
+      this.#rememberPublications(response);
+      return tracks.map(({ mid }) => mid);
+    } catch (error) {
+      if (pc.signalingState === 'have-local-offer') {
+        await pc.setLocalDescription({ type: 'rollback' }).catch(() => undefined);
+      }
+      for (const { transceiver } of sources) {
+        if (transceiver.direction !== 'stopped') transceiver.direction = 'inactive';
+        await transceiver.sender.replaceTrack(null).catch(() => undefined);
+      }
+      if (published) {
+        await this.#signaling
+          .request('unpublish-tracks', {
+            sessionId: published.sessionId,
+            mids: tracks.map(({ mid }) => mid),
+          })
+          .catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
   async #unpublishKindIfActive(kind: SfuMediaKind, signal?: AbortSignal): Promise<void> {
     const entry = this.#published.get(kind);
     if (!entry) return;
@@ -1048,6 +1216,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     for (const [kind, entry] of this.#published) {
       if (!midSet.has(entry.mid)) continue;
       this.#published.delete(kind);
+      this.#descriptors.delete(kind);
       entry.transceiver.direction = 'inactive';
       try {
         await entry.transceiver.sender.replaceTrack(null);
@@ -1073,7 +1242,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
     this.#connected = false;
     this.#screenAudioExplicitlyStarted = false;
 
-    clearKeepAliveSink(this.#keepAliveDoc);
+    if (this.#manageKeepAlive) clearKeepAliveSink(this.#keepAliveDoc);
     this.#captureRegistry.stopAll();
 
     for (const entry of this.#published.values()) {
@@ -1084,6 +1253,7 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       }
     }
     this.#published.clear();
+    this.#descriptors.clear();
 
     for (const sub of this.#subscriptions.values()) {
       this.#onRemoteTrackEnded?.({
@@ -1106,14 +1276,19 @@ export class CloudflareSfuExecutionAdapter implements CloudflareSfuMediaPort, Su
       // Ignore peer connection close errors.
     }
 
-    const hadSession = Boolean(this.#publisherSessionId || this.#subscriberSessionId);
+    const sessionIds = [this.#publisherSessionId, this.#subscriberSessionId].filter(
+      (id): id is string => id !== null,
+    );
+    const hadSession = sessionIds.length > 0;
     this.#publisherPc = null;
     this.#subscriberPc = null;
     this.#publisherSessionId = null;
     this.#subscriberSessionId = null;
 
     if (notifyServer && wasConnected && hadSession) {
-      await this.#signaling.request('close-session', {}).catch(() => undefined);
+      await Promise.allSettled(
+        sessionIds.map((sessionId) => this.#signaling.request('close-session', { sessionId })),
+      );
     }
   }
 }

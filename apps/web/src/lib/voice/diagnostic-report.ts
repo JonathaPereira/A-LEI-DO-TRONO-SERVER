@@ -21,6 +21,12 @@ interface DiagnosticInput {
   telemetry?: UnknownFields<MediaTelemetry>;
   processing?: unknown;
   adaptation?: unknown;
+  screenQuality?: {
+    selected: string;
+    targetFps: number;
+    configuredSenderFps: number | null;
+    scaleResolutionDownBy: number | null;
+  };
   resources?: UnknownFields<VoiceResources> | null;
   reception?: {
     enabled?: boolean;
@@ -38,6 +44,7 @@ export function diagnosticReport({
   telemetry,
   processing,
   adaptation,
+  screenQuality,
   resources,
   reception,
 }: DiagnosticInput) {
@@ -84,6 +91,7 @@ export function diagnosticReport({
       playback: safe(call.playback),
       processing: safe(processing),
       adaptation: safe(adaptation),
+      screenQuality,
       metrics: numbers,
       video: (Array.isArray(telemetry?.video) ? telemetry.video : [])
         .slice(0, 24)

@@ -227,7 +227,15 @@ class FakeRTCPeerConnection implements PeerConnectionLike {
     };
   }
 
-  async setLocalDescription(desc: { type: 'offer' | 'answer'; sdp: string }) {
+  async setLocalDescription(
+    desc: { type: 'offer' | 'answer'; sdp: string } | { type: 'rollback' },
+  ) {
+    if (desc.type === 'rollback') {
+      assert.equal(this.signalingState, 'have-local-offer');
+      this.signalingState = 'stable';
+      this.localDescription = null;
+      return;
+    }
     if (desc.type === 'offer') {
       assert.equal(this.signalingState, 'stable');
       for (const tr of this.pendingTransceivers) {
@@ -554,6 +562,7 @@ describe('@trono/voice-engine — CloudflareSfuExecutionAdapter (Integração)',
     const { signaling, requests } = createFakeSignaling();
     const screenVideo = new FakeMediaTrack('scr-vid-2', 'video');
 
+    const screenAudio = new FakeMediaTrack('game-audio', 'audio');
     const adapter = new CloudflareSfuExecutionAdapter({
       signaling,
       createPeerConnection: (config) => {
@@ -564,9 +573,9 @@ describe('@trono/voice-engine — CloudflareSfuExecutionAdapter (Integração)',
       mediaDevices: {
         async getDisplayMedia() {
           return {
-            getTracks: () => [screenVideo],
+            getTracks: () => [screenVideo, screenAudio],
             getVideoTracks: () => [screenVideo],
-            getAudioTracks: () => [],
+            getAudioTracks: () => [screenAudio],
           };
         },
       },
@@ -585,10 +594,12 @@ describe('@trono/voice-engine — CloudflareSfuExecutionAdapter (Integração)',
         maxBitrateBps: 4_000_000,
         codec: 'h264',
         contentHint: 'motion',
-        captureAudio: false,
+        captureAudio: true,
       },
     });
 
+    const audioPublication = adapter.getLocalPublication('screen-audio');
+    assert.ok(audioPublication);
     const pubCountAfterStart = requests.filter((r) => r.action === 'publish-tracks').length;
 
     // Update dinâmico de FPS/bitrate/contentHint sem republicar
@@ -634,6 +645,8 @@ describe('@trono/voice-engine — CloudflareSfuExecutionAdapter (Integração)',
       requests.filter((r) => r.action === 'publish-tracks').length,
       pubCountAfterStart + 1,
     );
+    assert.equal(adapter.getLocalPublication('screen-audio'), audioPublication);
+    assert.equal(screenAudio.readyState, 'live');
     const secondTransceiver = createdPcs[0].transceivers.at(-1);
     assert.equal(secondTransceiver?.codecPreferences?.[0]?.mimeType, 'video/VP9');
 
@@ -641,6 +654,7 @@ describe('@trono/voice-engine — CloudflareSfuExecutionAdapter (Integração)',
     await adapter.stopScreenShare({ captureId: 'cap-2' });
     assert.equal(keepAliveDoc.children.length, 0);
     assert.equal(screenVideo.stopped, true);
+    assert.equal(screenAudio.stopped, true);
     assert.equal(requests.filter((r) => r.action === 'unpublish-tracks').length, 2);
     assert.equal(createdPcs.length, 2);
   });
@@ -704,6 +718,52 @@ describe('@trono/voice-engine — CloudflareSfuExecutionAdapter (Integração)',
     subGate.resolve();
 
     await Promise.all([pMic, pCam, pSub1, pSub2]);
+  });
+
+  it('recupera uma publicação recusada e conserva a captura emprestada ao desligar o SFU', async () => {
+    let first = true;
+    const { signaling, requests } = createFakeSignaling({
+      onRequest(action) {
+        if (action === 'publish-tracks' && first) {
+          first = false;
+          throw new Error('Publicação recusada');
+        }
+      },
+    });
+    const video = Object.assign(new FakeMediaTrack('jogo', 'video'), {
+      getSettings: () => ({ width: 1920, height: 1080, frameRate: 60 }),
+    });
+    const peers: FakeRTCPeerConnection[] = [];
+    const adapter = new CloudflareSfuExecutionAdapter({
+      signaling,
+      borrowInputTracks: true,
+      createPeerConnection(config) {
+        const peer = new FakeRTCPeerConnection(config);
+        peers.push(peer);
+        return peer;
+      },
+    });
+    await adapter.connect({ roomId: 'room-3', participantId: 'user-1', quality: 'balanced' });
+    const screen = {
+      captureId: 'game',
+      videoTrack: video,
+      options: { width: 1280, height: 720, frameRate: 60, maxBitrateBps: 4_000_000 },
+    };
+    await assert.rejects(adapter.startScreenShare(screen), /Publicação recusada/);
+    assert.equal(peers[0].transceivers[0].sender.track, null);
+    assert.equal(video.readyState, 'live');
+    await adapter.startScreenShare(screen);
+    const [encoding] = peers[0].transceivers.at(-1)!.sender.getParameters().encodings;
+    assert.equal(encoding.scaleResolutionDownBy, 1.5);
+    assert.equal(encoding.maxFramerate, 60);
+    assert.equal(encoding.maxBitrate, 4_000_000);
+    const publish = requests.filter((call) => call.action === 'publish-tracks').at(-1);
+    assert.deepEqual(publish?.payload.tracks, [
+      { kind: 'screen', mid: adapter.getLocalPublication('screen')?.mid, rids: [] },
+    ]);
+    await adapter.disconnect({ roomId: 'room-3' });
+    assert.equal(video.readyState, 'live');
+    assert.equal(peers.length, 2);
   });
 
   it('atualiza layer simulcast sem renegociar SDP e encerra assinatura via close-subscription', async () => {

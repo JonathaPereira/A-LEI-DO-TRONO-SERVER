@@ -111,6 +111,7 @@ export interface VoiceEngineHostPorts {
   media: CloudflareSfuMediaPort;
   subscriptions: SubscriptionPort;
   gateway?: GatewayPort;
+  propagateCommandErrors?: boolean;
 }
 
 export type SnapshotListener = (snapshot: VoiceEngineSnapshot, event: VoiceEngineEvent) => void;

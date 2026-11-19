@@ -167,7 +167,7 @@ export function reduceScreen(
         ...event.options,
       };
 
-      if (sameScreenOptions(currentOptions, nextOptions)) {
+      if (!event.force && sameScreenOptions(currentOptions, nextOptions)) {
         return {
           snapshot: {
             ...snapshot,

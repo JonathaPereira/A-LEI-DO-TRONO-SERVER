@@ -175,6 +175,7 @@ export type VoiceEngineEvent =
       type: 'screen/encodingUpdateRequested';
       captureId?: string;
       options: ScreenShareOptions;
+      force?: boolean;
     }
   | {
       type: 'screen/encodingUpdateSucceeded';

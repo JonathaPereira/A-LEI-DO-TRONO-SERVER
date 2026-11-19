@@ -30,6 +30,7 @@ export interface SfuSubscription {
   sessionId: string;
   mid: string;
   publisherSessionId: string;
+  trackName: string;
   publisherId: string;
   kind: VoiceMediaKind;
   preferredRid: SfuRid | null;
@@ -39,12 +40,13 @@ export interface SfuSubscription {
 }
 export interface SfuSettings {
   readonly enabled: boolean;
+  readonly ice: RTCConfiguration;
   readonly screenAllowed: boolean;
   readonly quality: string;
   readonly screenBitrate: number;
   readonly screenCodec?: ScreenCodec;
+  readonly screenContent?: 'motion' | 'detail';
   readonly videoBitrate: number;
   readonly camera: ScreenFormat;
   readonly screen: ScreenFormat;
-  readonly ice: RTCConfiguration;
 }

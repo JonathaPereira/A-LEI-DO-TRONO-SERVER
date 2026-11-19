@@ -117,7 +117,8 @@ export class VoiceEngineController {
   }
 
   updateScreenEncoding(
-    input: { captureId?: string; options: ScreenShareOptions } | ScreenShareOptions,
+    input:
+      { captureId?: string; options: ScreenShareOptions; force?: boolean } | ScreenShareOptions,
   ): Promise<void> {
     const normalized =
       'options' in input && input.options !== undefined
@@ -127,6 +128,7 @@ export class VoiceEngineController {
       type: 'screen/encodingUpdateRequested',
       captureId: normalized.captureId,
       options: normalized.options,
+      force: 'force' in normalized ? normalized.force : undefined,
     });
   }
 
