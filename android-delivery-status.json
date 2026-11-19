@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-11-19T16:02:44.512Z",
-  "source": "d803df2275044327d99fdada9d8080d29164d49f",
-  "runId": 44560972094,
-  "runUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/44560972094",
+  "checkedAt": "2026-11-19T16:17:45.420Z",
+  "source": "d576263da672d3dfd41516753ab9f27f33ca9413",
+  "runId": 44563976273,
+  "runUrl": "https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/actions/runs/44563976273",
   "shared": "success",
   "device": "failure",
   "package": "skipped",
