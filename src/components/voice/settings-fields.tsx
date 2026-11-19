@@ -319,6 +319,21 @@ export function VoiceCaptureSettings({
             <option value="detail">Nitidez • textos, slides e documentos estáticos</option>
           </select>
         </label>
+        <label>
+          <span>Codec da tela</span>
+          <select
+            id="screenCodecSelect"
+            value={preferences.screenCodec}
+            onChange={(event) => {
+              void client.selectCodec(event.target.value);
+            }}
+          >
+            <option value="auto">Automático • padrão do navegador (recomendado)</option>
+            <option value="vp8">VP8 • estável em jogos (multi-thread)</option>
+            <option value="vp9">VP9 • alta nitidez / menor banda</option>
+            <option value="h264">H.264 • hardware (NVENC / AMF / QSV)</option>
+          </select>
+        </label>
       </div>
       <label className="mn-share-audio">
         <input

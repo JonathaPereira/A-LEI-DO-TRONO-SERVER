@@ -524,9 +524,9 @@ test('video diagnostics expose interval freezes, dropped frames and encode/decod
  pc.report=video(0);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video.length,0,'stale reports must not masquerade as healthy intervals');
  h.telemetry.reset();pc.report=video(3);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video[0].encodeMs,null);
 });
-test('copied video diagnostics whitelist anonymous numbers and preserve unavailable values',()=>{
- const {diagnosticReport}=require('../src/lib/voice/diagnostic-report.ts');const report=JSON.parse(diagnosticReport({call:{},telemetry:{video:[{direction:'inbound',freezeCount:2,decodeMs:null,width:1920,height:1080,ip:'private',trackIdentifier:'secret',freezeMs:Infinity},{direction:'injected identity',decodeMs:5}]}}));
- assert.equal(report.video[0].freezeCount,2);assert.equal(report.video[0].decodeMs,null);assert.equal(report.video[0].freezeMs,null);assert.equal(report.video.length,1);assert(!JSON.stringify(report).includes('secret'));assert(!JSON.stringify(report).includes('private'));
+test('copied video diagnostics whitelist anonymous numbers, stream codec/implementation, and preserve unavailable values',()=>{
+ const {diagnosticReport}=require('../src/lib/voice/diagnostic-report.ts');const report=JSON.parse(diagnosticReport({call:{},telemetry:{video:[{direction:'inbound',freezeCount:2,decodeMs:null,width:1920,height:1080,ip:'private',trackIdentifier:'secret',freezeMs:Infinity},{direction:'injected identity',decodeMs:5}],streams:[{direction:'outbound',codec:'video/H264',implementation:'OpenH264',hardwareAccelerated:false,width:1280,height:720,fps:60,bitrateBps:4500000,encodeMs:18.5,stalled:true,stallMs:1200,cause:'encoder-stalled',trackId:'secret-track',pcKey:'sfu:secret-peer'}]}}));
+ assert.equal(report.video[0].freezeCount,2);assert.equal(report.video[0].decodeMs,null);assert.equal(report.video[0].freezeMs,null);assert.equal(report.video.length,1);assert.equal(report.streams.length,1);assert.equal(report.streams[0].codec,'video/H264');assert.equal(report.streams[0].implementation,'OpenH264');assert.equal(report.streams[0].hardwareAccelerated,false);assert.equal(report.streams[0].cause,'encoder-stalled');assert(!JSON.stringify(report).includes('secret'));assert(!JSON.stringify(report).includes('private'));
 });
 test('a measured zero video FPS is never replaced by the configured capture FPS',async t=>{
  const h=await setup(t,{getLocalVideo:()=>({getSettings:()=>({frameRate:60,width:1920,height:1080})})}),pc=h.attach();

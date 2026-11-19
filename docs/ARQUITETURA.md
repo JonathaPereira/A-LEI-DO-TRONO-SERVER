@@ -181,20 +181,23 @@ settings/initialize.ts prepara o controlador antes da voz, sem montar a view
 antiga nem adquirir dispositivos. media-settings.tsx apresenta os controles dos
 donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
 getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
-A transmissão de tela prioriza o codec H.264 (`prioritizeH264`) tanto no SFU
-(`sfu-session.ts`) quanto em conexões P2P (`p2p-peers.ts`), preservando os codecs `video/rtx`
-pareados para retransmissão NACK/RTX e permitindo que a
-codificação por hardware (NVIDIA NVENC / MediaFoundation no Windows) opere em
-1–2 ms com 0% de sobrecarga na CPU. A telemetria de mídia (`voice/telemetry.ts`)
-coleta deltas por fluxo de publicação/recepção e classifica congelamentos reais em 8 categorias
-sem confundir tela estática com falha; `voice/video-recovery.ts` e `voice/sfu-session.ts`
-aplicam recuperação direcionada e limitada por fluxo/estado `disconnected` (> 4,5 s) sem
-derrubar chamada, microfone, câmera ou socket. O perfil padrão de conteúdo de tela é `motion`,
-que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência
-e fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail`
-(`maintain-resolution`) para documentos e apresentações estáticas. No processo
-principal do Electron (`electron/main.cjs`), flags `--enable-gpu-rasterization` e
-`--enable-zero-copy` encaminham superfícies DXGI diretamente ao codificador.
+A transmissão de tela suporta preferência configurável de codec (`prioritizeScreenCodec`:
+`auto` por padrão para evitar fallback forçado para OpenH264 single-thread no Windows, com
+opções explícitas `vp8`, `vp9` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
+P2P (`p2p-peers.ts`), preservando os codecs `video/rtx` pareados para retransmissão NACK/RTX
+e usando piso/início conservadores em `screenStartupOffer` para não engessar o controle de
+congestionamento. A telemetria de mídia (`voice/telemetry.ts`) coleta deltas por fluxo de
+publicação/recepção, classifica congelamentos reais em 8 categorias sem confundir tela estática
+com falha e o relatório sanitizado (`voice/diagnostic-report.ts`) expõe codec, implementação do
+encoder/decoder e aceleração por hardware por fluxo; `voice/video-recovery.ts` e
+`voice/sfu-session.ts` aplicam recuperação direcionada e limitada por fluxo/estado `disconnected`
+(> 4,5 s) sem derrubar chamada, microfone, câmera ou socket. O perfil padrão de conteúdo de tela
+é `motion`, que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência e
+fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail` (`maintain-resolution`)
+para documentos e apresentações estáticas. No processo principal do Electron (`electron/main.cjs`
+e `electron/audio-priority.cjs`), `powerSaveBlocker` (`prevent-app-suspension`) e prioridade
+`PRIORITY_ABOVE_NORMAL` para `AudioService`, `VideoCaptureService` e o processo `GPU` protegem a
+captura e a codificação durante jogos no Windows.
 Escape fecha primeiro o menu/diálogo ou a tela cheia; outro Escape pode retornar
 à grade. O dono media-focus também encerra explicitamente fullscreen nativo.
 

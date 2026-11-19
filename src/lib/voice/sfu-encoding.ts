@@ -1,4 +1,5 @@
 import type { SfuSettings, SfuRid } from '../../types/sfu';
+import type { ScreenCodec } from '../../types/voice-quality';
 export function cameraEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
   return [
     {
@@ -44,15 +45,15 @@ export function screenEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
     },
   ];
 }
-// Chromium's startup hint is advisory; keep floor/start bounded to avoid uplink bursts and tail-drop stalls.
+// Keep min/start hints conservative so GCC can adapt smoothly without uplink bursts or tail-drop freezes.
 export function screenStartupOffer(
   offer: RTCSessionDescriptionInit,
   bitrate: number,
 ): RTCSessionDescriptionInit {
   if (!offer?.sdp) return offer;
   const max = Math.round(bitrate / 1000),
-    min = Math.min(3500, Math.max(1200, Math.round(max * 0.3))),
-    start = Math.min(6000, Math.max(min, Math.round(max * 0.6)));
+    min = Math.min(500, Math.max(250, Math.round(max * 0.06))),
+    start = Math.min(2500, Math.max(min, Math.round(max * 0.25)));
   const parts = offer.sdp.split(/(?=m=)/);
   return {
     type: offer.type,
@@ -113,8 +114,12 @@ function h264Rank(codec: RTCRtpCodec): number {
   return profileScore + (Number.isFinite(level) ? Math.min(level, 99) : 0);
 }
 
-export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined): boolean {
-  if (!transceiver?.setCodecPreferences) return false;
+export function prioritizeScreenCodec(
+  transceiver: RTCRtpTransceiver | null | undefined,
+  codec: ScreenCodec = 'auto',
+): boolean {
+  if (codec === 'auto' || !transceiver?.setCodecPreferences) return false;
+  const targetMime = codec === 'h264' ? 'video/h264' : codec === 'vp9' ? 'video/vp9' : 'video/vp8';
   try {
     const sender = typeof RTCRtpSender !== 'undefined' ? RTCRtpSender : null;
     const codecs = sender?.getCapabilities?.('video')?.codecs;
@@ -122,28 +127,35 @@ export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined
     // Keep paired video/rtx capabilities bound to each codec so NACK/RTX stays active.
     const groups: RTCRtpCodec[][] = [];
     for (let index = 0; index < codecs.length; index++) {
-      const codec = codecs[index];
+      const current = codecs[index];
       const next = codecs[index + 1];
       if (
-        codec.mimeType?.toLowerCase() !== 'video/rtx' &&
+        current.mimeType?.toLowerCase() !== 'video/rtx' &&
         next?.mimeType?.toLowerCase() === 'video/rtx'
       ) {
-        groups.push([codec, next]);
+        groups.push([current, next]);
         index++;
       } else {
-        groups.push([codec]);
+        groups.push([current]);
       }
     }
-    const h264Groups = groups.filter((g) => g[0].mimeType?.toLowerCase() === 'video/h264');
-    if (!h264Groups.length) return false;
-    const rankedH264 = [...h264Groups].sort((a, b) => h264Rank(b[0]) - h264Rank(a[0]));
+    const matchingGroups = groups.filter((g) => g[0].mimeType?.toLowerCase() === targetMime);
+    if (!matchingGroups.length) return false;
+    const ranked =
+      codec === 'h264'
+        ? [...matchingGroups].sort((a, b) => h264Rank(b[0]) - h264Rank(a[0]))
+        : matchingGroups;
     const ordered = [
-      ...rankedH264,
-      ...groups.filter((g) => g[0].mimeType?.toLowerCase() !== 'video/h264'),
+      ...ranked,
+      ...groups.filter((g) => g[0].mimeType?.toLowerCase() !== targetMime),
     ].flat();
     transceiver.setCodecPreferences(ordered);
     return true;
   } catch {
     return false;
   }
+}
+
+export function prioritizeH264(transceiver: RTCRtpTransceiver | null | undefined): boolean {
+  return prioritizeScreenCodec(transceiver, 'h264');
 }

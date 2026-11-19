@@ -1,6 +1,7 @@
 import type { TransmissionQuality } from './realtime';
 import type { ScreenFormat } from './voice';
 
+export type ScreenCodec = 'auto' | 'vp8' | 'vp9' | 'h264';
 export type ScreenFormatId =
   '720-15' | '1080-15' | '720-30' | '720-60' | '1080-30' | '1080-60' | '1440-30' | '1440-60';
 export interface VideoProfile {
@@ -19,6 +20,7 @@ export interface QualityPreferences {
   readonly screenFormat: ScreenFormatId;
   readonly screenBitrateMbps: number;
   readonly screenContent: 'motion' | 'detail';
+  readonly screenCodec: ScreenCodec;
   readonly adaptiveEnabled: boolean;
 }
 export interface QualitySnapshot {

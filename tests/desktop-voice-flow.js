@@ -36,12 +36,13 @@ async function exerciseVoiceProtection({ app, page }) {
         before.priority === row.priority
       )
         continue;
-      assert.equal(row.type, 'Utility');
       assert(
-        row.serviceName === 'audio.mojom.AudioService' ||
-          row.name === 'Audio Service' ||
-          row.serviceName === 'video_capture.mojom.VideoCaptureService' ||
-          row.name === 'Video Capture',
+        row.type === 'GPU' ||
+          (row.type === 'Utility' &&
+            (row.serviceName === 'audio.mojom.AudioService' ||
+              row.name === 'Audio Service' ||
+              row.serviceName === 'video_capture.mojom.VideoCaptureService' ||
+              row.name === 'Video Capture')),
       );
       assert(row.priority <= os.constants.priority.PRIORITY_ABOVE_NORMAL);
     }

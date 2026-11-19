@@ -217,16 +217,20 @@ test('native input/change pairs do not apply microphone or output gain twice', a
   assert.equal(h.events.filter((e) => e[0] === 'unlock').length, 1);
   assert.equal(h.storage.get('mnOutputGain'), '150');
 });
-test('format, content and shared audio preferences use existing owners without starting capture', async (t) => {
+test('format, content, codec and shared audio preferences use existing owners without starting capture', async (t) => {
   const h = await setup(t);
   await h.client.selectFormat('1080-60');
   await h.client.selectContent('motion');
+  await h.client.selectCodec('vp9');
   h.client.setShareAudio(false);
   assert.equal(h.client.getSnapshot().quality.preferences.screenFormat, '1080-60');
   assert.equal(h.client.getSnapshot().quality.preferences.screenContent, 'motion');
+  assert.equal(h.client.getSnapshot().quality.preferences.screenCodec, 'vp9');
   assert.equal(h.client.getSnapshot().shareAudio, false);
   await h.client.selectFormat('4k-120');
+  await h.client.selectCodec('invalid');
   assert.equal(h.quality.getSnapshot().preferences.screenFormat, '1080-60');
+  assert.equal(h.quality.getSnapshot().preferences.screenCodec, 'vp9');
 });
 test('SFU restrictions are reflected and the backend receives the capped bitrate', async (t) => {
   const h = await setup(t);

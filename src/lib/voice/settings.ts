@@ -5,7 +5,7 @@ import type { createAudioPlayback } from './audio-playback';
 import type { createCallQuality } from './quality';
 import type { createScreenSharing } from './screen-sharing';
 import { clampAudioGain } from './audio-playback.ts';
-import { isQuality, isScreenFormat, SCREEN_BITRATES } from './quality-policy.ts';
+import { isQuality, isScreenCodec, isScreenFormat, SCREEN_BITRATES } from './quality-policy.ts';
 
 interface SettingsOptions {
   controls: ReturnType<typeof createCallControls>;
@@ -211,6 +211,16 @@ export function createVoiceSettings(options: SettingsOptions) {
     selectContent(value: string) {
       return changeQuality(() =>
         options.quality.configure({ screenContent: value === 'motion' ? 'motion' : 'detail' }),
+      );
+    },
+    selectCodec(value: string) {
+      if (!isScreenCodec(value)) return Promise.resolve();
+      return changeQuality(
+        () => options.quality.configure({ screenCodec: value }),
+        (current) => {
+          if (current())
+            options.onStatus('Codec de tela aplicado ao próximo compartilhamento.', 'ok');
+        },
       );
     },
     selectBitrate(value: string) {

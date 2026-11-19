@@ -1,4 +1,5 @@
 import type { ScreenFormat, VoiceMediaKind } from './voice';
+import type { ScreenCodec } from './voice-quality';
 
 export type SfuRid = 'f' | 'h' | 'q';
 export interface SfuPublication {
@@ -41,6 +42,7 @@ export interface SfuSettings {
   readonly screenAllowed: boolean;
   readonly quality: string;
   readonly screenBitrate: number;
+  readonly screenCodec?: ScreenCodec;
   readonly videoBitrate: number;
   readonly camera: ScreenFormat;
   readonly screen: ScreenFormat;

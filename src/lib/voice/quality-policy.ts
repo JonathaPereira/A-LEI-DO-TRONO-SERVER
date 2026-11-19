@@ -1,5 +1,10 @@
 import type { MediaTelemetry } from '../../types/voice-diagnostics';
-import type { QualityProfile, VideoProfile, ScreenFormatId } from '../../types/voice-quality';
+import type {
+  QualityProfile,
+  VideoProfile,
+  ScreenFormatId,
+  ScreenCodec,
+} from '../../types/voice-quality';
 import type { TransmissionQuality } from '../../types/realtime';
 
 export const QUALITY_ORDER: readonly TransmissionQuality[] = Object.freeze([
@@ -8,6 +13,7 @@ export const QUALITY_ORDER: readonly TransmissionQuality[] = Object.freeze([
   'high',
 ]);
 export const SCREEN_BITRATES: readonly number[] = Object.freeze([4, 6, 8, 10, 12, 15, 18]);
+export const SCREEN_CODECS: readonly ScreenCodec[] = Object.freeze(['auto', 'vp8', 'vp9', 'h264']);
 export const SCREEN_FORMATS: Readonly<Record<ScreenFormatId, VideoProfile['screen']>> =
   Object.freeze({
     '720-15': Object.freeze({ width: 1280, height: 720, fps: 15 }),
@@ -54,6 +60,8 @@ export const isQuality = (value: unknown): value is TransmissionQuality =>
   typeof value === 'string' && QUALITY_ORDER.includes(value as TransmissionQuality);
 export const isScreenFormat = (value: unknown): value is ScreenFormatId =>
   typeof value === 'string' && Object.hasOwn(SCREEN_FORMATS, value);
+export const isScreenCodec = (value: unknown): value is ScreenCodec =>
+  typeof value === 'string' && SCREEN_CODECS.includes(value as ScreenCodec);
 
 /** Sustained trouble lowers video only; user preferences and audio are untouched. */
 export class CallStability {

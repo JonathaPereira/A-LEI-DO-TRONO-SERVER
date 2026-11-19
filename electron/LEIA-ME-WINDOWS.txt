@@ -1,3 +1,12 @@
+M&N · A Lei do Trono — Windows 1.3.0
+
+Melhoria 1.3.0: estabilidade de screen share (Degrau 1) — seletor de codec de tela
+(Automático sem forçar H.264, VP8, VP9 e H.264 no SFU e P2P com RTX pareado), piso/arranque
+conservadores de bitrate no SDP para evitar tail-drop e congelamentos por keyframe,
+proteção do processo GPU e powerSaveBlocker (prevent-app-suspension) no Electron Windows,
+e exposição sanitizada de codec/implementação do encoder/aceleração por hardware no relatório
+de diagnóstico copiado.
+
 M&N · A Lei do Trono — Windows 1.2.1
 
 Melhoria 1.2.1: eliminação de travadas reais no screen share de jogos em tela cheia/sem bordas

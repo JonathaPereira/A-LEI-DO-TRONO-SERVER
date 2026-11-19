@@ -109,14 +109,21 @@ test('only valid preferences are persisted and disabling adaptation restores the
   const { quality, values, writes } = await fixture({
     mnScreenFormat: '1080-60',
     mnScreenContent: 'detail',
+    mnScreenCodec: 'invalid-codec',
   });
+  assert.equal(quality.getSnapshot().preferences.screenCodec, 'auto');
   quality.configure({
     screenFormat: '__proto__',
     screenBitrateMbps: 999,
     transmissionQuality: 'invalid',
     screenContent: 'invalid',
+    screenCodec: 'invalid',
   });
   assert.deepEqual(writes, []);
+  quality.configure({ screenCodec: 'vp8' });
+  assert.equal(quality.getSnapshot().preferences.screenCodec, 'vp8');
+  assert.equal(values.get('mnScreenCodec'), 'vp8');
+  writes.length = 0;
   reduce(quality);
   quality.configure({ adaptiveEnabled: false, screenContent: 'motion', screenBitrateMbps: 12 });
   assert.equal(values.get('mnAdaptiveQuality'), '0');

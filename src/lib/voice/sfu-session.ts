@@ -11,7 +11,7 @@ import { abortable, waitForPeer } from './peer-wait.ts';
 import {
   advertisedRids,
   cameraEncodings,
-  prioritizeH264,
+  prioritizeScreenCodec,
   screenStartupOffer,
 } from './sfu-encoding.ts';
 import {
@@ -254,7 +254,7 @@ export function createSfuSession(options: SfuOptions) {
             },
           ];
         const tr = pc.addTransceiver(track, init);
-        if (kind === 'screen') prioritizeH264(tr);
+        if (kind === 'screen') prioritizeScreenCodec(tr, settings.screenCodec ?? 'auto');
         const offer = await abortable(pc.createOffer(), r.controller.signal);
         ensure();
         await abortable(

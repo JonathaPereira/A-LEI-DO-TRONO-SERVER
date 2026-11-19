@@ -128,6 +128,7 @@ async function setup(t, localId = 'a', mockClock = true) {
     },
     sendSignal: (id, type, data) => sent.push({ id, type, data }),
     getScreenWatch: () => true,
+    getScreenCodec: () => settings.screenCodec ?? 'auto',
     onTrack: (...args) => received.push(args),
     onClosed: (...args) => closed.push(args),
     onStateChange() {},
@@ -427,7 +428,7 @@ test('connected peer announces screen watch; failures request ICE and expose con
   assert.equal(h2.peers.connections.size, 0);
 });
 
-test('initiator prioritizes H264 hardware codec on the screen transceiver', async (t) => {
+test('initiator leaves browser codec order in auto mode and honors explicit screenCodec on the screen transceiver', async (t) => {
   const originalSender = globalThis.RTCRtpSender;
   try {
     globalThis.RTCRtpSender = {
@@ -446,9 +447,14 @@ test('initiator prioritizes H264 hardware codec on the screen transceiver', asyn
           : { codecs: [] },
     };
     const h = await setup(t);
-    const pc = h.peers.ensure('z');
-    assert.equal(pc._tronoScreenTransceiver.preferredCodecs?.[0]?.mimeType, 'video/H264');
-    assert.equal(pc._tronoVideoTransceiver.preferredCodecs, undefined);
+    const autoPc = h.peers.ensure('z');
+    assert.equal(autoPc._tronoScreenTransceiver.preferredCodecs, undefined);
+    assert.equal(autoPc._tronoVideoTransceiver.preferredCodecs, undefined);
+
+    h.settings.screenCodec = 'h264';
+    const h264Pc = h.peers.ensure('y');
+    assert.equal(h264Pc._tronoScreenTransceiver.preferredCodecs?.[0]?.mimeType, 'video/H264');
+    assert.equal(h264Pc._tronoVideoTransceiver.preferredCodecs, undefined);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }

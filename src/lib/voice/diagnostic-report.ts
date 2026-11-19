@@ -128,6 +128,51 @@ export function diagnosticReport({
             row.freezeCause = safe(item.freezeCause);
           return row;
         }),
+      streams: (Array.isArray(telemetry?.streams) ? telemetry.streams : [])
+        .slice(0, 24)
+        .filter(
+          (item) =>
+            item && typeof item === 'object' && ['inbound', 'outbound'].includes(item.direction),
+        )
+        .map((item) => {
+          const row: Record<string, unknown> = {
+            direction: item.direction,
+            codec: typeof item.codec === 'string' && item.codec ? safe(item.codec) : null,
+            implementation:
+              typeof item.implementation === 'string' && item.implementation
+                ? safe(item.implementation)
+                : null,
+            hardwareAccelerated:
+              typeof item.hardwareAccelerated === 'boolean' ? item.hardwareAccelerated : null,
+            stalled: !!item.stalled,
+            stallMs:
+              typeof item.stallMs === 'number' && Number.isFinite(item.stallMs)
+                ? Math.round(Math.max(0, item.stallMs))
+                : 0,
+            cause: typeof item.cause === 'string' && item.cause ? safe(item.cause) : null,
+          };
+          for (const key of [
+            'width',
+            'height',
+            'fps',
+            'bitrateBps',
+            'encodeMs',
+            'decodeMs',
+            'sendDelayMs',
+            'retransmittedPackets',
+            'nackCount',
+            'pliCount',
+            'keyFrames',
+            'freezeCount',
+          ] as const) {
+            const value = item[key];
+            row[key] =
+              typeof value === 'number' && Number.isFinite(value) && value >= 0
+                ? Math.round(value * 100) / 100
+                : null;
+          }
+          return row;
+        }),
       freezes: (Array.isArray(telemetry?.freezes) ? telemetry.freezes : [])
         .slice(-16)
         .filter(

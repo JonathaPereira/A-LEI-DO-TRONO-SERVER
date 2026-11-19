@@ -15,6 +15,7 @@ const {
   safeStorage,
   Notification,
   clipboard,
+  powerSaveBlocker,
 } = require('electron');
 const path = require('node:path'),
   fs = require('node:fs/promises'),
@@ -266,10 +267,25 @@ async function start() {
     }
   });
   const voicePriority = new AudioPriority({ metrics: () => app.getAppMetrics() });
-  app.on('will-quit', () => voicePriority.dispose());
+  let voicePowerSaveId = null;
+  const setVoicePowerSave = (active) => {
+    if (active) {
+      if (voicePowerSaveId === null || !powerSaveBlocker.isStarted(voicePowerSaveId))
+        voicePowerSaveId = powerSaveBlocker.start('prevent-app-suspension');
+    } else if (voicePowerSaveId !== null) {
+      if (powerSaveBlocker.isStarted(voicePowerSaveId)) powerSaveBlocker.stop(voicePowerSaveId);
+      voicePowerSaveId = null;
+    }
+  };
+  app.on('will-quit', () => {
+    setVoicePowerSave(false);
+    voicePriority.dispose();
+  });
   ipcMain.handle('mn:voice-protection', (event, active) => {
     trusted(event);
-    return voicePriority.setActive(active);
+    const result = voicePriority.setActive(active);
+    setVoicePowerSave(active === true);
+    return result;
   });
   const workArea = screen.getPrimaryDisplay().workAreaSize;
   window = new BrowserWindow({
@@ -606,6 +622,7 @@ async function start() {
   });
   window.webContents.on('render-process-gone', () => {
     nativeReplay?.stopActive();
+    setVoicePowerSave(false);
     voicePriority.setActive(false);
     stopRemote();
     clearHotkey();
@@ -616,6 +633,7 @@ async function start() {
   window.webContents.on('did-start-navigation', (_, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
       nativeReplay?.stopActive?.();
+      setVoicePowerSave(false);
       voicePriority.setActive(false);
       stopRemote();
       cancelCapture();

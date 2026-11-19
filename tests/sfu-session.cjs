@@ -230,7 +230,7 @@ test('screen uses dedicated single-layer encoding with native 60 FPS and min/sta
   const offer = h.pcs[0].localDescription.sdp;
   assert(
     offer.includes(
-      'x-google-min-bitrate=2400;x-google-start-bitrate=4800;x-google-max-bitrate=8000',
+      'x-google-min-bitrate=480;x-google-start-bitrate=2000;x-google-max-bitrate=8000',
     ),
   );
   assert(offer.includes('foo=bar'));
@@ -733,7 +733,7 @@ test('prioritizeH264 ranks higher-level Constrained Baseline and High Profile H2
   }
 });
 
-test('screen publication prioritizes H264 hardware codecs while retaining fallback codecs', async (t) => {
+test('screen publication leaves browser codec order untouched in auto mode and honors explicit screenCodec', async (t) => {
   const h = await setup(t);
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -749,14 +749,25 @@ test('screen publication prioritizes H264 hardware codecs while retaining fallba
             }
           : { codecs: [] },
     };
-    const track = new Track('video');
-    const pubPromise = h.session.publish('screen', track);
+    const autoTrack = new Track('video');
+    const autoPromise = h.session.publish('screen', autoTrack);
     await h.advance(100);
-    const pub = await pubPromise;
-    assert(pub);
-    const peer = h.pcs.at(-1);
-    assert.equal(peer?.tr?.preferredCodecs?.[0]?.mimeType, 'video/H264');
-    assert.equal(peer?.tr?.preferredCodecs?.length, 3);
+    assert(await autoPromise);
+    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs, undefined);
+
+    h.settings.screenCodec = 'vp9';
+    const vp9Promise = h.session.publish('screen', new Track('video'));
+    await h.advance(100);
+    assert(await vp9Promise);
+    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs?.[0]?.mimeType, 'video/VP9');
+    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs?.length, 3);
+
+    h.settings.screenCodec = 'h264';
+    const h264Promise = h.session.publish('screen', new Track('video'));
+    await h.advance(100);
+    assert(await h264Promise);
+    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs?.[0]?.mimeType, 'video/H264');
+    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs?.length, 3);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }

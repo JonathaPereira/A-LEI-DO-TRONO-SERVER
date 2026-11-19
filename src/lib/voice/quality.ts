@@ -11,6 +11,7 @@ import {
   SCREEN_BITRATES,
   SCREEN_FORMATS,
   isQuality,
+  isScreenCodec,
   isScreenFormat,
 } from './quality-policy.ts';
 
@@ -30,6 +31,7 @@ const keys: Record<keyof QualityPreferences, string> = {
   screenFormat: 'mnScreenFormat',
   screenBitrateMbps: 'mnScreenBitrate',
   screenContent: 'mnScreenContent',
+  screenCodec: 'mnScreenCodec',
   adaptiveEnabled: 'mnAdaptiveQuality',
 };
 
@@ -39,12 +41,14 @@ export function createCallQuality(options: QualityOptions) {
     stability = new CallStability();
   const initialQuality = storage.getItem(keys.transmissionQuality),
     initialFormat = storage.getItem(keys.screenFormat),
-    initialBitrate = Number(storage.getItem(keys.screenBitrateMbps));
+    initialBitrate = Number(storage.getItem(keys.screenBitrateMbps)),
+    initialCodec = storage.getItem(keys.screenCodec);
   let preferences: QualityPreferences = Object.freeze({
     transmissionQuality: isQuality(initialQuality) ? initialQuality : 'balanced',
     screenFormat: isScreenFormat(initialFormat) ? initialFormat : '720-30',
     screenBitrateMbps: SCREEN_BITRATES.includes(initialBitrate) ? initialBitrate : 8,
     screenContent: storage.getItem(keys.screenContent) === 'detail' ? 'detail' : 'motion',
+    screenCodec: isScreenCodec(initialCodec) ? initialCodec : 'auto',
     adaptiveEnabled: storage.getItem(keys.adaptiveEnabled) !== '0',
   });
   let revision = 0;
@@ -109,6 +113,7 @@ export function createCallQuality(options: QualityOptions) {
       next.screenBitrateMbps = patch.screenBitrateMbps;
     if (patch.screenContent === 'motion' || patch.screenContent === 'detail')
       next.screenContent = patch.screenContent;
+    if (isScreenCodec(patch.screenCodec)) next.screenCodec = patch.screenCodec;
     if (typeof patch.adaptiveEnabled === 'boolean') {
       next.adaptiveEnabled = patch.adaptiveEnabled;
       stability.reset();

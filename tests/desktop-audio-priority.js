@@ -15,10 +15,16 @@ const videoCapture = (pid = 6, creationTime = 100) => ({
   type: 'Utility',
   serviceName: 'video_capture.mojom.VideoCaptureService',
 });
-test('Windows priority changes only owned audio and video capture services during voice, preserving stronger priorities and restoring on exit', () => {
+const gpuProcess = (pid = 7, creationTime = 100) => ({
+  pid,
+  creationTime,
+  type: 'GPU',
+});
+test('Windows priority changes only owned audio, video capture and GPU processes during voice, preserving stronger priorities and restoring on exit', () => {
   let rows = [
       audio(),
       videoCapture(),
+      gpuProcess(),
       { pid: 3, creationTime: 100, type: 'Tab', name: 'Audio Service' },
       audio(4),
     ],
@@ -26,6 +32,7 @@ test('Windows priority changes only owned audio and video capture services durin
   const priorities = new Map([
     [2, 0],
     [6, 0],
+    [7, 0],
     [3, 0],
     [4, os.constants.priority.PRIORITY_HIGH],
   ]);
@@ -43,13 +50,15 @@ test('Windows priority changes only owned audio and video capture services durin
     assert.deepEqual(calls, [
       [2, os.constants.priority.PRIORITY_ABOVE_NORMAL],
       [6, os.constants.priority.PRIORITY_ABOVE_NORMAL],
+      [7, os.constants.priority.PRIORITY_ABOVE_NORMAL],
     ]);
     c.refresh();
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
     assert.equal(priorities.get(3), 0);
     c.setActive(false);
     assert.equal(priorities.get(2), 0);
     assert.equal(priorities.get(6), 0);
+    assert.equal(priorities.get(7), 0);
     assert.equal(priorities.get(4), os.constants.priority.PRIORITY_HIGH);
     assert.equal(c.timer, null);
     assert.throws(() => c.setActive({ pid: 3 }));
