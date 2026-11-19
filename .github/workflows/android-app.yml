@@ -107,9 +107,14 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none -camera-front none
           script: |
-            adb reverse tcp:10000 tcp:10000
-            chmod +x android/gradlew
-            android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon --console=plain
+            mkdir -p artifacts
+            bash -eo pipefail -c '
+              {
+                adb reverse tcp:10000 tcp:10000
+                chmod +x android/gradlew
+                android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon --console=plain --stacktrace
+              } 2>&1 | tee artifacts/android-device.log
+            '
       - name: Package production backend without test fixture
         id: package
         env:
@@ -183,7 +188,12 @@ jobs:
           FIREBASE_CONFIGURED: ${{ steps.prepare.outputs.firebase }}
         with:
           script: |
-            const report={checkedAt:new Date().toISOString(),source:context.sha,runId:context.runId,runUrl:`https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,shared:process.env.SHARED,device:process.env.DEVICE,package:process.env.PACKAGE,published:process.env.PUBLISHED,apkUrl:process.env.APK_URL,releaseUrl:process.env.RELEASE_URL,apkName:process.env.APK_NAME,sha256:process.env.SHA256,signed:process.env.SIGNED==='true',firebaseConfigured:process.env.FIREBASE_CONFIGURED==='true',mainPreserved:context.ref!=='refs/heads/main'};
+            const fs=require('node:fs'), path=require('node:path');
+            const tail=(file,max=8000)=>{try{const t=fs.readFileSync(file,'utf8');return t.length>max?t.slice(-max):t;}catch{return '';}};
+            const xmls=[];
+            const walk=(dir)=>{try{for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(e.name.endsWith('.xml'))xmls.push({file:p,content:tail(p,4000)});}}catch{}};
+            walk('android/app/build/outputs/androidTest-results');
+            const report={checkedAt:new Date().toISOString(),source:context.sha,runId:context.runId,runUrl:`https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,shared:process.env.SHARED,device:process.env.DEVICE,package:process.env.PACKAGE,published:process.env.PUBLISHED,apkUrl:process.env.APK_URL,releaseUrl:process.env.RELEASE_URL,apkName:process.env.APK_NAME,sha256:process.env.SHA256,signed:process.env.SIGNED==='true',firebaseConfigured:process.env.FIREBASE_CONFIGURED==='true',mainPreserved:context.ref!=='refs/heads/main',deviceLog:tail('artifacts/android-device.log',8000),fixtureLog:tail('/tmp/trono-android-fixture.log',4000),testResultsXml:xmls};
             const branch='codex/android-delivery-status';
             let head;
             try {head=(await github.rest.git.getRef({...context.repo,ref:'heads/'+branch})).data.object.sha;}
