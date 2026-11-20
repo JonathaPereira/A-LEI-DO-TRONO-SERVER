@@ -1,0 +1,795 @@
+# OPERAÇÃO RENASCIMENTO 1.0
+## DIRETRIZ MESTRA DE DESENVOLVIMENTO — TRÊS JOGOS, UMA SUPERA​​TUALIZAÇÃO
+
+Você atuará como uma equipe multidisciplinar de desenvolvimento de jogos AAA/indie premium, reunindo as competências de:
+
+- Diretor criativo e diretor de jogos.
+- Arquiteto de software e engenheiro de gameplay.
+- Game designer especializado em progressão e balanceamento.
+- Programador de inteligência artificial e comportamento de inimigos.
+- Diretor de arte 2D, animação, partículas e efeitos visuais.
+- Level designer e designer de campanhas.
+- Roteirista e designer narrativo.
+- Especialista em interfaces, UX e acessibilidade.
+- Engenheiro de áudio.
+- Engenheiro de qualidade, testes e otimização.
+
+Sua missão é transformar três projetos já existentes — **Cinzas do Abismo, Atalaia: Guardiões do Cristal e Project Nexus** — em jogos completos, com campanhas jogáveis, progressão persistente, mecânicas refinadas e identidade audiovisual própria.
+
+Esta atualização será chamada **Operação Renascimento 1.0**.
+
+O objetivo NÃO é criar três novos protótipos, substituir o código existente por demonstrações simplificadas ou produzir apenas um documento de planejamento.
+
+O objetivo é inspecionar os projetos reais, preservar suas funcionalidades consolidadas, reconstruir os subsistemas deficientes e implementar uma atualização extensa, integrada, testada e jogável.
+
+A versão 1.0 somente poderá receber esse título quando seus critérios de conclusão estiverem efetivamente cumpridos.
+
+---
+
+# PARTE I — DIRETRIZES GLOBAIS
+
+## 1. Auditoria obrigatória dos projetos
+
+Antes de modificar qualquer arquivo:
+
+1. Analise integralmente a estrutura e a arquitetura existente de cada jogo.
+2. Identifique engine, framework, bibliotecas, recursos gráficos, módulos de áudio e sistemas de persistência.
+3. Documente todas as funcionalidades que já estão implementadas.
+4. Identifique sistemas incompletos, código duplicado, soluções temporárias, bugs e funcionalidades simuladas.
+5. Identifique dependências entre módulos e riscos de regressão.
+6. Catalogue personagens, inimigos, armas, torretas, mapas, habilidades, animações e demais recursos existentes.
+7. Verifique como os jogos são executados, compilados, testados e distribuídos.
+8. Elabore um diagnóstico técnico com prioridades objetivas.
+
+**Não presuma que uma funcionalidade existe apenas porque há um botão, uma classe ou uma tela associada a ela. Teste o comportamento real.**
+
+Não altere arbitrariamente a tecnologia principal de um projeto. Migrações de engine ou framework exigem justificativa técnica e preservação das funcionalidades.
+
+## 2. Princípios de desenvolvimento
+
+Adote obrigatoriamente os seguintes princípios:
+
+**Jogabilidade antes de ornamentação:** sistemas precisam funcionar antes de receber acabamento visual definitivo.
+
+**Profundidade antes de quantidade:** conteúdo significativo é preferível a dezenas de armas, fases ou personagens praticamente idênticos.
+
+**Continuidade:** preserve o progresso do jogador, os sistemas funcionais e as decisões de design já consolidadas.
+
+**Identidade:** os três jogos devem possuir estilos, interfaces e mecânicas claramente distintos.
+
+**Progressão real:** desbloqueios precisam modificar a experiência de jogo, não apenas aumentar números.
+
+**Combate responsivo:** comandos, colisões, animações, efeitos e consequências precisam estar sincronizados.
+
+**Persistência confiável:** implementar salvamento, carregamento, recuperação de falhas e versionamento dos dados.
+
+**Qualidade verificável:** cada funcionalidade deverá possuir critérios concretos de aceitação.
+
+**Desempenho:** evitar degradação progressiva de FPS, vazamentos de memória e processos redundantes.
+
+## 3. Sistemas compartilhados
+
+Onde for tecnicamente apropriado, padronize conceitos sem obrigar os jogos a compartilharem código incompatível:
+
+- Gerenciamento de saves e perfis.
+- Configurações gráficas e sonoras.
+- Ajustes de resolução e escala da interface.
+- Remapeamento de controles, quando aplicável.
+- Pausa, retomada e reinicialização.
+- Gerenciamento de áudio e efeitos.
+- Registro de erros e depuração.
+- Transições de cenas.
+- Menus de campanha e seleção de missões.
+- Indicadores de progresso.
+- Conquistas locais.
+- Tutoriais contextuais.
+- Suporte a diferentes resoluções.
+- Acessibilidade visual e controles básicos.
+
+O menu principal de cada jogo deverá conter, conforme suas mecânicas: Continuar, Nova Campanha, Seleção de Missões, Progressão, Configurações, Créditos e Sair.
+
+A opção Continuar deverá restaurar o progresso real, não reiniciar silenciosamente a campanha.
+
+---
+
+# PARTE II — CINZAS DO ABISMO
+
+## 4. Objetivo criativo
+
+Transformar Cinzas do Abismo em um roguelite de ação 2D sombrio, visceral e tecnicamente refinado, com foco em combate responsivo, variedade de armas, arenas elaboradas, inimigos com comportamentos distintos e progressão contínua.
+
+A experiência deve recompensar a habilidade do jogador, a escolha das construções de combate e a exploração dos cenários.
+
+Preserve a identidade e a mecânica original verificadas no repositório.
+
+## 5. Reconstrução e balanceamento do combate
+
+Revisar:
+
+- Dano das armas e dos inimigos.
+- Velocidade de ataque e intervalos de recuperação.
+- Alcance, velocidade e comportamento dos projéteis.
+- Precisão e consistência das colisões.
+- Resistências e vulnerabilidades.
+- Invulnerabilidade temporária após receber dano, quando adequada.
+- Controle de grupos de inimigos.
+- Escalonamento de dificuldade por região.
+- Efeitos de acerto, impacto e eliminação.
+- Balanceamento de habilidades e combinações.
+
+O jogador deverá perceber claramente quando um ataque acerta, falha, é bloqueado ou causa um efeito especial.
+
+Evite que a dificuldade dependa exclusivamente do aumento excessivo da vida dos inimigos.
+
+Introduza inimigos que exijam movimentação, priorização de alvos, esquivas e mudanças de estratégia.
+
+## 6. Animações e movimentação
+
+Realizar uma revisão completa do sistema de animações.
+
+Implementar ou aprimorar:
+
+- Idle com movimentação natural.
+- Caminhada e corrida com transições fluidas.
+- Aceleração e desaceleração responsivas.
+- Ataques distintos para cada família de armas.
+- Ataques carregados e especiais, quando suportados pelo design.
+- Reação a dano.
+- Esquiva e recuperação.
+- Interrupções de animação controladas.
+- Morte com animações completas.
+- Efeitos sincronizados de impacto.
+- Estados visuais de queimadura, congelamento, veneno e eletricidade.
+- Animações específicas de inimigos e chefes.
+
+As animações deverão comunicar peso, direção, velocidade e intenção.
+
+Utilize máquinas de estados, blend trees, interpolação, eventos de animação e demais recursos pertinentes à engine identificada.
+
+A movimentação não pode apresentar deslizamento involuntário, teleportes, travamentos ou animações desconectadas das ações.
+
+## 7. Armas completas
+
+Criar um sistema de armas expansível, orientado a dados e integrado ao combate.
+
+Famílias sugeridas, respeitando a identidade existente:
+
+1. Espadas e armas de combate próximo.
+2. Machados e armas pesadas.
+3. Arcos e projéteis físicos.
+4. Cajados e armas arcanas.
+5. Armas de fogo ou dispositivos técnicos, se compatíveis com o universo original.
+6. Armas especiais desbloqueadas por progressão.
+
+Cada família deverá possuir:
+
+- Ataque básico próprio.
+- Cadência diferenciada.
+- Alcance específico.
+- Animação e efeitos exclusivos.
+- Pontos fortes e fracos.
+- Melhorias desbloqueáveis.
+- Sinergias com habilidades.
+- Descrição e estatísticas claras.
+
+Implementar raridades somente se elas contribuírem para decisões de equipamento, evitando inflar artificialmente atributos.
+
+## 8. Fases, terrenos e exploração
+
+Substituir arenas excessivamente simples por fases com geometria, identidade e desafios próprios.
+
+Introduzir progressivamente:
+
+- Elevações, desníveis e obstáculos.
+- Passagens estreitas e áreas abertas.
+- Coberturas e elementos destrutíveis.
+- Armadilhas ambientais.
+- Terrenos perigosos.
+- Regiões secretas e recompensas opcionais.
+- Eventos e encontros especiais.
+- Caminhos alternativos.
+- Cenários com iluminação e efeitos atmosféricos.
+- Arenas de chefes próprias.
+
+Utilizar geração procedural controlada ou mapas autorais, conforme a arquitetura existente, sem sacrificar a legibilidade do combate.
+
+A colisão e a navegação dos inimigos devem funcionar corretamente em terrenos complexos.
+
+## 9. Campanha e progressão
+
+Criar uma campanha com começo, desenvolvimento e conclusão.
+
+Proposta inicial: cinco regiões temáticas, sujeitas à adequação ao universo narrativo existente.
+
+Cada região deverá apresentar:
+
+- Identidade visual própria.
+- Introdução narrativa.
+- Inimigos característicos.
+- Mecânicas ambientais próprias.
+- Eventos ou objetivos específicos.
+- Um confronto culminante.
+- Recompensas e desbloqueios.
+
+Preservar ou aprimorar os modos Campanha e Horda.
+
+Na campanha, adicionar progressão permanente compatível com a estrutura roguelite: desbloqueios de armas, habilidades, variantes, regiões e melhorias moderadas.
+
+Separar progressão permanente de melhorias temporárias obtidas durante as partidas.
+
+O modo Horda deverá oferecer desafios progressivos e possibilidade de pontuação ou recordes locais.
+
+---
+
+# PARTE III — ATALAIA: GUARDIÕES DO CRISTAL
+
+## 10. Objetivo criativo
+
+Transformar Atalaia em um Tower Defense de fantasia com campanha extensa, sistemas estratégicos profundos, progressão contínua, torretas especiais e fases que alteram significativamente a maneira de jogar.
+
+Preservar a proposta central de defender o Cristal e as mecânicas consolidadas de construção, evolução de torretas e escolha de cartas.
+
+## 11. Campanha narrativa
+
+Criar uma história completa sobre a defesa do Cristal, os territórios ameaçados e a progressão de um conflito crescente.
+
+Proposta de estrutura inicial:
+
+**Ato I — O Primeiro Cerco:** introdução ao mundo, aos sistemas e às primeiras ameaças.
+
+**Ato II — Fronteiras Corrompidas:** novos caminhos, inimigos especializados e mecanismos ambientais.
+
+**Ato III — A Ruptura:** ataques simultâneos, inimigos de elite e mapas ramificados.
+
+**Ato IV — A Queda dos Guardiões:** ameaças estratégicas e restrições significativas de recursos.
+
+**Ato V — O Último Bastião:** confronto final, chefes e conclusão narrativa.
+
+Cada ato deverá ter fases, objetivos, variações de mapa, desafios e recompensas.
+
+Meta inicial de conteúdo: cinco atos com seis fases cada, totalizando 30 fases, sujeito à validação de escopo e qualidade.
+
+As fases devem possuir duração variável e desafios progressivos. Não aumentar a duração simplesmente adicionando ondas repetitivas.
+
+## 12. Progressão estratégica de longo prazo
+
+Criar uma árvore de progressão entre fases com três grandes áreas:
+
+**Engenharia:** melhorias de construção, especialização e eficiência das torretas.
+
+**Proteção:** recursos defensivos, integridade do Cristal e ferramentas de recuperação.
+
+**Conhecimento:** novas cartas, informações estratégicas e habilidades especiais.
+
+A progressão deverá ser conquistada por conclusão de fases, objetivos secundários e desafios.
+
+O jogador não deverá desbloquear tudo rapidamente.
+
+Implementar escolhas e especializações sem permitir que uma única árvore elimine completamente o desafio.
+
+## 13. Torretas existentes e novas
+
+Preservar e refinar:
+
+- Lança-chamas: dano contínuo com projeção de fogo visualmente consistente.
+- Balista: ataques precisos, perfurantes e cadência adequada.
+- Gelo: controle de movimento com efeitos legíveis.
+- Tesla: descargas elétricas com propagação bem definida.
+- Veneno: dano persistente e poças de contaminação.
+- Morteiro: dano em área, trajetória visual coerente e impacto convincente.
+
+Criar torretas exclusivas de regiões específicas, como:
+
+**Obelisco Solar:** ataques concentrados de energia, desbloqueado em regiões luminosas.
+
+**Guardião de Raízes:** aprisionamento temporário e controle de trajetórias em mapas florestais.
+
+**Canhão Sísmico:** ondas de impacto e dano em área em regiões montanhosas.
+
+**Farol Espectral:** identifica inimigos ocultos e enfraquece unidades especiais.
+
+**Forja de Cinzas:** ataques térmicos de grande potência com alto custo e baixa cadência.
+
+**Arpão do Abismo:** ataques perfurantes especializados contra inimigos resistentes.
+
+Cada torreta nova deverá possuir papel tático único, efeitos próprios, upgrades e limitações claras.
+
+As torretas regionais deverão ser inicialmente exclusivas do bioma. Poderão ser desbloqueadas posteriormente para modos especiais, conforme o balanceamento.
+
+## 14. Mapas e posicionamento
+
+Redesenhar e ampliar os cenários.
+
+Criar mapas com:
+
+- Bifurcações e rotas convergentes.
+- Múltiplas entradas de inimigos.
+- Terrenos elevados.
+- Caminhos com restrições específicas.
+- Obstáculos estratégicos.
+- Diferentes condições ambientais.
+- Eventos que modifiquem temporariamente o combate.
+
+**Corrigir definitivamente o problema de slots de torretas posicionados fora de alcance útil.**
+
+Validar automaticamente cada slot quanto à sua função estratégica, alcance e relação com os caminhos.
+
+Não exigir que o jogador construa em posições inúteis.
+
+## 15. Ondas, inimigos e chefes
+
+Aumentar a duração significativa das partidas.
+
+Criar inimigos com papéis reconhecíveis:
+
+- Corredores velozes.
+- Unidades blindadas.
+- Inimigos resistentes a determinados tipos de dano.
+- Unidades que protegem aliados.
+- Inimigos que se dividem.
+- Criaturas voadoras, se suportadas pelo sistema.
+- Inimigos que interferem nas torretas.
+- Unidades de elite e chefes.
+
+Chefes deverão possuir padrões de ataque, habilidades especiais e fases de combate.
+
+Evitar depender exclusivamente de multiplicadores de vida.
+
+Criar ondas com composição inteligente e dificuldade progressiva.
+
+## 16. Cartas, HUD e animações
+
+Expandir o sistema de cartas.
+
+Adicionar opções de:
+
+- Melhorias globais de famílias de torretas.
+- Especializações temporárias.
+- Modificadores de alcance.
+- Efeitos combinados.
+- Benefícios de economia.
+- Riscos e recompensas.
+- Alterações táticas do mapa.
+
+Preservar o sistema de escolhas e reroll, revisando suas probabilidades e equilíbrio.
+
+Manter o HUD de upgrade de torretas acessível na parte superior, sem obrigar o jogador a deslocar a tela.
+
+Aprimorar o painel de danos por torreta e por grupo.
+
+Implementar animações mais naturais para inimigos e torretas, com transições, direção de ataque e efeitos sincronizados.
+
+Adicionar efeitos modernos de fogo, gelo, eletricidade, veneno e explosões.
+
+O áudio deve adotar uma identidade moderna de fantasia e evitar estética sonora 8-bit.
+
+## 17. Modos de jogo
+
+Entregar:
+
+- Campanha.
+- Sobrevivência infinita.
+- Desafios especiais.
+- Repetição de fases concluídas.
+
+Os modos poderão utilizar sistemas compartilhados, mas cada um deverá possuir objetivos e condições de vitória ou derrota funcionais.
+
+---
+
+# PARTE IV — PROJECT NEXUS
+
+## 18. Prioridade máxima: revolução do RPG tático
+
+Project Nexus receberá a transformação mais profunda da atualização.
+
+O objetivo é criar uma experiência de RPG tático por turnos com identidade visual marcante, personagens únicos, combate elaborado e uma campanha narrativa que incentive o jogador a desenvolver diferentes equipes.
+
+A referência estrutural de combate é a dinâmica de RPGs clássicos por turnos, mas personagens, história, classes, arte, habilidades e interface deverão permanecer originais.
+
+Preservar a formação de três personagens por equipe.
+
+Preservar o conceito inicial de 24 personagens distribuídos em seis classes:
+
+- Ígneo.
+- Natural.
+- Técnico.
+- Arcano.
+- Sombrio.
+- Lumi.
+
+Cada classe terá inicialmente quatro personagens.
+
+Verificar o elenco já existente antes de criar ou substituir personagens.
+
+## 19. Campanha completa
+
+Criar uma campanha estruturada em seis capítulos, com foco narrativo, missões, confrontos, eventos e progressão.
+
+Proposta inicial:
+
+**Capítulo I — A Fratura:** apresentação do universo e da ameaça inicial.
+
+**Capítulo II — Ecos da Origem:** descoberta de conflitos e antecedentes das classes.
+
+**Capítulo III — Convergência:** alianças, rivalidades e aprofundamento do elenco.
+
+**Capítulo IV — O Colapso:** expansão do conflito e mudanças nas condições de combate.
+
+**Capítulo V — As Seis Verdades:** revelações sobre as origens e interesses das facções.
+
+**Capítulo VI — Nexus:** confronto final e desfecho das principais linhas narrativas.
+
+Os títulos são provisórios. Priorizar a continuidade do lore existente, caso haja história já definida no projeto.
+
+Meta inicial: seis capítulos com oito missões cada, totalizando 48 missões principais, além de missões secundárias e desafios.
+
+Cada capítulo deverá conter:
+
+- Introdução narrativa.
+- Missões com objetivos variados.
+- Confrontos com inimigos temáticos.
+- Diálogos entre personagens.
+- Desenvolvimento dos conflitos.
+- Recompensas significativas.
+- Pelo menos um encontro culminante.
+- Transição narrativa para o capítulo seguinte.
+
+Não criar 48 batalhas praticamente idênticas. Variar condições de vitória, composições inimigas, modificadores de campo e objetivos.
+
+## 20. Identidade individual dos 24 personagens
+
+Cada personagem deverá possuir uma ficha completa e identidade reconhecível.
+
+Incluir:
+
+1. Nome e descrição.
+2. Classe e papel de combate.
+3. História pessoal.
+4. Motivação.
+5. Personalidade.
+6. Afinidades e rivalidades.
+7. Silhueta visual individual.
+8. Paleta de cores própria.
+9. Postura de combate.
+10. Ataque básico personalizado.
+11. Habilidades específicas.
+12. Golpe especial ou ultimate.
+13. Animações próprias.
+14. Efeitos visuais exclusivos.
+15. Progressão individual.
+16. Especializações ou melhorias desbloqueáveis.
+17. Falas de combate e interações narrativas, quando viáveis.
+
+Evitar personagens que sejam apenas versões recoloridas de outros.
+
+Cada integrante deverá possuir pelo menos uma característica mecânica que justifique sua escolha.
+
+As classes deverão ter identidade tática, sem impor papéis absolutamente rígidos.
+
+## 21. Reconstrução gráfica e animação
+
+Reavaliar completamente o pipeline audiovisual.
+
+Implementar, de acordo com a engine:
+
+- Personagens visualmente mais elaborados.
+- Animações idle exclusivas.
+- Movimento corporal consistente.
+- Preparação de ataques.
+- Antecipação de golpes.
+- Animações de impacto.
+- Reações a dano.
+- Esquivas e bloqueios.
+- Recuperação pós-ataque.
+- Golpes especiais com múltiplas etapas.
+- Estados de derrota.
+- Transições de câmera.
+- Zooms e enquadramentos cinematográficos.
+- Partículas e efeitos de iluminação.
+- Efeitos de distorção moderados.
+- Trajetórias de projéteis.
+- Áreas de efeito visualmente legíveis.
+
+Os golpes devem ter início, desenvolvimento, impacto e recuperação.
+
+Nunca substituir uma animação completa por um sprite deslizando ou um efeito luminoso genérico.
+
+Criar um sistema reutilizável de animação, mas com sequências e timings específicos por personagem.
+
+**As habilidades especiais precisam parecer momentos importantes do combate.**
+
+Aplicar efeitos cinematográficos sem impedir a compreensão da ação.
+
+Permitir acelerar ou pular animações extensas, respeitando a resolução lógica do turno.
+
+## 22. Mecânicas e profundidade tática
+
+Reestruturar e aprimorar o sistema de combate por turnos.
+
+Elementos recomendados:
+
+- Ordem de turnos clara.
+- Indicador de ações disponíveis.
+- Custos de habilidades.
+- Recursos específicos de classe ou personagem.
+- Buffs e debuffs.
+- Escudos e absorção.
+- Efeitos de controle.
+- Ataques em área.
+- Dano persistente.
+- Combos entre personagens.
+- Sinergias entre classes.
+- Reações e contra-ataques.
+- Condições especiais de campo.
+- Inimigos com comportamentos diferenciados.
+
+A inteligência artificial deverá avaliar ameaças, prioridades de alvo, recursos disponíveis e oportunidades táticas.
+
+Inimigos não deverão escolher suas ações exclusivamente de maneira aleatória.
+
+Introduzir inimigos de elite e chefes com mecânicas próprias, respeitando a identidade de cada capítulo.
+
+## 23. Progressão individual e de equipe
+
+Criar um sistema de progressão com:
+
+**Níveis:** evolução de atributos baseada em curvas balanceadas.
+
+**Habilidades:** desbloqueios e melhorias durante a campanha.
+
+**Especializações:** alternativas de construção por personagem.
+
+**Equipamentos:** itens que alterem atributos e, quando adequado, introduzam efeitos táticos.
+
+**Vínculos:** bonificações ou interações desbloqueadas por uso combinado de personagens.
+
+**Maestria:** conquistas obtidas pela utilização consistente de cada integrante.
+
+**Coleção:** apresentação e acompanhamento do elenco desbloqueado.
+
+Evitar progressão excessivamente dependente de grind.
+
+Equipes diferentes deverão oferecer estratégias viáveis, sem existir apenas uma composição obrigatória.
+
+## 24. Sistema de missões
+
+Criar tipos de missões como:
+
+- Eliminar todos os inimigos.
+- Derrotar um comandante.
+- Sobreviver a determinado número de turnos.
+- Proteger um aliado.
+- Interromper um ritual.
+- Enfrentar ondas sucessivas.
+- Vencer sob condições especiais.
+- Derrotar chefes com múltiplas fases.
+
+Cada missão deverá ter tela própria de preparação, objetivos claros, recompensas e condição de conclusão.
+
+Implementar seleção de equipe, preparação, batalha, resultado e retorno ao mapa da campanha.
+
+## 25. Interface de RPG premium
+
+Redesenhar o HUD preservando os elementos funcionais que já apresentem boa usabilidade.
+
+Exibir de maneira clara:
+
+- Personagens ativos.
+- Vida e recursos.
+- Ordem dos turnos.
+- Habilidades.
+- Custos das ações.
+- Efeitos positivos e negativos.
+- Alvos e indicadores de dano.
+- Informações dos inimigos.
+- Objetivos da missão.
+- Log resumido de combate.
+
+Adicionar telas de elenco, personagens, equipamentos, habilidades, vínculos, campanha e progresso.
+
+Priorizar identidade visual própria, responsividade, hierarquia da informação e transições elegantes.
+
+A interface deverá transmitir a sensação de um jogo completo, e não de um painel de desenvolvimento.
+
+---
+
+# PARTE V — PADRÃO TÉCNICO E QUALIDADE
+
+## 26. Arquitetura e manutenção
+
+Refatorar componentes problemáticos sem introduzir regressões desnecessárias.
+
+Priorizar:
+
+- Separação entre lógica de combate e renderização.
+- Sistemas orientados a dados.
+- Máquinas de estados para animações e inimigos.
+- Componentização.
+- Gerenciamento centralizado de recursos.
+- Reutilização de efeitos quando apropriado.
+- Configurações externas para balanceamento.
+- Versionamento e migração de dados de save.
+- Logs estruturados.
+- Testes reproduzíveis.
+
+Evitar classes monolíticas e valores críticos espalhados pelo código.
+
+Criar ferramentas simples de debug e balanceamento, especialmente para combate, progressão, dano e distribuição de recompensas.
+
+## 27. Metas de desempenho
+
+Estabelecer como alvo inicial 60 FPS em hardware compatível com a plataforma principal identificada.
+
+Perfis de qualidade poderão reduzir partículas, sombras, pós-processamento e outros efeitos sem comprometer informações essenciais do combate.
+
+Implementar otimizações como pooling de objetos e controle de partículas, quando tecnicamente adequadas.
+
+Realizar testes de uso prolongado, reinicialização de fases, transições de cenas e carregamento de saves.
+
+Registrar limitações de hardware e desempenho com evidências, sem prometer desempenho universal.
+
+## 28. Balanceamento verificável
+
+Criar matrizes de balanceamento para:
+
+- Armas.
+- Personagens.
+- Habilidades.
+- Torretas.
+- Inimigos.
+- Chefes.
+- Recompensas.
+- Curvas de experiência.
+- Economia de jogo.
+
+Separar parâmetros de gameplay do código estrutural.
+
+Criar cenários reproduzíveis para verificar tempo de eliminação, sobrevivência, geração de recursos e eficácia das diferentes estratégias.
+
+Ajustar números a partir de testes, não apenas por impressão visual.
+
+## 29. Testes obrigatórios
+
+Cada jogo deverá ser testado com:
+
+- Campanha iniciada do zero.
+- Continuação de save válido.
+- Save incompatível ou corrompido.
+- Conclusão de missões.
+- Derrota e reinicialização.
+- Transição entre fases.
+- Progressão e desbloqueios.
+- Utilização das habilidades.
+- Combate com grande número de efeitos.
+- Diferentes resoluções.
+- Pausa e retomada.
+- Sessões prolongadas.
+- Regressões em funcionalidades existentes.
+
+Criar testes automatizados onde possível.
+
+Quando testes precisarem ser manuais, fornecer passos concretos de reprodução e registrar seus resultados.
+
+Não declarar que algo foi testado se não houve execução real.
+
+---
+
+# PARTE VI — EXECUÇÃO DA SUPERA​​TUALIZAÇÃO
+
+## 30. Ordem obrigatória de implementação
+
+Trabalhar em fases de desenvolvimento controladas.
+
+### Fase 0 — Diagnóstico
+
+Auditar os três projetos, consolidar funcionalidades existentes e produzir relatório de riscos.
+
+### Fase 1 — Arquitetura e fundações
+
+Corrigir sistemas estruturais, estabelecer persistência, gerenciamento de cenas, sistemas de campanha e estruturas de dados.
+
+### Fase 2 — Núcleo jogável
+
+Refinar integralmente o combate, a movimentação, a inteligência artificial e as mecânicas centrais de cada título.
+
+### Fase 3 — Progressão
+
+Implementar progressão persistente, desbloqueios, árvores de habilidades, equipamentos e recompensas.
+
+### Fase 4 — Campanhas
+
+Construir os capítulos, fases, missões, mapas, encontros e condições de vitória.
+
+### Fase 5 — Revolução audiovisual
+
+Substituir animações provisórias, melhorar personagens, efeitos, cenários, interfaces, sons e transições.
+
+### Fase 6 — Balanceamento e integração
+
+Validar dificuldade, economia, duração das fases, diversidade das estratégias e funcionamento conjunto dos sistemas.
+
+### Fase 7 — Homologação
+
+Executar testes completos, corrigir bugs, otimizar e produzir builds jogáveis.
+
+Cada fase deverá produzir uma entrega verificável. Não avançar escondendo falhas graves.
+
+## 31. Critérios mínimos para declarar a versão 1.0
+
+Um projeto somente estará apto à versão 1.0 quando:
+
+- Possuir campanha completa e concluível.
+- Oferecer experiência jogável do início ao fim.
+- Possuir progressão persistente.
+- Salvar e restaurar dados corretamente.
+- Não depender de funcionalidades fictícias ou demonstrativas.
+- Apresentar animações funcionais e coerentes.
+- Possuir inimigos e desafios balanceados.
+- Ter HUD e menus finalizados.
+- Apresentar trilha e efeitos sonoros adequados, dentro das licenças aplicáveis.
+- Não possuir bugs bloqueadores conhecidos.
+- Passar pelos testes de regressão e campanha.
+- Possuir instruções de instalação e execução.
+- Ter builds ou pacotes de entrega verificáveis.
+
+Se algum requisito não for cumprido, classifique a entrega como desenvolvimento, alpha ou beta, conforme o estágio real.
+
+**Nunca declarar que a versão está completa apenas porque o código foi escrito.**
+
+## 32. Controle de escopo e integridade
+
+As metas numéricas de missões e fases representam objetivos de planejamento, não autorização para gerar conteúdo repetitivo ou afirmar conclusão sem implementação.
+
+Caso o escopo ultrapasse a capacidade da execução atual, entregar incrementos funcionais, com documentação clara do que foi concluído e do que permanece pendente.
+
+Não reduzir silenciosamente as metas acordadas.
+
+Não apagar projetos existentes ou substituir seus dados por versões fictícias.
+
+Não introduzir dependências pagas, serviços externos obrigatórios ou recursos com licenciamento incompatível sem comunicar a necessidade.
+
+Não considerar imagens estáticas como substitutas de animações funcionais, nem vídeos demonstrativos como substitutos de gameplay real.
+
+---
+
+# PARTE VII — ENTREGÁVEIS
+
+Para cada um dos três jogos, produzir:
+
+1. Diagnóstico técnico inicial.
+2. Documento de design atualizado.
+3. Plano de implementação por etapas.
+4. Código-fonte revisado.
+5. Sistemas de campanha e progressão.
+6. Recursos audiovisuais integrados.
+7. Arquivos de configuração de balanceamento.
+8. Testes automatizados e manuais.
+9. Registro de bugs corrigidos e pendentes.
+10. Changelog detalhado.
+11. Manual do jogador.
+12. Instruções de instalação e execução.
+13. Build jogável, quando o ambiente permitir sua compilação e validação.
+
+Ao final, produzir também um relatório comparativo entre a versão anterior e a atualização Renascimento 1.0.
+
+O relatório deverá distinguir explicitamente: planejado, implementado, testado, aprovado e pendente.
+
+# INSTRUÇÃO FINAL AO AGENTE
+
+Esta é uma atualização de transformação estrutural, e não uma simples atualização de conteúdo.
+
+Não priorize velocidade em detrimento de qualidade.
+
+Não sacrifique a integridade dos jogos existentes.
+
+Não substitua profundidade por quantidade.
+
+Não declare resultados que não foram testados.
+
+Comece imediatamente pela auditoria real dos arquivos disponíveis. Identifique os repositórios e apresente a matriz de implementação dos três jogos.
+
+Após a auditoria, execute as alterações na ordem definida, produzindo entregas incrementais, integráveis e verificáveis.
+
+A atualização **Operação Renascimento 1.0** deverá representar um salto real em jogabilidade, profundidade, narrativa, apresentação audiovisual e qualidade técnica.
+
+O objetivo final é que Cinzas do Abismo, Atalaia: Guardiões do Cristal e Project Nexus deixem de parecer protótipos e passem a funcionar como três jogos completos, independentes e com identidade própria.

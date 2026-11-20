@@ -4,8 +4,7 @@ on:
     branches: [main, 'codex/men-games-*']
     paths:
       - 'games/**'
-      - 'apps/web/src/lib/men-games/**'
-      - 'apps/web/public/assets/games/**'
+      - 'src/lib/men-games/**'
       - 'scripts/build-men-games.cjs'
       - '.github/workflows/men-games-publish.yml'
   workflow_dispatch:
@@ -54,8 +53,7 @@ jobs:
         run: npm run build:men-games
 
       - name: Verify distribution integrity
-        run: |
-          node -e "const fs=require('node:fs');const reg=JSON.parse(fs.readFileSync('artifacts/men-games-distribution/registry.json','utf8'));if(!Array.isArray(reg.games)||reg.games.length===0)throw new Error('Empty games registry');if(!fs.existsSync('artifacts/men-games-distribution/index.html'))throw new Error('Missing index.html');"
+        run: node --test tests/men-games-distribution.cjs
 
       - name: Publish MeN Games Hub to Surge
         env:

@@ -1,5 +1,5 @@
 apply plugin: 'com.android.application'
-def tronoVersion = new groovy.json.JsonSlurper().parse(file('../../apps/desktop/package.json')).version
+def tronoVersion = new groovy.json.JsonSlurper().parse(file('../../electron/package.json')).version
 def parts = tronoVersion.tokenize('.').collect { it.toInteger() }
 def signedRelease = ['TRONO_ANDROID_KEYSTORE_PATH','TRONO_ANDROID_STORE_PASSWORD','TRONO_ANDROID_KEY_ALIAS','TRONO_ANDROID_KEY_PASSWORD'].every { System.getenv(it) }
 if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !signedRelease) {

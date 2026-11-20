@@ -1,13 +1,9 @@
 node_modules
-apps/web/.next
-apps/web/out
-apps/web/public
-apps/desktop/node_modules
-apps/desktop/package-lock.json
-packages/*/dist
 .next
 out
 artifacts
+public
 package-lock.json
+electron/package-lock.json
 docs/archive
 supabase

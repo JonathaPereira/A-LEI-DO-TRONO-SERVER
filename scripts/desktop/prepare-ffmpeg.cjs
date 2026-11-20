@@ -40,11 +40,11 @@ async function prepare() {
   }
   await fs.copyFile(path.join(source, 'LICENSE.txt'), path.join(output, 'LICENSE-LGPL-3.txt'));
   await fs.copyFile(
-    path.join(root, 'apps/desktop/ffmpeg-notices/GPL-3.txt'),
+    path.join(root, 'electron/ffmpeg-notices/GPL-3.txt'),
     path.join(output, 'LICENSE-GPL-3.txt'),
   );
   await fs.copyFile(
-    path.join(root, 'apps/desktop/ffmpeg-notices/UPSTREAM.txt'),
+    path.join(root, 'electron/ffmpeg-notices/UPSTREAM.txt'),
     path.join(output, 'UPSTREAM.txt'),
   );
   await fs.writeFile(

@@ -1,0 +1,238 @@
+M&N · A Lei do Trono — Windows & Android 2.0.3
+
+Reversão 2.0.3: retorno integral à arquitetura estável da versão 2.0.0 (revertendo o rebuild
+Fluxer + Cloudflare SFU do PR #73) preservando a correção de conexão Android da 2.0.1,
+com avanço de versão para 2.0.3 para permitir atualização limpa por cima da build 2.0.2.
+
+M&N · A Lei do Trono — Windows & Android 2.0.1
+
+Correção 2.0.1: reforço na resolução do servidor no Android (impedindo fallback para http://localhost:10000
+em WebView HTTPS mesmo sem detecção prévia de TronoAndroid), permissão ACCESS_NETWORK_STATE no manifesto
+Android e detalhe diagnóstico em falhas de rede no login.
+
+M&N · A Lei do Trono — Windows & Android 2.0.0
+
+Melhoria 2.0.0: VP9 definido como codec oficial de screen share (com priorização de Profile 0
+para decodificação em hardware universal, escalabilidade temporal L1T2 e alvo de buffer de 80 ms
+no receptor), indicador com avatares de quem está assistindo sua transmissão em tempo real (SFU e P2P),
+músicas de fundo desligadas por padrão em todas as plataformas, transição de boas-vindas estendida
+em +0,5 s, e correção no Android para manter chamadas ativas em segundo plano com a tela desligada
+(WebView mantido ativo durante o CallService, WifiLock e AudioManager MODE_IN_COMMUNICATION + melhorias
+de responsividade mobile).
+
+M&N · A Lei do Trono — Windows 1.3.1
+
+Melhoria 1.3.1: estabilidade de screen share (Degrau 2) — suporte ao codec AV1 (hardware
+em GPUs modernas RX 7000/9000 e RTX 40+, decodificação em hardware RTX 30+), alvo de buffer
+de 60 ms no receptor de vídeo de tela para eliminar presentation-frozen, proteção contra
+reconexão destrutiva da assinatura SFU em presentation-frozen com transporte saudável, e
+reconciliação automática de resolução/FPS no emissor quando a captura excede o formato escolhido.
+
+M&N · A Lei do Trono — Windows 1.3.0
+
+Melhoria 1.3.0: estabilidade de screen share (Degrau 1) — seletor de codec de tela
+(Automático sem forçar H.264, VP8, VP9 e H.264 no SFU e P2P com RTX pareado), piso/arranque
+conservadores de bitrate no SDP para evitar tail-drop e congelamentos por keyframe,
+proteção do processo GPU e powerSaveBlocker (prevent-app-suspension) no Electron Windows,
+e exposição sanitizada de codec/implementação do encoder/aceleração por hardware no relatório
+de diagnóstico copiado.
+
+M&N · A Lei do Trono — Windows 1.2.1
+
+Melhoria 1.2.1: eliminação de travadas reais no screen share de jogos em tela cheia/sem bordas
+(padrão screenContent='motion' com maintain-framerate em 30/60 FPS, priorização H.264 por nível
+decrescente no SFU e P2P sem afetar áudio/câmera, piso SDP anti-colapso em 30% do bitrate alvo no SFU,
+remoção de downscale síncrono em CPU na captura getDisplayMedia, tolerância >= 3,8s antes de derrubar
+assinaturas SFU de camada única, proteção de prioridade do VideoCaptureService contra EcoQoS do Windows,
+pausa da prévia local sem foco e Next.js 16.4.6).
+
+M&N · A Lei do Trono — Windows 1.2.0
+
+Melhoria 1.2.0: transição animada de boas-vindas na entrada do aplicativo e troca de conta
+(logotipo e slogan de M&N · A Lei do Trono com anel orbital, brilho light sheen, nome do usuário,
+foto de perfil com suporte completo a GIFs animados e badge do cargo na Corte), atuando como
+janela de ~4,5 s para carregamento de canais, presença e avatar em segundo plano, com atalho
+"Entrar agora" / Esc e opção "Rever boas-vindas" no menu do perfil.
+
+M&N · A Lei do Trono — Windows 1.1.1
+
+Melhoria 1.1.1: operação screen share anti-microtravamentos (pareamento video/rtx no H.264,
+piso/arranque SDP balanceados contra estagnação de fila, telemetria por fluxo com diagnóstico
+de 8 causas de congelamento, recuperação direcionada por stream com cooldown sem derrubar voz/câmera/socket
+e adaptação gradual mais rápida sob congestionamento), reconhecimento de links clicáveis no chat público e DMs
+e preservação da tela da biblioteca/jogos durante atualização em segundo plano da sessão.
+
+Melhoria 1.1.0: otimização de GPU no tema natalino (compositor 100% em transform/opacity),
+redução de uso de CPU no compartilhamento de tela (prioridade H.264 por hardware no SFU,
+limite de resolução sem downscale desnecessário, pausa de prévia oculta/recolhida e
+gravação de replay opt-in) e pipeline de validação seletiva sem engavetamento nem suítes
+de jogos desnecessárias.
+
+Melhoria 1.0.15: Especial de Natal em A Corte 🎄 — expansão completa do tema natalino
+("Uma celebração no reino") com pisca-piscas LED discretos e alternados nos botões,
+neve suave no chat, salas de voz e barra lateral decoradas, janela de apresentação
+flutuante com ativação instantânea sem desconectar chamadas e opções de Tema de Natal e
+Reduzir animações decorativas nas configurações de aparência.
+
+Melhoria 1.0.14: novo design visual com temas 100% funcionais no aplicativo, tema especial
+Natal da Corte 🎄 (com neve suave animada, doces, gorro festivo e meias/trenó decorativos),
+cursor de mouse personalizado Espada Real (32px) com brilho dourado e opção de voltar ao
+ponteiro padrão, e palco de chamadas aprimorado com atalhos de teclado (F para Tela Cheia,
+M para mutar, C para chat e Esc para grade).
+
+Melhoria 1.0.13: conexão SFU acelerada (ICE gathering rápido + prefetch paralelo +
+limite padrão elevado para 32 participantes) e transmissão de tela estabilizada para
+jogos (camada única dedicada de alta prioridade, piso de bitrate anti-stutter no SDP
+e proteção contra throttling em segundo plano).
+
+Melhoria 1.0.8: infraestrutura MeN Games e inicialização preguiçosa (Lazy Boot).
+Os jogos não são carregados na abertura do comunicador, liberando CPU e memória
+para chamadas de voz, vídeo e chat. O catálogo centraliza os 9 jogos da MeNCorp
+sob demanda e preserva todas as chamadas em andamento.
+
+Melhoria 1.0.7: leitura MP4 incremental e salvamento por partes reduzem cópias e
+pausas na captura nativa. Após atraso, o envio retoma com um quadro recente.
+O diagnóstico copiado inclui congelamentos e tempos de vídeo por fluxo; um
+encoder parado não aparece como se estivesse enviando os FPS configurados.
+Resolução, bitrate e FPS da transmissão são preservados. Captura de clipes
+continua optativa e os clipes em memória permanecem recuperáveis.
+Desempenho NVENC físico e os travamentos relatados no PC exigem reconferência.
+
+Trono 1.0: pistas do Similo mantêm a orientação também ao ampliar. Configurações
+separam as 12 cartas da mesa do baralho do informante, com tema principal e
+mistura opcional. As regras e a recuperação de voz continuam preservadas.
+
+A chamada tolera quedas temporárias da conexão por até 45 segundos e tenta
+reconectar automaticamente, conservando a captura. Sair durante a recuperação
+não reativa a voz ao voltar. Requer backend com features.voiceResume=true;
+reinício do servidor ou prazo esgotado ainda exigem entrar novamente. Sem SQL.
+
+Similo online: visual escuro, cinco temas combináveis e capitão alternado por
+rodada para resolver divergências. As cartas têm informações flutuantes e
+detalhes ampliáveis. Requer o backend com features.similo=true e acesso à arte
+em similo-mn.surge.sh. Não exige SQL.
+
+Mensagens diretas mostram a foto ou o ícone de perfil de quem enviou cada
+mensagem, incluindo sua própria conta. A lista de membros fica aberta por
+padrão nas chamadas, conversas, catálogo e jogos, com grupos online e offline.
+Use o botão de membros ou o X da lista para recolher; sua escolha acompanha
+a navegação. Em telas menores, a lista abre sobre a lateral e Esc a recolhe.
+
+Atalaia Godot 0.2: novo HUD com ouro, integridade e avanço da campanha separados,
+mapas sem deformação horizontal, novos fundos para as três regiões e animações
+de construção, movimento, evolução, dano e ganho de ouro. Campanhas salvas no
+Godot 0.1 continuam compatíveis.
+
+Esta entrega preserva as animações mais lentas do Love Letter e alinha os vagões
+às 309 posições impressas do Ticket to Ride. Atalaia: Guardiões do Cristal entra
+no catálogo, com as artes e as três fases do projeto Godot enviado. O Windows
+abre Atalaia em janela isolada; F11 alterna a tela cheia. O jogo precisa de
+internet no primeiro carregamento e salva a campanha neste dispositivo.
+
+Esta entrega usa a arquitetura migrada e inclui a correção do instalador da 0.3.3.
+Após autorizar a instalação, o app aberto na bandeja também é encerrado.
+Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas.
+
+1. Instalação nova: instale MN-Trono-1.0.5-Windows.exe.
+   Instalações 0.3.5/0.3.6 com falha ao baixar atualizações precisam instalar
+   esta versão manualmente uma vez. Versões anteriores sem a falha podem usar
+   o atualizador interno após a publicação do site completo.
+   Contas, permissões e preferências lembradas são mantidas.
+2. Entre com a conta do site. Lembre de mim restaura a sessão ao reabrir.
+   A sessão é protegida pelo Windows; sua senha não fica salva.
+   Desmarcar a opção ou sair da conta remove a sessão lembrada.
+3. Aparência oferece Original/Padrão e Discord, além dos temas de cores.
+   A escolha é individual. Trocar a disposição durante a call mantém os recursos.
+4. A chamada prioriza câmeras e compartilhamentos. Canais e mensagens diretas
+   ficam à esquerda; os jogos têm uma área separada. Os controles ficam abaixo
+   da mídia: rótulos curtos no Original e ícones no Discord. Passe o mouse
+   para ler a função de cada ícone. O canal conectado é clicável.
+5. Ler texto, abrir amigos, navegar ao início ou jogar preserva sua chamada.
+   Sair da call mantém o canal de texto e o assento no jogo. Entrar novamente
+   funciona mesmo ao ler outro canal de texto. Sair da conta encerra a sessão.
+6. Configurações fica na engrenagem: conta, aparência, áudio, vídeo, captura,
+   jogo, atividade, conexão, notificações e privacidade. Música começa mutada.
+   A redução de ruído leve/nativa é padrão; RNNoise é opcional.
+7. Silenciar voz bloqueia áudio e microfone, restaurando o mute anterior ao voltar.
+   Permissões de câmera/microfone ficam lembradas. Privacidade permite redefinir.
+8. Compartilhar tela mantém o popup de qualidade/FPS/áudio e a opção Trocar tela.
+   Áudio isolado por aplicativo requer Windows 11 ou build 20348+.
+   Áudio do computador inteiro pode incluir as vozes da chamada.
+9. Efeitos fica na lateral esquerda. Amigos aceita anexos privados com as regras
+   do chat geral. Avisos respeitam Configurações → Notificações e silenciamento.
+10. Jogos reúne A Lei do Trono, Azul e Cinzas do Abismo sem encerrar a chamada.
+    Azul usa o tabuleiro colorido original: 2–4 participantes e bots opcionais.
+    O Top 5 guarda o melhor resultado por conta; bots não recebem recordes.
+    Artes aprovadas aplicadas a peças, expositores e cartões murais.
+    Mesa de madeira, capa no catálogo e tela cheia própria.
+    Mercado central maior, murais compactos e seleção em grade nas telas verticais/menores.
+    A contagem detalha cada conexão, penalidade e bônus, com efeitos sonoros.
+    Concluir contagem mostra o resultado imediatamente; movimento reduzido é respeitado.
+    Somente o criador apaga mensagens e limpa o chat; o histórico usa Supabase.
+11. F11 e o botão Tela cheia ampliam a janela. Streams têm maximização própria.
+    Perfis expandem detalhes e volume sem empurrar a transmissão.
+12. Configurações → Atividade mostra opcionalmente o nome de um jogo/aplicativo.
+    O padrão é desligado. Títulos de janelas e caminhos não são compartilhados.
+13. Clipes ficam nos controles inferiores principais. Ativar captura local permite
+    escolher uma tela ou janela sem entrar em chamada ou transmitir. A captura
+    local vem desligada ao abrir o app; Desligar captura local encerra essa fonte.
+    Configurações dos clipes reúne qualidade Excelente/Econômica, atalho e pasta.
+    Preparar clipes ao transmitir a tela continua opcional. Desligar esse preparo
+    mantém a transmissão e os clipes já criados. Som dos clipes permite incluir
+    microfone + áudio da captura ou escolher Sem som. O estado Capturando clipes
+    indica a captura ativa. Codificador oferece Automático, NVIDIA NVENC e
+    Compatível; Automático testa o NVENC e informa o codificador efetivamente
+    ativado. NVENC requer placa/driver NVIDIA compatíveis no aplicativo Windows.
+    O nativo salva MP4; Compatível conserva WebM. Sem som no seletor da fonte
+    também exclui o microfone daquela captura.
+14. Fechar mantém o aplicativo na bandeja. M&N → Sair encerra de verdade.
+    Clique na versão no rodapé para buscar atualização. Reiniciar encerra a call;
+    escolha um momento conveniente. O atualizador vai direto para a última versão.
+
+O canal de atualização continua em a-lei-do-trono.surge.sh/downloads/.
+O instalador atual é baixado do próprio site, em downloads/.
+O instalador não tem assinatura digital; use o projeto/domínio oficial.
+Consulte ATUALIZACOES.md no ZIP do site para requisitos e histórico de atualizações.
+
+Cinzas do Abismo v0.5: campanha de 15 capítulos e horda sem fim.
+Ao abrir pela primeira vez no Windows, aguarde os recursos serem guardados localmente.
+Depois do preparo, é possível reabrir sem conexão. Código e interface são instalados com o app.
+Ao voltar ao chat, a partida pausa e deixa de renderizar, preservando a chamada.
+A horda salva checkpoints entre ondas; campanha em andamento é mantida durante a navegação.
+Música inicia mutada e gráficos em Leve; altere em Controles dentro do jogo.
+Recordes e horda ficam neste dispositivo; exporte/importe backup no menu do jogo.
+
+Splendor clássico: mesas online para 2–4 pessoas, bots, 90 cartas e 10 nobres.
+Compra, reservas ocultas, pagamento com ouro, escolha de devoluções e visitas de nobres.
+Quinze pontos iniciam a última rodada; empate pelo menor número de cartas compradas.
+Sons e animações explicam fichas, bônus e pontos. O manual fica em Como jogar.
+Voz e outros jogos continuam conectados durante a navegação. Recordes no Supabase.
+Compatível com o backend 0.13.0-alpha existente. Não há SQL novo se upgrade-splendor.sql já foi aplicado na 0.1.16.
+
+Love Letter, 2ª edição: mesas para 2–6 pessoas e bots, 21 cartas, Espiã e Chanceler.
+Mesa de veludo vinho com cartas ilustradas, descartes públicos e favores.
+Efeitos e escolhas secretas são validados pelo servidor; regras em Como jogar.
+O anfitrião inicia a próxima rodada. Mesas ficam em memória durante a partida.
+
+Compartilhar PC Beta e moderação: botão PC no HUD para compartilhar um monitor
+com alguém da mesma chamada sem desligar a voz. Mouse/teclado ou controle Xbox
+virtual separado (com driver opcional ViGEmBus 1.22.0 no anfitrião) exigem
+autorização explícita; Ctrl + Alt + Shift + F12 encerra o acesso. Perfil inicial
+720p/60 FPS com adaptação e indicadores reais. Administradores e criador podem
+silenciar microfone, bloquear mídia ou remover da chamada por 5 minutos.
+
+Nexus: abra Jogos → Nexus → Jogar Nexus. O jogo abre no upload 19926871 do itch.io
+(em janela própria isolada no aplicativo Windows), mantendo a chamada ativa no Trono.
+
+Ticket to Ride (mapa clássico dos EUA): mesas online para 2–5 pessoas e bots,
+110 cartas de trem, 30 bilhetes de destino secretos e bônus de maior caminho contínuo.
+Tabuleiro original, nove frentes de cartas, versos e peças coloridas aplicados,
+com rotas clicáveis e vagões animados respeitando movimento reduzido.
+Requer backend 0.14.0-alpha; sem SQL novo.
+
+Windows 0.3.6: animações do Love Letter com autor, alvo e resultado para toda
+a mesa. Guarda com um segundo de suspense. Última carta ilustrada e favores
+por vitória e pela Espiã separados. Preserva a reconstrução completa da 0.3.5.
+
+Windows 0.3.7: o pacote NSIS inclui a configuração do atualizador.
+Após instalar esta versão, novos downloads automáticos voltam a funcionar.

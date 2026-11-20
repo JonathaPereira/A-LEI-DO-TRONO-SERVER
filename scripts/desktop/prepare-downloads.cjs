@@ -4,7 +4,7 @@ const path = require('node:path'),
   { releaseInstaller } = require('./release-installer.cjs');
 (async () => {
   const root = path.resolve(__dirname, '../..'),
-    { version } = require('../../apps/desktop/package.json');
+    { version } = require('../../electron/package.json');
   const installerPath = await releaseInstaller({
     version,
     repository: DOWNLOAD_REPOSITORY,

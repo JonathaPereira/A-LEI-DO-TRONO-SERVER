@@ -4,13 +4,15 @@ on:
     branches: ['codex/surge-*']
     paths:
       [
-        'apps/web/**',
-        'apps/desktop/package.json',
-        'packages/**',
         'scripts/desktop/**',
-        'docs/DEPLOY_RENDER_SURGE.md',
-        'docs/ARQUITETURA.md',
+        'src/**',
+        'public/**',
         'package*.json',
+        'next.config.mjs',
+        'tests/site-package.js',
+        'tests/build-downloads.js',
+        'docs/PUBLICAR_SURGE_LEVE.md',
+        'docs/ATUALIZACOES.md',
         '.github/workflows/surge-package.yml',
       ]
   workflow_dispatch:
@@ -29,15 +31,15 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci
-      - run: npm run build:web
-      - name: Verify unit and integration test pyramid
-        run: npm test
+      - run: npm run build
+      - name: Test single-installer packaging, manifest and retention
+        run: npm test -- --suite all --filter '(?:site-package\.js|download-retention\.js|build-downloads\.js)$'
       - name: Find the approved installer for this version
         id: source
         uses: actions/github-script@v7
         with:
           script: |
-            const {version}=require('./apps/desktop/package.json');
+            const {version}=require('./electron/package.json');
             const {planBuildRetention}=require('./scripts/desktop/publish-build.cjs');
             const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
             const plan=planBuildRetention(releases);
@@ -50,7 +52,7 @@ jobs:
           MN_SOURCE_TAG: ${{ steps.source.outputs.tag }}
         run: |
           mkdir -p artifacts/windows-app
-          version=$(node -p "require('./apps/desktop/package.json').version")
+          version=$(node -p "require('./electron/package.json').version")
           gh release download "$MN_SOURCE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-$version-Windows.exe" --dir artifacts/windows-app
       - name: Package frontend with only its current installer
         env:
@@ -62,7 +64,7 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile, ZIP_DEFLATED
           import json
-          version=json.loads(Path('apps/desktop/package.json').read_text())['version']
+          version=json.loads(Path('electron/package.json').read_text())['version']
           source=Path('artifacts/site-download')
           with ZipFile(Path('artifacts') / f'MN-Trono-Frontend-{version}.zip','w',ZIP_DEFLATED) as archive:
               for file in sorted(source.rglob('*')):

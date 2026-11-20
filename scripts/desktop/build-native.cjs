@@ -6,7 +6,7 @@ const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '../..');
 const build = path.join(root, 'artifacts/native-audio');
-const source = path.join(root, 'apps/desktop/native-audio');
+const source = path.join(root, 'electron/native-audio');
 const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
 const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
 

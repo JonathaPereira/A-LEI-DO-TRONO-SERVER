@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-if (!fs.existsSync(path.join(root, 'apps/web/out/index.html')))
-  throw Error('Execute npm run build:web antes de preparar o Android.');
+if (!fs.existsSync(path.join(root, 'out/index.html')))
+  throw Error('Execute npm run build antes de preparar o Android.');
 const result = spawnSync(
   process.execPath,
   [require.resolve('@capacitor/cli/bin/capacitor'), 'sync', 'android'],

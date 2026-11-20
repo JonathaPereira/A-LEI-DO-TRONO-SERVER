@@ -72,7 +72,7 @@ async function cleanArtifacts({ github, context, core, protectedRunIds = [] }) {
     try {
       const { data } = await github.rest.repos.getContent({
         ...repo,
-        path: 'apps/desktop/package.json',
+        path: 'electron/package.json',
         ref: sha,
       });
       if (data.content)

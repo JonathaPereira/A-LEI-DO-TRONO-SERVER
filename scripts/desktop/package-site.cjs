@@ -21,17 +21,16 @@ async function prepareSite({
   repository = DOWNLOAD_REPOSITORY,
 } = {}) {
   version ??= JSON.parse(
-    await fs.readFile(path.join(root, 'apps/desktop/package.json'), 'utf8'),
+    await fs.readFile(path.join(root, 'electron/package.json'), 'utf8'),
   ).version;
   if (!/^\d+\.\d+\.\d+$/.test(version) || !/^[-\w.]+\/[-\w.]+$/.test(repository))
     throw Error('Versão ou repositório de downloads inválido.');
-  const webOut = path.join(root, 'apps/web/out');
-  const index = await fs.readFile(path.join(webOut, 'index.html'), 'utf8'),
+  const index = await fs.readFile(path.join(root, 'out/index.html'), 'utf8'),
     metadata = /<meta\b[^>]*\bname=["']mn-desktop-version["'][^>]*>/i.exec(index)?.[0],
     frontendVersion = /\bcontent=["'](\d+\.\d+\.\d+)["']/i.exec(metadata || '')?.[1];
   if (frontendVersion !== version)
     throw Error(
-      'A versão do frontend não corresponde ao instalador. Execute npm run build:web antes de preparar os downloads.',
+      'A versão do frontend não corresponde ao instalador. Execute npm run build antes de preparar os downloads.',
     );
   const filename = `MN-Trono-${version}-Windows.exe`,
     source = installerPath || path.join(root, 'artifacts/windows-app', filename);
@@ -48,14 +47,14 @@ async function prepareSite({
   await fs.mkdir(direct, { recursive: true });
   await fs.copyFile(source, path.join(direct, filename));
   await fs.copyFile(
-    path.join(root, 'apps/desktop/LEIA-ME-WINDOWS.txt'),
+    path.join(root, 'electron/LEIA-ME-WINDOWS.txt'),
     path.join(direct, 'LEIA-ME-WINDOWS.txt'),
   );
   const frontend = path.join(site, 'frontend');
-  await fs.cp(webOut, frontend, {
+  await fs.cp(path.join(root, 'out'), frontend, {
     recursive: true,
     filter: (input) => {
-      const relative = path.relative(webOut, input),
+      const relative = path.relative(path.join(root, 'out'), input),
         parts = relative.split(path.sep);
       return (
         !parts.includes('downloads') &&
@@ -89,14 +88,26 @@ async function prepareSite({
     `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Trono ${version} para Windows</title><a href="${filename}">Baixar Trono ${version} para Windows</a></html>`,
   );
   await fs.copyFile(
-    path.join(root, 'apps/desktop/LEIA-ME-PUBLICAR.txt'),
+    path.join(root, 'electron/LEIA-ME-PUBLICAR.txt'),
     path.join(site, 'LEIA-ME-PUBLICAR.txt'),
   );
   await fs.copyFile(
-    path.join(root, 'docs/DEPLOY_RENDER_SURGE.md'),
-    path.join(site, 'DEPLOY_RENDER_SURGE.md'),
+    path.join(root, 'docs/PUBLICAR_SURGE_LEVE.md'),
+    path.join(site, 'PUBLICAR_SURGE_LEVE.md'),
   );
-  await fs.copyFile(path.join(root, 'docs/ARQUITETURA.md'), path.join(site, 'ARQUITETURA.md'));
+  await fs.copyFile(
+    path.join(root, 'docs/INTEGRAR_NEXUS.md'),
+    path.join(site, 'INTEGRAR_NEXUS.md'),
+  );
+  await fs.copyFile(
+    path.join(root, 'docs/ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
+    path.join(site, 'ANALISE_SFU_E_JANELA_FLUTUANTE.md'),
+  );
+  await fs.copyFile(
+    path.join(root, 'docs/COMPARTILHAR_PC_BETA.md'),
+    path.join(site, 'COMPARTILHAR_PC_BETA.md'),
+  );
+  await fs.copyFile(path.join(root, 'docs/ATUALIZACOES.md'), path.join(site, 'ATUALIZACOES.md'));
   for (const file of ['upgrade-azul.sql', 'upgrade-splendor.sql'])
     await fs.copyFile(path.join(root, 'supabase', file), path.join(site, file));
   await fs.copyFile(
