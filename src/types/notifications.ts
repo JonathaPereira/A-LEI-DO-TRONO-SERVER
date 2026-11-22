@@ -22,6 +22,7 @@ export interface NotificationRequest extends NotificationFlags {
   readonly key: string;
   readonly title: string;
   readonly body?: string;
+  readonly imageUrl?: string;
   readonly target: NotificationTarget;
 }
 
@@ -29,6 +30,7 @@ export interface NotificationPayload {
   readonly key: string;
   readonly title: string;
   readonly body: string;
+  readonly imageUrl?: string;
   readonly preview?: boolean;
   readonly target: ScopedNotificationTarget;
 }

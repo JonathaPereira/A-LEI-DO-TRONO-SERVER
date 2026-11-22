@@ -33,6 +33,7 @@ export interface NotificationsOptions {
   showBrowserNotification?(payload: NotificationPayload, onClick: () => void): void;
   getPermission(): NotificationPermission | 'unsupported';
   requestPermission(): Promise<NotificationPermission>;
+  resolveFileUrl?(fileId: string): Promise<string | null>;
   navigate(target: ScopedNotificationTarget): Promise<unknown> | unknown;
   scheduleRead(callback: () => void): () => void;
   subscribeIdentity(listener: () => void): () => void;
@@ -93,6 +94,10 @@ export function createNotifications(options: NotificationsOptions) {
   function readMode(): NotificationMode {
     const value = preferences.get('notifications', 'mentions');
     return value === 'all' || value === 'off' ? value : 'mentions';
+  }
+
+  function isDnd(): boolean {
+    return preferences.get('presenceStatus', 'online') === 'dnd';
   }
 
   function readWindowsEnabled(): boolean {
@@ -186,7 +191,7 @@ export function createNotifications(options: NotificationsOptions) {
     if (disposed) return false;
     const id = notificationTargetId(target),
       policy = readNotificationFlags(flags);
-    if (!options.getAccountId() || !id || !policy || muted(id) || readMode() === 'off')
+    if (!options.getAccountId() || !id || !policy || muted(id) || readMode() === 'off' || isDnd())
       return false;
     return (
       policy.direct === true ||
@@ -218,6 +223,7 @@ export function createNotifications(options: NotificationsOptions) {
         key: owner + ':' + request.key,
         title: request.title,
         body: (request.body ?? '').slice(0, 220),
+        ...(request.imageUrl ? { imageUrl: request.imageUrl } : {}),
         target: Object.freeze({ ...request.target, accountId: owner }),
       });
     if (options.desktopNotify) {
@@ -262,13 +268,30 @@ export function createNotifications(options: NotificationsOptions) {
       if (!options.isChannelVisible(event.roomId))
         counts.set(event.roomId, (counts.get(event.roomId) ?? 0) + 1);
       render();
-      void notify({
+      const base = {
         key: event.id,
         title: event.mentioned ? 'Você foi mencionado · ' + event.roomName : event.roomName,
         body: event.name + ': ' + event.text,
-        target: { type: 'channel', id: event.roomId },
+        target: { type: 'channel' as const, id: event.roomId },
         mention: event.mentioned,
-      });
+      };
+      if (
+        event.attachment?.mime?.startsWith('image/') &&
+        options.resolveFileUrl &&
+        allowed(base.target, base)
+      ) {
+        const owner = accountId,
+          expected = generation;
+        void options
+          .resolveFileUrl(event.attachment.id)
+          .catch(() => null)
+          .then((imageUrl) => {
+            if (disposed || expected !== generation || owner !== options.getAccountId()) return;
+            return notify(imageUrl ? { ...base, imageUrl } : base);
+          });
+      } else {
+        void notify(base);
+      }
       return;
     }
     const expected = generation;
@@ -331,7 +354,12 @@ export function createNotifications(options: NotificationsOptions) {
         network.onMessage(onMessage),
         options.subscribeIdentity(syncIdentity),
         options.subscribePreferences((key) => {
-          if (key === 'notifications' || key === 'windowsNotifications' || key.startsWith('mute:'))
+          if (
+            key === 'notifications' ||
+            key === 'windowsNotifications' ||
+            key === 'presenceStatus' ||
+            key.startsWith('mute:')
+          )
             syncIdentity();
         }),
         options.subscribeAttention(readCurrent),

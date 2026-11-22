@@ -1,4 +1,5 @@
 import type { CommunityPerson } from '../../types/community';
+import type { PresenceStatus } from '../../types/domain';
 import type { GuestIdentity, NetworkAccount } from '../../types/network';
 import type { NetworkClient } from '../../lib/socket/client';
 import { createCommunity } from '../../lib/community/controller';
@@ -11,8 +12,15 @@ interface CommunityRuntime extends Window {
     getAccessToken(): Promise<string | null>;
     ensureGuest(): Promise<boolean>;
   };
+  TronoPersonal?: {
+    get(key: string, fallback: unknown): unknown;
+    set(key: string, value: unknown): void;
+  };
   TronoNetwork: NetworkClient;
-  TronoDesktop?: object;
+  TronoDesktop?: {
+    getPresenceStatus?(accountId: string): Promise<unknown>;
+    setPresenceStatus?(accountId: string, status: PresenceStatus): Promise<unknown>;
+  };
   TronoProfile: { openMini(id: string): void };
   TronoMessenger?: { open(id: string): void };
   TronoCommunityAdmin?: { editRole(person: CommunityPerson): void };
@@ -41,6 +49,28 @@ export function initializeCommunity(target: Window): () => void {
   const controller = createCommunity({
     network: runtime.TronoNetwork,
     getIdentity: identity,
+    preferences: runtime.TronoPersonal,
+    subscribePreferences(listener) {
+      const handle = (event: Event) => {
+        if (!(event instanceof CustomEvent)) return;
+        const detail: unknown = event.detail;
+        if (
+          detail &&
+          typeof detail === 'object' &&
+          'key' in detail &&
+          typeof detail.key === 'string'
+        )
+          listener(detail.key);
+      };
+      target.addEventListener('trono-personal-change', handle);
+      return () => target.removeEventListener('trono-personal-change', handle);
+    },
+    readDesktopStatus: runtime.TronoDesktop?.getPresenceStatus
+      ? (accountId) => runtime.TronoDesktop!.getPresenceStatus!(accountId)
+      : undefined,
+    syncDesktopStatus: runtime.TronoDesktop?.setPresenceStatus
+      ? (accountId, status) => runtime.TronoDesktop!.setPresenceStatus!(accountId, status)
+      : undefined,
     subscribeIdentity(listener) {
       target.addEventListener('trono-auth-change', listener);
       target.addEventListener('trono-role-change', listener);

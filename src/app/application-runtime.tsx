@@ -4,6 +4,7 @@ import { initializeAndroid } from '../lib/mobile/android';
 import { initializeAndroidPush } from '../lib/mobile/push';
 import { initializeDesktopWindow } from '../lib/desktop/window';
 import { initializeDesktopUpdates } from '../components/desktop/update-runtime';
+import { initializeDesktopOverlay } from '../components/desktop/overlay-runtime';
 import { publishServices } from '../components/application/services';
 import { throneRules } from '../lib/games/throne-rules';
 import { initializeAudio } from '../components/audio/runtime';
@@ -121,6 +122,7 @@ export function ApplicationRuntime() {
       (window as unknown as { __tronoReady?: boolean }).__tronoReady = true;
       window.dispatchEvent(new Event('trono:ready'));
       initializeCallStage(window);
+      initializeDesktopOverlay(window);
       initializeMediaDialogs(window);
       if ((window as Window & { TronoDesktop?: object }).TronoDesktop) {
         document.body.classList.add('desktop-app');

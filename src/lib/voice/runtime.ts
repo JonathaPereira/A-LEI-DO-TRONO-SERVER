@@ -357,7 +357,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       muted:
         controlState().deafened ||
         storage.getItem('tronoSfxEnabled') === '0' ||
-        storage.getItem('mnCallAlertsMuted') === '1',
+        storage.getItem('mnCallAlertsMuted') === '1' ||
+        (
+          window as Window & {
+            TronoPersonal?: { get(key: string, fallback: unknown): unknown };
+          }
+        ).TronoPersonal?.get('presenceStatus', 'online') === 'dnd',
       output: audioPlayback.getSnapshot().output,
     }),
     createContext: () => {

@@ -1,6 +1,7 @@
 export type AccountRole = 'guest' | 'member' | 'admin' | 'creator';
 export type ChannelType = 'text' | 'voice' | 'mixed';
 export type MediaTransport = 'p2p' | 'sfu' | 'sfu-pending';
+export type PresenceStatus = 'online' | 'away' | 'dnd';
 
 export interface AvatarAppearance {
   readonly avatar_preset?: string;

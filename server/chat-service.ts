@@ -187,8 +187,19 @@ export function createChatService({ rooms, wss, send, selectedChatId, history, f
                 roomId: room.id,
                 roomName: room.name,
                 name: entry.name,
-                text: value.text || 'Enviou um anexo',
+                text:
+                  value.text ||
+                  (entry.attachment?.mime?.startsWith('image/')
+                    ? 'Enviou uma imagem'
+                    : 'Enviou um anexo'),
                 mentioned: start >= 0 && (!tail || !/^\p{L}|^\p{N}|^_/u.test(tail)),
+                attachment: entry.attachment
+                  ? {
+                      id: entry.attachment.id,
+                      name: entry.attachment.name,
+                      mime: entry.attachment.mime,
+                    }
+                  : null,
               });
             }
         }),

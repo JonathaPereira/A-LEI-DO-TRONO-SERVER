@@ -13,7 +13,8 @@ import { record } from '../files/protocol.ts';
 
 interface MessengerOptions {
   client: Pick<SocialClient, 'request'>;
-  files: Pick<FilesClient, 'getSnapshot' | 'subscribe' | 'upload'>;
+  files: Pick<FilesClient, 'getSnapshot' | 'subscribe' | 'upload'> &
+    Partial<Pick<FilesClient, 'url'>>;
   community: Pick<CommunityController, 'getSnapshot' | 'subscribe'>;
   network: Pick<NetworkClient, 'onMessage'>;
   channels: Pick<ChannelsController, 'getSnapshot'>;
@@ -510,13 +511,28 @@ export function createMessenger(options: MessengerOptions) {
             ? event.senderName
             : (directPerson(state, other)?.name ?? 'Amigo');
         showToast(other, message, name);
-        void options.notifications.notify({
+        const isImage = message.attachment?.mime?.startsWith('image/') === true;
+        const baseNotice = {
           key: message.id,
           title: name + ' · mensagem privada',
-          body: message.text || 'Enviou um anexo',
-          target: { type: 'direct', id: other },
+          body: message.text || (isImage ? 'Enviou uma imagem' : 'Enviou um anexo'),
+          target: { type: 'direct' as const, id: other },
           direct: true,
-        });
+        };
+        if (isImage && message.attachment?.id && options.files.url) {
+          const ownerId = state.accountId;
+          void options.files
+            .url(message.attachment.id)
+            .catch(() => null)
+            .then((imageUrl) => {
+              if (disposed || state.accountId !== ownerId) return;
+              return options.notifications.notify(
+                imageUrl ? { ...baseNotice, imageUrl } : baseNotice,
+              );
+            });
+        } else {
+          void options.notifications.notify(baseNotice);
+        }
       }
       queueRefresh();
     } catch (error) {

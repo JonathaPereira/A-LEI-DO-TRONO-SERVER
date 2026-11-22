@@ -24,6 +24,7 @@ export const socketFeatures = Object.freeze({
   guestGame: true,
   voiceEvents: true,
   presence: true,
+  presenceStatus: true,
   roles: true,
   managedChannels: true,
   soundboard: true,

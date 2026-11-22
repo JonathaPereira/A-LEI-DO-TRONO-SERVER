@@ -444,6 +444,8 @@ export function createNetworkClient({
       joinRoom(id, name, current),
     requestChatChannels: () => send('list-chat-channels'),
     requestPresence: () => send('presence-request'),
+    setPresenceStatus: (status: 'online' | 'away' | 'dnd') =>
+      send('set-presence-status', { status }),
     setActivity: (activity: { name: string } | null) =>
       state.getSnapshot().features.gameActivity && send('activity-state', { activity }),
     get gameActivitySupported() {

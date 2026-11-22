@@ -1,10 +1,14 @@
 import type { CommunityPresence, GamePresence } from '../../types/community';
-import type { AccountRole } from '../../types/domain';
+import type { AccountRole, PresenceStatus } from '../../types/domain';
 import { readChannelParticipant } from '../channels/protocol.ts';
 import { invalidResponse } from '../socket/protocol.ts';
 
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function readStatus(value: unknown): PresenceStatus | null {
+  if (value === undefined) return 'online';
+  return value === 'online' || value === 'away' || value === 'dnd' ? value : null;
 }
 function unique<T extends { readonly id: string }>(rows: readonly T[]): readonly T[] {
   if (new Set(rows.map((row) => row.id)).size !== rows.length)
@@ -22,9 +26,11 @@ export function readPresence(value: unknown): CommunityPresence {
   const members = unique(
     value.members.map((row: unknown) => {
       const person = readChannelParticipant(row);
+      const presenceStatus = record(row) ? readStatus(row.presenceStatus) : null;
       if (
         !record(row) ||
         typeof row.online !== 'boolean' ||
+        !presenceStatus ||
         typeof row.role !== 'string' ||
         !['guest', 'member', 'admin', 'creator'].includes(row.role) ||
         person.guest !== (row.role === 'guest') ||
@@ -36,6 +42,7 @@ export function readPresence(value: unknown): CommunityPresence {
         ...person,
         role: row.role as AccountRole,
         online: row.online,
+        presenceStatus,
         roomName: row.roomName as string | null,
         activity:
           row.activity === null ? null : Object.freeze({ name: row.activity.name as string }),

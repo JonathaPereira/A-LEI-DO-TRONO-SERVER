@@ -23,6 +23,7 @@ import type { createCommunity } from './community';
 import type { createCommunityManagement } from './community-management';
 import type { createChatService } from './chat-service';
 import type { createVoiceSoundboard } from './voice-soundboard';
+import type { PresenceStatus } from '../src/types/domain';
 import type { RealtimeSfuManager } from './realtime-sfu';
 import type { RemotePc } from './remote-pc';
 export class BackendSocket extends WebSocket implements ChannelConnection {
@@ -38,6 +39,7 @@ export class BackendSocket extends WebSocket implements ChannelConnection {
   resumeFromToken: string | null = null;
   voiceTransferred = false;
   activity: { name: string; startedAt: number; seenAt: number } | null = null;
+  presenceStatus: PresenceStatus = 'online';
   authAttempts = 0;
   authQueue?: Promise<void>;
   guestRate?: { count: number; until: number };
@@ -136,6 +138,7 @@ export function createSocketGateway({
     if (!(sameAccount || sameGuest) || !channels.resumeVoice(old, ws)) return false;
     forget(old);
     ws.resumeFromToken = token;
+    if (sameAccount && old.presenceStatus) ws.presenceStatus = old.presenceStatus;
     old.voiceTransferred = true;
     azulService.disconnect(old);
     splendorService.disconnect(old);
@@ -279,6 +282,7 @@ export function createSocketGateway({
               }
             ws.account = null;
             ws.activity = null;
+            ws.presenceStatus = 'online';
             ws.guest = identity;
             clearAuthTimer(ws);
             const resumed = resume(ws, message.resumeToken);
@@ -357,7 +361,10 @@ export function createSocketGateway({
                   other.identityScope.abort();
                   other.close(4002, 'Sessão reconectada em outra aba');
                 }
-            if (priorAccount?.id !== account.id) ws.activity = null;
+            if (priorAccount?.id !== account.id) {
+              ws.activity = null;
+              ws.presenceStatus = 'online';
+            }
             ws.guest = null;
             ws.account = account;
             clearAuthTimer(ws);
@@ -511,6 +518,17 @@ export function createSocketGateway({
               type: 'error',
               code: result.code,
               message: 'Não foi possível atualizar a atividade.',
+            });
+          break;
+        }
+        case 'set-presence-status': {
+          if (denyGuestOnly()) break;
+          const result = community.updatePresenceStatus(ws, message.status);
+          if (!result.ok)
+            send(ws, {
+              type: 'error',
+              code: result.code,
+              message: 'Não foi possível atualizar o status de presença.',
             });
           break;
         }

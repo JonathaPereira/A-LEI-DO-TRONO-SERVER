@@ -1,4 +1,8 @@
+import type { PresenceStatus } from '../src/types/domain';
 import { object } from './http-api.ts';
+export function readPresenceStatus(value: unknown): PresenceStatus | null {
+  return value === 'online' || value === 'away' || value === 'dnd' ? value : null;
+}
 export function readSocketEnvelope(
   value: unknown,
 ): (Record<string, unknown> & { type: string }) | null {

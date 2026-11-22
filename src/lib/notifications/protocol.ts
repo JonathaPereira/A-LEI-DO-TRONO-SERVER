@@ -48,19 +48,30 @@ export function readNotificationRequest(value: unknown): NotificationRequest | n
     !record(value) ||
     !id(value.key) ||
     typeof value.title !== 'string' ||
-    (value.body !== undefined && typeof value.body !== 'string')
+    (value.body !== undefined && typeof value.body !== 'string') ||
+    (value.imageUrl !== undefined &&
+      (typeof value.imageUrl !== 'string' || value.imageUrl.length > 4096))
   )
     return null;
   const target = readNotificationTarget(value.target),
     flags = readNotificationFlags(value);
   if (!target || !flags) return null;
+  const imageUrl =
+    typeof value.imageUrl === 'string' && value.imageUrl.trim() ? value.imageUrl.trim() : undefined;
   return Object.freeze({
     key: value.key,
     title: value.title,
     body: (value.body as string | undefined) ?? '',
+    ...(imageUrl ? { imageUrl } : {}),
     target,
     ...flags,
   });
+}
+
+export interface NotificationAttachment {
+  readonly id: string;
+  readonly name: string;
+  readonly mime: string;
 }
 
 export type NotificationEvent =
@@ -72,8 +83,18 @@ export type NotificationEvent =
       readonly name: string;
       readonly text: string;
       readonly mentioned: boolean;
+      readonly attachment?: NotificationAttachment | null;
     }
   | { readonly type: 'joined-room' | 'joined-text-channel'; readonly roomId: string };
+
+function readNotificationAttachment(value: unknown): NotificationAttachment | null {
+  if (!record(value) || !id(value.id) || typeof value.mime !== 'string') return null;
+  return Object.freeze({
+    id: value.id,
+    name: typeof value.name === 'string' ? value.name : '',
+    mime: value.mime,
+  });
+}
 
 /** This domain accepts only validated notification and read events from the shared socket. */
 export function readNotificationEvent(value: unknown): NotificationEvent | null {
@@ -92,6 +113,7 @@ export function readNotificationEvent(value: unknown): NotificationEvent | null 
     typeof value.mentioned !== 'boolean'
   )
     return null;
+  const attachment = readNotificationAttachment(value.attachment);
   return Object.freeze({
     type: value.type,
     id: value.id,
@@ -100,5 +122,6 @@ export function readNotificationEvent(value: unknown): NotificationEvent | null 
     name: value.name,
     text: value.text,
     mentioned: value.mentioned,
+    ...(attachment ? { attachment } : {}),
   });
 }

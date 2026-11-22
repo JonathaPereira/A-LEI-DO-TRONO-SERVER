@@ -1,3 +1,17 @@
+M&N · A Lei do Trono — Windows & Android 2.1.0
+
+Novidades 2.1.0:
+- Status de Presença manual em tempo real (Online, Ausente e Não Perturbar) no menu do perfil,
+  com indicadores coloridos na lista de membros e DMs; no modo Não Perturbar, notificações
+  do Windows, toasts, sons de alerta e avisos no Overlay são silenciados enquanto mensagens e
+  contadores continuam funcionando normalmente.
+- Overlay discreto para jogos no Windows (Configurações → Aplicativo, atalho Ctrl + Shift + O),
+  transparente, click-through e sem injeção de DLL (compatível com anti-cheats), exibindo quem
+  está falando na call, espectadores da transmissão de tela e mini-avisos de mensagens.
+- Notificações do Windows com prévia do conteúdo de imagens enviadas em canais e DMs (estilo Discord).
+- Notas de atualização discretas exibidas apenas na primeira abertura da nova versão e reabríveis
+  pelo menu do perfil.
+
 M&N · A Lei do Trono — Windows & Android 2.0.3
 
 Reversão 2.0.3: retorno integral à arquitetura estável da versão 2.0.0 (revertendo o rebuild

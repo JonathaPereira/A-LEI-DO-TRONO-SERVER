@@ -32,7 +32,8 @@ const {
 const { clipBytes, writeClip } = require('./clip-files.cjs');
 const { DesktopPreferences } = require('./preferences.cjs');
 const { DesktopActivity } = require('./activity.cjs');
-const { createNotifications } = require('./notifications.cjs');
+const { createNotifications, notificationPayload } = require('./notifications.cjs');
+const { createGameOverlay } = require('./overlay.cjs');
 const { GameAssets } = require('./game-assets.cjs');
 const atalaiaConfig = require('./atalaia-config.cjs');
 const { createNexusLauncher, nexusConfig } = require('./nexus.cjs');
@@ -69,7 +70,9 @@ let window,
   updates,
   installingUpdate = false,
   preferences,
-  activity;
+  activity,
+  overlay,
+  activePresenceStatus = 'online';
 let nativeReplay;
 const folders = new Map();
 let remoteInput,
@@ -143,6 +146,7 @@ else {
   app.on('will-quit', () => {
     void nativeReplay?.dispose();
     stopRemote();
+    overlay?.dispose();
     globalShortcut.unregisterAll();
     applicationAudio?.stopAll();
     activity?.dispose();
@@ -346,9 +350,24 @@ async function start() {
     trusted(event);
     return atalaia.open();
   });
+  overlay = createGameOverlay({
+    BrowserWindow,
+    screen,
+    globalShortcut,
+    isMainFocused: () => !window.isDestroyed() && window.isFocused() && window.isVisible(),
+    getDnd: () => activePresenceStatus === 'dnd',
+    initialConfig: preferences.getOverlayConfig(),
+    saveConfig: (next) => preferences.setOverlayConfig(next),
+    onConfigChanged: (config) => {
+      if (!window.isDestroyed()) window.webContents.send('mn:overlay-config', config);
+    },
+  });
   const notifications = createNotifications({
     Notification,
     window,
+    isDnd: () => activePresenceStatus === 'dnd',
+    cacheDir: path.join(app.getPath('userData'), 'notification-images'),
+    fetchImage: (url, init) => net.fetch(url, init),
     activate: (target) => {
       if (window.isDestroyed()) return;
       window.show();
@@ -359,7 +378,55 @@ async function start() {
   });
   ipcMain.handle('mn:notify', (event, value) => {
     trusted(event);
+    const validated = notificationPayload(value);
+    if (!validated.preview && activePresenceStatus === 'dnd') {
+      return { shown: false, reason: 'dnd' };
+    }
+    if (!validated.preview && overlay?.shouldDisplayToast()) {
+      const shown = overlay.pushToast({
+        key: validated.key,
+        title: validated.title,
+        body: validated.body,
+        imageUrl: validated.imageUrl,
+      });
+      if (shown.shown) return { shown: true, via: 'overlay' };
+    }
     return notifications.notify(value);
+  });
+  ipcMain.handle('mn:presence-status-get', (event, accountId) => {
+    trusted(event);
+    if (typeof accountId !== 'string' || accountId.length > 128) return 'online';
+    const saved = preferences.getPresenceStatus(accountId);
+    activePresenceStatus = saved;
+    if (saved === 'dnd') overlay?.clearToasts();
+    return saved;
+  });
+  ipcMain.handle('mn:presence-status-set', async (event, value) => {
+    trusted(event);
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw Error('Status de presença inválido.');
+    const accountId = typeof value.accountId === 'string' ? value.accountId : '';
+    const status = value.status;
+    const saved = await preferences.setPresenceStatus(accountId, status);
+    activePresenceStatus = saved;
+    if (saved === 'dnd') overlay?.clearToasts();
+    return saved;
+  });
+  ipcMain.handle('mn:overlay-config-get', (event) => {
+    trusted(event);
+    return overlay.getConfig();
+  });
+  ipcMain.handle('mn:overlay-config-set', (event, patch) => {
+    trusted(event);
+    return overlay.configure(patch);
+  });
+  ipcMain.handle('mn:overlay-state', (event, nextState) => {
+    trusted(event);
+    return overlay.updateState(nextState);
+  });
+  ipcMain.handle('mn:overlay-toast', (event, toast) => {
+    trusted(event);
+    return overlay.pushToast(toast, { force: toast?.force === true });
   });
   app.on('will-quit', () => notifications.dispose());
   ipcMain.handle('mn:copy-diagnostics', (event, text) => {
@@ -625,6 +692,7 @@ async function start() {
     setVoicePowerSave(false);
     voicePriority.setActive(false);
     stopRemote();
+    overlay?.dispose();
     clearHotkey();
     cancelCapture();
     applicationAudio.stopAll();

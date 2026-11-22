@@ -29,8 +29,26 @@ import { AppIcon as Icon } from './icons';
 import styles from './shell.module.css';
 import { MobileNavigation } from './mobile-navigation';
 import { ChristmasPromo } from './christmas-promo';
+import type { PresenceStatus } from '../../types/domain';
 import { WelcomeIntroOverlay } from './welcome-intro';
 import { triggerWelcomeIntroReplay } from '../../lib/application/welcome-intro';
+import { ReleaseNotesCard } from './release-notes';
+import { APP_RELEASE_VERSION, openReleaseNotesPanel } from '../../lib/application/release-notes';
+
+const PRESENCE_OPTIONS: ReadonlyArray<{
+  readonly value: PresenceStatus;
+  readonly label: string;
+  readonly short: string;
+}> = [
+  { value: 'online', label: 'Online', short: 'Online' },
+  { value: 'away', label: 'Ausente', short: 'Ausente' },
+  { value: 'dnd', label: 'Não Perturbar', short: 'Não Perturbar' },
+];
+const PRESENCE_LABEL: Readonly<Record<PresenceStatus, string>> = {
+  online: 'Online',
+  away: 'Ausente',
+  dnd: 'Não Perturbar',
+};
 
 const noop = () => () => {};
 const empty = () => null;
@@ -127,11 +145,18 @@ function Navigation({
 }) {
   const auth = useModel(runtime.TronoAuth),
     channels = useModel(runtime.TronoChannels),
+    community = useModel(runtime.TronoCommunity),
     dm = useModel(runtime.TronoDirectMessages),
     call = useModel(runtime.TronoCallNavigation),
     toolbar = useModel(runtime.TronoCallToolbar),
     stage = useModel(runtime.TronoCallStage);
   const account = auth.user || auth.guest;
+  const presenceMembers = community.presence?.members ?? [];
+  const peerStatus = (peerId: string): PresenceStatus | 'offline' => {
+    const member = presenceMembers.find((person) => person.id === peerId);
+    if (!member || !member.online) return 'offline';
+    return member.presenceStatus;
+  };
   const [directExpanded, setDirectExpanded] = useState(false);
   const visibleThreads = directExpanded
     ? dm.threads
@@ -341,30 +366,41 @@ function Navigation({
               <span>Mensagens diretas</span>
               <small>{dm.threads.length}</small>
             </summary>
-            {visibleThreads.map((p) => (
-              <button
-                className={styles.channel + ' ' + styles.directMessage}
-                data-direct-peer={p.peerId}
-                key={p.peerId}
-                data-active={
-                  screen === 'chatOnlyScreen' &&
-                  call.page === 'chat' &&
-                  dm.open &&
-                  dm.peerId === p.peerId
-                }
-                onClick={() => {
-                  close();
-                  runtime.TronoCallNavigation.showChat();
-                  runtime.TronoPortal.showOnly('chatOnlyScreen');
-                  void runtime.TronoDirectMessages.open(p.peerId);
-                }}
-              >
-                <DirectProfileBanner accountId={p.peerId} />
-                <Avatar person={p} className={styles.tinyAvatar} />
-                <span className={styles.channelLabel}>{p.name}</span>
-                {!!p.unread && <b className={styles.badge}>{p.unread}</b>}
-              </button>
-            ))}
+            {visibleThreads.map((p) => {
+              const status = peerStatus(p.peerId);
+              return (
+                <button
+                  className={styles.channel + ' ' + styles.directMessage}
+                  data-direct-peer={p.peerId}
+                  key={p.peerId}
+                  data-active={
+                    screen === 'chatOnlyScreen' &&
+                    call.page === 'chat' &&
+                    dm.open &&
+                    dm.peerId === p.peerId
+                  }
+                  onClick={() => {
+                    close();
+                    runtime.TronoCallNavigation.showChat();
+                    runtime.TronoPortal.showOnly('chatOnlyScreen');
+                    void runtime.TronoDirectMessages.open(p.peerId);
+                  }}
+                >
+                  <DirectProfileBanner accountId={p.peerId} />
+                  <span className={styles.avatarWrap}>
+                    <Avatar person={p} className={styles.tinyAvatar} />
+                    <i
+                      className={styles.avatarBadge}
+                      data-size="tiny"
+                      data-status={status}
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span className={styles.channelLabel}>{p.name}</span>
+                  {!!p.unread && <b className={styles.badge}>{p.unread}</b>}
+                </button>
+              );
+            })}
             {dm.threads.length > 6 && (
               <button
                 type="button"
@@ -383,7 +419,17 @@ function Navigation({
       <footer className={styles.account} data-account-card>
         <DirectProfileBanner accountId={auth.user?.id ?? ''} />
         {account ? (
-          <Avatar person={auth.user ?? { avatar_preset: 'person' }} className={styles.avatar} />
+          <span className={styles.avatarWrap}>
+            <Avatar person={auth.user ?? { avatar_preset: 'person' }} className={styles.avatar} />
+            {auth.user && (
+              <i
+                className={styles.avatarBadge}
+                data-status={community.presenceStatus}
+                data-self-presence-badge={community.presenceStatus}
+                aria-hidden="true"
+              />
+            )}
+          </span>
         ) : (
           <span className={styles.initialAvatar}>C</span>
         )}
@@ -401,8 +447,40 @@ function Navigation({
                 />
               )}
               <strong>{account?.nickname || 'Visitante'}</strong>
-              <small>{auth.user ? 'Sua conta na Corte' : 'Convidado'}</small>
+              <small>{auth.user ? PRESENCE_LABEL[community.presenceStatus] : 'Convidado'}</small>
             </div>
+            {auth.user && (
+              <>
+                <div
+                  className={panelStyles.statusPicker}
+                  role="group"
+                  aria-label="Status de presença"
+                >
+                  {PRESENCE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={panelStyles.statusOption}
+                      data-presence-option={option.value}
+                      aria-pressed={community.presenceStatus === option.value}
+                      onClick={() => runtime.TronoCommunity.setPresenceStatus(option.value)}
+                    >
+                      <i
+                        className={panelStyles.statusDot}
+                        data-status={option.value}
+                        aria-hidden="true"
+                      />
+                      <span>{option.short}</span>
+                    </button>
+                  ))}
+                </div>
+                {community.presenceStatus === 'dnd' && (
+                  <p className={panelStyles.statusHint} role="status">
+                    Notificações, sons e popups silenciados.
+                  </p>
+                )}
+              </>
+            )}
             <button
               type="button"
               data-close-panel
@@ -439,6 +517,17 @@ function Navigation({
                 Rever boas-vindas
               </button>
             )}
+            {auth.user && (
+              <button
+                type="button"
+                data-close-panel
+                data-open-release-notes
+                onClick={() => openReleaseNotesPanel()}
+              >
+                <Icon name="bell" size={18} />
+                Novidades · v{APP_RELEASE_VERSION}
+              </button>
+            )}
             <button
               type="button"
               data-close-panel
@@ -450,7 +539,13 @@ function Navigation({
               Sair da conta
             </button>
           </QuickPanel>
-          <small>{auth.user ? 'Sua conta' : auth.guest ? 'Convidado' : 'Bem-vindo ao M&N'}</small>
+          <small>
+            {auth.user
+              ? PRESENCE_LABEL[community.presenceStatus]
+              : auth.guest
+                ? 'Convidado'
+                : 'Bem-vindo ao M&N'}
+          </small>
         </div>
         {(['muteMicBtn', 'deafenVoiceBtn'] as const).map((id) => (
           <button
@@ -521,45 +616,66 @@ function Members({ runtime }: { runtime: ApplicationServices }) {
             <h2 className={styles.sectionLabel}>
               {label.toUpperCase()} — {members.length}
             </h2>
-            {members.map((person) => (
-              <div key={person.id} className={styles.memberRow}>
-                <button
-                  type="button"
-                  className={styles.member}
-                  data-online={person.online}
-                  onClick={() => void runtime.TronoProfileViewer.open(person.id)}
-                  aria-label={'Ver perfil de ' + person.name}
-                  disabled={person.guest}
-                >
-                  {person.online && (
-                    <DirectProfileBanner accountId={person.guest ? '' : person.id} />
-                  )}
-                  <Avatar person={person} className={styles.avatar} />
-                  <span className={styles.memberIdentity}>
-                    <strong>{person.name}</strong>
-                    <small>
-                      {person.online
-                        ? person.activity?.name || person.roomName || 'Disponível'
-                        : 'Offline'}
-                    </small>
-                  </span>
-                  <i className={styles.onlineDot} data-online={person.online} aria-hidden="true" />
-                </button>
-                {management.canManageRoles &&
-                  !person.guest &&
-                  person.id !== management.accountId &&
-                  person.role !== 'creator' && (
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      aria-label={'Alterar cargo de ' + person.name}
-                      onClick={() => runtime.TronoChannelManagement.editRole(person)}
-                    >
-                      <Icon name="settings" size={14} />
-                    </button>
-                  )}
-              </div>
-            ))}
+            {members.map((person) => {
+              const badgeStatus = person.online ? person.presenceStatus : 'offline';
+              const subtitle = person.online
+                ? person.activity?.name ||
+                  person.roomName ||
+                  (person.presenceStatus === 'away'
+                    ? 'Ausente'
+                    : person.presenceStatus === 'dnd'
+                      ? 'Não Perturbar'
+                      : 'Disponível')
+                : 'Offline';
+              return (
+                <div key={person.id} className={styles.memberRow}>
+                  <button
+                    type="button"
+                    className={styles.member}
+                    data-online={person.online}
+                    data-presence-status={badgeStatus}
+                    onClick={() => void runtime.TronoProfileViewer.open(person.id)}
+                    aria-label={'Ver perfil de ' + person.name}
+                    disabled={person.guest}
+                  >
+                    {person.online && (
+                      <DirectProfileBanner accountId={person.guest ? '' : person.id} />
+                    )}
+                    <span className={styles.avatarWrap}>
+                      <Avatar person={person} className={styles.avatar} />
+                      <i
+                        className={styles.avatarBadge}
+                        data-status={badgeStatus}
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <span className={styles.memberIdentity}>
+                      <strong>{person.name}</strong>
+                      <small>{subtitle}</small>
+                    </span>
+                    <i
+                      className={styles.onlineDot}
+                      data-online={person.online}
+                      data-status={badgeStatus}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {management.canManageRoles &&
+                    !person.guest &&
+                    person.id !== management.accountId &&
+                    person.role !== 'creator' && (
+                      <button
+                        type="button"
+                        className={styles.iconButton}
+                        aria-label={'Alterar cargo de ' + person.name}
+                        onClick={() => runtime.TronoChannelManagement.editRole(person)}
+                      >
+                        <Icon name="settings" size={14} />
+                      </button>
+                    )}
+                </div>
+              );
+            })}
             {!members.length && (
               <p className={styles.sidebarHint}>
                 {online ? 'Nenhum membro online no momento.' : 'Nenhum membro offline nesta lista.'}
@@ -1003,6 +1119,7 @@ export function ApplicationShell({
           <ProfileDialogs runtime={runtime} />
           <CommunityDialogs runtime={runtime} />
           <ApplicationNotices runtime={runtime} />
+          <ReleaseNotesCard runtime={runtime} />
           <WelcomeIntroOverlay runtime={runtime} />
         </>
       )}

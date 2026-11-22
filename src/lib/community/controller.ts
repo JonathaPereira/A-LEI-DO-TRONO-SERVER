@@ -3,24 +3,41 @@ import type {
   CommunitySnapshot,
   CommunityVoiceNotice,
 } from '../../types/community';
+import type { PresenceStatus } from '../../types/domain';
 import type { NetworkClient } from '../socket/client.ts';
 import { readGamePresence, readPresence } from './protocol.ts';
 
 interface CommunityOptions {
-  network: Pick<NetworkClient, 'getSnapshot' | 'subscribe' | 'onMessage' | 'requestPresence'>;
+  network: Pick<NetworkClient, 'getSnapshot' | 'subscribe' | 'onMessage' | 'requestPresence'> & {
+    setPresenceStatus?(status: PresenceStatus): unknown;
+  };
   getIdentity(): CommunityIdentity | null;
   subscribeIdentity(listener: () => void): () => void;
   authenticate(identity: CommunityIdentity, current: () => boolean): Promise<boolean>;
+  preferences?: {
+    get(key: string, fallback: unknown): unknown;
+    set(key: string, value: unknown): void;
+  };
+  subscribePreferences?: (listener: (key: string) => void) => () => void;
+  readDesktopStatus?: (accountId: string) => Promise<unknown>;
+  syncDesktopStatus?: (accountId: string, status: PresenceStatus) => Promise<unknown> | unknown;
   now?: () => number;
   schedule?: (callback: () => void, delay: number) => () => void;
   warn?: (error: unknown) => void;
 }
 const empty = Object.freeze([]);
+function normalizeStatus(value: unknown): PresenceStatus {
+  return value === 'away' || value === 'dnd' ? value : 'online';
+}
 export function createCommunity({
   network,
   getIdentity,
   subscribeIdentity,
   authenticate,
+  preferences,
+  subscribePreferences,
+  readDesktopStatus,
+  syncDesktopStatus,
   now = Date.now,
   schedule = (callback, delay) => {
     const timer = setTimeout(callback, delay);
@@ -32,9 +49,15 @@ export function createCommunity({
     const identity = getIdentity();
     return identity ? Object.freeze({ ...identity }) : null;
   }
+  function readSavedStatus(identity: CommunityIdentity | null): PresenceStatus {
+    if (!identity?.accountId || !preferences) return 'online';
+    return normalizeStatus(preferences.get('presenceStatus', 'online'));
+  }
+  const initialIdentity = readIdentity();
   let state: CommunitySnapshot = Object.freeze({
-    identity: readIdentity(),
+    identity: initialIdentity,
     presence: null,
+    presenceStatus: readSavedStatus(initialIdentity),
     rooms: empty,
     connected: network.getSnapshot().connected,
     open: false,
@@ -62,6 +85,29 @@ export function createCommunity({
     timers.clear();
     seen.clear();
   }
+  function pushStatusToServer(identity: CommunityIdentity | null, status: PresenceStatus) {
+    if (!identity?.accountId || !accepting || !state.connected) return;
+    network.setPresenceStatus?.(status);
+  }
+  function hydrateDesktopStatus(identity: CommunityIdentity | null, epoch: number) {
+    if (!identity?.accountId) return;
+    const saved = readSavedStatus(identity);
+    void Promise.resolve(syncDesktopStatus?.(identity.accountId, saved)).catch(() => {});
+    if (!readDesktopStatus || preferences?.get('presenceStatus', undefined) !== undefined) return;
+    void readDesktopStatus(identity.accountId)
+      .then((value) => {
+        if (disposed || epoch !== generation || state.identity?.accountId !== identity.accountId)
+          return;
+        if (value === 'online' || value === 'away' || value === 'dnd') {
+          if (value !== state.presenceStatus) {
+            preferences?.set('presenceStatus', value);
+            update({ presenceStatus: value });
+            pushStatusToServer(state.identity, value);
+          }
+        }
+      })
+      .catch(() => {});
+  }
   /** One authentication drain; account changes invalidate work without opening another socket. */
   async function requestPresence() {
     requested++;
@@ -78,6 +124,11 @@ export function createCommunity({
         try {
           if ((await authenticate(identity, current)) && current()) {
             accepting = true;
+            if (identity.accountId) {
+              const status = readSavedStatus(identity);
+              if (status !== state.presenceStatus) update({ presenceStatus: status });
+              network.setPresenceStatus?.(status);
+            }
             network.requestPresence();
           }
         } catch (error) {
@@ -92,16 +143,21 @@ export function createCommunity({
     const identity = readIdentity();
     if (identity?.key !== state.identity?.key) {
       generation++;
+      const epoch = generation;
       accepting = false;
       clearNotices();
+      const presenceStatus = readSavedStatus(identity);
       update({
         identity,
         presence: null,
+        presenceStatus,
         rooms: empty,
         open: false,
         activities: empty,
         notices: empty,
       });
+      if (identity?.accountId) hydrateDesktopStatus(identity, epoch);
+      else void Promise.resolve(syncDesktopStatus?.('', 'online')).catch(() => {});
       void requestPresence();
     } else update({ identity });
   }
@@ -112,6 +168,18 @@ export function createCommunity({
     accepting = false;
     update({ connected });
     if (connected) void requestPresence();
+  }
+  function setPresenceStatus(value: PresenceStatus) {
+    if (disposed || !state.identity?.accountId) return;
+    const next = normalizeStatus(value);
+    preferences?.set('presenceStatus', next);
+    void Promise.resolve(syncDesktopStatus?.(state.identity.accountId, next)).catch(() => {});
+    if (next === 'dnd' && state.notices.length) clearNotices();
+    update({
+      presenceStatus: next,
+      ...(next === 'dnd' ? { notices: empty } : {}),
+    });
+    pushStatusToServer(state.identity, next);
   }
   return {
     getSnapshot: () => state,
@@ -127,6 +195,25 @@ export function createCommunity({
       cleanup.push(
         network.subscribe(syncConnection),
         subscribeIdentity(identityChanged),
+        ...(subscribePreferences
+          ? [
+              subscribePreferences((key) => {
+                if (key !== 'presenceStatus' || disposed || !state.identity?.accountId) return;
+                const next = readSavedStatus(state.identity);
+                if (next !== state.presenceStatus) {
+                  if (next === 'dnd') clearNotices();
+                  update({
+                    presenceStatus: next,
+                    ...(next === 'dnd' ? { notices: empty } : {}),
+                  });
+                  void Promise.resolve(syncDesktopStatus?.(state.identity.accountId, next)).catch(
+                    () => {},
+                  );
+                  pushStatusToServer(state.identity, next);
+                }
+              }),
+            ]
+          : []),
         network.onMessage((message) => {
           try {
             if (message.type === 'presence' && accepting && state.identity) {
@@ -145,12 +232,14 @@ export function createCommunity({
         }),
       );
       identityChanged();
+      if (state.identity?.accountId) hydrateDesktopStatus(state.identity, generation);
       syncConnection();
       void requestPresence();
     },
     toggle(value = !state.open) {
       if (!disposed) update({ open: !!state.identity && value });
     },
+    setPresenceStatus,
     voiceNotice(event: CommunityVoiceNotice) {
       if (disposed || !state.identity || (event.id && seen.has(event.id))) return;
       if (event.id) {
@@ -169,13 +258,18 @@ export function createCommunity({
         text: event.text || `${event.name || 'Participante'} ${action}.`,
         at: now(),
       });
+      const activities = Object.freeze([item, ...state.activities].slice(0, 8));
+      if (state.presenceStatus === 'dnd') {
+        update({ activities });
+        return;
+      }
       const notices = Object.freeze([...state.notices, item].slice(-3));
       for (const [key, cancel] of timers)
         if (!notices.some((notice) => notice.key === key)) {
           cancel();
           timers.delete(key);
         }
-      update({ notices, activities: Object.freeze([item, ...state.activities].slice(0, 8)) });
+      update({ notices, activities });
       timers.set(
         item.key,
         schedule(() => {

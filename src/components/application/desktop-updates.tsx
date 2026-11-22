@@ -1,4 +1,5 @@
 import { desktopUpdatePresentation, type DesktopUpdates } from '../../lib/desktop/updates';
+import { APP_RELEASE_VERSION, openReleaseNotesPanel } from '../../lib/application/release-notes';
 import { useModel } from './services';
 import { AppIcon as Icon } from './icons';
 import styles from './notices.module.css';
@@ -25,6 +26,14 @@ function UpdateSettings({ client }: { client: DesktopUpdates }) {
           onClick={() => void client.check()}
         >
           <Icon name="swap" size={16} /> Buscar atualizações
+        </button>
+        <button
+          id="desktopReleaseNotesButton"
+          type="button"
+          className="secondary-button"
+          onClick={() => openReleaseNotesPanel()}
+        >
+          <Icon name="crown" size={16} /> Novidades da v{APP_RELEASE_VERSION}
         </button>
         {view.ready && (
           <button

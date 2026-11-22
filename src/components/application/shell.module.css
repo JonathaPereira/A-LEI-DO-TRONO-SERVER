@@ -652,19 +652,82 @@
   white-space: nowrap;
 }
 .onlineDot {
-  width: 7px;
-  height: 7px;
-  background: #8cbaa5;
+  position: relative;
+  width: 8px;
+  height: 8px;
+  background: #3ba55d;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.onlineDot[data-online='false'] {
+.onlineDot[data-status='away'] {
+  background: #faa61a;
+}
+.onlineDot[data-status='dnd'] {
+  background: #ed4245;
+}
+.onlineDot[data-status='dnd']::after {
+  content: '';
+  position: absolute;
+  left: 1.5px;
+  right: 1.5px;
+  top: 3px;
+  height: 2px;
+  border-radius: 1px;
+  background: #191919;
+}
+.onlineDot[data-online='false'],
+.onlineDot[data-status='offline'] {
   background: #7b7b7b;
+}
+.avatarWrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.avatarBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--shell-side, #191919);
+  background: #3ba55d;
+  pointer-events: none;
+}
+.avatarBadge[data-size='tiny'] {
+  width: 9px;
+  height: 9px;
+  border-width: 1.5px;
+}
+.avatarBadge[data-status='away'] {
+  background: #faa61a;
+}
+.avatarBadge[data-status='dnd'] {
+  background: #ed4245;
+}
+.avatarBadge[data-status='dnd']::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 2.5px;
+  height: 2px;
+  border-radius: 1px;
+  background: #191919;
+}
+.avatarBadge[data-size='tiny'][data-status='dnd']::after {
+  top: 2px;
+  height: 1.5px;
+}
+.avatarBadge[data-status='offline'] {
+  background: #6c6c6c;
 }
 .member[data-online='false'] {
   color: #999;
 }
-.member[data-online='false'] > .avatar {
+.member[data-online='false'] > .avatar,
+.member[data-online='false'] > .avatarWrap .avatar {
   filter: grayscale(0.65);
 }
 .connection {

@@ -1,10 +1,11 @@
 import type { ChannelParticipant } from './channels';
-import type { AccountRole } from './domain';
+import type { AccountRole, PresenceStatus } from './domain';
 import type { VoiceNotice } from './voice-roster';
 
 export interface CommunityPerson extends ChannelParticipant {
   readonly role: AccountRole;
   readonly online: boolean;
+  readonly presenceStatus: PresenceStatus;
   readonly roomName: string | null;
   readonly activity: { readonly name: string } | null;
 }
@@ -34,6 +35,7 @@ export interface CommunityActivity {
 export interface CommunitySnapshot {
   readonly identity: CommunityIdentity | null;
   readonly presence: CommunityPresence | null;
+  readonly presenceStatus: PresenceStatus;
   readonly rooms: readonly GamePresence[];
   readonly connected: boolean;
   readonly open: boolean;

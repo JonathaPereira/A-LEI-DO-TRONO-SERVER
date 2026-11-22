@@ -4,9 +4,10 @@ import {
   type GuestRequest,
   type GuestIdentity,
 } from './sessions.ts';
-import type { AccountRole } from '../src/types/domain';
+import type { AccountRole, PresenceStatus } from '../src/types/domain';
 import type { MemberRole } from './roles';
 import { readDirectory } from './community-protocol.ts';
+import { readPresenceStatus } from './socket-protocol.ts';
 import { validNickname } from '../src/lib/auth/nickname.ts';
 
 interface Account {
@@ -24,6 +25,7 @@ export interface CommunityConnection extends GuestConnection {
   account?: Account | null;
   textRoomId?: string | null;
   activity?: { name: string; startedAt: number; seenAt: number } | null;
+  presenceStatus?: PresenceStatus;
 }
 interface Room {
   id: string;
@@ -42,6 +44,7 @@ interface Member {
 }
 interface Location {
   online: boolean;
+  presenceStatus: PresenceStatus;
   roomId: string | null;
   roomName: string | null;
   roomKind: Room['kind'] | null;
@@ -76,6 +79,7 @@ export function createCommunity({
   now = Date.now,
 }: Options) {
   const members = new Map<string, Member>(),
+    statuses = new Map<string, PresenceStatus>(),
     scope = new AbortController();
   const guests = createGuestSessions({ validNickname, nameReserved });
   let directoryReady = false,
@@ -90,10 +94,25 @@ export function createCommunity({
     ws: CommunityConnection,
   ): ws is CommunityConnection & { guest: GuestIdentity } =>
     !!ws.guest && ws.guest.expiresAt > now();
+  function statusFor(ws: CommunityConnection): PresenceStatus {
+    if (!validAccount(ws)) return 'online';
+    const saved = statuses.get(ws.account.id);
+    return readPresenceStatus(ws.presenceStatus) ?? saved ?? 'online';
+  }
   function note(ws: CommunityConnection) {
     if (closed) return;
     const identity = validAccount(ws) ? ws.account : validGuest(ws) ? ws.guest : null;
     if (!identity) return;
+    if (validAccount(ws)) {
+      const remembered = statuses.get(ws.account.id);
+      if (remembered && (!ws.presenceStatus || ws.presenceStatus === 'online'))
+        ws.presenceStatus = remembered;
+      else if (readPresenceStatus(ws.presenceStatus))
+        statuses.set(ws.account.id, ws.presenceStatus!);
+      else ws.presenceStatus = 'online';
+    } else {
+      ws.presenceStatus = 'online';
+    }
     const id = identity.id;
     members.set(id, {
       id,
@@ -104,6 +123,22 @@ export function createCommunity({
       avatar_file_id: identity.avatar_file_id || null,
       lastSeen: now(),
     });
+  }
+  function updatePresenceStatus(ws: CommunityConnection, value: unknown) {
+    if (closed) return { ok: false, code: 'COMMUNITY_UNAVAILABLE' };
+    if (!validAccount(ws)) return { ok: false, code: 'AUTH_REQUIRED' };
+    const next = readPresenceStatus(value);
+    if (!next) return { ok: false, code: 'INVALID_PRESENCE_STATUS' };
+    const previous = statusFor(ws);
+    ws.presenceStatus = next;
+    statuses.set(ws.account.id, next);
+    for (const client of wss.clients) {
+      if (validAccount(client) && client.account.id === ws.account.id) {
+        client.presenceStatus = next;
+      }
+    }
+    if (previous !== next) broadcast();
+    return { ok: true, status: next };
   }
   function updateActivity(ws: CommunityConnection, value: unknown) {
     if (closed) return { ok: false, code: 'COMMUNITY_UNAVAILABLE' };
@@ -154,6 +189,7 @@ export function createCommunity({
       if (!old || room)
         online.set(id, {
           online: true,
+          presenceStatus: full && validAccount(client) ? statusFor(client) : 'online',
           roomId: room?.id || null,
           roomName: room?.name || null,
           roomKind: room?.kind || null,
@@ -176,6 +212,7 @@ export function createCommunity({
         ...m,
         ...(online.get(m.id) || {
           online: false,
+          presenceStatus: 'online' as PresenceStatus,
           roomId: null,
           roomName: null,
           roomKind: null,
@@ -275,11 +312,12 @@ export function createCommunity({
     snapshot,
     broadcast,
     updateActivity,
+    updatePresenceStatus,
     guest,
     validGuest,
     nameReserved,
     refreshDirectory,
-    health: () => ({ directoryReady, gameActivity: true }),
+    health: () => ({ directoryReady, gameActivity: true, presenceStatus: true }),
     stop() {
       if (closed) return;
       closed = true;
@@ -287,6 +325,7 @@ export function createCommunity({
       clearInterval(timer);
       scope.abort();
       members.clear();
+      statuses.clear();
       guests.clear();
     },
   };

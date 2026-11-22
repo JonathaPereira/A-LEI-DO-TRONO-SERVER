@@ -12,6 +12,7 @@ interface NotificationsRuntime extends Window {
   };
   TronoChannels: ChannelsController;
   TronoNetwork: NetworkClient;
+  TronoFiles?: { url(id: string): Promise<string> };
   TronoMessenger: {
     open(id: string): void;
     joinChannel(id: string, options: { showText: boolean }): Promise<unknown>;
@@ -62,6 +63,9 @@ export function initializeNotifications(target: Window): NotificationsController
     desktopNotify: runtime.TronoDesktop?.notify
       ? (payload) => runtime.TronoDesktop!.notify!(payload)
       : undefined,
+    resolveFileUrl: runtime.TronoFiles
+      ? (fileId) => runtime.TronoFiles!.url(fileId).catch(() => null)
+      : undefined,
     showBrowserNotification(payload, onClick) {
       if (runtime.TronoAndroid) {
         void runtime.TronoAndroid.notify(payload).catch(console.warn);
@@ -73,6 +77,7 @@ export function initializeNotifications(target: Window): NotificationsController
         body: payload.body,
         tag: payload.key,
         icon: 'assets/throne.png',
+        ...(payload.imageUrl ? ({ image: payload.imageUrl } as NotificationOptions) : {}),
       });
       notice.onclick = () => {
         target.focus();

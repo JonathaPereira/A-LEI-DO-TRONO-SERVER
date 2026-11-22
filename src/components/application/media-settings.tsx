@@ -8,6 +8,7 @@ import {
 import { VoiceAudioPreferences } from '../voice/audio-preferences';
 import { ConnectionSettings } from '../voice/diagnostics';
 import { NotificationFields } from '../modals/notification-fields';
+import { OverlaySettingsFields } from '../modals/overlay-fields';
 import { SettingsActivityFields } from '../modals/settings-activity-fields';
 import { DesktopApplicationSettings } from './desktop-updates';
 import { ResourceSettings } from './resources';
@@ -103,6 +104,9 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
           {desktop && (
             <section hidden={selected !== 'application'} aria-label="Aplicativo">
               <DesktopApplicationSettings client={runtime.TronoDesktopUpdates} />
+              {runtime.TronoDesktopOverlay && (
+                <OverlaySettingsFields client={runtime.TronoDesktopOverlay} />
+              )}
             </section>
           )}
           <section hidden={selected !== 'resources'} aria-label="Recursos">
