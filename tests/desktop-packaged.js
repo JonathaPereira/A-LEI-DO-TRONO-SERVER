@@ -281,8 +281,15 @@ test(
       await page.locator('#azulBack').click();
       phase = 'installed Nexus isolation';
       await require('./desktop-nexus-flow').exerciseNexus({ app, page });
-      phase = 'installed Atalaia export';
-      await require('./desktop-atalaia-flow.cjs').exerciseAtalaia({ app, page });
+      const atalaiaExport = path.resolve(__dirname, '../artifacts/atalaia/web/index.html');
+      const hasAtalaiaExport = await fs
+        .access(atalaiaExport)
+        .then(() => true)
+        .catch(() => false);
+      if (hasAtalaiaExport || process.env.REQUIRE_ATALAIA === 'true') {
+        phase = 'installed Atalaia export';
+        await require('./desktop-atalaia-flow.cjs').exerciseAtalaia({ app, page });
+      }
       phase = 'installed roguelite preparation';
       await page.evaluate(() =>
         window.addEventListener('message', (e) => {

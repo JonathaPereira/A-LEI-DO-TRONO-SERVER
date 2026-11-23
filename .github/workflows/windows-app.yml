@@ -282,6 +282,8 @@ jobs:
           }
           exit 0
       - name: Package and smoke test the actual executable
+        env:
+          REQUIRE_ATALAIA: ${{ steps.plan.outputs.changed_atalaia == 'true' || inputs.full_tests == true }}
         shell: pwsh
         run: |
           npm --prefix electron run pack:win
