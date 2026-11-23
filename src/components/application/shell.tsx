@@ -972,7 +972,10 @@ export function ApplicationShell({
                 </button>
               </header>
               {runtime && (
-                <ChristmasPromo runtime={runtime} visible={!entry && !game && sessionReady} />
+                <>
+                  <ChristmasPromo runtime={runtime} visible={!entry && !game && sessionReady} />
+                  <ReleaseNotesCard runtime={runtime} visible={!entry && !game && sessionReady} />
+                </>
               )}
               <section
                 id="portalScreen"
@@ -1119,7 +1122,6 @@ export function ApplicationShell({
           <ProfileDialogs runtime={runtime} />
           <CommunityDialogs runtime={runtime} />
           <ApplicationNotices runtime={runtime} />
-          <ReleaseNotesCard runtime={runtime} />
           <WelcomeIntroOverlay runtime={runtime} />
         </>
       )}

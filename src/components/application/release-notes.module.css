@@ -1,69 +1,93 @@
+.wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 8px 18px 0;
+  z-index: 2;
+}
+
 .card {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 35;
-  width: min(370px, calc(100vw - 28px));
-  max-height: min(520px, calc(100dvh - 36px));
-  overflow: auto;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(214, 183, 121, 0.32);
-  background: rgba(24, 24, 28, 0.96);
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(214, 183, 121, 0.28);
+  background: rgba(26, 26, 30, 0.94);
   color: #e6e6e6;
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
   font:
-    13px/1.5 'Segoe UI',
+    12.5px/1.45 'Segoe UI',
     Arial,
     sans-serif;
-  animation: releaseSlideIn 220ms ease-out;
 }
 
-@keyframes releaseSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.header {
+.summaryRow {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  min-width: 0;
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 2px 7px;
   border-radius: 999px;
   background: rgba(214, 183, 121, 0.16);
   color: #e4c686;
   border: 1px solid rgba(214, 183, 121, 0.35);
-  margin-bottom: 5px;
+  flex-shrink: 0;
 }
 
-.header h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
+.summaryText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.summaryText strong {
   color: #f3e4c3;
+  font-size: 12.5px;
+  white-space: nowrap;
 }
 
-.subtitle {
-  margin: 3px 0 0;
+.summaryText span {
+  color: #b5b7c0;
   font-size: 12px;
-  color: #a9abb5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.summaryActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.toggleBtn {
+  border: 1px solid rgba(214, 183, 121, 0.36);
+  background: rgba(214, 183, 121, 0.14);
+  color: #f2dfb3;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toggleBtn:hover {
+  background: rgba(214, 183, 121, 0.24);
 }
 
 .closeBtn {
@@ -71,7 +95,7 @@
   background: transparent;
   color: #a8a8b3;
   border-radius: 6px;
-  padding: 5px;
+  padding: 4px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -85,16 +109,17 @@
 
 .list {
   list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
 }
 
 .item {
-  padding: 10px 11px;
-  border-radius: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -111,20 +136,20 @@
 
 .item strong {
   display: block;
-  font-size: 13px;
+  font-size: 12.5px;
   color: #f2f2f2;
 }
 
 .item p {
   margin: 3px 0 0;
-  font-size: 12px;
+  font-size: 11.5px;
   color: #b7b9c2;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .footer {
-  margin-top: 13px;
-  padding-top: 10px;
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
@@ -142,8 +167,9 @@
   background: rgba(214, 183, 121, 0.18);
   color: #f2dfb3;
   border-radius: 7px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   font: inherit;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
@@ -151,4 +177,13 @@
 
 .ackBtn:hover {
   background: rgba(214, 183, 121, 0.28);
+}
+
+@media (max-width: 760px) {
+  .wrap {
+    padding: 6px 10px 0;
+  }
+  .summaryText span {
+    display: none;
+  }
 }

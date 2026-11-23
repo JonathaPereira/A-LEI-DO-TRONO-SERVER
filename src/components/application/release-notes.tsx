@@ -12,34 +12,45 @@ import { AppIcon as Icon } from './icons';
 import { useModel, type ApplicationServices } from './services';
 import styles from './release-notes.module.css';
 
-/** Discreet floating changelog shown automatically once per new version and reopenable anytime. */
-export function ReleaseNotesCard({ runtime }: { runtime: ApplicationServices }) {
+/**
+ * Discreet in-flow release notes banner shown automatically only on the first
+ * open of a new version (never covering interactive controls) and reopenable
+ * anytime in expanded mode from the user menu or desktop settings.
+ */
+export function ReleaseNotesCard({
+  runtime,
+  visible = true,
+}: {
+  runtime: ApplicationServices;
+  visible?: boolean;
+}) {
   const auth = useModel(runtime.TronoAuth);
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const dismiss = useCallback(() => {
     markReleaseNotesSeen(window.localStorage, APP_RELEASE_VERSION);
     setOpen(false);
+    setExpanded(false);
   }, []);
 
   useEffect(() => {
     if (!auth.user) {
       setOpen(false);
+      setExpanded(false);
       return;
     }
     if (!shouldShowReleaseNotes(window.localStorage, APP_RELEASE_VERSION)) return;
-    // Mark seen as soon as it is scheduled/shown for this update so reopening the app won't repeat it.
-    const timer = window.setTimeout(() => {
-      if (shouldShowReleaseNotes(window.localStorage, APP_RELEASE_VERSION)) {
-        markReleaseNotesSeen(window.localStorage, APP_RELEASE_VERSION);
-        setOpen(true);
-      }
-    }, 1800);
-    return () => window.clearTimeout(timer);
+    markReleaseNotesSeen(window.localStorage, APP_RELEASE_VERSION);
+    setExpanded(false);
+    setOpen(true);
   }, [auth.user]);
 
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = () => {
+      setExpanded(true);
+      setOpen(true);
+    };
     window.addEventListener(RELEASE_NOTES_OPEN_EVENT, onOpen);
     return () => window.removeEventListener(RELEASE_NOTES_OPEN_EVENT, onOpen);
   }, []);
@@ -53,45 +64,65 @@ export function ReleaseNotesCard({ runtime }: { runtime: ApplicationServices }) 
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, dismiss]);
 
-  if (!open) return null;
+  if (!open || !visible) return null;
 
   return (
-    <aside
-      className={styles.card}
-      role="region"
-      aria-label="Notas de atualização"
-      data-release-notes={CURRENT_RELEASE_NOTES.version}
-    >
-      <header className={styles.header}>
-        <div>
+    <div className={styles.wrap}>
+      <aside
+        className={styles.card}
+        role="region"
+        aria-label="Notas de atualização"
+        data-release-notes={CURRENT_RELEASE_NOTES.version}
+        data-expanded={expanded ? 'true' : 'false'}
+      >
+        <div className={styles.summaryRow}>
           <span className={styles.badge}>v{CURRENT_RELEASE_NOTES.version}</span>
-          <h2>{CURRENT_RELEASE_NOTES.heading}</h2>
-          <p className={styles.subtitle}>{CURRENT_RELEASE_NOTES.subtitle}</p>
+          <div className={styles.summaryText}>
+            <strong>{CURRENT_RELEASE_NOTES.heading}</strong>
+            <span>
+              Status Online/Ausente/Não Perturbar, Overlay discreto para jogos no Windows e prévias
+              de imagens nas notificações.
+            </span>
+          </div>
+          <div className={styles.summaryActions}>
+            <button
+              type="button"
+              className={styles.toggleBtn}
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? 'Ocultar detalhes' : 'Ver novidades'}
+            </button>
+            <button
+              type="button"
+              className={styles.closeBtn}
+              aria-label="Fechar notas de atualização"
+              onClick={dismiss}
+            >
+              <Icon name="close" size={15} />
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          className={styles.closeBtn}
-          aria-label="Fechar notas de atualização"
-          onClick={dismiss}
-        >
-          <Icon name="close" size={16} />
-        </button>
-      </header>
-      <ul className={styles.list}>
-        {CURRENT_RELEASE_NOTES.items.map((item) => (
-          <li key={item.id} className={styles.item}>
-            <span className={styles.tag}>{item.tag}</span>
-            <strong>{item.title}</strong>
-            <p>{item.description}</p>
-          </li>
-        ))}
-      </ul>
-      <footer className={styles.footer}>
-        <small>Você pode rever estas notas no menu do seu perfil.</small>
-        <button type="button" className={styles.ackBtn} onClick={dismiss}>
-          Entendi
-        </button>
-      </footer>
-    </aside>
+        {expanded && (
+          <>
+            <ul className={styles.list}>
+              {CURRENT_RELEASE_NOTES.items.map((item) => (
+                <li key={item.id} className={styles.item}>
+                  <span className={styles.tag}>{item.tag}</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.description}</p>
+                </li>
+              ))}
+            </ul>
+            <footer className={styles.footer}>
+              <small>Você pode rever estas notas quando quiser no menu do seu perfil.</small>
+              <button type="button" className={styles.ackBtn} onClick={dismiss}>
+                Entendi
+              </button>
+            </footer>
+          </>
+        )}
+      </aside>
+    </div>
   );
 }
