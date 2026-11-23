@@ -1,4 +1,4 @@
-export const APP_RELEASE_VERSION = '2.2.0';
+export const APP_RELEASE_VERSION = '2.2.1';
 export const RELEASE_NOTES_STORAGE_KEY = 'trono:release-notes:seen';
 export const RELEASE_NOTES_OPEN_EVENT = 'trono:open-release-notes';
 

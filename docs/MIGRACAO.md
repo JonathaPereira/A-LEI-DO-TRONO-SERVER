@@ -1520,3 +1520,9 @@ Entrega 2.2.0 — Atalho Configurável do Overlay em Segundo Plano, Atualizaçã
 3. CI e empacotamento mais rápidos (`electron/package.json`, `scripts/select-tests.cjs`, `.github/workflows/windows-app.yml`): compressão NSIS `"normal"`, build/publicação condicional de Atalaia e Similo somente quando seus diretórios mudam (ou em `full_tests`), execução condicional do teste de instalador completo e trilha `platform` otimizada com smoke browser em paralelo (`--concurrency 2 --retries 1`), preservando suítes completas via `workflow_dispatch`.
 4. Verificação: `npm run format:check`, `npm run typecheck`, `npm run build`, `node scripts/test.cjs --suite core --exclude-games` (1.199/1.199 aprovados), testes de unidade de `tests/desktop-updates.js` (6/6 lógicos aprovados; 2 checks de `GenericProvider` requerem `electron/node_modules` no runner Windows) e smoke E2E em Chromium (`tests/auth-browser.cjs`, `tests/application-shell-browser.cjs`, `tests/mobile-browser.cjs`: 10/10 aprovados). Validação nativa de instalação/atalho global Windows segue executada no workflow `Windows full app`.
 
+Entrega 2.2.1 — Hotfix de encerramento do Overlay e `second-instance` no processo principal:
+
+1. Removido `closable: false` da `BrowserWindow` do overlay em `electron/overlay.cjs`, que impedia o Electron de encerrar o processo ao fechar/atualizar e deixava o app em segundo plano com a janela principal já destruída.
+2. Protegido `electron/main.cjs` com `showMainWindow()` (usado em `second-instance`, bandeja e cliques de notificação), descarte imediato do overlay em `before-quit`, `prepareInstall` e `window.on('closed')`, evitando `TypeError: Object has been destroyed`.
+
+

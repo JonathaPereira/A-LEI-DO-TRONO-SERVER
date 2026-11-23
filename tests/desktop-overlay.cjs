@@ -209,6 +209,7 @@ test('createGameOverlay enforces transparent click-through screen-saver window, 
     assert.equal(win.options.skipTaskbar, true);
     assert.equal(win.options.focusable, false);
     assert.equal(win.options.resizable, false);
+    assert.notEqual(win.options.closable, false);
     assert.equal(win.options.hasShadow, false);
     assert.equal(win.options.alwaysOnTop, true);
     assert.equal(win.options.webPreferences.nodeIntegration, false);

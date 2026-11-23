@@ -280,7 +280,6 @@ function createGameOverlay({
       movable: false,
       minimizable: false,
       maximizable: false,
-      closable: false,
       fullscreenable: false,
       hasShadow: false,
       show: false,

@@ -134,14 +134,21 @@ if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
   app.commandLine.appendSwitch('disable-background-timer-throttling');
 }
+function showMainWindow() {
+  if (!window || window.isDestroyed()) return false;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+  return true;
+}
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => {
-    window?.show();
-    window?.focus();
+    showMainWindow();
   });
   app.on('before-quit', () => {
     quitting = true;
+    overlay?.dispose();
   });
   app.on('will-quit', () => {
     void nativeReplay?.dispose();
@@ -163,14 +170,16 @@ else {
 }
 function trusted(event) {
   if (
-    event.sender !== window?.webContents ||
+    !window ||
+    window.isDestroyed() ||
+    event.sender !== window.webContents ||
     event.senderFrame !== window.webContents.mainFrame ||
     !isTrustedAppURL(event.senderFrame.url)
   )
     throw Error('Desktop access denied');
 }
 function clip() {
-  if (clipActive && !window?.isDestroyed())
+  if (clipActive && window && !window.isDestroyed())
     window.webContents.send('mn:clip', { id: crypto.randomUUID() });
 }
 function clearHotkey() {
@@ -312,7 +321,9 @@ async function start() {
       backgroundThrottling: false,
     },
   });
-  window.on('ready-to-show', () => window.show());
+  window.on('ready-to-show', () => {
+    if (window && !window.isDestroyed()) window.show();
+  });
   const nexus = createNexusLauncher({
     BrowserWindow,
     session,
@@ -354,13 +365,14 @@ async function start() {
     BrowserWindow,
     screen,
     globalShortcut,
-    isMainFocused: () => !window.isDestroyed() && window.isFocused() && window.isVisible(),
+    isMainFocused: () =>
+      Boolean(window && !window.isDestroyed() && window.isFocused() && window.isVisible()),
     getDnd: () => activePresenceStatus === 'dnd',
     getBlockedShortcuts: () => (hotkey ? [hotkey] : []),
     initialConfig: preferences.getOverlayConfig(),
     saveConfig: (next) => preferences.setOverlayConfig(next),
     onConfigChanged: (config) => {
-      if (!window.isDestroyed()) window.webContents.send('mn:overlay-config', config);
+      if (window && !window.isDestroyed()) window.webContents.send('mn:overlay-config', config);
     },
   });
   const notifications = createNotifications({
@@ -370,10 +382,7 @@ async function start() {
     cacheDir: path.join(app.getPath('userData'), 'notification-images'),
     fetchImage: (url, init) => net.fetch(url, init),
     activate: (target) => {
-      if (window.isDestroyed()) return;
-      window.show();
-      if (window.isMinimized()) window.restore();
-      window.focus();
+      if (!showMainWindow()) return;
       window.webContents.send('mn:notification-click', target);
     },
   });
@@ -451,14 +460,14 @@ async function start() {
     };
   });
   applicationAudio = new ApplicationAudio(app, (data) => {
-    if (!window.isDestroyed()) window.webContents.send('mn:application-audio', data);
+    if (window && !window.isDestroyed()) window.webContents.send('mn:application-audio', data);
   });
   remoteInput = new RemoteInput({
     app,
     displays: () => screen.getAllDisplays(),
     point: (p) => screen.dipToScreenPoint(p),
     publish: (data) => {
-      if (!window.isDestroyed()) window.webContents.send('mn:remote', data);
+      if (window && !window.isDestroyed()) window.webContents.send('mn:remote', data);
     },
   });
   screen.on('display-removed', stopRemote);
@@ -534,7 +543,7 @@ async function start() {
     return true;
   });
   activity = new DesktopActivity(app, (state) => {
-    if (!window.isDestroyed()) window.webContents.send('mn:activity', state);
+    if (window && !window.isDestroyed()) window.webContents.send('mn:activity', state);
   });
   ipcMain.handle('mn:activity-state', (event) => {
     trusted(event);
@@ -607,10 +616,11 @@ async function start() {
     updater: require('electron-updater').autoUpdater,
     enabled: app.isPackaged,
     publish: (state) => {
-      if (!window.isDestroyed()) window.webContents.send('mn:update-state', state);
+      if (window && !window.isDestroyed()) window.webContents.send('mn:update-state', state);
     },
     shouldConfirm: () => voicePriority.snapshot().active,
     confirm: async () => {
+      if (!window || window.isDestroyed()) return true;
       const answer = await dialog.showMessageBox(window, {
         type: 'question',
         buttons: ['Continuar na chamada', 'Reiniciar e atualizar'],
@@ -625,6 +635,7 @@ async function start() {
     prepareInstall: () => {
       installingUpdate = true;
       quitting = true;
+      overlay?.dispose();
     },
   });
   ipcMain.handle('mn:update-state', (event) => {
@@ -654,13 +665,18 @@ async function start() {
       updates?.dispose?.();
     });
   }
-  const windowState = () => ({ fullscreen: window.isFullScreen() });
+  const windowState = () => ({
+    fullscreen: Boolean(window && !window.isDestroyed() && window.isFullScreen()),
+  });
   // On Windows, isFullScreen() may still contain the previous value inside the event.
   for (const [name, fullscreen] of [
     ['enter-full-screen', true],
     ['leave-full-screen', false],
   ])
-    window.on(name, () => window.webContents.send('mn:window-state', { fullscreen }));
+    window.on(name, () => {
+      if (window && !window.isDestroyed())
+        window.webContents.send('mn:window-state', { fullscreen });
+    });
   ipcMain.handle('mn:window-state', (event) => {
     trusted(event);
     return windowState();
@@ -675,6 +691,15 @@ async function start() {
     if (tray && !quitting) {
       event.preventDefault();
       window.hide();
+    }
+  });
+  window.on('closed', () => {
+    overlay?.dispose();
+    stopRemote();
+    window = null;
+    if (!quitting) {
+      quitting = true;
+      app.quit();
     }
   });
   window.webContents.on('will-prevent-unload', (event) => {
@@ -1032,8 +1057,7 @@ async function start() {
       {
         label: 'Abrir M&N',
         click: () => {
-          window.show();
-          window.focus();
+          showMainWindow();
         },
       },
       { label: 'Clipar', click: clip },
@@ -1042,8 +1066,7 @@ async function start() {
     ]),
   );
   tray.on('double-click', () => {
-    window.show();
-    window.focus();
+    showMainWindow();
   });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
