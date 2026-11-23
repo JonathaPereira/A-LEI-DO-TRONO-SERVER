@@ -1,6 +1,6 @@
 {
   "name": "mn-trono-desktop",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "M&N e A Lei do Trono — aplicativo Windows",
   "author": "Jonatha Pereira",
   "private": true,
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.jonatha.mn.trono",
-    "compression": "maximum",
+    "compression": "normal",
     "productName": "MN Trono",
     "artifactName": "MN-Trono-${version}-Windows.${ext}",
     "directories": {

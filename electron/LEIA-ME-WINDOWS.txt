@@ -1,3 +1,13 @@
+M&N · A Lei do Trono — Windows & Android 2.2.0
+
+Novidades 2.2.0:
+- Atalho personalizável do Overlay em Jogos (Configurações → Aplicativo → Definir atalho),
+  com sincronização contínua de estado para funcionar mesmo com o aplicativo minimizado ou em
+  segundo plano e detecção de conflito de teclas no Windows.
+- Atualizador automático mais rápido e confiável: downloads hospedados via GitHub Releases
+  com suporte a atualização diferencial (.blockmap), novas tentativas automáticas em oscilações
+  de rede, botão bem visível na barra lateral e atualização silenciosa em 1 clique fora de chamadas.
+
 M&N · A Lei do Trono — Windows & Android 2.1.0
 
 Novidades 2.1.0:

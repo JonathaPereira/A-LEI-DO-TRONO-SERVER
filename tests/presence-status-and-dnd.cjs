@@ -393,5 +393,5 @@ test('release notes appear only on the first open of a new version', () => {
   markReleaseNotesSeen(storage, APP_RELEASE_VERSION);
   assert.equal(shouldShowReleaseNotes(storage, APP_RELEASE_VERSION), false);
   // Future version triggers again once
-  assert.equal(shouldShowReleaseNotes(storage, '2.2.0'), true);
+  assert.equal(shouldShowReleaseNotes(storage, '9.9.9'), true);
 });

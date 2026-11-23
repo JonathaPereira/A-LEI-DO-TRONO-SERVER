@@ -48,8 +48,18 @@ async function publishBuild({
     { version } = JSON.parse(await fs.readFile(path.join(root, 'electron/package.json'), 'utf8'));
   if (!/^\d+\.\d+\.\d+$/.test(version) || !Number.isSafeInteger(Number(context.runId)))
     throw Error('Identidade do build inválida.');
+  const blockmap = path.join(
+    root,
+    'artifacts/windows-download',
+    `MN-Trono-${version}-Windows.exe.blockmap`,
+  );
+  let hasBlockmap = false;
+  try {
+    hasBlockmap = (await fs.stat(blockmap)).isFile();
+  } catch {}
   const files = [
     path.join(root, 'artifacts/windows-download', `MN-Trono-${version}-Windows.exe`),
+    ...(hasBlockmap ? [blockmap] : []),
     path.join(root, 'artifacts', `MN-Trono-Frontend-${version}.zip`),
     path.join(root, 'electron/LEIA-ME-WINDOWS.txt'),
     ...additionalFiles.map((file) => path.join(root, file)),

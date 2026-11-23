@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('TronoDesktop', {
   onUpdateState: (fn) => listen('mn:update-state', fn),
   checkUpdates: () => ipcRenderer.invoke('mn:update-check'),
   installUpdate: () => ipcRenderer.invoke('mn:update-install'),
+  openUpdateDownload: () => ipcRenderer.invoke('mn:update-download-page'),
   onApplicationAudio: (fn) => listen('mn:application-audio', fn),
   ackApplicationAudio: (id) => ipcRenderer.send('mn:application-audio-ack', id),
   stopApplicationAudio: (id) => ipcRenderer.invoke('mn:application-audio-stop', id),

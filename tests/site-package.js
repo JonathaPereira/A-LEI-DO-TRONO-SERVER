@@ -90,13 +90,12 @@ test('Surge package contains the entire frontend and exactly the latest installe
       await fs.readFile(path.join(f.root, 'out/_next/static/chunks/auth.js')),
     );
     const yaml = await fs.readFile(path.join(result.frontend, 'downloads/latest.yml'), 'utf8');
+    const expectedUrl =
+      'https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/v0.1.11/MN-Trono-0.1.11-Windows.exe';
     assert(yaml.includes('version: 0.1.11'));
-    assert(yaml.includes('url: https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe'));
-    assert(yaml.includes('path: https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe'));
-    assert.equal(
-      result.url,
-      'https://mn-trono-downloads.surge.sh/MN-Trono-0.1.11-Windows.exe',
-    );
+    assert(yaml.includes('url: ' + expectedUrl));
+    assert(yaml.includes('path: ' + expectedUrl));
+    assert.equal(result.url, expectedUrl);
     assert(
       yaml.includes('sha512: ' + crypto.createHash('sha512').update(f.bytes).digest('base64')),
     );

@@ -6,6 +6,8 @@ export interface OverlayConfig {
   readonly opacity: number;
   readonly hideWhenIdle: boolean;
   readonly shortcut: string;
+  readonly shortcutRegistered?: boolean;
+  readonly shortcutError?: string;
 }
 
 export interface OverlayParticipant {
@@ -59,9 +61,55 @@ export const DEFAULT_OVERLAY_CONFIG: OverlayConfig = Object.freeze({
   opacity: 0.9,
   hideWhenIdle: true,
   shortcut: 'Control+Shift+O',
+  shortcutRegistered: false,
+  shortcutError: '',
 });
 
 const CORNERS = new Set<OverlayCorner>(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
+
+export function formatOverlayShortcut(shortcut: string): string {
+  if (!shortcut) return 'Desativado';
+  return shortcut
+    .split('+')
+    .map((part) => (part === 'Control' ? 'Ctrl' : part === 'Super' ? 'Win' : part))
+    .join(' + ');
+}
+
+export function buildShortcutFromKeyEvent(event: {
+  code: string;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  metaKey: boolean;
+}): { ok: true; shortcut: string } | { ok: false; error: string } {
+  const { code, ctrlKey, altKey, shiftKey, metaKey } = event;
+  if (!/^Key[A-Z]$|^Digit[0-9]$|^F([1-9]|1[0-9]|2[0-4])$/.test(code)) {
+    return { ok: false, error: 'Pressione uma letra, número ou tecla F (ex.: Ctrl + Shift + O).' };
+  }
+  if (
+    ['F5', 'F11', 'F12'].includes(code) ||
+    ((ctrlKey || metaKey) && ['KeyR', 'KeyW', 'KeyT', 'KeyL', 'KeyN', 'KeyP'].includes(code)) ||
+    (altKey && code === 'F4')
+  ) {
+    return { ok: false, error: 'Esse atalho é reservado pelo sistema. Escolha outra combinação.' };
+  }
+  if (!ctrlKey && !altKey && !metaKey && !/^F/.test(code)) {
+    return {
+      ok: false,
+      error: 'Combine com Ctrl, Alt ou Win (ou use uma tecla F livre como F8/F9).',
+    };
+  }
+  const shortcut = [
+    ctrlKey ? 'Control' : '',
+    altKey ? 'Alt' : '',
+    shiftKey ? 'Shift' : '',
+    metaKey ? 'Super' : '',
+    code.replace(/^Key|^Digit/, ''),
+  ]
+    .filter(Boolean)
+    .join('+');
+  return { ok: true, shortcut };
+}
 
 export function readOverlayConfig(
   value: unknown,
@@ -87,7 +135,20 @@ export function readOverlayConfig(
       : typeof src.shortcut === 'string' && src.shortcut.length <= 40
         ? src.shortcut
         : fallback.shortcut;
-  return Object.freeze({ enabled, corner, opacity, hideWhenIdle, shortcut });
+  const shortcutRegistered =
+    typeof src.shortcutRegistered === 'boolean'
+      ? src.shortcutRegistered
+      : Boolean(shortcut && fallback.shortcutRegistered);
+  const shortcutError = typeof src.shortcutError === 'string' ? src.shortcutError : '';
+  return Object.freeze({
+    enabled,
+    corner,
+    opacity,
+    hideWhenIdle,
+    shortcut,
+    shortcutRegistered,
+    shortcutError,
+  });
 }
 
 interface OverlayControllerOptions {
@@ -142,7 +203,6 @@ export function createDesktopOverlay({
 
   function flushState(force = false) {
     if (disposed || !available || !native?.updateOverlayState) return;
-    if (!state.config.enabled && !force) return;
     const next = readStageState();
     const serialized = JSON.stringify(next);
     if (!force && serialized === lastSentJson) return;
@@ -174,12 +234,19 @@ export function createDesktopOverlay({
     try {
       const saved = readOverlayConfig(await native.configureOverlay(patch), state.config);
       if (disposed) return saved;
-      update({ config: saved, busy: false });
+      update({
+        config: saved,
+        busy: false,
+        status: saved.shortcutError || '',
+      });
       if (saved.enabled) flushState(true);
       return saved;
     } catch (error) {
-      if (!disposed)
-        update({ busy: false, status: 'Não foi possível salvar a configuração do overlay.' });
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Não foi possível salvar a configuração do overlay.';
+      if (!disposed) update({ busy: false, status: message });
       warn(error);
       return state.config;
     }
@@ -221,7 +288,7 @@ export function createDesktopOverlay({
       const unsubConfig = native?.onOverlayConfig?.((raw) => {
         if (disposed) return;
         const next = readOverlayConfig(raw, state.config);
-        update({ config: next });
+        update({ config: next, status: next.shortcutError || state.status });
         if (next.enabled) flushState(true);
       });
       if (typeof unsubConfig === 'function') cleanup.push(unsubConfig);
@@ -230,8 +297,8 @@ export function createDesktopOverlay({
         .then((raw) => {
           if (disposed) return;
           const config = readOverlayConfig(raw, state.config);
-          update({ config });
-          if (config.enabled) flushState(true);
+          update({ config, status: config.shortcutError || '' });
+          flushState(true);
         })
         .catch((error) => warn(error));
     },

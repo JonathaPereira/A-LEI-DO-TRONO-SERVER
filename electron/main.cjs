@@ -40,7 +40,7 @@ const { createNexusLauncher, nexusConfig } = require('./nexus.cjs');
 const { AudioPriority } = require('./audio-priority.cjs');
 const { RemoteInput } = require('./remote-input.cjs');
 const { ApplicationAudio } = require('./application-audio.cjs'),
-  { createUpdates } = require('./updates.cjs');
+  { createUpdates, RELEASE_PAGE_URL } = require('./updates.cjs');
 const { contentSecurityPolicy } = require('./content-security.cjs');
 const { developmentOrigin } = require('./development.cjs');
 const { createNativeReplay, testEncoder } = require('./replay-native.cjs');
@@ -356,6 +356,7 @@ async function start() {
     globalShortcut,
     isMainFocused: () => !window.isDestroyed() && window.isFocused() && window.isVisible(),
     getDnd: () => activePresenceStatus === 'dnd',
+    getBlockedShortcuts: () => (hotkey ? [hotkey] : []),
     initialConfig: preferences.getOverlayConfig(),
     saveConfig: (next) => preferences.setOverlayConfig(next),
     onConfigChanged: (config) => {
@@ -608,15 +609,16 @@ async function start() {
     publish: (state) => {
       if (!window.isDestroyed()) window.webContents.send('mn:update-state', state);
     },
+    shouldConfirm: () => voicePriority.snapshot().active,
     confirm: async () => {
       const answer = await dialog.showMessageBox(window, {
         type: 'question',
-        buttons: ['Continuar no app', 'Reiniciar e atualizar'],
+        buttons: ['Continuar na chamada', 'Reiniciar e atualizar'],
         defaultId: 0,
         cancelId: 0,
         message: 'Reiniciar para atualizar?',
         detail:
-          'A chamada será encerrada. Sua conta, preferências e arquivos locais serão preservados.',
+          'Sua chamada será encerrada brevemente. Sua conta, preferências e arquivos locais serão preservados.',
       });
       return answer.response === 1;
     },
@@ -637,14 +639,19 @@ async function start() {
     trusted(event);
     return updates.install();
   });
+  ipcMain.handle('mn:update-download-page', (event) => {
+    trusted(event);
+    return shell.openExternal(RELEASE_PAGE_URL);
+  });
   if (app.isPackaged) {
-    const first = setTimeout(() => void updates.check(), 10000),
-      periodic = setInterval(() => void updates.check({ force: true }), 4 * 60 * 60 * 1000);
+    const first = setTimeout(() => void updates.check(), 3000),
+      periodic = setInterval(() => void updates.check({ force: true }), 45 * 60 * 1000);
     first.unref();
     periodic.unref();
     app.on('will-quit', () => {
       clearTimeout(first);
       clearInterval(periodic);
+      updates?.dispose?.();
     });
   }
   const windowState = () => ({ fullscreen: window.isFullScreen() });

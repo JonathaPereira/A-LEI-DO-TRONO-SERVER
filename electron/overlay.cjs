@@ -2,11 +2,38 @@
 const path = require('node:path');
 const { DEFAULT_OVERLAY, normalizeOverlay } = require('./preferences.cjs');
 
+const { accelerator: buildAccelerator } = require('./policy.cjs');
+
 const OVERLAY_WIDTH = 300;
 const OVERLAY_HEIGHT = 440;
 const MARGIN = 14;
 const TOAST_TTL_MS = 4000;
 const TOAST_FADE_MS = 350;
+const MODIFIER_NAMES = new Set(['Control', 'Alt', 'Shift', 'Super']);
+const KEY_PATTERN = /^([A-Z0-9]|F([1-9]|1[0-9]|2[0-4]))$/;
+
+function validateShortcutString(value) {
+  if (value === '') return '';
+  if (typeof value !== 'string' || value.length > 40) throw Error('Atalho inválido.');
+  const parts = value.split('+').filter(Boolean);
+  if (!parts.length) throw Error('Atalho inválido.');
+  const key = parts[parts.length - 1];
+  const modifiers = parts.slice(0, -1);
+  if (!KEY_PATTERN.test(key)) throw Error('Atalho inválido.');
+  const seen = new Set();
+  for (const mod of modifiers) {
+    if (!MODIFIER_NAMES.has(mod) || seen.has(mod)) throw Error('Atalho inválido.');
+    seen.add(mod);
+  }
+  const code = /^[A-Z]$/.test(key) ? 'Key' + key : /^[0-9]$/.test(key) ? 'Digit' + key : key;
+  return buildAccelerator({
+    code,
+    ctrl: seen.has('Control'),
+    alt: seen.has('Alt'),
+    shift: seen.has('Shift'),
+    meta: seen.has('Super'),
+  });
+}
 
 function readSafeUrl(value) {
   if (value === undefined || value === null || value === '') return undefined;
@@ -97,7 +124,15 @@ function overlayConfigPayload(value, fallback = DEFAULT_OVERLAY) {
   for (const key of Object.keys(value)) {
     if (!allowedKeys.has(key)) throw Error('Invalid overlay config');
   }
-  return normalizeOverlay(value, fallback);
+  const patch = { ...value };
+  if ('shortcut' in patch) {
+    if (patch.shortcut && typeof patch.shortcut === 'object') {
+      patch.shortcut = buildAccelerator(patch.shortcut);
+    } else {
+      patch.shortcut = validateShortcutString(patch.shortcut);
+    }
+  }
+  return normalizeOverlay(patch, fallback);
 }
 
 function buildOverlayHtml() {
@@ -159,6 +194,7 @@ function createGameOverlay({
   globalShortcut,
   isMainFocused = () => false,
   getDnd = () => false,
+  getBlockedShortcuts = () => [],
   initialConfig = DEFAULT_OVERLAY,
   saveConfig,
   onConfigChanged,
@@ -172,8 +208,17 @@ function createGameOverlay({
   let ready = false;
   let disposed = false;
   let registeredShortcut = '';
+  let shortcutError = '';
   const toasts = [];
   const toastTimers = new Map();
+
+  function publicConfig() {
+    return {
+      ...config,
+      shortcutRegistered: Boolean(config.shortcut && registeredShortcut === config.shortcut),
+      shortcutError,
+    };
+  }
 
   function unregisterShortcut() {
     if (!registeredShortcut) return;
@@ -185,12 +230,24 @@ function createGameOverlay({
 
   function registerShortcut() {
     unregisterShortcut();
+    shortcutError = '';
     if (disposed || !config.shortcut || !globalShortcut?.register) return;
+    const blocked = new Set((getBlockedShortcuts() || []).filter(Boolean));
+    if (blocked.has(config.shortcut)) {
+      shortcutError = 'Esse atalho já está sendo usado pelos Clipes. Escolha outra combinação.';
+      return;
+    }
     try {
-      if (globalShortcut.register(config.shortcut, () => void toggleEnabled())) {
+      if (
+        globalShortcut.register(config.shortcut, () => void toggleEnabled({ fromShortcut: true }))
+      ) {
         registeredShortcut = config.shortcut;
+      } else {
+        shortcutError = 'Atalho ocupado por outro aplicativo no Windows. Escolha outra combinação.';
       }
-    } catch {}
+    } catch {
+      shortcutError = 'Não foi possível registrar esse atalho global no Windows.';
+    }
   }
 
   function hasActiveContent() {
@@ -237,7 +294,7 @@ function createGameOverlay({
       },
     });
     created.setMenu?.(null);
-    created.setAlwaysOnTop?.(true, 'screen-saver');
+    created.setAlwaysOnTop?.(true, 'screen-saver', 1);
     created.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true });
     created.setIgnoreMouseEvents?.(true, { forward: true });
     created.webContents?.setWindowOpenHandler?.(() => ({ action: 'deny' }));
@@ -292,7 +349,7 @@ function createGameOverlay({
     const target = ensureWindow();
     if (!target || target.isDestroyed?.()) return;
     positionWindow();
-    target.setAlwaysOnTop?.(true, 'screen-saver');
+    target.setAlwaysOnTop?.(true, 'screen-saver', 1);
     target.setIgnoreMouseEvents?.(true, { forward: true });
     if (ready) {
       target.webContents?.send?.('mn:overlay-render', {
@@ -315,6 +372,7 @@ function createGameOverlay({
       if (typeof target.showInactive === 'function') target.showInactive();
       else target.show?.();
     }
+    target.moveTop?.();
   }
 
   function clearToastTimers(key) {
@@ -376,19 +434,32 @@ function createGameOverlay({
   }
 
   async function configure(patch) {
-    if (disposed) return { ...config };
+    if (disposed) return publicConfig();
     const next = overlayConfigPayload(patch, config);
     const saved = saveConfig ? await saveConfig(next) : next;
     config = normalizeOverlay(saved, next);
     registerShortcut();
     if (!config.enabled) clearAllToasts();
     pushRender();
-    onConfigChanged?.({ ...config });
-    return { ...config };
+    const result = publicConfig();
+    onConfigChanged?.(result);
+    return result;
   }
 
-  async function toggleEnabled() {
-    return configure({ enabled: !config.enabled });
+  async function toggleEnabled({ fromShortcut = false } = {}) {
+    const turningOn = !config.enabled;
+    const result = await configure({ enabled: turningOn });
+    if (fromShortcut && turningOn && !hasActiveContent()) {
+      pushToast(
+        {
+          key: 'overlay-toggled-on',
+          title: 'M&N · Overlay ativado',
+          body: 'Quando você entrar em call ou receber mensagens, elas aparecerão aqui.',
+        },
+        { force: true },
+      );
+    }
+    return result;
   }
 
   function handleDisplayChange() {
@@ -401,7 +472,7 @@ function createGameOverlay({
   if (config.enabled) pushRender();
 
   return {
-    getConfig: () => ({ ...config }),
+    getConfig: publicConfig,
     configure,
     toggleEnabled,
     updateState,
@@ -428,6 +499,7 @@ module.exports = {
   overlayConfigPayload,
   overlayStatePayload,
   overlayToastPayload,
+  validateShortcutString,
   buildOverlayHtml,
   cornerBounds,
 };

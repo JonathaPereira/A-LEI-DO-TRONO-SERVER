@@ -22,6 +22,7 @@ import { CommunityActions, ChannelFilesAction, CommunityDialogs } from './commun
 import { ProfileDialogs } from './profile-settings';
 import { MediaSettings } from './media-settings';
 import { ApplicationNotices } from './notices';
+import { DesktopUpdateSidebarBanner } from './desktop-updates';
 import { CallSurface } from './call';
 import { Conversation } from './conversation';
 import { useModel, useServices, type ApplicationServices } from './services';
@@ -415,6 +416,9 @@ function Navigation({
           </details>
         )}
       </div>
+      {runtime.TronoDesktopUpdates && (
+        <DesktopUpdateSidebarBanner client={runtime.TronoDesktopUpdates} />
+      )}
       <CallSummary runtime={runtime} />
       <footer className={styles.account} data-account-card>
         <DirectProfileBanner accountId={auth.user?.id ?? ''} />

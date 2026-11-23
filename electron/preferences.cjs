@@ -40,6 +40,7 @@ class DesktopPreferences {
     this.permissions = new Set();
     this.presenceByAccount = Object.create(null);
     this.overlay = { ...DEFAULT_OVERLAY };
+    this.autoInstallUpdates = true;
     this.queue = Promise.resolve();
   }
   async load() {
@@ -71,6 +72,9 @@ class DesktopPreferences {
           }
         }
         this.overlay = normalizeOverlay(settings.overlay, DEFAULT_OVERLAY);
+        if (typeof settings.autoInstallUpdates === 'boolean') {
+          this.autoInstallUpdates = settings.autoInstallUpdates;
+        }
       }
     } catch {}
   }
@@ -94,6 +98,7 @@ class DesktopPreferences {
     const payload = {
       presenceByAccount: { ...this.presenceByAccount },
       overlay: { ...this.overlay },
+      autoInstallUpdates: this.autoInstallUpdates,
     };
     await this.atomic('desktop-settings.json', JSON.stringify(payload));
   }
@@ -122,6 +127,16 @@ class DesktopPreferences {
       this.overlay = normalizeOverlay(patch, this.overlay);
       await this.saveDesktopSettings();
       return { ...this.overlay };
+    });
+  }
+  getAutoInstallUpdates() {
+    return this.autoInstallUpdates;
+  }
+  setAutoInstallUpdates(value) {
+    return this.enqueue(async () => {
+      this.autoInstallUpdates = !!value;
+      await this.saveDesktopSettings();
+      return this.autoInstallUpdates;
     });
   }
   async grant(types) {

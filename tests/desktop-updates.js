@@ -16,13 +16,21 @@ test('development and offline update checks preserve the running app',async()=>{
   const service=createUpdates({updater,enabled:true,publish:()=>{},confirm:async()=>false,prepareInstall:()=>{}});assert.equal((await service.check()).status,'error');await assert.rejects(service.install(),/Nenhuma/);
   const dev=createUpdates({updater,enabled:false,publish:()=>{},confirm:async()=>false,prepareInstall:()=>{}});assert.equal((await dev.check()).status,'development');
 });
-test('an app several releases behind downloads the latest full installer in one step',async()=>{
-  const updater=new EventEmitter();updater.currentVersion={version:'0.1.1'};let feed,checks=0,installed=0;
-  updater.setFeedURL=value=>feed=value;updater.quitAndInstall=()=>installed++;
+test('an app several releases behind downloads the latest installer with differential blockmap enabled',async()=>{
+  const updater=new EventEmitter();updater.currentVersion={version:'0.1.1'};let feed,checks=0,installed=0,silentArg=null;
+  updater.setFeedURL=value=>feed=value;updater.quitAndInstall=(silent)=>{installed++;silentArg=silent;};
   updater.checkForUpdates=async()=>{checks++;updater.emit('update-available',{version:'0.1.8',files:[{url:'MN-Trono-0.1.8-Windows.exe'}]});updater.emit('download-progress',{percent:62});};
-  const service=createUpdates({updater,enabled:true,publish:()=>{},confirm:async()=>true,prepareInstall:()=>{}});
-  await service.check();assert.equal(feed.url,UPDATE_URL);assert.equal(service.state.version,'0.1.8');assert.equal(service.state.percent,62);assert.equal(updater.disableDifferentialDownload,true);assert.equal(updater.allowDowngrade,false);
-  updater.emit('update-downloaded',{version:'0.1.8'});await service.check();assert.equal(checks,1);await service.install();assert.equal(installed,1);
+  const service=createUpdates({updater,enabled:true,publish:()=>{},confirm:async()=>false,shouldConfirm:()=>false,prepareInstall:()=>{},retryDelays:[]});
+  await service.check();assert.equal(feed.url,UPDATE_URL);assert.equal(service.state.version,'0.1.8');assert.equal(service.state.percent,62);assert.equal(updater.disableDifferentialDownload,false);assert.equal(updater.allowDowngrade,false);
+  updater.emit('update-downloaded',{version:'0.1.8'});await service.check();assert.equal(checks,1);await service.install();assert.equal(installed,1);assert.equal(silentArg,true);
+});
+test('transient download failure retries automatically with backoff',async()=>{
+  const updater=new EventEmitter();let checks=0,scheduledFn=null;
+  updater.setFeedURL=()=>{};updater.quitAndInstall=()=>{};
+  updater.checkForUpdates=async()=>{checks++;updater.emit('update-available',{version:'0.2.0'});if(checks===1){updater.emit('error',Error('reset'));throw Error('reset');}else updater.emit('update-downloaded',{version:'0.2.0'});};
+  const service=createUpdates({updater,enabled:true,publish:()=>{},confirm:async()=>true,prepareInstall:()=>{},retryDelays:[10],setTimer:(fn)=>{scheduledFn=fn;return 1;},clearTimer:()=>{}});
+  await service.check();assert.equal(service.state.status,'error');assert.match(service.state.message,/Tentando baixar novamente/);assert.ok(scheduledFn);
+  await scheduledFn();assert.equal(checks,2);assert.equal(service.state.status,'ready');service.dispose();
 });
 test('checking again replaces an older downloaded version with the latest before installation',async()=>{
   const updater=new EventEmitter();let checks=0,installed=0,releaseConsent;

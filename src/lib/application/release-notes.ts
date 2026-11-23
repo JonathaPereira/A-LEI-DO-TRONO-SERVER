@@ -1,4 +1,4 @@
-export const APP_RELEASE_VERSION = '2.1.0';
+export const APP_RELEASE_VERSION = '2.2.0';
 export const RELEASE_NOTES_STORAGE_KEY = 'trono:release-notes:seen';
 export const RELEASE_NOTES_OPEN_EVENT = 'trono:open-release-notes';
 
@@ -19,28 +19,29 @@ export interface ReleaseNotesEntry {
 export const CURRENT_RELEASE_NOTES: ReleaseNotesEntry = Object.freeze({
   version: APP_RELEASE_VERSION,
   heading: `Novidades da versão ${APP_RELEASE_VERSION}`,
-  subtitle: 'Melhorias inspiradas no Discord para conversar e jogar sem interrupções.',
+  subtitle:
+    'Atalho personalizado no Overlay em segundo plano e atualizações automáticas mais rápidas.',
   items: Object.freeze([
     Object.freeze({
-      id: 'presence-status',
-      tag: 'Presença',
-      title: 'Status Online, Ausente e Não Perturbar',
+      id: 'overlay-custom-shortcut',
+      tag: 'Overlay',
+      title: 'Atalho personalizável funcionando em segundo plano',
       description:
-        'Alterne seu status pelo menu do perfil. No modo Não Perturbar, todos os avisos, sons e notificações são silenciados enquanto suas mensagens continuam chegando normalmente.',
+        'Escolha qualquer combinação em Configurações → Aplicativo → Definir atalho. Agora o overlay ativa instantaneamente mesmo com o Trono minimizado ou no segundo plano do jogo.',
     }),
     Object.freeze({
-      id: 'game-overlay',
-      tag: 'Windows',
-      title: 'Overlay discreto para jogos',
+      id: 'fast-auto-updates',
+      tag: 'Atualização',
+      title: 'Atualização rápida, automática e visível na barra lateral',
       description:
-        'Ative em Configurações → Aplicativo (ou use Ctrl + Shift + O) para ver quem está falando na call, quem está assistindo à sua tela e mini-avisos sem tirar o foco do jogo.',
+        'Novas versões agora baixam muito mais rápido por atualização diferencial com novas tentativas automáticas, botão direto na barra lateral e instalação em 1 clique.',
     }),
     Object.freeze({
-      id: 'windows-image-notifications',
-      tag: 'Notificações',
-      title: 'Prévias de imagens nas notificações do Windows',
+      id: 'presence-and-images',
+      tag: 'Comunicação',
+      title: 'Status Online/Ausente/Não Perturbar e imagens nas notificações',
       description:
-        'Quando alguém enviar uma foto no chat ou por mensagem privada enquanto você estiver em outro aplicativo, a notificação do Windows exibe o conteúdo da imagem.',
+        'Alterne seu status no menu do perfil (com silêncio total em Não Perturbar) e visualize prévias de imagens recebidas diretamente nas notificações do Windows.',
     }),
   ]),
 });

@@ -226,7 +226,13 @@ export function AccountForm({ runtime }: { runtime: ApplicationServices }) {
           {!runtime.TronoDesktop && (
             <a
               className={styles.download}
-              href={'https://mn-trono-downloads.surge.sh/MN-Trono-' + version + '-Windows.exe'}
+              href={
+                'https://github.com/JonathaPereira/A-LEI-DO-TRONO-SERVER/releases/download/v' +
+                version +
+                '/MN-Trono-' +
+                version +
+                '-Windows.exe'
+              }
               download
             >
               Baixar para Windows

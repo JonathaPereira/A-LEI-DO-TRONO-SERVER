@@ -398,3 +398,62 @@ test('DesktopPreferences persists presence status per account and overlay config
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('custom overlay shortcut works in background while in call and detects conflicts', async () => {
+  const { buildShortcutFromKeyEvent, formatOverlayShortcut } = require('../src/lib/desktop/overlay.ts');
+  assert.deepEqual(
+    buildShortcutFromKeyEvent({ code: 'KeyK', ctrlKey: true, altKey: true, shiftKey: false, metaKey: false }),
+    { ok: true, shortcut: 'Control+Alt+K' },
+  );
+  assert.equal(formatOverlayShortcut('Control+Alt+K'), 'Ctrl + Alt + K');
+  assert.equal(
+    buildShortcutFromKeyEvent({ code: 'F12', ctrlKey: false, altKey: false, shiftKey: false, metaKey: false }).ok,
+    false,
+  );
+
+  const env = createFakeElectronEnv();
+  const overlay = createGameOverlay({
+    BrowserWindow: env.BrowserWindow,
+    screen: env.screen,
+    globalShortcut: env.globalShortcut,
+    getBlockedShortcuts: () => ['Control+Alt+F9'],
+    initialConfig: {
+      enabled: false,
+      corner: 'top-left',
+      opacity: 0.9,
+      hideWhenIdle: true,
+      shortcut: 'F8',
+    },
+  });
+  try {
+    assert.equal(overlay.getConfig().shortcutRegistered, true);
+    assert.equal(env.registeredShortcuts.has('F8'), true);
+
+    // Call state synced while overlay is still disabled -> pressing global shortcut in background shows immediately!
+    overlay.updateState({
+      inCall: true,
+      sharingScreen: false,
+      participants: [{ id: 'p1', name: 'Alice', speaking: true, muted: false }],
+      watchers: [],
+    });
+    assert.equal(env.windows.length, 0);
+    await env.registeredShortcuts.get('F8')();
+    assert.equal(overlay.getConfig().enabled, true);
+    assert.equal(env.windows.length, 1);
+    assert.equal(env.windows[0].visible, true);
+    assert.equal(env.windows[0].webContents.sent.at(-1).payload.participants[0].name, 'Alice');
+
+    // Conflict with clip shortcut is surfaced clearly
+    const conflicted = await overlay.configure({ shortcut: 'Control+Alt+F9' });
+    assert.equal(conflicted.shortcutRegistered, false);
+    assert.match(conflicted.shortcutError, /Clipes/);
+
+    // Valid custom shortcut registers cleanly
+    const updated = await overlay.configure({ shortcut: 'Control+Alt+K' });
+    assert.equal(updated.shortcutRegistered, true);
+    assert.equal(updated.shortcutError, '');
+    assert.equal(env.registeredShortcuts.has('Control+Alt+K'), true);
+  } finally {
+    overlay.dispose();
+  }
+});

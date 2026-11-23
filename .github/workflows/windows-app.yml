@@ -21,15 +21,15 @@ on:
   workflow_dispatch:
     inputs:
       publish_surge:
-        description: Publish the validated delivery to Surge automatically
+        description: Publish the validated delivery to GitHub Releases and Surge automatically
         type: boolean
         default: true
       extended_browser:
-        description: Run every browser regression instead of the release journeys
+        description: Run every browser regression instead of fast smoke/release journeys
         type: boolean
         default: false
       full_tests:
-        description: Run full release test suites even for focused changes
+        description: Run full release test suites and rebuild all optional game packages
         type: boolean
         default: false
       include_games:
@@ -72,10 +72,13 @@ jobs:
             const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
             const release=releases.find(r=>r.tag_name===tag);
             if(!release?.draft)throw Error('Only a draft release can have its instructions refreshed.');
-            const names=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`,`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`];
+            const baseNames=[`MN-Trono-${version}-Windows.exe`,`MN-Trono-Frontend-${version}.zip`];
+            const optionalNames=[`MN-Trono-${version}-Windows.exe.blockmap`,`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`];
+            const names=[...baseNames,...optionalNames.filter(n=>release.assets.some(a=>a.name===n))];
             const lines=names.map(name=>{
               const asset=release.assets.find(a=>a.name===name);
-              if(!asset||asset.size<1000000||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
+              const minSize=name.endsWith('.blockmap')?100:1000000;
+              if(!asset||asset.size<minSize||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))throw Error('Missing verified binary asset: '+name);
               return asset.digest.slice(7)+'  '+name;
             });
             const instructions=fs.readFileSync('electron/LEIA-ME-WINDOWS.txt');
@@ -92,7 +95,7 @@ jobs:
     name: Validate and package Windows
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.refresh_instructions) }}
     runs-on: windows-latest
-    timeout-minutes: ${{ inputs.extended_browser && 35 || 25 }}
+    timeout-minutes: ${{ inputs.extended_browser && 35 || 20 }}
     outputs:
       release_tag: ${{ steps.distribution.outputs.tag }}
     steps:
@@ -136,6 +139,7 @@ jobs:
           path: ${{ runner.temp }}\ms-playwright
           key: playwright-win-${{ hashFiles('package-lock.json') }}
       - name: Cache Godot tools
+        if: steps.plan.outputs.changed_atalaia == 'true' || inputs.full_tests == true
         id: godot-cache
         uses: actions/cache@v4
         with:
@@ -174,7 +178,8 @@ jobs:
             Write-Host 'Using cached Playwright Chromium binary.'
           }
           exit 0
-      - name: Export the complete Atalaia game for the web
+      - name: Export Atalaia web game when changed
+        if: steps.plan.outputs.changed_atalaia == 'true' || inputs.full_tests == true
         shell: pwsh
         run: |
           if (!(Test-Path 'artifacts/godot-tools/runtime.json')) {
@@ -185,7 +190,8 @@ jobs:
           }
           node scripts/build-atalaia.cjs 2>&1 | Tee-Object artifacts/atalaia-build.log
           exit $LASTEXITCODE
-      - name: Prepare Similo art for its separate static domain
+      - name: Prepare Similo art when changed
+        if: steps.plan.outputs.changed_similo == 'true' || inputs.full_tests == true
         run: node scripts/build-similo-art.cjs
       - name: Check sources and build frontend and native helpers once
         shell: pwsh
@@ -210,10 +216,11 @@ jobs:
             Write-Host 'Using cached FFmpeg binaries.'
           }
           exit 0
-      - name: Verify contracts and real user journeys
+      - name: Verify contracts and focused user journeys
         shell: pwsh
         env:
           EXTENDED_BROWSER: ${{ inputs.extended_browser || false }}
+          FULL_TESTS: ${{ inputs.full_tests || false }}
           INCLUDE_GAMES: ${{ steps.plan.outputs.include_games }}
           PLAN_MODE: ${{ steps.plan.outputs.mode }}
           PLAN_REASONS: ${{ steps.plan.outputs.reasons }}
@@ -241,27 +248,31 @@ jobs:
             Write-Host 'Skipping unrelated core tests for this change.'
           }
           if ($env:EXTENDED_BROWSER -eq 'true') {
-            $browserArgs = @('--suite', 'browser', '--retries', '1')
+            $browserArgs = @('--suite', 'browser', '--concurrency', '2', '--retries', '1')
             if ($env:INCLUDE_GAMES -ne 'true') { $browserArgs += '--exclude-games' }
             node scripts/test.cjs @browserArgs 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } elseif ($env:BROWSER_MODE -eq 'release') {
-            node scripts/test.cjs --suite browser --profile release --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
+          } elseif ($env:BROWSER_MODE -eq 'release' -or ($env:BROWSER_MODE -eq 'platform' -and $env:FULL_TESTS -eq 'true')) {
+            $browserArgs = @('--suite', 'browser', '--profile', 'release', '--concurrency', '2', '--retries', '1')
+            if ($env:INCLUDE_GAMES -ne 'true') { $browserArgs += '--exclude-games' }
+            node scripts/test.cjs @browserArgs 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:BROWSER_MODE -eq 'platform') {
-            node scripts/test.cjs --suite browser --profile release --exclude-games --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
+            node scripts/test.cjs --suite browser --filter '(?:application-shell-browser\.cjs|auth-browser\.cjs|chat-composer-browser\.cjs|mobile-browser\.cjs)$' --concurrency 2 --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:BROWSER_MODE -eq 'filtered' -and $env:BROWSER_FILTER) {
-            node scripts/test.cjs --suite browser --filter $env:BROWSER_FILTER --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
+            node scripts/test.cjs --suite browser --filter $env:BROWSER_FILTER --concurrency 2 --retries 1 2>&1 | Tee-Object artifacts/windows-browser.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             Write-Host 'Skipping unrelated browser tests for this change.'
           }
-          if ($env:DESKTOP_MODE -eq 'release') {
-            node scripts/test.cjs --suite desktop --profile release --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
+          if ($env:DESKTOP_MODE -eq 'release' -or ($env:DESKTOP_MODE -eq 'platform' -and $env:FULL_TESTS -eq 'true')) {
+            $desktopArgs = @('--suite', 'desktop', '--profile', 'release', '--retries', '1')
+            if ($env:INCLUDE_GAMES -ne 'true') { $desktopArgs += '--exclude-games' }
+            node scripts/test.cjs @desktopArgs 2>&1 | Tee-Object artifacts/windows-desktop.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:DESKTOP_MODE -eq 'platform') {
-            node scripts/test.cjs --suite desktop --profile release --exclude-games --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
+            node scripts/test.cjs --suite desktop --filter '(?:desktop-runtime\.js|desktop-updates\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } elseif ($env:DESKTOP_MODE -eq 'filtered' -and $env:DESKTOP_FILTER) {
             node scripts/test.cjs --suite desktop --filter $env:DESKTOP_FILTER --retries 1 2>&1 | Tee-Object artifacts/windows-desktop.log
@@ -278,6 +289,7 @@ jobs:
           node scripts/test.cjs --suite desktop --filter '(?:desktop-packaged\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-packaged.log
           exit $LASTEXITCODE
       - name: Accept the real installer on the disposable runner
+        if: steps.plan.outputs.run_installer_test == 'true' || inputs.full_tests == true
         shell: pwsh
         run: |
           node scripts/test.cjs --suite desktop --filter '(?:desktop-installer\.js)$' --retries 1 2>&1 | Tee-Object artifacts/windows-installer.log
@@ -294,16 +306,22 @@ jobs:
           $version = (Get-Content electron/package.json | ConvertFrom-Json).version
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/site-download), (Join-Path (Resolve-Path artifacts) "MN-Trono-Frontend-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
-          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/atalaia/web), (Join-Path (Resolve-Path artifacts) "Atalaia-Web-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
-          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/similo-art), (Join-Path (Resolve-Path artifacts) "Similo-Art-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          if (Test-Path 'artifacts/atalaia/web') {
+            [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/atalaia/web), (Join-Path (Resolve-Path artifacts) "Atalaia-Web-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          }
+          if (Test-Path 'artifacts/similo-art') {
+            [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/similo-art), (Join-Path (Resolve-Path artifacts) "Similo-Art-$version.zip"), [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          }
       - name: Save the validated delivery in a private draft release
         id: distribution
         uses: actions/github-script@v7
         with:
           script: |
+            const fs=require('node:fs');
             const {publishBuild}=require('./scripts/desktop/publish-build.cjs');
             const version=require('./electron/package.json').version;
-            const result=await publishBuild({github,context,core,additionalFiles:[`artifacts/Atalaia-Web-${version}.zip`,`artifacts/Similo-Art-${version}.zip`]});
+            const additionalFiles=[`artifacts/Atalaia-Web-${version}.zip`,`artifacts/Similo-Art-${version}.zip`].filter(file=>fs.existsSync(file));
+            const result=await publishBuild({github,context,core,additionalFiles});
             core.setOutput('tag',result.tag);
       - name: Report failed test summaries
         if: failure()
@@ -325,7 +343,7 @@ jobs:
             artifacts/profile-media*/failure-*.png
 
   publish-surge:
-    name: Publish validated delivery to Surge
+    name: Publish validated delivery to GitHub Releases and Surge
     needs: [windows]
     if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/men-games-separation')) || (github.event_name == 'workflow_dispatch' && inputs.publish_surge)
     uses: ./.github/workflows/frontend-publish.yml

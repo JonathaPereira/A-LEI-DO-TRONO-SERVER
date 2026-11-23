@@ -3,6 +3,7 @@ const fs = require('node:fs/promises'),
   path = require('node:path'),
   crypto = require('node:crypto');
 const DOWNLOAD_REPOSITORY = 'JonathaPereira/MN-Trono-Downloads';
+const PUBLIC_RELEASE_REPOSITORY = 'JonathaPereira/A-LEI-DO-TRONO-SERVER';
 const MAX_SITE_BYTES = 190 * 1024 * 1024;
 async function filesIn(dir) {
   const result = [];
@@ -19,11 +20,16 @@ async function prepareSite({
   installerPath,
   outputRoot,
   repository = DOWNLOAD_REPOSITORY,
+  releaseRepository = PUBLIC_RELEASE_REPOSITORY,
 } = {}) {
   version ??= JSON.parse(
     await fs.readFile(path.join(root, 'electron/package.json'), 'utf8'),
   ).version;
-  if (!/^\d+\.\d+\.\d+$/.test(version) || !/^[-\w.]+\/[-\w.]+$/.test(repository))
+  if (
+    !/^\d+\.\d+\.\d+$/.test(version) ||
+    !/^[-\w.]+\/[-\w.]+$/.test(repository) ||
+    !/^[-\w.]+\/[-\w.]+$/.test(releaseRepository)
+  )
     throw Error('Versão ou repositório de downloads inválido.');
   const index = await fs.readFile(path.join(root, 'out/index.html'), 'utf8'),
     metadata = /<meta\b[^>]*\bname=["']mn-desktop-version["'][^>]*>/i.exec(index)?.[0],
@@ -33,12 +39,19 @@ async function prepareSite({
       'A versão do frontend não corresponde ao instalador. Execute npm run build antes de preparar os downloads.',
     );
   const filename = `MN-Trono-${version}-Windows.exe`,
-    source = installerPath || path.join(root, 'artifacts/windows-app', filename);
+    blockmapName = `${filename}.blockmap`,
+    source = installerPath || path.join(root, 'artifacts/windows-app', filename),
+    blockmapSource = `${source}.blockmap`;
   const bytes = await fs.readFile(source);
   if (bytes.length < 1024 * 1024 || bytes[0] !== 0x4d || bytes[1] !== 0x5a)
     throw Error('Instalador Windows inválido.');
+  let hasBlockmap = false;
+  try {
+    const stat = await fs.stat(blockmapSource);
+    hasBlockmap = stat.isFile() && stat.size > 0;
+  } catch {}
   const hash = crypto.createHash('sha512').update(bytes).digest('base64'),
-    url = `https://mn-trono-downloads.surge.sh/${filename}`;
+    url = `https://github.com/${releaseRepository}/releases/download/v${version}/${filename}`;
   const artifacts = outputRoot || path.join(root, 'artifacts'),
     direct = path.join(artifacts, 'windows-download'),
     site = path.join(artifacts, 'site-download');
@@ -46,6 +59,7 @@ async function prepareSite({
   await fs.rm(site, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   await fs.mkdir(direct, { recursive: true });
   await fs.copyFile(source, path.join(direct, filename));
+  if (hasBlockmap) await fs.copyFile(blockmapSource, path.join(direct, blockmapName));
   await fs.copyFile(
     path.join(root, 'electron/LEIA-ME-WINDOWS.txt'),
     path.join(direct, 'LEIA-ME-WINDOWS.txt'),
@@ -69,6 +83,7 @@ async function prepareSite({
   await fs.mkdir(downloads, { recursive: true });
   // Clear downloads on every package and include exactly one approved installer.
   await fs.copyFile(source, path.join(downloads, filename));
+  if (hasBlockmap) await fs.copyFile(blockmapSource, path.join(downloads, blockmapName));
   const ignorePath = path.join(frontend, '.surgeignore'),
     ignore = await fs.readFile(ignorePath, 'utf8');
   await fs.writeFile(
@@ -85,7 +100,7 @@ async function prepareSite({
   );
   await fs.writeFile(
     path.join(downloads, 'index.html'),
-    `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Trono ${version} para Windows</title><a href="${filename}">Baixar Trono ${version} para Windows</a></html>`,
+    `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Trono ${version} para Windows</title><a href="${url}">Baixar Trono ${version} para Windows</a></html>`,
   );
   await fs.copyFile(
     path.join(root, 'electron/LEIA-ME-PUBLICAR.txt'),

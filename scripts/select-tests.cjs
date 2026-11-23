@@ -60,6 +60,26 @@ const SLICE_RULES = [
     desktop: ['tests/desktop-updates.js'],
   },
   {
+    name: 'desktop-overlay-and-updates',
+    games: false,
+    patterns: [
+      /^electron\/(?:overlay(?:-preload)?|notifications|preferences)\.cjs$/i,
+      /^src\/lib\/desktop\/(?:overlay|updates)\.ts$/i,
+      /^src\/components\/desktop\/(?:overlay|update)-runtime\.tsx$/i,
+      /^src\/components\/modals\/overlay-fields\.tsx$/i,
+      /^tests\/(?:desktop-overlay|desktop-notifications|desktop-preferences|presence-status-and-dnd)\.(?:c?js)$/i,
+    ],
+    core: [
+      'tests/desktop-overlay.cjs',
+      'tests/desktop-notifications.js',
+      'tests/desktop-preferences.js',
+      'tests/desktop-update-controls.cjs',
+      'tests/presence-status-and-dnd.cjs',
+    ],
+    browser: [],
+    desktop: ['tests/desktop-updates.js'],
+  },
+  {
     name: 'ui-theme-and-shell',
     games: false,
     patterns: [
@@ -580,11 +600,31 @@ function isVersionOnlyPackageBump(file, base, head) {
   }
 }
 
-function planFull({ includeGames, reason }) {
+function computeBuildFlags(normalized, full) {
+  const changedAtalaia =
+    Boolean(full) ||
+    normalized.some((file) =>
+      /^(?:games\/atalaia\/|scripts\/(?:build-atalaia|prepare-godot)\.cjs)/i.test(file),
+    );
+  const changedSimilo =
+    Boolean(full) ||
+    normalized.some((file) => /^(?:games\/similo\/|scripts\/build-similo-art\.cjs)/i.test(file));
+  const runInstallerTest =
+    Boolean(full) ||
+    normalized.some((file) =>
+      /^(?:electron\/(?:installer\.nsh|updates\.cjs)|\.github\/workflows\/windows-app\.yml)/i.test(
+        file,
+      ),
+    );
+  return { changedAtalaia, changedSimilo, runInstallerTest };
+}
+
+function planFull({ includeGames, reason, buildFlags }) {
   return {
     mode: includeGames ? 'full' : 'platform',
     docsOnly: false,
     includeGames,
+    ...buildFlags,
     runCore: true,
     coreMode: includeGames ? 'full' : 'platform',
     coreFilter: '',
@@ -613,12 +653,13 @@ function planForChangedFiles({
   const knownCore = new Set(suites.core || []);
   const knownBrowser = new Set(suites.browser || []);
   const knownDesktop = new Set(suites.desktop || []);
+  const buildFlags = computeBuildFlags(normalized, full);
 
   if (full || !normalized.length) {
     return planFull({
       includeGames: Boolean(includeGames),
       reason: full ? 'explicit-full' : 'no-changed-files',
-      suites,
+      buildFlags: computeBuildFlags(normalized, true),
     });
   }
 
@@ -629,6 +670,9 @@ function planForChangedFiles({
       mode: 'docs-only',
       docsOnly: true,
       includeGames: false,
+      changedAtalaia: false,
+      changedSimilo: false,
+      runInstallerTest: false,
       runCore: false,
       coreMode: 'skip',
       coreFilter: '',
@@ -660,7 +704,7 @@ function planForChangedFiles({
         return planFull({
           includeGames: touchedGames,
           reason: `full-trigger:${file}`,
-          suites,
+          buildFlags,
         });
       }
       continue;
@@ -669,7 +713,7 @@ function planForChangedFiles({
       return planFull({
         includeGames: touchedGames,
         reason: `full-trigger:${file}`,
-        suites,
+        buildFlags,
       });
     }
   }
@@ -720,7 +764,7 @@ function planForChangedFiles({
       return planFull({
         includeGames: touchedGames,
         reason: `unmapped:${file}`,
-        suites,
+        buildFlags,
       });
     }
   }
@@ -741,6 +785,7 @@ function planForChangedFiles({
     mode: 'selective',
     docsOnly: false,
     includeGames: touchedGames,
+    ...buildFlags,
     runCore: coreTests.length > 0,
     coreMode: coreTests.length ? 'filtered' : 'skip',
     coreFilter: buildRegex(coreTests),
@@ -775,6 +820,9 @@ function writeGithubOutput(plan, outputPath) {
     `mode=${plan.mode}`,
     `docs_only=${String(plan.docsOnly)}`,
     `include_games=${String(plan.includeGames)}`,
+    `changed_atalaia=${String(plan.changedAtalaia)}`,
+    `changed_similo=${String(plan.changedSimilo)}`,
+    `run_installer_test=${String(plan.runInstallerTest)}`,
     `run_core=${String(plan.runCore)}`,
     `core_mode=${plan.coreMode}`,
     `core_filter=${plan.coreFilter}`,

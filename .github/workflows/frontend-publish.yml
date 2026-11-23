@@ -17,7 +17,7 @@ on:
         required: false
         default: ''
 permissions:
-  # GitHub exposes draft releases only to callers with push access.
+  # GitHub exposes draft releases only to callers with push access and allows public release upload.
   contents: write
   actions: read
 concurrency:
@@ -26,7 +26,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,23 +53,37 @@ jobs:
           script: |
             const {findApprovedBuild}=require('./scripts/desktop/approved-build.cjs');
             const {version}=require('./electron/package.json');
-            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG,additionalAssets:[`Atalaia-Web-${version}.zip`,`Similo-Art-${version}.zip`]});
+            const approved=await findApprovedBuild({github,context,version,requested:process.env.REQUESTED_TAG});
+            const releases=await github.paginate(github.rest.repos.listReleases,{...context.repo,per_page:100});
+            const found=releases.find(r=>r.tag_name===approved.tag);
+            const names=new Set((found?.assets||[]).map(a=>a.name));
             core.setOutput('tag',approved.tag);
             core.setOutput('version',approved.version);
+            core.setOutput('has_atalaia',String(names.has(`Atalaia-Web-${version}.zip`)));
+            core.setOutput('has_similo',String(names.has(`Similo-Art-${version}.zip`)));
+            core.setOutput('has_blockmap',String(names.has(`MN-Trono-${version}-Windows.exe.blockmap`)));
             core.notice('Approved delivery: '+approved.tag+' '+approved.sha);
       - name: Download and verify the frontend and installer
         env:
           GH_TOKEN: ${{ github.token }}
           APPROVED_TAG: ${{ steps.release.outputs.tag }}
           APP_VERSION: ${{ steps.release.outputs.version }}
+          HAS_ATALAIA: ${{ steps.release.outputs.has_atalaia }}
+          HAS_SIMILO: ${{ steps.release.outputs.has_similo }}
+          HAS_BLOCKMAP: ${{ steps.release.outputs.has_blockmap }}
         shell: bash
         run: |
           mkdir -p artifacts/surge-delivery
-          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" --pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt" --pattern "Atalaia-Web-$APP_VERSION.zip" --pattern "Similo-Art-$APP_VERSION.zip" --dir artifacts/surge-delivery
+          PATTERNS=(--pattern "MN-Trono-Frontend-$APP_VERSION.zip" --pattern "SHA256SUMS-$APP_VERSION.txt")
+          if [ "$HAS_ATALAIA" = "true" ]; then PATTERNS+=(--pattern "Atalaia-Web-$APP_VERSION.zip"); fi
+          if [ "$HAS_SIMILO" = "true" ]; then PATTERNS+=(--pattern "Similo-Art-$APP_VERSION.zip"); fi
+          if [ "$HAS_BLOCKMAP" = "true" ]; then PATTERNS+=(--pattern "MN-Trono-$APP_VERSION-Windows.exe.blockmap"); fi
+          gh release download "$APPROVED_TAG" --repo "$GITHUB_REPOSITORY" "${PATTERNS[@]}" --dir artifacts/surge-delivery
           python3 <<'PY'
           from pathlib import Path, PurePosixPath
-          import base64, hashlib, os, re, zipfile
+          import base64, hashlib, json, os, re, zipfile
           root=Path('artifacts/surge-delivery'); version=os.environ['APP_VERSION']
+          repo=os.environ['GITHUB_REPOSITORY']
           sums={name:digest for digest,name in (line.split('  ',1) for line in (root/f'SHA256SUMS-{version}.txt').read_text().splitlines())}
           archive=root/f'MN-Trono-Frontend-{version}.zip'
           assert hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()==sums[archive.name]
@@ -85,49 +99,51 @@ jobs:
               assert sha256.hexdigest()==sums[name]
               manifest=z.read('frontend/downloads/latest.yml').decode()
               assert re.search(r'^version: '+re.escape(version)+r'$',manifest,re.M)
-              expected_url='https://mn-trono-downloads.surge.sh/'+name
+              expected_url=f'https://github.com/{repo}/releases/download/v{version}/{name}'
               assert re.findall(r'^\s*(?:- url|path): (.+)$',manifest,re.M)==[expected_url,expected_url]
               ignore=z.read('frontend/.surgeignore').decode()
               assert '*.exe' in ignore.splitlines() and not any(line.startswith('!downloads/') for line in ignore.splitlines())
               assert set(re.findall(r'sha512: (\S+)',manifest))=={base64.b64encode(sha512.digest()).decode()}
               z.extractall(root/'verified')
-          game=root/f'Atalaia-Web-{version}.zip'
-          assert hashlib.file_digest(game.open('rb'),'sha256').hexdigest()==sums[game.name]
-          with zipfile.ZipFile(game) as z:
-              for entry in z.infolist():
-                  path=PurePosixPath(entry.filename)
-                  assert not path.is_absolute() and '..' not in path.parts
-              import json
-              metadata=json.loads(z.read('version.json'))
-              assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
-              assert re.fullmatch(r'\d+\.\d+\.\d+',metadata['gameVersion'])
-              executable='atalaia-'+metadata['gameVersion']+'-'+os.environ['GITHUB_SHA'][:12]
-              assert metadata['executable']==executable
-              assert all(name in z.namelist() for name in ['index.html']+[executable+'.'+ext for ext in ['js','wasm','pck']])
-              z.extractall(root/'atalaia')
-          art=root/f'Similo-Art-{version}.zip'
-          assert hashlib.file_digest(art.open('rb'),'sha256').hexdigest()==sums[art.name]
-          with zipfile.ZipFile(art) as z:
-              expected={'v1/'+theme+'.webp' for theme in ['animals','history','tales','monsters','myths']}
-              assert {p for p in z.namelist() if not p.endswith('/')}==expected|{'version.json'}
-              metadata=json.loads(z.read('version.json'))
-              assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
-              assert set(metadata['files'])==expected
-              for file,digest in metadata['files'].items():
-                  assert hashlib.sha256(z.read(file)).hexdigest()==digest
-              z.extractall(root/'similo-art')
-          print('Frontend, installer, art and update manifest verified.')
+          if os.environ.get('HAS_ATALAIA')=='true':
+              game=root/f'Atalaia-Web-{version}.zip'
+              assert hashlib.file_digest(game.open('rb'),'sha256').hexdigest()==sums[game.name]
+              with zipfile.ZipFile(game) as z:
+                  for entry in z.infolist():
+                      path=PurePosixPath(entry.filename)
+                      assert not path.is_absolute() and '..' not in path.parts
+                  metadata=json.loads(z.read('version.json'))
+                  assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
+                  assert re.fullmatch(r'\d+\.\d+\.\d+',metadata['gameVersion'])
+                  executable='atalaia-'+metadata['gameVersion']+'-'+os.environ['GITHUB_SHA'][:12]
+                  assert metadata['executable']==executable
+                  assert all(name in z.namelist() for name in ['index.html']+[executable+'.'+ext for ext in ['js','wasm','pck']])
+                  z.extractall(root/'atalaia')
+          if os.environ.get('HAS_SIMILO')=='true':
+              art=root/f'Similo-Art-{version}.zip'
+              assert hashlib.file_digest(art.open('rb'),'sha256').hexdigest()==sums[art.name]
+              with zipfile.ZipFile(art) as z:
+                  expected={'v1/'+theme+'.webp' for theme in ['animals','history','tales','monsters','myths']}
+                  assert {p for p in z.namelist() if not p.endswith('/')}==expected|{'version.json'}
+                  metadata=json.loads(z.read('version.json'))
+                  assert metadata['source']==os.environ['GITHUB_SHA'] and metadata['desktopVersion']==version
+                  assert set(metadata['files'])==expected
+                  for file,digest in metadata['files'].items():
+                      assert hashlib.sha256(z.read(file)).hexdigest()==digest
+                  z.extractall(root/'similo-art')
+          print('Frontend, installer and update manifest verified.')
           PY
-      - name: Publish and verify Atalaia before updating the catalog
+      - name: Publish and verify Atalaia when changed
+        if: steps.release.outputs.has_atalaia == 'true'
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
-          APP_VERSION: ${{ steps.release.outputs.version }}
         shell: bash
         run: |
           npx --yes surge@0.46.0 artifacts/surge-delivery/atalaia atalaia-mn.surge.sh
           curl --fail --silent --show-error --retry 3 https://atalaia-mn.surge.sh/version.json -o artifacts/surge-delivery/atalaia-published.json
           cmp artifacts/surge-delivery/atalaia/version.json artifacts/surge-delivery/atalaia-published.json
-      - name: Publish and verify Similo portraits before updating the catalog
+      - name: Publish and verify Similo portraits when changed
+        if: steps.release.outputs.has_similo == 'true'
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
         shell: bash
@@ -143,16 +159,28 @@ jobs:
               with urllib.request.urlopen('https://similo-mn.surge.sh/'+file, timeout=60) as response:
                   assert hashlib.sha256(response.read()).hexdigest()==digest
           PYART
-      - name: Publish and verify the installer before updating the feed
+      - name: Publish public GitHub Release with installer and blockmap before updating the feed
         env:
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           APP_VERSION: ${{ steps.release.outputs.version }}
+          HAS_BLOCKMAP: ${{ steps.release.outputs.has_blockmap }}
         shell: bash
         run: |
-          mkdir -p artifacts/surge-delivery/installer
-          cp artifacts/surge-delivery/verified/frontend/downloads/* artifacts/surge-delivery/installer/
-          npx --yes surge@0.46.0 artifacts/surge-delivery/installer mn-trono-downloads.surge.sh
-          curl --fail --silent --show-error --retry 3 --max-time 300 "https://mn-trono-downloads.surge.sh/MN-Trono-$APP_VERSION-Windows.exe" -o artifacts/surge-delivery/published-installer.exe
+          TAG="v$APP_VERSION"
+          EXE="artifacts/surge-delivery/verified/frontend/downloads/MN-Trono-$APP_VERSION-Windows.exe"
+          LATEST="artifacts/surge-delivery/verified/frontend/downloads/latest.yml"
+          SUMS="artifacts/surge-delivery/SHA256SUMS-$APP_VERSION.txt"
+          ASSETS=("$EXE" "$LATEST" "$SUMS")
+          if [ "$HAS_BLOCKMAP" = "true" ] && [ -f "artifacts/surge-delivery/MN-Trono-$APP_VERSION-Windows.exe.blockmap" ]; then
+            ASSETS+=("artifacts/surge-delivery/MN-Trono-$APP_VERSION-Windows.exe.blockmap")
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "M&N · A Lei do Trono $APP_VERSION" --notes "Entrega validada Windows $APP_VERSION com suporte a atualização diferencial (.blockmap)."
+          fi
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/MN-Trono-$APP_VERSION-Windows.exe"
+          curl --fail --location --silent --show-error --retry 3 --max-time 300 "$URL" -o artifacts/surge-delivery/published-installer.exe
           python3 <<'PYCODE'
           from pathlib import Path
           import hashlib, os
@@ -160,7 +188,7 @@ jobs:
           sums={name:digest for digest,name in (line.split('  ',1) for line in (root/('SHA256SUMS-'+os.environ['APP_VERSION']+'.txt')).read_text().splitlines())}
           assert hashlib.file_digest((root/'published-installer.exe').open('rb'),'sha256').hexdigest()==sums[name]
           PYCODE
-      - name: Publish the verified directory to Surge
+      - name: Publish the verified frontend directory and latest.yml to Surge
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
         run: npx --yes surge@0.46.0 artifacts/surge-delivery/verified/frontend a-lei-do-trono.surge.sh
@@ -174,4 +202,4 @@ jobs:
           grep -Fx "version: $APP_VERSION" artifacts/surge-delivery/published-latest.yml
           curl --fail --silent --show-error --retry 3 https://a-lei-do-trono.surge.sh/ -o artifacts/surge-delivery/published-index.html
           grep -E "name=\"mn-desktop-version\"[^>]*content=\"$APP_VERSION\"" artifacts/surge-delivery/published-index.html
-          echo "Published and verified frontend $APP_VERSION at https://a-lei-do-trono.surge.sh/." >> "$GITHUB_STEP_SUMMARY"
+          echo "Published and verified $APP_VERSION at GitHub Releases (v$APP_VERSION) and https://a-lei-do-trono.surge.sh/." >> "$GITHUB_STEP_SUMMARY"

@@ -19,6 +19,7 @@ export interface DesktopUpdatePort {
   onUpdateState(listener: (value: unknown) => void): (() => void) | void;
   checkUpdates(): Promise<unknown>;
   installUpdate(): Promise<unknown>;
+  openUpdateDownload?(): Promise<unknown>;
 }
 const statuses = new Set<DesktopUpdateStatus>([
   'idle',
@@ -159,6 +160,12 @@ export function createDesktopUpdates(native: DesktopUpdatePort) {
       } finally {
         update({ installing: false });
       }
+    },
+    async openDownload() {
+      if (disposed) return;
+      try {
+        await native.openUpdateDownload?.();
+      } catch {}
     },
     close() {
       if (disposed) return;
