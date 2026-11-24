@@ -261,6 +261,65 @@ public class TronoAndroidPlugin extends Plugin {
     call.resolve(value);
   }
 
+  private AndroidUpdater updater;
+
+  private synchronized AndroidUpdater getUpdater() {
+    if (updater == null) {
+      updater =
+          new AndroidUpdater(
+              getContext(), state -> notifyListeners("updateState", state, false));
+    }
+    return updater;
+  }
+
+  @PluginMethod
+  public void getAppInfo(PluginCall call) {
+    call.resolve(
+        new JSObject()
+            .put("version", BuildConfig.VERSION_NAME)
+            .put("versionCode", BuildConfig.VERSION_CODE));
+  }
+
+  @PluginMethod
+  public void getUpdateState(PluginCall call) {
+    call.resolve(getUpdater().getState());
+  }
+
+  @PluginMethod
+  public void checkUpdates(PluginCall call) {
+    AndroidUpdater instance = getUpdater();
+    instance.submit(() -> call.resolve(instance.checkUpdatesSync()));
+  }
+
+  @PluginMethod
+  public void downloadUpdate(PluginCall call) {
+    AndroidUpdater instance = getUpdater();
+    instance.submit(() -> call.resolve(instance.downloadUpdateSync()));
+  }
+
+  @PluginMethod
+  public void installUpdate(PluginCall call) {
+    try {
+      JSObject result = getUpdater().installUpdate(getActivity());
+      call.resolve(result);
+    } catch (Exception error) {
+      call.reject(
+          error.getMessage() != null
+              ? error.getMessage()
+              : "Não foi possível abrir o instalador nativo do Android.");
+    }
+  }
+
+  @PluginMethod
+  public void openUpdateDownload(PluginCall call) {
+    try {
+      getUpdater().openDownloadPage(getActivity());
+      call.resolve();
+    } catch (Exception error) {
+      call.reject("Não foi possível abrir a página de atualização.");
+    }
+  }
+
   private void acceptIntent(Intent intent) {
     String raw = intent.getStringExtra("tronoTarget");
     intent.removeExtra("tronoTarget");
@@ -295,6 +354,10 @@ public class TronoAndroidPlugin extends Plugin {
 
   @Override
   protected void handleOnDestroy() {
+    if (updater != null) {
+      updater.shutdown();
+      updater = null;
+    }
     CallService.lease = null;
     getContext().stopService(new Intent(getContext(), CallService.class));
   }

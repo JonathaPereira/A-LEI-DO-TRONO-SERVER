@@ -23,6 +23,7 @@ import { ProfileDialogs } from './profile-settings';
 import { MediaSettings } from './media-settings';
 import { ApplicationNotices } from './notices';
 import { DesktopUpdateSidebarBanner } from './desktop-updates';
+import { AndroidUpdateSidebarBanner } from './android-updates';
 import { CallSurface } from './call';
 import { Conversation } from './conversation';
 import { useModel, useServices, type ApplicationServices } from './services';
@@ -150,7 +151,8 @@ function Navigation({
     dm = useModel(runtime.TronoDirectMessages),
     call = useModel(runtime.TronoCallNavigation),
     toolbar = useModel(runtime.TronoCallToolbar),
-    stage = useModel(runtime.TronoCallStage);
+    stage = useModel(runtime.TronoCallStage),
+    registeredAccounts = useModel(runtime.TronoRegisteredAccounts);
   const account = auth.user || auth.guest;
   const presenceMembers = community.presence?.members ?? [];
   const peerStatus = (peerId: string): PresenceStatus | 'offline' => {
@@ -419,6 +421,9 @@ function Navigation({
       {runtime.TronoDesktopUpdates && (
         <DesktopUpdateSidebarBanner client={runtime.TronoDesktopUpdates} />
       )}
+      {runtime.TronoAndroidUpdates && (
+        <AndroidUpdateSidebarBanner client={runtime.TronoAndroidUpdates} />
+      )}
       <CallSummary runtime={runtime} />
       <footer className={styles.account} data-account-card>
         <DirectProfileBanner accountId={auth.user?.id ?? ''} />
@@ -515,10 +520,35 @@ function Navigation({
               <Icon name="settings" size={18} />
               Configurações da Corte
             </button>
+            {registeredAccounts.allowed && (
+              <button
+                id="creatorAccountsBtn"
+                type="button"
+                data-close-panel
+                onClick={() => void runtime.TronoRegisteredAccounts.open()}
+              >
+                <Icon name="crown" size={18} />
+                E-mails cadastrados
+              </button>
+            )}
             {account && (
               <button type="button" data-close-panel onClick={() => triggerWelcomeIntroReplay()}>
                 <Icon name="crown" size={18} />
                 Rever boas-vindas
+              </button>
+            )}
+            {runtime.TronoAndroidUpdates && (
+              <button
+                type="button"
+                data-close-panel
+                data-open-android-updates
+                onClick={() => {
+                  runtime.TronoCallSettings.open('application');
+                  void runtime.TronoAndroidUpdates?.check();
+                }}
+              >
+                <Icon name="swap" size={18} />
+                Atualizar aplicativo
               </button>
             )}
             {auth.user && (
@@ -580,15 +610,6 @@ function Navigation({
           onClick={() => runtime.TronoCallSettings.open('audio')}
         >
           <Icon name="settings" size={18} />
-        </button>
-        <button
-          type="button"
-          data-open-clips
-          aria-label="Clipes"
-          title="Clipes"
-          aria-controls="clipsDialog"
-        >
-          <Icon name="clips" />
         </button>
       </footer>
     </>

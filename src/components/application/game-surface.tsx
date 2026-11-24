@@ -19,7 +19,6 @@ import { TrickOutcome } from '../navigation/trick-outcome';
 import { ConnectionNotice } from '../navigation/connection-notice';
 import { Toast } from '../navigation/toast';
 import { HoverTooltip } from '../navigation/hover-tooltip';
-import { BgMusic } from '../navigation/bg-music';
 import { ScreenOptionsDialog } from '../modals/screen-options-dialog';
 import { MediaFocusDialog } from '../modals/media-focus-dialog';
 
@@ -53,7 +52,6 @@ export function GameSurface({ active, screen }: { active: boolean; screen: Prima
       <ConnectionNotice />
       <Toast />
       <HoverTooltip />
-      <BgMusic />
       <ScreenOptionsDialog />
       <MediaFocusDialog />
     </div>

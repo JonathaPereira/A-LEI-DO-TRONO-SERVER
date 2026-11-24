@@ -15,6 +15,7 @@ export interface VideoFreezeRecoveryOptions {
   minStallMs?: number;
   hardRecoverStallMs?: number;
   healthyResetMs?: number;
+  getBufferMs?: () => number;
   now?: () => number;
   nudgePublisher(
     kind: Extract<VoiceMediaKind, 'screen' | 'camera'>,
@@ -136,6 +137,8 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
     const stamp = now();
     const callGen = options.generation();
     const sfu = options.isSfu();
+    const configuredBufferMs = options.getBufferMs?.() ?? 80;
+    const extraBufferMs = Math.max(0, configuredBufferMs - 80);
     let triggered = false;
 
     for (const stream of streams) {
@@ -155,15 +158,21 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
       // Never loop SFU publish retries if the local capture source itself stopped producing frames.
       if (stream.cause === 'capture-interrupted') continue;
 
-      const immediate = stream.cause === 'subscription-interrupted';
-      if (stream.stallMs < (immediate ? Math.min(minStallMs, 800) : minStallMs)) continue;
-
       const transportBroken =
         stream.cause === 'subscription-interrupted' ||
         stream.pcState === 'failed' ||
         stream.pcState === 'disconnected' ||
         stream.pcState === 'closed';
-      const canHardRecover = transportBroken || stream.stallMs >= hardRecoverStallMs;
+      const inboundBufferGrace =
+        stream.direction === 'inbound' && !transportBroken ? extraBufferMs : 0;
+      const immediate = stream.cause === 'subscription-interrupted';
+      const effectiveMinStall = immediate
+        ? Math.min(minStallMs, 800)
+        : minStallMs + inboundBufferGrace;
+      if (stream.stallMs < effectiveMinStall) continue;
+
+      const canHardRecover =
+        transportBroken || stream.stallMs >= hardRecoverStallMs + inboundBufferGrace;
 
       pruneWindow(entry, stamp);
       const attemptIndex = entry.attempts.length;
@@ -177,6 +186,9 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
           );
           triggered ||= ran;
         } else if (canHardRecover) {
+          // Do not tear down a connected publisher PeerConnection on uplink congestion;
+          // GCC and CallStability adapt bitrate cleanly without a keyframe-burst reconnect loop.
+          if (stream.cause === 'transport-congestion' && !transportBroken) continue;
           const ran = await runAction(targetKey, callGen, () =>
             options.recoverPublisher(pubKind, stream.cause),
           );
@@ -194,7 +206,7 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
           continue;
         if (attemptIndex === 0) {
           // Single-layer screen subscriptions have no RID switch option; avoid tearing down
-          // the PeerConnection on brief <3.8s stutters while transport stays connected.
+          // the PeerConnection on brief stutters while transport stays connected.
           if (!canHardRecover && parsed.kind === 'screen') continue;
           const ran = await runAction(targetKey, callGen, async () => {
             const refreshed = await options.refreshSfuSubscription(parsed.peerId, parsed.kind);

@@ -426,15 +426,6 @@ export function CallSurface({
               )}
             </span>
           ))}
-          <button
-            type="button"
-            data-open-clips
-            aria-label="Clipes"
-            title="Clipes"
-            aria-controls="clipsDialog"
-          >
-            <Icon name="clips" />
-          </button>
         </div>
         <p role="status">{toolbar.status.text}</p>
       </footer>

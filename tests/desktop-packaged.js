@@ -18,11 +18,7 @@ test(
       '../artifacts/windows-app/win-unpacked/MN Trono.exe',
     );
     await fs.access(executable);
-    const ffmpegDirectory=path.join(path.dirname(executable),'resources/ffmpeg');
-    for (const file of ['bin/ffmpeg.exe','LICENSE-LGPL-3.txt','LICENSE-GPL-3.txt','UPSTREAM.txt','BUILD-CONFIG.txt','VERSION.json']) await fs.access(path.join(ffmpegDirectory,file));
-    const ffmpegVersion=JSON.parse(await fs.readFile(path.join(ffmpegDirectory,'VERSION.json'),'utf8'));
-    assert.equal(ffmpegVersion.sha256,require('../scripts/desktop/prepare-ffmpeg.cjs').SHA256);
-    const codecProbe=require('node:child_process').spawnSync(path.join(ffmpegDirectory,'bin/ffmpeg.exe'),['-hide_banner','-encoders'],{encoding:'utf8',windowsHide:true,timeout:15000});assert.equal(codecProbe.status,0,codecProbe.stderr);assert.match(codecProbe.stdout,/h264_nvenc/);
+    await assert.rejects(fs.access(path.join(path.dirname(executable), 'resources/ffmpeg')));
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'mn-packaged-'));
     let app,
       page,
@@ -213,8 +209,8 @@ test(
         page,
         port: 10846,
       });
-      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
-      assert.equal(await page.evaluate(() => window.TronoClips.active), false);
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+      assert.equal(await page.evaluate(() => window.TronoDesktop.clipsSuspended), true);
       await page.evaluate(() => window.TronoCallSettings.open('capture'));
       await expect(page.getByRole('dialog', { name: 'Voz e vídeo', exact: true })).toBeVisible();
       await expect(page.locator('#screenFormatSelect')).toBeVisible();

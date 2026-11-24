@@ -129,6 +129,10 @@ test(
             await page.locator('#creatorAccountsMore').click();
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(51);
             await expect(page.locator('#creatorAccountsMore')).toBeHidden();
+            await page.locator('#creatorAccountsSearch').fill('private-50@example.test');
+            await expect(page.locator('#creatorAccountsList tr')).toHaveCount(1);
+            await page.locator('#creatorAccountsSearch').fill('');
+            await expect(page.locator('#creatorAccountsList tr')).toHaveCount(51);
             assert.deepEqual(requests, [0, 50, 50]);
             await page.keyboard.press('Escape');
             await expect(page.locator('#creatorAccountsDialog')).toBeHidden();
@@ -159,6 +163,13 @@ test(
             await profileButton.click();
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(50);
             assert.equal(await page.locator('#creatorAccountsDialog').count(), 1);
+            await page.keyboard.press('Escape');
+            await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
+            await page.locator('[data-account-card] button', { hasText: 'Criador' }).click();
+            await expect(page.locator('#creatorAccountsBtn')).toBeVisible();
+            await page.locator('#creatorAccountsBtn').click();
+            await expect(page.locator('#creatorAccountsDialog')).toBeVisible();
+            await expect(page.locator('#creatorAccountsList tr')).toHaveCount(50);
             await page.evaluate(() => window.TronoAuth.logout());
             await expect(page.locator('#creatorAccountsList tr')).toHaveCount(0);
             await expect(page.locator('#creatorAccountsDialog')).toBeHidden();
@@ -166,6 +177,9 @@ test(
             await page.locator('#authPassword').fill('Senha12!');
             await page.locator('#authSubmit').click();
             await expect.poll(() => page.evaluate(() => window.TronoAuth.user?.email)).toBe(member);
+            await page.locator('[data-account-card] button', { hasText: 'Membro' }).click();
+            await expect(page.locator('#creatorAccountsBtn')).toHaveCount(0);
+            await page.keyboard.press('Escape');
             await page.evaluate(() => window.TronoProfile.open());
             await expect(profileButton).toBeHidden();
             assert.deepEqual(errors, []);

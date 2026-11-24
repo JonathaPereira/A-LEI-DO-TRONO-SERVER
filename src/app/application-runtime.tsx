@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { initializeAndroid } from '../lib/mobile/android';
 import { initializeAndroidPush } from '../lib/mobile/push';
+import { initializeAndroidUpdates } from '../components/mobile/android-update-runtime';
 import { initializeDesktopWindow } from '../lib/desktop/window';
 import { initializeDesktopUpdates } from '../components/desktop/update-runtime';
 import { initializeDesktopOverlay } from '../components/desktop/overlay-runtime';
@@ -85,6 +86,7 @@ export function ApplicationRuntime() {
       initializeChannelManagement(window, { mount: false });
       initializeDesktopActivity(window);
       initializeDesktopUpdates(window);
+      initializeAndroidUpdates(window);
       initializeDesktopWindow(window);
       initializeVoiceRuntime(window);
       Object.assign(window, { TronoRules: throneRules });

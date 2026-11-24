@@ -108,10 +108,22 @@ export class CallStability {
       (t.video || []).some(
         (v) => (v.freezeCount ?? 0) > 0 && ((v.sendDelayMs ?? 0) >= 50 || (v.encodeMs ?? 0) >= 28),
       );
+    const highRetransmit =
+      (typeof t.retransmittedPct === 'number' &&
+        Number.isFinite(t.retransmittedPct) &&
+        t.retransmittedPct >= 5 &&
+        (t.retransmittedPackets ?? 10) >= 10) ||
+      (t.streams || []).some(
+        (s) =>
+          s.direction === 'outbound' &&
+          (s.packetsDelta ?? 0) >= 40 &&
+          (s.retransmittedPackets ?? 0) >= 10 &&
+          ((s.retransmittedPackets ?? 0) / (s.packetsDelta ?? 1)) * 100 >= 5,
+      );
     const network =
       (t.audioLossPct ?? 0) >= 5 ||
       (t.lossPct ?? 0) >= 5 ||
-      (t.retransmittedPackets ?? 0) >= 8 ||
+      highRetransmit ||
       (t.audioJitterMs ?? 0) >= 70 ||
       (t.rttMs ?? 0) >= 350 ||
       t.limiter === 'bandwidth' ||

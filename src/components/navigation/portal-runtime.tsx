@@ -142,20 +142,6 @@ export function initializePortal(target: Window): () => void {
         feedback.classList.toggle(style, enabled);
     }
   });
-  function track(event?: Event) {
-    const detail = (event as CustomEvent<{ id?: string }> | undefined)?.detail;
-    let id = detail?.id;
-    if (!id) {
-      try {
-        id = storage.getItem('tronoMusicTrack') || 'lofi';
-      } catch {
-        id = 'lofi';
-      }
-    }
-    const tracks = runtime.TRONO_MUSIC_TRACKS,
-      chosen = tracks?.[id] ?? tracks?.lofi;
-    if (chosen) controller.setNowPlaying(`${chosen.label} • ${chosen.artist}`);
-  }
   function lobbyInput(event: Event) {
     controller.queueNameCheck((event.target as HTMLInputElement).value);
   }
@@ -175,15 +161,13 @@ export function initializePortal(target: Window): () => void {
       doc.body.classList.add('portal-active');
     input('playerIdentity')?.addEventListener('input', lobbyInput);
     doc.getElementById('backFromLobbyBtn')?.addEventListener('click', back);
-    target.addEventListener('trono-music-track', track);
-    track();
+    controller.setNowPlaying('');
   }
   target.addEventListener('trono:ready', bind, { once: true });
   const dispose = () => {
     disposed = true;
     target.cancelAnimationFrame(focusFrame);
     target.removeEventListener('trono:ready', bind);
-    target.removeEventListener('trono-music-track', track);
     input('playerIdentity')?.removeEventListener('input', lobbyInput);
     doc.getElementById('backFromLobbyBtn')?.removeEventListener('click', back);
     releaseBridge();

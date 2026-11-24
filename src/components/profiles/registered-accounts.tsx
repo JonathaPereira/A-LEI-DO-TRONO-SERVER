@@ -1,7 +1,10 @@
 'use client';
 
-import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import type { RegisteredAccounts } from '../../lib/profiles/registered-accounts';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  filterRegisteredAccounts,
+  type RegisteredAccounts,
+} from '../../lib/profiles/registered-accounts';
 
 export function CreatorAccountsButton({
   controller,
@@ -36,8 +39,27 @@ export function RegisteredAccountsDialog({ controller }: { controller: Registere
     controller.getSnapshot,
     controller.getSnapshot,
   );
+  const [query, setQuery] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dialog = useRef<HTMLDialogElement>(null),
     returnFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!state.open) {
+      setQuery('');
+      setCopiedId(null);
+      if (copyTimer.current) {
+        clearTimeout(copyTimer.current);
+        copyTimer.current = null;
+      }
+    }
+    return () => {
+      if (copyTimer.current) {
+        clearTimeout(copyTimer.current);
+        copyTimer.current = null;
+      }
+    };
+  }, [state.open]);
   useLayoutEffect(() => {
     const element = dialog.current;
     if (!element) return;
@@ -52,6 +74,21 @@ export function RegisteredAccountsDialog({ controller }: { controller: Registere
       returnFocus.current = null;
     }
   }, [state.open]);
+  const visibleAccounts = filterRegisteredAccounts(state.accounts, query);
+  function copyEmail(id: string, email: string) {
+    if (!navigator.clipboard?.writeText) return;
+    void navigator.clipboard
+      .writeText(email)
+      .then(() => {
+        setCopiedId(id);
+        if (copyTimer.current) clearTimeout(copyTimer.current);
+        copyTimer.current = setTimeout(() => {
+          copyTimer.current = null;
+          setCopiedId(null);
+        }, 1800);
+      })
+      .catch(() => {});
+  }
   return (
     <dialog
       closedby="any"
@@ -78,6 +115,24 @@ export function RegisteredAccountsDialog({ controller }: { controller: Registere
       <small>ÁREA DO CRIADOR</small>
       <h2 id="creatorAccountsTitle">Contas cadastradas</h2>
       <p>E-mails de cadastro. Senhas e dados de autenticação não são exibidos.</p>
+      <div className="creator-accounts-toolbar">
+        <input
+          id="creatorAccountsSearch"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Filtrar por nome ou e-mail…"
+          aria-label="Filtrar contas cadastradas"
+        />
+        <button
+          id="creatorAccountsRefresh"
+          type="button"
+          disabled={state.loading}
+          onClick={() => void controller.open()}
+        >
+          Atualizar
+        </button>
+      </div>
       <div className="creator-table-scroll">
         <table>
           <thead>
@@ -85,14 +140,24 @@ export function RegisteredAccountsDialog({ controller }: { controller: Registere
               <th>Nome</th>
               <th>E-mail</th>
               <th>Cadastro</th>
+              <th>Ação</th>
             </tr>
           </thead>
           <tbody id="creatorAccountsList">
-            {state.accounts.map((account) => (
+            {visibleAccounts.map((account) => (
               <tr key={account.id}>
                 <td>{account.nickname}</td>
                 <td>{account.email}</td>
                 <td>{account.confirmed ? 'Confirmado' : 'Aguardando confirmação'}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="creator-copy-email"
+                    onClick={() => copyEmail(account.id, account.email)}
+                  >
+                    {copiedId === account.id ? 'Copiado' : 'Copiar'}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

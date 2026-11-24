@@ -28,6 +28,7 @@ interface SettingsOptions {
   unlockAudio(): void;
   announce(): void;
   onOutputChanged(): void;
+  onScreenBufferChanged?: () => void;
   setScreenBitrate(value: number): Promise<unknown>;
   onStatus(text: string, kind: 'ok' | 'warn'): void;
   warn?(error: unknown): void;
@@ -244,6 +245,18 @@ export function createVoiceSettings(options: SettingsOptions) {
       options.sharing.setAudio(value);
       refresh();
       options.onStatus('Preferência de áudio aplicada ao próximo compartilhamento.', 'ok');
+    },
+    setScreenSmoothMode(value: boolean) {
+      if (disposed) return;
+      options.quality.configure({ screenSmoothMode: Boolean(value) });
+      options.onScreenBufferChanged?.();
+      refresh();
+      options.onStatus(
+        value
+          ? 'Modo Fluidez ativado (~2s de buffer na transmissão; voz em tempo real).'
+          : 'Modo Fluidez desativado (transmissão em baixa latência).',
+        'ok',
+      );
     },
     dispose() {
       disposed = true;

@@ -88,11 +88,6 @@ export function ScreenOptionsContent({
           Para compartilhar só o som do jogo, escolha sua aba ou janela. O áudio do computador
           inteiro pode incluir a chamada; se houver retorno de voz, desmarque o áudio.
         </small>
-        <p id={'shareReplayHelp'} className={'share-replay-help'} hidden={desktop}>
-          {state.replay
-            ? 'O replay será preparado automaticamente para clipar pelo botão ✂ na barra da chamada, com o áudio da tela quando disponível.'
-            : 'Replay desligado. Ative em Meus clipes → Preferências para preparar clipes ao compartilhar.'}
-        </p>
         <div className={'dialog-actions'}>
           <button
             id={'screenOptionsCancel'}

@@ -18,15 +18,6 @@ function bundlePath(root, url) {
     throw Error('Invalid bundle path');
   return file;
 }
-function clipFilename(value) {
-  if (
-    typeof value !== 'string' ||
-    value.length > 160 ||
-    !/^Trono_Clipe_[a-zA-Z0-9_-]+\.webm$/.test(value)
-  )
-    throw Error('Nome de clipe inválido.');
-  return value;
-}
 function accelerator(value) {
   if (
     !value ||
@@ -54,4 +45,4 @@ function accelerator(value) {
     .filter(Boolean)
     .join('+');
 }
-module.exports = { APP_ORIGIN, BACKEND_ORIGIN, isAppURL, bundlePath, clipFilename, accelerator };
+module.exports = { APP_ORIGIN, BACKEND_ORIGIN, isAppURL, bundlePath, accelerator };

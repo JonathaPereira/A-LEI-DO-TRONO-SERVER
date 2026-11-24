@@ -1,4 +1,4 @@
-export const APP_RELEASE_VERSION = '2.2.1';
+export const APP_RELEASE_VERSION = '2.3.0';
 export const RELEASE_NOTES_STORAGE_KEY = 'trono:release-notes:seen';
 export const RELEASE_NOTES_OPEN_EVENT = 'trono:open-release-notes';
 
@@ -20,28 +20,35 @@ export const CURRENT_RELEASE_NOTES: ReleaseNotesEntry = Object.freeze({
   version: APP_RELEASE_VERSION,
   heading: `Novidades da versão ${APP_RELEASE_VERSION}`,
   subtitle:
-    'Atalho personalizado no Overlay em segundo plano e atualizações automáticas mais rápidas.',
+    'Transmissão de tela mais estável com Modo Fluidez, Auto-Ausente inteligente e atualizações automáticas no Android.',
   items: Object.freeze([
     Object.freeze({
-      id: 'overlay-custom-shortcut',
-      tag: 'Overlay',
-      title: 'Atalho personalizável funcionando em segundo plano',
+      id: 'screen-share-fluidez',
+      tag: 'Transmissão',
+      title: 'Transmissão de tela mais estável + Modo Fluidez (~2s de buffer)',
       description:
-        'Escolha qualquer combinação em Configurações → Aplicativo → Definir atalho. Agora o overlay ativa instantaneamente mesmo com o Trono minimizado ou no segundo plano do jogo.',
+        'Melhorias no H.264, recuperação suave sem derrubar o envio em congestão, indicador de estabilidade por percentual real e a nova opção Modo Fluidez em Configurações → Transmissão para suavizar oscilações da rede mantendo a voz em tempo real.',
     }),
     Object.freeze({
-      id: 'fast-auto-updates',
-      tag: 'Atualização',
-      title: 'Atualização rápida, automática e visível na barra lateral',
+      id: 'auto-away-presence',
+      tag: 'Presença',
+      title: 'Auto-Ausente inteligente após 10 minutos sem interação',
       description:
-        'Novas versões agora baixam muito mais rápido por atualização diferencial com novas tentativas automáticas, botão direto na barra lateral e instalação em 1 clique.',
+        'Quando estiver fora de chamada ou com o microfone mutado por 10 minutos sem interagir no app, seu status muda automaticamente para Ausente e volta para Online ao clicar novamente — sem alterar Não Perturbar ou Ausente manual.',
     }),
     Object.freeze({
-      id: 'presence-and-images',
-      tag: 'Comunicação',
-      title: 'Status Online/Ausente/Não Perturbar e imagens nas notificações',
+      id: 'android-auto-updates',
+      tag: 'Android',
+      title: 'Atualizações automáticas no Android com verificação SHA-256',
       description:
-        'Alterne seu status no menu do perfil (com silêncio total em Não Perturbar) e visualize prévias de imagens recebidas diretamente nas notificações do Windows.',
+        'O app Android agora verifica novas versões automaticamente, baixa o APK validando a integridade SHA-256 e abre o instalador nativo com 1 toque.',
+    }),
+    Object.freeze({
+      id: 'lighter-windows-installer',
+      tag: 'Windows',
+      title: 'Instalador mais leve sem Clipes/FFmpeg',
+      description:
+        'A função de Clipes e o pacote FFmpeg foram removidos para deixar o aplicativo mais leve. A gravação manual e os demais recursos seguem funcionando normalmente.',
     }),
   ]),
 });

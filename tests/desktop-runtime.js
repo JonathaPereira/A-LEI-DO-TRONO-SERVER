@@ -87,13 +87,15 @@ test(
           window.TronoDesktop.notify({ key: 'invalid', title: 'Test', body: 'No target' }),
         ),
       );
-      phase = 'replay waits for a shared source';
-      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
-      assert.equal(await page.evaluate(() => window.TronoClips.active), false);
-      assert.deepEqual(await page.evaluate(() => window.TronoDesktop.prepareReplay()), {
-        active: false,
-        suspended: true,
-      });
+      phase = 'clips remain suspended without global shortcuts or FFmpeg IPCs';
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+      assert.equal(await page.evaluate(() => window.TronoDesktop.clipsSuspended), true);
+      assert.equal(await page.evaluate(() => typeof window.TronoDesktop.prepareReplay), 'undefined');
+      assert.equal(
+        await page.evaluate(() => typeof window.TronoDesktop.configureClips),
+        'undefined',
+      );
+      assert.equal(await page.evaluate(() => typeof window.TronoDesktop.saveClip), 'undefined');
       assert.equal(
         await app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered('Control+Shift+X')),
         false,
@@ -112,8 +114,7 @@ test(
         )
         .toBe(false);
       phase = 'navigation';
-      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
-      assert.equal(await page.evaluate(() => window.TronoClips.active), false);
+      assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
       await page.evaluate(() => window.TronoCallSettings.open('privacy'));
       await expect(page.locator('dialog[data-topic]')).toBeVisible();
       await page.locator('[data-settings-tab="privacy"]').click();
@@ -127,25 +128,7 @@ test(
         await page.evaluate(async () => (await fetch('/missing-desktop-file')).status),
         404,
       );
-      phase = 'global clip shortcut registration and release';
-      const registered = await page.evaluate(() =>
-        window.TronoDesktop.configureClips({
-          active: true,
-          shortcut: { ctrl: true, alt: true, code: 'F9' },
-        }),
-      );
-      assert.equal(registered.active, true);
-      assert.equal(registered.globalActive, true);
-      assert.equal(
-        await app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered('Control+Alt+F9')),
-        true,
-      );
-      await page.evaluate(() => window.TronoDesktop.configureClips({ active: false }));
-      assert.equal(
-        await app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered('Control+Alt+F9')),
-        false,
-      );
-      // An untrusted child page cannot issue native filesystem IPC, even if it
+      // An untrusted child page cannot issue native IPC, even if it
       // navigates to the app origin with a manually injected test preload.
       phase = 'child IPC isolation';
       const denied = await app.evaluate(
@@ -162,7 +145,7 @@ test(
           try {
             await child.loadURL('https://a-lei-do-trono.surge.sh/desktop-platform.css');
             return await child.webContents.executeJavaScript(
-              'window.TronoDesktop.chooseFolder().then(()=>false,()=>true)',
+              'window.TronoDesktop.getResources().then(()=>false,()=>true)',
             );
           } finally {
             child.destroy();
@@ -172,45 +155,6 @@ test(
       );
       assert(denied);
       // Native process detection is exercised separately by desktop-activity-native.cjs.
-      phase = 'native file export';
-      await app.evaluate(({ dialog }, directory) => {
-        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
-        dialog.showSaveDialog = async () => ({ canceled: true });
-        dialog.showMessageBox = async () => ({ response: 0 });
-      }, directory);
-      const folder = await page.evaluate(() => window.TronoDesktop.chooseFolder());
-      assert.equal(folder.native, true);
-      assert.deepEqual(
-        await page.evaluate(() =>
-          window.TronoDesktop.saveClip({
-            filename: 'Trono_Clipe_cancel.webm',
-            bytes: Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3, 4]).buffer,
-          }),
-        ),
-        { canceled: true },
-      );
-      const result = await page.evaluate(
-        (folder) =>
-          window.TronoDesktop.saveClip({
-            directory: folder.id,
-            filename: 'Trono_Clipe_native.webm',
-            bytes: Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3, 4]).buffer,
-          }),
-        folder,
-      );
-      assert(result.saved);
-      assert.equal((await fs.readFile(path.join(directory, 'Trono_Clipe_native.webm'))).length, 5);
-      await assert.rejects(
-        page.evaluate(
-          (folder) =>
-            window.TronoDesktop.saveClip({
-              directory: folder.id,
-              filename: '../bad.webm',
-              bytes: new ArrayBuffer(5),
-            }),
-          folder,
-        ),
-      );
       // Enumerate real OS sources and cancel without starting a capture.
       phase = 'native capture picker';
       await page.evaluate(() => {

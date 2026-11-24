@@ -42,7 +42,7 @@ export function createAudioPlayer(options: Options) {
   const saved = storage.getItem('tronoMusicTrack') || 'lofi';
   const initialTrack = saved === 'tavern' || saved === 'classical' ? 'lofi' : saved;
   let state: AudioSnapshot = Object.freeze({
-    musicEnabled: storage.getItem('tronoMusicEnabled') === '1',
+    musicEnabled: false,
     sfxEnabled: storage.getItem('tronoSfxEnabled') !== '0',
     musicVolume: volume(storage.getItem('tronoMusicVolume') ?? 32),
     currentTrack: isMusicTrack(initialTrack) ? initialTrack : ('lofi' as MusicTrack),
@@ -64,59 +64,6 @@ export function createAudioPlayer(options: Options) {
       options.events.dispatchEvent(
         detail === undefined ? new Event(event) : new CustomEvent(event, { detail }),
       );
-  }
-  function status(message = '') {
-    if (state.musicStatus !== message) publish({ musicStatus: message }, 'trono-music-playback');
-  }
-  function source(fallback = false) {
-    const player = options.player(),
-      track = musicTracks[state.currentTrack];
-    if (!player) return;
-    const url = fallback ? track.fallback : track.src;
-    if (player.src !== new URL(url, options.href).href) {
-      player.pause();
-      player.src = url;
-      player.dataset.musicFallback = fallback ? '1' : '0';
-      player.load();
-    }
-  }
-  async function playMusic(): Promise<boolean> {
-    const player = options.player();
-    if (disposed || !state.musicEnabled || !player) return false;
-    const track = musicTracks[state.currentTrack];
-    if (
-      player.src !== new URL(track.src, options.href).href &&
-      player.src !== new URL(track.fallback, options.href).href
-    )
-      source();
-    player.volume = state.musicVolume / 100;
-    player.muted = false;
-    if (!player.paused) {
-      status();
-      return true;
-    }
-    const request = ++generation;
-    status('Carregando música…');
-    try {
-      await player.play();
-      if (disposed || !state.musicEnabled) {
-        player.pause();
-        return false;
-      }
-      if (request !== generation) return false;
-      status();
-      return true;
-    } catch (error) {
-      if (!disposed && request === generation) {
-        status(
-          error instanceof DOMException && error.name === 'NotAllowedError'
-            ? 'O navegador bloqueou a música. Clique em uma faixa para liberar.'
-            : 'Não foi possível tocar a faixa. Tente outra música.',
-        );
-        options.warn?.(error);
-      }
-      return false;
-    }
   }
   async function ensureAudio(): Promise<boolean> {
     if (disposed) return false;
@@ -146,7 +93,6 @@ export function createAudioPlayer(options: Options) {
     } catch (error) {
       options.warn?.(error);
     }
-    if (state.musicEnabled) void playMusic();
     return !context || context.state === 'running';
   }
   function setMusicVolume(value: unknown) {
@@ -155,41 +101,38 @@ export function createAudioPlayer(options: Options) {
       player = options.player();
     if (player) {
       player.volume = next / 100;
-      player.muted = !state.musicEnabled || next === 0;
+      player.muted = true;
+      player.pause();
     }
     storage.setItem('tronoMusicVolume', String(next));
     publish({ musicVolume: next }, 'trono-music-volume');
   }
-  function setMusicTrack(id: string, { play = true } = {}) {
+  function setMusicTrack(id: string) {
     if (disposed || !isMusicTrack(id)) return;
     generation++;
     storage.setItem('tronoMusicTrack', id);
     publish({ currentTrack: id }, 'trono-music-track', { id, ...musicTracks[id] });
-    source();
-    if (state.musicEnabled && play) void ensureAudio();
   }
-  async function setMusicEnabled(next: boolean) {
-    if (disposed) return state.musicEnabled;
+  async function setMusicEnabled(_next: boolean) {
+    if (disposed) return false;
     generation++;
-    storage.setItem('tronoMusicEnabled', next ? '1' : '0');
-    publish({ musicEnabled: next }, 'trono-audio-state', {
-      musicEnabled: next,
-      sfxEnabled: state.sfxEnabled,
-    });
+    storage.setItem('tronoMusicEnabled', '0');
     const player = options.player();
     if (player) {
-      player.muted = !next || state.musicVolume === 0;
-      if (!next) player.pause();
+      player.muted = true;
+      player.pause();
     }
-    if (next) void ensureAudio();
-    else status('Música silenciada.');
-    return next;
+    publish({ musicEnabled: false, musicStatus: '' }, 'trono-audio-state', {
+      musicEnabled: false,
+      sfxEnabled: state.sfxEnabled,
+    });
+    return false;
   }
   function setSfxEnabled(next: boolean) {
     if (disposed) return state.sfxEnabled;
     storage.setItem('tronoSfxEnabled', next ? '1' : '0');
     publish({ sfxEnabled: next }, 'trono-audio-state', {
-      musicEnabled: state.musicEnabled,
+      musicEnabled: false,
       sfxEnabled: next,
     });
     return next;
@@ -252,21 +195,23 @@ export function createAudioPlayer(options: Options) {
     setMusicVolume,
     setMusicEnabled,
     setSfxEnabled,
-    toggleMusic: () => setMusicEnabled(!state.musicEnabled),
+    toggleMusic: () => setMusicEnabled(false),
     toggleSfx: () => setSfxEnabled(!state.sfxEnabled),
     handleMusicError() {
-      if (disposed) return;
       const player = options.player();
-      if (!player || player.dataset.musicFallback === '1') return;
-      generation++;
-      source(true);
-      if (state.musicEnabled) void playMusic();
+      if (player) {
+        player.muted = true;
+        player.pause();
+      }
     },
     start() {
       if (started || disposed) return;
       started = true;
-      setMusicVolume(state.musicVolume);
-      setMusicTrack(state.currentTrack, { play: false });
+      const player = options.player();
+      if (player) {
+        player.muted = true;
+        player.pause();
+      }
     },
     get currentTrack() {
       return state.currentTrack;

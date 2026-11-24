@@ -21,6 +21,7 @@ export interface QualityPreferences {
   readonly screenBitrateMbps: number;
   readonly screenContent: 'motion' | 'detail';
   readonly screenCodec: ScreenCodec;
+  readonly screenSmoothMode: boolean;
   readonly adaptiveEnabled: boolean;
 }
 export interface QualitySnapshot {

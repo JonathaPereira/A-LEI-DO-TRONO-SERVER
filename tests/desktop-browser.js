@@ -239,12 +239,16 @@ test(
       }
       await open();
       await step(
-        'replay is available on desktop but never captures a screen until sharing begins',
+        'clips remain disabled and never allocate recorders, workers or captures',
         async () => {
           await page.evaluate(() => window.TronoCallSettings.open('resources'));
           await expect(page.getByRole('region', { name: 'Recursos', exact: true })).toBeVisible();
-          assert.equal(await page.evaluate(() => typeof window.TronoClips), 'object');
-          assert.equal(await page.evaluate(() => typeof window.TronoClipControls), 'object');
+          assert.equal(await page.evaluate(() => typeof window.TronoClips), 'undefined');
+          assert.equal(await page.evaluate(() => typeof window.TronoClipControls), 'undefined');
+          await expect(page.locator('[data-open-clips]')).toHaveCount(0);
+          await expect(page.locator('#clipsDialog')).toHaveCount(0);
+          await expect(page.locator('#settingsSoundboardToggle')).toBeVisible();
+          await expect(page.locator('#remotePcBtn')).toBeVisible();
           assert.deepEqual(
             await page.evaluate(() => ({
               recorders: window.__native.recorders,
@@ -254,34 +258,6 @@ test(
             })),
             { recorders: 0, workers: 0, replay: 0, captures: 0 },
           );
-          await page.evaluate(async () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 640; canvas.height = 360;
-            window.__clipCanvas = canvas;
-            window.__clipPaint = setInterval(() => {
-              canvas.getContext('2d').fillStyle = `hsl(${performance.now() % 360} 50% 50%)`;
-              canvas.getContext('2d').fillRect(0, 0, 640, 360);
-            }, 33);
-            window.__borrowedScreen = canvas.captureStream(30);
-            await window.TronoClips.sharedStarted(window.__borrowedScreen);
-          });
-          await expect.poll(() => page.evaluate(() => ({ready: window.TronoClips.replayStatus?.ready, message: document.getElementById('clipsStatus').textContent})), {timeout: 15000}).toMatchObject({ready: true});
-          await expect.poll(() => page.evaluate(() => window.__native.configurations.at(-1)?.active)).toBe(true);
-          await page.evaluate(() => window.__native.clip());
-          await expect.poll(() => page.evaluate(() => window.TronoClipLibrary.getSnapshot().pendingCount)).toBe(1);
-          await page.getByRole('button', { name: 'Seus clipes', exact: true }).click();
-          await page.locator('#clipAuto').uncheck();
-          await expect.poll(() => page.evaluate(() => window.TronoClips.active)).toBe(false);
-          assert.equal(await page.evaluate(() => window.__borrowedScreen.getVideoTracks()[0].readyState), 'live');
-          assert.equal(await page.evaluate(() => window.TronoClipLibrary.getSnapshot().pendingCount), 1);
-          await page.locator('#clipAuto').check();
-          await expect.poll(() => page.evaluate(() => window.TronoClips.active)).toBe(true);
-          await page.evaluate(() => {
-            clearInterval(window.__clipPaint);
-            window.TronoClips.sharedStopped(window.__borrowedScreen);
-            window.__borrowedScreen.getTracks().forEach(track => track.stop());
-          });
-          await page.locator('#clipClose').click();
           await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
         },
       );

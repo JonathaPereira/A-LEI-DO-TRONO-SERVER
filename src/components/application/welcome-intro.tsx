@@ -141,7 +141,7 @@ export function WelcomeIntroOverlay({ runtime }: { runtime: ApplicationServices 
   useEffect(() => {
     if (!visible || exiting) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !document.querySelector('dialog:modal')) {
         e.preventDefault();
         dismissIntro();
       }

@@ -15,6 +15,7 @@ interface RemoteMediaOptions {
   isPeerCurrent(id: string, peer: VoicePeerConnection): boolean;
   getInterest(id: string): Interest;
   isCameraHidden(id: string): boolean;
+  getScreenBufferMs?: () => number;
   onVoiceReceiver(id: string, receiver: RTCRtpReceiver, added: boolean): void;
   onAudioReady(id: string, kind: 'audio' | 'screen-audio'): void;
   onChange(): void;
@@ -56,6 +57,45 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
   const entries = new Map<string, Entry>();
   const now = options.now ?? Date.now;
   const warn = options.warn ?? ((error: unknown) => console.warn('[RemoteMedia]', error));
+  function applyScreenBuffer(
+    kind: VoiceMediaKind,
+    track: MediaStreamTrack,
+    receiver: RTCRtpReceiver | undefined,
+  ) {
+    if (!receiver) return;
+    const targetMs = Math.max(0, options.getScreenBufferMs?.() ?? 80);
+    // Voice audio ('audio') and camera ('camera') stay real-time; only watched screen streams buffer.
+    if (kind === 'screen' && track.kind === 'video') {
+      try {
+        const target = receiver as unknown as {
+          jitterBufferTarget?: number | null;
+          playoutDelayHint?: number | null;
+        };
+        if ('jitterBufferTarget' in target) target.jitterBufferTarget = targetMs;
+        else if ('playoutDelayHint' in target) target.playoutDelayHint = targetMs / 1000;
+      } catch {}
+    } else if (kind === 'screen-audio' && track.kind === 'audio') {
+      try {
+        const target = receiver as unknown as {
+          jitterBufferTarget?: number | null;
+          playoutDelayHint?: number | null;
+        };
+        const smooth = targetMs > 80;
+        if ('jitterBufferTarget' in target) target.jitterBufferTarget = smooth ? targetMs : null;
+        else if ('playoutDelayHint' in target)
+          target.playoutDelayHint = smooth ? targetMs / 1000 : 0;
+      } catch {}
+    }
+  }
+  function refreshScreenBuffer() {
+    for (const entry of entries.values()) {
+      for (const binding of entry.bindings.values()) {
+        if (binding.kind === 'screen' || binding.kind === 'screen-audio') {
+          applyScreenBuffer(binding.kind, binding.track, binding.receiver);
+        }
+      }
+    }
+  }
   function entryFor(id: string): Entry {
     let entry = entries.get(id);
     if (!entry) {
@@ -156,16 +196,7 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
     track.addEventListener('mute', muted);
     track.addEventListener('unmute', unmuted);
     if (receiver && kind === 'audio') options.onVoiceReceiver(id, receiver, true);
-    if (receiver && kind === 'screen' && track.kind === 'video') {
-      try {
-        const target = receiver as unknown as {
-          jitterBufferTarget?: number | null;
-          playoutDelayHint?: number | null;
-        };
-        if ('jitterBufferTarget' in target) target.jitterBufferTarget = 80;
-        else if ('playoutDelayHint' in target) target.playoutDelayHint = 0.08;
-      } catch {}
-    }
+    applyScreenBuffer(kind, track, receiver);
     if (kind === 'audio' || (kind === 'screen-audio' && options.getInterest(id).screen))
       options.onAudioReady(id, kind);
     if (track.kind === 'video' && !track.muted) healthy();
@@ -274,6 +305,7 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
     },
     cancelRecovery,
     scheduleRecovery,
+    refreshScreenBuffer,
     clear,
     reset() {
       for (const id of [...entries.keys()]) clear(id);

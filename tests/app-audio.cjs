@@ -175,10 +175,10 @@ test('preference storage survives denied getters, full storage and failed remova
     assert.equal(storage.getItem('key'), null);
   }
 });
-test('background music is opt-in across desktop and web/Android and old track IDs migrate without opening audio', () => {
+test('background music stays disabled across desktop and web/Android and old track IDs migrate without opening audio', () => {
   assert.equal(fixture().owner.musicEnabled, false);
   assert.equal(fixture({ desktop: false }).owner.musicEnabled, false);
-  assert.equal(fixture({ desktop: false, stored: { tronoMusicEnabled: '1' } }).owner.musicEnabled, true);
+  assert.equal(fixture({ desktop: false, stored: { tronoMusicEnabled: '1' } }).owner.musicEnabled, false);
   for (const id of ['tavern', 'classical', '__proto__', 'missing']) {
     const f = fixture({ stored: { tronoMusicTrack: id } });
     assert.equal(f.owner.currentTrack, 'lofi');
@@ -225,7 +225,7 @@ test('volume and track updates publish immutable state, matching compatibility e
   let updates = 0;
   const unsubscribe = f.owner.subscribe(() => updates++);
   f.owner.setMusicVolume(123);
-  f.owner.setMusicTrack('rock', { play: false });
+  f.owner.setMusicTrack('rock');
   f.owner.setSfxEnabled(false);
   assert.equal(f.owner.musicVolume, 100);
   assert.equal(f.values.get('tronoMusicTrack'), 'rock');
@@ -241,54 +241,17 @@ test('volume and track updates publish immutable state, matching compatibility e
   unsubscribe();
   await f.owner.dispose();
 });
-test('a rejected old play request cannot overwrite a newer track status', async () => {
-  const first = deferred(),
-    second = deferred(),
-    requests = [first, second];
-  const f = fixture({ play: () => requests.shift().promise });
-  await f.owner.setMusicEnabled(true);
-  f.owner.setMusicTrack('rock');
-  first.reject(Error('old failure'));
-  await tick();
-  assert.equal(f.owner.musicStatus, 'Carregando música…');
-  second.resolve();
-  await tick();
-  assert.equal(f.owner.musicStatus, '');
-  assert.equal(f.warnings.length, 0);
-  await f.owner.dispose();
-});
-test('muting while playback waits keeps the player paused after a late fulfillment', async () => {
-  const playing = deferred(),
-    f = fixture({ play: () => playing.promise });
-  await f.owner.setMusicEnabled(true);
-  await f.owner.setMusicEnabled(false);
-  playing.resolve();
-  await tick();
-  assert.equal(f.media.paused, true);
-  assert.equal(f.owner.musicStatus, 'Música silenciada.');
-  assert.equal(f.values.get('tronoMusicEnabled'), '0');
-  await f.owner.dispose();
-});
-test('music errors switch once to the distributed fallback and choosing another track resets it', async () => {
+test('enabling background music remains a safe no-op and never loads or plays audio tracks', async () => {
   const f = fixture();
   f.owner.start();
-  assert.match(f.media.src, /opengameart/);
+  assert.equal(await f.owner.setMusicEnabled(true), false);
+  assert.equal(await f.owner.toggleMusic(), false);
   f.owner.handleMusicError();
-  assert.match(f.media.src, /classical_piano_nocturne.mp3$/);
-  const loads = f.media.loads;
-  f.owner.handleMusicError();
-  assert.equal(f.media.loads, loads);
-  f.owner.setMusicTrack('edm', { play: false });
-  assert.equal(f.media.dataset.musicFallback, '0');
-  assert.match(f.media.src, /joyfully/);
-  await f.owner.dispose();
-});
-test('missing Web Audio does not disable HTML music playback', async () => {
-  const f = fixture({ createContext: () => null });
-  await f.owner.setMusicEnabled(true);
-  await tick();
-  assert.equal(f.media.paused, false);
-  assert.equal(f.contexts.length, 0);
+  assert.equal(f.media.paused, true);
+  assert.equal(f.media.muted, true);
+  assert.equal(f.media.plays, 0);
+  assert.equal(f.media.loads, 0);
+  assert.equal(f.values.get('tronoMusicEnabled'), '0');
   await f.owner.dispose();
 });
 test('partial graph failure closes its context and a later user gesture can retry', async () => {
@@ -306,17 +269,14 @@ test('partial graph failure closes its context and a later user gesture can retr
   await f.owner.dispose();
 });
 test('disposal releases only the owned context, sources and player and invalidates pending playback', async () => {
-  const playing = deferred(),
-    f = fixture({ play: () => playing.promise });
-  await f.owner.setMusicEnabled(true);
+  const f = fixture();
+  await f.owner.ensureAudio();
   f.owner.playSfx('crown');
   const context = f.contexts[0];
   await f.owner.dispose();
   await f.owner.dispose();
   assert.equal(context.closes, 1);
   assert(context.sources.every((source) => source.disconnects === 1));
-  playing.resolve();
-  await tick();
   assert.equal(f.media.paused, true);
   const snapshot = f.owner.getSnapshot();
   f.owner.setMusicTrack('rock');

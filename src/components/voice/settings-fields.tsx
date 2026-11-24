@@ -350,6 +350,21 @@ export function VoiceCaptureSettings({
           ? 'Para áudio isolado, escolha o aplicativo/jogo no seletor. O áudio do computador inteiro pode incluir as vozes da chamada.'
           : 'No seletor do navegador, marque Compartilhar áudio. Para enviar o som de um vídeo, prefira compartilhar a aba que o reproduz. Esta opção vale para a próxima transmissão.'}
       </small>
+      <label className="mn-share-audio">
+        <input
+          id="screenSmoothMode"
+          type="checkbox"
+          checked={preferences.screenSmoothMode}
+          aria-describedby="screenSmoothModeHelp"
+          onChange={(event) => client.setScreenSmoothMode(event.target.checked)}
+        />
+        <span>Modo Fluidez (~2s de buffer ao assistir transmissões)</span>
+      </label>
+      <small id="screenSmoothModeHelp" className="settings-context-help">
+        Adiciona um buffer de aproximadamente 2 segundos no vídeo e no áudio da transmissão
+        assistida para absorver oscilações de rede e reduzir travamentos. A voz da chamada continua
+        em tempo real, sem atraso.
+      </small>
       {desktop && <QualityHint state={state} />}
     </>
   );

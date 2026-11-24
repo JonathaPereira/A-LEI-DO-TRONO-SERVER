@@ -1,3 +1,19 @@
+M&N · A Lei do Trono — Windows & Android 2.3.0
+
+Novidades 2.3.0:
+- Transmissão de tela mais estável (SFU/P2P): estabilidade de chamada calculada por percentual
+  real de retransmissões, priorização corrigida de H.264 (packetization-mode=1 e Constrained
+  Baseline), recuperação suave de envio/vídeo sem derrubar o publisher em congestão momentânea e
+  opção Modo Fluidez (~2 s de buffer de vídeo/áudio da tela, mantendo a voz da chamada em tempo
+  real) em Configurações → Transmissão.
+- Auto-Ausente inteligente: muda automaticamente para Ausente após 10 minutos sem interação no
+  aplicativo quando fora de chamada ou com microfone mutado, voltando para Online ao interagir
+  novamente — sem sobrescrever Não Perturbar ou Ausente manual.
+- Atualizações automáticas no Android: verificação automática, download do APK com validação
+  obrigatória de integridade SHA-256, botão direto na interface e abertura do instalador nativo.
+- Instalador Windows mais leve: função de Clipes desativada e FFmpeg removido do pacote
+  (gravação manual e demais recursos seguem disponíveis normalmente).
+
 M&N · A Lei do Trono — Windows & Android 2.2.0
 
 Novidades 2.2.0:
@@ -197,18 +213,9 @@ Diretórios com apóstrofo são aceitos. Contas e preferências são preservadas
     Perfis expandem detalhes e volume sem empurrar a transmissão.
 12. Configurações → Atividade mostra opcionalmente o nome de um jogo/aplicativo.
     O padrão é desligado. Títulos de janelas e caminhos não são compartilhados.
-13. Clipes ficam nos controles inferiores principais. Ativar captura local permite
-    escolher uma tela ou janela sem entrar em chamada ou transmitir. A captura
-    local vem desligada ao abrir o app; Desligar captura local encerra essa fonte.
-    Configurações dos clipes reúne qualidade Excelente/Econômica, atalho e pasta.
-    Preparar clipes ao transmitir a tela continua opcional. Desligar esse preparo
-    mantém a transmissão e os clipes já criados. Som dos clipes permite incluir
-    microfone + áudio da captura ou escolher Sem som. O estado Capturando clipes
-    indica a captura ativa. Codificador oferece Automático, NVIDIA NVENC e
-    Compatível; Automático testa o NVENC e informa o codificador efetivamente
-    ativado. NVENC requer placa/driver NVIDIA compatíveis no aplicativo Windows.
-    O nativo salva MP4; Compatível conserva WebM. Sem som no seletor da fonte
-    também exclui o microfone daquela captura.
+13. A função de Clipes e o empacotamento do FFmpeg foram removidos para manter o
+    instalador mais leve. A gravação manual de partidas continua disponível em
+    Configurações → Recursos.
 14. Fechar mantém o aplicativo na bandeja. M&N → Sair encerra de verdade.
     Clique na versão no rodapé para buscar atualização. Reiniciar encerra a call;
     escolha um momento conveniente. O atualizador vai direto para a última versão.

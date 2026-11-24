@@ -21,15 +21,7 @@ const path = require('node:path'),
   fs = require('node:fs/promises'),
   crypto = require('node:crypto'),
   { pathToFileURL } = require('node:url');
-const {
-  APP_ORIGIN,
-  BACKEND_ORIGIN,
-  isAppURL,
-  bundlePath,
-  clipFilename,
-  accelerator,
-} = require('./policy.cjs');
-const { clipBytes, writeClip } = require('./clip-files.cjs');
+const { APP_ORIGIN, BACKEND_ORIGIN, isAppURL, bundlePath } = require('./policy.cjs');
 const { DesktopPreferences } = require('./preferences.cjs');
 const { DesktopActivity } = require('./activity.cjs');
 const { createNotifications, notificationPayload } = require('./notifications.cjs');
@@ -43,7 +35,6 @@ const { ApplicationAudio } = require('./application-audio.cjs'),
   { createUpdates, RELEASE_PAGE_URL } = require('./updates.cjs');
 const { contentSecurityPolicy } = require('./content-security.cjs');
 const { developmentOrigin } = require('./development.cjs');
-const { createNativeReplay, testEncoder } = require('./replay-native.cjs');
 const devOrigin = developmentOrigin({
   packaged: app.isPackaged,
   value: app.commandLine.getSwitchValue('desktop-dev-url'),
@@ -63,9 +54,7 @@ const root = app.isPackaged
 let window,
   tray,
   quitting = false,
-  hotkey = null,
   capture = null,
-  clipActive = false,
   applicationAudio,
   updates,
   installingUpdate = false,
@@ -73,8 +62,6 @@ let window,
   activity,
   overlay,
   activePresenceStatus = 'online';
-let nativeReplay;
-const folders = new Map();
 let remoteInput,
   remotePermit = null,
   remoteNotice = null;
@@ -151,7 +138,6 @@ else {
     overlay?.dispose();
   });
   app.on('will-quit', () => {
-    void nativeReplay?.dispose();
     stopRemote();
     overlay?.dispose();
     globalShortcut.unregisterAll();
@@ -177,15 +163,6 @@ function trusted(event) {
     !isTrustedAppURL(event.senderFrame.url)
   )
     throw Error('Desktop access denied');
-}
-function clip() {
-  if (clipActive && window && !window.isDestroyed())
-    window.webContents.send('mn:clip', { id: crypto.randomUUID() });
-}
-function clearHotkey() {
-  if (hotkey) globalShortcut.unregister(hotkey);
-  hotkey = null;
-  clipActive = false;
 }
 async function start() {
   app.setAppUserModelId(
@@ -368,7 +345,7 @@ async function start() {
     isMainFocused: () =>
       Boolean(window && !window.isDestroyed() && window.isFocused() && window.isVisible()),
     getDnd: () => activePresenceStatus === 'dnd',
-    getBlockedShortcuts: () => (hotkey ? [hotkey] : []),
+    getBlockedShortcuts: () => [],
     initialConfig: preferences.getOverlayConfig(),
     saveConfig: (next) => preferences.setOverlayConfig(next),
     onConfigChanged: (config) => {
@@ -557,38 +534,9 @@ async function start() {
     trusted(event);
     applicationAudio.stop(id);
   });
-  ipcMain.handle('mn:replay-prepare', (event) => {
-    trusted(event);
-    return { active: false, suspended: true };
-  });
-  const replayDirectory = path.join(app.getPath('userData'), 'replay-temporary');
-  await fs.rm(replayDirectory, { recursive: true, force: true });
-  nativeReplay = createNativeReplay({
-    executable: app.isPackaged
-      ? path.join(process.resourcesPath, 'ffmpeg/bin/ffmpeg.exe')
-      : path.resolve(__dirname, '../artifacts/ffmpeg/bin/ffmpeg.exe'),
-    directory: replayDirectory,
-    publish: (value) => {
-      if (!window?.isDestroyed()) window?.webContents.send('mn:replay-status', value);
-    },
-    ...testEncoder({
-      packaged: app.isPackaged,
-      origin: app.commandLine.getSwitchValue('desktop-api-test-origin'),
-      encoder: app.commandLine.getSwitchValue('desktop-replay-test-encoder'),
-    }),
-  });
-  for (const [channel, method] of [
-    ['mn:replay-capability', 'capability'],
-    ['mn:replay-start', 'start'],
-    ['mn:replay-packet', 'packet'],
-    ['mn:replay-clip', 'clip'],
-    ['mn:replay-stop', 'stop'],
-  ]) {
-    ipcMain.handle(channel, (event, value) => {
-      trusted(event);
-      return nativeReplay[method](value);
-    });
-  }
+  await fs
+    .rm(path.join(app.getPath('userData'), 'replay-temporary'), { recursive: true, force: true })
+    .catch(() => {});
   ipcMain.handle('mn:session-read', (event) => {
     trusted(event);
     return preferences.readSession();
@@ -720,19 +668,16 @@ async function start() {
     else quitting = false;
   });
   window.webContents.on('render-process-gone', () => {
-    nativeReplay?.stopActive();
     setVoicePowerSave(false);
     voicePriority.setActive(false);
     stopRemote();
     overlay?.dispose();
-    clearHotkey();
     cancelCapture();
     applicationAudio.stopAll();
     activity.dispose();
   });
   window.webContents.on('did-start-navigation', (_, _url, isInPlace, isMainFrame) => {
     if (isMainFrame && !isInPlace) {
-      nativeReplay?.stopActive?.();
       setVoicePowerSave(false);
       voicePriority.setActive(false);
       stopRemote();
@@ -741,7 +686,6 @@ async function start() {
   });
   window.webContents.on('did-navigate', () => {
     stopRemote();
-    clearHotkey();
     applicationAudio.stopAll();
   });
   window.webContents.on('will-navigate', (event, url) => {
@@ -944,20 +888,6 @@ async function start() {
       if (capture === pending) cancelCapture();
     }
   });
-  ipcMain.handle('mn:clips-configure', (event, configuration) => {
-    trusted(event);
-    if (configuration?.active !== true) {
-      clearHotkey();
-      return { active: false, globalActive: false };
-    }
-    const next = accelerator(configuration.shortcut);
-    if (next !== hotkey) {
-      clearHotkey();
-      if (globalShortcut.register(next, clip)) hotkey = next;
-    }
-    clipActive = true;
-    return { active: true, globalActive: hotkey === next };
-  });
   ipcMain.handle('mn:capture-select', async (event, choice) => {
     trusted(event);
     if (!capture || choice?.id !== capture.id) return false;
@@ -1012,41 +942,6 @@ async function start() {
     });
     return { selected: true, audio };
   });
-  ipcMain.handle('mn:folder', async (event) => {
-    trusted(event);
-    const answer = await dialog.showOpenDialog(window, {
-      title: 'Pasta para salvar clipes',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    if (answer.canceled || !answer.filePaths.length) return null;
-    const id = crypto.randomUUID(),
-      directory = answer.filePaths[0];
-    if (folders.size >= 32) folders.delete(folders.keys().next().value);
-    folders.set(id, directory);
-    return { native: true, id, name: path.basename(directory) };
-  });
-  ipcMain.handle('mn:clip-save', async (event, data) => {
-    trusted(event);
-    const name = clipFilename(data?.filename);
-    const bytes = clipBytes(data.bytes);
-    let target;
-    if (data.directory) {
-      const folder = folders.get(data.directory);
-      if (!folder) throw Error('Escolha novamente a pasta de clipes.');
-      target = path.join(folder, name);
-    } else {
-      const answer = await dialog.showSaveDialog(window, {
-        title: 'Salvar clipe',
-        defaultPath: path.join(app.getPath('videos'), name),
-        filters: [{ name: 'Vídeo WebM', extensions: ['webm'] }],
-      });
-      if (answer.canceled || !answer.filePath) return { canceled: true };
-      target = answer.filePath;
-      if (!target.toLowerCase().endsWith('.webm')) throw Error('Escolha um arquivo .webm.');
-    }
-    await writeClip(target, bytes, { overwrite: !data.directory });
-    return { saved: true };
-  });
   const icon = nativeImage
     .createFromPath(path.join(__dirname, 'assets/icon.png'))
     .resize({ width: 32, height: 32 });
@@ -1060,7 +955,6 @@ async function start() {
           showMainWindow();
         },
       },
-      { label: 'Clipar', click: clip },
       { type: 'separator' },
       { label: 'Sair', click: () => app.quit() },
     ]),

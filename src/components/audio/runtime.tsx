@@ -41,7 +41,7 @@ export function initializeAudio(target: Window) {
     host: HTMLElement | undefined,
     disposed = false;
   const unlock = () => {
-    if (client.musicEnabled || client.sfxEnabled) void client.ensureAudio();
+    if (client.sfxEnabled) void client.ensureAudio();
   };
   const click = (event: MouseEvent) => {
     const element =
@@ -74,7 +74,6 @@ export function initializeAudio(target: Window) {
       })
       .catch(() => {});
   };
-  const failed = () => client.handleMusicError();
   const bind = () => {
     if (disposed || root) return;
     host = doc.createElement('div');
@@ -97,7 +96,6 @@ export function initializeAudio(target: Window) {
       ),
     );
     client.start();
-    player()?.addEventListener('error', failed);
     target.addEventListener('pointerdown', unlock, { once: true });
     doc.addEventListener('click', click, true);
   };
@@ -109,7 +107,6 @@ export function initializeAudio(target: Window) {
     target.removeEventListener('pagehide', hidden);
     target.removeEventListener('pointerdown', unlock);
     doc.removeEventListener('click', click, true);
-    player()?.removeEventListener('error', failed);
     flushSync(() => root?.unmount());
     host?.remove();
     if (runtime.TronoAudio === client) delete runtime.TronoAudio;

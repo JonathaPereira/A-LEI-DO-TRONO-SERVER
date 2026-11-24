@@ -21,6 +21,10 @@ interface CommunityRuntime extends Window {
     getPresenceStatus?(accountId: string): Promise<unknown>;
     setPresenceStatus?(accountId: string, status: PresenceStatus): Promise<unknown>;
   };
+  TronoSocial?: {
+    readonly voiceJoined?: boolean;
+    readonly micMuted?: boolean;
+  };
   TronoProfile: { openMini(id: string): void };
   TronoMessenger?: { open(id: string): void };
   TronoCommunityAdmin?: { editRole(person: CommunityPerson): void };
@@ -71,6 +75,21 @@ export function initializeCommunity(target: Window): () => void {
     syncDesktopStatus: runtime.TronoDesktop?.setPresenceStatus
       ? (accountId, status) => runtime.TronoDesktop!.setPresenceStatus!(accountId, status)
       : undefined,
+    isVoiceActiveUnmuted: () =>
+      !!(runtime.TronoSocial?.voiceJoined && !runtime.TronoSocial.micMuted),
+    subscribeVoiceState(listener) {
+      target.addEventListener('trono-call-change', listener);
+      return () => target.removeEventListener('trono-call-change', listener);
+    },
+    subscribeInteraction(listener) {
+      const opts = { capture: true, passive: true } as const;
+      target.addEventListener('pointerdown', listener, opts);
+      target.addEventListener('keydown', listener, opts);
+      return () => {
+        target.removeEventListener('pointerdown', listener, opts);
+        target.removeEventListener('keydown', listener, opts);
+      };
+    },
     subscribeIdentity(listener) {
       target.addEventListener('trono-auth-change', listener);
       target.addEventListener('trono-role-change', listener);

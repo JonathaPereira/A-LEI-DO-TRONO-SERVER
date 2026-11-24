@@ -7,7 +7,6 @@ import type { NetworkClient } from '../socket/client';
 import type { ChatMessagesController } from '../chat/messages';
 import type { SettingsController } from '../settings/controller';
 import type { createMicrophoneProcessor } from './microphone-processor';
-import type { createScreenCapture } from './screen-capture';
 import type { createRealtimeConfiguration } from './realtime';
 import type { createVoiceTelemetry } from './telemetry';
 import type { createSpeakingIndicators } from './speaking-indicators';
@@ -27,7 +26,6 @@ import type { Mosaic, MosaicPerson } from './mosaic';
 import type { ScreenOptionsClient } from './screen-options';
 
 type ProcessorDependencies = Parameters<typeof createMicrophoneProcessor>[2];
-type CaptureOptions = Parameters<typeof createScreenCapture>[0];
 type TelemetryOptions = Parameters<typeof createVoiceTelemetry>[0];
 type AudioOptions = Parameters<typeof createAudioPreferences>[0];
 type TelemetrySnapshot = ReturnType<ReturnType<typeof createVoiceTelemetry>['getSnapshot']>;
@@ -51,11 +49,6 @@ export interface VoiceRuntimePorts {
       context: Parameters<ProcessorDependencies['createNoise']>[0],
       options: { onFailure: Parameters<ProcessorDependencies['createNoise']>[1] },
     ): ReturnType<ProcessorDependencies['createNoise']>;
-  };
-  TronoClips?: {
-    captureProfile(): ReturnType<CaptureOptions['getSettings']>['replay'];
-    sharedStarted(source: Parameters<CaptureOptions['onSourceStarted']>[0]): Promise<void>;
-    sharedStopped(source: Parameters<CaptureOptions['onSourceStopped']>[0]): void;
   };
   TronoAudio: ReturnType<AudioOptions['audio']>;
   TRONO_MUSIC_TRACKS: ReturnType<AudioOptions['tracks']>;
@@ -114,6 +107,7 @@ export interface SocialFacade {
   openScreenOptions(): void;
   readonly voiceJoined: boolean;
   readonly voiceJoining: boolean;
+  readonly micMuted: boolean;
   readonly voiceRoom: CallNavigationSnapshot['voiceRoom'];
   readonly cameraOn: boolean;
   readonly screenSharing: boolean;

@@ -1,6 +1,7 @@
 import { directPerson } from '../../lib/messenger/selectors';
 import { Avatar } from '../profiles/avatar';
 import { DesktopUpdateNotice } from './desktop-updates';
+import { AndroidUpdateNotice } from './android-updates';
 import { AppIcon as Icon } from './icons';
 import { useModel, type ApplicationServices } from './services';
 import styles from './notices.module.css';
@@ -11,6 +12,7 @@ export function ApplicationNotices({ runtime }: { runtime: ApplicationServices }
   return (
     <section className={styles.notices} aria-label="Avisos da Corte">
       {runtime.TronoDesktopUpdates && <DesktopUpdateNotice client={runtime.TronoDesktopUpdates} />}
+      {runtime.TronoAndroidUpdates && <AndroidUpdateNotice client={runtime.TronoAndroidUpdates} />}
       {community.notices.map((item) => (
         <div className={styles.notice} key={item.key} role="status" data-passive="true">
           <Icon name="voice" size={18} />

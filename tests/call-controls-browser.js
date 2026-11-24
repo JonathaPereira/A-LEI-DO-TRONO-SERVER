@@ -205,17 +205,6 @@ test(
             const replace = RTCRtpSender.prototype.replaceTrack;
             window.__detachReleases = [];
             window.__attachReleases = [];
-            window.__constraintReleases = [];
-            const constraints = MediaStreamTrack.prototype.applyConstraints;
-            MediaStreamTrack.prototype.applyConstraints = function (value) {
-              if (this.kind === 'video' && window.__holdScreenQuality)
-                return new Promise((resolve, reject) =>
-                  window.__constraintReleases.push(() =>
-                    constraints.call(this, value).then(resolve, reject),
-                  ),
-                );
-              return constraints.call(this, value);
-            };
             RTCRtpSender.prototype.replaceTrack = function (track) {
               if (track?.kind === 'video' && window.__holdAttach)
                 return new Promise((resolve, reject) =>
@@ -264,7 +253,7 @@ test(
         owner.evaluate((id) => {
           void window.TronoCallToolbar.activate(id);
         }, id);
-      await expect.poll(() => owner.evaluate(() => window.TronoClips.active)).toBe(true);
+      assert.equal(await owner.evaluate(() => typeof window.TronoClips), 'undefined');
       assert.equal(await owner.evaluate(() => window.__displayRequests.length), 1);
       await t.test('React mosaic selects six people and detaches borrowed previews', async () => {
         await owner.evaluate(() => {
@@ -308,8 +297,7 @@ test(
         assert.equal(
           await owner.evaluate(
             () =>
-              window.TronoClips.active &&
-              window.__replaySource.getTracks().every((track) => track.readyState === 'live') &&
+              window.TronoSocial.getLocalDisplayStream().getTracks().every((track) => track.readyState === 'live') &&
               window.TronoSocial.getLocalAudioTrack().readyState === 'live' &&
               window.__displayRequests.length === 1,
           ),
@@ -350,27 +338,8 @@ test(
           await owner.getByRole('checkbox', { name: 'Efeitos dos jogos', exact: true }).check();
           assert.equal(await owner.evaluate(() => window.TronoAudio.sfxEnabled), true);
           await owner.getByRole('checkbox', { name: 'Efeitos dos jogos', exact: true }).uncheck();
-          await owner.evaluate(() => {
-            const p = document.getElementById('bgMusic');
-            window.__restoreMusicPlay = p.play;
-            p.play = () =>
-              Promise.reject(new DOMException('test activation required', 'NotAllowedError'));
-          });
-          await owner.getByRole('checkbox', { name: 'Música de fundo', exact: true }).check();
-          await expect(
-            dialog.getByRole('status').filter({ hasText: 'O navegador bloqueou' }),
-          ).toBeVisible();
-          await owner.getByLabel('Trilha sonora').selectOption('rock');
-          await owner.getByRole('slider', { name: 'Volume da música', exact: true }).fill('47');
-          assert.equal(await owner.evaluate(() => document.getElementById('bgMusic').volume), 0.47);
-          await owner.evaluate(() => window.TronoAudio.setMusicVolume(19));
-          await expect(
-            owner.getByRole('slider', { name: 'Volume da música', exact: true }),
-          ).toHaveValue('19');
-          await owner.getByRole('checkbox', { name: 'Música de fundo', exact: true }).uncheck();
-          await owner.evaluate(
-            () => (document.getElementById('bgMusic').play = window.__restoreMusicPlay),
-          );
+          assert.equal(await owner.evaluate(() => document.getElementById('bgMusic')), null);
+          await expect(owner.getByRole('checkbox', { name: 'Música de fundo', exact: true })).toHaveCount(0);
           await dialog.locator('[data-settings-tab=connection]').click();
           await owner.locator('#adaptiveQuality').uncheck();
           await owner.locator('#adaptiveQuality').check();
@@ -453,14 +422,20 @@ test(
           });
           await expect.poll(async () => (await remote())?.cameraLive).toBe(true);
           await activate('cameraBtn');
-          await owner.evaluate(() => (window.__holdScreenQuality = true));
+          await owner.evaluate(() => (window.__holdAttach = true));
           await activate('screenShareBtn');
           await owner.locator('#screenOptionsConfirm').click();
           await expect(viewer.locator('[data-call-screen]')).toHaveCount(1, { timeout: 1500 });
-          assert(await owner.evaluate(() => window.__constraintReleases.length > 0));
+          await viewer
+            .locator('[data-call-screen]')
+            .getByRole('button', { name: 'Assistir transmissão', exact: true })
+            .click();
+          await expect
+            .poll(() => owner.evaluate(() => window.__attachReleases.length))
+            .toBeGreaterThan(0);
           await owner.evaluate(() => {
-            window.__holdScreenQuality = false;
-            for (const release of window.__constraintReleases.splice(0)) release();
+            window.__holdAttach = false;
+            for (const release of window.__attachReleases.splice(0)) release();
           });
         },
       );

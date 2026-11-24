@@ -25,6 +25,19 @@ export const EMPTY_REGISTERED_ACCOUNTS: RegisteredAccountsSnapshot = Object.free
   message: '',
 });
 
+export function filterRegisteredAccounts(
+  accounts: readonly RegisteredAccount[],
+  query: string,
+): readonly RegisteredAccount[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return accounts;
+  return accounts.filter(
+    (account) =>
+      account.nickname.toLowerCase().includes(needle) ||
+      account.email.toLowerCase().includes(needle),
+  );
+}
+
 /** Private directory state is scoped to the authenticated client's permission epoch. */
 export function createRegisteredAccounts({ profiles, getAccount }: RegisteredAccountsOptions) {
   let state = EMPTY_REGISTERED_ACCOUNTS,

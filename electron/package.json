@@ -1,6 +1,6 @@
 {
   "name": "mn-trono-desktop",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "M&N e A Lei do Trono — aplicativo Windows",
   "author": "Jonatha Pereira",
   "private": true,
@@ -29,18 +29,6 @@
       "assets/**"
     ],
     "extraResources": [
-      {
-        "from": "../artifacts/ffmpeg",
-        "to": "ffmpeg",
-        "filter": [
-          "bin/ffmpeg.exe",
-          "bin/*.dll",
-          "LICENSE*.txt",
-          "UPSTREAM.txt",
-          "BUILD-CONFIG.txt",
-          "VERSION.json"
-        ]
-      },
       {
         "from": "../out",
         "to": "renderer",

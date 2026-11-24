@@ -58,7 +58,7 @@ export function ReleaseNotesCard({
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') dismiss();
+      if (event.key === 'Escape' && !document.querySelector('dialog:modal')) dismiss();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -79,10 +79,7 @@ export function ReleaseNotesCard({
           <span className={styles.badge}>v{CURRENT_RELEASE_NOTES.version}</span>
           <div className={styles.summaryText}>
             <strong>{CURRENT_RELEASE_NOTES.heading}</strong>
-            <span>
-              Status Online/Ausente/Não Perturbar, Overlay discreto para jogos no Windows e prévias
-              de imagens nas notificações.
-            </span>
+            <span>{CURRENT_RELEASE_NOTES.subtitle}</span>
           </div>
           <div className={styles.summaryActions}>
             <button

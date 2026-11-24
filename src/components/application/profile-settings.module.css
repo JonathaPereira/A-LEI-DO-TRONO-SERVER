@@ -247,8 +247,29 @@
   display: flex;
   gap: 8px;
 }
+.surface :global(.creator-accounts-toolbar) {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.surface :global(.creator-accounts-toolbar input) {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--app-theme-border, #4c4c4c);
+  border-radius: 8px;
+  background: var(--app-theme-input, #141414);
+  color: inherit;
+  font: inherit;
+}
 .surface :global(.creator-table-scroll) {
   overflow: auto;
+  max-height: 55vh;
+}
+.surface :global(.creator-copy-email) {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85em;
 }
 .surface table {
   width: 100%;

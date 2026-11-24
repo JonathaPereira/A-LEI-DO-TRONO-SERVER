@@ -93,8 +93,9 @@ test(
               'Portal Humano',
             );
             await page.evaluate(() => window.TronoCallSettings.open('game'));
-            await page.getByLabel('Trilha sonora').selectOption('rock');
-            await expect(page.getByLabel('Trilha sonora')).toHaveValue('rock');
+            await expect(page.getByLabel('Trilha sonora')).toHaveCount(0);
+            await page.getByLabel('Efeitos dos jogos').check();
+            await expect(page.getByLabel('Efeitos dos jogos')).toBeChecked();
             await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
             await page.evaluate(() => {
               const original = window.TronoCommunityAdmin.refresh;

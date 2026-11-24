@@ -11,6 +11,7 @@ import { NotificationFields } from '../modals/notification-fields';
 import { OverlaySettingsFields } from '../modals/overlay-fields';
 import { SettingsActivityFields } from '../modals/settings-activity-fields';
 import { DesktopApplicationSettings } from './desktop-updates';
+import { AndroidApplicationSettings } from './android-updates';
 import { ResourceSettings } from './resources';
 import { GameSettings } from './game-settings';
 import { AccountSettings } from './profile-settings';
@@ -37,6 +38,7 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
     state = useModel(controller),
     dialog = useRef<HTMLDialogElement>(null);
   const desktop = !!runtime.TronoDesktop;
+  const android = !!runtime.TronoAndroidUpdates;
   const editor = useModel(runtime.TronoProfileEditor);
   const title = ['audio', 'video', 'capture', 'connection'].includes(state.topic)
     ? 'Voz e vídeo'
@@ -84,6 +86,7 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
             .filter(
               ([id]) =>
                 desktop ||
+                (id === 'application' && android) ||
                 (id !== 'capture' && id !== 'activity' && id !== 'privacy' && id !== 'application'),
             )
             .map(([id, label, icon]) => (
@@ -101,11 +104,17 @@ export function MediaSettings({ runtime }: { runtime: ApplicationServices }) {
         </nav>
         <div className={styles.fields} data-settings-fields>
           <AccountSettings runtime={runtime} />
-          {desktop && (
+          {(desktop || android) && (
             <section hidden={selected !== 'application'} aria-label="Aplicativo">
-              <DesktopApplicationSettings client={runtime.TronoDesktopUpdates} />
-              {runtime.TronoDesktopOverlay && (
-                <OverlaySettingsFields client={runtime.TronoDesktopOverlay} />
+              {desktop ? (
+                <>
+                  <DesktopApplicationSettings client={runtime.TronoDesktopUpdates} />
+                  {runtime.TronoDesktopOverlay && (
+                    <OverlaySettingsFields client={runtime.TronoDesktopOverlay} />
+                  )}
+                </>
+              ) : (
+                <AndroidApplicationSettings client={runtime.TronoAndroidUpdates} />
               )}
             </section>
           )}

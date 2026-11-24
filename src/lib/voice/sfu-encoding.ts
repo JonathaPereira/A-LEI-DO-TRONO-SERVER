@@ -64,14 +64,15 @@ export function screenStartupOffer(
           (m) => m[1],
         );
         for (const id of ids) {
-          const re = new RegExp('^a=fmtp:' + id + ' (.*)$', 'm'),
+          const re = new RegExp('^a=fmtp:' + id + ' ([^\\r\\n]*)', 'm'),
             hint = `x-google-min-bitrate=${min};x-google-start-bitrate=${start};x-google-max-bitrate=${max}`;
           if (re.test(part))
-            part = part.replace(
-              re,
-              (_: string, params: string) =>
-                `a=fmtp:${id} ${params.replace(/;?\s*x-google-(?:start|max|min)-bitrate=\d+/g, '')};${hint}`,
-            );
+            part = part.replace(re, (_: string, params: string) => {
+              const cleaned = params
+                .replace(/;?\s*x-google-(?:start|max|min)-bitrate=\d+/g, '')
+                .replace(/^[\s;]+|[\s;]+$/g, '');
+              return `a=fmtp:${id} ${cleaned ? `${cleaned};${hint}` : hint}`;
+            });
           else
             part = part.replace(
               new RegExp('(^a=rtpmap:' + id + ' [^\r\n]+\r?\n)', 'm'),
@@ -102,16 +103,37 @@ export function advertisedRids(transceiver: RTCRtpTransceiver, pc: RTCPeerConnec
 }
 
 function h264Rank(codec: RTCRtpCodec): number {
-  const match = /profile-level-id=([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(
-    codec.sdpFmtpLine || '',
-  );
+  const fmtp = codec.sdpFmtpLine || '';
+  const match = /profile-level-id=([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(fmtp);
   if (!match) return 1;
   const profile = match[1].toLowerCase();
+  const iop = match[2].toLowerCase();
   const level = parseInt(match[3], 16);
-  // Keep Constrained Baseline (42e0) first for universal SFU/hardware support, sorted by higher level first.
+  // Strongly prefer packetization-mode=1 (FU-A fragmentation) and level-asymmetry-allowed=1
+  // so hardware encoders (NVENC/AMF/QSV) are used instead of slow single-NAL software OpenH264.
+  const packetizationScore = /packetization-mode=1\b/i.test(fmtp)
+    ? 500
+    : /packetization-mode=0\b/i.test(fmtp)
+      ? -300
+      : 0;
+  const asymmetryScore = /level-asymmetry-allowed=1\b/i.test(fmtp) ? 100 : 0;
+  // Keep Constrained Baseline (42e0) ahead of plain Baseline (4200) and sort by higher level first.
   const profileScore =
-    profile === '42' ? 200 : profile === '64' ? 120 : profile === '4d' ? 100 : 50;
-  return profileScore + (Number.isFinite(level) ? Math.min(level, 99) : 0);
+    profile === '42' && iop === 'e0'
+      ? 220
+      : profile === '64'
+        ? 160
+        : profile === '4d'
+          ? 140
+          : profile === '42'
+            ? 100
+            : 50;
+  return (
+    packetizationScore +
+    asymmetryScore +
+    profileScore +
+    (Number.isFinite(level) ? Math.min(level, 99) : 0)
+  );
 }
 
 function vp9Rank(codec: RTCRtpCodec): number {

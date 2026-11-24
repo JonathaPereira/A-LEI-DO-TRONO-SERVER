@@ -186,11 +186,16 @@ A transmissão de tela suporta preferência configurável de codec (`prioritizeS
 opções explícitas `auto`, `av1`, `vp8` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
 P2P (`p2p-peers.ts`), preservando os codecs `video/rtx` pareados para retransmissão NACK/RTX
 e usando piso/início conservadores em `screenStartupOffer` para não engessar o controle de
-congestionamento. No lado emissor, `voice/quality.ts` garante o commit inicial de `setParameters`
-pós-negociação e `voice/runtime.ts` reconcilia `scaleResolutionDownBy`/`maxFramerate` caso a
-telemetria detecte resolução ou FPS acima do formato escolhido; no lado receptor, `voice/remote-media.ts`
-configura um alvo de 80 ms (`jitterBufferTarget` / `playoutDelayHint`) no `RTCRtpReceiver` de tela
-para suavizar quadros pesados sem atrasar áudio. Espectadores de tela sinalizam `stream-watch` tanto
+congestionamento (sanitizando parâmetros `a=fmtp` sem ponto-e-vírgula sobrando e priorizando H.264
+com `packetization-mode=1`, `level-asymmetry-allowed=1` e Constrained Baseline `42e0` para evitar
+fallback em software). No lado emissor, `voice/quality.ts` garante o commit inicial de `setParameters`
+pós-negociação, `voice/quality-policy.ts` (`CallStability`) avalia percentual real de retransmissão
+(`retransmittedPct >= 5%` com piso mínimo de pacotes, em vez de contagem bruta) e `voice/runtime.ts`
+reconcilia `scaleResolutionDownBy`/`maxFramerate` caso a telemetria detecte resolução ou FPS acima do
+formato escolhido; no lado receptor, `voice/remote-media.ts` configura um alvo padrão de 80 ms
+(`jitterBufferTarget` / `playoutDelayHint`) no `RTCRtpReceiver` de tela e oferece o **Modo Fluidez**
+(`screenSmoothMode`, ~2000 ms no vídeo e áudio da transmissão assistida com atualização ao vivo)
+mantendo sempre a voz da chamada (`audio`) em tempo real. Espectadores de tela sinalizam `stream-watch` tanto
 em SFU quanto em P2P (`voice/media-interest.ts`, `voice/roster.ts`) para exibir os avatares de quem
 assiste à transmissão no cartão do emissor (`call.tsx`). No Android (`MainActivity.java` e `CallService.java`),
 enquanto há chamada ativa o serviço em primeiro plano mantém `PARTIAL_WAKE_LOCK`, `WifiLock` e
@@ -200,8 +205,10 @@ deltas por fluxo de publicação/recepção, classifica congelamentos reais em 8
 tela estática com falha e o relatório sanitizado (`voice/diagnostic-report.ts`) expõe codec, implementação
 do encoder/decoder e aceleração por hardware por fluxo; `voice/video-recovery.ts` e `voice/sfu-session.ts`
 aplicam recuperação direcionada e limitada por fluxo/estado `disconnected` (> 4,5 s) sem derrubar
-chamada, microfone, câmera ou socket — e evitam reconectar assinaturas SFU de tela saudáveis em
-`presentation-frozen` enquanto o decoder ainda progride. O perfil padrão de conteúdo de tela
+chamada, microfone, câmera ou socket — evitando reconectar assinaturas SFU saudáveis em
+`presentation-frozen`, evitando derrubar publicadores conectados em `transport-congestion`, aplicando
+reset real de encoder (`replaceTrack(null)` + `replaceTrack(track)` + `applySender({ force: true })`)
+em `encoder-stalled`/`send-stalled` e respeitando a margem do buffer do Modo Fluidez. O perfil padrão de conteúdo de tela
 é `motion`, que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência e
 fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail` (`maintain-resolution`)
 para documentos e apresentações estáticas. No processo principal do Electron (`electron/main.cjs`
@@ -222,14 +229,9 @@ Navegar conserva a chamada; entrar/trocar/sair da voz são ações explícitas.
 busca de GIF e contas registradas. Biblioteca de arquivos e soundboard reutilizam
 o cliente de arquivos. O editor possui rascunho, mídia pendente e salvar/descartar.
 
-`clips/store.ts` mantém IndexedDB trono-local-clips v1, lojas clips/settings
-e índice owner. Não recriar ou limpar registros ao reconstruir a apresentação.
-Preferências conservam tronoClips:<owner> v2; `preferences/personal.ts` conserva
-mn-personal:<id>. Troca de conta limpa a projeção e invalida trabalhos anteriores.
+A função de Clipes/replay foi suspensa e desativada na interface, no runtime e no processo principal do Electron, e o FFmpeg não é mais empacotado no instalador Windows. `preferences/personal.ts` conserva `mn-personal:<id>`.
 
-Gravação manual e replay possuem seus próprios recursos; bibliotecas e janelas
-flutuantes emprestam comandos/streams. A gravação só confirma no commit da
-persistência. Não criar recorder, buffer ou captura adicional ao navegar. Troca de conta ou saída de convidado cancela seleção, encoder ativo e persistência ainda não confirmada da gravação, sem encerrar o microfone emprestado da chamada. O sinal de cancelamento atravessa o salvamento: após cada operação de pasta/arquivo a identidade é revalidada; um writable aberto é abortado e o fallback de download é suprimido. Um arquivo já confirmado não é apagado.
+A gravação manual mantém seus próprios recursos (`src/lib/recording/` e `src/components/recording/runtime.tsx`), reutilizando apenas o utilitário de download de arquivos (`src/lib/clips/export.ts`). A gravação só confirma no commit da persistência. Não criar recorder ou captura adicional ao navegar. Troca de conta ou saída de convidado cancela seleção, encoder ativo e persistência ainda não confirmada da gravação, sem encerrar o microfone emprestado da chamada. O sinal de cancelamento atravessa o salvamento: após cada operação de pasta/arquivo a identidade é revalidada; um writable aberto é abortado e o fallback de download é suprimido. Um arquivo já confirmado não é apagado.
 Remote PC conserva transporte, autorização de controle e ponte nativa existentes.
 
 desktop/window.ts possui a assinatura nativa da janela e deduplica fullscreen
@@ -517,6 +519,19 @@ troca/logout. O payload FCM não contém texto nem anexos da conversa. Menções
 canais continuam pelo socket enquanto o processo está ativo; push de canais ainda
 não está integrado. Firebase e assinatura são configuração operacional, não
 credenciais embarcadas no frontend. O segredo de serviço fica só no backend.
+
+Atualizações automáticas no Android pertencem a `AndroidUpdater.java` (nativo,
+invocado por `TronoAndroidPlugin.java`) e `src/lib/mobile/android-updates.ts`
+(projeção de estado e regras puras de semver/SHA-256). O verificador consulta
+apenas releases estáveis `android-v*` em hosts HTTPS permitidos, valida o hash
+`SHA-256` contra `SHA256SUMS.txt` durante o download e novamente antes de abrir
+o instalador nativo via `FileProvider` (`REQUEST_INSTALL_PACKAGES`), descartando
+qualquer arquivo divergente.
+
+Presença automática (Auto-Ausente após 10 minutos sem interação fora de chamada
+ou com microfone mutado) pertence a `src/lib/community/controller.ts`, mantendo o
+estado efêmero separado do status manual salvo (nunca sobrescrevendo `dnd` ou
+`away` manual).
 
 
 ### Captura local de clipes e avaliação dos encoders

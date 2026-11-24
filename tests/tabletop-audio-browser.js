@@ -127,21 +127,13 @@ test(
         state,
       );
       assert.deepEqual(errors, []);
-      // The retained game controls and Corte settings project the same audio owner.
+      // Corte settings project game SFX volumes and do not render background music controls.
       await page.evaluate(() => {
-        window.TronoAudio.setMusicVolume(23);
-        window.TronoAudio.setMusicTrack('rock', { play: false });
         window.TronoCallSettings.open('game');
       });
-      const volume = page.getByRole('slider', { name: 'Volume da música', exact: true });
-      await volume.focus();
-      await volume.press('End');
-      await volume.press('ArrowLeft');
-      await expect(volume).toHaveValue('99');
-      for (const id of ['musicVolumeValue', 'lobbyMusicVolumeValue'])
-        await expect(page.locator('#' + id)).toHaveText('99%');
-      for (const id of ['gameScreen', 'setupScreen'])
-        await expect(page.locator('#' + id + ' .track-btn[data-track=rock]')).toHaveClass(/active/);
+      await expect(page.getByRole('checkbox', { name: 'Efeitos dos jogos', exact: true })).toBeVisible();
+      await expect(page.getByRole('slider', { name: 'Volume da música', exact: true })).toHaveCount(0);
+      await expect(page.locator('#bgMusic')).toHaveCount(0);
       await page.getByRole('button', { name: 'Fechar configurações', exact: true }).click();
       const cleanup = await page.evaluate(async () => {
         const audio = window.TronoAudio;
@@ -158,7 +150,7 @@ test(
           ownedClosed,
           borrowedState: borrowed.state,
           borrowedTrack: track.readyState,
-          playerPaused: document.getElementById('bgMusic').paused,
+          bgMusicAbsent: !document.getElementById('bgMusic'),
           facadeRemoved: !window.TronoAudio,
           controlsRemoved: !document.querySelector('[data-audio-controls-root]'),
           cannotRestart: !(await audio.ensureAudio()),
@@ -171,7 +163,7 @@ test(
         ownedClosed: true,
         borrowedState: 'running',
         borrowedTrack: 'live',
-        playerPaused: true,
+        bgMusicAbsent: true,
         facadeRemoved: true,
         controlsRemoved: true,
         cannotRestart: true,

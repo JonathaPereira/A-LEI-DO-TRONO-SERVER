@@ -653,6 +653,7 @@ export function createVoiceTelemetry(options: Options) {
     const limiters: string[] = [];
     let outFpsMeasured = false;
     let retransmittedTotal = 0;
+    let outboundPacketsTotal = 0;
     let availableOutgoingBitrate: number | null = null;
     const videoIntervals: Readonly<VideoInterval>[] = [];
     const videoStreams: Readonly<VideoStreamHealth>[] = [];
@@ -724,6 +725,8 @@ export function createVoiceTelemetry(options: Options) {
             seenVideoStreamKeys.add(sampled.health.streamKey);
             if (sampled.interval.retransmittedPackets)
               retransmittedTotal += sampled.interval.retransmittedPackets;
+            if (sampled.interval.direction === 'outbound' && sampled.interval.packetsSent)
+              outboundPacketsTotal += sampled.interval.packetsSent;
           }
         }
         if (stat.type === 'outbound-rtp' && !stat.isRemote) {
@@ -913,6 +916,9 @@ export function createVoiceTelemetry(options: Options) {
       streams: Object.freeze(videoStreams),
       freezes: allFreezes,
       retransmittedPackets: retransmittedTotal,
+      retransmittedPct: outboundPacketsTotal
+        ? (retransmittedTotal / outboundPacketsTotal) * 100
+        : 0,
       availableOutgoingBitrate,
       outFpsMeasured,
       audioLossPct: audioTotal ? (audioLost / audioTotal) * 100 : 0,

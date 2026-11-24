@@ -213,19 +213,16 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       generation: voiceCall.getSnapshot().generation,
       joined: voiceCall.getSnapshot().joined,
       format: qualityProfile().screen,
-      replay: window.TronoClips?.captureProfile?.(),
+      replay: undefined,
       audio: screenSharingControls.getSnapshot().audio,
       contentHint: qualityPreferences().screenContent,
     }),
     onStarted: (change) => screenPublication.publish(change),
     onEnded: () => stopScreenShare(true),
     onAudioEnded: (change) => screenPublication.detachAudio(change),
-    onSourceStarted: (source) => {
-      void window.TronoClips?.sharedStarted?.(source);
-    },
-    onSourceStopped: (source) => {
+    onSourceStarted: () => {},
+    onSourceStopped: () => {
       screenWatchers.clear();
-      window.TronoClips?.sharedStopped?.(source);
     },
   });
   const screenSharing = () => screenCapture.getCapture() !== null;
@@ -280,6 +277,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       screen: !!privateVoiceRoster.get(id)?.screen && mediaInterest.isWatching(id),
     }),
     isCameraHidden: (id) => mediaInterest.isCameraHidden(id),
+    getScreenBufferMs: () => (qualityPreferences().screenSmoothMode ? 2000 : 80),
     onVoiceReceiver: (id, receiver, added) => {
       if (added) voiceTelemetry.registerReceiver(id, receiver);
       else voiceTelemetry.removeReceiver(receiver);
@@ -393,27 +391,49 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     active: () => voiceCall.getSnapshot().joined,
     generation: () => voiceCall.getSnapshot().generation,
     isSfu: () => transportIsSfu(),
-    async nudgePublisher(kind) {
-      const track =
+    getBufferMs: () => (qualityPreferences().screenSmoothMode ? 2000 : 80),
+    async nudgePublisher(kind, cause) {
+      const generation = voiceCall.getSnapshot().generation;
+      const currentTrack = () =>
         kind === 'screen'
           ? screenCapture.getCapture()?.outgoing.getVideoTracks()[0]
           : cameraCapture.getSnapshot().capture?.track;
+      const track = currentTrack();
       if (!track || track.readyState !== 'live') return false;
+      const resetEncoder = cause === 'encoder-stalled' || cause === 'send-stalled';
+      const nudgeSender = async (sender: RTCRtpSender) => {
+        if (resetEncoder && sender.replaceTrack) {
+          // Detach and reattach the live track to reset a wedged VideoSendStream encoder without renegotiating.
+          await sender.replaceTrack(null);
+          if (
+            !voiceCall.getSnapshot().joined ||
+            voiceCall.getSnapshot().generation !== generation ||
+            currentTrack() !== track ||
+            track.readyState !== 'live'
+          )
+            return false;
+          await sender.replaceTrack(track);
+        }
+        if (
+          !voiceCall.getSnapshot().joined ||
+          voiceCall.getSnapshot().generation !== generation ||
+          track.readyState !== 'live'
+        )
+          return false;
+        await callQuality.applySender(sender, kind, { force: true });
+        return true;
+      };
       let nudged = false;
       if (transportIsSfu()) {
         const pub = sfuSession.publications.get(kind);
-        if (pub?.sender?.replaceTrack && pub.sender.track === track) {
-          await pub.sender.replaceTrack(track);
-          await callQuality.applySender(pub.sender, kind);
-          nudged = true;
+        if (pub?.sender && pub.sender.track === track) {
+          nudged = await nudgeSender(pub.sender);
         }
       } else {
         for (const pc of peers.values()) {
           const tr = kind === 'screen' ? pc._tronoScreenTransceiver : pc._tronoVideoTransceiver;
-          if (tr?.sender?.replaceTrack && tr.sender.track === track) {
-            await tr.sender.replaceTrack(track);
-            await callQuality.applySender(tr.sender, kind);
-            nudged = true;
+          if (tr?.sender && tr.sender.track === track) {
+            if (await nudgeSender(tr.sender)) nudged = true;
           }
         }
       }
@@ -843,7 +863,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     },
     sharing: screenSharingControls,
     call: () => ({ ...voiceCall.getSnapshot(), mediaBlocked: controlState().mediaBlocked }),
-    replayEnabled: () => !!window.TronoClips?.captureProfile?.(),
+    replayEnabled: () => false,
     onBlocked: () => setStatus('Compartilhamento bloqueado pela moderação.', 'warn'),
   });
   window.TronoScreenOptions = screenOptions;
@@ -1342,6 +1362,11 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         detail: {
           joined: voiceCall.getSnapshot().joined,
           joining,
+          micMuted: !!(
+            controlState().micMuted ||
+            controlState().deafened ||
+            controlState().serverMuted
+          ),
           deafened: controlState().deafened,
           roomId: currentVoiceRoom()?.id,
         },
@@ -1502,6 +1527,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         announcedTransport(),
       ),
     onOutputChanged: refreshDiagnostics,
+    onScreenBufferChanged: () => remoteMedia.refreshScreenBuffer(),
     setScreenBitrate: (screenBitrate) =>
       window.TronoNetwork.requestSfu('set-screen-bitrate', { screenBitrate }),
     onStatus: setStatus,
@@ -1795,6 +1821,10 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     },
     get voiceJoining() {
       return !!voiceCall.getSnapshot().joining;
+    },
+    get micMuted() {
+      const c = controlState();
+      return !!(c.micMuted || c.deafened || c.serverMuted);
     },
     get voiceRoom() {
       const room = currentVoiceRoom();

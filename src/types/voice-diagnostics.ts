@@ -119,6 +119,7 @@ export interface MediaTelemetry {
   readonly streams?: readonly Readonly<VideoStreamHealth>[];
   readonly freezes?: readonly Readonly<VideoFreezeEvent>[];
   readonly retransmittedPackets?: number;
+  readonly retransmittedPct?: number;
   readonly availableOutgoingBitrate?: number | null;
   readonly audioLossPct: number;
   readonly audioJitterMs: number;

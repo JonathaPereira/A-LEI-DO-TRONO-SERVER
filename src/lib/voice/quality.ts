@@ -32,6 +32,7 @@ const keys: Record<keyof QualityPreferences, string> = {
   screenBitrateMbps: 'mnScreenBitrate',
   screenContent: 'mnScreenContent',
   screenCodec: 'mnScreenCodec',
+  screenSmoothMode: 'mnScreenSmoothMode',
   adaptiveEnabled: 'mnAdaptiveQuality',
 };
 
@@ -49,6 +50,7 @@ export function createCallQuality(options: QualityOptions) {
     screenBitrateMbps: SCREEN_BITRATES.includes(initialBitrate) ? initialBitrate : 8,
     screenContent: storage.getItem(keys.screenContent) === 'detail' ? 'detail' : 'motion',
     screenCodec: isScreenCodec(initialCodec) ? initialCodec : 'vp9',
+    screenSmoothMode: storage.getItem(keys.screenSmoothMode) === '1',
     adaptiveEnabled: storage.getItem(keys.adaptiveEnabled) !== '0',
   });
   let revision = 0;
@@ -115,6 +117,7 @@ export function createCallQuality(options: QualityOptions) {
     if (patch.screenContent === 'motion' || patch.screenContent === 'detail')
       next.screenContent = patch.screenContent;
     if (isScreenCodec(patch.screenCodec)) next.screenCodec = patch.screenCodec;
+    if (typeof patch.screenSmoothMode === 'boolean') next.screenSmoothMode = patch.screenSmoothMode;
     if (typeof patch.adaptiveEnabled === 'boolean') {
       next.adaptiveEnabled = patch.adaptiveEnabled;
       stability.reset();
@@ -150,6 +153,7 @@ export function createCallQuality(options: QualityOptions) {
   function applySender(
     sender: RTCRtpSender | null | undefined,
     kind: VoiceMediaKind,
+    { force = false }: { force?: boolean } = {},
   ): Promise<void> {
     if (!sender) return Promise.resolve();
     const generation = options.call().generation,
@@ -166,7 +170,7 @@ export function createCallQuality(options: QualityOptions) {
           const q = getSnapshot().profile;
           if (kind === 'audio' || kind === 'screen-audio') {
             const targetBitrate = kind === 'screen-audio' ? 192000 : q.audioBitrate;
-            if (parameters.encodings[0].maxBitrate === targetBitrate) return;
+            if (!force && parameters.encodings[0].maxBitrate === targetBitrate) return;
             parameters.encodings[0].maxBitrate = targetBitrate;
           } else if (kind === 'screen') {
             const targetDegradation =
@@ -185,6 +189,7 @@ export function createCallQuality(options: QualityOptions) {
               q: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
             };
             let changed =
+              force ||
               !initializedScreenSenders.has(sender) ||
               parameters.degradationPreference !== targetDegradation;
             parameters.degradationPreference = targetDegradation;
