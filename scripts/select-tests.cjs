@@ -739,8 +739,13 @@ function planForChangedFiles({
       matchedAny = true;
     }
     if (knownDesktop.has(file)) {
-      desktopSet.add(file);
-      reasons.add(`direct-desktop:${file}`);
+      if (file === 'tests/desktop-packaged.js' || file === 'tests/desktop-installer.js') {
+        reasons.add(`post-package-desktop:${file}`);
+        if (file === 'tests/desktop-installer.js') buildFlags.runInstallerTest = true;
+      } else {
+        desktopSet.add(file);
+        reasons.add(`direct-desktop:${file}`);
+      }
       matchedAny = true;
     }
 

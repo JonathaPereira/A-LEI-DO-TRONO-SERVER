@@ -165,3 +165,13 @@ test('test command supports --exclude-games, --retries, and --concurrency valida
   assert.notEqual(invalidRetries.status, 0);
   assert.match(invalidRetries.stderr, /Tentativas extras inválida/);
 });
+
+test('select-tests never schedules post-package desktop tests before packaging', () => {
+  const plan = planForChangedFiles({
+    files: ['tests/desktop-packaged.js', 'tests/desktop-installer.js'],
+  });
+  assert.equal(plan.mode, 'selective');
+  assert.equal(plan.desktopMode, 'skip');
+  assert.deepEqual(plan.desktopTests, []);
+  assert.equal(plan.runInstallerTest, true);
+});
