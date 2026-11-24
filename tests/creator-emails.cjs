@@ -46,3 +46,115 @@ test('filterRegisteredAccounts matches nickname or email case-insensitively with
   );
   assert.deepEqual(filterRegisteredAccounts(rows, 'nao-existe'), []);
 });
+
+test('GET /community/registered-accounts falls back to Supabase Admin API for Creator on 503 PROFILE_UNAVAILABLE and still blocks non-creators', async () => {
+  const express = require('express');
+  const { createCommunityManagement } = require('../server/community-management.ts');
+  const creatorId = '10000000-0000-4000-8000-000000000001';
+  const memberId = '10000000-0000-4000-8000-000000000002';
+  const fetchCalls = [];
+  const auth = {
+    configured: true,
+    allowedOrigins: new Set(['https://app.example.test']),
+    tokenFrom(req) {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token)
+        throw Object.assign(new Error('Entre na conta.'), { code: 'AUTH_REQUIRED', status: 401 });
+      return token;
+    },
+    identity: async (token) =>
+      token === 'creator-token'
+        ? {
+            id: creatorId,
+            nickname: 'Criador',
+            role: 'creator',
+            permissions: permissions('creator'),
+            expiresAt: Date.now() + 60_000,
+          }
+        : {
+            id: memberId,
+            nickname: 'Membro',
+            role: 'member',
+            permissions: permissions('member'),
+            expiresAt: Date.now() + 60_000,
+          },
+    request: async () => {
+      const err = new Error('Perfil indisponível. Confira a atualização do servidor.');
+      err.status = 503;
+      err.code = 'PROFILE_UNAVAILABLE';
+      throw err;
+    },
+  };
+  const mgmt = createCommunityManagement({
+    auth,
+    rooms: new Map(),
+    createRoom: (c) => ({ id: c.id, kind: 'chat', name: c.name }),
+    env: {
+      SUPABASE_URL: 'https://proj.supabase.test',
+      SUPABASE_SERVICE_ROLE_KEY: 'svc-secret-key',
+    },
+    fetchImpl: async (url) => {
+      fetchCalls.push(String(url));
+      if (String(url).includes('/auth/v1/admin/users')) {
+        return {
+          ok: true,
+          json: async () => ({
+            users: [
+              {
+                id: creatorId,
+                email: CREATOR_EMAIL,
+                email_confirmed_at: '2026-01-01T00:00:00Z',
+                created_at: '2026-01-01T00:00:00Z',
+                user_metadata: { nickname: 'MetaCriador' },
+              },
+              {
+                id: memberId,
+                email: 'membro@example.test',
+                email_confirmed_at: null,
+                created_at: '2026-01-02T00:00:00Z',
+                user_metadata: { nickname: 'MembroMeta' },
+              },
+            ],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => [
+          { id: creatorId, nickname: 'CriadorReal', created_at: '2026-01-01T00:00:00Z' },
+        ],
+      };
+    },
+  });
+  const app = express();
+  mgmt.install(app, express);
+  const server = await new Promise((resolve) => {
+    const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const forbidden = await fetch(`${base}/community/registered-accounts?offset=0`, {
+      headers: { Authorization: 'Bearer member-token' },
+    });
+    assert.equal(forbidden.status, 403);
+    assert.equal(fetchCalls.length, 0);
+
+    const ok = await fetch(`${base}/community/registered-accounts?offset=0`, {
+      headers: { Authorization: 'Bearer creator-token' },
+    });
+    assert.equal(ok.status, 200);
+    const body = await ok.json();
+    assert.equal(body.accounts.length, 2);
+    assert.equal(body.accounts[0].nickname, 'CriadorReal');
+    assert.equal(body.accounts[0].email, CREATOR_EMAIL);
+    assert.equal(body.accounts[0].confirmed, true);
+    assert.equal(body.accounts[1].nickname, 'MembroMeta');
+    assert.equal(body.accounts[1].email, 'membro@example.test');
+    assert.equal(body.accounts[1].confirmed, false);
+    assert.equal(body.hasMore, false);
+    assert.equal(body.nextOffset, 2);
+  } finally {
+    mgmt.stop?.();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

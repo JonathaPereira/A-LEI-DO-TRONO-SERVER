@@ -34,5 +34,6 @@ $$;
 \ir migrations/20261015145458_member_profiles.sql
 \ir migrations/20261015194333_profile_media_controls.sql
 \ir migrations/20261016140000_giphy_profile_credits.sql
+\ir migrations/20261124120000_fix_creator_registered_accounts_email_cast.sql
 
 \ir upgrade-android-push.sql
