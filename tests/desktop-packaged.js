@@ -337,6 +337,11 @@ test(
         page
           .getByRole('region', { name: 'Jogos', exact: true })
           .getByRole('slider', { name: 'Volume da música', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page
+          .getByRole('region', { name: 'Jogos', exact: true })
+          .getByLabel('Efeitos dos jogos', { exact: true }),
       ).toBeVisible();
       await page.locator('[data-settings-tab=activity]').click();
       await expect(page.locator('#desktopActivityEnabled')).not.toBeChecked();

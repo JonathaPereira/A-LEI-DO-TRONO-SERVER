@@ -181,11 +181,19 @@ test(
             }
             await open();
             await page.locator('[data-settings-tab=game]').click();
+            await expect(
+              page
+                .getByRole('region', { name: 'Jogos', exact: true })
+                .getByRole('slider', { name: 'Volume da música', exact: true }),
+            ).toHaveCount(0);
             await page
               .getByRole('region', { name: 'Jogos', exact: true })
-              .getByRole('slider', { name: 'Volume da música', exact: true })
+              .getByRole('slider', { name: 'Efeitos de Splendor', exact: true })
               .fill('24');
-            assert.equal(await page.evaluate(() => window.TronoAudio.musicVolume), 24);
+            assert.equal(
+              await page.evaluate(() => window.TronoAudio.gameVolume('splendor')),
+              24,
+            );
             await page.getByLabel('Efeitos dos jogos', { exact: true }).check();
             assert.equal(await page.evaluate(() => window.TronoAudio.sfxEnabled), true);
             await page.locator('[data-settings-tab=account]').click();
