@@ -262,9 +262,6 @@ export function CallSurface({
               <span className={styles.telemetryBadge}>
                 <span className={styles.telemetryDot} />
                 <span>Cloudflare SFU · TURN ativo</span>
-                {state.screens.length > 0 && (
-                  <span className={styles.fpsBadge}>1080p · 60 fps</span>
-                )}
               </span>
             )}
           </div>

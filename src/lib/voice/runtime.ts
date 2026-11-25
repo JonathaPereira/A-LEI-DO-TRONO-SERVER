@@ -277,7 +277,6 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       screen: !!privateVoiceRoster.get(id)?.screen && mediaInterest.isWatching(id),
     }),
     isCameraHidden: (id) => mediaInterest.isCameraHidden(id),
-    getScreenBufferMs: () => (qualityPreferences().screenSmoothMode ? 2000 : 80),
     onVoiceReceiver: (id, receiver, added) => {
       if (added) voiceTelemetry.registerReceiver(id, receiver);
       else voiceTelemetry.removeReceiver(receiver);
@@ -332,7 +331,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     createStream: (track) => new MediaStream([track]),
     createContext: () => {
       const Ctx = window.AudioContext || window.webkitAudioContext;
-      return Ctx ? new Ctx({ latencyHint: 0.04, sampleRate: 48000 }) : null;
+      return Ctx ? new Ctx({ latencyHint: 'interactive', sampleRate: 48000 }) : null;
     },
     onChange: updateAudioRecoveryUI,
     onBlocked: () => setStatus('Áudio recebido. Toque em Liberar áudio para ouvir.', 'warn'),
@@ -391,8 +390,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     active: () => voiceCall.getSnapshot().joined,
     generation: () => voiceCall.getSnapshot().generation,
     isSfu: () => transportIsSfu(),
-    getBufferMs: () => (qualityPreferences().screenSmoothMode ? 2000 : 80),
-    async nudgePublisher(kind, cause) {
+    async nudgePublisher(kind) {
       const generation = voiceCall.getSnapshot().generation;
       const currentTrack = () =>
         kind === 'screen'
@@ -400,23 +398,12 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
           : cameraCapture.getSnapshot().capture?.track;
       const track = currentTrack();
       if (!track || track.readyState !== 'live') return false;
-      const resetEncoder = cause === 'encoder-stalled' || cause === 'send-stalled';
       const nudgeSender = async (sender: RTCRtpSender) => {
-        if (resetEncoder && sender.replaceTrack) {
-          // Detach and reattach the live track to reset a wedged VideoSendStream encoder without renegotiating.
-          await sender.replaceTrack(null);
-          if (
-            !voiceCall.getSnapshot().joined ||
-            voiceCall.getSnapshot().generation !== generation ||
-            currentTrack() !== track ||
-            track.readyState !== 'live'
-          )
-            return false;
-          await sender.replaceTrack(track);
-        }
+        // Never detach a live video track with replaceTrack(null): detaching causes a 1.5-2s black/freeze spike.
         if (
           !voiceCall.getSnapshot().joined ||
           voiceCall.getSnapshot().generation !== generation ||
+          currentTrack() !== track ||
           track.readyState !== 'live'
         )
           return false;
@@ -520,26 +507,6 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
               : 'Qualidade de vídeo restaurada.',
             'ok',
           );
-      } else if (screenSharing()) {
-        const target = callQuality.getSnapshot().profile.screen;
-        const oversized = (snapshot.streams || []).some(
-          (s) =>
-            s.direction === 'outbound' &&
-            (s.pcKey === 'sfu:screen' || s.pcKey.startsWith('p2p:')) &&
-            ((s.height > 0 && s.height > target.height * 1.08) ||
-              (s.fps !== null && s.fps > target.fps + 5)),
-        );
-        if (oversized) {
-          const sfuScreen = sfuLocalPublications.get('screen')?.sender;
-          if (sfuScreen) await applySenderQuality(sfuScreen, 'screen');
-          else
-            await Promise.allSettled(
-              [...peers.values()]
-                .map((pc) => pc._tronoScreenSender)
-                .filter((sender): sender is RTCRtpSender => Boolean(sender))
-                .map((sender) => applySenderQuality(sender, 'screen')),
-            );
-        }
       }
       if (isCurrent()) await videoFreezeRecovery.inspect(snapshot);
     },
@@ -1527,7 +1494,6 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
         announcedTransport(),
       ),
     onOutputChanged: refreshDiagnostics,
-    onScreenBufferChanged: () => remoteMedia.refreshScreenBuffer(),
     setScreenBitrate: (screenBitrate) =>
       window.TronoNetwork.requestSfu('set-screen-bitrate', { screenBitrate }),
     onStatus: setStatus,

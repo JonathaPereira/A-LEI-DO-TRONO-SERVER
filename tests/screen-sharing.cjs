@@ -109,7 +109,7 @@ test('non-community, unsupported capture and SFU consumption limits prevent capt
   );
 });
 
-test('1080p at 60fps retains the existing 10Mbps preset and persists audio preferences', async (t) => {
+test('1080p at 60fps uses the calibrated 8Mbps preset and persists audio preferences', async (t) => {
   const h = await setup(t);
   assert.equal(h.sharing.getSnapshot().audio, true);
   assert(h.sharing.configure('1080', '60', false));
@@ -117,7 +117,7 @@ test('1080p at 60fps retains the existing 10Mbps preset and persists audio prefe
     screenFormat: '1080-60',
     screenContent: 'motion',
     transmissionQuality: 'high',
-    screenBitrateMbps: 10,
+    screenBitrateMbps: 8,
   });
   assert.equal(h.storage.get('mnShareStreamAudio'), '0');
   const { createScreenSharing } = await modulePromise;
@@ -128,7 +128,7 @@ test('1080p at 60fps retains the existing 10Mbps preset and persists audio prefe
   assert.equal(h.storage.get('mnShareStreamAudio'), '1');
 });
 
-test('720p/15 and 1080p/30 retain their existing bitrate presets', async (t) => {
+test('720p/15 and 1080p/30 use their calibrated bitrate presets', async (t) => {
   const h = await setup(t);
   assert(h.sharing.configure('720', '15', true));
   assert.deepEqual(h.preferences(), {
@@ -138,21 +138,21 @@ test('720p/15 and 1080p/30 retain their existing bitrate presets', async (t) => 
     screenBitrateMbps: 4,
   });
   assert(h.sharing.configure('1080', '30', true));
-  assert.equal(h.preferences().screenBitrateMbps, 8);
+  assert.equal(h.preferences().screenBitrateMbps, 6);
   assert.equal(h.preferences().screenContent, 'motion');
 });
 
-test('1440p at 60fps and 30fps retain their 15Mbps and 12Mbps presets', async (t) => {
+test('1440p at 60fps and 30fps use their 12Mbps and 10Mbps presets', async (t) => {
   const h = await setup(t);
   assert(h.sharing.configure('1440', '60', true));
   assert.deepEqual(h.preferences(), {
     screenFormat: '1440-60',
     screenContent: 'motion',
     transmissionQuality: 'high',
-    screenBitrateMbps: 15,
+    screenBitrateMbps: 12,
   });
   assert(h.sharing.configure('1440', '30', true));
-  assert.equal(h.preferences().screenBitrateMbps, 12);
+  assert.equal(h.preferences().screenBitrateMbps, 10);
 });
 
 test('invalid formats and a left call cannot change preferences', async (t) => {

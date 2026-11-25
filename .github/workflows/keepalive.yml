@@ -1,0 +1,38 @@
+name: Keep Server & Supabase Awake
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Render backend and Supabase database
+        env:
+          RENDER_HEALTH_URL: ${{ vars.RENDER_HEALTH_URL }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          TARGET_URL="${RENDER_HEALTH_URL:-https://a-lei-do-trono-server.onrender.com/health?keepalive=1}"
+          echo "Pinging backend keepalive endpoint..."
+          RESPONSE="$(curl --fail --silent --show-error --location --retry 3 --retry-delay 5 --retry-all-errors --max-time 60 "$TARGET_URL")"
+          echo "$RESPONSE" | jq -e '.ok == true' > /dev/null
+          echo "$RESPONSE" | jq '{ok: .ok, version: .version, uptime: .uptime, auth: .auth, keepalive: .keepalive}'
+
+          if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+            SUPA_BASE="${SUPABASE_URL%/}"
+            echo "Pinging direct Supabase PostgREST endpoint..."
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 3 --max-time 20 \
+              -H "apikey: ${SUPABASE_ANON_KEY}" \
+              "${SUPA_BASE}/rest/v1/profiles?select=id&limit=1" > /dev/null
+            echo "Direct Supabase ping succeeded."
+          fi

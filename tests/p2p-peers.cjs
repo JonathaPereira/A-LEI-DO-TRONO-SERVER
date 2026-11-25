@@ -428,9 +428,63 @@ test('connected peer announces screen watch; failures request ICE and expose con
   assert.equal(h2.peers.connections.size, 0);
 });
 
-test('initiator leaves browser codec order in auto mode and honors explicit screenCodec on the screen transceiver', async (t) => {
+test('P2P auto keeps the browser codec order until a power-efficient hardware encoder is detected', async (t) => {
+  const encoding = await import('../src/lib/voice/sfu-encoding.ts');
   const originalSender = globalThis.RTCRtpSender;
   try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: (kind) =>
+        kind === 'video'
+          ? {
+              codecs: [
+                { mimeType: 'video/VP8', clockRate: 90000 },
+                { mimeType: 'video/VP9', clockRate: 90000, sdpFmtpLine: 'profile-id=0' },
+                {
+                  mimeType: 'video/H264',
+                  clockRate: 90000,
+                  sdpFmtpLine: 'profile-level-id=640032;packetization-mode=1',
+                },
+              ],
+            }
+          : { codecs: [] },
+    };
+    encoding.resetHardwareScreenCodecCache();
+    // Software-only probe: every peer link would pay a separate software VP9 encode.
+    await encoding.detectHardwareScreenCodec({
+      encodingInfo: async () => ({ supported: true, smooth: true, powerEfficient: false }),
+    });
+    assert.equal(encoding.efficientHardwareScreenCodec(), null);
+    const h = await setup(t);
+    const softwarePc = h.peers.ensure('x');
+    assert.equal(softwarePc._tronoScreenTransceiver.preferredCodecs, undefined);
+
+    await encoding.detectHardwareScreenCodec({
+      encodingInfo: async ({ video }) => ({
+        supported: true,
+        smooth: true,
+        powerEfficient: /H264/.test(video.contentType),
+      }),
+    });
+    assert.equal(encoding.efficientHardwareScreenCodec(), 'h264');
+    const hardwarePc = h.peers.ensure('w');
+    assert.equal(hardwarePc._tronoScreenTransceiver.preferredCodecs?.[0]?.mimeType, 'video/H264');
+    assert.equal(hardwarePc._tronoVideoTransceiver.preferredCodecs, undefined);
+  } finally {
+    encoding.resetHardwareScreenCodecCache();
+    globalThis.RTCRtpSender = originalSender;
+  }
+});
+
+test('initiator prioritizes modern codecs ahead of VP8 in auto mode and honors explicit screenCodec on the screen transceiver only', async (t) => {
+  const encoding = await import('../src/lib/voice/sfu-encoding.ts');
+  const originalSender = globalThis.RTCRtpSender;
+  try {
+    await encoding.detectHardwareScreenCodec({
+      encodingInfo: async ({ video }) => ({
+        supported: true,
+        powerEfficient: /H264/.test(video.contentType),
+      }),
+    });
     globalThis.RTCRtpSender = {
       getCapabilities: (kind) =>
         kind === 'video'
@@ -440,7 +494,7 @@ test('initiator leaves browser codec order in auto mode and honors explicit scre
                 {
                   mimeType: 'video/H264',
                   clockRate: 90000,
-                  sdpFmtpLine: 'profile-level-id=42e01f;packetization-mode=1',
+                  sdpFmtpLine: 'profile-level-id=640032;packetization-mode=1',
                 },
               ],
             }
@@ -448,7 +502,8 @@ test('initiator leaves browser codec order in auto mode and honors explicit scre
     };
     const h = await setup(t);
     const autoPc = h.peers.ensure('z');
-    assert.equal(autoPc._tronoScreenTransceiver.preferredCodecs, undefined);
+    assert.equal(autoPc._tronoScreenTransceiver.preferredCodecs?.[0]?.mimeType, 'video/H264');
+    assert.equal(autoPc._tronoScreenTransceiver.preferredCodecs?.at(-1)?.mimeType, 'video/VP8');
     assert.equal(autoPc._tronoVideoTransceiver.preferredCodecs, undefined);
 
     h.settings.screenCodec = 'h264';
@@ -456,6 +511,7 @@ test('initiator leaves browser codec order in auto mode and honors explicit scre
     assert.equal(h264Pc._tronoScreenTransceiver.preferredCodecs?.[0]?.mimeType, 'video/H264');
     assert.equal(h264Pc._tronoVideoTransceiver.preferredCodecs, undefined);
   } finally {
+    encoding.resetHardwareScreenCodecCache();
     globalThis.RTCRtpSender = originalSender;
   }
 });

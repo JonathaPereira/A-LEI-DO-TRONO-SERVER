@@ -216,26 +216,8 @@ test('video recovery does not tear down connected outbound publisher on transpor
   assert.deepEqual(events.at(-1), ['recover-sub', 'peer-1', 'screen']);
 });
 
-test('Modo Fluidez applies ~2000ms buffer to screen video & screen-audio, updates live, and keeps voice real-time', async () => {
+test('remoteMedia keeps screen video, screen-audio, and voice receivers on native adaptive jitter buffer (null) without 2s overflow target', async () => {
   const { createRemoteMedia } = await import('../src/lib/voice/remote-media.ts');
-  const { createCallQuality } = await import('../src/lib/voice/quality.ts');
-
-  const store = new Map();
-  const quality = createCallQuality({
-    storage: {
-      getItem: (k) => store.get(k) ?? null,
-      setItem: (k, v) => store.set(k, v),
-    },
-    policy: () => ({ sfu: true }),
-    call: () => ({ generation: 1, joined: true }),
-    refreshCamera: async () => {},
-    refreshScreenHint: () => {},
-    senders: () => [],
-    subscriptions: () => [],
-    setLayer: async () => {},
-  });
-
-  assert.equal(quality.getSnapshot().preferences.screenSmoothMode, false);
 
   class FakeTrack extends EventTarget {
     constructor(kind) {
@@ -270,15 +252,14 @@ test('Modo Fluidez applies ~2000ms buffer to screen video & screen-audio, update
     isPeerCurrent: () => false,
     getInterest: () => ({ camera: false, screen: true }),
     isCameraHidden: () => false,
-    getScreenBufferMs: () => (quality.getSnapshot().preferences.screenSmoothMode ? 2000 : 80),
     onVoiceReceiver: () => {},
     onAudioReady: () => {},
     onChange: () => {},
     onRecover: async () => false,
   });
 
-  const screenVideoReceiver = { jitterBufferTarget: null };
-  const screenAudioReceiver = { jitterBufferTarget: null };
+  const screenVideoReceiver = { jitterBufferTarget: 2000 };
+  const screenAudioReceiver = { jitterBufferTarget: 2000 };
   const voiceReceiver = { jitterBufferTarget: null };
 
   media.attachSubscription({
@@ -306,24 +287,7 @@ test('Modo Fluidez applies ~2000ms buffer to screen video & screen-audio, update
     isCurrent: () => true,
   });
 
-  // Default low-latency mode
-  assert.equal(screenVideoReceiver.jitterBufferTarget, 80);
-  assert.equal(screenAudioReceiver.jitterBufferTarget, null);
-  assert.equal(voiceReceiver.jitterBufferTarget, null);
-
-  // Enable Modo Fluidez live: screen video + screen-audio jump to 2000ms, voice stays real-time (null)!
-  quality.configure({ screenSmoothMode: true });
-  assert.equal(store.get('mnScreenSmoothMode'), '1');
-  media.refreshScreenBuffer();
-  assert.equal(screenVideoReceiver.jitterBufferTarget, 2000);
-  assert.equal(screenAudioReceiver.jitterBufferTarget, 2000);
-  assert.equal(voiceReceiver.jitterBufferTarget, null);
-
-  // Disable Modo Fluidez live: screen video returns to 80ms, screen-audio returns to null, voice untouched!
-  quality.configure({ screenSmoothMode: false });
-  assert.equal(store.get('mnScreenSmoothMode'), '0');
-  media.refreshScreenBuffer();
-  assert.equal(screenVideoReceiver.jitterBufferTarget, 80);
+  assert.equal(screenVideoReceiver.jitterBufferTarget, null);
   assert.equal(screenAudioReceiver.jitterBufferTarget, null);
   assert.equal(voiceReceiver.jitterBufferTarget, null);
 });

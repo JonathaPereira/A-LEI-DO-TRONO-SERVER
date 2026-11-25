@@ -18,36 +18,36 @@ function stats(n, { jitter = 0.005, loss = 0, concealed = 0 } = {}) {
     jitter,
   };
 }
-test('voice margin responds to interval recovery, remains bounded and restores slowly without touching tracks', async () => {
+test('voice margin starts on native NetEq, steps up to 60/100ms on concealment, and restores cleanly without touching tracks', async () => {
   const { VoiceReception } = await policy;
   const c = new VoiceReception(),
     r = receiver(20),
     track = r.track;
   c.add(r);
-  assert.equal(r.jitterBufferTarget, 60);
+  assert.equal(r.jitterBufferTarget, 20);
   assert.equal(c.sample(r, stats(1), 0), null);
   let row = c.sample(r, stats(2, { concealed: 4000 }), 5000);
   assert.equal(row.concealedPct, (8000 / 48000) * 100);
-  assert.equal(r.jitterBufferTarget, 100);
+  assert.equal(r.jitterBufferTarget, 60);
   c.sample(r, stats(3, { concealed: 8000 }), 10000);
-  assert.equal(r.jitterBufferTarget, 100);
+  assert.equal(r.jitterBufferTarget, 60);
   c.sample(r, stats(4, { concealed: 8000 }), 15000);
-  assert.equal(r.jitterBufferTarget, 140);
+  assert.equal(r.jitterBufferTarget, 100);
   c.sample(r, stats(5, { concealed: 8000 }), 30000);
-  assert.equal(r.jitterBufferTarget, 140);
-  // Cumulative concealment is held constant in healthy intervals.
-  for (const stamp of [35000, 65000, 90000, 95000, 155000]) {
+  assert.equal(r.jitterBufferTarget, 100);
+  // Cumulative concealment is held constant in healthy intervals; restores in 20s steps back to original (20).
+  for (const stamp of [35000, 55000, 75000]) {
     const n = 6 + stamp / 5000,
       s = stats(n);
     s.concealedSamples = 40000;
     c.sample(r, s, stamp);
   }
-  assert.equal(r.jitterBufferTarget, 60);
+  assert.equal(r.jitterBufferTarget, 20);
   assert.equal(r.track, track);
   c.configure(false);
   assert.equal(r.jitterBufferTarget, 20);
   c.configure(true);
-  assert.equal(r.jitterBufferTarget, 60);
+  assert.equal(r.jitterBufferTarget, 20);
   c.clear();
   assert.equal(r.jitterBufferTarget, 20);
   assert.equal(c.has(r), false);
@@ -58,13 +58,13 @@ test('loss alone, UI lag and missing/stale/reset counters do not manufacture a h
     r = receiver();
   c.sample(r, stats(1), 0);
   c.sample(r, stats(2, { loss: 20 }), 5000);
-  assert.equal(r.jitterBufferTarget, 60);
+  assert.equal(r.jitterBufferTarget, null);
   c.sample(r, { packetsReceived: 300, jitter: 0.005 }, 10000);
   assert.equal(c.snapshot()[0].concealedPct, null);
   assert.equal(c.sample(r, stats(1), 15000), null);
   assert.equal(c.sample(r, stats(2), 14000), null);
   assert.equal(assessment([], 500).kind, 'local-timing');
-  assert.equal(r.jitterBufferTarget, 60);
+  assert.equal(r.jitterBufferTarget, null);
   const other = receiver();
   c.add(other);
   c.prune(new Set([r]));

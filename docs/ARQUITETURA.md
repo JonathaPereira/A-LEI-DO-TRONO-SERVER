@@ -181,38 +181,40 @@ settings/initialize.ts prepara o controlador antes da voz, sem montar a view
 antiga nem adquirir dispositivos. media-settings.tsx apresenta os controles dos
 donos existentes em CSS Modules. O seletor desktop conserva o único wrapper
 getDisplayMedia e a ponte nativa; somente sua apresentação foi reconstruída.
-A transmissão de tela suporta preferência configurável de codec (`prioritizeScreenCodec`:
-`vp9` como padrão oficial com Profile 0 priorizado e escalabilidade temporal `L1T2`, mantendo
-opções explícitas `auto`, `av1`, `vp8` e `h264`) tanto no SFU (`sfu-session.ts`) quanto em conexões
-P2P (`p2p-peers.ts`), preservando os codecs `video/rtx` pareados para retransmissão NACK/RTX
-e usando piso/início conservadores em `screenStartupOffer` para não engessar o controle de
-congestionamento (sanitizando parâmetros `a=fmtp` sem ponto-e-vírgula sobrando e priorizando H.264
-com `packetization-mode=1`, `level-asymmetry-allowed=1` e Constrained Baseline `42e0` para evitar
-fallback em software). No lado emissor, `voice/quality.ts` garante o commit inicial de `setParameters`
-pós-negociação, `voice/quality-policy.ts` (`CallStability`) avalia percentual real de retransmissão
-(`retransmittedPct >= 5%` com piso mínimo de pacotes, em vez de contagem bruta) e `voice/runtime.ts`
-reconcilia `scaleResolutionDownBy`/`maxFramerate` caso a telemetria detecte resolução ou FPS acima do
-formato escolhido; no lado receptor, `voice/remote-media.ts` configura um alvo padrão de 80 ms
-(`jitterBufferTarget` / `playoutDelayHint`) no `RTCRtpReceiver` de tela e oferece o **Modo Fluidez**
-(`screenSmoothMode`, ~2000 ms no vídeo e áudio da transmissão assistida com atualização ao vivo)
-mantendo sempre a voz da chamada (`audio`) em tempo real. Espectadores de tela sinalizam `stream-watch` tanto
-em SFU quanto em P2P (`voice/media-interest.ts`, `voice/roster.ts`) para exibir os avatares de quem
-assiste à transmissão no cartão do emissor (`call.tsx`). No Android (`MainActivity.java` e `CallService.java`),
-enquanto há chamada ativa o serviço em primeiro plano mantém `PARTIAL_WAKE_LOCK`, `WifiLock` e
-`AudioManager.MODE_IN_COMMUNICATION`, e `MainActivity` retoma o WebView em `onPause`/`onStop` para
-evitar suspensão de áudio/WebRTC com a tela desligada. A telemetria de mídia (`voice/telemetry.ts`) coleta
-deltas por fluxo de publicação/recepção, classifica congelamentos reais em 8 categorias sem confundir
-tela estática com falha e o relatório sanitizado (`voice/diagnostic-report.ts`) expõe codec, implementação
-do encoder/decoder e aceleração por hardware por fluxo; `voice/video-recovery.ts` e `voice/sfu-session.ts`
-aplicam recuperação direcionada e limitada por fluxo/estado `disconnected` (> 4,5 s) sem derrubar
-chamada, microfone, câmera ou socket — evitando reconectar assinaturas SFU saudáveis em
-`presentation-frozen`, evitando derrubar publicadores conectados em `transport-congestion`, aplicando
-reset real de encoder (`replaceTrack(null)` + `replaceTrack(track)` + `applySender({ force: true })`)
-em `encoder-stalled`/`send-stalled` e respeitando a margem do buffer do Modo Fluidez. O perfil padrão de conteúdo de tela
-é `motion`, que aplica `degradationPreference: 'maintain-framerate'` para manter a cadência e
-fluidez contínua para jogos e transmissões em 60 FPS, reservando `detail` (`maintain-resolution`)
-para documentos e apresentações estáticas. No processo principal do Electron (`electron/main.cjs`
-e `electron/audio-priority.cjs`), `powerSaveBlocker` (`prevent-app-suspension`) e prioridade
+A transmissão de tela nasce em `1080-60` (8 Mbps) com seleção `auto` guiada por hardware
+(`detectHardwareScreenCodec` via `MediaCapabilities.encodingInfo`: AV1 HW → H.264 High Profile HW
+`64` > Main `4d` > Constrained Baseline `42e0` com `packetization-mode=1` → VP9 Profile 0 `L1T2`,
+mantendo `vp8` apenas como último fallback e preservando opções explícitas `auto`, `h264`, `av1`,
+`vp9` e `vp8`) no SFU (`sfu-session.ts`, com oferta JSEP local intacta sem mutação de SDP). Em P2P
+(`p2p-peers.ts`), que codifica uma vez por espectador, `auto` só reordena quando o probe encontrou
+codificador eficiente por hardware (`efficientHardwareScreenCodec`); sem hardware, mantém a ordem do
+navegador para não multiplicar codificações VP9 por software. Os codecs `video/rtx` seguem pareados.
+Quando `replay` está desativado, `voice/screen-capture.ts` reutiliza a `MediaStream` original sem
+`clone()` duplicado. No lado emissor, `voice/quality.ts` garante dimensões pares compatíveis com
+YUV420/NVENC/AMF em `scaleResolutionDownBy` (inclusive em monitores ultrawide/janelas ímpares) e
+`voice/quality-policy.ts` (`CallStability`) avalia percentual real de retransmissão
+(`retransmittedPct >= 5%` com piso mínimo de pacotes). No lado receptor, `voice/remote-media.ts`
+mantém o buffer adaptativo nativo do WebRTC (`jitterBufferTarget = null`, evitando estouro do
+`PacketBuffer` de 2048 pacotes em alto bitrate), conserva a última imagem visível quando telas
+estáticas do Windows WGC marcam `track.muted` sem derrubar assinaturas SFU, e `voice/viewer-fps-meter.ts`
+mede os quadros realmente apresentados no `<video>` do espectador (`requestVideoFrameCallback` com
+fallback para `getVideoPlaybackQuality`), exibindo resolução e FPS reais em `media-tile.tsx`. A voz
+usa `latencyHint: 'interactive'` nos contextos de áudio (`voice/call-audio.ts` e `voice/runtime.ts`)
+e NetEq nativo (`null`) por padrão em `voice/reception-policy.ts` (aplicando margem temporária
+limitada de 60–100 ms apenas sob ocultação/jitter severos com retorno em degraus de 20 s).
+Espectadores de tela sinalizam `stream-watch` tanto em SFU quanto em P2P (`voice/media-interest.ts`,
+`voice/roster.ts`) para exibir os avatares de quem assiste à transmissão no cartão do emissor
+(`call.tsx`). No Android (`MainActivity.java` e `CallService.java`), enquanto há chamada ativa o
+serviço em primeiro plano mantém `PARTIAL_WAKE_LOCK`, `WifiLock` e `AudioManager.MODE_IN_COMMUNICATION`,
+e `MainActivity` retoma o WebView em `onPause`/`onStop` para evitar suspensão de áudio/WebRTC com a
+tela desligada. A telemetria de mídia (`voice/telemetry.ts`) coleta deltas por fluxo, ignora janelas
+estáticas sem PLI/FIR para não fabricar `encoder-stalled`/`sfu-forwarding-stalled`, mantém congelamentos
+com decodificação ativa em `presentation-frozen` e o relatório sanitizado (`voice/diagnostic-report.ts`)
+expõe codec, implementação e aceleração por hardware; `voice/video-recovery.ts` reconcilia chaves
+`sfu-pub:*` e `sfu-sub:*`, atualiza parâmetros sem destacar tracks vivas (`replaceTrack(null)` removido)
+e não reconecta assinaturas SFU conectadas em `presentation-frozen` ou `transport-congestion`. No
+processo principal do Electron (`electron/main.cjs` e `electron/audio-priority.cjs`), captura D3D11
+(`MediaFoundationD3D11VideoCapture`), `powerSaveBlocker` (`prevent-app-suspension`) e prioridade
 `PRIORITY_ABOVE_NORMAL` para `AudioService`, `VideoCaptureService` e o processo `GPU` protegem a
 captura e a codificação durante jogos no Windows.
 Escape fecha primeiro o menu/diálogo ou a tela cheia; outro Escape pode retornar

@@ -5,6 +5,7 @@ import type { CallStage, ParticipantView, StageSnapshot } from '../../lib/voice/
 import presentation from '../application/call.module.css';
 import { AppIcon as Icon } from '../application/icons';
 import { BorrowedVideo } from './borrowed-video';
+import { formatViewerFpsBadge, type ViewerFpsSnapshot } from '../../lib/voice/viewer-fps-meter';
 import { bindMediaResize } from '../../lib/voice/media-resize';
 import { bindStreamControls, type StreamControls } from '../../lib/voice/stream-controls';
 
@@ -32,6 +33,7 @@ export function MediaTile({
 }) {
   const client = runtime.TronoCallStage;
   const [tile] = useState(() => document.createElement('div'));
+  const [viewerStats, setViewerStats] = useState<ViewerFpsSnapshot | null>(null);
   const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
   useEffect(() => {
     const sync = () => setHidden(document.hidden);
@@ -133,6 +135,8 @@ export function MediaTile({
   const fullscreen = () => void client.fullscreen(tile);
   const volume = (value: string) => void client.setScreenVolume(p.id, value);
   const collapseTitle = p.collapsed ? 'Restaurar compartilhamento' : 'Minimizar compartilhamento';
+  const measureViewerFps = screen && !p.self && watching && live;
+  const fpsBadgeText = measureViewerFps ? formatViewerFpsBadge(viewerStats) : '';
   return createPortal(
     <>
       <BorrowedVideo
@@ -141,8 +145,19 @@ export function MediaTile({
           !hidden && (screen ? watching && !paused && (!p.collapsed || external) && live : live)
         }
         pauseWhenUnfocused={screen && p.self}
+        onStats={measureViewerFps ? setViewerStats : undefined}
         onDoubleClick={fullscreen}
       />
+      {fpsBadgeText && (
+        <span
+          className={presentation.viewerFps}
+          data-viewer-fps={viewerStats?.fps}
+          title="Resolução e FPS reais recebidos na sua tela"
+          aria-label={`Assistindo em ${fpsBadgeText}`}
+        >
+          {fpsBadgeText}
+        </span>
+      )}
       {external && (
         <button
           type="button"

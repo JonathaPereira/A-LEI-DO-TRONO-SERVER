@@ -254,7 +254,15 @@ export function createApplication({
   app.get('/', (_req, res) =>
     res.type('text/plain').send(`A Lei do Trono backend ${VERSION} online.`),
   );
-  app.get('/health', (_req, res) =>
+  app.get('/health', async (req, res) => {
+    const wantKeepalive = req.query?.keepalive === '1' || req.query?.keepalive === 'true';
+    let keepalive: Awaited<ReturnType<typeof accountAuth.keepalive>> | undefined;
+    if (wantKeepalive) {
+      keepalive = await accountAuth.keepalive();
+      if (!keepalive.throttled) {
+        await Promise.allSettled([communityManagement.refresh(), community.refreshDirectory()]);
+      }
+    }
     res.json({
       ok: true,
       version: VERSION,
@@ -278,8 +286,9 @@ export function createApplication({
       chatChannels: channels.safeChatChannels(),
       realtime: realtimeSfu.publicHealth(),
       uptime: process.uptime(),
-    }),
-  );
+      ...(keepalive ? { keepalive } : {}),
+    });
+  });
   app.get('/realtime/status', (_req, res) => res.json(realtimeSfu.statusPayload()));
   app.get('/rooms', (_req, res) => res.json({ rooms: channels.safeRooms() }));
 

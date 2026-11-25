@@ -658,7 +658,7 @@ test(
             initial.rows.length === 1 &&
             initial.rows[0].supported &&
             restored &&
-            receiver.jitterBufferTarget === 60 &&
+            receiver.jitterBufferTarget === null &&
             receiver.track === before
           );
         }),

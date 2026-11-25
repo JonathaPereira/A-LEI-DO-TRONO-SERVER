@@ -64,7 +64,7 @@ test('invalid persisted preferences fall back; snapshots and nested profiles are
   });
   const snapshot = quality.getSnapshot();
   assert.equal(snapshot.preferences.transmissionQuality, 'balanced');
-  assert.equal(snapshot.preferences.screenFormat, '720-30');
+  assert.equal(snapshot.preferences.screenFormat, '1080-60');
   assert.equal(snapshot.screenBitrate, 8000000);
   assert.equal(snapshot, quality.getSnapshot());
   assert.throws(() => (snapshot.profile.screen.fps = 5), TypeError);
@@ -111,7 +111,7 @@ test('only valid preferences are persisted and disabling adaptation restores the
     mnScreenContent: 'detail',
     mnScreenCodec: 'invalid-codec',
   });
-  assert.equal(quality.getSnapshot().preferences.screenCodec, 'vp9');
+  assert.equal(quality.getSnapshot().preferences.screenCodec, 'auto');
   quality.configure({
     screenFormat: '__proto__',
     screenBitrateMbps: 999,

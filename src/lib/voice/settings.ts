@@ -246,18 +246,6 @@ export function createVoiceSettings(options: SettingsOptions) {
       refresh();
       options.onStatus('Preferência de áudio aplicada ao próximo compartilhamento.', 'ok');
     },
-    setScreenSmoothMode(value: boolean) {
-      if (disposed) return;
-      options.quality.configure({ screenSmoothMode: Boolean(value) });
-      options.onScreenBufferChanged?.();
-      refresh();
-      options.onStatus(
-        value
-          ? 'Modo Fluidez ativado (~2s de buffer na transmissão; voz em tempo real).'
-          : 'Modo Fluidez desativado (transmissão em baixa latência).',
-        'ok',
-      );
-    },
     dispose() {
       disposed = true;
       enumeration++;

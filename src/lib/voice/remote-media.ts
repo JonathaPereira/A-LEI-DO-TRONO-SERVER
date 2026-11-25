@@ -63,27 +63,19 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
     receiver: RTCRtpReceiver | undefined,
   ) {
     if (!receiver) return;
-    const targetMs = Math.max(0, options.getScreenBufferMs?.() ?? 80);
-    // Voice audio ('audio') and camera ('camera') stay real-time; only watched screen streams buffer.
-    if (kind === 'screen' && track.kind === 'video') {
+    // Keep WebRTC's native adaptive jitter buffer active (null) on screen streams;
+    // forcing multi-second jitterBufferTarget overflows Chromium's 2048-packet PacketBuffer at 6-10 Mbps.
+    if (
+      (kind === 'screen' && track.kind === 'video') ||
+      (kind === 'screen-audio' && track.kind === 'audio')
+    ) {
       try {
         const target = receiver as unknown as {
           jitterBufferTarget?: number | null;
           playoutDelayHint?: number | null;
         };
-        if ('jitterBufferTarget' in target) target.jitterBufferTarget = targetMs;
-        else if ('playoutDelayHint' in target) target.playoutDelayHint = targetMs / 1000;
-      } catch {}
-    } else if (kind === 'screen-audio' && track.kind === 'audio') {
-      try {
-        const target = receiver as unknown as {
-          jitterBufferTarget?: number | null;
-          playoutDelayHint?: number | null;
-        };
-        const smooth = targetMs > 80;
-        if ('jitterBufferTarget' in target) target.jitterBufferTarget = smooth ? targetMs : null;
-        else if ('playoutDelayHint' in target)
-          target.playoutDelayHint = smooth ? targetMs / 1000 : 0;
+        if ('jitterBufferTarget' in target && target.jitterBufferTarget !== null)
+          target.jitterBufferTarget = null;
       } catch {}
     }
   }
@@ -301,7 +293,11 @@ export function createRemoteMedia(options: RemoteMediaOptions) {
         return true;
       }
       const last = entry.healthy.get(kind);
-      return last?.track === track && now() - last.at < 5200;
+      if (last?.track !== track) return false;
+      // Windows WGC stops emitting RTP frames on static screens, causing Chromium to mark
+      // remote screen tracks muted after ~2.5s; keep the last frame visible without SFU teardown.
+      if (kind === 'screen') return true;
+      return now() - last.at < 5200;
     },
     cancelRecovery,
     scheduleRecovery,

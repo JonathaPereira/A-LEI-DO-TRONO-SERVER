@@ -308,12 +308,34 @@
   position: absolute;
   top: 12px;
   left: 12px;
+  z-index: 3;
   font-size: 8px;
   letter-spacing: 1.5px;
   color: #9cc5ad;
   background: #212121e0;
   padding: 4px 7px;
   border-radius: 3px;
+  pointer-events: none;
+}
+.viewerFps {
+  position: absolute;
+  top: 12px;
+  left: 72px;
+  z-index: 3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--shell-accent, #e0c58d);
+  background: rgba(18, 19, 24, 0.88);
+  border: 1px solid rgba(214, 183, 121, 0.28);
+  padding: 2px 7px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+:global(#screenShareGrid) .viewerFps {
+  left: 12px;
 }
 .footer {
   flex-shrink: 0;

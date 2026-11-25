@@ -231,7 +231,7 @@ test(
             .toBe(true);
           const r = await p.evaluate(() => window.TronoSocial.voiceReception);
           assert.equal(r.rows[0].supported, true);
-          assert(r.rows[0].targetMs >= 60 && r.rows[0].targetMs <= 140);
+          assert.equal(r.rows[0].targetMs, null);
           assert.equal(r.playbackContext, null);
           const report = JSON.parse(await p.evaluate(() => window.TronoSocial.diagnostics()));
           assert.equal(report.reception.rows.length, 1);

@@ -22,6 +22,7 @@ interface AuthOptions {
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
   rateLimiter?: RateLimiter;
+  now?: () => number;
   onRevoke?: (event: { userId: string; sessionId?: string; all: boolean }) => void;
   onProfileChange?: (account: BackendAccount) => void;
 }
@@ -47,6 +48,7 @@ export function createAuth({
   env = process.env,
   fetchImpl = globalThis.fetch,
   rateLimiter,
+  now = Date.now,
   onRevoke = () => {},
   onProfileChange = () => {},
 }: AuthOptions = {}) {
@@ -85,6 +87,45 @@ export function createAuth({
   const provider = createAuthProvider({ url, key, configured, signal: lifetime.signal, fetchImpl });
   const { request: upstream, assertAvailable: assertConfigured } = provider;
   const health = () => ({ required, configured });
+  const KEEPALIVE_COOLDOWN_MS = 60_000;
+  let lastKeepaliveAt: number | null = null;
+  let lastKeepaliveOk = false;
+  let pendingKeepalive: Promise<{
+    ok: boolean;
+    throttled: boolean;
+    touchedAt: number | null;
+  }> | null = null;
+  function keepalive(): Promise<{ ok: boolean; throttled: boolean; touchedAt: number | null }> {
+    if (!configured || lifetime.signal.aborted) {
+      return Promise.resolve({ ok: false, throttled: false, touchedAt: lastKeepaliveAt });
+    }
+    if (pendingKeepalive) return pendingKeepalive;
+    const stamp = now();
+    if (lastKeepaliveAt !== null && stamp - lastKeepaliveAt < KEEPALIVE_COOLDOWN_MS) {
+      return Promise.resolve({
+        ok: lastKeepaliveOk,
+        throttled: true,
+        touchedAt: lastKeepaliveAt,
+      });
+    }
+    const run = (async () => {
+      try {
+        await upstream('/rest/v1/profiles?select=id&limit=1', { method: 'GET' });
+        lastKeepaliveAt = now();
+        lastKeepaliveOk = true;
+        return { ok: true, throttled: false, touchedAt: lastKeepaliveAt };
+      } catch {
+        lastKeepaliveAt = now();
+        lastKeepaliveOk = false;
+        return { ok: false, throttled: false, touchedAt: lastKeepaliveAt };
+      }
+    })();
+    const pending = run.finally(() => {
+      if (pendingKeepalive === pending) pendingKeepalive = null;
+    });
+    pendingKeepalive = pending;
+    return pending;
+  }
   async function limit(req: ApiRequest, body: Record<string, unknown>, kind: string, max = 10) {
     const keys = [`${kind}:ip:${req.ip || req.socket.remoteAddress}`];
     if (['signup', 'recover'].includes(kind))
@@ -489,6 +530,7 @@ export function createAuth({
     required,
     configured,
     health,
+    keepalive,
     identity,
     install,
     allowedOrigins,

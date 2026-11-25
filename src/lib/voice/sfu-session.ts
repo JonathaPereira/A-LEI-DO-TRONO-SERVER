@@ -11,8 +11,8 @@ import { abortable, waitForPeer } from './peer-wait.ts';
 import {
   advertisedRids,
   cameraEncodings,
+  detectHardwareScreenCodec,
   prioritizeScreenCodec,
-  screenStartupOffer,
 } from './sfu-encoding.ts';
 import {
   description,
@@ -245,6 +245,15 @@ export function createSfuSession(options: SfuOptions) {
         const settings = options.getSettings();
         const init: RTCRtpTransceiverInit = { direction: 'sendonly' };
         const screenCodec = settings.screenCodec ?? 'auto';
+        const resolvedAutoCodec =
+          kind === 'screen' &&
+          screenCodec === 'auto' &&
+          typeof navigator !== 'undefined' &&
+          typeof navigator.mediaCapabilities?.encodingInfo === 'function'
+            ? await abortable(detectHardwareScreenCodec(), r.controller.signal).catch(() => null)
+            : null;
+        ensure();
+        const effectiveScreenCodec = screenCodec === 'auto' ? resolvedAutoCodec : screenCodec;
         if (simulcast && kind === 'camera') init.sendEncodings = cameraEncodings(settings);
         else if (kind === 'screen')
           init.sendEncodings = [
@@ -252,7 +261,7 @@ export function createSfuSession(options: SfuOptions) {
               maxBitrate: settings.screenBitrate,
               maxFramerate: settings.screen.fps,
               networkPriority: 'high',
-              ...(screenCodec === 'vp9' || screenCodec === 'av1'
+              ...(effectiveScreenCodec === 'vp9' || effectiveScreenCodec === 'av1'
                 ? { scalabilityMode: 'L1T2' }
                 : {}),
             } as RTCRtpEncodingParameters,
@@ -271,15 +280,10 @@ export function createSfuSession(options: SfuOptions) {
             throw error;
           }
         }
-        if (kind === 'screen') prioritizeScreenCodec(tr, screenCodec);
+        if (kind === 'screen') prioritizeScreenCodec(tr, screenCodec, resolvedAutoCodec);
         const offer = await abortable(pc.createOffer(), r.controller.signal);
         ensure();
-        await abortable(
-          pc.setLocalDescription(
-            kind === 'screen' ? screenStartupOffer(offer, settings.screenBitrate) : offer,
-          ),
-          r.controller.signal,
-        );
+        await abortable(pc.setLocalDescription(offer), r.controller.signal);
         ensure();
         await waitForPeer(pc, 'gather', 1400, r.controller.signal);
         ensure();

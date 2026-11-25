@@ -139,12 +139,12 @@ export function createScreenSharing(options: SharingOptions) {
         screenBitrateMbps:
           resolution === '1440'
             ? fps === '60'
-              ? 15
-              : 12
+              ? 12
+              : 10
             : resolution === '1080'
               ? fps === '60'
-                ? 10
-                : 8
+                ? 8
+                : 6
               : fps === '15'
                 ? 4
                 : 6,

@@ -216,7 +216,7 @@ test('camera publication preserves simulcast profiles, readiness and borrowed ca
   assert.equal(track.stops, 0);
   assert.equal(h.pcs[0].closes, 1);
 });
-test('screen uses dedicated single-layer encoding with native 60 FPS and min/start/max SDP hints', async (t) => {
+test('screen uses dedicated single-layer encoding with native 60 FPS and unmodified JSEP local offer', async (t) => {
   const h = await setup(t);
   await h.session.publish('screen', new Track());
   assert.deepEqual(h.pcs[0].init.sendEncodings, [
@@ -228,13 +228,8 @@ test('screen uses dedicated single-layer encoding with native 60 FPS and min/sta
   ]);
   assert.equal(h.settings.screen.fps, 60);
   const offer = h.pcs[0].localDescription.sdp;
-  assert(
-    offer.includes(
-      'x-google-min-bitrate=480;x-google-start-bitrate=2000;x-google-max-bitrate=8000',
-    ),
-  );
   assert(offer.includes('foo=bar'));
-  assert(!offer.includes('start-bitrate=100'));
+  assert(!offer.includes('x-google-min-bitrate='));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));
   assert.deepEqual(h.calls[0].payload.rids, []);
 });
@@ -685,7 +680,7 @@ test('native subscription failure after the queue finishes schedules a new negot
   assert.deepEqual(h.fallback, []);
 });
 
-test('prioritizeH264 ranks higher-level Constrained Baseline and High Profile H264 ahead while keeping fallback codecs', async () => {
+test('prioritizeH264 ranks High Profile H264 ahead of Constrained Baseline while keeping fallback codecs', async () => {
   const { prioritizeH264 } = await import('../src/lib/voice/sfu-encoding.ts');
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -724,16 +719,16 @@ test('prioritizeH264 ranks higher-level Constrained Baseline and High Profile H2
     const applied = prioritizeH264(mockTransceiver);
     assert.equal(applied, true);
     assert.equal(preferred[0].mimeType, 'video/H264');
-    assert.match(preferred[0].sdpFmtpLine, /42e02a/);
-    assert.match(preferred[1].sdpFmtpLine, /42e01f/);
-    assert.match(preferred[2].sdpFmtpLine, /640032/);
+    assert.match(preferred[0].sdpFmtpLine, /640032/);
+    assert.match(preferred[1].sdpFmtpLine, /42e02a/);
+    assert.match(preferred[2].sdpFmtpLine, /42e01f/);
     assert.equal(preferred.length, 5);
   } finally {
     globalThis.RTCRtpSender = originalSender;
   }
 });
 
-test('screen publication leaves browser codec order untouched in auto mode and honors explicit screenCodec', async (t) => {
+test('screen publication prioritizes modern hardware/VP9 codecs ahead of VP8 in auto mode and honors explicit screenCodec', async (t) => {
   const h = await setup(t);
   const originalSender = globalThis.RTCRtpSender;
   try {
@@ -743,8 +738,12 @@ test('screen publication leaves browser codec order untouched in auto mode and h
           ? {
               codecs: [
                 { mimeType: 'video/VP8', clockRate: 90000 },
-                { mimeType: 'video/H264', clockRate: 90000 },
-                { mimeType: 'video/VP9', clockRate: 90000 },
+                {
+                  mimeType: 'video/H264',
+                  clockRate: 90000,
+                  sdpFmtpLine: 'packetization-mode=1;profile-level-id=640032',
+                },
+                { mimeType: 'video/VP9', clockRate: 90000, sdpFmtpLine: 'profile-id=0' },
               ],
             }
           : { codecs: [] },
@@ -753,7 +752,8 @@ test('screen publication leaves browser codec order untouched in auto mode and h
     const autoPromise = h.session.publish('screen', autoTrack);
     await h.advance(100);
     assert(await autoPromise);
-    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs, undefined);
+    assert.notEqual(h.pcs.at(-1)?.tr?.preferredCodecs?.[0]?.mimeType, 'video/VP8');
+    assert.equal(h.pcs.at(-1)?.tr?.preferredCodecs?.at(-1)?.mimeType, 'video/VP8');
 
     h.settings.screenCodec = 'vp9';
     const vp9Promise = h.session.publish('screen', new Track('video'));

@@ -44,6 +44,15 @@ interface TargetHistory {
   inFlight: boolean;
 }
 
+function parseOutboundKind(pcKey: string): Extract<VoiceMediaKind, 'screen' | 'camera'> {
+  const suffix = pcKey.startsWith('sfu-pub:')
+    ? pcKey.slice(8)
+    : pcKey.startsWith('sfu:')
+      ? pcKey.slice(4)
+      : '';
+  return suffix === 'camera' ? 'camera' : 'screen';
+}
+
 function parsePeerTarget(
   pcKey: string,
   stream: VideoStreamHealth,
@@ -53,8 +62,8 @@ function parsePeerTarget(
   peerId: string;
   kind: Extract<VoiceMediaKind, 'screen' | 'camera'>;
 } | null {
-  if (pcKey.startsWith('sfu:')) {
-    const rest = pcKey.slice(4);
+  if (pcKey.startsWith('sfu-sub:') || pcKey.startsWith('sfu:')) {
+    const rest = pcKey.startsWith('sfu-sub:') ? pcKey.slice(8) : pcKey.slice(4);
     const sep = rest.lastIndexOf(':');
     if (sep <= 0) return null;
     const peerId = rest.slice(0, sep);
@@ -142,9 +151,10 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
     let triggered = false;
 
     for (const stream of streams) {
+      const pubKind = parseOutboundKind(stream.pcKey);
       const targetKey =
         stream.direction === 'outbound'
-          ? `pub:${stream.pcKey.startsWith('sfu:') ? stream.pcKey.slice(4) : 'screen'}`
+          ? `pub:${pubKind}`
           : `sub:${stream.pcKey}:${stream.mid ?? stream.trackId ?? 'video'}`;
 
       const entry = stateFor(targetKey);
@@ -178,8 +188,6 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
       const attemptIndex = entry.attempts.length;
 
       if (stream.direction === 'outbound') {
-        const pubKind: Extract<VoiceMediaKind, 'screen' | 'camera'> =
-          stream.pcKey === 'sfu:camera' ? 'camera' : 'screen';
         if (attemptIndex === 0) {
           const ran = await runAction(targetKey, callGen, () =>
             options.nudgePublisher(pubKind, stream.cause),
@@ -189,6 +197,7 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
           // Do not tear down a connected publisher PeerConnection on uplink congestion;
           // GCC and CallStability adapt bitrate cleanly without a keyframe-burst reconnect loop.
           if (stream.cause === 'transport-congestion' && !transportBroken) continue;
+          if (!transportBroken && stream.stallMs < Math.max(hardRecoverStallMs, 8000)) continue;
           const ran = await runAction(targetKey, callGen, () =>
             options.recoverPublisher(pubKind, stream.cause),
           );
@@ -200,13 +209,15 @@ export function createVideoFreezeRecovery(options: VideoFreezeRecoveryOptions) {
       const parsed = parsePeerTarget(stream.pcKey, stream, sfu);
       if (!parsed) continue;
       if (parsed.transport === 'sfu') {
-        // presentation-frozen means frames are still decoding; tearing down a healthy SFU
-        // screen PeerConnection triggers a worse renegotiation/keyframe freeze loop.
-        if (parsed.kind === 'screen' && stream.cause === 'presentation-frozen' && !transportBroken)
+        // Connected SFU screen subscriptions recover from congestion/presentation freezes via
+        // RTCP NACK/RTX/PLI; tearing down a connected PeerConnection causes a ~2s reconnect freeze.
+        if (
+          parsed.kind === 'screen' &&
+          !transportBroken &&
+          (stream.cause === 'presentation-frozen' || stream.cause === 'transport-congestion')
+        )
           continue;
         if (attemptIndex === 0) {
-          // Single-layer screen subscriptions have no RID switch option; avoid tearing down
-          // the PeerConnection on brief stutters while transport stays connected.
           if (!canHardRecover && parsed.kind === 'screen') continue;
           const ran = await runAction(targetKey, callGen, async () => {
             const refreshed = await options.refreshSfuSubscription(parsed.peerId, parsed.kind);

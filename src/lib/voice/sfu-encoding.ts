@@ -110,23 +110,26 @@ function h264Rank(codec: RTCRtpCodec): number {
   const iop = match[2].toLowerCase();
   const level = parseInt(match[3], 16);
   // Strongly prefer packetization-mode=1 (FU-A fragmentation) and level-asymmetry-allowed=1
-  // so hardware encoders (NVENC/AMF/QSV) are used instead of slow single-NAL software OpenH264.
+  // so hardware encoders (NVENC/AMF/QSV) are used instead of single-NAL software OpenH264.
   const packetizationScore = /packetization-mode=1\b/i.test(fmtp)
     ? 500
     : /packetization-mode=0\b/i.test(fmtp)
       ? -300
       : 0;
   const asymmetryScore = /level-asymmetry-allowed=1\b/i.test(fmtp) ? 100 : 0;
-  // Keep Constrained Baseline (42e0) ahead of plain Baseline (4200) and sort by higher level first.
+  // Rank High Profile (64, CABAC + 8x8 transform, native NVENC/AMF/QSV) and Main (4d)
+  // ahead of Constrained Baseline (42e0) and plain Baseline (4200).
   const profileScore =
-    profile === '42' && iop === 'e0'
-      ? 220
-      : profile === '64'
-        ? 160
-        : profile === '4d'
-          ? 140
+    profile === '64'
+      ? iop === '0c'
+        ? 300
+        : 320
+      : profile === '4d'
+        ? 240
+        : profile === '42' && iop === 'e0'
+          ? 180
           : profile === '42'
-            ? 100
+            ? 80
             : 50;
   return (
     packetizationScore +
@@ -144,19 +147,106 @@ function vp9Rank(codec: RTCRtpCodec): number {
   return id === 0 ? 300 : id === 2 ? 150 : 50;
 }
 
+interface EncodingCapabilitiesLike {
+  encodingInfo(configuration: {
+    type: 'webrtc';
+    video: {
+      contentType: string;
+      width: number;
+      height: number;
+      bitrate: number;
+      framerate: number;
+    };
+  }): Promise<{ supported?: boolean; smooth?: boolean; powerEfficient?: boolean }>;
+}
+
+let cachedHardwareCodec: Exclude<ScreenCodec, 'auto'> | null = null;
+let cachedHardwareEfficient = false;
+let pendingHardwareProbe: Promise<Exclude<ScreenCodec, 'auto'>> | null = null;
+
+export function resetHardwareScreenCodecCache(): void {
+  cachedHardwareCodec = null;
+  cachedHardwareEfficient = false;
+  pendingHardwareProbe = null;
+}
+
+/** Codec reported as power-efficient (hardware) by the last probe, or null for software only. */
+export function efficientHardwareScreenCodec(): Exclude<ScreenCodec, 'auto'> | null {
+  return cachedHardwareEfficient ? cachedHardwareCodec : null;
+}
+
+export async function detectHardwareScreenCodec(
+  mediaCapabilities?: EncodingCapabilitiesLike | null,
+): Promise<Exclude<ScreenCodec, 'auto'>> {
+  const customProbe = arguments.length > 0;
+  if (!customProbe && cachedHardwareCodec) return cachedHardwareCodec;
+  if (!customProbe && pendingHardwareProbe) return pendingHardwareProbe;
+
+  const probe = (async (): Promise<Exclude<ScreenCodec, 'auto'>> => {
+    const mc =
+      mediaCapabilities !== undefined
+        ? mediaCapabilities
+        : typeof navigator !== 'undefined' &&
+            typeof navigator.mediaCapabilities?.encodingInfo === 'function'
+          ? (navigator.mediaCapabilities as unknown as EncodingCapabilitiesLike)
+          : null;
+    if (typeof mc?.encodingInfo === 'function') {
+      const candidates: readonly [Exclude<ScreenCodec, 'auto'>, readonly string[]][] = [
+        ['av1', ['video/AV1']],
+        [
+          'h264',
+          [
+            'video/H264; profile-level-id=640032; packetization-mode=1',
+            'video/H264; profile-level-id=64002a; packetization-mode=1',
+            'video/H264; profile-level-id=42e02a; packetization-mode=1',
+          ],
+        ],
+        ['vp9', ['video/VP9; profile-id=0', 'video/VP9']],
+      ];
+      for (const [codec, contentTypes] of candidates) {
+        for (const contentType of contentTypes) {
+          try {
+            const info = await mc.encodingInfo({
+              type: 'webrtc',
+              video: {
+                contentType,
+                width: 1920,
+                height: 1080,
+                bitrate: 8_000_000,
+                framerate: 60,
+              },
+            });
+            if (info?.supported && info?.powerEfficient) {
+              cachedHardwareCodec = codec;
+              cachedHardwareEfficient = true;
+              return codec;
+            }
+          } catch {}
+        }
+      }
+      cachedHardwareCodec = 'vp9';
+      cachedHardwareEfficient = false;
+      return 'vp9';
+    }
+    return 'vp9';
+  })();
+
+  if (!customProbe) {
+    const pending: Promise<Exclude<ScreenCodec, 'auto'>> = probe.finally(() => {
+      if (pendingHardwareProbe === pending) pendingHardwareProbe = null;
+    });
+    pendingHardwareProbe = pending;
+    return pending;
+  }
+  return probe;
+}
+
 export function prioritizeScreenCodec(
   transceiver: RTCRtpTransceiver | null | undefined,
   codec: ScreenCodec = 'auto',
+  resolvedAutoCodec?: Exclude<ScreenCodec, 'auto'> | null,
 ): boolean {
-  if (codec === 'auto' || !transceiver?.setCodecPreferences) return false;
-  const targetMime =
-    codec === 'h264'
-      ? 'video/h264'
-      : codec === 'vp9'
-        ? 'video/vp9'
-        : codec === 'av1'
-          ? 'video/av1'
-          : 'video/vp8';
+  if (!transceiver?.setCodecPreferences) return false;
   try {
     const sender = typeof RTCRtpSender !== 'undefined' ? RTCRtpSender : null;
     const codecs = sender?.getCapabilities?.('video')?.codecs;
@@ -176,14 +266,49 @@ export function prioritizeScreenCodec(
         groups.push([current]);
       }
     }
-    const matchingGroups = groups.filter((g) => g[0].mimeType?.toLowerCase() === targetMime);
-    if (!matchingGroups.length) return false;
-    const ranked =
+
+    const sortMimeGroups = (mime: string) => {
+      const matching = groups.filter((g) => g[0].mimeType?.toLowerCase() === mime);
+      if (mime === 'video/h264')
+        return [...matching].sort((a, b) => h264Rank(b[0]) - h264Rank(a[0]));
+      if (mime === 'video/vp9') return [...matching].sort((a, b) => vp9Rank(b[0]) - vp9Rank(a[0]));
+      return matching;
+    };
+
+    if (codec === 'auto') {
+      const hasHighH264 = groups.some(
+        (g) =>
+          g[0].mimeType?.toLowerCase() === 'video/h264' &&
+          /profile-level-id=64/i.test(g[0].sdpFmtpLine || ''),
+      );
+      const preferredAuto =
+        resolvedAutoCodec ?? cachedHardwareCodec ?? (hasHighH264 ? 'h264' : 'vp9');
+      const autoMimeOrder =
+        preferredAuto === 'av1'
+          ? ['video/av1', 'video/h264', 'video/vp9', 'video/vp8']
+          : preferredAuto === 'h264'
+            ? ['video/h264', 'video/vp9', 'video/av1', 'video/vp8']
+            : ['video/vp9', 'video/h264', 'video/av1', 'video/vp8'];
+      const known = new Set(autoMimeOrder);
+      const orderedGroups = [
+        ...autoMimeOrder.flatMap((mime) => sortMimeGroups(mime)),
+        ...groups.filter((g) => !known.has(g[0].mimeType?.toLowerCase() || '')),
+      ];
+      if (!orderedGroups.length) return false;
+      transceiver.setCodecPreferences(orderedGroups.flat());
+      return true;
+    }
+
+    const targetMime =
       codec === 'h264'
-        ? [...matchingGroups].sort((a, b) => h264Rank(b[0]) - h264Rank(a[0]))
+        ? 'video/h264'
         : codec === 'vp9'
-          ? [...matchingGroups].sort((a, b) => vp9Rank(b[0]) - vp9Rank(a[0]))
-          : matchingGroups;
+          ? 'video/vp9'
+          : codec === 'av1'
+            ? 'video/av1'
+            : 'video/vp8';
+    const ranked = sortMimeGroups(targetMime);
+    if (!ranked.length) return false;
     const ordered = [
       ...ranked,
       ...groups.filter((g) => g[0].mimeType?.toLowerCase() !== targetMime),

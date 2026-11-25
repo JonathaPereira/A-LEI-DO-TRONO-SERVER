@@ -192,9 +192,9 @@ test('recovery remains single while awaiting signaling and retries only after co
   finish(false); await tick();
 });
 
-test('remote screen video receiver configures 60ms jitterBufferTarget or playoutDelayHint without affecting audio', async t => {
+test('remote screen video receiver preserves native adaptive jitter buffer (null) without artificial delay', async t => {
   const h = await setup(t);
-  const screenReceiver = { jitterBufferTarget: null };
+  const screenReceiver = { jitterBufferTarget: 80 };
   const fallbackReceiver = { playoutDelayHint: null };
   const audioReceiver = { jitterBufferTarget: null };
   h.media.attachSubscription({
@@ -221,7 +221,7 @@ test('remote screen video receiver configures 60ms jitterBufferTarget or playout
     receiver: audioReceiver,
     isCurrent: () => true,
   });
-  assert.equal(screenReceiver.jitterBufferTarget, 80);
-  assert.equal(fallbackReceiver.playoutDelayHint, 0.08);
+  assert.equal(screenReceiver.jitterBufferTarget, null);
+  assert.equal(fallbackReceiver.playoutDelayHint, null);
   assert.equal(audioReceiver.jitterBufferTarget, null);
 });

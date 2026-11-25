@@ -53,7 +53,7 @@ export class VoiceReception {
       receiver,
       original: null,
       supported: false,
-      targetMs: 60,
+      targetMs: null,
       lastChange: -Infinity,
       goodSince: null,
       previous: null,
@@ -62,11 +62,12 @@ export class VoiceReception {
     try {
       if ('jitterBufferTarget' in receiver) {
         row.original = receiver.jitterBufferTarget ?? null;
+        row.targetMs = row.original;
         row.supported = true;
       }
     } catch {}
     this.receivers.set(receiver, row);
-    this.apply(row, this.enabled ? 60 : row.original);
+    this.apply(row, row.original);
     return row;
   }
   private apply(row: ReceiverState, target: number | null) {
@@ -87,7 +88,7 @@ export class VoiceReception {
     for (const row of this.receivers.values()) {
       row.goodSince = null;
       row.lastChange = -Infinity;
-      this.apply(row, enabled ? 60 : row.original);
+      if (!enabled) this.apply(row, row.original);
     }
   }
   remove(receiver: RTCRtpReceiver) {
@@ -158,14 +159,16 @@ export class VoiceReception {
       packets: received,
     };
     if (this.enabled && row.supported && received !== null && received > 0) {
-      // A little more receive margin can help variable arrivals. Pure packet
-      // loss or a delayed UI timer alone do not justify accumulating latency.
+      // Keep native NetEq (~20ms) active on clean calls; only add temporary margin during real jitter/concealment.
       const poor =
-        (jitterMs !== null && jitterMs >= 30) || (concealedPct !== null && concealedPct >= 3);
+        (jitterMs !== null && jitterMs >= 35) || (concealedPct !== null && concealedPct >= 4);
+      const currentTarget = row.targetMs;
       if (poor) {
         row.goodSince = null;
-        if (stamp - row.lastChange >= 10000 && (row.targetMs ?? 60) < 140) {
-          this.apply(row, Math.min(140, (row.targetMs ?? 60) + 40));
+        if (stamp - row.lastChange >= 10000 && (currentTarget === null || currentTarget < 100)) {
+          const nextTarget =
+            currentTarget === null || currentTarget < 60 ? 60 : Math.min(100, currentTarget + 40);
+          this.apply(row, nextTarget);
           row.lastChange = stamp;
         }
       } else if (
@@ -177,8 +180,13 @@ export class VoiceReception {
         jitterMs < 20
       ) {
         if (row.goodSince === null) row.goodSince = stamp;
-        if (stamp - row.goodSince >= 60000 && (row.targetMs ?? 60) > 60) {
-          this.apply(row, Math.max(60, (row.targetMs ?? 60) - 40));
+        if (
+          stamp - row.goodSince >= 20000 &&
+          currentTarget !== null &&
+          currentTarget !== row.original
+        ) {
+          const nextTarget = currentTarget > 60 ? 60 : row.original;
+          this.apply(row, nextTarget);
           row.lastChange = stamp;
           row.goodSince = stamp;
         }

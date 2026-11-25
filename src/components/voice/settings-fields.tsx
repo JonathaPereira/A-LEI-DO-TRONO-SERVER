@@ -328,11 +328,13 @@ export function VoiceCaptureSettings({
               void client.selectCodec(event.target.value);
             }}
           >
-            <option value="vp9">VP9 • oficial (melhor equilíbrio visual)</option>
-            <option value="auto">Automático • padrão do navegador</option>
-            <option value="av1">AV1 • hardware moderno (RX 7000/9000, RTX 40+)</option>
-            <option value="vp8">VP8 • estável em jogos leves (multi-thread)</option>
-            <option value="h264">H.264 • hardware (NVENC / AMF / QSV)</option>
+            <option value="auto">
+              Automático • GPU / Hardware (recomendado para 1080p 60 FPS)
+            </option>
+            <option value="h264">H.264 High • hardware (NVENC / AMF / QSV)</option>
+            <option value="av1">AV1 • hardware moderno (RTX 40+, RX 7000+, Arc)</option>
+            <option value="vp9">VP9 • nitidez para textos e telas estáticas</option>
+            <option value="vp8">VP8 • compatibilidade legada</option>
           </select>
         </label>
       </div>
@@ -349,21 +351,6 @@ export function VoiceCaptureSettings({
         {desktop
           ? 'Para áudio isolado, escolha o aplicativo/jogo no seletor. O áudio do computador inteiro pode incluir as vozes da chamada.'
           : 'No seletor do navegador, marque Compartilhar áudio. Para enviar o som de um vídeo, prefira compartilhar a aba que o reproduz. Esta opção vale para a próxima transmissão.'}
-      </small>
-      <label className="mn-share-audio">
-        <input
-          id="screenSmoothMode"
-          type="checkbox"
-          checked={preferences.screenSmoothMode}
-          aria-describedby="screenSmoothModeHelp"
-          onChange={(event) => client.setScreenSmoothMode(event.target.checked)}
-        />
-        <span>Modo Fluidez (~2s de buffer ao assistir transmissões)</span>
-      </label>
-      <small id="screenSmoothModeHelp" className="settings-context-help">
-        Adiciona um buffer de aproximadamente 2 segundos no vídeo e no áudio da transmissão
-        assistida para absorver oscilações de rede e reduzir travamentos. A voz da chamada continua
-        em tempo real, sem atraso.
       </small>
       {desktop && <QualityHint state={state} />}
     </>

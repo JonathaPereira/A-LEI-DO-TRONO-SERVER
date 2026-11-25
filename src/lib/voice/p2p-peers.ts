@@ -1,7 +1,11 @@
 import type { PeerSignal, VoiceMediaKind, VoicePeerConnection } from '../../types/voice';
 import type { ScreenCodec } from '../../types/voice-quality';
 import { parsePeerSignal } from './peer-protocol.ts';
-import { prioritizeScreenCodec } from './sfu-encoding.ts';
+import {
+  detectHardwareScreenCodec,
+  efficientHardwareScreenCodec,
+  prioritizeScreenCodec,
+} from './sfu-encoding.ts';
 
 type Status = 'connected' | 'reconnecting' | 'offer-timeout' | 'connection-timeout';
 interface PeerOptions {
@@ -50,6 +54,8 @@ export function createP2pPeers(options: PeerOptions) {
   const connections = new Map<string, VoicePeerConnection>();
   const sessions = new WeakMap<RTCPeerConnection, Session>();
   const warn = options.warn ?? ((error: unknown) => console.warn('[P2pPeers]', error));
+  // Warm the shared probe; links created before it resolves keep the browser order.
+  void detectHardwareScreenCodec().catch(() => {});
   function current(session: Session) {
     return (
       !session.closed &&
@@ -148,8 +154,12 @@ export function createP2pPeers(options: PeerOptions) {
             direction: 'sendrecv',
           });
       if (!transceiver) continue;
-      if (kind === 'screen')
-        prioritizeScreenCodec(transceiver, options.getScreenCodec?.() ?? 'auto');
+      if (kind === 'screen') {
+        // A mesh encodes once per viewer; never force a software VP9 encode per link.
+        const codec = options.getScreenCodec?.() ?? 'auto';
+        const hardware = codec === 'auto' ? efficientHardwareScreenCodec() : null;
+        if (codec !== 'auto' || hardware) prioritizeScreenCodec(transceiver, codec, hardware);
+      }
       transceiver.direction = 'sendrecv';
       peer[transceiverKey] = transceiver;
       peer[senderKey] = transceiver.sender;

@@ -32,7 +32,6 @@ const keys: Record<keyof QualityPreferences, string> = {
   screenBitrateMbps: 'mnScreenBitrate',
   screenContent: 'mnScreenContent',
   screenCodec: 'mnScreenCodec',
-  screenSmoothMode: 'mnScreenSmoothMode',
   adaptiveEnabled: 'mnAdaptiveQuality',
 };
 
@@ -46,11 +45,10 @@ export function createCallQuality(options: QualityOptions) {
     initialCodec = storage.getItem(keys.screenCodec);
   let preferences: QualityPreferences = Object.freeze({
     transmissionQuality: isQuality(initialQuality) ? initialQuality : 'balanced',
-    screenFormat: isScreenFormat(initialFormat) ? initialFormat : '720-30',
+    screenFormat: isScreenFormat(initialFormat) ? initialFormat : '1080-60',
     screenBitrateMbps: SCREEN_BITRATES.includes(initialBitrate) ? initialBitrate : 8,
     screenContent: storage.getItem(keys.screenContent) === 'detail' ? 'detail' : 'motion',
-    screenCodec: isScreenCodec(initialCodec) ? initialCodec : 'vp9',
-    screenSmoothMode: storage.getItem(keys.screenSmoothMode) === '1',
+    screenCodec: isScreenCodec(initialCodec) ? initialCodec : 'auto',
     adaptiveEnabled: storage.getItem(keys.adaptiveEnabled) !== '0',
   });
   let revision = 0;
@@ -84,12 +82,20 @@ export function createCallQuality(options: QualityOptions) {
         QUALITY_ORDER.indexOf(policy.maxQuality)
         ? policy.maxQuality
         : preferences.transmissionQuality;
+    const sfuBudgetLimited = policy.sfu && policy.highAllowed === false;
     const screenBitrate =
-      Math.min(preferences.screenBitrateMbps, policy.sfu && policy.highAllowed === false ? 6 : 15) *
-      1000000;
+      Math.min(preferences.screenBitrateMbps, sfuBudgetLimited ? 6 : 15) * 1000000;
+    const rawScreen = SCREEN_FORMATS[preferences.screenFormat];
+    const cappedScreen = sfuBudgetLimited
+      ? {
+          width: Math.min(rawScreen.width, 1280),
+          height: Math.min(rawScreen.height, 720),
+          fps: Math.min(rawScreen.fps, 30),
+        }
+      : rawScreen;
     const profile = stability.profile({
       ...QUALITY_PROFILES[effectiveQuality],
-      screen: SCREEN_FORMATS[preferences.screenFormat],
+      screen: cappedScreen,
       screenBitrate,
     });
     cached = Object.freeze({
@@ -117,7 +123,6 @@ export function createCallQuality(options: QualityOptions) {
     if (patch.screenContent === 'motion' || patch.screenContent === 'detail')
       next.screenContent = patch.screenContent;
     if (isScreenCodec(patch.screenCodec)) next.screenCodec = patch.screenCodec;
-    if (typeof patch.screenSmoothMode === 'boolean') next.screenSmoothMode = patch.screenSmoothMode;
     if (typeof patch.adaptiveEnabled === 'boolean') {
       next.adaptiveEnabled = patch.adaptiveEnabled;
       stability.reset();
@@ -177,12 +182,38 @@ export function createCallQuality(options: QualityOptions) {
               preferences.screenContent === 'motion' ? 'maintain-framerate' : 'maintain-resolution';
             sender.track.contentHint = preferences.screenContent;
             const source = sender.track.getSettings();
-            const rawScale = Math.max(
-              1,
-              (source.width || q.screen.width) / q.screen.width,
-              (source.height || q.screen.height) / q.screen.height,
-            );
-            const scale = Math.abs(rawScale - 1) < 0.08 ? 1 : rawScale;
+            const srcW = source.width || q.screen.width;
+            const srcH = source.height || q.screen.height;
+            const rawScale = Math.max(1, srcW / q.screen.width, srcH / q.screen.height);
+            let scale = Math.abs(rawScale - 1) < 0.08 ? 1 : rawScale;
+            const validEven = (s: number) => {
+              if (!Number.isFinite(s) || s < 1) return false;
+              const w = Math.floor(srcW / s);
+              const h = Math.floor(srcH / s);
+              return (
+                w >= 2 &&
+                h >= 2 &&
+                w % 2 === 0 &&
+                h % 2 === 0 &&
+                (scale === 1 || (w <= q.screen.width && h <= q.screen.height))
+              );
+            };
+            if (!validEven(scale)) {
+              const startEvenW = Math.max(
+                2,
+                Math.min(q.screen.width, Math.floor(srcW / scale)) & ~1,
+              );
+              for (let evenW = startEvenW; evenW >= Math.max(2, startEvenW - 64); evenW -= 2) {
+                for (const frac of [0.5, 0.2, 0.8]) {
+                  const candidate = Math.max(1, srcW / (evenW + frac));
+                  if (validEven(candidate)) {
+                    scale = candidate;
+                    break;
+                  }
+                }
+                if (validEven(scale)) break;
+              }
+            }
             const byRid: Record<string, number> = {
               f: q.screenBitrate,
               h: Math.max(500000, Math.round(q.screenBitrate * 0.42)),

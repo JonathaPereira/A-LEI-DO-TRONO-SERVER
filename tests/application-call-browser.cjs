@@ -615,6 +615,13 @@ test(
       await viewer.keyboard.press('Escape');
       await expect.poll(() => viewer.evaluate(() => !!document.fullscreenElement)).toBe(false);
       await expect(stream).toHaveAttribute('data-focused', 'true');
+      await expect(stream.locator('[data-viewer-fps]')).toBeVisible();
+      await expect(stream.locator('[data-viewer-fps]')).toContainText('FPS');
+      assert.equal(
+        await host.locator('[data-viewer-fps]').count(),
+        0,
+        'Sender local preview does not render viewer FPS badge',
+      );
       await stream
         .getByRole('button', { name: 'Opções da transmissão de Ana', exact: true })
         .click();
@@ -622,6 +629,7 @@ test(
       await expect(
         stream.getByRole('button', { name: 'Assistir transmissão', exact: true }),
       ).toBeVisible();
+      await expect(stream.locator('[data-viewer-fps]')).toHaveCount(0);
       await expect(stream).toHaveAttribute('data-focused', 'false');
       assert.equal(
         await viewer.evaluate(

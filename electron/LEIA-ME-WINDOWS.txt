@@ -1,3 +1,15 @@
+M&N · A Lei do Trono — Windows & Android 2.3.1
+
+Novidades 2.3.1:
+- Transmissão de tela em 1080p 60 FPS por hardware sem travadas: detecção automática de codificador
+  eficiente por GPU (AV1 e H.264 High Profile via hardware), buffer adaptativo nativo do WebRTC em
+  tempo real (substituindo o antigo Modo Fluidez), imunidade a telas estáticas do Windows sem
+  reconexões falsas, dimensões pares seguras em ultrawide/janelas e captura D3D11 enxuta.
+- Contador de FPS ao vivo para espectadores: exibe em tempo real a resolução e os quadros por
+  segundo realmente entregues no player de quem está assistindo à transmissão.
+- Chamadas de voz em tempo real: contexto de áudio interativo de baixa latência e NetEq nativo por
+  padrão para conversas mais imediatas.
+
 M&N · A Lei do Trono — Windows & Android 2.3.0
 
 Novidades 2.3.0:

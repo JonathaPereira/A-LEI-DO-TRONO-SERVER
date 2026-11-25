@@ -149,7 +149,7 @@ async function setup(t, options = {}) {
 test('collects interval voice, traffic, video and ICE metrics without touching peers or tracks', async (t) => {
   const h = await setup(t),
     pc = h.attach();
-  assert.equal(pc.voice.jitterBufferTarget, 60);
+  assert.equal(pc.voice.jitterBufferTarget, null);
   await h.sample(pc, 1);
   assert.equal(h.telemetry.getSnapshot().rows.length, 0);
   await h.sample(pc, 2);
@@ -212,7 +212,7 @@ test('screen/game audio never changes voice targets or contaminates voice diagno
   assert.equal(h.telemetry.getSnapshot().telemetry.audioJitterMs, 5);
   assert.equal(h.telemetry.getSnapshot().rows.length, 1);
   assert.equal(h.telemetry.getSnapshot().playout, null);
-  assert.equal(pc.voice.jitterBufferTarget, 60);
+  assert.equal(pc.voice.jitterBufferTarget, null);
   assert.equal(pc.screen.jitterBufferTarget, null);
   assert.equal(pc.camera.jitterBufferTarget, null);
 });
@@ -258,7 +258,7 @@ test('replacing a peer under the same key ignores its old report and starts inde
   const next = h.attach('p2p:p', 'next-peer');
   pending.resolve(report(50, { jitter: 0.9 }));
   await collecting;
-  assert.equal(next.voice.jitterBufferTarget, 60, 'new registration survives old batch pruning');
+  assert.equal(next.voice.jitterBufferTarget, null, 'new registration survives old batch pruning');
   await h.sample(next, 2);
   assert.equal(h.telemetry.getSnapshot().rows.length, 0);
   assert.equal(h.telemetry.getSnapshot().telemetry.downloadBps, 0);
@@ -288,7 +288,7 @@ test('reset invalidates old getStats and releases the sampling lock before its p
   assert.equal(h.changes, changes);
   assert.equal(h.samples.length, samples);
   assert.equal(old.voice.jitterBufferTarget, null);
-  assert.equal(next.voice.jitterBufferTarget, 60);
+  assert.equal(next.voice.jitterBufferTarget, null);
 });
 
 test('a failed stats read keeps the native target but clears stale measured intervals', async (t) => {
@@ -296,14 +296,14 @@ test('a failed stats read keeps the native target but clears stale measured inte
     pc = h.attach();
   await h.sample(pc, 1);
   await h.sample(pc, 2, { jitter: 0.04 });
-  assert.equal(pc.voice.jitterBufferTarget, 100);
+  assert.equal(pc.voice.jitterBufferTarget, 60);
   const history = h.telemetry.getSnapshot().history.length;
   const samples = h.samples.length;
   pc.getStats = async () => {
     throw new Error('peer busy');
   };
   await h.telemetry.collect();
-  assert.equal(pc.voice.jitterBufferTarget, 100);
+  assert.equal(pc.voice.jitterBufferTarget, 60);
   assert.equal(h.telemetry.getSnapshot().rows.length, 0);
   assert.equal(h.telemetry.getSnapshot().history.length, history);
   assert.equal(h.samples.length, samples, 'missing reports must not restore adaptive quality');
@@ -364,7 +364,7 @@ test('history is bounded and immutable; missing and restarted counters do not gr
   assert.equal(h.telemetry.getSnapshot().rows[0].concealedPct, null);
   await h.sample(pc, 1);
   assert.equal(h.telemetry.getSnapshot().rows.length, 0);
-  assert.equal(pc.voice.jitterBufferTarget, 60);
+  assert.equal(pc.voice.jitterBufferTarget, null);
   assert.equal(h.telemetry.getSnapshot().telemetry.downloadBps, 0);
 });
 

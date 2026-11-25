@@ -1,17 +1,20 @@
 'use client';
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { createViewerFpsMeter, type ViewerFpsSnapshot } from '../../lib/voice/viewer-fps-meter';
 
 /** A preview borrows the original stream. Detaching never stops its owner's tracks. */
 export function BorrowedVideo({
   stream,
   active,
   pauseWhenUnfocused = false,
+  onStats,
   onDoubleClick,
   className,
 }: {
   stream: MediaStream | null;
   active: boolean;
   pauseWhenUnfocused?: boolean;
+  onStats?: (stats: ViewerFpsSnapshot | null) => void;
   onDoubleClick(): void;
   className?: string;
 }) {
@@ -27,6 +30,21 @@ export function BorrowedVideo({
     )
       void video.play().catch(() => {});
   }, [stream, active, pauseWhenUnfocused]);
+  useEffect(() => {
+    if (!onStats) return;
+    if (!active || !stream || !ref.current) {
+      onStats(null);
+      return;
+    }
+    const meter = createViewerFpsMeter({
+      video: ref.current,
+      onUpdate: onStats,
+    });
+    return () => {
+      meter.dispose();
+      onStats(null);
+    };
+  }, [active, stream, onStats]);
   useEffect(() => {
     if (!active || !stream) return;
     const video = ref.current;

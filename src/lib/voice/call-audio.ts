@@ -26,7 +26,7 @@ export function createCallAudio(options: CallAudioOptions) {
       if (context) context.onstatechange = null;
       try {
         context = options.createContext({
-          latencyHint: options.desktop ? 0.04 : 'interactive',
+          latencyHint: 'interactive',
           sampleRate: 48000,
         });
       } catch (error) {

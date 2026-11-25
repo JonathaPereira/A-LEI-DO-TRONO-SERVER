@@ -410,10 +410,9 @@ export function createVoiceTelemetry(options: Options) {
           elapsedMs >= 500 &&
           framesEncoded === 0 &&
           !captureDown &&
-          (limiter === 'cpu' ||
-            (droppedFrames ?? 0) > 0 ||
-            (pliCount ?? 0) > 0 ||
+          ((pliCount ?? 0) > 0 ||
             (firCount ?? 0) > 0 ||
+            (droppedFrames ?? 0) >= 8 ||
             ((nackCount ?? 0) > 3 && (framesSent ?? 0) === 0))
         ) {
           stalled = true;
@@ -435,7 +434,6 @@ export function createVoiceTelemetry(options: Options) {
             (rxLossPct ?? 0) >= 2) ||
           ((pcRttMs ?? 0) >= 350 && ((freezeCount ?? 0) > 0 || (framesDecoded ?? 0) === 0));
         const trackEnded = track?.readyState === 'ended';
-        const trackMuted = track?.muted === true;
 
         if (
           trackEnded ||
@@ -464,13 +462,13 @@ export function createVoiceTelemetry(options: Options) {
           pktDelta === 0 &&
           (bytesDelta ?? 0) === 0 &&
           !trackEnded &&
-          (trackMuted || (pliCount ?? 0) > 0 || (firCount ?? 0) > 0 || priorZeroStreak >= 1)
+          ((pliCount ?? 0) > 0 || (firCount ?? 0) > 0)
         ) {
           stalled = true;
           cause = congested ? 'transport-congestion' : 'sfu-forwarding-stalled';
         } else if ((framesDecoded ?? 0) > 0 && ((freezeCount ?? 0) > 0 || (freezes ?? 0) > 0)) {
           stalled = true;
-          cause = congested ? 'transport-congestion' : 'presentation-frozen';
+          cause = 'presentation-frozen';
         } else if ((freezeCount ?? 0) > 0 || (freezes ?? 0) > 0) {
           stalled = true;
           cause = null;

@@ -115,11 +115,18 @@ const trace = (...values) => {
   if (!app.isPackaged && app.commandLine.hasSwitch('desktop-diagnostics'))
     console.error('[desktop]', ...values);
 };
-// Keep renderer Web Audio/RNNoise scheduled when Windows occludes or minimizes the app.
+// Keep renderer Web Audio/RNNoise scheduled when Windows occludes or minimizes the app,
+// and keep D3D11 zero-copy capture active for hardware 1080p60 screen encoding.
 if (process.platform === 'win32') {
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
   app.commandLine.appendSwitch('disable-background-timer-throttling');
+  const existingFeatures = app.commandLine.getSwitchValue('enable-features');
+  const d3d11Feature = 'MediaFoundationD3D11VideoCapture';
+  app.commandLine.appendSwitch(
+    'enable-features',
+    existingFeatures ? `${existingFeatures},${d3d11Feature}` : d3d11Feature,
+  );
 }
 function showMainWindow() {
   if (!window || window.isDestroyed()) return false;
