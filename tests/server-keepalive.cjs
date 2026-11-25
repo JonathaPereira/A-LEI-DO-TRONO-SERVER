@@ -31,7 +31,7 @@ test('createAuth.keepalive touches Supabase PostgREST and throttles repeated pin
     const first = await auth.keepalive();
     assert.deepEqual(first, { ok: true, throttled: false, touchedAt: 1_000_000 });
     assert.equal(hits.length, 1);
-    assert.equal(hits[0].url, 'https://proj.supabase.co/rest/v1/profiles?select=id&limit=1');
+    assert.equal(hits[0].url, 'https://proj.supabase.co/auth/v1/settings');
     assert.equal(hits[0].headers.apikey, 'anon-test-key');
     assert.equal(JSON.stringify(first).includes('anon-test-key'), false);
 

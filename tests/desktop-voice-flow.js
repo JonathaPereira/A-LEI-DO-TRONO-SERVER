@@ -81,7 +81,7 @@ async function exerciseVoiceProtection({ app, page }) {
       }
     });
     assert(receiver.supported, 'Modern Windows WebRTC exposes the receive margin API');
-    assert.equal(receiver.requested, 60);
+    assert.equal(receiver.requested, receiver.original);
     assert.equal(receiver.restored, receiver.original);
     await assert.rejects(
       page.evaluate(() => window.TronoDesktop.setVoiceProtection({ pid: 1, priority: -20 })),

@@ -110,7 +110,7 @@ export function createAuth({
     }
     const run = (async () => {
       try {
-        await upstream('/rest/v1/profiles?select=id&limit=1', { method: 'GET' });
+        await upstream('/auth/v1/settings', { method: 'GET' });
         lastKeepaliveAt = now();
         lastKeepaliveOk = true;
         return { ok: true, throttled: false, touchedAt: lastKeepaliveAt };

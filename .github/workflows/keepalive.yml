@@ -30,9 +30,9 @@ jobs:
 
           if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
             SUPA_BASE="${SUPABASE_URL%/}"
-            echo "Pinging direct Supabase PostgREST endpoint..."
+            echo "Pinging direct Supabase Auth settings endpoint..."
             curl --fail --silent --show-error --location --retry 2 --retry-delay 3 --max-time 20 \
               -H "apikey: ${SUPABASE_ANON_KEY}" \
-              "${SUPA_BASE}/rest/v1/profiles?select=id&limit=1" > /dev/null
+              "${SUPA_BASE}/auth/v1/settings" > /dev/null
             echo "Direct Supabase ping succeeded."
           fi
