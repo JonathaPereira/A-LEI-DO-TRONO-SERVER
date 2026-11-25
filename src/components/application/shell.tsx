@@ -823,6 +823,11 @@ export function ApplicationShell({
     runtime?.TronoCallNavigation.getSnapshot ?? empty,
     empty,
   );
+  const callStage = useSyncExternalStore(
+    runtime?.TronoCallStage.subscribe ?? noop,
+    runtime?.TronoCallStage.getSnapshot ?? empty,
+    empty,
+  );
   const session = useSyncExternalStore(
     runtime?.TronoAuth.subscribe ?? noop,
     runtime?.TronoAuth.getSnapshot ?? empty,
@@ -998,7 +1003,19 @@ export function ApplicationShell({
               </header>
               {runtime && (
                 <>
-                  <ChristmasPromo runtime={runtime} visible={!entry && !game && sessionReady} />
+                  <ChristmasPromo
+                    runtime={runtime}
+                    visible={
+                      !entry &&
+                      !game &&
+                      !(
+                        screen === 'chatOnlyScreen' &&
+                        callNav?.page === 'call' &&
+                        callStage?.screens.length
+                      ) &&
+                      sessionReady
+                    }
+                  />
                   <ReleaseNotesCard runtime={runtime} visible={!entry && !game && sessionReady} />
                 </>
               )}
