@@ -1,3 +1,14 @@
+M&N · A Lei do Trono — Windows & Android 2.3.2
+
+Novidades 2.3.2:
+- Rework visual mobile/Android: barra inferior limpa em 4 abas (Voz · Chat · Jogos · Perfil),
+  hub dedicado de Salas de Voz com cartão pré-entrada em 1 toque (microfone e saída de áudio),
+  palco de chamada 100% mobile sem atalhos de desktop/banners sobrepostos e lista de Membros sob
+  demanda sem roubar espaço fixo da tela.
+- Chamada ininterrupta no Android com tela desligada: modal automático logo ao abrir o app para
+  liberar Microfone, Notificações, Bateria sem restrições (Doze) e Bluetooth; AudioFocus nativo de
+  chamada, seletor de Viva-voz/Bluetooth/Auricular e botões Mutar/Desligar na tela bloqueada.
+
 M&N · A Lei do Trono — Windows & Android 2.3.1
 
 Novidades 2.3.1:

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { initializeAndroid } from '../lib/mobile/android';
 import { initializeAndroidPush } from '../lib/mobile/push';
 import { initializeAndroidUpdates } from '../components/mobile/android-update-runtime';
+import { initializeAndroidBackground } from '../components/mobile/android-background-runtime';
 import { initializeDesktopWindow } from '../lib/desktop/window';
 import { initializeDesktopUpdates } from '../components/desktop/update-runtime';
 import { initializeDesktopOverlay } from '../components/desktop/overlay-runtime';
@@ -124,6 +125,7 @@ export function ApplicationRuntime() {
       (window as unknown as { __tronoReady?: boolean }).__tronoReady = true;
       window.dispatchEvent(new Event('trono:ready'));
       initializeCallStage(window);
+      initializeAndroidBackground(window);
       initializeDesktopOverlay(window);
       initializeMediaDialogs(window);
       if ((window as Window & { TronoDesktop?: object }).TronoDesktop) {

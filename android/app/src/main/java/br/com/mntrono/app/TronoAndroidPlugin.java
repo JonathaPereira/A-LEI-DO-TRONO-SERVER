@@ -2,7 +2,10 @@ package br.com.mntrono.app;
 
 import android.Manifest;
 import android.content.*;
+import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
@@ -23,14 +26,118 @@ import javax.crypto.spec.GCMParameterSpec;
           strings = {Manifest.permission.RECORD_AUDIO}),
       @Permission(
           alias = "notifications",
-          strings = {Manifest.permission.POST_NOTIFICATIONS})
+          strings = {Manifest.permission.POST_NOTIFICATIONS}),
+      @Permission(
+          alias = "bluetooth",
+          strings = {Manifest.permission.BLUETOOTH_CONNECT})
     })
 public class TronoAndroidPlugin extends Plugin {
   private final Set<String> cancelled = Collections.synchronizedSet(new LinkedHashSet<>());
   private JSObject pendingTarget;
+  private PluginCall pendingBatteryCall;
 
   private SharedPreferences device() {
     return getContext().getSharedPreferences("trono_device", 0);
+  }
+
+  private boolean isIgnoringBatteryOptimizations() {
+    try {
+      PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+      return pm == null || pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
+    } catch (Exception ignored) {
+      return false;
+    }
+  }
+
+  private JSObject buildBackgroundStatus() {
+    boolean mic = getPermissionState("microphone") == PermissionState.GRANTED;
+    boolean notif =
+        Build.VERSION.SDK_INT < 33
+            || getPermissionState("notifications") == PermissionState.GRANTED;
+    boolean bt =
+        Build.VERSION.SDK_INT < 31
+            || getPermissionState("bluetooth") == PermissionState.GRANTED;
+    boolean battery = isIgnoringBatteryOptimizations();
+    boolean allReady = mic && notif && battery && bt;
+    return new JSObject()
+        .put("microphone", mic)
+        .put("notifications", notif)
+        .put("batteryUnrestricted", battery)
+        .put("bluetooth", bt)
+        .put("audioRoute", CallService.getAudioRoute())
+        .put("bluetoothAvailable", CallService.isBluetoothRouteAvailable(getContext()))
+        .put("allReady", allReady);
+  }
+
+  @PluginMethod
+  public void backgroundStatus(PluginCall call) {
+    call.resolve(buildBackgroundStatus());
+  }
+
+  @PluginMethod
+  public void requestBackgroundPermissions(PluginCall call) {
+    List<String> needed = new ArrayList<>();
+    if (getPermissionState("microphone") != PermissionState.GRANTED) needed.add("microphone");
+    if (Build.VERSION.SDK_INT >= 33
+        && getPermissionState("notifications") != PermissionState.GRANTED) {
+      needed.add("notifications");
+    }
+    if (Build.VERSION.SDK_INT >= 31
+        && getPermissionState("bluetooth") != PermissionState.GRANTED) {
+      needed.add("bluetooth");
+    }
+    if (needed.isEmpty()) {
+      call.resolve(buildBackgroundStatus());
+      return;
+    }
+    requestPermissionForAliases(
+        needed.toArray(new String[0]), call, "backgroundPermissionsResult");
+  }
+
+  @PermissionCallback
+  private void backgroundPermissionsResult(PluginCall call) {
+    call.resolve(buildBackgroundStatus());
+  }
+
+  @PluginMethod
+  public void requestBatteryExemption(PluginCall call) {
+    if (isIgnoringBatteryOptimizations()) {
+      call.resolve(buildBackgroundStatus());
+      return;
+    }
+    try {
+      pendingBatteryCall = call;
+      Intent intent =
+          new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+              .setData(Uri.parse("package:" + getContext().getPackageName()));
+      getActivity().startActivity(intent);
+    } catch (Exception primaryError) {
+      try {
+        Intent fallback = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        getActivity().startActivity(fallback);
+      } catch (Exception fallbackError) {
+        pendingBatteryCall = null;
+        call.resolve(buildBackgroundStatus());
+      }
+    }
+  }
+
+  @PluginMethod
+  public void setAudioRoute(PluginCall call) {
+    String requested = call.getString("route", "speaker");
+    String applied = CallService.setAudioRoute(getContext(), requested);
+    call.resolve(
+        new JSObject()
+            .put("audioRoute", applied)
+            .put("bluetoothAvailable", CallService.isBluetoothRouteAvailable(getContext())));
+  }
+
+  @PluginMethod
+  public void updateCallNotification(PluginCall call) {
+    String roomName = call.getString("roomName", "");
+    boolean muted = call.getBoolean("muted", false);
+    CallService.updateNotificationState(getContext(), roomName, muted);
+    call.resolve();
   }
 
   @PluginMethod
@@ -65,7 +172,9 @@ public class TronoAndroidPlugin extends Plugin {
       }
       try {
         CallService.lease = lease;
+        String roomName = call.getString("roomName", "");
         Intent start = new Intent(getContext(), CallService.class).putExtra("lease", lease);
+        if (roomName != null && !roomName.isEmpty()) start.putExtra("roomName", roomName);
         if (Build.VERSION.SDK_INT >= 26) getContext().startForegroundService(start);
         else getContext().startService(start);
         call.resolve();
@@ -334,6 +443,8 @@ public class TronoAndroidPlugin extends Plugin {
 
   @Override
   public void load() {
+    CallService.actionListener =
+        action -> notifyListeners("callAction", new JSObject().put("action", action), false);
     acceptIntent(getActivity().getIntent());
   }
 
@@ -345,6 +456,11 @@ public class TronoAndroidPlugin extends Plugin {
   @Override
   protected void handleOnResume() {
     NativeNotices.foreground = true;
+    PluginCall pending = pendingBatteryCall;
+    if (pending != null) {
+      pendingBatteryCall = null;
+      pending.resolve(buildBackgroundStatus());
+    }
   }
 
   @Override
@@ -354,6 +470,12 @@ public class TronoAndroidPlugin extends Plugin {
 
   @Override
   protected void handleOnDestroy() {
+    CallService.actionListener = null;
+    PluginCall pending = pendingBatteryCall;
+    if (pending != null) {
+      pendingBatteryCall = null;
+      pending.resolve(buildBackgroundStatus());
+    }
     if (updater != null) {
       updater.shutdown();
       updater = null;

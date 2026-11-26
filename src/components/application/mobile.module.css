@@ -8,8 +8,8 @@
     position: fixed;
     inset: auto 0 0;
     z-index: 18;
-    background: var(--app-theme-side, #151920f5);
-    border-top: 1px solid var(--app-theme-border, #d6b77924);
+    background: var(--app-theme-side, #141821f5);
+    border-top: 1px solid var(--app-theme-border, #d6b77928);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     color: var(--app-theme-text, #dce0e7);
     font:
@@ -18,56 +18,121 @@
   }
   .tabs {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     min-height: 64px;
+    padding: 4px 6px;
+    gap: 4px;
   }
   .tabs button {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
     background: transparent;
-    color: #9aabba;
+    color: #93a1b5;
     border: 0;
-    padding: 9px 2px;
-    min-height: 56px;
+    border-radius: 14px;
+    padding: 6px 4px;
+    min-height: 54px;
     font: inherit;
-    font-size: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
     cursor: pointer;
+    position: relative;
   }
   .tabs button[aria-current='page'],
   .tabs button[aria-expanded='true'] {
     color: #ecd29b;
-    background: #d6b7790d;
+    background: rgba(214, 183, 121, 0.12);
   }
   .tabs button:focus-visible,
-  .activeCall:focus-visible {
+  .activeCallMain:focus-visible,
+  .activeCallMute:focus-visible {
     outline: 2px solid #d6b779;
     outline-offset: -3px;
   }
-  .activeCall {
+  .iconWrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .badge {
+    position: absolute;
+    top: -6px;
+    right: -12px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    background: #a1454d;
+    color: #ffffff;
+  }
+  .badge[data-kind='voice'] {
+    background: #23684a;
+    color: #baf5d4;
+  }
+  .badge[data-kind='warn'] {
+    background: #d6b779;
+    color: #121418;
+  }
+  .activeCallBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #82c8ae26;
+    background: #15312a;
+    padding: 6px 10px 6px 14px;
+    min-height: 50px;
+  }
+  .activeCallMain {
+    flex: 1;
+    min-width: 0;
     border: 0;
-    border-bottom: 1px solid #82c8ae22;
+    background: transparent;
     color: #a8dfc5;
-    background: #17342e;
-    padding: 9px 16px;
+    padding: 4px 0;
     display: flex;
     gap: 10px;
     align-items: center;
     text-align: left;
     cursor: pointer;
-    min-height: 48px;
     font: inherit;
+    min-height: 44px;
   }
-  .activeCall span {
+  .activeCallMain span {
     flex: 1;
+    min-width: 0;
+    font-weight: 600;
   }
-  .activeCall small {
+  .activeCallMain small {
     display: block;
-    font-size: 10px;
+    font-size: 10.5px;
+    font-weight: 400;
     color: #91b7a7;
-    margin-top: 2px;
+    margin-top: 1px;
+  }
+  .activeCallMute {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(168, 223, 197, 0.25);
+    background: rgba(15, 25, 22, 0.55);
+    color: #dff5ea;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .activeCallMute[aria-pressed='true'] {
+    background: rgba(168, 49, 61, 0.5);
+    border-color: rgba(244, 152, 160, 0.5);
+    color: #ffd9dc;
   }
 }
 :global(html[data-keyboard='true']) .dock {

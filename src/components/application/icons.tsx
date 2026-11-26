@@ -37,8 +37,14 @@ import { StopIcon } from '@phosphor-icons/react/dist/csr/Stop';
 import { BellIcon } from '@phosphor-icons/react/dist/csr/Bell';
 import { BellSlashIcon } from '@phosphor-icons/react/dist/csr/BellSlash';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
+import { ShieldCheckIcon } from '@phosphor-icons/react/dist/csr/ShieldCheck';
+import { UserCircleIcon } from '@phosphor-icons/react/dist/csr/UserCircle';
+import { BluetoothIcon } from '@phosphor-icons/react/dist/csr/Bluetooth';
 const icons = {
   search: MagnifyingGlassIcon,
+  shield: ShieldCheckIcon,
+  profile: UserCircleIcon,
+  bluetooth: BluetoothIcon,
   bellOff: BellSlashIcon,
   music: MusicNotesIcon,
   clips: ScissorsIcon,

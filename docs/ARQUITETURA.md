@@ -204,10 +204,16 @@ e NetEq nativo (`null`) por padrão em `voice/reception-policy.ts` (aplicando ma
 limitada de 60–100 ms apenas sob ocultação/jitter severos com retorno em degraus de 20 s).
 Espectadores de tela sinalizam `stream-watch` tanto em SFU quanto em P2P (`voice/media-interest.ts`,
 `voice/roster.ts`) para exibir os avatares de quem assiste à transmissão no cartão do emissor
-(`call.tsx`). No Android (`MainActivity.java` e `CallService.java`), enquanto há chamada ativa o
-serviço em primeiro plano mantém `PARTIAL_WAKE_LOCK`, `WifiLock` e `AudioManager.MODE_IN_COMMUNICATION`,
-e `MainActivity` retoma o WebView em `onPause`/`onStop` para evitar suspensão de áudio/WebRTC com a
-tela desligada. A telemetria de mídia (`voice/telemetry.ts`) coleta deltas por fluxo, ignora janelas
+(`call.tsx`). No Android (`MainActivity.java`, `CallService.java`, `TronoAndroidPlugin.java` e
+`lib/mobile/background-permissions.ts`), o app solicita na abertura as permissões de segundo plano
+(`RECORD_AUDIO`, `POST_NOTIFICATIONS`, `BLUETOOTH_CONNECT` e isenção de otimização de bateria via
+`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) através do modal automático `AndroidPermissionsModal`; durante
+a chamada, `CallService` mantém `PARTIAL_WAKE_LOCK`, `WifiLock` (`ACCESS_WIFI_STATE`/`CHANGE_WIFI_STATE`),
+`AudioFocusRequest` (`USAGE_VOICE_COMMUNICATION`), roteamento nativo de áudio (`Viva-voz`/`Auricular`/`Bluetooth`),
+recuperação de `ACTION_AUDIO_BECOMING_NOISY` e notificação pública de chamada com ações diretas de `Mutar`
+e `Desligar` na tela bloqueada, enquanto `MainActivity` retoma o WebView em `onPause`/`onStop`/`onWindowFocusChanged`
+(com re-asserção após transição de visibilidade) para evitar suspensão de áudio/WebRTC com a tela
+desligada. A telemetria de mídia (`voice/telemetry.ts`) coleta deltas por fluxo, ignora janelas
 estáticas sem PLI/FIR para não fabricar `encoder-stalled`/`sfu-forwarding-stalled`, mantém congelamentos
 com decodificação ativa em `presentation-frozen` e o relatório sanitizado (`voice/diagnostic-report.ts`)
 expõe codec, implementação e aceleração por hardware; `voice/video-recovery.ts` reconcilia chaves

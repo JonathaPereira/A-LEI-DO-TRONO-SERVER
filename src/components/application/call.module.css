@@ -800,31 +800,113 @@
   inset: 0;
   background: rgb(0 0 0 / var(--participant-darkness, 0.6));
 }
+.mobileBackButton {
+  display: none;
+}
+.audioRouteButton {
+  background: rgba(214, 183, 121, 0.12) !important;
+  border-color: rgba(214, 183, 121, 0.35) !important;
+  color: #ead19a !important;
+  border-radius: 999px !important;
+}
 @media (max-width: 760px) {
   .call {
-    background: #101217;
+    background: #0d1016;
   }
   .heading {
-    padding: 14px 14px 8px;
-    gap: 8px;
+    padding: 10px 12px;
+    gap: 10px;
+    align-items: center;
+    background: #131722;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .mobileBackButton {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #1c2230;
+    color: #d7deeb;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .headingMeta {
+    flex: 1;
+    min-width: 0;
+  }
+  .heading h1 {
+    font-size: 16px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .heading p {
+    font-size: 11px;
+    color: #8fd7af;
+  }
+  .eyebrow,
+  .telemetryBadge,
+  .theaterButton,
+  .helpButton,
+  .desktopOnlyLabel {
+    display: none !important;
+  }
+  .chatToggleLabel {
+    display: none;
+  }
+  .chatToggleButton {
+    width: 38px;
+    height: 38px;
+    padding: 0 !important;
+    justify-content: center;
+    border-radius: 12px !important;
+  }
+  .audioRouteButton {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    min-height: 36px;
   }
   .footer {
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-    background: #151920;
+    background: #11151f;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .controls {
+    background: #181e2b;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 18px;
+    padding: 8px;
     gap: 8px;
+    justify-content: space-around;
   }
   .footer button {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 46px;
+    min-width: 46px;
+    border-radius: 14px !important;
     touch-action: manipulation;
   }
+  .controls button[data-danger='true'] {
+    margin-left: 0;
+    background: #b63943;
+    border-color: #cb4a54 !important;
+    color: #ffffff;
+  }
   .grid {
-    padding: 8px 12px;
+    padding: 12px;
     gap: 10px;
     align-content: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .card {
-    border-radius: 16px;
+    border-radius: 18px;
+    background: #151a24;
+    border-color: rgba(255, 255, 255, 0.07);
+  }
+  .card[data-call-screen] {
+    grid-column: 1 / -1;
   }
   .focusTarget,
   .watch {
@@ -834,11 +916,10 @@
 
 @media (max-width: 560px) {
   .grid {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 8px 10px;
+    padding: 10px;
   }
   .headingActions {
-    gap: 4px;
+    gap: 6px;
   }
 }
 

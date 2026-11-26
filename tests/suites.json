@@ -6,6 +6,7 @@
     "tests/men-trono-communication.cjs",
     "tests/clips-suspended.cjs",
     "tests/android-push-registration.cjs",
+    "tests/android-background-permissions.cjs",
     "tests/android-host.cjs",
     "tests/android-updates.cjs",
     "tests/mobile-push.cjs",

@@ -1993,13 +1993,24 @@
   .app[data-game='true'] > .main {
     height: 100%;
   }
+  .app[data-call='true'] > .main > .header,
+  .app[data-call='true'] > .main > .banners {
+    display: none !important;
+  }
   .workspace[data-call='true'] {
     grid-template-rows: minmax(0, 1fr);
   }
-  .workspace[data-call='true'] > .members {
+  .workspace > .members {
     position: fixed;
-    bottom: 64px;
-    max-height: 38dvh;
+    left: 0;
+    right: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    max-height: 44dvh;
+    z-index: 20;
+    box-shadow: 0 -18px 42px rgba(0, 0, 0, 0.55);
+  }
+  .workspace[data-mobile-call='true'] > .members {
+    bottom: calc(114px + env(safe-area-inset-bottom, 0px));
   }
 }
 @media (max-width: 359px) {
@@ -2009,7 +2020,7 @@
 }
 @media (max-width: 760px) {
   .workspace[data-mobile-call='true']:not([data-mobile-entry='true']) {
-    height: calc(100dvh - 112px - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 114px - env(safe-area-inset-bottom, 0px));
   }
 }
 @media (max-width: 760px) {

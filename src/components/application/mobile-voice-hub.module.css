@@ -1,0 +1,339 @@
+.hub {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .hub {
+    position: fixed;
+    inset: 0 0 calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 17;
+    display: flex;
+    flex-direction: column;
+    background: var(--shell-bg, #0f1218);
+    color: var(--shell-text, #eae4d8);
+  }
+
+  .hub[data-call-bar='true'] {
+    bottom: calc(114px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px 12px;
+    background: var(--shell-side, #141821);
+    border-bottom: 1px solid var(--shell-border, rgba(255, 255, 255, 0.06));
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .emblem {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: #1f2532;
+    border: 1px solid rgba(214, 183, 121, 0.36);
+    color: #d6b779;
+    display: grid;
+    place-items: center;
+    flex: 0 0 34px;
+  }
+
+  .titleBlock {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .titleBlock h2 {
+    margin: 0;
+    font:
+      600 17px/1.2 Georgia,
+      serif;
+    color: #f3e6ca;
+  }
+
+  .titleBlock small {
+    font-size: 11.5px;
+    color: #8fd7af;
+    margin-top: 2px;
+  }
+
+  .titleBlock small[data-empty='true'] {
+    color: #8c96a8;
+  }
+
+  .bgButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: #1b2230;
+    border: 1px solid rgba(124, 196, 155, 0.4);
+    color: #9ae0b9;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .bgButton[data-alert='true'] {
+    background: rgba(214, 183, 121, 0.14);
+    border-color: rgba(214, 183, 121, 0.55);
+    color: #f1d493;
+  }
+
+  .list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .roomCard {
+    width: 100%;
+    text-align: left;
+    padding: 14px;
+    border-radius: 18px;
+    background: #151a24;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    transition:
+      border-color 0.16s,
+      background 0.16s;
+  }
+
+  .roomCard[data-selected='true'] {
+    background: #19222d;
+    border-color: rgba(214, 183, 121, 0.58);
+  }
+
+  .roomCard[data-connected='true'] {
+    background: linear-gradient(145deg, #162923 0%, #151c25 100%);
+    border-color: rgba(124, 196, 155, 0.55);
+  }
+
+  .roomTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .roomNameRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .liveDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #7cc49b;
+    box-shadow: 0 0 8px rgba(124, 196, 155, 0.7);
+    flex-shrink: 0;
+  }
+
+  .roomName {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f4ecd9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .liveBadge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(54, 136, 98, 0.28);
+    color: #9be4bd;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+
+  .roomCount {
+    font-size: 12px;
+    color: #8f9aae;
+    flex-shrink: 0;
+  }
+
+  .peopleRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatars {
+    display: flex;
+    align-items: center;
+  }
+
+  .avatarItem {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid #151a24;
+    margin-left: -6px;
+    overflow: hidden;
+    background: #273041;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ecd7aa;
+  }
+
+  .avatarItem:first-child {
+    margin-left: 0;
+  }
+
+  .avatarItem img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .peopleNames {
+    font-size: 12.5px;
+    color: #b8c1d0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  .roomFoot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #8f9aae;
+  }
+
+  .roomCta {
+    color: #d6b779;
+    font-weight: 600;
+  }
+
+  .roomCard[data-connected='true'] .roomCta {
+    color: #9be4bd;
+  }
+
+  .sheet {
+    flex-shrink: 0;
+    padding: 16px;
+    background: #161c26;
+    border-top: 1px solid rgba(214, 183, 121, 0.36);
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sheetHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .sheetHead small {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: #d6b779;
+  }
+
+  .sheetHead strong {
+    font-size: 16px;
+    color: #f4ecd9;
+  }
+
+  .sheetClose {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #202736;
+    color: #aeb7c6;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+
+  .sheetOptions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .optionBtn {
+    min-height: 46px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #1f2634;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e4e9f2;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .optionBtn[data-muted='true'] {
+    background: rgba(145, 45, 56, 0.28);
+    border-color: rgba(214, 96, 108, 0.55);
+    color: #f8c2c7;
+  }
+
+  .joinBtn {
+    width: 100%;
+    min-height: 50px;
+    border: 0;
+    border-radius: 15px;
+    background: #277b57;
+    color: #ffffff;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(39, 123, 87, 0.35);
+  }
+
+  .joinBtn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  .emptyState {
+    padding: 28px 18px;
+    text-align: center;
+    color: #8f9aae;
+    font-size: 13px;
+  }
+}

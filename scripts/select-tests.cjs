@@ -345,6 +345,7 @@ const SLICE_RULES = [
       /^tests\/(?:android-|mobile-).*\.(?:c?js)$/i,
     ],
     core: [
+      'tests/android-background-permissions.cjs',
       'tests/android-push-registration.cjs',
       'tests/android-host.cjs',
       'tests/android-updates.cjs',

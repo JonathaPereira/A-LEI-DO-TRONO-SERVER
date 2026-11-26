@@ -5,11 +5,21 @@ import type { NotificationPayload } from '../../types/notifications';
 import { APP_RELEASE_VERSION } from '../application/release-notes';
 import { createAndroidHost } from './android-host';
 
+import type { AndroidAudioRoute, AndroidBackgroundStatus } from './background-permissions';
+
 interface NativeAndroid {
-  prepareVoice(options: { lease: string }): Promise<void>;
+  prepareVoice(options: { lease: string; roomName?: string }): Promise<void>;
   endVoice(options: { lease: string }): Promise<void>;
   permissions(): Promise<{ notifications: NotificationPermission }>;
   requestNotifications(): Promise<{ notifications: NotificationPermission }>;
+  backgroundStatus(): Promise<AndroidBackgroundStatus>;
+  requestBackgroundPermissions(): Promise<AndroidBackgroundStatus>;
+  requestBatteryExemption(): Promise<AndroidBackgroundStatus>;
+  setAudioRoute(options: { route: AndroidAudioRoute }): Promise<{
+    audioRoute: AndroidAudioRoute;
+    bluetoothAvailable?: boolean;
+  }>;
+  updateCallNotification(options: { roomName?: string; muted: boolean }): Promise<void>;
   notify(options: NotificationPayload): Promise<void>;
   readSession(): Promise<{ value: AuthSessionData | null }>;
   saveSession(options: { value: AuthSessionData | null }): Promise<void>;
@@ -35,6 +45,10 @@ interface NativeAndroid {
     event: 'updateState',
     listener: (event: unknown) => void,
   ): Promise<PluginListenerHandle>;
+  addListener(
+    event: 'callAction',
+    listener: (event: { action?: string }) => void,
+  ): Promise<PluginListenerHandle>;
 }
 const native = registerPlugin<NativeAndroid>('TronoAndroid');
 export function initializeAndroid(target: Window) {
@@ -43,11 +57,16 @@ export function initializeAndroid(target: Window) {
   let appVersion: string = APP_RELEASE_VERSION;
   const listeners = new Set<(target: unknown) => void>();
   const updateListeners = new Set<(state: unknown) => void>();
+  const callActionListeners = new Set<(action: 'toggleMute' | 'leave') => void>();
   const emit = (value: unknown) => {
     for (const listener of listeners) listener(value);
   };
   const emitUpdate = (value: unknown) => {
     for (const listener of updateListeners) listener(value);
+  };
+  const emitCallAction = (action: unknown) => {
+    if (action !== 'toggleMute' && action !== 'leave') return;
+    for (const listener of callActionListeners) listener(action);
   };
   const voice = createAndroidHost(native);
   const host = {
@@ -61,6 +80,23 @@ export function initializeAndroid(target: Window) {
       permission = (await native.requestNotifications()).notifications;
       target.dispatchEvent(new Event('trono-android-permission'));
       return permission;
+    },
+    getBackgroundStatus: () => native.backgroundStatus(),
+    async requestBackgroundPermissions() {
+      const status = await native.requestBackgroundPermissions();
+      permission = status.notifications ? 'granted' : permission;
+      target.dispatchEvent(new Event('trono-android-permission'));
+      return status;
+    },
+    requestBatteryExemption: () => native.requestBatteryExemption(),
+    setAudioRoute: (route: AndroidAudioRoute) => native.setAudioRoute({ route }),
+    updateCallNotification: (roomName: string, muted: boolean) =>
+      native.updateCallNotification({ roomName, muted }),
+    onCallAction(listener: (action: 'toggleMute' | 'leave') => void) {
+      callActionListeners.add(listener);
+      return () => {
+        callActionListeners.delete(listener);
+      };
     },
     async notify(payload: NotificationPayload) {
       await native.notify(payload);
@@ -115,12 +151,22 @@ export function initializeAndroid(target: Window) {
     .catch(console.warn);
   void native.addListener('notificationClick', (value) => emit(value.target));
   void native.addListener('updateState', (value) => emitUpdate(value));
+  void native.addListener('callAction', (value) => emitCallAction(value?.action));
 }
 export type AndroidHost = ReturnType<typeof createAndroidHost> & {
   readonly version: string;
   minimize(): Promise<void>;
   getPermission(): NotificationPermission;
   requestPermission(): Promise<NotificationPermission>;
+  getBackgroundStatus?(): Promise<AndroidBackgroundStatus>;
+  requestBackgroundPermissions?(): Promise<AndroidBackgroundStatus>;
+  requestBatteryExemption?(): Promise<AndroidBackgroundStatus>;
+  setAudioRoute?(route: AndroidAudioRoute): Promise<{
+    audioRoute: AndroidAudioRoute;
+    bluetoothAvailable?: boolean;
+  }>;
+  updateCallNotification?(roomName: string, muted: boolean): Promise<void>;
+  onCallAction?(listener: (action: 'toggleMute' | 'leave') => void): () => void;
   notify(payload: NotificationPayload): Promise<void>;
   readSession(): Promise<AuthSessionData | null>;
   saveSession(value: AuthSessionData | null): Promise<void>;

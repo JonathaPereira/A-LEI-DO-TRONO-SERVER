@@ -29,7 +29,10 @@ import { Conversation } from './conversation';
 import { useModel, useServices, type ApplicationServices } from './services';
 import { AppIcon as Icon } from './icons';
 import styles from './shell.module.css';
-import { MobileNavigation } from './mobile-navigation';
+import { MobileNavigation, type MobilePanel } from './mobile-navigation';
+import { MobileVoiceHub } from './mobile-voice-hub';
+import { MobileProfilePanel } from './mobile-profile-panel';
+import { AndroidPermissionsModal } from '../mobile/android-permissions-modal';
 import { ChristmasPromo } from './christmas-promo';
 import type { PresenceStatus } from '../../types/domain';
 import { WelcomeIntroOverlay } from './welcome-intro';
@@ -853,10 +856,14 @@ export function ApplicationShell({
       screen === 'similoScreen' ? document.getElementById('similoShellControls') : null,
     );
   }, [screen]);
-  const [drawer, setDrawer] = useState(false),
-    [members, setMembers] = useState(true);
+  const [drawer, setDrawer] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('none');
+  const [members, setMembers] = useState(true);
   const memberIdentity = session?.user?.id ?? session?.guest?.id ?? null;
-  useEffect(() => setMembers(true), [memberIdentity]);
+  useEffect(() => {
+    setMembers(!window.matchMedia('(max-width: 760px)').matches);
+    setMobilePanel('none');
+  }, [memberIdentity]);
   useEffect(() => {
     const surface = document.getElementById('gameSurface');
     if (!surface) return;
@@ -884,6 +891,10 @@ export function ApplicationShell({
         document.querySelector('dialog:modal, [popover]:popover-open, .media-maximized')
       )
         return;
+      if (mobilePanel !== 'none') {
+        setMobilePanel('none');
+        return;
+      }
       if (drawer) {
         setDrawer(false);
         return;
@@ -892,7 +903,7 @@ export function ApplicationShell({
     };
     document.addEventListener('keydown', close);
     return () => document.removeEventListener('keydown', close);
-  }, [drawer]);
+  }, [drawer, mobilePanel]);
   useEffect(() => {
     const back = () => {
       const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
@@ -907,6 +918,10 @@ export function ApplicationShell({
       }
       if (document.fullscreenElement) {
         void document.exitFullscreen();
+        return;
+      }
+      if (mobilePanel !== 'none') {
+        setMobilePanel('none');
         return;
       }
       if (drawer) {
@@ -927,16 +942,17 @@ export function ApplicationShell({
     };
     window.addEventListener('trono-android-back', back);
     return () => window.removeEventListener('trono-android-back', back);
-  }, [runtime, screen, drawer, members, entry, callNav?.page]);
+  }, [runtime, screen, drawer, members, entry, callNav?.page, mobilePanel]);
+  const mobileCallBar = Boolean(
+    (runtime?.TronoSocial.voiceJoined || runtime?.TronoSocial.voiceJoining) &&
+    !(mobilePanel === 'none' && screen === 'chatOnlyScreen' && callNav?.page === 'call'),
+  );
   return (
     <>
       <div
         className={styles.workspace}
         data-mobile-entry={entry}
-        data-mobile-call={
-          runtime?.TronoSocial.voiceJoined &&
-          !(screen === 'chatOnlyScreen' && callNav?.page === 'call')
-        }
+        data-mobile-call={mobileCallBar}
         data-members={members && !entry}
         data-call={screen === 'chatOnlyScreen' && callNav?.page === 'call'}
       >
@@ -1002,7 +1018,7 @@ export function ApplicationShell({
                 </button>
               </header>
               {runtime && (
-                <>
+                <div className={styles.banners}>
                   <ChristmasPromo
                     runtime={runtime}
                     visible={
@@ -1017,7 +1033,7 @@ export function ApplicationShell({
                     }
                   />
                   <ReleaseNotesCard runtime={runtime} visible={!entry && !game && sessionReady} />
-                </>
+                </div>
               )}
               <section
                 id="portalScreen"
@@ -1149,13 +1165,32 @@ export function ApplicationShell({
         )}
       </div>
       {runtime && !entry && (
-        <MobileNavigation
-          runtime={runtime}
-          screen={screen}
-          members={members}
-          toggleMembers={() => setMembers(!members)}
-          openChannels={() => setDrawer(!drawer)}
-        />
+        <>
+          <MobileVoiceHub
+            runtime={runtime}
+            open={mobilePanel === 'voice'}
+            hasCallBar={mobileCallBar}
+            onClose={() => setMobilePanel('none')}
+          />
+          <MobileProfilePanel
+            runtime={runtime}
+            open={mobilePanel === 'profile'}
+            hasCallBar={mobileCallBar}
+            onClose={() => setMobilePanel('none')}
+            onOpenChannels={() => setDrawer(true)}
+            onOpenMembers={() => setMembers(true)}
+          />
+          <MobileNavigation
+            runtime={runtime}
+            screen={screen}
+            panel={mobilePanel}
+            onSelectPanel={(next) => {
+              setDrawer(false);
+              setMembers(false);
+              setMobilePanel(next);
+            }}
+          />
+        </>
       )}
       {runtime && (
         <>
@@ -1165,6 +1200,7 @@ export function ApplicationShell({
           <CommunityDialogs runtime={runtime} />
           <ApplicationNotices runtime={runtime} />
           <WelcomeIntroOverlay runtime={runtime} />
+          <AndroidPermissionsModal runtime={runtime} />
         </>
       )}
     </>

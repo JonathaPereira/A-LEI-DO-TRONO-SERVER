@@ -1,15 +1,22 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import type { ParticipantView, StageSnapshot } from '../../lib/voice/stage';
 import type { CallControlId } from '../../lib/voice/toolbar';
+import {
+  audioRouteLabel,
+  type AndroidPermissionsSnapshot,
+} from '../../lib/mobile/background-permissions';
 import { CallMenu } from './call-menu';
 import { ParticipantBackground } from '../profiles/decorations';
 import { Avatar } from '../profiles/avatar';
 import { AppIcon as Icon } from './icons';
 import { useModel, type ApplicationServices } from './services';
 import styles from './call.module.css';
+
+const noopBg = () => () => {};
+const emptyBgState = (): AndroidPermissionsSnapshot | null => null;
 
 type CallHosts = {
   grid: RefObject<HTMLDivElement | null>;
@@ -158,6 +165,12 @@ export function CallSurface({
   const stage = runtime.TronoCallStage,
     state = useModel(stage),
     toolbar = useModel(runtime.TronoCallToolbar);
+  const bgGuard = runtime.TronoAndroidBackground;
+  const bgState = useSyncExternalStore(
+    bgGuard?.subscribe ?? noopBg,
+    bgGuard?.getSnapshot ?? emptyBgState,
+    emptyBgState,
+  );
   const [theater, setTheater] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
@@ -249,6 +262,15 @@ export function CallSurface({
       aria-label="Chamada da Corte"
     >
       <header className={styles.heading}>
+        <button
+          type="button"
+          className={styles.mobileBackButton}
+          aria-label="Minimizar chamada"
+          title="Voltar para conversas mantendo a chamada ativa"
+          onClick={() => runtime.TronoCallNavigation.showChat()}
+        >
+          <Icon name="chevron" size={18} />
+        </button>
         <div className={styles.headingMeta}>
           <span className={styles.eyebrow}>À MESMA MESA</span>
           <h1>{state.roomName || 'Salão da Corte'}</h1>
@@ -267,6 +289,18 @@ export function CallSurface({
           </div>
         </div>
         <div className={styles.headingActions}>
+          {bgGuard && bgState?.supported && (
+            <button
+              type="button"
+              className={styles.audioRouteButton}
+              aria-label={`Saída de áudio: ${audioRouteLabel(bgState.audioRoute)}`}
+              title="Alternar saída de áudio (Viva-voz / Auricular / Bluetooth)"
+              onClick={() => void bgGuard.cycleAudioRoute()}
+            >
+              <Icon name={bgState.audioRoute === 'bluetooth' ? 'bluetooth' : 'voice'} size={16} />
+              <span>{audioRouteLabel(bgState.audioRoute)}</span>
+            </button>
+          )}
           <button
             type="button"
             className={styles.theaterButton}
@@ -287,16 +321,21 @@ export function CallSurface({
           </button>
           {state.focused && (
             <button type="button" onClick={stage.grid}>
-              <Icon name="grid" size={16} /> Grade (Esc)
+              <Icon name="grid" size={16} /> Grade
+              <span className={styles.desktopOnlyLabel}> (Esc)</span>
             </button>
           )}
           <button
             type="button"
+            className={styles.chatToggleButton}
             aria-label={chatOpen ? 'Ocultar conversa da chamada' : 'Mostrar conversa da chamada'}
             aria-expanded={chatOpen}
             onClick={toggleChat}
           >
-            <Icon name="chat" size={17} /> Conversas (C)
+            <Icon name="chat" size={17} />
+            <span className={styles.chatToggleLabel}>
+              Conversas<span className={styles.desktopOnlyLabel}> (C)</span>
+            </span>
           </button>
           <button
             type="button"

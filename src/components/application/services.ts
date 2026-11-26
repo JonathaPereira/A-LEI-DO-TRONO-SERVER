@@ -76,6 +76,7 @@ export type ApplicationServices = Window & {
   TronoDesktopActivity?: DesktopActivityController;
   TronoDesktopUpdates?: DesktopUpdates;
   TronoAndroidUpdates?: AndroidUpdates;
+  TronoAndroidBackground?: import('../../lib/mobile/background-permissions').AndroidPermissionsGuard;
   TronoDesktopOverlay?: DesktopOverlayController;
   TronoNotifications: NotificationsController;
   TronoChatHub: { switchChannel(id: string, options?: { connectVoice?: boolean }): Promise<void> };
