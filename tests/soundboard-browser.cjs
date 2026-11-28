@@ -500,8 +500,7 @@ test(
         'mobile editor remains within the viewport and page disposal releases its own player and URL',
         async () => {
           await page.setViewportSize({ width: 390, height: 844 });
-          await page.getByRole('button', { name: 'Abrir canais', exact: true }).click();
-          await page.locator('#soundboardToggle').click();
+          await page.locator('#callSoundboardToggle').click();
           const menu = await page.locator('#soundboardDialog').boundingBox();
           assert(menu.x >= 0 && menu.x + menu.width <= 391);
           await page.locator('#soundUploadDetails summary').click();
