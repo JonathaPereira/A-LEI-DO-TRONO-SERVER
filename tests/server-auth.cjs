@@ -547,3 +547,57 @@ test('accepted profile writes and logout retain notifications after caller disco
     }
   }
 });
+
+test('cachedIdentity deduplicates concurrent reads, expires after TTL, and invalidates on logout, profile edit or manual invalidate', async (t) => {
+  let clock = Date.now();
+  t.mock.method(Date, 'now', () => clock);
+  const accessToken = token();
+  let currentProfile = profile();
+  const f = fixture({
+    fetch: async (url) => {
+      if (url.includes('/rest/v1/profiles?')) return Response.json([currentProfile]);
+    },
+  });
+  const http = await f.listen();
+  try {
+    // Concurrent lookups share a single upstream pair (/auth/v1/user + /rest/v1/profiles).
+    const [a, b] = await Promise.all([
+      f.service.cachedIdentity(accessToken),
+      f.service.cachedIdentity(accessToken),
+    ]);
+    assert.equal(a.id, id);
+    assert.equal(b.id, id);
+    assert.equal(f.calls.length, 2);
+
+    // Subsequent call within 30s TTL hits memory cache with zero upstream calls.
+    clock += 10_000;
+    const c = await f.service.cachedIdentity(accessToken);
+    assert.equal(c.nickname, 'Conta');
+    assert.equal(f.calls.length, 2);
+
+    // Manual invalidate (e.g. role change) immediately drops the cached account.
+    currentProfile = { ...currentProfile, community_role: 'admin' };
+    f.service.invalidate(id);
+    const afterRole = await f.service.cachedIdentity(accessToken);
+    assert.equal(afterRole.role, 'admin');
+    assert.equal(f.calls.length, 4);
+
+    // TTL expiration after 30s refreshes from provider.
+    clock += 31_000;
+    currentProfile = { ...currentProfile, nickname: 'Renovado' };
+    const afterTtl = await f.service.cachedIdentity(accessToken);
+    assert.equal(afterTtl.nickname, 'Renovado');
+    assert.equal(f.calls.length, 6);
+
+    // Logout immediately invalidates cached identity for that user.
+    const callsBeforeLogout = f.calls.length;
+    const logoutRes = await http.call('logout', { access: accessToken });
+    assert.equal(logoutRes.status, 200);
+    const callsAfterLogout = f.calls.length;
+    assert(callsAfterLogout > callsBeforeLogout);
+    await f.service.cachedIdentity(accessToken);
+    assert.equal(f.calls.length, callsAfterLogout + 2);
+  } finally {
+    await http.close();
+  }
+});

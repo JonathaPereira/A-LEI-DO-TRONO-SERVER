@@ -173,3 +173,44 @@ test('R2 removal keeps idempotent 404, bounded cancellation and preview/download
   assert.equal(detectMime(Buffer.from('%PDF-1.7')), 'application/pdf');
   assert.equal(detectMime(Buffer.from('<script>untrusted</script>')), 'application/octet-stream');
 });
+
+test('avatar media previews use deterministic 6-hour bucket URLs with disk-cache headers while private attachments keep 5-minute signatures', (t) => {
+  const storage = r2Adapter(env);
+  const avatarRow = {
+    kind: 'avatar',
+    object_key: 'avatar/u1/pic',
+    mime: 'image/gif',
+    name: 'anim.gif',
+  };
+  const directRow = {
+    kind: 'direct',
+    object_key: 'direct/u1/doc',
+    mime: 'image/png',
+    name: 'priv.png',
+  };
+  let nowMs = Date.parse('2026-10-21T07:10:00Z');
+  t.mock.method(Date, 'now', () => nowMs);
+  const first = storage.url(avatarRow, false);
+  nowMs = Date.parse('2026-10-21T11:55:00Z'); // Still inside 06:00-12:00 UTC bucket
+  const second = storage.url(avatarRow, false);
+  assert.equal(
+    first,
+    second,
+    'Same 6-hour window must produce an identical URL for browser disk cache',
+  );
+  const parsed = new URL(first);
+  assert.equal(parsed.searchParams.get('X-Amz-Date'), '20261021T060000Z');
+  assert.equal(parsed.searchParams.get('X-Amz-Expires'), '86400');
+  assert.equal(
+    parsed.searchParams.get('response-cache-control'),
+    'private, max-age=43200, immutable',
+  );
+
+  // Download requests and non-avatar attachments stay short-lived (300s) without immutable cache headers.
+  const downloadParsed = new URL(storage.url(avatarRow, true));
+  assert.equal(downloadParsed.searchParams.get('X-Amz-Expires'), '300');
+  assert.equal(downloadParsed.searchParams.get('response-cache-control'), null);
+  const directParsed = new URL(storage.url(directRow, false));
+  assert.equal(directParsed.searchParams.get('X-Amz-Expires'), '300');
+  assert.equal(directParsed.searchParams.get('response-cache-control'), null);
+});

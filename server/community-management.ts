@@ -27,6 +27,10 @@ interface Options<Room extends ChannelRoom> {
   db?:
     | ((path: string, method: 'POST', body: unknown, signal?: AbortSignal) => Promise<unknown>)
     | null;
+  resolveProfileMediaUrls?(
+    ids: readonly (string | null | undefined)[],
+    signal?: AbortSignal,
+  ): Promise<Record<string, { url: string; expiresAt: number }>>;
   onChanged?(): void;
   onDeleted?(room: Room): void;
   onRoleChanged?(id: string, role: 'admin' | 'member'): void;
@@ -39,6 +43,7 @@ export function createCommunityManagement<Room extends ChannelRoom>({
   rooms,
   createRoom,
   db,
+  resolveProfileMediaUrls,
   onChanged = () => {},
   onDeleted = () => {},
   onRoleChanged = () => {},
@@ -125,6 +130,8 @@ export function createCommunityManagement<Room extends ChannelRoom>({
       signal: scope.signal,
       code: 'COMMUNITY_UNAVAILABLE',
       message: 'Não foi possível atualizar a comunidade.',
+      cacheIdentityPaths: (req) =>
+        /^\/profiles\/[^/]+$/.test(req.path) || req.path === '/gif-provider',
     });
     function requirePermission(
       identity: AccountContext,
@@ -153,7 +160,20 @@ export function createCommunityManagement<Room extends ChannelRoom>({
         identity.signal,
       );
       if (!profile) throw fail('MEMBER_NOT_FOUND', 'Perfil não encontrado.', 404);
-      return { profile: readPublicProfile(profile, req.params.id) };
+      const publicProfile = readPublicProfile(profile, req.params.id);
+      const mediaIds = [
+        publicProfile.avatar_file_id,
+        publicProfile.personalization?.cover_file_id,
+        publicProfile.personalization?.background_file_id,
+      ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+      const mediaUrls =
+        resolveProfileMediaUrls && mediaIds.length > 0
+          ? await resolveProfileMediaUrls(mediaIds, identity.signal).catch(() => ({}))
+          : undefined;
+      return {
+        profile: publicProfile,
+        ...(mediaUrls && Object.keys(mediaUrls).length > 0 ? { mediaUrls } : {}),
+      };
     });
     async function readRegisteredAccountsFromAdmin(
       offset: number,

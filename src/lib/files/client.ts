@@ -30,9 +30,13 @@ interface FilesOptions {
   createUpload(): XMLHttpRequest;
   subscribeIdentity(listener: () => void): () => void;
   subscribeMessages(listener: (message: SocketMessage) => void): () => void;
+  storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   now?: () => number;
   warn?: (error: unknown) => void;
 }
+const PERSISTENT_URL_MIN_TTL_MS = 10 * 60_000;
+const PERSISTENT_URL_MAX = 150;
+const PERSISTENT_URL_PREFIX = 'mn-avatar-url-cache-v1:';
 const changed = () => new Error('A conta mudou. Tente novamente.');
 const missing = () =>
   Object.assign(new Error('Arquivo excluído ou indisponível.'), { code: 'FILE_NOT_FOUND' });
@@ -46,6 +50,7 @@ export function createFiles({
   createUpload,
   subscribeIdentity,
   subscribeMessages,
+  storage,
   now = Date.now,
   warn = console.warn,
 }: FilesOptions) {
@@ -55,6 +60,56 @@ export function createFiles({
   const pendingUrls = new Map<string, Promise<string>>();
   const uploads = new Set<() => void>();
   const listeners = new Set<() => void>();
+  function storageKey(accountId: string) {
+    return `${PERSISTENT_URL_PREFIX}${accountId}`;
+  }
+  function loadPersisted(accountId: string) {
+    if (!storage) return;
+    try {
+      const raw = storage.getItem(storageKey(accountId));
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      if (!record(parsed)) return;
+      const currentNow = now();
+      let count = 0;
+      for (const [id, value] of Object.entries(parsed)) {
+        if (count >= PERSISTENT_URL_MAX) break;
+        if (!id || Object.hasOwn(state.deleted, id)) continue;
+        try {
+          const link = readSignedUrl(value, currentNow + 30_000);
+          cache.set(`${id}:false`, link);
+          count++;
+        } catch {
+          /* Drop expired or malformed persisted entries. */
+        }
+      }
+    } catch {
+      /* Storage may be unavailable or corrupted. */
+    }
+  }
+  function savePersisted(accountId: string | null) {
+    if (!storage || !accountId) return;
+    try {
+      const currentNow = now();
+      const persisted: Record<string, { url: string; expiresAt: number }> = {};
+      const entries: [string, { url: string; expiresAt: number }][] = [];
+      for (const [key, link] of cache) {
+        if (!key.endsWith(':false')) continue;
+        if (link.expiresAt - currentNow <= PERSISTENT_URL_MIN_TTL_MS) continue;
+        entries.push([key.slice(0, -6), link]);
+      }
+      const trimmed = entries.slice(-PERSISTENT_URL_MAX);
+      if (!trimmed.length) {
+        storage.removeItem(storageKey(accountId));
+        return;
+      }
+      for (const [id, link] of trimmed)
+        persisted[id] = { url: link.url, expiresAt: link.expiresAt };
+      storage.setItem(storageKey(accountId), JSON.stringify(persisted));
+    } catch {
+      /* Ignore storage quota or privacy restrictions. */
+    }
+  }
   function update(patch: Partial<FilesSnapshot>) {
     if (disposed) return;
     state = Object.freeze({ ...state, ...patch });
@@ -74,6 +129,7 @@ export function createFiles({
       cache.clear();
       pendingUrls.clear();
       update({ accountId, moderateFiles, epoch: state.epoch + 1, deleted: Object.freeze({}) });
+      if (accountId) loadPersisted(accountId);
       for (const cancel of [...uploads]) cancel();
     } else if (state.moderateFiles !== moderateFiles) update({ moderateFiles });
   }
@@ -90,8 +146,45 @@ export function createFiles({
   }
   function markDeleted(id: string) {
     if (disposed || Object.hasOwn(state.deleted, id)) return;
-    for (const key of cache.keys()) if (key.startsWith(`${id}:`)) cache.delete(key);
+    let removed = false;
+    for (const key of cache.keys())
+      if (key.startsWith(`${id}:`)) {
+        cache.delete(key);
+        removed = true;
+      }
+    if (removed) savePersisted(state.accountId);
     update({ deleted: Object.freeze({ ...state.deleted, [id]: true }) });
+  }
+  function peekUrl(id: string | null | undefined, download = false): string | null {
+    syncIdentity();
+    if (disposed || !state.accountId || !id || Object.hasOwn(state.deleted, id)) return null;
+    const key = `${id}:${download}`,
+      entry = cache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt > now() + 30000) return entry.url;
+    cache.delete(key);
+    return null;
+  }
+  function primeUrls(entries: unknown) {
+    syncIdentity();
+    if (disposed || !state.accountId || !record(entries)) return;
+    const currentNow = now();
+    let persistNeeded = false;
+    for (const [id, raw] of Object.entries(entries)) {
+      if (!id || Object.hasOwn(state.deleted, id)) continue;
+      try {
+        const link = readSignedUrl(raw, currentNow + 30000);
+        const key = `${id}:false`;
+        const existing = cache.get(key);
+        if (!existing || link.expiresAt > existing.expiresAt) {
+          cache.set(key, link);
+          if (link.expiresAt - currentNow > PERSISTENT_URL_MIN_TTL_MS) persistNeeded = true;
+        }
+      } catch {
+        /* Ignore invalid or expired primed URLs. */
+      }
+    }
+    if (persistNeeded) savePersisted(state.accountId);
   }
   async function api(
     path: string,
@@ -151,8 +244,11 @@ export function createFiles({
         const data = await api(`/${encodeURIComponent(id)}/url${download ? '?download=1' : ''}`);
         assertCurrent(scope);
         if (Object.hasOwn(state.deleted, id)) throw missing();
-        const link = readSignedUrl(data, now());
+        const currentNow = now();
+        const link = readSignedUrl(data, currentNow);
         cache.set(key, link);
+        if (!download && link.expiresAt - currentNow > PERSISTENT_URL_MIN_TTL_MS)
+          savePersisted(scope.accountId);
         return link.url;
       } catch (error) {
         assertCurrent(scope);
@@ -282,6 +378,8 @@ export function createFiles({
   return {
     api,
     url,
+    peekUrl,
+    primeUrls,
     upload,
     remove,
     size: formatFileSize,

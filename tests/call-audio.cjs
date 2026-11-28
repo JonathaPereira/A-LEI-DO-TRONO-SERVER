@@ -152,7 +152,7 @@ async function alertsSetup(t, stored = {}, overrides = {}) {
   };
 }
 
-test('microphone context is lazy and reused across call entry/exit with interactive low latency', async (t) => {
+test('microphone context is lazy and reused across call entry/exit with safe desktop latency margin', async (t) => {
   const h = await audioSetup(t);
   assert.equal(h.contexts.length, 0);
   const ctx = h.audio.ensureContext();
@@ -160,7 +160,7 @@ test('microphone context is lazy and reused across call entry/exit with interact
   h.settings.generation++;
   h.settings.joined = true;
   assert.equal(h.audio.ensureContext(), ctx);
-  assert.deepEqual(h.parameters, [{ latencyHint: 'interactive', sampleRate: 48000 }]);
+  assert.deepEqual(h.parameters, [{ latencyHint: 0.04, sampleRate: 48000 }]);
   assert.equal(ctx.closes, 0);
 });
 test('web context retains interactive latency and unsupported/failed creation can retry', async (t) => {

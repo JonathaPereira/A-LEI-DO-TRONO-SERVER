@@ -27,8 +27,10 @@ export function useFileUrl(id: string | null | undefined, enabled = true) {
   const [result, setResult] = useState<{ key: string; url?: string; error?: string } | null>(null);
   const deleted = !!id && Object.hasOwn(state.deleted, id);
   const key = `${state.epoch}:${id}`;
+  const cachedUrl =
+    client && state.accountId && id && enabled && !deleted ? client.peekUrl(id) : null;
   useEffect(() => {
-    if (!client || !state.accountId || !id || !enabled || deleted) return;
+    if (!client || !state.accountId || !id || !enabled || deleted || cachedUrl) return;
     let active = true;
     void client.url(id).then(
       (url) => {
@@ -45,6 +47,7 @@ export function useFileUrl(id: string | null | undefined, enabled = true) {
     return () => {
       active = false;
     };
-  }, [client, state.accountId, id, enabled, deleted, key]);
+  }, [client, state.accountId, id, enabled, deleted, key, cachedUrl]);
+  if (cachedUrl) return { key, url: cachedUrl };
   return state.accountId && enabled && !deleted && result?.key === key ? result : null;
 }

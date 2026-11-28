@@ -377,3 +377,59 @@ test('avatar presets and file IDs cannot inject arbitrary markup or inherited pr
     '20000000-0000-4000-8000-000000000001',
   );
 });
+
+test('primeUrls and peekUrl resolve synchronously and persist only long-lived non-download URLs scoped per account', async (t) => {
+  const { createFiles } = await modulePromise;
+  const backing = new Map();
+  const storage = {
+    getItem: (k) => backing.get(k) ?? null,
+    setItem: (k, v) => backing.set(k, v),
+    removeItem: (k) => backing.delete(k),
+  };
+  let account = { id: 'a', permissions: { moderateFiles: false } };
+  let now = 10_000;
+  const requests = [];
+  const makeClient = () =>
+    createFiles({
+      backendHttp: 'https://backend.test',
+      getAccount: () => account,
+      getAccessToken: async () => 'token-a',
+      fetch: async (url) => {
+        requests.push(url);
+        return response({ url: 'https://files.test/short', expiresAt: now + 300_000 });
+      },
+      createUpload: () => ({}),
+      subscribeIdentity: () => () => {},
+      subscribeMessages: () => () => {},
+      storage,
+      now: () => now,
+    });
+  const first = makeClient();
+  t.after(() => first.dispose());
+
+  // Short-lived (5-minute) attachment URL is cached in memory only, never persisted to storage.
+  assert.equal(await first.url('chat-1'), 'https://files.test/short');
+  assert.equal(first.peekUrl('chat-1'), 'https://files.test/short');
+
+  // Long-lived avatar URL (> 10min TTL) primed from profile response resolves synchronously and persists across restarts.
+  first.primeUrls({
+    'avatar-1': { url: 'https://files.test/avatar-1', expiresAt: now + 12 * 3600_000 },
+  });
+  assert.equal(first.peekUrl('avatar-1'), 'https://files.test/avatar-1');
+  assert.equal(await first.url('avatar-1'), 'https://files.test/avatar-1');
+  assert.equal(requests.length, 1);
+
+  // Fresh client instance (simulating app restart) restores avatar-1 synchronously with zero network calls, never chat-1.
+  const restarted = makeClient();
+  t.after(() => restarted.dispose());
+  assert.equal(restarted.peekUrl('avatar-1'), 'https://files.test/avatar-1');
+  assert.equal(restarted.peekUrl('chat-1'), null);
+  assert.equal(await restarted.url('avatar-1'), 'https://files.test/avatar-1');
+  assert.equal(requests.length, 1);
+
+  // Switching account does not leak account A's persisted avatar URLs to account B.
+  account = { id: 'b', permissions: { moderateFiles: false } };
+  const other = makeClient();
+  t.after(() => other.dispose());
+  assert.equal(other.peekUrl('avatar-1'), null);
+});

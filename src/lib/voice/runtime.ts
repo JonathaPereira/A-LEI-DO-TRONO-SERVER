@@ -143,6 +143,13 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     },
     subscriptions: () => sfuSubscriptions.values(),
     setLayer: (key, rid) => sfuSession.setLayer(key, rid),
+    mobile: () =>
+      Boolean(window.TronoAndroid) ||
+      (!window.TronoDesktop &&
+        ((typeof window.matchMedia === 'function' &&
+          window.matchMedia('(pointer: coarse)').matches &&
+          Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 900) ||
+          /Android|iPhone|iPad|iPod|Mobile/i.test(navigator?.userAgent || ''))),
   });
 
   const meId = () => window.TronoNetwork?.clientId;
@@ -331,7 +338,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     createStream: (track) => new MediaStream([track]),
     createContext: () => {
       const Ctx = window.AudioContext || window.webkitAudioContext;
-      return Ctx ? new Ctx({ latencyHint: 'interactive', sampleRate: 48000 }) : null;
+      return Ctx ? new Ctx({ latencyHint: 0.04, sampleRate: 48000 }) : null;
     },
     onChange: updateAudioRecoveryUI,
     onBlocked: () => setStatus('Áudio recebido. Toque em Liberar áudio para ouvir.', 'warn'),

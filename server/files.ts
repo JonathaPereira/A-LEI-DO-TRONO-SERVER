@@ -21,7 +21,7 @@ import {
   publicFile,
 } from './files-protocol.ts';
 import { createStorageDatabase } from './storage-database.ts';
-import { r2Adapter } from './storage-r2.ts';
+import { r2Adapter, avatarUrlWindow } from './storage-r2.ts';
 import {
   detectMime,
   peek,
@@ -97,6 +97,37 @@ export function createFiles({
     return value;
   }
   let cleaning = false;
+  function signedLink(row: StoredFile, download = false) {
+    return {
+      url: r2.url(row, download),
+      expiresAt:
+        row.kind === 'avatar' && !download ? avatarUrlWindow().expiresAt : Date.now() + 300000,
+    };
+  }
+  async function resolveProfileMediaUrls(
+    ids: readonly (string | null | undefined)[],
+    signal?: AbortSignal,
+  ): Promise<Record<string, { url: string; expiresAt: number }>> {
+    if (!configured || lifetime.signal.aborted) return {};
+    const unique = [
+      ...new Set(ids.filter((value): value is string => typeof value === 'string' && uuid(value))),
+    ].slice(0, 16);
+    if (!unique.length) return {};
+    const allowed = new Set(unique);
+    const rows = readFilePage(
+      await db(
+        `chat_files?id=in.(${unique.join(',')})&kind=eq.avatar&state=eq.ready`,
+        'GET',
+        undefined,
+        signal,
+      ),
+      unique.length,
+      (row) => row.kind === 'avatar' && row.state === 'ready' && allowed.has(row.id),
+    );
+    const out: Record<string, { url: string; expiresAt: number }> = {};
+    for (const row of rows) out[row.id] = signedLink(row, false);
+    return out;
+  }
   async function lookup(id: string, signal?: AbortSignal) {
     if (!uuid(id)) throw error('FILE_NOT_FOUND', 'Arquivo não encontrado.', 404);
     const row = readSingleFile(
@@ -237,7 +268,11 @@ export function createFiles({
       res.once('close', close);
       try {
         const token = auth.tokenFrom(req),
-          account = await auth.identity(token, signal);
+          resolveIdentity =
+            req.method === 'GET' && /^\/[^/]+\/url$/.test(req.path) && auth.cachedIdentity
+              ? auth.cachedIdentity
+              : auth.identity,
+          account = await resolveIdentity(token, signal);
         if (signal.aborted) throw storageUnavailable();
         contexts.set(req, { token, account, signal });
         next();
@@ -352,7 +387,7 @@ export function createFiles({
         !membership(context(req).account.id, row.room_id || '')
       )
         throw error('FILE_FORBIDDEN', 'Entre no canal desse anexo para acessá-lo.', 403);
-      return { url: r2.url(row, req.query.download === '1'), expiresAt: Date.now() + 300000 };
+      return signedLink(row, req.query.download === '1');
     });
     route('delete', '/:id', async (req) => {
       const row = await lookup(req.params.id, context(req).signal);
@@ -546,6 +581,7 @@ export function createFiles({
     attachment,
     directAttachment,
     sound,
+    resolveProfileMediaUrls,
     health: () => ({
       configured,
       limits: LIMITS,

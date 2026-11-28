@@ -24,6 +24,7 @@ export function installAccountApi({
   bodyLimit = '8kb',
   methods = 'GET, POST, DELETE, OPTIONS',
   parseBodyBeforeAuth = false,
+  cacheIdentityPaths,
 }: {
   app: Express;
   express: Pick<typeof import('express'), 'json'>;
@@ -35,6 +36,7 @@ export function installAccountApi({
   bodyLimit?: string;
   methods?: string;
   parseBodyBeforeAuth?: boolean;
+  cacheIdentityPaths?: (req: ApiRequest) => boolean;
 }) {
   const contexts = new WeakMap<ApiRequest, AccountContext>();
   const unavailable = () => apiError(code, message, 503);
@@ -108,7 +110,11 @@ export function installAccountApi({
     res.once('finish', cleanup);
     try {
       const token = auth.tokenFrom(req),
-        account = await auth.identity(token, current);
+        resolveIdentity =
+          req.method === 'GET' && cacheIdentityPaths?.(req) && auth.cachedIdentity
+            ? auth.cachedIdentity
+            : auth.identity,
+        account = await resolveIdentity(token, current);
       if (current.aborted) throw unavailable();
       contexts.set(req, { token, account, signal: current });
       next();

@@ -1,5 +1,8 @@
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
+import { initializeFiles } from '../../lib/files/browser';
+import type { FilesRuntime } from '../../lib/files/browser';
+import type { FilesClient } from '../../lib/files/client';
 import { createProfiles } from '../../lib/profiles/client';
 import type { ProfilesClient } from '../../lib/profiles/client';
 import { createProfileViewer } from '../../lib/profiles/viewer';
@@ -9,6 +12,7 @@ import type { NetworkAccount } from '../../types/network';
 import { MemberProfileDialog } from './member-profile-dialog';
 
 interface ProfileRuntime extends Window {
+  TronoFiles?: FilesClient;
   TronoProfiles?: ProfilesClient;
   TronoProfileViewer?: ProfileViewer;
   TronoAuth?: {
@@ -37,6 +41,8 @@ export function initializeProfileViewer(target: Window, { mount = true } = {}): 
     subscribeIdentity: (listener) => listen(['trono-auth-change', 'trono-role-change'], listener),
     subscribeMessages: runtime.TronoNetwork.onMessage,
     subscribeProfileChange: (listener) => listen(['trono-profile-change'], listener),
+    primeFileUrls: (entries) =>
+      (runtime.TronoFiles ?? initializeFiles(target as FilesRuntime)).primeUrls(entries),
   }));
   const viewer = createProfileViewer({
     client,

@@ -662,13 +662,21 @@ test('Slice 4: CallQuality.applySender computes hardware-safe scaleResolutionDow
     const scale = applied[0].encodings[0].scaleResolutionDownBy;
     const outW = Math.floor(source.width / scale);
     const outH = Math.floor(source.height / scale);
-    assert.equal(outW % 2, 0, `Scaled width ${outW} for ${source.width}x${source.height} must be even`);
-    assert.equal(outH % 2, 0, `Scaled height ${outH} for ${source.width}x${source.height} must be even`);
+    assert.equal(
+      outW % 2,
+      0,
+      `Scaled width ${outW} for ${source.width}x${source.height} must be even`,
+    );
+    assert.equal(
+      outH % 2,
+      0,
+      `Scaled height ${outH} for ${source.width}x${source.height} must be even`,
+    );
     assert.ok(outW <= 1920 && outH <= 1080);
   }
 });
 
-test('Slice 5: CallAudio uses interactive latencyHint on desktop and VoiceReception starts on native NetEq (null) instead of forcing a 60-140ms voice delay floor', async () => {
+test('Slice 5: CallAudio uses 0.04 latencyHint on desktop and VoiceReception protects audio with 60-140ms jitter buffer floor', async () => {
   const { createCallAudio } = await import('../src/lib/voice/call-audio.ts');
   const { VoiceReception } = await import('../src/lib/voice/reception-policy.ts');
 
@@ -691,7 +699,7 @@ test('Slice 5: CallAudio uses interactive latencyHint on desktop and VoiceRecept
     onChange() {},
   });
   callAudio.ensureContext();
-  assert.deepEqual(createdOptions, [{ latencyHint: 'interactive', sampleRate: 48000 }]);
+  assert.deepEqual(createdOptions, [{ latencyHint: 0.04, sampleRate: 48000 }]);
   callAudio.dispose();
 
   const reception = new VoiceReception(true);
@@ -700,8 +708,7 @@ test('Slice 5: CallAudio uses interactive latencyHint on desktop and VoiceRecept
     jitterBufferTarget: null,
   };
   reception.add(voiceReceiver);
-  // Healthy voice calls start on native WebRTC NetEq (null) instead of forcing 60ms delay!
-  assert.equal(voiceReceiver.jitterBufferTarget, null);
+  assert.equal(voiceReceiver.jitterBufferTarget, 60);
 
   const makeStats = (n, concealed = 0) => ({
     packetsReceived: n * 100,
@@ -714,26 +721,26 @@ test('Slice 5: CallAudio uses interactive latencyHint on desktop and VoiceRecept
   });
 
   assert.equal(reception.sample(voiceReceiver, makeStats(1, 0), 0), null);
-  // Severe concealment (>4%) steps up gently to 60ms, then 100ms max (never 140ms)
+  assert.equal(voiceReceiver.jitterBufferTarget, 60);
+  // Concealment >= 2% steps up to 100ms, then 140ms ceiling
   reception.sample(voiceReceiver, makeStats(2, 4000), 5000);
-  assert.equal(voiceReceiver.jitterBufferTarget, 60);
+  assert.equal(voiceReceiver.jitterBufferTarget, 100);
   reception.sample(voiceReceiver, makeStats(3, 8000), 16000);
-  assert.equal(voiceReceiver.jitterBufferTarget, 100);
+  assert.equal(voiceReceiver.jitterBufferTarget, 140);
   reception.sample(voiceReceiver, makeStats(4, 12000), 27000);
-  assert.equal(voiceReceiver.jitterBufferTarget, 100);
+  assert.equal(voiceReceiver.jitterBufferTarget, 140);
 
-  // Recovers back to native NetEq (null) in 20s steps instead of staying stuck for 2 minutes
+  // Recovers back to 60ms floor in 60s healthy steps
   reception.sample(voiceReceiver, makeStats(5, 12000), 30000);
-  reception.sample(voiceReceiver, makeStats(6, 12000), 50000);
+  reception.sample(voiceReceiver, makeStats(6, 12000), 90000);
+  assert.equal(voiceReceiver.jitterBufferTarget, 100);
+  reception.sample(voiceReceiver, makeStats(7, 12000), 150000);
   assert.equal(voiceReceiver.jitterBufferTarget, 60);
-  reception.sample(voiceReceiver, makeStats(7, 12000), 70000);
-  assert.equal(voiceReceiver.jitterBufferTarget, null);
 });
 
 test('Slice 6: createViewerFpsMeter measures real viewer rendered FPS via requestVideoFrameCallback, drops to 0 FPS when frames pause, falls back to getVideoPlaybackQuality, and cleans up on dispose', async () => {
-  const { createViewerFpsMeter, formatViewerFpsBadge } = await import(
-    '../src/lib/voice/viewer-fps-meter.ts'
-  );
+  const { createViewerFpsMeter, formatViewerFpsBadge } =
+    await import('../src/lib/voice/viewer-fps-meter.ts');
 
   let nowMs = 1000;
   let nextHandle = 1;
@@ -827,4 +834,74 @@ test('Slice 6: createViewerFpsMeter measures real viewer rendered FPS via reques
   assert.deepEqual(fbUpdates.at(-1), { fps: 30, width: 1280, height: 720 });
   assert.equal(formatViewerFpsBadge(fbUpdates.at(-1)), '720p · 30 FPS');
   fbMeter.dispose();
+});
+
+test('auto screen codec avoids software OpenH264 on standard desktop Electron and when unprobed', async () => {
+  const { detectHardwareScreenCodec, prioritizeScreenCodec, resetHardwareScreenCodecCache } =
+    await import('../src/lib/voice/sfu-encoding.ts');
+  const originalSender = globalThis.RTCRtpSender;
+  const originalWindow = globalThis.window;
+  try {
+    globalThis.RTCRtpSender = {
+      getCapabilities: () => ({
+        codecs: [
+          { mimeType: 'video/VP8', clockRate: 90000 },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=96' },
+          {
+            mimeType: 'video/H264',
+            clockRate: 90000,
+            sdpFmtpLine: 'level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640032',
+          },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=102' },
+          { mimeType: 'video/VP9', clockRate: 90000, sdpFmtpLine: 'profile-id=0' },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=98' },
+          { mimeType: 'video/AV1', clockRate: 90000 },
+          { mimeType: 'video/rtx', clockRate: 90000, sdpFmtpLine: 'apt=45' },
+        ],
+      }),
+    };
+
+    // Unprobed auto (no cached hardware confirmation) must prefer VP9 instead of guessing H264 from SDP capabilities.
+    resetHardwareScreenCodecCache();
+    let unprobed = null;
+    assert.equal(
+      prioritizeScreenCodec({ setCodecPreferences: (c) => (unprobed = c) }, 'auto'),
+      true,
+    );
+    assert.equal(unprobed[0].mimeType, 'video/VP9');
+
+    // Standard desktop Electron (TronoDesktop without hardwareH264 flag) must skip H264 even if encodingInfo claims powerEfficient for H264,
+    // picking AV1 when HW AV1 exists or VP9 otherwise (never OpenH264).
+    globalThis.window = { TronoDesktop: { version: '2.3.2' } };
+    resetHardwareScreenCodecCache();
+    const electronRtx30 = await detectHardwareScreenCodec({
+      async encodingInfo(cfg) {
+        const ct = cfg.video?.contentType || '';
+        return {
+          supported: true,
+          smooth: true,
+          powerEfficient: ct.includes('H264'),
+        };
+      },
+    });
+    assert.equal(electronRtx30, 'vp9');
+
+    resetHardwareScreenCodecCache();
+    const electronRtx40 = await detectHardwareScreenCodec({
+      async encodingInfo(cfg) {
+        const ct = cfg.video?.contentType || '';
+        return {
+          supported: true,
+          smooth: true,
+          powerEfficient: ct.includes('AV1') || ct.includes('H264'),
+        };
+      },
+    });
+    assert.equal(electronRtx40, 'av1');
+  } finally {
+    resetHardwareScreenCodecCache();
+    globalThis.RTCRtpSender = originalSender;
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
 });

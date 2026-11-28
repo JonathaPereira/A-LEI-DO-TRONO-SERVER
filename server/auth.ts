@@ -1,7 +1,9 @@
+import crypto from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import type { Express, Response, NextFunction } from 'express';
 import type { ApiRequest } from './http-api';
 import type { BackendAccount } from './auth-contract';
+import { withAbort } from './abortable.ts';
 import { cleanProfile } from './profile-customization.ts';
 import { passwordChecks, validPassword } from '../src/lib/auth/password.ts';
 import { validNickname } from '../src/lib/auth/nickname.ts';
@@ -200,6 +202,22 @@ export function createAuth({
     if (!m) throw authError('AUTH_REQUIRED', 'Entre na sua conta para continuar.', 401);
     return m[1];
   }
+  const IDENTITY_CACHE_TTL_MS = 30_000;
+  const IDENTITY_CACHE_MAX = 500;
+  const identityCache = new Map<string, { account: BackendAccount; expiresAt: number }>();
+  const pendingIdentity = new Map<string, Promise<BackendAccount>>();
+  let cacheEpoch = 0;
+  const tokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
+  function invalidate(userId?: string) {
+    cacheEpoch++;
+    if (!userId) {
+      identityCache.clear();
+      pendingIdentity.clear();
+      return;
+    }
+    for (const [key, entry] of identityCache)
+      if (entry.account.id === userId) identityCache.delete(key);
+  }
   async function identity(token: string, signal?: AbortSignal): Promise<BackendAccount> {
     if (!validToken(token))
       throw authError('AUTH_REQUIRED', 'Entre na sua conta para continuar.', 401);
@@ -213,6 +231,42 @@ export function createAuth({
       user.id,
     );
     return verifiedAccount(user, profile, readSessionClaims(token, user.id));
+  }
+  async function cachedIdentity(token: string, signal?: AbortSignal): Promise<BackendAccount> {
+    if (!validToken(token))
+      throw authError('AUTH_REQUIRED', 'Entre na sua conta para continuar.', 401);
+    if (signal?.aborted) throw authUnavailable();
+    const key = tokenHash(token);
+    const currentNow = now();
+    const cached = identityCache.get(key);
+    if (cached) {
+      if (cached.expiresAt > currentNow && cached.account.expiresAt > currentNow)
+        return cached.account;
+      identityCache.delete(key);
+    }
+    let work = pendingIdentity.get(key);
+    if (!work) {
+      const startedEpoch = cacheEpoch;
+      work = identity(token, lifetime.signal)
+        .then((account) => {
+          if (!lifetime.signal.aborted && cacheEpoch === startedEpoch) {
+            const ttlExpires = Math.min(now() + IDENTITY_CACHE_TTL_MS, account.expiresAt);
+            if (ttlExpires > now()) {
+              if (identityCache.size >= IDENTITY_CACHE_MAX) {
+                const oldest = identityCache.keys().next().value;
+                if (oldest !== undefined) identityCache.delete(oldest);
+              }
+              identityCache.set(key, { account, expiresAt: ttlExpires });
+            }
+          }
+          return account;
+        })
+        .finally(() => {
+          if (pendingIdentity.get(key) === work) pendingIdentity.delete(key);
+        });
+      pendingIdentity.set(key, work);
+    }
+    return signal ? withAbort(work, signal) : work;
   }
   async function sessionPayload(data: unknown, signal: AbortSignal) {
     const credentials = readCredentials(data),
@@ -451,6 +505,7 @@ export function createAuth({
           token = tokenFrom(req),
           account = await identity(token, signal);
         await upstream('/auth/v1/user', { method: 'PUT', token, body: { password } });
+        invalidate(account.id);
         onRevoke({ userId: account.id, all: true });
         await upstream('/auth/v1/logout?scope=global', { method: 'POST', token });
         return { message: 'Senha atualizada. Entre novamente com a nova senha.' };
@@ -503,6 +558,7 @@ export function createAuth({
             body: { p_nickname: nickname, p_preset: preset, p_file: file },
           });
         const user = await identity(token, lifetime.signal);
+        invalidate(user.id);
         onProfileChange(user);
         return { user: publicAccount(user) };
       },
@@ -513,6 +569,7 @@ export function createAuth({
       const token = tokenFrom(req),
         account = await identity(token, signal);
       await upstream('/auth/v1/logout?scope=local', { method: 'POST', token });
+      invalidate(account.id);
       onRevoke({ userId: account.id, sessionId: account.sessionId, all: !account.sessionId });
       return { ok: true };
     });
@@ -524,6 +581,7 @@ export function createAuth({
   return {
     stop() {
       if (lifetime.signal.aborted) return;
+      invalidate();
       lifetime.abort();
       if (ownsLimiter) void limiter.stop();
     },
@@ -532,6 +590,8 @@ export function createAuth({
     health,
     keepalive,
     identity,
+    cachedIdentity,
+    invalidate,
     install,
     allowedOrigins,
     tokenFrom,

@@ -6,10 +6,17 @@ import type { FilesClient } from './client.ts';
 export interface FilesRuntime
   extends NetworkRuntime, Pick<Window, 'addEventListener' | 'removeEventListener'> {
   TronoFiles?: FilesClient;
+  localStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 }
 export function initializeFiles(runtime: FilesRuntime): FilesClient {
   if (runtime.TronoFiles) return runtime.TronoFiles;
   const network = initializeNetwork(runtime);
+  let storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | undefined;
+  try {
+    storage = runtime.localStorage;
+  } catch {
+    storage = undefined;
+  }
   const client = createFiles({
     backendHttp: network.BACKEND_HTTP,
     getAccount: () => runtime.TronoAuth?.user ?? null,
@@ -25,6 +32,7 @@ export function initializeFiles(runtime: FilesRuntime): FilesClient {
       };
     },
     subscribeMessages: network.onMessage,
+    storage,
   });
   runtime.TronoFiles = client;
   return client;

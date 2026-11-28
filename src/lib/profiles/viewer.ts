@@ -57,13 +57,22 @@ export function createProfileViewer({ client, openMessage, warn }: ProfileViewer
     controller?.abort();
     controller = new AbortController();
     currentId = id;
-    update({ open: true, full, loading: true, profile: null, message: '', canMessage: false });
+    const cached = client.peekProfile?.(id) ?? null;
+    update({
+      open: true,
+      full,
+      loading: !cached,
+      profile: cached,
+      message: '',
+      canMessage: cached ? id !== client.getSnapshot().accountId : false,
+    });
     try {
       const profile = await client.readProfile(id, { signal: controller.signal });
       if (disposed || operation !== sequence || !state.open) return;
       update({ loading: false, profile, canMessage: id !== client.getSnapshot().accountId });
     } catch (error) {
       if (disposed || operation !== sequence || !state.open) return;
+      if (cached) return;
       update({
         loading: false,
         message: error instanceof Error ? error.message : 'Não foi possível carregar o perfil.',

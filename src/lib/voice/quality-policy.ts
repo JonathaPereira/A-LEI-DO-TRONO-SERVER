@@ -120,13 +120,20 @@ export class CallStability {
           (s.retransmittedPackets ?? 0) >= 10 &&
           ((s.retransmittedPackets ?? 0) / (s.packetsDelta ?? 1)) * 100 >= 5,
       );
+    const bandwidthCongested =
+      t.limiter === 'bandwidth' &&
+      ((t.lossPct ?? 0) >= 2 ||
+        (t.audioLossPct ?? 0) >= 2 ||
+        (t.rttMs ?? 0) >= 180 ||
+        (t.video || []).some((v) => (v.sendDelayMs ?? 0) >= 40) ||
+        (t.streams || []).some((s) => s.direction === 'outbound' && (s.sendDelayMs ?? 0) >= 40));
     const network =
       (t.audioLossPct ?? 0) >= 5 ||
       (t.lossPct ?? 0) >= 5 ||
       highRetransmit ||
       (t.audioJitterMs ?? 0) >= 70 ||
       (t.rttMs ?? 0) >= 350 ||
-      t.limiter === 'bandwidth' ||
+      bandwidthCongested ||
       videoFreeze;
     const stepDownDelay = videoFreeze ? 6000 : 12000;
     if (cpu || network) {

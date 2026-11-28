@@ -23,6 +23,8 @@ export function cameraEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
   ];
 }
 export function screenEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
+  const hScale = q.screen.width >= 1920 ? 1.5 : 2;
+  const hBitrate = Math.min(3_000_000, Math.max(1_200_000, Math.round(q.screenBitrate * 0.35)));
   return [
     {
       rid: 'f',
@@ -33,15 +35,9 @@ export function screenEncodings(q: SfuSettings): RTCRtpEncodingParameters[] {
     },
     {
       rid: 'h',
-      scaleResolutionDownBy: 2,
-      maxBitrate: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
+      scaleResolutionDownBy: hScale,
+      maxBitrate: hBitrate,
       maxFramerate: Math.min(q.screen.fps, 30),
-    },
-    {
-      rid: 'q',
-      scaleResolutionDownBy: 4,
-      maxBitrate: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
-      maxFramerate: Math.min(q.screen.fps, 20),
     },
   ];
 }
@@ -191,16 +187,26 @@ export async function detectHardwareScreenCodec(
           ? (navigator.mediaCapabilities as unknown as EncodingCapabilitiesLike)
           : null;
     if (typeof mc?.encodingInfo === 'function') {
+      const desktopBridge =
+        typeof window !== 'undefined'
+          ? (window as { TronoDesktop?: { hardwareH264?: boolean } }).TronoDesktop
+          : undefined;
+      // Standard desktop Electron ships without proprietary H.264 HW encode and falls back to OpenH264.
+      const skipSoftwareElectronH264 = Boolean(desktopBridge) && !desktopBridge?.hardwareH264;
       const candidates: readonly [Exclude<ScreenCodec, 'auto'>, readonly string[]][] = [
         ['av1', ['video/AV1']],
-        [
-          'h264',
-          [
-            'video/H264; profile-level-id=640032; packetization-mode=1',
-            'video/H264; profile-level-id=64002a; packetization-mode=1',
-            'video/H264; profile-level-id=42e02a; packetization-mode=1',
-          ],
-        ],
+        ...(skipSoftwareElectronH264
+          ? ([] as readonly [Exclude<ScreenCodec, 'auto'>, readonly string[]][])
+          : ([
+              [
+                'h264',
+                [
+                  'video/H264; profile-level-id=640032; packetization-mode=1',
+                  'video/H264; profile-level-id=64002a; packetization-mode=1',
+                  'video/H264; profile-level-id=42e02a; packetization-mode=1',
+                ],
+              ],
+            ] as readonly [Exclude<ScreenCodec, 'auto'>, readonly string[]][])),
         ['vp9', ['video/VP9; profile-id=0', 'video/VP9']],
       ];
       for (const [codec, contentTypes] of candidates) {
@@ -276,13 +282,7 @@ export function prioritizeScreenCodec(
     };
 
     if (codec === 'auto') {
-      const hasHighH264 = groups.some(
-        (g) =>
-          g[0].mimeType?.toLowerCase() === 'video/h264' &&
-          /profile-level-id=64/i.test(g[0].sdpFmtpLine || ''),
-      );
-      const preferredAuto =
-        resolvedAutoCodec ?? cachedHardwareCodec ?? (hasHighH264 ? 'h264' : 'vp9');
+      const preferredAuto = resolvedAutoCodec ?? cachedHardwareCodec ?? 'vp9';
       const autoMimeOrder =
         preferredAuto === 'av1'
           ? ['video/av1', 'video/h264', 'video/vp9', 'video/vp8']

@@ -49,6 +49,7 @@ function fixture(ports = {}) {
         expiresAt: Date.now() + 60000,
       };
     },
+    ...(ports.cachedIdentity ? { cachedIdentity: ports.cachedIdentity } : {}),
     async request(...args) {
       calls.push(args);
       return ports.request ? ports.request(...args) : [row()];
@@ -57,6 +58,9 @@ function fixture(ports = {}) {
   const service = createCommunityManagement({
     auth,
     rooms,
+    ...(ports.resolveProfileMediaUrls
+      ? { resolveProfileMediaUrls: ports.resolveProfileMediaUrls }
+      : {}),
     createRoom(channel) {
       const room = { id: channel.id, kind: 'chat', players: new Map(), marker: {} };
       created.push(room);
@@ -423,6 +427,68 @@ test('an accepted channel deletion still synchronizes borrowed rooms after its H
   } finally {
     gate.resolve();
     controller.abort();
+    await server.close();
+  }
+});
+
+test('GET /profiles/:id uses cachedIdentity and returns inline mediaUrls while privileged routes still verify fresh identity', async () => {
+  const avatarId = '20000000-0000-4000-8000-000000000021';
+  const coverId = '20000000-0000-4000-8000-000000000022';
+  let freshCalls = 0,
+    cachedCalls = 0,
+    resolvedIds = null;
+  const f = fixture({
+    identity: async () => {
+      freshCalls++;
+      return { id, nickname: 'Conta', role: 'creator', expiresAt: Date.now() + 60000 };
+    },
+    cachedIdentity: async () => {
+      cachedCalls++;
+      return { id, nickname: 'Conta', role: 'member', expiresAt: Date.now() + 60000 };
+    },
+    resolveProfileMediaUrls: async (ids) => {
+      resolvedIds = ids;
+      return {
+        [avatarId]: { url: 'https://objects.test/avatar', expiresAt: Date.now() + 3600_000 },
+        [coverId]: { url: 'https://objects.test/cover', expiresAt: Date.now() + 3600_000 },
+      };
+    },
+    request: async (_token, path) => {
+      if (path.endsWith('read_member_profile')) {
+        return {
+          id,
+          nickname: 'Perfil Rápido',
+          avatar_preset: 'crown',
+          avatar_file_id: avatarId,
+          created_at: '2026-10-01T12:00:00Z',
+          personalization: { cover_file_id: coverId },
+        };
+      }
+      if (path.endsWith('creator_registered_accounts')) return [];
+      return [row()];
+    },
+  });
+  const server = await f.listen();
+  try {
+    const profileRes = await server.call(`/profiles/${id}`, { method: 'GET', token: 'member' });
+    assert.equal(profileRes.status, 200);
+    const body = await profileRes.json();
+    assert.equal(body.profile.nickname, 'Perfil Rápido');
+    assert.equal(body.mediaUrls[avatarId].url, 'https://objects.test/avatar');
+    assert.equal(body.mediaUrls[coverId].url, 'https://objects.test/cover');
+    assert.deepEqual(resolvedIds, [avatarId, coverId]);
+    assert.equal(cachedCalls, 1);
+    assert.equal(freshCalls, 0);
+
+    // Privileged creator directory must NEVER use cachedIdentity.
+    const accountsRes = await server.call('/registered-accounts?offset=0', {
+      method: 'GET',
+      token: 'creator',
+    });
+    assert.equal(accountsRes.status, 200);
+    assert.equal(freshCalls, 1);
+    assert.equal(cachedCalls, 1);
+  } finally {
     await server.close();
   }
 });

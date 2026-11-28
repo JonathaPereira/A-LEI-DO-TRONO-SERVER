@@ -13,6 +13,8 @@ import {
   cameraEncodings,
   detectHardwareScreenCodec,
   prioritizeScreenCodec,
+  screenEncodings,
+  screenStartupOffer,
 } from './sfu-encoding.ts';
 import {
   description,
@@ -237,7 +239,7 @@ export function createSfuSession(options: SfuOptions) {
     const ensure = () => {
       if (!current()) throw sfuCancelled();
     };
-    for (const simulcast of kind === 'camera' ? [true, false] : [false]) {
+    for (const simulcast of kind === 'camera' || kind === 'screen' ? [true, false] : [false]) {
       ensure();
       const r = resource('publish', kind),
         pc = r.pc;
@@ -255,6 +257,7 @@ export function createSfuSession(options: SfuOptions) {
         ensure();
         const effectiveScreenCodec = screenCodec === 'auto' ? resolvedAutoCodec : screenCodec;
         if (simulcast && kind === 'camera') init.sendEncodings = cameraEncodings(settings);
+        else if (simulcast && kind === 'screen') init.sendEncodings = screenEncodings(settings);
         else if (kind === 'screen')
           init.sendEncodings = [
             {
@@ -270,7 +273,7 @@ export function createSfuSession(options: SfuOptions) {
         try {
           tr = pc.addTransceiver(track, init);
         } catch (error) {
-          if (kind === 'screen' && init.sendEncodings?.[0]) {
+          if (kind === 'screen' && !simulcast && init.sendEncodings?.[0]) {
             const fallbackEnc = { ...init.sendEncodings[0] } as RTCRtpEncodingParameters & {
               scalabilityMode?: string;
             };
@@ -305,7 +308,11 @@ export function createSfuSession(options: SfuOptions) {
         );
         ensure();
         if (reply.description) {
-          await abortable(pc.setRemoteDescription(reply.description), r.controller.signal);
+          const remoteDesc =
+            kind === 'screen'
+              ? screenStartupOffer(reply.description, settings.screenBitrate)
+              : reply.description;
+          await abortable(pc.setRemoteDescription(remoteDesc), r.controller.signal);
           ensure();
         }
         const pub: SfuLocalPublication = {

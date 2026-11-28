@@ -57,12 +57,23 @@ const enc = (s: string) =>
 const sha = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
 const mac = (key: string | Buffer, s: string) =>
   crypto.createHmac('sha256', key).update(s).digest();
+export const AVATAR_URL_BUCKET_MS = 6 * 3600_000;
+export const AVATAR_URL_EXPIRES_SECONDS = 24 * 3600;
+export function avatarUrlWindow(nowMs = Date.now()) {
+  const bucketStart = Math.floor(nowMs / AVATAR_URL_BUCKET_MS) * AVATAR_URL_BUCKET_MS;
+  return {
+    bucketDate: new Date(bucketStart),
+    // Keep at least 12-18h of valid lifetime while producing byte-identical URLs inside each 6h window.
+    expiresAt: bucketStart + (AVATAR_URL_EXPIRES_SECONDS - 6 * 3600) * 1000,
+  };
+}
 export function signedUrl(
   env: NodeJS.ProcessEnv,
   method: 'GET' | 'PUT' | 'DELETE',
   key: string,
   query: Record<string, string> = {},
   now = new Date(),
+  expiresSeconds = 300,
 ) {
   const host = `${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     path = `/${enc(String(env.R2_BUCKET))}/${key.split('/').map(enc).join('/')}`;
@@ -75,7 +86,7 @@ export function signedUrl(
     'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
     'X-Amz-Credential': `${env.R2_ACCESS_KEY_ID}/${scope}`,
     'X-Amz-Date': date,
-    'X-Amz-Expires': '300',
+    'X-Amz-Expires': String(expiresSeconds),
     'X-Amz-SignedHeaders': 'host',
   };
   const canonicalQuery = Object.keys(params)
@@ -166,6 +177,21 @@ export function r2Adapter(env: NodeJS.ProcessEnv): ObjectStorage {
     },
     url(row, download = false) {
       const inline = !download && PREVIEW_MIMES.has(row.mime);
+      if (row.kind === 'avatar' && !download) {
+        const { bucketDate } = avatarUrlWindow();
+        return signedUrl(
+          env,
+          'GET',
+          row.object_key,
+          {
+            'response-content-type': row.mime,
+            'response-content-disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${enc(row.name)}`,
+            'response-cache-control': 'private, max-age=43200, immutable',
+          },
+          bucketDate,
+          AVATAR_URL_EXPIRES_SECONDS,
+        );
+      }
       return signedUrl(env, 'GET', row.object_key, {
         'response-content-type': row.mime,
         'response-content-disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${enc(row.name)}`,

@@ -24,6 +24,7 @@ interface QualityOptions {
   senders(): Iterable<{ sender: RTCRtpSender | null | undefined; kind: VoiceMediaKind }>;
   subscriptions(): Iterable<{ key: string; kind: VoiceMediaKind }>;
   setLayer(key: string, rid: SfuRid): Promise<void>;
+  mobile?(): boolean;
   warn?(error: unknown): void;
 }
 const keys: Record<keyof QualityPreferences, string> = {
@@ -148,6 +149,8 @@ export function createCallQuality(options: QualityOptions) {
   }
   function preferredRid(kind: VoiceMediaKind, maximized = false): SfuRid {
     if (stability.level) return stability.level === 2 ? 'q' : 'h';
+    if (kind === 'screen' && options.mobile?.())
+      return getSnapshot().effectiveQuality === 'economy' ? 'q' : 'h';
     if (maximized) return 'f';
     return kind === 'screen' && getSnapshot().effectiveQuality !== 'economy'
       ? 'f'
@@ -179,44 +182,44 @@ export function createCallQuality(options: QualityOptions) {
             parameters.encodings[0].maxBitrate = targetBitrate;
           } else if (kind === 'screen') {
             const targetDegradation =
-              preferences.screenContent === 'motion' ? 'maintain-framerate' : 'maintain-resolution';
+              preferences.screenContent === 'detail' ? 'maintain-resolution' : 'balanced';
             sender.track.contentHint = preferences.screenContent;
             const source = sender.track.getSettings();
             const srcW = source.width || q.screen.width;
             const srcH = source.height || q.screen.height;
             const rawScale = Math.max(1, srcW / q.screen.width, srcH / q.screen.height);
-            let scale = Math.abs(rawScale - 1) < 0.08 ? 1 : rawScale;
-            const validEven = (s: number) => {
-              if (!Number.isFinite(s) || s < 1) return false;
-              const w = Math.floor(srcW / s);
-              const h = Math.floor(srcH / s);
-              return (
-                w >= 2 &&
-                h >= 2 &&
-                w % 2 === 0 &&
-                h % 2 === 0 &&
-                (scale === 1 || (w <= q.screen.width && h <= q.screen.height))
-              );
-            };
-            if (!validEven(scale)) {
-              const startEvenW = Math.max(
-                2,
-                Math.min(q.screen.width, Math.floor(srcW / scale)) & ~1,
-              );
+            const ensureEvenScale = (desired: number, maxWidth: number) => {
+              let resolved = desired;
+              const validEven = (s: number) => {
+                if (!Number.isFinite(s) || s < 1) return false;
+                const w = Math.floor(srcW / s);
+                const h = Math.floor(srcH / s);
+                return (
+                  w >= 2 &&
+                  h >= 2 &&
+                  w % 2 === 0 &&
+                  h % 2 === 0 &&
+                  (resolved === 1 || w <= maxWidth)
+                );
+              };
+              if (validEven(resolved)) return resolved;
+              const startEvenW = Math.max(2, Math.min(maxWidth, Math.floor(srcW / resolved)) & ~1);
               for (let evenW = startEvenW; evenW >= Math.max(2, startEvenW - 64); evenW -= 2) {
-                for (const frac of [0.5, 0.2, 0.8]) {
+                for (const frac of [0, 0.5, 0.2, 0.8]) {
                   const candidate = Math.max(1, srcW / (evenW + frac));
                   if (validEven(candidate)) {
-                    scale = candidate;
-                    break;
+                    resolved = candidate;
+                    return resolved;
                   }
                 }
-                if (validEven(scale)) break;
               }
-            }
+              return resolved;
+            };
+            const baseScale = Math.abs(rawScale - 1) < 0.08 ? 1 : rawScale;
+            const scale = ensureEvenScale(baseScale, q.screen.width);
             const byRid: Record<string, number> = {
               f: q.screenBitrate,
-              h: Math.max(500000, Math.round(q.screenBitrate * 0.42)),
+              h: Math.min(3_000_000, Math.max(1_200_000, Math.round(q.screenBitrate * 0.35))),
               q: Math.max(250000, Math.round(q.screenBitrate * 0.18)),
             };
             let changed =
@@ -225,7 +228,11 @@ export function createCallQuality(options: QualityOptions) {
               parameters.degradationPreference !== targetDegradation;
             parameters.degradationPreference = targetDegradation;
             for (const e of parameters.encodings) {
-              const nextScale = scale * (e.rid === 'h' ? 2 : e.rid === 'q' ? 4 : 1);
+              const targetScale = scale * (e.rid === 'h' ? 1.5 : e.rid === 'q' ? 4 : 1);
+              const nextScale =
+                e.rid === 'h' || e.rid === 'q'
+                  ? ensureEvenScale(targetScale, Math.floor(srcW / scale))
+                  : scale;
               const nextBitrate = (e.rid && byRid[e.rid]) || q.screenBitrate;
               const nextFps =
                 e.rid === 'q'

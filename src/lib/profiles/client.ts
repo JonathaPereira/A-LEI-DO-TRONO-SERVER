@@ -1,6 +1,6 @@
 import { abortable } from '../http/abortable.ts';
 import type { NetworkAccount } from '../../types/network';
-import type { ProfilesSnapshot } from '../../types/profiles';
+import type { MemberProfile, ProfilesSnapshot } from '../../types/profiles';
 import type { SocketMessage } from '../../types/socket';
 import { profileId, readMemberProfile, readRegisteredAccountsPage, record } from './protocol.ts';
 
@@ -12,6 +12,7 @@ export interface ProfilesOptions {
   subscribeIdentity(listener: () => void): () => void;
   subscribeMessages(listener: (message: SocketMessage) => void): () => void;
   subscribeProfileChange?(listener: () => void): () => void;
+  primeFileUrls?(entries: unknown): void;
   warn?(error: unknown): void;
 }
 export const EMPTY_PROFILES: ProfilesSnapshot = Object.freeze({
@@ -21,6 +22,7 @@ export const EMPTY_PROFILES: ProfilesSnapshot = Object.freeze({
   revision: 0,
   profileId: null,
 });
+const PROFILE_CACHE_MAX = 150;
 const changed = () => new Error('A conta mudou. Abra novamente.');
 
 /** Authenticated reads only. Existing decoration caches retain their own presentation lifetime. */
@@ -30,6 +32,7 @@ export function createProfiles(options: ProfilesOptions) {
     permissionScope = '';
   const listeners = new Set<() => void>();
   const pending = new Set<AbortController>();
+  const profileCache = new Map<string, MemberProfile>();
   function update(patch: Partial<ProfilesSnapshot>) {
     state = Object.freeze({ ...state, ...patch });
     for (const listener of listeners) {
@@ -53,6 +56,7 @@ export function createProfiles(options: ProfilesOptions) {
     )
       return;
     permissionScope = permissions;
+    profileCache.clear();
     for (const controller of pending) controller.abort();
     update({
       accountId: account?.id ?? null,
@@ -128,7 +132,16 @@ export function createProfiles(options: ProfilesOptions) {
   }
   function invalidate(id: unknown) {
     if (disposed || typeof id !== 'string' || !id) return;
+    profileCache.delete(id);
     update({ profileId: id, revision: state.revision + 1 });
+  }
+  function cacheProfile(profile: MemberProfile) {
+    profileCache.delete(profile.id);
+    if (profileCache.size >= PROFILE_CACHE_MAX) {
+      const oldest = profileCache.keys().next().value;
+      if (oldest !== undefined) profileCache.delete(oldest);
+    }
+    profileCache.set(profile.id, profile);
   }
   const unsubscribeIdentity = options.subscribeIdentity(syncIdentity);
   const unsubscribeMessages = options.subscribeMessages((message) => {
@@ -139,6 +152,15 @@ export function createProfiles(options: ProfilesOptions) {
   );
   syncIdentity();
   return {
+    peekProfile(id: string): MemberProfile | null {
+      syncIdentity();
+      if (disposed || !state.accountId) return null;
+      try {
+        return profileCache.get(profileId(id)) ?? null;
+      } catch {
+        return null;
+      }
+    },
     async readProfile(id: string, { signal }: { signal?: AbortSignal } = {}) {
       profileId(id);
       syncIdentity();
@@ -147,6 +169,8 @@ export function createProfiles(options: ProfilesOptions) {
       assertCurrent(scope);
       const profile = readMemberProfile(data.profile);
       if (profile.id !== id) throw new Error('Resposta de perfil inválida.');
+      if (record(data.mediaUrls)) options.primeFileUrls?.(data.mediaUrls);
+      cacheProfile(profile);
       return profile;
     },
     async readAccounts(offset = 0, { signal }: { signal?: AbortSignal } = {}) {
@@ -175,6 +199,7 @@ export function createProfiles(options: ProfilesOptions) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      profileCache.clear();
       for (const controller of pending) controller.abort();
       pending.clear();
       unsubscribeIdentity();

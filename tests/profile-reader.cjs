@@ -435,3 +435,62 @@ test('current server failures remain visible while dispose detaches identity and
   h.client.dispose();
   assert.deepEqual(h.listeners(), [0, 0, 0]);
 });
+
+test('readProfile primes inline mediaUrls and viewer opens cached profiles immediately while refreshing in the background', async (t) => {
+  const [, { createProfiles }, { createProfileViewer }] = await modules;
+  let account = { id: alice, role: 'member', permissions: {} };
+  const identities = new Set(),
+    messages = new Set(),
+    primed = [];
+  let nextReply = () =>
+    response({
+      profile: person(bob, { nickname: 'Bob Inicial', avatar_file_id: image }),
+      mediaUrls: {
+        [image]: { url: 'https://objects.test/avatar-bob', expiresAt: Date.now() + 3600_000 },
+      },
+    });
+  const client = createProfiles({
+    backendHttp: 'https://backend.test',
+    getAccount: () => account,
+    getAccessToken: async () => 'access-token',
+    fetch: async () => nextReply(),
+    subscribeIdentity: (fn) => {
+      identities.add(fn);
+      return () => identities.delete(fn);
+    },
+    subscribeMessages: (fn) => {
+      messages.add(fn);
+      return () => messages.delete(fn);
+    },
+    primeFileUrls: (entries) => primed.push(entries),
+  });
+  const viewer = createProfileViewer({ client });
+  t.after(() => {
+    viewer.dispose();
+    client.dispose();
+  });
+
+  // First open fetches profile and primes inline mediaUrls.
+  await viewer.open(bob);
+  assert.equal(viewer.getSnapshot().profile.nickname, 'Bob Inicial');
+  assert.equal(primed.length, 1);
+  assert.equal(primed[0][image].url, 'https://objects.test/avatar-bob');
+
+  // Closing and reopening shows cached profile immediately without loading spinner while refreshing silently.
+  viewer.close();
+  const held = deferred();
+  nextReply = () => held.promise;
+  const reopen = viewer.open(bob);
+  assert.equal(viewer.getSnapshot().open, true);
+  assert.equal(viewer.getSnapshot().loading, false);
+  assert.equal(viewer.getSnapshot().profile.nickname, 'Bob Inicial');
+  assert.equal(viewer.getSnapshot().canMessage, true);
+  held.resolve(response({ profile: person(bob, { nickname: 'Bob Atualizado' }) }));
+  await reopen;
+  assert.equal(viewer.getSnapshot().profile.nickname, 'Bob Atualizado');
+
+  // Account switch clears cached profiles so they cannot leak across accounts.
+  account = { id: carol, role: 'member', permissions: {} };
+  [...identities].forEach((fn) => fn());
+  assert.equal(client.peekProfile(bob), null);
+});

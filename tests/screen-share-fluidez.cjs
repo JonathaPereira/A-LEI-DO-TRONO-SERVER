@@ -65,7 +65,10 @@ test('screenStartupOffer preserves CRLF integrity on existing H264 fmtp lines wi
   const fmtp102 = updated.sdp.split('\r\n').find((line) => line.startsWith('a=fmtp:102 '));
   assert.ok(fmtp102, 'H264 fmtp line must remain intact on a single CRLF line');
   assert.match(fmtp102, /profile-level-id=42e01f/);
-  assert.match(fmtp102, /x-google-min-bitrate=\d+;x-google-start-bitrate=\d+;x-google-max-bitrate=10000$/);
+  assert.match(
+    fmtp102,
+    /x-google-min-bitrate=\d+;x-google-start-bitrate=\d+;x-google-max-bitrate=10000$/,
+  );
   assert.equal(fmtp102.includes(';;'), false);
 });
 
@@ -98,7 +101,10 @@ test('prioritizeScreenCodec h264 strongly prefers packetization-mode=1 and Const
       }),
     };
     let preferred = null;
-    assert.equal(prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'h264'), true);
+    assert.equal(
+      prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'h264'),
+      true,
+    );
     assert.match(preferred[0].sdpFmtpLine, /packetization-mode=1;profile-level-id=42e01f/);
     assert.equal(preferred[1].sdpFmtpLine, 'apt=105');
     assert.match(preferred[4].sdpFmtpLine, /packetization-mode=0/);
@@ -290,4 +296,46 @@ test('remoteMedia keeps screen video, screen-audio, and voice receivers on nativ
   assert.equal(screenVideoReceiver.jitterBufferTarget, null);
   assert.equal(screenAudioReceiver.jitterBufferTarget, null);
   assert.equal(voiceReceiver.jitterBufferTarget, null);
+});
+
+test('CallStability ignores isolated bandwidth limiter when packet loss, RTT and sendDelay are healthy', async () => {
+  const { CallStability } = await import('../src/lib/voice/quality-policy.ts');
+  const stability = new CallStability();
+
+  const rampSample = {
+    limiter: 'bandwidth',
+    lossPct: 0,
+    audioLossPct: 0,
+    retransmittedPackets: 0,
+    retransmittedPct: 0,
+    rttMs: 57,
+    audioJitterMs: 5,
+    video: [{ direction: 'outbound', sendDelayMs: 0, encodeMs: 6, freezeCount: 0 }],
+    streams: [
+      {
+        direction: 'outbound',
+        packetsDelta: 400,
+        retransmittedPackets: 0,
+        sendDelayMs: 0,
+        stalled: false,
+        cause: null,
+      },
+    ],
+  };
+
+  assert.equal(stability.sample(rampSample, 0), false);
+  assert.equal(stability.sample(rampSample, 15000), false);
+  assert.equal(stability.sample(rampSample, 35000), false);
+  assert.equal(stability.level, 0);
+  assert.equal(stability.reason, '');
+
+  // Bandwidth limiter WITH actual congestion (loss >= 2% or sendDelayMs >= 40) still steps down after 12s.
+  const congestedSample = {
+    ...rampSample,
+    lossPct: 2.5,
+  };
+  assert.equal(stability.sample(congestedSample, 40000), false);
+  assert.equal(stability.sample(congestedSample, 52000), true);
+  assert.equal(stability.level, 1);
+  assert.equal(stability.reason, 'instabilidade de rede');
 });

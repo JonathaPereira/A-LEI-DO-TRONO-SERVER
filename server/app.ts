@@ -228,12 +228,14 @@ export function createApplication({
       process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
         ? fileStorage.db
         : null,
+    resolveProfileMediaUrls: fileStorage.resolveProfileMediaUrls,
     onChanged: (...args) => channels.broadcastChatChannels(...args),
     onDeleted: (room) => {
       channels.deleteRoom(room);
       chat.reset(room);
     },
     onRoleChanged: (id, role) => {
+      accountAuth.invalidate(id);
       for (const ws of wss.clients)
         if (ws.account?.id === id) {
           ws.account.role = role;

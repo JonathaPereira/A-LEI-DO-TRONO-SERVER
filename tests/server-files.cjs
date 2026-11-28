@@ -574,3 +574,43 @@ test('storage DB masks malformed provider failures and keeps secret/legacy key h
     await assert.rejects(db('rpc/fixture'), { code: 'STORAGE_UNAVAILABLE' });
   }
 });
+
+test('resolveProfileMediaUrls batches ready avatar files only and never exposes chat or direct files', async () => {
+  const avatarA = '20000000-0000-4000-8000-000000000011';
+  const avatarB = '20000000-0000-4000-8000-000000000012';
+  const directFile = '20000000-0000-4000-8000-000000000013';
+  const f = fixture({
+    fetch: async (url) => {
+      if (url.pathname.endsWith('/chat_files') && url.searchParams.get('id')?.startsWith('in.(')) {
+        const requested = url.searchParams.get('id').slice(4, -1).split(',');
+        return Response.json(
+          requested.flatMap((item) => {
+            const found = f.rows.get(item);
+            return found && found.kind === 'avatar' && found.state === 'ready' ? [found] : [];
+          }),
+        );
+      }
+    },
+  });
+  try {
+    f.rows.set(avatarA, row({ id: avatarA, kind: 'avatar', mime: 'image/gif', name: 'a.gif' }));
+    f.rows.set(avatarB, row({ id: avatarB, kind: 'avatar', mime: 'image/webp', name: 'b.webp' }));
+    f.rows.set(
+      directFile,
+      row({ id: directFile, kind: 'direct', mime: 'image/png', name: 'secret.png' }),
+    );
+    const urls = await f.service.resolveProfileMediaUrls([
+      avatarA,
+      avatarA,
+      avatarB,
+      directFile,
+      'not-a-uuid',
+    ]);
+    assert.deepEqual(Object.keys(urls).sort(), [avatarA, avatarB]);
+    assert.equal(urls[avatarA].url, 'https://objects.example.test/signed-fixture');
+    assert(urls[avatarA].expiresAt > Date.now() + 6 * 3600_000);
+    assert.equal(f.calls.length, 1, 'Batched query must hit Supabase only once');
+  } finally {
+    f.service.stop();
+  }
+});

@@ -134,7 +134,7 @@ test('only valid preferences are persisted and disabling adaptation restores the
   quality.sample({ limiter: 'cpu' }, 50000);
   assert.equal(quality.getSnapshot().adaptation.level, 0);
 });
-test('screen encoders preserve 60 FPS at full RID and maintain framerate when content is motion', async () => {
+test('screen encoders preserve 60 FPS at full RID, use balanced degradation when content is motion, and keep every layer on even dimensions', async () => {
   const { quality } = await fixture({
     mnScreenFormat: '1080-60',
     mnScreenBitrate: '10',
@@ -146,10 +146,10 @@ test('screen encoders preserve 60 FPS at full RID and maintain framerate when co
   };
   await quality.applySender(s, 'screen');
   assert.equal(s.track.contentHint, 'motion');
-  assert.equal(s.applied[0].degradationPreference, 'maintain-framerate');
+  assert.equal(s.applied[0].degradationPreference, 'balanced');
   assert.deepEqual(s.applied[0].encodings, [
     { rid: 'f', scaleResolutionDownBy: 2, maxBitrate: 10000000, maxFramerate: 60 },
-    { rid: 'h', scaleResolutionDownBy: 4, maxBitrate: 4200000, maxFramerate: 30 },
+    { rid: 'h', scaleResolutionDownBy: 3, maxBitrate: 3000000, maxFramerate: 30 },
     { rid: 'q', scaleResolutionDownBy: 8, maxBitrate: 1800000, maxFramerate: 20 },
   ]);
 });
@@ -323,12 +323,12 @@ test('1440p (2K) profiles and clean native scale prevent fractional downscaling'
 
   const av1Fixture = await fixture({ mnScreenFormat: '1080-30', mnScreenCodec: 'av1' });
   assert.equal(av1Fixture.quality.getSnapshot().preferences.screenCodec, 'av1');
-  const prefilled = sender(
-    [{ scaleResolutionDownBy: 1, maxBitrate: 8000000, maxFramerate: 30 }],
-    { width: 1920, height: 1080 },
-  );
+  const prefilled = sender([{ scaleResolutionDownBy: 1, maxBitrate: 8000000, maxFramerate: 30 }], {
+    width: 1920,
+    height: 1080,
+  });
   prefilled.getParameters = () => ({
-    degradationPreference: 'maintain-framerate',
+    degradationPreference: 'balanced',
     encodings: [{ scaleResolutionDownBy: 1, maxBitrate: 8000000, maxFramerate: 30 }],
   });
   await av1Fixture.quality.applySender(prefilled, 'screen');
@@ -336,4 +336,32 @@ test('1440p (2K) profiles and clean native scale prevent fractional downscaling'
   assert.equal(prefilled.applied[0].encodings[0].maxFramerate, 30);
   await av1Fixture.quality.applySender(prefilled, 'screen');
   assert.equal(prefilled.applied.length, 1);
+});
+
+test('screen simulcast h layer always rounds to even width/height (never odd 853x480) and mobile viewers select h layer', async () => {
+  const desktop = await fixture({ mnScreenFormat: '1080-60', mnScreenBitrate: '8' });
+  const s1080 = sender([{ rid: 'f' }, { rid: 'h' }], { width: 1920, height: 1080 });
+  await desktop.quality.applySender(s1080, 'screen');
+  const h1080 = s1080.applied[0].encodings.find((e) => e.rid === 'h');
+  assert.equal(Math.floor(1920 / h1080.scaleResolutionDownBy), 1280);
+  assert.equal(Math.floor(1080 / h1080.scaleResolutionDownBy), 720);
+  assert.equal(h1080.maxFramerate, 30);
+
+  const s720 = sender([{ rid: 'f' }, { rid: 'h' }], { width: 1280, height: 720 });
+  const q720 = (await fixture({ mnScreenFormat: '720-60', mnScreenBitrate: '6' })).quality;
+  await q720.applySender(s720, 'screen');
+  const h720 = s720.applied[0].encodings.find((e) => e.rid === 'h');
+  const h720W = Math.floor(1280 / h720.scaleResolutionDownBy);
+  const h720H = Math.floor(720 / h720.scaleResolutionDownBy);
+  assert.equal(h720W % 2, 0, `expected even width, got ${h720W}`);
+  assert.equal(h720H % 2, 0, `expected even height, got ${h720H}`);
+
+  const mobile = await fixture({}, { mobile: () => true });
+  assert.equal(desktop.quality.preferredRid('screen', false), 'f');
+  assert.equal(desktop.quality.preferredRid('screen', true), 'f');
+  assert.equal(mobile.quality.preferredRid('screen', false), 'h');
+  assert.equal(mobile.quality.preferredRid('screen', true), 'h');
+  assert.equal(mobile.quality.preferredRid('camera', false), 'f');
+  mobile.quality.configure({ transmissionQuality: 'economy' });
+  assert.equal(mobile.quality.preferredRid('screen', false), 'q');
 });

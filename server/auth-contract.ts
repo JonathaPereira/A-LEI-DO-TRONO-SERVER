@@ -17,6 +17,8 @@ export interface AuthGateway {
   readonly allowedOrigins: ReadonlySet<string>;
   tokenFrom(request: { headers: IncomingHttpHeaders }): string;
   identity(token: string, signal?: AbortSignal): Promise<BackendAccount>;
+  cachedIdentity?(token: string, signal?: AbortSignal): Promise<BackendAccount>;
+  invalidate?(userId?: string): void;
   request(
     token: string,
     path: string,

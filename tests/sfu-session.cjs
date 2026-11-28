@@ -216,14 +216,22 @@ test('camera publication preserves simulcast profiles, readiness and borrowed ca
   assert.equal(track.stops, 0);
   assert.equal(h.pcs[0].closes, 1);
 });
-test('screen uses dedicated single-layer encoding with native 60 FPS and unmodified JSEP local offer', async (t) => {
+test('screen publishes 2-layer simulcast with unmodified JSEP local offer, remote startup bitrate hint and single-layer fallback', async (t) => {
   const h = await setup(t);
   await h.session.publish('screen', new Track());
   assert.deepEqual(h.pcs[0].init.sendEncodings, [
     {
+      rid: 'f',
+      scaleResolutionDownBy: 1,
       maxBitrate: 8000000,
       maxFramerate: 60,
       networkPriority: 'high',
+    },
+    {
+      rid: 'h',
+      scaleResolutionDownBy: 1.5,
+      maxBitrate: 2800000,
+      maxFramerate: 30,
     },
   ]);
   assert.equal(h.settings.screen.fps, 60);
@@ -231,7 +239,31 @@ test('screen uses dedicated single-layer encoding with native 60 FPS and unmodif
   assert(offer.includes('foo=bar'));
   assert(!offer.includes('x-google-min-bitrate='));
   assert(offer.includes('a=rtpmap:111 opus/48000/2'));
-  assert.deepEqual(h.calls[0].payload.rids, []);
+  assert.deepEqual(h.calls[0].payload.rids, ['f', 'h']);
+  const remoteAnswer = h.pcs[0].remoteDescription.sdp;
+  assert.match(
+    remoteAnswer,
+    /x-google-min-bitrate=480;x-google-start-bitrate=2000;x-google-max-bitrate=8000/,
+  );
+
+  // If the SFU rejects screen simulcast, automatically fall back to a clean single layer.
+  let attempts = 0;
+  h.request(async (a, p) => {
+    if (a === 'publish-track' && ++attempts === 1)
+      throw new DOMException('simulcast', 'NotSupportedError');
+    return h.base(a, p);
+  });
+  await h.session.publish('screen', new Track());
+  assert.equal(h.pcs.length, 3);
+  assert.equal(h.pcs[1].closes, 1);
+  assert.deepEqual(h.pcs[2].init.sendEncodings, [
+    {
+      maxBitrate: 8000000,
+      maxFramerate: 60,
+      networkPriority: 'high',
+    },
+  ]);
+  assert.deepEqual(h.calls.filter((c) => c.action === 'publish-track').at(-1).payload.rids, []);
 });
 test('unsupported camera simulcast retries one single layer; explicit budget/network blocks do not retry', async (t) => {
   const h = await setup(t);
@@ -814,7 +846,10 @@ test('prioritizeScreenCodec supports AV1 while keeping paired video/rtx attached
       }),
     };
     let preferred = null;
-    assert.equal(prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'av1'), true);
+    assert.equal(
+      prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'av1'),
+      true,
+    );
     assert.equal(preferred[0].mimeType, 'video/AV1');
     assert.equal(preferred[1].mimeType, 'video/rtx');
     assert.equal(preferred[1].sdpFmtpLine, 'apt=45');
@@ -839,7 +874,10 @@ test('prioritizeScreenCodec ranks VP9 Profile 0 ahead of Profile 2 while preserv
       }),
     };
     let preferred = null;
-    assert.equal(prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'vp9'), true);
+    assert.equal(
+      prioritizeScreenCodec({ setCodecPreferences: (c) => (preferred = c) }, 'vp9'),
+      true,
+    );
     assert.equal(preferred[0].sdpFmtpLine, 'profile-id=0');
     assert.equal(preferred[1].sdpFmtpLine, 'apt=98');
     assert.equal(preferred[2].sdpFmtpLine, 'profile-id=2');
