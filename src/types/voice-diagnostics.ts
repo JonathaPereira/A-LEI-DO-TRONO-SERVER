@@ -83,8 +83,30 @@ export interface VideoStreamHealth {
   readonly stallMs: number;
   readonly cause: VideoFreezeCause | null;
   readonly codec: string | null;
+  readonly codecProfile?: string | null;
   readonly implementation: string | null;
   readonly hardwareAccelerated: boolean | null;
+  readonly active?: boolean | null;
+  readonly scalabilityMode?: string | null;
+  readonly targetBitrateBps?: number | null;
+  readonly avgQp?: number | null;
+  readonly limiter?: string | null;
+  readonly resolutionChanges?: number | null;
+  readonly limitationDurationsMs?: Readonly<{
+    none: number;
+    cpu: number;
+    bandwidth: number;
+    other: number;
+  }> | null;
+  readonly droppedFrames?: number | null;
+  readonly freezeMs?: number | null;
+  readonly pauseCount?: number | null;
+  readonly pauseMs?: number | null;
+  readonly jitterMs?: number | null;
+  readonly framesEncoded?: number | null;
+  readonly framesSent?: number | null;
+  readonly framesReceived?: number | null;
+  readonly framesDecoded?: number | null;
 }
 export interface VideoInterval {
   readonly direction: 'inbound' | 'outbound';
@@ -168,6 +190,13 @@ export interface MediaStat {
   readonly rid?: string;
   readonly codecId?: string;
   readonly mimeType?: string;
+  readonly sdpFmtpLine?: string;
+  readonly active?: boolean;
+  readonly scalabilityMode?: string;
+  readonly targetBitrate?: number;
+  readonly qpSum?: number;
+  readonly pauseCount?: number;
+  readonly totalPausesDuration?: number;
   readonly encoderImplementation?: string;
   readonly powerEfficientEncoder?: boolean;
   readonly decoderImplementation?: string;
@@ -192,6 +221,8 @@ export interface MediaStat {
   readonly freezeCount?: number;
   readonly totalFreezesDuration?: number;
   readonly qualityLimitationReason?: string;
+  readonly qualityLimitationDurations?: Readonly<Record<string, number>>;
+  readonly qualityLimitationResolutionChanges?: number;
   readonly state?: string;
   readonly nominated?: boolean;
   readonly selected?: boolean;

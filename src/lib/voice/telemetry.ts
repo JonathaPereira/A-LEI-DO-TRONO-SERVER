@@ -59,6 +59,9 @@ const videoCounterKeys = [
   'firCount',
   'keyFramesEncoded',
   'keyFramesDecoded',
+  'qpSum',
+  'pauseCount',
+  'totalPausesDuration',
 ] as const;
 type VideoCounter = (typeof videoCounterKeys)[number];
 interface PeerCounters {
@@ -306,6 +309,20 @@ export function createVoiceTelemetry(options: Options) {
     }
     return 0;
   }
+  function sanitizeCodecProfile(fmtp: unknown): string | null {
+    if (typeof fmtp !== 'string' || !fmtp.trim()) return null;
+    const allowed: string[] = [];
+    for (const part of fmtp.split(';')) {
+      const token = part.trim();
+      if (
+        /^(?:profile-level-id|profile-id|packetization-mode|tier|profile|level)=[0-9a-zA-Z_-]+$/i.test(
+          token,
+        )
+      )
+        allowed.push(token);
+    }
+    return allowed.length ? allowed.join(';') : null;
+  }
   function sampleVideo(
     pcKey: string,
     pc: VoicePeerConnection,
@@ -314,6 +331,7 @@ export function createVoiceTelemetry(options: Options) {
     stamp: number,
     pcRttMs: number | null,
     codecMime: string | null,
+    codecProfile: string | null = null,
   ): { interval: Readonly<VideoInterval>; health: Readonly<VideoStreamHealth> } | null {
     const previous = state.video.get(stat.id);
     if (previous && stamp <= previous.stamp) return null;
@@ -337,6 +355,9 @@ export function createVoiceTelemetry(options: Options) {
     const elapsedMs = previous ? Math.max(1, stamp - previous.stamp) : 0;
     const freezes = delta('totalFreezesDuration');
     const freezeCount = delta('freezeCount');
+    const pauseCount = delta('pauseCount');
+    const pauses = delta('totalPausesDuration');
+    const qpDelta = delta('qpSum');
     const framesEncoded = delta('framesEncoded');
     const framesSent = delta('framesSent');
     const framesReceived = delta('framesReceived');
@@ -357,6 +378,8 @@ export function createVoiceTelemetry(options: Options) {
     const bufferMs = duration('jitterBufferDelay', 'jitterBufferEmittedCount');
     const minBufferMs = duration('jitterBufferMinimumDelay', 'jitterBufferEmittedCount');
     const frameCount = direction === 'outbound' ? framesEncoded : framesDecoded;
+    const avgQp =
+      qpDelta !== null && frameCount !== null && frameCount > 0 ? qpDelta / frameCount : null;
     const fps =
       typeof stat.framesPerSecond === 'number' &&
       Number.isFinite(stat.framesPerSecond) &&
@@ -496,6 +519,38 @@ export function createVoiceTelemetry(options: Options) {
         : null;
     const bitrateBps =
       bytesDelta !== null && elapsedMs > 0 ? (bytesDelta * 8000) / elapsedMs : null;
+    const limitationDurationsMs =
+      direction === 'outbound' &&
+      stat.qualityLimitationDurations &&
+      typeof stat.qualityLimitationDurations === 'object'
+        ? Object.freeze({
+            none: Math.round(number(stat.qualityLimitationDurations.none) * 1000),
+            cpu: Math.round(number(stat.qualityLimitationDurations.cpu) * 1000),
+            bandwidth: Math.round(number(stat.qualityLimitationDurations.bandwidth) * 1000),
+            other: Math.round(number(stat.qualityLimitationDurations.other) * 1000),
+          })
+        : null;
+    const targetBitrateBps =
+      direction === 'outbound' &&
+      typeof stat.targetBitrate === 'number' &&
+      Number.isFinite(stat.targetBitrate) &&
+      stat.targetBitrate >= 0
+        ? stat.targetBitrate
+        : null;
+    const resolutionChanges =
+      direction === 'outbound' &&
+      typeof stat.qualityLimitationResolutionChanges === 'number' &&
+      Number.isFinite(stat.qualityLimitationResolutionChanges) &&
+      stat.qualityLimitationResolutionChanges >= 0
+        ? stat.qualityLimitationResolutionChanges
+        : null;
+    const jitterMs =
+      direction === 'inbound' &&
+      typeof stat.jitter === 'number' &&
+      Number.isFinite(stat.jitter) &&
+      stat.jitter >= 0
+        ? stat.jitter * 1000
+        : null;
 
     const interval = Object.freeze({
       direction,
@@ -556,6 +611,7 @@ export function createVoiceTelemetry(options: Options) {
       stallMs,
       cause,
       codec: codecMime,
+      codecProfile,
       implementation:
         direction === 'outbound'
           ? (stat.encoderImplementation ?? null)
@@ -568,6 +624,25 @@ export function createVoiceTelemetry(options: Options) {
           : typeof stat.powerEfficientDecoder === 'boolean'
             ? stat.powerEfficientDecoder
             : null,
+      active: direction === 'outbound' && typeof stat.active === 'boolean' ? stat.active : null,
+      scalabilityMode:
+        direction === 'outbound' && typeof stat.scalabilityMode === 'string' && stat.scalabilityMode
+          ? stat.scalabilityMode
+          : null,
+      targetBitrateBps,
+      avgQp,
+      limiter: direction === 'outbound' ? limiter : null,
+      resolutionChanges,
+      limitationDurationsMs,
+      droppedFrames: direction === 'inbound' ? droppedFrames : null,
+      freezeMs: freezes === null ? null : freezes * 1000,
+      pauseCount: direction === 'inbound' ? pauseCount : null,
+      pauseMs: direction === 'inbound' && pauses !== null ? pauses * 1000 : null,
+      jitterMs,
+      framesEncoded: direction === 'outbound' ? framesEncoded : null,
+      framesSent: direction === 'outbound' ? framesSent : null,
+      framesReceived: direction === 'inbound' ? framesReceived : null,
+      framesDecoded: direction === 'inbound' ? framesDecoded : null,
     });
 
     return { interval, health };
@@ -676,12 +751,15 @@ export function createVoiceTelemetry(options: Options) {
       if (!peerCurrent(pcKey, pc)) continue;
       reportsAvailable ||= report.size > 0;
       const voicePlayoutIds = new Set<string>();
-      const codecs = new Map<string, string>();
+      const codecs = new Map<string, { mime: string; profile: string | null }>();
       let pcRttSum = 0,
         pcRttCount = 0;
       report.forEach((stat) => {
         if (stat.type === 'codec' && typeof stat.mimeType === 'string')
-          codecs.set(stat.id, stat.mimeType);
+          codecs.set(stat.id, {
+            mime: stat.mimeType,
+            profile: sanitizeCodecProfile(stat.sdpFmtpLine),
+          });
         if (
           stat.type === 'candidate-pair' &&
           stat.state === 'succeeded' &&
@@ -713,10 +791,10 @@ export function createVoiceTelemetry(options: Options) {
           !stat.isRemote &&
           ['inbound-rtp', 'outbound-rtp'].includes(stat.type)
         ) {
-          const codecMime = stat.codecId
-            ? (codecs.get(stat.codecId) ?? null)
-            : (stat.mimeType ?? null);
-          const sampled = sampleVideo(pcKey, pc, state, stat, ts, pcRttMs, codecMime);
+          const codecInfo = stat.codecId ? codecs.get(stat.codecId) : undefined;
+          const codecMime = codecInfo?.mime ?? stat.mimeType ?? null;
+          const codecProfile = codecInfo?.profile ?? sanitizeCodecProfile(stat.sdpFmtpLine);
+          const sampled = sampleVideo(pcKey, pc, state, stat, ts, pcRttMs, codecMime, codecProfile);
           if (sampled) {
             videoIntervals.push(sampled.interval);
             videoStreams.push(sampled.health);

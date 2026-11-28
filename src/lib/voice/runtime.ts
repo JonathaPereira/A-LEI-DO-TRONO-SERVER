@@ -33,6 +33,7 @@ import { createVoiceCall } from './call-lifecycle';
 import { createVoiceRoster } from './roster';
 import { createVoiceTransport } from './transport';
 import { createSfuSession } from './sfu-session';
+import { efficientHardwareScreenCodec, lastDetectedScreenCodec } from './sfu-encoding';
 import { createVideoFreezeRecovery } from './video-recovery';
 import { QUALITY_ORDER, SCREEN_FORMATS } from './quality-policy';
 import type { SocialFacade, VoiceRuntimeWindow } from './runtime-ports';
@@ -122,6 +123,13 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
   let localStream: MediaStream | null = null;
   const qualityPreferences = () => callQuality.getSnapshot().preferences;
   const currentVoiceRoom = () => navigation.getSnapshot().voiceRoom;
+  const isMobileViewer = () =>
+    Boolean(window.TronoAndroid) ||
+    (!window.TronoDesktop &&
+      ((typeof window.matchMedia === 'function' &&
+        window.matchMedia('(pointer: coarse)').matches &&
+        Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 900) ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator?.userAgent || '')));
   const callQuality: ReturnType<typeof createCallQuality> = createCallQuality({
     storage,
     policy: () => ({
@@ -143,13 +151,7 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
     },
     subscriptions: () => sfuSubscriptions.values(),
     setLayer: (key, rid) => sfuSession.setLayer(key, rid),
-    mobile: () =>
-      Boolean(window.TronoAndroid) ||
-      (!window.TronoDesktop &&
-        ((typeof window.matchMedia === 'function' &&
-          window.matchMedia('(pointer: coarse)').matches &&
-          Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 900) ||
-          /Android|iPhone|iPad|iPod|Mobile/i.test(navigator?.userAgent || ''))),
+    mobile: isMobileViewer,
   });
 
   const meId = () => window.TronoNetwork?.clientId;
@@ -1379,9 +1381,74 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
       assessment,
       history: receiveHistory,
     } = voiceTelemetry.getSnapshot();
+    const qualitySnap = callQuality.getSnapshot();
+    const screenTrack = screenCapture.getCapture()?.outgoing.getVideoTracks()[0] ?? null;
+    const screenPub = sfuLocalPublications.get('screen') ?? null;
+    const screenSender =
+      screenPub?.sender ??
+      [...peers.values()].find((pc) => pc._tronoScreenSender?.track)?._tronoScreenSender ??
+      null;
+    let captureDiag: {
+      width?: number;
+      height?: number;
+      fps?: number;
+      displaySurface?: string;
+      contentHint?: string;
+      degradationPreference?: string;
+      publishedRids?: readonly string[];
+      encodings?: {
+        rid?: string;
+        active?: boolean;
+        scaleResolutionDownBy?: number;
+        maxBitrate?: number;
+        maxFramerate?: number;
+        scalabilityMode?: string;
+      }[];
+    } | null = null;
+    if (screenTrack) {
+      let settings: MediaTrackSettings & { displaySurface?: string } = {};
+      try {
+        settings = screenTrack.getSettings() as MediaTrackSettings & { displaySurface?: string };
+      } catch {}
+      let params: (RTCRtpSendParameters & { degradationPreference?: string }) | null = null;
+      try {
+        params =
+          (screenSender?.getParameters?.() as
+            (RTCRtpSendParameters & { degradationPreference?: string }) | undefined) ?? null;
+      } catch {}
+      captureDiag = {
+        width: settings.width,
+        height: settings.height,
+        fps: settings.frameRate,
+        displaySurface: settings.displaySurface,
+        contentHint: screenTrack.contentHint || undefined,
+        degradationPreference: params?.degradationPreference,
+        publishedRids: screenPub?.rids ?? [],
+        encodings: (params?.encodings || []).map((enc) => ({
+          rid: enc.rid,
+          active: enc.active,
+          scaleResolutionDownBy: enc.scaleResolutionDownBy,
+          maxBitrate: enc.maxBitrate,
+          maxFramerate: enc.maxFramerate,
+          scalabilityMode: (enc as RTCRtpEncodingParameters & { scalabilityMode?: string })
+            .scalabilityMode,
+        })),
+      };
+    }
+    const publicationsByKey = new Map(
+      sfuSession.getPublications().map((pub) => [`${pub.ownerId}:${pub.kind}`, pub]),
+    );
+    const screenSubDiag = [...sfuSubscriptions.values()]
+      .filter((sub) => sub.kind === 'screen')
+      .map((sub) => ({
+        pcKey: `sfu-sub:${sub.key}`,
+        requestedRid: preferredRidForMedia('screen', false),
+        negotiatedRid: sub.preferredRid,
+        availableRids: publicationsByKey.get(sub.key)?.rids ?? [],
+      }));
     return diagnosticReport({
       version: window.TronoDesktop?.version || window.TronoNetwork.CLIENT_VERSION,
-      platform: window.TronoDesktop ? 'Windows' : 'Navegador',
+      platform: window.TronoDesktop ? 'Windows' : window.TronoAndroid ? 'Android' : 'Navegador',
       call: {
         joined: voiceCall.getSnapshot().joined,
         muted: controlState().micMuted,
@@ -1403,9 +1470,29 @@ export function initializeVoiceRuntime(target: Window): VoiceRuntime {
           agoMs: Math.max(0, performance.now() - r.stamp),
         })),
       },
+      screenShare: {
+        config: {
+          format: qualitySnap.preferences.screenFormat,
+          targetWidth: qualitySnap.profile.screen.width,
+          targetHeight: qualitySnap.profile.screen.height,
+          targetFps: qualitySnap.profile.screen.fps,
+          targetBitrateBps: qualitySnap.profile.screenBitrate,
+          contentHint: qualitySnap.preferences.screenContent,
+          requestedCodec: qualitySnap.preferences.screenCodec,
+          autoDetectedCodec: lastDetectedScreenCodec(),
+          autoHardwareConfirmed: efficientHardwareScreenCodec() !== null,
+          adaptiveEnabled: qualitySnap.preferences.adaptiveEnabled,
+          adaptationLevel: qualitySnap.adaptation.level,
+          adaptationReason: qualitySnap.adaptation.reason || null,
+          mobileViewer: isMobileViewer(),
+        },
+        capture: captureDiag,
+        localTrackId: screenTrack?.id ?? null,
+        subscriptions: screenSubDiag,
+      },
       processing: noiseState().mode,
-      adaptation: callQuality.getSnapshot().adaptation.level
-        ? callQuality.getSnapshot().adaptation.reason
+      adaptation: qualitySnap.adaptation.level
+        ? qualitySnap.adaptation.reason
         : 'qualidade escolhida',
       resources: nativeResources,
     });

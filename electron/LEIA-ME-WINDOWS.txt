@@ -1,3 +1,15 @@
+M&N · A Lei do Trono — Windows & Android 2.3.3
+
+Novidades 2.3.3:
+- Transmissão de tela estável com Simulcast em 2 camadas (1080p 60 FPS no PC + 720p 30 FPS leve no
+  celular/Android), fim do falso-positivo de instabilidade de rede na rampa inicial de banda,
+  dimensões pares garantidas em todas as camadas e proteção do modo automático contra OpenH264.
+- Telemetria especializada de Screen Share no relatório de diagnóstico (sem remover nenhum dado da
+  chamada): BWE estimado, RIDs publicados/negociados, perfil de codec, QP médio, tempos de limitação,
+  trocas de resolução e métricas isoladas de envio e recepção de tela.
+- Voz mais estável no desktop (proteção de recepção restaurada sem áudio robótico/picotado) e
+  carregamento rápido de perfis, avatares e GIFs com cache persistente.
+
 M&N · A Lei do Trono — Windows & Android 2.3.2
 
 Novidades 2.3.2:

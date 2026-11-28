@@ -511,34 +511,165 @@ test('reset releases native priority even when the caller does not issue another
   assert.deepEqual(calls, [true, false]);
   assert.equal(h.telemetry.getSnapshot().priority.active, false);
 });
-test('video diagnostics expose interval freezes, dropped frames and encode/decode delays without changing media', async t=>{
- const h=await setup(t),pc=h.attach();
- const video=n=>new Map([
- ['tx',{id:'tx',type:'outbound-rtp',kind:'video',timestamp:n*1000,framesEncoded:n*60,totalEncodeTime:n*.3,framesSent:n*60,packetsSent:n*120,totalPacketSendDelay:n*.24,frameWidth:1920,frameHeight:1080}],
- ['rx',{id:'rx',type:'inbound-rtp',kind:'video',timestamp:n*1000,framesDecoded:n*60,totalDecodeTime:n*.12,framesDropped:n*2,freezeCount:n,totalFreezesDuration:n*.25,jitterBufferDelay:n*3,jitterBufferEmittedCount:n*60,frameWidth:1920,frameHeight:1080}],
- ]);
- pc.report=video(1);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video[0].encodeMs,null,'first report establishes a baseline');
- pc.report=video(2);await h.telemetry.collect();const rows=h.telemetry.getSnapshot().telemetry.video;
- assert.equal(rows[0].fps,60);assert.equal(rows[0].encodeMs,5);assert.equal(rows[0].sendDelayMs,2);assert.equal(rows[1].decodeMs,2);assert.equal(rows[1].bufferMs,50);assert.equal(rows[1].freezeCount,1);assert.equal(rows[1].freezeMs,250);assert.equal(rows[1].droppedFrames,2);
- assert.equal(rows[0].width,1920);assert.equal(rows[0].height,1080);assert(Object.isFrozen(rows));assert(Object.isFrozen(rows[0]));assert(!JSON.stringify(rows).includes('tx'));assert.equal(pc.connectionState,'connected');
- pc.report=video(0);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video.length,0,'stale reports must not masquerade as healthy intervals');
- h.telemetry.reset();pc.report=video(3);await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.video[0].encodeMs,null);
+test('video diagnostics expose interval freezes, dropped frames and encode/decode delays without changing media', async (t) => {
+  const h = await setup(t),
+    pc = h.attach();
+  const video = (n) =>
+    new Map([
+      [
+        'tx',
+        {
+          id: 'tx',
+          type: 'outbound-rtp',
+          kind: 'video',
+          timestamp: n * 1000,
+          framesEncoded: n * 60,
+          totalEncodeTime: n * 0.3,
+          framesSent: n * 60,
+          packetsSent: n * 120,
+          totalPacketSendDelay: n * 0.24,
+          frameWidth: 1920,
+          frameHeight: 1080,
+        },
+      ],
+      [
+        'rx',
+        {
+          id: 'rx',
+          type: 'inbound-rtp',
+          kind: 'video',
+          timestamp: n * 1000,
+          framesDecoded: n * 60,
+          totalDecodeTime: n * 0.12,
+          framesDropped: n * 2,
+          freezeCount: n,
+          totalFreezesDuration: n * 0.25,
+          jitterBufferDelay: n * 3,
+          jitterBufferEmittedCount: n * 60,
+          frameWidth: 1920,
+          frameHeight: 1080,
+        },
+      ],
+    ]);
+  pc.report = video(1);
+  await h.telemetry.collect();
+  assert.equal(
+    h.telemetry.getSnapshot().telemetry.video[0].encodeMs,
+    null,
+    'first report establishes a baseline',
+  );
+  pc.report = video(2);
+  await h.telemetry.collect();
+  const rows = h.telemetry.getSnapshot().telemetry.video;
+  assert.equal(rows[0].fps, 60);
+  assert.equal(rows[0].encodeMs, 5);
+  assert.equal(rows[0].sendDelayMs, 2);
+  assert.equal(rows[1].decodeMs, 2);
+  assert.equal(rows[1].bufferMs, 50);
+  assert.equal(rows[1].freezeCount, 1);
+  assert.equal(rows[1].freezeMs, 250);
+  assert.equal(rows[1].droppedFrames, 2);
+  assert.equal(rows[0].width, 1920);
+  assert.equal(rows[0].height, 1080);
+  assert(Object.isFrozen(rows));
+  assert(Object.isFrozen(rows[0]));
+  assert(!JSON.stringify(rows).includes('tx'));
+  assert.equal(pc.connectionState, 'connected');
+  pc.report = video(0);
+  await h.telemetry.collect();
+  assert.equal(
+    h.telemetry.getSnapshot().telemetry.video.length,
+    0,
+    'stale reports must not masquerade as healthy intervals',
+  );
+  h.telemetry.reset();
+  pc.report = video(3);
+  await h.telemetry.collect();
+  assert.equal(h.telemetry.getSnapshot().telemetry.video[0].encodeMs, null);
 });
-test('copied video diagnostics whitelist anonymous numbers, stream codec/implementation, and preserve unavailable values',()=>{
- const {diagnosticReport}=require('../src/lib/voice/diagnostic-report.ts');const report=JSON.parse(diagnosticReport({call:{},telemetry:{video:[{direction:'inbound',freezeCount:2,decodeMs:null,width:1920,height:1080,ip:'private',trackIdentifier:'secret',freezeMs:Infinity},{direction:'injected identity',decodeMs:5}],streams:[{direction:'outbound',codec:'video/H264',implementation:'OpenH264',hardwareAccelerated:false,width:1280,height:720,fps:60,bitrateBps:4500000,encodeMs:18.5,stalled:true,stallMs:1200,cause:'encoder-stalled',trackId:'secret-track',pcKey:'sfu:secret-peer'}]}}));
- assert.equal(report.video[0].freezeCount,2);assert.equal(report.video[0].decodeMs,null);assert.equal(report.video[0].freezeMs,null);assert.equal(report.video.length,1);assert.equal(report.streams.length,1);assert.equal(report.streams[0].codec,'video/H264');assert.equal(report.streams[0].implementation,'OpenH264');assert.equal(report.streams[0].hardwareAccelerated,false);assert.equal(report.streams[0].cause,'encoder-stalled');assert(!JSON.stringify(report).includes('secret'));assert(!JSON.stringify(report).includes('private'));
+test('copied video diagnostics whitelist anonymous numbers, stream codec/implementation, and preserve unavailable values', () => {
+  const { diagnosticReport } = require('../src/lib/voice/diagnostic-report.ts');
+  const report = JSON.parse(
+    diagnosticReport({
+      call: {},
+      telemetry: {
+        video: [
+          {
+            direction: 'inbound',
+            freezeCount: 2,
+            decodeMs: null,
+            width: 1920,
+            height: 1080,
+            ip: 'private',
+            trackIdentifier: 'secret',
+            freezeMs: Infinity,
+          },
+          { direction: 'injected identity', decodeMs: 5 },
+        ],
+        streams: [
+          {
+            direction: 'outbound',
+            codec: 'video/H264',
+            implementation: 'OpenH264',
+            hardwareAccelerated: false,
+            width: 1280,
+            height: 720,
+            fps: 60,
+            bitrateBps: 4500000,
+            encodeMs: 18.5,
+            stalled: true,
+            stallMs: 1200,
+            cause: 'encoder-stalled',
+            trackId: 'secret-track',
+            pcKey: 'sfu:secret-peer',
+          },
+        ],
+      },
+    }),
+  );
+  assert.equal(report.video[0].freezeCount, 2);
+  assert.equal(report.video[0].decodeMs, null);
+  assert.equal(report.video[0].freezeMs, null);
+  assert.equal(report.video.length, 1);
+  assert.equal(report.streams.length, 1);
+  assert.equal(report.streams[0].codec, 'video/H264');
+  assert.equal(report.streams[0].implementation, 'OpenH264');
+  assert.equal(report.streams[0].hardwareAccelerated, false);
+  assert.equal(report.streams[0].cause, 'encoder-stalled');
+  assert(!JSON.stringify(report).includes('secret'));
+  assert(!JSON.stringify(report).includes('private'));
 });
-test('a measured zero video FPS is never replaced by the configured capture FPS',async t=>{
- const h=await setup(t,{getLocalVideo:()=>({getSettings:()=>({frameRate:60,width:1920,height:1080})})}),pc=h.attach();
- pc.report=report(1);pc.report.get('video').framesPerSecond=0;await h.telemetry.collect();assert.equal(h.telemetry.getSnapshot().telemetry.outFps,0,'a stalled encoder must not be reported as 60 FPS');
+test('a measured zero video FPS is never replaced by the configured capture FPS', async (t) => {
+  const h = await setup(t, {
+      getLocalVideo: () => ({ getSettings: () => ({ frameRate: 60, width: 1920, height: 1080 }) }),
+    }),
+    pc = h.attach();
+  pc.report = report(1);
+  pc.report.get('video').framesPerSecond = 0;
+  await h.telemetry.collect();
+  assert.equal(
+    h.telemetry.getSnapshot().telemetry.outFps,
+    0,
+    'a stalled encoder must not be reported as 60 FPS',
+  );
 });
 
 test('classifies all 8 video freeze causes without confusing static images or guessing without evidence', async (t) => {
-  let screenTrack = { id: 'tx-track', kind: 'video', readyState: 'live', muted: false, enabled: true };
+  let screenTrack = {
+    id: 'tx-track',
+    kind: 'video',
+    readyState: 'live',
+    muted: false,
+    enabled: true,
+  };
   let rxTrack = { id: 'rx-track', kind: 'video', readyState: 'live', muted: false, enabled: true };
   const h = await setup(t, { getLocalVideo: () => screenTrack });
 
-  const makeVideoPc = (dir, overrides = () => ({}), trackRef = () => (dir === 'outbound' ? screenTrack : rxTrack)) => {
+  const makeVideoPc = (
+    dir,
+    overrides = () => ({}),
+    trackRef = () => (dir === 'outbound' ? screenTrack : rxTrack),
+  ) => {
     const p = peer();
     p.getTransceivers = () => [
       {
@@ -549,7 +680,10 @@ test('classifies all 8 video freeze causes without confusing static images or gu
       {
         mid: '1',
         sender: dir === 'outbound' ? { track: trackRef() } : { track: null },
-        receiver: dir === 'inbound' ? { track: trackRef(), playoutDelayHint: undefined, jitterBufferTarget: null } : p.screen,
+        receiver:
+          dir === 'inbound'
+            ? { track: trackRef(), playoutDelayHint: undefined, jitterBufferTarget: null }
+            : p.screen,
       },
     ];
     let step = 0;
@@ -791,4 +925,463 @@ test('classifies all 8 video freeze causes without confusing static images or gu
   inPc.next();
   await h.telemetry.collect();
   assert.equal(h.telemetry.getSnapshot().telemetry.streams[0].cause, null);
+});
+
+test('telemetry collects specialized per-layer screen share metrics (rid, codecProfile, targetBitrate, avgQp, limitation durations, pauses and jitter)', async (t) => {
+  const h = await setup(t);
+  const pubPc = peer();
+  const subPc = peer();
+  h.connections.set('sfu-pub:screen', pubPc);
+  h.connections.set('sfu-sub:peer-1:screen', subPc);
+
+  const pubReport = (n) =>
+    new Map([
+      [
+        'codec-vp9',
+        {
+          id: 'codec-vp9',
+          type: 'codec',
+          mimeType: 'video/VP9',
+          sdpFmtpLine: 'profile-id=0;x-google-start-bitrate=2000;secret-param=ignore',
+        },
+      ],
+      [
+        'pair',
+        {
+          id: 'pair',
+          type: 'candidate-pair',
+          state: 'succeeded',
+          nominated: true,
+          currentRoundTripTime: 0.054,
+          availableOutgoingBitrate: 11_500_000,
+        },
+      ],
+      [
+        'tx-f',
+        {
+          id: 'tx-f',
+          type: 'outbound-rtp',
+          kind: 'video',
+          mid: '0',
+          rid: 'f',
+          codecId: 'codec-vp9',
+          active: true,
+          scalabilityMode: 'L1T2',
+          encoderImplementation: 'libvpx',
+          powerEfficientEncoder: false,
+          timestamp: n * 2000,
+          frameWidth: 1920,
+          frameHeight: 1080,
+          framesPerSecond: 60,
+          framesEncoded: n * 120,
+          framesSent: n * 120,
+          packetsSent: n * 1600,
+          bytesSent: n * 2_000_000,
+          retransmittedPacketsSent: n * 2,
+          totalEncodeTime: n * 0.96,
+          totalPacketSendDelay: n * 0.8,
+          qpSum: n * 2400,
+          targetBitrate: 8_000_000,
+          qualityLimitationReason: 'none',
+          qualityLimitationResolutionChanges: 1,
+          qualityLimitationDurations: { none: 18.5, cpu: 0.5, bandwidth: 1.0, other: 0 },
+          nackCount: n,
+          pliCount: 0,
+          firCount: 0,
+          keyFramesEncoded: n,
+        },
+      ],
+      [
+        'tx-h',
+        {
+          id: 'tx-h',
+          type: 'outbound-rtp',
+          kind: 'video',
+          mid: '0',
+          rid: 'h',
+          codecId: 'codec-vp9',
+          active: true,
+          encoderImplementation: 'libvpx',
+          powerEfficientEncoder: false,
+          timestamp: n * 2000,
+          frameWidth: 1280,
+          frameHeight: 720,
+          framesPerSecond: 30,
+          framesEncoded: n * 60,
+          framesSent: n * 60,
+          packetsSent: n * 500,
+          bytesSent: n * 600_000,
+          retransmittedPacketsSent: 0,
+          totalEncodeTime: n * 0.24,
+          totalPacketSendDelay: 0,
+          qpSum: n * 1320,
+          targetBitrate: 2_800_000,
+          qualityLimitationReason: 'bandwidth',
+          qualityLimitationResolutionChanges: 0,
+          qualityLimitationDurations: { none: 15, cpu: 0, bandwidth: 5, other: 0 },
+          nackCount: 0,
+          pliCount: 0,
+          firCount: 0,
+          keyFramesEncoded: n,
+        },
+      ],
+    ]);
+
+  const subReport = (n) =>
+    new Map([
+      [
+        'codec-h264',
+        {
+          id: 'codec-h264',
+          type: 'codec',
+          mimeType: 'video/H264',
+          sdpFmtpLine: 'level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640032',
+        },
+      ],
+      [
+        'rx-screen',
+        {
+          id: 'rx-screen',
+          type: 'inbound-rtp',
+          kind: 'video',
+          mid: '0',
+          codecId: 'codec-h264',
+          decoderImplementation: 'MediaCodecVideoDecoder',
+          powerEfficientDecoder: true,
+          timestamp: n * 2000,
+          frameWidth: 1280,
+          frameHeight: 720,
+          framesPerSecond: 30,
+          framesReceived: n * 60,
+          framesDecoded: n * 60,
+          framesDropped: n,
+          packetsReceived: n * 480,
+          packetsLost: n * 2,
+          bytesReceived: n * 550_000,
+          totalDecodeTime: n * 0.36,
+          jitterBufferDelay: n * 1.8,
+          jitterBufferMinimumDelay: n * 0.9,
+          jitterBufferEmittedCount: n * 60,
+          jitter: 0.014,
+          qpSum: n * 1500,
+          freezeCount: n,
+          totalFreezesDuration: n * 0.3,
+          pauseCount: n,
+          totalPausesDuration: n * 0.5,
+          nackCount: n * 2,
+          pliCount: n,
+          firCount: 0,
+          keyFramesDecoded: n,
+        },
+      ],
+    ]);
+
+  pubPc.report = pubReport(1);
+  subPc.report = subReport(1);
+  await h.telemetry.collect();
+  pubPc.report = pubReport(2);
+  subPc.report = subReport(2);
+  await h.telemetry.collect();
+
+  const snap = h.telemetry.getSnapshot().telemetry;
+  assert.equal(snap.availableOutgoingBitrate, 11_500_000);
+  const fLayer = snap.streams.find((s) => s.direction === 'outbound' && s.rid === 'f');
+  const hLayer = snap.streams.find((s) => s.direction === 'outbound' && s.rid === 'h');
+  const rxLayer = snap.streams.find((s) => s.direction === 'inbound');
+
+  assert.ok(fLayer && hLayer && rxLayer);
+  assert.equal(fLayer.codecProfile, 'profile-id=0');
+  assert.equal(fLayer.active, true);
+  assert.equal(fLayer.scalabilityMode, 'L1T2');
+  assert.equal(fLayer.targetBitrateBps, 8_000_000);
+  assert.equal(fLayer.avgQp, 20);
+  assert.equal(fLayer.limiter, 'none');
+  assert.equal(fLayer.resolutionChanges, 1);
+  assert.deepEqual(fLayer.limitationDurationsMs, {
+    none: 18500,
+    cpu: 500,
+    bandwidth: 1000,
+    other: 0,
+  });
+  assert.equal(fLayer.framesEncoded, 120);
+  assert.equal(fLayer.framesSent, 120);
+
+  assert.equal(hLayer.targetBitrateBps, 2_800_000);
+  assert.equal(hLayer.avgQp, 22);
+  assert.equal(hLayer.limiter, 'bandwidth');
+
+  assert.equal(rxLayer.codecProfile, 'packetization-mode=1;profile-level-id=640032');
+  assert.equal(rxLayer.avgQp, 25);
+  assert.equal(rxLayer.jitterMs, 14);
+  assert.equal(rxLayer.droppedFrames, 1);
+  assert.equal(rxLayer.freezeMs, 300);
+  assert.equal(rxLayer.pauseCount, 1);
+  assert.equal(rxLayer.pauseMs, 500);
+});
+
+test('diagnosticReport adds specialized screenShare telemetry without removing call telemetry and strips private identifiers', async () => {
+  const { diagnosticReport } = await import('../src/lib/voice/diagnostic-report.ts');
+  const report = JSON.parse(
+    diagnosticReport({
+      version: '2.3.3',
+      platform: 'Windows',
+      call: {
+        joined: true,
+        muted: false,
+        deafened: false,
+        camera: true,
+        screen: true,
+        transport: 'sfu',
+        playback: 'Reproduzindo direto',
+      },
+      processing: 'rnnoise',
+      adaptation: 'qualidade escolhida',
+      telemetry: {
+        rttMs: 54,
+        uploadBps: 10_400_000,
+        downloadBps: 2_200_000,
+        availableOutgoingBitrate: 12_000_000,
+        retransmittedPct: 0.12,
+        audioLossPct: 0,
+        audioJitterMs: 8,
+        concealedPct: 0,
+        jitterBufferMs: 60,
+        eventLoopLagMs: 0.4,
+        lossPct: 0.1,
+        jitterMs: 10,
+        outFps: 60,
+        inFps: 30,
+        outW: 1920,
+        outH: 1080,
+        inW: 1280,
+        inH: 720,
+        pcState: 'connected',
+        iceRoute: 'STUN / srflx',
+        limiter: 'none',
+        streams: [
+          {
+            streamKey: 'sfu-pub:camera:cam1',
+            pcKey: 'sfu-pub:camera',
+            direction: 'outbound',
+            mid: '0',
+            rid: 'f',
+            trackId: 'cam-secret-track',
+            pcState: 'connected',
+            iceState: 'connected',
+            width: 1280,
+            height: 720,
+            fps: 30,
+            bitrateBps: 1_500_000,
+            codec: 'video/VP8',
+            implementation: 'libvpx',
+            hardwareAccelerated: false,
+            stalled: false,
+            stallMs: 0,
+            cause: null,
+          },
+          {
+            streamKey: 'sfu-pub:screen:scr-f',
+            pcKey: 'sfu-pub:screen',
+            direction: 'outbound',
+            mid: '0',
+            rid: 'f',
+            trackId: 'screen-secret-track',
+            pcState: 'connected',
+            iceState: 'connected',
+            width: 1920,
+            height: 1080,
+            fps: 60,
+            bitrateBps: 8_000_000,
+            targetBitrateBps: 8_000_000,
+            encodeMs: 7.5,
+            sendDelayMs: 0.5,
+            avgQp: 19,
+            limiter: 'none',
+            resolutionChanges: 0,
+            limitationDurationsMs: { none: 20000, cpu: 0, bandwidth: 0, other: 0 },
+            active: true,
+            scalabilityMode: null,
+            codec: 'video/VP9',
+            codecProfile: 'profile-id=0',
+            implementation: 'libvpx',
+            hardwareAccelerated: false,
+            framesEncoded: 120,
+            framesSent: 120,
+            packetsDelta: 1500,
+            retransmittedPackets: 1,
+            nackCount: 0,
+            pliCount: 0,
+            firCount: 0,
+            keyFrames: 1,
+            stalled: false,
+            stallMs: 0,
+            cause: null,
+          },
+          {
+            streamKey: 'sfu-sub:secret-peer-id:screen:rx1',
+            pcKey: 'sfu-sub:secret-peer-id:screen',
+            direction: 'inbound',
+            mid: '0',
+            rid: null,
+            trackId: 'rx-secret-track',
+            pcState: 'connected',
+            iceState: 'connected',
+            width: 1280,
+            height: 720,
+            fps: 30,
+            bitrateBps: 2_400_000,
+            decodeMs: 4.2,
+            bufferMs: 38,
+            minBufferMs: 18,
+            jitterMs: 11,
+            lossPct: 0,
+            avgQp: 24,
+            framesReceived: 60,
+            framesDecoded: 60,
+            droppedFrames: 0,
+            freezeCount: 0,
+            freezeMs: 0,
+            pauseCount: 0,
+            pauseMs: 0,
+            packetsDelta: 480,
+            packetsLost: 0,
+            nackCount: 0,
+            pliCount: 0,
+            firCount: 0,
+            keyFrames: 1,
+            codec: 'video/VP9',
+            codecProfile: 'profile-id=0',
+            implementation: 'MediaCodecVideoDecoder',
+            hardwareAccelerated: true,
+            stalled: false,
+            stallMs: 0,
+            cause: null,
+          },
+        ],
+        freezes: [
+          {
+            streamKey: 'sfu-pub:camera:cam1',
+            pcKey: 'sfu-pub:camera',
+            direction: 'outbound',
+            mid: '0',
+            rid: 'f',
+            trackId: 'cam-secret-track',
+            startedAt: 1000,
+            endedAt: 2000,
+            durationMs: 1000,
+            recovered: true,
+            cause: 'encoder-stalled',
+          },
+          {
+            streamKey: 'sfu-sub:secret-peer-id:screen:rx1',
+            pcKey: 'sfu-sub:secret-peer-id:screen',
+            direction: 'inbound',
+            mid: '0',
+            rid: 'h',
+            trackId: 'rx-secret-track',
+            startedAt: 3000,
+            endedAt: 4200,
+            durationMs: 1200,
+            recovered: true,
+            cause: 'presentation-frozen',
+          },
+        ],
+      },
+      screenShare: {
+        config: {
+          format: '1080-60',
+          targetWidth: 1920,
+          targetHeight: 1080,
+          targetFps: 60,
+          targetBitrateBps: 8_000_000,
+          contentHint: 'motion',
+          requestedCodec: 'auto',
+          autoDetectedCodec: 'vp9',
+          autoHardwareConfirmed: false,
+          adaptiveEnabled: true,
+          adaptationLevel: 0,
+          adaptationReason: null,
+          mobileViewer: false,
+        },
+        capture: {
+          width: 1920,
+          height: 1080,
+          fps: 60,
+          displaySurface: 'monitor',
+          contentHint: 'motion',
+          degradationPreference: 'balanced',
+          publishedRids: ['f', 'h'],
+          encodings: [
+            {
+              rid: 'f',
+              active: true,
+              scaleResolutionDownBy: 1,
+              maxBitrate: 8_000_000,
+              maxFramerate: 60,
+            },
+            {
+              rid: 'h',
+              active: true,
+              scaleResolutionDownBy: 1.5,
+              maxBitrate: 2_800_000,
+              maxFramerate: 30,
+            },
+          ],
+          windowTitle: 'Private Secret Window Title',
+        },
+        localTrackId: 'screen-secret-track',
+        subscriptions: [
+          {
+            pcKey: 'sfu-sub:secret-peer-id:screen',
+            requestedRid: 'h',
+            negotiatedRid: 'h',
+            availableRids: ['f', 'h'],
+            peerName: 'Secret User Name',
+          },
+        ],
+      },
+    }),
+  );
+
+  // Existing call telemetry stays intact
+  assert.equal(report.call.joined, true);
+  assert.equal(report.metrics.rttMs, 54);
+  assert.equal(report.streams.length, 3);
+  assert.equal(report.freezes.length, 2);
+
+  // Specialized screenShare section includes only screen streams/freezes and full tuning metrics
+  assert.ok(report.screenShare);
+  assert.equal(report.screenShare.config.format, '1080-60');
+  assert.equal(report.screenShare.config.requestedCodec, 'auto');
+  assert.equal(report.screenShare.config.autoDetectedCodec, 'vp9');
+  assert.equal(report.screenShare.bwe.availableOutgoingBps, 12_000_000);
+  assert.equal(report.screenShare.bwe.retransmittedPct, 0.12);
+  assert.equal(report.screenShare.capture.degradationPreference, 'balanced');
+  assert.deepEqual(report.screenShare.capture.publishedRids, ['f', 'h']);
+  assert.equal(report.screenShare.capture.encodings.length, 2);
+
+  // Camera stream must be excluded from screenShare.outbound and screenShare.freezes
+  assert.equal(report.screenShare.outbound.length, 1);
+  assert.equal(report.screenShare.outbound[0].rid, 'f');
+  assert.equal(report.screenShare.outbound[0].evenDimensions, true);
+  assert.equal(report.screenShare.outbound[0].codecProfile, 'profile-id=0');
+  assert.equal(report.screenShare.outbound[0].avgQp, 19);
+  assert.equal(report.screenShare.outbound[0].targetBitrateBps, 8_000_000);
+
+  assert.equal(report.screenShare.inbound.length, 1);
+  assert.equal(report.screenShare.inbound[0].viewerIndex, 1);
+  assert.equal(report.screenShare.inbound[0].requestedRid, 'h');
+  assert.equal(report.screenShare.inbound[0].negotiatedRid, 'h');
+  assert.deepEqual(report.screenShare.inbound[0].availableRids, ['f', 'h']);
+  assert.equal(report.screenShare.inbound[0].jitterMs, 11);
+
+  assert.equal(report.screenShare.freezes.length, 1);
+  assert.equal(report.screenShare.freezes[0].rid, 'h');
+  assert.equal(report.screenShare.freezes[0].cause, 'presentation-frozen');
+
+  // Strict privacy: zero private identifiers in serialized output
+  const serialized = JSON.stringify(report);
+  assert.equal(serialized.includes('secret'), false);
+  assert.equal(serialized.includes('Secret'), false);
+  assert.equal(serialized.includes('Private'), false);
 });

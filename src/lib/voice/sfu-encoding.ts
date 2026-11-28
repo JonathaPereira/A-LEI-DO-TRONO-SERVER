@@ -171,6 +171,11 @@ export function efficientHardwareScreenCodec(): Exclude<ScreenCodec, 'auto'> | n
   return cachedHardwareEfficient ? cachedHardwareCodec : null;
 }
 
+/** Last codec selected by detectHardwareScreenCodec, regardless of hardware efficiency. */
+export function lastDetectedScreenCodec(): Exclude<ScreenCodec, 'auto'> | null {
+  return cachedHardwareCodec;
+}
+
 export async function detectHardwareScreenCodec(
   mediaCapabilities?: EncodingCapabilitiesLike | null,
 ): Promise<Exclude<ScreenCodec, 'auto'>> {
